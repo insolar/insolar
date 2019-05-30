@@ -951,6 +951,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 		when                      whenType
 		messagesExpected          []insolar.MessageType
 		errorExpected             bool
+		retryExpected             bool
 		pendingInExecutorResults  message.PendingState
 		queueLenInExecutorResults int
 	}{
@@ -960,8 +961,9 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			errorExpected: true,
 		},
 		{
-			name: "pulse change in RegisterRequest",
-			when: whenRegisterRequest,
+			name:          "pulse change in RegisterRequest",
+			when:          whenRegisterRequest,
+			retryExpected: true,
 		},
 		{
 			name:                      "pulse change in HasPendingRequests",
@@ -1147,21 +1149,14 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
 
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
-			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
-			suite.lr.innerFlowDispatcher.ChangePulse(ctx, *pulse)
+			err := suite.lr.OnPulse(ctx, *pulse)
+			suite.Require().NoError(err)
 
-			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
-			// TODO AALEKSEEV fix TestLogicRunnner/TestCallMethodWithOnPulse/pulse_change_in_ReqisterRequest
-			/*
-				var err error
-				for {
-					_, err = suite.lr.FlowDispgatcher.WrapBusHandle(ctx, parcel)
-					if err == nil || err.Error() != "Please retry" { // OK scenario for CallMethod // TODO AALEXEEV
-						break
-					}
-				}
-			*/
-			if test.errorExpected {
+			_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+			if test.retryExpected {
+				suite.Require().Error(err)
+				suite.Require().Equal(ErrRetry.Error(), err.Error())
+			} else if test.errorExpected {
 				suite.Require().Error(err)
 			} else {
 				suite.Require().NoError(err)
