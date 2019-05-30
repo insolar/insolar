@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
@@ -65,6 +66,7 @@ func newMetrics(t *testing.T) {
 	newctx := insmetrics.ChangeTags(ctx, tag.Insert(osxtag, "11.12.13"))
 	stats.Record(newctx, videoCount.M(1), videoSize.M(rand.Int63()))
 
+	time.Sleep(200 * time.Millisecond)
 	content, err := testm.FetchContent()
 	require.NoError(t, err, "fetch content failed")
 
