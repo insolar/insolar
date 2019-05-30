@@ -961,8 +961,9 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			flowCanceledExpected: true,
 		},
 		{
-			name: "pulse change in RegisterRequest",
-			when: whenRegisterRequest,
+			name:                 "pulse change in RegisterRequest",
+			when:                 whenRegisterRequest,
+			flowCanceledExpected: true,
 		},
 		{
 			name:                      "pulse change in HasPendingRequests",
