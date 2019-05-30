@@ -24,9 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
-
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
@@ -47,6 +44,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
