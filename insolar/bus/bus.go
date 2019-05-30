@@ -183,6 +183,7 @@ func (b *Bus) SendTarget(
 	}
 
 	go func() {
+		inslogger.FromContext(ctx).WithField("correlation_id", id).Info("waiting for reply")
 		select {
 		case <-reply.done:
 			inslogger.FromContext(ctx).Infof("Done waiting replies for message with correlationID %s", id)
