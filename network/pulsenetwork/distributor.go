@@ -52,10 +52,12 @@ package pulsenetwork
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -152,7 +154,13 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 		}
 	}()
 
-	ctx, span := instracer.StartSpan(ctx, "distributor.Distribute")
+	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
+	ctx, logger = inslogger.WithTraceField(ctx, traceID)
+
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.Distribute")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(pulse.PulseNumber)),
+	)
 	defer span.End()
 
 	bootstrapHosts := make([]*host.Host, 0, len(d.bootstrapHosts))
@@ -244,7 +252,11 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
 	pb := packet.NewBuilder(d.pulsarHost)
-	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).RequestID(d.generateID()).Type(types.Pulse).Build()
+	pulseRequest := pb.Receiver(host).Request(
+		&packet.RequestPulse{
+			Pulse:         *pulse,
+			TraceSpanData: instracer.MustSerialize(ctx),
+		}).RequestID(d.generateID()).Type(types.Pulse).Build()
 	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
@@ -260,8 +272,6 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 func (d *distributor) pause(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Pause ] Pause distribution, stopping transport")
-	_, span := instracer.StartSpan(ctx, "distributor.pause")
-	defer span.End()
 	d.pool.Reset()
 	err := d.transport.Stop(ctx)
 	if err != nil {
@@ -271,8 +281,6 @@ func (d *distributor) pause(ctx context.Context) {
 
 func (d *distributor) resume(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
-	ctx, span := instracer.StartSpan(ctx, "distributor.resume")
-	defer span.End()
 	return d.transport.Start(ctx)
 }
 

@@ -111,6 +111,7 @@ type HostNetwork interface {
 	// SendRequestToHost send request packet to a remote host.
 	SendRequestToHost(ctx context.Context, request Request, receiver *host.Host) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
+	// All RegisterRequestHandler calls should be executed before Start.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() RequestBuilder
@@ -267,6 +268,8 @@ type ClaimQueue interface {
 	Clear()
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go
+
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found or is not working.
@@ -314,4 +317,7 @@ type Auther interface {
 	// ValidateCert checks certificate signature
 	// TODO make this cert.validate()
 	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
+
+	// FilterJoinerNodes returns nodes which allowed to connect to this network in this state.
+	FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode
 }
