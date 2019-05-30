@@ -63,12 +63,27 @@ import (
 type ClaimType uint8
 
 const (
-	TypeNodeJoinClaim     = ClaimType(1)
-	TypeNodeAnnounceClaim = ClaimType(2)
-	TypeNodeLeaveClaim    = ClaimType(3)
+	TypeNodeJoinClaim      = ClaimType(1)
+	TypeNodeAnnounceClaim  = ClaimType(2)
+	TypeNodeLeaveClaim     = ClaimType(3)
+	TypeChangeNetworkClaim = ClaimType(4)
 )
 
 const claimHeaderSize = 2
+
+// ChangeNetworkClaim uses to change network state.
+type ChangeNetworkClaim struct {
+	Address string
+}
+
+func (cnc *ChangeNetworkClaim) Type() ClaimType {
+	return TypeChangeNetworkClaim
+}
+
+func (cnc *ChangeNetworkClaim) Clone() ReferendumClaim {
+	result := *cnc
+	return &result
+}
 
 type ReferendumClaim interface {
 	Serializer

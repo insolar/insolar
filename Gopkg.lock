@@ -605,7 +605,6 @@
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
     "github.com/jbenet/go-base58",
-    "github.com/magiconair/properties/assert",
     "github.com/olekukonko/tablewriter",
     "github.com/onrik/gomerkle",
     "github.com/pkg/errors",

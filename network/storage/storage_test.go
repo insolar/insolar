@@ -58,6 +58,8 @@ import (
 	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -78,11 +80,14 @@ func (k testBadgerKey) ID() []byte {
 func TestBadgerDB_Get(t *testing.T) {
 	t.Parallel()
 
+	ctx := inslogger.TestContext(t)
+
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
 	db, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
+	defer db.Stop(ctx)
 	require.NoError(t, err)
 
 	var (
@@ -104,11 +109,14 @@ func TestBadgerDB_Get(t *testing.T) {
 func TestBadgerDB_Set(t *testing.T) {
 	t.Parallel()
 
+	ctx := inslogger.TestContext(t)
+
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
 	db, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
+	defer db.Stop(ctx)
 	require.NoError(t, err)
 
 	var (
