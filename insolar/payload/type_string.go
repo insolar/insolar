@@ -18,11 +18,12 @@ func _() {
 	_ = x[TypeObjIndex-7]
 	_ = x[TypeObjState-8]
 	_ = x[TypeIndex-9]
+	_ = x[TypePass-10]
 }
 
-const _Type_name = "TypeUnknownTypeErrorTypeIDTypeObjectTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndex"
+const _Type_name = "TypeUnknownTypeErrorTypeIDTypeObjectTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePass"
 
-var _Type_index = [...]uint8{0, 11, 20, 26, 36, 45, 58, 71, 83, 95, 104}
+var _Type_index = [...]uint8{0, 11, 20, 26, 36, 45, 58, 71, 83, 95, 104, 112}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

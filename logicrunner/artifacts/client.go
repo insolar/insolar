@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
@@ -190,6 +191,8 @@ func (m *client) GetObject(
 	success := func() bool {
 		return index != nil && statePayload != nil
 	}
+
+	logger := inslogger.FromContext(ctx)
 	for rep := range reps {
 		replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
@@ -198,14 +201,17 @@ func (m *client) GetObject(
 
 		switch p := replyPayload.(type) {
 		case *payload.Index:
+			logger.Info("rep index")
 			index = &object.Lifeline{}
 			err := index.Unmarshal(p.Index)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal index")
 			}
 		case *payload.State:
+			logger.Info("rep state")
 			statePayload = p
 		case *payload.Error:
+			logger.Info("rep error: ", p.Text)
 			switch p.Code {
 			case payload.CodeDeactivated:
 				return nil, insolar.ErrDeactivated

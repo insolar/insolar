@@ -85,6 +85,12 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	err = h.handle(ctx, msg)
 	if err != nil {
 		logger.Error(err)
+		errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			logger.Error(errors.Wrap(err, "failed to reply error"))
+			return nil, nil
+		}
+		go h.Sender.Reply(ctx, msg, errMsg)
 	}
 
 	return nil, nil

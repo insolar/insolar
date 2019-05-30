@@ -82,6 +82,8 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 			return f.Handle(ctx, h.Present)
 		case payload.TypePass:
 			return s.handlePass(ctx, f)
+		case payload.TypeError:
+			return f.Handle(ctx, NewError(s.message.WatermillMsg).Present)
 		default:
 			return fmt.Errorf("no handler for message type %s", payloadType.String())
 		}
