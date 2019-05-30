@@ -1148,10 +1148,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
 
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
-			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
-			suite.lr.innerFlowDispatcher.ChangePulse(ctx, *pulse)
+			err := suite.lr.OnPulse(ctx, *pulse)
+			suite.Require().NoError(err)
 
-			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+			_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 
 			if test.flowCanceledExpected {
 				suite.Require().Error(err)
