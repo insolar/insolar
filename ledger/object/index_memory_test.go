@@ -737,4 +737,26 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		require.Equal(t, 2, len(buck.requestPNIndex))
 	})
+
+	t.Run("set result, other there are other fillaments", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+		buck := idx.buckets[pn][objID]
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		res := record.Result{Request: *objRef}
+
+		err := idx.SetResult(ctx, pn, objID, res)
+
+		require.NoError(t, err)
+
+		require.Equal(t, 2, len(buck.fullFilament))
+		require.Equal(t, pn, buck.fullFilament[0].PN)
+		require.Equal(t, pn+1, buck.fullFilament[1].PN)
+	})
+
 }
