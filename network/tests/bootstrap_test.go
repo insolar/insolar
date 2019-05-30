@@ -62,6 +62,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus/packets"
 )
 
@@ -108,6 +109,15 @@ func (s *bootstrapSuite) SetupTest() {
 
 	}
 
+	pulseReceivers := make([]string, 0)
+	for _, node := range s.fixture().bootstrapNodes {
+		pulseReceivers = append(pulseReceivers, node.host)
+	}
+
+	log.Info("Start test pulsar")
+	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	s.Require().NoError(err)
+
 	// TODO: fake bootstrap
 	// s.StartNodesNetwork(s.fixture().bootstrapNodes)
 }
@@ -131,4 +141,27 @@ func TestBootstrap(t *testing.T) {
 func (s *bootstrapSuite) TestExample() {
 	inslogger.FromContext(s.fixture().ctx).Info("Log -- ")
 	s.True(true)
+
+	testNode := s.newNetworkNode("testNode")
+	s.preInitNode(testNode)
+
+	s.InitNode(testNode)
+	s.StartNode(testNode)
+	defer func(s *bootstrapSuite) {
+		s.StopNode(testNode)
+	}(s)
+
+	// s.waitForConsensus(1)
+	//
+	// s.AssertActiveNodesCountDelta(0)
+	//
+	// s.waitForConsensus(1)
+	//
+	// s.AssertActiveNodesCountDelta(1)
+	// s.AssertWorkingNodesCountDelta(0)
+	//
+	// s.waitForConsensus(2)
+	//
+	// s.AssertActiveNodesCountDelta(1)
+	// s.AssertWorkingNodesCountDelta(1)
 }
