@@ -71,7 +71,7 @@ func (p *UpdateObject) Proceed(ctx context.Context) error {
 
 func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	done, err := p.Dep.WriteAccessor.Begin(ctx, p.PulseNumber)
-	if err != nil {
+	if err == hot.ErrWriteClosed {
 		return bus.Reply{Err: flow.ErrCancelled}
 	}
 	defer done()

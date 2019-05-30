@@ -62,7 +62,7 @@ func (p *SetRecord) Proceed(ctx context.Context) error {
 
 func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 	done, err := p.Dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	if err != nil {
+	if err == hot.ErrWriteClosed {
 		return bus.Reply{Err: flow.ErrCancelled}
 	}
 	defer done()
