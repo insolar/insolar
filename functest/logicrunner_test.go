@@ -52,6 +52,7 @@ func (c *One) Dec() (int, error) {
 	objectRef := callConstructor(t, uploadContract(t, contractCode))
 	emptyArgs, _ := insolar.Serialize(make([]interface{}, 0))
 
+	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objectRef, "Get", emptyArgs)
 	require.Equal(t, float64(0), result)
 
