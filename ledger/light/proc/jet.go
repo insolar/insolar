@@ -141,12 +141,6 @@ func NewCheckJet(target insolar.ID, pn insolar.PulseNumber, msg *message.Message
 }
 
 func (p *CheckJet) Proceed(ctx context.Context) error {
-	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
-	if p.pulse <= insolar.FirstPulseNumber {
-		p.Result.Jet = *insolar.NewJetID(0, nil)
-		return nil
-	}
-
 	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch jet")

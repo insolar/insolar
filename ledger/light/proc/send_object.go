@@ -43,7 +43,7 @@ type SendObject struct {
 	Dep struct {
 		Coordinator    jet.Coordinator
 		Jets           jet.Storage
-		JetUpdater     jet.Fetcher
+		JetFetcher     jet.Fetcher
 		RecordAccessor object.RecordAccessor
 		Blobs          blob.Accessor
 		Bus            insolar.MessageBus
@@ -108,7 +108,11 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		node, err := p.Dep.Coordinator.NodeForObject(ctx, p.objectID, flow.Pulse(ctx), stateID.Pulse())
+		jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
+		if err != nil {
+			return errors.Wrap(err, "failed to fetch jet")
+		}
+		node, err := p.Dep.Coordinator.NodeForJet(ctx, *jetID, flow.Pulse(ctx), stateID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to calculate role")
 		}

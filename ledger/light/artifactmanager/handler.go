@@ -151,7 +151,7 @@ func NewMessageHandler(
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Blobs = h.Blobs
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetUpdater = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Sender = h.Sender

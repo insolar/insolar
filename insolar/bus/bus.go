@@ -211,7 +211,7 @@ func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 	}
 
 	reply.Metadata.Set(MetaReceiver, originMeta.Sender.String())
-	reply.Metadata.Set(MetaTraceID, origin.Metadata.Get(MetaTraceID))
+	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	reply.SetContext(ctx)
 
 	err = b.pub.Publish(TopicOutgoing, reply)
