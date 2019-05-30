@@ -371,10 +371,12 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	}
 
 	bucks[bucket.ObjID] = &extendedIndexBucket{
-		IndexBucket:       bucket,
-		notClosedRequests: []record.Request{},
-		fullFilament:      []chainLink{},
-		isStateCalculated: false,
+		IndexBucket:            bucket,
+		notClosedRequests:      []record.Request{},
+		fullFilament:           []chainLink{},
+		isStateCalculated:      false,
+		requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
+		notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
 	}
 
 	stats.Record(ctx,

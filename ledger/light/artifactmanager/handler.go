@@ -193,6 +193,7 @@ func NewMessageHandler(
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
+			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetPendingFilament: func(p *proc.GetPendingFilament) {
 			p.Dep.PendingAccessor = h.PendingAccessor
