@@ -18,7 +18,6 @@ package logicrunner
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
@@ -30,6 +29,11 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
+
+// PSE AGN means "please again" in radio jargon.
+// This text was chosen because it's very unlikely anyone
+// will use the same text for anything else in our code base.
+var ErrRetry = errors.New("PSE AGN")
 
 type HandleCall struct {
 	dep *Dependencies
@@ -87,7 +91,7 @@ func (h *HandleCall) executeActual(
 
 	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
 		if err == flow.ErrCancelled {
-			return nil, fmt.Errorf("Please retry") // TODO AALEKSEEV move to some constant!
+			return nil, ErrRetry
 		}
 		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}

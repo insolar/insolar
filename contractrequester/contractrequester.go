@@ -24,18 +24,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/messagebus"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/messagebus"
 )
 
 // ContractRequester helps to call contracts
@@ -137,7 +137,13 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
 	for {
 		res, err = sender(ctx, msg, nil)
-		if err == nil || !strings.HasSuffix(err.Error(), "Please retry") { // TODO AALEKSEEV use 'PSE AGN' constant
+		// Yep, this is indeed a very ugly code. We are in a difficult situation here because
+		// currently errors are serialized between nodes as strings and are modified in
+		// random places with error.Wrap(). As an alternative we could introduce a new Reply
+		// type, e.g. TypeRetry. However this is not the best solution either because
+		// retry is not a normal reply (nor is it an error). Hopefully we will gather
+		// more cases like this one and refactor the code properly one day ¯\_(ツ)_/¯
+		if err == nil || !strings.HasSuffix(err.Error(), logicrunner.ErrRetry.Error()) {
 			break
 		}
 	}

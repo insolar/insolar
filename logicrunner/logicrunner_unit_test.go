@@ -1155,7 +1155,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			/*
 				var err error
 				for {
-					_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+					_, err = suite.lr.FlowDispgatcher.WrapBusHandle(ctx, parcel)
 					if err == nil || err.Error() != "Please retry" { // OK scenario for CallMethod // TODO AALEXEEV
 						break
 					}
