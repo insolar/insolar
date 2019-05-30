@@ -57,18 +57,6 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
     return rv
 }
 
-/*
-func InitializePrototypeRefs() map[XXX_insolar.Reference]string {
-    rv := make(map[XXX_insolar.Reference]string, 0)
-
-    {{ range $contract := .Contracts -}}
-    rv[shouldLoadRef("{{ $contract.PrototypeReference }}")] = "{{ $contract.Name }}"
-    {{- end }}
-
-    return rv
-}
-*/
-
 func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
     rv := make([]XXX_artifacts.CodeDescriptor, 0)
 

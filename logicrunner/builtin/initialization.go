@@ -50,16 +50,6 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	return rv
 }
 
-/*
-func InitializePrototypeRefs() map[XXX_insolar.Reference]string {
-    rv := make(map[XXX_insolar.Reference]string, 0)
-
-    rv[shouldLoadRef("111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2.11111111111111111111111111111111")] = "helloworld"
-
-    return rv
-}
-*/
-
 func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 	rv := make([]XXX_artifacts.CodeDescriptor, 0)
 
