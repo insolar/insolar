@@ -3,7 +3,7 @@ discovery_keys_dir: "{{ .BaseDir }}/reusekeys/discovery"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false
 heavy_genesis_config_file: "{{ .BaseDir }}/configs/heavy_genesis.json"
-heavy_genesis_contracts_dir: "{{ .BaseDir }}/contracts"
+heavy_genesis_plugins_dir: "{{ .BaseDir }}/contracts"
 contracts:
   insgocc: "bin/insgocc"
   outdir: "{{ .BaseDir }}/contracts"

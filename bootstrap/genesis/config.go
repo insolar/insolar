@@ -56,8 +56,7 @@ type Config struct {
 
 	// RootBalance is a start balance for the root member's wallet.
 	RootBalance uint `mapstructure:"root_balance"`
-
-	Contracts Contracts
+	Contracts   Contracts
 
 	// Discovery settings.
 

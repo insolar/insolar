@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DiscoveryNodeManager implements insolar.DiscoveryNodesStore.
+// DiscoveryNodeManager should be created by NewDiscoveryNodeManager.
 type DiscoveryNodeManager struct {
 	artifactManager artifact.Manager
 }
@@ -54,16 +54,15 @@ func (g *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discover
 
 	nodeDomainDesc, err := g.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("got err: ", err)
-		return err
+		return errors.Wrap(err, "failed to get node domain contract")
 	}
 
 	var ndObj nodedomain.NodeDomain
 	insolar.MustDeserialize(nodeDomainDesc.Memory(), &ndObj)
-	inslogger.FromContext(ctx).Debug("get index on the Node Domain contract: ", ndObj.NodeIndexPK)
+	inslogger.FromContext(ctx).Debugf("get index on the node domain contract: %v", ndObj.NodeIndexPK)
 
 	if len(ndObj.NodeIndexPK) != 0 {
-		inslogger.FromContext(ctx).Debug("discovery nodes already saved in the Node Domain index.")
+		inslogger.FromContext(ctx).Info("discovery nodes already saved in the node domain index.")
 		return nil
 	}
 
@@ -93,11 +92,7 @@ func (g *DiscoveryNodeManager) updateDiscoveryData(
 	}
 
 	err = g.updateNodeDomainIndex(ctx, indexMap)
-	if err != nil {
-		return errors.Wrap(err, "failed to update node domain index")
-	}
-
-	return nil
+	return errors.Wrap(err, "failed to update node domain index")
 }
 
 // addDiscoveryNodes adds discovery nodeInfo's objects on ledger, returns index to store on nodeInfo domain.
@@ -130,7 +125,7 @@ func (g *DiscoveryNodeManager) activateNodeRecord(
 ) (*insolar.Reference, error) {
 	nodeData, err := insolar.Serialize(node)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize nodeInfo instance")
+		return nil, errors.Wrap(err, "failed to serialize node record data")
 	}
 
 	nodeID, err := g.artifactManager.RegisterRequest(
@@ -141,7 +136,7 @@ func (g *DiscoveryNodeManager) activateNodeRecord(
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register request")
+		return nil, errors.Wrap(err, "failed to register request for node record")
 	}
 
 	contract := insolar.NewReference(*bootstrap.ContractRootDomain.Record(), *nodeID)
@@ -155,11 +150,12 @@ func (g *DiscoveryNodeManager) activateNodeRecord(
 		nodeData,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodeRecord ] Could'n activateNodeRecord nodeInfo object")
+		return nil, errors.Wrap(err, "failed to activate object of node record")
 	}
+
 	_, err = g.artifactManager.RegisterResult(ctx, bootstrap.ContractRootDomain, *contract, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register result")
+		return nil, errors.Wrap(err, "couldn't register result for new node object")
 	}
 	return contract, nil
 }
@@ -179,7 +175,7 @@ func (g *DiscoveryNodeManager) updateNodeDomainIndex(
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't serialize NodeDomain")
+		return errors.Wrap(err, "failed to serialize index for node domain")
 	}
 
 	_, err = g.artifactManager.UpdateObject(
@@ -189,5 +185,5 @@ func (g *DiscoveryNodeManager) updateNodeDomainIndex(
 		nodeDomainDesc,
 		updateData,
 	)
-	return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't update NodeDomain")
+	return errors.Wrap(err, "failed to update node domain")
 }

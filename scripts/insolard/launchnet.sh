@@ -132,7 +132,7 @@ create_required_dirs()
 {
     echo "create_required_dirs() starts ..."
     set -x
-#    mkdir -p $LEDGER_DIR
+    mkdir -p $LEDGER_DIR
     mkdir -p ${DISCOVERY_NODES_DATA}certs
     mkdir -p $CONFIGS_DIR
 
@@ -273,13 +273,13 @@ launch_insgorund()
     done < "${INSGORUND_PORT_FILE}"
 }
 
-#copy_data()
-#{
-#    echo "copy data dir to heavy"
-#    set -x
-#    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}data
-#    { set +x; } 2>/dev/null
-#}
+copy_data()
+{
+    echo "copy data dir to heavy"
+    set -x
+    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}data
+    { set +x; } 2>/dev/null
+}
 
 copy_discovery_certs()
 {

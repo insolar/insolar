@@ -34,7 +34,6 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -149,14 +148,7 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// DiscoveryNodesStore provides interface for persisting discovery nodes.
-type DiscoveryNodesStore interface {
-	// StoreDiscoveryNodes saves discovery nodes on ledger, adds index with them to Node Domain object.
-	//
-	// If Node Domain object already has index - skip all saves.
-	StoreDiscoveryNodes(context.Context, []insolar.DiscoveryNodeRegister) error
-}
-
+// Genesis holds data and objects required for genesis on heavy node.
 type Genesis struct {
 	ArtifactManager artifact.Manager
 	BaseRecord      *BaseRecord
@@ -166,58 +158,69 @@ type Genesis struct {
 	ContractsConfig insolar.GenesisContractsConfig
 }
 
-// implements components.Starter
+// Start implements components.Starter.
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
-	inslog.Info("CALL CreateIfNeeded")
 	isInit, err := g.BaseRecord.CreateIfNeeded(ctx)
 	if err != nil {
 		return err
 	}
-	inslog.Infof("CALL CreateIfNeeded result:", isInit)
 	if !isInit {
+		inslog.Info("[genesis] base genesis record exists, skip genesis")
 		return nil
 	}
-	inslogger.FromContext(ctx).Info("START Genesis.Init(START Genesis.Init()")
+	inslogger.FromContext(ctx).Info("[genesis] start...")
 
-	err = g.StoreContracts(ctx)
+	err = g.storeContracts(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("[genesis] store contracts failed: %v", err)
+		return err
+	}
 
 	discoveryNodeManager := NewDiscoveryNodeManager(g.ArtifactManager)
 	inslog.Info("CALL StoreDiscoveryNodes")
-	return discoveryNodeManager.StoreDiscoveryNodes(ctx, g.DiscoveryNodes)
+	err = discoveryNodeManager.StoreDiscoveryNodes(ctx, g.DiscoveryNodes)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("store discovery nodes failed: %v", err)
+		return err
+	}
+	return nil
 }
 
-func (g *Genesis) StoreContracts(ctx context.Context) error {
-	inslogger.FromContext(ctx).Info("CALL Genesis.StoreContracts()")
+func (g *Genesis) storeContracts(ctx context.Context) error {
+	inslog := inslogger.FromContext(ctx)
 
 	plugins, err := readPluginsDir(g.PluginsDir)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to read plugins dir")
 	}
+	inslog.Infof("[genesis] found %v plugins in %v", len(plugins), g.PluginsDir)
 
 	for name, file := range plugins {
 		err = g.prepareContractPrototype(ctx, name, file)
 		if err != nil {
-			return errors.Wrapf(err, "failed to prepare plugin's prototype %v for contract %v",
-				file, name)
+			return errors.Wrapf(err, "failed to prepare plugin's prototype %v for contract %v", file, name)
 		}
+		inslog.Infof("[genesis] code and prototype are activated for %v", name)
 	}
 
-	for name, conf := range contracts.GenesisContractsStates(g.ContractsConfig) {
-
-		err = g.activateContract(ctx, name, conf)
+	states := contracts.GenesisContractsStates(g.ContractsConfig)
+	for _, conf := range states {
+		err = g.activateContract(ctx, conf)
 		if err != nil {
 			return errors.Wrapf(err, "failed to activate contract %v", conf.Name)
 		}
+		inslog.Infof("[genesis] activate contract %v", conf.Name)
 	}
-
 	return nil
 }
 
-func (g *Genesis) activateContract(ctx context.Context, name string, state insolar.GenesisContractState) error {
+func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisContractState) error {
+	name := state.Name
+
 	objRef := rootdomain.GenesisRef(name)
-	id, err := g.ArtifactManager.RegisterRequest(
+	_, err := g.ArtifactManager.RegisterRequest(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
@@ -225,33 +228,29 @@ func (g *Genesis) activateContract(ctx context.Context, name string, state insol
 		},
 	)
 	if err != nil {
-		return errors.Wrapf(err, "failed to register contract by name %v", name)
+		return errors.Wrapf(err, "failed to register '%v' contract", name)
 	}
 
-	// just in case
-	actualRef := insolar.NewReference(rootdomain.RootDomain.ID(), *id)
-	if objRef != *actualRef {
-		return errors.Errorf(
-			"mismatch actual reference and expected for contract %v (actual=%v) (expected=%v)",
-			name, *actualRef, objRef,
-		)
+	parentRef := insolar.GenesisRecord.Ref()
+	if state.ParentName != "" {
+		parentRef = rootdomain.GenesisRef(state.ParentName)
 	}
 
 	_, err = g.ArtifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		objRef,
-		rootdomain.GenesisRef(state.ParentName),
+		parentRef,
 		rootdomain.GenesisRef(name+"_proto"),
 		state.Delegate,
 		state.Memory,
 	)
 	if err != nil {
-		return errors.Wrapf(err, "failed to activate %v contract", name)
+		return errors.Wrapf(err, "failed to activate object for '%v'", name)
 	}
 
 	_, err = g.ArtifactManager.RegisterResult(ctx, bootstrap.ContractRootDomain, objRef, nil)
-	return errors.Wrapf(err, "failed to register %v contract instance", name)
+	return errors.Wrapf(err, "failed to register result for '%v'", name)
 }
 
 func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, binFile string) error {
@@ -266,13 +265,14 @@ func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, bin
 		},
 	)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "can't register request for prototype '%v'", name)
 	}
 	protoRef := insolar.NewReference(rootDomainID, *protoID)
+	assertGenesisRef(*protoRef, name+"_proto")
 
 	pluginBinary, err := ioutil.ReadFile(binFile)
 	if err != nil {
-		return errors.Wrap(err, "[ buildPrototypes ] Can't ReadFile")
+		return errors.Wrap(err, "failed to read plugin file")
 	}
 	codeReq, err := g.ArtifactManager.RegisterRequest(
 		ctx,
@@ -282,11 +282,9 @@ func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, bin
 		},
 	)
 	if err != nil {
-		return errors.Wrapf(err, "[ buildPrototypes ] Can't RegisterRequest for code '%v'", name)
+		return errors.Wrapf(err, "failed to register request for code '%v'", name)
 	}
-	inslogger.FromContext(ctx).Debugf("%v code ID=%v\n", name, codeReq)
 
-	log.Debugf("Deploying code for contract %q", name)
 	codeID, err := g.ArtifactManager.DeployCode(
 		ctx,
 		rootDomainRef,
@@ -295,16 +293,16 @@ func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, bin
 		insolar.MachineTypeGoPlugin,
 	)
 	if err != nil {
-		return errors.Wrapf(err, "[ buildPrototypes ] Can't DeployCode for code '%v", name)
+		return errors.Wrapf(err, "failed to deploy code for code '%v", name)
 	}
 
 	codeRef := insolar.NewReference(rootDomainID, *codeID)
+	assertGenesisRef(*codeRef, name+"_code")
+
 	_, err = g.ArtifactManager.RegisterResult(ctx, rootDomainRef, *codeRef, nil)
 	if err != nil {
-		return errors.Wrapf(err, "[ buildPrototypes ] Can't SetRecord for code '%v'", name)
+		return errors.Wrapf(err, "failed to register code result for '%v'", name)
 	}
-
-	log.Infof("Deployed code %q for contract %q", codeRef.String(), name)
 
 	_, err = g.ArtifactManager.ActivatePrototype(
 		ctx,
@@ -315,17 +313,17 @@ func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, bin
 		nil,
 	)
 	if err != nil {
-		return errors.Wrapf(err, "[ buildPrototypes ] Can't ActivatePrototypef for code '%v'", name)
+		return errors.Wrapf(err, "failed to activate prototype for '%v'", name)
 	}
 
 	_, err = g.ArtifactManager.RegisterResult(ctx, rootDomainRef, *protoRef, nil)
-	return errors.Wrap(err, "failed register request")
+	return errors.Wrapf(err, "failed to register request for '%v'", name)
 }
 
 func readPluginsDir(dir string) (map[string]string, error) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "open plugin dir %v failed", dir)
 	}
 
 	result := map[string]string{}
@@ -333,11 +331,24 @@ func readPluginsDir(dir string) (map[string]string, error) {
 		if file.IsDir() {
 			continue
 		}
-		if strings.HasSuffix(file.Name(), ".so") {
-			result[file.Name()] = filepath.Join(dir, file.Name())
+		soName := file.Name()
+		if strings.HasSuffix(soName, ".so") {
+			name := soName[:len(soName)-len(".so")]
+			result[name] = filepath.Join(dir, soName)
 			continue
 		}
 	}
 
 	return result, nil
+}
+
+func assertGenesisRef(gotRef insolar.Reference, name string) {
+	expectRef := rootdomain.GenesisRef(name)
+	// check just in case
+	if gotRef != expectRef {
+		panic(errors.Errorf(
+			"mismatch actual reference and expected for name %v (got=%v; expected=%v)",
+			name, gotRef, expectRef,
+		))
+	}
 }

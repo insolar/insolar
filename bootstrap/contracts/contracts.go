@@ -25,19 +25,23 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func GenesisContractsStates(cfg insolar.GenesisContractsConfig) map[string]insolar.GenesisContractState {
-	return map[string]insolar.GenesisContractState{
-		insolar.GenesisNameRootDomain: rootDomain(),
-		insolar.GenesisNameNodeDomain: nodeDomain(),
-		insolar.GenesisNameRootMember: rootMember(cfg.RootPublicKey),
-		insolar.GenesisNameRootWallet: rootWallet(cfg.RootBalance),
+// GenesisContractsStates returns list contract configs for genesis.
+//
+// Hint: order matters, because of dependency contracts on each other.
+func GenesisContractsStates(cfg insolar.GenesisContractsConfig) []insolar.GenesisContractState {
+	return []insolar.GenesisContractState{
+		rootDomain(),
+		nodeDomain(),
+		rootMember(cfg.RootPublicKey),
+		rootWallet(cfg.RootBalance),
 	}
 }
 
 func rootDomain() insolar.GenesisContractState {
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameRootDomain,
-		ParentName: insolar.GenesisNameRootDomain, // or emtpy ?
+		ParentName: "",
+
 		Memory: mustGenMemory(&rootdomain.RootDomain{
 			RootMember:    bootstrap.ContractRootMember,
 			NodeDomainRef: bootstrap.ContractNodeDomain,
