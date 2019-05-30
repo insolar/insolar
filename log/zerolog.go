@@ -114,7 +114,7 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	var output io.Writer
 	switch strings.ToLower(cfg.Formatter) {
 	case "text":
-		output = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: true, TimeFormat: timestampFormat}
+		output = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: true, TimeFormat: timestampFormat, PartsOrder: fieldsOrder, FormatCaller: formatCaller()}
 	case "json":
 		output = os.Stderr
 	default:

@@ -30,6 +30,7 @@ var testdataDir = testdataPath()
 
 func buildCLI(name string) (string, error) {
 	binPath := filepath.Join(testdataDir, name)
+
 	out, err := exec.Command(
 		"go", "build",
 		"-o", binPath,
@@ -41,7 +42,7 @@ func buildCLI(name string) (string, error) {
 	return binPath, nil
 }
 
-func buildInciderCLI() (string, error) {
+func buildInsiderCLI() (string, error) {
 	return buildCLI("insgorund")
 }
 
@@ -59,7 +60,7 @@ func testdataPath() string {
 
 // Build compiles and return path to insgorund and insgocc binaries.
 func Build() (string, string, error) {
-	icc, err := buildInciderCLI()
+	icc, err := buildInsiderCLI()
 	if err != nil {
 		return "", "", err
 	}

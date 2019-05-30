@@ -621,7 +621,7 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 	s.Require().NoError(err)
 
 	for _, contract := range contracts {
-		// Make a copy for proper work of closure inside gorutine
+		// Make a copy for proper work of closure inside goroutine
 		contract := contract
 
 		s.T().Run(contract, func(t *testing.T) {

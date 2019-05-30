@@ -145,6 +145,64 @@ func (h *Handler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (ins
 	return &rep, nil
 }
 
+func (h *Handler) handleGetObject(
+	ctx context.Context, parcel insolar.Parcel,
+) (insolar.Reply, error) {
+	msg := parcel.Message().(*message.GetObject)
+
+	// Fetch object index. If not found redirect.
+	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch object index for %s", msg.Head.Record().DebugString())
+	}
+
+	// Determine object state id.
+	var stateID *insolar.ID
+	if msg.State != nil {
+		stateID = msg.State
+	} else {
+		stateID = idx.LatestState
+	}
+	if stateID == nil {
+		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
+	}
+
+	// Fetch state record.
+	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch state %s for %s", stateID.DebugString(), msg.Head.Record()))
+	}
+
+	virtRec := rec.Virtual
+	concrete := record.Unwrap(virtRec)
+	state, ok := concrete.(record.State)
+	if !ok {
+		return nil, errors.New("invalid object record")
+	}
+	if state.ID() == record.StateDeactivation {
+		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+	}
+
+	rep := reply.Object{
+		Head:         msg.Head,
+		State:        *stateID,
+		Prototype:    state.GetImage(),
+		IsPrototype:  state.GetIsPrototype(),
+		ChildPointer: idx.ChildPointer,
+		Parent:       idx.Parent,
+	}
+
+	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
+		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch blob")
+		}
+		rep.Memory = b.Value
+	}
+
+	return &rep, nil
+}
+
 func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetDelegate)
 

@@ -31,7 +31,7 @@ type Cascade struct {
 }
 
 // RemoteProcedure is remote procedure call function.
-type RemoteProcedure func(ctx context.Context, args [][]byte) ([]byte, error)
+type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go
 
@@ -76,6 +76,7 @@ const (
 
 // TODO This Interface seems to duplicate MBLocker
 //go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go
+
 // GlobalInsolarLock is lock of all incoming and outcoming network calls.
 // It's not intended to be used in multiple threads. And main use of it is `Set` method of `PulseManager`.
 type GlobalInsolarLock interface {
