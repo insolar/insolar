@@ -104,6 +104,8 @@ type fixture struct {
 	bootstrapNodes []*networkNode
 	networkNodes   []*networkNode
 	pulsar         TestPulsar
+
+	discoveriesAreBootstrapped uint32
 }
 
 const cacheDir = "network_cache/"
@@ -234,6 +236,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		go startNode(node)
 	}
 	waitResults(results, len(nodes))
+	atomic.StoreUint32(&s.fixture().discoveriesAreBootstrapped, 1)
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
@@ -492,7 +495,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	pubMock := &PublisherMock{}
 	// little hack: this Register will replace transport.Factory
 	// in servicenetwork internal component manager with fake factory
-	node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport))
+	// and DiscoveryBootstrapper with bootstrapMock
+	node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport), newBootstrapMock(s.fixture()))
 
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
 		&amMock, certManager, cryptographyService, mblocker, GIL, serviceNetwork, keyProc, terminationHandler,
