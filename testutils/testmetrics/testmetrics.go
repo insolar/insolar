@@ -18,7 +18,6 @@ package testmetrics
 
 import (
 	"context"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -28,9 +27,9 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
 )
 
 // TestMetrics provides testing helpers for metrics.
@@ -41,8 +40,7 @@ type TestMetrics struct {
 
 // Start configures, creates and starts metrics server,
 // returns initialized TestMetrics object.
-func Start(ctx context.Context, t *testing.T) TestMetrics {
-	inslog := inslogger.FromContext(ctx)
+func Start(ctx context.Context, t *testing.T) (*TestMetrics, error) {
 	cfg := configuration.NewMetrics()
 	host, _ := parseAddr(cfg.ListenAddress)
 
@@ -53,7 +51,7 @@ func Start(ctx context.Context, t *testing.T) TestMetrics {
 
 	m, err := metrics.NewMetrics(ctx, cfg, metrics.GetInsolarRegistry("test"), "test")
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to create new metrics server")
 	}
 
 	cert := testutils.NewCertificateMock(t)
@@ -64,13 +62,13 @@ func Start(ctx context.Context, t *testing.T) TestMetrics {
 
 	err = m.Start(ctx)
 	if err != nil {
-		inslog.Fatal("metrics server failed to start:", err)
+		return nil, errors.Wrapf(err, "metrics server failed to start on host %v", host)
 	}
 
-	return TestMetrics{
+	return &TestMetrics{
 		ctx:     ctx,
 		Metrics: m,
-	}
+	}, nil
 }
 
 func parseAddr(address string) (string, int32) {
@@ -83,7 +81,7 @@ func parseAddr(address string) (string, int32) {
 }
 
 // FetchContent fetches content from /metrics.
-func (tm TestMetrics) FetchContent() (string, error) {
+func (tm *TestMetrics) FetchContent() (string, error) {
 	code, content, err := tm.FetchURL("/metrics")
 	if err != nil && code != http.StatusOK {
 		return "", errors.New("got non 200 code")
@@ -92,7 +90,7 @@ func (tm TestMetrics) FetchContent() (string, error) {
 }
 
 // FetchURL fetches content from provided relative url.
-func (tm TestMetrics) FetchURL(relurl string) (int, string, error) {
+func (tm *TestMetrics) FetchURL(relurl string) (int, string, error) {
 	// to be sure metrics are available
 	time.Sleep(time.Millisecond * 5)
 
@@ -108,6 +106,6 @@ func (tm TestMetrics) FetchURL(relurl string) (int, string, error) {
 }
 
 // Stop wraps metrics Stop method.
-func (tm TestMetrics) Stop() error {
+func (tm *TestMetrics) Stop() error {
 	return tm.Metrics.Stop(tm.ctx)
 }

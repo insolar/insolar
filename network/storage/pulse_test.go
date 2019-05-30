@@ -51,7 +51,6 @@
 package storage
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -59,6 +58,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,9 +68,10 @@ func TestNewPulseStorage(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := inslogger.TestContext(t)
 	cm := component.NewManager(nil)
 	badgerDB, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
+	defer badgerDB.Stop(ctx)
 	ps := NewPulseStorage()
 
 	cm.Register(badgerDB, ps)

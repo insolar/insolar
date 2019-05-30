@@ -30,9 +30,9 @@ type ExecutionState struct {
 
 	Ref Ref
 
-	ObjectDescriptor artifacts.ObjectDescriptor
+	ObjectDescriptor    artifacts.ObjectDescriptor
 	PrototypeDescriptor artifacts.ObjectDescriptor
-	CodeDescriptor artifacts.CodeDescriptor
+	CodeDescriptor      artifacts.CodeDescriptor
 
 	deactivate bool
 	nonce      uint64
@@ -61,7 +61,7 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 		res.Contract = es.ObjectDescriptor.HeadRef()
 	}
 	if es.Current != nil {
-		res.Request = es.Current.Request
+		res.Request = es.Current.RequestRef
 	}
 	return res
 }
