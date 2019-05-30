@@ -52,7 +52,6 @@ package node
 
 import (
 	"crypto"
-	"encoding/gob"
 	"sync"
 	"sync/atomic"
 
@@ -183,9 +182,10 @@ func (n *node) SetLeavingETA(number insolar.PulseNumber) {
 	atomic.StoreUint32(&n.NodeLeavingETA, uint32(number))
 }
 
-func init() {
-	gob.Register(&node{})
-}
+//
+// func init() {
+// 	gob.Register(&node{})
+// }
 
 func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkNode, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
