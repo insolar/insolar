@@ -429,7 +429,7 @@ func (m *mPendingAccessorMockRequestsForObjID) Set(f func(p context.Context, p1 
 }
 
 // RequestsForObjID implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
-func (m *PendingAccessorMock) RequestsForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error) {
+func (m *PendingAccessorMock) OpenRequestsForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error) {
 	counter := atomic.AddUint64(&m.RequestsForObjIDPreCounter, 1)
 	defer atomic.AddUint64(&m.RequestsForObjIDCounter, 1)
 

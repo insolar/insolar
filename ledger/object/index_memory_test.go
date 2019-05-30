@@ -353,7 +353,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 
 		buck := idx.buckets[pn][objID]
 
-		require.Equal(t, pn, buck.PreviousPendingFilament)
+		require.Equal(t, insolar.PulseNumber(0), buck.PreviousPendingFilament)
 
 		require.Equal(t, 1, len(buck.PendingRecords))
 		require.Equal(t, 1, len(buck.fullFilament))
@@ -473,5 +473,162 @@ func TestInMemoryIndex_SetFilament(t *testing.T) {
 		require.Equal(t, pn+1, buck.fullFilament[2].PN)
 
 		require.Equal(t, record.Wrap(req), buck.fullFilament[1].Records[0])
+	})
+}
+
+func TestInMemoryIndex_Records(t *testing.T) {
+	t.Run("err when no lifeline", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+
+		_, err := idx.Records(ctx, pn, objID)
+
+		require.Error(t, err, ErrLifelineNotFound)
+	})
+
+	t.Run("works fine", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+
+		_ = idx.SetRequest(ctx, pn, objID, req)
+
+		data, err := idx.Records(ctx, pn, objID)
+
+		require.NoError(t, err)
+		require.Equal(t, 1, len(data))
+		require.Equal(t, record.Wrap(req), data[0])
+	})
+}
+
+func TestInMemoryIndex_OpenRequestsForObjID(t *testing.T) {
+	t.Run("err when no lifeline", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+
+		_, err := idx.OpenRequestsForObjID(ctx, pn, objID, 0)
+
+		require.Error(t, err, ErrLifelineNotFound)
+	})
+
+	t.Run("works fine", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+
+		idx.createBucket(ctx, pn, objID)
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+
+		objRefS := insolar.NewReference(insolar.ID{}, *insolar.NewID(234, nil))
+		reqS := record.Request{Object: objRefS}
+
+		err := idx.SetRequest(ctx, pn, objID, req)
+		require.NoError(t, err)
+		err = idx.SetRequest(ctx, pn, objID, reqS)
+		require.NoError(t, err)
+
+		t.Run("query all", func(t *testing.T) {
+			reqs, err := idx.OpenRequestsForObjID(ctx, pn, objID, 10)
+			require.NoError(t, err)
+			require.Equal(t, 2, len(reqs))
+			require.Equal(t, req, reqs[0])
+			require.Equal(t, reqS, reqs[1])
+		})
+
+		t.Run("query one", func(t *testing.T) {
+			reqs, err := idx.OpenRequestsForObjID(ctx, pn, objID, 1)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(reqs))
+			require.Equal(t, req, reqs[0])
+		})
+	})
+}
+
+func TestInMemoryIndex_MetaForObjID(t *testing.T) {
+	t.Run("err when no lifeline", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+
+		_, err := idx.MetaForObjID(ctx, pn, objID)
+
+		require.Error(t, err, ErrLifelineNotFound)
+	})
+
+	t.Run("works fine. first in a row", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+
+		meta, err := idx.MetaForObjID(ctx, pn, objID)
+		require.NoError(t, err)
+
+		require.Nil(t, meta.PreviousPN)
+		require.Nil(t, meta.ReadUntil)
+		require.Equal(t, false, meta.IsStateCalculated)
+	})
+
+	t.Run("works fine. second in a row", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+
+		ru := insolar.PulseNumber(888)
+		idx.buckets[pn][objID].PreviousPendingFilament = insolar.PulseNumber(888)
+		idx.buckets[pn][objID].readPendingUntil = &ru
+
+		meta, err := idx.MetaForObjID(ctx, pn, objID)
+		require.NoError(t, err)
+
+		require.NotNil(t, meta.PreviousPN)
+		require.NotNil(t, meta.ReadUntil)
+
+		require.Equal(t, false, meta.IsStateCalculated)
+		require.Equal(t, insolar.PulseNumber(888), *meta.PreviousPN)
+		require.Equal(t, insolar.PulseNumber(888), *meta.ReadUntil)
+	})
+}
+
+func TestInMemoryIndex_SetReadUntil(t *testing.T) {
+	t.Run("err when no lifeline", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+
+		err := idx.SetReadUntil(ctx, pn, objID, nil)
+
+		require.Error(t, err, ErrLifelineNotFound)
+	})
+
+	t.Run("works fine", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+
+		rupn := insolar.PulseNumber(10)
+		err := idx.SetReadUntil(ctx, pn, objID, &rupn)
+
+		require.NoError(t, err)
+		require.Equal(t, insolar.PulseNumber(10), *idx.buckets[pn][objID].readPendingUntil)
 	})
 }

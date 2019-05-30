@@ -150,9 +150,9 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	b.Lock()
 	defer b.Unlock()
 
-	if b.PreviousPendingFilament == 0 {
-		b.PreviousPendingFilament = pn
-	}
+	// if b.PreviousPendingFilament == 0 {
+	// 	b.PreviousPendingFilament = pn
+	// }
 
 	b.PendingRecords = append(b.PendingRecords, record.Wrap(req))
 
@@ -323,7 +323,7 @@ func (i *InMemoryIndex) MetaForObjID(ctx context.Context, currentPN insolar.Puls
 	defer b.RUnlock()
 
 	var ppf *insolar.PulseNumber
-	if b.PreviousPendingFilament != currentPN {
+	if b.PreviousPendingFilament != 0 {
 		ppf = &b.PreviousPendingFilament
 	}
 
@@ -334,7 +334,7 @@ func (i *InMemoryIndex) MetaForObjID(ctx context.Context, currentPN insolar.Puls
 	}, nil
 }
 
-func (i *InMemoryIndex) RequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error) {
+func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error) {
 	b := i.bucket(currentPN, objID)
 	if b == nil {
 		return nil, ErrLifelineNotFound

@@ -267,7 +267,7 @@ func (p *SendObject) fetchPendings(ctx context.Context, currentPN insolar.PulseN
 
 	// Because we are the first light in the chain
 	if pendMeta.PreviousPN == nil || pendMeta.IsStateCalculated == true {
-		return p.Dep.PendingAccessor.RequestsForObjID(ctx, currentPN, objID, p.returnPendings)
+		return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, p.returnPendings)
 	}
 
 	err = p.fillPendingFilament(ctx, currentPN, objID, *pendMeta.PreviousPN, pendMeta.ReadUntil)
@@ -280,7 +280,7 @@ func (p *SendObject) fetchPendings(ctx context.Context, currentPN insolar.PulseN
 		return []record.Request{}, err
 	}
 
-	return p.Dep.PendingAccessor.RequestsForObjID(ctx, currentPN, objID, p.returnPendings)
+	return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, p.returnPendings)
 }
 
 func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, destPN insolar.PulseNumber, readUntil *insolar.PulseNumber) error {
