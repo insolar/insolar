@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"testing"
 
+	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
@@ -59,4 +60,10 @@ func TestReferences(t *testing.T) {
 			require.Equal(t, p.expect, p.got.String(), "reference is stable")
 		})
 	}
+}
+
+func TestRootDomain(t *testing.T) {
+	ref1 := rootdomain.RootDomain.Ref()
+	ref2 := rootdomain.GenesisRef(insolar.GenesisNameRootDomain)
+	require.Equal(t, ref1.String(), ref2.String(), "reference is the same")
 }
