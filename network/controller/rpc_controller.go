@@ -52,11 +52,11 @@ package controller
 
 import (
 	"context"
-	"encoding/gob"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -94,35 +94,6 @@ type rpcController struct {
 	methodTable map[string]insolar.RemoteProcedure
 }
 
-type RequestRPC struct {
-	Method string
-	Data   [][]byte
-}
-
-type ResponseRPC struct {
-	Success bool
-	Result  []byte
-	Error   string
-}
-
-type RequestCascade struct {
-	TraceID string
-	RPC     RequestRPC
-	Cascade insolar.Cascade
-}
-
-type ResponseCascade struct {
-	Success bool
-	Error   string
-}
-
-func init() {
-	gob.Register(&RequestRPC{})
-	gob.Register(&ResponseRPC{})
-	gob.Register(&RequestCascade{})
-	gob.Register(&ResponseCascade{})
-}
-
 func (rpc *rpcController) IAmRPCController() {
 	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
 }
@@ -136,7 +107,7 @@ func (rpc *rpcController) RemoteProcedureRegister(name string, method insolar.Re
 	rpc.methodTable[name] = method
 }
 
-func (rpc *rpcController) invoke(ctx context.Context, name string, data [][]byte) ([]byte, error) {
+func (rpc *rpcController) invoke(ctx context.Context, name string, data []byte) ([]byte, error) {
 	method, exists := rpc.methodTable[name]
 	if !exists {
 		return nil, errors.New(fmt.Sprintf("RPC with name %s is not registered", name))
@@ -156,11 +127,11 @@ func (rpc *rpcController) SendCascadeMessage(data insolar.Cascade, method string
 	)
 	defer span.End()
 	ctx = msg.Context(ctx)
-	return rpc.initCascadeSendMessage(ctx, data, false, method, [][]byte{message.ParcelToBytes(msg)})
+	return rpc.initCascadeSendMessage(ctx, data, false, method, message.ParcelToBytes(msg))
 }
 
 func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insolar.Cascade,
-	findCurrentNode bool, method string, args [][]byte) error {
+	findCurrentNode bool, method string, args []byte) error {
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.initCascadeSendMessage")
 	span.AddAttributes(
@@ -207,52 +178,57 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insol
 }
 
 func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data insolar.Cascade, nodeID insolar.Reference,
-	method string, args [][]byte) error {
+	method string, args []byte) error {
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
 	defer span.End()
-	request := rpc.Network.NewRequestBuilder().Type(types.Cascade).Data(&RequestCascade{
+	request := &packet.CascadeRequest{
 		TraceID: inslogger.TraceID(ctx),
-		RPC: RequestRPC{
+		RPC: &packet.RPCRequest{
 			Method: method,
 			Data:   args,
 		},
-		Cascade: data,
-	}).Build()
+		Cascade: &packet.Cascade{
+			NodeIds:           data.NodeIds,
+			Entropy:           data.Entropy,
+			ReplicationFactor: uint32(data.ReplicationFactor),
+		},
+	}
 
-	future, err := rpc.Network.SendRequest(ctx, request, nodeID)
+	future, err := rpc.Network.SendRequest(ctx, types.Cascade, request, nodeID)
 	if err != nil {
 		return err
 	}
 
-	go func(ctx context.Context, f network.Future, duration time.Duration) {
+	go func(ctx context.Context, receiver insolar.Reference, f network.Future, duration time.Duration) {
 		response, err := f.WaitResponse(duration)
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to get response to cascade message request from node %s: %s",
-				future.Request().GetSender(), err.Error())
+				receiver, err.Error())
 			return
 		}
-		data := response.GetData().(*ResponseCascade)
+		if response.GetResponse() == nil || response.GetResponse().GetBasic() == nil {
+			inslogger.FromContext(ctx).Warnf("Failed to get response to cascade message request from node %s: "+
+				"got invalid response protobuf message: %s", receiver, response)
+		}
+		data := response.GetResponse().GetBasic()
 		if !data.Success {
 			inslogger.FromContext(ctx).Warnf("Error response to cascade message request from node %s: %s",
 				response.GetSender(), data.Error)
 			return
 		}
-	}(ctx, future, rpc.options.PacketTimeout)
+	}(ctx, nodeID, future, rpc.options.PacketTimeout)
 
 	return nil
 }
 
 func (rpc *rpcController) SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error) {
-	request := rpc.Network.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
+	request := &packet.RPCRequest{
 		Method: name,
-		Data:   [][]byte{msgBytes},
-	}).Build()
+		Data:   msgBytes,
+	}
 
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("SendParcel with nodeID = %s method = %s, RequestID = %d", nodeID.String(),
-		name, request.GetRequestID())
-	future, err := rpc.Network.SendRequest(ctx, request, nodeID)
+	future, err := rpc.Network.SendRequest(ctx, types.RPC, request, nodeID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
 	}
@@ -260,8 +236,12 @@ func (rpc *rpcController) SendBytes(ctx context.Context, nodeID insolar.Referenc
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}
-	data := response.GetData().(*ResponseRPC)
-	if !data.Success {
+	if response.GetResponse() == nil || response.GetResponse().GetRPC() == nil {
+		inslogger.FromContext(ctx).Warnf("Error getting RPC response from node %s: "+
+			"got invalid response protobuf message: %s", nodeID, response)
+	}
+	data := response.GetResponse().GetRPC()
+	if data.Result == nil {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
 	stats.Record(ctx, statParcelsReplySizeBytes.M(int64(len(data.Result))))
@@ -273,48 +253,63 @@ func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg
 	ctx := context.Background() // TODO: ctx as argument
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, msg.Type().String())
 	stats.Record(ctx, statParcelsSentSizeBytes.M(int64(len(msgBytes))))
-	request := rpc.Network.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
+	request := &packet.RPCRequest{
 		Method: name,
-		Data:   [][]byte{msgBytes},
-	}).Build()
+		Data:   msgBytes,
+	}
 
 	start := time.Now()
 	ctx = msg.Context(ctx)
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("SendParcel with nodeID = %s method = %s, message reference = %s, RequestID = %d", nodeID.String(),
-		name, msg.DefaultTarget().String(), request.GetRequestID())
-	future, err := rpc.Network.SendRequest(ctx, request, nodeID)
+	// TODO: change sendrequest signature to have request as argument
+	logger.Debugf("Before SendParcel with nodeID = %s method = %s, message reference = %s", nodeID.String(),
+		name, msg.DefaultTarget().String())
+	future, err := rpc.Network.SendRequest(ctx, types.RPC, request, nodeID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
 	}
+	logger.Debugf("SendParcel with nodeID = %s method = %s, message reference = %s, RequestID = %d", nodeID.String(),
+		name, msg.DefaultTarget().String(), future.Request().GetRequestID())
 	response, err := future.WaitResponse(rpc.options.PacketTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}
-	data := response.GetData().(*ResponseRPC)
+	if response.GetResponse() == nil || response.GetResponse().GetRPC() == nil {
+		inslogger.FromContext(ctx).Warnf("Error getting RPC response from node %s: "+
+			"got invalid response protobuf message: %s", nodeID, response)
+	}
+	data := response.GetResponse().GetRPC()
 	logger.Debugf("Inside SendParcel: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
 		msg.Type(), msg.DefaultTarget(), msg.GetCaller(), msg.DefaultRole(), time.Since(start))
-	if !data.Success {
+	if data.Result == nil {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
 	stats.Record(ctx, statParcelsReplySizeBytes.M(int64(len(data.Result))))
 	return data.Result, nil
 }
 
-func (rpc *rpcController) processMessage(ctx context.Context, request network.Request) (network.Response, error) {
+func (rpc *rpcController) processMessage(ctx context.Context, request network.Packet) (network.Packet, error) {
+	if request.GetRequest() == nil || request.GetRequest().GetRPC() == nil {
+		inslogger.FromContext(ctx).Warnf("process RPC: got invalid request protobuf message: %s", request)
+	}
+
 	ctx = insmetrics.InsertTag(ctx, tagPacketType, request.GetType().String())
 	stats.Record(ctx, statPacketsReceived.M(1))
 
-	payload := request.GetData().(*RequestRPC)
+	payload := request.GetRequest().GetRPC()
 	result, err := rpc.invoke(ctx, payload.Method, payload.Data)
 	if err != nil {
-		return rpc.Network.BuildResponse(ctx, request, &ResponseRPC{Success: false, Error: err.Error()}), nil
+		return rpc.Network.BuildResponse(ctx, request, &packet.RPCResponse{Error: err.Error()}), nil
 	}
-	return rpc.Network.BuildResponse(ctx, request, &ResponseRPC{Success: true, Result: result}), nil
+	return rpc.Network.BuildResponse(ctx, request, &packet.RPCResponse{Result: result}), nil
 }
 
-func (rpc *rpcController) processCascade(ctx context.Context, request network.Request) (network.Response, error) {
-	payload := request.GetData().(*RequestCascade)
+func (rpc *rpcController) processCascade(ctx context.Context, request network.Packet) (network.Packet, error) {
+	if request.GetRequest() == nil || request.GetRequest().GetCascade() == nil {
+		inslogger.FromContext(ctx).Warnf("process cascade: got invalid request protobuf message: %s", request)
+	}
+
+	payload := request.GetRequest().GetCascade()
 	ctx, logger := inslogger.WithTraceField(ctx, payload.TraceID)
 
 	generalError := ""
@@ -323,16 +318,21 @@ func (rpc *rpcController) processCascade(ctx context.Context, request network.Re
 		logger.Debugf("failed to invoke RPC: %s", invokeErr.Error())
 		generalError += invokeErr.Error() + "; "
 	}
-	sendErr := rpc.initCascadeSendMessage(ctx, payload.Cascade, true, payload.RPC.Method, payload.RPC.Data)
+	cascade := insolar.Cascade{
+		NodeIds:           payload.Cascade.NodeIds,
+		Entropy:           payload.Cascade.Entropy,
+		ReplicationFactor: uint(payload.Cascade.ReplicationFactor),
+	}
+	sendErr := rpc.initCascadeSendMessage(ctx, cascade, true, payload.RPC.Method, payload.RPC.Data)
 	if sendErr != nil {
 		logger.Debugf("failed to send message to next cascade layer: %s", sendErr.Error())
 		generalError += sendErr.Error()
 	}
 
 	if generalError != "" {
-		return rpc.Network.BuildResponse(ctx, request, &ResponseCascade{Success: false, Error: generalError}), nil
+		return rpc.Network.BuildResponse(ctx, request, &packet.BasicResponse{Success: false, Error: generalError}), nil
 	}
-	return rpc.Network.BuildResponse(ctx, request, &ResponseCascade{Success: true}), nil
+	return rpc.Network.BuildResponse(ctx, request, &packet.BasicResponse{Success: true}), nil
 }
 
 func (rpc *rpcController) Init(ctx context.Context) error {

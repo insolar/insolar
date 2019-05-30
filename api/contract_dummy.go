@@ -36,6 +36,10 @@ func NewContractService(runner *Runner) *ContractService {
 type DummyArgs struct{}
 type DummyReply struct{}
 
+type UploadReply struct {
+	PrototypeRef string `json:"PrototypeRef"`
+}
+
 func (s *ContractService) Upload(r *http.Request, args *DummyArgs, reply *DummyReply) error {
 	return errors.New("method allowed only in build with functest tag")
 }

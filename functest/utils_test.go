@@ -23,6 +23,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -192,17 +194,18 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		return nil, err
 	}
 	var resp response
-	currentInterNum := 1
-	for ; currentInterNum <= sendRetryCount; currentInterNum++ {
+	currentIterNum := 1
+	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
 			Method: method,
 			Params: params,
 		})
 
 		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
-			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", currentInterNum, sendRetryCount)
+			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
+			resp.Error = netErr.Error()
 			continue
 		} else if err != nil {
 			return nil, err
@@ -217,36 +220,9 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		if resp.Error == "" {
 			return resp.Result, nil
 		}
-		if strings.Contains(resp.Error, "Incorrect message pulse") {
-			fmt.Printf("Incorrect message pulse, retry. Attempt: %d/%d\n(error - %s)\n", currentInterNum, sendRetryCount, resp.Error)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
-
-		if strings.Contains(resp.Error, "flow canceled") {
-			fmt.Printf("Flow canceled, retry. Attempt: %d/%d\n(error - %s)\n", currentInterNum, sendRetryCount, resp.Error)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
 
 		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
-			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentInterNum, sendRetryCount)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
-
-		if strings.Contains(resp.Error, "invalid state record") {
-			fmt.Printf("Invalid state record, retry. Attempt: %d/%d\n(error - %s)\n", currentInterNum, sendRetryCount, resp.Error)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
-
-		if strings.Contains(resp.Error, "invalid child record") {
-			fmt.Printf("Invalid child record, retry. Attempt: %d/%d\n(error - %s)\n", currentInterNum, sendRetryCount, resp.Error)
+			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
 			continue
@@ -255,7 +231,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		break
 	}
 
-	if currentInterNum > sendRetryCount {
+	if currentIterNum > sendRetryCount {
 		return nil, errors.New("Number of retries exceeded. " + resp.Error)
 	}
 
@@ -283,4 +259,87 @@ func newUserWithKeys() (*user, error) {
 		privKey: string(privKeyStr),
 		pubKey:  string(pubKeyStr),
 	}, nil
+}
+
+func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
+	uploadBody := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "contract.Upload",
+		"id":      "",
+		"params": map[string]string{
+			"name": "test",
+			"code": contractCode,
+		},
+	})
+	require.NotEmpty(t, uploadBody)
+
+	uploadRes := struct {
+		Version string          `json:"jsonrpc"`
+		ID      string          `json:"id"`
+		Result  api.UploadReply `json:"result"`
+	}{}
+
+	err := json.Unmarshal(uploadBody, &uploadRes)
+	require.NoError(t, err)
+
+	prototypeRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
+	require.NoError(t, err)
+
+	emptyRef := make([]byte, insolar.RecordRefSize)
+	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), prototypeRef)
+
+	return prototypeRef
+}
+
+func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Reference {
+	objectBody := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "contract.CallConstructor",
+		"id":      "",
+		"params": map[string]string{
+			"PrototypeRefString": prototypeRef.String(),
+		},
+	})
+	require.NotEmpty(t, objectBody)
+
+	callConstructorRes := struct {
+		Version string                   `json:"jsonrpc"`
+		ID      string                   `json:"id"`
+		Result  api.CallConstructorReply `json:"result"`
+	}{}
+
+	err := json.Unmarshal(objectBody, &callConstructorRes)
+	require.NoError(t, err)
+
+	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
+	require.NoError(t, err)
+
+	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)
+
+	return objectRef
+}
+
+func callMethod(t *testing.T, objectRef *insolar.Reference, method string, argsSerialized []byte) interface{} {
+	callMethodBody := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "contract.CallMethod",
+		"id":      "",
+		"params": map[string]interface{}{
+			"ObjectRefString": objectRef.String(),
+			"Method":          method,
+			"MethodArgs":      argsSerialized,
+		},
+	})
+	require.NotEmpty(t, callMethodBody)
+
+	callRes := struct {
+		Version string              `json:"jsonrpc"`
+		ID      string              `json:"id"`
+		Result  api.CallMethodReply `json:"result"`
+	}{}
+
+	err := json.Unmarshal(callMethodBody, &callRes)
+	require.NoError(t, err)
+
+	return callRes.Result.ExtractedReply
 }

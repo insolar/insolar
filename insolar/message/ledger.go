@@ -88,8 +88,8 @@ func (*GetCode) Type() insolar.MessageType {
 // GetObject retrieves object From storage.
 type GetObject struct {
 	ledgerMessage
-	Head     insolar.Reference
-	State    *insolar.ID // If nil, will fetch the latest state.
+	Head  insolar.Reference
+	State *insolar.ID // If nil, will fetch the latest state.
 }
 
 // AllowedSenderObjectAndRole implements interface method

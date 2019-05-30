@@ -26,6 +26,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type testKey struct {
@@ -44,10 +46,13 @@ func (k testKey) ID() []byte {
 func TestDB_Components(t *testing.T) {
 	t.Parallel()
 
+	ctx := inslogger.TestContext(t)
+
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 	badger, err := NewBadgerDB(tmpdir)
+	defer badger.Stop(ctx)
 	require.NoError(t, err)
 
 	mock := NewMemoryMockDB()

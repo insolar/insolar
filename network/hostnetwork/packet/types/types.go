@@ -50,12 +50,18 @@
 
 package types
 
+import (
+	"bytes"
+	"encoding/base64"
+)
+
 //go:generate stringer -type=PacketType
 type PacketType int
 
 const (
+	Unknown PacketType = iota
 	// Ping is packet type to ping remote node.
-	Ping PacketType = iota + 1
+	Ping
 	// RPC is packet type to execute RPC on a remote node.
 	RPC
 	// Cascade is packet type to send cascade message and execute RPC on each node of the cascade.
@@ -77,3 +83,31 @@ const (
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
 )
+
+// RequestID is 64 bit unsigned int request id.
+type RequestID uint64
+
+type RPCPayload []byte
+
+func (p RPCPayload) String() string {
+	return "Base64(" + base64.StdEncoding.EncodeToString(p) + ")"
+}
+
+func (p RPCPayload) Equal(other RPCPayload) bool {
+	return bytes.Equal(p, other)
+}
+
+func (p RPCPayload) Size() int {
+	return len(p)
+}
+
+func (p RPCPayload) MarshalTo(data []byte) (int, error) {
+	copy(data, p)
+	return p.Size(), nil
+}
+
+func (p *RPCPayload) Unmarshal(data []byte) error {
+	*p = make([]byte, len(data))
+	copy(*p, data)
+	return nil
+}

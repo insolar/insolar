@@ -171,7 +171,7 @@ prepare()
 
 build_binaries()
 {
-    make build
+    make BUILD_TAGS="-tags functest" build
 }
 
 rebuild_binaries()

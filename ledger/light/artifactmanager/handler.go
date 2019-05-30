@@ -19,14 +19,11 @@ package artifactmanager
 import (
 	"context"
 	"fmt"
-	"time"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -36,8 +33,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
@@ -70,6 +65,8 @@ type MessageHandler struct {
 
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
+
+	WriteAccessor hot.WriteAccessor
 
 	LifelineIndex         object.LifelineIndex
 	IndexBucketModifier   object.IndexBucketModifier
@@ -127,12 +124,14 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
 			p.Dep.Sender = h.Sender
+			p.Dep.WriteAccessor = h.WriteAccessor
 		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PlatformCryptographyScheme = h.PCS
 			p.Dep.Sender = h.Sender
+			p.Dep.PCS = h.PCS
+			p.Dep.WriteAccessor = h.WriteAccessor
 		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
@@ -165,6 +164,7 @@ func NewMessageHandler(
 			p.Dep.LifelineStateModifier = h.LifelineStateModifier
 			p.Dep.LifelineIndex = h.LifelineIndex
 			p.Dep.Sender = h.Sender
+			p.Dep.WriteAccessor = h.WriteAccessor
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.Coordinator = h.JetCoordinator
@@ -224,35 +224,6 @@ func NewMessageHandler(
 		return initHandle(msg).Future
 	})
 	return h
-}
-
-func instrumentHandler(name string) Handler {
-	return func(handler insolar.MessageHandler) insolar.MessageHandler {
-		return func(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
-			inslog := inslogger.FromContext(ctx)
-			start := time.Now()
-			code := "2xx"
-			ctx = insmetrics.InsertTag(ctx, tagMethod, name)
-
-			repl, err := handler(ctx, p)
-
-			latency := time.Since(start)
-			if err != nil {
-				code = "5xx"
-				inslog.Errorf("AM's handler %v returns error: %v", name, err)
-			}
-			inslog.Debugf("measured time of AM method %v is %v", name, latency)
-
-			ctx = insmetrics.ChangeTags(
-				ctx,
-				tag.Insert(tagMethod, name),
-				tag.Insert(tagResult, code),
-			)
-			stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
-
-			return repl, err
-		}
-	}
 }
 
 // Init initializes handlers and middleware.
