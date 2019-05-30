@@ -56,7 +56,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 		}
 		os.Unlock()
 
-		h.dep.Bus.Reply(ctx, h.Message, replyOk)
+		h.dep.Sender.Reply(ctx, h.Message, replyOk)
 		return nil
 	}
 	es := os.ExecutionState
@@ -80,7 +80,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 		return errors.Wrap(err, "[ HandlePendingFinished ] StartQueueProcessorIfNeeded returns error")
 	}
 
-	h.dep.Bus.Reply(ctx, h.Message, replyOk)
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
 
 }

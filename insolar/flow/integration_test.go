@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -49,16 +49,19 @@ func makeParcelMock(t *testing.T) insolar.Parcel {
 
 func TestEmptyHandle(t *testing.T) {
 	testReply := &mockReply{}
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
-				message.ReplyTo <- bus.Reply{Reply: testReply}
+				replyChan <- testReply
 				return nil
 			}
 		}, nil)
 
-	reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+	msg := &message.Message{}
+	_, err := disp.Process(msg)
 	require.NoError(t, err)
+	reply := <-replyChan
 	require.Equal(t, testReply, reply)
 }
 
@@ -71,18 +74,21 @@ func (p *EmptyProcedure) Proceed(context.Context) error {
 func TestCallEmptyProcedure(t *testing.T) {
 	testReply := &mockReply{}
 
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				err := f.Procedure(context, &EmptyProcedure{}, true)
 				require.NoError(t, err)
-				message.ReplyTo <- bus.Reply{Reply: testReply}
+				replyChan <- testReply
 				return nil
 			}
 		}, nil)
 
-	reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+	msg := &message.Message{}
+	_, err := disp.Process(msg)
 	require.NoError(t, err)
+	reply := <-replyChan
 	require.Equal(t, testReply, reply)
 
 }
@@ -96,18 +102,21 @@ func (p *ErrorProcedure) Proceed(context.Context) error {
 func TestProcedureReturnError(t *testing.T) {
 	testReply := &mockReply{}
 
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				err := f.Procedure(context, &ErrorProcedure{}, true)
 				require.Error(t, err)
-				message.ReplyTo <- bus.Reply{Reply: testReply}
+				replyChan <- testReply
 				return nil
 			}
 		}, nil)
 
-	reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+	msg := &message.Message{}
+	_, err := disp.Process(msg)
 	require.NoError(t, err)
+	reply := <-replyChan
 	require.Equal(t, testReply, reply)
 }
 
@@ -126,22 +135,25 @@ func TestChangePulse(t *testing.T) {
 
 	procedureStarted := make(chan struct{})
 
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				longProcedure := LongProcedure{}
 				longProcedure.started = procedureStarted
 				err := f.Procedure(context, &longProcedure, true)
 				require.Equal(t, flow.ErrCancelled, err)
-				message.ReplyTo <- bus.Reply{Reply: testReply}
+				replyChan <- testReply
 				return nil
 			}
 		}, nil)
 
 	handleProcessed := make(chan struct{})
 	go func() {
-		reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+		msg := &message.Message{}
+		_, err := disp.Process(msg)
 		require.NoError(t, err)
+		reply := <-replyChan
 		require.Equal(t, testReply, reply)
 		handleProcessed <- struct{}{}
 	}()
@@ -160,8 +172,9 @@ func TestChangePulseAndMigrate(t *testing.T) {
 
 	migrateStarted := make(chan struct{})
 
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(ctx context.Context, f1 flow.Flow) error {
 				longProcedure := LongProcedure{}
 				longProcedure.started = firstProcedureStarted
@@ -175,7 +188,7 @@ func TestChangePulseAndMigrate(t *testing.T) {
 					err := f2.Procedure(ctx, &longProcedure, true)
 					require.Equal(t, flow.ErrCancelled, err)
 
-					message.ReplyTo <- bus.Reply{Reply: testReply}
+					replyChan <- testReply
 
 					return nil
 				})
@@ -185,8 +198,10 @@ func TestChangePulseAndMigrate(t *testing.T) {
 
 	handleProcessed := make(chan struct{})
 	go func() {
-		reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+		msg := &message.Message{}
+		_, err := disp.Process(msg)
 		require.NoError(t, err)
+		reply := <-replyChan
 		require.Equal(t, testReply, reply)
 		handleProcessed <- struct{}{}
 	}()

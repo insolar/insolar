@@ -194,6 +194,7 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 
 	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
 	middleware.SetCorrelationID(correlationId, msg)
+	msg.Metadata.Set(MetaType, TypeReply)
 
 	var receivedMsg *message.Message
 	done := make(chan struct{})
@@ -233,6 +234,7 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 
 	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
 	middleware.SetCorrelationID(correlationId, msg)
+	msg.Metadata.Set(MetaType, TypeReply)
 
 	close(resChan.done)
 
@@ -247,6 +249,7 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(MetaType, TypeReply)
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
@@ -281,6 +284,7 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(MetaType, TypeReply)
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
@@ -306,6 +310,7 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(MetaType, TypeReply)
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
@@ -334,7 +339,9 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	payload := []byte{1, 2, 3, 4, 5}
 	var msg []*message.Message
 	for i := 0; i < count; i++ {
-		msg = append(msg, message.NewMessage(watermill.NewUUID(), payload))
+		m := message.NewMessage(watermill.NewUUID(), payload)
+		m.Metadata.Set(MetaType, TypeReply)
+		msg = append(msg, m)
 	}
 
 	// send messages
@@ -385,6 +392,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(MetaType, TypeReply)
 
 	// send message
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())

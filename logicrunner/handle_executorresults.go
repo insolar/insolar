@@ -192,7 +192,7 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 	} else {
 		rep = bus.ReplyAsMessage(ctx, &reply.OK{})
 	}
-	h.dep.Bus.Reply(ctx, h.Message, rep)
+	h.dep.Sender.Reply(ctx, h.Message, rep)
 
 	return err
 }

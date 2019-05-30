@@ -69,7 +69,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		es.Unlock()
 	}
 	os.Unlock()
-	h.dep.Bus.Reply(ctx, h.Message, replyOk)
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 
 	return nil
 

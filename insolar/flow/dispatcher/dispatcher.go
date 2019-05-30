@@ -113,7 +113,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "can't deserialize meta payload"))
+		return nil, errors.Wrap(err, "can't deserialize meta payload")
 	}
 	ctx, _ = inslogger.WithField(ctx, "pulse", fmt.Sprint(meta.Pulse))
 	ctx = pulse.ContextWith(ctx, meta.Pulse)

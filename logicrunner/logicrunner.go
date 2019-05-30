@@ -189,14 +189,14 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	return &res, nil
 }
 
-func InitHandlers(lr *LogicRunner, b bus.Sender) error {
+func InitHandlers(lr *LogicRunner, s bus.Sender) (*watermillMsg.Router, error) {
 	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 
 	dep := &Dependencies{
 		Publisher: pubSub,
 		lr:        lr,
-		Bus:       b,
+		Sender:    s,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
@@ -227,7 +227,7 @@ func InitHandlers(lr *LogicRunner, b bus.Sender) error {
 
 	router, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, wmLogger)
 	if err != nil {
-		return errors.Wrap(err, "Error while creating new watermill router")
+		return nil, errors.Wrap(err, "Error while creating new watermill router")
 	}
 
 	router.AddNoPublisherHandler(
@@ -247,7 +247,7 @@ func InitHandlers(lr *LogicRunner, b bus.Sender) error {
 	lr.router = router
 	lr.publisher = pubSub
 
-	return nil
+	return router, nil
 }
 
 // Start starts logic runner component
@@ -303,8 +303,6 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 			return err
 		}
 	}
-
-	lr.router.Close()
 
 	return reterr
 }

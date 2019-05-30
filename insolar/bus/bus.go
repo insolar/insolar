@@ -71,7 +71,6 @@ const (
 
 // Sender interface sends messages by watermill.
 type Sender interface {
-	SendAsync(ctx context.Context, msg *message.Message) error
 	// SendRole sends message to specified role. Node will be calculated automatically for the latest pulse. Use this
 	// method unless you need to send a message to a pre-calculated node.
 	// Replies will be written to the returned channel. Always read from the channel using multiple assignment
@@ -95,7 +94,7 @@ type lockedReply struct {
 	done chan struct{}
 }
 
-// Bus is component that sends messages and gives access to replies for them.
+// Sender is component that sends messages and gives access to replies for them.
 type Bus struct {
 	pub         message.Publisher
 	timeout     time.Duration
@@ -106,7 +105,7 @@ type Bus struct {
 	replies      map[string]*lockedReply
 }
 
-// NewBus creates Bus instance with provided values.
+// NewBus creates Sender instance with provided values.
 func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator) *Bus {
 	return &Bus{
 		timeout:     time.Second * 20,
@@ -295,7 +294,7 @@ func (b *Bus) CheckPulse(h message.HandlerFunc) message.HandlerFunc {
 		}
 		ctx, _ = inslogger.WithField(ctx, "pulse", fmt.Sprint(meta.Pulse))
 
-		ctx, span := instracer.StartSpan(ctx, "Bus.checkPulse")
+		ctx, span := instracer.StartSpan(ctx, "Sender.checkPulse")
 		defer span.End()
 
 		latestPulse, err := b.pulses.Latest(ctx)

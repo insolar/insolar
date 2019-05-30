@@ -56,14 +56,12 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	msgType := s.Message.Metadata.Get(wmBus.MetaType)
 	switch msgType {
 	case insolar.TypeGetObject.String():
-		fmt.Println("TypeGetObject gets inited")
 		h := &GetObject{
 			dep:     s.Dep,
 			Message: s.Message,
 			Parcel:  parcel,
 		}
 		err = f.Handle(ctx, h.Present)
-		fmt.Println("TypeGetObject gets error - ", err)
 		return err
 	case insolar.TypeSetRecord.String():
 		msg := parcel.Message().(*message.SetRecord)

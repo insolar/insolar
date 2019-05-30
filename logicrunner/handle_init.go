@@ -41,7 +41,7 @@ const (
 type Dependencies struct {
 	Publisher message.Publisher
 	lr        *LogicRunner
-	Bus       bus.Sender
+	Sender    bus.Sender
 }
 
 type Init struct {

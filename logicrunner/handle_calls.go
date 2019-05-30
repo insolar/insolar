@@ -152,7 +152,7 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	} else {
 		repMsg = bus.ReplyAsMessage(ctx, rep)
 	}
-	h.dep.Bus.Reply(ctx, h.Message, repMsg)
+	h.dep.Sender.Reply(ctx, h.Message, repMsg)
 
 	return nil
 

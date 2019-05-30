@@ -20,12 +20,15 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/reply"
+
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/proc"
@@ -38,12 +41,13 @@ func TestGetCode_Proceed(t *testing.T) {
 	a := require.New(t)
 	ctx := inslogger.TestContext(t)
 
-	replyTo := make(chan bus.Reply, 1)
+	replyChan := make(chan *message.Message, 1)
+	requestMessage := message.NewMessage(watermill.NewUUID(), nil)
 	blobValue := blob.Blob{Value: []byte{1, 2, 3}}
 	blobID := gen.ID()
 	codeRec := codeRecord(blobID)
 	codeRef := gen.Reference()
-	getCode := proc.NewGetCode(codeRef, replyTo)
+	getCode := proc.NewGetCode(codeRef, requestMessage)
 	records := object.NewRecordAccessorMock(mc)
 	records.ForIDFunc = func(c context.Context, id insolar.ID) (record.Material, error) {
 		a.Equal(*codeRef.Record(), id)
@@ -54,19 +58,26 @@ func TestGetCode_Proceed(t *testing.T) {
 		a.Equal(blobID, id)
 		return blobValue, nil
 	}
+	sender := bus.NewSenderMock(mc)
+	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
+		replyChan <- p2
+	}
 	getCode.Dep.RecordAccessor = records
 	getCode.Dep.BlobAccessor = blobs
+	getCode.Dep.Sender = sender
 
 	err := getCode.Proceed(ctx)
 	a.NoError(err)
 
 	unwrappedCodeRec := record.Unwrap(codeRec.Virtual)
 
-	rep := <-replyTo
-	a.Equal(bus.Reply{Reply: &reply.Code{
+	expectedRep := bus.ReplyAsMessage(ctx, &reply.Code{
 		Code:        blobValue.Value,
 		MachineType: unwrappedCodeRec.(*record.Code).MachineType,
-	}}, rep)
+	})
+	rep := <-replyChan
+	a.Equal(expectedRep.Metadata, rep.Metadata)
+	a.Equal(expectedRep.Payload, rep.Payload)
 }
 
 func codeRecord(codeID insolar.ID) record.Material {

@@ -159,7 +159,7 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	err = logicrunner.InitHandlers(logicRunner, b)
+	innerRouter, err := logicrunner.InitHandlers(logicRunner, b)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "Error while init handlers for logic runner:")
 	}
@@ -204,7 +204,9 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	stopper := startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process)
+	inRouter, outRouter := startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process)
+
+	stopper := stopWatermill(ctx, innerRouter, inRouter, outRouter)
 
 	return &cm, terminationHandler, stopper, nil
 }
@@ -215,7 +217,7 @@ func startWatermill(
 	pubSub message.Subscriber,
 	b *bus.Bus,
 	outHandler, inHandler message.HandlerFunc,
-) func() {
+) (*message.Router, *message.Router) {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
 		panic(err)
@@ -247,7 +249,7 @@ func startWatermill(
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
 
-	return stopWatermill(ctx, inRouter, outRouter)
+	return inRouter, outRouter
 }
 
 func startRouter(ctx context.Context, router *message.Router) {
@@ -259,9 +261,13 @@ func startRouter(ctx context.Context, router *message.Router) {
 	<-router.Running()
 }
 
-func stopWatermill(ctx context.Context, inRouter, outRouter *message.Router) func() {
+func stopWatermill(ctx context.Context, innerRouter, inRouter, outRouter *message.Router) func() {
 	return func() {
-		err := inRouter.Close()
+		err := innerRouter.Close()
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Error while closing router", err)
+		}
+		err = inRouter.Close()
 		if err != nil {
 			inslogger.FromContext(ctx).Error("Error while closing router", err)
 		}
