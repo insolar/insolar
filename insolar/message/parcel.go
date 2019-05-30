@@ -77,6 +77,9 @@ func (p *Parcel) Message() insolar.Message {
 func (p *Parcel) Context(ctx context.Context) context.Context {
 	ctx = inslogger.ContextWithTrace(ctx, p.ServiceData.LogTraceID)
 	ctx = inslogger.WithLoggerLevel(ctx, p.ServiceData.LogLevel)
+	if p.ServiceData.TraceSpanData == nil {
+		return ctx
+	}
 	parentspan := instracer.MustDeserialize(p.ServiceData.TraceSpanData)
 	return instracer.WithParentSpan(ctx, parentspan)
 }
