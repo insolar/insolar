@@ -53,9 +53,9 @@ package future
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -71,20 +71,18 @@ func TestFutureManager_Create(t *testing.T) {
 
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-	builder := packet.NewBuilder(sender)
-	p := builder.
-		Receiver(receiver).
-		Type(packet.TestPacket).
-		Request(&packet.RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(network.RequestID(123)).
-		Build()
 
+	p := &packet.Packet{
+		Sender:    sender,
+		Receiver:  receiver,
+		RequestID: 123,
+		Type:      uint32(types.Ping),
+	}
 	future := m.Create(p)
 
-	require.Equal(t, future.ID(), p.RequestID)
+	require.EqualValues(t, future.ID(), p.RequestID)
 	require.Equal(t, future.Request(), p)
 	require.Equal(t, future.Receiver(), receiver)
-	require.Equal(t, future.Request(), p)
 }
 
 func TestFutureManager_Get(t *testing.T) {
@@ -92,13 +90,13 @@ func TestFutureManager_Get(t *testing.T) {
 
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-	builder := packet.NewBuilder(sender)
-	p := builder.
-		Receiver(receiver).
-		Type(packet.TestPacket).
-		Request(&packet.RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(network.RequestID(123)).
-		Build()
+
+	p := &packet.Packet{
+		Sender:    sender,
+		Receiver:  receiver,
+		RequestID: 123,
+		Type:      uint32(types.Ping),
+	}
 
 	require.Nil(t, m.Get(p))
 
@@ -113,13 +111,13 @@ func TestFutureManager_Canceler(t *testing.T) {
 
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-	builder := packet.NewBuilder(sender)
-	p := builder.
-		Receiver(receiver).
-		Type(packet.TestPacket).
-		Request(&packet.RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(network.RequestID(123)).
-		Build()
+
+	p := &packet.Packet{
+		Sender:    sender,
+		Receiver:  receiver,
+		RequestID: 123,
+		Type:      uint32(types.Ping),
+	}
 
 	future := m.Create(p)
 	require.NotNil(t, future)

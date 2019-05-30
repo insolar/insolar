@@ -239,7 +239,7 @@ func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
 
 	handler, exist := nc.handlers[p.GetType()]
 	if !exist {
-		logger.Errorf("[ HandleDatagram ] No handler set for packet type %s from node %d, %s", p.GetType(), sender.ShortID, sender.NodeID)
+		logger.Errorf("[ HandleDatagram ] No handler set for packet type %d from node %d, %s", p.GetType(), sender.ShortID, sender.NodeID)
 		return
 	}
 	handler(p, sender.NodeID)

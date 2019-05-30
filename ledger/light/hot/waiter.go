@@ -59,7 +59,7 @@ func (w waiter) isClosed() bool {
 func NewChannelWaiter() *ChannelWaiter {
 	return &ChannelWaiter{
 		waiters: map[insolar.ID]waiter{},
-		pulse: insolar.FirstPulseNumber+1,
+		pulse:   insolar.FirstPulseNumber + 1,
 		timeout: make(chan struct{}),
 	}
 }

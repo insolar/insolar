@@ -306,11 +306,6 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	s.Equal(s.getNodesCount()+1, len(newNodeWorkingNodes))
 }
 
-func TestServiceNetworkOneBootstrap(t *testing.T) {
-	s := NewTestSuite(1, 0)
-	suite.Run(t, s)
-}
-
 func TestServiceNetworkManyBootstraps(t *testing.T) {
 	s := NewTestSuite(16, 0)
 	suite.Run(t, s)

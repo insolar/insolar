@@ -165,11 +165,11 @@ func (mn *MissingNodeClaimsVote) Deserialize(data io.Reader) error {
 		return errors.Wrap(err, "[ MissingNodeClaimsVote.Deserialize ] Can't read claimSize")
 	}
 	claimData := make([]byte, mn.claimSize)
-	err = binary.Read(data, defaultByteOrder, claimData[:])
+	err = binary.Read(data, defaultByteOrder, claimData)
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeClaimsVote.Deserialize ] Can't read claim data")
 	}
-	claims, err := parseReferendumClaim(claimData[:])
+	claims, err := parseReferendumClaim(claimData)
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeClaimsVote.Deserialize ] Can't parse claim from claim data")
 	}
