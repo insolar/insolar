@@ -30,9 +30,14 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// PSE AGN means "please again" in radio jargon.
-// This text was chosen because it's very unlikely anyone
-// will use the same text for anything else in our code base.
+// ErrRetry is returned when the message sent using MessageBus should be
+// resent on the calling side. When this message is returned it means that
+// the Flow was canceled during the processing of the message, which means that
+// the Pulse has changed and the receiver is not the one who has to process the
+// message anymore.
+// The text PSE AGN means "please again" in radio jargon. This text was chosen
+// because it's very unlikely anyone will use the same text for anything else
+// in our code base.
 var ErrRetry = errors.New("PSE AGN")
 
 type HandleCall struct {
