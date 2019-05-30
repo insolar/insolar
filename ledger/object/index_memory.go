@@ -199,9 +199,9 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	b.PendingRecords = append(b.PendingRecords, record.Wrap(res))
 
 	isInserted := false
-	for _, chainPart := range b.fullFilament {
+	for i, chainPart := range b.fullFilament {
 		if chainPart.PN == pn {
-			chainPart.Records = append(chainPart.Records, record.Wrap(res))
+			b.fullFilament[i].Records = append(b.fullFilament[i].Records, record.Wrap(res))
 			isInserted = true
 		}
 	}
@@ -217,7 +217,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	if ok {
 		delete(b.notClosedRequestsIndex[reqPN], *res.Request.Record())
 		for i := 0; i < len(b.notClosedRequests); i++ {
-			if b.notClosedRequests[i].Object.Record() == res.Request.Record() {
+			if *b.notClosedRequests[i].Object.Record() == *res.Request.Record() {
 				b.notClosedRequests = append(b.notClosedRequests[:i], b.notClosedRequests[i+1:]...)
 				break
 			}

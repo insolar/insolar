@@ -632,3 +632,109 @@ func TestInMemoryIndex_SetReadUntil(t *testing.T) {
 		require.Equal(t, insolar.PulseNumber(10), *idx.buckets[pn][objID].readPendingUntil)
 	})
 }
+
+func TestInMemoryIndex_SetResult(t *testing.T) {
+	t.Run("err when no lifeline", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+
+		err := idx.SetResult(ctx, pn, objID, record.Result{})
+
+		require.Error(t, err, ErrLifelineNotFound)
+	})
+
+	t.Run("set result, when no requests", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		res := record.Result{Request: *objRef}
+
+		err := idx.SetResult(ctx, pn, objID, res)
+
+		require.NoError(t, err)
+		buck := idx.buckets[pn][objID]
+
+		require.Equal(t, 1, len(buck.fullFilament))
+		require.Equal(t, record.Wrap(res), buck.fullFilament[0].Records[0])
+		require.Equal(t, pn, buck.fullFilament[0].PN)
+		require.Equal(t, 1, len(buck.PendingRecords))
+		require.Equal(t, record.Wrap(res), buck.PendingRecords[0])
+	})
+
+	t.Run("set 2 results, when no requests", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		res := record.Result{Request: *objRef}
+		resS := record.Result{Request: *objRef, Payload: []byte{1, 2, 3, 4, 5, 6}}
+
+		err := idx.SetResult(ctx, pn, objID, res)
+		require.NoError(t, err)
+		err = idx.SetResult(ctx, pn, objID, resS)
+		require.NoError(t, err)
+
+		buck := idx.buckets[pn][objID]
+
+		require.Equal(t, 1, len(buck.fullFilament))
+
+		require.Equal(t, 2, len(buck.fullFilament[0].Records))
+		require.Equal(t, pn, buck.fullFilament[0].PN)
+		require.Equal(t, record.Wrap(res), buck.fullFilament[0].Records[0])
+		require.Equal(t, record.Wrap(resS), buck.fullFilament[0].Records[1])
+
+		require.Equal(t, 2, len(buck.PendingRecords))
+		require.Equal(t, record.Wrap(res), buck.PendingRecords[0])
+		require.Equal(t, record.Wrap(resS), buck.PendingRecords[1])
+	})
+
+	t.Run("close requests work fine", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+		_ = idx.SetRequest(ctx, pn, objID, req)
+
+		objRefS := insolar.NewReference(insolar.ID{}, *insolar.NewID(321, nil))
+		reqS := record.Request{Object: objRefS}
+		_ = idx.SetRequest(ctx, pn, objID, reqS)
+
+		res := record.Result{Request: *objRef}
+
+		err := idx.SetResult(ctx, pn, objID, res)
+		require.NoError(t, err)
+
+		open, err := idx.OpenRequestsForObjID(ctx, pn, objID, 10)
+		require.NoError(t, err)
+
+		require.Equal(t, 1, len(open))
+		require.Equal(t, reqS, open[0])
+
+		buck := idx.buckets[pn][objID]
+		require.Equal(t, 1, len(buck.fullFilament))
+		require.Equal(t, pn, buck.fullFilament[0].PN)
+		require.Equal(t, 3, len(buck.fullFilament[0].Records))
+
+		require.Equal(t, 1, len(buck.notClosedRequestsIndex[pn]))
+		_, ok := buck.notClosedRequestsIndex[pn][*reqS.Object.Record()]
+		require.Equal(t, true, ok)
+
+		require.Equal(t, 1, len(buck.notClosedRequests))
+		require.Equal(t, reqS, buck.notClosedRequests[0])
+
+		require.Equal(t, 2, len(buck.requestPNIndex))
+	})
+}
