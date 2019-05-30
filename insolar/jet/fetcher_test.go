@@ -312,7 +312,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 			go func(b byte) {
 				target := insolar.NewID(0, []byte{b})
 
-				jetID, err := jtu.Fetch(ctx, *target, insolar.PulseNumber(100))
+				jetID, err := jtu.Fetch(ctx, *target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
 				require.NoError(t, err)
 
 				dataMu.Lock()
@@ -324,7 +324,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		}
 		go func() {
 			dataMu.Lock()
-			jtu.Fetch(ctx, *data[128], insolar.PulseNumber(100))
+			jtu.Fetch(ctx, *data[128], insolar.FirstPulseNumber+insolar.PulseNumber(100))
 			dataMu.Unlock()
 
 			wg.Done()
