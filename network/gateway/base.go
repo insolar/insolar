@@ -95,6 +95,9 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+	if g.Nodekeeper == nil {
+		return nil
+	}
 	if g.Nodekeeper.IsBootstrapped() {
 		g.Network.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
 		g.Network.Gateway().Run(ctx)
@@ -118,4 +121,18 @@ func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Cer
 // ValidateCert validates node certificate
 func (g *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
 	return false, errors.New("ValidateCert() in non active mode")
+}
+
+func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
+	dNodes := make(map[insolar.Reference]struct{}, len(certificate.GetDiscoveryNodes()))
+	for _, dn := range certificate.GetDiscoveryNodes() {
+		dNodes[*dn.GetNodeRef()] = struct{}{}
+	}
+	ret := []insolar.NetworkNode{}
+	for _, n := range nodes {
+		if _, ok := dNodes[n.ID()]; ok {
+			ret = append(ret, n)
+		}
+	}
+	return ret
 }
