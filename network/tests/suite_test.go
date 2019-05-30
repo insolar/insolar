@@ -66,6 +66,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/certificate"
@@ -79,7 +80,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/consensus/phases"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -490,10 +490,12 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
-	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock)
+	// little hack: this Register will replace transport.Factory
+	// in servicenetwork internal component manager with fake factory
+	node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport))
 
-	node.componentManager.Register(&amMock, certManager, cryptographyService, mblocker, GIL)
-	node.componentManager.Inject(serviceNetwork, keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport),
+	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
+		&amMock, certManager, cryptographyService, mblocker, GIL, serviceNetwork, keyProc, terminationHandler,
 		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t))
 
 	node.serviceNetwork = serviceNetwork
