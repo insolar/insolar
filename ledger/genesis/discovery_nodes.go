@@ -21,8 +21,8 @@ import (
 
 	"github.com/insolar/insolar/application/contract/nodedomain"
 	"github.com/insolar/insolar/application/contract/noderecord"
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -52,7 +52,7 @@ func (nm *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discove
 		return nil
 	}
 
-	nodeDomainDesc, err := nm.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
+	nodeDomainDesc, err := nm.artifactManager.GetObject(ctx, genesisrefs.ContractNodeDomain)
 	if err != nil {
 		return errors.Wrap(err, "failed to get node domain contract")
 	}
@@ -139,12 +139,12 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 		return nil, errors.Wrap(err, "failed to register request for node record")
 	}
 
-	contract := insolar.NewReference(*bootstrap.ContractRootDomain.Record(), *nodeID)
+	contract := insolar.NewReference(*genesisrefs.ContractRootDomain.Record(), *nodeID)
 	_, err = nm.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		*contract,
-		bootstrap.ContractNodeDomain,
+		genesisrefs.ContractNodeDomain,
 		rootdomain.GenesisRef(insolar.GenesisNameNodeRecord+"_proto"),
 		false,
 		nodeData,
@@ -153,7 +153,7 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 		return nil, errors.Wrap(err, "failed to activate object of node record")
 	}
 
-	_, err = nm.artifactManager.RegisterResult(ctx, bootstrap.ContractRootDomain, *contract, nil)
+	_, err = nm.artifactManager.RegisterResult(ctx, genesisrefs.ContractRootDomain, *contract, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't register result for new node object")
 	}
@@ -164,7 +164,7 @@ func (nm *DiscoveryNodeManager) updateNodeDomainIndex(
 	ctx context.Context,
 	indexMap map[string]string,
 ) error {
-	nodeDomainDesc, err := nm.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
+	nodeDomainDesc, err := nm.artifactManager.GetObject(ctx, genesisrefs.ContractNodeDomain)
 	if err != nil {
 		return err
 	}
@@ -180,8 +180,8 @@ func (nm *DiscoveryNodeManager) updateNodeDomainIndex(
 
 	_, err = nm.artifactManager.UpdateObject(
 		ctx,
-		bootstrap.ContractRootDomain,
-		bootstrap.ContractNodeDomain,
+		genesisrefs.ContractRootDomain,
+		genesisrefs.ContractNodeDomain,
 		nodeDomainDesc,
 		updateData,
 	)

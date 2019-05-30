@@ -21,8 +21,8 @@ import (
 	"github.com/insolar/insolar/application/contract/nodedomain"
 	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/application/contract/wallet"
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 )
 
 // GenesisContractsStates returns list contract configs for genesis.
@@ -43,8 +43,8 @@ func rootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			RootMember:    bootstrap.ContractRootMember,
-			NodeDomainRef: bootstrap.ContractNodeDomain,
+			RootMember:    genesisrefs.ContractRootMember,
+			NodeDomainRef: genesisrefs.ContractNodeDomain,
 		}),
 	}
 }

@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/bootstrap/contracts"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/rootdomain"
@@ -249,7 +249,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		return errors.Wrapf(err, "failed to activate object for '%v'", name)
 	}
 
-	_, err = g.ArtifactManager.RegisterResult(ctx, bootstrap.ContractRootDomain, objRef, nil)
+	_, err = g.ArtifactManager.RegisterResult(ctx, genesisrefs.ContractRootDomain, objRef, nil)
 	return errors.Wrapf(err, "failed to register result for '%v'", name)
 }
 

@@ -25,9 +25,9 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -131,7 +131,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 			},
 			MajorityRule: g.config.MajorityRule,
 
-			RootDomainReference: bootstrap.ContractRootDomain.String(),
+			RootDomainReference: genesisrefs.ContractRootDomain.String(),
 		}
 		c.MinRoles.Virtual = g.config.MinRoles.Virtual
 		c.MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial
