@@ -20,7 +20,6 @@ import (
 {{- range $import, $i := .Imports }}
 	{{$import}}
 {{- end }}
-"fmt"
 )
 
 type ExtendableError struct{
@@ -100,9 +99,6 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 	}
 
 	{{ $method.ArgumentsZeroList }}
-	if "{{ $method.Name}}" == "Call" {
-	    return nil, nil, fmt.Errorf("!!!!! pampam %#v !!!!!!!", args)
-	}
 	err = ph.Deserialize(data, &args)
 
 	if err != nil {

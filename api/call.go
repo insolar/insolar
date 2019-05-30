@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/square/go-jose"
 	"io/ioutil"
 	"net/http"
@@ -95,12 +96,27 @@ func (ar *Runner) makeCall(ctx context.Context, signedPayload SignedPayload, pub
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse signedPayload.Reference")
 	}
 
+	type PostParams = map[string]interface{}
+
+	pb,_  := public.MarshalJSON()
+	sg,_  := signature.CompactSerialize()
+
+	//postParams := PostParams{
+	//	"jwk": string(pb),
+	//	"jws": sg,
+	//}
+
+	fmt.Println("insMarshalData", string(pb), sg)
+
+	args, err := insolar.MarshalArgs(string(pb), sg)
+
+	fmt.Println("insMarshal", args)
+
 	res, err := ar.ContractRequester.SendRequest(
 		ctx,
 		reference,
 		"Call",
-		// TODO: Marshal?
-		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), public, signature},
+		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), args},
 	)
 
 	if err != nil {

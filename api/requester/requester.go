@@ -81,8 +81,8 @@ func SetVerbose(verb bool) {
 type PostParams = map[string]interface{}
 
 type SignedRequest struct {
-	PublicKey string  `json:"jwk"`
-	Token     string  `json:"jws"`
+	PublicKey string `json:"jwk"`
+	Token     string `json:"jws"`
 }
 
 // GetResponseBody makes request and extracts body
@@ -92,7 +92,6 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
 	}
 
-	fmt.Println("call json",string(jsonValue))
 	var signedRequest = SignedRequest{}
 
 	err = json.Unmarshal(jsonValue, &signedRequest)
@@ -151,23 +150,10 @@ func GetSeed(url string) ([]byte, error) {
 	return res.Seed, nil
 }
 
-func constructParams(params []interface{}) ([]byte, error) {
-	args, err := insolar.MarshalArgs(params...)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ constructParams ]")
-	}
-	return args, nil
-}
-
 // SendWithSeed sends request with known seed
 func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ Send ] Configs must be initialized")
-	}
-
-	params, err := constructParams(reqCfg.Params)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
 	}
 
 	callerRef, err := insolar.NewReferenceFromBase58(userCfg.Caller)
@@ -175,25 +161,15 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.Wrap(err, "[ Send ] Failed to parse userCfg.Caller")
 	}
 
-	//serRequest, err := insolar.MarshalArgs(
-	//	*callerRef,
-	//	reqCfg.Method,
-	//	params,
-	//	seed)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
-	//}
-
 	signedPayload := PostParams{
 		"reference": callerRef,
 		"method":    reqCfg.Method,
-		"params":    params,
+		"params":    reqCfg.Params,
 		"seed":      seed,
 	}
 
 	sp, err := json.Marshal(signedPayload)
 	verboseInfo(ctx, "Signing request ...")
-	//cs := scheme.Signer(userCfg.privateKeyObject)
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ES256, Key: userCfg.privateKeyObject}, nil)
 	signature, err := signer.Sign(sp)
 	if err != nil {
@@ -203,8 +179,6 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 
 	jws, err := signature.CompactSerialize()
 
-	fmt.Println("token", jws)
-
 	key, ok := userCfg.privateKeyObject.(*ecdsa.PrivateKey)
 	if !ok {
 		return nil, errors.Wrap(err, "[ Send ] failed to cast private")
@@ -213,7 +187,12 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	jwk := jose.JSONWebKey{Key: key.Public()}
 	jwkjs, err := jwk.MarshalJSON()
 
-	fmt.Println(string(jwkjs))
+	type SignedPayload struct {
+		Reference string `json:"reference"` // contract reference
+		Method    string `json:"method"`    // method name
+		Params    []byte `json:"params"`    // json object
+		Seed      string `json:"seed"`
+	}
 
 	// TODO: make structure for JWK instead of string
 	//params1 := PostParams{
@@ -224,14 +203,13 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	//}
 
 	postParams := PostParams{
-		"jwk": string(jwkjs),           // string(jwkjs),
+		"jwk": string(jwkjs),
 		"jws": jws,
 	}
+
 	if reqCfg.LogLevel != nil {
 		postParams["logLevel"] = reqCfg.LogLevel
 	}
-
-	fmt.Println("postParams", postParams)
 
 	body, err := GetResponseBody(url, postParams)
 

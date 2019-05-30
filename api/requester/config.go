@@ -37,9 +37,9 @@ type UserConfigJSON struct {
 
 // RequestConfigJSON holds info about request
 type RequestConfigJSON struct {
-	Params   []interface{} `json:"params"`
-	Method   string        `json:"method"`
-	LogLevel interface{}   `json:"logLevel,omitempty"`
+	Params   []byte      `json:"params"`
+	Method   string      `json:"method"`
+	LogLevel interface{} `json:"logLevel,omitempty"`
 }
 
 func readFile(path string, configType interface{}) error {

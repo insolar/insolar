@@ -107,7 +107,7 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 	return nil
 }
 
-func (sdk *SDK) sendRequest(ctx context.Context, method string, params []interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
+func (sdk *SDK) sendRequest(ctx context.Context, method string, params []byte, userCfg *requester.UserConfigJSON) ([]byte, error) {
 	reqCfg := &requester.RequestConfigJSON{
 		Params:   params,
 		Method:   method,
@@ -148,12 +148,18 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't export private key")
 	}
 
-	memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
-	if err != nil {
-		return nil, "", errors.Wrap(err, "[ CreateMember ] can't extract public key")
-	}
+	//memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
+	//if err != nil {
+	//	return nil, "", errors.Wrap(err, "[ CreateMember ] can't extract public key")
+	//}
 
-	params := []interface{}{memberName, string(memberPubKeyStr)}
+	type CreateMember struct {
+		Name string `json:"name"`
+	}
+	createMember := CreateMember{Name: memberName}
+	params, err := json.Marshal(createMember)
+
+	//params := []interface{}{memberName, string(memberPubKeyStr)}
 	body, err := sdk.sendRequest(ctx, "CreateMember", params, sdk.rootMember)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't send request")
@@ -174,7 +180,16 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 // Transfer method send money from one member to another
 func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
-	params := []interface{}{amount, to.Reference}
+
+	type Transfer struct {
+		Amount uint   `json:"amount"`
+		To     string `json:"to"`
+	}
+
+	transfer := Transfer{Amount: amount, To: to.Reference}
+	params, err := json.Marshal(transfer)
+
+	//params := []interface{}{amount, to.Reference}
 	config, err := requester.CreateUserConfig(from.Reference, from.PrivateKey)
 	if err != nil {
 		return "", errors.Wrap(err, "[ Transfer ] can't create user config")
@@ -200,7 +215,14 @@ func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) 
 // GetBalance returns current balance of the given member.
 func (sdk *SDK) GetBalance(m *Member) (uint64, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "GetBalance")
-	params := []interface{}{m.Reference}
+	type Balance struct {
+		Reference string `json:"reference"`
+	}
+	balance := Balance{Reference: m.Reference}
+	params, err := json.Marshal(balance)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ GetBalance ] can't marshal")
+	}
 	config, err := requester.CreateUserConfig(m.Reference, m.PrivateKey)
 	if err != nil {
 		return 0, errors.Wrap(err, "[ GetBalance ] can't create user config")
