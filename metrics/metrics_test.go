@@ -35,9 +35,9 @@ import (
 )
 
 func newMetrics(t *testing.T) {
-	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testm := testmetrics.Start(ctx, t)
+	testm, err := testmetrics.Start(ctx, t)
+	require.NoError(t, err, "metrics server start")
 
 	var (
 		// https://godoc.org/go.opencensus.io/stats
@@ -46,7 +46,7 @@ func newMetrics(t *testing.T) {
 	)
 	osxtag := insmetrics.MustTagKey("osx")
 
-	err := view.Register(
+	err = view.Register(
 		&view.View{
 			Name:        "video_count",
 			Measure:     videoCount,
@@ -66,13 +66,18 @@ func newMetrics(t *testing.T) {
 	stats.Record(newctx, videoCount.M(1), videoSize.M(rand.Int63()))
 
 	content, err := testm.FetchContent()
-	require.NoError(t, err)
-	// fmt.Println("/metrics => ", content)
+	require.NoError(t, err, "fetch content failed")
 
-	assert.Regexp(t, regexp.MustCompile(`insolar_video_size_count{[^}]*osx="11\.12\.13"[^}]*} 1`), content)
-	assert.Regexp(t, regexp.MustCompile(`insolar_video_count{[^}]*osx="11\.12\.13"[^}]*} 1`), content)
+	assert.Regexp(t,
+		regexp.MustCompile(`insolar_video_size_count{[^}]*osx="11\.12\.13"[^}]*} 1`),
+		content,
+		"insolar_video_size_count distribution count value is equal to 1")
+	assert.Regexp(t,
+		regexp.MustCompile(`insolar_video_count{[^}]*osx="11\.12\.13"[^}]*} 1`),
+		content,
+		"insolar_video_count counter value is equal to 1")
 
-	assert.NoError(t, testm.Stop())
+	assert.NoError(t, testm.Stop(), "metrics server is stopped")
 }
 
 func TestMetrics_NewMetrics(t *testing.T) {
@@ -82,16 +87,19 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=TestMetrics_NewMetrics")
 	cmd.Env = append(os.Environ(), "ISOLATE_METRICS_STATE=1")
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
 	err := cmd.Run()
 	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		t.Fatalf("Process ran with err %v, want os.Exit(0)", err)
+		t.Fatalf("Process failed with error '%v', expects os.Exit(0)", err)
 	}
 }
 
 func TestMetrics_ZPages(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testm := testmetrics.Start(ctx, t)
+	testm, err := testmetrics.Start(ctx, t)
+	require.NoError(t, err, "metrics server start")
 
 	// One more thing... from https://github.com/rakyll/opencensus-grpc-demo
 	// also check /debug/rpcz
@@ -107,7 +115,8 @@ func TestMetrics_ZPages(t *testing.T) {
 func TestMetrics_Status(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testm := testmetrics.Start(ctx, t)
+	testm, err := testmetrics.Start(ctx, t)
+	require.NoError(t, err, "metrics server start")
 
 	code, _, err := testm.FetchURL("/_status")
 	require.NoError(t, err)

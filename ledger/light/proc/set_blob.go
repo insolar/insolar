@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -34,9 +35,10 @@ type SetBlob struct {
 	jet     insolar.JetID
 
 	Dep struct {
-		BlobAccessor               blob.Accessor
-		BlobModifier               blob.Modifier
-		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
+		BlobAccessor  blob.Accessor
+		BlobModifier  blob.Modifier
+		PCS           insolar.PlatformCryptographyScheme
+		WriteAccessor hot.WriteAccessor
 	}
 }
 
@@ -54,11 +56,16 @@ func (p *SetBlob) Proceed(ctx context.Context) error {
 }
 
 func (p *SetBlob) reply(ctx context.Context) bus.Reply {
+	done, err := p.Dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	if err == hot.ErrWriteClosed {
+		return bus.Reply{Err: flow.ErrCancelled}
+	}
+	defer done()
 	msg := p.msg
 
-	calculatedID := object.CalculateIDForBlob(p.Dep.PlatformCryptographyScheme, flow.Pulse(ctx), msg.Memory)
+	calculatedID := object.CalculateIDForBlob(p.Dep.PCS, flow.Pulse(ctx), msg.Memory)
 
-	_, err := p.Dep.BlobAccessor.ForID(ctx, *calculatedID)
+	_, err = p.Dep.BlobAccessor.ForID(ctx, *calculatedID)
 	if err == nil {
 		return bus.Reply{Reply: &reply.ID{ID: *calculatedID}}
 	}
