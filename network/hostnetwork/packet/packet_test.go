@@ -118,7 +118,7 @@ func TestDeserializeBigPacket(t *testing.T) {
 	require.NoError(t, err)
 
 	deserializedData := deserializedMsg.GetRequest().GetRPC().Data
-	require.Equal(t, data, deserializedData)
+	require.EqualValues(t, data, deserializedData)
 }
 
 type PacketSuite struct {
@@ -132,7 +132,7 @@ func (s *PacketSuite) TestGetType() {
 }
 
 func (s *PacketSuite) TestGetData() {
-	s.Equal(s.packet.GetRequest().GetRPC().Data, []byte{0, 1, 2, 3})
+	s.EqualValues(s.packet.GetRequest().GetRPC().Data, []byte{0, 1, 2, 3})
 }
 
 func (s *PacketSuite) TestGetRequestID() {
