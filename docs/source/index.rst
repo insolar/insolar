@@ -10,7 +10,7 @@ Insolar Documentation
 
 To get a grip on how Insolar works, take a look at its :ref:`architecture overview <architecture>`.
 
-To connect to TestNet 1.1, go through :ref:`step-by-step instrcutions <connecting_to_testnet>`.
+To connect to TestNet 1.1, go through :ref:`step-by-step instructions <connecting_to_testnet>`.
 
 .. // TODO: Develop a documentation entry point (main page) upon the content's readiness.
 
