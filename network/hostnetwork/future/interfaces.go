@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 var (
@@ -71,22 +72,22 @@ var (
 type Future interface {
 
 	// ID returns packet sequence number.
-	ID() network.RequestID
+	ID() types.RequestID
 
 	// Receiver returns the initiator of the packet.
 	Receiver() *host.Host
 
 	// Request returns origin request.
-	Request() network.Request
+	Request() network.Packet
 
 	// Response is a channel to listen for future response.
-	Response() <-chan network.Response
+	Response() <-chan network.Packet
 
 	// SetResponse makes packet to appear in response channel.
-	SetResponse(network.Response)
+	SetResponse(network.Packet)
 
 	// WaitResponse gets the future response from Response() channel with a timeout set to `duration`.
-	WaitResponse(duration time.Duration) (network.Response, error)
+	WaitResponse(duration time.Duration) (network.Packet, error)
 
 	// Cancel closes all channels and cleans up underlying structures.
 	Cancel()

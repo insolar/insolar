@@ -53,37 +53,39 @@ package future
 import (
 	"sync"
 
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 type futureManager struct {
 	mutex   sync.RWMutex
-	futures map[network.RequestID]Future
+	futures map[types.RequestID]Future
 }
 
 func NewManager() Manager {
 	return &futureManager{
-		futures: make(map[network.RequestID]Future),
+		futures: make(map[types.RequestID]Future),
 	}
 }
 
 func (fm *futureManager) Create(packet *packet.Packet) Future {
-	future := NewFuture(packet.RequestID, packet.Receiver, packet, fm.canceler)
+	// TODO: replace wrapping with own types in protobuf
+	future := NewFuture(types.RequestID(packet.RequestID), packet.Receiver, packet, fm.canceler)
 
 	fm.mutex.Lock()
 	defer fm.mutex.Unlock()
 
-	fm.futures[packet.RequestID] = future
+	fm.futures[types.RequestID(packet.RequestID)] = future
 
 	return future
 }
 
 func (fm *futureManager) Get(packet *packet.Packet) Future {
+	// TODO: replace wrapping with own types in protobuf
 	fm.mutex.RLock()
 	defer fm.mutex.RUnlock()
 
-	return fm.futures[packet.RequestID]
+	return fm.futures[types.RequestID(packet.RequestID)]
 }
 
 func (fm *futureManager) canceler(f Future) {

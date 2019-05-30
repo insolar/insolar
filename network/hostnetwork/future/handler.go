@@ -70,15 +70,14 @@ func NewPacketHandler(futureManager Manager) PacketHandler {
 }
 
 func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
-	metrics.NetworkPacketReceivedTotal.WithLabelValues(response.Type.String()).Inc()
-	if !response.IsResponse {
+	metrics.NetworkPacketReceivedTotal.WithLabelValues(response.GetType().String()).Inc()
+	if !response.IsResponse() {
 		return
 	}
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"type":           response.Type,
-		"remote_address": response.RemoteAddress,
-		"request_id":     response.RequestID,
+		"type":       response.Type,
+		"request_id": response.RequestID,
 	})
 	logger.Debug("[ processResponse ] Processing response")
 
@@ -95,8 +94,8 @@ func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
 }
 
 func shouldProcessPacket(future Future, p *packet.Packet) bool {
-	typesShouldBeEqual := p.Type == future.Request().GetType()
+	typesShouldBeEqual := p.GetType() == future.Request().GetType()
 	responseIsForRightSender := future.Receiver().Equal(*p.Sender)
 
-	return typesShouldBeEqual && (responseIsForRightSender || p.Type == types.Ping)
+	return typesShouldBeEqual && (responseIsForRightSender || p.GetType() == types.Ping)
 }

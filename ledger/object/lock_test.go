@@ -25,41 +25,28 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_IDLockTheSame(t *testing.T) {
 	tl := newtestlocker()
-	id1 := insolar.ID{0x0A}
-	id2 := insolar.ID{0x0A}
-	start1 := make(chan bool)
-	start2 := make(chan bool)
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		<-start1
-		tl.Lock("lock1", &id1)
-		close(start2)
+	id := insolar.ID{0x0A}
 
-		time.Sleep(time.Millisecond * 50)
-		tl.Unlock("unlock1", &id1)
-		wg.Done()
-	}()
-	go func() {
-		<-start2
-		tl.Lock("lock2", &id2)
-		tl.Unlock("unlock2", &id2)
-		wg.Done()
-	}()
-	close(start1)
-	wg.Wait()
-
-	expectsteps := []string{
-		"before-lock1",
-		"before-lock2",
-		"before-unlock1",
-		"before-unlock2",
+	counter := 0
+	numParallelAccessors := 800
+	wg := sync.WaitGroup{}
+	wg.Add(numParallelAccessors)
+	for i := 0; i < numParallelAccessors; i++ {
+		go func() {
+			tl.Lock("", &id)
+			counter++
+			tl.Unlock("", &id)
+			wg.Done()
+		}()
 	}
-	assert.Equal(t, expectsteps, tl.synclist.list, "steps in proper order")
+
+	wg.Wait()
+	require.Equal(t, numParallelAccessors, counter)
 }
 
 func Test_IDLockDifferent(t *testing.T) {

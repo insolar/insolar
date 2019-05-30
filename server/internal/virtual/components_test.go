@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package virtual
 
@@ -24,16 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testPassed = false
-
 func TestInitComponents(t *testing.T) {
-	if testPassed {
-		// Dirty hack. This test doesn't work properly with -count 10
-		// because it registers HTTP handlers. Sadly there is no way
-		// to unregister HTTP handlers in net/http package.
-		return
-	}
-
 	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
@@ -68,6 +60,4 @@ func TestInitComponents(t *testing.T) {
 
 	err = cm.Stop(ctx)
 	require.NoError(t, err)
-
-	testPassed = true
 }

@@ -183,7 +183,7 @@ var secondInsgorundCleaner func()
 
 func startInsgorund(listenPort string, upstreamPort string) (func(), error) {
 	// It starts on ports of "virtual" node
-	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort)
+	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort, false)
 	if err != nil {
 		return cleaner, errors.Wrap(err, "[ startInsgorund ] couldn't wait for insolard to start completely: ")
 	}
@@ -372,18 +372,24 @@ func setup() error {
 	return nil
 }
 
-func teardown() {
-	var envSetting = os.Getenv("TEST_ENV")
-	var err error
-	fmt.Println("TEST_ENV: ", envSetting)
-	if envSetting != "CI" {
-		err = stopInsolard()
-
-		if err != nil {
-			fmt.Println("[ teardown ]  failed to stop insolard: ", err)
-		}
-		fmt.Println("[ teardown ] insolard was successfully stoped")
+func pulseWatcherPath() (string, string, error) {
+	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
+	if err != nil {
+		return "", "", errors.Wrap(err, "Couldn't receive path to github.com/insolar/insolar")
 	}
+	pulseWatcher := filepath.Join(p.Dir, "bin", "pulsewatcher")
+	config := filepath.Join(p.Dir, ".artifacts", "launchnet", "pulsewatcher.yaml")
+	return pulseWatcher, config, nil
+}
+
+func teardown() {
+	var err error
+
+	err = stopInsolard()
+	if err != nil {
+		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+	}
+	fmt.Println("[ teardown ] insolard was successfully stoped")
 
 	err = stopAllInsgorunds()
 	if err != nil {
@@ -401,7 +407,23 @@ func testMainWrapper(m *testing.M) int {
 		fmt.Println("error while setup, skip tests: ", err)
 		return 1
 	}
+
+	pulseWatcher, config, err := pulseWatcherPath()
+	if err != nil {
+		fmt.Println("PulseWatcher not found: ", err)
+		return 1
+	}
+
 	code := m.Run()
+
+	if code != 0 {
+		out, err := exec.Command(pulseWatcher, "-c", config, "-s").CombinedOutput()
+		if err != nil {
+			fmt.Println("PulseWatcher execution error: ", err)
+			return 1
+		}
+		fmt.Println(string(out))
+	}
 	return code
 }
 

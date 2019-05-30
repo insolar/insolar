@@ -109,9 +109,8 @@ func TestVerifyPulseSignTrue(t *testing.T) {
 	pulse.Signs = make(map[string]insolar.PulseSenderConfirmation, 1)
 	pulse.Signs["keystr"] = psc
 
-	valid, err := controller.verifyPulseSign(*pulse)
+	err = controller.verifyPulseSign(*pulse)
 	assert.NoError(t, err)
-	assert.True(t, valid)
 }
 
 func TestVerifyPulseSignFalse(t *testing.T) {
@@ -130,9 +129,8 @@ func TestVerifyPulseSignFalse(t *testing.T) {
 	pulse.Signs = make(map[string]insolar.PulseSenderConfirmation, 1)
 	pulse.Signs["keystr"] = psc
 
-	valid, err := controller.verifyPulseSign(*pulse)
+	err := controller.verifyPulseSign(*pulse)
 	assert.Error(t, err)
-	assert.False(t, valid)
 }
 
 func randomEntropy() [64]byte {

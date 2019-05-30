@@ -27,7 +27,7 @@ func refByName(name string) insolar.Reference {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	vRec := record.Wrap(record.Request{
 		CallType: record.CTGenesis,
-		Method: name,
+		Method:   name,
 	})
 	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vRec))
 	return *insolar.NewReference(rootdomain.RootDomain.ID(), *id)

@@ -17,12 +17,15 @@
 package insolar
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/insolar/utils"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -36,6 +39,29 @@ const (
 
 // Entropy is 64 random bytes used in every pseudo-random calculations.
 type Entropy [EntropySize]byte
+
+func (entropy Entropy) Marshal() ([]byte, error) { return entropy[:], nil }
+func (entropy Entropy) MarshalTo(data []byte) (int, error) {
+	copy(data, entropy[:])
+	return EntropySize, nil
+}
+func (entropy *Entropy) Unmarshal(data []byte) error {
+	if len(data) != EntropySize {
+		return errors.New("Not enough bytes to unpack Entropy")
+	}
+	copy(entropy[:], data)
+	return nil
+}
+func (entropy *Entropy) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, entropy)
+}
+func (entropy Entropy) Size() int { return EntropySize }
+func (entropy Entropy) Compare(other Entropy) int {
+	return bytes.Compare(entropy[:], other[:])
+}
+func (entropy Entropy) Equal(other Entropy) bool {
+	return entropy.Compare(other) == 0
+}
 
 // PulseNumber is a sequential number of Pulse.
 // Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
@@ -51,6 +77,28 @@ func NewPulseNumber(buf []byte) PulseNumber {
 // Bytes serializes pulse number.
 func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
+}
+
+func (pn *PulseNumber) MarshalTo(data []byte) (int, error) {
+	buf := pn.Bytes()
+	if len(data) < len(buf) {
+		return 0, errors.New("Not enough bytes to marshal PulseNumber")
+	}
+	copy(data, buf)
+	return len(buf), nil
+}
+
+func (pn *PulseNumber) Unmarshal(data []byte) error {
+	*pn = PulseNumber(binary.BigEndian.Uint32(data))
+	return nil
+}
+
+func (pn PulseNumber) Equal(other PulseNumber) bool {
+	return pn == other
+}
+
+func (pn PulseNumber) Size() int {
+	return len(pn.Bytes())
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go

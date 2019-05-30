@@ -52,7 +52,6 @@ package hostnetwork
 
 import (
 	"context"
-	"encoding/gob"
 	"sync"
 	"testing"
 	"time"
@@ -63,6 +62,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
@@ -72,8 +72,6 @@ import (
 )
 
 const (
-	InvalidPacket types.PacketType = 1024
-
 	ID1       = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
 	ID2       = "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
 	ID3       = "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
@@ -154,93 +152,84 @@ func TestNewHostNetwork_InvalidReference(t *testing.T) {
 	require.Nil(t, n)
 }
 
-func createTwoHostNetworks(id1, id2 string) (n1, n2 network.HostNetwork, err error) {
-	m := newMockResolver()
+type hostSuite struct {
+	t        *testing.T
+	ctx      context.Context
+	id1, id2 string
+	n1, n2   network.HostNetwork
+	resolver *MockResolver
+}
+
+func newHostSuite(t *testing.T) *hostSuite {
+	resolver := newMockResolver()
+	id1 := ID1 + DOMAIN
+	id2 := ID2 + DOMAIN
 
 	cm1 := component.NewManager(nil)
 	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n1, err = NewHostNetwork(ID1 + DOMAIN)
-	if err != nil {
-		return nil, nil, err
-	}
-	cm1.Inject(f1, n1, m)
+	n1, err := NewHostNetwork(id1)
+	require.NoError(t, err)
+	cm1.Inject(f1, n1, resolver)
 
 	cm2 := component.NewManager(nil)
 	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n2, err = NewHostNetwork(ID2 + DOMAIN)
-	if err != nil {
-		return nil, nil, err
-	}
-	cm2.Inject(f2, n2, m)
+	n2, err := NewHostNetwork(id2)
+	require.NoError(t, err)
+	cm2.Inject(f2, n2, resolver)
 
 	ctx := context.Background()
 
 	err = n1.Init(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	err = n2.Init(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 
-	err = n1.Start(ctx)
-	if err != nil {
-		return nil, nil, err
+	return &hostSuite{
+		t: t, ctx: ctx, id1: id1, id2: id2, n1: n1, n2: n2, resolver: resolver,
 	}
-	err = n2.Start(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+}
 
-	err = m.addMapping(id1, n1.PublicAddress())
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id1, n1.PublicAddress())
-	}
-	err = m.addMapping(id2, n2.PublicAddress())
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id2, n2.PublicAddress())
-	}
+func (s *hostSuite) Start() {
+	// start the second hostNetwork before the first because most test cases perform sending packets first -> second,
+	// so the second hostNetwork should be ready to receive packets when the first starts to send
+	err := s.n2.Start(s.ctx)
+	require.NoError(s.t, err)
+	err = s.n1.Start(s.ctx)
+	require.NoError(s.t, err)
 
-	return n1, n2, nil
+	err = s.resolver.addMapping(s.id1, s.n1.PublicAddress())
+	require.NoError(s.t, err, "failed to add mapping %s -> %s: %s", s.id1, s.n1.PublicAddress(), err)
+	err = s.resolver.addMapping(s.id2, s.n2.PublicAddress())
+	require.NoError(s.t, err, "failed to add mapping %s -> %s: %s", s.id2, s.n2.PublicAddress(), err)
+}
+
+func (s *hostSuite) Stop() {
+	// stop hostNetworks in the reverse order of their start
+	_ = s.n1.Stop(s.ctx)
+	_ = s.n2.Stop(s.ctx)
 }
 
 func TestNewHostNetwork(t *testing.T) {
-	ctx := context.Background()
-	ctx2 := context.Background()
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
+	s := newHostSuite(t)
+	defer s.Stop()
 
 	count := 10
 	wg := sync.WaitGroup{}
 	wg.Add(count)
 
-	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, request network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		wg.Done()
-		return n2.BuildResponse(ctx, request, nil), nil
+		return s.n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	}
-	n2.RegisterRequestHandler(types.Ping, handler)
+	s.n2.RegisterRequestHandler(types.Ping, handler)
 
-	err = n2.Start(ctx2)
-	assert.NoError(t, err)
-	defer func() {
-		err = n2.Stop(ctx2)
-		assert.NoError(t, err)
-	}()
-
-	err = n1.Start(ctx)
-	assert.NoError(t, err)
-	defer func() {
-		err = n1.Stop(ctx2)
-		assert.NoError(t, err)
-	}()
+	s.Start()
 
 	for i := 0; i < count; i++ {
-		request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
-		_, err = n1.SendRequest(ctx, request, *ref)
+		_, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 		require.NoError(t, err)
 	}
 
@@ -271,8 +260,7 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 	require.NoError(t, err)
 
 	// should return error because cannot resolve NodeID -> Address
-	request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	_, err = n1.SendRequest(ctx, request, *unknownID)
+	_, err = n1.SendRequest(ctx, types.Ping, &packet.Ping{}, *unknownID)
 	require.Error(t, err)
 
 	err = m.addMapping(ID2+DOMAIN, "abirvalg")
@@ -283,172 +271,123 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	// should return error because resolved address is invalid
-	_, err = n1.SendRequest(ctx, request, *ref)
+	_, err = n1.SendRequest(ctx, types.Ping, &packet.Ping{}, *ref)
 	require.Error(t, err)
 }
 
 func TestHostNetwork_SendRequestPacket2(t *testing.T) {
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
-	ctx := context.Background()
-	ctx2 := context.Background()
+	s := newHostSuite(t)
+	defer s.Stop()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
 		require.Equal(t, *ref, r.GetSender())
-		require.Equal(t, n1.PublicAddress(), r.GetSenderHost().Address.String())
+		require.Equal(t, s.n1.PublicAddress(), r.GetSenderHost().Address.String())
 		wg.Done()
-		return n2.BuildResponse(ctx, r, nil), nil
+		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
 
-	n2.RegisterRequestHandler(types.Ping, handler)
+	s.n2.RegisterRequestHandler(types.Ping, handler)
 
-	n2.Start(ctx2)
-	n1.Start(ctx)
-	defer func() {
-		n1.Stop(ctx)
-		n2.Stop(ctx2)
-	}()
+	s.Start()
 
-	request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
+	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	require.Equal(t, *ref, request.GetSender())
-	require.Equal(t, n1.PublicAddress(), request.GetSenderHost().Address.String())
-
-	ref, err = insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	require.NoError(t, err)
-	_, err = n1.SendRequest(ctx, request, *ref)
+	_, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
 	wg.Wait()
 }
 
 func TestHostNetwork_SendRequestPacket3(t *testing.T) {
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
-	ctx := context.Background()
-	ctx2 := context.Background()
+	s := newHostSuite(t)
+	defer s.Stop()
 
-	type Data struct {
-		Number int
-	}
-	gob.Register(&Data{})
-
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
-		d := r.GetData().(*Data)
-		return n2.BuildResponse(ctx, r, &Data{Number: d.Number + 1}), nil
+		data := r.GetRequest().GetPulse()
+		error := string(data.TraceSpanData) + string(data.TraceSpanData)
+		return s.n2.BuildResponse(ctx, r, &packet.BasicResponse{Error: error}), nil
 	}
-	n2.RegisterRequestHandler(types.Ping, handler)
+	s.n2.RegisterRequestHandler(types.Pulse, handler)
 
-	n2.Start(ctx2)
-	n1.Start(ctx)
-	defer func() {
-		n1.Stop(ctx)
-		n2.Stop(ctx2)
-	}()
+	s.Start()
 
-	magicNumber := 42
-	request := n1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
+	data := []byte("123")
+	request := &packet.PulseRequest{TraceSpanData: data}
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := n1.SendRequest(ctx, request, *ref)
-	require.NoError(t, err)
-	require.Equal(t, f.Request().GetSender(), request.GetSender())
-
-	r, err := f.WaitResponse(time.Second)
+	f, err := s.n1.SendRequest(s.ctx, types.Pulse, request, *ref)
 	require.NoError(t, err)
 
-	d := r.GetData().(*Data)
-	require.Equal(t, magicNumber+1, d.Number)
+	r, err := f.WaitResponse(time.Minute)
+	require.NoError(t, err)
 
-	magicNumber = 666
-	request = n1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
-	f, err = n1.SendRequest(ctx, request, *ref)
+	d := r.GetResponse().GetBasic().Error
+	require.Equal(t, "123123", d)
+
+	data = []byte("666")
+	request = &packet.PulseRequest{TraceSpanData: data}
+	f, err = s.n1.SendRequest(s.ctx, types.Pulse, request, *ref)
 	require.NoError(t, err)
 
 	r = <-f.Response()
-	d = r.GetData().(*Data)
-	require.Equal(t, magicNumber+1, d.Number)
+	d = r.GetResponse().GetBasic().Error
+	require.Equal(t, d, "666666")
 }
 
 func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
-	ctx := context.Background()
-	ctx2 := context.Background()
+	s := newHostSuite(t)
+	defer s.Stop()
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
-		time.Sleep(time.Second)
-		return n2.BuildResponse(ctx, r, nil), nil
+		time.Sleep(time.Millisecond * 100)
+		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
-	n2.RegisterRequestHandler(types.Ping, handler)
+	s.n2.RegisterRequestHandler(types.Ping, handler)
 
-	err = n2.Start(ctx2)
-	require.NoError(t, err)
+	s.Start()
 
-	defer func() {
-		err = n2.Stop(ctx2)
-		assert.NoError(t, err)
-	}()
-
-	err = n1.Start(ctx)
-	require.NoError(t, err)
-
-	request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := n1.SendRequest(ctx, request, *ref)
+	f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
-	_, err = f.WaitResponse(time.Millisecond)
+	_, err = f.WaitResponse(time.Microsecond * 10)
 	require.Error(t, err)
 
-	f, err = n1.SendRequest(ctx, request, *ref)
+	f, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
-	defer func() {
-		err = n1.Stop(ctx2)
-		assert.NoError(t, err)
-	}()
 
-	_, err = f.WaitResponse(time.Second * 2)
+	_, err = f.WaitResponse(time.Minute)
 	require.NoError(t, err)
 }
 
 func TestHostNetwork_WrongHandler(t *testing.T) {
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
-	ctx := context.Background()
-	ctx2 := context.Background()
+	s := newHostSuite(t)
+	defer s.Stop()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		wg.Done()
-		return n2.BuildResponse(ctx, r, nil), nil
+		return s.n2.BuildResponse(ctx, r, nil), nil
 	}
-	n2.RegisterRequestHandler(InvalidPacket, handler)
+	s.n2.RegisterRequestHandler(types.Pulse, handler)
 
-	n2.Start(ctx2)
-	n1.Start(ctx)
-	defer func() {
-		n1.Stop(ctx)
-		n2.Stop(ctx2)
-	}()
+	s.Start()
 
-	request := n1.NewRequestBuilder().Type(types.Ping).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	_, err = n1.SendRequest(ctx, request, *ref)
+	_, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
@@ -457,53 +396,44 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 }
 
 func TestStartStopSend(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
-	ctx := context.Background()
-	ctx2 := context.Background()
-
-	err = t2.Start(ctx2)
-	require.NoError(t, err)
-	defer t2.Stop(ctx2)
+	s := newHostSuite(t)
+	defer s.Stop()
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		wg.Done()
-		return t2.BuildResponse(ctx, r, nil), nil
+		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
-	t2.RegisterRequestHandler(types.Ping, handler)
+	s.n2.RegisterRequestHandler(types.Ping, handler)
 
-	err = t1.Start(ctx)
-	require.NoError(t, err)
+	s.Start()
 
 	send := func() {
-		request := t1.NewRequestBuilder().Type(types.Ping).Build()
 		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
-		f, err := t1.SendRequest(ctx, request, *ref)
+		f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 		require.NoError(t, err)
 		<-f.Response()
 	}
 
 	send()
 
-	err = t1.Stop(ctx)
+	err := s.n1.Stop(s.ctx)
 	require.NoError(t, err)
-	err = t1.Start(ctx)
+	err = s.n1.Start(s.ctx)
 	require.NoError(t, err)
 
 	send()
 	wg.Wait()
-	t1.Stop(ctx)
 }
 
 func TestHostNetwork_SendRequestToHost_NotStarted(t *testing.T) {
 	hn, err := NewHostNetwork(ID1 + DOMAIN)
 	require.NoError(t, err)
 
-	_, err = hn.SendRequestToHost(context.Background(), nil, nil)
+	_, err = hn.SendRequestToHost(context.Background(), types.Ping, nil, nil)
 	require.EqualError(t, err, "host network is not started")
 }

@@ -72,7 +72,9 @@ func (h *HandleCall) executeActual(
 
 	if err := f.Procedure(ctx, &procCheckRole, true); err != nil {
 		es.Unlock()
-		// TODO: check if error is ErrCancelled
+		if err == flow.ErrCancelled {
+			return nil, err // message bus will retry on the calling side
+		}
 		return nil, errors.Wrap(err, "[ executeActual ] can't play role")
 	}
 
@@ -82,10 +84,15 @@ func (h *HandleCall) executeActual(
 	}
 	es.Unlock()
 
-	request, err := lr.RegisterRequest(ctx, parcel)
-	if err != nil {
+	procRegisterRequest := NewRegisterRequest(parcel, h.dep)
+
+	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
+		if err == flow.ErrCancelled {
+			return nil, err // message bus will automatically retry on the calling side
+		}
 		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
+	request := procRegisterRequest.getResult()
 
 	es.Lock()
 	qElement := ExecutionQueueElement{

@@ -20,16 +20,16 @@ package logicrunner
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
 	"net"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+
+	"github.com/insolar/insolar/log"
 
 	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -72,10 +72,9 @@ type ObjectState struct {
 type CurrentExecution struct {
 	Context       context.Context
 	LogicContext  *insolar.LogicCallContext
-	Request       *Ref
-	Sequence      uint64
+	RequestRef    *Ref
+	Request       *record.Request
 	RequesterNode *Ref
-	ReturnMode    record.Request_RM
 	SentResult    bool
 }
 
@@ -195,7 +194,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 func initHandlers(lr *LogicRunner) error {
-	wmLogger := watermill.NewStdLogger(false, false)
+	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 
 	dep := &Dependencies{
@@ -349,19 +348,6 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg insolar.Message, ro
 	return nil
 }
 
-func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel insolar.Parcel) (*Ref, error) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.RegisterRequest")
-	defer span.End()
-
-	msg := parcel.Message().(*message.CallMethod)
-	id, err := lr.ArtifactManager.RegisterRequest(ctx, msg.Request)
-	if err != nil {
-		return nil, err
-	}
-
-	return insolar.NewReference(insolar.DomainID, *id), nil
-}
-
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
 	context, _ := inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
 	return context
@@ -378,7 +364,7 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if es.Current.ReturnMode == record.ReturnNoWait {
+	if es.Current.Request.ReturnMode == record.ReturnNoWait {
 		return false
 	}
 
@@ -415,7 +401,6 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 		ctx, insolar.DynamicRoleVirtualExecutor, *es.Ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
 	)
 	if !meCurrent {
-		es.objectbody = nil
 		go func() {
 			msg := message.PendingFinished{Reference: es.Ref}
 			_, err := lr.MessageBus.Send(ctx, &msg, nil)
@@ -439,18 +424,18 @@ func (lr *LogicRunner) executeOrValidate(
 		Mode:            "execution",
 		Caller:          msg.GetCaller(),
 		Callee:          &ref,
-		Request:         es.Current.Request,
+		Request:         es.Current.RequestRef,
 		Time:            time.Now(), // TODO: probably we should take it earlier
 		Pulse:           *lr.pulse(ctx),
 		TraceID:         inslogger.TraceID(ctx),
 		CallerPrototype: &msg.CallerPrototype,
+		Immutable:       msg.Immutable,
 	}
 
 	var re insolar.Reply
 	var err error
 	switch msg.CallType {
 	case record.CTMethod:
-		es.Current.LogicContext.Immutable = msg.Immutable
 		re, err = lr.executeMethodCall(ctx, es, msg)
 
 	case record.CTSaveAsChild, record.CTSaveAsDelegate:
@@ -469,13 +454,13 @@ func (lr *LogicRunner) executeOrValidate(
 	defer es.Unlock()
 
 	es.Current.SentResult = true
-	if es.Current.ReturnMode != record.ReturnResult {
+	if es.Current.Request.ReturnMode != record.ReturnResult {
 		return
 	}
 
 	target := *es.Current.RequesterNode
-	request := *es.Current.Request
-	seq := es.Current.Sequence
+	request := *es.Current.RequestRef
+	seq := es.Current.Request.Sequence
 
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for %#v", request)
@@ -575,56 +560,45 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 	return msg.DefaultTarget()
 }
 
-// ObjectBody is an inner representation of object and all it accessory
-// make it private again when we start it serialize before sending
-type ObjectBody struct {
-	objDescriptor   artifacts.ObjectDescriptor
-	Object          []byte
-	Prototype       *Ref
-	CodeMachineType insolar.MachineType
-	CodeRef         *Ref
-	Parent          *Ref
-}
-
-func init() {
-	gob.Register(&ObjectBody{})
-}
-
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (insolar.Reply, error) {
-	if es.objectbody == nil {
-		objDesc, protoDesc, codeDesc, err := lr.getDescriptorsByObjectRef(ctx, *m.Object)
 
+	objDesc, err := lr.ArtifactManager.GetObject(ctx, *m.Object)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object")
+	}
+	es.ObjectDescriptor = objDesc
+
+	if es.PrototypeDescriptor == nil {
+		protoRef, err := objDesc.Prototype()
 		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get descriptors by object reference")
+			return nil, errors.Wrap(err, "couldn't get prototype")
 		}
 
-		es.objectbody = &ObjectBody{
-			objDescriptor:   objDesc,
-			Object:          objDesc.Memory(),
-			Prototype:       protoDesc.HeadRef(),
-			CodeMachineType: codeDesc.MachineType(),
-			CodeRef:         codeDesc.Ref(),
-			Parent:          objDesc.Parent(),
+		protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *protoRef)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get descriptors by prototype reference")
 		}
-		inslogger.FromContext(ctx).Info("LogicRunner.executeMethodCall starts")
+
+		es.PrototypeDescriptor = protoDesc
+		es.CodeDescriptor = codeDesc
 	}
 
 	current := *es.Current
-	current.LogicContext.Prototype = es.objectbody.Prototype
-	current.LogicContext.Code = es.objectbody.CodeRef
-	current.LogicContext.Parent = es.objectbody.Parent
+	current.LogicContext.Prototype = es.PrototypeDescriptor.HeadRef()
+	current.LogicContext.Code = es.CodeDescriptor.Ref()
+	current.LogicContext.Parent = es.ObjectDescriptor.Parent()
 	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
-	if m.Prototype != nil && !m.Prototype.Equal(*es.objectbody.Prototype) {
+	if m.Prototype != nil && !m.Prototype.Equal(*es.PrototypeDescriptor.HeadRef()) {
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
 	}
 
-	executor, err := lr.GetExecutor(es.objectbody.CodeMachineType)
+	executor, err := lr.GetExecutor(es.CodeDescriptor.MachineType())
 	if err != nil {
 		return nil, es.WrapError(err, "no executor registered")
 	}
 
 	newData, result, err := executor.CallMethod(
-		ctx, current.LogicContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
+		ctx, current.LogicContext, *es.CodeDescriptor.Ref(), es.ObjectDescriptor.Memory(), m.Method, m.Arguments,
 	)
 	if err != nil {
 		return nil, es.WrapError(err, "executor error")
@@ -633,27 +607,21 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	am := lr.ArtifactManager
 	if es.deactivate {
 		_, err := am.DeactivateObject(
-			ctx, Ref{}, *current.Request, es.objectbody.objDescriptor,
+			ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor,
 		)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't deactivate object")
 		}
-	} else if !bytes.Equal(es.objectbody.Object, newData) {
-		od, err := am.UpdateObject(ctx, Ref{}, *current.Request, es.objectbody.objDescriptor, newData)
+	} else if !bytes.Equal(es.ObjectDescriptor.Memory(), newData) {
+		_, err := am.UpdateObject(ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor, newData)
 		if err != nil {
-			if strings.Contains(err.Error(), "invalid state record") {
-				es.objectbody = nil
-			}
 			return nil, es.WrapError(err, "couldn't update object")
 		}
-		es.objectbody.objDescriptor = od
 	}
-	_, err = am.RegisterResult(ctx, *m.Object, *current.Request, result)
+	_, err = am.RegisterResult(ctx, *m.Object, *current.RequestRef, result)
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't save results")
 	}
-
-	es.objectbody.Object = newData
 
 	return &reply.CallMethod{Result: result}, nil
 }
@@ -663,7 +631,7 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 ) (
 	artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
 ) {
-	protoDesc, err := lr.ArtifactManager.GetObject(ctx, protoRef, nil, false)
+	protoDesc, err := lr.ArtifactManager.GetObject(ctx, protoRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get prototype descriptor")
 	}
@@ -687,7 +655,7 @@ func (lr *LogicRunner) getDescriptorsByObjectRef(
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByObjectRef")
 	defer span.End()
 
-	objDesc, err := lr.ArtifactManager.GetObject(ctx, objRef, nil, false)
+	objDesc, err := lr.ArtifactManager.GetObject(ctx, objRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "couldn't get object")
 	}
@@ -741,16 +709,16 @@ func (lr *LogicRunner) executeConstructorCall(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate:
 		_, err = lr.ArtifactManager.ActivateObject(
 			ctx,
-			Ref{}, *current.Request, *m.Base, *m.Prototype, m.CallType == record.CTSaveAsDelegate, newData,
+			Ref{}, *current.RequestRef, *m.Base, *m.Prototype, m.CallType == record.CTSaveAsDelegate, newData,
 		)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't activate object")
 		}
-		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.Request, *current.Request, nil)
+		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.RequestRef, *current.RequestRef, nil)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't save results")
 		}
-		return &reply.CallConstructor{Object: current.Request}, err
+		return &reply.CallConstructor{Object: current.RequestRef}, err
 
 	default:
 		return nil, es.WrapError(nil, "unsupported type of save object")
@@ -851,7 +819,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 						"looks like pending executor died, continuing execution",
 					)
 					es.pending = message.NotPending
-					es.objectbody = nil
 					es.LedgerHasMoreRequests = true
 					lr.startGetLedgerPendingRequest(ctx, es)
 				}
@@ -881,6 +848,10 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 }
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
+	// lock is required to access lr.state
+	lr.stateMutex.Lock()
+	defer lr.stateMutex.Unlock()
+
 	if len(lr.state) == 0 {
 		lr.stopLock.Lock()
 		if lr.isStopping {

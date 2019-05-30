@@ -96,7 +96,7 @@ func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) 
 			ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
 			logger.Debug("[ HandleStream ] Handling packet RequestID = ", p.RequestID)
 
-			if p.IsResponse {
+			if p.IsResponse() {
 				go s.responseHandler.Handle(ctx, p)
 			} else {
 				go s.requestHandler(p)

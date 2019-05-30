@@ -24,7 +24,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "gridPos": {
         "h": 9,
@@ -117,7 +117,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": "Prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(insolar_consensus_active_nodes_count, instance)",
         "hide": 0,
         "includeAll": true,
@@ -145,7 +145,7 @@
             "$__all"
           ]
         },
-        "datasource": "Prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(insolar_consensus_active_nodes_count, job)",
         "hide": 0,
         "includeAll": true,

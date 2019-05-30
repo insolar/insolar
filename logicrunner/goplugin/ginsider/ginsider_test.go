@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
+// +build slowtest
 // +build !race
 
 // TODO test failed in race test call. added build tag to ignore this test
@@ -40,16 +40,8 @@ type HealthCheckSuite struct {
 }
 
 var binaryPath string
-var testHealthCheckPassed = false
 
 func (s *HealthCheckSuite) TestHealthCheck() {
-	if testHealthCheckPassed {
-		// Dirty hack. This test doesn't work properly with -count 10
-		// because it registers RPC handlers. Sadly there is no way
-		// to unregister RPC handlers in net/rpc package.
-		return
-	}
-
 	protocol := "unix"
 	socket := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
@@ -94,8 +86,6 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	log.Warnf("%+v", output)
 
 	s.NoError(err)
-
-	testHealthCheckPassed = true
 }
 
 func (s *HealthCheckSuite) prepareGoInsider(gi *GoInsider, protocol, socket string) {

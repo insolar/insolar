@@ -52,10 +52,13 @@ package pulsenetwork
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -152,7 +155,13 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 		}
 	}()
 
-	ctx, span := instracer.StartSpan(ctx, "distributor.Distribute")
+	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
+	ctx, logger = inslogger.WithTraceField(ctx, traceID)
+
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.Distribute")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(pulse.PulseNumber)),
+	)
 	defer span.End()
 
 	bootstrapHosts := make([]*host.Host, 0, len(d.bootstrapHosts))
@@ -203,8 +212,8 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	wg.Wait()
 }
 
-func (d *distributor) generateID() network.RequestID {
-	return network.RequestID(d.idGenerator.Generate())
+func (d *distributor) generateID() types.RequestID {
+	return types.RequestID(d.idGenerator.Generate())
 }
 
 func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
@@ -212,8 +221,14 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 
 	ctx, span := instracer.StartSpan(ctx, "distributor.pingHost")
 	defer span.End()
-	builder := packet.NewBuilder(d.pulsarHost)
-	pingPacket := builder.Receiver(host).Type(types.Ping).RequestID(d.generateID()).Build()
+
+	pingPacket := &packet.Packet{
+		Sender:    d.pulsarHost,
+		Receiver:  host,
+		RequestID: uint64(d.generateID()),
+		Type:      uint32(types.Ping),
+	}
+	pingPacket.SetRequest(&packet.Ping{})
 	pingCall, err := d.sendRequestToHost(ctx, pingPacket, host)
 	if err != nil {
 		logger.Error(err)
@@ -233,7 +248,7 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	return nil
 }
 
-func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse, host *host.Host) error {
+func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {
@@ -243,8 +258,17 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
-	pb := packet.NewBuilder(d.pulsarHost)
-	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).RequestID(d.generateID()).Type(types.Pulse).Build()
+	pulseRequest := &packet.Packet{
+		Sender:    d.pulsarHost,
+		Receiver:  host,
+		RequestID: uint64(d.generateID()),
+		Type:      uint32(types.Pulse),
+	}
+	request := &packet.PulseRequest{
+		TraceSpanData: instracer.MustSerialize(ctx),
+		Pulse:         pulse.ToProto(p),
+	}
+	pulseRequest.SetRequest(request)
 	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
@@ -260,8 +284,6 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 func (d *distributor) pause(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Pause ] Pause distribution, stopping transport")
-	_, span := instracer.StartSpan(ctx, "distributor.pause")
-	defer span.End()
 	d.pool.Reset()
 	err := d.transport.Stop(ctx)
 	if err != nil {
@@ -271,20 +293,19 @@ func (d *distributor) pause(ctx context.Context) {
 
 func (d *distributor) resume(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
-	ctx, span := instracer.StartSpan(ctx, "distributor.resume")
-	defer span.End()
 	return d.transport.Start(ctx)
 }
 
-func (d *distributor) sendRequestToHost(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
-	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", request.GetType(), receiver.String(), request.GetRequestID())
+func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Packet, receiver *host.Host) (network.Future, error) {
+	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d",
+		packet.GetType(), receiver.String(), packet.GetRequestID())
 
-	f := d.futureManager.Create(request.(*packet.Packet))
-	err := hostnetwork.SendPacket(ctx, d.pool, request.(*packet.Packet))
+	f := d.futureManager.Create(packet)
+	err := hostnetwork.SendPacket(ctx, d.pool, packet)
 	if err != nil {
 		f.Cancel()
 		return nil, errors.Wrap(err, "Failed to send transport packet")
 	}
-	metrics.NetworkPacketSentTotal.WithLabelValues(request.GetType().String()).Inc()
+	metrics.NetworkPacketSentTotal.WithLabelValues(packet.GetType().String()).Inc()
 	return f, nil
 }
