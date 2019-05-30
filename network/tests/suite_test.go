@@ -89,6 +89,9 @@ var (
 )
 
 const (
+	UseFakeTransport = true
+	UseMockBootstrap = true
+
 	pulseTimeMs  int32 = 8000
 	reqTimeoutMs int32 = 2000
 	pulseDelta   int32 = 8
@@ -493,10 +496,16 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
-	// little hack: this Register will replace transport.Factory
-	// in servicenetwork internal component manager with fake factory
-	// and DiscoveryBootstrapper with bootstrapMock
-	node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport), newBootstrapMock(s.fixture()))
+	if UseFakeTransport {
+		// little hack: this Register will replace transport.Factory
+		// in servicenetwork internal component manager with fake factory
+		node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport))
+	}
+	if UseMockBootstrap {
+		// little hack: this Register will replace DiscoveryBootstrapper
+		// in servicenetwork internal component manager with bootstrapMock
+		node.componentManager.Register(newBootstrapMock(s.fixture()))
+	}
 
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
 		&amMock, certManager, cryptographyService, mblocker, GIL, serviceNetwork, keyProc, terminationHandler,

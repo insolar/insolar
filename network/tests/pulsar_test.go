@@ -57,6 +57,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
@@ -65,7 +66,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/pulsenetwork"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -120,7 +120,12 @@ func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error 
 	}
 
 	tp.cm = &component.Manager{}
-	tp.cm.Inject(tp.distributor, transport.NewFakeFactory(configuration.NewHostNetwork().Transport))
+	if UseFakeTransport {
+		tp.cm.Register(transport.NewFakeFactory(configuration.NewHostNetwork().Transport))
+	} else {
+		tp.cm.Register(transport.NewFactory(configuration.NewHostNetwork().Transport))
+	}
+	tp.cm.Inject(tp.distributor)
 
 	if err = tp.cm.Init(ctx); err != nil {
 		return errors.Wrap(err, "Failed to init test pulsar components")
