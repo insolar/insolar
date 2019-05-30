@@ -318,14 +318,14 @@ func (m *PulseManager) processJets(ctx context.Context, previous, current, new i
 
 	m.JetModifier.Clone(ctx, current, new)
 
-	var results []jetInfo
 	ids := m.JetAccessor.All(ctx, new)
 	ids, err := m.filterOtherExecutors(ctx, current, ids)
 	if err != nil {
 		return nil, err
 	}
 
-	var withoutSplitIntention []insolar.JetID
+	var results []jetInfo                     // nolint: prealloc
+	var withoutSplitIntention []insolar.JetID // nolint: prealloc
 	for _, id := range ids {
 		if m.hasSplitIntention(ctx, previous, id) {
 			results = append(results, jetInfo{id: id})
