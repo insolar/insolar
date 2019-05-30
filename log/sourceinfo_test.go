@@ -17,10 +17,20 @@
 package log
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func stripPackageName(packageName string) string {
+	result := strings.TrimPrefix(packageName, insolarPrefix)
+	i := strings.Index(result, ".")
+	if result == packageName || i == -1 {
+		return result
+	}
+	return result[:i]
+}
 
 // beware to adding lines in this test (test output depend on test code offset!)
 func TestLog_getCallInfo(t *testing.T) {
