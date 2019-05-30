@@ -73,39 +73,12 @@ func New(name string, key string) (*Member, error) {
 
 // TODO: check if need to store public key when call node registry
 // TODO: some keys are in PEM format
-func (m *Member) verifySigAndComparePublic(public jose.JSONWebKey, signature jose.JSONWebSignature) ([]byte, error) {
-
-	// public in json format
-	//storedMemberPublicKey, err := m.GetPublicKey()
-	//if err != nil {
-	//	return nil, fmt.Errorf("[ verifySig ]: %s", err.Error())
-	//}
-
-	// jwk to json public and compare
-	//publicKeyDer, err := public.MarshalJSON()
-	//if err != nil {
-	//	return nil, fmt.Errorf("[ verifySig ] Invalid public key")
-	//}
-
-	//if storedMemberPublicKey != string(publicKeyDer) {
-	//	return nil, fmt.Errorf("[ verifySig ] Non authorized public key" + storedMemberPublicKey + string(publicKeyDer))
-	//}
-
-	payload, err := signature.Verify(public)
-	if err != nil {
-		return nil, fmt.Errorf("[ verifySig ] Incorrect signature")
-	}
-	return payload, nil
-}
-
-// Call method for authorized calls
-func (m *Member) Call(rootDomain insolar.Reference, _signedRequest []byte) (interface{}, error) {
-
+func (m *Member) verifySignatureAndComparePublic(signedRequest []byte) ([]byte, error) {
 	var jwks string
 	var jwss string
 
 	// cbored data
-	err := signer.UnmarshalParams(_signedRequest, &jwks, &jwss)
+	err := signer.UnmarshalParams(signedRequest, &jwks, &jwss)
 
 	jwk := jose.JSONWebKey{}
 
@@ -116,8 +89,34 @@ func (m *Member) Call(rootDomain insolar.Reference, _signedRequest []byte) (inte
 		return nil, fmt.Errorf("[ Call ] Can't unmarshal params: %s", err.Error())
 	}
 
+	//// public in pem format
+	//storedMemberPublicKey, err := m.GetPublicKey()
+	//if err != nil {
+	//	return nil, fmt.Errorf("[ verifySig ]: %s", err.Error())
+	//}
+	//
+	//// jwk to pem and compare
+	//publicKey, err := public.MarshalJSON()
+	//if err != nil {
+	//	return nil, fmt.Errorf("[ verifySig ] Invalid public key")
+	//}
+
+	//if storedMemberPublicKey != string(publicKeyDer) {
+	//	return nil, fmt.Errorf("[ verifySig ] Non authorized public key" + storedMemberPublicKey + string(publicKeyDer))
+	//}
+
+	payload, err := jws.Verify(jwk)
+	if err != nil {
+		return nil, fmt.Errorf("[ verifySig ] Incorrect signature")
+	}
+	return payload, nil
+}
+
+// Call method for authorized calls
+func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
+
 	// Verify signature
-	payload, err := m.verifySigAndComparePublic(jwk, *jws)
+	payload, err := m.verifySignatureAndComparePublic(signedRequest)
 	if err != nil {
 		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
 	}
