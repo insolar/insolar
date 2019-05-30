@@ -19,7 +19,6 @@ package genesis
 import (
 	"context"
 
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -40,55 +39,9 @@ func NewInitializer(cfgPath string, genesisConfigPath, genesisKeyOut string) *In
 	}
 }
 
-func (s *Initializer) Run() {
-	cfgHolder := configuration.NewHolder()
-	var err error
-	if len(s.cfgPath) != 0 {
-		err = cfgHolder.LoadFromFile(s.cfgPath)
-	} else {
-		err = cfgHolder.Load()
-	}
-	if err != nil {
-		// TODO: should be fatal error
-		log.Warn("failed to load configuration from file: ", err.Error())
-	}
-
-	cfg := &cfgHolder.Configuration
-	ctx, inslog := initLogger(context.Background(), cfg.Log)
-	log.SetGlobalLogger(inslog)
-	log.Info("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
-
+func (s *Initializer) Run(ctx context.Context) {
 	genesisConfig, err := ParseGenesisConfig(s.genesisConfigPath)
 	checkError(ctx, err, "failed to create genesis Generator")
-
-	bc := initBootstrapComponents(ctx, *cfg)
-	certManager := createCertificateManager(
-		ctx,
-		bc.CryptographyService,
-		bc.KeyProcessor,
-	)
-
-	sc := initStorageComponents(cfg.Ledger)
-
-	cm := component.Manager{}
-	cm.Inject(
-		bc.PlatformCryptographyScheme,
-		bc.CryptographyService,
-		bc.KeyProcessor,
-		certManager,
-
-		sc.blobDB,
-		sc.dropDB,
-		sc.recordDB,
-		sc.storeBadgerDB,
-		sc.pulseDB,
-	)
-
-	err = cm.Init(ctx)
-	checkError(ctx, err, "failed to init components")
-
-	err = cm.Start(ctx)
-	checkError(ctx, err, "failed to start components")
 
 	genesisGenerator := NewGenerator(
 		genesisConfig,
@@ -96,9 +49,6 @@ func (s *Initializer) Run() {
 	)
 	err = genesisGenerator.Run(ctx)
 	checkError(ctx, err, "failed to generate genesis")
-
-	err = cm.Stop(ctx)
-	checkError(ctx, err, "failed to stop components")
 }
 
 func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, insolar.Logger) {

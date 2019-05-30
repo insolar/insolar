@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
@@ -72,7 +73,7 @@ func main() {
 			params.configPath,
 			params.genesisConfigPath,
 			params.genesisKeyOut,
-		).Run()
+		).Run(context.Background())
 		return
 	}
 
