@@ -297,7 +297,7 @@ func (bc *BootstrapperImpl) BootstrapDiscovery(ctx context.Context) (*network.Bo
 		go bc.startCyclicBootstrap(ctx)
 	}
 
-	return parseBotstrapResults(bootstrapResults), nil
+	return parseBootstrapResults(bootstrapResults), nil
 }
 
 func (bc *BootstrapperImpl) calculateLastIgnoredPulse(ctx context.Context, lastPulses []insolar.PulseNumber) insolar.PulseNumber {
@@ -369,7 +369,7 @@ func (bc *BootstrapperImpl) getGenesisRequestsChannel(ctx context.Context, disco
 	for _, discoveryHost := range discoveryHosts {
 		go func(ctx context.Context, address *host.Host, ch chan<- *packet.GenesisResponse) {
 			logger := inslogger.FromContext(ctx)
-			ctx, span := instracer.StartSpan(ctx, "Bootsytrapper.getGenesisRequestChannel")
+			ctx, span := instracer.StartSpan(ctx, "Bootstrapper.getGenesisRequestChannel")
 			span.AddAttributes(
 				trace.StringAttribute("genesis request to", address.String()),
 			)
@@ -542,7 +542,7 @@ func (bc *BootstrapperImpl) startCyclicBootstrap(ctx context.Context) {
 			results = append(results, res)
 		}
 		if len(results) != 0 {
-			index := bc.getLagerNetorkIndex(ctx, results)
+			index := bc.getLargerNetworkIndex(ctx, results)
 			if index >= 0 {
 				bc.reconnectToNewNetwork(ctx, nodes[index].GetHost())
 			}
@@ -551,7 +551,7 @@ func (bc *BootstrapperImpl) startCyclicBootstrap(ctx context.Context) {
 	}
 }
 
-func (bc *BootstrapperImpl) getLagerNetorkIndex(ctx context.Context, results []*network.BootstrapResult) int {
+func (bc *BootstrapperImpl) getLargerNetworkIndex(ctx context.Context, results []*network.BootstrapResult) int {
 	networkSize := results[0].NetworkSize
 	index := 0
 	for i := 1; i < len(results); i++ {
@@ -671,7 +671,7 @@ func (bc *BootstrapperImpl) Init(ctx context.Context) error {
 	return nil
 }
 
-func parseBotstrapResults(results []*network.BootstrapResult) *network.BootstrapResult {
+func parseBootstrapResults(results []*network.BootstrapResult) *network.BootstrapResult {
 	minIDIndex := 0
 	minID := results[0].Host.NodeID
 	for i, result := range results {
