@@ -195,7 +195,7 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 	pulseTicker = time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
 	go func() {
 		for range pulseTicker.C {
-			err = server.StartConsensusProcess(ctx, insolar.PulseNumber(server.GetLastPulse().PulseNumber+insolar.PulseNumber(cfg.NumberDelta)))
+			err = server.StartConsensusProcess(ctx, server.GetLastPulse().PulseNumber+insolar.PulseNumber(cfg.NumberDelta))
 			if err != nil {
 				inslogger.FromContext(ctx).Fatal(err)
 				panic(err)

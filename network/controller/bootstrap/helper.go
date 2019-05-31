@@ -59,8 +59,6 @@ import (
 	"github.com/insolar/insolar/network/utils"
 )
 
-const nonceSize int = 128
-
 // CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
 func CheckShortIDCollision(keeper network.NodeKeeper, id insolar.ShortNodeID) bool {
 	return keeper.GetAccessor().GetActiveNodeByShortID(id) != nil

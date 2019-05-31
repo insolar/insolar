@@ -233,11 +233,11 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) Leave(ctx context.Context, ETA insolar.PulseNumber) {
+func (n *ServiceNetwork) Leave(ctx context.Context, eta insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: ETA})
+	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: eta})
 }
 
 func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {

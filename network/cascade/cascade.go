@@ -133,7 +133,7 @@ func getNextCascadeLayerIndexes(nodeIds []insolar.Reference, currentNode insolar
 	// calculate children subtree of the current node
 	startIndex = layerWeight + j*n
 	endIndex = startIndex + n
-	return
+	return startIndex, endIndex
 }
 
 // CalculateNextNodes get nodes of the next cascade layer from the input nodes slice

@@ -39,9 +39,6 @@ func (sw *ecdsaSignerWrapper) Sign(data []byte) (*insolar.Signature, error) {
 	}
 
 	ecdsaSignature := SerializeTwoBigInt(r, s)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
-	}
 
 	signature := insolar.SignatureFromBytes(ecdsaSignature)
 	return &signature, nil

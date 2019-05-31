@@ -76,6 +76,8 @@ type CurrentExecution struct {
 	Request       *record.Request
 	RequesterNode *Ref
 	SentResult    bool
+	Nonce         uint64
+	Deactivate    bool
 }
 
 type ExecutionQueueElement struct {
@@ -585,7 +587,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		es.CodeDescriptor = codeDesc
 	}
 
-	current := *es.Current
+	current := es.Current
 	current.LogicContext.Prototype = es.PrototypeDescriptor.HeadRef()
 	current.LogicContext.Code = es.CodeDescriptor.Ref()
 	current.LogicContext.Parent = es.ObjectDescriptor.Parent()
@@ -607,7 +609,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	am := lr.ArtifactManager
-	if es.deactivate {
+	if current.Deactivate {
 		_, err := am.DeactivateObject(
 			ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor,
 		)
@@ -647,32 +649,6 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 	}
 
 	return protoDesc, codeDesc, nil
-}
-
-func (lr *LogicRunner) getDescriptorsByObjectRef(
-	ctx context.Context, objRef Ref,
-) (
-	artifacts.ObjectDescriptor, artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
-) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByObjectRef")
-	defer span.End()
-
-	objDesc, err := lr.ArtifactManager.GetObject(ctx, objRef)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't get object")
-	}
-
-	protoRef, err := objDesc.Prototype()
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't get prototype reference")
-	}
-
-	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *protoRef)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't resolve prototype reference to descriptors")
-	}
-
-	return objDesc, protoDesc, codeDesc, nil
 }
 
 func (lr *LogicRunner) executeConstructorCall(

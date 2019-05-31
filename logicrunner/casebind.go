@@ -65,7 +65,7 @@ func NewCaseBindFromExecutorResultsMessage(msg *message.ExecutorResults) *CaseBi
 	panic("not implemented")
 }
 
-func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBindRequest {
+func (cb *CaseBind) getCaseBindForMessage(_ context.Context) []message.CaseBindRequest {
 	return make([]message.CaseBindRequest, 0)
 	// TODO: we don't validate at the moment, just send empty case bind
 	//

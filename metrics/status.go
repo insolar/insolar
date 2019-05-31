@@ -100,7 +100,7 @@ var statusTmpl = `
 </html>
 `
 
-var parsedStatusTmpl = template.Must(template.New("proc_status").Parse(string(statusTmpl)))
+var parsedStatusTmpl = template.Must(template.New("proc_status").Parse(statusTmpl))
 
 type procStatus struct {
 	StartTime time.Time
