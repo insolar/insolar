@@ -27,17 +27,14 @@ import (
 	"go.opencensus.io/stats"
 )
 
-// extendedObjectIndex is a thread-safe wrapper around IndexBucket struct.
+// extendedIndexBucket is a thread-safe wrapper around IndexBucket struct.
 // Due to IndexBucket is a protobuf-generated struct,
-// extendedObjectIndex was created for creating an opportunity for using of IndexBucket struct  in a thread-safe way.
+// extendedIndexBucket was created for creating an opportunity for using of IndexBucket struct  in a thread-safe way.
 // Also it stores some meta-info, that is required for the work process
-type extendedObjectIndex struct {
+type extendedIndexBucket struct {
 	sync.RWMutex
-	ObjectIndex
-	pendingsMeta
-}
+	IndexBucket
 
-type pendingsMeta struct {
 	isStateCalculated bool
 	fullFilament      []chainLink
 
@@ -53,14 +50,14 @@ type chainLink struct {
 	Records []record.Virtual
 }
 
-func (i *extendedObjectIndex) lifeline() (Lifeline, error) {
+func (i *extendedIndexBucket) lifeline() (Lifeline, error) {
 	i.RLock()
 	defer i.RUnlock()
 
 	return CloneIndex(i.Lifeline), nil
 }
 
-func (i *extendedObjectIndex) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
+func (i *extendedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
 	i.Lock()
 	defer i.Unlock()
 
@@ -68,7 +65,7 @@ func (i *extendedObjectIndex) setLifeline(lifeline Lifeline, pn insolar.PulseNum
 	i.LifelineLastUsed = pn
 }
 
-func (i *extendedObjectIndex) setLifelineLastUsed(pn insolar.PulseNumber) {
+func (i *extendedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
 	i.Lock()
 	defer i.Unlock()
 
@@ -78,30 +75,36 @@ func (i *extendedObjectIndex) setLifelineLastUsed(pn insolar.PulseNumber) {
 // InMemoryIndex is a in-memory storage, that stores a collection of IndexBuckets
 type InMemoryIndex struct {
 	bucketsLock sync.RWMutex
-	buckets     map[insolar.PulseNumber]map[insolar.ID]*extendedObjectIndex
+	buckets     map[insolar.PulseNumber]map[insolar.ID]*extendedIndexBucket
 }
 
 // NewInMemoryIndex creates a new InMemoryIndex
 func NewInMemoryIndex() *InMemoryIndex {
 	return &InMemoryIndex{
-		buckets: map[insolar.PulseNumber]map[insolar.ID]*extendedObjectIndex{},
+		buckets: map[insolar.PulseNumber]map[insolar.ID]*extendedIndexBucket{},
 	}
 }
 
-func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *extendedObjectIndex {
+func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *extendedIndexBucket {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	bucket := &extendedObjectIndex{
-		ObjectIndex: ObjectIndex{
+	bucket := &extendedIndexBucket{
+		IndexBucket: IndexBucket{
 			ObjID:          objID,
 			PendingRecords: []record.Virtual{},
 		},
+		fullFilament:           []chainLink{},
+		notClosedRequests:      []record.Request{},
+		notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
+		requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
+		readPendingUntil:       nil,
+		isStateCalculated:      false,
 	}
 
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
-		objsByPn = map[insolar.ID]*extendedObjectIndex{}
+		objsByPn = map[insolar.ID]*extendedIndexBucket{}
 		i.buckets[pn] = objsByPn
 	}
 	objsByPn[objID] = bucket
@@ -110,7 +113,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 	return bucket
 }
 
-func (i *InMemoryIndex) bucket(pn insolar.PulseNumber, objID insolar.ID) *extendedObjectIndex {
+func (i *InMemoryIndex) bucket(pn insolar.PulseNumber, objID insolar.ID) *extendedIndexBucket {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
@@ -356,26 +359,24 @@ func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumb
 	return b.PendingRecords, nil
 }
 
-// SetObjectIndex adds an object index with provided pulseNumber and ID
-func (i *InMemoryIndex) SetObjectIndex(ctx context.Context, pn insolar.PulseNumber, objIndex ObjectIndex) error {
+// SetBucket adds a bucket with provided pulseNumber and ID
+func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
 	bucks, ok := i.buckets[pn]
 	if !ok {
-		bucks = map[insolar.ID]*extendedObjectIndex{}
+		bucks = map[insolar.ID]*extendedIndexBucket{}
 		i.buckets[pn] = bucks
 	}
 
-	bucks[objIndex.ObjID] = &extendedObjectIndex{
-		ObjectIndex: objIndex,
-		pendingsMeta: pendingsMeta{
-			notClosedRequests:      []record.Request{},
-			fullFilament:           []chainLink{},
-			isStateCalculated:      false,
-			requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
-			notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
-		},
+	bucks[bucket.ObjID] = &extendedIndexBucket{
+		IndexBucket:            bucket,
+		notClosedRequests:      []record.Request{},
+		fullFilament:           []chainLink{},
+		isStateCalculated:      false,
+		requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
+		notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
 	}
 
 	stats.Record(ctx,
@@ -395,7 +396,7 @@ func (i *InMemoryIndex) ForID(ctx context.Context, pn insolar.PulseNumber, objID
 }
 
 // ForPNAndJet returns a collection of buckets for a provided pn and jetID
-func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []ObjectIndex {
+func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
@@ -404,7 +405,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		return nil
 	}
 
-	res := []ObjectIndex{}
+	res := []IndexBucket{}
 
 	for _, b := range bucks {
 		if b.Lifeline.JetID != jetID {
@@ -416,7 +417,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 
 		clonedRecords = append(clonedRecords, b.PendingRecords...)
 
-		res = append(res, ObjectIndex{
+		res = append(res, IndexBucket{
 			ObjID:            b.ObjID,
 			Lifeline:         clonedLfl,
 			LifelineLastUsed: b.LifelineLastUsed,

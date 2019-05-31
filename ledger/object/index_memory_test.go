@@ -216,7 +216,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 		pn := gen.PulseNumber()
 		index := NewInMemoryIndex()
 
-		err := index.SetObjectIndex(ctx, pn, buck)
+		err := index.SetBucket(ctx, pn, buck)
 		require.NoError(t, err)
 
 		savedBuck := index.buckets[pn][objID]
@@ -232,7 +232,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 		pn := gen.PulseNumber()
 		index := NewInMemoryIndex()
 
-		err := index.SetObjectIndex(ctx, pn, buck)
+		err := index.SetBucket(ctx, pn, buck)
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
@@ -246,7 +246,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 			},
 		}
 
-		err = index.SetObjectIndex(ctx, pn, sBuck)
+		err = index.SetBucket(ctx, pn, sBuck)
 		require.NoError(t, err)
 
 		savedBuck := index.buckets[pn][objID]
@@ -312,9 +312,9 @@ func TestNewInMemoryIndex_DeleteForPN(t *testing.T) {
 
 	index := NewInMemoryIndex()
 
-	index.buckets[fPn] = map[insolar.ID]*extendedObjectIndex{}
-	index.buckets[sPn] = map[insolar.ID]*extendedObjectIndex{}
-	index.buckets[tPn] = map[insolar.ID]*extendedObjectIndex{}
+	index.buckets[fPn] = map[insolar.ID]*extendedIndexBucket{}
+	index.buckets[sPn] = map[insolar.ID]*extendedIndexBucket{}
+	index.buckets[tPn] = map[insolar.ID]*extendedIndexBucket{}
 
 	index.DeleteForPN(ctx, sPn)
 

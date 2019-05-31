@@ -80,7 +80,7 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 	expectedMsg := &message.HeavyPayload{
 		JetID:        jetID,
 		PulseNum:     pn,
-		IndexBuckets: convertObjectIndexes(ctx, bucks),
+		IndexBuckets: convertIndexBuckets(ctx, bucks),
 		Drop:         drop.MustEncode(&d),
 		Blobs:        [][]byte{blob.MustEncode(&b)},
 		Records:      [][]byte{recData},
@@ -122,7 +122,7 @@ func TestLightDataGatherer_convertIndexBuckets(t *testing.T) {
 		expected = append(expected, buff)
 	}
 
-	resp := convertObjectIndexes(inslogger.TestContext(t), idxs)
+	resp := convertIndexBuckets(inslogger.TestContext(t), idxs)
 
 	require.Equal(t, resp, expected)
 

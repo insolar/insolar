@@ -50,7 +50,7 @@ type Handler struct {
 	RecordAccessor        object.RecordAccessor
 	RecordModifier        object.RecordModifier
 	IndexLifelineAccessor object.LifelineAccessor
-	IndexBucketModifier   object.ObjectIndexModifier
+	IndexBucketModifier   object.IndexBucketModifier
 	DropModifier          drop.Modifier
 
 	jetID insolar.JetID

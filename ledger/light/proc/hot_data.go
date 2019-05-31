@@ -42,7 +42,7 @@ type HotData struct {
 		DropModifier          drop.Modifier
 		RecentStorageProvider recentstorage.Provider
 		MessageBus            insolar.MessageBus
-		IndexBucketModifier   object.ObjectIndexModifier
+		IndexBucketModifier   object.IndexBucketModifier
 		PendingModifier       object.PendingModifier
 		JetStorage            jet.Storage
 		JetFetcher            jet.Fetcher
@@ -121,10 +121,10 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 
 		decodedIndex.JetID = jetID
-		err = p.Dep.IndexBucketModifier.SetObjectIndex(
+		err = p.Dep.IndexBucketModifier.SetBucket(
 			ctx,
 			p.msg.PulseNumber,
-			object.ObjectIndex{
+			object.IndexBucket{
 				ObjID:                   meta.ObjID,
 				Lifeline:                decodedIndex,
 				LifelineLastUsed:        meta.LifelineLastUsed,

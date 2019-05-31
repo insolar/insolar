@@ -73,7 +73,7 @@ func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar
 
 	buc, err := i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {
-		buc = &ObjectIndex{}
+		buc = &IndexBucket{}
 	} else if err != nil {
 		return err
 	}
@@ -98,8 +98,8 @@ func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar
 	return nil
 }
 
-// SetObjectIndex adds an object index with provided pulseNumber and ID
-func (i *IndexDB) SetObjectIndex(ctx context.Context, pn insolar.PulseNumber, bucket ObjectIndex) error {
+// SetBucket adds a bucket with provided pulseNumber and ID
+func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -112,13 +112,13 @@ func (i *IndexDB) SetObjectIndex(ctx context.Context, pn insolar.PulseNumber, bu
 		statBucketAddedCount.M(1),
 	)
 
-	inslogger.FromContext(ctx).Debugf("[SetObjectIndex] index for obj - %v was set successfully", bucket.ObjID.DebugString())
+	inslogger.FromContext(ctx).Debugf("[SetBucket] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
 	return i.setLastKnownPN(pn, bucket.ObjID)
 }
 
 // ForID returns a lifeline from a bucket with provided PN and ObjID
 func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
-	var buck *ObjectIndex
+	var buck *IndexBucket
 	buck, err := i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {
 		lastPN, err := i.getLastKnownPN(objID)
@@ -137,7 +137,7 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 	return buck.Lifeline, nil
 }
 
-func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *ObjectIndex) error {
+func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *IndexBucket) error {
 	key := indexKey{pn: pn, objID: objID}
 
 	buff, err := bucket.Marshal()
@@ -148,7 +148,7 @@ func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *Ob
 	return i.db.Set(key, buff)
 }
 
-func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*ObjectIndex, error) {
+func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*IndexBucket, error) {
 	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
 	if err == store.ErrNotFound {
 		return nil, ErrIndexBucketNotFound
@@ -157,7 +157,7 @@ func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*ObjectIn
 	if err != nil {
 		return nil, err
 	}
-	bucket := ObjectIndex{}
+	bucket := IndexBucket{}
 	err = bucket.Unmarshal(buff)
 	return &bucket, err
 }
