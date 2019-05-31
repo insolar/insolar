@@ -118,10 +118,12 @@ func (h *HandleCall) handleActual(
 			// before adding an item to the execution queue. In this case the queue was sent to the
 			// next executor without the last item. We could just return ErrCanceled to make the
 			// caller to resend the request. However this will cause a slow request deduplication
-			// process on the LME side. As an optimization we decided to send a special message
-			// type to the next executor. It's possible that while we send the message the pulse
-			// will change once again and the receiver will be not an executor of the object anymore.
-			// However in this case MessageBus will automatically resend the message to the right VE.
+			// process on the LME side (it will be caused anyway by another modifying request if
+			// the object is used a lot, but many requests are read-only and don't cause deduplication).
+			// As an optimization we decided to send a special message type to the next executor.
+			// It's possible that while we send the message the pulse will change once again and
+			// the receiver will be not an executor of the object anymore. However in this case
+			// MessageBus will automatically resend the message to the right VE.
 
 			// TODO: secially for immutable calls, they are not ordered by LME
 			return nil, flow.ErrCancelled
