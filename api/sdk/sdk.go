@@ -189,7 +189,6 @@ func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) 
 	transfer := Transfer{Amount: amount, To: to.Reference}
 	params, err := json.Marshal(transfer)
 
-	//params := []interface{}{amount, to.Reference}
 	config, err := requester.CreateUserConfig(from.Reference, from.PrivateKey)
 	if err != nil {
 		return "", errors.Wrap(err, "[ Transfer ] can't create user config")

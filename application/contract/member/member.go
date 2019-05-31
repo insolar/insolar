@@ -18,12 +18,9 @@ package member
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/insolar/go-jose"
 	"github.com/insolar/insolar/application/contract/member/signer"
-	"math"
-
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
@@ -208,34 +205,11 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 	}
 	var transfer = Transfer{}
 
-	var inAmount interface{}
 	err := json.Unmarshal(params, &transfer)
-
 	if err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
 	}
 
-	switch a := inAmount.(type) {
-	case uint:
-		transfer.Amount = a
-	case uint64:
-		if a > math.MaxUint32 {
-			return nil, errors.New("Transfer ammount bigger than integer")
-		}
-		transfer.Amount = uint(a)
-	case float32:
-		if a > math.MaxUint32 {
-			return nil, errors.New("Transfer ammount bigger than integer")
-		}
-		transfer.Amount = uint(a)
-	case float64:
-		if a > math.MaxUint32 {
-			return nil, errors.New("Transfer ammount bigger than integer")
-		}
-		transfer.Amount = uint(a)
-	default:
-		return nil, fmt.Errorf("Wrong type for amount %t", inAmount)
-	}
 	to, err := insolar.NewReferenceFromBase58(transfer.To)
 	if err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Failed to parse 'to' param: %s", err.Error())
