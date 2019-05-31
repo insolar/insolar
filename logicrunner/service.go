@@ -166,7 +166,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
-	
+
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
@@ -202,15 +202,11 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-<<<<<<< HEAD
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsDelegate")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsDelegate")
 	defer span.End()
 
-	es.nonce++
-=======
 	es.Current.Nonce++
->>>>>>> 182b16570c55fe0f33de9cd5adb49c0f3ead80a6
 
 	msg := &message.CallMethod{
 		Request: record.Request{
