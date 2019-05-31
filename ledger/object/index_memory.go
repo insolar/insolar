@@ -97,6 +97,12 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 			ObjID:          objID,
 			PendingRecords: []record.Virtual{},
 		},
+		pendingsMeta: pendingsMeta{
+			notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
+			requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
+			notClosedRequests:      []record.Request{},
+			fullFilament:           []chainLink{},
+		},
 	}
 
 	objsByPn, ok := i.buckets[pn]

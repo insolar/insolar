@@ -60,14 +60,14 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 		rec,
 	})
 
-	ia := mocks.NewIndexBucketAccessorMock(t)
+	ia := mocks.NewObjectIndexAccessorMock(t)
 	idx := object.Lifeline{
 		JetID:        gen.JetID(),
 		ChildPointer: insolar.NewID(gen.PulseNumber(), nil),
 		LatestState:  insolar.NewID(gen.PulseNumber(), nil),
 	}
 	idxID := gen.ID()
-	bucks := []object.IndexBucket{
+	bucks := []object.ObjectIndex{
 		{
 			ObjID:    idxID,
 			Lifeline: idx,
@@ -105,8 +105,8 @@ func TestDataGatherer_ForPulseAndJet_DropFetchingFailed(t *testing.T) {
 }
 
 func TestLightDataGatherer_convertIndexBuckets(t *testing.T) {
-	var idxs []object.IndexBucket
-	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.IndexBucket, c fuzz.Continue) {
+	var idxs []object.ObjectIndex
+	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.ObjectIndex, c fuzz.Continue) {
 		elem.Lifeline = object.Lifeline{
 			JetID:        gen.JetID(),
 			LatestUpdate: gen.PulseNumber(),
