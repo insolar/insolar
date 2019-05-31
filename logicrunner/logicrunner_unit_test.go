@@ -1033,7 +1033,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.am.RegisterRequestFunc = func(ctx context.Context, req record.Request) (*insolar.ID, error) {
 					if test.when == whenRegisterRequest {
 						changePulse()
-						// Due to specific implementation of HandleCall.executeActual
+						// Due to specific implementation of HandleCall.handleActual
 						// for this particular test we have to explicitly return
 						// ErrCancelled. Otherwise it's possible that RegisterRequest
 						// Procedure will return normally before Flow cancels it.
