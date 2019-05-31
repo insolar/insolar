@@ -110,7 +110,7 @@ func (m *Member) verifySignatureAndComparePublic(signedRequest []byte) (*SignedP
 	var payloadRequest = SignedPayload{}
 	err = json.Unmarshal(payload, &payloadRequest)
 	if err != nil {
-		return nil, nil,  fmt.Errorf("[ Call ]: %s", err.Error())
+		return nil, nil, fmt.Errorf("[ Call ]: %s", err.Error())
 	}
 
 	return &payloadRequest, &jwk, nil

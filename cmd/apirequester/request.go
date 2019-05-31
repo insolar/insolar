@@ -95,7 +95,7 @@ func severalParallelRequestToDifferentMembers(insSDK *sdk.SDK) {
 			traceIDBalance, err := insSDK.GetBalance(members[i])
 			check("Can not transfer money, error: ", err)
 			fmt.Println("Transfer success. TraceId: ", traceID)
-			fmt.Println("Balance success. TraceId: ", traceIDBalance)
+			fmt.Println("Balance result. TraceId: ", traceIDBalance)
 		}(i)
 	}
 	wg.Wait()
