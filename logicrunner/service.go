@@ -162,8 +162,6 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	pulse := gpr.lr.pulse(ctx)
-
 	es.nonce++
 
 	msg := &message.CallMethod{
@@ -178,7 +176,6 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 			Method:    req.ConstructorName,
 			Arguments: req.ArgsSerialized,
 		},
-		PulseNum: pulse.PulseNumber,
 	}
 
 	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, msg)
@@ -196,8 +193,6 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	pulse := gpr.lr.pulse(ctx)
-
 	es.nonce++
 
 	msg := &message.CallMethod{
@@ -212,7 +207,6 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 			Method:    req.ConstructorName,
 			Arguments: req.ArgsSerialized,
 		},
-		PulseNum: pulse.PulseNumber,
 	}
 
 	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, msg)
