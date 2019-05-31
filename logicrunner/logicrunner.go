@@ -651,32 +651,6 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 	return protoDesc, codeDesc, nil
 }
 
-func (lr *LogicRunner) getDescriptorsByObjectRef(
-	ctx context.Context, objRef Ref,
-) (
-	artifacts.ObjectDescriptor, artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
-) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByObjectRef")
-	defer span.End()
-
-	objDesc, err := lr.ArtifactManager.GetObject(ctx, objRef)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't get object")
-	}
-
-	protoRef, err := objDesc.Prototype()
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't get prototype reference")
-	}
-
-	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *protoRef)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't resolve prototype reference to descriptors")
-	}
-
-	return objDesc, protoDesc, codeDesc, nil
-}
-
 func (lr *LogicRunner) executeConstructorCall(
 	ctx context.Context, es *ExecutionState, m *message.CallMethod,
 ) (

@@ -244,19 +244,16 @@ func goPATH() string {
 	return gopath
 }
 
-func getContractPath(name string) (string, error) {
+func getContractPath(name string) string {
 	contractDir := filepath.Join(goPATH(), "src", contractSources)
 	contractFile := name + ".go"
-	return filepath.Join(contractDir, name, contractFile), nil
+	return filepath.Join(contractDir, name, contractFile)
 }
 
 func parseContracts(contractNames []string) (map[string]*preprocessor.ParsedFile, error) {
 	contracts := make(map[string]*preprocessor.ParsedFile)
 	for _, name := range contractNames {
-		contractPath, err := getContractPath(name)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ contractsMap ] couldn't get path to contracts: ")
-		}
+		contractPath := getContractPath(name)
 		parsed, err := preprocessor.ParseFile(contractPath, insolar.MachineTypeGoPlugin)
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ contractsMap ] couldn't read contract: %v", contractPath)

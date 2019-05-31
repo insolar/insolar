@@ -99,7 +99,7 @@ func (s *transferDifferentMembersScenario) canBeStarted() error {
 
 func (s *transferDifferentMembersScenario) start(ctx context.Context) {
 	var wg sync.WaitGroup
-	for i := 0; i < s.concurrent*2; i = i + 2 {
+	for i := 0; i < s.concurrent*2; i += 2 {
 		wg.Add(1)
 		go s.startMember(ctx, i, &wg)
 	}
@@ -109,7 +109,7 @@ func (s *transferDifferentMembersScenario) start(ctx context.Context) {
 func (s *transferDifferentMembersScenario) startMember(ctx context.Context, index int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	goroutineTime := time.Duration(0)
-	for j := 0; j < s.repetitions; j = j + 1 {
+	for j := 0; j < s.repetitions; j++ {
 		select {
 		case <-ctx.Done():
 			return
@@ -132,9 +132,7 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 			traceID, err = s.insSDK.Transfer(1, from, to)
 			stop = time.Since(start)
 
-			if err == nil {
-				retry = false
-			} else if strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
+			if err != nil && strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
 				time.Sleep(bof.Duration())
 				atomic.AddInt32(&s.penRetries, 1)
 			} else {

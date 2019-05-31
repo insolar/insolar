@@ -138,7 +138,7 @@ func (g *certGen) writeKeys() {
 	f, err := openFile(g.keysFileOut)
 	checkError("Failed to open file with private/public keys:", err)
 
-	_, err = f.Write([]byte(result))
+	_, err = f.Write(result)
 	checkError("Failed to write file with private/public keys:", err)
 
 	fmt.Println("Write keys to", g.keysFileOut)

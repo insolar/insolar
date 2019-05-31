@@ -181,7 +181,7 @@ func RetryFlowCancelled(accessor pulse.Accessor) PreSender {
 		"flow cancelled (retry limit exceeded on client)")
 }
 
-func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugStr string, err string) PreSender{
+func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugStr string, err string) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
 			retries := retriesCount
@@ -212,4 +212,3 @@ func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugS
 		}
 	}
 }
-

@@ -25,23 +25,22 @@ import (
 	"go.opencensus.io/stats"
 )
 
-// RecentStorageProvider provides a recent storage for jet
-type RecentStorageProvider struct { //nolint: golint
+// ConcreteProvider provides a recent storage for jet
+type ConcreteProvider struct {
 	pendingStorages map[insolar.ID]*PendingStorageConcrete
 
-	indexLock   sync.Mutex
 	pendingLock sync.Mutex
 }
 
-// NewRecentStorageProvider creates new provider
-func NewRecentStorageProvider() *RecentStorageProvider {
-	return &RecentStorageProvider{
+// NewProvider creates new ConcreteProvider
+func NewProvider() *ConcreteProvider {
+	return &ConcreteProvider{
 		pendingStorages: map[insolar.ID]*PendingStorageConcrete{},
 	}
 }
 
 // GetPendingStorage returns pendings for a specific jet
-func (p *RecentStorageProvider) GetPendingStorage(ctx context.Context, jetID insolar.ID) PendingStorage {
+func (p *ConcreteProvider) GetPendingStorage(ctx context.Context, jetID insolar.ID) PendingStorage {
 	p.pendingLock.Lock()
 	defer p.pendingLock.Unlock()
 
@@ -54,7 +53,7 @@ func (p *RecentStorageProvider) GetPendingStorage(ctx context.Context, jetID ins
 }
 
 // Count returns count of pendings in all storages
-func (p *RecentStorageProvider) Count() int {
+func (p *ConcreteProvider) Count() int {
 	p.pendingLock.Lock()
 	defer p.pendingLock.Unlock()
 
@@ -67,7 +66,7 @@ func (p *RecentStorageProvider) Count() int {
 }
 
 // ClonePendingStorage clones pending requests from one jet to another one
-func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJetID, toJetID insolar.ID) {
+func (p *ConcreteProvider) ClonePendingStorage(ctx context.Context, fromJetID, toJetID insolar.ID) {
 	p.pendingLock.Lock()
 	fromStorage, ok := p.pendingStorages[fromJetID]
 	p.pendingLock.Unlock()
@@ -105,9 +104,9 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 	p.pendingLock.Unlock()
 }
 
-// RemovePendingStorage removes pending requests for a specific jet from provider
+// RemovePendingStorage removes pending requests for a specific jet from ConcreteProvider
 // If there is a reference to RecentIndexStorage somewhere, it won't be affected
-func (p *RecentStorageProvider) RemovePendingStorage(ctx context.Context, id insolar.ID) {
+func (p *ConcreteProvider) RemovePendingStorage(ctx context.Context, id insolar.ID) {
 	p.pendingLock.Lock()
 	defer p.pendingLock.Unlock()
 

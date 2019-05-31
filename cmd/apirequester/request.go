@@ -65,12 +65,12 @@ func severalParallelRequestToRootMember(insSDK *sdk.SDK) {
 	var wg sync.WaitGroup
 	wg.Add(10)
 	for i := 0; i < 10; i++ {
-		go func(i int) {
+		go func() {
 			defer wg.Done()
 			m, traceID, err := insSDK.CreateMember()
 			check("Can not create member, error: ", err)
 			fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
-		}(i)
+		}()
 	}
 	wg.Wait()
 	fmt.Print("severalParallelRequestToRootMember done just fine\n\n")
