@@ -46,7 +46,7 @@ type Generator struct {
 
 // NewGenerator parses config file and creates new generator on success.
 func NewGenerator(configFile, certificatesOutDir string) (*Generator, error) {
-	config, err := ParseGenesisConfig(configFile)
+	config, err := ParseConfig(configFile)
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,7 @@
 local base_params = import '../params.libsonnet';
 local params = std.mergePatch( base_params.components.insolar, std.extVar("__ksonnet/params").components.insolar );
 
-local genesis = import 'genesis.libsonnet' ;
+local bootstrap_config = import 'bootstrap_config.libsonnet' ;
 local statefull_set() = import 'statefull_set.libsonnet';
 local genesis_insolard_conf() = import "insolard_genesis_config.libsonnet";
 local insolard_conf() = import "insolard_config.libsonnet";
@@ -69,7 +69,7 @@ local configs() = {
     name: "node-config"
   },
   data:{
-            "genesis.yaml": std.manifestYamlDoc(genesis.generate_genesis()),
+            "bootstrap.yaml": std.manifestYamlDoc(bootstrap_config.generate()),
             "insolar-genesis.yaml": std.manifestYamlDoc(genesis_insolard_conf()),
             "insolar.yaml": std.manifestYamlDoc(insolard_conf()),
     }

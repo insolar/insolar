@@ -36,11 +36,13 @@ type Node struct {
 
 // Contracts contains config for contract's plugins generation.
 type Contracts struct {
+	// Insgocc is the path to ingocc binary for plugins generation.
 	Insgocc string
-	OutDir  string
+	// OutDir is the path to directory where plugins so files would be saved.
+	OutDir string
 }
 
-// Config contains all genesis config
+// Config contains all data required for bootstrap.
 type Config struct {
 	// RootKeysFile is the root key place.
 	RootKeysFile string `mapstructure:"root_keys_file"`
@@ -69,10 +71,10 @@ type Config struct {
 	// DiscoveryNodes is a discovery nodes list.
 	DiscoveryNodes []Node `mapstructure:"discovery_nodes"`
 
-	// Nodes is not need on genesis and only used by generate_insolar_config.go
+	// Nodes is used only by generate_insolar_config.go
 	Nodes []Node `mapstructure:"nodes"`
 
-	// PulsarPublicKeys is the pulsar's public keys for pulses  validation
+	// PulsarPublicKeys is the pulsar's public keys for pulses validation
 	// (not in use, just for future features).
 	PulsarPublicKeys []string `mapstructure:"pulsar_public_keys"`
 }
@@ -94,29 +96,29 @@ func hasMinimumRolesSet(conf *Config) error {
 		for role := range minRequiredRolesSet {
 			missingRoles += role + ", "
 		}
-		return errors.New("[ hasMinimumRolesSet ] No required roles in genesis config: " + missingRoles)
+		return errors.New("no required roles in config: " + missingRoles)
 	}
 
 	return nil
 }
 
-// ParseGenesisConfig parse genesis config
-func ParseGenesisConfig(path string) (*Config, error) {
+// ParseConfig parse bootstrap config.
+func ParseConfig(path string) (*Config, error) {
 	var conf = &Config{}
 	v := viper.New()
 	v.SetConfigFile(path)
 	err := v.ReadInConfig()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ parseGenesisConfig ] couldn't read config file")
+		return nil, errors.Wrap(err, "couldn't read config file")
 	}
 	err = v.Unmarshal(conf)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ parseGenesisConfig ] couldn't unmarshal yaml to struct")
+		return nil, errors.Wrap(err, "couldn't unmarshal yaml to struct")
 	}
 
 	err = hasMinimumRolesSet(conf)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ parseGenesisConfig ]")
+		return nil, err
 	}
 
 	return conf, nil

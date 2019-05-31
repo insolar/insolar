@@ -1,6 +1,6 @@
 #@IgnoreInspection BashAddShebang
 CONFIG_DIR=/opt/insolar/config
-GENESIS_CONFIG=$CONFIG_DIR/genesis.yaml
+BOOTSTRAP_CONFIG=$CONFIG_DIR/bootstrap.yaml
 HEAVY_GENESIS_CONFIG=$CONFIG_DIR/heavy_genesis.json
 NODES_DATA=$CONFIG_DIR/nodes
 DISCOVERY_KEYS=$CONFIG_DIR/discovery
@@ -17,16 +17,16 @@ then
     echo "generate root member key"
     insolar gen-key-pair > $CONFIG_DIR/root_member_keys.json
 
-    echo "generate genesis"
+    echo "generate bootstrap files"
     mkdir -vp $NODES_DATA
     mkdir -vp $CERTS_KEYS
     mkdir -vp $DISCOVERY_KEYS
-    insolar bootstrap $GENESIS_CONFIG --keyout $CERTS_KEYS
+    insolar bootstrap --config ${BOOTSTRAP_CONFIG} --certificates-out-dir ${CERTS_KEYS}
     touch /opt/insolar/config/finished
 else
     while ! (/usr/bin/test -e /opt/insolar/config/finished)
     do
-        echo "Waiting for genesis ... ( sleep 5 sec )"
+        echo "Waiting for bootstrap ... ( sleep 5 sec )"
         sleep 5s
     done
 fi

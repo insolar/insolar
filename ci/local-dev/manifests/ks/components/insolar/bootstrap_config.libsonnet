@@ -11,7 +11,7 @@ local make_min_roles() = {
 
 {
   // It generates nodes in particular order: 1) heavy_material 2) light_material 3) virtual
-  generate_genesis():: {
+  generate():: {
 
     // common fields
     root_keys_file: '/opt/insolar/config/root_member_keys.json',

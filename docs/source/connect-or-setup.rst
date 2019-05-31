@@ -154,7 +154,7 @@ To set up the network locally, do the following:
 
 #. Install dependencies and build binaries: simply run ``make``.
 
-#. Take a look at the ``scripts/insolard/bootstrap/genesis_template.yaml`` file. Here, you can find a list of nodes to be launched. In local setup, the 'nodes' are simply services listening on different ports.
+#. Take a look at the ``scripts/insolard/bootstrap_template.yaml`` file. Here, you can find a list of nodes to be launched. In local setup, the 'nodes' are simply services listening on different ports.
 
    To add more nodes to the 'network', uncomment some.
 
@@ -162,9 +162,9 @@ To set up the network locally, do the following:
 
    .. code-block:: bash
 
-      scripts/insolard/launchnet.sh -g
+      scripts/insolard/launchnet.sh -b
 
-   The launcher generates genesis data, starts the nodes and a pulse watcher, and logs events to ``.artifacts/launchnet/logs``.
+   The launcher generates bootstrap data, starts the nodes and a pulse watcher, and logs events to ``.artifacts/launchnet/logs``.
 
 When the pulse watcher says ``INSOLAR STATE: READY``, the network is up and has achieved consensus. You can start running test scripts and `benchmarks <https://github.com/insolar/insolar/blob/master/cmd/benchmark/README.md>`_.
 
