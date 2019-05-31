@@ -119,7 +119,6 @@ func (p *SendObject) handle(
 			ChildPointer: p.index.ChildPointer,
 			Parent:       p.index.Parent,
 			Memory:       obj.Memory,
-			Pendings:     []record.Request{},
 		}, nil
 	}
 
@@ -133,9 +132,6 @@ func (p *SendObject) handle(
 		}
 		stateJet = actualJet
 	}
-
-	// Fetch pendings
-	pendings, err := p.fetchPendings(ctx, parcel.Pulse(), *msg.Head.Record())
 
 	// Fetch state record.
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, *stateID)
@@ -168,7 +164,6 @@ func (p *SendObject) handle(
 			ChildPointer: p.index.ChildPointer,
 			Parent:       p.index.Parent,
 			Memory:       obj.Memory,
-			Pendings:     pendings,
 		}, nil
 	}
 	if err != nil {
@@ -197,7 +192,6 @@ func (p *SendObject) handle(
 		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: childPointer,
 		Parent:       p.index.Parent,
-		Pendings:     pendings,
 	}
 
 	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {

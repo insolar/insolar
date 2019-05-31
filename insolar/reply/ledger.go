@@ -41,7 +41,6 @@ type Object struct {
 	ChildPointer *insolar.ID
 	Memory       []byte
 	Parent       insolar.Reference
-	Pendings     []record.Request
 }
 
 // Type implementation of Reply interface.

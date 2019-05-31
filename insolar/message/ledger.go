@@ -494,6 +494,7 @@ func (m *GetPendingRequestID) DefaultTarget() *insolar.Reference {
 	return insolar.NewReference(insolar.DomainID, m.ObjectID)
 }
 
+// GetPendingFilament fetches a part of a pending-filament from another light
 type GetPendingFilament struct {
 	ledgerMessage
 
