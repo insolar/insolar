@@ -205,7 +205,7 @@ func initComponents(
 }
 
 func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
-	inslogger.FromContext(msg.Context()).WithField(
+	inslogger.FromContext(context.Background()).WithField(
 		"correlation_id",
 		middleware.MessageCorrelationID(msg),
 	).Error("no reply channel")

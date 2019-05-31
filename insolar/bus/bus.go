@@ -238,7 +238,7 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 
 		select {
 		case reply.messages <- msg:
-			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
+			inslogger.FromContext(context.Background()).Infof("result for message with correlationID %s was send", id)
 		case <-reply.done:
 		}
 		reply.wg.Done()

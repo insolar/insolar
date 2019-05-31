@@ -75,7 +75,7 @@ func New() *Handler {
 }
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
-	ctx := inslogger.ContextWithTrace(msg.Context(), msg.Metadata.Get(bus.MetaTraceID))
+	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
 
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)

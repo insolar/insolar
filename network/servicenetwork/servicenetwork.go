@@ -365,7 +365,7 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, address string
 
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
-	ctx := inslogger.ContextWithTrace(msg.Context(), msg.Metadata.Get(bus.MetaTraceID))
+	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
 	logger := inslogger.FromContext(ctx)
 	msgType, err := payload.UnmarshalType(msg.Payload)
 	if err != nil {
@@ -416,7 +416,7 @@ func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, erro
 		return insolar.Reference{}, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
 	}
 
-	latestPulse, err := n.PulseAccessor.Latest(msg.Context())
+	latestPulse, err := n.PulseAccessor.Latest(context.Background())
 	if err != nil {
 		return insolar.Reference{}, errors.Wrap(err, "failed to fetch pulse")
 	}
@@ -461,7 +461,7 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 		logger.Error(err)
 		return nil, err
 	}
-	ctx = inslogger.ContextWithTrace(msg.Context(), msg.Metadata.Get(bus.MetaTraceID))
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 	logger = inslogger.FromContext(ctx)
 	// TODO: check pulse here
 
