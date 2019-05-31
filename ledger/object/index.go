@@ -65,22 +65,22 @@ type IndexCleaner interface {
 	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketModifier -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.ObjectIndexModifier -o ./mocks -s _mock.go
 
-// IndexBucketModifier provides methods for modifying buckets of index.
+// ObjectIndexModifier provides methods for modifying buckets of index.
 // Index contains buckets with pn->objID->Bucket hierarchy.
-// With using of IndexBucketModifier there is a possibility to set buckets from outside of an index.
-type IndexBucketModifier interface {
-	// SetBucket adds a bucket with provided pulseNumber and ID
-	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error
+// With using of ObjectIndexModifier there is a possibility to set buckets from outside of an index.
+type ObjectIndexModifier interface {
+	// SetObjectIndex adds a bucket with provided pulseNumber and ID
+	SetObjectIndex(ctx context.Context, pn insolar.PulseNumber, bucket ObjectIndex) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketAccessor -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.ObjectIndexAccessor -o ./mocks -s _mock.go
 
-// IndexBucketAccessor provides an interface for fetching buckets from an index.
-type IndexBucketAccessor interface {
+// ObjectIndexAccessor provides an interface for fetching buckets from an index.
+type ObjectIndexAccessor interface {
 	// ForPNAndJet returns a collection of buckets for a provided pn and jetID
-	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket
+	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []ObjectIndex
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingModifier -o ./mocks -s _mock.go

@@ -41,7 +41,7 @@ type LightDataGatherer struct {
 	dropAccessor         drop.Accessor
 	blobsAccessor        blob.CollectionAccessor
 	recsAccessor         object.RecordCollectionAccessor
-	indexReplicaAccessor object.IndexBucketAccessor
+	indexReplicaAccessor object.ObjectIndexAccessor
 }
 
 // NewDataGatherer creates a new instance of LightDataGatherer
@@ -49,7 +49,7 @@ func NewDataGatherer(
 	dropAccessor drop.Accessor,
 	blobsAccessor blob.CollectionAccessor,
 	recsAccessor object.RecordCollectionAccessor,
-	indexReplicaAccessor object.IndexBucketAccessor,
+	indexReplicaAccessor object.ObjectIndexAccessor,
 ) *LightDataGatherer {
 	return &LightDataGatherer{
 		dropAccessor:         dropAccessor,
@@ -79,14 +79,14 @@ func (d *LightDataGatherer) ForPulseAndJet(
 	return &message.HeavyPayload{
 		JetID:        jetID,
 		PulseNum:     pn,
-		IndexBuckets: convertIndexBuckets(ctx, indexes),
+		IndexBuckets: convertObjectIndexes(ctx, indexes),
 		Drop:         drop.MustEncode(&dr),
 		Blobs:        convertBlobs(bls),
 		Records:      convertRecords(ctx, records),
 	}, nil
 }
 
-func convertIndexBuckets(ctx context.Context, buckets []object.IndexBucket) [][]byte {
+func convertObjectIndexes(ctx context.Context, buckets []object.ObjectIndex) [][]byte {
 	convertedBucks := make([][]byte, len(buckets))
 	for i, buck := range buckets {
 		buff, err := buck.Marshal()

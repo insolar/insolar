@@ -68,7 +68,7 @@ type MessageHandler struct {
 	JetReleaser   hot.JetReleaser `inject:""`
 
 	LifelineIndex         object.LifelineIndex
-	IndexBucketModifier   object.IndexBucketModifier
+	IndexBucketModifier   object.ObjectIndexModifier
 	LifelineStateModifier object.LifelineStateModifier
 	PendingModifier       object.PendingModifier
 	PendingAccessor       object.PendingAccessor
@@ -84,7 +84,7 @@ type MessageHandler struct {
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
 	index object.LifelineIndex,
-	indexBucketModifier object.IndexBucketModifier,
+	indexBucketModifier object.ObjectIndexModifier,
 	indexStateModifier object.LifelineStateModifier,
 	pendingModifier object.PendingModifier,
 	pendingAccessor object.PendingAccessor,

@@ -27,15 +27,15 @@ type PendingAccessorMock struct {
 	MetaForObjIDPreCounter uint64
 	MetaForObjIDMock       mPendingAccessorMockMetaForObjID
 
+	OpenRequestsForObjIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error)
+	OpenRequestsForObjIDCounter    uint64
+	OpenRequestsForObjIDPreCounter uint64
+	OpenRequestsForObjIDMock       mPendingAccessorMockOpenRequestsForObjID
+
 	RecordsFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.Virtual, r1 error)
 	RecordsCounter    uint64
 	RecordsPreCounter uint64
 	RecordsMock       mPendingAccessorMockRecords
-
-	RequestsForObjIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error)
-	RequestsForObjIDCounter    uint64
-	RequestsForObjIDPreCounter uint64
-	RequestsForObjIDMock       mPendingAccessorMockRequestsForObjID
 }
 
 // NewPendingAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.PendingAccessor
@@ -47,8 +47,8 @@ func NewPendingAccessorMock(t minimock.Tester) *PendingAccessorMock {
 	}
 
 	m.MetaForObjIDMock = mPendingAccessorMockMetaForObjID{mock: m}
+	m.OpenRequestsForObjIDMock = mPendingAccessorMockOpenRequestsForObjID{mock: m}
 	m.RecordsMock = mPendingAccessorMockRecords{mock: m}
-	m.RequestsForObjIDMock = mPendingAccessorMockRequestsForObjID{mock: m}
 
 	return m
 }
@@ -200,6 +200,159 @@ func (m *PendingAccessorMock) MetaForObjIDFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.MetaForObjIDFunc != nil {
 		return atomic.LoadUint64(&m.MetaForObjIDCounter) > 0
+	}
+
+	return true
+}
+
+type mPendingAccessorMockOpenRequestsForObjID struct {
+	mock              *PendingAccessorMock
+	mainExpectation   *PendingAccessorMockOpenRequestsForObjIDExpectation
+	expectationSeries []*PendingAccessorMockOpenRequestsForObjIDExpectation
+}
+
+type PendingAccessorMockOpenRequestsForObjIDExpectation struct {
+	input  *PendingAccessorMockOpenRequestsForObjIDInput
+	result *PendingAccessorMockOpenRequestsForObjIDResult
+}
+
+type PendingAccessorMockOpenRequestsForObjIDInput struct {
+	p  context.Context
+	p1 insolar.PulseNumber
+	p2 insolar.ID
+	p3 int
+}
+
+type PendingAccessorMockOpenRequestsForObjIDResult struct {
+	r  []record.Request
+	r1 error
+}
+
+// Expect specifies that invocation of PendingAccessor.OpenRequestsForObjID is expected from 1 to Infinity times
+func (m *mPendingAccessorMockOpenRequestsForObjID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) *mPendingAccessorMockOpenRequestsForObjID {
+	m.mock.OpenRequestsForObjIDFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingAccessorMockOpenRequestsForObjIDExpectation{}
+	}
+	m.mainExpectation.input = &PendingAccessorMockOpenRequestsForObjIDInput{p, p1, p2, p3}
+	return m
+}
+
+// Return specifies results of invocation of PendingAccessor.OpenRequestsForObjID
+func (m *mPendingAccessorMockOpenRequestsForObjID) Return(r []record.Request, r1 error) *PendingAccessorMock {
+	m.mock.OpenRequestsForObjIDFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingAccessorMockOpenRequestsForObjIDExpectation{}
+	}
+	m.mainExpectation.result = &PendingAccessorMockOpenRequestsForObjIDResult{r, r1}
+	return m.mock
+}
+
+// ExpectOnce specifies that invocation of PendingAccessor.OpenRequestsForObjID is expected once
+func (m *mPendingAccessorMockOpenRequestsForObjID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) *PendingAccessorMockOpenRequestsForObjIDExpectation {
+	m.mock.OpenRequestsForObjIDFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PendingAccessorMockOpenRequestsForObjIDExpectation{}
+	expectation.input = &PendingAccessorMockOpenRequestsForObjIDInput{p, p1, p2, p3}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PendingAccessorMockOpenRequestsForObjIDExpectation) Return(r []record.Request, r1 error) {
+	e.result = &PendingAccessorMockOpenRequestsForObjIDResult{r, r1}
+}
+
+// Set uses given function f as a mock of PendingAccessor.OpenRequestsForObjID method
+func (m *mPendingAccessorMockOpenRequestsForObjID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error)) *PendingAccessorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.OpenRequestsForObjIDFunc = f
+	return m.mock
+}
+
+// OpenRequestsForObjID implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
+func (m *PendingAccessorMock) OpenRequestsForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error) {
+	counter := atomic.AddUint64(&m.OpenRequestsForObjIDPreCounter, 1)
+	defer atomic.AddUint64(&m.OpenRequestsForObjIDCounter, 1)
+
+	if len(m.OpenRequestsForObjIDMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.OpenRequestsForObjIDMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PendingAccessorMock.OpenRequestsForObjID. %v %v %v %v", p, p1, p2, p3)
+			return
+		}
+
+		input := m.OpenRequestsForObjIDMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PendingAccessorMockOpenRequestsForObjIDInput{p, p1, p2, p3}, "PendingAccessor.OpenRequestsForObjID got unexpected parameters")
+
+		result := m.OpenRequestsForObjIDMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PendingAccessorMock.OpenRequestsForObjID")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.OpenRequestsForObjIDMock.mainExpectation != nil {
+
+		input := m.OpenRequestsForObjIDMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PendingAccessorMockOpenRequestsForObjIDInput{p, p1, p2, p3}, "PendingAccessor.OpenRequestsForObjID got unexpected parameters")
+		}
+
+		result := m.OpenRequestsForObjIDMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PendingAccessorMock.OpenRequestsForObjID")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.OpenRequestsForObjIDFunc == nil {
+		m.t.Fatalf("Unexpected call to PendingAccessorMock.OpenRequestsForObjID. %v %v %v %v", p, p1, p2, p3)
+		return
+	}
+
+	return m.OpenRequestsForObjIDFunc(p, p1, p2, p3)
+}
+
+// OpenRequestsForObjIDMinimockCounter returns a count of PendingAccessorMock.OpenRequestsForObjIDFunc invocations
+func (m *PendingAccessorMock) OpenRequestsForObjIDMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.OpenRequestsForObjIDCounter)
+}
+
+// OpenRequestsForObjIDMinimockPreCounter returns the value of PendingAccessorMock.OpenRequestsForObjID invocations
+func (m *PendingAccessorMock) OpenRequestsForObjIDMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.OpenRequestsForObjIDPreCounter)
+}
+
+// OpenRequestsForObjIDFinished returns true if mock invocations count is ok
+func (m *PendingAccessorMock) OpenRequestsForObjIDFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.OpenRequestsForObjIDMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.OpenRequestsForObjIDCounter) == uint64(len(m.OpenRequestsForObjIDMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.OpenRequestsForObjIDMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.OpenRequestsForObjIDCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.OpenRequestsForObjIDFunc != nil {
+		return atomic.LoadUint64(&m.OpenRequestsForObjIDCounter) > 0
 	}
 
 	return true
@@ -357,159 +510,6 @@ func (m *PendingAccessorMock) RecordsFinished() bool {
 	return true
 }
 
-type mPendingAccessorMockRequestsForObjID struct {
-	mock              *PendingAccessorMock
-	mainExpectation   *PendingAccessorMockRequestsForObjIDExpectation
-	expectationSeries []*PendingAccessorMockRequestsForObjIDExpectation
-}
-
-type PendingAccessorMockRequestsForObjIDExpectation struct {
-	input  *PendingAccessorMockRequestsForObjIDInput
-	result *PendingAccessorMockRequestsForObjIDResult
-}
-
-type PendingAccessorMockRequestsForObjIDInput struct {
-	p  context.Context
-	p1 insolar.PulseNumber
-	p2 insolar.ID
-	p3 int
-}
-
-type PendingAccessorMockRequestsForObjIDResult struct {
-	r  []record.Request
-	r1 error
-}
-
-// Expect specifies that invocation of PendingAccessor.RequestsForObjID is expected from 1 to Infinity times
-func (m *mPendingAccessorMockRequestsForObjID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) *mPendingAccessorMockRequestsForObjID {
-	m.mock.RequestsForObjIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingAccessorMockRequestsForObjIDExpectation{}
-	}
-	m.mainExpectation.input = &PendingAccessorMockRequestsForObjIDInput{p, p1, p2, p3}
-	return m
-}
-
-// Return specifies results of invocation of PendingAccessor.RequestsForObjID
-func (m *mPendingAccessorMockRequestsForObjID) Return(r []record.Request, r1 error) *PendingAccessorMock {
-	m.mock.RequestsForObjIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingAccessorMockRequestsForObjIDExpectation{}
-	}
-	m.mainExpectation.result = &PendingAccessorMockRequestsForObjIDResult{r, r1}
-	return m.mock
-}
-
-// ExpectOnce specifies that invocation of PendingAccessor.RequestsForObjID is expected once
-func (m *mPendingAccessorMockRequestsForObjID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) *PendingAccessorMockRequestsForObjIDExpectation {
-	m.mock.RequestsForObjIDFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &PendingAccessorMockRequestsForObjIDExpectation{}
-	expectation.input = &PendingAccessorMockRequestsForObjIDInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *PendingAccessorMockRequestsForObjIDExpectation) Return(r []record.Request, r1 error) {
-	e.result = &PendingAccessorMockRequestsForObjIDResult{r, r1}
-}
-
-// Set uses given function f as a mock of PendingAccessor.RequestsForObjID method
-func (m *mPendingAccessorMockRequestsForObjID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error)) *PendingAccessorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.RequestsForObjIDFunc = f
-	return m.mock
-}
-
-// RequestsForObjID implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
-func (m *PendingAccessorMock) OpenRequestsForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error) {
-	counter := atomic.AddUint64(&m.RequestsForObjIDPreCounter, 1)
-	defer atomic.AddUint64(&m.RequestsForObjIDCounter, 1)
-
-	if len(m.RequestsForObjIDMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RequestsForObjIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PendingAccessorMock.RequestsForObjID. %v %v %v %v", p, p1, p2, p3)
-			return
-		}
-
-		input := m.RequestsForObjIDMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PendingAccessorMockRequestsForObjIDInput{p, p1, p2, p3}, "PendingAccessor.RequestsForObjID got unexpected parameters")
-
-		result := m.RequestsForObjIDMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the PendingAccessorMock.RequestsForObjID")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.RequestsForObjIDMock.mainExpectation != nil {
-
-		input := m.RequestsForObjIDMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, PendingAccessorMockRequestsForObjIDInput{p, p1, p2, p3}, "PendingAccessor.RequestsForObjID got unexpected parameters")
-		}
-
-		result := m.RequestsForObjIDMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the PendingAccessorMock.RequestsForObjID")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.RequestsForObjIDFunc == nil {
-		m.t.Fatalf("Unexpected call to PendingAccessorMock.RequestsForObjID. %v %v %v %v", p, p1, p2, p3)
-		return
-	}
-
-	return m.RequestsForObjIDFunc(p, p1, p2, p3)
-}
-
-// RequestsForObjIDMinimockCounter returns a count of PendingAccessorMock.RequestsForObjIDFunc invocations
-func (m *PendingAccessorMock) RequestsForObjIDMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RequestsForObjIDCounter)
-}
-
-// RequestsForObjIDMinimockPreCounter returns the value of PendingAccessorMock.RequestsForObjID invocations
-func (m *PendingAccessorMock) RequestsForObjIDMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RequestsForObjIDPreCounter)
-}
-
-// RequestsForObjIDFinished returns true if mock invocations count is ok
-func (m *PendingAccessorMock) RequestsForObjIDFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RequestsForObjIDMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RequestsForObjIDCounter) == uint64(len(m.RequestsForObjIDMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.RequestsForObjIDMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RequestsForObjIDCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.RequestsForObjIDFunc != nil {
-		return atomic.LoadUint64(&m.RequestsForObjIDCounter) > 0
-	}
-
-	return true
-}
-
 // ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 // Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PendingAccessorMock) ValidateCallCounters() {
@@ -518,12 +518,12 @@ func (m *PendingAccessorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to PendingAccessorMock.MetaForObjID")
 	}
 
-	if !m.RecordsFinished() {
-		m.t.Fatal("Expected call to PendingAccessorMock.Records")
+	if !m.OpenRequestsForObjIDFinished() {
+		m.t.Fatal("Expected call to PendingAccessorMock.OpenRequestsForObjID")
 	}
 
-	if !m.RequestsForObjIDFinished() {
-		m.t.Fatal("Expected call to PendingAccessorMock.RequestsForObjID")
+	if !m.RecordsFinished() {
+		m.t.Fatal("Expected call to PendingAccessorMock.Records")
 	}
 
 }
@@ -547,12 +547,12 @@ func (m *PendingAccessorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to PendingAccessorMock.MetaForObjID")
 	}
 
-	if !m.RecordsFinished() {
-		m.t.Fatal("Expected call to PendingAccessorMock.Records")
+	if !m.OpenRequestsForObjIDFinished() {
+		m.t.Fatal("Expected call to PendingAccessorMock.OpenRequestsForObjID")
 	}
 
-	if !m.RequestsForObjIDFinished() {
-		m.t.Fatal("Expected call to PendingAccessorMock.RequestsForObjID")
+	if !m.RecordsFinished() {
+		m.t.Fatal("Expected call to PendingAccessorMock.Records")
 	}
 
 }
@@ -570,8 +570,8 @@ func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.MetaForObjIDFinished()
+		ok = ok && m.OpenRequestsForObjIDFinished()
 		ok = ok && m.RecordsFinished()
-		ok = ok && m.RequestsForObjIDFinished()
 
 		if ok {
 			return
@@ -584,12 +584,12 @@ func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to PendingAccessorMock.MetaForObjID")
 			}
 
-			if !m.RecordsFinished() {
-				m.t.Error("Expected call to PendingAccessorMock.Records")
+			if !m.OpenRequestsForObjIDFinished() {
+				m.t.Error("Expected call to PendingAccessorMock.OpenRequestsForObjID")
 			}
 
-			if !m.RequestsForObjIDFinished() {
-				m.t.Error("Expected call to PendingAccessorMock.RequestsForObjID")
+			if !m.RecordsFinished() {
+				m.t.Error("Expected call to PendingAccessorMock.Records")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -608,11 +608,11 @@ func (m *PendingAccessorMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.RecordsFinished() {
+	if !m.OpenRequestsForObjIDFinished() {
 		return false
 	}
 
-	if !m.RequestsForObjIDFinished() {
+	if !m.RecordsFinished() {
 		return false
 	}
 

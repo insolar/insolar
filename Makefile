@@ -213,7 +213,7 @@ generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/payload/payload.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/lifeline.proto
-	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src ledger/object/indexbucket.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src ledger/object/objectindex.proto
 
 regen-builtin: $(BININSGOCC)
 	$(BININSGOCC) regen-builtin

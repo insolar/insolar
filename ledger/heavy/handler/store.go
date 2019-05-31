@@ -30,19 +30,19 @@ import (
 
 func storeIndexBuckets(
 	ctx context.Context,
-	indexes object.IndexBucketModifier,
+	indexes object.ObjectIndexModifier,
 	rawBuckets [][]byte,
 	pn insolar.PulseNumber,
 ) error {
 	for _, rwb := range rawBuckets {
-		buck := object.IndexBucket{}
+		buck := object.ObjectIndex{}
 		err := buck.Unmarshal(rwb)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 			continue
 		}
 
-		err = indexes.SetBucket(ctx, pn, buck)
+		err = indexes.SetObjectIndex(ctx, pn, buck)
 		if err != nil {
 			return errors.Wrapf(err, "heavyserver: index storing failed")
 		}
