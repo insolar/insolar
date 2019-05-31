@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -85,7 +85,7 @@ type PendingModifierMockRefreshStateResult struct {
 	r error
 }
 
-// Expect specifies that invocation of PendingModifier.RefreshState is expected from 1 to Infinity times
+//Expect specifies that invocation of PendingModifier.RefreshState is expected from 1 to Infinity times
 func (m *mPendingModifierMockRefreshState) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mPendingModifierMockRefreshState {
 	m.mock.RefreshStateFunc = nil
 	m.expectationSeries = nil
@@ -97,7 +97,7 @@ func (m *mPendingModifierMockRefreshState) Expect(p context.Context, p1 insolar.
 	return m
 }
 
-// Return specifies results of invocation of PendingModifier.RefreshState
+//Return specifies results of invocation of PendingModifier.RefreshState
 func (m *mPendingModifierMockRefreshState) Return(r error) *PendingModifierMock {
 	m.mock.RefreshStateFunc = nil
 	m.expectationSeries = nil
@@ -109,7 +109,7 @@ func (m *mPendingModifierMockRefreshState) Return(r error) *PendingModifierMock 
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PendingModifier.RefreshState is expected once
+//ExpectOnce specifies that invocation of PendingModifier.RefreshState is expected once
 func (m *mPendingModifierMockRefreshState) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *PendingModifierMockRefreshStateExpectation {
 	m.mock.RefreshStateFunc = nil
 	m.mainExpectation = nil
@@ -124,7 +124,7 @@ func (e *PendingModifierMockRefreshStateExpectation) Return(r error) {
 	e.result = &PendingModifierMockRefreshStateResult{r}
 }
 
-// Set uses given function f as a mock of PendingModifier.RefreshState method
+//Set uses given function f as a mock of PendingModifier.RefreshState method
 func (m *mPendingModifierMockRefreshState) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r error)) *PendingModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -133,7 +133,7 @@ func (m *mPendingModifierMockRefreshState) Set(f func(p context.Context, p1 inso
 	return m.mock
 }
 
-// RefreshState implements github.com/insolar/insolar/ledger/object.PendingModifier interface
+//RefreshState implements github.com/insolar/insolar/ledger/object.PendingModifier interface
 func (m *PendingModifierMock) RefreshState(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r error) {
 	counter := atomic.AddUint64(&m.RefreshStatePreCounter, 1)
 	defer atomic.AddUint64(&m.RefreshStateCounter, 1)
@@ -183,17 +183,17 @@ func (m *PendingModifierMock) RefreshState(p context.Context, p1 insolar.PulseNu
 	return m.RefreshStateFunc(p, p1, p2)
 }
 
-// RefreshStateMinimockCounter returns a count of PendingModifierMock.RefreshStateFunc invocations
+//RefreshStateMinimockCounter returns a count of PendingModifierMock.RefreshStateFunc invocations
 func (m *PendingModifierMock) RefreshStateMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RefreshStateCounter)
 }
 
-// RefreshStateMinimockPreCounter returns the value of PendingModifierMock.RefreshState invocations
+//RefreshStateMinimockPreCounter returns the value of PendingModifierMock.RefreshState invocations
 func (m *PendingModifierMock) RefreshStateMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RefreshStatePreCounter)
 }
 
-// RefreshStateFinished returns true if mock invocations count is ok
+//RefreshStateFinished returns true if mock invocations count is ok
 func (m *PendingModifierMock) RefreshStateFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RefreshStateMock.expectationSeries) > 0 {
@@ -236,7 +236,7 @@ type PendingModifierMockSetFilamentResult struct {
 	r error
 }
 
-// Expect specifies that invocation of PendingModifier.SetFilament is expected from 1 to Infinity times
+//Expect specifies that invocation of PendingModifier.SetFilament is expected from 1 to Infinity times
 func (m *mPendingModifierMockSetFilament) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.Virtual) *mPendingModifierMockSetFilament {
 	m.mock.SetFilamentFunc = nil
 	m.expectationSeries = nil
@@ -248,7 +248,7 @@ func (m *mPendingModifierMockSetFilament) Expect(p context.Context, p1 insolar.P
 	return m
 }
 
-// Return specifies results of invocation of PendingModifier.SetFilament
+//Return specifies results of invocation of PendingModifier.SetFilament
 func (m *mPendingModifierMockSetFilament) Return(r error) *PendingModifierMock {
 	m.mock.SetFilamentFunc = nil
 	m.expectationSeries = nil
@@ -260,7 +260,7 @@ func (m *mPendingModifierMockSetFilament) Return(r error) *PendingModifierMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PendingModifier.SetFilament is expected once
+//ExpectOnce specifies that invocation of PendingModifier.SetFilament is expected once
 func (m *mPendingModifierMockSetFilament) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.Virtual) *PendingModifierMockSetFilamentExpectation {
 	m.mock.SetFilamentFunc = nil
 	m.mainExpectation = nil
@@ -275,7 +275,7 @@ func (e *PendingModifierMockSetFilamentExpectation) Return(r error) {
 	e.result = &PendingModifierMockSetFilamentResult{r}
 }
 
-// Set uses given function f as a mock of PendingModifier.SetFilament method
+//Set uses given function f as a mock of PendingModifier.SetFilament method
 func (m *mPendingModifierMockSetFilament) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.Virtual) (r error)) *PendingModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -284,7 +284,7 @@ func (m *mPendingModifierMockSetFilament) Set(f func(p context.Context, p1 insol
 	return m.mock
 }
 
-// SetFilament implements github.com/insolar/insolar/ledger/object.PendingModifier interface
+//SetFilament implements github.com/insolar/insolar/ledger/object.PendingModifier interface
 func (m *PendingModifierMock) SetFilament(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.Virtual) (r error) {
 	counter := atomic.AddUint64(&m.SetFilamentPreCounter, 1)
 	defer atomic.AddUint64(&m.SetFilamentCounter, 1)
@@ -334,17 +334,17 @@ func (m *PendingModifierMock) SetFilament(p context.Context, p1 insolar.PulseNum
 	return m.SetFilamentFunc(p, p1, p2, p3, p4)
 }
 
-// SetFilamentMinimockCounter returns a count of PendingModifierMock.SetFilamentFunc invocations
+//SetFilamentMinimockCounter returns a count of PendingModifierMock.SetFilamentFunc invocations
 func (m *PendingModifierMock) SetFilamentMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetFilamentCounter)
 }
 
-// SetFilamentMinimockPreCounter returns the value of PendingModifierMock.SetFilament invocations
+//SetFilamentMinimockPreCounter returns the value of PendingModifierMock.SetFilament invocations
 func (m *PendingModifierMock) SetFilamentMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetFilamentPreCounter)
 }
 
-// SetFilamentFinished returns true if mock invocations count is ok
+//SetFilamentFinished returns true if mock invocations count is ok
 func (m *PendingModifierMock) SetFilamentFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetFilamentMock.expectationSeries) > 0 {
@@ -386,7 +386,7 @@ type PendingModifierMockSetReadUntilResult struct {
 	r error
 }
 
-// Expect specifies that invocation of PendingModifier.SetReadUntil is expected from 1 to Infinity times
+//Expect specifies that invocation of PendingModifier.SetReadUntil is expected from 1 to Infinity times
 func (m *mPendingModifierMockSetReadUntil) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) *mPendingModifierMockSetReadUntil {
 	m.mock.SetReadUntilFunc = nil
 	m.expectationSeries = nil
@@ -398,7 +398,7 @@ func (m *mPendingModifierMockSetReadUntil) Expect(p context.Context, p1 insolar.
 	return m
 }
 
-// Return specifies results of invocation of PendingModifier.SetReadUntil
+//Return specifies results of invocation of PendingModifier.SetReadUntil
 func (m *mPendingModifierMockSetReadUntil) Return(r error) *PendingModifierMock {
 	m.mock.SetReadUntilFunc = nil
 	m.expectationSeries = nil
@@ -410,7 +410,7 @@ func (m *mPendingModifierMockSetReadUntil) Return(r error) *PendingModifierMock 
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PendingModifier.SetReadUntil is expected once
+//ExpectOnce specifies that invocation of PendingModifier.SetReadUntil is expected once
 func (m *mPendingModifierMockSetReadUntil) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) *PendingModifierMockSetReadUntilExpectation {
 	m.mock.SetReadUntilFunc = nil
 	m.mainExpectation = nil
@@ -425,7 +425,7 @@ func (e *PendingModifierMockSetReadUntilExpectation) Return(r error) {
 	e.result = &PendingModifierMockSetReadUntilResult{r}
 }
 
-// Set uses given function f as a mock of PendingModifier.SetReadUntil method
+//Set uses given function f as a mock of PendingModifier.SetReadUntil method
 func (m *mPendingModifierMockSetReadUntil) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) (r error)) *PendingModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -434,7 +434,7 @@ func (m *mPendingModifierMockSetReadUntil) Set(f func(p context.Context, p1 inso
 	return m.mock
 }
 
-// SetReadUntil implements github.com/insolar/insolar/ledger/object.PendingModifier interface
+//SetReadUntil implements github.com/insolar/insolar/ledger/object.PendingModifier interface
 func (m *PendingModifierMock) SetReadUntil(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.SetReadUntilPreCounter, 1)
 	defer atomic.AddUint64(&m.SetReadUntilCounter, 1)
@@ -484,17 +484,17 @@ func (m *PendingModifierMock) SetReadUntil(p context.Context, p1 insolar.PulseNu
 	return m.SetReadUntilFunc(p, p1, p2, p3)
 }
 
-// SetReadUntilMinimockCounter returns a count of PendingModifierMock.SetReadUntilFunc invocations
+//SetReadUntilMinimockCounter returns a count of PendingModifierMock.SetReadUntilFunc invocations
 func (m *PendingModifierMock) SetReadUntilMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetReadUntilCounter)
 }
 
-// SetReadUntilMinimockPreCounter returns the value of PendingModifierMock.SetReadUntil invocations
+//SetReadUntilMinimockPreCounter returns the value of PendingModifierMock.SetReadUntil invocations
 func (m *PendingModifierMock) SetReadUntilMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetReadUntilPreCounter)
 }
 
-// SetReadUntilFinished returns true if mock invocations count is ok
+//SetReadUntilFinished returns true if mock invocations count is ok
 func (m *PendingModifierMock) SetReadUntilFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetReadUntilMock.expectationSeries) > 0 {
@@ -536,7 +536,7 @@ type PendingModifierMockSetRequestResult struct {
 	r error
 }
 
-// Expect specifies that invocation of PendingModifier.SetRequest is expected from 1 to Infinity times
+//Expect specifies that invocation of PendingModifier.SetRequest is expected from 1 to Infinity times
 func (m *mPendingModifierMockSetRequest) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 record.Request) *mPendingModifierMockSetRequest {
 	m.mock.SetRequestFunc = nil
 	m.expectationSeries = nil
@@ -548,7 +548,7 @@ func (m *mPendingModifierMockSetRequest) Expect(p context.Context, p1 insolar.Pu
 	return m
 }
 
-// Return specifies results of invocation of PendingModifier.SetRequest
+//Return specifies results of invocation of PendingModifier.SetRequest
 func (m *mPendingModifierMockSetRequest) Return(r error) *PendingModifierMock {
 	m.mock.SetRequestFunc = nil
 	m.expectationSeries = nil
@@ -560,7 +560,7 @@ func (m *mPendingModifierMockSetRequest) Return(r error) *PendingModifierMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PendingModifier.SetRequest is expected once
+//ExpectOnce specifies that invocation of PendingModifier.SetRequest is expected once
 func (m *mPendingModifierMockSetRequest) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 record.Request) *PendingModifierMockSetRequestExpectation {
 	m.mock.SetRequestFunc = nil
 	m.mainExpectation = nil
@@ -575,7 +575,7 @@ func (e *PendingModifierMockSetRequestExpectation) Return(r error) {
 	e.result = &PendingModifierMockSetRequestResult{r}
 }
 
-// Set uses given function f as a mock of PendingModifier.SetRequest method
+//Set uses given function f as a mock of PendingModifier.SetRequest method
 func (m *mPendingModifierMockSetRequest) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 record.Request) (r error)) *PendingModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -584,7 +584,7 @@ func (m *mPendingModifierMockSetRequest) Set(f func(p context.Context, p1 insola
 	return m.mock
 }
 
-// SetRequest implements github.com/insolar/insolar/ledger/object.PendingModifier interface
+//SetRequest implements github.com/insolar/insolar/ledger/object.PendingModifier interface
 func (m *PendingModifierMock) SetRequest(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 record.Request) (r error) {
 	counter := atomic.AddUint64(&m.SetRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.SetRequestCounter, 1)
@@ -634,17 +634,17 @@ func (m *PendingModifierMock) SetRequest(p context.Context, p1 insolar.PulseNumb
 	return m.SetRequestFunc(p, p1, p2, p3)
 }
 
-// SetRequestMinimockCounter returns a count of PendingModifierMock.SetRequestFunc invocations
+//SetRequestMinimockCounter returns a count of PendingModifierMock.SetRequestFunc invocations
 func (m *PendingModifierMock) SetRequestMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetRequestCounter)
 }
 
-// SetRequestMinimockPreCounter returns the value of PendingModifierMock.SetRequest invocations
+//SetRequestMinimockPreCounter returns the value of PendingModifierMock.SetRequest invocations
 func (m *PendingModifierMock) SetRequestMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetRequestPreCounter)
 }
 
-// SetRequestFinished returns true if mock invocations count is ok
+//SetRequestFinished returns true if mock invocations count is ok
 func (m *PendingModifierMock) SetRequestFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetRequestMock.expectationSeries) > 0 {
@@ -686,7 +686,7 @@ type PendingModifierMockSetResultResult struct {
 	r error
 }
 
-// Expect specifies that invocation of PendingModifier.SetResult is expected from 1 to Infinity times
+//Expect specifies that invocation of PendingModifier.SetResult is expected from 1 to Infinity times
 func (m *mPendingModifierMockSetResult) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 record.Result) *mPendingModifierMockSetResult {
 	m.mock.SetResultFunc = nil
 	m.expectationSeries = nil
@@ -698,7 +698,7 @@ func (m *mPendingModifierMockSetResult) Expect(p context.Context, p1 insolar.Pul
 	return m
 }
 
-// Return specifies results of invocation of PendingModifier.SetResult
+//Return specifies results of invocation of PendingModifier.SetResult
 func (m *mPendingModifierMockSetResult) Return(r error) *PendingModifierMock {
 	m.mock.SetResultFunc = nil
 	m.expectationSeries = nil
@@ -710,7 +710,7 @@ func (m *mPendingModifierMockSetResult) Return(r error) *PendingModifierMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PendingModifier.SetResult is expected once
+//ExpectOnce specifies that invocation of PendingModifier.SetResult is expected once
 func (m *mPendingModifierMockSetResult) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 record.Result) *PendingModifierMockSetResultExpectation {
 	m.mock.SetResultFunc = nil
 	m.mainExpectation = nil
@@ -725,7 +725,7 @@ func (e *PendingModifierMockSetResultExpectation) Return(r error) {
 	e.result = &PendingModifierMockSetResultResult{r}
 }
 
-// Set uses given function f as a mock of PendingModifier.SetResult method
+//Set uses given function f as a mock of PendingModifier.SetResult method
 func (m *mPendingModifierMockSetResult) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 record.Result) (r error)) *PendingModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -734,7 +734,7 @@ func (m *mPendingModifierMockSetResult) Set(f func(p context.Context, p1 insolar
 	return m.mock
 }
 
-// SetResult implements github.com/insolar/insolar/ledger/object.PendingModifier interface
+//SetResult implements github.com/insolar/insolar/ledger/object.PendingModifier interface
 func (m *PendingModifierMock) SetResult(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 record.Result) (r error) {
 	counter := atomic.AddUint64(&m.SetResultPreCounter, 1)
 	defer atomic.AddUint64(&m.SetResultCounter, 1)
@@ -784,17 +784,17 @@ func (m *PendingModifierMock) SetResult(p context.Context, p1 insolar.PulseNumbe
 	return m.SetResultFunc(p, p1, p2, p3)
 }
 
-// SetResultMinimockCounter returns a count of PendingModifierMock.SetResultFunc invocations
+//SetResultMinimockCounter returns a count of PendingModifierMock.SetResultFunc invocations
 func (m *PendingModifierMock) SetResultMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetResultCounter)
 }
 
-// SetResultMinimockPreCounter returns the value of PendingModifierMock.SetResult invocations
+//SetResultMinimockPreCounter returns the value of PendingModifierMock.SetResult invocations
 func (m *PendingModifierMock) SetResultMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetResultPreCounter)
 }
 
-// SetResultFinished returns true if mock invocations count is ok
+//SetResultFinished returns true if mock invocations count is ok
 func (m *PendingModifierMock) SetResultFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetResultMock.expectationSeries) > 0 {
