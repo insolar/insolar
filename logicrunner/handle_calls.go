@@ -36,7 +36,7 @@ type HandleCall struct {
 	Message bus.Message
 }
 
-func (h *HandleCall) executeActual(
+func (h *HandleCall) handleActual(
 	ctx context.Context,
 	parcel insolar.Parcel,
 	msg *message.CallMethod,
@@ -57,11 +57,6 @@ func (h *HandleCall) executeActual(
 	es := os.ExecutionState
 	os.Unlock()
 
-	// ExecutionState should be locked between CheckOurRole and
-	// appending ExecutionQueueElement to the queue to prevent a race condition.
-	// Otherwise it's possible that OnPulse will clean up the queue and set
-	// ExecutionState.Pending to NotPending. Execute will add an element to the
-	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
 
 	procCheckRole := CheckOurRole{
@@ -75,7 +70,7 @@ func (h *HandleCall) executeActual(
 		if err == flow.ErrCancelled {
 			return nil, err // message bus will retry on the calling side
 		}
-		return nil, errors.Wrap(err, "[ executeActual ] can't play role")
+		return nil, errors.Wrap(err, "[ handleActual ] can't play role")
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
@@ -125,7 +120,7 @@ func (h *HandleCall) executeActual(
 		ref: &ref,
 	}
 	if err := f.Handle(ctx, s.Present); err != nil {
-		inslogger.FromContext(ctx).Warn("[ executeActual ] StartQueueProcessorIfNeeded returns error: ", err)
+		inslogger.FromContext(ctx).Warn("[ handleActual ] StartQueueProcessorIfNeeded returns error: ", err)
 	}
 
 	return &reply.RegisterRequest{
@@ -151,7 +146,7 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	defer span.End()
 
 	r := bus.Reply{}
-	r.Reply, r.Err = h.executeActual(ctx, parcel, msg, f)
+	r.Reply, r.Err = h.handleActual(ctx, parcel, msg, f)
 
 	h.Message.ReplyTo <- r
 	return nil
