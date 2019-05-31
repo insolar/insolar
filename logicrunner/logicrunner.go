@@ -121,6 +121,9 @@ func (st *ObjectState) MustModeState(mode string) (res *ExecutionState) {
 	if res == nil {
 		panic("object is not in " + mode + " mode")
 	}
+	if res.Current == nil {
+		panic("object "+ res.Ref.String() +" has no Current")
+	}
 	return res
 }
 
@@ -418,12 +421,11 @@ func (lr *LogicRunner) executeOrValidate(
 	defer span.End()
 
 	msg := parcel.Message().(*message.CallMethod)
-	ref := msg.GetReference()
 
 	es.Current.LogicContext = &insolar.LogicCallContext{
 		Mode:            "execution",
 		Caller:          msg.GetCaller(),
-		Callee:          &ref,
+		Callee:          &es.Ref,
 		Request:         es.Current.RequestRef,
 		Time:            time.Now(), // TODO: probably we should take it earlier
 		Pulse:           *lr.pulse(ctx),
