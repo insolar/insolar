@@ -144,7 +144,7 @@ func (g *DiscoveryNodeManager) activateNodeRecord(
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register request")
 	}
 
-	contract := insolar.NewReference(*bootstrap.ContractRootDomain.Record(), *nodeID)
+	contract := insolar.NewReference(*nodeID)
 	_, err = g.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},

@@ -51,7 +51,7 @@ func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 }
 
 func genRefWithID(id *insolar.ID) *insolar.Reference {
-	return insolar.NewReference(domainID, *id)
+	return insolar.NewReference(*id)
 }
 
 func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {

@@ -110,10 +110,6 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	}
 }
 
-var (
-	domainID = *genRandomID(0)
-)
-
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
 	_, err := rand.Read(buff[:])
@@ -124,7 +120,7 @@ func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 }
 
 func genRefWithID(id *insolar.ID) *insolar.Reference {
-	return insolar.NewReference(domainID, *id)
+	return insolar.NewReference(*id)
 }
 
 func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {

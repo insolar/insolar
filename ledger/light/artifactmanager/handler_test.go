@@ -82,7 +82,7 @@ func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 }
 
 func genRefWithID(id *insolar.ID) *insolar.Reference {
-	return insolar.NewReference(domainID, *id)
+	return insolar.NewReference(*id)
 }
 
 func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
@@ -505,7 +505,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	})
 
 	hotIndexes := &message.HotData{
-		Jet:         *insolar.NewReference(insolar.DomainID, insolar.ID(jetID)),
+		Jet:         *insolar.NewReference(insolar.ID(jetID)),
 		PulseNumber: insolar.FirstPulseNumber,
 		HotIndexes: []message.HotIndex{
 			{

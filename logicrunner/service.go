@@ -112,13 +112,12 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 	defer recoverRPC(&err)
 
 	os := gpr.lr.MustObjectState(req.Callee)
-
-	if os.ExecutionState.Current.LogicContext.Immutable {
-		return errors.New("Try to call route from immutable method")
-	}
-
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
+
+	if es.Current.LogicContext.Immutable {
+		return errors.New("Try to call route from immutable method")
+	}
 
 	// TODO: delegation token
 
