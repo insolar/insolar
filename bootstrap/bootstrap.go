@@ -72,21 +72,19 @@ func (g *Generator) Run(ctx context.Context) error {
 	fmt.Printf("[ Genesis] config:\n%v\n", dumpAsJSON(g.config))
 
 	inslog := inslogger.FromContext(ctx)
-	inslog.Info("[ Genesis ] Starting  ...")
 
-	inslog.Info("[ Genesis ] ReadKeysFile ...")
+	inslog.Info("[ Genesis ] read keys file")
 	pair, err := secrets.ReadKeysFile(g.config.RootKeysFile)
 	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
+		return errors.Wrap(err, "couldn't get root keys")
 	}
 	publicKey := platformpolicy.MustPublicKeyToString(pair.Public)
 
-	inslog.Info("[ Genesis ] generate plugins ...")
+	inslog.Info("[ Genesis ] generate plugins")
 	err = g.generatePlugins()
 	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] could't compile smart contracts via insgocc"))
+		return errors.Wrap(err, "could't compile smart contracts via insgocc")
 	}
-	inslog.Info("[ Genesis ] generate memory files ...")
 
 	inslog.Info("[ Genesis ] create keys ...")
 	discoveryNodes, err := createKeysInDir(
@@ -97,13 +95,13 @@ func (g *Generator) Run(ctx context.Context) error {
 		g.config.ReuseKeys,
 	)
 	if err != nil {
-		return errors.Wrapf(err, "[ Genesis ] create keys step failed")
+		return errors.Wrapf(err, "create keys step failed")
 	}
 
 	inslog.Info("[ Genesis ] create certificates ...")
 	err = g.makeCertificates(ctx, discoveryNodes)
 	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] generate discovery certificates failed")
+		return errors.Wrap(err, "generate discovery certificates failed")
 	}
 
 	inslog.Info("[ Genesis ] create heavy genesis config ...")
@@ -113,10 +111,9 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] generate heavy genesis config failed")
+		return errors.Wrap(err, "generate heavy genesis config failed")
 	}
 
-	inslog.Info("[ Genesis ] Finished.")
 	return nil
 }
 
@@ -167,13 +164,13 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 
 			certs[i].BootstrapNodes[j].NetworkSign, err = certs[i].SignNetworkPart(dn.privateKey)
 			if err != nil {
-				return errors.Wrapf(err, "[ makeCertificates ] Can't SignNetworkPart for %s",
+				return errors.Wrapf(err, "can't SignNetworkPart for %s",
 					dn.reference())
 			}
 
 			certs[i].BootstrapNodes[j].NodeSign, err = certs[i].SignNodePart(dn.privateKey)
 			if err != nil {
-				return errors.Wrapf(err, "[ makeCertificates ] Can't SignNodePart for %s",
+				return errors.Wrapf(err, "can't SignNodePart for %s",
 					dn.reference())
 			}
 		}
@@ -181,20 +178,20 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 		// save cert to disk
 		cert, err := json.MarshalIndent(certs[i], "", "  ")
 		if err != nil {
-			return errors.Wrapf(err, "[ makeCertificates ] Can't MarshalIndent")
+			return errors.Wrapf(err, "can't MarshalIndent")
 		}
 
 		if len(node.CertName) == 0 {
-			return errors.New("[ makeCertificates ] cert_name must not be empty for node number " + strconv.Itoa(i+1))
+			return errors.New("cert_name must not be empty for node number " + strconv.Itoa(i+1))
 		}
 
 		certFile := path.Join(g.certificatesOutDir, node.CertName)
 		err = ioutil.WriteFile(certFile, cert, 0600)
 		if err != nil {
-			return errors.Wrapf(err, "[ makeCertificates ] filed create ceritificate: %v", certFile)
+			return errors.Wrapf(err, "failed to create certificate: %v", certFile)
 		}
 
-		inslogger.FromContext(ctx).Debugf("[makeCertificates] write cert file to %v", certFile)
+		inslogger.FromContext(ctx).Debugf("write certificate file: %v", certFile)
 	}
 	return nil
 }
@@ -245,11 +242,4 @@ func dumpAsJSON(data interface{}) string {
 		panic(err)
 	}
 	return string(b)
-}
-
-func checkError(ctx context.Context, err error, message string) {
-	if err == nil {
-		return
-	}
-	inslogger.FromContext(ctx).Fatalf("%v: %v", message, err.Error())
 }

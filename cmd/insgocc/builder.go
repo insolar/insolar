@@ -95,11 +95,7 @@ func (cb *contractsBuilder) clean() {
 }
 
 func (cb *contractsBuilder) parseContract(name string) (*preprocessor.ParsedFile, error) {
-	contractPath, err := cb.getContractPath(name)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get path to contracts: ")
-	}
-	return preprocessor.ParseFile(contractPath, insolar.MachineTypeGoPlugin)
+	return preprocessor.ParseFile(cb.getContractPath(name), insolar.MachineTypeGoPlugin)
 }
 
 type buildResult struct {
@@ -231,13 +227,13 @@ func goPATH() string {
 	return gopath
 }
 
-func (cb *contractsBuilder) getContractPath(name string) (string, error) {
+func (cb *contractsBuilder) getContractPath(name string) string {
 	contractDir := filepath.Join(goPATH(), "src", contractSources)
 	if cb.sourcesDir != "" {
 		contractDir = cb.sourcesDir
 	}
 	contractFile := name + ".go"
-	return filepath.Join(contractDir, name, contractFile), nil
+	return filepath.Join(contractDir, name, contractFile)
 }
 
 // prependGoPath prepends `path` to GOPATH environment variable
