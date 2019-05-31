@@ -511,16 +511,13 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			insolar.Reference{}, *insolar.NewReference(*codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
-
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] DeployCode returns error")
 		}
 
 		codeRef := &insolar.Reference{}
 		codeRef.SetRecord(*codeID)
-		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't SetRecord")
-		}
+
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
 
