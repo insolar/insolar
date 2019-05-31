@@ -47,12 +47,13 @@ func (r genesisBinary) Ref() Reference {
 	return *NewReference(id, id)
 }
 
-// DiscoveryNodeRegister carries data required for registering discovery node on genesis phase.
+// DiscoveryNodeRegister carries data required for registering discovery node via genesis.
 type DiscoveryNodeRegister struct {
 	Role      string
 	PublicKey string
 }
 
+// GenesisContractState carries data required for contract object creation via genesis.
 type GenesisContractState struct {
 	Name       string
 	ParentName string
@@ -60,6 +61,7 @@ type GenesisContractState struct {
 	Memory     []byte
 }
 
+// GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
 	RootBalance   uint
 	RootPublicKey string
