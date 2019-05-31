@@ -497,12 +497,12 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
 	if UseFakeTransport {
-		// little hack: this Register will replace transport.Factory
+		// little hack: this Register will override transport.Factory
 		// in servicenetwork internal component manager with fake factory
 		node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport))
 	}
 	if UseFakeBootstrap {
-		// little hack: this Register will replace DiscoveryBootstrapper
+		// little hack: this Register will override DiscoveryBootstrapper
 		// in servicenetwork internal component manager with fakeBootstrap
 		node.componentManager.Register(newFakeBootstrap(s.fixture()))
 	}
