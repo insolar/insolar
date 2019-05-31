@@ -88,7 +88,8 @@ func (h *HandleCall) executeActual(
 
 	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
 		if err == flow.ErrCancelled {
-			return nil, err // message bus will automatically retry on the calling side
+			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
+			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
 		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
