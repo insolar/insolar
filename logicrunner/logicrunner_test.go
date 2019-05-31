@@ -35,6 +35,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/ugorji/go/codec"
 
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/object"
@@ -71,6 +72,14 @@ import (
 )
 
 var parallel = false
+
+func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr *LogicRunner) {
+	// mb.ReRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
+
+	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
+	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
+	// mb.ReRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
+}
 
 type LogicRunnerFuncSuite struct {
 	suite.Suite
@@ -122,6 +131,10 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	})
 	s.NoError(err, "Initialize runner")
 
+	b := bus.NewSenderMock(s.T())
+	innerRouter, err = InitHandlers(lr, b)
+	s.NoError(err, "Error while init handlers for logic runner:")
+
 	cryptoMock := testutils.NewCryptographyServiceMock(s.T())
 	cryptoMock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
@@ -164,7 +177,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	pulseAccessor := l.PulseManager.(*pulsemanager.PulseManager).PulseAccessor
 	nth := testutils.NewTerminationHandlerMock(s.T())
 
-	cm.Inject(pulseAccessor, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, cryptoMock)
+	cm.Inject(pulseAccessor, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, cryptoMock, b)
 	err = cm.Init(ctx)
 	s.NoError(err)
 	err = cm.Start(ctx)
@@ -180,6 +193,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	return lr, am, cb, pm, messageHandler, func() {
 		cb.Clean()
 		lr.Stop(ctx)
+		innerRouter.Close()
 		rundCleaner()
 	}
 }
@@ -1345,9 +1359,10 @@ func New(n int) (*Child, error) {
 		lr.HandleValidateCaseBindMessage(ctx, m)
 	}
 
-	for _, m := range toExecute {
-		lr.HandleExecutorResultsMessage(ctx, m)
-	}
+	// HandleExecutorResultsMessage doesn't exist anymore
+	// for _, m := range toExecute {
+	// 	lr.HandleExecutorResultsMessage(ctx, m)
+	// }
 
 	for _, m := range toCheckValidate {
 		lr.HandleValidationResultsMessage(ctx, m)
