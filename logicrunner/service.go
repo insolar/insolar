@@ -126,13 +126,13 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 
 	// TODO: delegation token
 
-	es.nonce++
+	es.Current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.nonce,
+			Nonce:           es.Current.Nonce,
 
 			Immutable: req.Immutable,
 
@@ -166,18 +166,18 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
-
+	
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
-	es.nonce++
+	es.Current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.nonce,
+			Nonce:           es.Current.Nonce,
 
 			CallType:  record.CTSaveAsChild,
 			Base:      &req.Parent,
@@ -202,17 +202,21 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+<<<<<<< HEAD
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsDelegate")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsDelegate")
 	defer span.End()
 
 	es.nonce++
+=======
+	es.Current.Nonce++
+>>>>>>> 182b16570c55fe0f33de9cd5adb49c0f3ead80a6
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.nonce,
+			Nonce:           es.Current.Nonce,
 
 			CallType:  record.CTSaveAsDelegate,
 			Base:      &req.Into,
@@ -342,6 +346,6 @@ func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctyp
 
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
-	es.deactivate = true
+	es.Current.Deactivate = true
 	return nil
 }
