@@ -114,6 +114,11 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	ds := drop.NewDB(memoryMockDB)
 	bs := blob.NewDB(memoryMockDB)
 
+	writeManagerMock := hot.NewWriteAccessorMock(t)
+	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
+		return func() {}, nil
+	}
+
 	genesisBaseRecord := &genesis.BaseRecord{
 		DB:                    memoryMockDB,
 		DropModifier:          ds,
@@ -170,6 +175,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	handler.Blobs = bs
 	handler.RecordModifier = recordModifier
 	handler.RecordAccessor = recordAccessor
+	handler.WriteAccessor = writeManagerMock
 
 	idLockerMock := mocks.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()

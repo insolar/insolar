@@ -17,7 +17,6 @@
 package genesis
 
 import (
-	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
@@ -30,5 +29,5 @@ func refByName(name string) insolar.Reference {
 		Method:   name,
 	})
 	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vRec))
-	return *insolar.NewReference(rootdomain.RootDomain.ID(), *id)
+	return *insolar.NewReference(*id)
 }

@@ -109,7 +109,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
-	rundCleaner, err := goplugintestutils.StartInsgorund(s.runnerBin, "unix", rundSock, "unix", lrSock)
+	rundCleaner, err := goplugintestutils.StartInsgorund(s.runnerBin, "unix", rundSock, "unix", lrSock, true)
 	s.NoError(err)
 
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
@@ -157,6 +157,10 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
+	// Here we increase the default timeout to 10 minutes to prevent accidental test fails on CI.
+	// In normal code the user of ContractRequester never has to do anything like this. For this
+	// reason ContractRequester _interface_ doesn't has a SetCallTimeout method.
+	cr.SetCallTimeout(10 * time.Minute)
 	pulseAccessor := l.PulseManager.(*pulsemanager.PulseManager).PulseAccessor
 	nth := testutils.NewTerminationHandlerMock(s.T())
 
@@ -214,7 +218,7 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(
 	_, err = lr.(*LogicRunner).MessageBus.Send(
 		ctx,
 		&message.HotData{
-			Jet:             *insolar.NewReference(insolar.DomainID, insolar.ID(rootJetId)),
+			Jet:             *insolar.NewReference(insolar.ID(rootJetId)),
 			Drop:            drop.Drop{Pulse: 1, JetID: rootJetId},
 			PendingRequests: nil,
 			HotIndexes:      hotIndexes,

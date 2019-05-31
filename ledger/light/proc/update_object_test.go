@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object/mocks"
+	"github.com/insolar/insolar/ledger/light/hot"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -51,7 +52,7 @@ func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 }
 
 func genRefWithID(id *insolar.ID) *insolar.Reference {
-	return insolar.NewReference(domainID, *id)
+	return insolar.NewReference(*id)
 }
 
 func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
@@ -80,6 +81,11 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	idLockMock := mocks.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
+
+	writeManagerMock := hot.NewWriteAccessorMock(t)
+	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
+		return func() {}, nil
+	}
 
 	objIndex := object.Lifeline{LatestState: genRandomID(0), StateID: record.StateActivation}
 	amendRecord := record.Amend{
@@ -123,6 +129,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = indexMemoryStor
+	updateObject.Dep.WriteAccessor = writeManagerMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)
@@ -145,6 +152,11 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
+
+	writeManagerMock := hot.NewWriteAccessorMock(t)
+	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
+		return func() {}, nil
+	}
 
 	scheme := testutils.NewPlatformCryptographyScheme()
 	indexMemoryStor := object.NewInMemoryIndex()
@@ -187,6 +199,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = indexMemoryStor
+	updateObject.Dep.WriteAccessor = writeManagerMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)

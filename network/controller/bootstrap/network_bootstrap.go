@@ -72,6 +72,7 @@ type NetworkBootstrapper interface {
 type networkBootstrapper struct {
 	Certificate    insolar.Certificate     `inject:""`
 	Bootstrapper   Bootstrapper            `inject:""`
+	DBootstrapper  DiscoveryBootstrapper   `inject:""`
 	NodeKeeper     network.NodeKeeper      `inject:""`
 	SessionManager SessionManager          `inject:""`
 	AuthController AuthorizationController `inject:""`
@@ -105,11 +106,11 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 }
 
 func (nb *networkBootstrapper) SetLastPulse(number insolar.PulseNumber) {
-	nb.Bootstrapper.SetLastPulse(number)
+	nb.DBootstrapper.SetLastPulse(number)
 }
 
 func (nb *networkBootstrapper) GetLastPulse() insolar.PulseNumber {
-	return nb.Bootstrapper.GetLastPulse()
+	return nb.DBootstrapper.GetLastPulse()
 }
 
 func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) (*network.BootstrapResult, error) {
@@ -132,11 +133,11 @@ func (nb *networkBootstrapper) AuthenticateToDiscoveryNode(ctx context.Context, 
 	// origin := nb.NodeKeeper.GetOrigin()
 	// mutableOrigin := origin.(nodenetwork.MutableNode)
 	// mutableOrigin.SetShortID(data.AssignShortID)
-	return nb.AuthController.Register(ctx, discovery, data.SessionID)
+	return nb.AuthController.Register(ctx, discovery, SessionID(data.SessionID))
 }
 
 func (nb *networkBootstrapper) bootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
-	return nb.Bootstrapper.BootstrapDiscovery(ctx)
+	return nb.DBootstrapper.BootstrapDiscovery(ctx)
 }
 
 func NewNetworkBootstrapper() NetworkBootstrapper {

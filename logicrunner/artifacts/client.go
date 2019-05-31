@@ -95,7 +95,7 @@ func (m *client) RegisterRequest(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
 		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
 		recID := insolar.NewID(currentPN, hash)
-		recRef = insolar.NewReference(insolar.DomainID, *recID)
+		recRef = insolar.NewReference(*recID)
 	default:
 		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
@@ -465,7 +465,7 @@ func (m *client) DeployCode(
 	virtRec := record.Wrap(codeRec)
 	hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
 	codeID := insolar.NewID(currentPN, hash)
-	codeRef := insolar.NewReference(*domain.Record(), *codeID)
+	codeRef := insolar.NewReference(*codeID)
 
 	_, err = m.setBlob(ctx, code, *codeRef)
 	if err != nil {
@@ -843,6 +843,7 @@ func (m *client) setRecord(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
 	)
 	genericReply, err := sender(ctx, &message.SetRecord{
 		Record:    data,
@@ -869,7 +870,11 @@ func (m *client) setBlob(
 	target insolar.Reference,
 ) (*insolar.ID, error) {
 
-	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
+	sender := messagebus.BuildSender(
+		m.DefaultBus.Send,
+		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
+	)
 	genericReact, err := sender(ctx, &message.SetBlob{
 		Memory:    blob,
 		TargetRef: target,
@@ -903,6 +908,7 @@ func (m *client) sendUpdateObject(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
 	)
 	genericReply, err := sender(
 		ctx,
@@ -941,6 +947,7 @@ func (m *client) registerChild(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
 	)
 	genericReact, err := sender(ctx, &message.RegisterChild{
 		Record: data,

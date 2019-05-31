@@ -48,41 +48,73 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-/*
-Package transport provides network transport interface. It allows to abstract our network from physical transport.
-It can either be IP based network or any other kind of packet courier (e.g. an industrial packet bus).
+// +build networktest
 
-Package exports simple interfaces for easily defining new transports.
+package tests
 
-For now we provide two implementations of transport.
-The default is UTPTransport which using BitTorrent µTP protocol.
+import (
+	"context"
+	"sync/atomic"
 
-Usage:
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/controller/bootstrap"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/version"
+)
 
-	var conn net.PacketConn
-	// get udp connection anywhere
+type fakeBootstrap struct {
+	NodeKeeper network.NodeKeeper `inject:""`
 
-	tp, _ := transport.NewUTPTransport(conn)
-	msg := &packet.Packet{}
+	suite *fixture
+}
 
-	// Send the async queries and wait for a future
-	future, err := tp.SendRequest(msg)
+func (b *fakeBootstrap) Init(ctx context.Context) error {
+	inslogger.FromContext(ctx).Info("Using fakeBootstrap")
+	return nil
+}
+
+func (b *fakeBootstrap) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
+	if atomic.LoadUint32(&b.suite.discoveriesAreBootstrapped) == 1 {
+		return nil, bootstrap.ErrReconnectRequired
+	}
+	nodes := make([]insolar.NetworkNode, 0)
+	for _, bNode := range b.suite.bootstrapNodes {
+		if bNode.id.Equal(b.NodeKeeper.GetOrigin().ID()) {
+			continue
+		}
+		n := convertNode(bNode)
+		n.(node.MutableNode).SetState(insolar.NodeUndefined)
+		nodes = append(nodes, n)
+	}
+	b.NodeKeeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeUndefined)
+	nodes = append(nodes, b.NodeKeeper.GetOrigin())
+	b.NodeKeeper.SetInitialSnapshot(nodes)
+	// this result is currently not used in discovery bootstrap scenario, so do not fill the Host
+	return &network.BootstrapResult{
+		Host:              nil,
+		ReconnectRequired: false,
+		NetworkSize:       len(b.suite.bootstrapNodes),
+	}, nil
+}
+
+func (b *fakeBootstrap) SetLastPulse(number insolar.PulseNumber) {}
+
+func (b *fakeBootstrap) GetLastPulse() insolar.PulseNumber {
+	return 0
+}
+
+func convertNode(n *networkNode) insolar.NetworkNode {
+	pk, err := n.cryptographyService.GetPublicKey()
 	if err != nil {
 		panic(err)
 	}
+	return node.NewNode(n.id, n.role, pk, n.host, version.Version)
+}
 
-	select {
-	case response := <-future.Response():
-		// Channel was closed
-		if response == nil {
-			panic("chanel closed unexpectedly")
-		}
-
-		// do something with response
-
-	case <-time.After(1 * time.Second):
-		future.Cancel()
+func newFakeBootstrap(suite *fixture) *fakeBootstrap {
+	return &fakeBootstrap{
+		suite: suite,
 	}
-
-*/
-package transport
+}

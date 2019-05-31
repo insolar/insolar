@@ -66,6 +66,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/certificate"
@@ -79,7 +80,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/consensus/phases"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -89,6 +89,9 @@ var (
 )
 
 const (
+	UseFakeTransport = true
+	UseFakeBootstrap = true
+
 	pulseTimeMs  int32 = 8000
 	reqTimeoutMs int32 = 2000
 	pulseDelta   int32 = 8
@@ -104,6 +107,8 @@ type fixture struct {
 	bootstrapNodes []*networkNode
 	networkNodes   []*networkNode
 	pulsar         TestPulsar
+
+	discoveriesAreBootstrapped uint32
 }
 
 const cacheDir = "network_cache/"
@@ -234,6 +239,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		go startNode(node)
 	}
 	waitResults(results, len(nodes))
+	atomic.StoreUint32(&s.fixture().discoveriesAreBootstrapped, 1)
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
@@ -490,10 +496,19 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
-	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock)
+	if UseFakeTransport {
+		// little hack: this Register will override transport.Factory
+		// in servicenetwork internal component manager with fake factory
+		node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport))
+	}
+	if UseFakeBootstrap {
+		// little hack: this Register will override DiscoveryBootstrapper
+		// in servicenetwork internal component manager with fakeBootstrap
+		node.componentManager.Register(newFakeBootstrap(s.fixture()))
+	}
 
-	node.componentManager.Register(&amMock, certManager, cryptographyService, mblocker, GIL)
-	node.componentManager.Inject(serviceNetwork, keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport),
+	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
+		&amMock, certManager, cryptographyService, mblocker, GIL, serviceNetwork, keyProc, terminationHandler,
 		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t))
 
 	node.serviceNetwork = serviceNetwork

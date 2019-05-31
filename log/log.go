@@ -19,18 +19,44 @@ package log
 import (
 	"io"
 	stdlog "log"
+	"os"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 )
 
-const timestampFormat = time.RFC3339Nano
+const timestampFormat = "2006-01-02T15:04:05.000000000Z07:00"
+
+var fieldsOrder = []string{
+	zerolog.TimestampFieldName,
+	zerolog.LevelFieldName,
+	zerolog.MessageFieldName,
+	zerolog.CallerFieldName,
+}
 
 const defaultCallerSkipFrameCount = 3
+
+func formatCaller() zerolog.Formatter {
+	return func(i interface{}) string {
+		var c string
+		if cc, ok := i.(string); ok {
+			c = cc
+		}
+		if len(c) > 0 {
+			cwd, err := os.Getwd()
+			if err == nil {
+				c = strings.TrimPrefix(c, cwd)
+				c = strings.TrimPrefix(c, "/")
+			}
+			c = "file=" + c
+		}
+		return c
+	}
+}
 
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (insolar.Logger, error) {

@@ -449,12 +449,9 @@ func (mb *MessageBus) handleParcelFromTheFuture(ctx context.Context, parcel inso
 
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
-func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte, err error) {
+func (mb *MessageBus) deliver(ctx context.Context, args []byte) (result []byte, err error) {
 	inslogger.FromContext(ctx).Debug("MessageBus.deliver starts ...")
-	if len(args) < 1 {
-		return nil, errors.New("need exactly one argument when mb.deliver()")
-	}
-	parcel, err := message.DeserializeParcel(bytes.NewBuffer(args[0]))
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(args))
 	if err != nil {
 		return nil, err
 	}

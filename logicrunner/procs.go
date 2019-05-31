@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -90,7 +91,7 @@ func (r *RegisterRequest) Proceed(ctx context.Context) error {
 		return err
 	}
 
-	r.setResult(insolar.NewReference(insolar.DomainID, *id))
+	r.setResult(insolar.NewReference(*id))
 	return nil
 }
 
@@ -112,15 +113,16 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 
 	if c.parcel != nil {
 		if c.parcel.Type() != insolar.TypeCallMethod {
+			// We expect ONLY CallMethods in LogicRunner.
 			c.es.Unlock()
-			c.es.pending = message.NotPending
-			return nil
+			return fmt.Errorf("unexpecxted parcel type during ClarifyPendingState: %v", c.parcel.Type())
 		}
 
 		msg := c.parcel.Message().(*message.CallMethod)
 		if msg.CallType != record.CTMethod {
-			c.es.Unlock()
+			// It's considered that we are not pending except someone calls a method.
 			c.es.pending = message.NotPending
+			c.es.Unlock()
 			return nil
 		}
 	}

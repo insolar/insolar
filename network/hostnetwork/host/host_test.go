@@ -51,10 +51,12 @@
 package host
 
 import (
+	"net"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -144,4 +146,46 @@ func TestHost_Equal(t *testing.T) {
 			require.Equal(t, test.equal, Host{NodeID: test.id1, Address: test.addr1}.Equal(Host{NodeID: test.id2, Address: test.addr2}))
 		})
 	}
+}
+
+func marshalUnmarshalHost(t *testing.T, h *Host) *Host {
+	data, err := h.Marshal()
+	require.NoError(t, err)
+	h2 := Host{}
+	err = h2.Unmarshal(data)
+	require.NoError(t, err)
+	return &h2
+}
+
+func TestHost_Marshal(t *testing.T) {
+	ref := testutils.RandomRef()
+	sid := insolar.ShortNodeID(137)
+	h := Host{}
+	h.NodeID = ref
+	h.ShortID = sid
+
+	h2 := marshalUnmarshalHost(t, &h)
+
+	assert.Equal(t, h.NodeID, h2.NodeID)
+	assert.Equal(t, h.ShortID, h2.ShortID)
+	assert.Nil(t, h.Address)
+}
+
+func TestHost_Marshal2(t *testing.T) {
+	ref := testutils.RandomRef()
+	sid := insolar.ShortNodeID(138)
+	ip := []byte{10, 11, 0, 56}
+	port := 5432
+	zone := "what is it for?"
+	addr := Address{UDPAddr: net.UDPAddr{IP: ip, Port: port, Zone: zone}}
+	h := Host{NodeID: ref, ShortID: sid, Address: &addr}
+
+	h2 := marshalUnmarshalHost(t, &h)
+
+	assert.Equal(t, h.NodeID, h2.NodeID)
+	assert.Equal(t, h.ShortID, h2.ShortID)
+	require.NotNil(t, h2.Address)
+	assert.Equal(t, h.Address.IP, h2.Address.IP)
+	assert.Equal(t, h.Address.Port, h2.Address.Port)
+	assert.Equal(t, h.Address.Zone, h2.Address.Zone)
 }

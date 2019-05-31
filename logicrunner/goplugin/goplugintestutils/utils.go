@@ -508,7 +508,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
-			insolar.Reference{}, *insolar.NewReference(insolar.ID{}, *codeReq),
+			insolar.Reference{}, *insolar.NewReference(*codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
 		codeRef := &insolar.Reference{}

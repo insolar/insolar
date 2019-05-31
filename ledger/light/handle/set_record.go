@@ -20,6 +20,9 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
@@ -89,7 +92,7 @@ func (s *SetRecord) ensureIndex(ctx context.Context, jet *proc.FetchJet, f flow.
 		return nil
 	}
 
-	objRef := *insolar.NewReference(insolar.ID{}, objID)
+	objRef := *insolar.NewReference(objID)
 
 	idx := proc.NewGetIndex(objRef, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(idx)

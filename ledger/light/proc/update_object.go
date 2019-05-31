@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -50,6 +51,7 @@ type UpdateObject struct {
 		IDLocker              object.IDLocker
 		LifelineIndex         object.LifelineIndex
 		LifelineStateModifier object.LifelineStateModifier
+		WriteAccessor         hot.WriteAccessor
 	}
 }
 
@@ -68,6 +70,12 @@ func (p *UpdateObject) Proceed(ctx context.Context) error {
 }
 
 func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
+	done, err := p.Dep.WriteAccessor.Begin(ctx, p.PulseNumber)
+	if err == hot.ErrWriteClosed {
+		return bus.Reply{Err: flow.ErrCancelled}
+	}
+	defer done()
+
 	logger := inslogger.FromContext(ctx)
 	if p.Message.Object.Record() == nil {
 		return bus.Reply{
@@ -76,7 +84,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	}
 
 	virtRec := record.Virtual{}
-	err := virtRec.Unmarshal(p.Message.Record)
+	err = virtRec.Unmarshal(p.Message.Record)
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "can't deserialize record")}
 	}
