@@ -60,7 +60,7 @@ type EntropySignaturePayload struct {
 
 // Hash calculates hash of payload
 func (es *EntropySignaturePayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
-	_, err := hashProvider.Write(es.EntropySignature[:])
+	_, err := hashProvider.Write(es.EntropySignature)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ type VectorPayload struct {
 
 // Hash calculates hash of payload
 func (vp *VectorPayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
-	var sortedKeys []string
+	sortedKeys := make([]string, 0, len(vp.Vector))
 	for key := range vp.Vector {
 		sortedKeys = append(sortedKeys, key)
 	}
@@ -143,7 +143,7 @@ type PulsePayload struct {
 
 // Hash calculates hash of payload
 func (pp *PulsePayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
-	var sortedKeys []string
+	sortedKeys := make([]string, 0, len(pp.Pulse.Signs))
 	for key := range pp.Pulse.Signs {
 		sortedKeys = append(sortedKeys, key)
 	}

@@ -50,7 +50,7 @@ type cachedKeyStore struct {
 	privateKey crypto.PrivateKey
 }
 
-func (ks *cachedKeyStore) getCachedPrivateKey(identifier string) crypto.PublicKey {
+func (ks *cachedKeyStore) getCachedPrivateKey() crypto.PublicKey {
 	if ks.privateKey != nil {
 		return ks.privateKey
 	}
@@ -67,8 +67,8 @@ func (ks *cachedKeyStore) loadPrivateKey(identifier string) (crypto.PrivateKey, 
 	return privateKey, nil
 }
 
-func (ks *cachedKeyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) {
-	privateKey := ks.getCachedPrivateKey(identifier)
+func (ks *cachedKeyStore) GetPrivateKey(_ string) (crypto.PrivateKey, error) {
+	privateKey := ks.getCachedPrivateKey()
 
 	return privateKey, nil
 }

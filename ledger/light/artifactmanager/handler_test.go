@@ -382,7 +382,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	registerChild.Dep.LifelineStateModifier = s.indexMemoryStor
 	registerChild.Dep.PCS = s.scheme
 
-	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
+	err = registerChild.Proceed(s.ctx)
 	require.NoError(s.T(), err)
 
 	busRep := <-replyTo
@@ -459,7 +459,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	registerChild.Dep.LifelineStateModifier = s.indexMemoryStor
 	registerChild.Dep.PCS = s.scheme
 
-	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
+	err = registerChild.Proceed(s.ctx)
 	require.NoError(s.T(), err)
 
 	idx, err := s.indexMemoryStor.ForID(s.ctx, pulse, *msg.Parent.Record())
@@ -626,7 +626,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	procGetRequest := proc.NewGetRequest(*reqID, replyTo)
 	procGetRequest.Dep.RecordAccessor = s.recordAccessor
 
-	err = procGetRequest.Proceed(contextWithJet(s.ctx, jetID))
+	err = procGetRequest.Proceed(s.ctx)
 
 	require.NoError(s.T(), err)
 	res := <-replyTo

@@ -34,9 +34,6 @@ type ExecutionState struct {
 	PrototypeDescriptor artifacts.ObjectDescriptor
 	CodeDescriptor      artifacts.CodeDescriptor
 
-	deactivate bool
-	nonce      uint64
-
 	Current               *CurrentExecution
 	Queue                 []ExecutionQueueElement
 	QueueProcessorActive  bool
