@@ -239,8 +239,7 @@ func (m *client) GetObject(
 		err error
 	)
 
-	desc = m.localStorage.Object(head)
-	if desc != nil {
+	if desc := m.localStorage.Object(head); desc != nil {
 		return desc, nil
 	}
 

@@ -107,13 +107,13 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 
 	// TODO: delegation token
 
-	es.nonce++
+	es.Current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.nonce,
+			Nonce:           es.Current.Nonce,
 
 			Immutable: req.Immutable,
 
@@ -154,13 +154,13 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 	}
 	ctx := es.Current.Context
 
-	es.nonce++
+	es.Current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.nonce,
+			Nonce:           es.Current.Nonce,
 
 			CallType:  record.CTSaveAsChild,
 			Base:      &req.Parent,
@@ -191,13 +191,13 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 	}
 	ctx := es.Current.Context
 
-	es.nonce++
+	es.Current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.nonce,
+			Nonce:           es.Current.Nonce,
 
 			CallType:  record.CTSaveAsDelegate,
 			Base:      &req.Into,
@@ -338,6 +338,6 @@ func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *r
 		return errors.Wrap(err, "Failed to find needed execution state")
 	}
 
-	es.deactivate = true
+	es.Current.Deactivate = true
 	return nil
 }
