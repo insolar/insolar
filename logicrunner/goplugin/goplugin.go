@@ -196,6 +196,7 @@ func (gp *GoPlugin) CallMethod(
 		}
 		return callResult.Response.Data, callResult.Response.Ret, nil
 	case <-time.After(timeout):
+		inslogger.FromContext(ctx).Debug("CallMethodRPC waiting results timeout")
 		return nil, nil, errors.New("logicrunner execution timeout")
 	}
 }
@@ -237,6 +238,7 @@ func (gp *GoPlugin) CallConstructor(
 		}
 		return callResult.Response.Ret, nil
 	case <-time.After(timeout):
+		inslogger.FromContext(ctx).Debug("CallConstructor waiting results timeout")
 		return nil, errors.New("logicrunner execution timeout")
 	}
 }

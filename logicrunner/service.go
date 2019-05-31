@@ -112,15 +112,14 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 	defer recoverRPC(&err)
 
 	os := gpr.lr.MustObjectState(req.Callee)
-
-	if os.ExecutionState.Current.LogicContext.Immutable {
-		return errors.New("Try to call route from immutable method")
-	}
-
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
 	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
+
+	if es.Current.LogicContext.Immutable {
+		return errors.New("Try to call route from immutable method")
+	}
 
 	ctx, span := instracer.StartSpan(ctx, "RPC.RouteCall")
 	defer span.End()

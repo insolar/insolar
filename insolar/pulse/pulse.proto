@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package pulse;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.populate_all) = false;
+
+message PulseProto {
+    uint32 PulseNumber = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    uint32 PrevPulseNumber = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    uint32 NextPulseNumber = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+
+    int64 PulseTimestamp = 4;
+    int32 EpochPulseNumber = 5;
+    bytes OriginID = 6;
+
+    bytes Entropy = 7 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
+    repeated PulseSenderConfirmationProto Signs = 8;
+}
+
+message PulseSenderConfirmationProto {
+    string PublicKey = 1;
+    uint32 PulseNumber = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    string ChosenPublicKey = 3;
+    bytes Entropy = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
+    bytes Signature = 5;
+}

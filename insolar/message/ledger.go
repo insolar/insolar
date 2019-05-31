@@ -88,8 +88,8 @@ func (*GetCode) Type() insolar.MessageType {
 // GetObject retrieves object From storage.
 type GetObject struct {
 	ledgerMessage
-	Head     insolar.Reference
-	State    *insolar.ID // If nil, will fetch the latest state.
+	Head  insolar.Reference
+	State *insolar.ID // If nil, will fetch the latest state.
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -390,7 +390,7 @@ func (*GetJet) Type() insolar.MessageType {
 
 // AllowedSenderObjectAndRole implements interface method
 func (m *GetJet) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return insolar.NewReference(insolar.DomainID, m.Object), insolar.DynamicRoleLightExecutor
+	return insolar.NewReference(m.Object), insolar.DynamicRoleLightExecutor
 }
 
 // DefaultRole returns role for this event
@@ -400,7 +400,7 @@ func (*GetJet) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (m *GetJet) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(insolar.DomainID, m.Object)
+	return insolar.NewReference(m.Object)
 }
 
 // AbandonedRequestsNotification informs virtual node about unclosed requests.
@@ -427,7 +427,7 @@ func (*AbandonedRequestsNotification) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (m *AbandonedRequestsNotification) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(insolar.DomainID, m.Object)
+	return insolar.NewReference(m.Object)
 }
 
 // GetRequest fetches request from ledger.
@@ -454,7 +454,7 @@ func (*GetRequest) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (m *GetRequest) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(insolar.DomainID, m.Request)
+	return insolar.NewReference(m.Request)
 }
 
 // GetPendingRequestID fetches a pending request id for an object from current LME
@@ -481,5 +481,5 @@ func (*GetPendingRequestID) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (m *GetPendingRequestID) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(insolar.DomainID, m.ObjectID)
+	return insolar.NewReference(m.ObjectID)
 }

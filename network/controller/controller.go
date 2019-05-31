@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
@@ -104,8 +105,8 @@ func (c *Controller) Bootstrap(ctx context.Context) (*network.BootstrapResult, e
 
 // Inject inject components.
 func (c *Controller) Init(ctx context.Context) error {
-	c.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Request) (network.Response, error) {
-		return c.Network.BuildResponse(ctx, request, nil), nil
+	c.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Packet) (network.Packet, error) {
+		return c.Network.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	return nil
 }
