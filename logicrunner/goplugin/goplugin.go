@@ -80,7 +80,7 @@ const timeout = time.Minute * 10
 
 // Downstream returns a connection to `ginsider`
 func (gp *GoPlugin) Downstream(ctx context.Context) (*rpc.Client, error) {
-	ctx, span := instracer.StartSpan(ctx, "GoPlugin.Downstream")
+	_, span := instracer.StartSpan(ctx, "GoPlugin.Downstream")
 	defer span.End()
 
 	gp.clientMutex.Lock()
