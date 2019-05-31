@@ -85,8 +85,6 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
 	}
 
-	httpClient.Timeout = time.Second * 20
-
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with creating request")

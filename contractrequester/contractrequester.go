@@ -105,7 +105,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 }
 
 func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
-	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call "+inMsg.Type().String())
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
 	defer span.End()
 
 	msg := inMsg.(*message.CallMethod)

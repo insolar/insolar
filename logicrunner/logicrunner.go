@@ -910,7 +910,6 @@ func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []
 
 func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Message, sendWg *sync.WaitGroup) {
 	defer sendWg.Done()
-	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>> sendOnPulseMessage")
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
