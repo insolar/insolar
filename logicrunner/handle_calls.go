@@ -123,8 +123,8 @@ func (h *HandleCall) handleActual(
 			// will change once again and the receiver will be not an executor of the object anymore.
 			// However in this case MessageBus will automatically resend the message to the right VE.
 
-			// TODO: it's done to support current logic. Do it correctly when go to flow
-			f.Continue(ctx)
+			// TODO: secially for immutable calls, they are not ordered by LME
+			return nil, flow.ErrCancelled
 		} else {
 			return nil, err
 		}
