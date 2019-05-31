@@ -76,6 +76,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 				return errors.Wrap(err, "failed to create reply")
 			}
 			go p.Dep.Sender.Reply(ctx, p.message, msg)
+			return nil
 		}
 
 		var memory []byte
