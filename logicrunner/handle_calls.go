@@ -26,6 +26,8 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
+
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -49,10 +51,8 @@ func (h *HandleCall) handleActual(
 
 	os.Lock()
 	if os.ExecutionState == nil {
-		os.ExecutionState = &ExecutionState{
-			Ref:   ref,
-			Queue: make([]ExecutionQueueElement, 0),
-		}
+		os.ExecutionState = NewExecutionState()
+		os.ExecutionState.Ref = ref
 	}
 	es := os.ExecutionState
 	os.Unlock()
@@ -99,6 +99,7 @@ func (h *HandleCall) handleActual(
 		parcel:  parcel,
 		request: request,
 	}
+	log.Error(request)
 
 	es.Queue = append(es.Queue, qElement)
 	es.Unlock()

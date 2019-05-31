@@ -34,7 +34,7 @@ type ExecutionState struct {
 	PrototypeDescriptor artifacts.ObjectDescriptor
 	CodeDescriptor      artifacts.CodeDescriptor
 
-	Current               *CurrentExecution
+	CurrentList           *CurrentExecutionList
 	Queue                 []ExecutionQueueElement
 	QueueProcessorActive  bool
 	LedgerHasMoreRequests bool
@@ -47,6 +47,13 @@ type ExecutionState struct {
 	HasPendingCheckMutex sync.Mutex
 }
 
+func NewExecutionState() *ExecutionState {
+	return &ExecutionState{
+		CurrentList: NewCurrentExecutionList(),
+		Queue:       make([]ExecutionQueueElement, 0),
+	}
+}
+
 func (es *ExecutionState) WrapError(err error, message string) error {
 	if err == nil {
 		err = errors.New(message)
@@ -57,9 +64,9 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	if es.ObjectDescriptor != nil {
 		res.Contract = es.ObjectDescriptor.HeadRef()
 	}
-	if es.Current != nil {
-		res.Request = es.Current.RequestRef
-	}
+	// if es.Current != nil {
+	// 	res.Request = es.Current.RequestRef
+	// }
 	return res
 }
 
