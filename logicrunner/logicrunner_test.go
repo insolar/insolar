@@ -218,7 +218,7 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(
 	_, err = lr.(*LogicRunner).MessageBus.Send(
 		ctx,
 		&message.HotData{
-			Jet:             *insolar.NewReference(insolar.DomainID, insolar.ID(rootJetId)),
+			Jet:             *insolar.NewReference(insolar.ID(rootJetId)),
 			Drop:            drop.Drop{Pulse: 1, JetID: rootJetId},
 			PendingRequests: nil,
 			HotIndexes:      hotIndexes,

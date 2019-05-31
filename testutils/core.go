@@ -45,7 +45,7 @@ func resetBits(value []byte, start uint8) []byte {
 
 	// Reset bits in starting byte.
 	mask := byte(0xFF)
-	mask <<= 8 - byte(startBit)
+	mask <<= 8 - startBit
 	result[startByte] = value[startByte] & mask
 
 	return result
@@ -63,7 +63,7 @@ func RandomString() string {
 // RandomRef generates random object reference
 func RandomRef() insolar.Reference {
 	ref := [insolar.RecordRefSize]byte{}
-	_, err := rand.Read(ref[:])
+	_, err := rand.Read(ref[:insolar.RecordIDSize])
 	if err != nil {
 		panic(err)
 	}
@@ -116,13 +116,13 @@ func JetFromString(s string) insolar.ID {
 	jetPrefix := make([]byte, insolar.JetPrefixSize)
 	depth := uint8(len(s))
 	for i, char := range s {
-		byteOffset := int(i / 8)
+		byteOffset := i / 8
 		bitsOffset := 7 - uint(i%8)
 		switch char {
 		case '0':
 		case '1':
 			add := uint8(1 << bitsOffset)
-			jetPrefix[byteOffset] = byte(uint8(jetPrefix[byteOffset] + add))
+			jetPrefix[byteOffset] += add
 		default:
 			panic(fmt.Errorf(
 				"%v character is non 0 or 1, but %v (input string='%v')", i, char, s))

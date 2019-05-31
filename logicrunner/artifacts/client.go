@@ -95,7 +95,7 @@ func (m *client) RegisterRequest(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
 		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
 		recID := insolar.NewID(currentPN, hash)
-		recRef = insolar.NewReference(insolar.DomainID, *recID)
+		recRef = insolar.NewReference(*recID)
 	default:
 		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
@@ -465,7 +465,7 @@ func (m *client) DeployCode(
 	virtRec := record.Wrap(codeRec)
 	hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
 	codeID := insolar.NewID(currentPN, hash)
-	codeRef := insolar.NewReference(*domain.Record(), *codeID)
+	codeRef := insolar.NewReference(*codeID)
 
 	_, err = m.setBlob(ctx, code, *codeRef)
 	if err != nil {

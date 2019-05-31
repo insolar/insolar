@@ -48,80 +48,73 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package routing
+// +build networktest
+
+package tests
 
 import (
-	"strconv"
+	"context"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network/controller/bootstrap"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/version"
 )
 
-type Table struct {
+type fakeBootstrap struct {
 	NodeKeeper network.NodeKeeper `inject:""`
+
+	suite *fixture
 }
 
-func (t *Table) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
-	node := t.NodeKeeper.GetAccessor().GetActiveNodeByShortID(id)
-	if node != nil {
-		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
+func (b *fakeBootstrap) Init(ctx context.Context) error {
+	inslogger.FromContext(ctx).Info("Using fakeBootstrap")
+	return nil
+}
+
+func (b *fakeBootstrap) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
+	if atomic.LoadUint32(&b.suite.discoveriesAreBootstrapped) == 1 {
+		return nil, bootstrap.ErrReconnectRequired
 	}
-	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensus(id)
-	if h == nil {
-		return nil, errors.New("no such local node with ShortID: " + strconv.FormatUint(uint64(id), 10))
-	}
-	return h, nil
-}
-
-func (t *Table) ResolveConsensusRef(ref insolar.Reference) (*host.Host, error) {
-	node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
-	if node != nil {
-		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
-	}
-	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensusRef(ref)
-	if h == nil {
-		return nil, errors.New("no such local node with node ID: " + ref.String())
-	}
-	return h, nil
-}
-
-func (t *Table) isLocalNode(insolar.Reference) bool {
-	return true
-}
-
-func (t *Table) resolveRemoteNode(_ insolar.Reference) (*host.Host, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (t *Table) addRemoteHost(_ *host.Host) {
-	log.Warn("not implemented")
-}
-
-// Resolve NodeID -> ShortID, Address. Can initiate network requests.
-func (t *Table) Resolve(ref insolar.Reference) (*host.Host, error) {
-	if t.isLocalNode(ref) {
-		node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
-		if node == nil {
-			return nil, errors.New("no such local node with NodeID: " + ref.String())
+	nodes := make([]insolar.NetworkNode, 0)
+	for _, bNode := range b.suite.bootstrapNodes {
+		if bNode.id.Equal(b.NodeKeeper.GetOrigin().ID()) {
+			continue
 		}
-		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
+		n := convertNode(bNode)
+		n.(node.MutableNode).SetState(insolar.NodeUndefined)
+		nodes = append(nodes, n)
 	}
-	return t.resolveRemoteNode(ref)
+	b.NodeKeeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeUndefined)
+	nodes = append(nodes, b.NodeKeeper.GetOrigin())
+	b.NodeKeeper.SetInitialSnapshot(nodes)
+	// this result is currently not used in discovery bootstrap scenario, so do not fill the Host
+	return &network.BootstrapResult{
+		Host:              nil,
+		ReconnectRequired: false,
+		NetworkSize:       len(b.suite.bootstrapNodes),
+	}, nil
 }
 
-// AddToKnownHosts add host to routing table.
-func (t *Table) AddToKnownHosts(h *host.Host) {
-	if t.isLocalNode(h.NodeID) {
-		// we should already have this node in NodeNetwork active list, do nothing
-		return
-	}
-	t.addRemoteHost(h)
+func (b *fakeBootstrap) SetLastPulse(number insolar.PulseNumber) {}
+
+func (b *fakeBootstrap) GetLastPulse() insolar.PulseNumber {
+	return 0
 }
 
-// Rebalance recreate shards of routing table with known hosts according to new partition policy.
-func (t *Table) Rebalance(network.PartitionPolicy) {
-	log.Warn("not implemented")
+func convertNode(n *networkNode) insolar.NetworkNode {
+	pk, err := n.cryptographyService.GetPublicKey()
+	if err != nil {
+		panic(err)
+	}
+	return node.NewNode(n.id, n.role, pk, n.host, version.Version)
+}
+
+func newFakeBootstrap(suite *fixture) *fakeBootstrap {
+	return &fakeBootstrap{
+		suite: suite,
+	}
 }

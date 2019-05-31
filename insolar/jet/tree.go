@@ -134,7 +134,7 @@ func (t *Tree) Find(recordID insolar.ID) (insolar.JetID, bool) {
 
 	hash := recordID.Hash()
 	j, depth := t.Head.Find(hash, 0)
-	id := *insolar.NewJetID(uint8(depth), resetBits(hash, depth))
+	id := *insolar.NewJetID(depth, resetBits(hash, depth))
 	return id, j.Actual
 }
 

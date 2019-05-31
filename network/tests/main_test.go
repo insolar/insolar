@@ -307,7 +307,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 }
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := NewTestSuite(16, 0)
+	s := NewTestSuite(12, 0)
 	suite.Run(t, s)
 }
 

@@ -107,7 +107,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ buildPrototypes ] Can't RegisterRequest for contract")
 		}
-		cb.prototypes[name] = insolar.NewReference(rd.ID(), *protoID)
+		cb.prototypes[name] = insolar.NewReference(*protoID)
 
 		inslogger.FromContext(ctx).Infof("Register %v_proto reference: %v", name, cb.prototypes[name])
 	}
@@ -174,7 +174,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
 			rd.Ref(),
-			*insolar.NewReference(rd.ID(), *codeReq),
+			*insolar.NewReference(*codeReq),
 			pluginBinary,
 			insolar.MachineTypeGoPlugin,
 		)
@@ -182,7 +182,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't DeployCode for code '%v", name)
 		}
 
-		codeRef := insolar.NewReference(rd.ID(), *codeID)
+		codeRef := insolar.NewReference(*codeID)
 		_, err = cb.artifactManager.RegisterResult(ctx, rd.Ref(), *codeRef, nil)
 		if err != nil {
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't SetRecord for code '%v'", name)
@@ -244,19 +244,16 @@ func goPATH() string {
 	return gopath
 }
 
-func getContractPath(name string) (string, error) {
+func getContractPath(name string) string {
 	contractDir := filepath.Join(goPATH(), "src", contractSources)
 	contractFile := name + ".go"
-	return filepath.Join(contractDir, name, contractFile), nil
+	return filepath.Join(contractDir, name, contractFile)
 }
 
 func parseContracts(contractNames []string) (map[string]*preprocessor.ParsedFile, error) {
 	contracts := make(map[string]*preprocessor.ParsedFile)
 	for _, name := range contractNames {
-		contractPath, err := getContractPath(name)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ contractsMap ] couldn't get path to contracts: ")
-		}
+		contractPath := getContractPath(name)
 		parsed, err := preprocessor.ParseFile(contractPath, insolar.MachineTypeGoPlugin)
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ contractsMap ] couldn't read contract: %v", contractPath)

@@ -39,20 +39,20 @@ const (
 type JetID ID
 
 // Size is a protobuf required method. It returns size of JetID
-func (j *JetID) Size() int { return RecordIDSize }
+func (id *JetID) Size() int { return RecordIDSize }
 
 // MarshalTo is a protobuf required method. It marshals data
-func (j *JetID) MarshalTo(data []byte) (n int, err error) {
-	copy(data, j[:])
+func (id *JetID) MarshalTo(data []byte) (n int, err error) {
+	copy(data, id[:])
 	return RecordIDSize, nil
 }
 
 // Unmarshal is a protobuf required method. It unmarshals data
-func (j *JetID) Unmarshal(data []byte) error {
+func (id *JetID) Unmarshal(data []byte) error {
 	if len(data) != RecordIDSize {
 		return errors.New("Not enough bytes to unpack JetID")
 	}
-	copy(j[:], data)
+	copy(id[:], data)
 	return nil
 }
 
