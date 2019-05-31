@@ -197,7 +197,7 @@ func (p *GetIndexWM) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate heavy")
 	}
 	genericReply, err := p.Dep.Bus.Send(ctx, &message.GetObjectIndex{
-		Object: *insolar.NewReference(insolar.ID{}, p.object),
+		Object: *insolar.NewReference(p.object),
 	}, &insolar.MessageSendOptions{
 		Receiver: heavy,
 	})
