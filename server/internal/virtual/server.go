@@ -88,7 +88,7 @@ func (s *Server) Serve() {
 	}
 	defer jaegerflush()
 
-	cm, th, err := initComponents(
+	cm, th := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
@@ -98,7 +98,6 @@ func (s *Server) Serve() {
 		certManager,
 		false,
 	)
-	checkError(ctx, err, "failed to init components")
 
 	ctx, inslog = inslogger.WithField(ctx, "nodeid", certManager.GetCertificate().GetNodeRef().String())
 	ctx, inslog = inslogger.WithField(ctx, "role", certManager.GetCertificate().GetRole().String())

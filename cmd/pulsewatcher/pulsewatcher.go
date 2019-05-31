@@ -123,7 +123,7 @@ func parseInt64(str string) int64 {
 	return res
 }
 
-func displayResultsJSON(results [][]string, ready bool, buffer *bytes.Buffer) {
+func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 	type DocumentItem struct {
 		URL             string
 		NetworkState    string
