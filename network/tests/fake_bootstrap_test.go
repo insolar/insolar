@@ -64,18 +64,18 @@ import (
 	"github.com/insolar/insolar/version"
 )
 
-type bootstrapMock struct {
+type fakeBootstrap struct {
 	NodeKeeper network.NodeKeeper `inject:""`
 
 	suite *fixture
 }
 
-func (b *bootstrapMock) Init(ctx context.Context) error {
-	inslogger.FromContext(ctx).Info("Using bootstrapMock")
+func (b *fakeBootstrap) Init(ctx context.Context) error {
+	inslogger.FromContext(ctx).Info("Using fakeBootstrap")
 	return nil
 }
 
-func (b *bootstrapMock) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
+func (b *fakeBootstrap) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	if atomic.LoadUint32(&b.suite.discoveriesAreBootstrapped) == 1 {
 		return nil, bootstrap.ErrReconnectRequired
 	}
@@ -99,9 +99,9 @@ func (b *bootstrapMock) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	}, nil
 }
 
-func (b *bootstrapMock) SetLastPulse(number insolar.PulseNumber) {}
+func (b *fakeBootstrap) SetLastPulse(number insolar.PulseNumber) {}
 
-func (b *bootstrapMock) GetLastPulse() insolar.PulseNumber {
+func (b *fakeBootstrap) GetLastPulse() insolar.PulseNumber {
 	return 0
 }
 
@@ -113,8 +113,8 @@ func convertNode(n *networkNode) insolar.NetworkNode {
 	return node.NewNode(n.id, n.role, pk, n.host, version.Version)
 }
 
-func newBootstrapMock(suite *fixture) *bootstrapMock {
-	return &bootstrapMock{
+func newFakeBootstrap(suite *fixture) *fakeBootstrap {
+	return &fakeBootstrap{
 		suite: suite,
 	}
 }
