@@ -36,8 +36,7 @@ var RootDomain = &Record{
 
 // Ref returns insolar.Reference to root domain object.
 func (r Record) Ref() insolar.Reference {
-	id := r.ID()
-	return *insolar.NewReference(id, id)
+	return *insolar.NewReference(r.ID())
 }
 
 // ID returns insolar.ID  to root domain object.
@@ -61,5 +60,5 @@ func GenesisRef(name string) insolar.Reference {
 	virtRec := record.Wrap(req)
 	hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
 	id := insolar.NewID(insolar.FirstPulseNumber, hash)
-	return *insolar.NewReference(RootDomain.ID(), *id)
+	return *insolar.NewReference(*id)
 }

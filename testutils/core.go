@@ -63,7 +63,7 @@ func RandomString() string {
 // RandomRef generates random object reference
 func RandomRef() insolar.Reference {
 	ref := [insolar.RecordRefSize]byte{}
-	_, err := rand.Read(ref[:])
+	_, err := rand.Read(ref[:insolar.RecordIDSize])
 	if err != nil {
 		panic(err)
 	}

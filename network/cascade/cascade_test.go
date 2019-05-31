@@ -51,17 +51,17 @@
 package cascade
 
 import (
-	"encoding/hex"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 const (
-	domainStr = ".4F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
+	domainStr = ".11111111111111111111111111111111"
 	id1Str    = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
 	id2Str    = "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
 	id3Str    = "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
@@ -125,11 +125,11 @@ func TestCalculateNextNodes(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	r, _ := CalculateNextNodes(pcs, c, nil)
-	require.Equal(t, []insolar.Reference{nodeIds[3], nodeIds[8]}, r)
+	require.Equal(t, []insolar.Reference{nodeIds[4], nodeIds[5]}, r)
 	r, _ = CalculateNextNodes(pcs, c, &nodeIds[3])
-	require.Equal(t, []insolar.Reference{nodeIds[1], nodeIds[6]}, r)
+	require.Equal(t, []insolar.Reference{nodeIds[11], nodeIds[0]}, r)
 	r, _ = CalculateNextNodes(pcs, c, &nodeIds[1])
-	require.Equal(t, []insolar.Reference{nodeIds[4], nodeIds[7]}, r)
+	require.Equal(t, []insolar.Reference{nodeIds[6], nodeIds[8]}, r)
 }
 
 func Test_geometricProgressionSum(t *testing.T) {
@@ -140,9 +140,12 @@ func Test_geometricProgressionSum(t *testing.T) {
 func Test_calcHash(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	ref, err := insolar.NewReferenceFromBase58("4SxZ6BSx6qBP41nqQgtsFW5EF3JLDxYscZeVQnviPUGZ.4P3FnY89dNJKiR3qTzMvSbgryVwnxMspus6JrwrAYiVG")
+	ref, err := insolar.NewReferenceFromBase58("4SxZ6BSx6qBP41nqQgtsFW5EF3JLDxYscZeVQnviPUGZ.11111111111111111111111111111111")
 	require.NoError(t, err)
-	c, _ := hex.DecodeString("b87473cbc572fd5afc8f165c6b554939068e870490bac3077daf6f9f9ec83df6dbe2d50c061d7034617c24f2d841bc9800121f9f43f90ba91bd8b646df0642ad")
+	c := []byte{0x5d, 0x1b, 0x31, 0x34, 0x2e, 0xf0, 0x55, 0xb5, 0x37, 0x91, 0xb3, 0x12, 0x46, 0x84, 0xd9, 0x47, 0x3,
+		0x27, 0xf3, 0x89, 0x90, 0xe4, 0x26, 0xd7, 0xff, 0xc0, 0x2e, 0x1a, 0x68, 0x55, 0x46, 0x7, 0xae, 0xd6, 0x82,
+		0x63, 0xab, 0xc5, 0xe5, 0x71, 0xd3, 0x31, 0x55, 0x23, 0x51, 0x85, 0x37, 0x23, 0xfc, 0x92, 0xc9, 0x48, 0x1e,
+		0x76, 0x6f, 0x2a, 0x47, 0xb4, 0x3e, 0xf9, 0xa4, 0xa, 0x8d, 0xa8}
 	require.Equal(t, c, calcHash(pcs, *ref, insolar.Entropy{0}))
 }
 

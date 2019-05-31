@@ -116,16 +116,10 @@ func (id *ID) MarshalJSON() ([]byte, error) {
 type Reference [RecordRefSize]byte
 
 // NewReference returns Reference composed from domain and record
-func NewReference(domain ID, record ID) *Reference {
+func NewReference(record ID) *Reference {
 	var ref Reference
-	ref.SetDomain(domain)
 	ref.SetRecord(record)
 	return &ref
-}
-
-// SetDomain set domain's ID.
-func (ref *Reference) SetDomain(recID ID) {
-	copy(ref[RecordIDSize:], recID[:])
 }
 
 // SetRecord set record's ID.
@@ -133,8 +127,8 @@ func (ref *Reference) SetRecord(recID ID) {
 	copy(ref[:RecordIDSize], recID[:])
 }
 
-// Domain returns domain ID part of reference.
-func (ref Reference) Domain() *ID {
+// domain returns domain ID part of reference.
+func (ref Reference) domain() *ID {
 	var id ID
 	copy(id[:], ref[RecordIDSize:])
 	return &id
@@ -152,7 +146,7 @@ func (ref *Reference) Record() *ID {
 
 // String outputs base58 Reference representation.
 func (ref Reference) String() string {
-	return ref.Record().String() + RecordRefIDSeparator + ref.Domain().String()
+	return ref.Record().String() + RecordRefIDSeparator + ref.domain().String()
 }
 
 // FromSlice : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
@@ -193,11 +187,11 @@ func NewReferenceFromBase58(str string) (*Reference, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "bad record part")
 	}
-	domainID, err := NewIDFromBase58(parts[1])
+	_, err = NewIDFromBase58(parts[1])
 	if err != nil {
 		return nil, errors.Wrap(err, "bad domain part")
 	}
-	return NewReference(*domainID, *recordID), nil
+	return NewReference(*recordID), nil
 }
 
 // MarshalJSON serializes reference into JSON.

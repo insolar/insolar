@@ -312,7 +312,7 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 func generateTextReference(pulse insolar.PulseNumber, code []byte) *insolar.Reference {
 	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
 	codeHash := hasher.Hash(code)
-	return insolar.NewReference(insolar.ID{}, *insolar.NewID(pulse, codeHash))
+	return insolar.NewReference(*insolar.NewID(pulse, codeHash))
 }
 
 // WriteProxy generates and writes into `out` source code of contract's proxy

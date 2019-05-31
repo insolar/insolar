@@ -121,6 +121,9 @@ func (st *ObjectState) MustModeState(mode string) (res *ExecutionState) {
 	if res == nil {
 		panic("object is not in " + mode + " mode")
 	}
+	if res.Current == nil {
+		panic("object "+ res.Ref.String() +" has no Current")
+	}
 	return res
 }
 
@@ -348,19 +351,6 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg insolar.Message, ro
 	return nil
 }
 
-func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel insolar.Parcel) (*Ref, error) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.RegisterRequest")
-	defer span.End()
-
-	msg := parcel.Message().(*message.CallMethod)
-	id, err := lr.ArtifactManager.RegisterRequest(ctx, msg.Request)
-	if err != nil {
-		return nil, err
-	}
-
-	return insolar.NewReference(insolar.DomainID, *id), nil
-}
-
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
 	context, _ := inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
 	return context
@@ -431,12 +421,11 @@ func (lr *LogicRunner) executeOrValidate(
 	defer span.End()
 
 	msg := parcel.Message().(*message.CallMethod)
-	ref := msg.GetReference()
 
 	es.Current.LogicContext = &insolar.LogicCallContext{
 		Mode:            "execution",
 		Caller:          msg.GetCaller(),
-		Callee:          &ref,
+		Callee:          &es.Ref,
 		Request:         es.Current.RequestRef,
 		Time:            time.Now(), // TODO: probably we should take it earlier
 		Pulse:           *lr.pulse(ctx),

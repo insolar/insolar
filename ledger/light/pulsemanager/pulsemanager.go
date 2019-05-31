@@ -177,7 +177,7 @@ func (m *PulseManager) processEndPulse(
 			sender := func(msg message.HotData, jetID insolar.JetID) {
 				ctx, span := instracer.StartSpan(ctx, "pulse.send_hot")
 				defer span.End()
-				msg.Jet = *insolar.NewReference(insolar.DomainID, insolar.ID(jetID))
+				msg.Jet = *insolar.NewReference(insolar.ID(jetID))
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
 				if err != nil {
 					logger.WithField("err", err).Error("failed to send hot data")
