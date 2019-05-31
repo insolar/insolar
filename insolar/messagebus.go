@@ -101,6 +101,7 @@ type Message interface {
 type MessageSignature interface {
 	GetSign() []byte
 	GetSender() Reference
+	SetSender(Reference)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Parcel -o ../testutils -s _mock.go

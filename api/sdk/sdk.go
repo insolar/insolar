@@ -217,7 +217,7 @@ func (sdk *SDK) GetBalance(m *Member) (uint64, error) {
 	}
 
 	if response.Error != "" {
-		return 0, errors.New(response.Error)
+		return 0, errors.New(response.Error + ". TraceId: " + response.TraceID)
 	}
 
 	// TODO FIXME don't transfer money in floats!
