@@ -379,13 +379,13 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		idx := NewInMemoryIndex()
 		idx.createBucket(ctx, pn, objID)
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
 
 		err := idx.SetRequest(ctx, pn, objID, req)
 		require.NoError(t, err)
 
-		objRefS := insolar.NewReference(insolar.ID{}, *insolar.NewID(321, nil))
+		objRefS := insolar.NewReference(*insolar.NewID(321, nil))
 		reqS := record.Request{Object: objRefS}
 
 		err = idx.SetRequest(ctx, pn, objID, reqS)
@@ -495,7 +495,7 @@ func TestInMemoryIndex_Records(t *testing.T) {
 		idx := NewInMemoryIndex()
 		idx.createBucket(ctx, pn, objID)
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
 
 		_ = idx.SetRequest(ctx, pn, objID, req)
@@ -528,10 +528,10 @@ func TestInMemoryIndex_OpenRequestsForObjID(t *testing.T) {
 
 		idx.createBucket(ctx, pn, objID)
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
 
-		objRefS := insolar.NewReference(insolar.ID{}, *insolar.NewID(234, nil))
+		objRefS := insolar.NewReference(*insolar.NewID(234, nil))
 		reqS := record.Request{Object: objRefS}
 
 		err := idx.SetRequest(ctx, pn, objID, req)
@@ -652,7 +652,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		idx := NewInMemoryIndex()
 		idx.createBucket(ctx, pn, objID)
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		res := record.Result{Request: *objRef}
 
 		err := idx.SetResult(ctx, pn, objID, res)
@@ -674,7 +674,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		idx := NewInMemoryIndex()
 		idx.createBucket(ctx, pn, objID)
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		res := record.Result{Request: *objRef}
 		resS := record.Result{Request: *objRef, Payload: []byte{1, 2, 3, 4, 5, 6}}
 
@@ -704,11 +704,11 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		idx := NewInMemoryIndex()
 		idx.createBucket(ctx, pn, objID)
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
 		_ = idx.SetRequest(ctx, pn, objID, req)
 
-		objRefS := insolar.NewReference(insolar.ID{}, *insolar.NewID(321, nil))
+		objRefS := insolar.NewReference(*insolar.NewID(321, nil))
 		reqS := record.Request{Object: objRefS}
 		_ = idx.SetRequest(ctx, pn, objID, reqS)
 
@@ -747,7 +747,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		buck := idx.buckets[pn][objID]
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		res := record.Result{Request: *objRef}
 
 		err := idx.SetResult(ctx, pn, objID, res)
@@ -785,7 +785,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		}
 		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
 
@@ -815,7 +815,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		}
 		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
 
@@ -844,7 +844,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		}
 		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req)}})
 
@@ -866,16 +866,16 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
 
-		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
 		res := record.Result{Request: *objRef}
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req), record.Wrap(res)}})
 
-		objRefS := insolar.NewReference(insolar.ID{}, *insolar.NewID(567, nil))
+		objRefS := insolar.NewReference(*insolar.NewID(567, nil))
 		reqS := record.Request{Object: objRefS}
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(reqS)}})
 
-		objRefT := insolar.NewReference(insolar.ID{}, *insolar.NewID(888, nil))
+		objRefT := insolar.NewReference(*insolar.NewID(888, nil))
 		reqT := record.Request{Object: objRefT}
 		resT := record.Result{Request: *objRefT}
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 2, Records: []record.Virtual{record.Wrap(reqT), record.Wrap(resT)}})
