@@ -86,6 +86,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 		go p.Dep.Sender.Reply(ctx, replyTo, msg)
+		return errors.New("object is deactivated")
 	}
 
 	var memory []byte

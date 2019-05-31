@@ -108,7 +108,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 			"jet": p.jet.DebugString(),
 			"pn":  flow.Pulse(ctx),
 		}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.object.Record().DebugString()))
-		return errors.Wrapf(err, "failed to fetch index from heavy")
+		return errors.Wrap(err, "failed to fetch index from heavy")
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
 	if !ok {
@@ -206,7 +206,7 @@ func (p *GetIndexWM) process(ctx context.Context) error {
 			"jet": p.jet.DebugString(),
 			"pn":  flow.Pulse(ctx),
 		}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.object.DebugString()))
-		return errors.Wrapf(err, "failed to fetch index from heavy")
+		return errors.Wrap(err, "failed to fetch index from heavy")
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
 	if !ok {
