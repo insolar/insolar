@@ -23,8 +23,8 @@ import (
 
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/object/mocks"
 	"github.com/insolar/insolar/ledger/light/hot"
+	"github.com/insolar/insolar/ledger/object/mocks"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"

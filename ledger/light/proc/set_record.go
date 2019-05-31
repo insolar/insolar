@@ -50,7 +50,7 @@ type SetRecord struct {
 
 		PCS                  insolar.PlatformCryptographyScheme
 		RecordModifier       object.RecordModifier
-		WriteAccessor         hot.WriteAccessor
+		WriteAccessor        hot.WriteAccessor
 		PendingRequestsLimit int
 	}
 }

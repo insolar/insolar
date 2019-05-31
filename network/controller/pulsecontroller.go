@@ -52,12 +52,9 @@ package controller
 
 import (
 	"context"
-	"strconv"
 	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"

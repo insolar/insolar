@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -35,7 +34,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 // MessageHandler processes messages for local storage interaction.

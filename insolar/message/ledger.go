@@ -519,5 +519,5 @@ func (*GetPendingFilament) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (m *GetPendingFilament) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(insolar.DomainID, m.ObjectID)
+	return insolar.NewReference(m.ObjectID)
 }
