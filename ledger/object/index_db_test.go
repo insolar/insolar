@@ -114,7 +114,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	objID := gen.ID()
 	lflID := gen.ID()
 	jetID := gen.JetID()
-	buck := ObjectIndex{
+	buck := IndexBucket{
 		ObjID: objID,
 		Lifeline: Lifeline{
 			LatestState: &lflID,
@@ -127,7 +127,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		pn := gen.PulseNumber()
 		index := NewIndexDB(store.NewMemoryMockDB())
 
-		err := index.SetObjectIndex(ctx, pn, buck)
+		err := index.SetBucket(ctx, pn, buck)
 		require.NoError(t, err)
 
 		res, err := index.ForID(ctx, pn, objID)
@@ -143,12 +143,12 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		pn := gen.PulseNumber()
 		index := NewIndexDB(store.NewMemoryMockDB())
 
-		err := index.SetObjectIndex(ctx, pn, buck)
+		err := index.SetBucket(ctx, pn, buck)
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
 		sJetID := gen.JetID()
-		sBuck := ObjectIndex{
+		sBuck := IndexBucket{
 			ObjID: objID,
 			Lifeline: Lifeline{
 				LatestState: &sLlflID,
@@ -157,7 +157,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 			},
 		}
 
-		err = index.SetObjectIndex(ctx, pn, sBuck)
+		err = index.SetBucket(ctx, pn, sBuck)
 		require.NoError(t, err)
 
 		res, err := index.ForID(ctx, pn, objID)

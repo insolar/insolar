@@ -58,7 +58,7 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 		meta, metaOK := buck[id]
 		require.Equal(t, true, metaOK)
 		require.NotNil(t, meta)
-		require.NotNil(t, meta.ObjectIndex)
+		require.NotNil(t, meta.IndexBucket)
 
 		require.Equal(t, meta.Lifeline, idx)
 		require.Equal(t, meta.LifelineLastUsed, pn)
@@ -203,7 +203,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 	objID := gen.ID()
 	lflID := gen.ID()
 	jetID := gen.JetID()
-	buck := ObjectIndex{
+	buck := IndexBucket{
 		ObjID: objID,
 		Lifeline: Lifeline{
 			LatestState: &lflID,
@@ -237,7 +237,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 
 		sLlflID := gen.ID()
 		sJetID := gen.JetID()
-		sBuck := ObjectIndex{
+		sBuck := IndexBucket{
 			ObjID: objID,
 			Lifeline: Lifeline{
 				LatestState: &sLlflID,

@@ -540,7 +540,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	}
 
 	idxStateModifierMock := mocks.NewLifelineStateModifierMock(s.T())
-	bucketMock := mocks.NewObjectIndexModifierMock(s.T())
+	bucketMock := mocks.NewIndexBucketModifierMock(s.T())
 	idxMock := mocks.NewLifelineIndexMock(s.T())
 
 	penModifierMock := mocks.NewPendingModifierMock(s.T())
@@ -551,7 +551,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		return nil
 	}
 
-	bucketMock.SetObjectIndexFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.ObjectIndex) (r error) {
+	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.IndexBucket) (r error) {
 		require.Equal(s.T(), *firstID, ib.ObjID)
 		require.Equal(s.T(), insolar.FirstPulseNumber, int(pn))
 		require.Equal(s.T(), *firstID, *ib.Lifeline.LatestState)
