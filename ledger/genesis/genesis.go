@@ -254,7 +254,6 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 }
 
 func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, binFile string) error {
-	rootDomainID := rootdomain.RootDomain.ID()
 	rootDomainRef := rootdomain.RootDomain.Ref()
 
 	protoID, err := g.ArtifactManager.RegisterRequest(
@@ -267,7 +266,7 @@ func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, bin
 	if err != nil {
 		return errors.Wrapf(err, "can't register request for prototype '%v'", name)
 	}
-	protoRef := insolar.NewReference(rootDomainID, *protoID)
+	protoRef := insolar.NewReference(*protoID)
 	assertGenesisRef(*protoRef, name+"_proto")
 
 	pluginBinary, err := ioutil.ReadFile(binFile)
@@ -288,7 +287,7 @@ func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, bin
 	codeID, err := g.ArtifactManager.DeployCode(
 		ctx,
 		rootDomainRef,
-		*insolar.NewReference(rootDomainID, *codeReq),
+		*insolar.NewReference(*codeReq),
 		pluginBinary,
 		insolar.MachineTypeGoPlugin,
 	)
@@ -296,7 +295,7 @@ func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, bin
 		return errors.Wrapf(err, "failed to deploy code for code '%v", name)
 	}
 
-	codeRef := insolar.NewReference(rootDomainID, *codeID)
+	codeRef := insolar.NewReference(*codeID)
 
 	_, err = g.ArtifactManager.RegisterResult(ctx, rootDomainRef, *codeRef, nil)
 	if err != nil {
