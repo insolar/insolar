@@ -52,7 +52,14 @@ var (
 	output             string
 	concurrent         int
 	repetitions        int
-	memberKeys         string
+	rootKeysPath       string
+	mdAdminKeysPath    string
+	oracle0KeysPath    string
+	oracle1KeysPath    string
+	oracle2KeysPath    string
+	oracle0Name        string
+	oracle1Name        string
+	oracle2Name        string
 	apiURLs            []string
 	logLevel           string
 	logLevelServer     string
@@ -65,7 +72,14 @@ func parseInputParams() {
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
-	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to file with member keys")
+	pflag.StringVarP(&rootKeysPath, "rootkeyspath", "k", "", "path to file with root member keys")
+	pflag.StringVarP(&mdAdminKeysPath, "mdadminkeyspath", "a", "", "path to file with md admin member keys")
+	pflag.StringVarP(&oracle0KeysPath, "oracle0keyspath", "d", "", "path to file with oracle0 member keys")
+	pflag.StringVarP(&oracle1KeysPath, "oracle1keyspath", "e", "", "path to file with oracle1 member keys")
+	pflag.StringVarP(&oracle2KeysPath, "oracle2keyspath", "f", "", "path to file with oracle2 member keys")
+	pflag.StringVarP(&oracle0Name, "oracle0name", "D", "oracle0", "oracle0 name")
+	pflag.StringVarP(&oracle0Name, "oracle1name", "E", "oracle1", "oracle1 name")
+	pflag.StringVarP(&oracle0Name, "oracle2name", "F", "oracle2", "oracle2 name")
 	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19101/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.StringVarP(&logLevelServer, "loglevelserver", "L", "", "server log level")
@@ -299,7 +313,8 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	insSDK, err := sdk.NewSDK(apiURLs, memberKeys)
+	oracles := map[string]string{oracle0Name: oracle0KeysPath, oracle1Name: oracle1KeysPath, oracle2Name: oracle2KeysPath}
+	insSDK, err := sdk.NewSDK(apiURLs, rootKeysPath, mdAdminKeysPath, oracles)
 	check("SDK is not initialized: ", err)
 
 	err = insSDK.SetLogLevel(logLevelServer)

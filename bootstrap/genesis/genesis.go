@@ -277,12 +277,12 @@ func (g *Generator) activateRootMember(
 
 	m, err := member.New("RootMember", rootPubKey)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootMember ]")
+		return errors.Wrap(err, "[ ActivateRootMember ] Can't construct oracle member")
 	}
 
 	instanceData, err := insolar.Serialize(m)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootMember ]")
+		return errors.Wrap(err, "[ ActivateRootMember ] Can't serialize")
 	}
 
 	contractID, err := g.artifactManager.RegisterRequest(
@@ -294,7 +294,7 @@ func (g *Generator) activateRootMember(
 	)
 
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
+		return errors.Wrap(err, "[ ActivateRootMember ] Can't register request")
 	}
 	contract := insolar.NewReference(*domain, *contractID)
 	_, err = g.artifactManager.ActivateObject(
@@ -307,11 +307,11 @@ func (g *Generator) activateRootMember(
 		instanceData,
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
+		return errors.Wrap(err, "[ ActivateRootMember ] Can't activate object")
 	}
 	_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
+		return errors.Wrap(err, "[ ActivateRootMember ] Can't register result")
 	}
 	g.rootMemberContract = contract
 	return nil
@@ -326,12 +326,12 @@ func (g *Generator) activateMDAdminMember(
 
 	m, err := member.New("MDAdminMember", mdAdminPubKey)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateMDAdminMember ]")
+		return errors.Wrap(err, "[ ActivateMDAdminMember ] Can't construct oracle member")
 	}
 
 	instanceData, err := insolar.Serialize(m)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateMDAdminMember ]")
+		return errors.Wrap(err, "[ ActivateMDAdminMember ] Can't serialize")
 	}
 
 	contractID, err := g.artifactManager.RegisterRequest(
@@ -343,7 +343,7 @@ func (g *Generator) activateMDAdminMember(
 	)
 
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateMDAdminMember ] couldn't create mdAdmin member instance")
+		return errors.Wrap(err, "[ ActivateMDAdminMember ] Can't register request")
 	}
 	contract := insolar.NewReference(*domain, *contractID)
 	_, err = g.artifactManager.ActivateObject(
@@ -356,11 +356,11 @@ func (g *Generator) activateMDAdminMember(
 		instanceData,
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateMDAdminMember ] couldn't create mdAdmin member instance")
+		return errors.Wrap(err, "[ ActivateMDAdminMember ] Can't activate object")
 	}
 	_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateMDAdminMember ] couldn't create mdAdmin member instance")
+		return errors.Wrap(err, "[ ActivateMDAdminMember ] Can't register result")
 	}
 	g.mdAdminMemberContract = contract
 	return nil
@@ -382,24 +382,24 @@ func (g *Generator) activateOracleMembers(
 	for name, key := range oraclePubKeys {
 		m, err := member.NewOracleMember(name, key)
 		if err != nil {
-			return errors.Wrap(err, "[ ActivateOracleMember ]")
+			return errors.Wrap(err, "[ ActivateOracleMember ] Can't construct oracle member")
 		}
 
 		instanceData, err := insolar.Serialize(m)
 		if err != nil {
-			return errors.Wrap(err, "[ ActivateOracleMember ]")
+			return errors.Wrap(err, "[ ActivateOracleMember ] Can't serialize")
 		}
 
 		contractID, err := g.artifactManager.RegisterRequest(
 			ctx,
 			record.Request{
 				CallType: record.CTGenesis,
-				Method:   "OracleMember",
+				Method:   name,
 			},
 		)
 
 		if err != nil {
-			return errors.Wrap(err, "[ ActivateOracleMember ] couldn't create oracle member instance")
+			return errors.Wrap(err, "[ ActivateOracleMember ] Can't register request")
 		}
 		contract := insolar.NewReference(*domain, *contractID)
 		_, err = g.artifactManager.ActivateObject(
@@ -412,11 +412,11 @@ func (g *Generator) activateOracleMembers(
 			instanceData,
 		)
 		if err != nil {
-			return errors.Wrap(err, "[ ActivateOracleMember ] couldn't create oracle member instance")
+			return errors.Wrap(err, "[ ActivateOracleMember ] Can't activate object")
 		}
 		_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
 		if err != nil {
-			return errors.Wrap(err, "[ ActivateOracleMember ] couldn't create oracle member instance")
+			return errors.Wrap(err, "[ ActivateOracleMember ] Can't register result")
 		}
 
 		g.oracleMemberContracts[name] = *contract

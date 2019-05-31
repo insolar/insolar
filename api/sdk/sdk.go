@@ -82,10 +82,10 @@ func getKeys(path string) (memberKeys, error) {
 }
 
 // NewSDK creates insSDK object
-func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
+func NewSDK(urls []string, rootKeysPath string, mdAdminKeysPath string, oraclesKeysPath map[string]string) (*SDK, error) {
 	buffer := &ringBuffer{urls: urls}
 
-	rootKeys, err := getKeys(rootMemberKeysPath)
+	rootKeys, err := getKeys(rootKeysPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewSDK ] can't get root member keys")
 	}
