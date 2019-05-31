@@ -20,9 +20,8 @@ then
     echo "generate genesis"
     mkdir -vp $NODES_DATA
     mkdir -vp $CERTS_KEYS
-    mkdir -vp $CONFIG_DIR/data
     mkdir -vp $DISCOVERY_KEYS
-    insolard --config $CONFIG_DIR/insolar-genesis.yaml --genesis $GENESIS_CONFIG --keyout $CERTS_KEYS
+    insolar bootstrap $GENESIS_CONFIG --keyout $CERTS_KEYS
     touch /opt/insolar/config/finished
 else
     while ! (/usr/bin/test -e /opt/insolar/config/finished)
@@ -37,11 +36,12 @@ if [ -f /opt/work/config/node-cert.json ]
 then
     echo "skip work"
 else    
-    echo "copy genesis"
-    cp -vR $CONFIG_DIR/data /opt/work/
+    echo "copy files required for genesis"
+    cp -v ${HEAVY_GENESIS_CONFIG} /opt/work/config/heavy_genesis.json
+    cp -vR $CONFIG_DIR/plugins /opt/work/
+
     echo "copy configs"
     mkdir -vp /opt/work/config
     cp -v $CERTS_KEYS/$(hostname | awk -F'-' '{ printf "seed-%d-cert.json", $2 }')  /opt/work/config/node-cert.json
     cp -v $DISCOVERY_KEYS/$(hostname | awk -F'-' '{ printf "seed-%d-key.json", $2 }')  /opt/work/config/node-keys.json
-    cp -v ${HEAVY_GENESIS_CONFIG} /opt/work/config/heavy_genesis.json
 fi

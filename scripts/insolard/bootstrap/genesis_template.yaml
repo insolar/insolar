@@ -3,10 +3,10 @@ discovery_keys_dir: "{{ .BaseDir }}/reusekeys/discovery"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false
 heavy_genesis_config_file: "{{ .BaseDir }}/configs/heavy_genesis.json"
-heavy_genesis_plugins_dir: "{{ .BaseDir }}/contracts"
+heavy_genesis_plugins_dir: "{{ .BaseDir }}/plugins"
 contracts:
   insgocc: "bin/insgocc"
-  outdir: "{{ .BaseDir }}/contracts"
+  outdir: "{{ .BaseDir }}/plugins"
 root_balance: 1000000000
 majority_rule: 0
 min_roles:
