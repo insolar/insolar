@@ -85,15 +85,23 @@ type IndexBucketAccessor interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingModifier -o ./mocks -s _mock.go
 
-// PendingModifier provides methods for modifying pending requests.
+// PendingModifier provides methods for modifying pending requests
 type PendingModifier interface {
+	// SetRequest sets a request for a specific object
 	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Request) error
+	// SetResult sets a result for a specific object. Also, if there is a not closed request for a provided result,
+	// the request will be closed
 	SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Result) error
+	// SetFilament adds a slice of records to an object with provided id and pulse. It's assumed, that the method is
+	// called for setting records from another light, during the process of filling full chaing of pendings
 	SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.Virtual) error
+	// RefreshState recalculates state of the chain, marks requests as closed and opened.
 	RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
+	// SetReadUntil saves info about thrashold for the pending-fetching
 	SetReadUntil(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, readUntil *insolar.PulseNumber) error
 }
 
+// PendingMeta contains data about current status of the pending fillament
 type PendingMeta struct {
 	PreviousPN        *insolar.PulseNumber
 	ReadUntil         *insolar.PulseNumber
@@ -104,7 +112,10 @@ type PendingMeta struct {
 
 // PendingAccessor provides methods for fetching pending requests.
 type PendingAccessor interface {
+	// MetaForObjID returns meta-info for an object with provided id/pn
 	MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingMeta, error)
+	// OpenRequestsForObjID returns open requests for a specific object
 	OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
+	// Records returns all the records for a provided object
 	Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.Virtual, error)
 }
