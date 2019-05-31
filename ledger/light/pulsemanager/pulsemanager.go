@@ -316,7 +316,10 @@ func (m *PulseManager) processJets(ctx context.Context, previous, current, new i
 	ctx, span := instracer.StartSpan(ctx, "jets.process")
 	defer span.End()
 
-	m.JetModifier.Clone(ctx, current, new)
+	err := m.JetModifier.Clone(ctx, current, new)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", current, new)
+	}
 
 	if m.NodeNet.GetOrigin().Role() != insolar.StaticRoleLightMaterial {
 		return nil, nil
@@ -324,7 +327,7 @@ func (m *PulseManager) processJets(ctx context.Context, previous, current, new i
 
 	var results []jetInfo
 	ids := m.JetAccessor.All(ctx, new)
-	ids, err := m.filterOtherExecutors(ctx, current, ids)
+	ids, err = m.filterOtherExecutors(ctx, current, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -517,8 +520,11 @@ func (m *PulseManager) setUnderGilSection(
 		// No active nodes for pulse. It means there was no processing (network start).
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree and unlock jet waiter.
-			m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
-			err := m.JetReleaser.Unlock(ctx, insolar.ID(insolar.ZeroJetID))
+			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
+			if err != nil {
+				return nil, nil, nil, errors.Wrapf(err, "failed to upfate zeroJet")
+			}
+			err = m.JetReleaser.Unlock(ctx, insolar.ID(insolar.ZeroJetID))
 			if err != nil {
 				if err == artifactmanager.ErrWaiterNotLocked {
 					inslogger.FromContext(ctx).Error(err)
@@ -553,7 +559,12 @@ func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, previous, 
 			}
 
 			// Set actual because we are the last executor for jet.
-			m.JetModifier.Update(ctx, new, true, leftJetID, rightJetID)
+			err = m.JetModifier.Update(ctx, new, true, leftJetID, rightJetID)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to update left.id=%v right.id=%v",
+					leftJetID.DebugString(),
+					rightJetID.DebugString())
+			}
 			info.left = &jetInfo{id: leftJetID}
 			info.right = &jetInfo{id: rightJetID}
 
@@ -582,7 +593,10 @@ func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, previous, 
 			jets[i] = info
 		} else {
 			// Set actual because we are the last executor for jet.
-			m.JetModifier.Update(ctx, new, true, jet.id)
+			err := m.JetModifier.Update(ctx, new, true, jet.id)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to update jet.id=%v", jet.id.DebugString())
+			}
 			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(jet.id), new)
 			if err != nil {
 				return nil, err

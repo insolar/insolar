@@ -23,18 +23,24 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 func TestNewJetKeeper(t *testing.T) {
 	db := store.NewMemoryMockDB()
-	jetKeeper := NewJetKeeper(db)
+	jets := jet.NewDBStore(db)
+	jetKeeper := NewJetKeeper(jets, db)
 	require.NotNil(t, jetKeeper)
 }
 
 func TestDbJetKeeper_Add(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
 	db := store.NewMemoryMockDB()
-	jetKeeper := NewJetKeeper(db)
+	jets := jet.NewDBStore(db)
+	jetKeeper := NewJetKeeper(jets, db)
 
 	var (
 		pulse insolar.PulseNumber
@@ -43,32 +49,44 @@ func TestDbJetKeeper_Add(t *testing.T) {
 	f := fuzz.New()
 	f.Fuzz(&pulse)
 	f.Fuzz(&jet)
-	err := jetKeeper.Add(pulse, jet)
+	err := jetKeeper.Add(ctx, pulse, jet)
 	require.NoError(t, err)
 }
 
-func TestDbJetKeeper_All(t *testing.T) {
+func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
 	db := store.NewMemoryMockDB()
-	jetKeeper := NewJetKeeper(db)
-	const (
-		pulse    = 10
-		jetCount = 100
-	)
-	jets, err := jetKeeper.All(pulse)
-	require.NoError(t, err)
-	require.Empty(t, jets)
+	jets := jet.NewDBStore(db)
+	jetKeeper := NewJetKeeper(jets, db)
+
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
 	var (
-		jet insolar.JetID
+		pulse       insolar.PulseNumber
+		futurePulse insolar.PulseNumber
+		jet         insolar.JetID
 	)
-	f := fuzz.New()
-	for i := 0; i < jetCount; i++ {
-		f.Fuzz(&jet)
-		err = jetKeeper.Add(pulse, jet)
-		require.NoError(t, err)
-	}
+	pulse = 10
+	futurePulse = 20
+	jet = insolar.ZeroJetID
 
-	jets, err = jetKeeper.All(pulse)
+	err := jetKeeper.Add(ctx, pulse, jet)
 	require.NoError(t, err)
-	require.Len(t, jets, jetCount)
+
+	err = jets.Update(ctx, pulse, false, jet)
+	require.NoError(t, err)
+	left, right, err := jets.Split(ctx, pulse, jet)
+	require.NoError(t, err)
+
+	require.Equal(t, pulse, jetKeeper.TopSyncPulse())
+
+	err = jets.Clone(ctx, pulse, futurePulse)
+	require.NoError(t, err)
+	err = jetKeeper.Add(ctx, futurePulse, left)
+	require.NoError(t, err)
+	err = jetKeeper.Add(ctx, futurePulse, right)
+	require.NoError(t, err)
+
+	require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
 }

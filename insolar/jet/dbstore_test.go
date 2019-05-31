@@ -106,25 +106,6 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 }
 
-// func TestDBStorage_DeleteJetTree(t *testing.T) {
-// 	ctx := inslogger.TestContext(t)
-//
-// 	db := store.NewMemoryMockDB()
-// 	s := NewDBStore(db)
-//
-// 	_, _, err := s.Split(ctx, 100, *insolar.NewJetID(0, nil))
-// 	require.NoError(t, err)
-//
-// 	s.DeleteForPN(ctx, 100)
-//
-// 	_ := dbTreeForPulse(s, 100)
-// 	require.False(t, ok, "tree should be an empty")
-//
-// 	all := s.All(ctx, 100)
-// 	require.Equal(t, 1, len(all), "should be just one jet ID")
-// 	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero after tree removal")
-// }
-
 func TestDBStorage_ForID_Basic(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
@@ -133,7 +114,6 @@ func TestDBStorage_ForID_Basic(t *testing.T) {
 
 	bits := parsePrefix(meaningfulBits)
 	expectJetID := NewIDFromString(meaningfulBits)
-	// fmt.Printf("expectJetID:        %08b\n", expectJetID[:])
 	searchID := gen.ID()
 	hash := searchID[insolar.RecordHashOffset:]
 	hash = setBitsPrefix(hash, bits, len(meaningfulBits))

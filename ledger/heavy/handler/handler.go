@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/heavy/consistency"
 	"github.com/insolar/insolar/ledger/heavy/replica"
 
 	"github.com/pkg/errors"
@@ -60,7 +59,6 @@ type Handler struct {
 	PulseAccessor         pulse.Accessor
 	JetModifier           jet.Modifier
 	JetKeeper             replica.JetKeeper
-	PulseValidator        consistency.PulseValidator
 	jetID                 insolar.JetID
 }
 
@@ -367,31 +365,30 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 
-	{
-		pulse, err := h.PulseAccessor.Latest(ctx)
-		if err != nil {
-			return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-		}
-		futurePulse := pulse.NextPulseNumber
-		drop, err := storeDrop(ctx, h.DropModifier, msg.Drop)
-		switch {
-		case err != nil:
-			logger.Error(errors.Wrapf(err, "failed to store drop"))
-			return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-		case drop.Split:
-			logger.Infof("replication: msg.Pulse=%v msg.JET=%v drop.JET=%v future=%v drop.Pulse=%v", msg.PulseNum, msg.JetID.DebugString(), drop.JetID.DebugString(), futurePulse, drop.Pulse)
-			if _, _, err := h.JetModifier.Split(ctx, futurePulse, drop.JetID); err != nil {
-				logger.Error(errors.Wrapf(err, "failed to split jet=%v pulse=%v", drop.JetID.DebugString(), futurePulse))
-				return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-			}
-		default:
-			h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
-		}
+	pulse, err := h.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
+	}
+	futurePulse := pulse.NextPulseNumber
+	drop, err := storeDrop(ctx, h.DropModifier, msg.Drop)
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to store drop"))
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
+	}
+	if drop.Split {
+		_, _, err = h.JetModifier.Split(ctx, futurePulse, drop.JetID)
 
-		if err := h.JetKeeper.Add(drop.Pulse, drop.JetID); err != nil {
-			logger.Error(errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", msg.JetID.DebugString()))
-			return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-		}
+	} else {
+		err = h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
+	}
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", drop.JetID.DebugString(), futurePulse))
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
+	}
+
+	if err := h.JetKeeper.Add(ctx, drop.Pulse, drop.JetID); err != nil {
+		logger.Error(errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", msg.JetID.DebugString()))
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 
 	storeBlobs(ctx, h.BlobModifier, h.PCS, msg.PulseNum, msg.Blobs)
@@ -399,8 +396,6 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	stats.Record(ctx,
 		statReceivedHeavyPayloadCount.M(1),
 	)
-
-	go h.PulseValidator.CheckPulseConsistency(ctx, msg.PulseNum)
 
 	return &reply.OK{}, nil
 }

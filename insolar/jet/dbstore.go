@@ -23,8 +23,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
@@ -53,15 +51,9 @@ func (s *DBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID
 	return tree.Find(recordID)
 }
 
-func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) {
+func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error {
 	s.Lock()
 	defer s.Unlock()
-
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"pulse":  pulse,
-		"actual": actual,
-		"ids":    ids,
-	})
 
 	tree := s.get(pulse)
 
@@ -70,8 +62,9 @@ func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual 
 	}
 	err := s.set(pulse, tree)
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to update jets"))
+		return errors.Wrapf(err, "failed to update jets")
 	}
+	return nil
 }
 func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
 	s.Lock()
@@ -88,29 +81,17 @@ func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insol
 	}
 	return left, right, nil
 }
-func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber) {
+func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber) error {
 	s.Lock()
 	defer s.Unlock()
-
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"from_pulse": from,
-		"to_pulse":   to,
-	})
 
 	tree := s.get(from)
 	newTree := tree.Clone(false)
 	err := s.set(to, newTree)
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to clone jet.Tree"))
+		return errors.Wrapf(err, "failed to clone jet.Tree")
 	}
-}
-
-func (s *DBStore) DeleteForPN(ctx context.Context, pulse insolar.PulseNumber) {
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"pulse": pulse,
-	})
-
-	logger.Errorf("deleting records from db jet store is not provided")
+	return nil
 }
 
 type pulseKey insolar.PulseNumber
@@ -120,7 +101,7 @@ func (k pulseKey) Scope() store.Scope {
 }
 
 func (k pulseKey) ID() []byte {
-	return utils.UInt32ToBytes(uint32(k))
+	return insolar.PulseNumber(k).Bytes()
 }
 
 func (s *DBStore) get(pn insolar.PulseNumber) *Tree {

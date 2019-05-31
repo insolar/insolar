@@ -136,9 +136,10 @@ func (p *HotData) process(ctx context.Context) error {
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 	}
 
-	p.Dep.JetStorage.Update(
-		ctx, p.msg.PulseNumber, true, jetID,
-	)
+	err = p.Dep.JetStorage.Update(ctx, p.msg.PulseNumber, true, jetID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to update jetID=%v", jetID.DebugString())
+	}
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
 

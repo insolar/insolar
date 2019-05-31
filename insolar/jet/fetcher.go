@@ -150,7 +150,10 @@ func (tu *fetcher) Fetch(
 	}
 
 	// Updating local tree.
-	tu.JetStorage.Update(ctx, pulse, true, insolar.JetID(*resJet))
+	err = tu.JetStorage.Update(ctx, pulse, true, insolar.JetID(*resJet))
+	if err != nil {
+		return nil, err
+	}
 
 	return resJet, nil
 }

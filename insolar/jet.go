@@ -122,9 +122,9 @@ ScanPrefix:
 	return res.String()
 }
 
-type JetIDSlice []JetID
+type JetIDCollection []JetID
 
-func (ids JetIDSlice) DebugString() string {
+func (ids JetIDCollection) DebugString() string {
 	builder := strings.Builder{}
 	builder.WriteRune('[')
 	for i, id := range ids {

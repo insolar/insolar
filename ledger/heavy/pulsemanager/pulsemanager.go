@@ -108,7 +108,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	defer span.End()
 	defer m.GIL.Release(ctx)
 
-	// FIXME: @andreyromancev. 17.12.18. return insolar.Pulse here.
 	storagePulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil && err != pulse.ErrNotFound {
 		return errors.Wrap(err, "call of m.PulseAccessor.Latest failed")
@@ -147,7 +146,10 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 
 		futurePulse := newPulse.NextPulseNumber
-		m.JetModifier.Clone(ctx, newPulse.PulseNumber, futurePulse)
+		err = m.JetModifier.Clone(ctx, newPulse.PulseNumber, futurePulse)
+		if err != nil {
+			return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", newPulse.PulseNumber, futurePulse)
+		}
 	}
 
 	if persist && oldPulse != nil {
@@ -159,7 +161,10 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree.
 			futurePulse := newPulse.NextPulseNumber
-			m.JetModifier.Update(ctx, futurePulse, false, insolar.ZeroJetID)
+			err := m.JetModifier.Update(ctx, futurePulse, false, insolar.ZeroJetID)
+			if err != nil {
+				return errors.Wrapf(err, "failed to update zeroJet")
+			}
 			logger.Infof("[PulseManager] activate zeroJet pulse=%v", futurePulse)
 		}
 	}

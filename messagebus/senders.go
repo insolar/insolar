@@ -150,7 +150,11 @@ func RetryJetSender(jetModifier jet.Modifier) PreSender {
 				}
 
 				if r, ok := rep.(*reply.JetMiss); ok {
-					jetModifier.Update(ctx, r.Pulse, true, insolar.JetID(r.JetID))
+					err := jetModifier.Update(ctx, r.Pulse, true, insolar.JetID(r.JetID))
+					if err != nil {
+						return nil, errors.Wrapf(err, "failed to update r.JetID=%v",
+							insolar.JetID(r.JetID).DebugString())
+					}
 				} else {
 					return rep, err
 				}
