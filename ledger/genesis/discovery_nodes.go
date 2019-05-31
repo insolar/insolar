@@ -139,7 +139,7 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 		return nil, errors.Wrap(err, "failed to register request for node record")
 	}
 
-	contract := insolar.NewReference(*genesisrefs.ContractRootDomain.Record(), *nodeID)
+	contract := insolar.NewReference(*nodeID)
 	_, err = nm.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},

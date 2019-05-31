@@ -43,8 +43,7 @@ func (r genesisBinary) ID() ID {
 
 // Ref returns genesis record reference.
 func (r genesisBinary) Ref() Reference {
-	id := r.ID()
-	return *NewReference(id, id)
+	return *NewReference(r.ID())
 }
 
 // DiscoveryNodeRegister carries data required for registering discovery node via genesis.

@@ -91,7 +91,7 @@ func (r *RegisterRequest) Proceed(ctx context.Context) error {
 		return err
 	}
 
-	r.setResult(insolar.NewReference(insolar.DomainID, *id))
+	r.setResult(insolar.NewReference(*id))
 	return nil
 }
 
