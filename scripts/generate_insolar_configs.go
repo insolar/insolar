@@ -56,9 +56,6 @@ var (
 	genesisConfigTmpl = "scripts/insolard/bootstrap/genesis_template.yaml"
 	genesisFileName   = withBaseDir("genesis.yaml")
 
-	bootstrapInsolardConfigTmpl = "scripts/insolard/bootstrap/insolard_template.yaml"
-	bootstrapInsolardFileName   = withBaseDir("insolard.yaml")
-
 	pulsardConfigTmpl = "scripts/insolard/pulsar_template.yaml"
 	pulsardFileName   = withBaseDir("pulsar.yaml")
 
@@ -116,7 +113,6 @@ func main() {
 	parseInputParams()
 
 	mustMakeDir(outputDir)
-	writeBootstrapInsolardConfig()
 	writeGenesisConfig()
 
 	genesisConf, err := bootstrap.ParseGenesisConfig(genesisFileName)
@@ -243,18 +239,6 @@ func writeGenesisConfig() {
 
 	err = makeFile(genesisFileName, b.String())
 	check("Can't makeFileWithDir: "+genesisFileName, err)
-}
-
-func writeBootstrapInsolardConfig() {
-	templates, err := template.ParseFiles(bootstrapInsolardConfigTmpl)
-	check("Can't parse template: "+bootstrapInsolardConfigTmpl, err)
-
-	var b bytes.Buffer
-	err = templates.Execute(&b, &commonConfigVars{BaseDir: baseDir()})
-	check("Can't process template: "+bootstrapInsolardConfigTmpl, err)
-
-	err = createFileWithDir(bootstrapInsolardFileName, b.String())
-	check("Can't makeFileWithDir: "+bootstrapInsolardFileName, err)
 }
 
 var defaultInsloardConf *configuration.Configuration

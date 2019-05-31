@@ -22,8 +22,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -35,30 +38,27 @@ import (
 	"github.com/pkg/errors"
 )
 
-type nodeInfo struct {
-	privateKey crypto.PrivateKey
-	publicKey  string
-	role       string
-}
-
-func (ni nodeInfo) reference() insolar.Reference {
-	return rootdomain.GenesisRef(ni.publicKey)
-}
-
 // Generator is a component for generating RootDomain instance and genesis contracts.
 type Generator struct {
-	config *Config
-	keyOut string
+	config             *Config
+	certificatesOutDir string
 }
 
-// NewGenerator creates new Generator.
-func NewGenerator(
-	config *Config,
-	genesisKeyOut string,
-) *Generator {
+// NewGenerator parses config file and creates new generator on success.
+func NewGenerator(configFile, certificatesOutDir string) (*Generator, error) {
+	config, err := ParseGenesisConfig(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewGeneratorWithConfig(config, certificatesOutDir), nil
+}
+
+// NewGeneratorWithConfig creates new Generator with provided config.
+func NewGeneratorWithConfig(config *Config, certificatesOutDir string) *Generator {
 	return &Generator{
-		config: config,
-		keyOut: genesisKeyOut,
+		config:             config,
+		certificatesOutDir: certificatesOutDir,
 	}
 }
 
@@ -120,6 +120,16 @@ func (g *Generator) Run(ctx context.Context) error {
 	return nil
 }
 
+type nodeInfo struct {
+	privateKey crypto.PrivateKey
+	publicKey  string
+	role       string
+}
+
+func (ni nodeInfo) reference() insolar.Reference {
+	return rootdomain.GenesisRef(ni.publicKey)
+}
+
 func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {
 	certs := make([]certificate.Certificate, 0, len(g.config.DiscoveryNodes))
 	for _, node := range discoveryNodes {
@@ -178,7 +188,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 			return errors.New("[ makeCertificates ] cert_name must not be empty for node number " + strconv.Itoa(i+1))
 		}
 
-		certFile := path.Join(g.keyOut, node.CertName)
+		certFile := path.Join(g.certificatesOutDir, node.CertName)
 		err = ioutil.WriteFile(certFile, cert, 0600)
 		if err != nil {
 			return errors.Wrapf(err, "[ makeCertificates ] filed create ceritificate: %v", certFile)
@@ -215,10 +225,31 @@ func (g *Generator) makeHeavyGenesisConfig(
 		"[ makeHeavyGenesisConfig ] failed to write heavy config %v", g.config.HeavyGenesisConfigFile)
 }
 
+func (g *Generator) generatePlugins() error {
+	insgoccBin := g.config.Contracts.Insgocc
+	args := []string{
+		"compile-genesis-plugins",
+		"-o", g.config.Contracts.OutDir,
+	}
+
+	fmt.Println(insgoccBin, strings.Join(args, " "))
+	gocc := exec.Command(insgoccBin, args...)
+	gocc.Stderr = os.Stderr
+	gocc.Stdout = os.Stdout
+	return gocc.Run()
+}
+
 func dumpAsJSON(data interface{}) string {
 	b, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		panic(err)
 	}
 	return string(b)
+}
+
+func checkError(ctx context.Context, err error, message string) {
+	if err == nil {
+		return
+	}
+	inslogger.FromContext(ctx).Fatalf("%v: %v", message, err.Error())
 }

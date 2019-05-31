@@ -19,12 +19,11 @@ DISCOVERY_NODE_LOGS=${LAUNCHNET_LOGS_DIR}discoverynodes/
 INSGORUND_LOGS=${LAUNCHNET_LOGS_DIR}insgorund/
 
 BIN_DIR=bin
+INSOLAR_CLI=${BIN_DIR}/insolar
 INSOLARD=$BIN_DIR/insolard
 INSGORUND=$BIN_DIR/insgorund
 PULSARD=$BIN_DIR/pulsard
 PULSEWATCHER=$BIN_DIR/pulsewatcher
-
-LEDGER_DIR=${LAUNCHNET_BASE_DIR}data
 
 # TODO: move to launchnet dir
 PULSAR_DATA_DIR=${LAUNCHNET_BASE_DIR}pulsar_data
@@ -114,7 +113,6 @@ clear_dirs()
 {
     echo "clear_dirs() starts ..."
     set -x
-    rm -rfv ${LEDGER_DIR}
     rm -rfv ${DISCOVERY_NODES_DATA}
     rm -rfv ${LAUNCHNET_LOGS_DIR}
     rm -rfv ${CONTRACTS_PLUGINS_DIR}
@@ -132,9 +130,8 @@ create_required_dirs()
 {
     echo "create_required_dirs() starts ..."
     set -x
-    mkdir -p $LEDGER_DIR
     mkdir -p ${DISCOVERY_NODES_DATA}certs
-    mkdir -p $CONFIGS_DIR
+    mkdir -p ${CONFIGS_DIR}
 
     mkdir -p ${INSGORUND_LOGS}
     touch $INSGORUND_PORT_FILE
@@ -273,14 +270,6 @@ launch_insgorund()
     done < "${INSGORUND_PORT_FILE}"
 }
 
-copy_data()
-{
-    echo "copy data dir to heavy"
-    set -x
-    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}data
-    { set +x; } 2>/dev/null
-}
-
 copy_discovery_certs()
 {
     echo "copy_certs() starts ..."
@@ -323,7 +312,7 @@ genesis()
     generate_insolard_configs
 
     echo "start genesis ..."
-    CMD="$INSOLARD --config ${BOOTSTRAP_INSOLARD_CONFIG} --genesis ${BOOTSTRAP_GENESIS_CONFIG} --keyout ${DISCOVERY_NODES_DATA}certs"
+    CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_GENESIS_CONFIG} --certificates-out-dir=${DISCOVERY_NODES_DATA}certs"
 
     GENESIS_EXIT_CODE=0
     set +e
@@ -348,9 +337,7 @@ genesis()
         exit $GENESIS_EXIT_CODE
     fi
     echo "genesis is done"
-#    exit 0
 
-#    copy_data
     copy_discovery_certs
 }
 
