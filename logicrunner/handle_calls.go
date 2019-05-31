@@ -126,7 +126,7 @@ func (h *HandleCall) handleActual(
 			// MessageBus will automatically resend the message to the right VE.
 
 			// TODO: secially for immutable calls, they are not ordered by LME
-			return nil, flow.ErrCancelled
+			f.Continue(ctx)
 		} else {
 			return nil, err
 		}
