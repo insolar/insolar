@@ -116,7 +116,6 @@ func NewMessageHandler(
 		FetchJetWM: func(p *proc.CheckJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetUpdater = h.jetTreeUpdater
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},

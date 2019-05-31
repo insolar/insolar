@@ -125,7 +125,6 @@ type CheckJet struct {
 	Dep struct {
 		JetAccessor jet.Accessor
 		Coordinator jet.Coordinator
-		JetUpdater  jet.Fetcher
 		JetFetcher  jet.Fetcher
 		Sender      wbus.Sender
 	}
