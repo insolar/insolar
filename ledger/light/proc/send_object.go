@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -37,10 +36,9 @@ import (
 )
 
 type SendObject struct {
-	message        bus.Message
-	jet            insolar.JetID
-	index          object.Lifeline
-	returnPendings int
+	message bus.Message
+	jet     insolar.JetID
+	index   object.Lifeline
 
 	Dep struct {
 		Coordinator    jet.Coordinator
@@ -253,85 +251,86 @@ func (p *SendObject) fetchObject(
 	return rep, nil
 }
 
-func (p *SendObject) fetchPendings(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.Request, error) {
-	pendMeta, err := p.Dep.PendingAccessor.MetaForObjID(ctx, currentPN, objID)
-	if err != nil {
-		return []record.Request{}, err
-	}
-
-	// Because we are the first light in the chain
-	if pendMeta.PreviousPN == nil || pendMeta.IsStateCalculated {
-		return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, p.returnPendings)
-	}
-
-	err = p.fillPendingFilament(ctx, currentPN, objID, *pendMeta.PreviousPN, pendMeta.ReadUntil)
-	if err != nil {
-		return []record.Request{}, err
-	}
-
-	err = p.Dep.PendingModifier.RefreshState(ctx, currentPN, objID)
-	if err != nil {
-		return []record.Request{}, err
-	}
-
-	return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, p.returnPendings)
-}
-
-func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, destPN insolar.PulseNumber, readUntil *insolar.PulseNumber) error {
-	continueFilling := true
-
-	for continueFilling {
-		isBeyond, err := p.Dep.Coordinator.IsBeyondLimit(ctx, currentPN, destPN)
-		if err != nil {
-			return err
-		}
-		if isBeyond {
-			return nil
-		}
-
-		node, err := p.Dep.Coordinator.NodeForObject(ctx, objID, currentPN, destPN)
-		if err != nil {
-			return err
-		}
-
-		rep, err := p.Dep.Bus.Send(
-			ctx,
-			&message.GetPendingFilament{ObjectID: objID},
-			&insolar.MessageSendOptions{
-				Receiver: node,
-			},
-		)
-		if err != nil {
-			return err
-		}
-
-		switch r := rep.(type) {
-		case *reply.PendingFilament:
-			err := p.Dep.PendingModifier.SetFilament(ctx, flow.Pulse(ctx), objID, destPN, r.Records)
-			if err != nil {
-				return err
-			}
-
-			if r.HasFullChain {
-				continueFilling = false
-			}
-			if r.PreviousPendingPN == nil {
-				continueFilling = false
-			}
-
-			// If know border read to the start of the chain
-			// In another way, read until limit
-			if readUntil == nil || *r.PreviousPendingPN > *readUntil {
-				destPN = *r.PreviousPendingPN
-			} else {
-				continueFilling = false
-			}
-		case *reply.Error:
-			return r.Error()
-		default:
-			return fmt.Errorf("fillPendingFilament: unexpected reply: %#v", rep)
-		}
-	}
-
-	return nil
-}
+// temporary, we need to merge functionality in master and then move pendings to it
+// func (p *SendObject) fetchPendings(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.Request, error) {
+// 	pendMeta, err := p.Dep.PendingAccessor.MetaForObjID(ctx, currentPN, objID)
+// 	if err != nil {
+// 		return []record.Request{}, err
+// 	}
+//
+// 	// Because we are the first light in the chain
+// 	if pendMeta.PreviousPN == nil || pendMeta.IsStateCalculated {
+// 		return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, p.returnPendings)
+// 	}
+//
+// 	err = p.fillPendingFilament(ctx, currentPN, objID, *pendMeta.PreviousPN, pendMeta.ReadUntil)
+// 	if err != nil {
+// 		return []record.Request{}, err
+// 	}
+//
+// 	err = p.Dep.PendingModifier.RefreshState(ctx, currentPN, objID)
+// 	if err != nil {
+// 		return []record.Request{}, err
+// 	}
+//
+// 	return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, p.returnPendings)
+// }
+//
+// func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, destPN insolar.PulseNumber, readUntil *insolar.PulseNumber) error {
+// 	continueFilling := true
+//
+// 	for continueFilling {
+// 		isBeyond, err := p.Dep.Coordinator.IsBeyondLimit(ctx, currentPN, destPN)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if isBeyond {
+// 			return nil
+// 		}
+//
+// 		node, err := p.Dep.Coordinator.NodeForObject(ctx, objID, currentPN, destPN)
+// 		if err != nil {
+// 			return err
+// 		}
+//
+// 		rep, err := p.Dep.Bus.Send(
+// 			ctx,
+// 			&message.GetPendingFilament{ObjectID: objID},
+// 			&insolar.MessageSendOptions{
+// 				Receiver: node,
+// 			},
+// 		)
+// 		if err != nil {
+// 			return err
+// 		}
+//
+// 		switch r := rep.(type) {
+// 		case *reply.PendingFilament:
+// 			err := p.Dep.PendingModifier.SetFilament(ctx, flow.Pulse(ctx), objID, destPN, r.Records)
+// 			if err != nil {
+// 				return err
+// 			}
+//
+// 			if r.HasFullChain {
+// 				continueFilling = false
+// 			}
+// 			if r.PreviousPendingPN == nil {
+// 				continueFilling = false
+// 			}
+//
+// 			// If know border read to the start of the chain
+// 			// In another way, read until limit
+// 			if readUntil == nil || *r.PreviousPendingPN > *readUntil {
+// 				destPN = *r.PreviousPendingPN
+// 			} else {
+// 				continueFilling = false
+// 			}
+// 		case *reply.Error:
+// 			return r.Error()
+// 		default:
+// 			return fmt.Errorf("fillPendingFilament: unexpected reply: %#v", rep)
+// 		}
+// 	}
+//
+// 	return nil
+// }
