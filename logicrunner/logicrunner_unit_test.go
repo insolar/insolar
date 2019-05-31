@@ -1406,6 +1406,15 @@ func (s *LogicRunnerOnPulseTestSuite) TestSendTaskToNextExecutor() {
 	s.Equal(false, ok)
 }
 
+func makeQueue(ctx context.Context, size int) []ExecutionQueueElement {
+	q := make([]ExecutionQueueElement, size)
+	for i, _ := range q {
+		q[i].ctx = ctx
+	}
+
+	return q
+}
+
 func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
@@ -1415,11 +1424,11 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 		hasMoreRequests bool
 	}{
 		"Has": {
-			make([]ExecutionQueueElement, maxQueueLength+1),
+			makeQueue(s.ctx, maxQueueLength+1),
 			true,
 		},
 		"Don't": {
-			make([]ExecutionQueueElement, maxQueueLength),
+			makeQueue(s.ctx, maxQueueLength),
 			false,
 		},
 	}
