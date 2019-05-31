@@ -35,6 +35,10 @@ type extendedIndexBucket struct {
 	sync.RWMutex
 	IndexBucket
 
+	pendingMeta pendingMeta
+}
+
+type pendingMeta struct {
 	isStateCalculated bool
 	fullFilament      []chainLink
 
@@ -94,12 +98,14 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 			ObjID:          objID,
 			PendingRecords: []record.Virtual{},
 		},
-		fullFilament:           []chainLink{},
-		notClosedRequests:      []record.Request{},
-		notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
-		requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
-		readPendingUntil:       nil,
-		isStateCalculated:      false,
+		pendingMeta: pendingMeta{
+			fullFilament:           []chainLink{},
+			notClosedRequests:      []record.Request{},
+			notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
+			requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
+			readPendingUntil:       nil,
+			isStateCalculated:      false,
+		},
 	}
 
 	objsByPn, ok := i.buckets[pn]
@@ -157,28 +163,28 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	b.PendingRecords = append(b.PendingRecords, record.Wrap(req))
 
 	isInserted := false
-	for i, chainPart := range b.fullFilament {
+	for i, chainPart := range b.pendingMeta.fullFilament {
 		if chainPart.PN == pn {
-			b.fullFilament[i].Records = append(b.fullFilament[i].Records, record.Wrap(req))
+			b.pendingMeta.fullFilament[i].Records = append(b.pendingMeta.fullFilament[i].Records, record.Wrap(req))
 			isInserted = true
 		}
 	}
 
 	if !isInserted {
-		b.fullFilament = append(b.fullFilament, chainLink{Records: []record.Virtual{record.Wrap(req)}, PN: pn})
-		sort.Slice(b.fullFilament, func(i, j int) bool {
-			return b.fullFilament[i].PN < b.fullFilament[j].PN
+		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{Records: []record.Virtual{record.Wrap(req)}, PN: pn})
+		sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
+			return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 		})
 	}
 
-	b.requestPNIndex[*req.Object.Record()] = pn
+	b.pendingMeta.requestPNIndex[*req.Object.Record()] = pn
 
-	_, ok := b.notClosedRequestsIndex[pn]
+	_, ok := b.pendingMeta.notClosedRequestsIndex[pn]
 	if !ok {
-		b.notClosedRequestsIndex[pn] = map[insolar.ID]*record.Request{}
+		b.pendingMeta.notClosedRequestsIndex[pn] = map[insolar.ID]*record.Request{}
 	}
-	b.notClosedRequestsIndex[pn][*req.Object.Record()] = &req
-	b.notClosedRequests = append(b.notClosedRequests, req)
+	b.pendingMeta.notClosedRequestsIndex[pn][*req.Object.Record()] = &req
+	b.pendingMeta.notClosedRequests = append(b.pendingMeta.notClosedRequests, req)
 
 	stats.Record(ctx,
 		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
@@ -199,26 +205,26 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	b.PendingRecords = append(b.PendingRecords, record.Wrap(res))
 
 	isInserted := false
-	for i, chainPart := range b.fullFilament {
+	for i, chainPart := range b.pendingMeta.fullFilament {
 		if chainPart.PN == pn {
-			b.fullFilament[i].Records = append(b.fullFilament[i].Records, record.Wrap(res))
+			b.pendingMeta.fullFilament[i].Records = append(b.pendingMeta.fullFilament[i].Records, record.Wrap(res))
 			isInserted = true
 		}
 	}
 
 	if !isInserted {
-		b.fullFilament = append(b.fullFilament, chainLink{Records: []record.Virtual{record.Wrap(res)}, PN: pn})
-		sort.Slice(b.fullFilament, func(i, j int) bool {
-			return b.fullFilament[i].PN < b.fullFilament[j].PN
+		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{Records: []record.Virtual{record.Wrap(res)}, PN: pn})
+		sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
+			return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 		})
 	}
 
-	reqPN, ok := b.requestPNIndex[*res.Request.Record()]
+	reqPN, ok := b.pendingMeta.requestPNIndex[*res.Request.Record()]
 	if ok {
-		delete(b.notClosedRequestsIndex[reqPN], *res.Request.Record())
-		for i := 0; i < len(b.notClosedRequests); i++ {
-			if *b.notClosedRequests[i].Object.Record() == *res.Request.Record() {
-				b.notClosedRequests = append(b.notClosedRequests[:i], b.notClosedRequests[i+1:]...)
+		delete(b.pendingMeta.notClosedRequestsIndex[reqPN], *res.Request.Record())
+		for i := 0; i < len(b.pendingMeta.notClosedRequests); i++ {
+			if *b.pendingMeta.notClosedRequests[i].Object.Record() == *res.Request.Record() {
+				b.pendingMeta.notClosedRequests = append(b.pendingMeta.notClosedRequests[:i], b.pendingMeta.notClosedRequests[i+1:]...)
 				break
 			}
 		}
@@ -240,9 +246,9 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 	b.Lock()
 	defer b.Unlock()
 
-	b.fullFilament = append(b.fullFilament, chainLink{Records: recs, PN: filPN})
-	sort.Slice(b.fullFilament, func(i, j int) bool {
-		return b.fullFilament[i].PN < b.fullFilament[j].PN
+	b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{Records: recs, PN: filPN})
+	sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
+		return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 	})
 
 	return nil
@@ -257,17 +263,17 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	b.Lock()
 	defer b.Unlock()
 
-	for _, chainLink := range b.fullFilament {
+	for _, chainLink := range b.pendingMeta.fullFilament {
 		for _, chainPart := range chainLink.Records {
 			tChainPart := chainPart
 			switch r := record.Unwrap(&tChainPart).(type) {
 			case *record.Request:
-				b.notClosedRequestsIndex[chainLink.PN][*r.Object.Record()] = r
-				b.requestPNIndex[*r.Object.Record()] = chainLink.PN
+				b.pendingMeta.notClosedRequestsIndex[chainLink.PN][*r.Object.Record()] = r
+				b.pendingMeta.requestPNIndex[*r.Object.Record()] = chainLink.PN
 			case *record.Result:
-				reqPN, ok := b.requestPNIndex[*r.Request.Record()]
+				reqPN, ok := b.pendingMeta.requestPNIndex[*r.Request.Record()]
 				if ok {
-					delete(b.notClosedRequestsIndex[reqPN], *r.Request.Record())
+					delete(b.pendingMeta.notClosedRequestsIndex[reqPN], *r.Request.Record())
 				}
 			}
 		}
@@ -275,23 +281,23 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 
 	isEarliestFound := false
 
-	for i, chainLink := range b.fullFilament {
-		if len(b.notClosedRequestsIndex[chainLink.PN]) == 0 {
+	for i, chainLink := range b.pendingMeta.fullFilament {
+		if len(b.pendingMeta.notClosedRequestsIndex[chainLink.PN]) == 0 {
 			if isEarliestFound {
 				continue
 			}
 
-			b.readPendingUntil = &b.fullFilament[i].PN
+			b.pendingMeta.readPendingUntil = &b.pendingMeta.fullFilament[i].PN
 			isEarliestFound = true
 
 		} else {
-			for _, ncr := range b.notClosedRequestsIndex[chainLink.PN] {
-				b.notClosedRequests = append(b.notClosedRequests, *ncr)
+			for _, ncr := range b.pendingMeta.notClosedRequestsIndex[chainLink.PN] {
+				b.pendingMeta.notClosedRequests = append(b.pendingMeta.notClosedRequests, *ncr)
 			}
 		}
 	}
 
-	b.isStateCalculated = true
+	b.pendingMeta.isStateCalculated = true
 
 	return nil
 }
@@ -305,7 +311,7 @@ func (i *InMemoryIndex) SetReadUntil(ctx context.Context, pn insolar.PulseNumber
 	b.Lock()
 	defer b.Unlock()
 
-	b.readPendingUntil = readUntil
+	b.pendingMeta.readPendingUntil = readUntil
 
 	return nil
 }
@@ -325,8 +331,8 @@ func (i *InMemoryIndex) MetaForObjID(ctx context.Context, currentPN insolar.Puls
 	}
 
 	return PendingMeta{
-		IsStateCalculated: b.isStateCalculated,
-		ReadUntil:         b.readPendingUntil,
+		IsStateCalculated: b.pendingMeta.isStateCalculated,
+		ReadUntil:         b.pendingMeta.readPendingUntil,
 		PreviousPN:        ppf,
 	}, nil
 }
@@ -340,11 +346,11 @@ func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN inso
 	b.RLock()
 	defer b.RUnlock()
 
-	if len(b.notClosedRequests) > count {
-		return append([]record.Request{}, b.notClosedRequests[:count]...), nil
+	if len(b.pendingMeta.notClosedRequests) > count {
+		return append([]record.Request{}, b.pendingMeta.notClosedRequests[:count]...), nil
 	}
 
-	return append([]record.Request{}, b.notClosedRequests...), nil
+	return append([]record.Request{}, b.pendingMeta.notClosedRequests...), nil
 }
 
 func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.Virtual, error) {
@@ -371,12 +377,14 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	}
 
 	bucks[bucket.ObjID] = &extendedIndexBucket{
-		IndexBucket:            bucket,
-		notClosedRequests:      []record.Request{},
-		fullFilament:           []chainLink{},
-		isStateCalculated:      false,
-		requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
-		notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
+		IndexBucket: bucket,
+		pendingMeta: pendingMeta{
+			notClosedRequests:      []record.Request{},
+			fullFilament:           []chainLink{},
+			isStateCalculated:      false,
+			requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
+			notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
+		},
 	}
 
 	stats.Record(ctx,

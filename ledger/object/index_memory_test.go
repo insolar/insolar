@@ -356,20 +356,20 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		require.Equal(t, insolar.PulseNumber(0), buck.PreviousPendingFilament)
 
 		require.Equal(t, 1, len(buck.PendingRecords))
-		require.Equal(t, 1, len(buck.fullFilament))
-		require.Equal(t, 1, len(buck.fullFilament[0].Records))
+		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, 1, len(buck.pendingMeta.fullFilament[0].Records))
 
 		require.Equal(t, record.Wrap(req), buck.PendingRecords[0])
-		require.Equal(t, pn, buck.fullFilament[0].PN)
-		require.Equal(t, record.Wrap(req), buck.fullFilament[0].Records[0])
+		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
+		require.Equal(t, record.Wrap(req), buck.pendingMeta.fullFilament[0].Records[0])
 
-		require.Equal(t, 1, len(buck.requestPNIndex))
-		require.Equal(t, 1, len(buck.notClosedRequestsIndex))
-		require.Equal(t, 1, len(buck.notClosedRequests))
+		require.Equal(t, 1, len(buck.pendingMeta.requestPNIndex))
+		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIndex))
+		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequests))
 
-		require.Equal(t, pn, buck.requestPNIndex[*req.Object.Record()])
-		require.Equal(t, req, *buck.notClosedRequestsIndex[pn][*req.Object.Record()])
-		require.Equal(t, req, buck.notClosedRequests[0])
+		require.Equal(t, pn, buck.pendingMeta.requestPNIndex[*req.Object.Record()])
+		require.Equal(t, req, *buck.pendingMeta.notClosedRequestsIndex[pn][*req.Object.Record()])
+		require.Equal(t, req, buck.pendingMeta.notClosedRequests[0])
 	})
 
 	t.Run("set two request on the object", func(t *testing.T) {
@@ -393,26 +393,26 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 
 		buck := idx.buckets[pn][objID]
 		require.Equal(t, 2, len(buck.PendingRecords))
-		require.Equal(t, 1, len(buck.fullFilament))
-		require.Equal(t, 2, len(buck.fullFilament[0].Records))
+		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, 2, len(buck.pendingMeta.fullFilament[0].Records))
 
 		require.Equal(t, record.Wrap(req), buck.PendingRecords[0])
 		require.Equal(t, record.Wrap(reqS), buck.PendingRecords[1])
-		require.Equal(t, pn, buck.fullFilament[0].PN)
-		require.Equal(t, record.Wrap(req), buck.fullFilament[0].Records[0])
-		require.Equal(t, record.Wrap(reqS), buck.fullFilament[0].Records[1])
+		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
+		require.Equal(t, record.Wrap(req), buck.pendingMeta.fullFilament[0].Records[0])
+		require.Equal(t, record.Wrap(reqS), buck.pendingMeta.fullFilament[0].Records[1])
 
-		require.Equal(t, 2, len(buck.requestPNIndex))
-		require.Equal(t, 1, len(buck.notClosedRequestsIndex))
-		require.Equal(t, 2, len(buck.notClosedRequests))
+		require.Equal(t, 2, len(buck.pendingMeta.requestPNIndex))
+		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIndex))
+		require.Equal(t, 2, len(buck.pendingMeta.notClosedRequests))
 
-		require.Equal(t, pn, buck.requestPNIndex[*req.Object.Record()])
-		require.Equal(t, req, *buck.notClosedRequestsIndex[pn][*req.Object.Record()])
-		require.Equal(t, req, buck.notClosedRequests[0])
+		require.Equal(t, pn, buck.pendingMeta.requestPNIndex[*req.Object.Record()])
+		require.Equal(t, req, *buck.pendingMeta.notClosedRequestsIndex[pn][*req.Object.Record()])
+		require.Equal(t, req, buck.pendingMeta.notClosedRequests[0])
 
-		require.Equal(t, pn, buck.requestPNIndex[*reqS.Object.Record()])
-		require.Equal(t, reqS, *buck.notClosedRequestsIndex[pn][*reqS.Object.Record()])
-		require.Equal(t, reqS, buck.notClosedRequests[1])
+		require.Equal(t, pn, buck.pendingMeta.requestPNIndex[*reqS.Object.Record()])
+		require.Equal(t, reqS, *buck.pendingMeta.notClosedRequestsIndex[pn][*reqS.Object.Record()])
+		require.Equal(t, reqS, buck.pendingMeta.notClosedRequests[1])
 	})
 
 	t.Run("test rebalanced fillaments buckets list", func(t *testing.T) {
@@ -423,7 +423,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		idx.createBucket(ctx, pn, objID)
 
 		buck := idx.buckets[pn][objID]
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
 
 		objRef := gen.Reference()
 		req := record.Request{Object: &objRef}
@@ -431,9 +431,9 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		err := idx.SetRequest(ctx, pn, objID, req)
 		require.NoError(t, err)
 
-		require.Equal(t, 2, len(buck.fullFilament))
-		require.Equal(t, pn, buck.fullFilament[0].PN)
-		require.Equal(t, pn+1, buck.fullFilament[1].PN)
+		require.Equal(t, 2, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
+		require.Equal(t, pn+1, buck.pendingMeta.fullFilament[1].PN)
 	})
 
 }
@@ -458,8 +458,8 @@ func TestInMemoryIndex_SetFilament(t *testing.T) {
 		idx.createBucket(ctx, pn, objID)
 
 		buck := idx.buckets[pn][objID]
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn - 10, Records: []record.Virtual{}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn - 10, Records: []record.Virtual{}})
 
 		objRef := gen.Reference()
 		req := record.Request{Object: &objRef}
@@ -467,12 +467,12 @@ func TestInMemoryIndex_SetFilament(t *testing.T) {
 		err := idx.SetFilament(ctx, pn, objID, pn, []record.Virtual{record.Wrap(req)})
 		require.NoError(t, err)
 
-		require.Equal(t, 3, len(buck.fullFilament))
-		require.Equal(t, pn-10, buck.fullFilament[0].PN)
-		require.Equal(t, pn, buck.fullFilament[1].PN)
-		require.Equal(t, pn+1, buck.fullFilament[2].PN)
+		require.Equal(t, 3, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, pn-10, buck.pendingMeta.fullFilament[0].PN)
+		require.Equal(t, pn, buck.pendingMeta.fullFilament[1].PN)
+		require.Equal(t, pn+1, buck.pendingMeta.fullFilament[2].PN)
 
-		require.Equal(t, record.Wrap(req), buck.fullFilament[1].Records[0])
+		require.Equal(t, record.Wrap(req), buck.pendingMeta.fullFilament[1].Records[0])
 	})
 }
 
@@ -592,7 +592,7 @@ func TestInMemoryIndex_MetaForObjID(t *testing.T) {
 
 		ru := insolar.PulseNumber(888)
 		idx.buckets[pn][objID].PreviousPendingFilament = insolar.PulseNumber(888)
-		idx.buckets[pn][objID].readPendingUntil = &ru
+		idx.buckets[pn][objID].pendingMeta.readPendingUntil = &ru
 
 		meta, err := idx.MetaForObjID(ctx, pn, objID)
 		require.NoError(t, err)
@@ -629,7 +629,7 @@ func TestInMemoryIndex_SetReadUntil(t *testing.T) {
 		err := idx.SetReadUntil(ctx, pn, objID, &rupn)
 
 		require.NoError(t, err)
-		require.Equal(t, insolar.PulseNumber(10), *idx.buckets[pn][objID].readPendingUntil)
+		require.Equal(t, insolar.PulseNumber(10), *idx.buckets[pn][objID].pendingMeta.readPendingUntil)
 	})
 }
 
@@ -660,9 +660,9 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		require.NoError(t, err)
 		buck := idx.buckets[pn][objID]
 
-		require.Equal(t, 1, len(buck.fullFilament))
-		require.Equal(t, record.Wrap(res), buck.fullFilament[0].Records[0])
-		require.Equal(t, pn, buck.fullFilament[0].PN)
+		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, record.Wrap(res), buck.pendingMeta.fullFilament[0].Records[0])
+		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
 		require.Equal(t, 1, len(buck.PendingRecords))
 		require.Equal(t, record.Wrap(res), buck.PendingRecords[0])
 	})
@@ -685,12 +685,12 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		buck := idx.buckets[pn][objID]
 
-		require.Equal(t, 1, len(buck.fullFilament))
+		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
 
-		require.Equal(t, 2, len(buck.fullFilament[0].Records))
-		require.Equal(t, pn, buck.fullFilament[0].PN)
-		require.Equal(t, record.Wrap(res), buck.fullFilament[0].Records[0])
-		require.Equal(t, record.Wrap(resS), buck.fullFilament[0].Records[1])
+		require.Equal(t, 2, len(buck.pendingMeta.fullFilament[0].Records))
+		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
+		require.Equal(t, record.Wrap(res), buck.pendingMeta.fullFilament[0].Records[0])
+		require.Equal(t, record.Wrap(resS), buck.pendingMeta.fullFilament[0].Records[1])
 
 		require.Equal(t, 2, len(buck.PendingRecords))
 		require.Equal(t, record.Wrap(res), buck.PendingRecords[0])
@@ -724,18 +724,18 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		require.Equal(t, reqS, open[0])
 
 		buck := idx.buckets[pn][objID]
-		require.Equal(t, 1, len(buck.fullFilament))
-		require.Equal(t, pn, buck.fullFilament[0].PN)
-		require.Equal(t, 3, len(buck.fullFilament[0].Records))
+		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
+		require.Equal(t, 3, len(buck.pendingMeta.fullFilament[0].Records))
 
-		require.Equal(t, 1, len(buck.notClosedRequestsIndex[pn]))
-		_, ok := buck.notClosedRequestsIndex[pn][*reqS.Object.Record()]
+		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIndex[pn]))
+		_, ok := buck.pendingMeta.notClosedRequestsIndex[pn][*reqS.Object.Record()]
 		require.Equal(t, true, ok)
 
-		require.Equal(t, 1, len(buck.notClosedRequests))
-		require.Equal(t, reqS, buck.notClosedRequests[0])
+		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequests))
+		require.Equal(t, reqS, buck.pendingMeta.notClosedRequests[0])
 
-		require.Equal(t, 2, len(buck.requestPNIndex))
+		require.Equal(t, 2, len(buck.pendingMeta.requestPNIndex))
 	})
 
 	t.Run("set result, other there are other fillaments", func(t *testing.T) {
@@ -745,7 +745,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		idx := NewInMemoryIndex()
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
 
 		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
 		res := record.Result{Request: *objRef}
@@ -754,9 +754,9 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		require.NoError(t, err)
 
-		require.Equal(t, 2, len(buck.fullFilament))
-		require.Equal(t, pn, buck.fullFilament[0].PN)
-		require.Equal(t, pn+1, buck.fullFilament[1].PN)
+		require.Equal(t, 2, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
+		require.Equal(t, pn+1, buck.pendingMeta.fullFilament[1].PN)
 	})
 }
 
@@ -779,27 +779,27 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		idx := NewInMemoryIndex()
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
-		buck.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
+		buck.pendingMeta.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
 			pn + 1: {},
 			pn:     {},
 		}
-		buck.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
+		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
 
 		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
 
 		res := record.Result{Request: *objRef}
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(res)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(res)}})
 
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
 
-		require.Equal(t, true, buck.isStateCalculated)
-		require.Equal(t, 2, len(buck.fullFilament))
-		require.Equal(t, 0, len(buck.notClosedRequests))
-		require.Equal(t, 0, len(buck.notClosedRequestsIndex[pn]))
-		require.Equal(t, 0, len(buck.notClosedRequestsIndex[pn+1]))
+		require.Equal(t, true, buck.pendingMeta.isStateCalculated)
+		require.Equal(t, 2, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequests))
+		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequestsIndex[pn]))
+		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequestsIndex[pn+1]))
 	})
 
 	t.Run("works fine. req and res", func(t *testing.T) {
@@ -809,27 +809,27 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		idx := NewInMemoryIndex()
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
-		buck.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
+		buck.pendingMeta.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
 			pn + 1: {},
 			pn:     {},
 		}
-		buck.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
+		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
 
 		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
 
 		res := record.Result{Request: *objRef}
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(res)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(res)}})
 
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
 
-		require.Equal(t, true, buck.isStateCalculated)
-		require.Equal(t, 2, len(buck.fullFilament))
-		require.Equal(t, 0, len(buck.notClosedRequests))
-		require.Equal(t, 0, len(buck.notClosedRequestsIndex[pn]))
-		require.Equal(t, 0, len(buck.notClosedRequestsIndex[pn+1]))
+		require.Equal(t, true, buck.pendingMeta.isStateCalculated)
+		require.Equal(t, 2, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequests))
+		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequestsIndex[pn]))
+		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequestsIndex[pn+1]))
 	})
 
 	t.Run("works fine. open pending", func(t *testing.T) {
@@ -839,23 +839,23 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		idx := NewInMemoryIndex()
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
-		buck.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
+		buck.pendingMeta.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
 			pn: {},
 		}
-		buck.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
+		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
 
 		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req)}})
 
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
 
-		require.Equal(t, true, buck.isStateCalculated)
-		require.Equal(t, 1, len(buck.fullFilament))
-		require.Equal(t, 1, len(buck.notClosedRequests))
-		require.Equal(t, req, buck.notClosedRequests[0])
-		require.Equal(t, 1, len(buck.notClosedRequestsIndex[pn]))
+		require.Equal(t, true, buck.pendingMeta.isStateCalculated)
+		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
+		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequests))
+		require.Equal(t, req, buck.pendingMeta.notClosedRequests[0])
+		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIndex[pn]))
 	})
 
 	t.Run("calculates readPendingUntil properly", func(t *testing.T) {
@@ -869,27 +869,27 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
 		res := record.Result{Request: *objRef}
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req), record.Wrap(res)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req), record.Wrap(res)}})
 
 		objRefS := insolar.NewReference(insolar.ID{}, *insolar.NewID(567, nil))
 		reqS := record.Request{Object: objRefS}
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(reqS)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(reqS)}})
 
 		objRefT := insolar.NewReference(insolar.ID{}, *insolar.NewID(888, nil))
 		reqT := record.Request{Object: objRefT}
 		resT := record.Result{Request: *objRefT}
-		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 2, Records: []record.Virtual{record.Wrap(reqT), record.Wrap(resT)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 2, Records: []record.Virtual{record.Wrap(reqT), record.Wrap(resT)}})
 
-		buck.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
+		buck.pendingMeta.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
 			pn:     {},
 			pn + 1: {},
 			pn + 2: {},
 		}
-		buck.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
+		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
 
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
 
-		require.Equal(t, pn, *buck.readPendingUntil)
+		require.Equal(t, pn, *buck.pendingMeta.readPendingUntil)
 	})
 }
