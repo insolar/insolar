@@ -36,7 +36,7 @@ type HandleCall struct {
 	Message bus.Message
 }
 
-func (h *HandleCall) executeActual(
+func (h *HandleCall) handleActual(
 	ctx context.Context,
 	parcel insolar.Parcel,
 	msg *message.CallMethod,
@@ -57,11 +57,6 @@ func (h *HandleCall) executeActual(
 	es := os.ExecutionState
 	os.Unlock()
 
-	// ExecutionState should be locked between CheckOurRole and
-	// appending ExecutionQueueElement to the queue to prevent a race condition.
-	// Otherwise it's possible that OnPulse will clean up the queue and set
-	// ExecutionState.Pending to NotPending. Execute will add an element to the
-	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
 
 	procCheckRole := CheckOurRole{
@@ -75,7 +70,7 @@ func (h *HandleCall) executeActual(
 		if err == flow.ErrCancelled {
 			return nil, err // message bus will retry on the calling side
 		}
-		return nil, errors.Wrap(err, "[ executeActual ] can't play role")
+		return nil, errors.Wrap(err, "[ handleActual ] can't play role")
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
@@ -83,6 +78,9 @@ func (h *HandleCall) executeActual(
 		return nil, os.WrapError(nil, "loop detected")
 	}
 	es.Unlock()
+
+	// RegisterRequest is an external, slow call to the LME thus we have to
+	// unlock ExecutionState during the call.
 
 	procRegisterRequest := NewRegisterRequest(parcel, h.dep)
 
@@ -112,6 +110,19 @@ func (h *HandleCall) executeActual(
 
 	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
 		if err == flow.ErrCancelled {
+			// If the flow has canceled during ClarifyPendingState there are two possibilities.
+			// 1. It's possible that we started to execute ClarifyPendingState, the pulse has
+			// changed and the execution queue was sent to the next executor in OnPulse method.
+			// This means that the next executor already has the last queue element, it's OK.
+			// 2. It's also possible that the pulse has changed after RegisterRequest but
+			// before adding an item to the execution queue. In this case the queue was sent to the
+			// next executor without the last item. We could just return ErrCanceled to make the
+			// caller to resend the request. However this will cause a slow request deduplication
+			// process on the LME side. As an optimization we decided to send a special message
+			// type to the next executor. It's possible that while we send the message the pulse
+			// will change once again and the receiver will be not an executor of the object anymore.
+			// However in this case MessageBus will automatically resend the message to the right VE.
+
 			// TODO: it's done to support current logic. Do it correctly when go to flow
 			f.Continue(ctx)
 		} else {
@@ -125,7 +136,7 @@ func (h *HandleCall) executeActual(
 		ref: &ref,
 	}
 	if err := f.Handle(ctx, s.Present); err != nil {
-		inslogger.FromContext(ctx).Warn("[ executeActual ] StartQueueProcessorIfNeeded returns error: ", err)
+		inslogger.FromContext(ctx).Warn("[ handleActual ] StartQueueProcessorIfNeeded returns error: ", err)
 	}
 
 	return &reply.RegisterRequest{
@@ -151,7 +162,7 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	defer span.End()
 
 	r := bus.Reply{}
-	r.Reply, r.Err = h.executeActual(ctx, parcel, msg, f)
+	r.Reply, r.Err = h.handleActual(ctx, parcel, msg, f)
 
 	h.Message.ReplyTo <- r
 	return nil
