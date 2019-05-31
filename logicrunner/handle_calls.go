@@ -73,7 +73,7 @@ func (h *HandleCall) executeActual(
 	if err := f.Procedure(ctx, &procCheckRole, true); err != nil {
 		es.Unlock()
 		if err == flow.ErrCancelled {
-			return nil, err // message bus will retry on the calling side
+			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
 		return nil, errors.Wrap(err, "[ executeActual ] can't play role")
 	}
