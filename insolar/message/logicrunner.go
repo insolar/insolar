@@ -238,10 +238,7 @@ var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() //
 
 // GenRequest calculates Reference for request message from pulse number and request's payload.
 func genRequest(pn insolar.PulseNumber, payload []byte, domain *insolar.ID) *insolar.Reference {
-	ref := insolar.NewReference(
-		*domain,
-		*insolar.NewID(pn, hasher.Hash(payload)),
-	)
+	ref := insolar.NewReference(*insolar.NewID(pn, hasher.Hash(payload)))
 	return ref
 }
 

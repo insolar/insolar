@@ -73,15 +73,8 @@ type Phases struct {
 	SecondPhase SecondPhase `inject:""`
 	ThirdPhase  ThirdPhase  `inject:""`
 
-<<<<<<< HEAD
 	NodeKeeper network.NodeKeeper `inject:""`
 	Calculator merkle.Calculator  `inject:""`
-=======
-	Gatewayer    network.Gatewayer    `inject:""`
-	PulseManager insolar.PulseManager `inject:""`
-	NodeKeeper   network.NodeKeeper   `inject:""`
-	Calculator   merkle.Calculator    `inject:""`
->>>>>>> 0bf216898cd485f7b4734292f08eddf439095e88
 
 	lastPulse insolar.PulseNumber
 	lock      sync.Mutex

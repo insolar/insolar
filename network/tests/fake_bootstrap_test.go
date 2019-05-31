@@ -54,115 +54,67 @@ package tests
 
 import (
 	"context"
-	"fmt"
-	"testing"
-	"time"
-
-	"github.com/stretchr/testify/suite"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/controller/bootstrap"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/version"
 )
 
-type bootstrapSuite struct {
-	testSuite
+type fakeBootstrap struct {
+	NodeKeeper network.NodeKeeper `inject:""`
 
-	joiner networkNode
+	suite *fixture
 }
 
-type fakeConsensus struct {
-	node  *networkNode
-	suite *bootstrapSuite
+func (b *fakeBootstrap) Init(ctx context.Context) error {
+	inslogger.FromContext(ctx).Info("Using fakeBootstrap")
+	return nil
 }
 
-func (f *fakeConsensus) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-
-	activeNodes := make([]insolar.NetworkNode, 0)
-	for _, n := range f.suite.fixture().bootstrapNodes {
-		activeNodes = append(activeNodes, n.serviceNetwork.NodeKeeper.GetOrigin())
+func (b *fakeBootstrap) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
+	if atomic.LoadUint32(&b.suite.discoveriesAreBootstrapped) == 1 {
+		return nil, bootstrap.ErrReconnectRequired
 	}
-
-	var claims []packets.ReferendumClaim
-	// snapshot := f.node.serviceNetwork.NodeKeeper.GetSnapshotCopy()
-	// snapshot.
-
-	return f.node.serviceNetwork.NodeKeeper.Sync(f.node.ctx, activeNodes, claims)
-}
-
-func (s *bootstrapSuite) SetupTest() {
-	s.fixtureMap[s.T().Name()] = newFixture(s.T())
-	var err error
-	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
-	s.Require().NoError(err)
-
-	inslogger.FromContext(s.fixture().ctx).Info("SetupTest -- ")
-
-	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
+	nodes := make([]insolar.NetworkNode, 0)
+	for _, bNode := range b.suite.bootstrapNodes {
+		if bNode.id.Equal(b.NodeKeeper.GetOrigin().ID()) {
+			continue
+		}
+		n := convertNode(bNode)
+		n.(node.MutableNode).SetState(insolar.NodeUndefined)
+		nodes = append(nodes, n)
 	}
+	b.NodeKeeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeUndefined)
+	nodes = append(nodes, b.NodeKeeper.GetOrigin())
+	b.NodeKeeper.SetInitialSnapshot(nodes)
+	// this result is currently not used in discovery bootstrap scenario, so do not fill the Host
+	return &network.BootstrapResult{
+		Host:              nil,
+		ReconnectRequired: false,
+		NetworkSize:       len(b.suite.bootstrapNodes),
+	}, nil
+}
 
-	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
-	for _, n := range s.fixture().bootstrapNodes {
-		n.serviceNetwork.PhaseManager.(*phaseManagerWrapper).original = &fakeConsensus{n, s}
+func (b *fakeBootstrap) SetLastPulse(number insolar.PulseNumber) {}
 
+func (b *fakeBootstrap) GetLastPulse() insolar.PulseNumber {
+	return 0
+}
+
+func convertNode(n *networkNode) insolar.NetworkNode {
+	pk, err := n.cryptographyService.GetPublicKey()
+	if err != nil {
+		panic(err)
 	}
+	return node.NewNode(n.id, n.role, pk, n.host, version.Version)
+}
 
-	pulseReceivers := make([]string, 0)
-	for _, node := range s.fixture().bootstrapNodes {
-		pulseReceivers = append(pulseReceivers, node.host)
+func newFakeBootstrap(suite *fixture) *fakeBootstrap {
+	return &fakeBootstrap{
+		suite: suite,
 	}
-
-	log.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	s.Require().NoError(err)
-
-	// TODO: fake bootstrap
-	// s.StartNodesNetwork(s.fixture().bootstrapNodes)
-}
-
-func (s *bootstrapSuite) TearDownTest() {
-	inslogger.FromContext(s.fixture().ctx).Info("TearDownTest -- ")
-
-}
-
-func newBootstraptSuite(bootstrapCount int) *bootstrapSuite {
-	return &bootstrapSuite{
-		testSuite: newTestSuite(3, 0),
-	}
-}
-
-func TestBootstrap(t *testing.T) {
-	s := newBootstraptSuite(1)
-	suite.Run(t, s)
-}
-
-func (s *bootstrapSuite) TestExample() {
-	s.T().Skip("fix me")
-	inslogger.FromContext(s.fixture().ctx).Info("Log -- ")
-	s.True(true)
-
-	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
-
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-	defer func(s *bootstrapSuite) {
-		s.StopNode(testNode)
-	}(s)
-
-	// s.waitForConsensus(1)
-	//
-	// s.AssertActiveNodesCountDelta(0)
-	//
-	// s.waitForConsensus(1)
-	//
-	// s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(0)
-	//
-	// s.waitForConsensus(2)
-	//
-	// s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(1)
 }
