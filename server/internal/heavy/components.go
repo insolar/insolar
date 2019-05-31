@@ -340,11 +340,9 @@ func startWatermill(
 		middleware.CorrelationID,
 	)
 
-	inRouter.AddHandler(
+	inRouter.AddNoPublisherHandler(
 		"IncomingHandler",
 		bus.TopicIncoming,
-		pubSub,
-		bus.TopicOutgoing,
 		pubSub,
 		inHandler,
 	)
