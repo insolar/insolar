@@ -94,7 +94,7 @@ message GenesisRequest {
 }
 
 message RPCResponse {
-    bytes Result = 1;
+    bytes Result = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/packet/types.RPCPayload", (gogoproto.nullable) = false];
     string Error = 2;
 }
 

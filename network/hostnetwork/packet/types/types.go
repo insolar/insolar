@@ -52,7 +52,7 @@ package types
 
 import (
 	"bytes"
-	"encoding/base64"
+	"strconv"
 )
 
 //go:generate stringer -type=PacketType
@@ -90,7 +90,7 @@ type RequestID uint64
 type RPCPayload []byte
 
 func (p RPCPayload) String() string {
-	return "Base64(" + base64.StdEncoding.EncodeToString(p) + ")"
+	return "bytes,len:" + strconv.Itoa(len(p))
 }
 
 func (p RPCPayload) Equal(other RPCPayload) bool {
