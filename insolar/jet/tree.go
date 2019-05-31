@@ -89,6 +89,10 @@ func (j *jet) ExtractLeafIDs(ids *[]insolar.JetID, path []byte, depth uint8) {
 		return
 	}
 	if j.Left == nil && j.Right == nil {
+		// Only actual jets should be returned.
+		if !j.Actual {
+			return
+		}
 		*ids = append(*ids, *insolar.NewJetID(depth, path))
 		return
 	}

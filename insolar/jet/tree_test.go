@@ -172,14 +172,15 @@ func TestTree_String(t *testing.T) {
 func TestTree_LeafIDs(t *testing.T) {
 	tree := Tree{
 		Head: &jet{
-			Left: &jet{},
+			Left: &jet{Actual: true},
 			Right: &jet{
+				Left: &jet{Actual: false},
 				Right: &jet{
 					Left: &jet{
-						Left:  &jet{},
-						Right: &jet{},
+						Left:  &jet{Actual: true},
+						Right: &jet{Actual: true},
 					},
-					Right: &jet{},
+					Right: &jet{Actual: true},
 				},
 			},
 		},
