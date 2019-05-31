@@ -112,9 +112,9 @@ func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 	leaving := snapshot.nodeList[ListLeaving]
 
 	result := make([]insolar.NetworkNode, len(joining)+len(working)+len(leaving))
-	copy(result[:len(joining)], joining[:])
-	copy(result[len(joining):len(joining)+len(working)], working[:])
-	copy(result[len(joining)+len(working):], leaving[:])
+	copy(result[:len(joining)], joining)
+	copy(result[len(joining):len(joining)+len(working)], working)
+	copy(result[len(joining)+len(working):], leaving)
 
 	return result
 }

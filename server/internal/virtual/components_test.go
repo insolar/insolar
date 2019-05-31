@@ -39,7 +39,7 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
-	cm, _, err := initComponents(
+	cm, _ := initComponents(
 		ctx,
 		cfg,
 		bootstrapComponents.CryptographyService,
@@ -49,10 +49,9 @@ func TestInitComponents(t *testing.T) {
 		cert,
 		false,
 	)
-	require.NoError(t, err)
 	require.NotNil(t, cm)
 
-	err = cm.Init(ctx)
+	err := cm.Init(ctx)
 	require.NoError(t, err)
 
 	err = cm.Start(ctx)

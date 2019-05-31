@@ -83,7 +83,7 @@ func (l *TMPLedger) GetArtifactManager() Client {
 // private members (suitable for tests).
 func NewTestLedger(
 	am Client,
-	pm *pulsemanager.PulseManager,
+	pm insolar.PulseManager,
 	jc jet.Coordinator,
 ) *TMPLedger {
 	return &TMPLedger{

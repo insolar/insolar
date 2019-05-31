@@ -20,6 +20,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/pulsar/storage.PulsarStorage -o ../pulsartestutils -s _mock.go
+
 type PulsarStorage interface {
 	GetLastPulse() (*insolar.Pulse, error)
 	SetLastPulse(pulse *insolar.Pulse) error

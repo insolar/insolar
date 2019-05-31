@@ -117,7 +117,7 @@ func initComponents(
 	certManager insolar.CertificateManager,
 	isGenesis bool,
 
-) (*component.Manager, insolar.TerminationHandler, error) {
+) (*component.Manager, insolar.TerminationHandler) {
 	cm := component.Manager{}
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
@@ -201,7 +201,7 @@ func initComponents(
 
 	startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, notFound)
 
-	return &cm, terminationHandler, nil
+	return &cm, terminationHandler
 }
 
 func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
