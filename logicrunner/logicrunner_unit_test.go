@@ -1440,11 +1440,11 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 		s.T().Run(name, func(t *testing.T) {
 			a := assert.New(t)
 
-			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
+			messagesQueue := convertQueueToMessageQueue(s.ctx, test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1517,7 +1517,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref:                   s.ref,
+		Ref: s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)

@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -120,6 +120,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
+
 	ctx, span := instracer.StartSpan(ctx, "RPC.RouteCall")
 	defer span.End()
 
@@ -166,6 +168,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
@@ -200,6 +203,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+	inslogger.FromContext(ctx).Debug("RPC.SaveAsDelegate")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsDelegate")
 	defer span.End()
 
@@ -320,6 +324,7 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+	inslogger.FromContext(ctx).Debug("RPC.GetDelegate")
 	ctx, span := instracer.StartSpan(ctx, "RPC.GetDelegate")
 	defer span.End()
 

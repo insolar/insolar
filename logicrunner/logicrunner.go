@@ -427,6 +427,9 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 func (lr *LogicRunner) executeOrValidate(
 	ctx context.Context, es *ExecutionState, parcel insolar.Parcel,
 ) {
+
+	inslogger.FromContext(ctx).Debug("executeOrValidate")
+
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.ExecuteOrValidate")
 	defer span.End()
 
@@ -506,7 +509,7 @@ func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *
 	os.Lock()
 	defer os.Unlock()
 	if os.ExecutionState == nil {
-		inslogger.FromContext(ctx).Info("[ ProcessExecutionQueue ] got not existing reference. It's strange")
+		inslogger.FromContext(ctx).Info("[ ProcessExecutionQueue ] got not existing reference. It's strange. Ref: ", ref.String())
 		return nil
 	}
 	es := os.ExecutionState
@@ -544,6 +547,8 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 	}
 
 	msg := parcel.Message().(*message.CallMethod)
+
+	parcel.SetSender(msg.Request.Sender)
 
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(
@@ -762,7 +767,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 	messages := make([]insolar.Message, 0)
 
-	ctx, spanStates := instracer.StartSpan(ctx, "pulse.logicrunner processing of states")
 	for ref, state := range lr.state {
 		meNext, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
@@ -808,7 +812,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 				if len(queue) > 0 || sendExecResults {
 					// TODO: we also should send when executed something for validation
 					// TODO: now validation is disabled
-					messagesQueue := convertQueueToMessageQueue(queue)
+					messagesQueue := convertQueueToMessageQueue(ctx, queue)
 
 					messages = append(
 						messages,
@@ -854,7 +858,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 		state.Unlock()
 	}
-	spanStates.End()
 
 	lr.stateMutex.Unlock()
 
@@ -907,20 +910,26 @@ func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []
 
 func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Message, sendWg *sync.WaitGroup) {
 	defer sendWg.Done()
+	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>> sendOnPulseMessage")
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
 	}
 }
 
-func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
+func convertQueueToMessageQueue(ctx context.Context, queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
+	var traces string
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
 			Parcel:  elem.parcel,
 			Request: elem.request,
 		})
+
+		traces += inslogger.TraceID(elem.ctx) + ", "
 	}
+
+	inslogger.FromContext(ctx).Debug("convertQueueToMessageQueue: ", traces)
 
 	return mq
 }
