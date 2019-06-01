@@ -42,7 +42,7 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 	inslogger.FromContext(ctx).Debug("ProcessExecutionQueue")
 
 	lr := p.dep.lr
-	es := lr.getExecStateFromRef(ctx, p.Message.Payload)
+	es := lr.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
 	if es == nil {
 		return nil
 	}
