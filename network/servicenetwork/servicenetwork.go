@@ -437,11 +437,6 @@ func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 
 func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]byte, error) {
 	logger := inslogger.FromContext(ctx)
-	if len(args) < 1 {
-		err := errors.New("need exactly one argument when n.processIncoming()")
-		logger.Error(err)
-		return nil, err
-	}
 	msg, err := deserializeMessage(bytes.NewBuffer(args))
 	if err != nil {
 		err = errors.Wrap(err, "error while deserialize msg from buffer")
