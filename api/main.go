@@ -30,6 +30,7 @@ import (
 	"github.com/gorilla/rpc/v2"
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
@@ -53,6 +54,7 @@ type Runner struct {
 	ServiceNetwork      insolar.Network             `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	ArtifactManager     artifacts.Client            `inject:""`
+	JetCoordinator      jet.Coordinator             `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner

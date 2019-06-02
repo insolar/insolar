@@ -1033,7 +1033,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.am.RegisterRequestFunc = func(ctx context.Context, req record.Request) (*insolar.ID, error) {
 					if test.when == whenRegisterRequest {
 						changePulse()
-						// Due to specific implementation of HandleCall.executeActual
+						// Due to specific implementation of HandleCall.handleActual
 						// for this particular test we have to explicitly return
 						// ErrCancelled. Otherwise it's possible that RegisterRequest
 						// Procedure will return normally before Flow cancels it.
@@ -1268,7 +1268,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
 			Current: &CurrentExecution{},
-			Queue:   append(make([]ExecutionQueueElement, 0), ExecutionQueueElement{}),
+			Queue:   append(make([]ExecutionQueueElement, 0), ExecutionQueueElement{ctx: s.ctx}),
 			pending: message.NotPending,
 		},
 	}
@@ -1406,6 +1406,15 @@ func (s *LogicRunnerOnPulseTestSuite) TestSendTaskToNextExecutor() {
 	s.Equal(false, ok)
 }
 
+func makeQueue(ctx context.Context, size int) []ExecutionQueueElement {
+	q := make([]ExecutionQueueElement, size)
+	for i, _ := range q {
+		q[i].ctx = ctx
+	}
+
+	return q
+}
+
 func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
@@ -1415,11 +1424,11 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 		hasMoreRequests bool
 	}{
 		"Has": {
-			make([]ExecutionQueueElement, maxQueueLength+1),
+			makeQueue(s.ctx, maxQueueLength+1),
 			true,
 		},
 		"Don't": {
-			make([]ExecutionQueueElement, maxQueueLength),
+			makeQueue(s.ctx, maxQueueLength),
 			false,
 		},
 	}
@@ -1428,7 +1437,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 		s.T().Run(name, func(t *testing.T) {
 			a := assert.New(t)
 
-			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
+			messagesQueue := convertQueueToMessageQueue(s.ctx, test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
 				RecordRef:             s.objectRef,
