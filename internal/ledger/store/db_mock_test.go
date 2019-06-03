@@ -110,7 +110,7 @@ func TestMockDB_NewIterator(t *testing.T) {
 	)
 
 	const (
-		ArrayLength = 1000
+		ArrayLength = 100
 	)
 
 	fuzz.New().NilChance(0).Fuzz(&commonScope)
@@ -174,10 +174,10 @@ func TestMockDB_NewIterator(t *testing.T) {
 	it.Seek(commonPrefix)
 	i := 0
 	for it.Next() && i < len(expected) {
-		require.ElementsMatch(t, expected[i].k.ID(), it.Key())
+		require.Equal(t, expected[i].k.ID(), it.Key())
 		val, err := it.Value()
 		require.NoError(t, err)
-		require.ElementsMatch(t, expected[i].v, val)
+		require.Equal(t, expected[i].v, val)
 		i++
 	}
 	require.Equal(t, len(expected), i)

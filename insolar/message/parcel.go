@@ -106,6 +106,10 @@ func (p *Parcel) GetSender() insolar.Reference {
 	return p.Sender
 }
 
+func (p *Parcel) SetSender(sender insolar.Reference) {
+	p.Sender = sender
+}
+
 func (p *Parcel) AddDelegationToken(token insolar.DelegationToken) {
 	p.Token = token
 }
