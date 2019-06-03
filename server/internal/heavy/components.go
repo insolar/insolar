@@ -291,6 +291,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Tokens,
 		Parcels,
 		artifacts.NewClient(),
+		Genesis,
 		GenesisProvider,
 		API,
 		KeyProcessor,
@@ -301,7 +302,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NodeNetwork,
 		NetworkService,
 		pubSub,
-		Genesis,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {

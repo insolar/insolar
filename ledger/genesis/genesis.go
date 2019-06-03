@@ -145,9 +145,12 @@ type Genesis struct {
 // Start implements components.Starter.
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
+	fmt.Println("CALL Genesis.Start()")
 
 	isRequired, err := g.BaseRecord.IsGenesisRequired(ctx)
+	inslogger.FromContext(ctx).Infof("[genesis] required=%v", isRequired)
 	if err != nil {
+		inslog.Error(err.Error())
 		return err
 	}
 
