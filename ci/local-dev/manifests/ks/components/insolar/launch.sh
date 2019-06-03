@@ -4,7 +4,6 @@ set -x
 CONFIG_DIR=/opt/insolar/config
 BOOTSTRAP_CONFIG=$CONFIG_DIR/bootstrap.yaml
 HEAVY_GENESIS_CONFIG=$CONFIG_DIR/heavy_genesis.json
-NODES_DATA=$CONFIG_DIR/nodes
 DISCOVERY_KEYS=$CONFIG_DIR/discovery
 CERTS_KEYS=$CONFIG_DIR/certs
 
@@ -18,7 +17,6 @@ then
     insolar gen-key-pair > $CONFIG_DIR/root_member_keys.json
 
     echo "generate bootstrap files"
-    mkdir -vp $NODES_DATA
     mkdir -vp $CERTS_KEYS
     mkdir -vp $DISCOVERY_KEYS
     insolar bootstrap --config ${BOOTSTRAP_CONFIG} --certificates-out-dir ${CERTS_KEYS}
