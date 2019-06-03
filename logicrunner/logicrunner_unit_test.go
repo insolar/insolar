@@ -918,6 +918,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	wg.Wait()
 }
 
+// AALEKSEEV TODO FIX THIS TEST
 func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	objectRef := testutils.RandomRef()
 	parentRef := testutils.RandomRef()
@@ -972,6 +973,9 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			name:                 "pulse change in RegisterRequest",
 			when:                 whenRegisterRequest,
 			flowCanceledExpected: true,
+			messagesExpected: []insolar.MessageType{
+				insolar.TypeAdditionalCallFromPreviousExecutor,
+			},
 		},
 		{
 			name:                      "pulse change in HasPendingRequests",
@@ -1127,7 +1131,8 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					case insolar.TypeReturnResults,
 						insolar.TypeExecutorResults,
 						insolar.TypePendingFinished,
-						insolar.TypeStillExecuting:
+						insolar.TypeStillExecuting,
+						insolar.TypeAdditionalCallFromPreviousExecutor: // AALEKSEEV TODO fix? or maybe not?
 						return &reply.OK{}, nil
 					default:
 						panic("no idea how to handle " + msg.Type().String())

@@ -276,8 +276,8 @@ func (pf *PendingFinished) Type() insolar.MessageType {
 // this one message may be invisible by OnPulse handler. See HandleCall
 // for more details.
 type AdditionalCallFromPreviousExecutor struct {
-	Reference insolar.Reference // object reference
-	// TODO AALEKSEEV
+	Reference    insolar.Reference // object reference
+	QueueElement ExecutionQueueElement
 }
 
 func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {

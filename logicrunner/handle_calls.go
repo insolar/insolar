@@ -126,11 +126,23 @@ func (h *HandleCall) handleActual(
 			// the receiver will be not an executor of the object anymore. However in this case
 			// MessageBus will automatically resend the message to the right VE.
 
-			// TODO: secially for immutable calls, they are not ordered by LME
-			f.Continue(ctx)
-		} else {
-			return nil, err
+			additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
+				Reference: ref,
+				QueueElement: message.ExecutionQueueElement{
+					Parcel:  parcel,
+					Request: request,
+				},
+			}
+
+			_, err = lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
+			if err == nil {
+				// If MessageBus.Send fails we report the error somebody who called this method.
+				// Otherwise we report ErrCancelled
+				err = flow.ErrCancelled
+			}
 		}
+
+		return nil, err
 	}
 
 	s := StartQueueProcessorIfNeeded{
@@ -170,4 +182,15 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	h.Message.ReplyTo <- r
 	return nil
 
+}
+
+type HandleAdditionalCallFromPreviousExecutor struct {
+	dep *Dependencies
+
+	Message bus.Message
+}
+
+func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
+	// TODO AALEKSEEV add a message to the execution queue
+	return nil
 }
