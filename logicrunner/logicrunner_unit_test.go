@@ -171,7 +171,6 @@ func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueu
 	suite.Require().Equal(message.InPending, es.pending)
 }
 
-// AALEKSEEV TODO fix this test + write more
 func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_HappyPath() {
 	h := HandleAdditionalCallFromPreviousExecutor{
 		dep: &Dependencies{
@@ -186,9 +185,89 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_
 		Parcel:          parcel,
 		Request:         &request,
 	}
+
+	f.ProcedureFunc = func(ctx context.Context, proc flow.Procedure, cancelable bool) error {
+		_, ok := proc.(*ClarifyPendingState)
+		if ok {
+			// ClarifyPendingState returned normally
+			return nil
+		}
+		return fmt.Errorf("Unexpected procedure call")
+	}
+
+	f.HandleFunc = func(ctx context.Context, handle flow.Handle) error {
+		// StartQueueProcessorIfNeeded returned normally
+		return nil
+	}
+
 	rep, err := h.handleActual(context.Background(), &msg, f)
 	require.NoError(suite.T(), err)
-	require.Equal(suite.T(), reply.OK{}, rep)
+	require.Equal(suite.T(), &reply.OK{}, rep)
+}
+
+func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_ClarifyPendingState_Failed() {
+	h := HandleAdditionalCallFromPreviousExecutor{
+		dep: &Dependencies{
+			lr: suite.lr,
+		},
+	}
+	f := flow.NewFlowMock(suite.T())
+	parcel := testutils.NewParcelMock(suite.T())
+	request := gen.Reference()
+	msg := message.AdditionalCallFromPreviousExecutor{
+		ObjectReference: gen.Reference(),
+		Parcel:          parcel,
+		Request:         &request,
+	}
+
+	f.ProcedureFunc = func(ctx context.Context, proc flow.Procedure, cancelable bool) error {
+		_, ok := proc.(*ClarifyPendingState)
+		if ok {
+			// ClarifyPendingState returned an error
+			return fmt.Errorf("ClarifyPendingState FAILED")
+		}
+		return fmt.Errorf("Unexpected procedure call")
+	}
+
+	rep, err := h.handleActual(context.Background(), &msg, f)
+	// An error was logged but we return reply.OK nonetheless
+	require.NoError(suite.T(), err)
+	require.Equal(suite.T(), &reply.OK{}, rep)
+}
+
+func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_StartQueueProcessorIfNeeded_Failed() {
+	h := HandleAdditionalCallFromPreviousExecutor{
+		dep: &Dependencies{
+			lr: suite.lr,
+		},
+	}
+	f := flow.NewFlowMock(suite.T())
+	parcel := testutils.NewParcelMock(suite.T())
+	request := gen.Reference()
+	msg := message.AdditionalCallFromPreviousExecutor{
+		ObjectReference: gen.Reference(),
+		Parcel:          parcel,
+		Request:         &request,
+	}
+
+	f.ProcedureFunc = func(ctx context.Context, proc flow.Procedure, cancelable bool) error {
+		_, ok := proc.(*ClarifyPendingState)
+		if ok {
+			// ClarifyPendingState returned normally
+			return nil
+		}
+		return fmt.Errorf("Unexpected procedure call")
+	}
+
+	f.HandleFunc = func(ctx context.Context, handle flow.Handle) error {
+		// StartQueueProcessorIfNeeded returned an error
+		return fmt.Errorf("StartQueueProcessorIfNeeded FAILED")
+	}
+
+	rep, err := h.handleActual(context.Background(), &msg, f)
+	// An error was logged but we return reply.OK nonetheless
+	require.NoError(suite.T(), err)
+	require.Equal(suite.T(), &reply.OK{}, rep)
 }
 
 func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
