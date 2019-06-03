@@ -17,8 +17,10 @@
 package insolar
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -37,6 +39,29 @@ const (
 
 // Entropy is 64 random bytes used in every pseudo-random calculations.
 type Entropy [EntropySize]byte
+
+func (entropy Entropy) Marshal() ([]byte, error) { return entropy[:], nil }
+func (entropy Entropy) MarshalTo(data []byte) (int, error) {
+	copy(data, entropy[:])
+	return EntropySize, nil
+}
+func (entropy *Entropy) Unmarshal(data []byte) error {
+	if len(data) != EntropySize {
+		return errors.New("Not enough bytes to unpack Entropy")
+	}
+	copy(entropy[:], data)
+	return nil
+}
+func (entropy *Entropy) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, entropy)
+}
+func (entropy Entropy) Size() int { return EntropySize }
+func (entropy Entropy) Compare(other Entropy) int {
+	return bytes.Compare(entropy[:], other[:])
+}
+func (entropy Entropy) Equal(other Entropy) bool {
+	return entropy.Compare(other) == 0
+}
 
 // PulseNumber is a sequential number of Pulse.
 // Upper 2 bits are reserved for use in references (scope), must be zero otherwise.

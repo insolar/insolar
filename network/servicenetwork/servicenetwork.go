@@ -180,8 +180,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
-		// use flaky network instead of hostNetwork to imitate network delays
-		// NewFlakyNetwork(hostNetwork),
 		merkle.NewCalculator(),
 		consensusNetwork,
 		phases.NewCommunicator(),
@@ -235,11 +233,11 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) Leave(ctx context.Context, ETA insolar.PulseNumber) {
+func (n *ServiceNetwork) Leave(ctx context.Context, eta insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: ETA})
+	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: eta})
 }
 
 func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
@@ -437,14 +435,14 @@ func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }
 
-func (n *ServiceNetwork) processIncoming(ctx context.Context, args [][]byte) ([]byte, error) {
+func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]byte, error) {
 	logger := inslogger.FromContext(ctx)
 	if len(args) < 1 {
 		err := errors.New("need exactly one argument when n.processIncoming()")
 		logger.Error(err)
 		return nil, err
 	}
-	msg, err := deserializeMessage(bytes.NewBuffer(args[0]))
+	msg, err := deserializeMessage(bytes.NewBuffer(args))
 	if err != nil {
 		err = errors.Wrap(err, "error while deserialize msg from buffer")
 		logger.Error(err)

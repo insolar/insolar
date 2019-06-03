@@ -80,7 +80,7 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Acquire")
 	defer span.End()
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", mb.counter)
-	mb.counter = mb.counter + 1
+	mb.counter++
 	if mb.counter-1 == 0 {
 		inslogger.FromContext(ctx).Info("Lock MB")
 		ctx, mb.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
@@ -95,7 +95,7 @@ func (mb *MessageBus) Release(ctx context.Context) {
 	if mb.counter == 0 {
 		panic("Trying to unlock without locking")
 	}
-	mb.counter = mb.counter - 1
+	mb.counter--
 	if mb.counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
 		mb.Unlock(ctx)
@@ -155,7 +155,7 @@ func (mb *MessageBus) MustRegister(p insolar.MessageType, handler insolar.Messag
 	}
 }
 
-func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar.Parcel, ops *insolar.MessageSendOptions, currentPulse insolar.Pulse) *watermillMsg.Message {
+func (mb *MessageBus) createWatermillMessage(_ context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse) *watermillMsg.Message {
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
 
@@ -204,7 +204,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 
 	_, ok := transferredToWatermill[msg.Type()]
 	if ok {
-		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
+		wmMsg := mb.createWatermillMessage(ctx, parcel, currentPulse)
 		nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, ops)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate role")
@@ -442,12 +442,9 @@ func (mb *MessageBus) handleParcelFromTheFuture(ctx context.Context, parcel inso
 
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
-func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte, err error) {
+func (mb *MessageBus) deliver(ctx context.Context, args []byte) (result []byte, err error) {
 	inslogger.FromContext(ctx).Debug("MessageBus.deliver starts ...")
-	if len(args) < 1 {
-		return nil, errors.New("need exactly one argument when mb.deliver()")
-	}
-	parcel, err := message.DeserializeParcel(bytes.NewBuffer(args[0]))
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(args))
 	if err != nil {
 		return nil, err
 	}
@@ -485,7 +482,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	return buf.Bytes(), nil
 }
 
-func (mb *MessageBus) checkParcel(ctx context.Context, parcel insolar.Parcel) error {
+func (mb *MessageBus) checkParcel(_ context.Context, parcel insolar.Parcel) error {
 	sender := parcel.GetSender()
 
 	if mb.signmessages {

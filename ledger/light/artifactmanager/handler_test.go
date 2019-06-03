@@ -82,7 +82,7 @@ func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 }
 
 func genRefWithID(id *insolar.ID) *insolar.Reference {
-	return insolar.NewReference(domainID, *id)
+	return insolar.NewReference(*id)
 }
 
 func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
@@ -382,7 +382,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	registerChild.Dep.LifelineStateModifier = s.indexMemoryStor
 	registerChild.Dep.PCS = s.scheme
 
-	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
+	err = registerChild.Proceed(s.ctx)
 	require.NoError(s.T(), err)
 
 	busRep := <-replyTo
@@ -459,7 +459,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	registerChild.Dep.LifelineStateModifier = s.indexMemoryStor
 	registerChild.Dep.PCS = s.scheme
 
-	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
+	err = registerChild.Proceed(s.ctx)
 	require.NoError(s.T(), err)
 
 	idx, err := s.indexMemoryStor.ForID(s.ctx, pulse, *msg.Parent.Record())
@@ -505,7 +505,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	})
 
 	hotIndexes := &message.HotData{
-		Jet:         *insolar.NewReference(insolar.DomainID, insolar.ID(jetID)),
+		Jet:         *insolar.NewReference(insolar.ID(jetID)),
 		PulseNumber: insolar.FirstPulseNumber,
 		HotIndexes: []message.HotIndex{
 			{
@@ -605,7 +605,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	req := record.Request{
-		Object:      genRandomRef(0),
+		Object: genRandomRef(0),
 	}
 
 	virtRec := record.Wrap(req)
@@ -626,7 +626,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	procGetRequest := proc.NewGetRequest(*reqID, replyTo)
 	procGetRequest.Dep.RecordAccessor = s.recordAccessor
 
-	err = procGetRequest.Proceed(contextWithJet(s.ctx, jetID))
+	err = procGetRequest.Proceed(s.ctx)
 
 	require.NoError(s.T(), err)
 	res := <-replyTo

@@ -51,6 +51,7 @@
 package packets
 
 import (
+	"bytes"
 	"crypto"
 
 	"github.com/insolar/insolar/insolar"
@@ -221,4 +222,36 @@ func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 		NodeAddress:             address,
 		Signature:               s,
 	}, nil
+}
+
+func (njc *NodeJoinClaim) Marshal() ([]byte, error) {
+	return njc.Serialize()
+}
+
+func (njc *NodeJoinClaim) MarshalTo(data []byte) (int, error) {
+	tmp, err := njc.Serialize()
+	if err != nil {
+		return 0, errors.New("Error serializing NodeJoinClaim")
+	}
+	copy(data, tmp)
+	return len(tmp), nil
+}
+
+func (njc *NodeJoinClaim) Unmarshal(data []byte) error {
+	if len(data) != njc.Size() {
+		return errors.New("Not enough bytes to unpack NodeJoinClaim")
+	}
+	return njc.Deserialize(bytes.NewReader(data))
+}
+
+func (njc *NodeJoinClaim) Size() int {
+	return int(claimSizeMap[TypeNodeJoinClaim])
+}
+
+func (njc *NodeJoinClaim) Compare(other NodeJoinClaim) int {
+	return njc.NodeRef.Compare(other.NodeRef)
+}
+
+func (njc *NodeJoinClaim) Equal(other NodeJoinClaim) bool {
+	return njc.Compare(other) == 0
 }

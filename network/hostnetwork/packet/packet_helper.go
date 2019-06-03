@@ -53,30 +53,66 @@ package packet
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/gob"
 	"io"
-
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/pkg/errors"
 )
 
-// Packet is network packet object for requests and responses.
-type Packet struct {
-	Sender        *host.Host
-	Receiver      *host.Host
-	Type          types.PacketType
-	RequestID     network.RequestID
-	RemoteAddress string
+func (p *Packet) SetRequest(request interface{}) {
+	var r isRequest_Request
+	switch t := request.(type) {
+	case *Ping:
+		r = &Request_Ping{t}
+	case *RPCRequest:
+		r = &Request_RPC{t}
+	case *CascadeRequest:
+		r = &Request_Cascade{t}
+	case *PulseRequest:
+		r = &Request_Pulse{t}
+	case *BootstrapRequest:
+		r = &Request_Bootstrap{t}
+	case *AuthorizeRequest:
+		r = &Request_Authorize{t}
+	case *RegisterRequest:
+		r = &Request_Register{t}
+	case *GenesisRequest:
+		r = &Request_Genesis{t}
+	default:
+		panic("Request payload is not a valid protobuf struct!")
+	}
+	p.Payload = &Packet_Request{Request: &Request{Request: r}}
+}
 
-	TraceID    string
-	Data       interface{}
-	Error      error
-	IsResponse bool
+func (p *Packet) SetResponse(response interface{}) {
+	var r isResponse_Response
+	switch t := response.(type) {
+	case *Ping:
+		r = &Response_Ping{t}
+	case *RPCResponse:
+		r = &Response_RPC{t}
+	case *BasicResponse:
+		r = &Response_Basic{t}
+	case *BootstrapResponse:
+		r = &Response_Bootstrap{t}
+	case *AuthorizeResponse:
+		r = &Response_Authorize{t}
+	case *RegisterResponse:
+		r = &Response_Register{t}
+	case *GenesisResponse:
+		r = &Response_Genesis{t}
+	default:
+		panic("Response payload is not a valid protobuf struct!")
+	}
+	p.Payload = &Packet_Response{Response: &Response{Response: r}}
+}
+
+func (p *Packet) GetType() types.PacketType {
+	// TODO: make p.Type of type PacketType instead of uint32
+	return types.PacketType(p.Type)
 }
 
 func (p *Packet) GetSender() insolar.Reference {
@@ -87,42 +123,33 @@ func (p *Packet) GetSenderHost() *host.Host {
 	return p.Sender
 }
 
-func (p *Packet) GetType() types.PacketType {
-	return p.Type
+func (p *Packet) GetRequestID() types.RequestID {
+	return types.RequestID(p.RequestID)
 }
 
-func (p *Packet) GetData() interface{} {
-	return p.Data
-}
-
-func (p *Packet) GetRequestID() network.RequestID {
-	return p.RequestID
+func (p *Packet) IsResponse() bool {
+	return p.GetResponse() != nil
 }
 
 // SerializePacket converts packet to byte slice.
-func SerializePacket(q *Packet) ([]byte, error) {
-	var msgBuffer bytes.Buffer
-	enc := gob.NewEncoder(&msgBuffer)
-	err := enc.Encode(q)
+func SerializePacket(p *Packet) ([]byte, error) {
+	data, err := p.Marshal()
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	length := msgBuffer.Len()
-
 	var lengthBytes [8]byte
-	binary.PutUvarint(lengthBytes[:], uint64(length))
+	binary.PutUvarint(lengthBytes[:], uint64(p.Size()))
 
 	var result []byte
 	result = append(result, lengthBytes[:]...)
-	result = append(result, msgBuffer.Bytes()...)
+	result = append(result, data...)
 
 	return result, nil
 }
 
 // DeserializePacket reads packet from io.Reader.
 func DeserializePacket(conn io.Reader) (*Packet, error) {
-
 	lengthBytes := make([]byte, 8)
 	if _, err := io.ReadFull(conn, lengthBytes); err != nil {
 		return nil, err
@@ -142,20 +169,13 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 	log.Debugf("[ DeserializePacket ] read packet")
 
 	msg := &Packet{}
-	dec := gob.NewDecoder(bytes.NewReader(buf))
-
-	err = dec.Decode(msg)
+	err = msg.Unmarshal(buf)
 	if err != nil {
 		log.Error("[ DeserializePacket ] couldn't decode packet: ", err)
 		return nil, err
 	}
 
-	log.Debugf("[ DeserializePacket ] decoded packet to %#v", msg)
+	log.Debugf("[ DeserializePacket ] decoded packet to %s", msg)
 
 	return msg, nil
-}
-
-func init() {
-	gob.Register(&RequestPulse{})
-	gob.Register(&ResponsePulse{})
 }

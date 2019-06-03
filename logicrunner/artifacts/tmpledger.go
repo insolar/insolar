@@ -80,7 +80,7 @@ func (l *TMPLedger) GetArtifactManager() Client {
 // private members (suitable for tests).
 func NewTestLedger(
 	am Client,
-	pm *pulsemanager.PulseManager,
+	pm insolar.PulseManager,
 	jc jet.Coordinator,
 ) *TMPLedger {
 	return &TMPLedger{
@@ -112,6 +112,11 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	ns := node.NewStorage()
 	ds := drop.NewDB(memoryMockDB)
 	bs := blob.NewDB(memoryMockDB)
+
+	writeManagerMock := hot.NewWriteAccessorMock(t)
+	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
+		return func() {}, nil
+	}
 
 	genesisBaseRecord := &genesis.BaseRecord{
 		DB:                    memoryMockDB,
@@ -169,6 +174,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	handler.Blobs = bs
 	handler.RecordModifier = recordModifier
 	handler.RecordAccessor = recordAccessor
+	handler.WriteAccessor = writeManagerMock
 
 	idLockerMock := object.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()

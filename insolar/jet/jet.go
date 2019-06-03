@@ -121,7 +121,7 @@ func resetBits(value []byte, start uint8) []byte {
 
 	// Reset bits in starting byte.
 	mask := byte(0xFF)
-	mask <<= 8 - byte(startBit)
+	mask <<= 8 - startBit
 	result[startByte] = value[startByte] & mask
 
 	return result
@@ -139,7 +139,7 @@ func NewIDFromString(s string) insolar.JetID {
 
 func parsePrefix(s string) []byte {
 	var prefix []byte
-	tail := s[:]
+	tail := s
 	for len(tail) > 0 {
 		offset := 8
 		if len(tail) < 8 {

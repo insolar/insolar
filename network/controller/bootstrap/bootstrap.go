@@ -53,7 +53,6 @@ package bootstrap
 import (
 	"context"
 	"crypto"
-	"encoding/gob"
 	"fmt"
 	"math"
 	"math/rand"
@@ -63,9 +62,10 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/version"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -80,7 +80,6 @@ import (
 	"github.com/insolar/insolar/network/controller/pinger"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 const bootstrapTimeout time.Duration = 2 // seconds
@@ -95,25 +94,20 @@ type DiscoveryNode struct {
 	Node insolar.DiscoveryNode
 }
 
-type Permission struct {
-	JoinerPublicKey []byte
-	Signature       []byte
-	UTC             []byte
-	ReconnectTo     string
-	DiscoveryRef    insolar.Reference
-}
-
 type Bootstrapper interface {
 	component.Initer
 
 	Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error)
-	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
 	ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error)
+}
+
+type DiscoveryBootstrapper interface {
+	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number insolar.PulseNumber)
 	GetLastPulse() insolar.PulseNumber
 }
 
-type bootstrapper struct {
+type Bootstrap struct {
 	Certificate   insolar.Certificate         `inject:""`
 	NodeKeeper    network.NodeKeeper          `inject:""`
 	Network       network.HostNetwork         `inject:""`
@@ -131,7 +125,7 @@ type bootstrapper struct {
 	bootstrapLock       chan struct{}
 	cyclicBootstrapStop int32
 
-	genesisRequestsReceived map[insolar.Reference]*GenesisRequest
+	genesisRequestsReceived map[insolar.Reference]*packet.GenesisRequest
 	genesisLock             sync.Mutex
 
 	firstPulseTime time.Time
@@ -139,133 +133,26 @@ type bootstrapper struct {
 	reconnectToNewNetwork func(ctx context.Context, address string)
 }
 
-func (p *Permission) RawBytes() []byte {
-	res := make([]byte, 0)
-	res = append(res, p.JoinerPublicKey...)
-	res = append(res, p.DiscoveryRef.Bytes()...)
-	res = append(res, []byte(p.ReconnectTo)...)
-	res = append(res, p.UTC...)
-	return res
-}
-
-func (bc *bootstrapper) GetFirstFakePulseTime() time.Time {
+func (bc *Bootstrap) GetFirstFakePulseTime() time.Time {
 	return bc.firstPulseTime
 }
 
-func (bc *bootstrapper) getRequest(ref insolar.Reference) *GenesisRequest {
+func (bc *Bootstrap) getRequest(ref insolar.Reference) *packet.GenesisRequest {
 	bc.genesisLock.Lock()
 	defer bc.genesisLock.Unlock()
 
 	return bc.genesisRequestsReceived[ref]
 }
 
-func (bc *bootstrapper) setRequest(ref insolar.Reference, req *GenesisRequest) {
+func (bc *Bootstrap) setRequest(ref insolar.Reference, req *packet.GenesisRequest) {
 	bc.genesisLock.Lock()
 	defer bc.genesisLock.Unlock()
 
 	bc.genesisRequestsReceived[ref] = req
 }
 
-type NodeBootstrapRequest struct {
-	// TODO: change to mandate cuz cert not registered for gob
-	// Certificate   insolar.Certificate
-	JoinClaim packets.NodeJoinClaim
-	// LastNodePulse is a last received pulse number.
-	LastNodePulse insolar.PulseNumber
-	// Permission is a information for reconnect to another discovery node.
-	Permission Permission
-}
-
-type NodeBootstrapResponse struct {
-	Code         Code
-	RejectReason string
-	// ETA - promise to accept joiner node to the network (in seconds).
-	ETA int
-	// AssignShortID is an demand to use this short id.
-	AssignShortID insolar.ShortNodeID
-	// UpdateSincePulse is a pulse number from which origin have to update storage.
-	UpdateSincePulse insolar.PulseNumber
-	// NetworkSize is a size of the network from bootstrap node.
-	NetworkSize int
-	// Permission is a information for reconnect to another discovery node.
-	Permission Permission
-}
-
-type GenesisRequest struct {
-	LastPulse insolar.PulseNumber
-	Discovery *NodeStruct
-}
-
-type GenesisResponse struct {
-	Response GenesisRequest
-	Error    string
-}
-
-type StartSessionRequest struct{}
-
-type StartSessionResponse struct {
-	SessionID SessionID
-}
-
-type NodeStruct struct {
-	ID      insolar.Reference
-	SID     insolar.ShortNodeID
-	Role    insolar.StaticRole
-	PK      []byte
-	Address string
-	Version string
-}
-
-func newNode(n *NodeStruct) (insolar.NetworkNode, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
-	if err != nil {
-		return nil, errors.Wrap(err, "error deserializing node public key")
-	}
-
-	result := node.NewNode(n.ID, n.Role, pk, n.Address, n.Version)
-	mNode := result.(node.MutableNode)
-	mNode.SetShortID(n.SID)
-	return mNode, nil
-}
-
-func newNodeStruct(node insolar.NetworkNode) (*NodeStruct, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
-	if err != nil {
-		return nil, errors.Wrap(err, "error serializing node public key")
-	}
-
-	return &NodeStruct{
-		ID:      node.ID(),
-		SID:     node.ShortID(),
-		Role:    node.Role(),
-		PK:      pk,
-		Address: node.Address(),
-		Version: node.Version(),
-	}, nil
-}
-
-// Code is bootstrap result code
-type Code uint8
-
-const (
-	Accepted = Code(iota + 1)
-	Rejected
-	Redirected
-	ReconnectRequired
-	UpdateSchedule
-)
-
-func init() {
-	gob.Register(&NodeBootstrapRequest{})
-	gob.Register(&NodeBootstrapResponse{})
-	gob.Register(&StartSessionRequest{})
-	gob.Register(&StartSessionResponse{})
-	gob.Register(&GenesisRequest{})
-	gob.Register(&GenesisResponse{})
-}
-
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
-func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error) {
+func (bc *Bootstrap) Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
 	defer span.End()
@@ -285,7 +172,7 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	return result, &DiscoveryNode{result.Host, discovery}, nil
 }
 
-func (bc *bootstrapper) SetLastPulse(number insolar.PulseNumber) {
+func (bc *Bootstrap) SetLastPulse(number insolar.PulseNumber) {
 	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.SetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.Lock()
 	span.End()
@@ -298,7 +185,7 @@ func (bc *bootstrapper) SetLastPulse(number insolar.PulseNumber) {
 	}
 }
 
-func (bc *bootstrapper) forceSetLastPulse(number insolar.PulseNumber) {
+func (bc *Bootstrap) forceSetLastPulse(number insolar.PulseNumber) {
 	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.forceSetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.Lock()
 	span.End()
@@ -308,7 +195,7 @@ func (bc *bootstrapper) forceSetLastPulse(number insolar.PulseNumber) {
 	bc.lastPulse = number
 }
 
-func (bc *bootstrapper) GetLastPulse() insolar.PulseNumber {
+func (bc *Bootstrap) GetLastPulse() insolar.PulseNumber {
 	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.GetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.RLock()
 	span.End()
@@ -317,7 +204,7 @@ func (bc *bootstrapper) GetLastPulse() insolar.PulseNumber {
 	return bc.lastPulse
 }
 
-func (bc *bootstrapper) checkActiveNode(node insolar.NetworkNode) error {
+func (bc *Bootstrap) checkActiveNode(node insolar.NetworkNode) error {
 	n := bc.NodeKeeper.GetAccessor().GetActiveNode(node.ID())
 	if n != nil {
 		return errors.Errorf("NetworkNode ID collision: %s", n.ID())
@@ -333,7 +220,7 @@ func (bc *bootstrapper) checkActiveNode(node insolar.NetworkNode) error {
 	return nil
 }
 
-func (bc *bootstrapper) ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error) {
+func (bc *Bootstrap) ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error) {
 	host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a host")
@@ -347,7 +234,7 @@ func (bc *bootstrapper) ZeroBootstrap(ctx context.Context) (*network.BootstrapRe
 }
 
 // BootstrapDiscovery bootstrapping as discovery node
-func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
+func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ BootstrapDiscovery ] Network bootstrap between discovery nodes")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.BootstrapDiscovery")
@@ -410,10 +297,10 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		go bc.startCyclicBootstrap(ctx)
 	}
 
-	return parseBotstrapResults(bootstrapResults), nil
+	return parseBootstrapResults(bootstrapResults), nil
 }
 
-func (bc *bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulses []insolar.PulseNumber) insolar.PulseNumber {
+func (bc *Bootstrap) calculateLastIgnoredPulse(ctx context.Context, lastPulses []insolar.PulseNumber) insolar.PulseNumber {
 	maxLastPulse := bc.GetLastPulse()
 	inslogger.FromContext(ctx).Debugf("NetworkNode %s (origin) LastIgnoredPulse: %d", bc.NodeKeeper.GetOrigin().ID(), maxLastPulse)
 	for _, pulse := range lastPulses {
@@ -424,18 +311,18 @@ func (bc *bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulse
 	return maxLastPulse
 }
 
-func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*GenesisResponse, error) {
+func (bc *Bootstrap) sendGenesisRequest(ctx context.Context, h *host.Host) (*packet.GenesisResponse, error) {
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.sendGenesisRequest")
 	defer span.End()
-	discovery, err := newNodeStruct(bc.NodeKeeper.GetOrigin())
+	discovery, err := bc.NodeKeeper.GetOriginJoinClaim()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to prepare genesis request to address %s", h)
 	}
-	request := bc.Network.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
+	request := &packet.GenesisRequest{
 		LastPulse: bc.GetLastPulse(),
 		Discovery: discovery,
-	}).Build()
-	future, err := bc.Network.SendRequestToHost(ctx, request, h)
+	}
+	future, err := bc.Network.SendRequestToHost(ctx, types.Genesis, request, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send genesis request to address %s", h)
 	}
@@ -443,18 +330,22 @@ func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to get response to genesis request from address %s", h)
 	}
-	data := response.GetData().(*GenesisResponse)
+	if response.GetResponse() == nil || response.GetResponse().GetGenesis() == nil {
+		return nil, errors.Errorf("Failed to get response to genesis request from address %s: "+
+			"got incorrect response: %s", h, response)
+	}
+	data := response.GetResponse().GetGenesis()
 	if data.Response.Discovery == nil {
 		return nil, errors.New("Error genesis response from discovery node: " + data.Error)
 	}
 	return data, nil
 }
 
-func (bc *bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []insolar.DiscoveryNode, needResponses int) <-chan *network.BootstrapResult {
+func (bc *Bootstrap) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []insolar.DiscoveryNode, needResponses int) <-chan *network.BootstrapResult {
 	// we need only one host to bootstrap
 	bootstrapResults := make(chan *network.BootstrapResult, needResponses)
 	for _, discoveryNode := range discoveryNodes {
-		go func(ctx context.Context, address string, ch chan<- *network.BootstrapResult) {
+		go func(ctx context.Context, address string) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
 			ctx, span := instracer.StartSpan(ctx, "Bootstrapper.getDiscoveryNodesChannel")
 			defer span.End()
@@ -467,18 +358,18 @@ func (bc *bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryN
 				return
 			}
 			bootstrapResults <- bootstrapResult
-		}(ctx, discoveryNode.GetHost(), bootstrapResults)
+		}(ctx, discoveryNode.GetHost())
 	}
 
 	return bootstrapResults
 }
 
-func (bc *bootstrapper) getGenesisRequestsChannel(ctx context.Context, discoveryHosts []*host.Host) chan *GenesisResponse {
-	result := make(chan *GenesisResponse)
+func (bc *Bootstrap) getGenesisRequestsChannel(ctx context.Context, discoveryHosts []*host.Host) chan *packet.GenesisResponse {
+	result := make(chan *packet.GenesisResponse)
 	for _, discoveryHost := range discoveryHosts {
-		go func(ctx context.Context, address *host.Host, ch chan<- *GenesisResponse) {
+		go func(ctx context.Context, address *host.Host, ch chan<- *packet.GenesisResponse) {
 			logger := inslogger.FromContext(ctx)
-			ctx, span := instracer.StartSpan(ctx, "Bootsytrapper.getGenesisRequestChannel")
+			ctx, span := instracer.StartSpan(ctx, "Bootstrapper.getGenesisRequestChannel")
 			span.AddAttributes(
 				trace.StringAttribute("genesis request to", address.String()),
 			)
@@ -486,7 +377,7 @@ func (bc *bootstrapper) getGenesisRequestsChannel(ctx context.Context, discovery
 			cachedReq := bc.getRequest(address.NodeID)
 			if cachedReq != nil {
 				logger.Infof("Got genesis info of node %s from cache", address)
-				ch <- &GenesisResponse{Response: *cachedReq}
+				ch <- &packet.GenesisResponse{Response: cachedReq}
 				return
 			}
 
@@ -502,7 +393,7 @@ func (bc *bootstrapper) getGenesisRequestsChannel(ctx context.Context, discovery
 	return result
 }
 
-func (bc *bootstrapper) waitResultFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult) *network.BootstrapResult {
+func (bc *Bootstrap) waitResultFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult) *network.BootstrapResult {
 	for {
 		select {
 		case bootstrapHost := <-ch:
@@ -514,7 +405,7 @@ func (bc *bootstrapper) waitResultFromChannel(ctx context.Context, ch <-chan *ne
 	}
 }
 
-func (bc *bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult, count int) ([]*network.BootstrapResult, []*host.Host) {
+func (bc *Bootstrap) waitResultsFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult, count int) ([]*network.BootstrapResult, []*host.Host) {
 	result := make([]*network.BootstrapResult, 0)
 	hosts := make([]*host.Host, 0)
 	for {
@@ -532,13 +423,15 @@ func (bc *bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *n
 	}
 }
 
-func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *GenesisResponse, count int) ([]insolar.NetworkNode, []insolar.PulseNumber, error) {
+func (bc *Bootstrap) waitGenesisResults(ctx context.Context, ch <-chan *packet.GenesisResponse,
+	count int) ([]insolar.NetworkNode, []insolar.PulseNumber, error) {
+
 	result := make([]insolar.NetworkNode, 0)
 	lastPulses := make([]insolar.PulseNumber, 0)
 	for {
 		select {
 		case res := <-ch:
-			discovery, err := newNode(res.Response.Discovery)
+			discovery, err := node.ClaimToNode(version.Version, res.Response.Discovery)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "Error deserializing node from discovery node")
 			}
@@ -554,9 +447,11 @@ func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *Genes
 	}
 }
 
-type bootstrapFunc func(context.Context, string, *Permission) (*network.BootstrapResult, error)
+type bootstrapFunc func(context.Context, string, *packet.Permission) (*network.BootstrapResult, error)
 
-func bootstrap(ctx context.Context, address string, options *common.Options, bootstrapF bootstrapFunc, perm *Permission) (*network.BootstrapResult, error) {
+func bootstrap(ctx context.Context, address string, options *common.Options, bootstrapF bootstrapFunc,
+	perm *packet.Permission) (*network.BootstrapResult, error) {
+
 	minTO := options.MinTimeout
 	if !options.InfinityBootstrap {
 		return bootstrapF(ctx, address, perm)
@@ -574,7 +469,9 @@ func bootstrap(ctx context.Context, address string, options *common.Options, boo
 	}
 }
 
-func (bc *bootstrapper) startBootstrap(ctx context.Context, address string, perm *Permission) (*network.BootstrapResult, error) {
+func (bc *Bootstrap) startBootstrap(ctx context.Context, address string,
+	perm *packet.Permission) (*network.BootstrapResult, error) {
+
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.startBootstrap")
 	defer span.End()
 	bootstrapHost, err := bc.pinger.Ping(ctx, address, bc.options.PingTimeout)
@@ -590,24 +487,12 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string, perm
 		lastPulse = *insolar.GenesisPulse
 	}
 
-	bootstrapReq := &NodeBootstrapRequest{
-		JoinClaim:     *claim,
+	request := &packet.BootstrapRequest{
+		JoinClaim:     claim,
 		LastNodePulse: lastPulse.PulseNumber,
+		Permission:    perm,
 	}
-
-	if perm == nil {
-		proc := platformpolicy.NewKeyProcessor()
-		key, err := proc.ExportPublicKeyBinary(bc.Certificate.GetPublicKey())
-		if err != nil {
-			return nil, errors.Wrap(err, "Failed to export an origin pub key")
-		}
-		bootstrapReq.Permission.JoinerPublicKey = key
-	} else {
-		bootstrapReq.Permission = *perm
-	}
-
-	request := bc.Network.NewRequestBuilder().Type(types.Bootstrap).Data(bootstrapReq).Build()
-	future, err := bc.Network.SendRequestToHost(ctx, request, bootstrapHost)
+	future, err := bc.Network.SendRequestToHost(ctx, types.Bootstrap, request, bootstrapHost)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
 	}
@@ -616,28 +501,34 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string, perm
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
 	}
-
-	data := response.GetData().(*NodeBootstrapResponse)
+	if response.GetResponse() == nil || response.GetResponse().GetBootstrap() == nil {
+		return nil, errors.Errorf("Failed to get response to bootstrap request from address %s: "+
+			"got incorrect response: %s", address, response)
+	}
+	data := response.GetResponse().GetBootstrap()
 	logger := inslogger.FromContext(ctx)
-
 	switch data.Code {
-	case Rejected:
+	case packet.Rejected:
 		return nil, errors.New("Rejected: " + data.RejectReason)
-	case Redirected:
-		logger.Infof("bootstrap redirected from %s to %s", bc.NodeKeeper.GetOrigin().Address(), data.Permission.ReconnectTo)
-		return bootstrap(ctx, data.Permission.ReconnectTo, bc.options, bc.startBootstrap, &data.Permission)
-	case UpdateSchedule:
+	case packet.Redirected:
+		// TODO: handle this case somehow
+		if data.Permission == nil {
+			return nil, errors.Errorf("discovery node %s returned empty permission for redirect", address)
+		}
+		logger.Infof("bootstrap redirected from %s to %s", address, data.Permission.Payload.ReconnectTo)
+		return bootstrap(ctx, data.Permission.Payload.ReconnectTo, bc.options, bc.startBootstrap, data.Permission)
+	case packet.UpdateSchedule:
 		// TODO: INS-1960
 	}
 
 	return &network.BootstrapResult{
 		Host:              response.GetSenderHost(),
-		ReconnectRequired: data.Code == ReconnectRequired,
-		NetworkSize:       data.NetworkSize,
+		ReconnectRequired: data.Code == packet.ReconnectRequired,
+		NetworkSize:       int(data.NetworkSize),
 	}, nil
 }
 
-func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
+func (bc *Bootstrap) startCyclicBootstrap(ctx context.Context) {
 	for atomic.LoadInt32(&bc.cyclicBootstrapStop) == 0 {
 		results := make([]*network.BootstrapResult, 0)
 		nodes := bc.getInactivenodes()
@@ -651,7 +542,7 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 			results = append(results, res)
 		}
 		if len(results) != 0 {
-			index := bc.getLagerNetorkIndex(ctx, results)
+			index := bc.getLargerNetworkIndex(results)
 			if index >= 0 {
 				bc.reconnectToNewNetwork(ctx, nodes[index].GetHost())
 			}
@@ -660,7 +551,7 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 	}
 }
 
-func (bc *bootstrapper) getLagerNetorkIndex(ctx context.Context, results []*network.BootstrapResult) int {
+func (bc *Bootstrap) getLargerNetworkIndex(results []*network.BootstrapResult) int {
 	networkSize := results[0].NetworkSize
 	index := 0
 	for i := 1; i < len(results); i++ {
@@ -675,106 +566,104 @@ func (bc *bootstrapper) getLagerNetorkIndex(ctx context.Context, results []*netw
 	return -1
 }
 
-func (bc *bootstrapper) StopCyclicBootstrap() {
+func (bc *Bootstrap) StopCyclicBootstrap() {
 	atomic.StoreInt32(&bc.cyclicBootstrapStop, 1)
 }
 
-func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
-	var code Code
-	bootstrapRequest := request.GetData().(*NodeBootstrapRequest)
-	if bootstrapRequest == nil {
-		return nil, errors.New("received broken bootstrap request")
+func (bc *Bootstrap) nodeShouldReconnectAsJoiner(nodeID insolar.Reference) bool {
+	return bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState &&
+		utils.IsDiscovery(nodeID, bc.Certificate)
+}
+
+func (bc *Bootstrap) processBootstrap(ctx context.Context, request network.Packet) (network.Packet, error) {
+	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
+		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
 	}
+
+	code := packet.Accepted
+	data := request.GetRequest().GetBootstrap()
 	var shortID insolar.ShortNodeID
-	if CheckShortIDCollision(bc.NodeKeeper, bootstrapRequest.JoinClaim.ShortNodeID) {
-		shortID = GenerateShortID(bc.NodeKeeper, bootstrapRequest.JoinClaim.GetNodeID())
+	if CheckShortIDCollision(bc.NodeKeeper, data.JoinClaim.ShortNodeID) {
+		shortID = GenerateShortID(bc.NodeKeeper, data.JoinClaim.GetNodeID())
 	} else {
-		shortID = bootstrapRequest.JoinClaim.ShortNodeID
+		shortID = data.JoinClaim.ShortNodeID
 	}
 	lastPulse, err := bc.PulseAccessor.Latest(ctx)
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
 	}
 
-	if permissionIsEmpty(bootstrapRequest.Permission) {
-		code = Redirected
-		err := bc.updatePermissionsOnRequest(bootstrapRequest)
+	var perm *packet.Permission
+	if bc.nodeShouldReconnectAsJoiner(data.JoinClaim.NodeRef) { //nolint
+		code = packet.ReconnectRequired
+	} else if data.Permission == nil {
+		code = packet.Redirected
+		perm, err = bc.generatePermission(data.JoinClaim.NodePK[:])
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to update a permission in request")
+			err = errors.Wrapf(err, "failed to generate permission")
+			return bc.rejectBootstrapRequest(ctx, request, err.Error()), nil
 		}
 	} else {
-		code, err = bc.getCodeFromPermission(bootstrapRequest.Permission)
+		err = bc.checkPermission(data.Permission)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get a code from permission")
+			err = errors.Wrapf(err, "failed to check permission")
+			return bc.rejectBootstrapRequest(ctx, request, err.Error()), nil
 		}
 	}
 
-	if bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState {
-		code = ReconnectRequired
-	}
-
+	networkSize := uint32(len(bc.NodeKeeper.GetAccessor().GetActiveNodes()))
 	return bc.Network.BuildResponse(ctx, request,
-		&NodeBootstrapResponse{
-			Code:         code,
-			RejectReason: "",
-			// TODO: calculate an ETA
-			AssignShortID:    shortID,
+		&packet.BootstrapResponse{
+			Code: code,
+			// TODO: calculate ETA
+			AssignShortID:    uint32(shortID),
 			UpdateSincePulse: lastPulse.PulseNumber,
-			NetworkSize:      len(bc.NodeKeeper.GetAccessor().GetActiveNodes()),
-			Permission:       bootstrapRequest.Permission,
+			NetworkSize:      networkSize,
+			Permission:       perm,
 		}), nil
 }
 
-func (bc *bootstrapper) getCodeFromPermission(permission Permission) (Code, error) {
-	verified, err := bc.checkPermissionSign(permission)
-	if err != nil {
-		return Rejected, errors.Wrap(err, "failed to check a permission sign")
-	}
-	if !verified {
-		return Rejected, errors.New("failed to verify a permission sign")
-	}
-
-	// TODO: INS-1960
-	// etaDiff := time.Since(permission.UTC)
-	// if etaDiff > updateScheduleETA {
-	// 	return UpdateSchedule, nil
-	// }
-
-	return Accepted, nil
+func (bc *Bootstrap) rejectBootstrapRequest(ctx context.Context, request network.Packet, reason string) network.Packet {
+	inslogger.FromContext(ctx).Errorf("Rejected bootstrap request from node %s: %s", request.GetSender(), reason)
+	return bc.Network.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Rejected, RejectReason: reason})
 }
 
-func (bc *bootstrapper) updatePermissionsOnRequest(request *NodeBootstrapRequest) error {
-	request.Permission.DiscoveryRef = bc.NodeKeeper.GetOrigin().ID()
-	t, err := time.Now().GobEncode()
-	if err != nil {
-		return errors.Wrap(err, "failed to encode a time")
-	}
-	request.Permission.UTC = t
-	request.Permission.ReconnectTo = bc.getRandActiveDiscoveryAddress()
+func (bc *Bootstrap) generatePermission(joinerPublicKey []byte) (*packet.Permission, error) {
+	result := packet.Permission{
+		Payload: packet.PermissionPayload{
+			DiscoveryRef:    bc.NodeKeeper.GetOrigin().ID(),
+			UTC:             time.Now().Unix(),
+			ReconnectTo:     bc.getRandActiveDiscoveryAddress(),
+			JoinerPublicKey: joinerPublicKey,
+		}}
 
-	sign, err := bc.getPermissionSign(request.Permission)
+	sign, err := bc.signPermission(&result.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to get a permission sign")
+		return nil, errors.Wrap(err, "failed to sign permission")
 	}
 
-	request.Permission.Signature = sign
-	return nil
+	result.Signature = sign
+	return &result, nil
 }
 
-func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Request) (network.Response, error) {
-	data := request.GetData().(*GenesisRequest)
-	discovery, err := newNodeStruct(bc.NodeKeeper.GetOrigin())
+func (bc *Bootstrap) processGenesis(ctx context.Context, request network.Packet) (network.Packet, error) {
+	if request.GetRequest() == nil || request.GetRequest().GetGenesis() == nil {
+		return nil, errors.Errorf("process genesis: got invalid protobuf request message: %s", request)
+	}
+
+	data := request.GetRequest().GetGenesis()
+	discovery, err := bc.NodeKeeper.GetOriginJoinClaim()
 	if err != nil {
-		return bc.Network.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
+		return bc.Network.BuildResponse(ctx, request, &packet.GenesisResponse{Error: err.Error()}), nil
 	}
 	bc.SetLastPulse(data.LastPulse)
 	bc.setRequest(request.GetSender(), data)
-	return bc.Network.BuildResponse(ctx, request, &GenesisResponse{
-		Response: GenesisRequest{Discovery: discovery, LastPulse: bc.GetLastPulse()},
+	return bc.Network.BuildResponse(ctx, request, &packet.GenesisResponse{
+		Response: &packet.GenesisRequest{Discovery: discovery, LastPulse: bc.GetLastPulse()},
 	}), nil
 }
 
-func (bc *bootstrapper) Init(ctx context.Context) error {
+func (bc *Bootstrap) Init(ctx context.Context) error {
 	bc.firstPulseTime = time.Now()
 	bc.pinger = pinger.NewPinger(bc.Network)
 	bc.Network.RegisterRequestHandler(types.Bootstrap, bc.processBootstrap)
@@ -782,7 +671,7 @@ func (bc *bootstrapper) Init(ctx context.Context) error {
 	return nil
 }
 
-func parseBotstrapResults(results []*network.BootstrapResult) *network.BootstrapResult {
+func parseBootstrapResults(results []*network.BootstrapResult) *network.BootstrapResult {
 	minIDIndex := 0
 	minID := results[0].Host.NodeID
 	for i, result := range results {
@@ -793,7 +682,7 @@ func parseBotstrapResults(results []*network.BootstrapResult) *network.Bootstrap
 	return results[minIDIndex]
 }
 
-func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
+func (bc *Bootstrap) getInactivenodes() []insolar.DiscoveryNode {
 	res := make([]insolar.DiscoveryNode, 0)
 	for _, node := range bc.Certificate.GetDiscoveryNodes() {
 		if bc.NodeKeeper.GetAccessor().GetActiveNode(*node.GetNodeRef()) != nil {
@@ -803,24 +692,31 @@ func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
 	return res
 }
 
-func (bc *bootstrapper) checkPermissionSign(permission Permission) (bool, error) {
+func (bc *Bootstrap) checkPermission(permission *packet.Permission) error {
 	nodes := bc.Certificate.GetDiscoveryNodes()
 	var discoveryPubKey crypto.PublicKey
 	found := false
 	for _, node := range nodes {
-		if node.GetNodeRef().Equal(permission.DiscoveryRef) {
+		if node.GetNodeRef().Equal(permission.Payload.DiscoveryRef) {
 			discoveryPubKey = node.GetPublicKey()
 			found = true
 		}
 	}
 	if !found {
-		return false, errors.New("failed to find a discovery node from reference in permission")
+		return errors.New("failed to find a discovery node from reference in permission")
 	}
-	verified := bc.Cryptography.Verify(discoveryPubKey, insolar.SignatureFromBytes(permission.Signature), permission.RawBytes())
-	return verified, nil
+	payload, err := permission.Payload.Marshal()
+	if err != nil {
+		return errors.New("failed to marshal bootstrap permission payload part")
+	}
+	verified := bc.Cryptography.Verify(discoveryPubKey, insolar.SignatureFromBytes(permission.Signature), payload)
+	if !verified {
+		return errors.New("bootstrap permission payload verification failed")
+	}
+	return nil
 }
 
-func (bc *bootstrapper) getRandActiveDiscoveryAddress() string {
+func (bc *Bootstrap) getRandActiveDiscoveryAddress() string {
 	if len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) <= 1 {
 		return bc.NodeKeeper.GetOrigin().Address()
 	}
@@ -835,32 +731,23 @@ func (bc *bootstrapper) getRandActiveDiscoveryAddress() string {
 	return bc.NodeKeeper.GetOrigin().Address()
 }
 
-func (bc *bootstrapper) getPermissionSign(perm Permission) ([]byte, error) {
-	sign, err := bc.Cryptography.Sign(perm.RawBytes())
+func (bc *Bootstrap) signPermission(perm *packet.PermissionPayload) ([]byte, error) {
+	data, err := perm.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign a permission")
+		return nil, errors.Wrap(err, "failed to marshal bootstrap permission")
+	}
+	sign, err := bc.Cryptography.Sign(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign bootstrap permission")
 	}
 	return sign.Bytes(), nil
 }
 
-func permissionIsEmpty(perm Permission) bool {
-	if len(perm.ReconnectTo) == 0 {
-		return true
-	}
-	if perm.DiscoveryRef.IsEmpty() {
-		return true
-	}
-	if len(perm.Signature) == 0 {
-		return true
-	}
-	return false
-}
-
-func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, address string)) Bootstrapper {
-	return &bootstrapper{
+func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, address string)) *Bootstrap {
+	return &Bootstrap{
 		options:                 options,
 		bootstrapLock:           make(chan struct{}),
-		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
+		genesisRequestsReceived: make(map[insolar.Reference]*packet.GenesisRequest),
 		reconnectToNewNetwork:   reconnectToNewNetwork,
 	}
 }

@@ -88,7 +88,7 @@ func (*CallMethod) DefaultRole() insolar.DynamicRole {
 func (cm *CallMethod) DefaultTarget() *insolar.Reference {
 	switch cm.CallType {
 	case record.CTSaveAsChild:
-		return genRequest(cm.PulseNum, MustSerializeBytes(cm), &insolar.DomainID)
+		return genRequest(cm.PulseNum, MustSerializeBytes(cm))
 	case record.CTSaveAsDelegate:
 		return cm.Base
 	default:
@@ -98,7 +98,7 @@ func (cm *CallMethod) DefaultTarget() *insolar.Reference {
 
 func (cm *CallMethod) GetReference() insolar.Reference {
 	if cm.CallType != record.CTMethod {
-		return *genRequest(cm.PulseNum, MustSerializeBytes(cm), &insolar.DomainID)
+		return *genRequest(cm.PulseNum, MustSerializeBytes(cm))
 	}
 	return *cm.Object
 }
@@ -237,11 +237,8 @@ func (vr *ValidationResults) GetReference() insolar.Reference {
 var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
 
 // GenRequest calculates Reference for request message from pulse number and request's payload.
-func genRequest(pn insolar.PulseNumber, payload []byte, domain *insolar.ID) *insolar.Reference {
-	ref := insolar.NewReference(
-		*domain,
-		*insolar.NewID(pn, hasher.Hash(payload)),
-	)
+func genRequest(pn insolar.PulseNumber, payload []byte) *insolar.Reference {
+	ref := insolar.NewReference(*insolar.NewID(pn, hasher.Hash(payload)))
 	return ref
 }
 

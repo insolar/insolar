@@ -20,6 +20,7 @@ import (
 	"context"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -35,8 +36,13 @@ type ProcessExecutionQueue struct {
 }
 
 func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error {
+	ctx, span := instracer.StartSpan(ctx, "ProcessExecutionQueue")
+	defer span.End()
+
+	inslogger.FromContext(ctx).Debug("ProcessExecutionQueue")
+
 	lr := p.dep.lr
-	es := lr.getExecStateFromRef(ctx, p.Message.Payload)
+	es := lr.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
 	if es == nil {
 		return nil
 	}
@@ -44,7 +50,7 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 	for {
 		es.Lock()
 		if len(es.Queue) == 0 && es.LedgerQueueElement == nil {
-			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
+			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty. Ref: ", es.Ref.String())
 			es.QueueProcessorActive = false
 			es.Current = nil
 			es.Unlock()
@@ -98,6 +104,9 @@ type StartQueueProcessorIfNeeded struct {
 }
 
 func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) error {
+	ctx, span := instracer.StartSpan(ctx, "StartQueueProcessorIfNeeded")
+	defer span.End()
+
 	s.es.Lock()
 	defer s.es.Unlock()
 
@@ -118,9 +127,6 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 		return nil
 	}
 
-	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-	s.es.QueueProcessorActive = true
-
 	pub := s.dep.Publisher
 	rawRef := s.ref.Bytes()
 	err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, processExecutionQueueMsg))
@@ -131,6 +137,9 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 	if err != nil {
 		return errors.Wrap(err, "can't send getLedgerPendingRequestMsg")
 	}
+
+	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+	s.es.QueueProcessorActive = true
 
 	return nil
 }

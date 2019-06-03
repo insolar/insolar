@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -93,7 +93,7 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 
 	am := gpr.lr.ArtifactManager
 
-	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
+	ctx, span := instracer.StartSpan(ctx, "RPC.GetCode")
 	defer span.End()
 
 	codeDescriptor, err := am.GetCode(ctx, req.Code)
@@ -112,23 +112,27 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 	defer recoverRPC(&err)
 
 	os := gpr.lr.MustObjectState(req.Callee)
-
-	if os.ExecutionState.Current.LogicContext.Immutable {
-		return errors.New("Try to call route from immutable method")
-	}
-
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
+
+	if es.Current.LogicContext.Immutable {
+		return errors.New("Try to call route from immutable method")
+	}
+
+	ctx, span := instracer.StartSpan(ctx, "RPC.RouteCall")
+	defer span.End()
+
 	// TODO: delegation token
 
-	es.nonce++
+	es.Current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.nonce,
+			Nonce:           es.Current.Nonce,
 
 			Immutable: req.Immutable,
 
@@ -163,13 +167,17 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	es.nonce++
+	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
+	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
+	defer span.End()
+
+	es.Current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.nonce,
+			Nonce:           es.Current.Nonce,
 
 			CallType:  record.CTSaveAsChild,
 			Base:      &req.Parent,
@@ -194,13 +202,17 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	es.nonce++
+	inslogger.FromContext(ctx).Debug("RPC.SaveAsDelegate")
+	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsDelegate")
+	defer span.End()
+
+	es.Current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.nonce,
+			Nonce:           es.Current.Nonce,
 
 			CallType:  record.CTSaveAsDelegate,
 			Base:      &req.Into,
@@ -232,6 +244,9 @@ func (gpr *RPC) GetObjChildrenIterator(
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
+
+	ctx, span := instracer.StartSpan(ctx, "RPC.GetObjChildrenIterator")
+	defer span.End()
 
 	am := gpr.lr.ArtifactManager
 	iteratorID := req.IteratorID
@@ -308,6 +323,10 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+	inslogger.FromContext(ctx).Debug("RPC.GetDelegate")
+	ctx, span := instracer.StartSpan(ctx, "RPC.GetDelegate")
+	defer span.End()
+
 	am := gpr.lr.ArtifactManager
 	ref, err := am.GetDelegate(ctx, req.Object, req.OfType)
 	if err != nil {
@@ -323,6 +342,6 @@ func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctyp
 
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
-	es.deactivate = true
+	es.Current.Deactivate = true
 	return nil
 }

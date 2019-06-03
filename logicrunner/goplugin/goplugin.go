@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"go.opencensus.io/stats"
 
@@ -79,6 +80,9 @@ const timeout = time.Minute * 10
 
 // Downstream returns a connection to `ginsider`
 func (gp *GoPlugin) Downstream(ctx context.Context) (*rpc.Client, error) {
+	_, span := instracer.StartSpan(ctx, "GoPlugin.Downstream")
+	defer span.End()
+
 	gp.clientMutex.Lock()
 	defer gp.clientMutex.Unlock()
 
@@ -118,6 +122,9 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 		inslogger.FromContext(ctx).Info("Connect to insgorund")
 		client, err = gp.Downstream(ctx)
 		if err == nil {
+			ctx, span := instracer.StartSpan(ctx, "GoPlugin callClientWithReconnect")
+			defer span.End()
+
 			call := <-client.Go(method, req, res, nil).Done
 			err = call.Error
 
@@ -159,6 +166,9 @@ func (gp *GoPlugin) CallMethod(
 ) {
 	ctx = insmetrics.InsertTag(ctx, tagMethodName, method)
 
+	ctx, span := instracer.StartSpan(ctx, "GoPlugin.CallMethod "+method)
+	defer span.End()
+
 	inslogger.FromContext(ctx).Debug("GoPlugin.CallMethod starts")
 	start := time.Now()
 	defer func() {
@@ -186,6 +196,7 @@ func (gp *GoPlugin) CallMethod(
 		}
 		return callResult.Response.Data, callResult.Response.Ret, nil
 	case <-time.After(timeout):
+		inslogger.FromContext(ctx).Debug("CallMethodRPC waiting results timeout")
 		return nil, nil, errors.New("logicrunner execution timeout")
 	}
 }
@@ -227,6 +238,7 @@ func (gp *GoPlugin) CallConstructor(
 		}
 		return callResult.Response.Ret, nil
 	case <-time.After(timeout):
+		inslogger.FromContext(ctx).Debug("CallConstructor waiting results timeout")
 		return nil, errors.New("logicrunner execution timeout")
 	}
 }

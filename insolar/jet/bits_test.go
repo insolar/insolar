@@ -17,10 +17,59 @@
 package jet
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
+
+// bitsToString converts byte slice to plain string representation in bits.
+func bitsToString(bitslice []byte) string {
+	var b strings.Builder
+	for _, bits := range bitslice {
+		fmt.Fprintf(&b, "%08b", bits)
+	}
+	return b.String()
+}
+
+// setBitsPrefix copies count bits from []bits to []in.
+func setBitsPrefix(in []byte, bits []byte, count int) []byte {
+	out := make([]byte, len(in))
+	// copy in to out
+	_ = copy(out, in)
+	if count > len(bits)*8 {
+		panic(fmt.Sprintf("count=%v is greater whan bits slice size in bits %v*8=%v",
+			count, len(bits), len(bits)*8))
+	}
+
+	// copy first bytes from bits, instead last byte if count%8 != 0
+	bytesTailOffset := count / 8
+	copy(out, bits[:bytesTailOffset])
+
+	bitsTailOffset := count % 8
+	if bitsTailOffset == 0 {
+		return out
+	}
+
+	// preserve last bits in last modified byte in []in
+	// overwrite other bits by first bits from []bits
+
+	// switch first bits in last byte of []in to 0
+	// [1011 0110], bitsTailOffset=5 -> 0000 0111 (mask: 00000111)
+	inMask := byte(0xFF)
+	inMask >>= byte(bitsTailOffset)
+	inMask &= in[bytesTailOffset]
+	// switch last bits in last byte of []bits to 0
+	// [0110 1101], bitsTailOffset=5 -> 0110 1000 (mask: 11111000)
+	bitsMask := byte(0xFF)
+	bitsMask <<= 8 - byte(bitsTailOffset)
+	bitsMask &= bits[bytesTailOffset]
+	// bits[bytesTailOffset][:bitsTailOffset] + in[bytesTailOffset][bitsTailOffset:]
+	out[bytesTailOffset] = inMask | bitsMask
+
+	return out
+}
 
 func TestJetStorage_bitsToString(t *testing.T) {
 	cases := map[string][]byte{

@@ -58,22 +58,23 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 type future struct {
-	response       chan network.Response
+	response       chan network.Packet
 	receiver       *host.Host
 	request        *packet.Packet
-	requestID      network.RequestID
+	requestID      types.RequestID
 	cancelCallback CancelCallback
 	finished       uint32
 }
 
 // NewFuture creates a new Future.
-func NewFuture(requestID network.RequestID, receiver *host.Host, packet *packet.Packet, cancelCallback CancelCallback) Future {
-	metrics.NetworkFutures.WithLabelValues(packet.Type.String()).Inc()
+func NewFuture(requestID types.RequestID, receiver *host.Host, packet *packet.Packet, cancelCallback CancelCallback) Future {
+	metrics.NetworkFutures.WithLabelValues(packet.GetType().String()).Inc()
 	return &future{
-		response:       make(chan network.Response, 1),
+		response:       make(chan network.Packet, 1),
 		receiver:       receiver,
 		request:        packet,
 		requestID:      requestID,
@@ -82,7 +83,7 @@ func NewFuture(requestID network.RequestID, receiver *host.Host, packet *packet.
 }
 
 // ID returns RequestID of packet.
-func (f *future) ID() network.RequestID {
+func (f *future) ID() types.RequestID {
 	return f.requestID
 }
 
@@ -92,17 +93,17 @@ func (f *future) Receiver() *host.Host {
 }
 
 // Request returns original request packet.
-func (f *future) Request() network.Request {
+func (f *future) Request() network.Packet {
 	return f.request
 }
 
 // Response returns response packet channel.
-func (f *future) Response() <-chan network.Response {
+func (f *future) Response() <-chan network.Packet {
 	return f.response
 }
 
 // SetResponse write packet to the response channel.
-func (f *future) SetResponse(response network.Response) {
+func (f *future) SetResponse(response network.Packet) {
 	if atomic.CompareAndSwapUint32(&f.finished, 0, 1) {
 		f.response <- response
 		f.finish()
@@ -110,7 +111,7 @@ func (f *future) SetResponse(response network.Response) {
 }
 
 // WaitResponse gets the future response from Response() channel with a timeout set to `duration`.
-func (f *future) WaitResponse(duration time.Duration) (network.Response, error) {
+func (f *future) WaitResponse(duration time.Duration) (network.Packet, error) {
 	select {
 	case response, ok := <-f.Response():
 		if !ok {
@@ -119,7 +120,7 @@ func (f *future) WaitResponse(duration time.Duration) (network.Response, error) 
 		return response, nil
 	case <-time.After(duration):
 		f.Cancel()
-		metrics.NetworkPacketTimeoutTotal.WithLabelValues(f.request.Type.String()).Inc()
+		metrics.NetworkPacketTimeoutTotal.WithLabelValues(f.request.GetType().String()).Inc()
 		return nil, ErrTimeout
 	}
 }
@@ -130,7 +131,7 @@ func (f *future) WaitResponse(duration time.Duration) (network.Response, error) 
 func (f *future) Cancel() {
 	if atomic.CompareAndSwapUint32(&f.finished, 0, 1) {
 		f.finish()
-		metrics.NetworkFutures.WithLabelValues(f.request.Type.String()).Dec()
+		metrics.NetworkFutures.WithLabelValues(f.request.GetType().String()).Dec()
 	}
 }
 

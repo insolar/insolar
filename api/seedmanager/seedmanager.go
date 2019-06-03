@@ -25,10 +25,10 @@ import (
 type Expiration = int64
 
 // DefaultTTL is default time period for deleting expired seeds
-const DefaultTTL = time.Duration(1 * time.Second)
+const DefaultTTL = 1 * time.Second
 
 // DefaultCleanPeriod default time period for launching cleaning goroutine
-const DefaultCleanPeriod = time.Duration(1 * time.Second)
+const DefaultCleanPeriod = 1 * time.Second
 
 // SeedManager manages working with seed pool
 // It's thread safe
@@ -44,8 +44,8 @@ func New() *SeedManager {
 }
 
 // NewSpecified creates new seed manager with custom params
-func NewSpecified(TTL time.Duration, cleanPeriod time.Duration) *SeedManager {
-	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: TTL}
+func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
+	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: ttl}
 	go func() {
 		for range time.Tick(cleanPeriod) {
 			sm.deleteExpired()
