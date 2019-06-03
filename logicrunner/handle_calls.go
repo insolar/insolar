@@ -70,7 +70,7 @@ func (h *HandleCall) handleActual(
 		if err == flow.ErrCancelled {
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
-		return nil, errors.Wrap(err, "[ handleActual ] can't play role")
+		return nil, errors.Wrap(err, "[ HandleCall ] can't play role")
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
@@ -89,7 +89,7 @@ func (h *HandleCall) handleActual(
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
-		return nil, os.WrapError(err, "[ Execute ] can't create request")
+		return nil, os.WrapError(err, "[ HandleCall ] can't create request")
 	}
 	request := procRegisterRequest.getResult()
 
@@ -151,7 +151,7 @@ func (h *HandleCall) handleActual(
 		ref: &ref,
 	}
 	if err := f.Handle(ctx, s.Present); err != nil {
-		inslogger.FromContext(ctx).Warn("[ handleActual ] StartQueueProcessorIfNeeded returns error: ", err)
+		inslogger.FromContext(ctx).Warn("[ HandleCall ] StartQueueProcessorIfNeeded returns error: ", err)
 	}
 
 	return &reply.RegisterRequest{
@@ -190,16 +190,64 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 	Message bus.Message
 }
 
-// Please note that currently we completely lack any fraud detection here.
+// AALEKSEEV TODO WRITE A UNIT TEST FOR THIS
+// This is basically a simplified version of HandleCall.handleActual().
+// Please note that currently we lack any fraud detection here.
 // Ideally we should check that the previous executor was really an executor
-// during previous pulse, that the request was really registered, etc...
+// during previous pulse, that the request was really registered, etc.
+// Also we don't handle case when pulse changes during execution of this handle.
+// In this scenario user is in a bad luck. The request will be lost and user will have
+// to re-send it after some timeout.
 func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	ctx context.Context,
 	parcel insolar.Parcel,
 	msg *message.AdditionalCallFromPreviousExecutor,
 	f flow.Flow,
 ) (insolar.Reply, error) {
-	// TODO AALEKSEEV implement
+	lr := h.dep.lr
+	ref := msg.Reference
+	os := lr.UpsertObjectState(ref)
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		os.ExecutionState = &ExecutionState{
+			Ref:   ref,
+			Queue: make([]ExecutionQueueElement, 0),
+		}
+	}
+	es := os.ExecutionState
+	os.Unlock()
+
+	es.Lock()
+	qElement := ExecutionQueueElement{
+		ctx:     ctx,
+		parcel:  msg.QueueElement.Parcel,
+		request: msg.QueueElement.Request,
+	}
+	es.Queue = append(es.Queue, qElement)
+	es.Unlock()
+
+	procClarifyPendingState := ClarifyPendingState{
+		es:              es,
+		parcel:          parcel,
+		ArtifactManager: lr.ArtifactManager,
+	}
+
+	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
+		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor ] ClarifyPendingState returns error: ", err)
+		// We intentionally report OK to the previous executor here. There is no point
+		// in resending the message or anything.
+		return &reply.OK{}, nil
+	}
+
+	s := StartQueueProcessorIfNeeded{
+		es:  es,
+		dep: h.dep,
+		ref: &ref,
+	}
+	if err := f.Handle(ctx, s.Present); err != nil {
+		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor ] StartQueueProcessorIfNeeded returns error: ", err)
+	}
 
 	return &reply.OK{}, nil
 }
