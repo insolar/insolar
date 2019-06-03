@@ -194,7 +194,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	ctx context.Context,
 	msg *message.AdditionalCallFromPreviousExecutor,
 	f flow.Flow,
-) (insolar.Reply, error) {
+) {
 	lr := h.dep.lr
 	ref := msg.ObjectReference
 
@@ -229,7 +229,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor ] ClarifyPendingState returns error: ", err)
 		// We intentionally report OK to the previous executor here. There is no point
 		// in resending the message or anything.
-		return &reply.OK{}, nil
+		return
 	}
 
 	s := StartQueueProcessorIfNeeded{
@@ -240,8 +240,6 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	if err := f.Handle(ctx, s.Present); err != nil {
 		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor ] StartQueueProcessorIfNeeded returns error: ", err)
 	}
-
-	return &reply.OK{}, nil
 }
 
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
@@ -260,7 +258,9 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 	)
 	defer span.End()
 
-	r := bus.Reply{}
-	r.Reply, r.Err = h.handleActual(ctx, msg, f)
+	h.handleActual(ctx, msg, f)
+
+	// we never return any other replies
+	h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}}
 	return nil
 }
