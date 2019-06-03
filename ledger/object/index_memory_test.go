@@ -578,7 +578,7 @@ func TestInMemoryIndex_MetaForObjID(t *testing.T) {
 		meta, err := idx.MetaForObjID(ctx, pn, objID)
 		require.NoError(t, err)
 
-		require.Nil(t, meta.PreviousPN)
+		require.Nil(t, meta.PrevSegmentPN)
 		require.Nil(t, meta.ReadUntil)
 		require.Equal(t, false, meta.IsStateCalculated)
 	})
@@ -597,11 +597,11 @@ func TestInMemoryIndex_MetaForObjID(t *testing.T) {
 		meta, err := idx.MetaForObjID(ctx, pn, objID)
 		require.NoError(t, err)
 
-		require.NotNil(t, meta.PreviousPN)
+		require.NotNil(t, meta.PrevSegmentPN)
 		require.NotNil(t, meta.ReadUntil)
 
 		require.Equal(t, false, meta.IsStateCalculated)
-		require.Equal(t, insolar.PulseNumber(888), *meta.PreviousPN)
+		require.Equal(t, insolar.PulseNumber(888), *meta.PrevSegmentPN)
 		require.Equal(t, insolar.PulseNumber(888), *meta.ReadUntil)
 	})
 }
@@ -613,7 +613,7 @@ func TestInMemoryIndex_SetReadUntil(t *testing.T) {
 		objID := gen.ID()
 		idx := NewInMemoryIndex()
 
-		err := idx.SetReadUntil(ctx, pn, objID, nil)
+		err := idx.SetLastOpenRequestPN(ctx, pn, objID, nil)
 
 		require.Error(t, err, ErrLifelineNotFound)
 	})
@@ -626,7 +626,7 @@ func TestInMemoryIndex_SetReadUntil(t *testing.T) {
 		idx.createBucket(ctx, pn, objID)
 
 		rupn := insolar.PulseNumber(10)
-		err := idx.SetReadUntil(ctx, pn, objID, &rupn)
+		err := idx.SetLastOpenRequestPN(ctx, pn, objID, &rupn)
 
 		require.NoError(t, err)
 		require.Equal(t, insolar.PulseNumber(10), *idx.buckets[pn][objID].pendingMeta.readPendingUntil)

@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -30,11 +30,6 @@ type PendingModifierMock struct {
 	SetFilamentCounter    uint64
 	SetFilamentPreCounter uint64
 	SetFilamentMock       mPendingModifierMockSetFilament
-
-	SetReadUntilFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) (r error)
-	SetReadUntilCounter    uint64
-	SetReadUntilPreCounter uint64
-	SetReadUntilMock       mPendingModifierMockSetReadUntil
 
 	SetRequestFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 record.Request) (r error)
 	SetRequestCounter    uint64
@@ -57,7 +52,6 @@ func NewPendingModifierMock(t minimock.Tester) *PendingModifierMock {
 
 	m.RefreshStateMock = mPendingModifierMockRefreshState{mock: m}
 	m.SetFilamentMock = mPendingModifierMockSetFilament{mock: m}
-	m.SetReadUntilMock = mPendingModifierMockSetReadUntil{mock: m}
 	m.SetRequestMock = mPendingModifierMockSetRequest{mock: m}
 	m.SetResultMock = mPendingModifierMockSetResult{mock: m}
 
@@ -359,156 +353,6 @@ func (m *PendingModifierMock) SetFilamentFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.SetFilamentFunc != nil {
 		return atomic.LoadUint64(&m.SetFilamentCounter) > 0
-	}
-
-	return true
-}
-
-type mPendingModifierMockSetReadUntil struct {
-	mock              *PendingModifierMock
-	mainExpectation   *PendingModifierMockSetReadUntilExpectation
-	expectationSeries []*PendingModifierMockSetReadUntilExpectation
-}
-
-type PendingModifierMockSetReadUntilExpectation struct {
-	input  *PendingModifierMockSetReadUntilInput
-	result *PendingModifierMockSetReadUntilResult
-}
-
-type PendingModifierMockSetReadUntilInput struct {
-	p  context.Context
-	p1 insolar.PulseNumber
-	p2 insolar.ID
-	p3 *insolar.PulseNumber
-}
-
-type PendingModifierMockSetReadUntilResult struct {
-	r error
-}
-
-//Expect specifies that invocation of PendingModifier.SetReadUntil is expected from 1 to Infinity times
-func (m *mPendingModifierMockSetReadUntil) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) *mPendingModifierMockSetReadUntil {
-	m.mock.SetReadUntilFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingModifierMockSetReadUntilExpectation{}
-	}
-	m.mainExpectation.input = &PendingModifierMockSetReadUntilInput{p, p1, p2, p3}
-	return m
-}
-
-//Return specifies results of invocation of PendingModifier.SetReadUntil
-func (m *mPendingModifierMockSetReadUntil) Return(r error) *PendingModifierMock {
-	m.mock.SetReadUntilFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingModifierMockSetReadUntilExpectation{}
-	}
-	m.mainExpectation.result = &PendingModifierMockSetReadUntilResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of PendingModifier.SetReadUntil is expected once
-func (m *mPendingModifierMockSetReadUntil) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) *PendingModifierMockSetReadUntilExpectation {
-	m.mock.SetReadUntilFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &PendingModifierMockSetReadUntilExpectation{}
-	expectation.input = &PendingModifierMockSetReadUntilInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *PendingModifierMockSetReadUntilExpectation) Return(r error) {
-	e.result = &PendingModifierMockSetReadUntilResult{r}
-}
-
-//Set uses given function f as a mock of PendingModifier.SetReadUntil method
-func (m *mPendingModifierMockSetReadUntil) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) (r error)) *PendingModifierMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.SetReadUntilFunc = f
-	return m.mock
-}
-
-//SetReadUntil implements github.com/insolar/insolar/ledger/object.PendingModifier interface
-func (m *PendingModifierMock) SetReadUntil(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) (r error) {
-	counter := atomic.AddUint64(&m.SetReadUntilPreCounter, 1)
-	defer atomic.AddUint64(&m.SetReadUntilCounter, 1)
-
-	if len(m.SetReadUntilMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetReadUntilMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PendingModifierMock.SetReadUntil. %v %v %v %v", p, p1, p2, p3)
-			return
-		}
-
-		input := m.SetReadUntilMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PendingModifierMockSetReadUntilInput{p, p1, p2, p3}, "PendingModifier.SetReadUntil got unexpected parameters")
-
-		result := m.SetReadUntilMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the PendingModifierMock.SetReadUntil")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetReadUntilMock.mainExpectation != nil {
-
-		input := m.SetReadUntilMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, PendingModifierMockSetReadUntilInput{p, p1, p2, p3}, "PendingModifier.SetReadUntil got unexpected parameters")
-		}
-
-		result := m.SetReadUntilMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the PendingModifierMock.SetReadUntil")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetReadUntilFunc == nil {
-		m.t.Fatalf("Unexpected call to PendingModifierMock.SetReadUntil. %v %v %v %v", p, p1, p2, p3)
-		return
-	}
-
-	return m.SetReadUntilFunc(p, p1, p2, p3)
-}
-
-//SetReadUntilMinimockCounter returns a count of PendingModifierMock.SetReadUntilFunc invocations
-func (m *PendingModifierMock) SetReadUntilMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetReadUntilCounter)
-}
-
-//SetReadUntilMinimockPreCounter returns the value of PendingModifierMock.SetReadUntil invocations
-func (m *PendingModifierMock) SetReadUntilMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetReadUntilPreCounter)
-}
-
-//SetReadUntilFinished returns true if mock invocations count is ok
-func (m *PendingModifierMock) SetReadUntilFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetReadUntilMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetReadUntilCounter) == uint64(len(m.SetReadUntilMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetReadUntilMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetReadUntilCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetReadUntilFunc != nil {
-		return atomic.LoadUint64(&m.SetReadUntilCounter) > 0
 	}
 
 	return true
@@ -826,10 +670,6 @@ func (m *PendingModifierMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to PendingModifierMock.SetFilament")
 	}
 
-	if !m.SetReadUntilFinished() {
-		m.t.Fatal("Expected call to PendingModifierMock.SetReadUntil")
-	}
-
 	if !m.SetRequestFinished() {
 		m.t.Fatal("Expected call to PendingModifierMock.SetRequest")
 	}
@@ -863,10 +703,6 @@ func (m *PendingModifierMock) MinimockFinish() {
 		m.t.Fatal("Expected call to PendingModifierMock.SetFilament")
 	}
 
-	if !m.SetReadUntilFinished() {
-		m.t.Fatal("Expected call to PendingModifierMock.SetReadUntil")
-	}
-
 	if !m.SetRequestFinished() {
 		m.t.Fatal("Expected call to PendingModifierMock.SetRequest")
 	}
@@ -891,7 +727,6 @@ func (m *PendingModifierMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.RefreshStateFinished()
 		ok = ok && m.SetFilamentFinished()
-		ok = ok && m.SetReadUntilFinished()
 		ok = ok && m.SetRequestFinished()
 		ok = ok && m.SetResultFinished()
 
@@ -908,10 +743,6 @@ func (m *PendingModifierMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SetFilamentFinished() {
 				m.t.Error("Expected call to PendingModifierMock.SetFilament")
-			}
-
-			if !m.SetReadUntilFinished() {
-				m.t.Error("Expected call to PendingModifierMock.SetReadUntil")
 			}
 
 			if !m.SetRequestFinished() {
@@ -939,10 +770,6 @@ func (m *PendingModifierMock) AllMocksCalled() bool {
 	}
 
 	if !m.SetFilamentFinished() {
-		return false
-	}
-
-	if !m.SetReadUntilFinished() {
 		return false
 	}
 

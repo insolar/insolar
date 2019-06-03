@@ -97,15 +97,13 @@ type PendingModifier interface {
 	SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.Virtual) error
 	// RefreshState recalculates state of the chain, marks requests as closed and opened.
 	RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
-	// SetReadUntil saves info about thrashold for the pending-fetching
-	SetReadUntil(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, readUntil *insolar.PulseNumber) error
 }
 
-// PendingMeta contains data about current status of the pending fillament
-type PendingMeta struct {
-	PreviousPN        *insolar.PulseNumber
-	ReadUntil         *insolar.PulseNumber
-	IsStateCalculated bool
+// PendingFilamentState contains data about current status of the pending fillament
+type PendingFilamentState struct {
+	PrevSegmentPN       insolar.PulseNumber
+	EarliestOpenRequest insolar.PulseNumber
+	IsStateCalculated   bool
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingAccessor -o ./mocks -s _mock.go
@@ -113,7 +111,7 @@ type PendingMeta struct {
 // PendingAccessor provides methods for fetching pending requests.
 type PendingAccessor interface {
 	// MetaForObjID returns meta-info for an object with provided id/pn
-	MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingMeta, error)
+	MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingFilamentState, error)
 	// OpenRequestsForObjID returns open requests for a specific object
 	OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
 	// Records returns all the records for a provided object

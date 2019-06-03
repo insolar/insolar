@@ -125,20 +125,15 @@ func (p *HotData) process(ctx context.Context) error {
 			ctx,
 			p.msg.PulseNumber,
 			object.IndexBucket{
-				ObjID:                   meta.ObjID,
-				Lifeline:                decodedIndex,
-				LifelineLastUsed:        meta.LifelineLastUsed,
-				PendingRecords:          []record.Virtual{},
-				PreviousPendingFilament: meta.PreviousPendingFilament,
+				ObjID:            meta.ObjID,
+				Lifeline:         decodedIndex,
+				LifelineLastUsed: meta.LifelineLastUsed,
+				PendingRecords:   []record.Virtual{},
 			},
 		)
 		if err != nil {
 			logger.Error(errors.Wrapf(err, "[handleHotRecords] failed to save index - %v", meta.ObjID.DebugString()))
 			continue
-		}
-		err = p.Dep.PendingModifier.SetReadUntil(ctx, p.msg.PulseNumber, meta.ObjID, meta.ReadToUntil)
-		if err != nil {
-			logger.Error(errors.Wrapf(err, "[handleHotRecords] failed to save SetReadUntil - %v", meta.ObjID.DebugString()))
 		}
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 	}

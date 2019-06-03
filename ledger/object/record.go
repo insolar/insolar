@@ -33,6 +33,14 @@ type TypeID uint32
 // TypeIDSize is a size of TypeID type.
 const TypeIDSize = 4
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordStorage -o ./mocks -s _mock.go
+
+// RecordStorage is an union of RecordAccessor and RecordModifier
+type RecordStorage interface {
+	RecordAccessor
+	RecordModifier
+}
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordAccessor -o ./mocks -s _mock.go
 
 // RecordAccessor provides info about record-values from storage.

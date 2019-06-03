@@ -57,7 +57,7 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 			ID:                p.msg.ObjectID,
 			Records:           records,
 			HasFullChain:      meta.IsStateCalculated,
-			PreviousPendingPN: meta.PreviousPN,
+			PreviousPendingPN: meta.PrevSegmentPN,
 		},
 	}
 

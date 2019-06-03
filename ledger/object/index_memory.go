@@ -33,8 +33,8 @@ import (
 // Also it stores some meta-info, that is required for the work process
 type extendedIndexBucket struct {
 	sync.RWMutex
-	IndexBucket
 
+	objectMeta  IndexBucket
 	pendingMeta pendingMeta
 }
 
@@ -49,10 +49,6 @@ type pendingMeta struct {
 	notClosedRequests      []record.Request
 	notClosedRequestsIndex map[insolar.PulseNumber]map[insolar.ID]*record.Request
 	requestPNIndex         map[insolar.ID]insolar.PulseNumber
-
-	// readPendingUntil indicates thrashold for pendings
-	// it indicates a light executor, that has all requests are closed (all requests behind it are closed too)
-	readPendingUntil *insolar.PulseNumber
 }
 
 type chainLink struct {
@@ -64,34 +60,37 @@ func (i *extendedIndexBucket) lifeline() (Lifeline, error) {
 	i.RLock()
 	defer i.RUnlock()
 
-	return CloneIndex(i.Lifeline), nil
+	return CloneIndex(i.objectMeta.Lifeline), nil
 }
 
 func (i *extendedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
 	i.Lock()
 	defer i.Unlock()
 
-	i.Lifeline = lifeline
-	i.LifelineLastUsed = pn
+	i.objectMeta.Lifeline = lifeline
+	i.objectMeta.LifelineLastUsed = pn
 }
 
 func (i *extendedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
 	i.Lock()
 	defer i.Unlock()
 
-	i.LifelineLastUsed = pn
+	i.objectMeta.LifelineLastUsed = pn
 }
 
 // InMemoryIndex is a in-memory storage, that stores a collection of IndexBuckets
 type InMemoryIndex struct {
+	recordStorage RecordStorage
+
 	bucketsLock sync.RWMutex
 	buckets     map[insolar.PulseNumber]map[insolar.ID]*extendedIndexBucket
 }
 
 // NewInMemoryIndex creates a new InMemoryIndex
-func NewInMemoryIndex() *InMemoryIndex {
+func NewInMemoryIndex(recordStorage RecordStorage) *InMemoryIndex {
 	return &InMemoryIndex{
-		buckets: map[insolar.PulseNumber]map[insolar.ID]*extendedIndexBucket{},
+		recordStorage: recordStorage,
+		buckets:       map[insolar.PulseNumber]map[insolar.ID]*extendedIndexBucket{},
 	}
 }
 
@@ -100,7 +99,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 	defer i.bucketsLock.Unlock()
 
 	bucket := &extendedIndexBucket{
-		IndexBucket: IndexBucket{
+		objectMeta: IndexBucket{
 			ObjID:          objID,
 			PendingRecords: []record.Virtual{},
 		},
@@ -109,7 +108,6 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 			notClosedRequests:      []record.Request{},
 			notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
 			requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
-			readPendingUntil:       nil,
 			isStateCalculated:      false,
 		},
 	}
@@ -165,7 +163,7 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	}
 
 	bucks[bucket.ObjID] = &extendedIndexBucket{
-		IndexBucket: bucket,
+		objectMeta: bucket,
 		pendingMeta: pendingMeta{
 			notClosedRequests:      []record.Request{},
 			fullFilament:           []chainLink{},
@@ -204,19 +202,19 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 	res := []IndexBucket{}
 
 	for _, b := range bucks {
-		if b.Lifeline.JetID != jetID {
+		if b.objectMeta.Lifeline.JetID != jetID {
 			continue
 		}
 
-		clonedLfl := CloneIndex(b.Lifeline)
+		clonedLfl := CloneIndex(b.objectMeta.Lifeline)
 		var clonedRecords []record.Virtual
 
-		clonedRecords = append(clonedRecords, b.PendingRecords...)
+		clonedRecords = append(clonedRecords, b.objectMeta.PendingRecords...)
 
 		res = append(res, IndexBucket{
-			ObjID:            b.ObjID,
+			ObjID:            b.objectMeta.ObjID,
 			Lifeline:         clonedLfl,
-			LifelineLastUsed: b.LifelineLastUsed,
+			LifelineLastUsed: b.objectMeta.LifelineLastUsed,
 			PendingRecords:   clonedRecords,
 		})
 	}
@@ -254,7 +252,7 @@ func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 
 	for _, buck := range bucks {
 		stats.Record(ctx,
-			statObjectPendingRequestsInMemoryRemovedCount.M(int64(len(buck.PendingRecords))),
+			statObjectPendingRequestsInMemoryRemovedCount.M(int64(len(buck.objectMeta.PendingRecords))),
 		)
 	}
 }
@@ -273,7 +271,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	// 	b.PreviousPendingFilament = pn
 	// }
 
-	b.PendingRecords = append(b.PendingRecords, record.Wrap(req))
+	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, record.Wrap(req))
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {
@@ -318,7 +316,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	b.Lock()
 	defer b.Unlock()
 
-	b.PendingRecords = append(b.PendingRecords, record.Wrap(res))
+	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, record.Wrap(res))
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {
@@ -401,15 +399,12 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	isEarliestFound := false
 
 	for i, chainLink := range b.pendingMeta.fullFilament {
-		if len(b.pendingMeta.notClosedRequestsIndex[chainLink.PN]) == 0 {
-			if isEarliestFound {
-				continue
+		if len(b.pendingMeta.notClosedRequestsIndex[chainLink.PN]) != 0 {
+			if !isEarliestFound {
+				b.objectMeta.Lifeline.EarliestOpenRequest = b.pendingMeta.fullFilament[i].PN
+				isEarliestFound = true
 			}
 
-			b.pendingMeta.readPendingUntil = &b.pendingMeta.fullFilament[i].PN
-			isEarliestFound = true
-
-		} else {
 			for _, ncr := range b.pendingMeta.notClosedRequestsIndex[chainLink.PN] {
 				b.pendingMeta.notClosedRequests = append(b.pendingMeta.notClosedRequests, *ncr)
 			}
@@ -421,40 +416,20 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	return nil
 }
 
-// SetReadUntil saves info about thrashold for the pending-fetching
-func (i *InMemoryIndex) SetReadUntil(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, readUntil *insolar.PulseNumber) error {
-	b := i.bucket(pn, objID)
-	if b == nil {
-		return ErrLifelineNotFound
-	}
-
-	b.Lock()
-	defer b.Unlock()
-
-	b.pendingMeta.readPendingUntil = readUntil
-
-	return nil
-}
-
 // MetaForObjID returns meta-info for an object with provided id/pn
-func (i *InMemoryIndex) MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingMeta, error) {
+func (i *InMemoryIndex) MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingFilamentState, error) {
 	b := i.bucket(currentPN, objID)
 	if b == nil {
-		return PendingMeta{}, ErrLifelineNotFound
+		return PendingFilamentState{}, ErrLifelineNotFound
 	}
 
 	b.RLock()
 	defer b.RUnlock()
 
-	var ppf *insolar.PulseNumber
-	if b.PreviousPendingFilament != 0 {
-		ppf = &b.PreviousPendingFilament
-	}
-
-	return PendingMeta{
-		IsStateCalculated: b.pendingMeta.isStateCalculated,
-		ReadUntil:         b.pendingMeta.readPendingUntil,
-		PreviousPN:        ppf,
+	return PendingFilamentState{
+		IsStateCalculated:   b.pendingMeta.isStateCalculated,
+		EarliestOpenRequest: b.objectMeta.Lifeline.EarliestOpenRequest,
+		PrevSegmentPN:       b.objectMeta.Lifeline.PreviousPendingFilament,
 	}, nil
 }
 
@@ -485,5 +460,5 @@ func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumb
 	b.RLock()
 	defer b.RLock()
 
-	return b.PendingRecords, nil
+	return b.objectMeta.PendingRecords, nil
 }

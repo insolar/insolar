@@ -136,7 +136,7 @@ type PendingFilament struct {
 	ID                insolar.ID
 	Records           []record.Virtual
 	HasFullChain      bool
-	PreviousPendingPN *insolar.PulseNumber
+	PreviousPendingPN insolar.PulseNumber
 }
 
 // Type implementation of Reply interface.

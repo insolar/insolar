@@ -259,11 +259,11 @@ func (p *SendObject) fetchObject(
 // 	}
 //
 // 	// Because we are the first light in the chain
-// 	if pendMeta.PreviousPN == nil || pendMeta.IsStateCalculated {
-// 		return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, p.returnPendings)
+// 	if pendMeta.PrevSegmentPN == 0 || pendMeta.IsStateCalculated {
+// 		return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, 10)
 // 	}
 //
-// 	err = p.fillPendingFilament(ctx, currentPN, objID, *pendMeta.PreviousPN, pendMeta.ReadUntil)
+// 	err = p.fillPendingFilament(ctx, currentPN, objID, pendMeta.PrevSegmentPN, pendMeta.EarliestOpenRequest)
 // 	if err != nil {
 // 		return []record.Request{}, err
 // 	}
@@ -273,10 +273,10 @@ func (p *SendObject) fetchObject(
 // 		return []record.Request{}, err
 // 	}
 //
-// 	return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, p.returnPendings)
+// 	return p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, currentPN, objID, 10)
 // }
-//
-// func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, destPN insolar.PulseNumber, readUntil *insolar.PulseNumber) error {
+
+// func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, destPN insolar.PulseNumber, earlistOpenRequest insolar.PulseNumber) error {
 // 	continueFilling := true
 //
 // 	for continueFilling {
@@ -314,14 +314,14 @@ func (p *SendObject) fetchObject(
 // 			if r.HasFullChain {
 // 				continueFilling = false
 // 			}
-// 			if r.PreviousPendingPN == nil {
+// 			if r.PreviousPendingPN == 0 {
 // 				continueFilling = false
 // 			}
 //
 // 			// If know border read to the start of the chain
 // 			// In another way, read until limit
-// 			if readUntil == nil || *r.PreviousPendingPN > *readUntil {
-// 				destPN = *r.PreviousPendingPN
+// 			if earlistOpenRequest == 0 || r.PreviousPendingPN > earlistOpenRequest {
+// 				destPN = r.PreviousPendingPN
 // 			} else {
 // 				continueFilling = false
 // 			}

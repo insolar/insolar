@@ -100,13 +100,13 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
 	ps := pulse.NewStorageMem()
-	index := object.NewInMemoryIndex()
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	recordStorage := object.NewRecordMemory()
 	memoryMockDB := store.NewMemoryMockDB()
+	index := object.NewInMemoryIndex(recordStorage)
 
 	cm := &component.Manager{}
 	js := jet.NewStore()

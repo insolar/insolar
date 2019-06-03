@@ -6,14 +6,14 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
-	object "github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -22,7 +22,7 @@ import (
 type PendingAccessorMock struct {
 	t minimock.Tester
 
-	MetaForObjIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.PendingMeta, r1 error)
+	MetaForObjIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.PendingFilamentState, r1 error)
 	MetaForObjIDCounter    uint64
 	MetaForObjIDPreCounter uint64
 	MetaForObjIDMock       mPendingAccessorMockMetaForObjID
@@ -71,7 +71,7 @@ type PendingAccessorMockMetaForObjIDInput struct {
 }
 
 type PendingAccessorMockMetaForObjIDResult struct {
-	r  object.PendingMeta
+	r  object.PendingFilamentState
 	r1 error
 }
 
@@ -88,7 +88,7 @@ func (m *mPendingAccessorMockMetaForObjID) Expect(p context.Context, p1 insolar.
 }
 
 //Return specifies results of invocation of PendingAccessor.MetaForObjID
-func (m *mPendingAccessorMockMetaForObjID) Return(r object.PendingMeta, r1 error) *PendingAccessorMock {
+func (m *mPendingAccessorMockMetaForObjID) Return(r object.PendingFilamentState, r1 error) *PendingAccessorMock {
 	m.mock.MetaForObjIDFunc = nil
 	m.expectationSeries = nil
 
@@ -110,12 +110,12 @@ func (m *mPendingAccessorMockMetaForObjID) ExpectOnce(p context.Context, p1 inso
 	return expectation
 }
 
-func (e *PendingAccessorMockMetaForObjIDExpectation) Return(r object.PendingMeta, r1 error) {
+func (e *PendingAccessorMockMetaForObjIDExpectation) Return(r object.PendingFilamentState, r1 error) {
 	e.result = &PendingAccessorMockMetaForObjIDResult{r, r1}
 }
 
 //Set uses given function f as a mock of PendingAccessor.MetaForObjID method
-func (m *mPendingAccessorMockMetaForObjID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.PendingMeta, r1 error)) *PendingAccessorMock {
+func (m *mPendingAccessorMockMetaForObjID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.PendingFilamentState, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -124,7 +124,7 @@ func (m *mPendingAccessorMockMetaForObjID) Set(f func(p context.Context, p1 inso
 }
 
 //MetaForObjID implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
-func (m *PendingAccessorMock) MetaForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.PendingMeta, r1 error) {
+func (m *PendingAccessorMock) MetaForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.PendingFilamentState, r1 error) {
 	counter := atomic.AddUint64(&m.MetaForObjIDPreCounter, 1)
 	defer atomic.AddUint64(&m.MetaForObjIDCounter, 1)
 

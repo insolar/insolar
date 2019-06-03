@@ -63,6 +63,6 @@ func UniqueJetIDs(jets ...*insolar.JetID) {
 // Reference generates random reference.
 func Reference() (ref insolar.Reference) {
 	id := ID()
-	copy(ref[:insolar.RecordIDSize],id[:])
+	copy(ref[:insolar.RecordIDSize], id[:])
 	return
 }

@@ -352,10 +352,6 @@ type HotIndex struct {
 	// LifelineLastUsed is a mark of pulse, when the lifeline was used for the last time
 	// It's being used for `ttl` of indexes
 	LifelineLastUsed insolar.PulseNumber
-
-	// PreviousPendingFilament say a pulse of last saving request/result
-	PreviousPendingFilament insolar.PulseNumber
-	ReadToUntil             *insolar.PulseNumber
 }
 
 // GetPendingRequests fetches pending requests for object.
