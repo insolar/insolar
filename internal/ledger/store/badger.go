@@ -94,7 +94,61 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 	return nil
 }
 
+// NewIterator returns new Iterator over the store.
+func (b *BadgerDB) NewIterator(scope Scope) Iterator {
+	bi := badgerIterator{scope: scope, fullPrefix: scope.Bytes()}
+	bi.txn = b.backend.NewTransaction(false)
+	opts := badger.DefaultIteratorOptions
+	bi.it = bi.txn.NewIterator(opts)
+	bi.it.Seek(bi.fullPrefix)
+	return &bi
+}
+
 // Stop gracefully stops all disk writes. After calling this, it's safe to kill the process without losing data.
 func (b *BadgerDB) Stop(ctx context.Context) error {
 	return b.backend.Close()
+}
+
+type badgerIterator struct {
+	scope      Scope
+	fullPrefix []byte
+	txn        *badger.Txn
+	it         *badger.Iterator
+	prevKey    []byte
+	prevValue  []byte
+}
+
+func (bi *badgerIterator) Close() {
+	bi.it.Close()
+	bi.txn.Discard()
+}
+
+func (bi *badgerIterator) Seek(prefix []byte) {
+	bi.fullPrefix = append(bi.scope.Bytes(), prefix...)
+	bi.it.Seek(bi.fullPrefix)
+}
+
+func (bi *badgerIterator) Next() bool {
+	if !bi.it.ValidForPrefix(bi.fullPrefix) {
+		return false
+	}
+
+	prev := bi.it.Item().KeyCopy(bi.prevKey)
+	bi.prevKey = prev[len(bi.scope.Bytes()):]
+	prev, err := bi.it.Item().ValueCopy(bi.prevValue)
+	if err != nil {
+		return false
+	}
+	bi.prevValue = prev
+
+	bi.it.Next()
+	return true
+}
+
+func (bi *badgerIterator) Key() []byte {
+	return bi.prevKey
+}
+
+func (bi *badgerIterator) Value() ([]byte, error) {
+	return bi.prevValue, nil
 }

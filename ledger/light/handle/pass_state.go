@@ -14,21 +14,31 @@
 // limitations under the License.
 //
 
-package messagebus
+package handle
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/ThreeDotsLabs/watermill/message"
+
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/ledger/light/proc"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/messagebus.sender -o .
+type PassState struct {
+	dep     *proc.Dependencies
+	message *message.Message
+}
 
-// Sender is an internal interface used by recorder and player. It should not be publicated.
-//
-// Sender provides access to private MessageBus methods.
-type sender interface {
-	insolar.MessageBus
-	CreateParcel(ctx context.Context, msg insolar.Message, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error)
-	SendParcel(ctx context.Context, msg insolar.Parcel, currentPulse insolar.Pulse, ops *insolar.MessageSendOptions) (insolar.Reply, error)
+func NewPassState(dep *proc.Dependencies, msg *message.Message) *PassState {
+	return &PassState{
+		dep:     dep,
+		message: msg,
+	}
+}
+
+func (s *PassState) Present(ctx context.Context, f flow.Flow) error {
+	state := proc.NewPassState(s.message)
+	s.dep.PassState(state)
+	return f.Procedure(ctx, state, false)
 }

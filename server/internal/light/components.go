@@ -225,7 +225,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
-		hots := recentstorage.NewRecentStorageProvider()
+		hots := recentstorage.NewProvider()
 		waiter := hot.NewChannelWaiter()
 
 		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, &conf)
@@ -247,6 +247,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
 		handler.WriteAccessor = writeController
+		handler.Sender = WmBus
 
 		jetCalculator := jet.NewCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
@@ -316,7 +317,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Requester,
 		Tokens,
 		Parcels,
-		artifacts.NewClient(),
+		artifacts.NewClient(WmBus),
 		Genesis,
 		API,
 		KeyProcessor,
@@ -376,11 +377,9 @@ func startWatermill(
 		middleware.CorrelationID,
 	)
 
-	inRouter.AddHandler(
+	inRouter.AddNoPublisherHandler(
 		"IncomingHandler",
 		bus.TopicIncoming,
-		pubSub,
-		bus.TopicOutgoing,
 		pubSub,
 		inHandler,
 	)

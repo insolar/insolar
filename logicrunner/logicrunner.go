@@ -76,6 +76,8 @@ type CurrentExecution struct {
 	Request       *record.Request
 	RequesterNode *Ref
 	SentResult    bool
+	Nonce         uint64
+	Deactivate    bool
 }
 
 type ExecutionQueueElement struct {
@@ -120,6 +122,9 @@ func (st *ObjectState) MustModeState(mode string) (res *ExecutionState) {
 	}
 	if res == nil {
 		panic("object is not in " + mode + " mode")
+	}
+	if res.Current == nil {
+		panic("object "+ res.Ref.String() +" has no Current")
 	}
 	return res
 }
@@ -414,16 +419,18 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 func (lr *LogicRunner) executeOrValidate(
 	ctx context.Context, es *ExecutionState, parcel insolar.Parcel,
 ) {
+
+	inslogger.FromContext(ctx).Debug("executeOrValidate")
+
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.ExecuteOrValidate")
 	defer span.End()
 
 	msg := parcel.Message().(*message.CallMethod)
-	ref := msg.GetReference()
 
 	es.Current.LogicContext = &insolar.LogicCallContext{
 		Mode:            "execution",
 		Caller:          msg.GetCaller(),
-		Callee:          &ref,
+		Callee:          &es.Ref,
 		Request:         es.Current.RequestRef,
 		Time:            time.Now(), // TODO: probably we should take it earlier
 		Pulse:           *lr.pulse(ctx),
@@ -484,23 +491,6 @@ func (lr *LogicRunner) executeOrValidate(
 	}()
 }
 
-func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *ExecutionState {
-	ref := Ref{}.FromSlice(rawRef)
-
-	// TODO: we should stop processing here if 'ref' doesn't exist. Made UpsertObjectState return error if so?
-	os := lr.UpsertObjectState(ref)
-
-	os.Lock()
-	defer os.Unlock()
-	if os.ExecutionState == nil {
-		inslogger.FromContext(ctx).Info("[ ProcessExecutionQueue ] got not existing reference. It's strange")
-		return nil
-	}
-	es := os.ExecutionState
-
-	return es
-}
-
 func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) *insolar.Reference {
 	es.Lock()
 	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
@@ -532,6 +522,8 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 
 	msg := parcel.Message().(*message.CallMethod)
 
+	parcel.SetSender(msg.Request.Sender)
+
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(
 		ctx, insolar.DynamicRoleVirtualExecutor, id, pulse, lr.JetCoordinator.Me(),
@@ -561,6 +553,8 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (insolar.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeMethodCall")
+	defer span.End()
 
 	objDesc, err := lr.ArtifactManager.GetObject(ctx, *m.Object)
 	if err != nil {
@@ -583,7 +577,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		es.CodeDescriptor = codeDesc
 	}
 
-	current := *es.Current
+	current := es.Current
 	current.LogicContext.Prototype = es.PrototypeDescriptor.HeadRef()
 	current.LogicContext.Code = es.CodeDescriptor.Ref()
 	current.LogicContext.Parent = es.ObjectDescriptor.Parent()
@@ -605,7 +599,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	am := lr.ArtifactManager
-	if es.deactivate {
+	if current.Deactivate {
 		_, err := am.DeactivateObject(
 			ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor,
 		)
@@ -631,6 +625,8 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 ) (
 	artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
 ) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByPrototypeRef")
+	defer span.End()
 	protoDesc, err := lr.ArtifactManager.GetObject(ctx, protoRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get prototype descriptor")
@@ -647,37 +643,14 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 	return protoDesc, codeDesc, nil
 }
 
-func (lr *LogicRunner) getDescriptorsByObjectRef(
-	ctx context.Context, objRef Ref,
-) (
-	artifacts.ObjectDescriptor, artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
-) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByObjectRef")
-	defer span.End()
-
-	objDesc, err := lr.ArtifactManager.GetObject(ctx, objRef)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't get object")
-	}
-
-	protoRef, err := objDesc.Prototype()
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't get prototype reference")
-	}
-
-	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *protoRef)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't resolve prototype reference to descriptors")
-	}
-
-	return objDesc, protoDesc, codeDesc, nil
-}
-
 func (lr *LogicRunner) executeConstructorCall(
 	ctx context.Context, es *ExecutionState, m *message.CallMethod,
 ) (
 	insolar.Reply, error,
 ) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeConstructorCall")
+	defer span.End()
+
 	current := *es.Current
 	if current.LogicContext.Caller.IsEmpty() {
 		return nil, es.WrapError(nil, "Call constructor from nowhere")
@@ -742,7 +715,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 	messages := make([]insolar.Message, 0)
 
-	ctx, spanStates := instracer.StartSpan(ctx, "pulse.logicrunner processing of states")
 	for ref, state := range lr.state {
 		meNext, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
@@ -788,7 +760,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 				if len(queue) > 0 || sendExecResults {
 					// TODO: we also should send when executed something for validation
 					// TODO: now validation is disabled
-					messagesQueue := convertQueueToMessageQueue(queue)
+					messagesQueue := convertQueueToMessageQueue(ctx, queue)
 
 					messages = append(
 						messages,
@@ -834,7 +806,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 		state.Unlock()
 	}
-	spanStates.End()
 
 	lr.stateMutex.Unlock()
 
@@ -893,14 +864,19 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Messa
 	}
 }
 
-func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
+func convertQueueToMessageQueue(ctx context.Context, queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
+	var traces string
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
 			Parcel:  elem.parcel,
 			Request: elem.request,
 		})
+
+		traces += inslogger.TraceID(elem.ctx) + ", "
 	}
+
+	inslogger.FromContext(ctx).Debug("convertQueueToMessageQueue: ", traces)
 
 	return mq
 }

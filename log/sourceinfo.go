@@ -46,12 +46,3 @@ func getCallInfo(skipCallNumber int) *callInfo {
 		line:     line,
 	}
 }
-
-func stripPackageName(packageName string) string {
-	result := strings.TrimPrefix(packageName, insolarPrefix)
-	i := strings.Index(result, ".")
-	if result == packageName || i == -1 {
-		return result
-	}
-	return result[:i]
-}

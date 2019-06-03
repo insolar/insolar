@@ -20,8 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
@@ -47,6 +51,7 @@ type client struct {
 	PulseAccessor  pulse.Accessor                     `inject:""`
 	JetCoordinator jet.Coordinator                    `inject:""`
 
+	sender               bus.Sender
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
 }
@@ -58,10 +63,11 @@ func (m *client) State() ([]byte, error) {
 }
 
 // NewClient creates new client instance.
-func NewClient() *client { // nolint
+func NewClient(sender bus.Sender) *client { // nolint
 	return &client{
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              messagebus.NewSenders(),
+		sender:               sender,
 	}
 }
 
@@ -95,7 +101,7 @@ func (m *client) RegisterRequest(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
 		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
 		recID := insolar.NewID(currentPN, hash)
-		recRef = insolar.NewReference(insolar.DomainID, *recID)
+		recRef = insolar.NewReference(*recID)
 	default:
 		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
@@ -164,8 +170,7 @@ func (m *client) GetObject(
 	head insolar.Reference,
 ) (ObjectDescriptor, error) {
 	var (
-		desc ObjectDescriptor
-		err  error
+		err error
 	)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.Getobject")
 	instrumenter := instrument(ctx, "GetObject").err(&err)
@@ -180,39 +185,84 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
-	getObjectMsg := &message.GetObject{
-		Head: head,
-	}
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-
-	genericReact, err := sender(ctx, getObjectMsg, nil)
+	msg, err := payload.NewMessage(&payload.GetObject{
+		ObjectID: *head.Record(),
+	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal message")
+	}
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
+	defer done()
+
+	var (
+		index        *object.Lifeline
+		statePayload *payload.State
+	)
+	success := func() bool {
+		return index != nil && statePayload != nil
 	}
 
-	switch r := genericReact.(type) {
-	case *reply.Object:
-		desc = &objectDescriptor{
-			head:         r.Head,
-			state:        r.State,
-			prototype:    r.Prototype,
-			isPrototype:  r.IsPrototype,
-			childPointer: r.ChildPointer,
-			memory:       r.Memory,
-			parent:       r.Parent,
+	logger := inslogger.FromContext(ctx)
+	for rep := range reps {
+		replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal reply")
 		}
-		return desc, err
-	case *reply.Error:
-		return nil, r.Error()
-	default:
-		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", genericReact)
+
+		switch p := replyPayload.(type) {
+		case *payload.Index:
+			logger.Info("rep index")
+			index = &object.Lifeline{}
+			err := index.Unmarshal(p.Index)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal index")
+			}
+		case *payload.State:
+			logger.Info("rep state")
+			statePayload = p
+		case *payload.Error:
+			logger.Info("rep error: ", p.Text)
+			switch p.Code {
+			case payload.CodeDeactivated:
+				return nil, insolar.ErrDeactivated
+			default:
+				return nil, errors.New(p.Text)
+			}
+		default:
+			return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		}
+
+		if success() {
+			break
+		}
 	}
+	if !success() {
+		logger.WithField("correlation_id", middleware.MessageCorrelationID(msg)).Error("no reply")
+		return nil, errors.New("no reply")
+	}
+
+	rec := record.Material{}
+	err = rec.Unmarshal(statePayload.Record)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal state")
+	}
+	virtual := record.Unwrap(rec.Virtual)
+	s, ok := virtual.(record.State)
+	if !ok {
+		return nil, errors.New("wrong state record")
+	}
+	state := s
+
+	desc := &objectDescriptor{
+		head:         head,
+		state:        *index.LatestState,
+		prototype:    state.GetImage(),
+		isPrototype:  state.GetIsPrototype(),
+		childPointer: index.ChildPointer,
+		memory:       statePayload.Memory,
+		parent:       index.Parent,
+	}
+	return desc, err
 }
 
 // GetPendingRequest returns an unclosed pending request
@@ -305,6 +355,9 @@ func (m *client) HasPendingRequests(
 	ctx context.Context,
 	object insolar.Reference,
 ) (bool, error) {
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendingRequests")
+	defer span.End()
+
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
@@ -465,7 +518,7 @@ func (m *client) DeployCode(
 	virtRec := record.Wrap(codeRec)
 	hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
 	codeID := insolar.NewID(currentPN, hash)
-	codeRef := insolar.NewReference(*domain.Record(), *codeID)
+	codeRef := insolar.NewReference(*codeID)
 
 	_, err = m.setBlob(ctx, code, *codeRef)
 	if err != nil {

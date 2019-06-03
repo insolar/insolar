@@ -110,7 +110,7 @@ func newScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurr
 		out:         out,
 		members:     members,
 		insSDK:      insSDK,
-		penRetries:  int32(penRetries),
+		penRetries:  penRetries,
 	}
 }
 
@@ -263,7 +263,7 @@ func saveMembers(members []*sdk.Member) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal members in json")
 	}
-	_, err = file.Write([]byte(result))
+	_, err = file.Write(result)
 	return errors.Wrap(err, "couldn't save members in file")
 }
 

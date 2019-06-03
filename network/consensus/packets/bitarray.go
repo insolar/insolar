@@ -64,7 +64,7 @@ const statesInByte = 4
 
 type bitArray []BitSetState
 
-func div(dividend, divider int) int {
+func div(dividend, divider int) int { // nolint: unparam
 	if (dividend % divider) == 0 {
 		return dividend / divider
 	}
@@ -82,7 +82,7 @@ func parseStatesFromByte(b uint8) [statesInByte]BitSetState {
 
 func deserialize(data []byte, length int) (bitArray, error) {
 	if len(data) != div(length, statesInByte) {
-		return nil, errors.Errorf("wrong size of data buffer, expected: %d, got: %d", int(div(length, statesInByte)), len(data))
+		return nil, errors.Errorf("wrong size of data buffer, expected: %d, got: %d", div(length, statesInByte), len(data))
 	}
 	result := make(bitArray, length)
 	statesLeft := length
@@ -184,7 +184,7 @@ func (ba bitArray) serializeCompressed() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (ba bitArray) writeSequence(buf *bytes.Buffer, state BitSetState, count int) error {
+func (ba bitArray) writeSequence(buf io.Writer, state BitSetState, count int) error {
 	err := binary.Write(buf, binary.BigEndian, uint16(count))
 	if err != nil {
 		return errors.Wrap(err, "failed to write states count to buffer")

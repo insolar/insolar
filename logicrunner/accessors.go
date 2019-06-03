@@ -73,6 +73,17 @@ func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
 	return res
 }
 
+func (lr *LogicRunner) GetExecutionState(ref Ref) *ExecutionState {
+	os := lr.GetObjectState(ref)
+	if os == nil {
+		return nil
+	}
+
+	os.Lock()
+	defer os.Unlock()
+	return os.ExecutionState
+}
+
 func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 	pulse, err := lr.PulseAccessor.Latest(ctx)
 	if err != nil {

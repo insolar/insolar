@@ -175,7 +175,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 		}
 
 		isVerified := handler.Pulsar.CryptographyService.Verify(publicKey, insolar.SignatureFromBytes(btfCell.GetSign()), requestBody.Entropy[:])
-		if err != nil || !isVerified {
+		if !isVerified {
 			handler.Pulsar.AddItemToVector(request.PublicKey, nil)
 			inslog.Errorf("signature and Entropy aren't matched")
 			return errors.New("signature and Entropy aren't matched")

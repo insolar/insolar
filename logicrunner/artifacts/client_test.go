@@ -110,10 +110,6 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	}
 }
 
-var (
-	domainID = *genRandomID(0)
-)
-
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
 	_, err := rand.Read(buff[:])
@@ -124,7 +120,7 @@ func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 }
 
 func genRefWithID(id *insolar.ID) *insolar.Reference {
-	return insolar.NewReference(domainID, *id)
+	return insolar.NewReference(*id)
 }
 
 func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
@@ -176,7 +172,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 
 func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 	mc := minimock.NewController(s.T())
-	am := NewClient()
+	am := NewClient(nil)
 	mb := testutils.NewMessageBusMock(mc)
 
 	objRef := genRandomRef(0)
@@ -211,7 +207,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	defer mc.Finish()
 
 	cs := platformpolicy.NewPlatformCryptographyScheme()
-	am := NewClient()
+	am := NewClient(nil)
 	am.PCS = cs
 	pa := pulse.NewAccessorMock(s.T())
 	pa.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
@@ -301,7 +297,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 		}
 	}
 
-	am := NewClient()
+	am := NewClient(nil)
 	am.JetCoordinator = jc
 	am.DefaultBus = mb
 	am.PulseAccessor = pulseAccessor

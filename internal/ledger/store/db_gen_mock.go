@@ -22,6 +22,11 @@ type DBMock struct {
 	GetPreCounter uint64
 	GetMock       mDBMockGet
 
+	NewIteratorFunc       func(p Scope) (r Iterator)
+	NewIteratorCounter    uint64
+	NewIteratorPreCounter uint64
+	NewIteratorMock       mDBMockNewIterator
+
 	SetFunc       func(p Key, p1 []byte) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
@@ -37,6 +42,7 @@ func NewDBMock(t minimock.Tester) *DBMock {
 	}
 
 	m.GetMock = mDBMockGet{mock: m}
+	m.NewIteratorMock = mDBMockNewIterator{mock: m}
 	m.SetMock = mDBMockSet{mock: m}
 
 	return m
@@ -187,6 +193,153 @@ func (m *DBMock) GetFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetFunc != nil {
 		return atomic.LoadUint64(&m.GetCounter) > 0
+	}
+
+	return true
+}
+
+type mDBMockNewIterator struct {
+	mock              *DBMock
+	mainExpectation   *DBMockNewIteratorExpectation
+	expectationSeries []*DBMockNewIteratorExpectation
+}
+
+type DBMockNewIteratorExpectation struct {
+	input  *DBMockNewIteratorInput
+	result *DBMockNewIteratorResult
+}
+
+type DBMockNewIteratorInput struct {
+	p Scope
+}
+
+type DBMockNewIteratorResult struct {
+	r Iterator
+}
+
+//Expect specifies that invocation of DB.NewIterator is expected from 1 to Infinity times
+func (m *mDBMockNewIterator) Expect(p Scope) *mDBMockNewIterator {
+	m.mock.NewIteratorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBMockNewIteratorExpectation{}
+	}
+	m.mainExpectation.input = &DBMockNewIteratorInput{p}
+	return m
+}
+
+//Return specifies results of invocation of DB.NewIterator
+func (m *mDBMockNewIterator) Return(r Iterator) *DBMock {
+	m.mock.NewIteratorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBMockNewIteratorExpectation{}
+	}
+	m.mainExpectation.result = &DBMockNewIteratorResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DB.NewIterator is expected once
+func (m *mDBMockNewIterator) ExpectOnce(p Scope) *DBMockNewIteratorExpectation {
+	m.mock.NewIteratorFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DBMockNewIteratorExpectation{}
+	expectation.input = &DBMockNewIteratorInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DBMockNewIteratorExpectation) Return(r Iterator) {
+	e.result = &DBMockNewIteratorResult{r}
+}
+
+//Set uses given function f as a mock of DB.NewIterator method
+func (m *mDBMockNewIterator) Set(f func(p Scope) (r Iterator)) *DBMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.NewIteratorFunc = f
+	return m.mock
+}
+
+//NewIterator implements github.com/insolar/insolar/internal/ledger/store.DB interface
+func (m *DBMock) NewIterator(p Scope) (r Iterator) {
+	counter := atomic.AddUint64(&m.NewIteratorPreCounter, 1)
+	defer atomic.AddUint64(&m.NewIteratorCounter, 1)
+
+	if len(m.NewIteratorMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.NewIteratorMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v", p)
+			return
+		}
+
+		input := m.NewIteratorMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p}, "DB.NewIterator got unexpected parameters")
+
+		result := m.NewIteratorMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBMock.NewIterator")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.NewIteratorMock.mainExpectation != nil {
+
+		input := m.NewIteratorMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p}, "DB.NewIterator got unexpected parameters")
+		}
+
+		result := m.NewIteratorMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBMock.NewIterator")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.NewIteratorFunc == nil {
+		m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v", p)
+		return
+	}
+
+	return m.NewIteratorFunc(p)
+}
+
+//NewIteratorMinimockCounter returns a count of DBMock.NewIteratorFunc invocations
+func (m *DBMock) NewIteratorMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.NewIteratorCounter)
+}
+
+//NewIteratorMinimockPreCounter returns the value of DBMock.NewIterator invocations
+func (m *DBMock) NewIteratorMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.NewIteratorPreCounter)
+}
+
+//NewIteratorFinished returns true if mock invocations count is ok
+func (m *DBMock) NewIteratorFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.NewIteratorMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.NewIteratorCounter) == uint64(len(m.NewIteratorMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.NewIteratorMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.NewIteratorCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.NewIteratorFunc != nil {
+		return atomic.LoadUint64(&m.NewIteratorCounter) > 0
 	}
 
 	return true
@@ -348,6 +501,10 @@ func (m *DBMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to DBMock.Get")
 	}
 
+	if !m.NewIteratorFinished() {
+		m.t.Fatal("Expected call to DBMock.NewIterator")
+	}
+
 	if !m.SetFinished() {
 		m.t.Fatal("Expected call to DBMock.Set")
 	}
@@ -373,6 +530,10 @@ func (m *DBMock) MinimockFinish() {
 		m.t.Fatal("Expected call to DBMock.Get")
 	}
 
+	if !m.NewIteratorFinished() {
+		m.t.Fatal("Expected call to DBMock.NewIterator")
+	}
+
 	if !m.SetFinished() {
 		m.t.Fatal("Expected call to DBMock.Set")
 	}
@@ -392,6 +553,7 @@ func (m *DBMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetFinished()
+		ok = ok && m.NewIteratorFinished()
 		ok = ok && m.SetFinished()
 
 		if ok {
@@ -403,6 +565,10 @@ func (m *DBMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetFinished() {
 				m.t.Error("Expected call to DBMock.Get")
+			}
+
+			if !m.NewIteratorFinished() {
+				m.t.Error("Expected call to DBMock.NewIterator")
 			}
 
 			if !m.SetFinished() {
@@ -422,6 +588,10 @@ func (m *DBMock) MinimockWait(timeout time.Duration) {
 func (m *DBMock) AllMocksCalled() bool {
 
 	if !m.GetFinished() {
+		return false
+	}
+
+	if !m.NewIteratorFinished() {
 		return false
 	}
 

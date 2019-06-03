@@ -18,11 +18,11 @@ package virtual
 
 import (
 	"context"
-	"errors"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -117,7 +117,7 @@ func initComponents(
 	certManager insolar.CertificateManager,
 	isGenesis bool,
 
-) (*component.Manager, insolar.TerminationHandler, error) {
+) (*component.Manager, insolar.TerminationHandler) {
 	cm := component.Manager{}
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
@@ -181,7 +181,7 @@ func initComponents(
 		pubsub,
 		messageBus,
 		contractRequester,
-		artifacts.NewClient(),
+		artifacts.NewClient(b),
 		jc,
 		pulses,
 		jet.NewStore(),
@@ -201,11 +201,15 @@ func initComponents(
 
 	startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, notFound)
 
-	return &cm, terminationHandler, nil
+	return &cm, terminationHandler
 }
 
 func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
-	return nil, errors.New("reply channel for this msg doesn't exist")
+	inslogger.FromContext(context.Background()).WithField(
+		"correlation_id",
+		middleware.MessageCorrelationID(msg),
+	).Error("no reply channel")
+	return nil, nil
 }
 
 func startWatermill(

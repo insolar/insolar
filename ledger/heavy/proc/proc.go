@@ -14,21 +14,8 @@
 // limitations under the License.
 //
 
-package genesis
+package proc
 
-import (
-	"github.com/insolar/insolar/bootstrap/rootdomain"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/platformpolicy"
-)
-
-func refByName(name string) insolar.Reference {
-	pcs := platformpolicy.NewPlatformCryptographyScheme()
-	vRec := record.Wrap(record.Request{
-		CallType: record.CTGenesis,
-		Method:   name,
-	})
-	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vRec))
-	return *insolar.NewReference(rootdomain.RootDomain.ID(), *id)
+type Dependencies struct {
+	PassState func(*PassState)
 }

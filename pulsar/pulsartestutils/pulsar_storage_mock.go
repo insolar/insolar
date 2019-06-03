@@ -1,19 +1,3 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
-
 package pulsartestutils
 
 /*
@@ -26,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -73,31 +57,103 @@ func NewPulsarStorageMock(t minimock.Tester) *PulsarStorageMock {
 }
 
 type mPulsarStorageMockClose struct {
-	mock *PulsarStorageMock
+	mock              *PulsarStorageMock
+	mainExpectation   *PulsarStorageMockCloseExpectation
+	expectationSeries []*PulsarStorageMockCloseExpectation
 }
 
-//Return sets up a mock for PulsarStorage.Close to return Return's arguments
-func (m *mPulsarStorageMockClose) Return(r error) *PulsarStorageMock {
-	m.mock.CloseFunc = func() error {
-		return r
+type PulsarStorageMockCloseExpectation struct {
+	result *PulsarStorageMockCloseResult
+}
+
+type PulsarStorageMockCloseResult struct {
+	r error
+}
+
+//Expect specifies that invocation of PulsarStorage.Close is expected from 1 to Infinity times
+func (m *mPulsarStorageMockClose) Expect() *mPulsarStorageMockClose {
+	m.mock.CloseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulsarStorageMockCloseExpectation{}
 	}
+
+	return m
+}
+
+//Return specifies results of invocation of PulsarStorage.Close
+func (m *mPulsarStorageMockClose) Return(r error) *PulsarStorageMock {
+	m.mock.CloseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulsarStorageMockCloseExpectation{}
+	}
+	m.mainExpectation.result = &PulsarStorageMockCloseResult{r}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PulsarStorage.Close is expected once
+func (m *mPulsarStorageMockClose) ExpectOnce() *PulsarStorageMockCloseExpectation {
+	m.mock.CloseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PulsarStorageMockCloseExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PulsarStorageMockCloseExpectation) Return(r error) {
+	e.result = &PulsarStorageMockCloseResult{r}
 }
 
 //Set uses given function f as a mock of PulsarStorage.Close method
 func (m *mPulsarStorageMockClose) Set(f func() (r error)) *PulsarStorageMock {
-	m.mock.CloseFunc = f
+	m.mainExpectation = nil
+	m.expectationSeries = nil
 
+	m.mock.CloseFunc = f
 	return m.mock
 }
 
 //Close implements github.com/insolar/insolar/pulsar/storage.PulsarStorage interface
 func (m *PulsarStorageMock) Close() (r error) {
-	atomic.AddUint64(&m.ClosePreCounter, 1)
+	counter := atomic.AddUint64(&m.ClosePreCounter, 1)
 	defer atomic.AddUint64(&m.CloseCounter, 1)
 
+	if len(m.CloseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.CloseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PulsarStorageMock.Close.")
+			return
+		}
+
+		result := m.CloseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulsarStorageMock.Close")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.CloseMock.mainExpectation != nil {
+
+		result := m.CloseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulsarStorageMock.Close")
+		}
+
+		r = result.r
+
+		return
+	}
+
 	if m.CloseFunc == nil {
-		m.t.Fatal("Unexpected call to PulsarStorageMock.Close")
+		m.t.Fatalf("Unexpected call to PulsarStorageMock.Close.")
 		return
 	}
 
@@ -114,32 +170,127 @@ func (m *PulsarStorageMock) CloseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ClosePreCounter)
 }
 
-type mPulsarStorageMockGetLastPulse struct {
-	mock *PulsarStorageMock
+//CloseFinished returns true if mock invocations count is ok
+func (m *PulsarStorageMock) CloseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.CloseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.CloseCounter) == uint64(len(m.CloseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.CloseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.CloseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.CloseFunc != nil {
+		return atomic.LoadUint64(&m.CloseCounter) > 0
+	}
+
+	return true
 }
 
-//Return sets up a mock for PulsarStorage.GetLastPulse to return Return's arguments
-func (m *mPulsarStorageMockGetLastPulse) Return(r *insolar.Pulse, r1 error) *PulsarStorageMock {
-	m.mock.GetLastPulseFunc = func() (*insolar.Pulse, error) {
-		return r, r1
+type mPulsarStorageMockGetLastPulse struct {
+	mock              *PulsarStorageMock
+	mainExpectation   *PulsarStorageMockGetLastPulseExpectation
+	expectationSeries []*PulsarStorageMockGetLastPulseExpectation
+}
+
+type PulsarStorageMockGetLastPulseExpectation struct {
+	result *PulsarStorageMockGetLastPulseResult
+}
+
+type PulsarStorageMockGetLastPulseResult struct {
+	r  *insolar.Pulse
+	r1 error
+}
+
+//Expect specifies that invocation of PulsarStorage.GetLastPulse is expected from 1 to Infinity times
+func (m *mPulsarStorageMockGetLastPulse) Expect() *mPulsarStorageMockGetLastPulse {
+	m.mock.GetLastPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulsarStorageMockGetLastPulseExpectation{}
 	}
+
+	return m
+}
+
+//Return specifies results of invocation of PulsarStorage.GetLastPulse
+func (m *mPulsarStorageMockGetLastPulse) Return(r *insolar.Pulse, r1 error) *PulsarStorageMock {
+	m.mock.GetLastPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulsarStorageMockGetLastPulseExpectation{}
+	}
+	m.mainExpectation.result = &PulsarStorageMockGetLastPulseResult{r, r1}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PulsarStorage.GetLastPulse is expected once
+func (m *mPulsarStorageMockGetLastPulse) ExpectOnce() *PulsarStorageMockGetLastPulseExpectation {
+	m.mock.GetLastPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PulsarStorageMockGetLastPulseExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PulsarStorageMockGetLastPulseExpectation) Return(r *insolar.Pulse, r1 error) {
+	e.result = &PulsarStorageMockGetLastPulseResult{r, r1}
 }
 
 //Set uses given function f as a mock of PulsarStorage.GetLastPulse method
 func (m *mPulsarStorageMockGetLastPulse) Set(f func() (r *insolar.Pulse, r1 error)) *PulsarStorageMock {
-	m.mock.GetLastPulseFunc = f
+	m.mainExpectation = nil
+	m.expectationSeries = nil
 
+	m.mock.GetLastPulseFunc = f
 	return m.mock
 }
 
 //GetLastPulse implements github.com/insolar/insolar/pulsar/storage.PulsarStorage interface
 func (m *PulsarStorageMock) GetLastPulse() (r *insolar.Pulse, r1 error) {
-	atomic.AddUint64(&m.GetLastPulsePreCounter, 1)
+	counter := atomic.AddUint64(&m.GetLastPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetLastPulseCounter, 1)
 
+	if len(m.GetLastPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetLastPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PulsarStorageMock.GetLastPulse.")
+			return
+		}
+
+		result := m.GetLastPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulsarStorageMock.GetLastPulse")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetLastPulseMock.mainExpectation != nil {
+
+		result := m.GetLastPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulsarStorageMock.GetLastPulse")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
 	if m.GetLastPulseFunc == nil {
-		m.t.Fatal("Unexpected call to PulsarStorageMock.GetLastPulse")
+		m.t.Fatalf("Unexpected call to PulsarStorageMock.GetLastPulse.")
 		return
 	}
 
@@ -156,56 +307,137 @@ func (m *PulsarStorageMock) GetLastPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetLastPulsePreCounter)
 }
 
-type mPulsarStorageMockSavePulse struct {
-	mock             *PulsarStorageMock
-	mockExpectations *PulsarStorageMockSavePulseParams
+//GetLastPulseFinished returns true if mock invocations count is ok
+func (m *PulsarStorageMock) GetLastPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetLastPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetLastPulseCounter) == uint64(len(m.GetLastPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetLastPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetLastPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetLastPulseFunc != nil {
+		return atomic.LoadUint64(&m.GetLastPulseCounter) > 0
+	}
+
+	return true
 }
 
-//PulsarStorageMockSavePulseParams represents input parameters of the PulsarStorage.SavePulse
-type PulsarStorageMockSavePulseParams struct {
+type mPulsarStorageMockSavePulse struct {
+	mock              *PulsarStorageMock
+	mainExpectation   *PulsarStorageMockSavePulseExpectation
+	expectationSeries []*PulsarStorageMockSavePulseExpectation
+}
+
+type PulsarStorageMockSavePulseExpectation struct {
+	input  *PulsarStorageMockSavePulseInput
+	result *PulsarStorageMockSavePulseResult
+}
+
+type PulsarStorageMockSavePulseInput struct {
 	p *insolar.Pulse
 }
 
-//Expect sets up expected params for the PulsarStorage.SavePulse
+type PulsarStorageMockSavePulseResult struct {
+	r error
+}
+
+//Expect specifies that invocation of PulsarStorage.SavePulse is expected from 1 to Infinity times
 func (m *mPulsarStorageMockSavePulse) Expect(p *insolar.Pulse) *mPulsarStorageMockSavePulse {
-	m.mockExpectations = &PulsarStorageMockSavePulseParams{p}
+	m.mock.SavePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulsarStorageMockSavePulseExpectation{}
+	}
+	m.mainExpectation.input = &PulsarStorageMockSavePulseInput{p}
 	return m
 }
 
-//Return sets up a mock for PulsarStorage.SavePulse to return Return's arguments
+//Return specifies results of invocation of PulsarStorage.SavePulse
 func (m *mPulsarStorageMockSavePulse) Return(r error) *PulsarStorageMock {
-	m.mock.SavePulseFunc = func(p *insolar.Pulse) error {
-		return r
+	m.mock.SavePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulsarStorageMockSavePulseExpectation{}
 	}
+	m.mainExpectation.result = &PulsarStorageMockSavePulseResult{r}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PulsarStorage.SavePulse is expected once
+func (m *mPulsarStorageMockSavePulse) ExpectOnce(p *insolar.Pulse) *PulsarStorageMockSavePulseExpectation {
+	m.mock.SavePulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PulsarStorageMockSavePulseExpectation{}
+	expectation.input = &PulsarStorageMockSavePulseInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PulsarStorageMockSavePulseExpectation) Return(r error) {
+	e.result = &PulsarStorageMockSavePulseResult{r}
 }
 
 //Set uses given function f as a mock of PulsarStorage.SavePulse method
 func (m *mPulsarStorageMockSavePulse) Set(f func(p *insolar.Pulse) (r error)) *PulsarStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.SavePulseFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //SavePulse implements github.com/insolar/insolar/pulsar/storage.PulsarStorage interface
 func (m *PulsarStorageMock) SavePulse(p *insolar.Pulse) (r error) {
-	atomic.AddUint64(&m.SavePulsePreCounter, 1)
+	counter := atomic.AddUint64(&m.SavePulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SavePulseCounter, 1)
 
-	if m.SavePulseMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SavePulseMock.mockExpectations, PulsarStorageMockSavePulseParams{p},
-			"PulsarStorage.SavePulse got unexpected parameters")
-
-		if m.SavePulseFunc == nil {
-
-			m.t.Fatal("No results are set for the PulsarStorageMock.SavePulse")
-
+	if len(m.SavePulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SavePulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PulsarStorageMock.SavePulse. %v", p)
 			return
 		}
+
+		input := m.SavePulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PulsarStorageMockSavePulseInput{p}, "PulsarStorage.SavePulse got unexpected parameters")
+
+		result := m.SavePulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulsarStorageMock.SavePulse")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.SavePulseMock.mainExpectation != nil {
+
+		input := m.SavePulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PulsarStorageMockSavePulseInput{p}, "PulsarStorage.SavePulse got unexpected parameters")
+		}
+
+		result := m.SavePulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulsarStorageMock.SavePulse")
+		}
+
+		r = result.r
+
+		return
 	}
 
 	if m.SavePulseFunc == nil {
-		m.t.Fatal("Unexpected call to PulsarStorageMock.SavePulse")
+		m.t.Fatalf("Unexpected call to PulsarStorageMock.SavePulse. %v", p)
 		return
 	}
 
@@ -222,56 +454,137 @@ func (m *PulsarStorageMock) SavePulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SavePulsePreCounter)
 }
 
-type mPulsarStorageMockSetLastPulse struct {
-	mock             *PulsarStorageMock
-	mockExpectations *PulsarStorageMockSetLastPulseParams
+//SavePulseFinished returns true if mock invocations count is ok
+func (m *PulsarStorageMock) SavePulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SavePulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SavePulseCounter) == uint64(len(m.SavePulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SavePulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SavePulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SavePulseFunc != nil {
+		return atomic.LoadUint64(&m.SavePulseCounter) > 0
+	}
+
+	return true
 }
 
-//PulsarStorageMockSetLastPulseParams represents input parameters of the PulsarStorage.SetLastPulse
-type PulsarStorageMockSetLastPulseParams struct {
+type mPulsarStorageMockSetLastPulse struct {
+	mock              *PulsarStorageMock
+	mainExpectation   *PulsarStorageMockSetLastPulseExpectation
+	expectationSeries []*PulsarStorageMockSetLastPulseExpectation
+}
+
+type PulsarStorageMockSetLastPulseExpectation struct {
+	input  *PulsarStorageMockSetLastPulseInput
+	result *PulsarStorageMockSetLastPulseResult
+}
+
+type PulsarStorageMockSetLastPulseInput struct {
 	p *insolar.Pulse
 }
 
-//Expect sets up expected params for the PulsarStorage.SetLastPulse
+type PulsarStorageMockSetLastPulseResult struct {
+	r error
+}
+
+//Expect specifies that invocation of PulsarStorage.SetLastPulse is expected from 1 to Infinity times
 func (m *mPulsarStorageMockSetLastPulse) Expect(p *insolar.Pulse) *mPulsarStorageMockSetLastPulse {
-	m.mockExpectations = &PulsarStorageMockSetLastPulseParams{p}
+	m.mock.SetLastPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulsarStorageMockSetLastPulseExpectation{}
+	}
+	m.mainExpectation.input = &PulsarStorageMockSetLastPulseInput{p}
 	return m
 }
 
-//Return sets up a mock for PulsarStorage.SetLastPulse to return Return's arguments
+//Return specifies results of invocation of PulsarStorage.SetLastPulse
 func (m *mPulsarStorageMockSetLastPulse) Return(r error) *PulsarStorageMock {
-	m.mock.SetLastPulseFunc = func(p *insolar.Pulse) error {
-		return r
+	m.mock.SetLastPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulsarStorageMockSetLastPulseExpectation{}
 	}
+	m.mainExpectation.result = &PulsarStorageMockSetLastPulseResult{r}
 	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PulsarStorage.SetLastPulse is expected once
+func (m *mPulsarStorageMockSetLastPulse) ExpectOnce(p *insolar.Pulse) *PulsarStorageMockSetLastPulseExpectation {
+	m.mock.SetLastPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PulsarStorageMockSetLastPulseExpectation{}
+	expectation.input = &PulsarStorageMockSetLastPulseInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PulsarStorageMockSetLastPulseExpectation) Return(r error) {
+	e.result = &PulsarStorageMockSetLastPulseResult{r}
 }
 
 //Set uses given function f as a mock of PulsarStorage.SetLastPulse method
 func (m *mPulsarStorageMockSetLastPulse) Set(f func(p *insolar.Pulse) (r error)) *PulsarStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
 	m.mock.SetLastPulseFunc = f
-	m.mockExpectations = nil
 	return m.mock
 }
 
 //SetLastPulse implements github.com/insolar/insolar/pulsar/storage.PulsarStorage interface
 func (m *PulsarStorageMock) SetLastPulse(p *insolar.Pulse) (r error) {
-	atomic.AddUint64(&m.SetLastPulsePreCounter, 1)
+	counter := atomic.AddUint64(&m.SetLastPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SetLastPulseCounter, 1)
 
-	if m.SetLastPulseMock.mockExpectations != nil {
-		testify_assert.Equal(m.t, *m.SetLastPulseMock.mockExpectations, PulsarStorageMockSetLastPulseParams{p},
-			"PulsarStorage.SetLastPulse got unexpected parameters")
-
-		if m.SetLastPulseFunc == nil {
-
-			m.t.Fatal("No results are set for the PulsarStorageMock.SetLastPulse")
-
+	if len(m.SetLastPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetLastPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PulsarStorageMock.SetLastPulse. %v", p)
 			return
 		}
+
+		input := m.SetLastPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PulsarStorageMockSetLastPulseInput{p}, "PulsarStorage.SetLastPulse got unexpected parameters")
+
+		result := m.SetLastPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulsarStorageMock.SetLastPulse")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.SetLastPulseMock.mainExpectation != nil {
+
+		input := m.SetLastPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PulsarStorageMockSetLastPulseInput{p}, "PulsarStorage.SetLastPulse got unexpected parameters")
+		}
+
+		result := m.SetLastPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulsarStorageMock.SetLastPulse")
+		}
+
+		r = result.r
+
+		return
 	}
 
 	if m.SetLastPulseFunc == nil {
-		m.t.Fatal("Unexpected call to PulsarStorageMock.SetLastPulse")
+		m.t.Fatalf("Unexpected call to PulsarStorageMock.SetLastPulse. %v", p)
 		return
 	}
 
@@ -288,23 +601,43 @@ func (m *PulsarStorageMock) SetLastPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetLastPulsePreCounter)
 }
 
+//SetLastPulseFinished returns true if mock invocations count is ok
+func (m *PulsarStorageMock) SetLastPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SetLastPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetLastPulseCounter) == uint64(len(m.SetLastPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SetLastPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetLastPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SetLastPulseFunc != nil {
+		return atomic.LoadUint64(&m.SetLastPulseCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PulsarStorageMock) ValidateCallCounters() {
 
-	if m.CloseFunc != nil && atomic.LoadUint64(&m.CloseCounter) == 0 {
+	if !m.CloseFinished() {
 		m.t.Fatal("Expected call to PulsarStorageMock.Close")
 	}
 
-	if m.GetLastPulseFunc != nil && atomic.LoadUint64(&m.GetLastPulseCounter) == 0 {
+	if !m.GetLastPulseFinished() {
 		m.t.Fatal("Expected call to PulsarStorageMock.GetLastPulse")
 	}
 
-	if m.SavePulseFunc != nil && atomic.LoadUint64(&m.SavePulseCounter) == 0 {
+	if !m.SavePulseFinished() {
 		m.t.Fatal("Expected call to PulsarStorageMock.SavePulse")
 	}
 
-	if m.SetLastPulseFunc != nil && atomic.LoadUint64(&m.SetLastPulseCounter) == 0 {
+	if !m.SetLastPulseFinished() {
 		m.t.Fatal("Expected call to PulsarStorageMock.SetLastPulse")
 	}
 
@@ -312,7 +645,6 @@ func (m *PulsarStorageMock) ValidateCallCounters() {
 
 //CheckMocksCalled checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-//noinspection GoDeprecation
 func (m *PulsarStorageMock) CheckMocksCalled() {
 	m.Finish()
 }
@@ -326,19 +658,19 @@ func (m *PulsarStorageMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PulsarStorageMock) MinimockFinish() {
 
-	if m.CloseFunc != nil && atomic.LoadUint64(&m.CloseCounter) == 0 {
+	if !m.CloseFinished() {
 		m.t.Fatal("Expected call to PulsarStorageMock.Close")
 	}
 
-	if m.GetLastPulseFunc != nil && atomic.LoadUint64(&m.GetLastPulseCounter) == 0 {
+	if !m.GetLastPulseFinished() {
 		m.t.Fatal("Expected call to PulsarStorageMock.GetLastPulse")
 	}
 
-	if m.SavePulseFunc != nil && atomic.LoadUint64(&m.SavePulseCounter) == 0 {
+	if !m.SavePulseFinished() {
 		m.t.Fatal("Expected call to PulsarStorageMock.SavePulse")
 	}
 
-	if m.SetLastPulseFunc != nil && atomic.LoadUint64(&m.SetLastPulseCounter) == 0 {
+	if !m.SetLastPulseFinished() {
 		m.t.Fatal("Expected call to PulsarStorageMock.SetLastPulse")
 	}
 
@@ -356,10 +688,10 @@ func (m *PulsarStorageMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && (m.CloseFunc == nil || atomic.LoadUint64(&m.CloseCounter) > 0)
-		ok = ok && (m.GetLastPulseFunc == nil || atomic.LoadUint64(&m.GetLastPulseCounter) > 0)
-		ok = ok && (m.SavePulseFunc == nil || atomic.LoadUint64(&m.SavePulseCounter) > 0)
-		ok = ok && (m.SetLastPulseFunc == nil || atomic.LoadUint64(&m.SetLastPulseCounter) > 0)
+		ok = ok && m.CloseFinished()
+		ok = ok && m.GetLastPulseFinished()
+		ok = ok && m.SavePulseFinished()
+		ok = ok && m.SetLastPulseFinished()
 
 		if ok {
 			return
@@ -368,19 +700,19 @@ func (m *PulsarStorageMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if m.CloseFunc != nil && atomic.LoadUint64(&m.CloseCounter) == 0 {
+			if !m.CloseFinished() {
 				m.t.Error("Expected call to PulsarStorageMock.Close")
 			}
 
-			if m.GetLastPulseFunc != nil && atomic.LoadUint64(&m.GetLastPulseCounter) == 0 {
+			if !m.GetLastPulseFinished() {
 				m.t.Error("Expected call to PulsarStorageMock.GetLastPulse")
 			}
 
-			if m.SavePulseFunc != nil && atomic.LoadUint64(&m.SavePulseCounter) == 0 {
+			if !m.SavePulseFinished() {
 				m.t.Error("Expected call to PulsarStorageMock.SavePulse")
 			}
 
-			if m.SetLastPulseFunc != nil && atomic.LoadUint64(&m.SetLastPulseCounter) == 0 {
+			if !m.SetLastPulseFinished() {
 				m.t.Error("Expected call to PulsarStorageMock.SetLastPulse")
 			}
 
@@ -393,22 +725,22 @@ func (m *PulsarStorageMock) MinimockWait(timeout time.Duration) {
 }
 
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-//it can be used with assert/require, i.e. require.True(mock.AllMocksCalled())
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PulsarStorageMock) AllMocksCalled() bool {
 
-	if m.CloseFunc != nil && atomic.LoadUint64(&m.CloseCounter) == 0 {
+	if !m.CloseFinished() {
 		return false
 	}
 
-	if m.GetLastPulseFunc != nil && atomic.LoadUint64(&m.GetLastPulseCounter) == 0 {
+	if !m.GetLastPulseFinished() {
 		return false
 	}
 
-	if m.SavePulseFunc != nil && atomic.LoadUint64(&m.SavePulseCounter) == 0 {
+	if !m.SavePulseFinished() {
 		return false
 	}
 
-	if m.SetLastPulseFunc != nil && atomic.LoadUint64(&m.SetLastPulseCounter) == 0 {
+	if !m.SetLastPulseFinished() {
 		return false
 	}
 

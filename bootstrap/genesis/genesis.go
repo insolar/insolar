@@ -218,7 +218,7 @@ func (g *Generator) activateNodeDomain(
 	if err != nil {
 		return errors.Wrap(err, "[ activateNodeDomain ] couldn't create nodedomain instance")
 	}
-	contract := insolar.NewReference(rootdomain.RootDomain.ID(), *contractID)
+	contract := insolar.NewReference(*contractID)
 
 	inslogger.FromContext(ctx).Infof("[ activateNodeDomain ] Ref: %v", contract)
 
@@ -270,7 +270,7 @@ func (g *Generator) activateRootMember(
 	if err != nil {
 		return errors.Wrap(err, "[ activateRootMember ] request register root rootMember instance failed")
 	}
-	contract := insolar.NewReference(rootdomain.RootDomain.ID(), *contractID)
+	contract := insolar.NewReference(*contractID)
 	memberDesc, err := g.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
@@ -317,7 +317,7 @@ func (g *Generator) activateRootMemberWallet(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't register root wallet")
 	}
-	contract := insolar.NewReference(rootdomain.RootDomain.ID(), *contractID)
+	contract := insolar.NewReference(*contractID)
 	_, err = g.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
