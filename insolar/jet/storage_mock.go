@@ -25,15 +25,10 @@ type StorageMock struct {
 	AllPreCounter uint64
 	AllMock       mStorageMockAll
 
-	CloneFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber)
+	CloneFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r error)
 	CloneCounter    uint64
 	ClonePreCounter uint64
 	CloneMock       mStorageMockClone
-
-	DeleteForPNFunc       func(p context.Context, p1 insolar.PulseNumber)
-	DeleteForPNCounter    uint64
-	DeleteForPNPreCounter uint64
-	DeleteForPNMock       mStorageMockDeleteForPN
 
 	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r insolar.JetID, r1 bool)
 	ForIDCounter    uint64
@@ -45,7 +40,7 @@ type StorageMock struct {
 	SplitPreCounter uint64
 	SplitMock       mStorageMockSplit
 
-	UpdateFunc       func(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID)
+	UpdateFunc       func(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) (r error)
 	UpdateCounter    uint64
 	UpdatePreCounter uint64
 	UpdateMock       mStorageMockUpdate
@@ -61,7 +56,6 @@ func NewStorageMock(t minimock.Tester) *StorageMock {
 
 	m.AllMock = mStorageMockAll{mock: m}
 	m.CloneMock = mStorageMockClone{mock: m}
-	m.DeleteForPNMock = mStorageMockDeleteForPN{mock: m}
 	m.ForIDMock = mStorageMockForID{mock: m}
 	m.SplitMock = mStorageMockSplit{mock: m}
 	m.UpdateMock = mStorageMockUpdate{mock: m}
@@ -224,13 +218,18 @@ type mStorageMockClone struct {
 }
 
 type StorageMockCloneExpectation struct {
-	input *StorageMockCloneInput
+	input  *StorageMockCloneInput
+	result *StorageMockCloneResult
 }
 
 type StorageMockCloneInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 	p2 insolar.PulseNumber
+}
+
+type StorageMockCloneResult struct {
+	r error
 }
 
 //Expect specifies that invocation of Storage.Clone is expected from 1 to Infinity times
@@ -246,14 +245,14 @@ func (m *mStorageMockClone) Expect(p context.Context, p1 insolar.PulseNumber, p2
 }
 
 //Return specifies results of invocation of Storage.Clone
-func (m *mStorageMockClone) Return() *StorageMock {
+func (m *mStorageMockClone) Return(r error) *StorageMock {
 	m.mock.CloneFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &StorageMockCloneExpectation{}
 	}
-
+	m.mainExpectation.result = &StorageMockCloneResult{r}
 	return m.mock
 }
 
@@ -268,8 +267,12 @@ func (m *mStorageMockClone) ExpectOnce(p context.Context, p1 insolar.PulseNumber
 	return expectation
 }
 
+func (e *StorageMockCloneExpectation) Return(r error) {
+	e.result = &StorageMockCloneResult{r}
+}
+
 //Set uses given function f as a mock of Storage.Clone method
-func (m *mStorageMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber)) *StorageMock {
+func (m *mStorageMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r error)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -278,7 +281,7 @@ func (m *mStorageMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber
 }
 
 //Clone implements github.com/insolar/insolar/insolar/jet.Storage interface
-func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) {
+func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.ClonePreCounter, 1)
 	defer atomic.AddUint64(&m.CloneCounter, 1)
 
@@ -291,6 +294,14 @@ func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insola
 		input := m.CloneMock.expectationSeries[counter-1].input
 		testify_assert.Equal(m.t, *input, StorageMockCloneInput{p, p1, p2}, "Storage.Clone got unexpected parameters")
 
+		result := m.CloneMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the StorageMock.Clone")
+			return
+		}
+
+		r = result.r
+
 		return
 	}
 
@@ -301,6 +312,13 @@ func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insola
 			testify_assert.Equal(m.t, *input, StorageMockCloneInput{p, p1, p2}, "Storage.Clone got unexpected parameters")
 		}
 
+		result := m.CloneMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the StorageMock.Clone")
+		}
+
+		r = result.r
+
 		return
 	}
 
@@ -309,7 +327,7 @@ func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insola
 		return
 	}
 
-	m.CloneFunc(p, p1, p2)
+	return m.CloneFunc(p, p1, p2)
 }
 
 //CloneMinimockCounter returns a count of StorageMock.CloneFunc invocations
@@ -337,130 +355,6 @@ func (m *StorageMock) CloneFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.CloneFunc != nil {
 		return atomic.LoadUint64(&m.CloneCounter) > 0
-	}
-
-	return true
-}
-
-type mStorageMockDeleteForPN struct {
-	mock              *StorageMock
-	mainExpectation   *StorageMockDeleteForPNExpectation
-	expectationSeries []*StorageMockDeleteForPNExpectation
-}
-
-type StorageMockDeleteForPNExpectation struct {
-	input *StorageMockDeleteForPNInput
-}
-
-type StorageMockDeleteForPNInput struct {
-	p  context.Context
-	p1 insolar.PulseNumber
-}
-
-//Expect specifies that invocation of Storage.DeleteForPN is expected from 1 to Infinity times
-func (m *mStorageMockDeleteForPN) Expect(p context.Context, p1 insolar.PulseNumber) *mStorageMockDeleteForPN {
-	m.mock.DeleteForPNFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &StorageMockDeleteForPNExpectation{}
-	}
-	m.mainExpectation.input = &StorageMockDeleteForPNInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of Storage.DeleteForPN
-func (m *mStorageMockDeleteForPN) Return() *StorageMock {
-	m.mock.DeleteForPNFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &StorageMockDeleteForPNExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Storage.DeleteForPN is expected once
-func (m *mStorageMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *StorageMockDeleteForPNExpectation {
-	m.mock.DeleteForPNFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &StorageMockDeleteForPNExpectation{}
-	expectation.input = &StorageMockDeleteForPNInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of Storage.DeleteForPN method
-func (m *mStorageMockDeleteForPN) Set(f func(p context.Context, p1 insolar.PulseNumber)) *StorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.DeleteForPNFunc = f
-	return m.mock
-}
-
-//DeleteForPN implements github.com/insolar/insolar/insolar/jet.Storage interface
-func (m *StorageMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
-	counter := atomic.AddUint64(&m.DeleteForPNPreCounter, 1)
-	defer atomic.AddUint64(&m.DeleteForPNCounter, 1)
-
-	if len(m.DeleteForPNMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.DeleteForPNMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StorageMock.DeleteForPN. %v %v", p, p1)
-			return
-		}
-
-		input := m.DeleteForPNMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StorageMockDeleteForPNInput{p, p1}, "Storage.DeleteForPN got unexpected parameters")
-
-		return
-	}
-
-	if m.DeleteForPNMock.mainExpectation != nil {
-
-		input := m.DeleteForPNMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, StorageMockDeleteForPNInput{p, p1}, "Storage.DeleteForPN got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.DeleteForPNFunc == nil {
-		m.t.Fatalf("Unexpected call to StorageMock.DeleteForPN. %v %v", p, p1)
-		return
-	}
-
-	m.DeleteForPNFunc(p, p1)
-}
-
-//DeleteForPNMinimockCounter returns a count of StorageMock.DeleteForPNFunc invocations
-func (m *StorageMock) DeleteForPNMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.DeleteForPNCounter)
-}
-
-//DeleteForPNMinimockPreCounter returns the value of StorageMock.DeleteForPN invocations
-func (m *StorageMock) DeleteForPNMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.DeleteForPNPreCounter)
-}
-
-//DeleteForPNFinished returns true if mock invocations count is ok
-func (m *StorageMock) DeleteForPNFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.DeleteForPNMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.DeleteForPNCounter) == uint64(len(m.DeleteForPNMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.DeleteForPNMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.DeleteForPNCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.DeleteForPNFunc != nil {
-		return atomic.LoadUint64(&m.DeleteForPNCounter) > 0
 	}
 
 	return true
@@ -780,7 +674,8 @@ type mStorageMockUpdate struct {
 }
 
 type StorageMockUpdateExpectation struct {
-	input *StorageMockUpdateInput
+	input  *StorageMockUpdateInput
+	result *StorageMockUpdateResult
 }
 
 type StorageMockUpdateInput struct {
@@ -788,6 +683,10 @@ type StorageMockUpdateInput struct {
 	p1 insolar.PulseNumber
 	p2 bool
 	p3 []insolar.JetID
+}
+
+type StorageMockUpdateResult struct {
+	r error
 }
 
 //Expect specifies that invocation of Storage.Update is expected from 1 to Infinity times
@@ -803,14 +702,14 @@ func (m *mStorageMockUpdate) Expect(p context.Context, p1 insolar.PulseNumber, p
 }
 
 //Return specifies results of invocation of Storage.Update
-func (m *mStorageMockUpdate) Return() *StorageMock {
+func (m *mStorageMockUpdate) Return(r error) *StorageMock {
 	m.mock.UpdateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &StorageMockUpdateExpectation{}
 	}
-
+	m.mainExpectation.result = &StorageMockUpdateResult{r}
 	return m.mock
 }
 
@@ -825,8 +724,12 @@ func (m *mStorageMockUpdate) ExpectOnce(p context.Context, p1 insolar.PulseNumbe
 	return expectation
 }
 
+func (e *StorageMockUpdateExpectation) Return(r error) {
+	e.result = &StorageMockUpdateResult{r}
+}
+
 //Set uses given function f as a mock of Storage.Update method
-func (m *mStorageMockUpdate) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID)) *StorageMock {
+func (m *mStorageMockUpdate) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) (r error)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -835,7 +738,7 @@ func (m *mStorageMockUpdate) Set(f func(p context.Context, p1 insolar.PulseNumbe
 }
 
 //Update implements github.com/insolar/insolar/insolar/jet.Storage interface
-func (m *StorageMock) Update(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) {
+func (m *StorageMock) Update(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) (r error) {
 	counter := atomic.AddUint64(&m.UpdatePreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateCounter, 1)
 
@@ -848,6 +751,14 @@ func (m *StorageMock) Update(p context.Context, p1 insolar.PulseNumber, p2 bool,
 		input := m.UpdateMock.expectationSeries[counter-1].input
 		testify_assert.Equal(m.t, *input, StorageMockUpdateInput{p, p1, p2, p3}, "Storage.Update got unexpected parameters")
 
+		result := m.UpdateMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the StorageMock.Update")
+			return
+		}
+
+		r = result.r
+
 		return
 	}
 
@@ -858,6 +769,13 @@ func (m *StorageMock) Update(p context.Context, p1 insolar.PulseNumber, p2 bool,
 			testify_assert.Equal(m.t, *input, StorageMockUpdateInput{p, p1, p2, p3}, "Storage.Update got unexpected parameters")
 		}
 
+		result := m.UpdateMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the StorageMock.Update")
+		}
+
+		r = result.r
+
 		return
 	}
 
@@ -866,7 +784,7 @@ func (m *StorageMock) Update(p context.Context, p1 insolar.PulseNumber, p2 bool,
 		return
 	}
 
-	m.UpdateFunc(p, p1, p2, p3...)
+	return m.UpdateFunc(p, p1, p2, p3...)
 }
 
 //UpdateMinimockCounter returns a count of StorageMock.UpdateFunc invocations
@@ -911,10 +829,6 @@ func (m *StorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to StorageMock.Clone")
 	}
 
-	if !m.DeleteForPNFinished() {
-		m.t.Fatal("Expected call to StorageMock.DeleteForPN")
-	}
-
 	if !m.ForIDFinished() {
 		m.t.Fatal("Expected call to StorageMock.ForID")
 	}
@@ -952,10 +866,6 @@ func (m *StorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to StorageMock.Clone")
 	}
 
-	if !m.DeleteForPNFinished() {
-		m.t.Fatal("Expected call to StorageMock.DeleteForPN")
-	}
-
 	if !m.ForIDFinished() {
 		m.t.Fatal("Expected call to StorageMock.ForID")
 	}
@@ -984,7 +894,6 @@ func (m *StorageMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.AllFinished()
 		ok = ok && m.CloneFinished()
-		ok = ok && m.DeleteForPNFinished()
 		ok = ok && m.ForIDFinished()
 		ok = ok && m.SplitFinished()
 		ok = ok && m.UpdateFinished()
@@ -1002,10 +911,6 @@ func (m *StorageMock) MinimockWait(timeout time.Duration) {
 
 			if !m.CloneFinished() {
 				m.t.Error("Expected call to StorageMock.Clone")
-			}
-
-			if !m.DeleteForPNFinished() {
-				m.t.Error("Expected call to StorageMock.DeleteForPN")
 			}
 
 			if !m.ForIDFinished() {
@@ -1037,10 +942,6 @@ func (m *StorageMock) AllMocksCalled() bool {
 	}
 
 	if !m.CloneFinished() {
-		return false
-	}
-
-	if !m.DeleteForPNFinished() {
 		return false
 	}
 

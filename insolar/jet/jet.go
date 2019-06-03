@@ -41,6 +41,8 @@ type Modifier interface {
 	Clone(ctx context.Context, from, to insolar.PulseNumber) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Cleaner -o ./ -s _mock.go
+
 // Cleaner provides an interface for removing jet.Tree from a storage.
 type Cleaner interface {
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
