@@ -19,11 +19,11 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"github.com/square/go-jose"
 	"io/ioutil"
 	"net/http"
 	"time"
 
+	insolarJose "github.com/insolar/go-jose"
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
 	"github.com/pkg/errors"
+	"github.com/square/go-jose"
 )
 
 // Request is a representation of request struct to api
@@ -45,7 +46,9 @@ type Request struct {
 // Data which is signed
 type SignedPayload struct {
 	Reference string `json:"reference"` // contract reference
-	Method    string `json:"method"`    // method name
+	Method    string
+
+	// method name
 	Params    string `json:"params"`    // json object
 	Seed      []byte `json:"seed"`
 }
@@ -86,7 +89,7 @@ func (ar *Runner) checkSeed(paramsSeed []byte) error {
 	return nil
 }
 
-func (ar *Runner) makeCall(ctx context.Context, signedPayload SignedPayload, public jose.JSONWebKey, signature jose.JSONWebSignature) (interface{}, error) {
+func (ar *Runner) makeCall(ctx context.Context, signedPayload SignedPayload, request Request) (interface{}, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+signedPayload.Method)
 	defer span.End()
 
@@ -96,17 +99,7 @@ func (ar *Runner) makeCall(ctx context.Context, signedPayload SignedPayload, pub
 	}
 
 	type PostParams = map[string]interface{}
-
-	publicJSON, err := public.MarshalJSON()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal public")
-	}
-	jwsToken, err := signature.CompactSerialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] failed to serialize jws token")
-	}
-
-	args, err := insolar.MarshalArgs(string(publicJSON), jwsToken)
+	args, err := insolar.MarshalArgs(string(request.PublicKey), request.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}
@@ -158,7 +151,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		signedPayload, public, signature, err := verify(request.PublicKey, request.Signature)
+		signedPayload, err := verify(request.PublicKey, request.Signature)
 		if err != nil {
 			processError(err, "Can't verify signature", &resp, insLog)
 			return
@@ -207,7 +200,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, *signedPayload, *public, *signature)
+			result, err = ar.makeCall(ctx, *signedPayload, request)
 			ch <- nil
 		}()
 		select {
@@ -231,30 +224,73 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 // verify and get payload
 // return parsed payload, public key, signature and error
-func verify(publicKey string, _signature string) (*SignedPayload, *jose.JSONWebKey, *jose.JSONWebSignature, error) {
-	// unmarshal public key
-	public := jose.JSONWebKey{}
-	err := public.UnmarshalJSON([]byte(publicKey))
+func verify(publicKey string, _signature string) (*SignedPayload, error) {
+	type rawJSONWebKey struct {
+		Crv string `json:"crv,omitempty"`
+	}
+	var raw rawJSONWebKey
+	err := json.Unmarshal([]byte(publicKey), &raw)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
+	}
+	switch raw.Crv {
+	case "P-256K":
+		{
+			// unmarshal public key
+			public := insolarJose.JSONWebKey{}
+			err = public.UnmarshalJSON([]byte(publicKey))
+			if err != nil {
+				return nil, err
+			}
+			// parse jws token
+			signature, err := insolarJose.ParseSigned(_signature)
+			if err != nil {
+				return nil, err
+			}
+			var payloadRequest = SignedPayload{}
+
+			payload, err := signature.Verify(&public)
+			if err != nil {
+				return nil, err
+			}
+
+			err = json.Unmarshal(payload, &payloadRequest)
+			if err != nil {
+				return nil, err
+			}
+
+			return &payloadRequest, nil
+		}
+	case "P-256":
+		{
+			// unmarshal public key
+			public := jose.JSONWebKey{}
+			err = public.UnmarshalJSON([]byte(publicKey))
+			if err != nil {
+				return nil, err
+			}
+			// parse jws token
+			signature, err := jose.ParseSigned(_signature)
+			if err != nil {
+				return nil, err
+			}
+			var payloadRequest = SignedPayload{}
+
+			payload, err := signature.Verify(&public)
+			if err != nil {
+				return nil, err
+			}
+
+			err = json.Unmarshal(payload, &payloadRequest)
+			if err != nil {
+				return nil, err
+			}
+
+			return &payloadRequest, nil
+
+		}
+	default:
+		return nil, errors.Errorf("Unsupported key format")
 	}
 
-	// parse jws token
-	signature, err := jose.ParseSigned(_signature)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	var payloadRequest = SignedPayload{}
-
-	payload, err := signature.Verify(&public)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	err = json.Unmarshal(payload, &payloadRequest)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return &payloadRequest, &public, signature, nil
 }

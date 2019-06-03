@@ -155,6 +155,7 @@ func (m *Member) createMemberCall(ref insolar.Reference, params []byte, public j
 	}
 
 	rootDomain := rootdomain.GetObject(ref)
+	// TODO: convert to pem format
 	key, err := public.MarshalJSON()
 	if err != nil {
 		return 0, fmt.Errorf("[ createMemberCall ]: %s", err.Error())

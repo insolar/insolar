@@ -92,7 +92,7 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
 	}
 
-	var signedRequest = SignedRequest{}
+	var signedRequest = SignedRequest{PublicKey: "foo", Token: "bar"}
 
 	err = json.Unmarshal(jsonValue, &signedRequest)
 
