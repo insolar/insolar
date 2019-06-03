@@ -132,6 +132,7 @@ func (r *Request) Type() insolar.ReplyType {
 	return TypeRequest
 }
 
+// PendingFilament contains data about a part/full pending filament
 type PendingFilament struct {
 	ID                insolar.ID
 	Records           []record.Virtual

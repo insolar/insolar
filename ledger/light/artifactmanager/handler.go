@@ -198,6 +198,13 @@ func NewMessageHandler(
 			p.Dep.PendingAccessor = h.PendingAccessor
 			p.Dep.LifelineAccessor = h.LifelineIndex
 		},
+		RefreshPendingFilament: func(p *proc.RefreshPendingFilament) {
+			p.Dep.LifelineAccessor = h.LifelineIndex
+			p.Dep.PendingModifier = h.PendingModifier
+			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.Bus = h.Bus
+		},
 	}
 
 	initHandle := func(msg bus.Message) *handle.Init {
