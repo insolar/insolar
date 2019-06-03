@@ -199,9 +199,9 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_
 		return nil
 	}
 
-	rep, err := h.handleActual(context.Background(), &msg, f)
-	require.NoError(suite.T(), err)
-	require.Equal(suite.T(), &reply.OK{}, rep)
+	require.NotPanics(suite.T(), func() {
+		h.handleActual(context.Background(), &msg, f)
+	})
 }
 
 func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_ClarifyPendingState_Failed() {
@@ -228,10 +228,10 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_
 		return fmt.Errorf("Unexpected procedure call")
 	}
 
-	rep, err := h.handleActual(context.Background(), &msg, f)
 	// An error was logged but we return reply.OK nonetheless
-	require.NoError(suite.T(), err)
-	require.Equal(suite.T(), &reply.OK{}, rep)
+	require.NotPanics(suite.T(), func() {
+		h.handleActual(context.Background(), &msg, f)
+	})
 }
 
 func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_StartQueueProcessorIfNeeded_Failed() {
@@ -263,10 +263,10 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_
 		return fmt.Errorf("StartQueueProcessorIfNeeded FAILED")
 	}
 
-	rep, err := h.handleActual(context.Background(), &msg, f)
 	// An error was logged but we return reply.OK nonetheless
-	require.NoError(suite.T(), err)
-	require.Equal(suite.T(), &reply.OK{}, rep)
+	require.NotPanics(suite.T(), func() {
+		h.handleActual(context.Background(), &msg, f)
+	})
 }
 
 func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
