@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -67,7 +68,7 @@ type MessageBus struct {
 	handlers     map[insolar.MessageType]insolar.MessageHandler
 	signmessages bool
 
-	counter uint64
+	counter int64
 	span    *trace.Span
 
 	globalLock                  sync.RWMutex
@@ -79,9 +80,10 @@ type MessageBus struct {
 func (mb *MessageBus) Acquire(ctx context.Context) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Acquire")
 	defer span.End()
-	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", mb.counter)
-	mb.counter++
-	if mb.counter-1 == 0 {
+
+	counter := atomic.AddInt64(&mb.counter, 1)
+	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
+	if counter == 1 {
 		inslogger.FromContext(ctx).Info("Lock MB")
 		ctx, mb.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
 		mb.Lock(ctx)
@@ -91,12 +93,13 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 func (mb *MessageBus) Release(ctx context.Context) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Release")
 	defer span.End()
-	inslogger.FromContext(ctx).Info("Call Release in MessageBus: ", mb.counter)
-	if mb.counter == 0 {
+
+	counter := atomic.AddInt64(&mb.counter, -1)
+	if counter < 0 {
 		panic("Trying to unlock without locking")
 	}
-	mb.counter--
-	if mb.counter == 0 {
+	inslogger.FromContext(ctx).Info("Call Release in MessageBus: ", counter)
+	if counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
 		mb.Unlock(ctx)
 		mb.span.End()
