@@ -161,7 +161,7 @@ func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker(t *testing.T) {
 	calc.PulseCalculator = pulseCalculator
 
 	// Act
-	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber, 0)
+	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber+1, insolar.FirstPulseNumber+2)
 
 	// Assert
 	require.NotNil(t, err)
@@ -210,11 +210,11 @@ func TestJetCoordinator_IsBeyondLimit_InsideOfLightChainLimit(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	coord := NewJetCoordinator(25)
 	pulseCalculator := pulse.NewCalculatorMock(t)
-	pulseCalculator.BackwardsMock.Expect(ctx, insolar.FirstPulseNumber, 25).Return(insolar.Pulse{PulseNumber: 15}, nil)
+	pulseCalculator.BackwardsMock.Expect(ctx, insolar.FirstPulseNumber+1, 25).Return(insolar.Pulse{PulseNumber: 15}, nil)
 	coord.PulseCalculator = pulseCalculator
 
 	// Act
-	res, err := coord.IsBeyondLimit(ctx, insolar.FirstPulseNumber, 16)
+	res, err := coord.IsBeyondLimit(ctx, insolar.FirstPulseNumber+1, insolar.FirstPulseNumber+2)
 
 	// Assert
 	require.Nil(t, err)
