@@ -58,6 +58,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
@@ -364,6 +365,13 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, address string
 
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
+	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
+	logger := inslogger.FromContext(ctx)
+	msgType, err := payload.UnmarshalType(msg.Payload)
+	if err != nil {
+		logger.Error("failed to extract message type")
+	}
+
 	node, err := n.wrapMeta(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send message")
@@ -382,7 +390,6 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	if err != nil {
 		return nil, errors.Wrap(err, "error while converting message to bytes")
 	}
-	ctx := inslogger.ContextWithTrace(msg.Context(), msg.Metadata.Get(bus.MetaTraceID))
 	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
@@ -390,6 +397,12 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	if !bytes.Equal(res, ack) {
 		return nil, errors.Errorf("reply is not ack: %s", res)
 	}
+
+	logger.WithFields(map[string]interface{}{
+		"msg_type":       msgType.String(),
+		"correlation_id": middleware.MessageCorrelationID(msg),
+	}).Info("Network sent message")
+
 	return nil, nil
 }
 
@@ -403,7 +416,7 @@ func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, erro
 		return insolar.Reference{}, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
 	}
 
-	latestPulse, err := n.PulseAccessor.Latest(msg.Context())
+	latestPulse, err := n.PulseAccessor.Latest(context.Background())
 	if err != nil {
 		return insolar.Reference{}, errors.Wrap(err, "failed to fetch pulse")
 	}
@@ -437,18 +450,24 @@ func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 
 func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]byte, error) {
 	logger := inslogger.FromContext(ctx)
-	if len(args) < 1 {
-		err := errors.New("need exactly one argument when n.processIncoming()")
-		logger.Error(err)
-		return nil, err
-	}
 	msg, err := deserializeMessage(bytes.NewBuffer(args))
 	if err != nil {
 		err = errors.Wrap(err, "error while deserialize msg from buffer")
 		logger.Error(err)
 		return nil, err
 	}
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
+	logger = inslogger.FromContext(ctx)
 	// TODO: check pulse here
+
+	msgType, err := payload.UnmarshalTypeFromMeta(msg.Payload)
+	if err != nil {
+		logger.Error("failed to extract message type")
+	}
+	logger.WithFields(map[string]interface{}{
+		"msg_type":       msgType.String(),
+		"correlation_id": middleware.MessageCorrelationID(msg),
+	}).Info("Network received message")
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {

@@ -321,8 +321,8 @@ func (m *PulseManager) processJets(ctx context.Context, previous, current, new i
 		return nil, errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", current, new)
 	}
 
-	ids := m.JetAccessor.All(ctx, new)
-	ids, err = m.filterOtherExecutors(ctx, current, ids)
+	ids := m.JetAccessor.All(ctx, current)
+	ids, err := m.filterOtherExecutors(ctx, current, ids)
 	if err != nil {
 		return nil, err
 	}

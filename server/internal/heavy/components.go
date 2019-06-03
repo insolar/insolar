@@ -257,6 +257,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.PulseAccessor = Pulses
 		h.JetModifier = jets
 		h.JetKeeper = jetKeeper
+		h.Sender = WmBus
 
 		PulseManager = pm
 		Handler = h
@@ -289,7 +290,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Requester,
 		Tokens,
 		Parcels,
-		artifacts.NewClient(),
+		artifacts.NewClient(WmBus),
 		Genesis,
 		API,
 		KeyProcessor,
@@ -349,11 +350,9 @@ func startWatermill(
 		middleware.CorrelationID,
 	)
 
-	inRouter.AddHandler(
+	inRouter.AddNoPublisherHandler(
 		"IncomingHandler",
 		bus.TopicIncoming,
-		pubSub,
-		bus.TopicOutgoing,
 		pubSub,
 		inHandler,
 	)

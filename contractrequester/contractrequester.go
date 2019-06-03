@@ -131,7 +131,11 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		cr.ResultMutex.Unlock()
 	}
 
-	sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
+	sender := messagebus.BuildSender(
+		cr.MessageBus.Send,
+		messagebus.RetryIncorrectPulse(cr.PulseAccessor),
+		messagebus.RetryFlowCancelled(cr.PulseAccessor),
+	)
 	res, err := sender(ctx, msg, nil)
 
 	if err != nil {

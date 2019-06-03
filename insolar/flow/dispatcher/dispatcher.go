@@ -18,13 +18,13 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync/atomic"
 
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	wmBus "github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -114,49 +114,29 @@ func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.
 
 // Process handles incoming message.
 func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
-	ctx := msg.Context()
+	ctx := context.Background()
 	msgBus := bus.Message{
 		WatermillMsg: msg,
 		ReplyTo:      make(chan bus.Reply),
 	}
-	p, err := pulseFromString(msg.Metadata.Get(wmBus.MetaPulse))
+
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't get pulse from string")
+		return nil, errors.Wrap(err, "failed to unmarshal meta")
 	}
-	ctx, logger := inslogger.WithField(ctx, "pulse", msg.Metadata.Get(wmBus.MetaPulse))
-	ctx = pulse.ContextWith(ctx, p)
+	ctx, logger := inslogger.WithField(ctx, "pulse", fmt.Sprintf("%d", meta.Pulse))
+	ctx = pulse.ContextWith(ctx, meta.Pulse)
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
 	go func() {
 		f := thread.NewThread(msgBus, d.controller)
-		handle := d.getHandleByPulse(p)
+		handle := d.getHandleByPulse(meta.Pulse)
 		err := f.Run(ctx, handle(msgBus))
 		if err != nil {
-			logger.Error("Handling failed", err)
+			logger.Error(errors.Wrap(err, "Handling failed"))
 		}
 	}()
-
-	// TODO: move this logic to specific function and use it instead writing to ReplyTo channel
-	// now its here for simplicity of moving only one message type (GetObject)
-	rep := <-msgBus.ReplyTo
-	var resInBytes []byte
-	var replyType string
-	if rep.Err != nil {
-		resInBytes, err = wmBus.ErrorToBytes(rep.Err)
-		if err != nil {
-			return nil, errors.Wrap(err, "can't convert error to bytes")
-		}
-		replyType = wmBus.TypeError
-	} else {
-		resInBytes = reply.ToBytes(rep.Reply)
-		replyType = string(rep.Reply.Type())
-	}
-	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(wmBus.MetaType, replyType)
-	receiver := msgBus.WatermillMsg.Metadata.Get(wmBus.MetaSender)
-	resAsMsg.Metadata.Set(wmBus.MetaReceiver, receiver)
-	resAsMsg.Metadata.Set(wmBus.MetaTraceID, msg.Metadata.Get(wmBus.MetaTraceID))
-	return []*message.Message{resAsMsg}, nil
-
+	return nil, nil
 }
 
 func pulseFromString(p string) (insolar.PulseNumber, error) {
