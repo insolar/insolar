@@ -62,7 +62,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 
 	rec, err := p.Dep.Records.ForID(ctx, pass.StateID)
 	if err == object.ErrNotFound {
-		msg, err := payload.NewMessage(&payload.Error{Text: "no such state"})
+		msg, err := payload.NewMessage(&payload.Error{Text: "state not found"})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
