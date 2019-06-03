@@ -60,14 +60,18 @@ func (Key) Scope() store.Scope {
 
 // IsGenesisRequired checks if genesis record already exists.
 func (br *BaseRecord) IsGenesisRequired(ctx context.Context) (bool, error) {
-	_, err := br.DB.Get(Key{})
-	if err == nil {
-		return false, nil
-	}
-	if err != store.ErrNotFound {
+	b, err := br.DB.Get(Key{})
+	if err != nil {
+		if err == store.ErrNotFound {
+			return true, nil
+		}
 		return false, errors.Wrap(err, "genesis record fetch failed")
 	}
-	return true, nil
+
+	if len(b) == 0 {
+		return false, errors.Wrap(err, "genesis record is empty (genesis hasn't properly finished")
+	}
+	return false, nil
 }
 
 // Create creates new base genesis record if needed.
@@ -129,6 +133,11 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 		return errors.Wrap(err, "fail to set genesis index")
 	}
 
+	return br.DB.Set(Key{}, nil)
+}
+
+// Done saves genesis value. Should be called when all genesis steps finished properly.
+func (br *BaseRecord) Done(ctx context.Context) error {
 	return br.DB.Set(Key{}, insolar.GenesisRecord.Ref().Bytes())
 }
 
@@ -145,7 +154,6 @@ type Genesis struct {
 // Start implements components.Starter.
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
-	fmt.Println("CALL Genesis.Start()")
 
 	isRequired, err := g.BaseRecord.IsGenesisRequired(ctx)
 	inslogger.FromContext(ctx).Infof("[genesis] required=%v", isRequired)
@@ -160,24 +168,32 @@ func (g *Genesis) Start(ctx context.Context) error {
 	}
 
 	inslogger.FromContext(ctx).Info("[genesis] start...")
+
+	inslog.Info("[genesis] create genesis record")
 	err = g.BaseRecord.Create(ctx)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		inslog.Info("[genesis] finalize genesis record")
+		g.BaseRecord.Done(ctx)
+	}()
 
+	inslog.Info("[genesis] store contracts")
 	err = g.storeContracts(ctx)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("[genesis] store contracts failed: %v", err)
 		return err
 	}
 
+	inslog.Info("[genesis] store discovery nodes")
 	discoveryNodeManager := NewDiscoveryNodeManager(g.ArtifactManager)
-	inslog.Info("CALL StoreDiscoveryNodes")
 	err = discoveryNodeManager.StoreDiscoveryNodes(ctx, g.DiscoveryNodes)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("store discovery nodes failed: %v", err)
 		return err
 	}
+
 	return nil
 }
 
