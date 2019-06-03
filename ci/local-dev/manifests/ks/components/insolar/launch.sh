@@ -35,12 +35,13 @@ if [[ -f /opt/work/config/node-cert.json ]];
 then
     echo "skip work"
 else    
+    mkdir -vp /opt/work/config
+
     echo "copy files required for genesis"
     cp -v ${HEAVY_GENESIS_CONFIG} /opt/work/config/heavy_genesis.json
     cp -vR ${CONFIG_DIR}/plugins /opt/work/
 
     echo "copy configs"
-    mkdir -vp /opt/work/config
     cp -v ${CERTS_KEYS}/$(hostname | awk -F'-' '{ printf "seed-%d-cert.json", $2 }')  /opt/work/config/node-cert.json
     cp -v ${DISCOVERY_KEYS}/$(hostname | awk -F'-' '{ printf "seed-%d-key.json", $2 }')  /opt/work/config/node-keys.json
 fi

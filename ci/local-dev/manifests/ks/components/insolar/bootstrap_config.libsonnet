@@ -20,7 +20,7 @@ local make_min_roles() = {
     heavy_genesis_config_file: "/opt/insolar/config/heavy_genesis.json",
     heavy_genesis_plugins_dir: "/opt/work/plugins",
     contracts: {
-      insgocc: "bin/insgocc",
+      insgocc: "/go/bin/insgocc",
       outdir: "/opt/insolar/config/plugins",
     },
     root_balance: 1000000000,
