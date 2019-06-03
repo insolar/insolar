@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -65,6 +66,9 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			return fmt.Errorf("no handler for message type %s", msgType)
 		}
 	}
+
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", s.Message.Parcel.Message().Type().String()))
+	defer span.End()
 
 	switch s.Message.Parcel.Message().Type() {
 	case insolar.TypeGetObject:

@@ -18,10 +18,12 @@ package proc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -44,6 +46,9 @@ func NewGetPendingFilament(msg *message.GetPendingFilament, rep chan<- bus.Reply
 }
 
 func (p *GetPendingFilament) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("GetPendingFilament"))
+	defer span.End()
+
 	isStateCalc, err := p.Dep.PendingAccessor.IsStateCalculated(ctx, p.msg.PN, p.msg.ObjectID)
 	if err != nil {
 		return errors.Wrap(err, "[GetPendingFilament] can't fetch a pendings meta")

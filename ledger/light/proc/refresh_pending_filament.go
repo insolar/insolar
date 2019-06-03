@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -48,6 +49,9 @@ func NewRefreshPendingFilament(replyTo chan<- bus.Reply, pn insolar.PulseNumber,
 }
 
 func (p *RefreshPendingFilament) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("RefreshPendingFilament"))
+	defer span.End()
+
 	err := p.process(ctx)
 	if err != nil {
 		p.replyTo <- bus.Reply{Err: err}
@@ -87,6 +91,9 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 }
 
 func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, destPN insolar.PulseNumber, earlistOpenRequest insolar.PulseNumber) error {
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("RefreshPendingFilament.fillPendingFilament"))
+	defer span.End()
+
 	continueFilling := true
 
 	for continueFilling {

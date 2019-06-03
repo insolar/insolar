@@ -18,12 +18,15 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"go.opencensus.io/trace"
 )
 
 type GetPendingRequests struct {
@@ -43,18 +46,24 @@ func NewGetPendingRequests(dep *proc.Dependencies, rep chan<- bus.Reply, parcel 
 }
 
 func (s *GetPendingRequests) Present(ctx context.Context, f flow.Flow) error {
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("GetPendingRequests"))
+	span.AddAttributes(
+		trace.StringAttribute("objID", s.msg.Object.Record().DebugString()),
+	)
+	defer span.End()
+
 	jet := proc.NewFetchJet(*s.msg.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, s.reqPulse, *s.msg.Object.Record())
-	s.dep.RefreshPendingFilament(refreshPendingsState)
-	if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
-		panic("something broken")
-		return err
-	}
+	// refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, s.reqPulse, *s.msg.Object.Record())
+	// s.dep.RefreshPendingFilament(refreshPendingsState)
+	// if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
+	// 	panic(errors.Wrap(err, "something broken"))
+	// 	return err
+	// }
 
 	getPendingRequests := proc.NewGetPendingRequests(jet.Result.Jet, s.replyTo, s.msg, s.reqPulse)
 	s.dep.GetPendingRequests(getPendingRequests)
