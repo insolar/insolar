@@ -72,12 +72,7 @@ func TestFutureManager_Create(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 
-	p := &packet.Packet{
-		Sender:    sender,
-		Receiver:  receiver,
-		RequestID: 123,
-		Type:      uint32(types.Ping),
-	}
+	p := packet.NewPacket(sender, receiver, types.Ping, 123)
 	future := m.Create(p)
 
 	require.EqualValues(t, future.ID(), p.RequestID)
@@ -91,12 +86,7 @@ func TestFutureManager_Get(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 
-	p := &packet.Packet{
-		Sender:    sender,
-		Receiver:  receiver,
-		RequestID: 123,
-		Type:      uint32(types.Ping),
-	}
+	p := packet.NewPacket(sender, receiver, types.Ping, 123)
 
 	require.Nil(t, m.Get(p))
 
@@ -112,12 +102,7 @@ func TestFutureManager_Canceler(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 
-	p := &packet.Packet{
-		Sender:    sender,
-		Receiver:  receiver,
-		RequestID: 123,
-		Type:      uint32(types.Ping),
-	}
+	p := packet.NewPacket(sender, receiver, types.Ping, 123)
 
 	future := m.Create(p)
 	require.NotNil(t, future)

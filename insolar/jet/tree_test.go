@@ -172,14 +172,14 @@ func TestTree_String(t *testing.T) {
 func TestTree_LeafIDs(t *testing.T) {
 	tree := Tree{
 		Head: &jet{
-			Left: &jet{},
+			Left: &jet{Actual: true},
 			Right: &jet{
 				Right: &jet{
 					Left: &jet{
-						Left:  &jet{},
-						Right: &jet{},
+						Left:  &jet{Actual: false},
+						Right: &jet{Actual: true},
 					},
-					Right: &jet{},
+					Right: &jet{Actual: true},
 				},
 			},
 		},
@@ -187,11 +187,10 @@ func TestTree_LeafIDs(t *testing.T) {
 
 	leafIDs := tree.LeafIDs()
 
-	require.Equal(t, len(leafIDs), 4)
+	require.Equal(t, len(leafIDs), 3)
 	assert.Equal(t, leafIDs[0], NewIDFromString("0"))
-	assert.Equal(t, leafIDs[1], NewIDFromString("1100"))
-	assert.Equal(t, leafIDs[2], NewIDFromString("1101"))
-	assert.Equal(t, leafIDs[3], NewIDFromString("111"))
+	assert.Equal(t, leafIDs[1], NewIDFromString("1101"))
+	assert.Equal(t, leafIDs[2], NewIDFromString("111"))
 }
 
 func Test_ParsePrefix(t *testing.T) {

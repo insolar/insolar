@@ -318,7 +318,7 @@ func (m *PulseManager) processJets(ctx context.Context, previous, current, new i
 
 	m.JetModifier.Clone(ctx, current, new)
 
-	ids := m.JetAccessor.All(ctx, new)
+	ids := m.JetAccessor.All(ctx, current)
 	ids, err := m.filterOtherExecutors(ctx, current, ids)
 	if err != nil {
 		return nil, err

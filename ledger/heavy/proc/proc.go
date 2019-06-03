@@ -16,12 +16,6 @@
 
 package proc
 
-import (
-	"errors"
-)
-
-var (
-	ErrInvalidRef        = errors.New("invalid reference")
-	ErrObjectDeactivated = errors.New("object is deactivated")
-	ErrNotExecutor       = errors.New("not executor for jet")
-)
+type Dependencies struct {
+	PassState func(*PassState)
+}
