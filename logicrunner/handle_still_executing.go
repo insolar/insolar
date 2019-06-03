@@ -58,6 +58,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		es := os.ExecutionState
 		es.Lock()
 		if es.pending == message.NotPending {
+			// It might be when StillExecuting comes after PendingFinished
 			inslogger.FromContext(ctx).Error(
 				"got StillExecuting message, but our state says that it's not in pending",
 			)
