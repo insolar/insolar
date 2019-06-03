@@ -32,7 +32,7 @@ local image_params = params.insolar.image;
 						"tty": true,
 						"stdin": true,
 						"command": [
-							"/bin/sh", "-ec", importstr "launch.sh"
+							"/bin/bash", "-c", importstr "launch.sh"
 						],
 						"env": [
 							{
