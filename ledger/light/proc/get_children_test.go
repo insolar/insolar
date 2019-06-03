@@ -68,7 +68,14 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	}
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	indexMemoryStor := object.NewInMemoryIndex()
+	ra := mocks.NewRecordAccessorMock(t)
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
+		return record.Material{}, object.ErrNotFound
+	}
+	rsm := mocks.NewRecordStorageMock(t)
+	rsm.ForIDFunc = ra.ForIDFunc
+
+	indexMemoryStor := object.NewInMemoryIndex(rsm)
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
@@ -89,10 +96,7 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	gc.Dep.Coordinator = jc
 	gc.Dep.JetStorage = jet.NewStore()
 	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
-	ra := mocks.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
-		return record.Material{}, object.ErrNotFound
-	}
+
 	gc.Dep.RecordAccessor = ra
 
 	tf := testutils.NewDelegationTokenFactoryMock(t)
@@ -121,7 +125,14 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	}
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	indexMemoryStor := object.NewInMemoryIndex()
+	ra := mocks.NewRecordAccessorMock(t)
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
+		return record.Material{}, object.ErrNotFound
+	}
+	rsm := mocks.NewRecordStorageMock(t)
+	rsm.ForIDFunc = ra.ForIDFunc
+
+	indexMemoryStor := object.NewInMemoryIndex(rsm)
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
@@ -142,10 +153,6 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	gc.Dep.Coordinator = jc
 	gc.Dep.JetStorage = jet.NewStore()
 	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
-	ra := mocks.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
-		return record.Material{}, object.ErrNotFound
-	}
 	gc.Dep.RecordAccessor = ra
 
 	tf := testutils.NewDelegationTokenFactoryMock(t)

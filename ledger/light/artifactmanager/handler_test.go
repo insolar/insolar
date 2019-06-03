@@ -122,7 +122,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.recordModifier = recordStorage
 	s.recordAccessor = recordStorage
 
-	s.indexMemoryStor = object.NewInMemoryIndex()
+	s.indexMemoryStor = object.NewInMemoryIndex(recordStorage)
 
 	s.cm.Inject(
 		s.scheme,
@@ -245,7 +245,10 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
+	pam := mocks.NewPendingAccessorMock(s.T())
+	pam.IsStateCalculatedMock.Return(true, nil)
+
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, pam, &configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
@@ -504,8 +507,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		LatestState: firstID,
 		JetID:       insolar.JetID(jetID),
 	})
-
-	rupn := insolar.PulseNumber(111)
 	hotIndexes := &message.HotData{
 		Jet:         *insolar.NewReference(insolar.ID(jetID)),
 		PulseNumber: insolar.FirstPulseNumber,
@@ -514,7 +515,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 				Index:            firstIndex,
 				LifelineLastUsed: insolar.PulseNumber(234),
 				ObjID:            *firstID,
-				ReadToUntil:      &rupn,
 			},
 		},
 		PendingRequests: map[insolar.ID]recentstorage.PendingObjectContext{
@@ -543,14 +543,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	bucketMock := mocks.NewIndexBucketModifierMock(s.T())
 	idxMock := mocks.NewLifelineIndexMock(s.T())
 
-	penModifierMock := mocks.NewPendingModifierMock(s.T())
-	penModifierMock.SetReadUntilFunc = func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 *insolar.PulseNumber) (r error) {
-		require.Equal(s.T(), insolar.FirstPulseNumber, int(p1))
-		require.Equal(s.T(), *firstID, p2)
-		require.Equal(s.T(), rupn, *p3)
-		return nil
-	}
-
 	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.IndexBucket) (r error) {
 		require.Equal(s.T(), *firstID, ib.ObjID)
 		require.Equal(s.T(), insolar.FirstPulseNumber, int(pn))
@@ -577,7 +569,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DropModifier = s.dropModifier
-	h.PendingModifier = penModifierMock
 
 	jr := testutils.NewJetReleaserMock(s.T())
 	jr.UnlockMock.Return(nil)

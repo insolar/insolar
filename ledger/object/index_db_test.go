@@ -53,7 +53,7 @@ func TestDBIndex_SetLifeline(t *testing.T) {
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
-		storage := NewInMemoryIndex()
+		storage := NewIndexDB(store.NewMemoryMockDB())
 		pn := gen.PulseNumber()
 
 		err := storage.Set(ctx, pn, id, idx)

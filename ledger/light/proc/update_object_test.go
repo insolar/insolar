@@ -75,8 +75,10 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	mb.MustRegisterMock.Return()
 	jc := jet.NewCoordinatorMock(t)
 
+	recordStorage := object.NewRecordMemory()
+
 	scheme := testutils.NewPlatformCryptographyScheme()
-	indexMemoryStor := object.NewInMemoryIndex()
+	indexMemoryStor := object.NewInMemoryIndex(recordStorage)
 
 	idLockMock := mocks.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
@@ -113,8 +115,6 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	heavyRef := genRandomRef(0)
 	jc.HeavyMock.Return(heavyRef, nil)
-
-	recordStorage := object.NewRecordMemory()
 
 	updateObject := UpdateObject{
 		JetID:       insolar.JetID(jetID),
@@ -159,8 +159,8 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	}
 
 	scheme := testutils.NewPlatformCryptographyScheme()
-	indexMemoryStor := object.NewInMemoryIndex()
 	recordStorage := object.NewRecordMemory()
+	indexMemoryStor := object.NewInMemoryIndex(recordStorage)
 
 	idLockMock := mocks.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
