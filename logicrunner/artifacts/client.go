@@ -771,6 +771,10 @@ func (m *client) activateObject(
 	if err != nil {
 		return nil, err
 	}
+	_, err = m.GetObject(ctx, prototype)
+	if err != nil {
+		return nil, err
+	}
 	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
