@@ -9,15 +9,17 @@ option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.populate_all) = false;
 
 message Packet {
-    bytes Sender = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
-    bytes Receiver = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
-    uint64 RequestID = 3;
-    string TraceID = 4;
-    uint32 Type = 5;
+    int32 polymorph = 16;
+
+    bytes Sender = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
+    bytes Receiver = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
+    uint64 RequestID = 22;
+    string TraceID = 23;
+    uint32 Type = 24;
 
     oneof Payload {
-        Request Request = 6;
-        Response Response = 7;
+        Request Request = 25;
+        Response Response = 26;
     }
 }
 
@@ -52,7 +54,7 @@ message Ping {
 
 message RPCRequest {
     string Method = 1;
-    bytes Data = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/packet/types.RPCPayload", (gogoproto.nullable) = false];
+    bytes Data = 2;
 }
 
 message Cascade {

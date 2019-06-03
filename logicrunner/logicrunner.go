@@ -491,23 +491,6 @@ func (lr *LogicRunner) executeOrValidate(
 	}()
 }
 
-func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *ExecutionState {
-	ref := Ref{}.FromSlice(rawRef)
-
-	// TODO: we should stop processing here if 'ref' doesn't exist. Made UpsertObjectState return error if so?
-	os := lr.UpsertObjectState(ref)
-
-	os.Lock()
-	defer os.Unlock()
-	if os.ExecutionState == nil {
-		inslogger.FromContext(ctx).Info("[ ProcessExecutionQueue ] got not existing reference. It's strange. Ref: ", ref.String())
-		return nil
-	}
-	es := os.ExecutionState
-
-	return es
-}
-
 func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) *insolar.Reference {
 	es.Lock()
 	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {

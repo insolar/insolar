@@ -99,11 +99,6 @@ func (rpc *rpcController) IAmRPCController() {
 }
 
 func (rpc *rpcController) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
-	_, span := instracer.StartSpan(context.Background(), "RPCController.RemoteProcedureRegister")
-	span.AddAttributes(
-		trace.StringAttribute("method", name),
-	)
-	defer span.End()
 	rpc.methodTable[name] = method
 }
 

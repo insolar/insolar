@@ -31,8 +31,7 @@ func ID() (id insolar.ID) {
 // JetID generates random jet id.
 func JetID() (jetID insolar.JetID) {
 	f := fuzz.New().Funcs(func(jet *insolar.JetID, c fuzz.Continue) {
-		var id insolar.ID
-		c.Fuzz(&id)
+		id := ID()
 		copy(jet[:], id[:])
 		// set special pulse number
 		copy(jet[:insolar.PulseNumberSize], insolar.PulseNumberJet.Bytes())
@@ -63,6 +62,6 @@ func UniqueJetIDs(jets ...*insolar.JetID) {
 // Reference generates random reference.
 func Reference() (ref insolar.Reference) {
 	id := ID()
-	copy(ref[:insolar.RecordIDSize],id[:])
+	copy(ref[:insolar.RecordIDSize], id[:])
 	return
 }

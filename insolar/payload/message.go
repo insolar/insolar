@@ -14,14 +14,17 @@
 // limitations under the License.
 //
 
-package proc
+package payload
 
 import (
-	"errors"
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
 )
 
-var (
-	ErrInvalidRef        = errors.New("invalid reference")
-	ErrObjectDeactivated = errors.New("object is deactivated")
-	ErrNotExecutor       = errors.New("not executor for jet")
-)
+func NewMessage(pl Payload) (*message.Message, error) {
+	buf, err := Marshal(pl)
+	if err != nil {
+		return nil, err
+	}
+	return message.NewMessage(watermill.NewUUID(), buf), nil
+}
