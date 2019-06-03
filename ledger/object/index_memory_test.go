@@ -312,9 +312,9 @@ func TestNewInMemoryIndex_DeleteForPN(t *testing.T) {
 
 	index := NewInMemoryIndex(nil)
 
-	index.buckets[fPn] = map[insolar.ID]*extendedIndexBucket{}
-	index.buckets[sPn] = map[insolar.ID]*extendedIndexBucket{}
-	index.buckets[tPn] = map[insolar.ID]*extendedIndexBucket{}
+	index.buckets[fPn] = map[insolar.ID]*filamentCache{}
+	index.buckets[sPn] = map[insolar.ID]*filamentCache{}
+	index.buckets[tPn] = map[insolar.ID]*filamentCache{}
 
 	index.DeleteForPN(ctx, sPn)
 

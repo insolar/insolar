@@ -27,11 +27,10 @@ import (
 	"go.opencensus.io/stats"
 )
 
-// extendedIndexBucket is a thread-safe wrapper around IndexBucket struct.
-// Due to IndexBucket is a protobuf-generated struct,
-// extendedIndexBucket was created for creating an opportunity for using of IndexBucket struct  in a thread-safe way.
+// filamentCache is a thread-safe wrapper around FilamentIndex struct, because FilamentIndex
+// is a protobuf-generated struct.
 // Also it stores some meta-info, that is required for the work process
-type extendedIndexBucket struct {
+type filamentCache struct {
 	sync.RWMutex
 
 	objectMeta  FilamentIndex
@@ -56,14 +55,14 @@ type chainLink struct {
 	Records []record.Virtual
 }
 
-func (i *extendedIndexBucket) lifeline() (Lifeline, error) {
+func (i *filamentCache) lifeline() (Lifeline, error) {
 	i.RLock()
 	defer i.RUnlock()
 
 	return CloneIndex(i.objectMeta.Lifeline), nil
 }
 
-func (i *extendedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
+func (i *filamentCache) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
 	i.Lock()
 	defer i.Unlock()
 
@@ -71,7 +70,7 @@ func (i *extendedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNum
 	i.objectMeta.LifelineLastUsed = pn
 }
 
-func (i *extendedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
+func (i *filamentCache) setLifelineLastUsed(pn insolar.PulseNumber) {
 	i.Lock()
 	defer i.Unlock()
 
@@ -83,22 +82,22 @@ type InMemoryIndex struct {
 	recordStorage RecordStorage
 
 	bucketsLock sync.RWMutex
-	buckets     map[insolar.PulseNumber]map[insolar.ID]*extendedIndexBucket
+	buckets     map[insolar.PulseNumber]map[insolar.ID]*filamentCache
 }
 
 // NewInMemoryIndex creates a new InMemoryIndex
 func NewInMemoryIndex(recordStorage RecordStorage) *InMemoryIndex {
 	return &InMemoryIndex{
 		recordStorage: recordStorage,
-		buckets:       map[insolar.PulseNumber]map[insolar.ID]*extendedIndexBucket{},
+		buckets:       map[insolar.PulseNumber]map[insolar.ID]*filamentCache{},
 	}
 }
 
-func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *extendedIndexBucket {
+func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *filamentCache {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	bucket := &extendedIndexBucket{
+	bucket := &filamentCache{
 		objectMeta: FilamentIndex{
 			ObjID:          objID,
 			PendingRecords: []record.Virtual{},
@@ -114,7 +113,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
-		objsByPn = map[insolar.ID]*extendedIndexBucket{}
+		objsByPn = map[insolar.ID]*filamentCache{}
 		i.buckets[pn] = objsByPn
 	}
 	objsByPn[objID] = bucket
@@ -123,7 +122,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 	return bucket
 }
 
-func (i *InMemoryIndex) bucket(pn insolar.PulseNumber, objID insolar.ID) *extendedIndexBucket {
+func (i *InMemoryIndex) bucket(pn insolar.PulseNumber, objID insolar.ID) *filamentCache {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
@@ -158,11 +157,11 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 
 	bucks, ok := i.buckets[pn]
 	if !ok {
-		bucks = map[insolar.ID]*extendedIndexBucket{}
+		bucks = map[insolar.ID]*filamentCache{}
 		i.buckets[pn] = bucks
 	}
 
-	bucks[bucket.ObjID] = &extendedIndexBucket{
+	bucks[bucket.ObjID] = &filamentCache{
 		objectMeta: bucket,
 		pendingMeta: pendingMeta{
 			notClosedRequests:      []record.Request{},
