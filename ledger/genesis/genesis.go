@@ -69,7 +69,7 @@ func (br *BaseRecord) IsGenesisRequired(ctx context.Context) (bool, error) {
 	}
 
 	if len(b) == 0 {
-		return false, errors.Wrap(err, "genesis record is empty (genesis hasn't properly finished")
+		return false, errors.New("genesis record is empty (genesis hasn't properly finished)")
 	}
 	return false, nil
 }
