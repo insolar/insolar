@@ -50,7 +50,7 @@ local image_params = params.insolar.image;
 								"mountPath": "/tmp/code",
 							},
 							{
-								"name": "bootstrap-config",
+								"name": "bootstrap-config-file",
 								"mountPath": "/opt/insolar/config/bootstrap.yaml",
 								"subPath": "bootstrap.yaml",
 							},
@@ -196,9 +196,9 @@ local image_params = params.insolar.image;
 						}
 					},
 					{
-						"name": "bootstrap-config",
+						"name": "bootstrap-config-file",
 						"configMap": {
-							"name": "bootstrap-config"
+							"name": "bootstrap-config-file"
 						}
 					},
 					{

@@ -65,7 +65,7 @@ local bootstrap_config_map() = {
   apiVersion: "v1",
   kind: "ConfigMap",
   metadata: {
-    name: "bootstrap-config"
+    name: "bootstrap-config-file"
   },
   data:{
     "bootstrap.yaml": std.manifestYamlDoc(bootstrap_config.generate()),
