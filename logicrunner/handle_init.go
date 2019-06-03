@@ -60,7 +60,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeAdditionalCallFromPreviousExecutor:
 		// TODO AALEKSEEV
-		return nil
+		panic("TypeAdditionalCallFromPreviousExecutor - Work in progress")
 	case insolar.TypePendingFinished:
 		h := &HandlePendingFinished{
 			dep:     s.dep,
