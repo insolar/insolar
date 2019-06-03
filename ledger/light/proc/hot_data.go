@@ -19,7 +19,6 @@ package proc
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -128,7 +127,7 @@ func (p *HotData) process(ctx context.Context) error {
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
 				LifelineLastUsed: meta.LifelineLastUsed,
-				PendingRecords:   []record.Virtual{},
+				PendingRecords:   []insolar.ID{},
 			},
 		)
 		if err != nil {

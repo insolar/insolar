@@ -135,7 +135,7 @@ func (r *Request) Type() insolar.ReplyType {
 // PendingFilament contains data about a part/full pending filament
 type PendingFilament struct {
 	ID                insolar.ID
-	Records           []record.Virtual
+	Records           []record.Material
 	HasFullChain      bool
 	PreviousPendingPN insolar.PulseNumber
 }

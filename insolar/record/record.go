@@ -129,3 +129,10 @@ func (Genesis) GetImage() *insolar.Reference {
 func (Genesis) GetIsPrototype() bool {
 	return false
 }
+
+// MaterialWithId is a key-value pair
+// We don't want to recalculate id continuously
+type MaterialWithId struct {
+	Id     insolar.ID
+	Record Material
+}

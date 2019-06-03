@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
 
@@ -51,8 +52,8 @@ type pendingMeta struct {
 }
 
 type chainLink struct {
-	PN      insolar.PulseNumber
-	Records []record.Virtual
+	PN         insolar.PulseNumber
+	RecordsIDs []insolar.ID
 }
 
 func (i *filamentCache) lifeline() (Lifeline, error) {
@@ -100,7 +101,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 	bucket := &filamentCache{
 		objectMeta: FilamentIndex{
 			ObjID:          objID,
-			PendingRecords: []record.Virtual{},
+			PendingRecords: []insolar.ID{},
 		},
 		pendingMeta: pendingMeta{
 			fullFilament:           []chainLink{},
@@ -206,7 +207,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		}
 
 		clonedLfl := CloneIndex(b.objectMeta.Lifeline)
-		var clonedRecords []record.Virtual
+		var clonedRecords []insolar.ID
 
 		clonedRecords = append(clonedRecords, b.objectMeta.PendingRecords...)
 
@@ -257,7 +258,7 @@ func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 }
 
 // SetRequest sets a request for a specific object
-func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Request) error {
+func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID, req record.Request) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
@@ -270,18 +271,18 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	// 	b.PreviousPendingFilament = pn
 	// }
 
-	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, record.Wrap(req))
+	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, *req.Object.Record())
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {
 		if chainPart.PN == pn {
-			b.pendingMeta.fullFilament[i].Records = append(b.pendingMeta.fullFilament[i].Records, record.Wrap(req))
+			b.pendingMeta.fullFilament[i].RecordsIDs = append(b.pendingMeta.fullFilament[i].RecordsIDs, reqID)
 			isInserted = true
 		}
 	}
 
 	if !isInserted {
-		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{Records: []record.Virtual{record.Wrap(req)}, PN: pn})
+		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{RecordsIDs: []insolar.ID{reqID}, PN: pn})
 		sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
 			return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 		})
@@ -306,7 +307,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 
 // SetResult sets a result for a specific object. Also, if there is a not closed request for a provided result,
 // the request will be closed
-func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, res record.Result) error {
+func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID, res record.Result) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
@@ -315,18 +316,18 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	b.Lock()
 	defer b.Unlock()
 
-	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, record.Wrap(res))
+	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, *res.Request.Record())
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {
 		if chainPart.PN == pn {
-			b.pendingMeta.fullFilament[i].Records = append(b.pendingMeta.fullFilament[i].Records, record.Wrap(res))
+			b.pendingMeta.fullFilament[i].RecordsIDs = append(b.pendingMeta.fullFilament[i].RecordsIDs, resID)
 			isInserted = true
 		}
 	}
 
 	if !isInserted {
-		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{Records: []record.Virtual{record.Wrap(res)}, PN: pn})
+		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{RecordsIDs: []insolar.ID{resID}, PN: pn})
 		sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
 			return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 		})
@@ -352,7 +353,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 
 // SetFilament adds a slice of records to an object with provided id and pulse. It's assumed, that the method is
 // called for setting records from another light, during the process of filling full chaing of pendings
-func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.Virtual) error {
+func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.MaterialWithId) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
@@ -361,7 +362,16 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 	b.Lock()
 	defer b.Unlock()
 
-	b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{Records: recs, PN: filPN})
+	recsIds := make([]insolar.ID, len(recs))
+	for idx, rec := range recs {
+		recsIds[idx] = rec.Id
+		err := i.recordStorage.Set(ctx, rec.Id, rec.Record)
+		if err != nil {
+			return errors.Wrap(err, "filament update failed")
+		}
+	}
+
+	b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{RecordsIDs: recsIds, PN: filPN})
 	sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
 		return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 	})
@@ -380,9 +390,12 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	defer b.Unlock()
 
 	for _, chainLink := range b.pendingMeta.fullFilament {
-		for _, chainPart := range chainLink.Records {
-			tChainPart := chainPart
-			switch r := record.Unwrap(&tChainPart).(type) {
+		for _, recID := range chainLink.RecordsIDs {
+			rec, err := i.recordStorage.ForID(ctx, recID)
+			if err != nil {
+				return errors.Wrap(err, "failed to refresh an index state")
+			}
+			switch r := record.Unwrap(rec.Virtual).(type) {
 			case *record.Request:
 				b.pendingMeta.notClosedRequestsIndex[chainLink.PN][*r.Object.Record()] = r
 				b.pendingMeta.requestPNIndex[*r.Object.Record()] = chainLink.PN
@@ -446,7 +459,7 @@ func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN inso
 }
 
 // Records returns all the records for a provided object
-func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.Virtual, error) {
+func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.MaterialWithId, error) {
 	b := i.bucket(currentPN, objID)
 	if b == nil {
 		return nil, ErrLifelineNotFound
@@ -455,5 +468,17 @@ func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumb
 	b.RLock()
 	defer b.RLock()
 
-	return b.objectMeta.PendingRecords, nil
+	res := make([]record.MaterialWithId, len(b.objectMeta.PendingRecords))
+	for idx, id := range b.objectMeta.PendingRecords {
+		rec, err := i.recordStorage.ForID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		res[idx] = record.MaterialWithId{
+			Record: rec,
+			Id:     id,
+		}
+	}
+
+	return res, nil
 }
