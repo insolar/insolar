@@ -39,7 +39,7 @@ func TestJetStorage_Empty(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	s := NewStore()
 
-	all := s.All(ctx, gen.PulseNumber())
+	all := s.All(ctx, insolar.FirstPulseNumber)
 	require.Equal(t, 1, len(all), "should be just one jet ID")
 	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero on empty storage")
 }
@@ -98,8 +98,7 @@ func TestJetStorage_DeleteJetTree(t *testing.T) {
 	require.False(t, ok, "tree should be an empty")
 
 	all := s.All(ctx, 100)
-	require.Equal(t, 1, len(all), "should be just one jet ID")
-	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero after tree removal")
+	require.Equal(t, 0, len(all), "should be just one jet ID")
 }
 
 func TestJetStorage_ForID_Basic(t *testing.T) {
