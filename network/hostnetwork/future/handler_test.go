@@ -65,12 +65,7 @@ import (
 func newPacket() *packet.Packet {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-	return &packet.Packet{
-		Sender:    sender,
-		Receiver:  receiver,
-		RequestID: 123,
-		Type:      uint32(types.Pulse),
-	}
+	return packet.NewPacket(sender, receiver, types.Pulse, 123)
 }
 
 func TestNewPacketHandler(t *testing.T) {
