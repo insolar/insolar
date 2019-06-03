@@ -114,7 +114,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	objID := gen.ID()
 	lflID := gen.ID()
 	jetID := gen.JetID()
-	buck := IndexBucket{
+	buck := FilamentIndex{
 		ObjID: objID,
 		Lifeline: Lifeline{
 			LatestState: &lflID,
@@ -148,7 +148,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 
 		sLlflID := gen.ID()
 		sJetID := gen.JetID()
-		sBuck := IndexBucket{
+		sBuck := FilamentIndex{
 			ObjID: objID,
 			Lifeline: Lifeline{
 				LatestState: &sLlflID,

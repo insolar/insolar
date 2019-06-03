@@ -543,7 +543,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	bucketMock := mocks.NewIndexBucketModifierMock(s.T())
 	idxMock := mocks.NewLifelineIndexMock(s.T())
 
-	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.IndexBucket) (r error) {
+	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.FilamentIndex) (r error) {
 		require.Equal(s.T(), *firstID, ib.ObjID)
 		require.Equal(s.T(), insolar.FirstPulseNumber, int(pn))
 		require.Equal(s.T(), *firstID, *ib.Lifeline.LatestState)
