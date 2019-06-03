@@ -46,27 +46,22 @@ local image_params = params.insolar.image;
 						],
 						"volumeMounts": [
 							{
-								"name": "bootstrap-config",
-								"mountPath": "/opt/insolar/config"
+								"name": "configs",
+								"mountPath": "/opt/insolar/config",
 							},
 							{
 								"name": "code",
-								"mountPath": "/tmp/code"
+								"mountPath": "/tmp/code",
 							},
 							{
-								"name": "node-config",
-								"mountPath": "/opt/insolar/config/insolar-genesis.yaml",
-								"subPath": "insolar-genesis.yaml"
-							},
-							{
-								"name": "node-config",
-								"mountPath": "/opt/insolar/config/genesis.yaml",
-								"subPath": "genesis.yaml"
+								"name": "bootstrap-config",
+								"mountPath": "/opt/insolar/config/bootstrap.yaml",
+								"subPath": "bootstrap.yaml",
 							},
 							{
 								"name": "work",
-								"mountPath": "/opt/work"
-							}
+								"mountPath": "/opt/work",
+							},
 						]
 					}
 				],
@@ -170,10 +165,6 @@ local image_params = params.insolar.image;
 							{
 								"name": "work",
 								"mountPath": "/opt/insolar"
-							},
-							{
-								"name": "bootstrap-config",
-								"mountPath": "/opt/bootstrap-config"
 							},
 							{
 								"name": "code",
