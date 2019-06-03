@@ -227,9 +227,9 @@ func (jc *Coordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) (*i
 // or if currentPN|targetPN didn't found in in-memory pulse-storage.
 func (jc *Coordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error) {
 	backPN, err := jc.PulseCalculator.Backwards(ctx, currentPN, jc.lightChainLimit)
-	// We are not aware of pulses beyond limit. Returning false is the only way.
+	// We are not aware of pulses beyond limit. Returning true is the only way.
 	if err == pulse.ErrNotFound {
-		return false, nil
+		return true, nil
 	}
 	if err != nil {
 		return false, errors.Wrapf(err, "[PulseCalculator.Backwards] failed, currentPN - %v, lightChainLimit - %v", currentPN, jc.lightChainLimit)
