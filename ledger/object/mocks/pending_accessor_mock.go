@@ -31,7 +31,7 @@ type PendingAccessorMock struct {
 	OpenRequestsForObjIDPreCounter uint64
 	OpenRequestsForObjIDMock       mPendingAccessorMockOpenRequestsForObjID
 
-	RecordsFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.Material, r1 error)
+	RecordsFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.MaterialWithId, r1 error)
 	RecordsCounter    uint64
 	RecordsPreCounter uint64
 	RecordsMock       mPendingAccessorMockRecords
@@ -375,7 +375,7 @@ type PendingAccessorMockRecordsInput struct {
 }
 
 type PendingAccessorMockRecordsResult struct {
-	r  []record.Material
+	r  []record.MaterialWithId
 	r1 error
 }
 
@@ -392,7 +392,7 @@ func (m *mPendingAccessorMockRecords) Expect(p context.Context, p1 insolar.Pulse
 }
 
 //Return specifies results of invocation of PendingAccessor.Records
-func (m *mPendingAccessorMockRecords) Return(r []record.Material, r1 error) *PendingAccessorMock {
+func (m *mPendingAccessorMockRecords) Return(r []record.MaterialWithId, r1 error) *PendingAccessorMock {
 	m.mock.RecordsFunc = nil
 	m.expectationSeries = nil
 
@@ -414,12 +414,12 @@ func (m *mPendingAccessorMockRecords) ExpectOnce(p context.Context, p1 insolar.P
 	return expectation
 }
 
-func (e *PendingAccessorMockRecordsExpectation) Return(r []record.Material, r1 error) {
+func (e *PendingAccessorMockRecordsExpectation) Return(r []record.MaterialWithId, r1 error) {
 	e.result = &PendingAccessorMockRecordsResult{r, r1}
 }
 
 //Set uses given function f as a mock of PendingAccessor.Records method
-func (m *mPendingAccessorMockRecords) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.Material, r1 error)) *PendingAccessorMock {
+func (m *mPendingAccessorMockRecords) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.MaterialWithId, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -428,7 +428,7 @@ func (m *mPendingAccessorMockRecords) Set(f func(p context.Context, p1 insolar.P
 }
 
 //Records implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
-func (m *PendingAccessorMock) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (r []record.MaterialWithId, r1 error) {
+func (m *PendingAccessorMock) Records(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.MaterialWithId, r1 error) {
 	counter := atomic.AddUint64(&m.RecordsPreCounter, 1)
 	defer atomic.AddUint64(&m.RecordsCounter, 1)
 
