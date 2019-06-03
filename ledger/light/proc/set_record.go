@@ -84,11 +84,6 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	calculatedID := insolar.NewID(flow.Pulse(ctx), hash)
 
-	penReply := p.handlePendings(ctx, *calculatedID, &virtRec)
-	if penReply != nil {
-		return *penReply
-	}
-
 	hash = record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	id := insolar.NewID(flow.Pulse(ctx), hash)
 	rec := record.Material{
@@ -103,6 +98,11 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 		id = calculatedID
 	} else if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "can't save record into storage")}
+	}
+
+	penReply := p.handlePendings(ctx, *calculatedID, &virtRec)
+	if penReply != nil {
+		return *penReply
 	}
 
 	return bus.Reply{Reply: &reply.ID{ID: *id}}
@@ -123,7 +123,7 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), calculatedID)
 
-			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), *r, )
+			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID, *r)
 			if err != nil {
 				return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 			}
@@ -132,7 +132,7 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
-		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object,, *r)
+		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
 		if err != nil {
 			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 		}
