@@ -158,8 +158,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 	isRequired, err := g.BaseRecord.IsGenesisRequired(ctx)
 	inslogger.FromContext(ctx).Infof("[genesis] required=%v", isRequired)
 	if err != nil {
-		inslog.Error(err.Error())
-		return err
+		panic(err.Error())
 	}
 
 	if !isRequired {
@@ -174,24 +173,24 @@ func (g *Genesis) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		inslog.Info("[genesis] finalize genesis record")
-		g.BaseRecord.Done(ctx)
-	}()
 
 	inslog.Info("[genesis] store contracts")
 	err = g.storeContracts(ctx)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("[genesis] store contracts failed: %v", err)
-		return err
+		panic(fmt.Sprintf("[genesis] store contracts failed: %v", err))
 	}
 
 	inslog.Info("[genesis] store discovery nodes")
 	discoveryNodeManager := NewDiscoveryNodeManager(g.ArtifactManager)
 	err = discoveryNodeManager.StoreDiscoveryNodes(ctx, g.DiscoveryNodes)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("store discovery nodes failed: %v", err)
-		return err
+		panic(fmt.Sprintf("[genesis] store discovery nodes failed: %v", err))
+	}
+
+	inslog.Info("[genesis] finalize genesis record")
+	err = g.BaseRecord.Done(ctx)
+	if err != nil {
+		panic(fmt.Sprintf("[genesis] finalize genesis record failed: %v", err))
 	}
 
 	return nil
