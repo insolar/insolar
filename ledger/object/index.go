@@ -99,19 +99,12 @@ type PendingModifier interface {
 	RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 }
 
-// PendingFilamentState contains data about current status of the pending fillament
-type PendingFilamentState struct {
-	PrevSegmentPN       insolar.PulseNumber
-	EarliestOpenRequest insolar.PulseNumber
-	IsStateCalculated   bool
-}
-
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingAccessor -o ./mocks -s _mock.go
 
 // PendingAccessor provides methods for fetching pending requests.
 type PendingAccessor interface {
-	// MetaForObjID returns meta-info for an object with provided id/pn
-	MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingFilamentState, error)
+	// IsStateCalculated returns status of a pending filament. Was it calculated or not
+	IsStateCalculated(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (bool, error)
 	// OpenRequestsForObjID returns open requests for a specific object
 	OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
 	// Records returns all the records for a provided object

@@ -416,21 +416,17 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	return nil
 }
 
-// MetaForObjID returns meta-info for an object with provided id/pn
-func (i *InMemoryIndex) MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingFilamentState, error) {
+// IsStateCalculated returns status of a pending filament. Was it calculated or not
+func (i *InMemoryIndex) IsStateCalculated(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (bool, error) {
 	b := i.bucket(currentPN, objID)
 	if b == nil {
-		return PendingFilamentState{}, ErrLifelineNotFound
+		return false, ErrLifelineNotFound
 	}
 
 	b.RLock()
 	defer b.RUnlock()
 
-	return PendingFilamentState{
-		IsStateCalculated:   b.pendingMeta.isStateCalculated,
-		EarliestOpenRequest: b.objectMeta.Lifeline.EarliestOpenRequest,
-		PrevSegmentPN:       b.objectMeta.Lifeline.PreviousPendingFilament,
-	}, nil
+	return b.pendingMeta.isStateCalculated, nil
 }
 
 // OpenRequestsForObjID returns open requests for a specific object

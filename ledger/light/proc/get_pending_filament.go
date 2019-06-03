@@ -31,7 +31,8 @@ type GetPendingFilament struct {
 	repylyTo chan<- bus.Reply
 
 	Dep struct {
-		PendingAccessor object.PendingAccessor
+		PendingAccessor  object.PendingAccessor
+		LifelineAccessor object.LifelineAccessor
 	}
 }
 
@@ -43,21 +44,25 @@ func NewGetPendingFilament(msg *message.GetPendingFilament, rep chan<- bus.Reply
 }
 
 func (p *GetPendingFilament) Proceed(ctx context.Context) error {
-	meta, err := p.Dep.PendingAccessor.MetaForObjID(ctx, p.msg.PN, p.msg.ObjectID)
+	isStateCalc, err := p.Dep.PendingAccessor.IsStateCalculated(ctx, p.msg.PN, p.msg.ObjectID)
 	if err != nil {
-		return errors.Wrap(err, "can't fetch a pendings meta")
+		return errors.Wrap(err, "[GetPendingFilament] can't fetch a pendings meta")
 	}
 	records, err := p.Dep.PendingAccessor.Records(ctx, p.msg.PN, p.msg.ObjectID)
 	if err != nil {
-		return errors.Wrap(err, "can't fetch pendings")
+		return errors.Wrap(err, "[GetPendingFilament] can't fetch pendings")
+	}
+	lfl, err := p.Dep.LifelineAccessor.ForID(ctx, p.msg.PN, p.msg.ObjectID)
+	if err != nil {
+		return errors.Wrap(err, "[GetPendingFilament] can't fetch lifeline")
 	}
 
 	p.repylyTo <- bus.Reply{
 		Reply: &reply.PendingFilament{
 			ID:                p.msg.ObjectID,
 			Records:           records,
-			HasFullChain:      meta.IsStateCalculated,
-			PreviousPendingPN: meta.PrevSegmentPN,
+			HasFullChain:      isStateCalc,
+			PreviousPendingPN: lfl.PreviousPendingFilament,
 		},
 	}
 

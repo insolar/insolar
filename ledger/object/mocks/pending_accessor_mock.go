@@ -13,7 +13,6 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -22,10 +21,10 @@ import (
 type PendingAccessorMock struct {
 	t minimock.Tester
 
-	MetaForObjIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.PendingFilamentState, r1 error)
-	MetaForObjIDCounter    uint64
-	MetaForObjIDPreCounter uint64
-	MetaForObjIDMock       mPendingAccessorMockMetaForObjID
+	IsStateCalculatedFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r bool, r1 error)
+	IsStateCalculatedCounter    uint64
+	IsStateCalculatedPreCounter uint64
+	IsStateCalculatedMock       mPendingAccessorMockIsStateCalculated
 
 	OpenRequestsForObjIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error)
 	OpenRequestsForObjIDCounter    uint64
@@ -46,100 +45,100 @@ func NewPendingAccessorMock(t minimock.Tester) *PendingAccessorMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.MetaForObjIDMock = mPendingAccessorMockMetaForObjID{mock: m}
+	m.IsStateCalculatedMock = mPendingAccessorMockIsStateCalculated{mock: m}
 	m.OpenRequestsForObjIDMock = mPendingAccessorMockOpenRequestsForObjID{mock: m}
 	m.RecordsMock = mPendingAccessorMockRecords{mock: m}
 
 	return m
 }
 
-type mPendingAccessorMockMetaForObjID struct {
+type mPendingAccessorMockIsStateCalculated struct {
 	mock              *PendingAccessorMock
-	mainExpectation   *PendingAccessorMockMetaForObjIDExpectation
-	expectationSeries []*PendingAccessorMockMetaForObjIDExpectation
+	mainExpectation   *PendingAccessorMockIsStateCalculatedExpectation
+	expectationSeries []*PendingAccessorMockIsStateCalculatedExpectation
 }
 
-type PendingAccessorMockMetaForObjIDExpectation struct {
-	input  *PendingAccessorMockMetaForObjIDInput
-	result *PendingAccessorMockMetaForObjIDResult
+type PendingAccessorMockIsStateCalculatedExpectation struct {
+	input  *PendingAccessorMockIsStateCalculatedInput
+	result *PendingAccessorMockIsStateCalculatedResult
 }
 
-type PendingAccessorMockMetaForObjIDInput struct {
+type PendingAccessorMockIsStateCalculatedInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 	p2 insolar.ID
 }
 
-type PendingAccessorMockMetaForObjIDResult struct {
-	r  object.PendingFilamentState
+type PendingAccessorMockIsStateCalculatedResult struct {
+	r  bool
 	r1 error
 }
 
-//Expect specifies that invocation of PendingAccessor.MetaForObjID is expected from 1 to Infinity times
-func (m *mPendingAccessorMockMetaForObjID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mPendingAccessorMockMetaForObjID {
-	m.mock.MetaForObjIDFunc = nil
+// Expect specifies that invocation of PendingAccessor.IsStateCalculated is expected from 1 to Infinity times
+func (m *mPendingAccessorMockIsStateCalculated) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mPendingAccessorMockIsStateCalculated {
+	m.mock.IsStateCalculatedFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingAccessorMockMetaForObjIDExpectation{}
+		m.mainExpectation = &PendingAccessorMockIsStateCalculatedExpectation{}
 	}
-	m.mainExpectation.input = &PendingAccessorMockMetaForObjIDInput{p, p1, p2}
+	m.mainExpectation.input = &PendingAccessorMockIsStateCalculatedInput{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of PendingAccessor.MetaForObjID
-func (m *mPendingAccessorMockMetaForObjID) Return(r object.PendingFilamentState, r1 error) *PendingAccessorMock {
-	m.mock.MetaForObjIDFunc = nil
+// Return specifies results of invocation of PendingAccessor.IsStateCalculated
+func (m *mPendingAccessorMockIsStateCalculated) Return(r bool, r1 error) *PendingAccessorMock {
+	m.mock.IsStateCalculatedFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingAccessorMockMetaForObjIDExpectation{}
+		m.mainExpectation = &PendingAccessorMockIsStateCalculatedExpectation{}
 	}
-	m.mainExpectation.result = &PendingAccessorMockMetaForObjIDResult{r, r1}
+	m.mainExpectation.result = &PendingAccessorMockIsStateCalculatedResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of PendingAccessor.MetaForObjID is expected once
-func (m *mPendingAccessorMockMetaForObjID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *PendingAccessorMockMetaForObjIDExpectation {
-	m.mock.MetaForObjIDFunc = nil
+// ExpectOnce specifies that invocation of PendingAccessor.IsStateCalculated is expected once
+func (m *mPendingAccessorMockIsStateCalculated) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *PendingAccessorMockIsStateCalculatedExpectation {
+	m.mock.IsStateCalculatedFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &PendingAccessorMockMetaForObjIDExpectation{}
-	expectation.input = &PendingAccessorMockMetaForObjIDInput{p, p1, p2}
+	expectation := &PendingAccessorMockIsStateCalculatedExpectation{}
+	expectation.input = &PendingAccessorMockIsStateCalculatedInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *PendingAccessorMockMetaForObjIDExpectation) Return(r object.PendingFilamentState, r1 error) {
-	e.result = &PendingAccessorMockMetaForObjIDResult{r, r1}
+func (e *PendingAccessorMockIsStateCalculatedExpectation) Return(r bool, r1 error) {
+	e.result = &PendingAccessorMockIsStateCalculatedResult{r, r1}
 }
 
-//Set uses given function f as a mock of PendingAccessor.MetaForObjID method
-func (m *mPendingAccessorMockMetaForObjID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.PendingFilamentState, r1 error)) *PendingAccessorMock {
+// Set uses given function f as a mock of PendingAccessor.IsStateCalculated method
+func (m *mPendingAccessorMockIsStateCalculated) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r bool, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.MetaForObjIDFunc = f
+	m.mock.IsStateCalculatedFunc = f
 	return m.mock
 }
 
-//MetaForObjID implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
-func (m *PendingAccessorMock) MetaForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.PendingFilamentState, r1 error) {
-	counter := atomic.AddUint64(&m.MetaForObjIDPreCounter, 1)
-	defer atomic.AddUint64(&m.MetaForObjIDCounter, 1)
+// IsStateCalculated implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
+func (m *PendingAccessorMock) IsStateCalculated(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r bool, r1 error) {
+	counter := atomic.AddUint64(&m.IsStateCalculatedPreCounter, 1)
+	defer atomic.AddUint64(&m.IsStateCalculatedCounter, 1)
 
-	if len(m.MetaForObjIDMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.MetaForObjIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PendingAccessorMock.MetaForObjID. %v %v %v", p, p1, p2)
+	if len(m.IsStateCalculatedMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsStateCalculatedMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PendingAccessorMock.IsStateCalculated. %v %v %v", p, p1, p2)
 			return
 		}
 
-		input := m.MetaForObjIDMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PendingAccessorMockMetaForObjIDInput{p, p1, p2}, "PendingAccessor.MetaForObjID got unexpected parameters")
+		input := m.IsStateCalculatedMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PendingAccessorMockIsStateCalculatedInput{p, p1, p2}, "PendingAccessor.IsStateCalculated got unexpected parameters")
 
-		result := m.MetaForObjIDMock.expectationSeries[counter-1].result
+		result := m.IsStateCalculatedMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the PendingAccessorMock.MetaForObjID")
+			m.t.Fatal("No results are set for the PendingAccessorMock.IsStateCalculated")
 			return
 		}
 
@@ -149,16 +148,16 @@ func (m *PendingAccessorMock) MetaForObjID(p context.Context, p1 insolar.PulseNu
 		return
 	}
 
-	if m.MetaForObjIDMock.mainExpectation != nil {
+	if m.IsStateCalculatedMock.mainExpectation != nil {
 
-		input := m.MetaForObjIDMock.mainExpectation.input
+		input := m.IsStateCalculatedMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, PendingAccessorMockMetaForObjIDInput{p, p1, p2}, "PendingAccessor.MetaForObjID got unexpected parameters")
+			testify_assert.Equal(m.t, *input, PendingAccessorMockIsStateCalculatedInput{p, p1, p2}, "PendingAccessor.IsStateCalculated got unexpected parameters")
 		}
 
-		result := m.MetaForObjIDMock.mainExpectation.result
+		result := m.IsStateCalculatedMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the PendingAccessorMock.MetaForObjID")
+			m.t.Fatal("No results are set for the PendingAccessorMock.IsStateCalculated")
 		}
 
 		r = result.r
@@ -167,39 +166,39 @@ func (m *PendingAccessorMock) MetaForObjID(p context.Context, p1 insolar.PulseNu
 		return
 	}
 
-	if m.MetaForObjIDFunc == nil {
-		m.t.Fatalf("Unexpected call to PendingAccessorMock.MetaForObjID. %v %v %v", p, p1, p2)
+	if m.IsStateCalculatedFunc == nil {
+		m.t.Fatalf("Unexpected call to PendingAccessorMock.IsStateCalculated. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.MetaForObjIDFunc(p, p1, p2)
+	return m.IsStateCalculatedFunc(p, p1, p2)
 }
 
-//MetaForObjIDMinimockCounter returns a count of PendingAccessorMock.MetaForObjIDFunc invocations
-func (m *PendingAccessorMock) MetaForObjIDMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.MetaForObjIDCounter)
+// IsStateCalculatedMinimockCounter returns a count of PendingAccessorMock.IsStateCalculatedFunc invocations
+func (m *PendingAccessorMock) IsStateCalculatedMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsStateCalculatedCounter)
 }
 
-//MetaForObjIDMinimockPreCounter returns the value of PendingAccessorMock.MetaForObjID invocations
-func (m *PendingAccessorMock) MetaForObjIDMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.MetaForObjIDPreCounter)
+// IsStateCalculatedMinimockPreCounter returns the value of PendingAccessorMock.IsStateCalculated invocations
+func (m *PendingAccessorMock) IsStateCalculatedMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsStateCalculatedPreCounter)
 }
 
-//MetaForObjIDFinished returns true if mock invocations count is ok
-func (m *PendingAccessorMock) MetaForObjIDFinished() bool {
+// IsStateCalculatedFinished returns true if mock invocations count is ok
+func (m *PendingAccessorMock) IsStateCalculatedFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.MetaForObjIDMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.MetaForObjIDCounter) == uint64(len(m.MetaForObjIDMock.expectationSeries))
+	if len(m.IsStateCalculatedMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsStateCalculatedCounter) == uint64(len(m.IsStateCalculatedMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.MetaForObjIDMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.MetaForObjIDCounter) > 0
+	if m.IsStateCalculatedMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsStateCalculatedCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.MetaForObjIDFunc != nil {
-		return atomic.LoadUint64(&m.MetaForObjIDCounter) > 0
+	if m.IsStateCalculatedFunc != nil {
+		return atomic.LoadUint64(&m.IsStateCalculatedCounter) > 0
 	}
 
 	return true
@@ -514,8 +513,8 @@ func (m *PendingAccessorMock) RecordsFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PendingAccessorMock) ValidateCallCounters() {
 
-	if !m.MetaForObjIDFinished() {
-		m.t.Fatal("Expected call to PendingAccessorMock.MetaForObjID")
+	if !m.IsStateCalculatedFinished() {
+		m.t.Fatal("Expected call to PendingAccessorMock.IsStateCalculated")
 	}
 
 	if !m.OpenRequestsForObjIDFinished() {
@@ -543,8 +542,8 @@ func (m *PendingAccessorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PendingAccessorMock) MinimockFinish() {
 
-	if !m.MetaForObjIDFinished() {
-		m.t.Fatal("Expected call to PendingAccessorMock.MetaForObjID")
+	if !m.IsStateCalculatedFinished() {
+		m.t.Fatal("Expected call to PendingAccessorMock.IsStateCalculated")
 	}
 
 	if !m.OpenRequestsForObjIDFinished() {
@@ -569,7 +568,7 @@ func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.MetaForObjIDFinished()
+		ok = ok && m.IsStateCalculatedFinished()
 		ok = ok && m.OpenRequestsForObjIDFinished()
 		ok = ok && m.RecordsFinished()
 
@@ -580,8 +579,8 @@ func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.MetaForObjIDFinished() {
-				m.t.Error("Expected call to PendingAccessorMock.MetaForObjID")
+			if !m.IsStateCalculatedFinished() {
+				m.t.Error("Expected call to PendingAccessorMock.IsStateCalculated")
 			}
 
 			if !m.OpenRequestsForObjIDFinished() {
@@ -604,7 +603,7 @@ func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PendingAccessorMock) AllMocksCalled() bool {
 
-	if !m.MetaForObjIDFinished() {
+	if !m.IsStateCalculatedFinished() {
 		return false
 	}
 
