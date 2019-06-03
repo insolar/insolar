@@ -170,7 +170,7 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("is not CallMethod message")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.Execute")
+	ctx, span := instracer.StartSpan(ctx, "HandleCall.Present")
 	span.AddAttributes(
 		trace.StringAttribute("msg.Type", msg.Type().String()),
 	)
@@ -190,7 +190,37 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 	Message bus.Message
 }
 
+// Please note that currently we completely lack any fraud detection here.
+// Ideally we should check that the previous executor was really an executor
+// during previous pulse, that the request was really registered, etc...
+func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
+	ctx context.Context,
+	parcel insolar.Parcel,
+	msg *message.AdditionalCallFromPreviousExecutor,
+	f flow.Flow,
+) (insolar.Reply, error) {
+	// TODO AALEKSEEV implement
+
+	return &reply.OK{}, nil
+}
+
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
-	// TODO AALEKSEEV add a message to the execution queue
+	parcel := h.Message.Parcel
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("HandleAdditionalCallFromPreviousExecutor.Present starts ...")
+
+	msg, ok := parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
+	if !ok {
+		return errors.New("is not AdditionalCallFromPreviousExecutor message")
+	}
+
+	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
+	span.AddAttributes(
+		trace.StringAttribute("msg.Type", msg.Type().String()),
+	)
+	defer span.End()
+
+	r := bus.Reply{}
+	r.Reply, r.Err = h.handleActual(ctx, parcel, msg, f)
 	return nil
 }

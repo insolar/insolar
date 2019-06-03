@@ -973,16 +973,16 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			name:                 "pulse change in RegisterRequest",
 			when:                 whenRegisterRequest,
 			flowCanceledExpected: true,
-			messagesExpected: []insolar.MessageType{
-				insolar.TypeAdditionalCallFromPreviousExecutor,
-			},
 		},
 		{
-			name:                      "pulse change in HasPendingRequests",
-			when:                      whenHasPendingRequest,
-			messagesExpected:          []insolar.MessageType{insolar.TypeExecutorResults},
+			name: "pulse change in HasPendingRequests",
+			when: whenHasPendingRequest,
+			messagesExpected: []insolar.MessageType{
+				insolar.TypeExecutorResults, insolar.TypeAdditionalCallFromPreviousExecutor,
+			},
 			pendingInExecutorResults:  message.PendingUnknown,
 			queueLenInExecutorResults: 1,
+			flowCanceledExpected:      true,
 		},
 		{
 			name: "pulse change in CallMethod",
