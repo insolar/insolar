@@ -239,8 +239,8 @@ func (rpc *rpcController) SendBytes(ctx context.Context, nodeID insolar.Referenc
 	if data.Result == nil {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
-	stats.Record(ctx, statParcelsReplySizeBytes.M(int64(len(*data.Result))))
-	return *data.Result, nil
+	stats.Record(ctx, statParcelsReplySizeBytes.M(int64(len(data.Result))))
+	return data.Result, nil
 }
 
 func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error) {
@@ -279,8 +279,8 @@ func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg
 	if data.Result == nil {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
-	stats.Record(ctx, statParcelsReplySizeBytes.M(int64(len(*data.Result))))
-	return *data.Result, nil
+	stats.Record(ctx, statParcelsReplySizeBytes.M(int64(len(data.Result))))
+	return data.Result, nil
 }
 
 func (rpc *rpcController) processMessage(ctx context.Context, request network.Packet) (network.Packet, error) {
@@ -296,8 +296,7 @@ func (rpc *rpcController) processMessage(ctx context.Context, request network.Pa
 	if err != nil {
 		return rpc.Network.BuildResponse(ctx, request, &packet.RPCResponse{Error: err.Error()}), nil
 	}
-	r := types.RPCPayload(result)
-	return rpc.Network.BuildResponse(ctx, request, &packet.RPCResponse{Result: &r}), nil
+	return rpc.Network.BuildResponse(ctx, request, &packet.RPCResponse{Result: result}), nil
 }
 
 func (rpc *rpcController) processCascade(ctx context.Context, request network.Packet) (network.Packet, error) {
