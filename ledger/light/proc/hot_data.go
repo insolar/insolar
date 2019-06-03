@@ -124,7 +124,7 @@ func (p *HotData) process(ctx context.Context) error {
 		err = p.Dep.IndexBucketModifier.SetBucket(
 			ctx,
 			p.msg.PulseNumber,
-			object.IndexBucket{
+			object.FilamentIndex{
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
 				LifelineLastUsed: meta.LifelineLastUsed,

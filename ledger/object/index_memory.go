@@ -34,7 +34,7 @@ import (
 type extendedIndexBucket struct {
 	sync.RWMutex
 
-	objectMeta  IndexBucket
+	objectMeta  FilamentIndex
 	pendingMeta pendingMeta
 }
 
@@ -99,7 +99,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 	defer i.bucketsLock.Unlock()
 
 	bucket := &extendedIndexBucket{
-		objectMeta: IndexBucket{
+		objectMeta: FilamentIndex{
 			ObjID:          objID,
 			PendingRecords: []record.Virtual{},
 		},
@@ -152,7 +152,7 @@ func (i *InMemoryIndex) Set(ctx context.Context, pn insolar.PulseNumber, objID i
 }
 
 // SetBucket adds a bucket with provided pulseNumber and ID
-func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
+func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
@@ -190,7 +190,7 @@ func (i *InMemoryIndex) ForID(ctx context.Context, pn insolar.PulseNumber, objID
 }
 
 // ForPNAndJet returns a collection of buckets for a provided pn and jetID
-func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket {
+func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
@@ -199,7 +199,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		return nil
 	}
 
-	res := []IndexBucket{}
+	res := []FilamentIndex{}
 
 	for _, b := range bucks {
 		if b.objectMeta.Lifeline.JetID != jetID {
@@ -211,7 +211,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 
 		clonedRecords = append(clonedRecords, b.objectMeta.PendingRecords...)
 
-		res = append(res, IndexBucket{
+		res = append(res, FilamentIndex{
 			ObjID:            b.objectMeta.ObjID,
 			Lifeline:         clonedLfl,
 			LifelineLastUsed: b.objectMeta.LifelineLastUsed,

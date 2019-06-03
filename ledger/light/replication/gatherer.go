@@ -86,7 +86,7 @@ func (d *LightDataGatherer) ForPulseAndJet(
 	}, nil
 }
 
-func convertIndexBuckets(ctx context.Context, buckets []object.IndexBucket) [][]byte {
+func convertIndexBuckets(ctx context.Context, buckets []object.FilamentIndex) [][]byte {
 	convertedBucks := make([][]byte, len(buckets))
 	for i, buck := range buckets {
 		buff, err := buck.Marshal()

@@ -72,7 +72,7 @@ type IndexCleaner interface {
 // With using of IndexBucketModifier there is a possibility to set buckets from outside of an index.
 type IndexBucketModifier interface {
 	// SetBucket adds a bucket with provided pulseNumber and ID
-	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error
+	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketAccessor -o ./mocks -s _mock.go
@@ -80,7 +80,7 @@ type IndexBucketModifier interface {
 // IndexBucketAccessor provides an interface for fetching buckets from an index.
 type IndexBucketAccessor interface {
 	// ForPNAndJet returns a collection of buckets for a provided pn and jetID
-	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket
+	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingModifier -o ./mocks -s _mock.go

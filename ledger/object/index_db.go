@@ -73,7 +73,7 @@ func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar
 
 	buc, err := i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {
-		buc = &IndexBucket{}
+		buc = &FilamentIndex{}
 	} else if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar
 }
 
 // SetBucket adds a bucket with provided pulseNumber and ID
-func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
+func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -118,7 +118,7 @@ func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket 
 
 // ForID returns a lifeline from a bucket with provided PN and ObjID
 func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
-	var buck *IndexBucket
+	var buck *FilamentIndex
 	buck, err := i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {
 		lastPN, err := i.getLastKnownPN(objID)
@@ -137,7 +137,7 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 	return buck.Lifeline, nil
 }
 
-func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *IndexBucket) error {
+func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *FilamentIndex) error {
 	key := indexKey{pn: pn, objID: objID}
 
 	buff, err := bucket.Marshal()
@@ -148,7 +148,7 @@ func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *In
 	return i.db.Set(key, buff)
 }
 
-func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*IndexBucket, error) {
+func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*FilamentIndex, error) {
 	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
 	if err == store.ErrNotFound {
 		return nil, ErrIndexBucketNotFound
@@ -157,7 +157,7 @@ func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*IndexBuc
 	if err != nil {
 		return nil, err
 	}
-	bucket := IndexBucket{}
+	bucket := FilamentIndex{}
 	err = bucket.Unmarshal(buff)
 	return &bucket, err
 }

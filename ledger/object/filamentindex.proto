@@ -7,7 +7,7 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "ledger/object/lifeline.proto";
 import "github.com/insolar/insolar/insolar/record/record.proto";
 
-message IndexBucket {
+message FilamentIndex {
     option (gogoproto.equal) = false;
 
     int32  __polymorph  = 16;
