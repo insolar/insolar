@@ -58,94 +58,78 @@ func (Key) Scope() store.Scope {
 	return store.ScopeGenesis
 }
 
-// CreateIfNeeded creates new base genesis record if needed.
-// Returns reference of genesis record and flag if base record have been created.
-func (br *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
-	inslog := inslogger.FromContext(ctx)
-	inslog.Info("start storage bootstrap")
-
-	getGenesisRef := func() (*insolar.Reference, error) {
-		buff, err := br.DB.Get(Key{})
-		if err != nil {
-			return nil, err
-		}
-		var genesisRef insolar.Reference
-		copy(genesisRef[:], buff)
-		return &genesisRef, nil
-	}
-
-	createGenesisRecord := func() error {
-		err := br.PulseAppender.Append(
-			ctx,
-			insolar.Pulse{
-				PulseNumber: insolar.GenesisPulse.PulseNumber,
-				Entropy:     insolar.GenesisPulse.Entropy,
-			},
-		)
-		if err != nil {
-			return errors.Wrap(err, "fail to set genesis pulse")
-		}
-		// Add initial drop
-		err = br.DropModifier.Set(ctx, drop.Drop{JetID: insolar.ZeroJetID})
-		if err != nil {
-			return errors.Wrap(err, "fail to set initial drop")
-		}
-
-		lastPulse, err := br.PulseAccessor.Latest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "fail to get last pulse")
-		}
-		if lastPulse.PulseNumber != insolar.GenesisPulse.PulseNumber {
-			return fmt.Errorf(
-				"last pulse number %v is not equal to genesis special value %v",
-				lastPulse.PulseNumber,
-				insolar.GenesisPulse.PulseNumber,
-			)
-		}
-
-		genesisID := insolar.GenesisRecord.ID()
-		genesisRecord := record.Genesis{Hash: insolar.GenesisRecord}
-		virtRec := record.Wrap(genesisRecord)
-		rec := record.Material{
-			Virtual: &virtRec,
-			JetID:   insolar.ZeroJetID,
-		}
-		err = br.RecordModifier.Set(ctx, genesisID, rec)
-		if err != nil {
-			return errors.Wrap(err, "can't save genesis record into storage")
-		}
-
-		err = br.IndexLifelineModifier.Set(
-			ctx,
-			insolar.FirstPulseNumber,
-			genesisID,
-			object.Lifeline{
-				LatestState:         &genesisID,
-				LatestStateApproved: &genesisID,
-				JetID:               insolar.ZeroJetID,
-			},
-		)
-		if err != nil {
-			return errors.Wrap(err, "fail to set genesis index")
-		}
-
-		return br.DB.Set(Key{}, insolar.GenesisRecord.Ref().Bytes())
-	}
-
-	_, err := getGenesisRef()
+// IsGenesisRequired checks if genesis record already exists.
+func (br *BaseRecord) IsGenesisRequired(ctx context.Context) (bool, error) {
+	_, err := br.DB.Get(Key{})
 	if err == nil {
 		return false, nil
 	}
 	if err != store.ErrNotFound {
-		return false, errors.Wrap(err, "genesis bootstrap failed")
+		return false, errors.Wrap(err, "genesis record fetch failed")
 	}
-
-	err = createGenesisRecord()
-	if err != nil {
-		return true, err
-	}
-
 	return true, nil
+}
+
+// Create creates new base genesis record if needed.
+func (br *BaseRecord) Create(ctx context.Context) error {
+	inslog := inslogger.FromContext(ctx)
+	inslog.Info("start storage bootstrap")
+
+	err := br.PulseAppender.Append(
+		ctx,
+		insolar.Pulse{
+			PulseNumber: insolar.GenesisPulse.PulseNumber,
+			Entropy:     insolar.GenesisPulse.Entropy,
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "fail to set genesis pulse")
+	}
+	// Add initial drop
+	err = br.DropModifier.Set(ctx, drop.Drop{JetID: insolar.ZeroJetID})
+	if err != nil {
+		return errors.Wrap(err, "fail to set initial drop")
+	}
+
+	lastPulse, err := br.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "fail to get last pulse")
+	}
+	if lastPulse.PulseNumber != insolar.GenesisPulse.PulseNumber {
+		return fmt.Errorf(
+			"last pulse number %v is not equal to genesis special value %v",
+			lastPulse.PulseNumber,
+			insolar.GenesisPulse.PulseNumber,
+		)
+	}
+
+	genesisID := insolar.GenesisRecord.ID()
+	genesisRecord := record.Genesis{Hash: insolar.GenesisRecord}
+	virtRec := record.Wrap(genesisRecord)
+	rec := record.Material{
+		Virtual: &virtRec,
+		JetID:   insolar.ZeroJetID,
+	}
+	err = br.RecordModifier.Set(ctx, genesisID, rec)
+	if err != nil {
+		return errors.Wrap(err, "can't save genesis record into storage")
+	}
+
+	err = br.IndexLifelineModifier.Set(
+		ctx,
+		insolar.FirstPulseNumber,
+		genesisID,
+		object.Lifeline{
+			LatestState:         &genesisID,
+			LatestStateApproved: &genesisID,
+			JetID:               insolar.ZeroJetID,
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "fail to set genesis index")
+	}
+
+	return br.DB.Set(Key{}, insolar.GenesisRecord.Ref().Bytes())
 }
 
 // Genesis holds data and objects required for genesis on heavy node.
@@ -162,15 +146,21 @@ type Genesis struct {
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
-	isInit, err := g.BaseRecord.CreateIfNeeded(ctx)
+	isRequired, err := g.BaseRecord.IsGenesisRequired(ctx)
 	if err != nil {
 		return err
 	}
-	if !isInit {
+
+	if !isRequired {
 		inslog.Info("[genesis] base genesis record exists, skip genesis")
 		return nil
 	}
+
 	inslogger.FromContext(ctx).Info("[genesis] start...")
+	err = g.BaseRecord.Create(ctx)
+	if err != nil {
+		return err
+	}
 
 	err = g.storeContracts(ctx)
 	if err != nil {

@@ -126,7 +126,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		RecordModifier:        recordStorage,
 		IndexLifelineModifier: index,
 	}
-	_, err := genesisBaseRecord.CreateIfNeeded(ctx)
+	err := genesisBaseRecord.Create(ctx)
 	if err != nil {
 		t.Error(err, "failed to create base genesis record")
 	}
