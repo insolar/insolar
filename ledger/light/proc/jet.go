@@ -19,9 +19,13 @@ package proc
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar"
+	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
@@ -106,4 +110,87 @@ func (p *WaitHot) Proceed(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+type CheckJet struct {
+	target  insolar.ID
+	pulse   insolar.PulseNumber
+	message *message.Message
+	pass    bool
+
+	Result struct {
+		Jet insolar.JetID
+	}
+
+	Dep struct {
+		JetAccessor jet.Accessor
+		Coordinator jet.Coordinator
+		JetFetcher  jet.Fetcher
+		Sender      wbus.Sender
+	}
+}
+
+func NewCheckJet(target insolar.ID, pn insolar.PulseNumber, msg *message.Message, pass bool) *CheckJet {
+	return &CheckJet{
+		target:  target,
+		pulse:   pn,
+		message: msg,
+		pass:    pass,
+	}
+}
+
+func (p *CheckJet) Proceed(ctx context.Context) error {
+	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch jet")
+	}
+
+	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate executor for jet")
+	}
+	if *executor != p.Dep.Coordinator.Me() {
+		if !p.pass {
+			return ErrNotExecutor
+		}
+
+		msg, err := payload.NewMessage(&payload.Pass{
+			Origin:        p.message.Payload,
+			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+		go func() {
+			_, done := p.Dep.Sender.SendTarget(ctx, msg, *executor)
+			done()
+		}()
+		return nil
+	}
+
+	p.Result.Jet = insolar.JetID(*jetID)
+	return nil
+}
+
+type WaitHotWM struct {
+	jetID   insolar.JetID
+	pulse   insolar.PulseNumber
+	message *message.Message
+
+	Dep struct {
+		Waiter hot.JetWaiter
+		Sender wbus.Sender
+	}
+}
+
+func NewWaitHotWM(j insolar.JetID, pn insolar.PulseNumber, msg *message.Message) *WaitHotWM {
+	return &WaitHotWM{
+		jetID:   j,
+		pulse:   pn,
+		message: msg,
+	}
+}
+
+func (p *WaitHotWM) Proceed(ctx context.Context) error {
+	return p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
 }

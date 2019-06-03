@@ -14,14 +14,9 @@
 // limitations under the License.
 //
 
-package proc
+package payload
 
-import (
-	"errors"
-)
-
-var (
-	ErrInvalidRef        = errors.New("invalid reference")
-	ErrObjectDeactivated = errors.New("object is deactivated")
-	ErrNotExecutor       = errors.New("not executor for jet")
+const (
+	CodeUnknown     = 0
+	CodeDeactivated = 1
 )
