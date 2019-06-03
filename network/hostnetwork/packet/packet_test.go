@@ -221,3 +221,10 @@ func TestPacket_GetResponse(t *testing.T) {
 	_, p2 := marshalUnmarshalPacketResponse(t, &cascade)
 	assert.NotNil(t, p2.GetResponse().GetBasic())
 }
+
+func TestPacket_Marshal_0x80(t *testing.T) {
+	p := testRPCPacket()
+	data, err := p.Marshal()
+	require.NoError(t, err)
+	assert.EqualValues(t, 0x80, data[0])
+}
