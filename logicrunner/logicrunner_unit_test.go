@@ -169,6 +169,15 @@ func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueu
 	suite.Require().Equal(message.InPending, es.pending)
 }
 
+func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_HappyPath() {
+	h := HandleAdditionalCallFromPreviousExecutor{}
+	f := flow.NewFlowMock(suite.T())
+	msg := message.AdditionalCallFromPreviousExecutor{}
+	rep, err := h.handleActual(context.Background(), &msg, f)
+	require.NoError(suite.T(), err)
+	require.Equal(suite.T(), reply.OK{}, rep)
+}
+
 func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	objectRef := testutils.RandomRef()
 

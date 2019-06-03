@@ -200,12 +200,12 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 // to re-send it after some timeout.
 func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	ctx context.Context,
-	parcel insolar.Parcel,
 	msg *message.AdditionalCallFromPreviousExecutor,
 	f flow.Flow,
 ) (insolar.Reply, error) {
 	lr := h.dep.lr
 	ref := msg.Reference
+
 	os := lr.UpsertObjectState(ref)
 
 	os.Lock()
@@ -229,7 +229,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 
 	procClarifyPendingState := ClarifyPendingState{
 		es:              es,
-		parcel:          parcel,
+		parcel:          msg.QueueElement.Parcel,
 		ArtifactManager: lr.ArtifactManager,
 	}
 
@@ -269,6 +269,6 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 	defer span.End()
 
 	r := bus.Reply{}
-	r.Reply, r.Err = h.handleActual(ctx, parcel, msg, f)
+	r.Reply, r.Err = h.handleActual(ctx, msg, f)
 	return nil
 }
