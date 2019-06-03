@@ -133,11 +133,6 @@ func (h *HandleCall) handleActual(
 			}
 
 			_, err = lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
-			if err == nil {
-				// If MessageBus.Send fails we report the error somebody who called this method.
-				// Otherwise we report ErrCancelled
-				err = flow.ErrCancelled
-			}
 		}
 
 		return nil, err

@@ -1082,7 +1082,6 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			},
 			pendingInExecutorResults:  message.PendingUnknown,
 			queueLenInExecutorResults: 1,
-			flowCanceledExpected:      true,
 		},
 		{
 			name: "pulse change in CallMethod",
