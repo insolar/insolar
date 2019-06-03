@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/insolar/gen"
+
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
@@ -169,10 +171,21 @@ func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueu
 	suite.Require().Equal(message.InPending, es.pending)
 }
 
+// AALEKSEEV TODO fix this test + write more
 func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_HappyPath() {
-	h := HandleAdditionalCallFromPreviousExecutor{}
+	h := HandleAdditionalCallFromPreviousExecutor{
+		dep: &Dependencies{
+			lr: suite.lr,
+		},
+	}
 	f := flow.NewFlowMock(suite.T())
-	msg := message.AdditionalCallFromPreviousExecutor{}
+	parcel := testutils.NewParcelMock(suite.T())
+	request := gen.Reference()
+	msg := message.AdditionalCallFromPreviousExecutor{
+		ObjectReference: gen.Reference(),
+		Parcel:          parcel,
+		Request:         &request,
+	}
 	rep, err := h.handleActual(context.Background(), &msg, f)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), reply.OK{}, rep)

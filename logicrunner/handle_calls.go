@@ -127,11 +127,9 @@ func (h *HandleCall) handleActual(
 			// MessageBus will automatically resend the message to the right VE.
 
 			additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
-				Reference: ref,
-				QueueElement: message.ExecutionQueueElement{
-					Parcel:  parcel,
-					Request: request,
-				},
+				ObjectReference: ref,
+				Parcel:          parcel,
+				Request:         request,
 			}
 
 			_, err = lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
@@ -190,7 +188,6 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 	Message bus.Message
 }
 
-// AALEKSEEV TODO WRITE A UNIT TEST FOR THIS
 // This is basically a simplified version of HandleCall.handleActual().
 // Please note that currently we lack any fraud detection here.
 // Ideally we should check that the previous executor was really an executor
@@ -204,7 +201,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	f flow.Flow,
 ) (insolar.Reply, error) {
 	lr := h.dep.lr
-	ref := msg.Reference
+	ref := msg.ObjectReference
 
 	os := lr.UpsertObjectState(ref)
 
@@ -221,15 +218,15 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	es.Lock()
 	qElement := ExecutionQueueElement{
 		ctx:     ctx,
-		parcel:  msg.QueueElement.Parcel,
-		request: msg.QueueElement.Request,
+		parcel:  msg.Parcel,
+		request: msg.Request,
 	}
 	es.Queue = append(es.Queue, qElement)
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
 		es:              es,
-		parcel:          msg.QueueElement.Parcel,
+		parcel:          msg.Parcel,
 		ArtifactManager: lr.ArtifactManager,
 	}
 

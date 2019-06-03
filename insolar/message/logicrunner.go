@@ -276,13 +276,14 @@ func (pf *PendingFinished) Type() insolar.MessageType {
 // this one message may be invisible by OnPulse handler. See HandleCall
 // for more details.
 type AdditionalCallFromPreviousExecutor struct {
-	Reference    insolar.Reference // object reference
-	QueueElement ExecutionQueueElement
+	ObjectReference insolar.Reference
+	Parcel          insolar.Parcel
+	Request         *insolar.Reference
 }
 
 func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {
 	// Contract that initiated this call
-	return &m.Reference
+	return &m.ObjectReference
 }
 
 func (m *AdditionalCallFromPreviousExecutor) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
@@ -295,7 +296,7 @@ func (m *AdditionalCallFromPreviousExecutor) DefaultRole() insolar.DynamicRole {
 }
 
 func (m *AdditionalCallFromPreviousExecutor) DefaultTarget() *insolar.Reference {
-	return &m.Reference
+	return &m.ObjectReference
 }
 
 func (m *AdditionalCallFromPreviousExecutor) Type() insolar.MessageType {
