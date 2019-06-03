@@ -186,6 +186,24 @@ func TestJetCoordinator_IsBeyondLimit_OutsideOfLightChainLimit(t *testing.T) {
 	require.Equal(t, true, res)
 }
 
+func TestJetCoordinator_IsBeyondLimit_PulseNotFoundIsBeyondLimit(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	ctx := inslogger.TestContext(t)
+
+	coord := NewJetCoordinator(25)
+	pulseCalculator := pulse.NewCalculatorMock(t)
+	pulseCalculator.BackwardsMock.Expect(ctx, insolar.FirstPulseNumber, 25).Return(insolar.Pulse{}, pulse.ErrNotFound)
+	coord.PulseCalculator = pulseCalculator
+
+	// Act
+	res, err := coord.IsBeyondLimit(ctx, insolar.FirstPulseNumber, 10)
+
+	// Assert
+	require.Nil(t, err)
+	require.Equal(t, true, res)
+}
+
 func TestJetCoordinator_IsBeyondLimit_InsideOfLightChainLimit(t *testing.T) {
 	t.Parallel()
 	// Arrange
