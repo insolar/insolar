@@ -49,6 +49,12 @@ func (s *GetDelegate) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	s.dep.WaitHot(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
 	idx := proc.NewGetIndex(msg.Head, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
