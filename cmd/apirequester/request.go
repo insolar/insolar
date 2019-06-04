@@ -93,8 +93,10 @@ func severalParallelRequestToDifferentMembers(insSDK *sdk.SDK) {
 		go func(i int) {
 			defer wg.Done()
 			traceID, err := insSDK.Transfer(big.NewInt(1), members[i], members[i+10])
+			traceIDBalance, err := insSDK.GetBalance(members[i])
 			check("Can not transfer money, error: ", err)
 			fmt.Println("Transfer success. TraceId: ", traceID)
+			fmt.Println("Balance result. TraceId: ", traceIDBalance)
 		}(i)
 	}
 	wg.Wait()

@@ -9,6 +9,7 @@ BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
+SIMPLEREQUESTER = simplerequester
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -84,7 +85,7 @@ ensure:
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER)
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(SIMPLEREQUESTER)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -122,6 +123,10 @@ $(PULSEWATCHER):
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
 	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
+
+.PHONY: $(SIMPLEREQUESTER)
+$(SIMPLEREQUESTER):
+	go build -o $(BIN_DIR)/$(SIMPLEREQUESTER) -ldflags "${LDFLAGS}" cmd/simplerequester/*.go
 
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
@@ -166,23 +171,23 @@ $(ARTIFACTS_DIR):
 
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -v -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic  -tags slowtest $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic  -tags slowtest $(ALL_PACKAGES)
 
 .PHONY: ci_test_unit
 ci_test_unit:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -v $(ALL_PACKAGES) -race -count 1 | tee unit.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
 
 .PHONY: ci_test_slow
 ci_test_slow:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -v -tags slowtest ./logicrunner/ -count 1 | tee -a unit.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/ -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count 3 | tee func.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -json -tags functest -v ./functest -count 3 | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags networktest -v ./network/tests -count=1 | tee integr.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=1 | tee ci_test_integrtest.json
 
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
@@ -211,6 +216,7 @@ docker: docker-insolard docker-genesis docker-insgorund
 generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ insolar/payload/payload.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/lifeline.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/indexbucket.proto
 

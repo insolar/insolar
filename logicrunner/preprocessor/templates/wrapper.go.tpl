@@ -100,6 +100,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 
 	{{ $method.ArgumentsZeroList }}
 	err = ph.Deserialize(data, &args)
+
 	if err != nil {
 		e := &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
 		return nil, nil, e

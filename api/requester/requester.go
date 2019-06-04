@@ -19,8 +19,10 @@ package requester
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"github.com/square/go-jose"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -78,11 +80,20 @@ func SetVerbose(verb bool) {
 // PostParams represents params struct
 type PostParams = map[string]interface{}
 
+type SignedRequest struct {
+	PublicKey string `json:"jwk"`
+	Token     string `json:"jws"`
+}
+
 // GetResponseBody makes request and extracts body
 func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
+	}
+
+	if err != nil {
+		fmt.Println("Unmarshal error", err)
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
@@ -108,50 +119,37 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 }
 
 // GetSeed makes rpc request to seed.Get method and extracts it
-func GetSeed(url string) ([]byte, error) {
+func GetSeed(url string) (string, error) {
 	body, err := GetResponseBody(url+"/rpc", PostParams{
 		"jsonrpc": "2.0",
 		"method":  "seed.Get",
 		"id":      "",
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getSeed ]")
+		return "", errors.Wrap(err, "[ getSeed ]")
 	}
 
 	seedResp := rpcSeedResponse{}
 
 	err = json.Unmarshal(body, &seedResp)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getSeed ] Can't unmarshal")
+		return "", errors.Wrap(err, "[ getSeed ] Can't unmarshal")
 	}
 	if seedResp.Error != nil {
-		return nil, errors.New("[ getSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
+		return "", errors.New("[ getSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
 	}
 	res := &seedResp.Result
 	if res == nil {
-		return nil, errors.New("[ getSeed ] Field 'result' is nil")
+		return "", errors.New("[ getSeed ] Field 'result' is nil")
 	}
 
 	return res.Seed, nil
 }
 
-func constructParams(params []interface{}) ([]byte, error) {
-	args, err := insolar.MarshalArgs(params...)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ constructParams ]")
-	}
-	return args, nil
-}
-
 // SendWithSeed sends request with known seed
-func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
+func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed string) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ Send ] Configs must be initialized")
-	}
-
-	params, err := constructParams(reqCfg.Params)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
 	}
 
 	callerRef, err := insolar.NewReferenceFromBase58(userCfg.Caller)
@@ -159,30 +157,37 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.Wrap(err, "[ Send ] Failed to parse userCfg.Caller reference: '"+userCfg.Caller+"'")
 	}
 
-	serRequest, err := insolar.MarshalArgs(
-		*callerRef,
-		reqCfg.Method,
-		params,
-		seed)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
+	signedPayload := PostParams{
+		"reference": callerRef,
+		"method":    reqCfg.Method,
+		"params":    reqCfg.Params,
+		"seed":      seed,
 	}
 
+	sp, err := json.Marshal(signedPayload)
 	verboseInfo(ctx, "Signing request ...")
-	cs := scheme.Signer(userCfg.privateKeyObject)
-	signature, err := cs.Sign(serRequest)
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ES256, Key: userCfg.privateKeyObject}, nil)
+	signature, err := signer.Sign(sp)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}
 	verboseInfo(ctx, "Signing request completed")
 
-	postParams := PostParams{
-		"params":    params,
-		"method":    reqCfg.Method,
-		"reference": userCfg.Caller,
-		"seed":      seed,
-		"signature": signature.Bytes(),
+	jws, err := signature.CompactSerialize()
+
+	key, ok := userCfg.privateKeyObject.(*ecdsa.PrivateKey)
+	if !ok {
+		return nil, errors.Wrap(err, "[ Send ] failed to cast private")
 	}
+
+	jwk := jose.JSONWebKey{Key: key.Public()}
+	jwkjs, err := jwk.MarshalJSON()
+
+	postParams := PostParams{
+		"jwk": string(jwkjs),
+		"jws": jws,
+	}
+
 	if reqCfg.LogLevel != nil {
 		postParams["logLevel"] = reqCfg.LogLevel
 	}
@@ -203,7 +208,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}
-	verboseInfo(ctx, "GETSEED request completed. seed: "+string(seed))
+	verboseInfo(ctx, "GETSEED request completed. seed: "+seed)
 
 	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
 	if err != nil {

@@ -19,7 +19,6 @@ package genesis
 import (
 	"context"
 
-	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -119,9 +118,6 @@ func (s *Initializer) Run() {
 		genesisGenerator := NewGenerator(
 			genesisConfig,
 			artifactManager,
-			&rootdomain.Record{
-				PCS: bc.PlatformCryptographyScheme,
-			},
 			s.genesisKeyOut,
 		)
 		err = genesisGenerator.Run(ctx)

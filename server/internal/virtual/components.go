@@ -39,6 +39,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
@@ -119,11 +120,8 @@ func initComponents(
 ) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
 
-	// TODO: use insolar.Logger
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-
-	b := bus.NewBus(pubsub)
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -174,15 +172,19 @@ func initComponents(
 		pulsemanager.NewPulseManager(),
 	)
 
+	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+	pulses := pulse.NewStorageMem()
+	b := bus.NewBus(pubsub, pulses, jc)
+
 	components := []interface{}{
 		b,
 		pubsub,
 		messageBus,
 		contractRequester,
 		artifacts.NewClient(),
-		pulse.NewStorageMem(),
+		jc,
+		pulses,
 		jet.NewStore(),
-		jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit),
 		node.NewStorage(),
 		delegationTokenFactory,
 		parcelFactory,

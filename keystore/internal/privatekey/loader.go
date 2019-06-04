@@ -21,10 +21,11 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
+	"github.com/pkg/errors"
+	"github.com/square/go-jose"
 	"io/ioutil"
 	"path/filepath"
-
-	"github.com/pkg/errors"
 )
 
 type keyLoader struct {
@@ -83,4 +84,26 @@ func pemParse(key []byte) (crypto.PrivateKey, error) {
 	}
 
 	return privateKey, nil
+}
+
+func jwkParse(json []byte) (crypto.PrivateKey, error) {
+	fmt.Println("rawjson", string(json))
+	var jwk jose.JSONWebKey
+	err := jwk.UnmarshalJSON(json)
+	if err != nil {
+		return nil, errors.New("can't unmarshal")
+	}
+	if !jwk.Valid() {
+		return nil, errors.New("invalid JWK key")
+	}
+
+	//fmt.Println("jwk type", reflect.ValueOf(jwk.Key).String())
+	//
+	//key, ok := jwk.Key.(*ecdsa.PrivateKey)
+	//
+	//fmt.Println("conv ok: ", ok)
+	//fmt.Println("public ", key.Public())
+
+	return jwk.Key, nil
+
 }

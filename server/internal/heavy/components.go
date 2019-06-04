@@ -22,9 +22,12 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/insolar/insolar/log"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/genesis"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -59,11 +62,12 @@ import (
 )
 
 type components struct {
-	cmp               component.Manager
-	NodeRef, NodeRole string
+	cmp      component.Manager
+	NodeRef  string
+	NodeRole string
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -105,8 +109,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
-	// TODO: use insolar.Logger
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 
 	// Network.
@@ -157,6 +160,35 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		}
 	}
 
+	// Storage.
+	var (
+		Coordinator jet.Coordinator
+		Pulses      *pulse.DB
+		Jets        jet.Storage
+		Nodes       *node.Storage
+		DB          *store.BadgerDB
+	)
+	{
+		var err error
+		DB, err = store.NewBadgerDB(cfg.Ledger.Storage.DataDirectory)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to initialize DB"))
+		}
+		Nodes = node.NewStorage()
+		Pulses = pulse.NewDB(DB)
+		Jets = jet.NewStore()
+
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c.PulseCalculator = Pulses
+		c.PulseAccessor = Pulses
+		c.JetAccessor = Jets
+		c.NodeNet = NodeNetwork
+		c.PlatformCryptographyScheme = CryptoScheme
+		c.Nodes = Nodes
+
+		Coordinator = c
+	}
+
 	// Communication.
 	var (
 		Tokens  insolar.DelegationTokenFactory
@@ -172,7 +204,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(pubSub)
+		WmBus = bus.NewBus(pubSub, Pulses, Coordinator)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -186,41 +218,22 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	var (
-		Coordinator  jet.Coordinator
-		Pulses       pulse.Accessor
-		Jets         jet.Storage
-		PulseManager insolar.PulseManager
-		Handler      *handler.Handler
+		PulseManager        insolar.PulseManager
+		Handler             *handler.Handler
+		DiscoveryNodesStore *genesis.Genesis
 	)
 	{
-		conf := cfg.Ledger
-
-		db, err := store.NewBadgerDB(conf.Storage.DataDirectory)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to initialize DB"))
-		}
-
-		pulses := pulse.NewDB(db)
-		records := object.NewRecordDB(db)
-		nodes := node.NewStorage()
-		jets := jet.NewStore()
-		indexes := object.NewIndexDB(db)
-		blobs := blob.NewDB(db)
-		drops := drop.NewDB(db)
-
-		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
-		cord.PulseCalculator = pulses
-		cord.PulseAccessor = pulses
-		cord.JetAccessor = jets
-		cord.NodeNet = NodeNetwork
-		cord.PlatformCryptographyScheme = CryptoScheme
-		cord.Nodes = nodes
+		pulses := pulse.NewDB(DB)
+		records := object.NewRecordDB(DB)
+		indexes := object.NewIndexDB(DB)
+		blobs := blob.NewDB(DB)
+		drops := drop.NewDB(DB)
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
-		pm.NodeSetter = nodes
-		pm.Nodes = nodes
+		pm.NodeSetter = Nodes
+		pm.Nodes = Nodes
 		pm.PulseAppender = pulses
 
 		h := handler.New()
@@ -235,11 +248,22 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 
-		Coordinator = cord
-		Pulses = pulses
-		Jets = jets
 		PulseManager = pm
 		Handler = h
+
+		artifactManager := &artifact.Scope{
+			PulseNumber:      insolar.FirstPulseNumber,
+			PCS:              CryptoScheme,
+			BlobStorage:      blobs,
+			RecordAccessor:   records,
+			RecordModifier:   records,
+			LifelineModifier: indexes,
+			LifelineAccessor: indexes,
+		}
+		DiscoveryNodesStore = &genesis.Genesis{
+			DiscoveryNodeManager: genesis.NewDiscoveryNodeManager(artifactManager),
+			DiscoveryNodes:       genesisCfg.DiscoveryNodes,
+		}
 	}
 
 	c.cmp.Inject(
@@ -265,6 +289,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		DiscoveryNodesStore,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {

@@ -18,12 +18,8 @@ package member
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"math/big"
-	"strconv"
-	"time"
-
+	"github.com/insolar/go-jose"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/deposit"
 	"github.com/insolar/insolar/application/proxy/member"
@@ -34,11 +30,30 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
+var INSATTR_GetPublicKey_API = true
+var INSATTR_Call_API = true
+
 type Member struct {
 	foundation.BaseContract
 	Name      string
 	EthAddr   string
 	PublicKey string
+}
+
+type SignedRequest struct {
+	PublicKey string `json:"jwk"`
+	Token     string `json:"jws"`
+}
+
+type SignedPayload struct {
+	Reference string `json:"reference"` // contract reference
+	Method    string `json:"method"`    // method name
+	Params    string `json:"params"`    // json object
+	Seed      string `json:"seed"`
+}
+
+type Reference struct {
+	Reference string `json:"reference"`
 }
 
 func (m *Member) GetName() (string, error) {
@@ -74,71 +89,94 @@ func NewOracleMember(name string, key string) (*Member, error) {
 	}, nil
 }
 
-func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byte) error {
-	args, err := insolar.MarshalArgs(m.GetReference(), method, params, seed)
+// TODO: check if need to store public key when call node registry
+// TODO: some keys are in PEM format
+func (m *Member) verifySignatureAndComparePublic(signedRequest []byte) (*SignedPayload, *jose.JSONWebKey, error) {
+	var jwks string
+	var jwss string
+
+	// decode jwk and jws data
+	err := signer.UnmarshalParams(signedRequest, &jwks, &jwss)
+
+	jwk := jose.JSONWebKey{}
+
+	err = jwk.UnmarshalJSON([]byte(jwks))
+	jws, err := jose.ParseSigned(jwss)
+
 	if err != nil {
-		return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
+		return nil, nil, fmt.Errorf("[ Call ] Can't unmarshal params: %s", err.Error())
 	}
 
-	key, err := m.GetPublicKey()
+	payload, err := jws.Verify(jwk)
 	if err != nil {
-		return fmt.Errorf("[ verifySig ]: %s", err.Error())
+		return nil, nil, fmt.Errorf("[ verifySig ] Incorrect signature")
+	}
+	// Unmarshal payload
+	var payloadRequest = SignedPayload{}
+	err = json.Unmarshal(payload, &payloadRequest)
+	if err != nil {
+		return nil, nil, fmt.Errorf("[ Call1 ]: %s", err.Error())
 	}
 
-	publicKey, err := foundation.ImportPublicKey(key)
-	if err != nil {
-		return fmt.Errorf("[ verifySig ] Invalid public key")
-	}
-
-	verified := foundation.Verify(args, sign, publicKey)
-	if !verified {
-		return fmt.Errorf("[ verifySig ] Incorrect signature")
-	}
-	return nil
+	return &payloadRequest, &jwk, nil
 }
 
-var INSATTR_Call_API = true
-
 // Call method for authorized calls
-func (m *Member) Call(rootDomainRef insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
+func (m *Member) Call(rootDomainRef insolar.Reference, signedRequest []byte) (interface{}, error) {
 
-	switch method {
+	// Verify signature
+	payload, public, err := m.verifySignatureAndComparePublic(signedRequest)
+	if err != nil {
+		return nil, fmt.Errorf("[ Call2 ]: %s", err.Error())
+	}
+
+	switch payload.Method {
 	case "CreateMember":
-		return m.createMemberCall(rootDomainRef, params)
+		return m.createMemberCall(rootDomainRef, []byte(payload.Params), *public)
 	}
 
-	if err := m.verifySig(method, params, seed, sign); err != nil {
-		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
-	}
-
-	switch method {
+	switch payload.Method {
+	case "GetMyBalance":
+		return m.getMyBalanceCall()
 	case "GetBalance":
-		return m.getBalanceCall()
+		return m.getBalanceCall([]byte(payload.Params))
 	case "Transfer":
-		return m.transferCall(params)
+		return m.transferCall([]byte(payload.Params))
 	case "DumpUserInfo":
-		return m.dumpUserInfoCall(rootDomainRef, params)
+		return m.dumpUserInfoCall(rootDomainRef, []byte(payload.Params))
 	case "DumpAllUsers":
 		return m.dumpAllUsersCall(rootDomainRef)
 	case "RegisterNode":
-		return m.registerNodeCall(rootDomainRef, params)
+		return m.registerNodeCall(rootDomainRef, []byte(payload.Params))
 	case "GetNodeRef":
-		return m.getNodeRefCall(rootDomainRef, params)
+		return m.getNodeRefCall(rootDomainRef, []byte(payload.Params))
 	case "Migration":
-		return m.migrationCall(rootDomainRef, params)
+		return m.migrationCall(rootDomainRef, []byte(payload.Params))
 	case "AddBurnAddress":
-		return m.AddBurnAddressCall(rootDomainRef, params)
+		return m.AddBurnAddressCall(rootDomainRef, []byte(payload.Params))
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
 
-func (m *Member) createMemberCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
-	var key string
-	if err := signer.UnmarshalParams(params, &key); err != nil {
-		return nil, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
+func (m *Member) createMemberCall(rdRef insolar.Reference, params []byte, public jose.JSONWebKey) (interface{}, error) {
+	type CreateMember struct {
+		Name string `json:"name"`
 	}
 
-	return m.createMemberByKey(rdRef, key)
+	rootDomain := rootdomain.GetObject(ref)
+	// TODO: convert to pem format
+	key, err := public.MarshalJSON()
+	if err != nil {
+		return 0, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
+	}
+	createMember := CreateMember{}
+
+	err = json.Unmarshal(params, &createMember)
+	if err != nil {
+		return 0, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
+	}
+
+	return m.createMemberByKey(rdRef, string(key))
 }
 
 func (m *Member) createMemberByKey(rdRef insolar.Reference, key string) (interface{}, error) {
@@ -223,6 +261,15 @@ func (m *Member) getBalanceCall() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("[ getBalanceCall ] Can't get implementation: %s", err.Error())
 	}
+
+	return w.GetBalance()
+}
+
+func (m *Member) getBalanceCall() (interface{}, error) {
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return nil, fmt.Errorf("[ getBalanceCall ] Can't get implementation: %s", err.Error())
+	}
 	b, err := w.GetBalance()
 	if err != nil {
 		return nil, fmt.Errorf("[ getBalanceCall ] Can't get balance: %s", err.Error())
@@ -253,13 +300,18 @@ func parseTimeStamp(timeStr string) (time.Time, error) {
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
-	var toMemberStr string
-	var amount string
-	if err := signer.UnmarshalParams(params, &amount, &toMemberStr); err != nil {
+	type Transfer struct {
+		Amount uint   `json:"amount"`
+		To     string `json:"to"`
+	}
+	var transfer = Transfer{}
+
+	err := json.Unmarshal(params, &transfer)
+	if err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
 	}
 
-	toMember, err := insolar.NewReferenceFromBase58(toMemberStr)
+	toMember, err := insolar.NewReferenceFromBase58(transfer.To)
 	if err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Failed to parse 'to' param: %s", err.Error())
 	}
@@ -280,11 +332,15 @@ func (m *Member) transfer(amount string, toMember *insolar.Reference) (interface
 	return nil, w.Transfer(amount, toMember)
 }
 
-func (m *Member) registerNodeCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
-	var publicKey string
-	var role string
-	if err := signer.UnmarshalParams(params, &publicKey, &role); err != nil {
-		return nil, fmt.Errorf("[ registerNodeCall ] Can't unmarshal params: %s", err.Error())
+func (m *Member) registerNodeCall(ref insolar.Reference, params []byte) (interface{}, error) {
+	type RegisterNode struct {
+		Public string `json:"public"`
+		Role   string `json:"role"`
+	}
+
+	registerNode := RegisterNode{}
+	if err := json.Unmarshal(params, &registerNode); err != nil {
+		return nil, fmt.Errorf("[ registerNodeCall ] Can't unmarshal params: %s"+string(params), err.Error())
 	}
 
 	rootDomain := rootdomain.GetObject(rdRef)
@@ -303,8 +359,12 @@ func (m *Member) registerNodeCall(rdRef insolar.Reference, params []byte) (inter
 }
 
 func (m *Member) getNodeRefCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
-	var publicKey string
-	if err := signer.UnmarshalParams(params, &publicKey); err != nil {
+	type NodeRef struct {
+		publicKey string
+	}
+
+	var nodeReference = NodeRef{}
+	if err := json.Unmarshal(params, &nodeReference); err != nil {
 		return nil, fmt.Errorf("[ getNodeRefCall ] Can't unmarshal params: %s", err.Error())
 	}
 
@@ -463,8 +523,9 @@ func (m *Member) FindDeposit(txHash string, amount big.Int) (bool, deposit.Depos
 }
 
 func (m *Member) dumpUserInfoCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
-	var userRefIn string
-	if err := signer.UnmarshalParams(params, &userRefIn); err != nil {
+	rootDomain := rootdomain.GetObject(ref)
+	var user Reference
+	if err := json.Unmarshal(params, &user); err != nil {
 		return nil, fmt.Errorf("[ dumpUserInfoCall ] Can't unmarshal params: %s", err.Error())
 	}
 	userRef, err := insolar.NewReferenceFromBase58(userRefIn)

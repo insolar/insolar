@@ -36,10 +36,7 @@ func TestReadRequestConfigFromFile(t *testing.T) {
 	conf, err := ReadRequestConfigFromFile("testdata/requestConfig.json")
 	require.NoError(t, err)
 	require.Equal(t, "CreateMember", conf.Method)
-
-	require.Len(t, conf.Params, 2)
-	require.Equal(t, float64(200), conf.Params[0])
-	require.Equal(t, "Test", conf.Params[1])
+	require.Equal(t, `{"name":"Test"}`, conf.Params)
 }
 
 func TestReadUserConfigFromFile(t *testing.T) {

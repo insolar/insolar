@@ -18,7 +18,6 @@ package requester
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -37,7 +36,7 @@ import (
 const TESTREFERENCE = "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"
 const TESTSEED = "VGVzdA=="
 
-var testSeedResponse = seedResponse{Seed: []byte("Test"), TraceID: "testTraceID"}
+var testSeedResponse = seedResponse{Seed: "Test", TraceID: "testTraceID"}
 var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
 var testStatusResponse = StatusResponse{NetworkState: "OK"}
 
@@ -69,11 +68,7 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	}
 
 	answer := map[string]interface{}{}
-	if params.Method == "CreateMember" {
-		answer["reference"] = TESTREFERENCE
-	} else {
-		answer["random_data"] = TESTSEED
-	}
+	answer["reference"] = TESTREFERENCE
 
 	writeReponse(response, answer)
 }
@@ -190,9 +185,9 @@ func TestMain(m *testing.M) {
 func TestGetSeed(t *testing.T) {
 	seed, err := GetSeed(URL)
 	require.NoError(t, err)
-	decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
-	require.NoError(t, err)
-	require.Equal(t, decodedSeed, seed)
+	//decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
+	//require.NoError(t, err)
+	require.Equal(t, "Test", seed)
 }
 
 func TestGetResponseBodyEmpty(t *testing.T) {
@@ -208,13 +203,15 @@ func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 func TestGetResponseBody(t *testing.T) {
 	data, err := GetResponseBody(URL+"/call", PostParams{})
 	require.NoError(t, err)
-	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
+	require.Contains(t, string(data), `"reference": "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"`)
 }
 
 func TestSetVerbose(t *testing.T) {
 	require.False(t, verbose)
 	SetVerbose(true)
 	require.True(t, verbose)
+	// restore original value for future tests, if -count 10 flag is used
+	SetVerbose(false)
 }
 
 func readConfigs(t *testing.T) (*UserConfigJSON, *RequestConfigJSON) {
@@ -237,7 +234,7 @@ func TestSend(t *testing.T) {
 func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
-	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, []byte(TESTSEED))
+	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, TESTSEED)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
@@ -245,13 +242,13 @@ func TestSendWithSeed(t *testing.T) {
 func TestSendWithSeed_WithBadUrl(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
-	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, []byte(TESTSEED))
+	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, TESTSEED)
 	require.EqualError(t, err, "[ Send ] Problem with sending target request: [ getResponseBody ] Bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
-	_, err := SendWithSeed(ctx, URL, nil, nil, []byte(TESTSEED))
+	_, err := SendWithSeed(ctx, URL, nil, nil, TESTSEED)
 	require.EqualError(t, err, "[ Send ] Configs must be initialized")
 }
 
