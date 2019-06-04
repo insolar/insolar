@@ -373,34 +373,9 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 		logger.Error("failed to extract message type")
 	}
 
-	node, err := n.wrapMeta(msg)
+	err = n.sendMessage(ctx, msg)
 	if err != nil {
-		n.replyError(ctx, msg, errors.Wrap(err, "failed to send message"))
-		return nil, nil
-	}
-
-	// Short path when sending to self node. Skip serialization
-	origin := n.NodeKeeper.GetOrigin()
-	if node.Equal(origin.ID()) {
-		err := n.Pub.Publish(bus.TopicIncoming, msg)
-		if err != nil {
-			n.replyError(ctx, msg, errors.Wrap(err, "error while publish msg to TopicIncoming"))
-			return nil, nil
-		}
-		return nil, nil
-	}
-	msgBytes, err := messageToBytes(msg)
-	if err != nil {
-		n.replyError(ctx, msg, errors.Wrap(err, "error while converting message to bytes"))
-		return nil, nil
-	}
-	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
-	if err != nil {
-		n.replyError(ctx, msg, errors.Wrap(err, "error while sending watermillMsg to controller"))
-		return nil, nil
-	}
-	if !bytes.Equal(res, ack) {
-		n.replyError(ctx, msg, errors.Errorf("reply is not ack: %s", res))
+		n.replyError(ctx, msg, err)
 		return nil, nil
 	}
 
@@ -410,6 +385,35 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	}).Info("Network sent message")
 
 	return nil, nil
+}
+
+func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) error {
+	node, err := n.wrapMeta(msg)
+	if err != nil {
+		return errors.Wrap(err, "failed to send message")
+	}
+
+	// Short path when sending to self node. Skip serialization
+	origin := n.NodeKeeper.GetOrigin()
+	if node.Equal(origin.ID()) {
+		err := n.Pub.Publish(bus.TopicIncoming, msg)
+		if err != nil {
+			return errors.Wrap(err, "error while publish msg to TopicIncoming")
+		}
+		return nil
+	}
+	msgBytes, err := messageToBytes(msg)
+	if err != nil {
+		return errors.Wrap(err, "error while converting message to bytes")
+	}
+	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
+	if err != nil {
+		return errors.Wrap(err, "error while sending watermillMsg to controller")
+	}
+	if !bytes.Equal(res, ack) {
+		return errors.Errorf("reply is not ack: %s", res)
+	}
+	return nil
 }
 
 func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) {
