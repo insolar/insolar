@@ -22,9 +22,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -155,6 +157,33 @@ func printResults(s scenario) {
 	s.printResult()
 }
 
+func addBurnAddresses(insSDK *sdk.SDK) int32 {
+	var err error
+	var retriesCount int32
+
+	for i := 0; i < concurrent*2; i++ {
+		bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
+		for bof.Attempt() < backoffAttemptsCount {
+			ba := "fake_burn_address_" + strconv.Itoa(i)
+			traceID, err := insSDK.AddBurnAddress("fake_burn_address_" + strconv.Itoa(i))
+			if err == nil {
+				fmt.Printf("Burn address '%s' was added. TraceID: %s\n", ba, traceID)
+				break
+			}
+
+			if strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
+				retriesCount++
+			} else {
+				fmt.Printf("Retry to add burn address. TraceID: %s Error is: %s\n", traceID, err.Error())
+			}
+			time.Sleep(bof.Duration())
+		}
+		check(fmt.Sprintf("Couldn't add burn address after retries: %d", backoffAttemptsCount), err)
+		bof.Reset()
+	}
+	return retriesCount
+}
+
 func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
 	var members []*sdk.Member
 	var member *sdk.Member
@@ -167,6 +196,7 @@ func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
 		for bof.Attempt() < backoffAttemptsCount {
 			member, traceID, err = insSDK.CreateMember()
 			if err == nil {
+				fmt.Printf("Member '%s' created. TraceID: %s\n", member.Reference, traceID)
 				members = append(members, member)
 				break
 			}
@@ -184,10 +214,10 @@ func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
 	return members, retriesCount
 }
 
-func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance uint64, penRetires int32) {
+func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance big.Int, penRetires int32) {
 	type Result struct {
 		num     int
-		balance uint64
+		balance big.Int
 		err     error
 	}
 
@@ -221,6 +251,7 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance uint6
 	}
 
 	wg.Wait()
+	totalBalance = *big.NewInt(0)
 	for i := 0; i < nmembers; i++ {
 		res := <-results
 		if res.err != nil {
@@ -229,7 +260,8 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance uint6
 			}
 			continue
 		}
-		totalBalance += res.balance
+		b := totalBalance
+		totalBalance.Add(&b, &res.balance)
 	}
 
 	return totalBalance, penRetires
@@ -320,10 +352,13 @@ func main() {
 	err = insSDK.SetLogLevel(logLevelServer)
 	check("Failed to parse log level: ", err)
 
+	crBaPenBefore := addBurnAddresses(insSDK)
+	check("Error while adding burn addresses: ", err)
+
 	members, crMemPenBefore, err := getMembers(insSDK)
 	check("Error while loading members: ", err)
 
-	var totalBalanceBefore uint64
+	var totalBalanceBefore big.Int
 	var balancePenRetries int32
 	if !noCheckBalance {
 		totalBalanceBefore, balancePenRetries = getTotalBalance(insSDK, members)
@@ -335,7 +370,7 @@ func main() {
 	var sigChan = make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 
-	s := newScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore+balancePenRetries)
+	s := newScenarios(out, insSDK, members, concurrent, repetitions, crBaPenBefore+crMemPenBefore+balancePenRetries)
 	go func() {
 		stopGracefully := true
 		for {
@@ -364,10 +399,10 @@ func main() {
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
 	if !noCheckBalance {
-		totalBalanceAfter := uint64(0)
+		totalBalanceAfter := *big.NewInt(0)
 		for nretries := 0; nretries < 3; nretries++ {
 			totalBalanceAfter, _ = getTotalBalance(insSDK, members)
-			if totalBalanceAfter == totalBalanceBefore {
+			if totalBalanceAfter.Cmp(&totalBalanceBefore) == 0 {
 				break
 			}
 			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
@@ -375,8 +410,8 @@ func main() {
 			time.Sleep(3 * time.Second)
 
 		}
-		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
-		if totalBalanceBefore != totalBalanceAfter {
+		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore.String(), totalBalanceAfter.String())
+		if totalBalanceAfter.Cmp(&totalBalanceBefore) != 0 {
 			log.Fatal("Total balance mismatch!\n")
 		}
 	}
