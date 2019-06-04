@@ -66,6 +66,7 @@ func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock,
 	nk network.NodeKeeper, cr insolar.ContractRequester,
 	cs insolar.CryptographyService, mb insolar.MessageBus,
 	cm insolar.CertificateManager) network.Gateway {
+	gil.Acquire(context.Background())
 	return (&Base{
 		Network: n, GIL: gil,
 		Nodekeeper: nk, ContractRequester: cr,

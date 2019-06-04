@@ -112,8 +112,6 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	}
 	parcel.MessageMock.Return(&message.GetObject{})
 
-	mb.Unlock(ctx)
-
 	return mb, ps, parcel, expectedRef
 }
 
