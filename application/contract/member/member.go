@@ -45,7 +45,7 @@ type SignedRequest struct {
 type SignedPayload struct {
 	Reference string `json:"reference"` // contract reference
 	Method    string `json:"method"`    // method name
-	Params    []byte `json:"params"`    // json object
+	Params    string `json:"params"`    // json object
 	Seed      string `json:"seed"`
 }
 
@@ -110,7 +110,7 @@ func (m *Member) verifySignatureAndComparePublic(signedRequest []byte) (*SignedP
 	var payloadRequest = SignedPayload{}
 	err = json.Unmarshal(payload, &payloadRequest)
 	if err != nil {
-		return nil, nil, fmt.Errorf("[ Call ]: %s", err.Error())
+		return nil, nil, fmt.Errorf("[ Call1 ]: %s", err.Error())
 	}
 
 	return &payloadRequest, &jwk, nil
@@ -122,29 +122,29 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	// Verify signature
 	payload, public, err := m.verifySignatureAndComparePublic(signedRequest)
 	if err != nil {
-		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
+		return nil, fmt.Errorf("[ Call2 ]: %s", err.Error())
 	}
 
 	switch payload.Method {
 	case "CreateMember":
-		return m.createMemberCall(rootDomain, payload.Params, *public)
+		return m.createMemberCall(rootDomain, []byte(payload.Params), *public)
 	}
 
 	switch payload.Method {
 	case "GetMyBalance":
 		return m.getMyBalanceCall()
 	case "GetBalance":
-		return m.getBalanceCall(payload.Params)
+		return m.getBalanceCall([]byte(payload.Params))
 	case "Transfer":
-		return m.transferCall(payload.Params)
+		return m.transferCall([]byte(payload.Params))
 	case "DumpUserInfo":
-		return m.dumpUserInfoCall(rootDomain, payload.Params)
+		return m.dumpUserInfoCall(rootDomain, []byte(payload.Params))
 	case "DumpAllUsers":
 		return m.dumpAllUsersCall(rootDomain)
 	case "RegisterNode":
-		return m.registerNodeCall(rootDomain, payload.Params)
+		return m.registerNodeCall(rootDomain, []byte(payload.Params))
 	case "GetNodeRef":
-		return m.getNodeRefCall(rootDomain, payload.Params)
+		return m.getNodeRefCall(rootDomain, []byte(payload.Params))
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }

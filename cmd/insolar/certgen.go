@@ -88,7 +88,7 @@ func (g *certGen) registerNode() insolar.Reference {
 	checkError("Failed to export public key:", err)
 	request := requester.RequestConfigJSON{
 		Method: "RegisterNode",
-		Params: data,
+		Params: string(data),
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
@@ -190,7 +190,7 @@ func (g *certGen) getNodeRefByPk() insolar.Reference {
 	checkError("Failed to export public key:", err)
 	request := requester.RequestConfigJSON{
 		Method: "GetNodeRef",
-		Params: keySerialized,
+		Params: string(keySerialized),
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")

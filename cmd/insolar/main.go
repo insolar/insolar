@@ -200,7 +200,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	//TODO: add strucutre
 
 	req := requester.RequestConfigJSON{
-		Params:   []byte{},
+		Params:   "",
 		Method:   "CreateMember",
 		LogLevel: logLevelInsolar,
 	}

@@ -37,7 +37,7 @@ type UserConfigJSON struct {
 
 // RequestConfigJSON holds info about request
 type RequestConfigJSON struct {
-	Params   []byte      `json:"params"`
+	Params   string      `json:"params"`
 	Method   string      `json:"method"`
 	LogLevel interface{} `json:"logLevel,omitempty"`
 }

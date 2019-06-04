@@ -109,7 +109,7 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params []byte, userCfg *requester.UserConfigJSON) ([]byte, error) {
 	reqCfg := &requester.RequestConfigJSON{
-		Params:   params,
+		Params:   string(params),
 		Method:   method,
 		LogLevel: sdk.logLevel,
 	}
