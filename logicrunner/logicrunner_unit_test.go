@@ -48,6 +48,7 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/insolar/utils"
 )
 
 type LogicRunnerCommonTestSuite struct {
@@ -489,8 +490,8 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 		Current: nil,
 	}
 
-	reqIdA := insolar.NewAPIRequestID()
-	reqIdB := insolar.NewAPIRequestID()
+	reqIdA := utils.RandTraceID()
+	reqIdB := utils.RandTraceID()
 
 	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil, reqIdA)
 	suite.Require().False(loop)
@@ -896,7 +897,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 					Prototype: &protoRef,
 					Object:    &objectRef,
 					Method:    "some",
-					APIRequestID: insolar.NewAPIRequestID(),
+					APIRequestID: utils.RandTraceID(),
 				},
 			}
 

@@ -129,7 +129,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		record.Request{
 			CallType: record.CTSaveAsChild,
 			Prototype: &base,
-			APIRequestID: insolar.NewAPIRequestID(),
+			APIRequestID: utils.TraceID(ctx),
 		},
 	)
 
@@ -195,7 +195,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 			Object:    objectRef,
 			Method:    args.Method,
 			Arguments: args.MethodArgs,
-			APIRequestID: insolar.NewAPIRequestID(),
+			APIRequestID: utils.TraceID(ctx),
 		},
 	}
 

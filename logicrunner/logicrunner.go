@@ -359,7 +359,7 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
-	ctx context.Context, es *ExecutionState, parcel insolar.Parcel, APIReqId insolar.APIRequestID,
+	ctx context.Context, es *ExecutionState, parcel insolar.Parcel, APIReqId string,
 ) bool {
 	if es.Current == nil {
 		return false
@@ -378,10 +378,10 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if APIReqId.IsEmpty() || es.Current.Request.APIRequestID.IsEmpty() {
-		inslogger.FromContext(ctx).Error("APIRequestID shouldn't be empty", APIReqId.ToHex(), es.Current.Request.APIRequestID.ToHex())
+	if APIReqId == "" || es.Current.Request.APIRequestID == "" {
+		inslogger.FromContext(ctx).Errorf("APIRequestID shouldn't be empty actual: %s expected: %s", APIReqId, es.Current.Request.APIRequestID)
 	}
-	if !APIReqId.Equal(es.Current.Request.APIRequestID) {
+	if APIReqId != es.Current.Request.APIRequestID {
 		return false
 	}
 
