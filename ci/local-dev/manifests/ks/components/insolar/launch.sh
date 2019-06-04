@@ -39,6 +39,9 @@ else
     cp -v ${HEAVY_GENESIS_CONFIG} /opt/work/config/heavy_genesis.json
     cp -vR ${CONFIG_DIR}/plugins /opt/work/
 
+    echo "copy root member keys for benchmarking purposes"
+    cp -v ${CONFIG_DIR}/root_member_keys.json /opt/work/config/
+
     echo "copy configs"
     cp -v ${CERTS_KEYS}/$(hostname | awk -F'-' '{ printf "seed-%d-cert.json", $2 }')  /opt/work/config/node-cert.json
     cp -v ${DISCOVERY_KEYS}/$(hostname | awk -F'-' '{ printf "seed-%d-key.json", $2 }')  /opt/work/config/node-keys.json
