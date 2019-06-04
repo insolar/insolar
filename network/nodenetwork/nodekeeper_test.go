@@ -112,15 +112,6 @@ func TestNewNodeKeeper(t *testing.T) {
 	assert.NotNil(t, nk.GetSnapshotCopy())
 }
 
-func TestNodekeeper_IsBootstrapped(t *testing.T) {
-	nk := newNodeKeeper(t, nil)
-	assert.False(t, nk.IsBootstrapped())
-	nk.SetIsBootstrapped(true)
-	assert.True(t, nk.IsBootstrapped())
-	nk.SetIsBootstrapped(false)
-	assert.False(t, nk.IsBootstrapped())
-}
-
 func TestNodekeeper_GetCloudHash(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
 	assert.Nil(t, nk.GetCloudHash())

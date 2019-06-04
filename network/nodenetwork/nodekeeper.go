@@ -148,8 +148,6 @@ type nodekeeper struct {
 	syncNodes  []insolar.NetworkNode
 	syncClaims []packets.ReferendumClaim
 
-	bootstrapped uint32
-
 	Cryptography       insolar.CryptographyService `inject:""`
 	TerminationHandler insolar.TerminationHandler  `inject:""`
 }
@@ -166,8 +164,8 @@ func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
 	defer nk.activeLock.Unlock()
 
 	nodesMap := make(map[insolar.Reference]insolar.NetworkNode)
-	for _, node := range nodes {
-		nodesMap[node.ID()] = node
+	for _, n := range nodes {
+		nodesMap[n.ID()] = n
 	}
 	nk.snapshot = node.NewSnapshot(insolar.FirstPulseNumber, nodesMap)
 	nk.accessor = node.NewAccessor(nk.snapshot)
@@ -196,22 +194,6 @@ func (nk *nodekeeper) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode 
 func (nk *nodekeeper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	return nk.GetAccessor().GetWorkingNodesByRole(role)
 }
-
-// // TODO: remove this method when bootstrap mechanism completed
-// // IsBootstrapped method returns true when bootstrapNodes are connected to each other
-// func (nk *nodekeeper) IsBootstrapped() bool {
-// 	return atomic.LoadUint32(&nk.bootstrapped) == 1
-// }
-//
-// // TODO: remove this method when bootstrap mechanism completed
-// // SetIsBootstrapped method set is bootstrap completed
-// func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
-// 	if isBootstrap {
-// 		atomic.StoreUint32(&nk.bootstrapped, 1)
-// 	} else {
-// 		atomic.StoreUint32(&nk.bootstrapped, 0)
-// 	}
-// }
 
 func (nk *nodekeeper) GetOrigin() insolar.NetworkNode {
 	return nk.origin
@@ -256,10 +238,10 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode, cla
 	nk.syncClaims = claims
 
 	foundOrigin := false
-	for _, node := range nodes {
-		if node.ID().Equal(nk.origin.ID()) {
+	for _, n := range nodes {
+		if n.ID().Equal(nk.origin.ID()) {
 			foundOrigin = true
-			nk.syncOrigin(node)
+			nk.syncOrigin(n)
 			nk.consensusInfo.SetIsJoiner(false)
 		}
 	}
