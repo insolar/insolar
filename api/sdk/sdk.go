@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 
 	"github.com/pkg/errors"
 )
@@ -181,8 +182,13 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 func (sdk *SDK) AddBurnAddress(burnAddress string) (string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "AddBurnAddress")
 
-	params := []interface{}{burnAddress}
-	body, err := sdk.sendRequest(ctx, "AddBurnAddress", params, sdk.mdAdminMember)
+	type Params struct {
+		BurnAddress string `json:"burn_address"`
+	}
+	params := Params{BurnAddress: burnAddress}
+	paramsMarshaled, err := json.Marshal(params)
+
+	body, err := sdk.sendRequest(ctx, "AddBurnAddress", paramsMarshaled, sdk.mdAdminMember)
 	if err != nil {
 		return "", errors.Wrap(err, "[ AddBurnAddress ] can't send request")
 	}
@@ -202,6 +208,7 @@ func (sdk *SDK) AddBurnAddress(burnAddress string) (string, error) {
 // CreateMember api request creates member with new random keys
 func (sdk *SDK) CreateMember() (*Member, string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "CreateMember")
+	memberName := testutils.RandomString()
 	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, err := ks.GeneratePrivateKey()
@@ -214,18 +221,13 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't export private key")
 	}
 
-	//memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
-	//if err != nil {
-	//	return nil, "", errors.Wrap(err, "[ CreateMember ] can't extract public key")
-	//}
-
-	type CreateMember struct {
+	type Params struct {
 		Name string `json:"name"`
 	}
-	createMember := CreateMember{Name: memberName}
-	params, err := json.Marshal(createMember)
+	params := Params{Name: memberName}
+	paramsMarshaled, err := json.Marshal(params)
 
-	body, err := sdk.sendRequest(ctx, "CreateMember", params, sdk.rootMember)
+	body, err := sdk.sendRequest(ctx, "CreateMember", paramsMarshaled, sdk.rootMember)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't send request")
 	}
@@ -247,7 +249,7 @@ func (sdk *SDK) Transfer(amount *big.Int, from *Member, to *Member) (string, err
 	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
 
 	type Transfer struct {
-		Amount uint   `json:"amount"`
+		Amount string `json:"amount"`
 		To     string `json:"to"`
 	}
 
@@ -279,20 +281,13 @@ func (sdk *SDK) Transfer(amount *big.Int, from *Member, to *Member) (string, err
 // GetBalance returns current balance of the given member.
 func (sdk *SDK) GetBalance(m *Member) (big.Int, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "GetBalance")
-	type Balance struct {
-		Reference string `json:"reference"`
-	}
-	balance := Balance{Reference: m.Reference}
-	params, err := json.Marshal(balance)
-	if err != nil {
-		return 0, errors.Wrap(err, "[ GetBalance ] can't marshal")
-	}
+
 	config, err := requester.CreateUserConfig(m.Reference, m.PrivateKey)
 	if err != nil {
 		return big.Int{}, errors.Wrap(err, "[ GetBalance ] can't create user config")
 	}
 
-	body, err := sdk.sendRequest(ctx, "GetBalance", params, config)
+	body, err := sdk.sendRequest(ctx, "GetMyBalance", []byte{}, config)
 	if err != nil {
 		return big.Int{}, errors.Wrap(err, "[ GetBalance ] can't send request")
 	}

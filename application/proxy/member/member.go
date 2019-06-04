@@ -24,6 +24,16 @@ import (
 	"math/big"
 )
 
+type SignedRequest struct {
+	PublicKey string `json:"jwk"`
+	Token     string `json:"jws"`
+}
+type SignedPayload struct {
+	Reference string `json:"reference"` // contract reference
+	Method    string `json:"method"`    // method name
+	Params    string `json:"params"`    // json object
+	Seed      string `json:"seed"`
+}
 type BalanceWithDeposits struct {
 	Balance string
 	//Deposits []map[string]string
@@ -31,7 +41,7 @@ type BalanceWithDeposits struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113Yz9tohKenNsVXR4RYR2vNGUF77yK3HRkEkXcbH.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111wpPCsqaC7AbyEFX15qrsSaGxqoKxXJynBBsnj1.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -517,13 +527,10 @@ func (r *Member) GetPublicKeyAsImmutable() (string, error) {
 }
 
 // Call is proxy generated method
-func (r *Member) Call(rootDomainRef insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
-	var args [5]interface{}
+func (r *Member) Call(rootDomainRef insolar.Reference, signedRequest []byte) (interface{}, error) {
+	var args [2]interface{}
 	args[0] = rootDomainRef
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = signedRequest
 
 	var argsSerialized []byte
 
@@ -555,13 +562,10 @@ func (r *Member) Call(rootDomainRef insolar.Reference, method string, params []b
 }
 
 // CallNoWait is proxy generated method
-func (r *Member) CallNoWait(rootDomainRef insolar.Reference, method string, params []byte, seed []byte, sign []byte) error {
-	var args [5]interface{}
+func (r *Member) CallNoWait(rootDomainRef insolar.Reference, signedRequest []byte) error {
+	var args [2]interface{}
 	args[0] = rootDomainRef
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = signedRequest
 
 	var argsSerialized []byte
 
@@ -579,13 +583,10 @@ func (r *Member) CallNoWait(rootDomainRef insolar.Reference, method string, para
 }
 
 // CallAsImmutable is proxy generated method
-func (r *Member) CallAsImmutable(rootDomainRef insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
-	var args [5]interface{}
+func (r *Member) CallAsImmutable(rootDomainRef insolar.Reference, signedRequest []byte) (interface{}, error) {
+	var args [2]interface{}
 	args[0] = rootDomainRef
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = signedRequest
 
 	var argsSerialized []byte
 
@@ -601,6 +602,182 @@ func (r *Member) CallAsImmutable(rootDomainRef insolar.Reference, method string,
 	}
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "Call", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// AddBurnAddressCall is proxy generated method
+func (r *Member) AddBurnAddressCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = rdRef
+	args[1] = params
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "AddBurnAddressCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// AddBurnAddressCallNoWait is proxy generated method
+func (r *Member) AddBurnAddressCallNoWait(rdRef insolar.Reference, params []byte) error {
+	var args [2]interface{}
+	args[0] = rdRef
+	args[1] = params
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "AddBurnAddressCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AddBurnAddressCallAsImmutable is proxy generated method
+func (r *Member) AddBurnAddressCallAsImmutable(rdRef insolar.Reference, params []byte) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = rdRef
+	args[1] = params
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "AddBurnAddressCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetMyBalance is proxy generated method
+func (r *Member) GetMyBalance() (interface{}, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetMyBalance", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetMyBalanceNoWait is proxy generated method
+func (r *Member) GetMyBalanceNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "GetMyBalance", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetMyBalanceAsImmutable is proxy generated method
+func (r *Member) GetMyBalanceAsImmutable() (interface{}, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "GetMyBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -875,97 +1052,6 @@ func (r *Member) DumpAllUsersAsImmutable(rdRef insolar.Reference) ([]byte, error
 	}
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "DumpAllUsers", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, err
-	}
-
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// AddBurnAddressCall is proxy generated method
-func (r *Member) AddBurnAddressCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = rdRef
-	args[1] = params
-
-	var argsSerialized []byte
-
-	ret := [2]interface{}{}
-	var ret0 interface{}
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "AddBurnAddressCall", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, err
-	}
-
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// AddBurnAddressCallNoWait is proxy generated method
-func (r *Member) AddBurnAddressCallNoWait(rdRef insolar.Reference, params []byte) error {
-	var args [2]interface{}
-	args[0] = rdRef
-	args[1] = params
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "AddBurnAddressCall", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// AddBurnAddressCallAsImmutable is proxy generated method
-func (r *Member) AddBurnAddressCallAsImmutable(rdRef insolar.Reference, params []byte) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = rdRef
-	args[1] = params
-
-	var argsSerialized []byte
-
-	ret := [2]interface{}{}
-	var ret0 interface{}
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "AddBurnAddressCall", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

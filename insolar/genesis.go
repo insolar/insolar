@@ -23,12 +23,12 @@ const (
 	GenesisNameNodeDomain = "nodedomain"
 	// GenesisNameNodeRecord is the name of node contract for genesis record.
 	GenesisNameNodeRecord = "noderecord"
-	// GenesisNameRootMember is the name of root member contract for genesis record.
-	GenesisNameRootMember = "member"
-	// GenesisNameRootWallet is the name of wallet contract for genesis record.
-	GenesisNameRootWallet = "wallet"
-	// GenesisNameAllowance is the name of allowance contract for genesis record.
-	GenesisNameAllowance = "allowance"
+	// GenesisNameMember is the name of member contract for genesis record.
+	GenesisNameMember = "member"
+	// GenesisNameWallet is the name of wallet contract for genesis record.
+	GenesisNameWallet = "wallet"
+	// GenesisNameDeposit is the name of deposit contract for genesis record.
+	GenesisNameDeposit = "deposit"
 )
 
 type genesisBinary []byte

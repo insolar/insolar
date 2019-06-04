@@ -28,9 +28,11 @@ import (
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"math/big"
+	"strconv"
+	"time"
 )
 
-var INSATTR_GetPublicKey_API = true
 var INSATTR_Call_API = true
 
 type Member struct {
@@ -50,10 +52,6 @@ type SignedPayload struct {
 	Method    string `json:"method"`    // method name
 	Params    string `json:"params"`    // json object
 	Seed      string `json:"seed"`
-}
-
-type Reference struct {
-	Reference string `json:"reference"`
 }
 
 func (m *Member) GetName() (string, error) {
@@ -89,13 +87,10 @@ func NewOracleMember(name string, key string) (*Member, error) {
 	}, nil
 }
 
-// TODO: check if need to store public key when call node registry
-// TODO: some keys are in PEM format
 func (m *Member) verifySignatureAndComparePublic(signedRequest []byte) (*SignedPayload, *jose.JSONWebKey, error) {
 	var jwks string
 	var jwss string
 
-	// decode jwk and jws data
 	err := signer.UnmarshalParams(signedRequest, &jwks, &jwss)
 
 	jwk := jose.JSONWebKey{}
@@ -139,7 +134,7 @@ func (m *Member) Call(rootDomainRef insolar.Reference, signedRequest []byte) (in
 	case "GetMyBalance":
 		return m.getMyBalanceCall()
 	case "GetBalance":
-		return m.getBalanceCall([]byte(payload.Params))
+		return m.getBalanceCall(rootDomainRef, []byte(payload.Params))
 	case "Transfer":
 		return m.transferCall([]byte(payload.Params))
 	case "DumpUserInfo":
@@ -158,20 +153,47 @@ func (m *Member) Call(rootDomainRef insolar.Reference, signedRequest []byte) (in
 	return nil, &foundation.Error{S: "Unknown method"}
 }
 
+func (mdAdminMember *Member) AddBurnAddressCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
+
+	rootDomain := rootdomain.GetObject(rdRef)
+	mdAdminRef, err := rootDomain.GetMDAdminMemberRef()
+	if err != nil {
+		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't get migration deamon admin reference from root domain: %s", err.Error())
+	}
+
+	if mdAdminMember.GetReference() != *mdAdminRef {
+		return nil, fmt.Errorf("[ AddBurnAddressCall ] Only migration deamon admin can call this method")
+	}
+
+	type Input struct {
+		BurnAddress string `json:"burn_address"`
+	}
+	input := Input{}
+	err = json.Unmarshal(params, &input)
+	if err != nil {
+		return 0, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
+	}
+
+	err = rootDomain.AddBurnAddress(input.BurnAddress)
+	if err != nil {
+		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't add burn address: %s", err.Error())
+	}
+
+	return nil, nil
+}
+
 func (m *Member) createMemberCall(rdRef insolar.Reference, params []byte, public jose.JSONWebKey) (interface{}, error) {
-	type CreateMember struct {
+	type Input struct {
 		Name string `json:"name"`
 	}
 
-	rootDomain := rootdomain.GetObject(ref)
-	// TODO: convert to pem format
 	key, err := public.MarshalJSON()
 	if err != nil {
 		return 0, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
 	}
-	createMember := CreateMember{}
+	input := Input{}
 
-	err = json.Unmarshal(params, &createMember)
+	err = json.Unmarshal(params, &input)
 	if err != nil {
 		return 0, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
 	}
@@ -256,23 +278,47 @@ type BalanceWithDeposits struct {
 	//Deposits []map[string]string
 }
 
-func (m *Member) getBalanceCall() (interface{}, error) {
-	w, err := wallet.GetImplementationFrom(m.GetReference())
+func (caller *Member) getBalanceCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(rdRef)
+	rootMember, err := rootDomain.GetRootMemberRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ getBalanceCall ] Can't get implementation: %s", err.Error())
+		return 0, fmt.Errorf("[ getBalanceCall ] Failed get root member reference: %s", err.Error())
+	}
+	if caller.GetReference() != *rootMember {
+		return 0, fmt.Errorf("[ getBalanceCall ] Only root member can call this method")
+	}
+	type Input struct {
+		Reference string `json:"reference"`
 	}
 
-	return w.GetBalance()
+	input := Input{}
+
+	err = json.Unmarshal(params, &input)
+	if err != nil {
+		return 0, fmt.Errorf("[ getBalanceCall ] Failed unmarshal params: %s", err.Error())
+	}
+
+	mRef, err := insolar.NewReferenceFromBase58(input.Reference)
+	if err != nil {
+		return 0, fmt.Errorf("[ getBalanceCall ] Failed to parse reference: %s", err.Error())
+	}
+	m := member.GetObject(*mRef)
+
+	return m.GetMyBalance()
 }
 
-func (m *Member) getBalanceCall() (interface{}, error) {
+func (m *Member) getMyBalanceCall() (interface{}, error) {
+	return m.GetMyBalance()
+}
+
+func (m *Member) GetMyBalance() (interface{}, error) {
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
-		return nil, fmt.Errorf("[ getBalanceCall ] Can't get implementation: %s", err.Error())
+		return nil, fmt.Errorf("[ getMyBalanceCall ] Can't get implementation: %s", err.Error())
 	}
 	b, err := w.GetBalance()
 	if err != nil {
-		return nil, fmt.Errorf("[ getBalanceCall ] Can't get balance: %s", err.Error())
+		return nil, fmt.Errorf("[ getMyBalanceCall ] Can't get balance: %s", err.Error())
 	}
 	//d, err := m.getDeposits()
 	//if err != nil {
@@ -284,7 +330,7 @@ func (m *Member) getBalanceCall() (interface{}, error) {
 		//Deposits: d,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("[ getBalanceCall ] Can't marshal: %s", err.Error())
+		return nil, fmt.Errorf("[ getMyBalanceCall ] Can't marshal: %s", err.Error())
 	}
 
 	return balanceWithDepositsMarshaled, nil
@@ -294,14 +340,14 @@ func parseTimeStamp(timeStr string) (time.Time, error) {
 
 	i, err := strconv.ParseInt(timeStr, 10, 64)
 	if err != nil {
-		return time.Unix(0, 0), errors.New("Can't parse time ")
+		return time.Unix(0, 0), fmt.Errorf("Can't parse time ")
 	}
 	return time.Unix(i, 0), nil
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
 	type Transfer struct {
-		Amount uint   `json:"amount"`
+		Amount string `json:"amount"`
 		To     string `json:"to"`
 	}
 	var transfer = Transfer{}
@@ -319,7 +365,7 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ transferCall ] Recipient must be different from the sender")
 	}
 
-	return m.transfer(amount, toMember)
+	return m.transfer(transfer.Amount, toMember)
 }
 
 func (m *Member) transfer(amount string, toMember *insolar.Reference) (interface{}, error) {
@@ -332,7 +378,7 @@ func (m *Member) transfer(amount string, toMember *insolar.Reference) (interface
 	return nil, w.Transfer(amount, toMember)
 }
 
-func (m *Member) registerNodeCall(ref insolar.Reference, params []byte) (interface{}, error) {
+func (m *Member) registerNodeCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
 	type RegisterNode struct {
 		Public string `json:"public"`
 		Role   string `json:"role"`
@@ -350,7 +396,7 @@ func (m *Member) registerNodeCall(ref insolar.Reference, params []byte) (interfa
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	cert, err := nd.RegisterNode(publicKey, role)
+	cert, err := nd.RegisterNode(registerNode.Public, registerNode.Role)
 	if err != nil {
 		return nil, fmt.Errorf("[ registerNodeCall ] Problems with RegisterNode: %s", err.Error())
 	}
@@ -375,7 +421,7 @@ func (m *Member) getNodeRefCall(rdRef insolar.Reference, params []byte) (interfa
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	nodeRef, err := nd.GetNodeRefByPK(publicKey)
+	nodeRef, err := nd.GetNodeRefByPK(nodeReference.publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("[ getNodeRefCall ] NetworkNode not found: %s", err.Error())
 	}
@@ -523,12 +569,15 @@ func (m *Member) FindDeposit(txHash string, amount big.Int) (bool, deposit.Depos
 }
 
 func (m *Member) dumpUserInfoCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(ref)
-	var user Reference
+	type Input struct {
+		Reference string `json:"reference"`
+	}
+	var user Input
 	if err := json.Unmarshal(params, &user); err != nil {
 		return nil, fmt.Errorf("[ dumpUserInfoCall ] Can't unmarshal params: %s", err.Error())
 	}
-	userRef, err := insolar.NewReferenceFromBase58(userRefIn)
+
+	userRef, err := insolar.NewReferenceFromBase58(user.Reference)
 	if err != nil {
 		return nil, fmt.Errorf("[ dumpUserInfoCall ] Failed to parse 'inInsAddr' param: %s", err.Error())
 	}
@@ -536,10 +585,14 @@ func (m *Member) dumpUserInfoCall(rdRef insolar.Reference, params []byte) (inter
 	rootDomain := rootdomain.GetObject(rdRef)
 	rootMember, err := rootDomain.GetRootMemberRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ dumpUserInfoCall ] Can't get root member: %s", err.Error())
+		return nil, fmt.Errorf("[ dumpAllUsersCall ] Can't get root member reference: %s", err.Error())
 	}
 	if *userRef != m.GetReference() && m.GetReference() != *rootMember {
 		return nil, fmt.Errorf("[ dumpUserInfoCall ] You can dump only yourself")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("[ dumpUserInfoCall ] Can't get root member: %s", err.Error())
 	}
 
 	return m.DumpUserInfo(rdRef, *userRef)
@@ -549,7 +602,7 @@ func (m *Member) dumpAllUsersCall(rdRef insolar.Reference) (interface{}, error) 
 	rootDomain := rootdomain.GetObject(rdRef)
 	rootMember, err := rootDomain.GetRootMemberRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ dumpAllUsersCall ] Can't get root member: %s", err.Error())
+		return nil, fmt.Errorf("[ dumpAllUsersCall ] Can't get root member reference: %s", err.Error())
 	}
 	if m.GetReference() != *rootMember {
 		return nil, fmt.Errorf("[ dumpAllUsersCall ] You can dump only yourself")
@@ -625,29 +678,4 @@ func (rootMember *Member) DumpAllUsers(rdRef insolar.Reference) ([]byte, error) 
 	}
 	resJSON, _ := json.Marshal(res)
 	return resJSON, nil
-}
-
-func (mdAdminMember *Member) AddBurnAddressCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
-
-	rootDomain := rootdomain.GetObject(rdRef)
-	mdAdminRef, err := rootDomain.GetMDAdminMemberRef()
-	if err != nil {
-		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't get migration deamon admin reference from root domain: %s", err.Error())
-	}
-
-	if mdAdminMember.GetReference() != *mdAdminRef {
-		return nil, fmt.Errorf("[ AddBurnAddressCall ] Only migration deamon admin can call this method")
-	}
-
-	var burnAddress string
-	if err := signer.UnmarshalParams(params, &burnAddress); err != nil {
-		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't unmarshal params: %s", err.Error())
-	}
-
-	err = rootDomain.AddBurnAddress(burnAddress)
-	if err != nil {
-		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't add burn address: %s", err.Error())
-	}
-
-	return nil, nil
 }
