@@ -57,7 +57,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -65,18 +64,17 @@ import (
 
 // Controller contains network logic.
 type Controller struct {
-	Bootstrapper  bootstrap.NetworkBootstrapper `inject:""`
-	RPCController RPCController                 `inject:""`
-	Network       network.HostNetwork           `inject:""`
+	RPCController RPCController       `inject:""`
+	Network       network.HostNetwork `inject:""`
 }
 
-func (c *Controller) SetLastIgnoredPulse(number insolar.PulseNumber) {
-	c.Bootstrapper.SetLastPulse(number)
-}
-
-func (c *Controller) GetLastIgnoredPulse() insolar.PulseNumber {
-	return c.Bootstrapper.GetLastPulse()
-}
+// func (c *Controller) SetLastIgnoredPulse(number insolar.PulseNumber) {
+// 	c.Bootstrapper.SetLastPulse(number)
+// }
+//
+// func (c *Controller) GetLastIgnoredPulse() insolar.PulseNumber {
+// 	return c.Bootstrapper.GetLastPulse()
+// }
 
 // SendParcel send message to nodeID.
 func (c *Controller) SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error) {
@@ -98,10 +96,10 @@ func (c *Controller) SendCascadeMessage(data insolar.Cascade, method string, msg
 	return c.RPCController.SendCascadeMessage(data, method, msg)
 }
 
-// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
-func (c *Controller) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
-	return c.Bootstrapper.Bootstrap(ctx)
-}
+// // Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
+// func (c *Controller) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
+// 	return c.Bootstrapper.Bootstrap(ctx)
+// }
 
 // Inject inject components.
 func (c *Controller) Init(ctx context.Context) error {
@@ -111,9 +109,9 @@ func (c *Controller) Init(ctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error {
-	return c.Bootstrapper.AuthenticateToDiscoveryNode(ctx, nil)
-}
+// func (c *Controller) AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error {
+// 	return c.Bootstrapper.AuthenticateToDiscoveryNode(ctx, nil)
+// }
 
 // ConfigureOptions convert daemon configuration to controller options
 func ConfigureOptions(conf configuration.Configuration) *common.Options {

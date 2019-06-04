@@ -75,3 +75,7 @@ func (g *Void) GetState() insolar.NetworkState {
 func (g *Void) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	return g.Base.OnPulse(ctx, pu)
 }
+
+func (g *Void) ShoudIgnorePulse(context.Context, insolar.Pulse) bool {
+	return false
+}

@@ -191,3 +191,7 @@ func (g *Complete) signCertHandler(ctx context.Context, p insolar.Parcel) (insol
 		Sign: sign,
 	}, nil
 }
+
+func (g *Complete) ShoudIgnorePulse(context.Context, insolar.Pulse) bool {
+	return false
+}

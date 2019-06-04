@@ -139,7 +139,6 @@ func TestBootstrap(t *testing.T) {
 }
 
 func (s *bootstrapSuite) TestExample() {
-	s.T().Skip("fix me")
 	inslogger.FromContext(s.fixture().ctx).Info("Log -- ")
 	s.True(true)
 

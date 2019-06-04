@@ -220,6 +220,7 @@ func (bc *Bootstrap) checkActiveNode(node insolar.NetworkNode) error {
 	return nil
 }
 
+// todo: should be removed
 func (bc *Bootstrap) ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error) {
 	host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
 	if err != nil {

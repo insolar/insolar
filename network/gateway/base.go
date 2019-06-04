@@ -56,22 +56,23 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/log" // TODO remove before merge
+	"github.com/insolar/insolar/network/controller/bootstrap"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 )
 
 // Base is abstract class for gateways
-
 type Base struct {
 	Self                network.Gateway
-	Network             network.Gatewayer
-	Nodekeeper          network.NodeKeeper
-	ContractRequester   insolar.ContractRequester
-	CryptographyService insolar.CryptographyService
-	CertificateManager  insolar.CertificateManager
-	GIL                 insolar.GlobalInsolarLock
-	MessageBus          insolar.MessageBus
+	Gatewayer           network.Gatewayer             `inject:""`
+	NodeKeeper          network.NodeKeeper            `inject:""`
+	ContractRequester   insolar.ContractRequester     `inject:""`
+	CryptographyService insolar.CryptographyService   `inject:""`
+	CertificateManager  insolar.CertificateManager    `inject:""`
+	GIL                 insolar.GlobalInsolarLock     `inject:""`
+	MessageBus          insolar.MessageBus            `inject:""`
+	Bootstrapper        bootstrap.NetworkBootstrapper `inject:""`
 }
 
 // NewGateway creates new gateway on top of existing
@@ -79,7 +80,7 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 	log.Infof("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
-		g.Self = &NoNetwork{g}
+		g.Self = &NoNetwork{Base: g}
 	case insolar.VoidNetworkState:
 		g.Self = NewVoid(g)
 	case insolar.JetlessNetworkState:
@@ -95,13 +96,14 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
-	if g.Nodekeeper == nil {
+	if g.NodeKeeper == nil {
 		return nil
 	}
-	if g.Nodekeeper.IsBootstrapped() {
-		g.Network.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
-		g.Network.Gateway().Run(ctx)
-	}
+	// TODO switch state from another state
+	// if g.NodeKeeper.IsBootstrapped() {
+	// 	g.Gatewayer.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
+	// 	g.Gatewayer.Gateway().Run(ctx)
+	// }
 	return nil
 }
 
@@ -135,4 +137,8 @@ func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insola
 		}
 	}
 	return ret
+}
+
+func (g *Base) ShoudIgnorePulse(context.Context, insolar.Pulse) bool {
+	return false
 }

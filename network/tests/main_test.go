@@ -419,7 +419,7 @@ func (s *consensusSuite) TestDiscoveryDown() {
 }
 
 func flushNodeKeeper(keeper network.NodeKeeper) {
-	keeper.SetIsBootstrapped(false)
+	// keeper.SetIsBootstrapped(false)
 	keeper.GetConsensusInfo().(*nodenetwork.ConsensusInfo).Flush(false)
 	keeper.SetCloudHash(nil)
 	keeper.SetInitialSnapshot([]insolar.NetworkNode{})

@@ -55,8 +55,14 @@ package gateway
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/utils"
 )
 
 // TODO Slightly ugly, decide how to inject anything without exporting Base
@@ -67,8 +73,8 @@ func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock,
 	cs insolar.CryptographyService, mb insolar.MessageBus,
 	cm insolar.CertificateManager) network.Gateway {
 	return (&Base{
-		Network: n, GIL: gil,
-		Nodekeeper: nk, ContractRequester: cr,
+		Gatewayer: n, GIL: gil,
+		NodeKeeper: nk, ContractRequester: cr,
 		CryptographyService: cs, MessageBus: mb,
 		CertificateManager: cm,
 	}).NewGateway(insolar.NoNetworkState)
@@ -77,9 +83,22 @@ func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock,
 // NoNetwork initial state
 type NoNetwork struct {
 	*Base
+
+	isDiscovery bool
+	skip        uint32
 }
 
 func (g *NoNetwork) Run(ctx context.Context) {
+	// run bootstrap
+	g.isDiscovery = utils.OriginIsDiscovery(g.Base.CertificateManager.GetCertificate())
+
+	log.Info("TODO: remove! Bootstrapping network...")
+	_, err := g.Bootstrapper.Bootstrap(ctx)
+	if err != nil {
+		err = errors.Wrap(err, "Failed to bootstrap network")
+		panic(err.Error())
+	}
+
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {
@@ -88,4 +107,38 @@ func (g *NoNetwork) GetState() insolar.NetworkState {
 
 func (g *NoNetwork) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	return g.Base.OnPulse(ctx, pu)
+}
+
+func (g *NoNetwork) ShoudIgnorePulse(ctx context.Context, newPulse insolar.Pulse) bool {
+	if true { //!g.Base.NodeKeeper.IsBootstrapped() { always true here
+		g.Bootstrapper.SetLastPulse(newPulse.NextPulseNumber)
+		return true
+	}
+
+	return g.isDiscovery && !g.NodeKeeper.GetConsensusInfo().IsJoiner() &&
+		newPulse.PulseNumber <= g.Bootstrapper.GetLastPulse()+insolar.PulseNumber(g.skip)
+}
+
+func (g *NoNetwork) connectToNewNetwork(ctx context.Context, address string) {
+	g.NodeKeeper.GetClaimQueue().Push(&packets.ChangeNetworkClaim{Address: address})
+	logger := inslogger.FromContext(ctx)
+
+	// node, err := findNodeByAddress(address, g.CertificateManager.GetCertificate().GetDiscoveryNodes())
+	// if err != nil {
+	// 	logger.Warnf("Failed to find a discovery node: ", err)
+	// }
+
+	err := g.Bootstrapper.AuthenticateToDiscoveryNode(ctx, nil /*node*/)
+	if err != nil {
+		logger.Errorf("Failed to authenticate a node: " + err.Error())
+	}
+}
+
+func findNodeByAddress(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
+	for _, node := range nodes {
+		if node.GetHost() == address {
+			return node, nil
+		}
+	}
+	return nil, errors.New("Failed to find a discovery node with address: " + address)
 }

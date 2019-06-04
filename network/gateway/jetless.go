@@ -70,3 +70,7 @@ func (g *Jetless) Run(ctx context.Context) {
 func (g *Jetless) GetState() insolar.NetworkState {
 	return insolar.JetlessNetworkState
 }
+
+func (g *Jetless) ShoudIgnorePulse(context.Context, insolar.Pulse) bool {
+	return false
+}

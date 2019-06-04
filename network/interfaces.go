@@ -85,12 +85,12 @@ type Controller interface {
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
 	SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error
 	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
-	Bootstrap(ctx context.Context) (*BootstrapResult, error)
+	// Bootstrap(ctx context.Context) (*BootstrapResult, error)
 	// SetLastIgnoredPulse set pulse number after which we will begin setting new pulses to PulseManager
-	SetLastIgnoredPulse(number insolar.PulseNumber)
-	// GetLastIgnoredPulse get last pulse that will be ignored
-	GetLastIgnoredPulse() insolar.PulseNumber
-	AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error
+	// SetLastIgnoredPulse(number insolar.PulseNumber)
+	// // GetLastIgnoredPulse get last pulse that will be ignored
+	// GetLastIgnoredPulse() insolar.PulseNumber
+	// AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error
 }
 
 // RequestHandler handler function to process incoming requests from network and return responses to these requests.
@@ -169,10 +169,11 @@ type PulseHandler interface {
 type NodeKeeper interface {
 	insolar.NodeNetwork
 
+	// TODO: remove
 	// IsBootstrapped method shows that all DiscoveryNodes finds each other
-	IsBootstrapped() bool
-	// SetIsBootstrapped method set is bootstrap completed
-	SetIsBootstrapped(isBootstrap bool)
+	// IsBootstrapped() bool
+	// // SetIsBootstrapped method set is bootstrap completed
+	// SetIsBootstrapped(isBootstrap bool)
 
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte
@@ -294,6 +295,8 @@ type Gateway interface {
 	OnPulse(context.Context, insolar.Pulse) error
 	NewGateway(insolar.NetworkState) Gateway
 	Auther() Auther
+
+	ShoudIgnorePulse(context.Context, insolar.Pulse) bool
 }
 
 type Auther interface {

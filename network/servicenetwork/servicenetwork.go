@@ -59,10 +59,11 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -81,7 +82,6 @@ import (
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const deliverWatermillMsg = "ServiceNetwork.processIncoming"
@@ -109,9 +109,9 @@ type ServiceNetwork struct {
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
 	Controller   network.Controller  `inject:"subcomponent"`
 
-	isGenesis   bool
-	isDiscovery bool
-	skip        int
+	isGenesis bool
+	// isDiscovery bool
+	skip int // ToDO: move to gateway
 
 	lock sync.Mutex
 
@@ -174,8 +174,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	options := controller.ConfigureOptions(n.cfg)
 
 	cert := n.CertificateManager.GetCertificate()
-	n.isDiscovery = utils.OriginIsDiscovery(cert)
 
+	baseGateway := &gateway.Base{}
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
@@ -188,11 +188,13 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewSecondPhase(),
 		phases.NewThirdPhase(),
 		phases.NewPhaseManager(n.cfg.Service.Consensus),
-		bootstrap.NewSessionManager(),
 		controller.NewNetworkController(),
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
-		bootstrap.NewBootstrapper(options, n.connectToNewNetwork),
+
+		baseGateway,
+		bootstrap.NewSessionManager(),
+		bootstrap.NewBootstrapper(options, nil /*n.connectToNewNetwork*/),
 		bootstrap.NewAuthorizationController(options),
 		bootstrap.NewNetworkBootstrapper(),
 	)
@@ -201,13 +203,15 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	if n.Gateway() == nil {
-		n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
-			n.CryptographyService, n.MessageBus, n.CertificateManager)
-		n.gateway.Run(ctx)
-		inslogger.FromContext(ctx).Debug("Launch network gateway")
+	n.SetGateway(baseGateway.NewGateway(insolar.NoNetworkState))
 
-	}
+	// if n.Gateway() == nil {
+	// 	n.SetGateway(baseGateway.NewGateway(insolar.NoNetworkState))
+	// 	// gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester, n.CryptographyService, n.MessageBus, n.CertificateManager)
+	// 	n.gateway.Run(ctx)
+	// 	inslogger.FromContext(ctx).Debug("Launch network gateway")
+	//
+	// }
 
 	return nil
 }
@@ -222,11 +226,8 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
 
-	log.Info("Bootstrapping network...")
-	_, err = n.Controller.Bootstrap(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Failed to bootstrap network")
-	}
+	n.SetGateway(n.Gateway().NewGateway(insolar.NoNetworkState))
+	go n.Gateway().Run(ctx)
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
@@ -284,15 +285,22 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	)
 	defer span.End()
 
-	if !n.NodeKeeper.IsBootstrapped() {
-		n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
+	if n.Gateway().ShoudIgnorePulse(ctx, newPulse) {
 		return
 	}
-	if n.shoudIgnorePulse(newPulse) {
-		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
-		return
-	}
+	//todo call gaiwayer
+	/*
+		if !n.NodeKeeper.IsBootstrapped() {
+			n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
+			return
+		}
+		if n.shoudIgnorePulse(newPulse) {
+			log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
+			return
+		}
+	*/
 
+	// todo move to nonetwork gateway
 	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
@@ -328,10 +336,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
 
-func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
-	return n.isDiscovery && !n.NodeKeeper.GetConsensusInfo().IsJoiner() &&
-		newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+insolar.PulseNumber(n.skip)
-}
+// func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
+// 	return n.isDiscovery && !n.NodeKeeper.GetConsensusInfo().IsJoiner() &&
+// 		newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+insolar.PulseNumber(n.skip)
+// }
 
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
@@ -345,21 +353,6 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 		errMsg := "Failed to pass consensus: " + err.Error()
 		logger.Error(errMsg)
 		n.SetGateway(n.Gateway().NewGateway(insolar.NoNetworkState))
-	}
-}
-
-func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, address string) {
-	n.NodeKeeper.GetClaimQueue().Push(&packets.ChangeNetworkClaim{Address: address})
-	logger := inslogger.FromContext(ctx)
-
-	node, err := findNodeByAddress(address, n.CertificateManager.GetCertificate().GetDiscoveryNodes())
-	if err != nil {
-		logger.Warnf("Failed to find a discovery node: ", err)
-	}
-
-	err = n.Controller.AuthenticateToDiscoveryNode(ctx, node)
-	if err != nil {
-		logger.Errorf("Failed to authenticate a node: " + err.Error())
 	}
 }
 
@@ -433,15 +426,6 @@ func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, erro
 	msg.Payload = buf
 
 	return *receiverRef, nil
-}
-
-func findNodeByAddress(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
-	for _, node := range nodes {
-		if node.GetHost() == address {
-			return node, nil
-		}
-	}
-	return nil, errors.New("Failed to find a discovery node with address: " + address)
 }
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
