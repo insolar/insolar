@@ -163,6 +163,18 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		request := Request{}
 		resp := answer{}
 
+		defer func() {
+			res, err := json.MarshalIndent(resp, "", "    ")
+			if err != nil {
+				res = []byte(`{"error": "can't marshal answer to json'"}`)
+			}
+			response.Header().Add("Content-Type", "application/json")
+			_, err = response.Write(res)
+			if err != nil {
+				insLog.Errorf("Can't write response\n")
+			}
+		}()
+
 		_, err := UnmarshalRequest(req, &request)
 		if err != nil {
 			processError(err, "Can't unmarshal request", &resp, insLog)
@@ -187,18 +199,6 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		resp.TraceID = traceID
 
 		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
-
-		defer func() {
-			res, err := json.MarshalIndent(resp, "", "    ")
-			if err != nil {
-				res = []byte(`{"error": "can't marshal answer to json'"}`)
-			}
-			response.Header().Add("Content-Type", "application/json")
-			_, err = response.Write(res)
-			if err != nil {
-				insLog.Errorf("Can't write response\n")
-			}
-		}()
 
 		if request.LogLevel != nil {
 			logLevelNumber, err := insolar.ParseLevel(*request.LogLevel)
