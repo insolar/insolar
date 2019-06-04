@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
 	"io/ioutil"
@@ -261,7 +262,7 @@ func newUserWithKeys() (*user, error) {
 	}, nil
 }
 
-func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
+func  uploadContract(t *testing.T, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.Upload",
@@ -277,10 +278,12 @@ func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
 		Version string          `json:"jsonrpc"`
 		ID      string          `json:"id"`
 		Result  api.UploadReply `json:"result"`
+		Error   json2.Error     `json:"error"`
 	}{}
 
 	err := json.Unmarshal(uploadBody, &uploadRes)
 	require.NoError(t, err)
+	require.Empty(t, uploadRes.Error)
 
 	prototypeRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
 	require.NoError(t, err)
@@ -306,10 +309,12 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 		Version string                   `json:"jsonrpc"`
 		ID      string                   `json:"id"`
 		Result  api.CallConstructorReply `json:"result"`
+		Error   json2.Error              `json:"error"` // TODO check that it is json2.Error
 	}{}
 
 	err := json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
+	require.Empty(t, callConstructorRes.Error)
 
 	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
 	require.NoError(t, err)
@@ -336,10 +341,12 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, argsS
 		Version string              `json:"jsonrpc"`
 		ID      string              `json:"id"`
 		Result  api.CallMethodReply `json:"result"`
+		Error   json2.Error         `json:"error"`
 	}{}
 
 	err := json.Unmarshal(callMethodBody, &callRes)
 	require.NoError(t, err)
+	require.Empty(t, callRes.Error)
 
 	return callRes.Result.ExtractedReply
 }
