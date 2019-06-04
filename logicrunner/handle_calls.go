@@ -70,7 +70,7 @@ func (h *HandleCall) handleActual(
 		if err == flow.ErrCancelled {
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
-		return nil, errors.Wrap(err, "[ HandleCall ] can't play role")
+		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't play role")
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
@@ -89,7 +89,7 @@ func (h *HandleCall) handleActual(
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
-		return nil, os.WrapError(err, "[ HandleCall ] can't create request")
+		return nil, os.WrapError(err, "[ HandleCall.handleActual ] can't create request")
 	}
 	request := procRegisterRequest.getResult()
 
@@ -144,7 +144,7 @@ func (h *HandleCall) handleActual(
 		ref: &ref,
 	}
 	if err := f.Handle(ctx, s.Present); err != nil {
-		inslogger.FromContext(ctx).Warn("[ HandleCall ] StartQueueProcessorIfNeeded returns error: ", err)
+		inslogger.FromContext(ctx).Warn("[ HandleCall.handleActual ] StartQueueProcessorIfNeeded returns error: ", err)
 	}
 
 	return &reply.RegisterRequest{
@@ -226,7 +226,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	}
 
 	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
-		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor ] ClarifyPendingState returns error: ", err)
+		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor.handleActual ] ClarifyPendingState returns error: ", err)
 		// We intentionally report OK to the previous executor here. There is no point
 		// in resending the message or anything.
 		return
@@ -238,7 +238,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 		ref: &ref,
 	}
 	if err := f.Handle(ctx, s.Present); err != nil {
-		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor ] StartQueueProcessorIfNeeded returns error: ", err)
+		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor.handleActual ] StartQueueProcessorIfNeeded returns error: ", err)
 	}
 }
 
