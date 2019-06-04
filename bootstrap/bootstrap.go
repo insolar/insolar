@@ -38,7 +38,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Generator is a component for generating RootDomain instance and genesis contracts.
+// Generator is a component for generating bootstrap files required for discovery nodes bootstrap and heavy genesis.
 type Generator struct {
 	config             *Config
 	certificatesOutDir string
@@ -62,31 +62,31 @@ func NewGeneratorWithConfig(config *Config, certificatesOutDir string) *Generato
 	}
 }
 
-// Run generates genesis data via headless bootstrap step.
+// Run generates bootstrap data.
 //
 // 1. builds Go plugins for genesis contracts
 //    (gone when built-in contracts (INS-2308) would be implemented)
-// 2. read root keys file and generates keys for discovery nodes
+// 2. read root keys file and generates keys and certificates for discovery nodes.
 // 3. generates genesis config for heavy node.
 func (g *Generator) Run(ctx context.Context) error {
-	fmt.Printf("[ Genesis] config:\n%v\n", dumpAsJSON(g.config))
+	fmt.Printf("[ bootstrap ] config:\n%v\n", dumpAsJSON(g.config))
 
 	inslog := inslogger.FromContext(ctx)
 
-	inslog.Info("[ Genesis ] read keys file")
+	inslog.Info("[ bootstrap ] read keys file")
 	pair, err := secrets.ReadKeysFile(g.config.RootKeysFile)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get root keys")
 	}
 	publicKey := platformpolicy.MustPublicKeyToString(pair.Public)
 
-	inslog.Info("[ Genesis ] generate plugins")
+	inslog.Info("[ bootstrap ] generate plugins")
 	err = g.generatePlugins()
 	if err != nil {
 		return errors.Wrap(err, "could't compile smart contracts via insgocc")
 	}
 
-	inslog.Info("[ Genesis ] create keys ...")
+	inslog.Info("[ bootstrap ] create keys ...")
 	discoveryNodes, err := createKeysInDir(
 		ctx,
 		g.config.DiscoveryKeysDir,
@@ -98,13 +98,13 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "create keys step failed")
 	}
 
-	inslog.Info("[ Genesis ] create certificates ...")
+	inslog.Info("[ bootstrap ] create certificates ...")
 	err = g.makeCertificates(ctx, discoveryNodes)
 	if err != nil {
 		return errors.Wrap(err, "generate discovery certificates failed")
 	}
 
-	inslog.Info("[ Genesis ] create heavy genesis config ...")
+	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
 		RootBalance:   g.config.RootBalance,
 		RootPublicKey: publicKey,
@@ -191,7 +191,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 			return errors.Wrapf(err, "failed to create certificate: %v", certFile)
 		}
 
-		inslogger.FromContext(ctx).Debugf("write certificate file: %v", certFile)
+		inslogger.FromContext(ctx).Infof("[ bootstrap ] write certificate file: %v", certFile)
 	}
 	return nil
 }
@@ -214,12 +214,12 @@ func (g *Generator) makeHeavyGenesisConfig(
 	}
 	b, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {
-		return errors.Wrapf(err, "[ makeHeavyGenesisConfig ] failed to decode heavy config to json")
+		return errors.Wrapf(err, "failed to decode heavy config to json")
 	}
 
 	err = ioutil.WriteFile(g.config.HeavyGenesisConfigFile, b, 0600)
 	return errors.Wrapf(err,
-		"[ makeHeavyGenesisConfig ] failed to write heavy config %v", g.config.HeavyGenesisConfigFile)
+		"failed to write heavy config %v", g.config.HeavyGenesisConfigFile)
 }
 
 func (g *Generator) generatePlugins() error {

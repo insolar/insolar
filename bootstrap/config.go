@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Node contains info about discovery nodes
+// Node contains info about discovery nodes.
 type Node struct {
 	Host string `mapstructure:"host"`
 	Role string `mapstructure:"role"`
@@ -42,7 +42,7 @@ type Contracts struct {
 	OutDir string
 }
 
-// Config contains all data required for bootstrap.
+// Config contains configuration required for bootstrap.
 type Config struct {
 	// RootKeysFile is the root key place.
 	RootKeysFile string `mapstructure:"root_keys_file"`
@@ -79,7 +79,7 @@ type Config struct {
 	PulsarPublicKeys []string `mapstructure:"pulsar_public_keys"`
 }
 
-// It's very light check. It's not about majority rule
+// hasMinimumRolesSet does basic check (it's not about majority rule).
 func hasMinimumRolesSet(conf *Config) error {
 	minRequiredRolesSet := map[string]bool{
 		"virtual":        true,
