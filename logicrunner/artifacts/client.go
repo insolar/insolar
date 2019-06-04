@@ -198,32 +198,47 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		m.senders.CachedSender(m.PCS),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-
-	genericReact, err := sender(ctx, &message.GetCode{Code: code}, nil)
-
+	msg, err := payload.NewMessage(&payload.GetCode{
+		CodeID: *code.Record(),
+	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	switch rep := genericReact.(type) {
-	case *reply.Code:
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, code)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply")
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.Code:
+		rec := record.Material{}
+		err := rec.Unmarshal(p.Record)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal record")
+		}
+		virtual := record.Unwrap(rec.Virtual)
+		codeRecord, ok := virtual.(*record.Code)
+		if !ok {
+			return nil, errors.Wrapf(err, "unexpected record %T", virtual)
+		}
 		desc = &codeDescriptor{
 			ref:         code,
-			machineType: rep.MachineType,
-			code:        rep.Code,
+			machineType: codeRecord.MachineType,
+			code:        p.Code,
 		}
 		return desc, nil
-	case *reply.Error:
-		return nil, rep.Error()
+	case *payload.Error:
+		return nil, errors.New(p.Text)
 	default:
-		return nil, fmt.Errorf("GetCode: unexpected reply: %#v", rep)
+		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
 	}
 }
 
