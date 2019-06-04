@@ -16,6 +16,7 @@ var memRef string
 var privateKey *ecdsa.PrivateKey
 
 func TestCreateMember(t *testing.T) {
+	t.Skip()
 
 	var err error
 	privateKey, err = ecdsa.GenerateKey(elliptic.P256K(), rand.Reader)
@@ -50,6 +51,7 @@ func TestCreateMember(t *testing.T) {
 }
 
 func TestGetBalance(t *testing.T) {
+	t.Skip()
 
 	seed, err := requester.GetSeed(TestUrl)
 	require.NoError(t, err)
