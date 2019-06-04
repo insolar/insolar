@@ -73,7 +73,6 @@ type PublisherMock struct {
 }
 
 func (p *PublisherMock) Publish(topic string, messages ...*message.Message) error {
-	p.msg = messages[0]
 	return nil
 }
 
@@ -81,27 +80,43 @@ func (p *PublisherMock) Close() error {
 	return nil
 }
 
-func checkPublishedMsg(t *testing.T, pub *PublisherMock, errText string) {
-	require.NotNil(t, pub.msg)
-	replyPayload, err := payload.UnmarshalFromMeta(pub.msg.Payload)
+func checkRepliedMsg(t *testing.T, expectedMsg *message.Message, errText string) {
+	require.NotNil(t, expectedMsg)
+	replyPayload, err := payload.Unmarshal(expectedMsg.Payload)
 	require.NoError(t, err)
 	require.Contains(t, replyPayload.(*payload.Error).Text, errText)
 }
 
+func prepareNetwork(t *testing.T, cfg configuration.Configuration) *ServiceNetwork {
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	require.NoError(t, err)
+
+	nodeKeeper := networkUtils.NewNodeKeeperMock(t)
+	nodeMock := networkUtils.NewNetworkNodeMock(t)
+	nodeMock.IDMock.Return(testutils.RandomRef())
+	nodeKeeper.GetOriginMock.Return(nodeMock)
+	serviceNetwork.NodeKeeper = nodeKeeper
+
+	return serviceNetwork
+}
+
 func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	cfg := configuration.NewConfiguration()
+	var expectedMsg *message.Message
 
-	pubMock := &PublisherMock{}
-
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
-	serviceNetwork.Pub = pubMock
+	serviceNetwork := prepareNetwork(t, cfg)
+	sender := bus.NewSenderMock(t)
+	serviceNetwork.Sender = sender
+	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
+		expectedMsg = p2
+	}
 
 	p := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), p)
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
-	checkPublishedMsg(t, pubMock, "failed to send message: Receiver in msg.Metadata not set")
+	checkRepliedMsg(t, expectedMsg, "failed to send message: Receiver in msg.Metadata not set")
 	require.Nil(t, outMsgs)
 }
 
@@ -109,10 +124,14 @@ func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 
-	pubMock := &PublisherMock{}
+	var expectedMsg *message.Message
 
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
-	serviceNetwork.Pub = pubMock
+	serviceNetwork := prepareNetwork(t, cfg)
+	sender := bus.NewSenderMock(t)
+	serviceNetwork.Sender = sender
+	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
+		expectedMsg = p2
+	}
 
 	p := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), p)
@@ -120,7 +139,7 @@ func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
-	checkPublishedMsg(t, pubMock, "incorrect Receiver in msg.Metadata")
+	checkRepliedMsg(t, expectedMsg, "incorrect Receiver in msg.Metadata")
 	require.Nil(t, outMsgs)
 }
 
@@ -176,6 +195,12 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.Controller = controller
 	serviceNetwork.NodeKeeper = nodeN
+	var expectedMsg *message.Message
+	sender := bus.NewSenderMock(t)
+	serviceNetwork.Sender = sender
+	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
+		expectedMsg = p2
+	}
 
 	p := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), p)
@@ -183,7 +208,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
-	checkPublishedMsg(t, pubMock, "error while sending watermillMsg to controller")
+	checkRepliedMsg(t, expectedMsg, "error while sending watermillMsg to controller")
 	require.Nil(t, outMsgs)
 }
 
@@ -210,6 +235,12 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.Controller = controller
 	serviceNetwork.NodeKeeper = nodeN
+	var expectedMsg *message.Message
+	sender := bus.NewSenderMock(t)
+	serviceNetwork.Sender = sender
+	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
+		expectedMsg = p2
+	}
 
 	payload := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
@@ -217,7 +248,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
-	checkPublishedMsg(t, pubMock, "reply is not ack")
+	checkRepliedMsg(t, expectedMsg, "reply is not ack")
 	require.Nil(t, outMsgs)
 }
 
