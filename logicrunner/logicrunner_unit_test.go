@@ -1042,13 +1042,13 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	// Last time we spent two full workdays trying to find a race condition
 	// in our code before we realized this test has a logic error related
 	// to it concurrent nature. Keep the code as simple as possible. Don't be smart.
-	pn := 100
+	var pn insolar.PulseNumber = 100
 	var lck sync.Mutex
 
 	suite.ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
 		lck.Lock()
 		defer lck.Unlock()
-		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}, nil
+		return insolar.Pulse{PulseNumber: pn}, nil
 	}
 
 	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
@@ -1114,10 +1114,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				defer lck.Unlock()
 				pn += 1
 
-				pulseNum := insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}
-				ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(pn))
+				pulseNum := insolar.Pulse{PulseNumber: pn}
+				ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(int(pn)))
 				err := suite.lr.OnPulse(ctx, pulseNum)
-				suite.Require().NoError(err)
+				require.NoError(t, err)
 				return
 			}
 
@@ -1229,12 +1229,12 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.mb.SendFunc = func(
 					ctx context.Context, msg insolar.Message, opts *insolar.MessageSendOptions,
 				) (insolar.Reply, error) {
-					suite.Require().Contains(test.messagesExpected, msg.Type())
+					require.Contains(t, test.messagesExpected, msg.Type())
 					wg.Done()
 
 					if msg.Type() == insolar.TypeExecutorResults {
-						suite.Require().Equal(test.pendingInExecutorResults, msg.(*message.ExecutorResults).Pending)
-						suite.Require().Equal(test.queueLenInExecutorResults, len(msg.(*message.ExecutorResults).Queue))
+						require.Equal(t, test.pendingInExecutorResults, msg.(*message.ExecutorResults).Pending)
+						require.Equal(t, test.queueLenInExecutorResults, len(msg.(*message.ExecutorResults).Queue))
 					}
 
 					switch msg.Type() {
@@ -1268,17 +1268,17 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
 			pulseNum := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
 			err := suite.lr.OnPulse(ctx, *pulseNum)
-			suite.Require().NoError(err)
+			require.NoError(t, err)
 
 			_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 
 			if test.flowCanceledExpected {
-				suite.Require().Error(err)
-				suite.Require().Equal(flow.ErrCancelled, err)
+				require.EqualError(t, err, flow.ErrCancelled.Error())
+				require.Equal(t, flow.ErrCancelled, err)
 			} else if test.errorExpected {
-				suite.Require().Error(err)
+				require.Error(t, err)
 			} else {
-				suite.Require().NoError(err)
+				require.NoError(t, err)
 			}
 
 			wg.Wait()
@@ -1572,7 +1572,6 @@ func TestLogicRunnerOnPulse(t *testing.T) {
 }
 
 func TestLRUnsafeGetLedgerPendingRequest(t *testing.T) {
-	// t.Parallel()
 	suite.Run(t, new(LRUnsafeGetLedgerPendingRequestTestSuite))
 }
 
