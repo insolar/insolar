@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -36,6 +37,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -167,6 +169,77 @@ func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueu
 
 	suite.Require().NoError(err)
 	suite.Require().Equal(message.InPending, es.pending)
+}
+
+func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor() {
+	table := []struct {
+		name                           string
+		clarifyPendingStateResult      error
+		startQueueProcessorResult      error
+		expectedClarifyPendingStateCtr int32
+		expectedStartQueueProcessorCtr int32
+	}{
+		{
+			name:                           "Happy path",
+			expectedClarifyPendingStateCtr: 1,
+			expectedStartQueueProcessorCtr: 1,
+		},
+		{
+			name:                           "ClarifyPendingState failed",
+			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
+			expectedClarifyPendingStateCtr: 1,
+		},
+		{
+			name:                           "StartQueueProcessorIfNeeded failed",
+			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
+			expectedClarifyPendingStateCtr: 1,
+			expectedStartQueueProcessorCtr: 1,
+		},
+		{
+			name:                           "Both procedures fail",
+			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
+			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
+			expectedClarifyPendingStateCtr: 1,
+			expectedStartQueueProcessorCtr: 0,
+		},
+	}
+
+	for _, test := range table {
+		test := test
+		suite.T().Run(test.name, func(t *testing.T) {
+			h := HandleAdditionalCallFromPreviousExecutor{
+				dep: &Dependencies{
+					lr: suite.lr,
+				},
+			}
+			f := flow.NewFlowMock(suite.T())
+			parcel := testutils.NewParcelMock(suite.T())
+			request := gen.Reference()
+			msg := message.AdditionalCallFromPreviousExecutor{
+				ObjectReference: gen.Reference(),
+				Parcel:          parcel,
+				Request:         &request,
+			}
+
+			var clarifyPendingStateCtr int32
+			f.ProcedureFunc = func(ctx context.Context, proc flow.Procedure, cancelable bool) error {
+				atomic.AddInt32(&clarifyPendingStateCtr, 1)
+				_, ok := proc.(*ClarifyPendingState)
+				require.True(suite.T(), ok)
+				return test.clarifyPendingStateResult
+			}
+
+			var startQueueProcessorCtr int32
+			f.HandleFunc = func(ctx context.Context, handle flow.Handle) error {
+				atomic.AddInt32(&startQueueProcessorCtr, 1)
+				return test.startQueueProcessorResult
+			}
+
+			h.handleActual(context.Background(), &msg, f)
+			require.Equal(suite.T(), test.expectedClarifyPendingStateCtr, atomic.LoadInt32(&clarifyPendingStateCtr))
+			require.Equal(suite.T(), test.expectedStartQueueProcessorCtr, atomic.LoadInt32(&startQueueProcessorCtr))
+		})
+	}
 }
 
 func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
@@ -979,9 +1052,11 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			flowCanceledExpected: true,
 		},
 		{
-			name:                      "pulse change in HasPendingRequests",
-			when:                      whenHasPendingRequest,
-			messagesExpected:          []insolar.MessageType{insolar.TypeExecutorResults},
+			name: "pulse change in HasPendingRequests",
+			when: whenHasPendingRequest,
+			messagesExpected: []insolar.MessageType{
+				insolar.TypeExecutorResults, insolar.TypeAdditionalCallFromPreviousExecutor,
+			},
 			pendingInExecutorResults:  message.PendingUnknown,
 			queueLenInExecutorResults: 1,
 		},
@@ -1054,6 +1129,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
 					if test.when == whenHasPendingRequest {
 						changePulse()
+						// We have to implicitly return ErrCancelled to make f.Procedure return ErrCancelled as well
+						// which will cause the correct code path to execute in logicrunner.HandleCall.
+						// Otherwise the test has a race condition - f.Procedure can be cancelled or return normally.
+						return false, flow.ErrCancelled
 					}
 
 					return false, nil
@@ -1119,7 +1198,6 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.mb.SendFunc = func(
 					ctx context.Context, msg insolar.Message, opts *insolar.MessageSendOptions,
 				) (insolar.Reply, error) {
-
 					suite.Require().Contains(test.messagesExpected, msg.Type())
 					wg.Done()
 
@@ -1132,7 +1210,8 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					case insolar.TypeReturnResults,
 						insolar.TypeExecutorResults,
 						insolar.TypePendingFinished,
-						insolar.TypeStillExecuting:
+						insolar.TypeStillExecuting,
+						insolar.TypeAdditionalCallFromPreviousExecutor:
 						return &reply.OK{}, nil
 					default:
 						panic("no idea how to handle " + msg.Type().String())

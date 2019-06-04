@@ -129,7 +129,7 @@ func (st *ObjectState) MustModeState(mode string) *ExecutionState {
 		panic(err)
 	}
 	if res.Current == nil {
-		panic("object "+ res.Ref.String() +" has no Current")
+		panic("object " + res.Ref.String() + " has no Current")
 	}
 	return res
 }
@@ -333,6 +333,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowDispatcher.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeAdditionalCallFromPreviousExecutor, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.FlowDispatcher.WrapBusHandle)
 }
