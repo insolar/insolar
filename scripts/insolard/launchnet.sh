@@ -33,7 +33,7 @@ SCRIPTS_DIR=scripts/insolard/
 
 CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs/
 
-KEYS_FILE=${CONFIGS_DIR}bootstrap_keys.json
+PULSAR_KEYS=${CONFIGS_DIR}pulsar_keys.json
 ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}root_member_keys.json
 HEAVY_GENESIS_CONFIG_FILE=${CONFIGS_DIR}heavy_genesis.json
 CONTRACTS_PLUGINS_DIR=${LAUNCHNET_BASE_DIR}contracts
@@ -177,10 +177,10 @@ rebuild_binaries()
     build_binaries
 }
 
-generate_bootstrap_keys()
+generate_pulsar_keys()
 {
-    echo "generate bootstrap keys: $KEYS_FILE"
-    bin/insolar gen-key-pair > $KEYS_FILE
+    echo "generate pulsar keys: ${PULSAR_KEYS}"
+    bin/insolar gen-key-pair > ${PULSAR_KEYS}
 }
 
 generate_root_member_keys()
@@ -308,7 +308,7 @@ bootstrap()
     else
         echo "SKIP: build binaries (SKIP_BUILD=$SKIP_BUILD)"
     fi
-    generate_bootstrap_keys
+    generate_pulsar_keys
     generate_root_member_keys
     generate_insolard_configs
 

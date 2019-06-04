@@ -32,7 +32,7 @@ local image_params = params.insolar.image;
 						"command": [
 							"/bin/sh",
 							"-c",
-							"/go/bin/insolar gen-key-pair > /opt/insolar/config/bootstrap_keys.json;"
+							"/go/bin/insolar gen-key-pair > /opt/insolar/config/pulsar_keys.json;"
 						],
 						"env": [
 							{
@@ -68,7 +68,7 @@ local image_params = params.insolar.image;
 							},
 							{
 								"name": "INSOLAR_KEYSPATH",
-								"value": "/opt/insolar/config/bootstrap_keys.json"
+								"value": "/opt/insolar/config/pulsar_keys.json"
 							},
 							{
 								"name": "INSOLAR_PULSAR_STORAGE_DATADIRECTORY",

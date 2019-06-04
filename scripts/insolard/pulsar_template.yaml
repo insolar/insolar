@@ -27,7 +27,7 @@ pulsar:
     randomnodescount: 5
 versionmanager:
   minalowedversion: v0.3.0
-keyspath: "{{ .BaseDir }}/configs/bootstrap_keys.json"
+keyspath: "{{ .BaseDir }}/configs/pulsar_keys.json"
 tracer:
   jaeger:
     collectorendpoint: ""
