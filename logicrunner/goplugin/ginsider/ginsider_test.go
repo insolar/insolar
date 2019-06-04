@@ -26,6 +26,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -85,8 +86,10 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	refString := "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"
 	ref, err := insolar.NewReferenceFromBase58(refString)
 	s.Require().NoError(err)
-	err = gi.AddPlugin(*ref, tmpDir+"/healthcheck.so")
-	s.Require().NoError(err, "failed to add plugin by path "+tmpDir+"/healthcheck.so")
+
+	healthcheckSoFile := path.Join(tmpDir, "healthcheck.so")
+	err = gi.AddPlugin(*ref, healthcheckSoFile)
+	s.Require().NoError(err, "failed to add plugin by path "+healthcheckSoFile)
 
 	s.prepareGoInsider(gi, protocol, socket)
 
@@ -95,11 +98,11 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 		"-p", protocol,
 		"-r", refString,
 	}
-	fmt.Println(healthchseckPath, strings.Join(healthcheckArgs, " "))
+
 	cmd := exec.Command(healthcheckPath, healthcheckArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err = cmd.Run()
 
 	s.NoError(err)
 }
