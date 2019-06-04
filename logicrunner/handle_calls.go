@@ -133,6 +133,9 @@ func (h *HandleCall) handleActual(
 			}
 
 			_, err = lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
+			if err != nil {
+				err = errors.Wrap(err, "[ HandleCall.handleActual ] mb.Send failed to send AdditionalCallFromPreviousExecutor")
+			}
 		}
 
 		return nil, err
