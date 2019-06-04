@@ -418,7 +418,7 @@ func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, r
 	}
 	buf, err := wrapper.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to wrap error message")
+		return errors.Wrapf(err, "failed to wrap error message (%s)", repErr.Error())
 	}
 	msg.Payload = buf
 	n.Sender.Reply(ctx, msg, errMsg)
