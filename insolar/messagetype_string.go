@@ -33,15 +33,15 @@ func _() {
 	_ = x[TypeGetRequest-22]
 	_ = x[TypeGetPendingRequestID-23]
 	_ = x[TypeGetPendingFilament-24]
-	_ = x[TypeHeavyStartStop-24]
-	_ = x[TypeHeavyPayload-25]
-	_ = x[TypeGenesisRequest-26]
-	_ = x[TypeNodeSignRequest-27]
+	_ = x[TypeHeavyStartStop-25]
+	_ = x[TypeHeavyPayload-26]
+	_ = x[TypeGenesisRequest-27]
+	_ = x[TypeNodeSignRequest-28]
 }
 
-const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeGetRequestTypeGetPendingRequestIDTypeGetPendingFilamentTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequestTypeNodeSignRequest"
+const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeGetRequestTypeGetPendingRequestIDTypeGetPendingFilamentTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequestTypeNodeSignRequest"
 
-var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 128, 139, 152, 167, 182, 198, 215, 228, 246, 257, 275, 297, 311, 321, 354, 368, 391, 413, 431, 447, 465, 484}
+var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 177, 190, 205, 220, 236, 253, 266, 284, 295, 313, 335, 349, 359, 392, 406, 429, 451, 469, 485, 503, 522}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {
