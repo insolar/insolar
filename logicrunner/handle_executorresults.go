@@ -48,10 +48,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 
 	state.Lock()
 	if state.ExecutionState == nil {
-		state.ExecutionState = &ExecutionState{
-			Ref:   ref,
-			Queue: make([]ExecutionQueueElement, 0),
-		}
+		state.ExecutionState = NewExecutionState(ref)
 	}
 	es := state.ExecutionState
 	p.Result.es = es
@@ -62,7 +59,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	es.Lock()
 
 	if es.pending == message.InPending {
-		if es.Current != nil {
+		if !es.CurrentList.Empty() {
 			logger.Debug("execution returned to node that is still executing pending")
 
 			es.pending = message.NotPending
