@@ -378,21 +378,12 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	// if reqId == nil {
-	// 	panic(fmt.Sprint("ReqId must not be nil", reqId))
-	// }
-	// if es.Current.Request.RequestID == nil {
-	// 	panic(fmt.Sprint("es.Current.Request.RequestID", reqId))
-	// }
-	// if bytes.Compare(reqId, ) != 0 {
-	// 	return false
-	// }
-	if !APIReqId.Equal(ctx, es.Current.Request.APIRequestID) {
+	if APIReqId.IsEmpty() || es.Current.Request.APIRequestID.IsEmpty() {
+		inslogger.FromContext(ctx).Error("APIRequestID shouldn't be empty", APIReqId.ToHex(), es.Current.Request.APIRequestID.ToHex())
+	}
+	if !APIReqId.Equal(es.Current.Request.APIRequestID) {
 		return false
 	}
-	// if bytes.Compare(reqId[:], es.Current.Request.APIRequestID[:]) != 0 {
-	// 	return false
-	// }
 
 	inslogger.FromContext(ctx).Debug("loop detected")
 

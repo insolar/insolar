@@ -19,8 +19,6 @@ import (
 	"github.com/satori/go.uuid"
 	"errors"
 	"encoding/hex"
-	"context"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type APIRequestID uuid.UUID
@@ -30,12 +28,13 @@ func NewAPIRequestID() APIRequestID {
 }
 
 // Equal checks if APIRequestID equals to the other.
-func (id APIRequestID) Equal(ctx context.Context, other APIRequestID) bool {
-	var empty APIRequestID
-	if id == empty || other == empty {
-		inslogger.FromContext(ctx).Error("APIRequestID shouldn't be empty", id.toHex(), other.toHex())
-	}
+func (id APIRequestID) Equal(other APIRequestID) bool {
 	return id == other
+}
+
+func (id APIRequestID) IsEmpty() bool {
+	var empty APIRequestID
+	return id == empty
 }
 
 // Size returns size of the APIRequestID
@@ -56,6 +55,6 @@ func (id *APIRequestID) Unmarshal(data []byte) error {
 	return nil
 }
 
-func (id *APIRequestID) toHex() string {
+func (id *APIRequestID) ToHex() string {
 	return hex.EncodeToString(id[:])
 }
