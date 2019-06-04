@@ -1834,7 +1834,7 @@ func (r *One) EmptyMethod() (error) {
 	}
 
 	// emulate death
-	err = rlr.sock.Close()
+	err = rlr.rpc.Stop(ctx)
 	s.Require().NoError(err)
 
 	client, err := gp.Downstream(ctx)

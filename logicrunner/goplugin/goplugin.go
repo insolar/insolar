@@ -23,16 +23,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/logicrunner/artifacts"
-	"go.opencensus.io/stats"
-
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 

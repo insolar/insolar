@@ -17,7 +17,9 @@
 package helloworld
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/common"
+	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 type ExtendableError struct {
@@ -29,7 +31,7 @@ func (e *ExtendableError) Error() string {
 }
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -55,7 +57,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 }
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -81,7 +83,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 }
 
 func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 
 	self := new(HelloWorld)
 
@@ -121,8 +123,213 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
+func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(HelloWorld)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeCount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeCount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeCount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.Count()
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(HelloWorld)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeErrored ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeErrored ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeErrored ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.Errored()
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(HelloWorld)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeCreateChild ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeCreateChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeCreateChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.CreateChild()
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_CountChild(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(HelloWorld)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeCountChild ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeCountChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeCountChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.CountChild()
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(HelloWorld)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeCall ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := [5]interface{}{}
+	var args0 insolar.Reference
+	args[0] = &args0
+	var args1 string
+	args[1] = &args1
+	var args2 []byte
+	args[2] = &args2
+	var args3 []byte
+	args[3] = &args3
+	var args4 []byte
+	args[4] = &args4
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.Call(args0, args1, args2, args3, args4)
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)
@@ -150,11 +357,20 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	return ret, err
 }
 
-func Initialize() map[string]interface{} {
-	return map[string]interface{}{
-		"INSMETHOD_GetCode":      INSMETHOD_GetCode,
-		"INSMETHOD_GetPrototype": INSMETHOD_GetPrototype,
-		"INSMETHOD_Greet":        INSMETHOD_Greet,
-		"INSCONSTRUCTOR_New":     INSCONSTRUCTOR_New,
+func Initialize() XXX_preprocessor.ContractWrapper {
+	return XXX_preprocessor.ContractWrapper{
+		GetCode:      INSMETHOD_GetCode,
+		GetPrototype: INSMETHOD_GetPrototype,
+		Methods: XXX_preprocessor.ContractMethods{
+			"Greet":       INSMETHOD_Greet,
+			"Count":       INSMETHOD_Count,
+			"Errored":     INSMETHOD_Errored,
+			"CreateChild": INSMETHOD_CreateChild,
+			"CountChild":  INSMETHOD_CountChild,
+			"Call":        INSMETHOD_Call,
+		},
+		Constructors: XXX_preprocessor.ContractConstructors{
+			"New": INSCONSTRUCTOR_New,
+		},
 	}
 }

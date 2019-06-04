@@ -20,39 +20,35 @@ package logicrunner
 import (
 	"bytes"
 	"context"
-	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 
-	"github.com/insolar/insolar/log"
-
 	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/record"
-
-	"go.opencensus.io/trace"
-
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/logicrunner/artifacts"
-
-	"github.com/insolar/insolar/instrumentation/instracer"
-
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin"
+	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
@@ -111,17 +107,26 @@ func (lre Error) Error() string {
 	return buffer.String()
 }
 
-func (st *ObjectState) MustModeState(mode string) (res *ExecutionState) {
+func (st *ObjectState) GetModeState(mode string) (rv *ExecutionState, err error) {
 	switch mode {
 	case "execution":
-		res = st.ExecutionState
+		rv = st.ExecutionState
 	case "validation":
-		res = st.Validation
+		rv = st.Validation
 	default:
-		panic("'" + mode + "' is unknown object processing mode")
+		err = errors.Errorf("'%s' is unknown object processing mode", mode)
 	}
-	if res == nil {
-		panic("object is not in " + mode + " mode")
+
+	if rv == nil && err != nil {
+		err = errors.Errorf("object is not in '%s' mode", mode)
+	}
+	return rv, err
+}
+
+func (st *ObjectState) MustModeState(mode string) *ExecutionState {
+	res, err := st.GetModeState(mode)
+	if err != nil {
+		panic(err)
 	}
 	if res.Current == nil {
 		panic("object "+ res.Ref.String() +" has no Current")
@@ -166,7 +171,7 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	sock net.Listener
+	rpc *lrCommon.RPC
 
 	stopLock   sync.Mutex
 	isStopping bool
@@ -189,6 +194,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		Cfg:   cfg,
 		state: make(map[Ref]*ObjectState),
 	}
+	res.rpc = lrCommon.NewRPC(NewRPCMethods(&res), cfg)
 
 	err := initHandlers(&res)
 	if err != nil {
@@ -258,29 +264,62 @@ func initHandlers(lr *LogicRunner) error {
 	return nil
 }
 
+func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
+	bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
+	if err := lr.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
+		return err
+	}
+	lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeBuiltin)
+
+	// TODO: insert all necessary descriptors here
+	codeDescriptors := builtin.InitializeCodeDescriptors()
+	for _, codeDescriptor := range codeDescriptors {
+		lr.ArtifactManager.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
+	}
+
+	prototypeDescriptors := builtin.InitializePrototypeDescriptors()
+	for _, prototypeDescriptor := range prototypeDescriptors {
+		lr.ArtifactManager.InjectObjectDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
+	}
+
+	lr.ArtifactManager.InjectFinish()
+
+	lrCommon.CurrentProxyCtx = builtin.NewProxyHelper(NewRPCMethods(lr))
+
+	return nil
+}
+
+func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
+	if lr.Cfg.RPCListen != "" {
+		lr.rpc.Start(ctx)
+	}
+
+	gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
+	if err != nil {
+		return err
+	}
+	if err := lr.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
+		return err
+	}
+	lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeGoPlugin)
+	return nil
+}
+
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
 	if lr.Cfg.BuiltIn != nil {
-		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
-		if err := lr.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
+		log.Error("Initializing builtin")
+		if err := lr.initializeBuiltin(ctx); err != nil {
+			log.Errorf("Initializing builtin not done: %s", err.Error())
 			return err
 		}
-		lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeBuiltin)
+		log.Error("Initializing builtin done")
 	}
 
 	if lr.Cfg.GoPlugin != nil {
-		if lr.Cfg.RPCListen != "" {
-			StartRPC(ctx, lr)
-		}
-
-		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
-		if err != nil {
+		if err := lr.initializeGoPlugin(ctx); err != nil {
 			return err
 		}
-		if err := lr.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
-			return err
-		}
-		lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeGoPlugin)
 	}
 
 	lr.RegisterHandlers()
@@ -311,13 +350,12 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 		}
 	}
 
-	if lr.sock != nil {
-		if err := lr.sock.Close(); err != nil {
-			return err
-		}
+	if err := lr.rpc.Stop(ctx); err != nil {
+		return err
 	}
-
-	lr.router.Close()
+	if err := lr.router.Close(); err != nil {
+		return err
+	}
 
 	return reterr
 }

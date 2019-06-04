@@ -17,56 +17,30 @@
 package logicrunner
 
 import (
-	"context"
 	"fmt"
-	"net"
-	"net/rpc"
 	"runtime/debug"
 	"sync"
 
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner/artifacts"
-
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
-// StartRPC starts RPC server for isolated executors to use
-func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
-	rpcService := &RPC{lr: lr}
-
-	rpcServer := rpc.NewServer()
-	err := rpcServer.Register(rpcService)
-	if err != nil {
-		panic("Fail to register LogicRunner RPC Service: " + err.Error())
-	}
-
-	l, e := net.Listen(lr.Cfg.RPCProtocol, lr.Cfg.RPCListen)
-	if e != nil {
-		inslogger.FromContext(ctx).Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"' over "+lr.Cfg.RPCProtocol+": ", e)
-	}
-	lr.sock = l
-
-	inslogger.FromContext(ctx).Infof("starting LogicRunner RPC service on %q over %s", lr.Cfg.RPCListen, lr.Cfg.RPCProtocol)
-	go func() {
-		rpcServer.Accept(l)
-		inslogger.FromContext(ctx).Info("LogicRunner RPC service stopped")
-	}()
-
-	return rpcService
+type RPCMethods struct {
+	lr *LogicRunner
 }
 
-// RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
-type RPC struct {
-	lr *LogicRunner
+func NewRPCMethods(lr *LogicRunner) *RPCMethods {
+	return &RPCMethods{lr: lr}
 }
 
 func recoverRPC(err *error) {
@@ -84,19 +58,25 @@ func recoverRPC(err *error) {
 }
 
 // GetCode is an RPC retrieving a code by its reference
-func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
+func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
 	defer recoverRPC(&err)
-	os := gpr.lr.MustObjectState(req.Callee)
-	es := os.MustModeState(req.Mode)
+
+	os := m.lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
 	ctx := es.Current.Context
+
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
-	am := gpr.lr.ArtifactManager
-
-	ctx, span := instracer.StartSpan(ctx, "RPC.GetCode")
+	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
 	defer span.End()
 
-	codeDescriptor, err := am.GetCode(ctx, req.Code)
+	codeDescriptor, err := m.lr.ArtifactManager.GetCode(ctx, req.Code)
 	if err != nil {
 		return err
 	}
@@ -108,21 +88,22 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 }
 
 // RouteCall routes call from a contract to a contract through event bus.
-func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
+func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := gpr.lr.MustObjectState(req.Callee)
-	es := os.MustModeState(req.Mode)
+	os := m.lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
 	ctx := es.Current.Context
 
-	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
-
-	if es.Current.LogicContext.Immutable {
+	if os.ExecutionState.Current.LogicContext.Immutable {
 		return errors.New("Try to call route from immutable method")
 	}
-
-	ctx, span := instracer.StartSpan(ctx, "RPC.RouteCall")
-	defer span.End()
 
 	// TODO: delegation token
 
@@ -149,7 +130,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 		msg.ReturnMode = record.ReturnNoWait
 	}
 
-	res, err := gpr.lr.ContractRequester.CallMethod(ctx, msg)
+	res, err := m.lr.ContractRequester.CallMethod(ctx, msg)
 	if err != nil {
 		return err
 	}
@@ -162,16 +143,18 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
+func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := gpr.lr.MustObjectState(req.Callee)
-	es := os.MustModeState(req.Mode)
+	os := m.lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
 	ctx := es.Current.Context
-
-	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
-	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
-	defer span.End()
 
 	es.Current.Nonce++
 
@@ -191,7 +174,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 		},
 	}
 
-	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, msg)
+	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
 
 	rep.Reference = ref
 
@@ -199,16 +182,18 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 }
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
+func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := gpr.lr.MustObjectState(req.Callee)
-	es := os.MustModeState(req.Mode)
+	os := m.lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
 	ctx := es.Current.Context
-
-	inslogger.FromContext(ctx).Debug("RPC.SaveAsDelegate")
-	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsDelegate")
-	defer span.End()
 
 	es.Current.Nonce++
 
@@ -228,33 +213,36 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 		},
 	}
 
-	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, msg)
+	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
 
 	rep.Reference = ref
 	return err
 }
 
+var iteratorBuffSize = 1000
 var iteratorMap = make(map[string]artifacts.RefIterator)
 var iteratorMapLock = sync.RWMutex{}
-var iteratorBuffSize = 1000
 
 // GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
-func (gpr *RPC) GetObjChildrenIterator(
+func (m *RPCMethods) GetObjChildrenIterator(
 	req rpctypes.UpGetObjChildrenIteratorReq,
 	rep *rpctypes.UpGetObjChildrenIteratorResp,
 ) (
 	err error,
 ) {
+
 	defer recoverRPC(&err)
 
-	os := gpr.lr.MustObjectState(req.Callee)
-	es := os.MustModeState(req.Mode)
+	os := m.lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
 	ctx := es.Current.Context
-
-	ctx, span := instracer.StartSpan(ctx, "RPC.GetObjChildrenIterator")
-	defer span.End()
-
-	am := gpr.lr.ArtifactManager
+	am := m.lr.ArtifactManager
 	iteratorID := req.IteratorID
 
 	iteratorMapLock.RLock()
@@ -322,19 +310,20 @@ func (gpr *RPC) GetObjChildrenIterator(
 }
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
+func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := gpr.lr.MustObjectState(req.Callee)
-	es := os.MustModeState(req.Mode)
+	os := m.lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
 	ctx := es.Current.Context
 
-	inslogger.FromContext(ctx).Debug("RPC.GetDelegate")
-	ctx, span := instracer.StartSpan(ctx, "RPC.GetDelegate")
-	defer span.End()
-
-	am := gpr.lr.ArtifactManager
-	ref, err := am.GetDelegate(ctx, req.Object, req.OfType)
+	ref, err := m.lr.ArtifactManager.GetDelegate(ctx, req.Object, req.OfType)
 	if err != nil {
 		return err
 	}
@@ -343,11 +332,18 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 }
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
+func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := gpr.lr.MustObjectState(req.Callee)
-	es := os.MustModeState(req.Mode)
+	os := m.lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
+
 	es.Current.Deactivate = true
 	return nil
 }

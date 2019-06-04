@@ -36,8 +36,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/metrics"
 )
@@ -58,6 +58,8 @@ type GoInsider struct {
 
 	plugins      map[insolar.Reference]*pluginRec
 	pluginsMutex sync.Mutex
+
+	lrCommon.Serializer
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
@@ -65,7 +67,8 @@ func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
 	res := GoInsider{dir: path, upstreamProtocol: network, upstreamAddress: address}
 	res.plugins = make(map[insolar.Reference]*pluginRec)
-	proxyctx.Current = &res
+	lrCommon.CurrentProxyCtx = &res
+	res.Serializer = lrCommon.NewCBORSerializer()
 	return &res
 }
 
@@ -357,10 +360,10 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 // GetObjChildrenIterator rpc call to insolard service, returns iterator over children of object with specified prototype
 // at first time call it without iteratorID
 // iteratorID is a cache key on service side, use it in all calls, except first
-func (gi *GoInsider) GetObjChildrenIterator(obj insolar.Reference, prototype insolar.Reference, iteratorID string) (*proxyctx.ChildrenTypedIterator, error) {
+func (gi *GoInsider) GetObjChildrenIterator(obj insolar.Reference, prototype insolar.Reference, iteratorID string) (*lrCommon.ChildrenTypedIterator, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return &proxyctx.ChildrenTypedIterator{}, err
+		return &lrCommon.ChildrenTypedIterator{}, err
 	}
 
 	res := rpctypes.UpGetObjChildrenIteratorResp{}
@@ -377,10 +380,10 @@ func (gi *GoInsider) GetObjChildrenIterator(obj insolar.Reference, prototype ins
 			log.Fatal("GetObjChildrenIterator: ginsider can't connect to insgocc, shutdown")
 			os.Exit(0)
 		}
-		return &proxyctx.ChildrenTypedIterator{}, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
+		return &lrCommon.ChildrenTypedIterator{}, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
 	}
 
-	return &proxyctx.ChildrenTypedIterator{
+	return &lrCommon.ChildrenTypedIterator{
 		Parent:         obj,
 		ChildPrototype: prototype,
 		IteratorID:     res.Iterator.ID,

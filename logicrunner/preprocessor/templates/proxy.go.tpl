@@ -18,7 +18,7 @@ package {{ .PackageName }}
 
 import (
 {{- range $import, $i := .Imports }}
-	{{$import}}
+	{{ $import }}
 {{- end }}
 )
 
@@ -46,7 +46,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*{{ .ContractType }}, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*{{ .Cont
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*{{ .ContractType }}, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func GetPrototype() insolar.Reference {
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object insolar.Reference) (*{{ .ContractType }}, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
+	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractConstructorHolder {
 	{{ $func.InitArgs }}
 
 	var argsSerialized []byte
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		panic(err)
 	}
@@ -110,12 +110,12 @@ func (r *{{ $.ContractType }}) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
 
-		err = proxyctx.Current.Deserialize(res, &ret)
+		err = common.CurrentProxyCtx.Deserialize(res, &ret)
 		if err != nil {
 			return ret0, err
 		}
@@ -140,12 +140,12 @@ func (r *{{ $.ContractType }}) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
 
-		err = proxyctx.Current.Deserialize(res, &ret)
+		err = common.CurrentProxyCtx.Deserialize(res, &ret)
 		if err != nil {
 			return ret0, err
 		}
@@ -168,17 +168,17 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 
 	{{ $method.ResultZeroList }}
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
 
-	err = proxyctx.Current.Deserialize(res, &ret)
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
@@ -194,12 +194,12 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }}
 	{{ $method.InitArgs }}
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -214,17 +214,17 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if not $method.Immutable}}AsI
 
 	{{ $method.ResultZeroList }}
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
 
-	err = proxyctx.Current.Deserialize(res, &ret)
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
