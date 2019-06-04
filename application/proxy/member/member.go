@@ -31,7 +31,7 @@ type BalanceWithDeposits struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111131AyaMizrwqYwp5ffrqyQShh3iYUe3PBPNnbjt2.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113Yz9tohKenNsVXR4RYR2vNGUF77yK3HRkEkXcbH.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {

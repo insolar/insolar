@@ -19,6 +19,7 @@ package genesisdataprovider
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/component"
@@ -59,10 +60,16 @@ func mockCertificateManager(t *testing.T, rootDomainRef *insolar.Reference) *tes
 	return certificateManagerMock
 }
 
-func mockInfoResult(rootMemberRef insolar.Reference, nodeDomainRef insolar.Reference) insolar.Reply {
+func mockInfoResult(rootMemberRef insolar.Reference, oracleMemberRefs map[string]insolar.Reference, mdAdminMemberRef insolar.Reference, nodeDomainRef insolar.Reference) insolar.Reply {
+	oracleMemberRefStrs := map[string]string{}
+	for name, ref := range oracleMemberRefs {
+		oracleMemberRefStrs[name] = ref.String()
+	}
 	result := map[string]interface{}{
-		"root_member": rootMemberRef.String(),
-		"node_domain": nodeDomainRef.String(),
+		"root_member":     rootMemberRef.String(),
+		"oracle_members":  oracleMemberRefStrs,
+		"md_admin_member": mdAdminMemberRef.String(),
+		"node_domain":     nodeDomainRef.String(),
 	}
 	resJSON, _ := json.Marshal(result)
 	resSer, _ := insolar.MarshalArgs(resJSON, nil)
@@ -86,9 +93,14 @@ func TestNew(t *testing.T) {
 func TestGenesisDataProvider_setInfo(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
+	oracleMemberRefs := map[string]insolar.Reference{}
+	for i := 0; i < 10; i++ {
+		oracleMemberRefs["oracle"+strconv.Itoa(i)] = testutils.RandomRef()
+	}
+	mdAdminMemberRef := testutils.RandomRef()
 	nodeDomainRef := testutils.RandomRef()
 
-	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
+	infoRes := mockInfoResult(rootMemberRef, oracleMemberRefs, mdAdminMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),
@@ -131,9 +143,14 @@ func TestGenesisDataProvider_GetRootDomain(t *testing.T) {
 func TestGenesisDataProvider_GetRootMember(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
+	oracleMemberRefs := map[string]insolar.Reference{}
+	for i := 0; i < 10; i++ {
+		oracleMemberRefs["oracle"+strconv.Itoa(i)] = testutils.RandomRef()
+	}
+	mdAdminMemberRef := testutils.RandomRef()
 	nodeDomainRef := testutils.RandomRef()
 
-	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
+	infoRes := mockInfoResult(rootMemberRef, oracleMemberRefs, mdAdminMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),
@@ -149,10 +166,15 @@ func TestGenesisDataProvider_GetRootMember(t *testing.T) {
 func TestGenesisDataProvider_GetRootMember_AlreadySet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
+	oracleMemberRefs := map[string]insolar.Reference{}
+	for i := 0; i < 10; i++ {
+		oracleMemberRefs["oracle"+strconv.Itoa(i)] = testutils.RandomRef()
+	}
+	mdAdminMemberRef := testutils.RandomRef()
 	nodeDomainRef := testutils.RandomRef()
 
 	newRootMemberRef := testutils.RandomRef()
-	infoRes := mockInfoResult(newRootMemberRef, nodeDomainRef)
+	infoRes := mockInfoResult(newRootMemberRef, oracleMemberRefs, mdAdminMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),
@@ -184,9 +206,14 @@ func TestGenesisDataProvider_GetRootMember_Error(t *testing.T) {
 func TestGenesisDataProvider_GetNodeDomain(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
+	oracleMemberRefs := map[string]insolar.Reference{}
+	for i := 0; i < 10; i++ {
+		oracleMemberRefs["oracle"+strconv.Itoa(i)] = testutils.RandomRef()
+	}
+	mdAdminMemberRef := testutils.RandomRef()
 	nodeDomainRef := testutils.RandomRef()
 
-	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
+	infoRes := mockInfoResult(rootMemberRef, oracleMemberRefs, mdAdminMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),
@@ -202,10 +229,15 @@ func TestGenesisDataProvider_GetNodeDomain(t *testing.T) {
 func TestGenesisDataProvider_GetNodeDomain_AlreadySet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
+	oracleMemberRefs := map[string]insolar.Reference{}
+	for i := 0; i < 10; i++ {
+		oracleMemberRefs["oracle"+strconv.Itoa(i)] = testutils.RandomRef()
+	}
+	mdAdminMemberRef := testutils.RandomRef()
 	nodeDomainRef := testutils.RandomRef()
 
 	newNodeDomainRef := testutils.RandomRef()
-	infoRes := mockInfoResult(rootMemberRef, newNodeDomainRef)
+	infoRes := mockInfoResult(rootMemberRef, oracleMemberRefs, mdAdminMemberRef, newNodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),

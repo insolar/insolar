@@ -25,7 +25,7 @@ import (
 func Sub(a *big.Int, b *big.Int) (*big.Int, error) {
 	result := new(big.Int)
 
-	if a.Cmp(b) == 1 {
+	if a.Cmp(b) == -1 {
 		return result, errors.New("subtrahend must be smaller than minuend")
 	}
 
