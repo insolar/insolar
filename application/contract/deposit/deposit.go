@@ -18,9 +18,11 @@ package deposit
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"math/big"
+	"strconv"
 	"time"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 type DepositStatus string
@@ -59,6 +61,15 @@ func New(oracleConfirms map[string]bool, txHash string, amount big.Int, unHoldDa
 		TxHash:         txHash,
 		UnHoldDate:     unHoldDate,
 		Amount:         amount,
+	}, nil
+}
+
+func (d *Deposit) MapMarshal() (map[string]string, error) {
+	return map[string]string{
+		"Status":   string(d.Status),
+		"Confirms": strconv.Itoa(int(d.Confirms)),
+		"TxHash":   d.TxHash,
+		"Amount":   d.Amount.String(),
 	}, nil
 }
 

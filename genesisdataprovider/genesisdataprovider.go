@@ -31,9 +31,11 @@ type GenesisDataProvider struct {
 	CertificateManager insolar.CertificateManager `inject:""`
 	ContractRequester  insolar.ContractRequester  `inject:""`
 
-	rootMemberRef *insolar.Reference
-	nodeDomainRef *insolar.Reference
-	lock          sync.RWMutex
+	rootMemberRef    *insolar.Reference
+	oracleMemberRefs map[string]*insolar.Reference
+	mdAdminMemberRef *insolar.Reference
+	nodeDomainRef    *insolar.Reference
+	lock             sync.RWMutex
 }
 
 // New creates new GenesisDataProvider
@@ -55,7 +57,21 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.RootMember")
 	}
+	oracleMemberRefs := map[string]*insolar.Reference{}
+	for name, refStr := range info.OracleMembers {
+		oracleMemberRef, err := insolar.NewReferenceFromBase58(refStr)
+		if err != nil {
+			return errors.Wrap(err, "[ setInfo ] Failed to parse info.OracleMember")
+		}
+		oracleMemberRefs[name] = oracleMemberRef
+	}
+	mdAdminMemberRef, err := insolar.NewReferenceFromBase58(info.MDAdminMember)
+	if err != nil {
+		return errors.Wrap(err, "[ setInfo ] Failed to parse info.RootMember")
+	}
 	gdp.rootMemberRef = rootMemberRef
+	gdp.oracleMemberRefs = oracleMemberRefs
+	gdp.mdAdminMemberRef = mdAdminMemberRef
 	nodeDomainRef, err := insolar.NewReferenceFromBase58(info.NodeDomain)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.NodeDomain")
@@ -94,4 +110,30 @@ func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*insolar.Ref
 		}
 	}
 	return gdp.rootMemberRef, nil
+}
+
+// GetRootMember returns reference to RootMember
+func (gdp *GenesisDataProvider) GetOracleMembers(ctx context.Context) (map[string]*insolar.Reference, error) {
+	gdp.lock.Lock()
+	defer gdp.lock.Unlock()
+	if gdp.oracleMemberRefs == nil {
+		err := gdp.setInfo(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetOracleMembers ] Can't get info")
+		}
+	}
+	return gdp.oracleMemberRefs, nil
+}
+
+// GetRootMember returns reference to RootMember
+func (gdp *GenesisDataProvider) GetMDAdminMember(ctx context.Context) (*insolar.Reference, error) {
+	gdp.lock.Lock()
+	defer gdp.lock.Unlock()
+	if gdp.mdAdminMemberRef == nil {
+		err := gdp.setInfo(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetMDAdminMember ] Can't get info")
+		}
+	}
+	return gdp.mdAdminMemberRef, nil
 }

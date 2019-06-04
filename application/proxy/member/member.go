@@ -24,9 +24,14 @@ import (
 	"math/big"
 )
 
+type BalanceWithDeposits struct {
+	Balance string
+	//Deposits []map[string]string
+}
+
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113BPfEdjGWrFw6Nm13PKNNR3CAKLpEuqZq1L8Y56.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111131AyaMizrwqYwp5ffrqyQShh3iYUe3PBPNnbjt2.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {

@@ -17,7 +17,6 @@
 package rootdomain
 
 import (
-	"container/list"
 	"encoding/json"
 	"fmt"
 	"github.com/insolar/insolar/application/proxy/member"
@@ -35,7 +34,7 @@ type RootDomain struct {
 	MDWallet          insolar.Reference
 	BurnAddressMap    map[string]insolar.Reference
 	PublicKeyMap      map[string]insolar.Reference
-	FreeBurnAddresses list.List
+	FreeBurnAddresses []string
 	NodeDomain        insolar.Reference
 }
 
@@ -95,19 +94,17 @@ func (rd *RootDomain) DumpAllUsers() (*proxyctx.ChildrenTypedIterator, error) {
 }
 
 func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
-	rd.FreeBurnAddresses.PushBack(burnAddress)
+	rd.FreeBurnAddresses = append(rd.FreeBurnAddresses, burnAddress)
 
 	return nil
 }
 
 func (rd *RootDomain) GetBurnAddress() (string, error) {
-	e := rd.FreeBurnAddresses.Front()
-	if e == nil {
+	if len(rd.FreeBurnAddresses) == 0 {
 		return "", fmt.Errorf("[ GetBurnAddress ] No more burn address left")
 	}
-	rd.FreeBurnAddresses.Remove(e)
 
-	return e.Value.(string), nil
+	return rd.FreeBurnAddresses[0], nil
 }
 
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {

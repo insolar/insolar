@@ -17,7 +17,6 @@
 package genesis
 
 import (
-	"container/list"
 	"context"
 	"crypto"
 	"encoding/json"
@@ -435,7 +434,7 @@ func (g *Generator) updateRootDomain(
 		MDWallet:          *g.mdWalletContract,
 		BurnAddressMap:    map[string]insolar.Reference{},
 		PublicKeyMap:      map[string]insolar.Reference{},
-		FreeBurnAddresses: *list.New(),
+		FreeBurnAddresses: []string{},
 		NodeDomain:        *g.nodeDomainContract,
 	})
 	if err != nil {
@@ -465,7 +464,7 @@ func (g *Generator) activateRootWallet(
 		return errors.Errorf("[ ActivateRootWallet ] Failed to parse RootBalance")
 	}
 
-	w, err := wallet.New(*b)
+	w, err := wallet.New(b.String())
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
@@ -517,7 +516,7 @@ func (g *Generator) activateMDWallet(
 		return errors.Errorf("[ activateMDWallet ] Failed to parse MDBalance")
 	}
 
-	w, err := wallet.New(*b)
+	w, err := wallet.New(b.String())
 	if err != nil {
 		return errors.Wrap(err, "[ activateMDWallet ]")
 	}

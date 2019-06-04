@@ -20,6 +20,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"strconv"
+	"time"
+
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/deposit"
 	"github.com/insolar/insolar/application/proxy/member"
@@ -28,9 +32,6 @@ import (
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"math/big"
-	"strconv"
-	"time"
 )
 
 type Member struct {
@@ -174,7 +175,7 @@ func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key strin
 		return nil, fmt.Errorf("[ createMember ] Can't save as child: %s", err.Error())
 	}
 
-	wHolder := wallet.New(big.Int{})
+	wHolder := wallet.New(big.NewInt(100).String())
 	_, err = wHolder.AsDelegate(new.Reference)
 	if err != nil {
 		return nil, fmt.Errorf("[ createMember ] Can't save as delegate: %s", err.Error())
@@ -183,14 +184,14 @@ func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key strin
 	return new, nil
 }
 
-func (m *Member) getDeposits() ([]deposit.Deposit, error) {
+func (m *Member) getDeposits() ([]map[string]string, error) {
 
 	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
 	if err != nil {
 		return nil, fmt.Errorf("[ getDeposits ] Can't get children: %s", err.Error())
 	}
 
-	result := []deposit.Deposit{}
+	result := []map[string]string{}
 	for iterator.HasNext() {
 		cref, err := iterator.Next()
 		if err != nil {
@@ -200,11 +201,21 @@ func (m *Member) getDeposits() ([]deposit.Deposit, error) {
 		if !cref.IsEmpty() {
 			d := deposit.GetObject(cref)
 
-			result = append(result, *d)
+			m, err := d.MapMarshal()
+			if err != nil {
+				return nil, fmt.Errorf("[ getDeposits ] Can't marshal deposit to map: %s", err.Error())
+			}
+
+			result = append(result, m)
 		}
 	}
 
 	return result, nil
+}
+
+type BalanceWithDeposits struct {
+	Balance string
+	//Deposits []map[string]string
 }
 
 func (m *Member) getBalanceCall() (interface{}, error) {
@@ -216,41 +227,36 @@ func (m *Member) getBalanceCall() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("[ getBalanceCall ] Can't get balance: %s", err.Error())
 	}
-	d, err := m.getDeposits()
+	//d, err := m.getDeposits()
+	//if err != nil {
+	//	return nil, fmt.Errorf("[ getBalanceCall ] Can't get deposits: %s", err.Error())
+	//}
+
+	balanceWithDepositsMarshaled, err := json.Marshal(BalanceWithDeposits{
+		Balance: b,
+		//Deposits: d,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("[ getBalanceCall ] Can't get deposits: %s", err.Error())
+		return nil, fmt.Errorf("[ getBalanceCall ] Can't marshal: %s", err.Error())
 	}
 
-	jsonOut, err := json.Marshal(struct {
-		Balance  big.Int
-		Deposits []deposit.Deposit
-	}{
-		Balance:  b,
-		Deposits: d,
-	})
-
-	return jsonOut, nil
+	return balanceWithDepositsMarshaled, nil
 }
 
 func parseTimeStamp(timeStr string) (time.Time, error) {
 
 	i, err := strconv.ParseInt(timeStr, 10, 64)
 	if err != nil {
-		return time.Unix(0, 0), errors.New("Can't parse time")
+		return time.Unix(0, 0), errors.New("Can't parse time ")
 	}
 	return time.Unix(i, 0), nil
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
-	var toMemberStr, inAmount string
-	if err := signer.UnmarshalParams(params, &inAmount, &toMemberStr); err != nil {
+	var toMemberStr string
+	var amount string
+	if err := signer.UnmarshalParams(params, &amount, &toMemberStr); err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
-	}
-
-	amount := new(big.Int)
-	amount, ok := amount.SetString(inAmount, 10)
-	if !ok {
-		return nil, fmt.Errorf("[ transferCall ] Failed to parse amount")
 	}
 
 	toMember, err := insolar.NewReferenceFromBase58(toMemberStr)
@@ -261,10 +267,10 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ transferCall ] Recipient must be different from the sender")
 	}
 
-	return m.transfer(*amount, toMember)
+	return m.transfer(amount, toMember)
 }
 
-func (m *Member) transfer(amount big.Int, toMember *insolar.Reference) (interface{}, error) {
+func (m *Member) transfer(amount string, toMember *insolar.Reference) (interface{}, error) {
 
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
@@ -578,6 +584,9 @@ func (mdAdminMember *Member) AddBurnAddressCall(rdRef insolar.Reference, params 
 	}
 
 	err = rootDomain.AddBurnAddress(burnAddress)
+	if err != nil {
+		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't add burn address: %s", err.Error())
+	}
 
-	return nil, err
+	return nil, nil
 }
