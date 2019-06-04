@@ -760,13 +760,13 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 
 func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessage() {
 	objectId := testutils.RandomID()
-	objectRef := testutils.RandomRef()
+	objectRef := *insolar.NewReference(objectId)
 	msg := &message.AbandonedRequestsNotification{Object: objectId}
 	parcel := &message.Parcel{Msg: msg}
 
 	_, err := suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests false
@@ -777,7 +777,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests already true
@@ -788,7 +788,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 }
 
