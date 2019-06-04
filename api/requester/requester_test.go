@@ -68,11 +68,6 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	}
 
 	answer := map[string]interface{}{}
-	// if params.Method == "CreateMember" {
-	// 	answer["reference"] = TESTREFERENCE
-	// } else {
-	// 	answer["random_data"] = TESTSEED
-	// }
 	answer["reference"] = TESTREFERENCE
 
 	writeReponse(response, answer)
@@ -208,7 +203,7 @@ func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 func TestGetResponseBody(t *testing.T) {
 	data, err := GetResponseBody(URL+"/call", PostParams{})
 	require.NoError(t, err)
-	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
+	require.Contains(t, string(data), `"reference": "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"`)
 }
 
 func TestSetVerbose(t *testing.T) {
