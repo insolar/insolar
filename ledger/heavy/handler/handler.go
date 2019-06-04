@@ -142,9 +142,10 @@ func (h *Handler) handlePass(ctx context.Context, msg *watermillMsg.Message) err
 	}
 	origin := watermillMsg.NewMessage(watermill.NewUUID(), pass.Origin)
 	middleware.SetCorrelationID(string(pass.CorrelationID), origin)
+
 	switch payloadType { // nolint
 	case payload.TypeGetCode:
-		p := proc.NewGetCode(msg)
+		p := proc.NewGetCode(origin)
 		h.dep.GetCode(p)
 		return p.Proceed(ctx)
 	default:
