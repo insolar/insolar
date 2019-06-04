@@ -49,5 +49,5 @@ func TestCallUploadedContract(t *testing.T) {
 
 	methodResult := callMethod(t, objectRef, "Hello", argsSerialized)
 
-	require.Equal(t, testParam, methodResult.(string))
+	require.Equal(t, testParam, methodResult)
 }
