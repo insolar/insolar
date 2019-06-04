@@ -374,7 +374,7 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 
 	node, err := n.wrapMeta(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send message")
+		return nil, n.replyError(msg, errors.Wrap(err, "failed to send message"))
 	}
 
 	// Short path when sending to self node. Skip serialization
@@ -382,20 +382,20 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	if node.Equal(origin.ID()) {
 		err := n.Pub.Publish(bus.TopicIncoming, msg)
 		if err != nil {
-			return nil, errors.Wrap(err, "error while publish msg to TopicIncoming")
+			return nil, n.replyError(msg, errors.Wrap(err, "error while publish msg to TopicIncoming"))
 		}
 		return nil, nil
 	}
 	msgBytes, err := messageToBytes(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "error while converting message to bytes")
+		return nil, n.replyError(msg, errors.Wrap(err, "error while converting message to bytes"))
 	}
 	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
 	if err != nil {
-		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
+		return nil, n.replyError(msg, errors.Wrap(err, "error while sending watermillMsg to controller"))
 	}
 	if !bytes.Equal(res, ack) {
-		return nil, errors.Errorf("reply is not ack: %s", res)
+		return nil, n.replyError(msg, errors.Errorf("reply is not ack: %s", res))
 	}
 
 	logger.WithFields(map[string]interface{}{
@@ -404,6 +404,29 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	}).Info("Network sent message")
 
 	return nil, nil
+}
+
+func (n *ServiceNetwork) replyError(msg *message.Message, repErr error) error {
+	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
+	if err != nil {
+		return errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error())
+	}
+	middleware.SetCorrelationID(middleware.MessageCorrelationID(msg), errMsg)
+	errMsg.Metadata.Set(bus.MetaTraceID, msg.Metadata.Get(bus.MetaTraceID))
+	wrapper := payload.Meta{
+		Payload: errMsg.Payload,
+	}
+	buf, err := wrapper.Marshal()
+	if err != nil {
+		return errors.Wrapf(err, "failed to wrap message with error as reply (%s)", repErr.Error())
+	}
+	errMsg.Payload = buf
+
+	err = n.Pub.Publish(bus.TopicIncoming, errMsg)
+	if err != nil {
+		return errors.Wrapf(err, "failed to publish message with error as reply (%s)", repErr.Error())
+	}
+	return nil
 }
 
 func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {

@@ -60,6 +60,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
@@ -67,9 +68,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type PublisherMock struct{}
+type PublisherMock struct {
+	msg *message.Message
+}
 
 func (p *PublisherMock) Publish(topic string, messages ...*message.Message) error {
+	p.msg = messages[0]
 	return nil
 }
 
@@ -77,16 +81,27 @@ func (p *PublisherMock) Close() error {
 	return nil
 }
 
+func checkPublishedMsg(t *testing.T, pub *PublisherMock, errText string) {
+	require.NotNil(t, pub.msg)
+	replyPayload, err := payload.UnmarshalFromMeta(pub.msg.Payload)
+	require.NoError(t, err)
+	require.Contains(t, replyPayload.(*payload.Error).Text, errText)
+}
+
 func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	pubMock := &PublisherMock{}
 
-	payload := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), payload)
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	serviceNetwork.Pub = pubMock
+
+	p := []byte{1, 2, 3, 4, 5}
+	inMsg := message.NewMessage(watermill.NewUUID(), p)
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
-	require.EqualError(t, err, "failed to send message: Receiver in msg.Metadata not set")
+	require.NoError(t, err)
+	checkPublishedMsg(t, pubMock, "failed to send message: Receiver in msg.Metadata not set")
 	require.Nil(t, outMsgs)
 }
 
@@ -94,15 +109,18 @@ func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	pubMock := &PublisherMock{}
 
-	payload := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), payload)
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	serviceNetwork.Pub = pubMock
+
+	p := []byte{1, 2, 3, 4, 5}
+	inMsg := message.NewMessage(watermill.NewUUID(), p)
 	inMsg.Metadata.Set(bus.MetaReceiver, "someBadValue")
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "incorrect Receiver in msg.Metadata")
+	require.NoError(t, err)
+	checkPublishedMsg(t, pubMock, "incorrect Receiver in msg.Metadata")
 	require.Nil(t, outMsgs)
 }
 
@@ -138,7 +156,9 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 func TestSendMessageHandler_SendError(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
+	pubMock := &PublisherMock{}
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	serviceNetwork.Pub = pubMock
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
@@ -157,20 +177,22 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	serviceNetwork.Controller = controller
 	serviceNetwork.NodeKeeper = nodeN
 
-	payload := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), payload)
+	p := []byte{1, 2, 3, 4, 5}
+	inMsg := message.NewMessage(watermill.NewUUID(), p)
 	inMsg.Metadata.Set(bus.MetaReceiver, testutils.RandomRef().String())
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "error while sending watermillMsg to controller")
+	require.NoError(t, err)
+	checkPublishedMsg(t, pubMock, "error while sending watermillMsg to controller")
 	require.Nil(t, outMsgs)
 }
 
 func TestSendMessageHandler_WrongReply(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
+	pubMock := &PublisherMock{}
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	serviceNetwork.Pub = pubMock
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
@@ -194,8 +216,8 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	inMsg.Metadata.Set(bus.MetaReceiver, testutils.RandomRef().String())
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "reply is not ack")
+	require.NoError(t, err)
+	checkPublishedMsg(t, pubMock, "reply is not ack")
 	require.Nil(t, outMsgs)
 }
 
