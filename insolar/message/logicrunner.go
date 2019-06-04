@@ -273,7 +273,7 @@ func (pf *PendingFinished) Type() insolar.MessageType {
 // AdditionalCallFromPreviousExecutor is sent to the current executor
 // by previous executor when Flow cancels after registering the request
 // but before adding the request to the execution queue. For this reason
-// this one message may be invisible by OnPulse handler. See HandleCall
+// this one request may be invisible by OnPulse handler. See HandleCall
 // for more details.
 type AdditionalCallFromPreviousExecutor struct {
 	ObjectReference insolar.Reference
