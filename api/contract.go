@@ -40,6 +40,7 @@ import (
 // ContractService is a service that provides ability to add custom contracts
 type ContractService struct {
 	runner *Runner
+	cb     *goplugintestutils.ContractsBuilder
 }
 
 // NewContractService creates new Contract service instance.
@@ -72,22 +73,24 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 		return errors.New("params.code is missing")
 	}
 
-	insgocc, err := goplugintestutils.BuildPreprocessor()
-	if err != nil {
-		inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
-		return errors.Wrap(err, "can't build preprocessor")
+	if s.cb == nil {
+		insgocc, err := goplugintestutils.BuildPreprocessor()
+		if err != nil {
+			inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
+			return errors.Wrap(err, "can't build preprocessor")
+		}
+		s.cb = goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc)
 	}
-	cb := goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc)
 
 	contractMap := make(map[string]string)
 	contractMap[args.Name] = args.Code
 
-	err = cb.Build(contractMap)
+	err := s.cb.Build(contractMap)
 	if err != nil {
 		inslog.Infof("[ ContractService.Upload ] can't build contract %#v", err)
 		return errors.Wrap(err, "can't build contract")
 	}
-	reference := *cb.Prototypes[args.Name]
+	reference := *s.cb.Prototypes[args.Name]
 	reply.PrototypeRef = reference.String()
 	return nil
 }
