@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -74,7 +74,7 @@ type PendingAccessorMockIsStateCalculatedResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of PendingAccessor.IsStateCalculated is expected from 1 to Infinity times
+//Expect specifies that invocation of PendingAccessor.IsStateCalculated is expected from 1 to Infinity times
 func (m *mPendingAccessorMockIsStateCalculated) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mPendingAccessorMockIsStateCalculated {
 	m.mock.IsStateCalculatedFunc = nil
 	m.expectationSeries = nil
@@ -86,7 +86,7 @@ func (m *mPendingAccessorMockIsStateCalculated) Expect(p context.Context, p1 ins
 	return m
 }
 
-// Return specifies results of invocation of PendingAccessor.IsStateCalculated
+//Return specifies results of invocation of PendingAccessor.IsStateCalculated
 func (m *mPendingAccessorMockIsStateCalculated) Return(r bool, r1 error) *PendingAccessorMock {
 	m.mock.IsStateCalculatedFunc = nil
 	m.expectationSeries = nil
@@ -98,7 +98,7 @@ func (m *mPendingAccessorMockIsStateCalculated) Return(r bool, r1 error) *Pendin
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PendingAccessor.IsStateCalculated is expected once
+//ExpectOnce specifies that invocation of PendingAccessor.IsStateCalculated is expected once
 func (m *mPendingAccessorMockIsStateCalculated) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *PendingAccessorMockIsStateCalculatedExpectation {
 	m.mock.IsStateCalculatedFunc = nil
 	m.mainExpectation = nil
@@ -113,7 +113,7 @@ func (e *PendingAccessorMockIsStateCalculatedExpectation) Return(r bool, r1 erro
 	e.result = &PendingAccessorMockIsStateCalculatedResult{r, r1}
 }
 
-// Set uses given function f as a mock of PendingAccessor.IsStateCalculated method
+//Set uses given function f as a mock of PendingAccessor.IsStateCalculated method
 func (m *mPendingAccessorMockIsStateCalculated) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r bool, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -122,7 +122,7 @@ func (m *mPendingAccessorMockIsStateCalculated) Set(f func(p context.Context, p1
 	return m.mock
 }
 
-// IsStateCalculated implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
+//IsStateCalculated implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
 func (m *PendingAccessorMock) IsStateCalculated(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r bool, r1 error) {
 	counter := atomic.AddUint64(&m.IsStateCalculatedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsStateCalculatedCounter, 1)
@@ -174,17 +174,17 @@ func (m *PendingAccessorMock) IsStateCalculated(p context.Context, p1 insolar.Pu
 	return m.IsStateCalculatedFunc(p, p1, p2)
 }
 
-// IsStateCalculatedMinimockCounter returns a count of PendingAccessorMock.IsStateCalculatedFunc invocations
+//IsStateCalculatedMinimockCounter returns a count of PendingAccessorMock.IsStateCalculatedFunc invocations
 func (m *PendingAccessorMock) IsStateCalculatedMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.IsStateCalculatedCounter)
 }
 
-// IsStateCalculatedMinimockPreCounter returns the value of PendingAccessorMock.IsStateCalculated invocations
+//IsStateCalculatedMinimockPreCounter returns the value of PendingAccessorMock.IsStateCalculated invocations
 func (m *PendingAccessorMock) IsStateCalculatedMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IsStateCalculatedPreCounter)
 }
 
-// IsStateCalculatedFinished returns true if mock invocations count is ok
+//IsStateCalculatedFinished returns true if mock invocations count is ok
 func (m *PendingAccessorMock) IsStateCalculatedFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.IsStateCalculatedMock.expectationSeries) > 0 {
