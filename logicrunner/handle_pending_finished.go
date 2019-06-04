@@ -47,11 +47,8 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 	os.Lock()
 	if os.ExecutionState == nil {
 		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = &ExecutionState{
-			Ref:     *ref,
-			Queue:   make([]ExecutionQueueElement, 0),
-			pending: message.NotPending,
-		}
+		os.ExecutionState = NewExecutionState(*ref)
+		os.ExecutionState.pending = message.NotPending
 		os.Unlock()
 
 		h.Message.ReplyTo <- replyOk
@@ -62,7 +59,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 
 	es.Lock()
 	es.pending = message.NotPending
-	if es.Current != nil {
+	if !es.CurrentList.Empty() {
 		es.Unlock()
 		return errors.New("[ HandlePendingFinished ] received PendingFinished when we are already executing")
 	}

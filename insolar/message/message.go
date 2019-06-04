@@ -47,6 +47,8 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &ValidationResults{}, nil
 	case insolar.TypePendingFinished:
 		return &PendingFinished{}, nil
+	case insolar.TypeAdditionalCallFromPreviousExecutor:
+		return &AdditionalCallFromPreviousExecutor{}, nil
 	case insolar.TypeStillExecuting:
 		return &StillExecuting{}, nil
 
@@ -193,6 +195,7 @@ func init() {
 	gob.Register(&CallMethod{})
 	gob.Register(&ReturnResults{})
 	gob.Register(&ExecutorResults{})
+	gob.Register(&AdditionalCallFromPreviousExecutor{})
 	gob.Register(&ValidateCaseBind{})
 	gob.Register(&ValidationResults{})
 	gob.Register(&PendingFinished{})
