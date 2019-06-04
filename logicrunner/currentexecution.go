@@ -44,7 +44,7 @@ type CurrentExecutionList struct {
 
 func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *CurrentExecution {
 	ces.lock.RLock()
-	rv, _ := ces.executions[requestRef]
+	rv := ces.executions[requestRef]
 	ces.lock.RUnlock()
 	return rv
 }
@@ -76,7 +76,7 @@ func (ces *CurrentExecutionList) GetByTraceID(traceid string) *CurrentExecution 
 func (ces *CurrentExecutionList) GetMutable() *CurrentExecution {
 	ces.lock.RLock()
 	for _, ce := range ces.executions {
-		if ce.LogicContext.Immutable == false {
+		if !ce.LogicContext.Immutable {
 			ces.lock.RUnlock()
 			return ce
 		}
@@ -87,7 +87,7 @@ func (ces *CurrentExecutionList) GetMutable() *CurrentExecution {
 
 func (ces *CurrentExecutionList) Cleanup() {
 	ces.lock.Lock()
-	ces.executions = make(map[insolar.Reference]*CurrentExecution, 0)
+	ces.executions = make(map[insolar.Reference]*CurrentExecution)
 	ces.lock.Unlock()
 }
 
@@ -108,7 +108,7 @@ func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, pred
 	rv := true
 	ces.lock.RLock()
 	for _, current := range ces.executions {
-		if predicate(current, predicateCtx) == false {
+		if !predicate(current, predicateCtx) {
 			rv = false
 			break
 		}

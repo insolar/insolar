@@ -135,8 +135,7 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 		return pulseNum, nil
 	}
 
-	es := NewExecutionState()
-	es.Ref = objectRef
+	es := NewExecutionState(objectRef)
 	es.CurrentList.Set(objectRef, &CurrentExecution{})
 	es.pending = message.NotPending
 
@@ -161,7 +160,7 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 }
 
 func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending() {
-	es := NewExecutionState()
+	es := NewExecutionState(testutils.RandomRef())
 	es.pending = message.InPending
 	es.Queue = append(es.Queue, ExecutionQueueElement{})
 
@@ -318,8 +317,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 				parcel.TypeMock.ExpectOnce().Return(insolar.TypeCallMethod)
 				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: test.messageType}})
 			}
-			es := NewExecutionState()
-			es.Ref = objectRef
+			es := NewExecutionState(objectRef)
 			es.pending = test.inState
 			if test.amReply != nil {
 				suite.am.HasPendingRequestsMock.Return(test.amReply.has, test.amReply.err)
@@ -344,8 +342,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		parcel.TypeMock.Expect().Return(insolar.TypeCallMethod)
 		parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: record.CTMethod}})
 
-		es := NewExecutionState()
-		es.Ref = objectRef
+		es := NewExecutionState(objectRef)
 		es.pending = message.PendingUnknown
 
 		suite.am.HasPendingRequestsMock.Return(false, errors.New("some"))
@@ -499,7 +496,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			}
 
 			if test.existingObject {
-				es := NewExecutionState()
+				es := NewExecutionState(object)
 				es.pending = test.object.pending
 
 				os := suite.lr.UpsertObjectState(object)
@@ -569,7 +566,7 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 }
 
 func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
-	es := NewExecutionState()
+	es := NewExecutionState(testutils.RandomRef())
 
 	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil)
 	suite.Require().False(loop)
@@ -666,7 +663,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	suite.Require().Equal(false, st.ExecutionState.PendingConfirmed)
 
 	// If we already have task in InPending, but it wasn't confirmed
-	es := NewExecutionState()
+	es := NewExecutionState(objectRef)
 	es.pending = message.InPending
 	es.PendingConfirmed = false
 
@@ -692,7 +689,7 @@ func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 		suite.T().Run(name, func(t *testing.T) {
 			a := assert.New(t)
 
-			es := NewExecutionState()
+			es := NewExecutionState(testutils.RandomRef())
 			es.Queue = make([]ExecutionQueueElement, tc.QueueLength)
 
 			mq, hasMore := es.releaseQueue()
@@ -720,7 +717,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 
 	randRef := testutils.RandomRef()
 
-	es := NewExecutionState()
+	es := NewExecutionState(randRef)
 	es.Queue = append(make([]ExecutionQueueElement, 0), ExecutionQueueElement{})
 	es.PrototypeDescriptor = pDesc
 	es.CodeDescriptor = cDesc
@@ -763,6 +760,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 
 func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessage() {
 	objectId := testutils.RandomID()
+	objectRef := testutils.RandomRef()
 	msg := &message.AbandonedRequestsNotification{Object: objectId}
 	parcel := &message.Parcel{Msg: msg}
 
@@ -773,7 +771,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 
 	// LedgerHasMoreRequests false
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
-	es := NewExecutionState()
+	es := NewExecutionState(objectRef)
 	es.LedgerHasMoreRequests = false
 	suite.lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: es}
 
@@ -784,7 +782,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 
 	// LedgerHasMoreRequests already true
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
-	es = NewExecutionState()
+	es = NewExecutionState(objectRef)
 	es.LedgerHasMoreRequests = true
 	suite.lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: es}
 
@@ -809,7 +807,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
 	}
 
-	es := NewExecutionState()
+	es := NewExecutionState(ref)
 	es.pending = message.InPending
 	es.CurrentList.Set(ref, &CurrentExecution{})
 
@@ -828,7 +826,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
 	}
 
-	es = NewExecutionState()
+	es = NewExecutionState(ref)
 	es.pending = message.InPending
 
 	suite.lr.state[ref] = &ObjectState{ExecutionState: es}
@@ -868,7 +866,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 			Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
 		}
 
-		es := NewExecutionState()
+		es := NewExecutionState(ref)
 		es.QueueProcessorActive = true
 		es.LedgerHasMoreRequests = test.objectStateStatus
 		suite.lr.state[ref] = &ObjectState{ExecutionState: es}
@@ -1332,7 +1330,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyES() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
-		ExecutionState: NewExecutionState(),
+		ExecutionState: NewExecutionState(s.objectRef),
 	}
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
@@ -1346,8 +1344,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyESWithValidation() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
-		ExecutionState: NewExecutionState(),
-		Validation:     NewExecutionState(),
+		ExecutionState: NewExecutionState(s.objectRef),
+		Validation:     NewExecutionState(s.objectRef),
 		Consensus:      &Consensus{},
 	}
 	err := s.lr.OnPulse(s.ctx, s.pulse)
@@ -1363,7 +1361,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestESWithValidationCurrent() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
-	es := NewExecutionState()
+	es := NewExecutionState(s.objectRef)
 	es.pending = message.NotPending
 	s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}
 	// we should set empty current execution here, since we added new
@@ -1383,7 +1381,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
-	es := NewExecutionState()
+	es := NewExecutionState(s.objectRef)
 	es.CurrentList.Set(s.objectRef, &CurrentExecution{})
 	es.Queue = append(es.Queue, ExecutionQueueElement{ctx: s.ctx})
 	es.pending = message.NotPending
@@ -1402,7 +1400,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithEmptyQueue() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
-	es := NewExecutionState()
+	es := NewExecutionState(s.objectRef)
 	es.CurrentList.Set(s.objectRef, &CurrentExecution{})
 	es.pending = message.NotPending
 
@@ -1419,7 +1417,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	es := NewExecutionState()
+	es := NewExecutionState(s.objectRef)
 	es.pending = message.NotPending
 	s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}
 	es.CurrentList.Set(s.objectRef, &CurrentExecution{})
@@ -1437,7 +1435,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	es := NewExecutionState()
+	es := NewExecutionState(s.objectRef)
 	es.CurrentList.Set(s.objectRef, &CurrentExecution{})
 	es.pending = message.InPending
 
@@ -1456,7 +1454,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
 
 	s.am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
 
-	es := NewExecutionState()
+	es := NewExecutionState(s.objectRef)
 	es.pending = message.InPending
 	es.PendingConfirmed = false
 	es.Ref = s.objectRef
@@ -1475,7 +1473,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer3() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	es := NewExecutionState()
+	es := NewExecutionState(s.objectRef)
 	es.pending = message.InPending
 	es.PendingConfirmed = true
 
@@ -1496,7 +1494,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestSendTaskToNextExecutor() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
-	es := NewExecutionState()
+	es := NewExecutionState(s.objectRef)
 	es.pending = message.InPending
 	es.PendingConfirmed = false
 
@@ -1556,7 +1554,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 				return nil, nil
 			})
 
-			es := NewExecutionState()
+			es := NewExecutionState(s.objectRef)
 			es.Queue = test.queue
 			s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}
 
@@ -1600,8 +1598,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) AfterTest(suiteName, testName
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueElement() {
-	es := NewExecutionState()
-	es.Ref = s.ref
+	es := NewExecutionState(s.ref)
 	es.LedgerQueueElement = &ExecutionQueueElement{}
 
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
@@ -1612,8 +1609,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
-	es := NewExecutionState()
-	es.Ref = s.ref
+	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = false
 
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
@@ -1621,8 +1617,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecution
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() {
-	es := NewExecutionState()
-	es.Ref = s.ref
+	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = true
 
 	am := artifacts.NewClientMock(s.mc)
@@ -1633,8 +1628,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() 
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
-	es := NewExecutionState()
-	es.Ref = s.ref
+	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = true
 
 	parcel := &message.Parcel{
@@ -1653,8 +1647,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 }
 
 func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequest() {
-	es := NewExecutionState()
-	es.Ref = s.ref
+	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = true
 
 	parcel := &message.Parcel{

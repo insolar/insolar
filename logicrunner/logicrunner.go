@@ -604,14 +604,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 
 	executor, err := lr.GetExecutor(es.CodeDescriptor.MachineType())
 	if err != nil {
-		return nil, es.WrapError(err, "no executor registered")
+		return nil, es.WrapError(current, err, "no executor registered")
 	}
 
 	newData, result, err := executor.CallMethod(
 		ctx, current.LogicContext, *es.CodeDescriptor.Ref(), es.ObjectDescriptor.Memory(), msg.Method, msg.Arguments,
 	)
 	if err != nil {
-		return nil, es.WrapError(err, "executor error")
+		return nil, es.WrapError(current, err, "executor error")
 	}
 
 	am := lr.ArtifactManager
@@ -620,17 +620,17 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 			ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor,
 		)
 		if err != nil {
-			return nil, es.WrapError(err, "couldn't deactivate object")
+			return nil, es.WrapError(current, err, "couldn't deactivate object")
 		}
 	} else if !bytes.Equal(es.ObjectDescriptor.Memory(), newData) {
 		_, err := am.UpdateObject(ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor, newData)
 		if err != nil {
-			return nil, es.WrapError(err, "couldn't update object")
+			return nil, es.WrapError(current, err, "couldn't update object")
 		}
 	}
 	_, err = am.RegisterResult(ctx, *msg.Object, *current.RequestRef, result)
 	if err != nil {
-		return nil, es.WrapError(err, "couldn't save results")
+		return nil, es.WrapError(current, err, "couldn't save results")
 	}
 
 	return &reply.CallMethod{Result: result}, nil
@@ -670,16 +670,16 @@ func (lr *LogicRunner) executeConstructorCall(
 	msg := current.Message
 
 	if current.LogicContext.Caller.IsEmpty() {
-		return nil, es.WrapError(nil, "Call constructor from nowhere")
+		return nil, es.WrapError(current, nil, "Call constructor from nowhere")
 	}
 
 	if msg.Prototype == nil {
-		return nil, es.WrapError(nil, "prototype reference is required")
+		return nil, es.WrapError(current, nil, "prototype reference is required")
 	}
 
 	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *msg.Prototype)
 	if err != nil {
-		return nil, es.WrapError(err, "couldn't descriptors")
+		return nil, es.WrapError(current, err, "couldn't descriptors")
 	}
 
 	current.LogicContext.Prototype = protoDesc.HeadRef()
@@ -687,12 +687,12 @@ func (lr *LogicRunner) executeConstructorCall(
 
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
-		return nil, es.WrapError(err, "no executer registered")
+		return nil, es.WrapError(current, err, "no executer registered")
 	}
 
 	newData, err := executor.CallConstructor(ctx, current.LogicContext, *codeDesc.Ref(), msg.Method, msg.Arguments)
 	if err != nil {
-		return nil, es.WrapError(err, "executer error")
+		return nil, es.WrapError(current, err, "executer error")
 	}
 
 	switch msg.CallType {
@@ -702,16 +702,16 @@ func (lr *LogicRunner) executeConstructorCall(
 			Ref{}, *current.RequestRef, *msg.Base, *msg.Prototype, msg.CallType == record.CTSaveAsDelegate, newData,
 		)
 		if err != nil {
-			return nil, es.WrapError(err, "couldn't activate object")
+			return nil, es.WrapError(current, err, "couldn't activate object")
 		}
 		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.RequestRef, *current.RequestRef, nil)
 		if err != nil {
-			return nil, es.WrapError(err, "couldn't save results")
+			return nil, es.WrapError(current, err, "couldn't save results")
 		}
 		return &reply.CallConstructor{Object: current.RequestRef}, err
 
 	default:
-		return nil, es.WrapError(nil, "unsupported type of save object")
+		return nil, es.WrapError(current, nil, "unsupported type of save object")
 	}
 }
 

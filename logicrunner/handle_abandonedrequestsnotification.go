@@ -43,8 +43,7 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 
 	state.Lock()
 	if state.ExecutionState == nil {
-		state.ExecutionState = NewExecutionState()
-		state.ExecutionState.Ref = ref
+		state.ExecutionState = NewExecutionState(ref)
 		state.ExecutionState.pending = message.InPending
 		state.ExecutionState.PendingConfirmed = false
 		state.ExecutionState.LedgerHasMoreRequests = true

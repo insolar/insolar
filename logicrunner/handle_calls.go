@@ -51,8 +51,7 @@ func (h *HandleCall) handleActual(
 
 	os.Lock()
 	if os.ExecutionState == nil {
-		os.ExecutionState = NewExecutionState()
-		os.ExecutionState.Ref = ref
+		os.ExecutionState = NewExecutionState(ref)
 	}
 	es := os.ExecutionState
 	os.Unlock()

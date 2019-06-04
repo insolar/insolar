@@ -48,9 +48,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 
 	state.Lock()
 	if state.ExecutionState == nil {
-		state.ExecutionState = NewExecutionState()
-		state.ExecutionState.Ref = ref
-
+		state.ExecutionState = NewExecutionState(ref)
 	}
 	es := state.ExecutionState
 	p.Result.es = es

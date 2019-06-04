@@ -47,8 +47,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 	os.Lock()
 	if os.ExecutionState == nil {
 		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = NewExecutionState()
-		os.ExecutionState.Ref = *ref
+		os.ExecutionState = NewExecutionState(*ref)
 		os.ExecutionState.pending = message.NotPending
 		os.Unlock()
 
