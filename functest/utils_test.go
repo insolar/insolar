@@ -26,6 +26,7 @@ import (
 	"github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/testutils"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -268,7 +269,7 @@ func  uploadContract(t *testing.T, contractCode string) *insolar.Reference {
 		"method":  "contract.Upload",
 		"id":      "",
 		"params": map[string]string{
-			"name": "test",
+			"name": testutils.RandStringBytes(16),
 			"code": contractCode,
 		},
 	})
