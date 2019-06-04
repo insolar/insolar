@@ -46,9 +46,9 @@ type pendingMeta struct {
 	isStateCalculated bool
 	fullFilament      []chainLink
 
-	notClosedRequestsIds   []insolar.ID
-	notClosedRequestsIndex map[insolar.PulseNumber]map[insolar.ID]*record.Request
-	requestPNIndex         map[insolar.ID]insolar.PulseNumber
+	notClosedRequestsIds      []insolar.ID
+	notClosedRequestsIdsIndex map[insolar.PulseNumber]map[insolar.ID]struct{}
+	requestPNIndex            map[insolar.ID]insolar.PulseNumber
 }
 
 type chainLink struct {
@@ -104,11 +104,11 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 			PendingRecords: []insolar.ID{},
 		},
 		pendingMeta: pendingMeta{
-			fullFilament:           []chainLink{},
-			notClosedRequestsIds:   []insolar.ID{},
-			notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
-			requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
-			isStateCalculated:      false,
+			fullFilament:              []chainLink{},
+			notClosedRequestsIds:      []insolar.ID{},
+			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[insolar.ID]struct{}{},
+			requestPNIndex:            map[insolar.ID]insolar.PulseNumber{},
+			isStateCalculated:         false,
 		},
 	}
 
@@ -165,11 +165,11 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	bucks[bucket.ObjID] = &filamentCache{
 		objectMeta: bucket,
 		pendingMeta: pendingMeta{
-			notClosedRequestsIds:   []insolar.ID{},
-			fullFilament:           []chainLink{},
-			isStateCalculated:      false,
-			requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
-			notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
+			notClosedRequestsIds:      []insolar.ID{},
+			fullFilament:              []chainLink{},
+			isStateCalculated:         false,
+			requestPNIndex:            map[insolar.ID]insolar.PulseNumber{},
+			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[insolar.ID]struct{}{},
 		},
 	}
 
@@ -286,11 +286,11 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 
 	b.pendingMeta.requestPNIndex[reqID] = pn
 
-	_, ok := b.pendingMeta.notClosedRequestsIndex[pn]
+	_, ok := b.pendingMeta.notClosedRequestsIdsIndex[pn]
 	if !ok {
-		b.pendingMeta.notClosedRequestsIndex[pn] = map[insolar.ID]*record.Request{}
+		b.pendingMeta.notClosedRequestsIdsIndex[pn] = map[insolar.ID]struct{}{}
 	}
-	b.pendingMeta.notClosedRequestsIndex[pn][reqID] = &req
+	b.pendingMeta.notClosedRequestsIdsIndex[pn][reqID] = struct{}{}
 	b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds, reqID)
 
 	stats.Record(ctx,
@@ -331,7 +331,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 
 	reqPN, ok := b.pendingMeta.requestPNIndex[*res.Request.Record()]
 	if ok {
-		delete(b.pendingMeta.notClosedRequestsIndex[reqPN], *res.Request.Record())
+		delete(b.pendingMeta.notClosedRequestsIdsIndex[reqPN], *res.Request.Record())
 		for i := 0; i < len(b.pendingMeta.notClosedRequestsIds); i++ {
 			if b.pendingMeta.notClosedRequestsIds[i] == *res.Request.Record() {
 				b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds[:i], b.pendingMeta.notClosedRequestsIds[i+1:]...)
@@ -393,12 +393,12 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 			}
 			switch r := record.Unwrap(rec.Virtual).(type) {
 			case *record.Request:
-				b.pendingMeta.notClosedRequestsIndex[chainLink.PN][*r.Object.Record()] = r
+				b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN][*r.Object.Record()] = struct{}{}
 				b.pendingMeta.requestPNIndex[*r.Object.Record()] = chainLink.PN
 			case *record.Result:
 				reqPN, ok := b.pendingMeta.requestPNIndex[*r.Request.Record()]
 				if ok {
-					delete(b.pendingMeta.notClosedRequestsIndex[reqPN], *r.Request.Record())
+					delete(b.pendingMeta.notClosedRequestsIdsIndex[reqPN], *r.Request.Record())
 				}
 			}
 		}
@@ -407,15 +407,14 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	isEarliestFound := false
 
 	for i, chainLink := range b.pendingMeta.fullFilament {
-		if len(b.pendingMeta.notClosedRequestsIndex[chainLink.PN]) != 0 {
+		if len(b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN]) != 0 {
 			if !isEarliestFound {
 				b.objectMeta.Lifeline.EarliestOpenRequest = b.pendingMeta.fullFilament[i].PN
 				isEarliestFound = true
 			}
 
-			for _, ncr := range b.pendingMeta.notClosedRequestsIndex[chainLink.PN] {
-				panic("refactor here")
-				// b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds, *ncr)
+			for openReqID := range b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN] {
+				b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds, openReqID)
 			}
 		}
 	}
