@@ -53,7 +53,6 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -409,7 +408,6 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 }
 
 func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) error {
-	fmt.Println("reply err love")
 	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
 	if err != nil {
 		return errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error())
