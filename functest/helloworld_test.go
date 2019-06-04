@@ -60,15 +60,13 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	if result.Error != nil {
-		return nil, errors.New(*result.Error)
+	} else if result.Error != nil {
+		return nil, errors.Errorf("[ NewHelloWorld ] Failed to execute: %s", *result.Error)
 	}
 
 	rv, ok := result.Result.(string)
 	if !ok {
-		return nil, errors.Errorf("Failed to decode: expected string, got %T", result.Result)
+		return nil, errors.Errorf("[ NewHelloWorld ] Failed to decode: expected string, got %T", result.Result)
 	}
 
 	i := HelloWorldInstance{}
@@ -99,10 +97,13 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return "", err
+	} else if result.Error != nil {
+		return "", errors.Errorf("[ Greet ] Failed to execute: %s", *result.Error)
 	}
+
 	rv, ok := result.Result.(string)
 	if !ok {
-		return "", errors.Errorf("Failed to decode: expected string, got %T", result.Result)
+		return "", errors.Errorf("[ Greet ] Failed to decode: expected string, got %T", result.Result)
 	}
 	return rv, nil
 }
@@ -126,11 +127,13 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return 0, err
+	} else if result.Error != nil {
+		return 0, errors.Errorf("[ Count ] Failed to execute: %s", *result.Error)
 	}
 
 	rv, ok := result.Result.(float64)
 	if !ok {
-		return 0, errors.Errorf("Failed to decode: expected float64, got %T", result.Result)
+		return 0, errors.Errorf("[ Count ] Failed to decode: expected float64, got %T", result.Result)
 	}
 	return int(rv), nil
 }
@@ -154,11 +157,13 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
+	} else if result.Error != nil {
+		return nil, errors.Errorf("[ CreateChild ] Failed to execute: %s", *result.Error)
 	}
 
 	rv, ok := result.Result.(string)
 	if !ok {
-		return nil, errors.Errorf("Failed to decode: expected string, got %T", result.Result)
+		return nil, errors.Errorf("[ CreateChild ] Failed to decode: expected string, got %T", result.Result)
 	}
 
 	child := HelloWorldInstance{}
@@ -189,11 +194,13 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return 0, err
+	} else if result.Error != nil {
+		return 0, errors.Errorf("[ CountChild ] Failed to execute: %s", *result.Error)
 	}
 
 	rv, ok := result.Result.(float64)
 	if !ok {
-		return 0, errors.Errorf("Failed to decode: expected float64, got %T", result.Result)
+		return 0, errors.Errorf("[ CountChild ] Failed to decode result: expected float64, got %T", result.Result)
 	}
 	return int(rv), nil
 }
@@ -203,13 +210,13 @@ func TestCallHelloWorld(t *testing.T) {
 	ctx := context.TODO()
 
 	hw, err := NewHelloWorld(ctx)
-	r.NoError(err, "No error is provided")
-	a.NotEmpty(hw.Ref, "Ref was provided")
+	r.NoError(err, "Unexpected error")
+	a.NotEmpty(hw.Ref, "Ref doesn't exists")
 
 	for i := 0; i < 100; i++ {
 		val, err := hw.Greet(ctx, "Simon")
-		r.NoError(err, "No error was thrown on Greet")
-		a.Contains(val, "Simon'", "Returned message was OK")
+		r.NoError(err, "Unexpected error was thrown on Greet")
+		a.Contains(val, "Simon'", "Returned message doesn't contains Simon")
 	}
 
 	count, err := hw.Count(ctx)
@@ -228,8 +235,8 @@ func TestCallHelloWorld(t *testing.T) {
 		cnt := rand.Int() % 13
 		for i := 0; i < cnt; i++ {
 			val, err := hwt.Greet(ctx, "Martha")
-			r.NoError(err, "No error was thrown on Greet")
-			a.Contains(val, "Martha'", "Returned message was OK")
+			r.NoError(err, "Unexpected error was thrown on Greet")
+			a.Contains(val, "Martha'", "Returned message doesn't contains Martha")
 		}
 		childrenCntArray = append(childrenCntArray, cnt)
 		childrenCnt = childrenCnt + cnt

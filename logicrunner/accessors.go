@@ -130,6 +130,6 @@ func (st *ObjectState) StartValidation(ref Ref) *ExecutionState {
 	if st.Validation != nil {
 		panic("Unexpected. Validation already in progress")
 	}
-	st.Validation = &ExecutionState{Ref: ref}
+	st.Validation = NewExecutionState(ref)
 	return st.Validation
 }

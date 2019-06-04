@@ -69,9 +69,7 @@ func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCod
 	if err != nil {
 		return errors.Wrap(err, "Failed to find needed execution state")
 	}
-	ctx := es.Current.Context
-
-	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
+	ctx := es.CurrentList.Get(req.Request).Context
 
 	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
 	defer span.End()
@@ -99,21 +97,24 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 	if err != nil {
 		return errors.Wrap(err, "Failed to find needed execution state")
 	}
-	ctx := es.Current.Context
+	current := es.CurrentList.Get(req.Request)
+	ctx := current.Context
 
-	if os.ExecutionState.Current.LogicContext.Immutable {
+	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
+
+	if current.LogicContext.Immutable {
 		return errors.New("Try to call route from immutable method")
 	}
 
 	// TODO: delegation token
 
-	es.Current.Nonce++
+	current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.Current.Nonce,
+			Nonce:           current.Nonce,
 
 			Immutable: req.Immutable,
 
@@ -152,15 +153,21 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 	if err != nil {
 		return errors.Wrap(err, "Failed to find needed execution state")
 	}
-	ctx := es.Current.Context
 
-	es.Current.Nonce++
+	current := es.CurrentList.Get(req.Request)
+	ctx := current.Context
+
+	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
+	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
+	defer span.End()
+
+	current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.Current.Nonce,
+			Nonce:           current.Nonce,
 
 			CallType:  record.CTSaveAsChild,
 			Base:      &req.Parent,
@@ -189,15 +196,20 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 	if err != nil {
 		return errors.Wrap(err, "Failed to find needed execution state")
 	}
-	ctx := es.Current.Context
+	current := es.CurrentList.Get(req.Request)
+	ctx := current.Context
 
-	es.Current.Nonce++
+	inslogger.FromContext(ctx).Debug("RPC.SaveAsDelegate")
+	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsDelegate")
+	defer span.End()
+
+	current.Nonce++
 
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:          req.Callee,
 			CallerPrototype: req.CalleePrototype,
-			Nonce:           es.Current.Nonce,
+			Nonce:           current.Nonce,
 
 			CallType:  record.CTSaveAsDelegate,
 			Base:      &req.Into,
@@ -235,8 +247,13 @@ func (m *RPCMethods) GetObjChildrenIterator(
 	if err != nil {
 		return errors.Wrap(err, "Failed to find needed execution state")
 	}
-	ctx := es.Current.Context
+	ctx := es.CurrentList.Get(req.Request).Context
+
+	ctx, span := instracer.StartSpan(ctx, "RPC.GetObjChildrenIterator")
+	defer span.End()
+
 	am := m.lr.ArtifactManager
+
 	iteratorID := req.IteratorID
 
 	iteratorMapLock.RLock()
@@ -315,7 +332,7 @@ func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.Up
 	if err != nil {
 		return errors.Wrap(err, "Failed to find needed execution state")
 	}
-	ctx := es.Current.Context
+	ctx := es.CurrentList.Get(req.Request).Context
 
 	ref, err := m.lr.ArtifactManager.GetDelegate(ctx, req.Object, req.OfType)
 	if err != nil {
@@ -338,6 +355,7 @@ func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *r
 		return errors.Wrap(err, "Failed to find needed execution state")
 	}
 
-	es.Current.Deactivate = true
+	es.CurrentList.Get(req.Request).Deactivate = true
+
 	return nil
 }

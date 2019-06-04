@@ -189,6 +189,9 @@ const (
 	TypeValidationResults
 	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
 	TypePendingFinished
+	// TypeAdditionalCallFromPreviousExecutor is sent by the old executor to the current executor when Flow
+	// cancels after registering the request but before adding the request to the execution queue.
+	TypeAdditionalCallFromPreviousExecutor
 	// TypeStillExecuting is sent by an old executor on pulse switch if it wants to continue executing
 	// to the current executor
 	TypeStillExecuting

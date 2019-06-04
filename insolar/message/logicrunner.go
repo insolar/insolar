@@ -270,6 +270,39 @@ func (pf *PendingFinished) Type() insolar.MessageType {
 	return insolar.TypePendingFinished
 }
 
+// AdditionalCallFromPreviousExecutor is sent to the current executor
+// by previous executor when Flow cancels after registering the request
+// but before adding the request to the execution queue. For this reason
+// this one request may be invisible by OnPulse handler. See HandleCall
+// for more details.
+type AdditionalCallFromPreviousExecutor struct {
+	ObjectReference insolar.Reference
+	Parcel          insolar.Parcel
+	Request         *insolar.Reference
+}
+
+func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {
+	// Contract that initiated this call
+	return &m.ObjectReference
+}
+
+func (m *AdditionalCallFromPreviousExecutor) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
+	// This type of message currently can be send from any node
+	return nil, 0
+}
+
+func (m *AdditionalCallFromPreviousExecutor) DefaultRole() insolar.DynamicRole {
+	return insolar.DynamicRoleVirtualExecutor
+}
+
+func (m *AdditionalCallFromPreviousExecutor) DefaultTarget() *insolar.Reference {
+	return &m.ObjectReference
+}
+
+func (m *AdditionalCallFromPreviousExecutor) Type() insolar.MessageType {
+	return insolar.TypeAdditionalCallFromPreviousExecutor
+}
+
 // StillExecuting
 type StillExecuting struct {
 	Reference insolar.Reference // object we still executing
