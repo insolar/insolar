@@ -59,9 +59,8 @@ func NewGetCode(msg *message.Message, codeID insolar.ID, pass bool) *GetCode {
 
 func (p *GetCode) Proceed(ctx context.Context) error {
 	sendCode := func(rec record.Material) error {
-		virtual := rec.Virtual
-		concrete := record.Unwrap(virtual)
-		code, ok := concrete.(record.Code)
+		virtual := record.Unwrap(rec.Virtual)
+		code, ok := virtual.(*record.Code)
 		if !ok {
 			return fmt.Errorf("invalid code record %#v", virtual)
 		}

@@ -59,9 +59,8 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch record")
 	}
-	virtual := rec.Virtual
-	concrete := record.Unwrap(virtual)
-	code, ok := concrete.(record.Code)
+	virtual := record.Unwrap(rec.Virtual)
+	code, ok := virtual.(*record.Code)
 	if !ok {
 		return fmt.Errorf("invalid code record %#v", virtual)
 	}
