@@ -28,6 +28,14 @@ import (
 	"github.com/insolar/insolar/messagebus"
 )
 
+func NewCodeDescriptor(code []byte, machineType insolar.MachineType, ref insolar.Reference) CodeDescriptor {
+	return &codeDescriptor{
+		code:        code,
+		machineType: machineType,
+		ref:         ref,
+	}
+}
+
 // CodeDescriptor represents meta info required to fetch all code data.
 type codeDescriptor struct {
 	code        []byte
@@ -48,6 +56,20 @@ func (d *codeDescriptor) MachineType() insolar.MachineType {
 // Code returns code data.
 func (d *codeDescriptor) Code() ([]byte, error) {
 	return d.code, nil
+}
+
+func NewObjectDescriptor(head insolar.Reference, state insolar.ID, prototype *insolar.Reference, isPrototype bool,
+	childPointer *insolar.ID, memory []byte, parent insolar.Reference) ObjectDescriptor {
+
+	return &objectDescriptor{
+		head:         head,
+		state:        state,
+		prototype:    prototype,
+		isPrototype:  isPrototype,
+		childPointer: childPointer,
+		memory:       memory,
+		parent:       parent,
+	}
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.

@@ -151,6 +151,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 		JetCoordinator: jc,
 		PCS:            s.scheme,
 		senders:        messagebus.NewSenders(),
+		localStorage:   newLocalStorage(),
 	}
 
 	desc, err := am.GetCode(s.ctx, codeRef)

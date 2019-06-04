@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package preprocessor
 
 import (
@@ -454,7 +456,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType) error {
 	s.NoError(err)
 	s.Contains(bufProxy.String(), `"some/test/import/path"`)
 	s.Contains(bufProxy.String(), `"some/test/import/pointerPath"`)
-	s.Contains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	s.Contains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/common"`)
 	code, err := ioutil.ReadAll(&bufProxy)
 	s.NoError(err)
 	s.NotEqual(len(code), 0)
@@ -496,7 +498,7 @@ func ( A ) Get(i someAlias.SomeType) error {
 	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
 	s.NoError(err)
 	s.Contains(bufProxy.String(), `someAlias "some/test/import/path"`)
-	s.Contains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	s.Contains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/common"`)
 	code, err := ioutil.ReadAll(&bufProxy)
 	s.NoError(err)
 	s.NotEqual(len(code), 0)
@@ -505,7 +507,7 @@ func ( A ) Get(i someAlias.SomeType) error {
 	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.Contains(bufWrapper.String(), `someAlias "some/test/import/path"`)
-	s.NotContains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	s.NotContains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/common"`)
 }
 
 func (s *PreprocessorSuite) TestImportsFromContractUseInsideFunc() {

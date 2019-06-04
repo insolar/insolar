@@ -18,7 +18,10 @@ package {{ .Package }}
 
 import (
 {{- range $import, $i := .Imports }}
-	{{$import}}
+	{{ $import }}
+{{- end }}
+{{ if $.GenerateInitialize -}}
+    XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 {{- end }}
 )
 
@@ -31,7 +34,7 @@ func ( e *ExtendableError ) Error() string{
 }
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
@@ -57,7 +60,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 }
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
@@ -84,7 +87,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 {{ range $method := .Methods }}
 func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 
 	self := new({{ $.ContractType }})
 
@@ -131,7 +134,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 
 {{ range $f := .Functions }}
 func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	{{ $f.ArgumentsZeroList }}
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -160,16 +163,20 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
 {{ end }}
 
 {{ if $.GenerateInitialize -}}
-func Initialize() map[string]interface{} {
-    return map[string]interface{}{
-        "INSMETHOD_GetCode": INSMETHOD_GetCode,
-        "INSMETHOD_GetPrototype": INSMETHOD_GetPrototype,
-{{ range $method := .Methods -}}
-        "INSMETHOD_{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
-{{- end }}
-{{ range $f := .Functions -}}
-        "INSCONSTRUCTOR_{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
-{{ end }}
+func Initialize() XXX_preprocessor.ContractWrapper {
+    return XXX_preprocessor.ContractWrapper{
+        GetCode: INSMETHOD_GetCode,
+        GetPrototype: INSMETHOD_GetPrototype,
+        Methods: XXX_preprocessor.ContractMethods{
+            {{ range $method := .Methods -}}
+                    "{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
+            {{ end }}
+        },
+        Constructors: XXX_preprocessor.ContractConstructors{
+            {{ range $f := .Functions -}}
+                    "{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
+            {{ end }}
+        },
     }
 }
 {{- end }}
