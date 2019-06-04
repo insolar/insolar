@@ -22,30 +22,18 @@ message Error {
     string Text = 21;
 }
 
-message Object {
-    uint32 Polymorph = 16;
-
-    bytes ObjectID     = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    bytes StateID      = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    bytes Prototype    = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Parent       = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bool IsPrototype   = 24;
-    bytes ChildPointer = 25 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    bytes Memory       = 26;
-}
-
-message State {
-    uint32 Polymorph = 16;
-
-    bytes Record   = 20;
-    bytes Memory   = 21;
-}
 
 message GetObject {
     uint32 Polymorph = 16;
 
     bytes ObjectID        = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes ObjectRequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message GetCode {
+    uint32 Polymorph = 16;
+
+    bytes CodeID     = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
 message PassState {
@@ -73,6 +61,20 @@ message Index {
     uint32 Polymorph = 16;
 
     bytes Index = 20;
+}
+
+message Code {
+    uint32 Polymorph = 16;
+
+    bytes Record   = 20;
+    bytes Code     = 21;
+}
+
+message State {
+    uint32 Polymorph = 16;
+
+    bytes Record   = 20;
+    bytes Memory   = 21;
 }
 
 message ID {
