@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/pkg/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/replication.DataGatherer -o ./ -s _mock.go
@@ -68,7 +69,7 @@ func (d *LightDataGatherer) ForPulseAndJet(
 	dr, err := d.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("synchronize: can't fetch a drop")
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch drop")
 	}
 
 	bls := d.blobsAccessor.ForPulse(ctx, jetID, pn)

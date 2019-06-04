@@ -112,16 +112,32 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
+
+		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), stateID.Pulse())
 		if err != nil {
-			return errors.Wrap(err, "failed to fetch jet")
+			return errors.Wrap(err, "failed to calculate pulse")
 		}
-		node, err := p.Dep.Coordinator.NodeForJet(ctx, *jetID, flow.Pulse(ctx), stateID.Pulse())
-		if err != nil {
-			return errors.Wrap(err, "failed to calculate role")
+		var node insolar.Reference
+		if onHeavy {
+			h, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+			if err != nil {
+				return errors.Wrap(err, "failed to calculate heavy")
+			}
+			node = *h
+		} else {
+			jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch jet")
+			}
+			l, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, stateID.Pulse())
+			if err != nil {
+				return errors.Wrap(err, "failed to calculate role")
+			}
+			node = *l
 		}
+
 		go func() {
-			_, done := p.Dep.Sender.SendTarget(ctx, msg, *node)
+			_, done := p.Dep.Sender.SendTarget(ctx, msg, node)
 			done()
 		}()
 		return nil

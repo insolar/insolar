@@ -67,13 +67,9 @@ func testRPCPacket() *Packet {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 
-	return &Packet{
-		Sender:    sender,
-		Receiver:  receiver,
-		Type:      uint32(types.RPC),
-		TraceID:   "d6b44f62-7b5e-4249-90c7-ccae194a5baa",
-		RequestID: 123,
-	}
+	result := NewPacket(sender, receiver, types.RPC, 123)
+	result.TraceID = "d6b44f62-7b5e-4249-90c7-ccae194a5baa"
+	return result
 }
 
 func TestSerializePacket(t *testing.T) {
@@ -220,4 +216,11 @@ func TestPacket_GetResponse(t *testing.T) {
 	cascade := BasicResponse{}
 	_, p2 := marshalUnmarshalPacketResponse(t, &cascade)
 	assert.NotNil(t, p2.GetResponse().GetBasic())
+}
+
+func TestPacket_Marshal_0x80(t *testing.T) {
+	p := testRPCPacket()
+	data, err := p.Marshal()
+	require.NoError(t, err)
+	assert.EqualValues(t, 0x80, data[0])
 }

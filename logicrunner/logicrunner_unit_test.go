@@ -1446,25 +1446,24 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
-			mb := testutils.NewMessageBusMock(s.mc)
-			// defer new SendFunc before calling OnPulse
-			mb.SendMock.Set(func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-				a.Equal(1, int(mb.SendPreCounter))
+			wg := sync.WaitGroup{}
+			wg.Add(1)
+			s.mb.SendMock.Set(func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 				a.Equal(expectedMessage, p1)
+				wg.Done()
 				return nil, nil
 			})
 
-			s.SetupLogicRunner()
-			lr := s.lr
-			lr.MessageBus = mb
-			lr.state[s.objectRef] = &ObjectState{
+			s.lr.state[s.objectRef] = &ObjectState{
 				ExecutionState: &ExecutionState{
 					Queue: test.queue,
 				},
 			}
 
-			err := lr.OnPulse(s.ctx, s.pulse)
+			err := s.lr.OnPulse(s.ctx, s.pulse)
 			a.NoError(err)
+
+			wg.Wait()
 		})
 	}
 }

@@ -194,3 +194,14 @@ func (p *Packet) DebugString() string {
 		`IsResponse:` + strconv.FormatBool(p.IsResponse()) + `,` +
 		`}`
 }
+
+func NewPacket(sender, receiver *host.Host, packetType types.PacketType, id uint64) *Packet {
+	return &Packet{
+		// Polymorph field should be non-default so we have first byte 0x80 in serialized representation
+		Polymorph: 1,
+		Sender:    sender,
+		Receiver:  receiver,
+		Type:      uint32(packetType),
+		RequestID: id,
+	}
+}
