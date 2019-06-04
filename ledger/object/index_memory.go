@@ -349,7 +349,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 
 // SetFilament adds a slice of records to an object with provided id and pulse. It's assumed, that the method is
 // called for setting records from another light, during the process of filling full chaing of pendings
-func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.MaterialWithId) error {
+func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.MaterialWithID) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
@@ -360,8 +360,8 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 
 	recsIds := make([]insolar.ID, len(recs))
 	for idx, rec := range recs {
-		recsIds[idx] = rec.Id
-		err := i.recordStorage.Set(ctx, rec.Id, rec.Record)
+		recsIds[idx] = rec.ID
+		err := i.recordStorage.Set(ctx, rec.ID, rec.Record)
 		if err != nil {
 			return errors.Wrap(err, "filament update failed")
 		}
@@ -471,7 +471,7 @@ func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN inso
 }
 
 // Records returns all the records for a provided object
-func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.MaterialWithId, error) {
+func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.MaterialWithID, error) {
 	b := i.bucket(currentPN, objID)
 	if b == nil {
 		return nil, ErrLifelineNotFound
@@ -480,15 +480,15 @@ func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumb
 	b.RLock()
 	defer b.RLock()
 
-	res := make([]record.MaterialWithId, len(b.objectMeta.PendingRecords))
+	res := make([]record.MaterialWithID, len(b.objectMeta.PendingRecords))
 	for idx, id := range b.objectMeta.PendingRecords {
 		rec, err := i.recordStorage.ForID(ctx, id)
 		if err != nil {
 			return nil, err
 		}
-		res[idx] = record.MaterialWithId{
+		res[idx] = record.MaterialWithID{
 			Record: rec,
-			Id:     id,
+			ID:     id,
 		}
 	}
 
