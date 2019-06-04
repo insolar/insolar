@@ -408,9 +408,13 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 }
 
 func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) error {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"correlation_id": middleware.MessageCorrelationID(msg),
+	})
 	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
 	if err != nil {
-		return errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error())
+		logger.Error(errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error()))
+		return nil
 	}
 	wrapper := payload.Meta{
 		Payload: msg.Payload,
@@ -418,7 +422,8 @@ func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, r
 	}
 	buf, err := wrapper.Marshal()
 	if err != nil {
-		return errors.Wrapf(err, "failed to wrap error message (%s)", repErr.Error())
+		logger.Error(errors.Wrapf(err, "failed to wrap error message (%s)", repErr.Error()))
+		return nil
 	}
 	msg.Payload = buf
 	n.Sender.Reply(ctx, msg, errMsg)
