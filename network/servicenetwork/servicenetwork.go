@@ -375,7 +375,8 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 
 	node, err := n.wrapMeta(msg)
 	if err != nil {
-		return nil, n.replyError(ctx, msg, errors.Wrap(err, "failed to send message"))
+		n.replyError(ctx, msg, errors.Wrap(err, "failed to send message"))
+		return nil, nil
 	}
 
 	// Short path when sending to self node. Skip serialization
@@ -383,20 +384,24 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	if node.Equal(origin.ID()) {
 		err := n.Pub.Publish(bus.TopicIncoming, msg)
 		if err != nil {
-			return nil, n.replyError(ctx, msg, errors.Wrap(err, "error while publish msg to TopicIncoming"))
+			n.replyError(ctx, msg, errors.Wrap(err, "error while publish msg to TopicIncoming"))
+			return nil, nil
 		}
 		return nil, nil
 	}
 	msgBytes, err := messageToBytes(msg)
 	if err != nil {
-		return nil, n.replyError(ctx, msg, errors.Wrap(err, "error while converting message to bytes"))
+		n.replyError(ctx, msg, errors.Wrap(err, "error while converting message to bytes"))
+		return nil, nil
 	}
 	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
 	if err != nil {
-		return nil, n.replyError(ctx, msg, errors.Wrap(err, "error while sending watermillMsg to controller"))
+		n.replyError(ctx, msg, errors.Wrap(err, "error while sending watermillMsg to controller"))
+		return nil, nil
 	}
 	if !bytes.Equal(res, ack) {
-		return nil, n.replyError(ctx, msg, errors.Errorf("reply is not ack: %s", res))
+		n.replyError(ctx, msg, errors.Errorf("reply is not ack: %s", res))
+		return nil, nil
 	}
 
 	logger.WithFields(map[string]interface{}{
@@ -407,14 +412,14 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	return nil, nil
 }
 
-func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) error {
+func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"correlation_id": middleware.MessageCorrelationID(msg),
 	})
 	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error()))
-		return nil
+		return
 	}
 	wrapper := payload.Meta{
 		Payload: msg.Payload,
@@ -423,11 +428,11 @@ func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, r
 	buf, err := wrapper.Marshal()
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to wrap error message (%s)", repErr.Error()))
-		return nil
+		return
 	}
 	msg.Payload = buf
 	n.Sender.Reply(ctx, msg, errMsg)
-	return nil
+	return
 }
 
 func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
