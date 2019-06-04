@@ -1055,12 +1055,13 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	)
 
 	table := []struct {
-		name                     string
-		when                     whenType
-		messagesExpected         []insolar.MessageType
-		errorExpected            bool
-		flowCanceledExpected     bool
-		pendingInExecutorResults message.PendingState
+		name                      string
+		when                      whenType
+		messagesExpected          []insolar.MessageType
+		errorExpected             bool
+		flowCanceledExpected      bool
+		pendingInExecutorResults  message.PendingState
+		queueLenInExecutorResults int
 	}{
 		{
 			name:                 "pulse change in IsAuthorized",
@@ -1078,7 +1079,8 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			messagesExpected: []insolar.MessageType{
 				insolar.TypeExecutorResults, insolar.TypeAdditionalCallFromPreviousExecutor,
 			},
-			pendingInExecutorResults: message.PendingUnknown,
+			pendingInExecutorResults:  message.PendingUnknown,
+			queueLenInExecutorResults: 1,
 		},
 		{
 			name: "pulse change in CallMethod",
@@ -1086,7 +1088,8 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			messagesExpected: []insolar.MessageType{
 				insolar.TypeExecutorResults, insolar.TypeReturnResults, insolar.TypePendingFinished, insolar.TypeStillExecuting,
 			},
-			pendingInExecutorResults: message.InPending,
+			pendingInExecutorResults:  message.InPending,
+			queueLenInExecutorResults: 0,
 		},
 	}
 
@@ -1222,6 +1225,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 					if msg.Type() == insolar.TypeExecutorResults {
 						suite.Require().Equal(test.pendingInExecutorResults, msg.(*message.ExecutorResults).Pending)
+						suite.Require().Equal(test.queueLenInExecutorResults, len(msg.(*message.ExecutorResults).Queue))
 					}
 
 					switch msg.Type() {
