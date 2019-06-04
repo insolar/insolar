@@ -149,6 +149,16 @@ type TestArtifactManager struct {
 	Prototypes map[insolar.Reference]*TestObjectDescriptor
 }
 
+func (t *TestArtifactManager) InjectCodeDescriptor(_ insolar.Reference, _ artifacts.CodeDescriptor) {
+	panic("implement me")
+}
+func (t *TestArtifactManager) InjectObjectDescriptor(_ insolar.Reference, _ artifacts.ObjectDescriptor) {
+	panic("implement me")
+}
+func (t *TestArtifactManager) InjectFinish() {
+	panic("implement me")
+}
+
 func (t *TestArtifactManager) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
 	panic("implement me")
 }
@@ -511,11 +521,13 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			insolar.Reference{}, *insolar.NewReference(*codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] DeployCode returns error")
+		}
+
 		codeRef := &insolar.Reference{}
 		codeRef.SetRecord(*codeID)
-		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't SetRecord")
-		}
+
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
 

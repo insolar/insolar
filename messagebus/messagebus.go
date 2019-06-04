@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -67,7 +68,7 @@ type MessageBus struct {
 	handlers     map[insolar.MessageType]insolar.MessageHandler
 	signmessages bool
 
-	counter uint64
+	counter int64
 	span    *trace.Span
 
 	globalLock                  sync.RWMutex
@@ -79,9 +80,10 @@ type MessageBus struct {
 func (mb *MessageBus) Acquire(ctx context.Context) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Acquire")
 	defer span.End()
-	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", mb.counter)
-	mb.counter = mb.counter + 1
-	if mb.counter-1 == 0 {
+
+	counter := atomic.AddInt64(&mb.counter, 1)
+	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
+	if counter == 1 {
 		inslogger.FromContext(ctx).Info("Lock MB")
 		ctx, mb.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
 		mb.Lock(ctx)
@@ -91,12 +93,13 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 func (mb *MessageBus) Release(ctx context.Context) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Release")
 	defer span.End()
-	inslogger.FromContext(ctx).Info("Call Release in MessageBus: ", mb.counter)
-	if mb.counter == 0 {
+
+	counter := atomic.AddInt64(&mb.counter, -1)
+	if counter < 0 {
 		panic("Trying to unlock without locking")
 	}
-	mb.counter = mb.counter - 1
-	if mb.counter == 0 {
+	inslogger.FromContext(ctx).Info("Call Release in MessageBus: ", counter)
+	if counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
 		mb.Unlock(ctx)
 		mb.span.End()
@@ -155,7 +158,7 @@ func (mb *MessageBus) MustRegister(p insolar.MessageType, handler insolar.Messag
 	}
 }
 
-func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar.Parcel, ops *insolar.MessageSendOptions, currentPulse insolar.Pulse) *watermillMsg.Message {
+func (mb *MessageBus) createWatermillMessage(_ context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse) *watermillMsg.Message {
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
 
@@ -204,7 +207,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 
 	_, ok := transferredToWatermill[msg.Type()]
 	if ok {
-		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
+		wmMsg := mb.createWatermillMessage(ctx, parcel, currentPulse)
 		nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, ops)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate role")
@@ -482,7 +485,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args []byte) (result []byte, 
 	return buf.Bytes(), nil
 }
 
-func (mb *MessageBus) checkParcel(ctx context.Context, parcel insolar.Parcel) error {
+func (mb *MessageBus) checkParcel(_ context.Context, parcel insolar.Parcel) error {
 	sender := parcel.GetSender()
 
 	if mb.signmessages {

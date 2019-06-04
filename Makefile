@@ -40,7 +40,7 @@ lint: ci-lint
 
 .PHONY: ci-lint
 ci-lint:
-	golangci-lint run --new-from-rev=c8f94b7f41b9ae0d2b7ed618d37358b78f479bee
+	golangci-lint run
 
 .PHONY: metalint
 metalint:
@@ -178,7 +178,7 @@ ci_test_slow:
 
 .PHONY: ci_test_func
 ci_test_func:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -json -tags functest -v ./functest -count 3 | tee ci_test_func.json
+	CGO_ENABLED=1 INSOLAR_LOG_LEVEL=error go test $(TEST_ARGS) -json -tags functest -v ./functest -count 3 -failfast | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest:

@@ -213,7 +213,7 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 		Msg: &message.GetObject{},
 	}
 
-	msg := mb.createWatermillMessage(ctx, parcel, nil, pulse)
+	msg := mb.createWatermillMessage(ctx, parcel, pulse)
 
 	require.NotNil(t, msg)
 	require.NotNil(t, msg.Payload)

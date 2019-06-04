@@ -70,6 +70,11 @@ type ParcelMock struct {
 	PulsePreCounter uint64
 	PulseMock       mParcelMockPulse
 
+	SetSenderFunc       func(p insolar.Reference)
+	SetSenderCounter    uint64
+	SetSenderPreCounter uint64
+	SetSenderMock       mParcelMockSetSender
+
 	TypeFunc       func() (r insolar.MessageType)
 	TypeCounter    uint64
 	TypePreCounter uint64
@@ -94,6 +99,7 @@ func NewParcelMock(t minimock.Tester) *ParcelMock {
 	m.GetSignMock = mParcelMockGetSign{mock: m}
 	m.MessageMock = mParcelMockMessage{mock: m}
 	m.PulseMock = mParcelMockPulse{mock: m}
+	m.SetSenderMock = mParcelMockSetSender{mock: m}
 	m.TypeMock = mParcelMockType{mock: m}
 
 	return m
@@ -1455,6 +1461,129 @@ func (m *ParcelMock) PulseFinished() bool {
 	return true
 }
 
+type mParcelMockSetSender struct {
+	mock              *ParcelMock
+	mainExpectation   *ParcelMockSetSenderExpectation
+	expectationSeries []*ParcelMockSetSenderExpectation
+}
+
+type ParcelMockSetSenderExpectation struct {
+	input *ParcelMockSetSenderInput
+}
+
+type ParcelMockSetSenderInput struct {
+	p insolar.Reference
+}
+
+//Expect specifies that invocation of Parcel.SetSender is expected from 1 to Infinity times
+func (m *mParcelMockSetSender) Expect(p insolar.Reference) *mParcelMockSetSender {
+	m.mock.SetSenderFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ParcelMockSetSenderExpectation{}
+	}
+	m.mainExpectation.input = &ParcelMockSetSenderInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Parcel.SetSender
+func (m *mParcelMockSetSender) Return() *ParcelMock {
+	m.mock.SetSenderFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ParcelMockSetSenderExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Parcel.SetSender is expected once
+func (m *mParcelMockSetSender) ExpectOnce(p insolar.Reference) *ParcelMockSetSenderExpectation {
+	m.mock.SetSenderFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ParcelMockSetSenderExpectation{}
+	expectation.input = &ParcelMockSetSenderInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Parcel.SetSender method
+func (m *mParcelMockSetSender) Set(f func(p insolar.Reference)) *ParcelMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SetSenderFunc = f
+	return m.mock
+}
+
+//SetSender implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) SetSender(p insolar.Reference) {
+	counter := atomic.AddUint64(&m.SetSenderPreCounter, 1)
+	defer atomic.AddUint64(&m.SetSenderCounter, 1)
+
+	if len(m.SetSenderMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetSenderMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ParcelMock.SetSender. %v", p)
+			return
+		}
+
+		input := m.SetSenderMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ParcelMockSetSenderInput{p}, "Parcel.SetSender got unexpected parameters")
+
+		return
+	}
+
+	if m.SetSenderMock.mainExpectation != nil {
+
+		input := m.SetSenderMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ParcelMockSetSenderInput{p}, "Parcel.SetSender got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.SetSenderFunc == nil {
+		m.t.Fatalf("Unexpected call to ParcelMock.SetSender. %v", p)
+		return
+	}
+
+	m.SetSenderFunc(p)
+}
+
+//SetSenderMinimockCounter returns a count of ParcelMock.SetSenderFunc invocations
+func (m *ParcelMock) SetSenderMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SetSenderCounter)
+}
+
+//SetSenderMinimockPreCounter returns the value of ParcelMock.SetSender invocations
+func (m *ParcelMock) SetSenderMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SetSenderPreCounter)
+}
+
+//SetSenderFinished returns true if mock invocations count is ok
+func (m *ParcelMock) SetSenderFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SetSenderMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetSenderCounter) == uint64(len(m.SetSenderMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SetSenderMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetSenderCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SetSenderFunc != nil {
+		return atomic.LoadUint64(&m.SetSenderCounter) > 0
+	}
+
+	return true
+}
+
 type mParcelMockType struct {
 	mock              *ParcelMock
 	mainExpectation   *ParcelMockTypeExpectation
@@ -1633,6 +1762,10 @@ func (m *ParcelMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ParcelMock.Pulse")
 	}
 
+	if !m.SetSenderFinished() {
+		m.t.Fatal("Expected call to ParcelMock.SetSender")
+	}
+
 	if !m.TypeFinished() {
 		m.t.Fatal("Expected call to ParcelMock.Type")
 	}
@@ -1694,6 +1827,10 @@ func (m *ParcelMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ParcelMock.Pulse")
 	}
 
+	if !m.SetSenderFinished() {
+		m.t.Fatal("Expected call to ParcelMock.SetSender")
+	}
+
 	if !m.TypeFinished() {
 		m.t.Fatal("Expected call to ParcelMock.Type")
 	}
@@ -1722,6 +1859,7 @@ func (m *ParcelMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetSignFinished()
 		ok = ok && m.MessageFinished()
 		ok = ok && m.PulseFinished()
+		ok = ok && m.SetSenderFinished()
 		ok = ok && m.TypeFinished()
 
 		if ok {
@@ -1769,6 +1907,10 @@ func (m *ParcelMock) MinimockWait(timeout time.Duration) {
 
 			if !m.PulseFinished() {
 				m.t.Error("Expected call to ParcelMock.Pulse")
+			}
+
+			if !m.SetSenderFinished() {
+				m.t.Error("Expected call to ParcelMock.SetSender")
 			}
 
 			if !m.TypeFinished() {
@@ -1824,6 +1966,10 @@ func (m *ParcelMock) AllMocksCalled() bool {
 	}
 
 	if !m.PulseFinished() {
+		return false
+	}
+
+	if !m.SetSenderFinished() {
 		return false
 	}
 

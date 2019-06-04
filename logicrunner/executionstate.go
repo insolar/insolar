@@ -21,6 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
@@ -28,16 +29,13 @@ import (
 type ExecutionState struct {
 	sync.Mutex
 
-	Ref Ref
+	Ref Ref // Object reference
 
 	ObjectDescriptor    artifacts.ObjectDescriptor
 	PrototypeDescriptor artifacts.ObjectDescriptor
 	CodeDescriptor      artifacts.CodeDescriptor
 
-	deactivate bool
-	nonce      uint64
-
-	Current               *CurrentExecution
+	CurrentList           *CurrentExecutionList
 	Queue                 []ExecutionQueueElement
 	QueueProcessorActive  bool
 	LedgerHasMoreRequests bool
@@ -50,7 +48,15 @@ type ExecutionState struct {
 	HasPendingCheckMutex sync.Mutex
 }
 
-func (es *ExecutionState) WrapError(err error, message string) error {
+func NewExecutionState(ref insolar.Reference) *ExecutionState {
+	return &ExecutionState{
+		Ref:         ref,
+		CurrentList: NewCurrentExecutionList(),
+		Queue:       make([]ExecutionQueueElement, 0),
+	}
+}
+
+func (es *ExecutionState) WrapError(current *CurrentExecution, err error, message string) error {
 	if err == nil {
 		err = errors.New(message)
 	} else {
@@ -60,8 +66,8 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	if es.ObjectDescriptor != nil {
 		res.Contract = es.ObjectDescriptor.HeadRef()
 	}
-	if es.Current != nil {
-		res.Request = es.Current.RequestRef
+	if current != nil {
+		res.Request = current.RequestRef
 	}
 	return res
 }

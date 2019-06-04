@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"time"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
@@ -26,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 type ProcessExecutionQueue struct {
@@ -35,8 +37,13 @@ type ProcessExecutionQueue struct {
 }
 
 func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error {
+	ctx, span := instracer.StartSpan(ctx, "ProcessExecutionQueue")
+	defer span.End()
+
+	inslogger.FromContext(ctx).Debug("ProcessExecutionQueue")
+
 	lr := p.dep.lr
-	es := lr.getExecStateFromRef(ctx, p.Message.Payload)
+	es := lr.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
 	if es == nil {
 		return nil
 	}
@@ -44,9 +51,12 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 	for {
 		es.Lock()
 		if len(es.Queue) == 0 && es.LedgerQueueElement == nil {
-			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
+			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty. Ref: ", es.Ref.String())
 			es.QueueProcessorActive = false
-			es.Current = nil
+
+			if mutable := es.CurrentList.GetMutable(); mutable != nil {
+				es.CurrentList.Delete(*mutable.LogicContext.Request)
+			}
 			es.Unlock()
 			return nil
 		}
@@ -59,22 +69,35 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 			qe, es.Queue = es.Queue[0], es.Queue[1:]
 		}
 
+		msg, ok := qe.parcel.Message().(*message.CallMethod)
+		if !ok {
+			panic("Not a call method message, should never happen")
+		}
+
 		sender := qe.parcel.GetSender()
 		current := CurrentExecution{
 			RequestRef:    qe.request,
 			RequesterNode: &sender,
 			Context:       qe.ctx,
+			Request:       &msg.Request,
+			Message:       msg,
+			LogicContext: &insolar.LogicCallContext{
+				Mode:            "execution",
+				Caller:          msg.GetCaller(),
+				Callee:          &es.Ref,
+				Request:         qe.request,
+				Time:            time.Now(), // TODO: probably we should take it earlier
+				Pulse:           *lr.pulse(ctx),
+				TraceID:         inslogger.TraceID(ctx),
+				CallerPrototype: &msg.CallerPrototype,
+				Immutable:       msg.Immutable,
+			},
 		}
-		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
-			current.Request = &msg.Request
-		} else {
-			panic("Not a call method message, should never happen")
-		}
-		es.Current = &current
 
+		es.CurrentList.Set(*qe.request, &current)
 		es.Unlock()
 
-		lr.executeOrValidate(current.Context, es, qe.parcel)
+		lr.executeOrValidate(current.Context, es, &current)
 
 		if qe.fromLedger {
 			pub := p.dep.Publisher
@@ -98,6 +121,9 @@ type StartQueueProcessorIfNeeded struct {
 }
 
 func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) error {
+	ctx, span := instracer.StartSpan(ctx, "StartQueueProcessorIfNeeded")
+	defer span.End()
+
 	s.es.Lock()
 	defer s.es.Unlock()
 
@@ -118,9 +144,6 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 		return nil
 	}
 
-	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-	s.es.QueueProcessorActive = true
-
 	pub := s.dep.Publisher
 	rawRef := s.ref.Bytes()
 	err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, processExecutionQueueMsg))
@@ -131,6 +154,9 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 	if err != nil {
 		return errors.Wrap(err, "can't send getLedgerPendingRequestMsg")
 	}
+
+	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+	s.es.QueueProcessorActive = true
 
 	return nil
 }

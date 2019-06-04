@@ -30,6 +30,7 @@ type JetWaiter interface {
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/hot.JetReleaser -o ../../../testutils -s _mock.go
+
 // JetReleaser provides methods for releasing jet waiters.
 type JetReleaser interface {
 	Unlock(ctx context.Context, jetID insolar.ID) error

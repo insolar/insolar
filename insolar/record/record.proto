@@ -68,6 +68,7 @@ message Request {
 
     string Method = 30;
     bytes Arguments = 31;
+    bytes Sender = 32 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message Result {
