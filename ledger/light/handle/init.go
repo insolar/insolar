@@ -90,7 +90,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		}
 	}
 
-	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", s.Message.Parcel.Message().Type().String()))
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", s.message.Parcel.Message().Type().String()))
 	defer span.End()
 
 	switch s.message.Parcel.Message().Type() {
@@ -139,8 +139,8 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		h := NewHotData(s.dep, s.message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingFilament:
-		msg := s.Message.Parcel.Message().(*message.GetPendingFilament)
-		h := NewGetPendingFilament(s.Dep, msg, s.Message.ReplyTo)
+		msg := s.message.Parcel.Message().(*message.GetPendingFilament)
+		h := NewGetPendingFilament(s.dep, msg, s.message.ReplyTo)
 		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.message.Parcel.Message().Type().String())
