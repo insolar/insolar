@@ -81,7 +81,6 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	ctx, span := instracer.StartSpan(ctx, "SendRequest " + method)
 	defer span.End()
 
-	// TODO: how to pass jwk and jws forward?
 	args, err := insolar.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")

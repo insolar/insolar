@@ -92,10 +92,6 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
 	}
 
-	var signedRequest = SignedRequest{PublicKey: "foo", Token: "bar"}
-
-	err = json.Unmarshal(jsonValue, &signedRequest)
-
 	if err != nil {
 		fmt.Println("Unmarshal error", err)
 	}
@@ -227,6 +223,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}
+	fmt.Println("SEEED", seed)
 	verboseInfo(ctx, "GETSEED request completed. seed: "+string(seed))
 
 	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)

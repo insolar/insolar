@@ -127,7 +127,7 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 
 	switch payload.Method {
 	case "CreateMember":
-		return m.createMemberCall(rootDomain, []byte(payload.Params), *public)
+		return m.createMemberCall(rootDomain, payload.Params, *public)
 	}
 
 	switch payload.Method {

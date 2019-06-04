@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -49,8 +50,8 @@ type SignedPayload struct {
 	Method    string
 
 	// method name
-	Params    string `json:"params"`    // json object
-	Seed      []byte `json:"seed"`
+	Params string `json:"params"` // json object
+	Seed   string `json:"seed"`
 }
 
 type answer struct {
@@ -78,6 +79,23 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 
 func (ar *Runner) checkSeed(paramsSeed []byte) error {
 	seed := seedmanager.SeedFromBytes(paramsSeed)
+	if seed == nil {
+		return errors.New("[ checkSeed ] Bad seed param")
+	}
+
+	if !ar.SeedManager.Exists(*seed) {
+		return errors.New("[ checkSeed ] Incorrect seed")
+	}
+
+	return nil
+}
+
+func (ar *Runner) checkSeedString(_seed string) error {
+	decoded, err := base64.StdEncoding.DecodeString(_seed)
+	if err != nil {
+		return errors.New("[ checkSeed ] decode error")
+	}
+	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {
 		return errors.New("[ checkSeed ] Bad seed param")
 	}
@@ -191,7 +209,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed(signedPayload.Seed)
+		err = ar.checkSeedString(signedPayload.Seed)
 		if err != nil {
 			processError(err, "Can't checkSeed", &resp, insLog)
 			return
