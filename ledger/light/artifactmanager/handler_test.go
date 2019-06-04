@@ -152,6 +152,13 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 	}
 }
 
+type waiterMock struct {
+}
+
+func (*waiterMock) Wait(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) error {
+	return nil
+}
+
 func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
@@ -163,6 +170,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetPendingStorageMock.Return(pendingMock)
+
+	waiterMock := waiterMock{}
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -204,6 +213,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 
 	h.JetCoordinator = jc
 	h.Bus = mb
+	h.HotDataWaiter = &waiterMock
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 

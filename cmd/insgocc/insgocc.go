@@ -413,7 +413,7 @@ func main() {
 				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed)
 				checkError(err)
 
-				reference := contract.GenerateReference()
+				reference := contract.GenerateReference(preprocessor.PrototypeType)
 				err = contract.Parsed.WriteProxy(reference.String(), output.writer)
 				checkError(err)
 

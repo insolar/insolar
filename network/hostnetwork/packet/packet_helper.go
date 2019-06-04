@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"strconv"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -175,7 +176,32 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 		return nil, err
 	}
 
-	log.Debugf("[ DeserializePacket ] decoded packet to %s", msg)
+	log.Debugf("[ DeserializePacket ] decoded packet to %s", msg.DebugString())
 
 	return msg, nil
+}
+
+func (p *Packet) DebugString() string {
+	if p == nil {
+		return "nil"
+	}
+	return `&Packet{` +
+		`Sender:` + p.Sender.String() + `,` +
+		`Receiver:` + p.Receiver.String() + `,` +
+		`RequestID:` + strconv.FormatUint(p.RequestID, 10) + `,` +
+		`TraceID:` + p.TraceID + `,` +
+		`Type:` + p.GetType().String() + `,` +
+		`IsResponse:` + strconv.FormatBool(p.IsResponse()) + `,` +
+		`}`
+}
+
+func NewPacket(sender, receiver *host.Host, packetType types.PacketType, id uint64) *Packet {
+	return &Packet{
+		// Polymorph field should be non-default so we have first byte 0x80 in serialized representation
+		Polymorph: 1,
+		Sender:    sender,
+		Receiver:  receiver,
+		Type:      uint32(packetType),
+		RequestID: id,
+	}
 }

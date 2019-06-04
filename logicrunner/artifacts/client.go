@@ -20,8 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
@@ -39,6 +43,61 @@ const (
 	getChildrenChunkSize = 10 * 1000
 )
 
+type localStorage struct {
+	initialized bool
+	storage     map[insolar.Reference]interface{}
+}
+
+/*
+	objectStorageLock sync.RWMutex
+	objectStorage     map[insolar.Reference]ObjectDescriptor
+
+	codeStorageLock sync.RWMutex
+	codeStorage     map[insolar.Reference]CodeDescriptor
+}*/
+
+func (s *localStorage) Initialized() {
+	s.initialized = true
+}
+
+func (s *localStorage) StoreObject(reference insolar.Reference, descriptor interface{}) {
+	if s.initialized {
+		panic("Trying to initialize cache after initialization was finished")
+	}
+	s.storage[reference] = descriptor
+}
+
+func (s *localStorage) Code(reference insolar.Reference) CodeDescriptor {
+	codeDescI, ok := s.storage[reference]
+	if !ok {
+		return nil
+	}
+	codeDesc, ok := codeDescI.(CodeDescriptor)
+	if !ok {
+		return nil
+	}
+	return codeDesc
+}
+
+func (s *localStorage) Object(reference insolar.Reference) ObjectDescriptor {
+	objectDescI, ok := s.storage[reference]
+	if !ok {
+		return nil
+	}
+	objectDesc, ok := objectDescI.(ObjectDescriptor)
+	if !ok {
+		return nil
+	}
+	return objectDesc
+}
+
+func newLocalStorage() *localStorage {
+	return &localStorage{
+		initialized: false,
+		storage:     make(map[insolar.Reference]interface{}),
+	}
+}
+
 // Client provides concrete API to storage for processing module.
 type client struct {
 	JetStorage     jet.Storage                        `inject:""`
@@ -47,8 +106,10 @@ type client struct {
 	PulseAccessor  pulse.Accessor                     `inject:""`
 	JetCoordinator jet.Coordinator                    `inject:""`
 
+	sender               bus.Sender
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
+	localStorage         *localStorage
 }
 
 // State returns hash state for artifact manager.
@@ -58,10 +119,12 @@ func (m *client) State() ([]byte, error) {
 }
 
 // NewClient creates new client instance.
-func NewClient() *client { // nolint
+func NewClient(sender bus.Sender) *client { // nolint
 	return &client{
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              messagebus.NewSenders(),
+		sender:               sender,
+		localStorage:         newLocalStorage(),
 	}
 }
 
@@ -115,7 +178,16 @@ func (m *client) RegisterRequest(
 func (m *client) GetCode(
 	ctx context.Context, code insolar.Reference,
 ) (CodeDescriptor, error) {
-	var err error
+	var (
+		desc CodeDescriptor
+		err  error
+	)
+
+	desc = m.localStorage.Code(code)
+	if desc != nil {
+		return desc, nil
+	}
+
 	instrumenter := instrument(ctx, "GetCode").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
 	defer func() {
@@ -142,12 +214,12 @@ func (m *client) GetCode(
 
 	switch rep := genericReact.(type) {
 	case *reply.Code:
-		desc := codeDescriptor{
+		desc = &codeDescriptor{
 			ref:         code,
 			machineType: rep.MachineType,
 			code:        rep.Code,
 		}
-		return &desc, nil
+		return desc, nil
 	case *reply.Error:
 		return nil, rep.Error()
 	default:
@@ -164,9 +236,13 @@ func (m *client) GetObject(
 	head insolar.Reference,
 ) (ObjectDescriptor, error) {
 	var (
-		desc ObjectDescriptor
-		err  error
+		err error
 	)
+
+	if desc := m.localStorage.Object(head); desc != nil {
+		return desc, nil
+	}
+
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.Getobject")
 	instrumenter := instrument(ctx, "GetObject").err(&err)
 	defer func() {
@@ -180,39 +256,84 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
-	getObjectMsg := &message.GetObject{
-		Head: head,
-	}
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-
-	genericReact, err := sender(ctx, getObjectMsg, nil)
+	msg, err := payload.NewMessage(&payload.GetObject{
+		ObjectID: *head.Record(),
+	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal message")
+	}
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
+	defer done()
+
+	var (
+		index        *object.Lifeline
+		statePayload *payload.State
+	)
+	success := func() bool {
+		return index != nil && statePayload != nil
 	}
 
-	switch r := genericReact.(type) {
-	case *reply.Object:
-		desc = &objectDescriptor{
-			head:         r.Head,
-			state:        r.State,
-			prototype:    r.Prototype,
-			isPrototype:  r.IsPrototype,
-			childPointer: r.ChildPointer,
-			memory:       r.Memory,
-			parent:       r.Parent,
+	logger := inslogger.FromContext(ctx)
+	for rep := range reps {
+		replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal reply")
 		}
-		return desc, err
-	case *reply.Error:
-		return nil, r.Error()
-	default:
-		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", genericReact)
+
+		switch p := replyPayload.(type) {
+		case *payload.Index:
+			logger.Info("rep index")
+			index = &object.Lifeline{}
+			err := index.Unmarshal(p.Index)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal index")
+			}
+		case *payload.State:
+			logger.Info("rep state")
+			statePayload = p
+		case *payload.Error:
+			logger.Info("rep error: ", p.Text)
+			switch p.Code {
+			case payload.CodeDeactivated:
+				return nil, insolar.ErrDeactivated
+			default:
+				return nil, errors.New(p.Text)
+			}
+		default:
+			return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		}
+
+		if success() {
+			break
+		}
 	}
+	if !success() {
+		logger.WithField("correlation_id", middleware.MessageCorrelationID(msg)).Error("no reply")
+		return nil, errors.New("no reply")
+	}
+
+	rec := record.Material{}
+	err = rec.Unmarshal(statePayload.Record)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal state")
+	}
+	virtual := record.Unwrap(rec.Virtual)
+	s, ok := virtual.(record.State)
+	if !ok {
+		return nil, errors.New("wrong state record")
+	}
+	state := s
+
+	desc := &objectDescriptor{
+		head:         head,
+		state:        *index.LatestState,
+		prototype:    state.GetImage(),
+		isPrototype:  state.GetIsPrototype(),
+		childPointer: index.ChildPointer,
+		memory:       statePayload.Memory,
+		parent:       index.Parent,
+	}
+	return desc, err
 }
 
 // GetPendingRequest returns an unclosed pending request
@@ -971,4 +1092,16 @@ func (m *client) registerChild(
 	default:
 		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", rep)
 	}
+}
+
+func (m *client) InjectCodeDescriptor(reference insolar.Reference, descriptor CodeDescriptor) {
+	m.localStorage.StoreObject(reference, descriptor)
+}
+
+func (m *client) InjectObjectDescriptor(reference insolar.Reference, descriptor ObjectDescriptor) {
+	m.localStorage.StoreObject(reference, descriptor)
+}
+
+func (m *client) InjectFinish() {
+	m.localStorage.Initialized()
 }

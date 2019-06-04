@@ -204,7 +204,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
 		fjmr := *insolar.NewJetID(0, nil)
 		js.ForIDMock.Return(fjmr, true)
-		jetID, err := jtu.Fetch(ctx, target, insolar.PulseNumber(100))
+		jetID, err := jtu.Fetch(ctx, target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, fjmr, insolar.JetID(*jetID))
 	})
@@ -214,7 +214,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		jc.MeMock.Return(meRef)
 
 		ans.InRoleMock.Expect(
-			100, insolar.StaticRoleLightMaterial,
+			insolar.FirstPulseNumber+100, insolar.StaticRoleLightMaterial,
 		).Return(
 			[]insolar.Node{{ID: gen.Reference()}}, nil,
 		)
@@ -226,12 +226,12 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		fjm := *insolar.NewJetID(0, nil)
 		js.ForIDMock.Return(fjm, false)
 		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) {
-			require.Equal(t, insolar.PulseNumber(100), pn)
+			require.Equal(t, insolar.FirstPulseNumber+insolar.PulseNumber(100), pn)
 			require.True(t, actual)
 			require.Equal(t, []insolar.JetID{*insolar.NewJetID(0, nil)}, jets)
 		}
 
-		jetID, err := jtu.Fetch(ctx, target, insolar.PulseNumber(100))
+		jetID, err := jtu.Fetch(ctx, target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, insolar.ID(*insolar.NewJetID(0, nil)), *jetID)
 	})
@@ -312,7 +312,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 			go func(b byte) {
 				target := insolar.NewID(0, []byte{b})
 
-				jetID, err := jtu.Fetch(ctx, *target, insolar.PulseNumber(100))
+				jetID, err := jtu.Fetch(ctx, *target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
 				require.NoError(t, err)
 
 				dataMu.Lock()
@@ -324,7 +324,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		}
 		go func() {
 			dataMu.Lock()
-			jtu.Fetch(ctx, *data[128], insolar.PulseNumber(100))
+			jtu.Fetch(ctx, *data[128], insolar.FirstPulseNumber+insolar.PulseNumber(100))
 			dataMu.Unlock()
 
 			wg.Done()

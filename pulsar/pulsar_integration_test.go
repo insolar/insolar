@@ -167,7 +167,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	}()
 
 	// Assert
-	pulseDistributor.MinimockWait(100 * time.Millisecond)
+	pulseDistributor.MinimockWait(1 * time.Minute)
 	require.Equal(t, 1, int(pulseDistributor.DistributeCounter))
 
 	defer newPulsar.StopServer(ctx)

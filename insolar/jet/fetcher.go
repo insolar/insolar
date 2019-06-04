@@ -97,6 +97,11 @@ func (tu *fetcher) Fetch(
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet")
 	defer span.End()
 
+	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
+	if pulse <= insolar.FirstPulseNumber {
+		return (*insolar.ID)(insolar.NewJetID(0, nil)), nil
+	}
+
 	// Look in the local tree. Return if the actual jet found.
 	jetID, actual := tu.JetStorage.ForID(ctx, pulse, target)
 	if actual {
