@@ -78,11 +78,6 @@ type NodeKeeperMock struct {
 	GetWorkingNodesByRolePreCounter uint64
 	GetWorkingNodesByRoleMock       mNodeKeeperMockGetWorkingNodesByRole
 
-	IsBootstrappedFunc       func() (r bool)
-	IsBootstrappedCounter    uint64
-	IsBootstrappedPreCounter uint64
-	IsBootstrappedMock       mNodeKeeperMockIsBootstrapped
-
 	MoveSyncToActiveFunc       func(p context.Context, p1 insolar.PulseNumber) (r error)
 	MoveSyncToActiveCounter    uint64
 	MoveSyncToActivePreCounter uint64
@@ -97,11 +92,6 @@ type NodeKeeperMock struct {
 	SetInitialSnapshotCounter    uint64
 	SetInitialSnapshotPreCounter uint64
 	SetInitialSnapshotMock       mNodeKeeperMockSetInitialSnapshot
-
-	SetIsBootstrappedFunc       func(p bool)
-	SetIsBootstrappedCounter    uint64
-	SetIsBootstrappedPreCounter uint64
-	SetIsBootstrappedMock       mNodeKeeperMockSetIsBootstrapped
 
 	SyncFunc       func(p context.Context, p1 []insolar.NetworkNode, p2 []packets.ReferendumClaim) (r error)
 	SyncCounter    uint64
@@ -128,11 +118,9 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetWorkingNodeMock = mNodeKeeperMockGetWorkingNode{mock: m}
 	m.GetWorkingNodesMock = mNodeKeeperMockGetWorkingNodes{mock: m}
 	m.GetWorkingNodesByRoleMock = mNodeKeeperMockGetWorkingNodesByRole{mock: m}
-	m.IsBootstrappedMock = mNodeKeeperMockIsBootstrapped{mock: m}
 	m.MoveSyncToActiveMock = mNodeKeeperMockMoveSyncToActive{mock: m}
 	m.SetCloudHashMock = mNodeKeeperMockSetCloudHash{mock: m}
 	m.SetInitialSnapshotMock = mNodeKeeperMockSetInitialSnapshot{mock: m}
-	m.SetIsBootstrappedMock = mNodeKeeperMockSetIsBootstrapped{mock: m}
 	m.SyncMock = mNodeKeeperMockSync{mock: m}
 
 	return m
@@ -1657,140 +1645,6 @@ func (m *NodeKeeperMock) GetWorkingNodesByRoleFinished() bool {
 	return true
 }
 
-type mNodeKeeperMockIsBootstrapped struct {
-	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockIsBootstrappedExpectation
-	expectationSeries []*NodeKeeperMockIsBootstrappedExpectation
-}
-
-type NodeKeeperMockIsBootstrappedExpectation struct {
-	result *NodeKeeperMockIsBootstrappedResult
-}
-
-type NodeKeeperMockIsBootstrappedResult struct {
-	r bool
-}
-
-//Expect specifies that invocation of NodeKeeper.IsBootstrapped is expected from 1 to Infinity times
-func (m *mNodeKeeperMockIsBootstrapped) Expect() *mNodeKeeperMockIsBootstrapped {
-	m.mock.IsBootstrappedFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockIsBootstrappedExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of NodeKeeper.IsBootstrapped
-func (m *mNodeKeeperMockIsBootstrapped) Return(r bool) *NodeKeeperMock {
-	m.mock.IsBootstrappedFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockIsBootstrappedExpectation{}
-	}
-	m.mainExpectation.result = &NodeKeeperMockIsBootstrappedResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeKeeper.IsBootstrapped is expected once
-func (m *mNodeKeeperMockIsBootstrapped) ExpectOnce() *NodeKeeperMockIsBootstrappedExpectation {
-	m.mock.IsBootstrappedFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeKeeperMockIsBootstrappedExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeKeeperMockIsBootstrappedExpectation) Return(r bool) {
-	e.result = &NodeKeeperMockIsBootstrappedResult{r}
-}
-
-//Set uses given function f as a mock of NodeKeeper.IsBootstrapped method
-func (m *mNodeKeeperMockIsBootstrapped) Set(f func() (r bool)) *NodeKeeperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.IsBootstrappedFunc = f
-	return m.mock
-}
-
-//IsBootstrapped implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) IsBootstrapped() (r bool) {
-	counter := atomic.AddUint64(&m.IsBootstrappedPreCounter, 1)
-	defer atomic.AddUint64(&m.IsBootstrappedCounter, 1)
-
-	if len(m.IsBootstrappedMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IsBootstrappedMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.IsBootstrapped.")
-			return
-		}
-
-		result := m.IsBootstrappedMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.IsBootstrapped")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.IsBootstrappedMock.mainExpectation != nil {
-
-		result := m.IsBootstrappedMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.IsBootstrapped")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.IsBootstrappedFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.IsBootstrapped.")
-		return
-	}
-
-	return m.IsBootstrappedFunc()
-}
-
-//IsBootstrappedMinimockCounter returns a count of NodeKeeperMock.IsBootstrappedFunc invocations
-func (m *NodeKeeperMock) IsBootstrappedMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.IsBootstrappedCounter)
-}
-
-//IsBootstrappedMinimockPreCounter returns the value of NodeKeeperMock.IsBootstrapped invocations
-func (m *NodeKeeperMock) IsBootstrappedMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.IsBootstrappedPreCounter)
-}
-
-//IsBootstrappedFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) IsBootstrappedFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IsBootstrappedMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IsBootstrappedCounter) == uint64(len(m.IsBootstrappedMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.IsBootstrappedMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IsBootstrappedCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.IsBootstrappedFunc != nil {
-		return atomic.LoadUint64(&m.IsBootstrappedCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeKeeperMockMoveSyncToActive struct {
 	mock              *NodeKeeperMock
 	mainExpectation   *NodeKeeperMockMoveSyncToActiveExpectation
@@ -2185,129 +2039,6 @@ func (m *NodeKeeperMock) SetInitialSnapshotFinished() bool {
 	return true
 }
 
-type mNodeKeeperMockSetIsBootstrapped struct {
-	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockSetIsBootstrappedExpectation
-	expectationSeries []*NodeKeeperMockSetIsBootstrappedExpectation
-}
-
-type NodeKeeperMockSetIsBootstrappedExpectation struct {
-	input *NodeKeeperMockSetIsBootstrappedInput
-}
-
-type NodeKeeperMockSetIsBootstrappedInput struct {
-	p bool
-}
-
-//Expect specifies that invocation of NodeKeeper.SetIsBootstrapped is expected from 1 to Infinity times
-func (m *mNodeKeeperMockSetIsBootstrapped) Expect(p bool) *mNodeKeeperMockSetIsBootstrapped {
-	m.mock.SetIsBootstrappedFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockSetIsBootstrappedExpectation{}
-	}
-	m.mainExpectation.input = &NodeKeeperMockSetIsBootstrappedInput{p}
-	return m
-}
-
-//Return specifies results of invocation of NodeKeeper.SetIsBootstrapped
-func (m *mNodeKeeperMockSetIsBootstrapped) Return() *NodeKeeperMock {
-	m.mock.SetIsBootstrappedFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockSetIsBootstrappedExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeKeeper.SetIsBootstrapped is expected once
-func (m *mNodeKeeperMockSetIsBootstrapped) ExpectOnce(p bool) *NodeKeeperMockSetIsBootstrappedExpectation {
-	m.mock.SetIsBootstrappedFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeKeeperMockSetIsBootstrappedExpectation{}
-	expectation.input = &NodeKeeperMockSetIsBootstrappedInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of NodeKeeper.SetIsBootstrapped method
-func (m *mNodeKeeperMockSetIsBootstrapped) Set(f func(p bool)) *NodeKeeperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.SetIsBootstrappedFunc = f
-	return m.mock
-}
-
-//SetIsBootstrapped implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) SetIsBootstrapped(p bool) {
-	counter := atomic.AddUint64(&m.SetIsBootstrappedPreCounter, 1)
-	defer atomic.AddUint64(&m.SetIsBootstrappedCounter, 1)
-
-	if len(m.SetIsBootstrappedMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetIsBootstrappedMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.SetIsBootstrapped. %v", p)
-			return
-		}
-
-		input := m.SetIsBootstrappedMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NodeKeeperMockSetIsBootstrappedInput{p}, "NodeKeeper.SetIsBootstrapped got unexpected parameters")
-
-		return
-	}
-
-	if m.SetIsBootstrappedMock.mainExpectation != nil {
-
-		input := m.SetIsBootstrappedMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NodeKeeperMockSetIsBootstrappedInput{p}, "NodeKeeper.SetIsBootstrapped got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.SetIsBootstrappedFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.SetIsBootstrapped. %v", p)
-		return
-	}
-
-	m.SetIsBootstrappedFunc(p)
-}
-
-//SetIsBootstrappedMinimockCounter returns a count of NodeKeeperMock.SetIsBootstrappedFunc invocations
-func (m *NodeKeeperMock) SetIsBootstrappedMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetIsBootstrappedCounter)
-}
-
-//SetIsBootstrappedMinimockPreCounter returns the value of NodeKeeperMock.SetIsBootstrapped invocations
-func (m *NodeKeeperMock) SetIsBootstrappedMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetIsBootstrappedPreCounter)
-}
-
-//SetIsBootstrappedFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) SetIsBootstrappedFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetIsBootstrappedMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetIsBootstrappedCounter) == uint64(len(m.SetIsBootstrappedMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetIsBootstrappedMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetIsBootstrappedCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetIsBootstrappedFunc != nil {
-		return atomic.LoadUint64(&m.SetIsBootstrappedCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeKeeperMockSync struct {
 	mock              *NodeKeeperMock
 	mainExpectation   *NodeKeeperMockSyncExpectation
@@ -2505,10 +2236,6 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetWorkingNodesByRole")
 	}
 
-	if !m.IsBootstrappedFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.IsBootstrapped")
-	}
-
 	if !m.MoveSyncToActiveFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.MoveSyncToActive")
 	}
@@ -2519,10 +2246,6 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 
 	if !m.SetInitialSnapshotFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetInitialSnapshot")
-	}
-
-	if !m.SetIsBootstrappedFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.SetIsBootstrapped")
 	}
 
 	if !m.SyncFinished() {
@@ -2590,10 +2313,6 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetWorkingNodesByRole")
 	}
 
-	if !m.IsBootstrappedFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.IsBootstrapped")
-	}
-
 	if !m.MoveSyncToActiveFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.MoveSyncToActive")
 	}
@@ -2604,10 +2323,6 @@ func (m *NodeKeeperMock) MinimockFinish() {
 
 	if !m.SetInitialSnapshotFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetInitialSnapshot")
-	}
-
-	if !m.SetIsBootstrappedFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.SetIsBootstrapped")
 	}
 
 	if !m.SyncFinished() {
@@ -2639,11 +2354,9 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetWorkingNodeFinished()
 		ok = ok && m.GetWorkingNodesFinished()
 		ok = ok && m.GetWorkingNodesByRoleFinished()
-		ok = ok && m.IsBootstrappedFinished()
 		ok = ok && m.MoveSyncToActiveFinished()
 		ok = ok && m.SetCloudHashFinished()
 		ok = ok && m.SetInitialSnapshotFinished()
-		ok = ok && m.SetIsBootstrappedFinished()
 		ok = ok && m.SyncFinished()
 
 		if ok {
@@ -2697,10 +2410,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NodeKeeperMock.GetWorkingNodesByRole")
 			}
 
-			if !m.IsBootstrappedFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.IsBootstrapped")
-			}
-
 			if !m.MoveSyncToActiveFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.MoveSyncToActive")
 			}
@@ -2711,10 +2420,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SetInitialSnapshotFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.SetInitialSnapshot")
-			}
-
-			if !m.SetIsBootstrappedFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.SetIsBootstrapped")
 			}
 
 			if !m.SyncFinished() {
@@ -2777,10 +2482,6 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.IsBootstrappedFinished() {
-		return false
-	}
-
 	if !m.MoveSyncToActiveFinished() {
 		return false
 	}
@@ -2790,10 +2491,6 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 	}
 
 	if !m.SetInitialSnapshotFinished() {
-		return false
-	}
-
-	if !m.SetIsBootstrappedFinished() {
 		return false
 	}
 
