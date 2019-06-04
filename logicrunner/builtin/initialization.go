@@ -22,8 +22,8 @@ import (
 	helloworld "github.com/insolar/insolar/logicrunner/builtin/contract/helloworld"
 	"github.com/pkg/errors"
 
-	XXX_rootdomain "github.com/insolar/insolar/bootstrap/rootdomain"
 	XXX_insolar "github.com/insolar/insolar/insolar"
+	XXX_rootdomain "github.com/insolar/insolar/insolar/rootdomain"
 	XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
 	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
