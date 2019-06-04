@@ -162,7 +162,7 @@ To set up the network locally, do the following:
 
    .. code-block:: bash
 
-      scripts/insolard/launchnet.sh -b
+      scripts/insolard/launchnet.sh -g
 
    The launcher generates bootstrap data, starts the nodes and a pulse watcher, and logs events to ``.artifacts/launchnet/logs``.
 

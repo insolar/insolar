@@ -12,5 +12,3 @@ else
     echo "If you want to show nice output for stringified json in ConfigMap, install yamlyaml tool:"
     echo "  go install github.com/nordicdyno/yamlyaml"
 fi
-
-
