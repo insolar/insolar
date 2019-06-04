@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -170,103 +171,75 @@ func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueu
 	suite.Require().Equal(message.InPending, es.pending)
 }
 
-func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_HappyPath() {
-	h := HandleAdditionalCallFromPreviousExecutor{
-		dep: &Dependencies{
-			lr: suite.lr,
+func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor() {
+	table := []struct {
+		name                           string
+		clarifyPendingStateResult      error
+		startQueueProcessorResult      error
+		expectedClarifyPendingStateCtr int32
+		expectedStartQueueProcessorCtr int32
+	}{
+		{
+			name:                           "Happy path",
+			expectedClarifyPendingStateCtr: 1,
+			expectedStartQueueProcessorCtr: 1,
+		},
+		{
+			name:                           "ClarifyPendingState failed",
+			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
+			expectedClarifyPendingStateCtr: 1,
+		},
+		{
+			name:                           "StartQueueProcessorIfNeeded failed",
+			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
+			expectedClarifyPendingStateCtr: 1,
+			expectedStartQueueProcessorCtr: 1,
+		},
+		{
+			name:                           "Both procedures fail",
+			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
+			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
+			expectedClarifyPendingStateCtr: 1,
+			expectedStartQueueProcessorCtr: 0,
 		},
 	}
-	f := flow.NewFlowMock(suite.T())
-	parcel := testutils.NewParcelMock(suite.T())
-	request := gen.Reference()
-	msg := message.AdditionalCallFromPreviousExecutor{
-		ObjectReference: gen.Reference(),
-		Parcel:          parcel,
-		Request:         &request,
-	}
 
-	f.ProcedureFunc = func(ctx context.Context, proc flow.Procedure, cancelable bool) error {
-		_, ok := proc.(*ClarifyPendingState)
-		if ok {
-			// ClarifyPendingState returned normally
-			return nil
-		}
-		return fmt.Errorf("Unexpected procedure call")
-	}
+	for _, test := range table {
+		test := test
+		suite.T().Run(test.name, func(t *testing.T) {
+			h := HandleAdditionalCallFromPreviousExecutor{
+				dep: &Dependencies{
+					lr: suite.lr,
+				},
+			}
+			f := flow.NewFlowMock(suite.T())
+			parcel := testutils.NewParcelMock(suite.T())
+			request := gen.Reference()
+			msg := message.AdditionalCallFromPreviousExecutor{
+				ObjectReference: gen.Reference(),
+				Parcel:          parcel,
+				Request:         &request,
+			}
 
-	f.HandleFunc = func(ctx context.Context, handle flow.Handle) error {
-		// StartQueueProcessorIfNeeded returned normally
-		return nil
-	}
+			var clarifyPendingStateCtr int32
+			f.ProcedureFunc = func(ctx context.Context, proc flow.Procedure, cancelable bool) error {
+				atomic.AddInt32(&clarifyPendingStateCtr, 1)
+				_, ok := proc.(*ClarifyPendingState)
+				require.True(suite.T(), ok)
+				return test.clarifyPendingStateResult
+			}
 
-	require.NotPanics(suite.T(), func() {
-		h.handleActual(context.Background(), &msg, f)
-	})
-}
+			var startQueueProcessorCtr int32
+			f.HandleFunc = func(ctx context.Context, handle flow.Handle) error {
+				atomic.AddInt32(&startQueueProcessorCtr, 1)
+				return test.startQueueProcessorResult
+			}
 
-func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_ClarifyPendingState_Failed() {
-	h := HandleAdditionalCallFromPreviousExecutor{
-		dep: &Dependencies{
-			lr: suite.lr,
-		},
+			h.handleActual(context.Background(), &msg, f)
+			require.Equal(suite.T(), test.expectedClarifyPendingStateCtr, atomic.LoadInt32(&clarifyPendingStateCtr))
+			require.Equal(suite.T(), test.expectedStartQueueProcessorCtr, atomic.LoadInt32(&startQueueProcessorCtr))
+		})
 	}
-	f := flow.NewFlowMock(suite.T())
-	parcel := testutils.NewParcelMock(suite.T())
-	request := gen.Reference()
-	msg := message.AdditionalCallFromPreviousExecutor{
-		ObjectReference: gen.Reference(),
-		Parcel:          parcel,
-		Request:         &request,
-	}
-
-	f.ProcedureFunc = func(ctx context.Context, proc flow.Procedure, cancelable bool) error {
-		_, ok := proc.(*ClarifyPendingState)
-		if ok {
-			// ClarifyPendingState returned an error
-			return fmt.Errorf("ClarifyPendingState FAILED")
-		}
-		return fmt.Errorf("Unexpected procedure call")
-	}
-
-	// An error was logged but we return reply.OK nonetheless
-	require.NotPanics(suite.T(), func() {
-		h.handleActual(context.Background(), &msg, f)
-	})
-}
-
-func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor_StartQueueProcessorIfNeeded_Failed() {
-	h := HandleAdditionalCallFromPreviousExecutor{
-		dep: &Dependencies{
-			lr: suite.lr,
-		},
-	}
-	f := flow.NewFlowMock(suite.T())
-	parcel := testutils.NewParcelMock(suite.T())
-	request := gen.Reference()
-	msg := message.AdditionalCallFromPreviousExecutor{
-		ObjectReference: gen.Reference(),
-		Parcel:          parcel,
-		Request:         &request,
-	}
-
-	f.ProcedureFunc = func(ctx context.Context, proc flow.Procedure, cancelable bool) error {
-		_, ok := proc.(*ClarifyPendingState)
-		if ok {
-			// ClarifyPendingState returned normally
-			return nil
-		}
-		return fmt.Errorf("Unexpected procedure call")
-	}
-
-	f.HandleFunc = func(ctx context.Context, handle flow.Handle) error {
-		// StartQueueProcessorIfNeeded returned an error
-		return fmt.Errorf("StartQueueProcessorIfNeeded FAILED")
-	}
-
-	// An error was logged but we return reply.OK nonetheless
-	require.NotPanics(suite.T(), func() {
-		h.handleActual(context.Background(), &msg, f)
-	})
 }
 
 func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
