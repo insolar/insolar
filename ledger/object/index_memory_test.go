@@ -1,32 +1,45 @@
+// //
+// // Copyright 2019 Insolar Technologies GmbH
+// //
+// // Licensed under the Apache License, Version 2.0 (the "License");
+// // you may not use this file except in compliance with the License.
+// // You may obtain a copy of the License at
+// //
+// //     http://www.apache.org/licenses/LICENSE-2.0
+// //
+// // Unless required by applicable law or agreed to in writing, software
+// // distributed under the License is distributed on an "AS IS" BASIS,
+// // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// // See the License for the specific language governing permissions and
+// // limitations under the License.
+// //
 //
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-
 package object
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+//
+// import (
+// 	"context"
+// 	"testing"
+//
+// 	"github.com/insolar/insolar/insolar"
+// 	"github.com/insolar/insolar/insolar/gen"
+// 	"github.com/insolar/insolar/insolar/record"
+// 	"github.com/insolar/insolar/instrumentation/inslogger"
+// 	"github.com/stretchr/testify/assert"
+// 	"github.com/stretchr/testify/require"
+// )
+//
 func TestInMemoryIndex_SetLifeline(t *testing.T) {
 	t.Parallel()
 
@@ -49,7 +62,7 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 		err := storage.Set(ctx, pn, id, idx)
 
 		require.NoError(t, err)
-		assert.Equal(t, 1, len(storage.buckets))
+		require.Equal(t, 1, len(storage.buckets))
 
 		buck, buckOK := storage.buckets[pn]
 		require.Equal(t, true, buckOK)
@@ -129,7 +142,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 		res, err := storage.ForID(ctx, pn, id)
 
 		require.NoError(t, err)
-		assert.Equal(t, idx, res)
+		require.Equal(t, idx, res)
 	})
 
 	t.Run("returns error when no index-value for id", func(t *testing.T) {
@@ -140,7 +153,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 
 		_, err := storage.ForID(ctx, pn, id)
 
-		assert.Equal(t, ErrLifelineNotFound, err)
+		require.Equal(t, ErrLifelineNotFound, err)
 	})
 }
 
@@ -333,7 +346,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		objID := gen.ID()
 		idx := NewInMemoryIndex(nil)
 
-		err := idx.SetRequest(ctx, pn, objID, record.Request{})
+		err := idx.SetRequest(ctx, pn, objID, insolar.ID{}, record.Request{})
 
 		require.Error(t, err, ErrLifelineNotFound)
 	})
@@ -347,8 +360,9 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 
 		objRef := gen.Reference()
 		req := record.Request{Object: &objRef}
+		reqID := insolar.NewID(1, []byte{1})
 
-		err := idx.SetRequest(ctx, pn, objID, req)
+		err := idx.SetRequest(ctx, pn, objID, *reqID, req)
 		require.NoError(t, err)
 
 		buck := idx.buckets[pn][objID]
@@ -357,11 +371,11 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 
 		require.Equal(t, 1, len(buck.objectMeta.PendingRecords))
 		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
-		require.Equal(t, 1, len(buck.pendingMeta.fullFilament[0].Records))
+		require.Equal(t, 1, len(buck.pendingMeta.fullFilament[0].RecordsIDs))
 
-		require.Equal(t, record.Wrap(req), buck.objectMeta.PendingRecords[0])
+		require.Equal(t, *reqID, buck.objectMeta.PendingRecords[0])
 		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
-		require.Equal(t, record.Wrap(req), buck.pendingMeta.fullFilament[0].Records[0])
+		require.Equal(t, *reqID, buck.pendingMeta.fullFilament[0].RecordsIDs[0])
 
 		require.Equal(t, 1, len(buck.pendingMeta.requestPNIndex))
 		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIndex))
@@ -381,26 +395,28 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 
 		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
+		reqID := insolar.NewID(1, []byte{1})
 
-		err := idx.SetRequest(ctx, pn, objID, req)
+		err := idx.SetRequest(ctx, pn, objID, *reqID, req)
 		require.NoError(t, err)
 
 		objRefS := insolar.NewReference(*insolar.NewID(321, nil))
 		reqS := record.Request{Object: objRefS}
+		reqSID := insolar.NewID(2, []byte{2})
 
-		err = idx.SetRequest(ctx, pn, objID, reqS)
+		err = idx.SetRequest(ctx, pn, objID, *reqSID, reqS)
 		require.NoError(t, err)
 
 		buck := idx.buckets[pn][objID]
 		require.Equal(t, 2, len(buck.objectMeta.PendingRecords))
 		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
-		require.Equal(t, 2, len(buck.pendingMeta.fullFilament[0].Records))
+		require.Equal(t, 2, len(buck.pendingMeta.fullFilament[0].RecordsIDs))
 
-		require.Equal(t, record.Wrap(req), buck.objectMeta.PendingRecords[0])
-		require.Equal(t, record.Wrap(reqS), buck.objectMeta.PendingRecords[1])
+		require.Equal(t, *reqID, buck.objectMeta.PendingRecords[0])
+		require.Equal(t, *reqSID, buck.objectMeta.PendingRecords[1])
 		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
-		require.Equal(t, record.Wrap(req), buck.pendingMeta.fullFilament[0].Records[0])
-		require.Equal(t, record.Wrap(reqS), buck.pendingMeta.fullFilament[0].Records[1])
+		require.Equal(t, *reqID, buck.pendingMeta.fullFilament[0].RecordsIDs[0])
+		require.Equal(t, *reqSID, buck.pendingMeta.fullFilament[0].RecordsIDs[1])
 
 		require.Equal(t, 2, len(buck.pendingMeta.requestPNIndex))
 		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIndex))
@@ -423,19 +439,19 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		idx.createBucket(ctx, pn, objID)
 
 		buck := idx.buckets[pn][objID]
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, RecordsIDs: []insolar.ID{}})
 
 		objRef := gen.Reference()
 		req := record.Request{Object: &objRef}
+		reqID := insolar.NewID(1, []byte{1})
 
-		err := idx.SetRequest(ctx, pn, objID, req)
+		err := idx.SetRequest(ctx, pn, objID, *reqID, req)
 		require.NoError(t, err)
 
 		require.Equal(t, 2, len(buck.pendingMeta.fullFilament))
 		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
 		require.Equal(t, pn+1, buck.pendingMeta.fullFilament[1].PN)
 	})
-
 }
 
 func TestInMemoryIndex_SetFilament(t *testing.T) {
@@ -454,17 +470,29 @@ func TestInMemoryIndex_SetFilament(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		pn := insolar.PulseNumber(123)
 		objID := gen.ID()
-		idx := NewInMemoryIndex(nil)
+
+		rsm := NewRecordStorageMock(t)
+		objRef := gen.Reference()
+		req := record.Request{Object: &objRef}
+		vReq := record.Wrap(req)
+		mReq := record.Material{
+			Virtual: &vReq,
+		}
+		reqID := *insolar.NewID(222, nil)
+		rsm.SetFunc = func(p context.Context, p1 insolar.ID, p2 record.Material) (r error) {
+			require.Equal(t, p1, reqID)
+			require.Equal(t, p2, mReq)
+			return nil
+		}
+
+		idx := NewInMemoryIndex(rsm)
 		idx.createBucket(ctx, pn, objID)
 
 		buck := idx.buckets[pn][objID]
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn - 10, Records: []record.Virtual{}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, RecordsIDs: []insolar.ID{}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn - 10, RecordsIDs: []insolar.ID{}})
 
-		objRef := gen.Reference()
-		req := record.Request{Object: &objRef}
-
-		err := idx.SetFilament(ctx, pn, objID, pn, []record.Virtual{record.Wrap(req)})
+		err := idx.SetFilament(ctx, pn, objID, pn, []record.MaterialWithId{{Record: mReq, Id: reqID}})
 		require.NoError(t, err)
 
 		require.Equal(t, 3, len(buck.pendingMeta.fullFilament))
@@ -472,7 +500,8 @@ func TestInMemoryIndex_SetFilament(t *testing.T) {
 		require.Equal(t, pn, buck.pendingMeta.fullFilament[1].PN)
 		require.Equal(t, pn+1, buck.pendingMeta.fullFilament[2].PN)
 
-		require.Equal(t, record.Wrap(req), buck.pendingMeta.fullFilament[1].Records[0])
+		require.Equal(t, *insolar.NewID(222, nil), buck.pendingMeta.fullFilament[1].RecordsIDs[0])
+		rsm.MinimockFinish()
 	})
 }
 
@@ -492,19 +521,32 @@ func TestInMemoryIndex_Records(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
 		objID := gen.ID()
-		idx := NewInMemoryIndex(nil)
-		idx.createBucket(ctx, pn, objID)
 
 		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
+		vReq := record.Wrap(req)
+		reqID := insolar.NewID(444, nil)
 
-		_ = idx.SetRequest(ctx, pn, objID, req)
+		rsm := NewRecordStorageMock(t)
+		rsm.ForIDFunc = func(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
+			require.Equal(t, *reqID, p1)
+
+			return record.Material{
+				Virtual: &vReq,
+			}, nil
+		}
+
+		idx := NewInMemoryIndex(rsm)
+		idx.createBucket(ctx, pn, objID)
+
+		_ = idx.SetRequest(ctx, pn, objID, *reqID, req)
 
 		data, err := idx.Records(ctx, pn, objID)
 
 		require.NoError(t, err)
 		require.Equal(t, 1, len(data))
-		require.Equal(t, record.Wrap(req), data[0])
+		require.Equal(t, record.Wrap(req), *data[0].Record.Virtual)
+		require.Equal(t, *reqID, data[0].Id)
 	})
 }
 
@@ -530,13 +572,15 @@ func TestInMemoryIndex_OpenRequestsForObjID(t *testing.T) {
 
 		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
+		reqID := insolar.NewID(333, nil)
 
 		objRefS := insolar.NewReference(*insolar.NewID(234, nil))
 		reqS := record.Request{Object: objRefS}
+		reqSID := insolar.NewID(666, nil)
 
-		err := idx.SetRequest(ctx, pn, objID, req)
+		err := idx.SetRequest(ctx, pn, objID, *reqID, req)
 		require.NoError(t, err)
-		err = idx.SetRequest(ctx, pn, objID, reqS)
+		err = idx.SetRequest(ctx, pn, objID, *reqSID, reqS)
 		require.NoError(t, err)
 
 		t.Run("query all", func(t *testing.T) {
@@ -563,7 +607,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		objID := gen.ID()
 		idx := NewInMemoryIndex(nil)
 
-		err := idx.SetResult(ctx, pn, objID, record.Result{})
+		err := idx.SetResult(ctx, pn, objID, insolar.ID{}, record.Result{})
 
 		require.Error(t, err, ErrLifelineNotFound)
 	})
@@ -577,17 +621,18 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		res := record.Result{Request: *objRef}
+		resID := insolar.NewID(999, nil)
 
-		err := idx.SetResult(ctx, pn, objID, res)
+		err := idx.SetResult(ctx, pn, objID, *resID, res)
 
 		require.NoError(t, err)
 		buck := idx.buckets[pn][objID]
 
 		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
-		require.Equal(t, record.Wrap(res), buck.pendingMeta.fullFilament[0].Records[0])
+		require.Equal(t, *resID, buck.pendingMeta.fullFilament[0].RecordsIDs[0])
 		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
 		require.Equal(t, 1, len(buck.objectMeta.PendingRecords))
-		require.Equal(t, record.Wrap(res), buck.objectMeta.PendingRecords[0])
+		require.Equal(t, *resID, buck.objectMeta.PendingRecords[0])
 	})
 
 	t.Run("set 2 results, when no requests", func(t *testing.T) {
@@ -599,25 +644,27 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		res := record.Result{Request: *objRef}
+		resID := insolar.NewID(333, nil)
 		resS := record.Result{Request: *objRef, Payload: []byte{1, 2, 3, 4, 5, 6}}
+		resSID := insolar.NewID(222, nil)
 
-		err := idx.SetResult(ctx, pn, objID, res)
+		err := idx.SetResult(ctx, pn, objID, *resID, res)
 		require.NoError(t, err)
-		err = idx.SetResult(ctx, pn, objID, resS)
+		err = idx.SetResult(ctx, pn, objID, *resSID, resS)
 		require.NoError(t, err)
 
 		buck := idx.buckets[pn][objID]
 
 		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
 
-		require.Equal(t, 2, len(buck.pendingMeta.fullFilament[0].Records))
+		require.Equal(t, 2, len(buck.pendingMeta.fullFilament[0].RecordsIDs))
 		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
-		require.Equal(t, record.Wrap(res), buck.pendingMeta.fullFilament[0].Records[0])
-		require.Equal(t, record.Wrap(resS), buck.pendingMeta.fullFilament[0].Records[1])
+		require.Equal(t, *resID, buck.pendingMeta.fullFilament[0].RecordsIDs[0])
+		require.Equal(t, *resSID, buck.pendingMeta.fullFilament[0].RecordsIDs[1])
 
 		require.Equal(t, 2, len(buck.objectMeta.PendingRecords))
-		require.Equal(t, record.Wrap(res), buck.objectMeta.PendingRecords[0])
-		require.Equal(t, record.Wrap(resS), buck.objectMeta.PendingRecords[1])
+		require.Equal(t, *resID, buck.objectMeta.PendingRecords[0])
+		require.Equal(t, *resSID, buck.objectMeta.PendingRecords[1])
 	})
 
 	t.Run("close requests work fine", func(t *testing.T) {
@@ -629,15 +676,18 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
-		_ = idx.SetRequest(ctx, pn, objID, req)
+		reqID := insolar.NewID(1, nil)
+		_ = idx.SetRequest(ctx, pn, objID, *reqID, req)
 
 		objRefS := insolar.NewReference(*insolar.NewID(321, nil))
 		reqS := record.Request{Object: objRefS}
-		_ = idx.SetRequest(ctx, pn, objID, reqS)
+		reqSID := insolar.NewID(2, nil)
+		_ = idx.SetRequest(ctx, pn, objID, *reqSID, reqS)
 
 		res := record.Result{Request: *objRef}
+		resSID := insolar.NewID(3, nil)
 
-		err := idx.SetResult(ctx, pn, objID, res)
+		err := idx.SetResult(ctx, pn, objID, *resSID, res)
 		require.NoError(t, err)
 
 		open, err := idx.OpenRequestsForObjID(ctx, pn, objID, 10)
@@ -649,7 +699,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		buck := idx.buckets[pn][objID]
 		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
 		require.Equal(t, pn, buck.pendingMeta.fullFilament[0].PN)
-		require.Equal(t, 3, len(buck.pendingMeta.fullFilament[0].Records))
+		require.Equal(t, 3, len(buck.pendingMeta.fullFilament[0].RecordsIDs))
 
 		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIndex[pn]))
 		_, ok := buck.pendingMeta.notClosedRequestsIndex[pn][*reqS.Object.Record()]
@@ -668,12 +718,13 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		idx := NewInMemoryIndex(nil)
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, RecordsIDs: []insolar.ID{}})
 
 		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		res := record.Result{Request: *objRef}
+		resID := insolar.NewID(1, nil)
 
-		err := idx.SetResult(ctx, pn, objID, res)
+		err := idx.SetResult(ctx, pn, objID, *resID, res)
 
 		require.NoError(t, err)
 
@@ -699,21 +750,40 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
 		objID := gen.ID()
-		idx := NewInMemoryIndex(nil)
+
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+		reqID := insolar.NewID(111, nil)
+
+		res := record.Result{Request: *objRef}
+		resID := insolar.NewID(222, nil)
+
+		rsm := NewRecordStorageMock(t)
+		rsm.ForIDFunc = func(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
+			switch p1 {
+			case *reqID:
+				reqV := record.Wrap(req)
+				return record.Material{Virtual: &reqV}, nil
+			case *resID:
+				resV := record.Wrap(res)
+				return record.Material{Virtual: &resV}, nil
+			default:
+				panic("test is totaly broken")
+			}
+		}
+
+		idx := NewInMemoryIndex(rsm)
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
+
 		buck.pendingMeta.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
 			pn + 1: {},
 			pn:     {},
 		}
+
 		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
-
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
-		req := record.Request{Object: objRef}
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
-
-		res := record.Result{Request: *objRef}
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(res)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, RecordsIDs: []insolar.ID{*reqID}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, RecordsIDs: []insolar.ID{*resID}})
 
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
@@ -729,7 +799,29 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
 		objID := gen.ID()
-		idx := NewInMemoryIndex(nil)
+
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+		reqID := insolar.NewID(111, nil)
+
+		res := record.Result{Request: *objRef}
+		resID := insolar.NewID(222, nil)
+
+		rsm := NewRecordStorageMock(t)
+		rsm.ForIDFunc = func(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
+			switch p1 {
+			case *reqID:
+				reqV := record.Wrap(req)
+				return record.Material{Virtual: &reqV}, nil
+			case *resID:
+				resV := record.Wrap(res)
+				return record.Material{Virtual: &resV}, nil
+			default:
+				panic("test is totally broken")
+			}
+		}
+
+		idx := NewInMemoryIndex(rsm)
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
 		buck.pendingMeta.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
@@ -738,12 +830,8 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		}
 		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
 
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
-		req := record.Request{Object: objRef}
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
-
-		res := record.Result{Request: *objRef}
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(res)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, RecordsIDs: []insolar.ID{*reqID}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, RecordsIDs: []insolar.ID{*resID}})
 
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
@@ -759,7 +847,23 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
 		objID := gen.ID()
-		idx := NewInMemoryIndex(nil)
+
+		objRef := insolar.NewReference(*insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+		reqID := insolar.NewID(111, nil)
+
+		rsm := NewRecordStorageMock(t)
+		rsm.ForIDFunc = func(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
+			switch p1 {
+			case *reqID:
+				reqV := record.Wrap(req)
+				return record.Material{Virtual: &reqV}, nil
+			default:
+				panic("test is totally broken")
+			}
+		}
+
+		idx := NewInMemoryIndex(rsm)
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
 		buck.pendingMeta.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
@@ -767,9 +871,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		}
 		buck.pendingMeta.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
 
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
-		req := record.Request{Object: objRef}
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req)}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, RecordsIDs: []insolar.ID{*reqID}})
 
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
@@ -785,23 +887,51 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
 		objID := gen.ID()
-		idx := NewInMemoryIndex(nil)
-		idx.createBucket(ctx, pn, objID)
-		buck := idx.buckets[pn][objID]
 
 		objRef := insolar.NewReference(*insolar.NewID(123, nil))
 		req := record.Request{Object: objRef}
+		reqV := record.Wrap(req)
 		res := record.Result{Request: *objRef}
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req), record.Wrap(res)}})
+		resV := record.Wrap(res)
+		resID := *insolar.NewID(321, nil)
 
 		objRefS := insolar.NewReference(*insolar.NewID(567, nil))
 		reqS := record.Request{Object: objRefS}
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(reqS)}})
+		reqSV := record.Wrap(reqS)
 
 		objRefT := insolar.NewReference(*insolar.NewID(888, nil))
 		reqT := record.Request{Object: objRefT}
 		resT := record.Result{Request: *objRefT}
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 2, Records: []record.Virtual{record.Wrap(reqT), record.Wrap(resT)}})
+		reqTV := record.Wrap(reqT)
+		resTV := record.Wrap(resT)
+		resTID := *insolar.NewID(999, nil)
+
+		rsm := NewRecordStorageMock(t)
+		rsm.ForIDFunc = func(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
+			switch p1 {
+			case *req.Object.Record():
+				return record.Material{Virtual: &reqV}, nil
+			case resID:
+				return record.Material{Virtual: &resV}, nil
+			case *reqS.Object.Record():
+				return record.Material{Virtual: &reqSV}, nil
+			case *reqT.Object.Record():
+				return record.Material{Virtual: &reqTV}, nil
+			case resTID:
+				return record.Material{Virtual: &resTV}, nil
+			default:
+				panic("test is totally broken")
+			}
+		}
+
+		idx := NewInMemoryIndex(rsm)
+		idx.createBucket(ctx, pn, objID)
+		buck := idx.buckets[pn][objID]
+
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, RecordsIDs: []insolar.ID{*objRef.Record(), resID}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, RecordsIDs: []insolar.ID{*objRefS.Record()}})
+
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 2, RecordsIDs: []insolar.ID{*objRefT.Record(), resTID}})
 
 		buck.pendingMeta.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
 			pn:     {},

@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/object/mocks"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 func TestCleaner_cleanPulse(t *testing.T) {
@@ -50,10 +50,10 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	bc := blob.NewCleanerMock(ctrl)
 	bc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
-	rc := mocks.NewRecordCleanerMock(ctrl)
+	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
-	ic := mocks.NewIndexCleanerMock(ctrl)
+	ic := object.NewIndexCleanerMock(ctrl)
 	ic.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
 	ps := pulse.NewShifterMock(ctrl)
@@ -87,10 +87,10 @@ func TestCleaner_clean(t *testing.T) {
 	bc := blob.NewCleanerMock(ctrl)
 	bc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
-	rc := mocks.NewRecordCleanerMock(ctrl)
+	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
-	ic := mocks.NewIndexCleanerMock(ctrl)
+	ic := object.NewIndexCleanerMock(ctrl)
 	ic.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	ps := pulse.NewShifterMock(ctrl)
@@ -129,10 +129,10 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	bc := blob.NewCleanerMock(ctrl)
 	bc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
-	rc := mocks.NewRecordCleanerMock(ctrl)
+	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
-	ic := mocks.NewIndexCleanerMock(ctrl)
+	ic := object.NewIndexCleanerMock(ctrl)
 	ic.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	ps := pulse.NewShifterMock(ctrl)

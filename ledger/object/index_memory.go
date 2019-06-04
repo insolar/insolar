@@ -271,7 +271,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	// 	b.PreviousPendingFilament = pn
 	// }
 
-	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, *req.Object.Record())
+	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, reqID)
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {
@@ -316,7 +316,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	b.Lock()
 	defer b.Unlock()
 
-	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, *res.Request.Record())
+	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, resID)
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {

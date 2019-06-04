@@ -1,4 +1,4 @@
-package mocks
+package object
 
 /*
 DO NOT EDIT!
@@ -12,7 +12,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,7 +20,7 @@ import (
 type IndexBucketAccessorMock struct {
 	t minimock.Tester
 
-	ForPNAndJetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []object.FilamentIndex)
+	ForPNAndJetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex)
 	ForPNAndJetCounter    uint64
 	ForPNAndJetPreCounter uint64
 	ForPNAndJetMock       mIndexBucketAccessorMockForPNAndJet
@@ -58,7 +57,7 @@ type IndexBucketAccessorMockForPNAndJetInput struct {
 }
 
 type IndexBucketAccessorMockForPNAndJetResult struct {
-	r []object.FilamentIndex
+	r []FilamentIndex
 }
 
 //Expect specifies that invocation of IndexBucketAccessor.ForPNAndJet is expected from 1 to Infinity times
@@ -74,7 +73,7 @@ func (m *mIndexBucketAccessorMockForPNAndJet) Expect(p context.Context, p1 insol
 }
 
 //Return specifies results of invocation of IndexBucketAccessor.ForPNAndJet
-func (m *mIndexBucketAccessorMockForPNAndJet) Return(r []object.FilamentIndex) *IndexBucketAccessorMock {
+func (m *mIndexBucketAccessorMockForPNAndJet) Return(r []FilamentIndex) *IndexBucketAccessorMock {
 	m.mock.ForPNAndJetFunc = nil
 	m.expectationSeries = nil
 
@@ -96,12 +95,12 @@ func (m *mIndexBucketAccessorMockForPNAndJet) ExpectOnce(p context.Context, p1 i
 	return expectation
 }
 
-func (e *IndexBucketAccessorMockForPNAndJetExpectation) Return(r []object.FilamentIndex) {
+func (e *IndexBucketAccessorMockForPNAndJetExpectation) Return(r []FilamentIndex) {
 	e.result = &IndexBucketAccessorMockForPNAndJetResult{r}
 }
 
 //Set uses given function f as a mock of IndexBucketAccessor.ForPNAndJet method
-func (m *mIndexBucketAccessorMockForPNAndJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []object.FilamentIndex)) *IndexBucketAccessorMock {
+func (m *mIndexBucketAccessorMockForPNAndJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex)) *IndexBucketAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -110,7 +109,7 @@ func (m *mIndexBucketAccessorMockForPNAndJet) Set(f func(p context.Context, p1 i
 }
 
 //ForPNAndJet implements github.com/insolar/insolar/ledger/object.IndexBucketAccessor interface
-func (m *IndexBucketAccessorMock) ForPNAndJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []object.FilamentIndex) {
+func (m *IndexBucketAccessorMock) ForPNAndJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex) {
 	counter := atomic.AddUint64(&m.ForPNAndJetPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPNAndJetCounter, 1)
 

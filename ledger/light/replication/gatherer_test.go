@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/ledger/object/mocks"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -54,13 +53,13 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 	}
 	ba.ForPulseMock.Expect(ctx, jetID, pn).Return([]blob.Blob{b})
 
-	ra := mocks.NewRecordCollectionAccessorMock(t)
+	ra := object.NewRecordCollectionAccessorMock(t)
 	rec := getMaterialRecord()
 	ra.ForPulseMock.Expect(ctx, jetID, pn).Return([]record.Material{
 		rec,
 	})
 
-	ia := mocks.NewIndexBucketAccessorMock(t)
+	ia := object.NewIndexBucketAccessorMock(t)
 	idx := object.Lifeline{
 		JetID:        gen.JetID(),
 		ChildPointer: insolar.NewID(gen.PulseNumber(), nil),

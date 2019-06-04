@@ -1,4 +1,4 @@
-package mocks
+package object
 
 /*
 DO NOT EDIT!
@@ -6,13 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "LifelineAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	object "github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,7 +20,7 @@ import (
 type LifelineAccessorMock struct {
 	t minimock.Tester
 
-	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.Lifeline, r1 error)
+	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r Lifeline, r1 error)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mLifelineAccessorMockForID
@@ -58,7 +57,7 @@ type LifelineAccessorMockForIDInput struct {
 }
 
 type LifelineAccessorMockForIDResult struct {
-	r  object.Lifeline
+	r  Lifeline
 	r1 error
 }
 
@@ -75,7 +74,7 @@ func (m *mLifelineAccessorMockForID) Expect(p context.Context, p1 insolar.PulseN
 }
 
 //Return specifies results of invocation of LifelineAccessor.ForID
-func (m *mLifelineAccessorMockForID) Return(r object.Lifeline, r1 error) *LifelineAccessorMock {
+func (m *mLifelineAccessorMockForID) Return(r Lifeline, r1 error) *LifelineAccessorMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -97,12 +96,12 @@ func (m *mLifelineAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.Pu
 	return expectation
 }
 
-func (e *LifelineAccessorMockForIDExpectation) Return(r object.Lifeline, r1 error) {
+func (e *LifelineAccessorMockForIDExpectation) Return(r Lifeline, r1 error) {
 	e.result = &LifelineAccessorMockForIDResult{r, r1}
 }
 
 //Set uses given function f as a mock of LifelineAccessor.ForID method
-func (m *mLifelineAccessorMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.Lifeline, r1 error)) *LifelineAccessorMock {
+func (m *mLifelineAccessorMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r Lifeline, r1 error)) *LifelineAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -111,7 +110,7 @@ func (m *mLifelineAccessorMockForID) Set(f func(p context.Context, p1 insolar.Pu
 }
 
 //ForID implements github.com/insolar/insolar/ledger/object.LifelineAccessor interface
-func (m *LifelineAccessorMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.Lifeline, r1 error) {
+func (m *LifelineAccessorMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 

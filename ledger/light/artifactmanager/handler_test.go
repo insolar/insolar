@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/ledger/object/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -176,7 +175,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.Nodes = s.nodeStorage
 
 	h.RecentStorageProvider = provideMock
-	idLock := mocks.NewIDLockerMock(s.T())
+	idLock := object.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
 	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
@@ -245,7 +244,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	pam := mocks.NewPendingAccessorMock(s.T())
+	pam := object.NewPendingAccessorMock(s.T())
 	pam.IsStateCalculatedMock.Return(true, nil)
 
 	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, pam, &configuration.Ledger{})
@@ -351,7 +350,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
-	idLockMock := mocks.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -425,7 +424,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
-	idLockMock := mocks.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -539,9 +538,9 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		s.T().Fail()
 	}
 
-	idxStateModifierMock := mocks.NewLifelineStateModifierMock(s.T())
-	bucketMock := mocks.NewIndexBucketModifierMock(s.T())
-	idxMock := mocks.NewLifelineIndexMock(s.T())
+	idxStateModifierMock := object.NewLifelineStateModifierMock(s.T())
+	bucketMock := object.NewIndexBucketModifierMock(s.T())
+	idxMock := object.NewLifelineIndexMock(s.T())
 
 	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.FilamentIndex) (r error) {
 		require.Equal(s.T(), *firstID, ib.ObjID)

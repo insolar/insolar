@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineIndex -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineIndex -o ./ -s _mock.go
 
 // LifelineIndex is a base storage for lifelines.
 type LifelineIndex interface {
@@ -33,7 +33,7 @@ type LifelineIndex interface {
 	LifelineModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./ -s _mock.go
 
 // LifelineAccessor provides methods for fetching lifelines.
 type LifelineAccessor interface {
@@ -41,7 +41,7 @@ type LifelineAccessor interface {
 	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineModifier -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineModifier -o ./ -s _mock.go
 
 // LifelineModifier provides methods for modifying lifelines.
 type LifelineModifier interface {
@@ -49,7 +49,7 @@ type LifelineModifier interface {
 	Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineStateModifier -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineStateModifier -o ./ -s _mock.go
 
 // LifelineStateModifier provides an interface for changing a state of lifeline.
 type LifelineStateModifier interface {
@@ -57,7 +57,7 @@ type LifelineStateModifier interface {
 	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go
 
 // IndexCleaner provides an interface for removing backets from a storage.
 type IndexCleaner interface {
@@ -65,7 +65,7 @@ type IndexCleaner interface {
 	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketModifier -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketModifier -o ./ -s _mock.go
 
 // IndexBucketModifier provides methods for modifying buckets of index.
 // Index contains buckets with pn->objID->Bucket hierarchy.
@@ -75,7 +75,7 @@ type IndexBucketModifier interface {
 	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketAccessor -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketAccessor -o ./ -s _mock.go
 
 // IndexBucketAccessor provides an interface for fetching buckets from an index.
 type IndexBucketAccessor interface {
@@ -83,7 +83,7 @@ type IndexBucketAccessor interface {
 	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingModifier -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingModifier -o ./ -s _mock.go
 
 // PendingModifier provides methods for modifying pending requests
 type PendingModifier interface {
@@ -99,7 +99,7 @@ type PendingModifier interface {
 	RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingAccessor -o ./mocks -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingAccessor -o ./ -s _mock.go
 
 // PendingAccessor provides methods for fetching pending requests.
 type PendingAccessor interface {

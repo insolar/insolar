@@ -1,4 +1,4 @@
-package mocks
+package object
 
 /*
 DO NOT EDIT!

@@ -1,4 +1,4 @@
-package mocks
+package object
 
 /*
 DO NOT EDIT!
@@ -12,7 +12,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,7 +20,7 @@ import (
 type IndexBucketModifierMock struct {
 	t minimock.Tester
 
-	SetBucketFunc       func(p context.Context, p1 insolar.PulseNumber, p2 object.FilamentIndex) (r error)
+	SetBucketFunc       func(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error)
 	SetBucketCounter    uint64
 	SetBucketPreCounter uint64
 	SetBucketMock       mIndexBucketModifierMockSetBucket
@@ -54,7 +53,7 @@ type IndexBucketModifierMockSetBucketExpectation struct {
 type IndexBucketModifierMockSetBucketInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-	p2 object.FilamentIndex
+	p2 FilamentIndex
 }
 
 type IndexBucketModifierMockSetBucketResult struct {
@@ -62,7 +61,7 @@ type IndexBucketModifierMockSetBucketResult struct {
 }
 
 //Expect specifies that invocation of IndexBucketModifier.SetBucket is expected from 1 to Infinity times
-func (m *mIndexBucketModifierMockSetBucket) Expect(p context.Context, p1 insolar.PulseNumber, p2 object.FilamentIndex) *mIndexBucketModifierMockSetBucket {
+func (m *mIndexBucketModifierMockSetBucket) Expect(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *mIndexBucketModifierMockSetBucket {
 	m.mock.SetBucketFunc = nil
 	m.expectationSeries = nil
 
@@ -86,7 +85,7 @@ func (m *mIndexBucketModifierMockSetBucket) Return(r error) *IndexBucketModifier
 }
 
 //ExpectOnce specifies that invocation of IndexBucketModifier.SetBucket is expected once
-func (m *mIndexBucketModifierMockSetBucket) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 object.FilamentIndex) *IndexBucketModifierMockSetBucketExpectation {
+func (m *mIndexBucketModifierMockSetBucket) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *IndexBucketModifierMockSetBucketExpectation {
 	m.mock.SetBucketFunc = nil
 	m.mainExpectation = nil
 
@@ -101,7 +100,7 @@ func (e *IndexBucketModifierMockSetBucketExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of IndexBucketModifier.SetBucket method
-func (m *mIndexBucketModifierMockSetBucket) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 object.FilamentIndex) (r error)) *IndexBucketModifierMock {
+func (m *mIndexBucketModifierMockSetBucket) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error)) *IndexBucketModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -110,7 +109,7 @@ func (m *mIndexBucketModifierMockSetBucket) Set(f func(p context.Context, p1 ins
 }
 
 //SetBucket implements github.com/insolar/insolar/ledger/object.IndexBucketModifier interface
-func (m *IndexBucketModifierMock) SetBucket(p context.Context, p1 insolar.PulseNumber, p2 object.FilamentIndex) (r error) {
+func (m *IndexBucketModifierMock) SetBucket(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error) {
 	counter := atomic.AddUint64(&m.SetBucketPreCounter, 1)
 	defer atomic.AddUint64(&m.SetBucketCounter, 1)
 
