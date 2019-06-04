@@ -18,7 +18,6 @@ package requester
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -191,9 +190,9 @@ func TestMain(m *testing.M) {
 func TestGetSeed(t *testing.T) {
 	seed, err := GetSeed(URL)
 	require.NoError(t, err)
-	decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
-	require.NoError(t, err)
-	require.Equal(t, decodedSeed, seed)
+	//decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
+	//require.NoError(t, err)
+	require.Equal(t, "Test", seed)
 }
 
 func TestGetResponseBodyEmpty(t *testing.T) {
