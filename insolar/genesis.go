@@ -73,4 +73,6 @@ type GenesisHeavyConfig struct {
 	// ContractsDir is the directory with contracts plugins and memory files.
 	PluginsDir      string
 	ContractsConfig GenesisContractsConfig
+	// Skip is flag for skipping genesis on heavy node. Useful for some test cases.
+	Skip bool
 }
