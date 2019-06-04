@@ -432,7 +432,6 @@ func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, r
 	}
 	msg.Payload = buf
 	n.Sender.Reply(ctx, msg, errMsg)
-	return
 }
 
 func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
