@@ -93,6 +93,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 			Object:    ref,
 			Method:    method,
 			Arguments: args,
+			APIRequestID: insolar.NewAPIRequestID(),
 		},
 	}
 

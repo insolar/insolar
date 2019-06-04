@@ -489,24 +489,24 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 		Current: nil,
 	}
 
-	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil)
+	reqIdA := insolar.NewAPIRequestID()
+	reqIdB := insolar.NewAPIRequestID()
+
+	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil, reqIdA)
 	suite.Require().False(loop)
 
-	ctxA, _ := inslogger.WithTraceField(suite.ctx, "a")
-	ctxB, _ := inslogger.WithTraceField(suite.ctx, "b")
-
+	request := record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdA}
 	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(
-		&message.CallMethod{Request: record.Request{ReturnMode: record.ReturnResult}},
+		&message.CallMethod{Request: request},
 	)
-	es.Current = &CurrentExecution{
-		Request: &record.Request{ReturnMode: record.ReturnResult},
-		Context: ctxA,
+	es.Current = &CurrentExecution{ Request: &request,
+		// Context: suite.ctx,
 	}
 
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel, reqIdA)
 	suite.Require().True(loop)
 
-	loop = suite.lr.CheckExecutionLoop(ctxB, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel, reqIdB)
 	suite.Require().False(loop)
 
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(
@@ -514,25 +514,25 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	)
 	es.Current = &CurrentExecution{
 		Request: &record.Request{ReturnMode: record.ReturnResult},
-		Context: ctxA,
+		// Context: ctxA,
 	}
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel, reqIdA)
 	suite.Require().False(loop)
 
 	parcel = testutils.NewParcelMock(suite.mc)
 	es.Current = &CurrentExecution{
 		Request: &record.Request{ReturnMode: record.ReturnNoWait},
-		Context: ctxA,
+		// Context: ctxA,
 	}
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel, reqIdA)
 	suite.Require().False(loop)
 
 	es.Current = &CurrentExecution{
 		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
-		Context:    ctxA,
+		// Context:    ctxA,
 		SentResult: true,
 	}
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel, reqIdA)
 	suite.Require().False(loop)
 }
 
@@ -896,6 +896,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 					Prototype: &protoRef,
 					Object:    &objectRef,
 					Method:    "some",
+					APIRequestID: insolar.NewAPIRequestID(),
 				},
 			}
 

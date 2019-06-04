@@ -73,7 +73,7 @@ func (h *HandleCall) handleActual(
 		return nil, errors.Wrap(err, "[ handleActual ] can't play role")
 	}
 
-	if lr.CheckExecutionLoop(ctx, es, parcel) {
+	if lr.CheckExecutionLoop(ctx, es, parcel, msg.Request.APIRequestID) {
 		es.Unlock()
 		return nil, os.WrapError(nil, "loop detected")
 	}

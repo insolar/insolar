@@ -359,7 +359,7 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
-	ctx context.Context, es *ExecutionState, parcel insolar.Parcel,
+	ctx context.Context, es *ExecutionState, parcel insolar.Parcel, APIReqId insolar.APIRequestID,
 ) bool {
 	if es.Current == nil {
 		return false
@@ -378,9 +378,21 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if inslogger.TraceID(es.Current.Context) != inslogger.TraceID(ctx) {
+	// if reqId == nil {
+	// 	panic(fmt.Sprint("ReqId must not be nil", reqId))
+	// }
+	// if es.Current.Request.RequestID == nil {
+	// 	panic(fmt.Sprint("es.Current.Request.RequestID", reqId))
+	// }
+	// if bytes.Compare(reqId, ) != 0 {
+	// 	return false
+	// }
+	if !APIReqId.Equal(ctx, es.Current.Request.APIRequestID) {
 		return false
 	}
+	// if bytes.Compare(reqId[:], es.Current.Request.APIRequestID[:]) != 0 {
+	// 	return false
+	// }
 
 	inslogger.FromContext(ctx).Debug("loop detected")
 

@@ -140,6 +140,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 			Prototype: &req.Prototype,
 			Method:    req.Method,
 			Arguments: req.Arguments,
+
+			APIRequestID: es.Current.Request.APIRequestID,
 		},
 	}
 
@@ -184,6 +186,8 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 			Prototype: &req.Prototype,
 			Method:    req.ConstructorName,
 			Arguments: req.ArgsSerialized,
+
+			APIRequestID: es.Current.Request.APIRequestID,
 		},
 	}
 
@@ -219,6 +223,8 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 			Prototype: &req.Prototype,
 			Method:    req.ConstructorName,
 			Arguments: req.ArgsSerialized,
+
+			APIRequestID: es.Current.Request.APIRequestID,
 		},
 	}
 
