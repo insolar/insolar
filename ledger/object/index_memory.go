@@ -46,7 +46,7 @@ type pendingMeta struct {
 	isStateCalculated bool
 	fullFilament      []chainLink
 
-	notClosedRequests      []record.Request
+	notClosedRequestsIds   []insolar.ID
 	notClosedRequestsIndex map[insolar.PulseNumber]map[insolar.ID]*record.Request
 	requestPNIndex         map[insolar.ID]insolar.PulseNumber
 }
@@ -105,7 +105,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 		},
 		pendingMeta: pendingMeta{
 			fullFilament:           []chainLink{},
-			notClosedRequests:      []record.Request{},
+			notClosedRequestsIds:   []insolar.ID{},
 			notClosedRequestsIndex: map[insolar.PulseNumber]map[insolar.ID]*record.Request{},
 			requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
 			isStateCalculated:      false,
@@ -165,7 +165,7 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	bucks[bucket.ObjID] = &filamentCache{
 		objectMeta: bucket,
 		pendingMeta: pendingMeta{
-			notClosedRequests:      []record.Request{},
+			notClosedRequestsIds:   []insolar.ID{},
 			fullFilament:           []chainLink{},
 			isStateCalculated:      false,
 			requestPNIndex:         map[insolar.ID]insolar.PulseNumber{},
@@ -267,10 +267,6 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	b.Lock()
 	defer b.Unlock()
 
-	// if b.PreviousPendingFilament == 0 {
-	// 	b.PreviousPendingFilament = pn
-	// }
-
 	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, reqID)
 
 	isInserted := false
@@ -288,14 +284,14 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 		})
 	}
 
-	b.pendingMeta.requestPNIndex[*req.Object.Record()] = pn
+	b.pendingMeta.requestPNIndex[reqID] = pn
 
 	_, ok := b.pendingMeta.notClosedRequestsIndex[pn]
 	if !ok {
 		b.pendingMeta.notClosedRequestsIndex[pn] = map[insolar.ID]*record.Request{}
 	}
-	b.pendingMeta.notClosedRequestsIndex[pn][*req.Object.Record()] = &req
-	b.pendingMeta.notClosedRequests = append(b.pendingMeta.notClosedRequests, req)
+	b.pendingMeta.notClosedRequestsIndex[pn][reqID] = &req
+	b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds, reqID)
 
 	stats.Record(ctx,
 		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
@@ -336,9 +332,9 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	reqPN, ok := b.pendingMeta.requestPNIndex[*res.Request.Record()]
 	if ok {
 		delete(b.pendingMeta.notClosedRequestsIndex[reqPN], *res.Request.Record())
-		for i := 0; i < len(b.pendingMeta.notClosedRequests); i++ {
-			if *b.pendingMeta.notClosedRequests[i].Object.Record() == *res.Request.Record() {
-				b.pendingMeta.notClosedRequests = append(b.pendingMeta.notClosedRequests[:i], b.pendingMeta.notClosedRequests[i+1:]...)
+		for i := 0; i < len(b.pendingMeta.notClosedRequestsIds); i++ {
+			if b.pendingMeta.notClosedRequestsIds[i] == *res.Request.Record() {
+				b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds[:i], b.pendingMeta.notClosedRequestsIds[i+1:]...)
 				break
 			}
 		}
@@ -418,7 +414,8 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 			}
 
 			for _, ncr := range b.pendingMeta.notClosedRequestsIndex[chainLink.PN] {
-				b.pendingMeta.notClosedRequests = append(b.pendingMeta.notClosedRequests, *ncr)
+				panic("refactor here")
+				// b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds, *ncr)
 			}
 		}
 	}
@@ -451,11 +448,27 @@ func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN inso
 	b.RLock()
 	defer b.RUnlock()
 
-	if len(b.pendingMeta.notClosedRequests) > count {
-		return append([]record.Request{}, b.pendingMeta.notClosedRequests[:count]...), nil
+	if len(b.pendingMeta.notClosedRequestsIds) < count {
+		count = len(b.pendingMeta.notClosedRequestsIds)
 	}
 
-	return append([]record.Request{}, b.pendingMeta.notClosedRequests...), nil
+	res := make([]record.Request, count)
+
+	for idx := 0; idx < count; idx++ {
+		rec, err := i.recordStorage.ForID(ctx, b.pendingMeta.notClosedRequestsIds[idx])
+		if err != nil {
+			return nil, err
+		}
+
+		switch r := record.Unwrap(rec.Virtual).(type) {
+		case *record.Request:
+			res[idx] = *r
+		default:
+			panic("filament is totally broken")
+		}
+	}
+
+	return res, nil
 }
 
 // Records returns all the records for a provided object
