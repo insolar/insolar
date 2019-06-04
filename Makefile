@@ -9,6 +9,7 @@ BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
+SIMPLEREQUESTER = simplerequester
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -84,7 +85,7 @@ ensure:
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER)
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(SIMPLEREQUESTER)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -122,6 +123,10 @@ $(PULSEWATCHER):
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
 	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
+
+.PHONY: $(SIMPLEREQUESTER)
+$(SIMPLEREQUESTER):
+	go build -o $(BIN_DIR)/$(SIMPLEREQUESTER) -ldflags "${LDFLAGS}" cmd/simplerequester/*.go
 
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
