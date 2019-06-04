@@ -18,8 +18,8 @@ package wallet
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 // PrototypeReference to prototype of this contract
@@ -41,7 +41,7 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Wallet, error) {
-	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Wallet, 
 
 // AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*Wallet, error) {
-	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func GetPrototype() insolar.Reference {
 
 // GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object insolar.Reference) (*Wallet, error) {
-	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
+	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func New(balance uint) *ContractConstructorHolder {
 	args[0] = balance
 
 	var argsSerialized []byte
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		panic(err)
 	}
@@ -104,12 +104,12 @@ func (r *Wallet) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
 
-		err = proxyctx.Current.Deserialize(res, &ret)
+		err = common.CurrentProxyCtx.Deserialize(res, &ret)
 		if err != nil {
 			return ret0, err
 		}
@@ -134,12 +134,12 @@ func (r *Wallet) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
 
-		err = proxyctx.Current.Deserialize(res, &ret)
+		err = common.CurrentProxyCtx.Deserialize(res, &ret)
 		if err != nil {
 			return ret0, err
 		}
@@ -166,17 +166,17 @@ func (r *Wallet) Transfer(amount uint, to *insolar.Reference) error {
 	var ret0 *foundation.Error
 	ret[0] = &ret0
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "Transfer", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
 
-	err = proxyctx.Current.Deserialize(res, &ret)
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
 		return err
 	}
@@ -195,12 +195,12 @@ func (r *Wallet) TransferNoWait(amount uint, to *insolar.Reference) error {
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "Transfer", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -220,17 +220,17 @@ func (r *Wallet) TransferAsImmutable(amount uint, to *insolar.Reference) error {
 	var ret0 *foundation.Error
 	ret[0] = &ret0
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "Transfer", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
 
-	err = proxyctx.Current.Deserialize(res, &ret)
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
 		return err
 	}
@@ -252,17 +252,17 @@ func (r *Wallet) Accept(aRef *insolar.Reference) error {
 	var ret0 *foundation.Error
 	ret[0] = &ret0
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "Accept", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Accept", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
 
-	err = proxyctx.Current.Deserialize(res, &ret)
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
 		return err
 	}
@@ -280,12 +280,12 @@ func (r *Wallet) AcceptNoWait(aRef *insolar.Reference) error {
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "Accept", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Accept", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -304,17 +304,17 @@ func (r *Wallet) AcceptAsImmutable(aRef *insolar.Reference) error {
 	var ret0 *foundation.Error
 	ret[0] = &ret0
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "Accept", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Accept", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
 
-	err = proxyctx.Current.Deserialize(res, &ret)
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
 		return err
 	}
@@ -337,17 +337,17 @@ func (r *Wallet) GetBalance() (uint, error) {
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetBalance", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
 
-	err = proxyctx.Current.Deserialize(res, &ret)
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
 		return ret0, err
 	}
@@ -364,12 +364,12 @@ func (r *Wallet) GetBalanceNoWait() error {
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "GetBalance", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -389,17 +389,17 @@ func (r *Wallet) GetBalanceAsImmutable() (uint, error) {
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "GetBalance", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
 
-	err = proxyctx.Current.Deserialize(res, &ret)
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
 		return ret0, err
 	}
