@@ -1148,6 +1148,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
 					if test.when == whenHasPendingRequest {
 						changePulse()
+						// We have to implicitly return ErrCancelled to make f.Procedure return ErrCancelled as well
+						// which will cause the correct code path to execute in logicrunner.HandleCall.
+						// Otherwise the test has a race condition - f.Procedure can be cancelled or return normally.
+						return false, flow.ErrCancelled
 					}
 
 					return false, nil
@@ -1213,7 +1217,6 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.mb.SendFunc = func(
 					ctx context.Context, msg insolar.Message, opts *insolar.MessageSendOptions,
 				) (insolar.Reply, error) {
-
 					suite.Require().Contains(test.messagesExpected, msg.Type())
 					wg.Done()
 
