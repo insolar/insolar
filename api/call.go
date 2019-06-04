@@ -93,7 +93,7 @@ func (ar *Runner) checkSeed(paramsSeed []byte) error {
 func (ar *Runner) checkSeedString(_seed string) error {
 	decoded, err := base64.StdEncoding.DecodeString(_seed)
 	if err != nil {
-		return errors.New("[ checkSeed ] decode error")
+		return errors.New("[ checkSeed ] Decode error")
 	}
 	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {

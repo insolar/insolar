@@ -183,21 +183,6 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	jwk := jose.JSONWebKey{Key: key.Public()}
 	jwkjs, err := jwk.MarshalJSON()
 
-	type SignedPayload struct {
-		Reference string `json:"reference"` // contract reference
-		Method    string `json:"method"`    // method name
-		Params    []byte `json:"params"`    // json object
-		Seed      string `json:"seed"`
-	}
-
-	// TODO: make structure for JWK instead of string
-	//params1 := PostParams{
-	//	"kty": "EC",
-	//	"crv": "P-256",
-	//	"x": "yJre6H1ysL1CEPpni6LJbi4QKTiAwMZeNgSyj-Fi5EA",
-	//	"y": "XJ3SdW0KQMj4KMoqzM0osBewtRTtHQlOYj5PNgmA1BY",
-	//}
-
 	postParams := PostParams{
 		"jwk": string(jwkjs),
 		"jws": jws,
@@ -223,7 +208,6 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}
-	fmt.Println("SEEED", seed)
 	verboseInfo(ctx, "GETSEED request completed. seed: "+string(seed))
 
 	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
