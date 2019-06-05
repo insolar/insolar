@@ -1,13 +1,15 @@
-package simplerequester
+package main
 
 import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/insolar/go-jose"
-	"github.com/insolar/x-crypto/ecdsa"
+	insJose "github.com/insolar/go-jose"
+	"github.com/insolar/insolar/platformpolicy"
+	xecdsa "github.com/insolar/x-crypto/ecdsa"
 	"github.com/insolar/x-crypto/x509"
 	"github.com/pkg/errors"
+	"github.com/square/go-jose"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -30,29 +32,60 @@ type memberKeys struct {
 	Public  string `json:"public_key"`
 }
 
-func createSignedData(privateKey *ecdsa.PrivateKey, datas *DataToSign) (string, string, error) {
-	pub := jose.JSONWebKey{Key: privateKey.Public()}
-	pubjs, err := pub.MarshalJSON()
-	if err != nil {
-		return "", "", err
-	}
-	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ES256K, Key: privateKey}, nil)
-	if err != nil {
-		return "", "", err
-	}
+func createSignedData(keys *memberKeys, datas *DataToSign) (string, string, error) {
 
 	payload, err := json.Marshal(datas)
 	if err != nil {
 		return "", "", err
 	}
-	object, err := signer.Sign(payload)
-	if err != nil {
-		return "", "", err
+	privateKey, err := importPrivateKeyPEM([]byte(keys.Private))
+
+	switch privateKey.Curve.Params().Name {
+
+	case "P-256K":
+		pub := insJose.JSONWebKey{Key: privateKey.Public()}
+		pubjs, err := pub.MarshalJSON()
+		if err != nil {
+			return "", "", err
+		}
+		signer, err := insJose.NewSigner(insJose.SigningKey{Algorithm: insJose.ES256K, Key: privateKey}, nil)
+		if err != nil {
+			return "", "", err
+		}
+		object, err := signer.Sign(payload)
+		if err != nil {
+			return "", "", err
+		}
+		compactSerialized, err := object.CompactSerialize()
+		if err != nil {
+			return "", "", err
+		}
+		return compactSerialized, string(pubjs), nil
+
+	default:
+		keyProcessor := platformpolicy.NewKeyProcessor()
+		privateKey, err := keyProcessor.ImportPrivateKeyPEM([]byte(keys.Private))
+		publicKey := keyProcessor.ExtractPublicKey(privateKey)
+
+		pub := jose.JSONWebKey{Key: publicKey}
+		pubjs, err := pub.MarshalJSON()
+		if err != nil {
+			return "", "", err
+		}
+		signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ES256, Key: privateKey}, nil)
+		if err != nil {
+			return "", "", err
+		}
+		object, err := signer.Sign(payload)
+		if err != nil {
+			return "", "", err
+		}
+		compactSerialized, err := object.CompactSerialize()
+		if err != nil {
+			return "", "", err
+		}
+		return compactSerialized, string(pubjs), nil
 	}
-	compactSerialized, _ := object.CompactSerialize()
-
-	return compactSerialized, string(pubjs), nil
-
 }
 
 func getResponse(body []byte) (*response, error) {
@@ -64,7 +97,7 @@ func getResponse(body []byte) (*response, error) {
 	return res, nil
 }
 
-func importPrivateKeyPEM(pemEncoded []byte) (*ecdsa.PrivateKey, error) {
+func importPrivateKeyPEM(pemEncoded []byte) (*xecdsa.PrivateKey, error) {
 	block, _ := pem.Decode(pemEncoded)
 	if block == nil {
 		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with decoding. Key - %v", pemEncoded)
@@ -78,13 +111,28 @@ func importPrivateKeyPEM(pemEncoded []byte) (*ecdsa.PrivateKey, error) {
 }
 
 func ReadRequestParams(path string) (*DataToSign, error) {
-	rConfig := &DataToSign{}
-	err := readFile(path, rConfig)
+	type DataToSignFile struct {
+		Reference string      `json:"reference"`
+		Method    string      `json:"method"`
+		Params    interface{} `json:"params"`
+	}
+
+	fileParams := &DataToSignFile{}
+	err := readFile(path, fileParams)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readRequestParams ] ")
 	}
+	parameters, err := json.Marshal(fileParams.Params)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ readRequestParams ] ")
+	}
+	params := &DataToSign{
+		Method:    fileParams.Method,
+		Reference: fileParams.Reference,
+		Params:    string(parameters),
+	}
 
-	return rConfig, nil
+	return params, nil
 }
 
 func readFile(path string, configType interface{}) error {
@@ -105,4 +153,13 @@ func readFile(path string, configType interface{}) error {
 	}
 
 	return nil
+}
+
+func ExportPrivateKeyPEM(privateKey xecdsa.PrivateKey) ([]byte, error) {
+	x509Encoded, err := x509.MarshalECPrivateKey(&privateKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ExportPrivateKey ]")
+	}
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+	return pemEncoded, nil
 }

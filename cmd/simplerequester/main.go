@@ -1,4 +1,4 @@
-package simplerequester
+package main
 
 import (
 	"encoding/json"
@@ -58,13 +58,19 @@ func main() {
 
 	err := log.SetLevel("error")
 	check("can't set 'error' level on logger: ", err)
-	var datas *DataToSign
+	datas := &DataToSign{}
 
 	if paramsFile != "" {
 		datas, err = ReadRequestParams(paramsFile)
 		check("[ simpleRequester ]", err)
 	} else {
-		datas.Reference = memberRef
+		if memberRef == "" {
+			response, err := requester.Info(apiURL)
+			check("[ simpleRequester ]", err)
+			datas.Reference = response.RootMember
+		} else {
+			datas.Reference = memberRef
+		}
 		datas.Method = method
 		datas.Params = params
 	}
@@ -80,20 +86,28 @@ func main() {
 	rawConf, err := ioutil.ReadFile(memberKeysPath)
 	check("[ simpleRequester ]", err)
 
-	keys := memberKeys{}
-	err = json.Unmarshal(rawConf, &keys)
+	fmt.Println("Params: " + datas.Params)
+	fmt.Println("Method: " + datas.Method)
+	fmt.Println("Reference: " + datas.Reference)
+	fmt.Println("Seed: " + datas.Seed)
+
+	keys := &memberKeys{}
+	err = json.Unmarshal(rawConf, keys)
 	check("[ simpleRequester ]", err)
 
-	privateKey, err := importPrivateKeyPEM([]byte(keys.Private))
-
-	jws, jwk, err := createSignedData(privateKey, datas)
+	jws, jwk, err := createSignedData(keys, datas)
 	check("[ simpleRequester ]", err)
 	params := requester.PostParams{
 		"jws": jws,
 		"jwk": jwk,
 	}
+	fmt.Println("JWS: " + jws)
+	fmt.Println("JWK: " + jwk)
 	body, err := requester.GetResponseBody(apiURL+"/call", params)
 	check("[ simpleRequester ]", err)
+	if len(body) == 0 {
+		fmt.Println("[ simpleRequester ] Response body is Empty")
+	}
 
 	response, err := getResponse(body)
 	check("[ simpleRequester ]", err)
