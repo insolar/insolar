@@ -19,6 +19,8 @@
 package functest
 
 import (
+	"fmt"
+	"github.com/magiconair/properties/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -173,10 +175,13 @@ func (r *Two) GetPayloadString() (string, error) {
 `
 
 	uploadContractOnce(t, "two", contractTwoCode)
-
-	oneProto := uploadContractOnce(t, "one", contractOneCode)
-	objectRef := callConstructor(t, oneProto)
+	objectRef := callConstructor(t, uploadContractOnce(t, "one", contractOneCode))
 
 	resp := callMethod(t, objectRef, "Hello", "ins")
 	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", resp)
+
+	for i := 2; i <= 5; i++ {
+		resp = callMethod(t, objectRef, "Again", "ins")
+		assert.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), resp)
+	}
 }
