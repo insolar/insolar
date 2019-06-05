@@ -51,10 +51,11 @@ message Pass {
     bytes CorrelationID = 22;
 }
 
-message SetRecord {
+message SetCode {
     uint32 Polymorph = 16;
 
     bytes Record = 20;
+    bytes Code   = 21;
 }
 
 message Index {

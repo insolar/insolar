@@ -38,6 +38,7 @@ const (
 	TypePass      Type = 10
 	TypeGetCode   Type = 11
 	TypeCode      Type = 12
+	TypeSetCode   Type = 13
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -88,6 +89,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *Code:
 		pl.Polymorph = uint32(TypeCode)
 		return pl.Marshal()
+	case *SetCode:
+		pl.Polymorph = uint32(TypeSetCode)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -133,6 +137,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeCode:
 		pl := Code{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSetCode:
+		pl := SetCode{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
