@@ -385,21 +385,20 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 	return ctx
 }
 
+
 // values here (boolean flags) are inverted here, since it's common "predicate" checking function
-func noLoopCheckerPredicate(current *CurrentExecution, predicateCtx interface{}) bool {
-	ctx := predicateCtx.(context.Context)
+func noLoopCheckerPredicate(current *CurrentExecution, args interface{}) bool {
+	apiReqID := args.(string)
 	if current.SentResult ||
 		current.Request.ReturnMode == record.ReturnNoWait ||
-		inslogger.TraceID(current.Context) != inslogger.TraceID(ctx) {
-
-		return true
+		current.Request.APIRequestID != apiReqID {
+			return true
 	}
 	return false
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
-	ctx context.Context, es *ExecutionState, parcel insolar.Parcel,
-) bool {
+	ctx context.Context, es *ExecutionState, parcel insolar.Parcel) bool {
 	if es.CurrentList.Empty() {
 		return false
 	}
@@ -409,13 +408,12 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if es.CurrentList.Check(noLoopCheckerPredicate, ctx) {
+	if es.CurrentList.Check(noLoopCheckerPredicate, msg.APIRequestID) {
 		return false
 	}
 
 	inslogger.FromContext(ctx).Debug("loop detected")
 	return true
-
 }
 
 // finishPendingIfNeeded checks whether last execution was a pending one.
@@ -518,7 +516,7 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 
 	id := *es.Ref.Record()
 
-	parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
 		if err != insolar.ErrNoPendingRequest {
 			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
@@ -553,14 +551,11 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 		return nil
 	}
 
-	request := msg.GetReference()
-	request.SetRecord(id)
-
 	es.LedgerHasMoreRequests = ledgerHasMore
 	es.LedgerQueueElement = &ExecutionQueueElement{
 		ctx:        ctx,
 		parcel:     parcel,
-		request:    &request,
+		request:    requestRef,
 		fromLedger: true,
 	}
 
@@ -724,6 +719,7 @@ func (lr *LogicRunner) startGetLedgerPendingRequest(ctx context.Context, es *Exe
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
+
 	lr.FlowDispatcher.ChangePulse(ctx, pulse)
 	lr.innerFlowDispatcher.ChangePulse(ctx, pulse)
 
@@ -744,74 +740,15 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 		if es := state.ExecutionState; es != nil {
 			es.Lock()
 
-			// if we are executor again we just continue working
-			// without sending data on next executor (because we are next executor)
+			toSend := es.OnPulse(ctx, meNext)
+			messages = append(messages, toSend...)
+
 			if !meNext {
-				sendExecResults := false
-
-				if !es.CurrentList.Empty() {
-					es.pending = message.InPending
-					sendExecResults = true
-
-					// TODO: this should return delegation token to continue execution of the pending
-					messages = append(
-						messages,
-						&message.StillExecuting{
-							Reference: ref,
-						},
-					)
-				} else {
-					if es.pending == message.InPending && !es.PendingConfirmed {
-						inslogger.FromContext(ctx).Warn(
-							"looks like pending executor died, continuing execution",
-						)
-						es.pending = message.NotPending
-						sendExecResults = true
-						es.LedgerHasMoreRequests = true
-					}
-
+				if es.CurrentList.Empty() {
 					state.ExecutionState = nil
 				}
-
-				queue, ledgerHasMoreRequest := es.releaseQueue()
-				if len(queue) > 0 || sendExecResults {
-					// TODO: we also should send when executed something for validation
-					// TODO: now validation is disabled
-					messagesQueue := convertQueueToMessageQueue(ctx, queue)
-
-					messages = append(
-						messages,
-						//&message.ValidateCaseBind{
-						//	Reference: ref,
-						//	Requests:  requests,
-						//	Pulse:     pulse,
-						//},
-						&message.ExecutorResults{
-							RecordRef:             ref,
-							Pending:               es.pending,
-							Queue:                 messagesQueue,
-							LedgerHasMoreRequests: es.LedgerHasMoreRequests || ledgerHasMoreRequest,
-						},
-					)
-				}
-			} else {
-				if !es.CurrentList.Empty() {
-					// no pending should be as we are executing
-					if es.pending == message.InPending {
-						inslogger.FromContext(ctx).Warn(
-							"we are executing ATM, but ES marked as pending, shouldn't be",
-						)
-						es.pending = message.NotPending
-					}
-				} else if es.pending == message.InPending && !es.PendingConfirmed {
-					inslogger.FromContext(ctx).Warn(
-						"looks like pending executor died, continuing execution",
-					)
-					es.pending = message.NotPending
-					es.LedgerHasMoreRequests = true
-					lr.startGetLedgerPendingRequest(ctx, es)
-				}
-				es.PendingConfirmed = false
+			} else if es.pending == message.NotPending && es.LedgerHasMoreRequests {
+				lr.startGetLedgerPendingRequest(ctx, es)
 			}
 
 			es.Unlock()

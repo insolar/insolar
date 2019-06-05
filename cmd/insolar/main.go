@@ -151,6 +151,8 @@ func main() {
 		&certFile, "node-cert", "c", "cert.json", "The OUT file the node certificate")
 	rootCmd.AddCommand(certgenCmd)
 
+	rootCmd.AddCommand(bootstrapCommand())
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

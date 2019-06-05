@@ -19,13 +19,11 @@ DISCOVERY_NODE_LOGS=${LAUNCHNET_LOGS_DIR}discoverynodes/
 INSGORUND_LOGS=${LAUNCHNET_LOGS_DIR}insgorund/
 
 BIN_DIR=bin
+INSOLAR_CLI=${BIN_DIR}/insolar
 INSOLARD=$BIN_DIR/insolard
 INSGORUND=$BIN_DIR/insgorund
 PULSARD=$BIN_DIR/pulsard
 PULSEWATCHER=$BIN_DIR/pulsewatcher
-
-LEDGER_DIR=${LAUNCHNET_BASE_DIR}data
-LEDGER_NEW_DIR=${LAUNCHNET_BASE_DIR}new-data
 
 # TODO: move to launchnet dir
 PULSAR_DATA_DIR=${LAUNCHNET_BASE_DIR}pulsar_data
@@ -33,32 +31,33 @@ PULSAR_CONFIG=${LAUNCHNET_BASE_DIR}pulsar.yaml
 
 SCRIPTS_DIR=scripts/insolard/
 
-CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs
+CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs/
 
-KEYS_FILE=$CONFIGS_DIR/bootstrap_keys.json
-ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}/root_member_keys.json
-HEAVY_GENESIS_CONFIG_FILE=${CONFIGS_DIR}/heavy_genesis.json
+PULSAR_KEYS=${CONFIGS_DIR}pulsar_keys.json
+ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}root_member_keys.json
+HEAVY_GENESIS_CONFIG_FILE=${CONFIGS_DIR}heavy_genesis.json
+CONTRACTS_PLUGINS_DIR=${LAUNCHNET_BASE_DIR}contracts
 
 # TODO: use only heavy matereal data dir
 DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
 
 DISCOVERY_NODES_HEAVY_DATA=${DISCOVERY_NODES_DATA}1/
 
-GENESIS_TEMPLATE=${SCRIPTS_DIR}bootstrap/genesis_template.yaml
-BOOTSTRAP_GENESIS_CONFIG=${LAUNCHNET_BASE_DIR}genesis.yaml
+BOOTSTRAP_TEMPLATE=${SCRIPTS_DIR}bootstrap_template.yaml
+BOOTSTRAP_CONFIG=${LAUNCHNET_BASE_DIR}bootstrap.yaml
 BOOTSTRAP_INSOLARD_CONFIG=${LAUNCHNET_BASE_DIR}insolard.yaml
 
 PULSEWATCHER_CONFIG=${LAUNCHNET_BASE_DIR}pulsewatcher.yaml
 
-INSGORUND_PORT_FILE=$CONFIGS_DIR/insgorund_ports.txt
+INSGORUND_PORT_FILE=${CONFIGS_DIR}insgorund_ports.txt
 
 set -x
 export INSOLAR_LOG_FORMATTER=${INSOLAR_LOG_FORMATTER}
 export INSOLAR_LOG_LEVEL=${INSOLAR_LOG_LEVEL}
 { set +x; } 2>/dev/null
 
-NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_TEMPLATE | grep "host:" | grep -v "#" | wc -l | tr -d '[:space:]')
-NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_TEMPLATE | grep "host:" | grep -v "#" | wc -l | tr -d '[:space:]')
+NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $BOOTSTRAP_TEMPLATE | grep "host:" | grep -v "#" | wc -l | tr -d '[:space:]')
+NUM_NODES=$(sed -n '/^nodes:/,$p' $BOOTSTRAP_TEMPLATE | grep "host:" | grep -v "#" | wc -l | tr -d '[:space:]')
 echo "discovery+other nodes: ${NUM_DISCOVERY_NODES}+${NUM_NODES}"
 
 for i in `seq 1 $NUM_DISCOVERY_NODES`
@@ -98,7 +97,7 @@ stop_listening()
         ports="$ports $gorund_ports"
     fi
 
-    transport_ports=$( grep "host:" ${BOOTSTRAP_GENESIS_CONFIG} | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+    transport_ports=$( grep "host:" ${BOOTSTRAP_CONFIG} | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
     ports="$ports $transport_ports"
 
     for port in $ports
@@ -114,9 +113,9 @@ clear_dirs()
 {
     echo "clear_dirs() starts ..."
     set -x
-    rm -rfv ${LEDGER_DIR}
     rm -rfv ${DISCOVERY_NODES_DATA}
     rm -rfv ${LAUNCHNET_LOGS_DIR}
+    rm -rfv ${CONTRACTS_PLUGINS_DIR}
     { set +x; } 2>/dev/null
 
     for i in `seq 1 $NUM_DISCOVERY_NODES`
@@ -131,9 +130,8 @@ create_required_dirs()
 {
     echo "create_required_dirs() starts ..."
     set -x
-    mkdir -p $LEDGER_DIR
     mkdir -p ${DISCOVERY_NODES_DATA}certs
-    mkdir -p $CONFIGS_DIR
+    mkdir -p ${CONFIGS_DIR}
 
     mkdir -p ${INSGORUND_LOGS}
     touch $INSGORUND_PORT_FILE
@@ -153,8 +151,7 @@ generate_insolard_configs()
 {
     echo "generate configs"
     set -x
-    go run scripts/generate_insolar_configs.go \
-        -p $INSGORUND_PORT_FILE
+    go run scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
     { set +x; } 2>/dev/null
 }
 
@@ -180,10 +177,10 @@ rebuild_binaries()
     build_binaries
 }
 
-generate_bootstrap_keys()
+generate_pulsar_keys()
 {
-    echo "generate bootstrap keys: $KEYS_FILE"
-    bin/insolar gen-key-pair > $KEYS_FILE
+    echo "generate pulsar keys: ${PULSAR_KEYS}"
+    bin/insolar gen-key-pair > ${PULSAR_KEYS}
 }
 
 generate_root_member_keys()
@@ -209,16 +206,19 @@ usage()
     echo "possible options: "
     echo -e "\t-h - show help"
     echo -e "\t-n - don't run insgorund"
-    echo -e "\t-g - generate genesis"
-    echo -e "\t-G - generate genesis and exit, show generation log"
+    echo -e "\t-g - start launchnet"
+    echo -e "\t-b - do bootstrap only and exit, show bootstrap logs"
     echo -e "\t-l - clear all and exit"
     echo -e "\t-C - generate configs only"
 }
 
 process_input_params()
 {
+    # shell does not reset OPTIND automatically;
+    # it must be manually reset between multiple calls to getopts
+    # within the same shell invocation if a new set of parameters is to be used
     OPTIND=1
-    while getopts "h?ngGlwC" opt; do
+    while getopts "h?ngblwC" opt; do
         case "$opt" in
         h|\?)
             usage
@@ -228,12 +228,12 @@ process_input_params()
             run_insgorund=false
             ;;
         g)
-            genesis
+            bootstrap
             ;;
-        G)
-            NO_GENESIS_LOG_REDIRECT=1
+        b)
+            NO_BOOTSTRAP_LOG_REDIRECT=1
             NO_STOP_LISTENING_ON_PREPARE=${NO_STOP_LISTENING_ON_PREPARE:-"1"}
-            genesis
+            bootstrap
             exit 0
             ;;
         l)
@@ -270,14 +270,6 @@ launch_insgorund()
     done < "${INSGORUND_PORT_FILE}"
 }
 
-copy_data()
-{
-    echo "copy data dir to heavy"
-    set -x
-    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}data
-    { set +x; } 2>/dev/null
-}
-
 copy_discovery_certs()
 {
     echo "copy_certs() starts ..."
@@ -306,8 +298,9 @@ wait_for_complete_network_state()
     done
 }
 
-genesis()
+bootstrap()
 {
+    echo "bootstrap start"
     prepare
     if [[ "$SKIP_BUILD" != "1" ]]; then
         echo "build binaries"
@@ -315,38 +308,37 @@ genesis()
     else
         echo "SKIP: build binaries (SKIP_BUILD=$SKIP_BUILD)"
     fi
-    generate_bootstrap_keys
+    generate_pulsar_keys
     generate_root_member_keys
     generate_insolard_configs
 
-    echo "start genesis ..."
-    CMD="$INSOLARD --config ${BOOTSTRAP_INSOLARD_CONFIG} --genesis ${BOOTSTRAP_GENESIS_CONFIG} --keyout ${DISCOVERY_NODES_DATA}certs"
+    echo "start bootstrap ..."
+    CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG} --certificates-out-dir=${DISCOVERY_NODES_DATA}certs"
 
     GENESIS_EXIT_CODE=0
     set +e
-    if [[ "$NO_GENESIS_LOG_REDIRECT" != "1" ]]; then
+    if [[ "$NO_BOOTSTRAP_LOG_REDIRECT" != "1" ]]; then
         set -x
-        ${CMD} &> ${LAUNCHNET_LOGS_DIR}genesis_output.log
+        ${CMD} &> ${LAUNCHNET_LOGS_DIR}bootstrap.log
         GENESIS_EXIT_CODE=$?
         { set +x; } 2>/dev/null
-        echo "genesis log: ${LAUNCHNET_LOGS_DIR}genesis_output.log"
+        echo "bootstrap log: ${LAUNCHNET_LOGS_DIR}bootstrap.log"
     else
         set -x
         ${CMD}
-        GENESIS_EXIT_CODE=$?
+        BOOTSTRAP_EXIT_CODE=$?
         { set +x; } 2>/dev/null
     fi
     set -e
-    if [[ $GENESIS_EXIT_CODE -ne 0 ]]; then
+    if [[ ${BOOTSTRAP_EXIT_CODE} -ne 0 ]]; then
         echo "Genesis failed"
-        if [[ "$NO_GENESIS_LOG_REDIRECT" != "1" ]]; then
-            echo "check log: ${LAUNCHNET_LOGS_DIR}/genesis_output.log"
+        if [[ "${NO_BOOTSTRAP_LOG_REDIRECT}" != "1" ]]; then
+            echo "check log: ${LAUNCHNET_LOGS_DIR}/bootstrap.log"
         fi
-        exit $GENESIS_EXIT_CODE
+        exit ${BOOTSTRAP_EXIT_CODE}
     fi
-    echo "genesis is done"
+    echo "bootstrap is done"
 
-    copy_data
     copy_discovery_certs
 }
 
@@ -360,7 +352,7 @@ trap 'stop_listening true' INT TERM EXIT
 echo "start pulsar ..."
 echo "   log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
 set -x
-mkdir -p $PULSAR_DATA_DIR
+mkdir -p ${PULSAR_DATA_DIR}
 ${PULSARD} -c ${PULSAR_CONFIG} --trace &> ${LAUNCHNET_LOGS_DIR}pulsar_output.log &
 { set +x; } 2>/dev/null
 echo "pulsar log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"

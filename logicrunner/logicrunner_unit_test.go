@@ -50,6 +50,7 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/insolar/utils"
 )
 
 type LogicRunnerCommonTestSuite struct {
@@ -183,23 +184,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name:                           "Happy path",
+			name: "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "ClarifyPendingState failed",
+			name: "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name:                           "StartQueueProcessorIfNeeded failed",
+			name: "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "Both procedures fail",
+			name: "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -568,29 +569,31 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	es := NewExecutionState(testutils.RandomRef())
 
+	reqIdA := utils.RandTraceID()
+	reqIdB := utils.RandTraceID()
+
 	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil)
 	suite.Require().False(loop)
-
-	ctxA, _ := inslogger.WithTraceField(suite.ctx, "a")
-	ctxB, _ := inslogger.WithTraceField(suite.ctx, "b")
 
 	objectRef := testutils.RandomRef()
 	msg := &message.CallMethod{
 		Request: record.Request{
 			ReturnMode: record.ReturnResult,
 			Object:     &objectRef,
+			APIRequestID: reqIdA,
 		},
 	}
 	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
-		Request: &record.Request{ReturnMode: record.ReturnResult},
-		Context: ctxA,
+		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdA},
 	})
-
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().True(loop)
 
-	loop = suite.lr.CheckExecutionLoop(ctxB, es, parcel)
+	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
+		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdB},
+	})
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 
 	// intermediate env cleanup
@@ -605,27 +608,24 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
 		Request: &record.Request{ReturnMode: record.ReturnResult},
-		Context: ctxA,
 	})
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 	es.CurrentList.Cleanup()
 
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
 		Request: &record.Request{ReturnMode: record.ReturnNoWait},
-		Context: ctxA,
 	})
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 	es.CurrentList.Cleanup()
 
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
 		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
-		Context:    ctxA,
 		SentResult: true,
 	})
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 }
 
@@ -760,13 +760,13 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 
 func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessage() {
 	objectId := testutils.RandomID()
-	objectRef := testutils.RandomRef()
+	objectRef := *insolar.NewReference(objectId)
 	msg := &message.AbandonedRequestsNotification{Object: objectId}
 	parcel := &message.Parcel{Msg: msg}
 
 	_, err := suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests false
@@ -777,7 +777,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests already true
@@ -788,7 +788,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 }
 
@@ -1004,6 +1004,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 					Prototype: &protoRef,
 					Object:    &objectRef,
 					Method:    "some",
+					APIRequestID: utils.RandTraceID(),
 				},
 			}
 
@@ -1452,7 +1453,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	s.am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
+	s.am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 
 	es := NewExecutionState(s.objectRef)
 	es.pending = message.InPending
@@ -1541,8 +1542,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1620,7 +1621,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() 
 	es.LedgerHasMoreRequests = true
 
 	am := artifacts.NewClientMock(s.mc)
-	am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
+	am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 	s.lr.ArtifactManager = am
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
 	s.Equal(false, es.LedgerHasMoreRequests)
@@ -1634,7 +1635,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 		PulseNumber: s.oldRequestPulseNumber,
 		Msg:         &message.CallMethod{},
 	}
-	s.am.GetPendingRequestMock.Return(parcel, nil)
+	s.am.GetPendingRequestMock.Return(nil, parcel, nil)
 
 	// we doesn't authorized (pulse change in time we process function)
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
@@ -1649,11 +1650,13 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = true
 
+	testRequestRef := record.Request{Object: &s.ref}
+
 	parcel := &message.Parcel{
 		PulseNumber: s.oldRequestPulseNumber,
-		Msg:         &message.CallMethod{Request: record.Request{Object: &s.ref}},
+		Msg:         &message.CallMethod{Request: testRequestRef},
 	}
-	s.am.GetPendingRequestMock.Return(parcel, nil)
+	s.am.GetPendingRequestMock.Return(testRequestRef.Object, parcel, nil)
 
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(true, nil)
