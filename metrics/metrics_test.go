@@ -17,6 +17,7 @@
 package metrics_test
 
 import (
+	"context"
 	"math/rand"
 	"net/http"
 	"os"
@@ -67,8 +68,8 @@ func testMetricsServerOutput(t *testing.T) {
 		distRe  = regexp.MustCompile(`insolar_some_metric_distribution_count{[^}]*xyz="11\.12\.13"[^}]*} 1`)
 	)
 
-	newctx := insmetrics.ChangeTags(ctx, tag.Insert(someTag, "11.12.13"))
-	stats.Record(newctx, metricCount.M(1), metricDist.M(rand.Int63()))
+	metricsCtx := insmetrics.ChangeTags(context.Background(), tag.Insert(someTag, "11.12.13"))
+	stats.Record(metricsCtx, metricCount.M(1), metricDist.M(rand.Int63()))
 
 	time.Sleep(200 * time.Millisecond)
 	content, err := testm.FetchContent()
