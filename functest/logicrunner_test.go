@@ -48,7 +48,7 @@ func (c *One) Dec() (int, error) {
 	return c.Number, nil
 }
 `
-	objectRef := callConstructor(t, uploadContract(t, "test", contractCode))
+	objectRef := callConstructor(t, uploadContractOnce(t, "test", contractCode))
 
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objectRef, "Get")
@@ -172,9 +172,9 @@ func (r *Two) GetPayloadString() (string, error) {
 }
 `
 
-	uploadContract(t, "two", contractTwoCode)
+	uploadContractOnce(t, "two", contractTwoCode)
 
-	oneProto := uploadContract(t, "one", contractOneCode)
+	oneProto := uploadContractOnce(t, "one", contractOneCode)
 	objectRef := callConstructor(t, oneProto)
 
 	resp := callMethod(t, objectRef, "Hello", "ins")
