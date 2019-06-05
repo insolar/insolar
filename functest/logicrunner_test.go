@@ -375,3 +375,25 @@ func (r *One) Hello() (string, error) {
 	resp := callMethod(t, obj, "Hello")
 	require.Equal(t, prototype.String(), resp)
 }
+
+func TestDeactivationError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Kill() error {
+	r.SelfDestruct()
+	return nil
+}
+`
+
+	obj := callConstructor(t, uploadContractOnce(t, "deactivation", contractOneCode))
+
+	// no error
+	callMethod(t, obj, "Kill")
+}
