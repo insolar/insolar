@@ -50,21 +50,20 @@ func (c *One) Dec() (int, error) {
 }
 `
 	objectRef := callConstructor(t, uploadContract(t, contractCode))
-	emptyArgs, _ := insolar.Serialize(make([]interface{}, 0))
 
 	// be careful - jsonUnmarshal convert json numbers to float64
-	result := callMethod(t, objectRef, "Get", emptyArgs)
+	result := callMethod(t, objectRef, "Get")
 	require.Equal(t, float64(0), result)
 
-	result = callMethod(t, objectRef, "Inc", emptyArgs)
+	result = callMethod(t, objectRef, "Inc")
 	require.Equal(t, float64(1), result)
 
-	result = callMethod(t, objectRef, "Get", emptyArgs)
+	result = callMethod(t, objectRef, "Get")
 	require.Equal(t, float64(1), result)
 
-	result = callMethod(t, objectRef, "Dec", emptyArgs)
+	result = callMethod(t, objectRef, "Dec")
 	require.Equal(t, float64(0), result)
 
-	result = callMethod(t, objectRef, "Get", emptyArgs)
+	result = callMethod(t, objectRef, "Get")
 	require.Equal(t, float64(0), result)
 }
