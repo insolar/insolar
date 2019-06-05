@@ -205,10 +205,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 
 	os.Lock()
 	if os.ExecutionState == nil {
-		os.ExecutionState = &ExecutionState{
-			Ref:   ref,
-			Queue: make([]ExecutionQueueElement, 0),
-		}
+		os.ExecutionState = NewExecutionState(ref)
 	}
 	es := os.ExecutionState
 	os.Unlock()
