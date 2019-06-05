@@ -19,7 +19,6 @@
 package functest
 
 import (
-	"github.com/insolar/insolar/insolar"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -43,11 +42,6 @@ func TestCallUploadedContract(t *testing.T) {
 	objectRef := callConstructor(t, prototypeRef)
 
 	testParam := "test"
-	args := append(make([]string, 0), testParam)
-	argsSerialized, err := insolar.Serialize(args)
-	require.NoError(t, err)
-
-	methodResult := callMethod(t, objectRef, "Hello", argsSerialized)
-
+	methodResult := callMethod(t, objectRef, "Hello", testParam)
 	require.Equal(t, testParam, methodResult)
 }
