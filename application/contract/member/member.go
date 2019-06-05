@@ -171,12 +171,41 @@ func (mdAdminMember *Member) AddBurnAddressCall(rdRef insolar.Reference, params 
 	input := Input{}
 	err = json.Unmarshal(params, &input)
 	if err != nil {
-		return 0, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
+		return 0, fmt.Errorf("[ AddBurnAddressCall ]: %s", err.Error())
 	}
 
 	err = rootDomain.AddBurnAddress(input.BurnAddress)
 	if err != nil {
 		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't add burn address: %s", err.Error())
+	}
+
+	return nil, nil
+}
+
+func (mdAdminMember *Member) AddBurnAddressesCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
+
+	rootDomain := rootdomain.GetObject(rdRef)
+	mdAdminRef, err := rootDomain.GetMDAdminMemberRef()
+	if err != nil {
+		return nil, fmt.Errorf("[ AddBurnAddressesCall ] Can't get migration deamon admin reference from root domain: %s", err.Error())
+	}
+
+	if mdAdminMember.GetReference() != *mdAdminRef {
+		return nil, fmt.Errorf("[ AddBurnAddressesCall ] Only migration deamon admin can call this method")
+	}
+
+	type Input struct {
+		BurnAddresses []string `json:"burn_addresses"`
+	}
+	input := Input{}
+	err = json.Unmarshal(params, &input)
+	if err != nil {
+		return 0, fmt.Errorf("[ AddBurnAddressesCall ]: %s", err.Error())
+	}
+
+	err = rootDomain.AddBurnAddresses(input.BurnAddresses)
+	if err != nil {
+		return nil, fmt.Errorf("[ AddBurnAddressesCall ] Can't add burn address: %s", err.Error())
 	}
 
 	return nil, nil

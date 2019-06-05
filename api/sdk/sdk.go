@@ -178,7 +178,7 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 	return res, nil
 }
 
-// CreateMember api request creates member with new random keys
+// AddBurnAddress api request add new burn address
 func (sdk *SDK) AddBurnAddress(burnAddress string) (string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "AddBurnAddress")
 
@@ -199,6 +199,36 @@ func (sdk *SDK) AddBurnAddress(burnAddress string) (string, error) {
 	response, err := sdk.getResponse(body)
 	if err != nil {
 		return "", errors.Wrap(err, "[ AddBurnAddress ] can't get response")
+	}
+
+	if response.Error != "" {
+		return response.TraceID, errors.New(response.Error)
+	}
+
+	return response.TraceID, nil
+}
+
+// AddBurnAddress api request add new burn addresses
+func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
+	ctx := inslogger.ContextWithTrace(context.Background(), "burnAddresses")
+
+	type Params struct {
+		BurnAddresses []string `json:"burn_addresses"`
+	}
+	params := Params{BurnAddresses: burnAddresses}
+	paramsMarshaled, err := json.Marshal(params)
+	if err != nil {
+		return "", errors.Wrap(err, "[ AddBurnAddresses ] failed marshal")
+	}
+
+	body, err := sdk.sendRequest(ctx, "AddBurnAddresses", paramsMarshaled, sdk.mdAdminMember)
+	if err != nil {
+		return "", errors.Wrap(err, "[ AddBurnAddresses ] can't send request")
+	}
+
+	response, err := sdk.getResponse(body)
+	if err != nil {
+		return "", errors.Wrap(err, "[ AddBurnAddresses ] can't get response")
 	}
 
 	if response.Error != "" {

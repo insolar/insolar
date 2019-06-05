@@ -99,6 +99,12 @@ func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 	return nil
 }
 
+func (rd *RootDomain) AddBurnAddresses(burnAddresses []string) error {
+	rd.FreeBurnAddresses = append(rd.FreeBurnAddresses, burnAddresses...)
+
+	return nil
+}
+
 func (rd *RootDomain) GetBurnAddress() (string, error) {
 	if len(rd.FreeBurnAddresses) == 0 {
 		return "", fmt.Errorf("[ GetBurnAddress ] No more burn address left")
