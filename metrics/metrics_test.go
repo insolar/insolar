@@ -35,56 +35,60 @@ import (
 	"go.opencensus.io/tag"
 )
 
-func newMetrics(t *testing.T) {
+func testMetricsServerOutput(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	testm, err := testmetrics.Start(ctx, t)
 	require.NoError(t, err, "metrics server start")
 
 	var (
-		// https://godoc.org/go.opencensus.io/stats
-		videoCount = stats.Int64("video_count", "number of processed videos", stats.UnitDimensionless)
-		videoSize  = stats.Int64("video_size", "size of processed video", stats.UnitBytes)
+		metricCount = stats.Int64("some_count", "number of processed videos", stats.UnitDimensionless)
+		metricDist  = stats.Int64("some_distribution", "size of processed video", stats.UnitBytes)
 	)
-	osxtag := insmetrics.MustTagKey("osx")
+	someTag := insmetrics.MustTagKey("xyz")
 
 	err = view.Register(
 		&view.View{
-			Name:        "video_count",
-			Measure:     videoCount,
+			Name:        "some_metric_count",
+			Measure:     metricCount,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{osxtag},
+			TagKeys:     []tag.Key{someTag},
 		},
 		&view.View{
-			Name:        "video_size",
-			Measure:     videoSize,
+			Name:        "some_metric_distribution",
+			Measure:     metricDist,
 			Aggregation: view.Distribution(0, 1<<16, 1<<32),
-			TagKeys:     []tag.Key{osxtag},
+			TagKeys:     []tag.Key{someTag},
 		},
 	)
 	require.NoError(t, err)
 
-	newctx := insmetrics.ChangeTags(ctx, tag.Insert(osxtag, "11.12.13"))
-	stats.Record(newctx, videoCount.M(1), videoSize.M(rand.Int63()))
+	var (
+		countRe = regexp.MustCompile(`insolar_some_metric_count{[^}]*xyz="11\.12\.13"[^}]*} 1`)
+		distRe  = regexp.MustCompile(`insolar_some_metric_distribution_count{[^}]*xyz="11\.12\.13"[^}]*} 1`)
+	)
+
+	newctx := insmetrics.ChangeTags(ctx, tag.Insert(someTag, "11.12.13"))
+	stats.Record(newctx, metricCount.M(1), metricDist.M(rand.Int63()))
 
 	time.Sleep(200 * time.Millisecond)
 	content, err := testm.FetchContent()
 	require.NoError(t, err, "fetch content failed")
 
 	assert.Regexp(t,
-		regexp.MustCompile(`insolar_video_size_count{[^}]*osx="11\.12\.13"[^}]*} 1`),
+		countRe,
 		content,
-		"insolar_video_size_count distribution count value is equal to 1")
+		"distribution count value is equal to 1")
 	assert.Regexp(t,
-		regexp.MustCompile(`insolar_video_count{[^}]*osx="11\.12\.13"[^}]*} 1`),
+		distRe,
 		content,
-		"insolar_video_count counter value is equal to 1")
+		"counter value is equal to 1")
 
 	assert.NoError(t, testm.Stop(), "metrics server is stopped")
 }
 
 func TestMetrics_NewMetrics(t *testing.T) {
 	if os.Getenv("ISOLATE_METRICS_STATE") == "1" {
-		newMetrics(t)
+		testMetricsServerOutput(t)
 		return
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=TestMetrics_NewMetrics")
