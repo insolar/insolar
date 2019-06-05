@@ -129,9 +129,12 @@ func NewCommunicator() *ConsensusCommunicator {
 
 // Init method implements Initer interface
 func (nc *ConsensusCommunicator) Init(ctx context.Context) error {
-	nc.phase1result = make(chan phase1Result)
-	nc.phase2result = make(chan phase2Result)
-	nc.phase3result = make(chan phase3Result)
+	// Please note that all channels have to be buffered. The code is written
+	// so that otherwise there will be goroutines that will block on writing
+	// to the channel which will cause goroutines leak.
+	nc.phase1result = make(chan phase1Result, 1)
+	nc.phase2result = make(chan phase2Result, 1)
+	nc.phase3result = make(chan phase3Result, 1)
 	nc.ConsensusNetwork.RegisterPacketHandler(packets.Phase1, nc.phase1DataHandler)
 	nc.ConsensusNetwork.RegisterPacketHandler(packets.Phase2, nc.phase2DataHandler)
 	nc.ConsensusNetwork.RegisterPacketHandler(packets.Phase3, nc.phase3DataHandler)
