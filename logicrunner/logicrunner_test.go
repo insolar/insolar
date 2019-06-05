@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/rpc"
 	"os"
 	"path"
@@ -1222,12 +1223,28 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	s.Nil(resTransfer)
 
 	// Verify Member1 balance
-	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member1Ref})
-	s.Equal(999999999, int(res3.(uint64)))
+	for i := 1; i <= 10; i++ {
+		result = root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member1Ref})
+		if result.(uint64) == 999999999 {
+			break
+		}
+		ms := time.Millisecond * 100 * time.Duration(math.Pow(2, float64(i)))
+		log.Debug("sleeping", ms)
+		time.Sleep(ms)
+	}
+	s.Equal(999999999, int(result.(uint64)))
 
 	// Verify Member2 balance
-	res4 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member2Ref})
-	s.Equal(1000000001, int(res4.(uint64)))
+	for i := 1; i <= 10; i++ {
+		result = root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member2Ref})
+		if result.(uint64) == 1000000001 {
+			break
+		}
+		ms := time.Millisecond * 100 * time.Duration(math.Pow(2, float64(i)))
+		log.Debug("sleeping", ms)
+		time.Sleep(ms)
+	}
+	s.Equal(1000000001, int(result.(uint64)))
 }
 
 func (s *LogicRunnerFuncSuite) TestFullValidationCycleError() {
