@@ -49,7 +49,6 @@ func (p *keyLoader) Load(file string) (crypto.PrivateKey, error) {
 	return signer, nil
 }
 
-// TODO: deprecated, use PEM format
 func readJSON(path string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(path))
 	if err != nil {
