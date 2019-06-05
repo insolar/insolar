@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-package bootstrap
+package genesisrefs
 
 import (
-	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/rootdomain"
 )
 
 var (
