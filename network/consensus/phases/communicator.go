@@ -624,8 +624,10 @@ func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacke
 	case nc.phase3result <- phase3Result{id: sender, packet: p}:
 		// ok
 	case <-time.After(5 * time.Second):
-		// If writing to the channel blocks it most likely means that we already received this type of packet.
+		// If writing to the channel blocks it may mean that we already received this type of packet.
 		// This may happen e.g. if another type was resent which in turn caused type 3 packet to be resent.
-		log.Warn("It seems that type 3 packet was already processed! Ignoring.")
+		// It's also possible that the goroutine at the other end of the channel terminated by some other
+		// reason (e.g. ctx.Done). Anyway we shouldn't leave this goroutine hanging.
+		log.Warn("phase3DataHandler timed out")
 	}
 }
