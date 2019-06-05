@@ -111,7 +111,7 @@ func importPrivateKeyPEM(pemEncoded []byte) (*xecdsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
-func ReadRequestParams(path string) (*DataToSign, error) {
+func readRequestParams(path string) (*DataToSign, error) {
 	type DataToSignFile struct {
 		Reference string      `json:"reference"`
 		Method    string      `json:"method"`
@@ -154,13 +154,4 @@ func readFile(path string, configType interface{}) error {
 	}
 
 	return nil
-}
-
-func ExportPrivateKeyPEM(privateKey xecdsa.PrivateKey) ([]byte, error) {
-	x509Encoded, err := x509.MarshalECPrivateKey(&privateKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ExportPrivateKey ]")
-	}
-	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
-	return pemEncoded, nil
 }

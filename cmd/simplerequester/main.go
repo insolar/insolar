@@ -55,7 +55,7 @@ func main() {
 	datas := &DataToSign{}
 
 	if paramsFile != "" {
-		datas, err = ReadRequestParams(paramsFile)
+		datas, err = readRequestParams(paramsFile)
 		check("[ simpleRequester ]", err)
 	} else {
 		if memberRef == "" {
@@ -65,8 +65,12 @@ func main() {
 		} else {
 			datas.Reference = memberRef
 		}
-		datas.Method = method
-		datas.Params = params
+		if method != "" {
+			datas.Method = method
+		}
+		if params != "" {
+			datas.Params = params
+		}
 	}
 	if datas.Method == "" {
 		fmt.Println("Method cannot be null", err)
