@@ -53,19 +53,24 @@ func (c *One) Dec() (int, error) {
 	objectRef := callConstructor(t, uploadContractOnce(t, "test", contractCode))
 
 	// be careful - jsonUnmarshal convert json numbers to float64
-	result := callMethod(t, objectRef, "Get")
+	result, err := callMethod(t, objectRef, "Get")
+	require.Empty(t, err)
 	require.Equal(t, float64(0), result)
 
-	result = callMethod(t, objectRef, "Inc")
+	result, err = callMethod(t, objectRef, "Inc")
+	require.Empty(t, err)
 	require.Equal(t, float64(1), result)
 
-	result = callMethod(t, objectRef, "Get")
+	result, err = callMethod(t, objectRef, "Get")
+	require.Empty(t, err)
 	require.Equal(t, float64(1), result)
 
-	result = callMethod(t, objectRef, "Dec")
+	result, err = callMethod(t, objectRef, "Dec")
+	require.Empty(t, err)
 	require.Equal(t, float64(0), result)
 
-	result = callMethod(t, objectRef, "Get")
+	result, err = callMethod(t, objectRef, "Get")
+	require.Empty(t, err)
 	require.Equal(t, float64(0), result)
 }
 
@@ -177,11 +182,13 @@ func (r *Two) GetPayloadString() (string, error) {
 	uploadContractOnce(t, "two", contractTwoCode)
 	objectRef := callConstructor(t, uploadContractOnce(t, "one", contractOneCode))
 
-	resp := callMethod(t, objectRef, "Hello", "ins")
+	resp, err := callMethod(t, objectRef, "Hello", "ins")
+	require.Empty(t, err)
 	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", resp)
 
 	for i := 2; i <= 5; i++ {
-		resp = callMethod(t, objectRef, "Again", "ins")
+		resp, err = callMethod(t, objectRef, "Again", "ins")
+		require.Empty(t, err)
 		assert.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), resp)
 	}
 
@@ -274,10 +281,12 @@ func (r *Two) Hello(s string) (string, error) {
 	uploadContractOnce(t, "injection_delegate_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "injection_delegate_one", contractOneCode))
 
-	resp := callMethod(t, obj, "Hello", "ins")
+	resp, err := callMethod(t, obj, "Hello", "ins")
+	require.Empty(t, err)
 	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resp)
 
-	resp = callMethod(t, obj, "HelloFromDelegate", "ins")
+	resp, err = callMethod(t, obj, "HelloFromDelegate", "ins")
+	require.Empty(t, err)
 	require.Equal(t, "Hello you too, ins. 1288 times!", resp)
 }
 
@@ -348,10 +357,11 @@ func (r *Two) Value() (int, error) {
 	uploadContractOnce(t, "basic_notification_call_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "basic_notification_call_one", contractOneCode))
 
-	// no error
-	callMethod(t, obj, "Hello")
+	_, err := callMethod(t, obj, "Hello")
+	require.Empty(t, err)
 
-	resp := callMethod(t, obj, "Value")
+	resp, err := callMethod(t, obj, "Value")
+	require.Empty(t, err)
 	require.Equal(t, float64(644), resp)
 }
 
@@ -372,7 +382,8 @@ func (r *One) Hello() (string, error) {
 	prototype := uploadContractOnce(t, "context_passing", contractOneCode)
 	obj := callConstructor(t, prototype)
 
-	resp := callMethod(t, obj, "Hello")
+	resp, err := callMethod(t, obj, "Hello")
+	require.Empty(t, err)
 	require.Equal(t, prototype.String(), resp)
 }
 
@@ -394,6 +405,35 @@ func (r *One) Kill() error {
 
 	obj := callConstructor(t, uploadContractOnce(t, "deactivation", contractOneCode))
 
-	// no error
-	callMethod(t, obj, "Kill")
+	_, err := callMethod(t, obj, "Kill")
+	require.Empty(t, err)
 }
+
+
+// TODO вернуться позже или забить или сделать отдельный тест не через общую ручку а напрямую поймать ошибку
+//func TestPanicError(t *testing.T) {
+//	var contractOneCode = `
+//package main
+//
+//import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+//import "errors"
+//
+//type One struct {
+//	foundation.BaseContract
+//}
+//
+//func (r *One) Panic() error {
+//	return errors.New("test")
+//}
+//func (r *One) NotPanic() error {
+//	return nil
+//}
+//`
+//	obj := callConstructor(t, uploadContractOnce(t, "panic", contractOneCode))
+//
+//	_, err := callMethod(t, obj, "Panic") // need to check error
+//	require.Equal(t, errors.New("test"), err.S)
+//
+//	_, err = callMethod(t, obj, "NotPanic") // no error
+//	require.Empty(t, err)
+//}
