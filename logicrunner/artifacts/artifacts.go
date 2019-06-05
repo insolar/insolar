@@ -50,7 +50,7 @@ type Client interface {
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
 	// GetPendingRequest returns a pending request for object.
-	GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error)
+	GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, insolar.Parcel, error)
 
 	// HasPendingRequests returns true if object has unclosed requests.
 	HasPendingRequests(ctx context.Context, object insolar.Reference) (bool, error)

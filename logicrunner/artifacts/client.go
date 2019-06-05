@@ -339,7 +339,7 @@ func (m *client) GetObject(
 // GetPendingRequest returns an unclosed pending request
 // It takes an id from current LME
 // Then goes either to a light node or heavy node
-func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
+func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, insolar.Parcel, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetRegisterRequest").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRegisterRequest")
@@ -361,7 +361,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 		ObjectID: objectID,
 	}, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var requestID insolar.ID
@@ -369,19 +369,19 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 	case *reply.ID:
 		requestID = r.ID
 	case *reply.Error:
-		return nil, r.Error()
+		return nil, nil, r.Error()
 	default:
-		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
+		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
 	}
 
 	currentPN, err := m.pulse(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, currentPN, requestID.Pulse())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	sender = messagebus.BuildSender(
@@ -397,7 +397,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	switch r := genericReply.(type) {
@@ -405,12 +405,12 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 		rec := record.Virtual{}
 		err = rec.Unmarshal(r.Record)
 		if err != nil {
-			return nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
+			return nil, nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
 		}
 		concrete := record.Unwrap(&rec)
 		castedRecord, ok := concrete.(*record.Request)
 		if !ok {
-			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
+			return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
 
 		serviceData := message.ServiceData{
@@ -418,12 +418,12 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 			LogLevel:      inslogger.GetLoggerLevel(ctx),
 			TraceSpanData: instracer.MustSerialize(ctx),
 		}
-		return &message.Parcel{Msg: &message.CallMethod{
+		return insolar.NewReference(requestID), &message.Parcel{Msg: &message.CallMethod{
 			Request: *castedRecord}, ServiceData: serviceData}, nil
 	case *reply.Error:
-		return nil, r.Error()
+		return nil, nil, r.Error()
 	default:
-		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
+		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
 	}
 }
 

@@ -304,7 +304,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	am.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
+	_, res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
 
 	// Assert
 	require.NoError(s.T(), err)
