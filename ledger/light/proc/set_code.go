@@ -100,7 +100,7 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store blob")
 	}
 
-	virtual := record.Wrap(p.code)
+	virtual := record.Wrap(p.record)
 	material := record.Material{
 		Virtual: &virtual,
 	}

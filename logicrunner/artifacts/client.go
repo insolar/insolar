@@ -595,31 +595,56 @@ func (m *client) DeployCode(
 		return nil, err
 	}
 
+	h := m.PCS.ReferenceHasher()
+	_, err = h.Write(code)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to calculate hash")
+	}
+	blobID := *insolar.NewID(currentPN, h.Sum(nil))
+
 	codeRec := record.Code{
 		Domain:      domain,
 		Request:     request,
-		Code:        *object.CalculateIDForBlob(m.PCS, currentPN, code),
+		Code:        blobID,
 		MachineType: machineType,
 	}
-	virtRec := record.Wrap(codeRec)
-	hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-	codeID := insolar.NewID(currentPN, hash)
-	codeRef := insolar.NewReference(*codeID)
-
-	_, err = m.setBlob(ctx, code, *codeRef)
+	buf, err := codeRec.Marshal()
 	if err != nil {
-		return nil, err
-	}
-	id, err := m.setRecord(
-		ctx,
-		virtRec,
-		*codeRef,
-	)
-	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal record")
 	}
 
-	return id, nil
+	h = m.PCS.ReferenceHasher()
+	_, err = h.Write(buf)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to calculate hash")
+	}
+	recID := *insolar.NewID(currentPN, h.Sum(nil))
+
+	msg, err := payload.NewMessage(&payload.SetCode{
+		Record: buf,
+		Code:   code,
+	})
+
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID))
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply")
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return &p.ID, nil
+	case *payload.Error:
+		return nil, errors.New(p.Text)
+	default:
+		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+	}
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
