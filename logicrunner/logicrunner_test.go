@@ -1222,6 +1222,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	resTransfer := member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", *cb.Prototypes["member"], []interface{}{1, member2Ref})
 	s.Nil(resTransfer)
 
+	var result interface{}
 	// Verify Member1 balance
 	for i := 1; i <= 10; i++ {
 		result = root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member1Ref})
