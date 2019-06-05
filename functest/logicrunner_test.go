@@ -66,3 +66,117 @@ func (c *One) Dec() (int, error) {
 	result = callMethod(t, objectRef, "Get")
 	require.Equal(t, float64(0), result)
 }
+
+func TestContractCallingContractError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/application/proxy/two"
+import "github.com/insolar/insolar/insolar"
+import "errors"
+
+type One struct {
+	foundation.BaseContract
+	Friend insolar.Reference
+}
+
+func (r *One) Hello(s string) (string, error) {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return "1", err
+	}
+
+	res, err := friend.Hello(s)
+	if err != nil {
+		return "2", err
+	}
+	
+	r.Friend = friend.GetReference()
+	return "Hi, " + s + "! Two said: " + res, nil
+}
+
+func (r *One) Again(s string) (string, error) {
+	res, err := two.GetObject(r.Friend).Hello(s)
+	if err != nil {
+		return "", err
+	}
+	
+	return "Hi, " + s + "! Two said: " + res, nil
+}
+
+func (r *One)GetFriend() (insolar.Reference, error) {
+	return r.Friend, nil
+}
+
+func (r *One)TestPayload() (two.Payload, error) {
+	f := two.GetObject(r.Friend)
+	err := f.SetPayload(two.Payload{Int: 10, Str: "HiHere"})
+	if err != nil { return two.Payload{}, err }
+
+	p, err := f.GetPayload()
+	if err != nil { return two.Payload{}, err }
+
+	str, err := f.GetPayloadString()	
+	if err != nil { return two.Payload{}, err }
+
+	if p.Str != str { return two.Payload{}, errors.New("Oops") }
+
+	return p, nil
+
+}
+
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+	P Payload
+}
+
+type Payload struct {
+	Int int
+	Str string
+}
+
+func New() (*Two, error) {
+	return &Two{X:0}, nil;
+}
+
+func (r *Two) Hello(s string) (string, error) {
+	r.X ++
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
+}
+
+func (r *Two) GetPayload() (Payload, error) {
+	return r.P, nil
+}
+
+func (r *Two) SetPayload(P Payload) (error) {
+	r.P = P
+	return nil
+}
+
+func (r *Two) GetPayloadString() (string, error) {
+	return r.P.Str, nil
+}
+`
+
+	uploadContract(t, "two", contractTwoCode)
+
+	oneProto := uploadContract(t, "one", contractOneCode)
+	objectRef := callConstructor(t, oneProto)
+
+	resp := callMethod(t, objectRef, "Hello", "ins")
+	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", resp)
+}
