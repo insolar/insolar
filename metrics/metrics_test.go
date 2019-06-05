@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,6 +38,7 @@ import (
 )
 
 func testMetricsServerOutput(t *testing.T) {
+	// checks is metrics server properly exports metrics added with opencensus on prometheus http endpoint
 	ctx := inslogger.TestContext(t)
 	testm, err := testmetrics.Start(ctx, t)
 	require.NoError(t, err, "metrics server start")
@@ -71,18 +73,31 @@ func testMetricsServerOutput(t *testing.T) {
 	metricsCtx := insmetrics.ChangeTags(context.Background(), tag.Insert(someTag, "11.12.13"))
 	stats.Record(metricsCtx, metricCount.M(1), metricDist.M(rand.Int63()))
 
-	time.Sleep(200 * time.Millisecond)
-	content, err := testm.FetchContent()
-	require.NoError(t, err, "fetch content failed")
+	var (
+		content  string
+		fetchErr error
+	)
+	// loop because at some strange circumstances at CI one fetch is not enough
+	for i := 0; i < 1000; i++ {
+		time.Sleep(500 * time.Millisecond)
+		content, fetchErr = testm.FetchContent()
+		if fetchErr != nil {
+			continue
+		}
+		if strings.Contains(content, "insolar_some_metric") {
+			break
+		}
+	}
 
+	require.NoError(t, fetchErr, "fetch content failed")
 	assert.Regexp(t,
 		countRe,
 		content,
-		"distribution count value is equal to 1")
+		"counter value is equal to 1")
 	assert.Regexp(t,
 		distRe,
 		content,
-		"counter value is equal to 1")
+		"distribution counter value is equal to 1")
 
 	assert.NoError(t, testm.Stop(), "metrics server is stopped")
 }
