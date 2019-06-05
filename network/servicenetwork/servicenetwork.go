@@ -53,6 +53,7 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -372,6 +373,9 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
+		if msg == nil {
+			fmt.Println("SendMessageHandler, get nil msg")
+		}
 		err := n.Pub.Publish(bus.TopicIncoming, msg)
 		if err != nil {
 			return nil, errors.Wrap(err, "error while publish msg to TopicIncoming")
@@ -449,6 +453,9 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 		return nil, err
 	}
 	// TODO: check pulse here
+	if msg == nil {
+		fmt.Println("processIncoming, get nil msg")
+	}
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {

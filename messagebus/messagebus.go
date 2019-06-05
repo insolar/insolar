@@ -26,6 +26,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -220,14 +221,21 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 
 	_, ok := transferredToWatermill[msg.Type()]
 	if ok {
+		readBarrier(ctx, &mb.globalLock)
 		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
 		nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, ops)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate role")
 		}
 		res, done := mb.Sender.SendTarget(ctx, wmMsg, nodes[0])
+		fmt.Println("send mb with id ", middleware.MessageCorrelationID(wmMsg), msg.Type(), inslogger.TraceID(ctx))
 		repMsg := <-res
 		done()
+		fmt.Println("get res mb with id ", middleware.MessageCorrelationID(repMsg), msg.Type(), inslogger.TraceID(ctx))
+		if repMsg == nil {
+			fmt.Println("TraceIDTraceIDTraceID - ", inslogger.TraceID(ctx), msg.Type())
+			// panic("nooo, love")
+		}
 		return deserializePayload(repMsg)
 	}
 
@@ -249,6 +257,7 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload to error")
 		}
+		fmt.Println("deserializePayload get error - ", middleware.MessageCorrelationID(msg), errReply)
 		return nil, errReply
 	}
 

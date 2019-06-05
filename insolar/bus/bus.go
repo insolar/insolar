@@ -108,7 +108,7 @@ type Bus struct {
 // NewBus creates Sender instance with provided values.
 func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator) *Bus {
 	return &Bus{
-		timeout:     time.Second * 20,
+		timeout:     time.Second * 200,
 		pub:         pub,
 		replies:     make(map[string]*lockedReply),
 		pulses:      pulses,
@@ -192,6 +192,7 @@ func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
 	id := watermill.NewUUID()
+	fmt.Println("create msg with id ", id, msg.Metadata.Get(MetaType), inslogger.TraceID(ctx))
 	middleware.SetCorrelationID(id, msg)
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 
@@ -237,6 +238,7 @@ func (b *Bus) SendTarget(
 func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 	id := middleware.MessageCorrelationID(origin)
 	middleware.SetCorrelationID(id, reply)
+	fmt.Println("it was reply ", id, origin.Metadata.Get(MetaType), reply.Metadata.Get(MetaType), origin.Metadata.Get(MetaTraceID))
 
 	originSender := origin.Metadata.Get(MetaSender)
 	if originSender == "" {
@@ -256,23 +258,34 @@ func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
 		id := middleware.MessageCorrelationID(msg)
+		fmt.Println("Get correlationID ", id)
+
+		msgType := msg.Metadata.Get(MetaType)
+		if msgType != TypeReply && msgType != TypeErrorReply {
+			return h(msg)
+		}
 
 		b.repliesMutex.RLock()
 		reply, ok := b.replies[id]
 		if !ok {
+			fmt.Println("IncomingMessageRouter - not reply no wait", msgType, id)
 			b.repliesMutex.RUnlock()
+			panic("IncomingMessageRouter - not reply")
 			return h(msg)
 		}
 
-		msgType := msg.Metadata.Get(MetaType)
-		if msgType != TypeReply && msgType != TypeErrorReply {
-			b.repliesMutex.RUnlock()
-			return h(msg)
-		}
+		// msgType := msg.Metadata.Get(MetaType)
+		// if msgType != TypeReply && msgType != TypeErrorReply {
+		// 	b.repliesMutex.RUnlock()
+		// 	return h(msg)
+		// }
 
 		reply.wg.Add(1)
 		b.repliesMutex.RUnlock()
 
+		if msg == nil {
+			fmt.Println("IncomingMessageRouter, get nil msg")
+		}
 		select {
 		case reply.messages <- msg:
 			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
@@ -325,7 +338,9 @@ func (b *Bus) CheckPulse(h message.HandlerFunc) message.HandlerFunc {
 				insolar.TypeValidateRecord.String(),
 				insolar.TypeHotRecords.String(),
 				insolar.TypeCallMethod.String():
-				inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", meta.Pulse, latestPulse.PulseNumber, msgType)
+				err := errors.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", meta.Pulse, latestPulse.PulseNumber, msgType)
+				inslogger.FromContext(ctx).Error(err)
+				b.Reply(ctx, msg, ErrorAsMessage(ctx, err))
 				return nil, fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", meta.Pulse, latestPulse.PulseNumber, msgType)
 			}
 		}
