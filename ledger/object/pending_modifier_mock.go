@@ -26,7 +26,7 @@ type PendingModifierMock struct {
 	RefreshStatePreCounter uint64
 	RefreshStateMock       mPendingModifierMockRefreshState
 
-	SetFilamentFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.MaterialWithID) (r error)
+	SetFilamentFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.CompositeFilamentRecord) (r error)
 	SetFilamentCounter    uint64
 	SetFilamentPreCounter uint64
 	SetFilamentMock       mPendingModifierMockSetFilament
@@ -223,7 +223,7 @@ type PendingModifierMockSetFilamentInput struct {
 	p1 insolar.PulseNumber
 	p2 insolar.ID
 	p3 insolar.PulseNumber
-	p4 []record.MaterialWithID
+	p4 []record.CompositeFilamentRecord
 }
 
 type PendingModifierMockSetFilamentResult struct {
@@ -231,7 +231,7 @@ type PendingModifierMockSetFilamentResult struct {
 }
 
 //Expect specifies that invocation of PendingModifier.SetFilament is expected from 1 to Infinity times
-func (m *mPendingModifierMockSetFilament) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.MaterialWithID) *mPendingModifierMockSetFilament {
+func (m *mPendingModifierMockSetFilament) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.CompositeFilamentRecord) *mPendingModifierMockSetFilament {
 	m.mock.SetFilamentFunc = nil
 	m.expectationSeries = nil
 
@@ -255,7 +255,7 @@ func (m *mPendingModifierMockSetFilament) Return(r error) *PendingModifierMock {
 }
 
 //ExpectOnce specifies that invocation of PendingModifier.SetFilament is expected once
-func (m *mPendingModifierMockSetFilament) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.MaterialWithID) *PendingModifierMockSetFilamentExpectation {
+func (m *mPendingModifierMockSetFilament) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.CompositeFilamentRecord) *PendingModifierMockSetFilamentExpectation {
 	m.mock.SetFilamentFunc = nil
 	m.mainExpectation = nil
 
@@ -270,7 +270,7 @@ func (e *PendingModifierMockSetFilamentExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of PendingModifier.SetFilament method
-func (m *mPendingModifierMockSetFilament) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.MaterialWithID) (r error)) *PendingModifierMock {
+func (m *mPendingModifierMockSetFilament) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.CompositeFilamentRecord) (r error)) *PendingModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -279,7 +279,7 @@ func (m *mPendingModifierMockSetFilament) Set(f func(p context.Context, p1 insol
 }
 
 //SetFilament implements github.com/insolar/insolar/ledger/object.PendingModifier interface
-func (m *PendingModifierMock) SetFilament(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.MaterialWithID) (r error) {
+func (m *PendingModifierMock) SetFilament(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.CompositeFilamentRecord) (r error) {
 	counter := atomic.AddUint64(&m.SetFilamentPreCounter, 1)
 	defer atomic.AddUint64(&m.SetFilamentCounter, 1)
 

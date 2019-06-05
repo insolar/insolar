@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,17 +21,17 @@ import (
 type PendingAccessorMock struct {
 	t minimock.Tester
 
-	IsStateCalculatedFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r bool, r1 error)
-	IsStateCalculatedCounter    uint64
-	IsStateCalculatedPreCounter uint64
-	IsStateCalculatedMock       mPendingAccessorMockIsStateCalculated
+	FirstPendingFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *record.PendingFilament, r1 error)
+	FirstPendingCounter    uint64
+	FirstPendingPreCounter uint64
+	FirstPendingMock       mPendingAccessorMockFirstPending
 
 	OpenRequestsForObjIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error)
 	OpenRequestsForObjIDCounter    uint64
 	OpenRequestsForObjIDPreCounter uint64
 	OpenRequestsForObjIDMock       mPendingAccessorMockOpenRequestsForObjID
 
-	RecordsFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.MaterialWithID, r1 error)
+	RecordsFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.CompositeFilamentRecord, r1 error)
 	RecordsCounter    uint64
 	RecordsPreCounter uint64
 	RecordsMock       mPendingAccessorMockRecords
@@ -45,100 +45,100 @@ func NewPendingAccessorMock(t minimock.Tester) *PendingAccessorMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.IsStateCalculatedMock = mPendingAccessorMockIsStateCalculated{mock: m}
+	m.FirstPendingMock = mPendingAccessorMockFirstPending{mock: m}
 	m.OpenRequestsForObjIDMock = mPendingAccessorMockOpenRequestsForObjID{mock: m}
 	m.RecordsMock = mPendingAccessorMockRecords{mock: m}
 
 	return m
 }
 
-type mPendingAccessorMockIsStateCalculated struct {
+type mPendingAccessorMockFirstPending struct {
 	mock              *PendingAccessorMock
-	mainExpectation   *PendingAccessorMockIsStateCalculatedExpectation
-	expectationSeries []*PendingAccessorMockIsStateCalculatedExpectation
+	mainExpectation   *PendingAccessorMockFirstPendingExpectation
+	expectationSeries []*PendingAccessorMockFirstPendingExpectation
 }
 
-type PendingAccessorMockIsStateCalculatedExpectation struct {
-	input  *PendingAccessorMockIsStateCalculatedInput
-	result *PendingAccessorMockIsStateCalculatedResult
+type PendingAccessorMockFirstPendingExpectation struct {
+	input  *PendingAccessorMockFirstPendingInput
+	result *PendingAccessorMockFirstPendingResult
 }
 
-type PendingAccessorMockIsStateCalculatedInput struct {
+type PendingAccessorMockFirstPendingInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 	p2 insolar.ID
 }
 
-type PendingAccessorMockIsStateCalculatedResult struct {
-	r  bool
+type PendingAccessorMockFirstPendingResult struct {
+	r  *record.PendingFilament
 	r1 error
 }
 
-//Expect specifies that invocation of PendingAccessor.IsStateCalculated is expected from 1 to Infinity times
-func (m *mPendingAccessorMockIsStateCalculated) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mPendingAccessorMockIsStateCalculated {
-	m.mock.IsStateCalculatedFunc = nil
+// Expect specifies that invocation of PendingAccessor.FirstPending is expected from 1 to Infinity times
+func (m *mPendingAccessorMockFirstPending) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mPendingAccessorMockFirstPending {
+	m.mock.FirstPendingFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingAccessorMockIsStateCalculatedExpectation{}
+		m.mainExpectation = &PendingAccessorMockFirstPendingExpectation{}
 	}
-	m.mainExpectation.input = &PendingAccessorMockIsStateCalculatedInput{p, p1, p2}
+	m.mainExpectation.input = &PendingAccessorMockFirstPendingInput{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of PendingAccessor.IsStateCalculated
-func (m *mPendingAccessorMockIsStateCalculated) Return(r bool, r1 error) *PendingAccessorMock {
-	m.mock.IsStateCalculatedFunc = nil
+// Return specifies results of invocation of PendingAccessor.FirstPending
+func (m *mPendingAccessorMockFirstPending) Return(r *record.PendingFilament, r1 error) *PendingAccessorMock {
+	m.mock.FirstPendingFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingAccessorMockIsStateCalculatedExpectation{}
+		m.mainExpectation = &PendingAccessorMockFirstPendingExpectation{}
 	}
-	m.mainExpectation.result = &PendingAccessorMockIsStateCalculatedResult{r, r1}
+	m.mainExpectation.result = &PendingAccessorMockFirstPendingResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of PendingAccessor.IsStateCalculated is expected once
-func (m *mPendingAccessorMockIsStateCalculated) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *PendingAccessorMockIsStateCalculatedExpectation {
-	m.mock.IsStateCalculatedFunc = nil
+// ExpectOnce specifies that invocation of PendingAccessor.FirstPending is expected once
+func (m *mPendingAccessorMockFirstPending) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *PendingAccessorMockFirstPendingExpectation {
+	m.mock.FirstPendingFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &PendingAccessorMockIsStateCalculatedExpectation{}
-	expectation.input = &PendingAccessorMockIsStateCalculatedInput{p, p1, p2}
+	expectation := &PendingAccessorMockFirstPendingExpectation{}
+	expectation.input = &PendingAccessorMockFirstPendingInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *PendingAccessorMockIsStateCalculatedExpectation) Return(r bool, r1 error) {
-	e.result = &PendingAccessorMockIsStateCalculatedResult{r, r1}
+func (e *PendingAccessorMockFirstPendingExpectation) Return(r *record.PendingFilament, r1 error) {
+	e.result = &PendingAccessorMockFirstPendingResult{r, r1}
 }
 
-//Set uses given function f as a mock of PendingAccessor.IsStateCalculated method
-func (m *mPendingAccessorMockIsStateCalculated) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r bool, r1 error)) *PendingAccessorMock {
+// Set uses given function f as a mock of PendingAccessor.FirstPending method
+func (m *mPendingAccessorMockFirstPending) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *record.PendingFilament, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.IsStateCalculatedFunc = f
+	m.mock.FirstPendingFunc = f
 	return m.mock
 }
 
-//IsStateCalculated implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
-func (m *PendingAccessorMock) IsStateCalculated(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r bool, r1 error) {
-	counter := atomic.AddUint64(&m.IsStateCalculatedPreCounter, 1)
-	defer atomic.AddUint64(&m.IsStateCalculatedCounter, 1)
+// FirstPending implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
+func (m *PendingAccessorMock) FirstPending(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *record.PendingFilament, r1 error) {
+	counter := atomic.AddUint64(&m.FirstPendingPreCounter, 1)
+	defer atomic.AddUint64(&m.FirstPendingCounter, 1)
 
-	if len(m.IsStateCalculatedMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IsStateCalculatedMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PendingAccessorMock.IsStateCalculated. %v %v %v", p, p1, p2)
+	if len(m.FirstPendingMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.FirstPendingMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PendingAccessorMock.FirstPending. %v %v %v", p, p1, p2)
 			return
 		}
 
-		input := m.IsStateCalculatedMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PendingAccessorMockIsStateCalculatedInput{p, p1, p2}, "PendingAccessor.IsStateCalculated got unexpected parameters")
+		input := m.FirstPendingMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PendingAccessorMockFirstPendingInput{p, p1, p2}, "PendingAccessor.FirstPending got unexpected parameters")
 
-		result := m.IsStateCalculatedMock.expectationSeries[counter-1].result
+		result := m.FirstPendingMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the PendingAccessorMock.IsStateCalculated")
+			m.t.Fatal("No results are set for the PendingAccessorMock.FirstPending")
 			return
 		}
 
@@ -148,16 +148,16 @@ func (m *PendingAccessorMock) IsStateCalculated(p context.Context, p1 insolar.Pu
 		return
 	}
 
-	if m.IsStateCalculatedMock.mainExpectation != nil {
+	if m.FirstPendingMock.mainExpectation != nil {
 
-		input := m.IsStateCalculatedMock.mainExpectation.input
+		input := m.FirstPendingMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, PendingAccessorMockIsStateCalculatedInput{p, p1, p2}, "PendingAccessor.IsStateCalculated got unexpected parameters")
+			testify_assert.Equal(m.t, *input, PendingAccessorMockFirstPendingInput{p, p1, p2}, "PendingAccessor.FirstPending got unexpected parameters")
 		}
 
-		result := m.IsStateCalculatedMock.mainExpectation.result
+		result := m.FirstPendingMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the PendingAccessorMock.IsStateCalculated")
+			m.t.Fatal("No results are set for the PendingAccessorMock.FirstPending")
 		}
 
 		r = result.r
@@ -166,39 +166,39 @@ func (m *PendingAccessorMock) IsStateCalculated(p context.Context, p1 insolar.Pu
 		return
 	}
 
-	if m.IsStateCalculatedFunc == nil {
-		m.t.Fatalf("Unexpected call to PendingAccessorMock.IsStateCalculated. %v %v %v", p, p1, p2)
+	if m.FirstPendingFunc == nil {
+		m.t.Fatalf("Unexpected call to PendingAccessorMock.FirstPending. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.IsStateCalculatedFunc(p, p1, p2)
+	return m.FirstPendingFunc(p, p1, p2)
 }
 
-//IsStateCalculatedMinimockCounter returns a count of PendingAccessorMock.IsStateCalculatedFunc invocations
-func (m *PendingAccessorMock) IsStateCalculatedMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.IsStateCalculatedCounter)
+// FirstPendingMinimockCounter returns a count of PendingAccessorMock.FirstPendingFunc invocations
+func (m *PendingAccessorMock) FirstPendingMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.FirstPendingCounter)
 }
 
-//IsStateCalculatedMinimockPreCounter returns the value of PendingAccessorMock.IsStateCalculated invocations
-func (m *PendingAccessorMock) IsStateCalculatedMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.IsStateCalculatedPreCounter)
+// FirstPendingMinimockPreCounter returns the value of PendingAccessorMock.FirstPending invocations
+func (m *PendingAccessorMock) FirstPendingMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.FirstPendingPreCounter)
 }
 
-//IsStateCalculatedFinished returns true if mock invocations count is ok
-func (m *PendingAccessorMock) IsStateCalculatedFinished() bool {
+// FirstPendingFinished returns true if mock invocations count is ok
+func (m *PendingAccessorMock) FirstPendingFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IsStateCalculatedMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IsStateCalculatedCounter) == uint64(len(m.IsStateCalculatedMock.expectationSeries))
+	if len(m.FirstPendingMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.FirstPendingCounter) == uint64(len(m.FirstPendingMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.IsStateCalculatedMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IsStateCalculatedCounter) > 0
+	if m.FirstPendingMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.FirstPendingCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.IsStateCalculatedFunc != nil {
-		return atomic.LoadUint64(&m.IsStateCalculatedCounter) > 0
+	if m.FirstPendingFunc != nil {
+		return atomic.LoadUint64(&m.FirstPendingCounter) > 0
 	}
 
 	return true
@@ -375,7 +375,7 @@ type PendingAccessorMockRecordsInput struct {
 }
 
 type PendingAccessorMockRecordsResult struct {
-	r  []record.MaterialWithID
+	r  []record.CompositeFilamentRecord
 	r1 error
 }
 
@@ -392,7 +392,7 @@ func (m *mPendingAccessorMockRecords) Expect(p context.Context, p1 insolar.Pulse
 }
 
 //Return specifies results of invocation of PendingAccessor.Records
-func (m *mPendingAccessorMockRecords) Return(r []record.MaterialWithID, r1 error) *PendingAccessorMock {
+func (m *mPendingAccessorMockRecords) Return(r []record.CompositeFilamentRecord, r1 error) *PendingAccessorMock {
 	m.mock.RecordsFunc = nil
 	m.expectationSeries = nil
 
@@ -414,12 +414,12 @@ func (m *mPendingAccessorMockRecords) ExpectOnce(p context.Context, p1 insolar.P
 	return expectation
 }
 
-func (e *PendingAccessorMockRecordsExpectation) Return(r []record.MaterialWithID, r1 error) {
+func (e *PendingAccessorMockRecordsExpectation) Return(r []record.CompositeFilamentRecord, r1 error) {
 	e.result = &PendingAccessorMockRecordsResult{r, r1}
 }
 
 //Set uses given function f as a mock of PendingAccessor.Records method
-func (m *mPendingAccessorMockRecords) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.MaterialWithID, r1 error)) *PendingAccessorMock {
+func (m *mPendingAccessorMockRecords) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.CompositeFilamentRecord, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -428,7 +428,7 @@ func (m *mPendingAccessorMockRecords) Set(f func(p context.Context, p1 insolar.P
 }
 
 //Records implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
-func (m *PendingAccessorMock) Records(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.MaterialWithID, r1 error) {
+func (m *PendingAccessorMock) Records(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.CompositeFilamentRecord, r1 error) {
 	counter := atomic.AddUint64(&m.RecordsPreCounter, 1)
 	defer atomic.AddUint64(&m.RecordsCounter, 1)
 
@@ -513,8 +513,8 @@ func (m *PendingAccessorMock) RecordsFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PendingAccessorMock) ValidateCallCounters() {
 
-	if !m.IsStateCalculatedFinished() {
-		m.t.Fatal("Expected call to PendingAccessorMock.IsStateCalculated")
+	if !m.FirstPendingFinished() {
+		m.t.Fatal("Expected call to PendingAccessorMock.FirstPending")
 	}
 
 	if !m.OpenRequestsForObjIDFinished() {
@@ -542,8 +542,8 @@ func (m *PendingAccessorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PendingAccessorMock) MinimockFinish() {
 
-	if !m.IsStateCalculatedFinished() {
-		m.t.Fatal("Expected call to PendingAccessorMock.IsStateCalculated")
+	if !m.FirstPendingFinished() {
+		m.t.Fatal("Expected call to PendingAccessorMock.FirstPending")
 	}
 
 	if !m.OpenRequestsForObjIDFinished() {
@@ -568,7 +568,7 @@ func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.IsStateCalculatedFinished()
+		ok = ok && m.FirstPendingFinished()
 		ok = ok && m.OpenRequestsForObjIDFinished()
 		ok = ok && m.RecordsFinished()
 
@@ -579,8 +579,8 @@ func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.IsStateCalculatedFinished() {
-				m.t.Error("Expected call to PendingAccessorMock.IsStateCalculated")
+			if !m.FirstPendingFinished() {
+				m.t.Error("Expected call to PendingAccessorMock.FirstPending")
 			}
 
 			if !m.OpenRequestsForObjIDFinished() {
@@ -603,7 +603,7 @@ func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PendingAccessorMock) AllMocksCalled() bool {
 
-	if !m.IsStateCalculatedFinished() {
+	if !m.FirstPendingFinished() {
 		return false
 	}
 

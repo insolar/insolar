@@ -135,5 +135,5 @@ type CompositeFilamentRecord struct {
 	Record   Material
 
 	MetaID insolar.ID
-	Meta   Material
+	Meta   PendingFilament
 }

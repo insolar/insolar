@@ -60,26 +60,30 @@ func (p *RefreshPendingFilament) Proceed(ctx context.Context) error {
 }
 
 func (p *RefreshPendingFilament) process(ctx context.Context) error {
-	isStateCalculated, err := p.Dep.PendingAccessor.IsStateCalculated(ctx, p.pn, p.objID)
-	if err != nil {
-		return errors.Wrap(err, "[RefreshPendingFilament] can't fetch a filament state")
-	}
-	if isStateCalculated {
-		return nil
-	}
-
 	lfl, err := p.Dep.LifelineAccessor.ForID(ctx, p.pn, p.objID)
 	if err != nil {
 		return errors.Wrap(err, "[RefreshPendingFilament] can't fetch a lifeline state")
 	}
 
-	if lfl.PreviousPendingFilament == 0 {
+	if lfl.PendingPointer == 0 {
 		return nil
 	}
 
-	err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PreviousPendingFilament, lfl.EarliestOpenRequest)
+	fp, err := p.Dep.PendingAccessor.FirstPending(ctx, p.pn, p.objID)
 	if err != nil {
 		return err
+	}
+
+	if fp == nil {
+		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer, lfl.EarliestOpenRequest)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = p.fillPendingFilament(ctx, p.pn, p.objID, fp.PreviousRecord.Pulse(), lfl.EarliestOpenRequest)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = p.Dep.PendingModifier.RefreshState(ctx, p.pn, p.objID)
@@ -130,17 +134,18 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 				return err
 			}
 
-			if r.HasFullChain {
-				continueFilling = false
+			if len(r.Records) == 0 {
+				panic("unexpected behaviour")
 			}
-			if r.PreviousPendingPN == 0 {
+
+			if r.Records[0].Meta.PreviousRecord.Pulse() == 0 {
 				continueFilling = false
 			}
 
 			// If know border read to the start of the chain
 			// In other words, we read until limit
-			if earlistOpenRequest == 0 || r.PreviousPendingPN > earlistOpenRequest {
-				destPN = r.PreviousPendingPN
+			if earlistOpenRequest == 0 || r.Records[0].Meta.PreviousRecord.Pulse() > earlistOpenRequest {
+				destPN = r.Records[0].Meta.PreviousRecord.Pulse()
 			} else {
 				continueFilling = false
 			}

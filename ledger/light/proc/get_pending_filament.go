@@ -49,25 +49,14 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("GetPendingFilament"))
 	defer span.End()
 
-	isStateCalc, err := p.Dep.PendingAccessor.IsStateCalculated(ctx, p.msg.PN, p.msg.ObjectID)
-	if err != nil {
-		return errors.Wrap(err, "[GetPendingFilament] can't fetch a pendings meta")
-	}
 	records, err := p.Dep.PendingAccessor.Records(ctx, p.msg.PN, p.msg.ObjectID)
 	if err != nil {
 		return errors.Wrap(err, "[GetPendingFilament] can't fetch pendings")
 	}
-	lfl, err := p.Dep.LifelineAccessor.ForID(ctx, p.msg.PN, p.msg.ObjectID)
-	if err != nil {
-		return errors.Wrap(err, "[GetPendingFilament] can't fetch lifeline")
-	}
-
 	p.repylyTo <- bus.Reply{
 		Reply: &reply.PendingFilament{
-			ObjID:             p.msg.ObjectID,
-			Records:           records,
-			HasFullChain:      isStateCalc,
-			PreviousPendingPN: lfl.PreviousPendingFilament,
+			ObjID:   p.msg.ObjectID,
+			Records: records,
 		},
 	}
 

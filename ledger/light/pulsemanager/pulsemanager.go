@@ -274,11 +274,6 @@ func (m *PulseManager) getExecutorHotData(
 
 	hotIndexes := make([]message.HotIndex, len(bucks))
 	for _, meta := range bucks {
-
-		// We are the previous filament for a next light
-		if len(meta.PendingRecords) > 0 {
-			meta.Lifeline.PreviousPendingFilament = currentPN
-		}
 		encoded, err := meta.Lifeline.Marshal()
 		if err != nil {
 			inslogger.FromContext(ctx).WithField("id", meta.ObjID.DebugString()).Error("failed to marshal lifeline")

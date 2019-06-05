@@ -399,7 +399,9 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 	recsIds := make([]metaRecordID, len(recs))
 	for idx, rec := range recs {
 		recsIds[idx] = metaRecordID(rec.MetaID)
-		err := i.recordStorage.Set(ctx, rec.MetaID, rec.Meta)
+
+		recV := record.Wrap(rec.Meta)
+		err := i.recordStorage.Set(ctx, rec.MetaID, record.Material{Virtual: &recV})
 		if err != nil {
 			return errors.Wrap(err, "filament update failed")
 		}
@@ -473,17 +475,40 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	return nil
 }
 
-// IsStateCalculated returns status of a pending filament. Was it calculated or not
-func (i *InMemoryIndex) IsStateCalculated(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (bool, error) {
+// // IsStateCalculated returns status of a pending filament. Was it calculated or not
+// func (i *InMemoryIndex) IsStateCalculated(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (bool, error) {
+// 	b := i.bucket(currentPN, objID)
+// 	if b == nil {
+// 		return false, ErrLifelineNotFound
+// 	}
+//
+// 	b.RLock()
+// 	defer b.RUnlock()
+//
+// 	return b.pendingMeta.isStateCalculated, nil
+// }
+
+func (i *InMemoryIndex) FirstPending(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (*record.PendingFilament, error) {
 	b := i.bucket(currentPN, objID)
 	if b == nil {
-		return false, ErrLifelineNotFound
+		return nil, ErrLifelineNotFound
 	}
 
 	b.RLock()
 	defer b.RUnlock()
 
-	return b.pendingMeta.isStateCalculated, nil
+	if len(b.pendingMeta.fullFilament) == 0 {
+		return nil, nil
+	}
+
+	metaID := b.pendingMeta.fullFilament[0].MetaRecordsIDs[0]
+	rec, err := i.recordStorage.ForID(ctx, insolar.ID(metaID))
+	if err != nil {
+		return nil, err
+	}
+
+	return record.Unwrap(rec.Virtual).(*record.PendingFilament), nil
+
 }
 
 // OpenRequestsForObjID returns open requests for a specific object
@@ -545,7 +570,7 @@ func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumb
 		res[idx] = record.CompositeFilamentRecord{
 			Record:   rec,
 			RecordID: concreteMeta.RecordID,
-			Meta:     metaRec,
+			Meta:     *concreteMeta,
 			MetaID:   id,
 		}
 	}
