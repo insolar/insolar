@@ -26,7 +26,6 @@ import (
 	"github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/testutils"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -263,13 +262,13 @@ func newUserWithKeys() (*user, error) {
 	}, nil
 }
 
-func  uploadContract(t *testing.T, contractCode string) *insolar.Reference {
+func  uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.Upload",
 		"id":      "",
 		"params": map[string]string{
-			"name": testutils.RandStringBytes(16),
+			"name": contractName,
 			"code": contractCode,
 		},
 	})
