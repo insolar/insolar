@@ -261,6 +261,9 @@ func (sdk *SDK) Transfer(amount *big.Int, from *Member, to *Member) (string, err
 
 	transfer := Transfer{Amount: amount.String(), To: to.Reference}
 	params, err := json.Marshal(transfer)
+	if err != nil {
+		return "", errors.Wrap(err, "[ Transfer ] failed marshal")
+	}
 
 	config, err := requester.CreateUserConfig(from.Reference, from.PrivateKey)
 	if err != nil {
