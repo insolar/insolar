@@ -124,17 +124,17 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 	mdAdminPubStr := platformpolicy.MustPublicKeyToString(mdAdminKeys.Public)
 
-	inslog.Info("[ Genesis ] Read oracles keys file ...")
-	oraclePubStrs := map[string]string{}
-	for _, o := range g.config.OracleKeysFiles {
-		oracleKeys, err := secrets.ReadKeysFile(o.KeysFile)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't get md admin keys")
-		}
-		oraclePubStrs[o.Name] = platformpolicy.MustPublicKeyToString(oracleKeys.Public)
-	}
+	//inslog.Info("[ Genesis ] Read oracles keys file ...")
+	//oraclePubStrs := map[string]string{}
+	//for _, o := range g.config.OracleKeysFiles {
+	//	oracleKeys, err := secrets.ReadKeysFile(o.KeysFile)
+	//	if err != nil {
+	//		return errors.Wrap(err, "[ Genesis ] couldn't get md admin keys")
+	//	}
+	//	oraclePubStrs[o.Name] = platformpolicy.MustPublicKeyToString(oracleKeys.Public)
+	//}
 
-	err = g.activateSmartContracts(ctx, rootPubStr, mdAdminPubStr, oraclePubStrs, prototypes)
+	err = g.activateSmartContracts(ctx, rootPubStr, mdAdminPubStr, prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
@@ -512,7 +512,6 @@ func (g *Generator) activateSmartContracts(
 	ctx context.Context,
 	rootPubKey string,
 	mdPubKey string,
-	oraclePubKeys map[string]string,
 	prototypes prototypes,
 ) error {
 	var err error
