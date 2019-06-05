@@ -62,7 +62,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler() {
 		CallUrl,
 		suite.user,
 		&requester.RequestConfigJSON{},
-		string(string(encoded)),
+		encoded,
 	)
 	suite.NoError(err)
 
@@ -85,7 +85,7 @@ func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
 		CallUrl,
 		suite.user,
 		&requester.RequestConfigJSON{},
-		string(encoded),
+		encoded,
 	)
 	suite.NoError(err)
 

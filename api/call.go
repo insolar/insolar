@@ -117,7 +117,7 @@ func (ar *Runner) makeCall(ctx context.Context, signedPayload SignedPayload, req
 	}
 
 	type PostParams = map[string]interface{}
-	args, err := insolar.MarshalArgs(string(request.PublicKey), request.Signature)
+	args, err := insolar.MarshalArgs(request.PublicKey, request.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}

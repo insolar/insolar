@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/pem"
+	"github.com/insolar/x-crypto/x509"
+	"github.com/pkg/errors"
 	"testing"
 
 	"github.com/insolar/insolar/api/requester"
@@ -25,7 +28,7 @@ func TestCreateMemberP256K(t *testing.T) {
 	t.Skip()
 	privateKey, err := xecdsa.GenerateKey(xelliptic.P256K(), xrand.Reader)
 	require.NoError(t, err)
-	pk, err := ExportPrivateKeyPEM(*privateKey)
+	pk, err := exportPrivateKeyPEM(*privateKey)
 
 	require.NoError(t, err)
 	seed, err := requester.GetSeed(TestUrl)
@@ -152,4 +155,13 @@ func TestGetBalanceP256(t *testing.T) {
 	response, err := getResponse(body)
 	require.NoError(t, err)
 	require.NotNil(t, response)
+}
+
+func exportPrivateKeyPEM(privateKey xecdsa.PrivateKey) ([]byte, error) {
+	x509Encoded, err := x509.MarshalECPrivateKey(&privateKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ExportPrivateKey ]")
+	}
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+	return pemEncoded, nil
 }
