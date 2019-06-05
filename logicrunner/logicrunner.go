@@ -385,21 +385,20 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 	return ctx
 }
 
+
 // values here (boolean flags) are inverted here, since it's common "predicate" checking function
-func noLoopCheckerPredicate(current *CurrentExecution, predicateCtx interface{}) bool {
-	ctx := predicateCtx.(context.Context)
+func noLoopCheckerPredicate(current *CurrentExecution, args interface{}) bool {
+	apiReqID := args.(string)
 	if current.SentResult ||
 		current.Request.ReturnMode == record.ReturnNoWait ||
-		inslogger.TraceID(current.Context) != inslogger.TraceID(ctx) {
-
-		return true
+		current.Request.APIRequestID != apiReqID {
+			return true
 	}
 	return false
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
-	ctx context.Context, es *ExecutionState, parcel insolar.Parcel,
-) bool {
+	ctx context.Context, es *ExecutionState, parcel insolar.Parcel) bool {
 	if es.CurrentList.Empty() {
 		return false
 	}
@@ -409,13 +408,12 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if es.CurrentList.Check(noLoopCheckerPredicate, ctx) {
+	if es.CurrentList.Check(noLoopCheckerPredicate, msg.APIRequestID) {
 		return false
 	}
 
 	inslogger.FromContext(ctx).Debug("loop detected")
 	return true
-
 }
 
 // finishPendingIfNeeded checks whether last execution was a pending one.

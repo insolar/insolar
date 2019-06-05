@@ -104,11 +104,11 @@ func (ces *CurrentExecutionList) Empty() bool {
 
 type CurrentExecutionPredicate func(*CurrentExecution, interface{}) bool
 
-func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, predicateCtx interface{}) bool {
+func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
 	rv := true
 	ces.lock.RLock()
 	for _, current := range ces.executions {
-		if !predicate(current, predicateCtx) {
+		if !predicate(current, args) {
 			rv = false
 			break
 		}

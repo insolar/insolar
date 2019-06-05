@@ -122,6 +122,8 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 			Prototype: &req.Prototype,
 			Method:    req.Method,
 			Arguments: req.Arguments,
+
+			APIRequestID: current.Request.APIRequestID,
 		},
 	}
 
@@ -174,6 +176,8 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 			Prototype: &req.Prototype,
 			Method:    req.ConstructorName,
 			Arguments: req.ArgsSerialized,
+
+			APIRequestID: current.Request.APIRequestID,
 		},
 	}
 
@@ -216,6 +220,8 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 			Prototype: &req.Prototype,
 			Method:    req.ConstructorName,
 			Arguments: req.ArgsSerialized,
+
+			APIRequestID: current.Request.APIRequestID,
 		},
 	}
 

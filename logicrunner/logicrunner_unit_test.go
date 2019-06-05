@@ -50,6 +50,7 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/insolar/utils"
 )
 
 type LogicRunnerCommonTestSuite struct {
@@ -568,29 +569,31 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	es := NewExecutionState(testutils.RandomRef())
 
+	reqIdA := utils.RandTraceID()
+	reqIdB := utils.RandTraceID()
+
 	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil)
 	suite.Require().False(loop)
-
-	ctxA, _ := inslogger.WithTraceField(suite.ctx, "a")
-	ctxB, _ := inslogger.WithTraceField(suite.ctx, "b")
 
 	objectRef := testutils.RandomRef()
 	msg := &message.CallMethod{
 		Request: record.Request{
 			ReturnMode: record.ReturnResult,
 			Object:     &objectRef,
+			APIRequestID: reqIdA,
 		},
 	}
 	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
-		Request: &record.Request{ReturnMode: record.ReturnResult},
-		Context: ctxA,
+		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdA},
 	})
-
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().True(loop)
 
-	loop = suite.lr.CheckExecutionLoop(ctxB, es, parcel)
+	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
+		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdB},
+	})
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 
 	// intermediate env cleanup
@@ -605,27 +608,24 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
 		Request: &record.Request{ReturnMode: record.ReturnResult},
-		Context: ctxA,
 	})
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 	es.CurrentList.Cleanup()
 
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
 		Request: &record.Request{ReturnMode: record.ReturnNoWait},
-		Context: ctxA,
 	})
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 	es.CurrentList.Cleanup()
 
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
 		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
-		Context:    ctxA,
 		SentResult: true,
 	})
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 }
 
@@ -1004,6 +1004,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 					Prototype: &protoRef,
 					Object:    &objectRef,
 					Method:    "some",
+					APIRequestID: utils.RandTraceID(),
 				},
 			}
 
