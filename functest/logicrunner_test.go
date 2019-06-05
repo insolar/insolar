@@ -184,4 +184,98 @@ func (r *Two) GetPayloadString() (string, error) {
 		resp = callMethod(t, objectRef, "Again", "ins")
 		assert.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), resp)
 	}
+
+	// TODO разобраться с кастом рефов
+	//resp = callMethod(t, objectRef, "GetFriend")
+	//
+	//// this is base64 instead of base58
+	//fmt.Println(">>> resp ", resp)
+	//fmt.Println(">>> CBORUnMarshal ", goplugintestutils.CBORUnMarshal(t, []byte(resp.(string))))
+	//fmt.Println(">>> resp.([]byte) ", []byte(resp.(string)))
+	//two := insolar.Reference{}.FromSlice([]byte(resp.(string)))
+
+	//r0 := resp.([]uint8)
+	//var two insolar.Reference
+	//for i := 0; i < 64; i++ {
+	//	two[i] = r0[i]
+	//}
+
+	//for i := 6; i <= 9; i++ {
+	//	resp = callMethod(t, &two, "Hello", "Insolar")
+	//	assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), resp)
+	//}
+	//
+	//resp = callMethod(t, &two, "TestPayload")
+	//res := resp.(map[interface{}]interface{})["Str"]
+	//assert.Equal(t,"HiHere", res)
+}
+
+func TestInjectingDelegateError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import two "github.com/insolar/insolar/application/proxy/injection_delegate_two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello(s string) (string, error) {
+	holder := two.New()
+	friend, err := holder.AsDelegate(r.GetReference())
+	if err != nil {
+		return "", err
+	}
+
+	res, err := friend.Hello(s)
+	if err != nil {
+		return "", err
+	}
+
+	return "Hi, " + s + "! Two said: " + res, nil
+}
+
+func (r *One) HelloFromDelegate(s string) (string, error) {
+	friend, err := two.GetImplementationFrom(r.GetReference())
+	if err != nil {
+		return "", err
+	}
+
+	return friend.Hello(s)
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+}
+
+func New() (*Two, error) {
+	return &Two{X:322}, nil
+}
+
+func (r *Two) Hello(s string) (string, error) {
+	r.X *= 2
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
+}
+`
+
+	uploadContractOnce(t, "injection_delegate_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "injection_delegate_one", contractOneCode))
+
+	resp := callMethod(t, obj, "Hello", "ins")
+	require.Equal(t,"Hi, ins! Two said: Hello you too, ins. 644 times!", resp)
+
+	resp = callMethod(t, obj, "HelloFromDelegate", "ins")
+	require.Equal(t,"Hello you too, ins. 1288 times!", resp)
 }
