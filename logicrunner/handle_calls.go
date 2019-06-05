@@ -134,20 +134,19 @@ func (h *HandleCall) handleActual(
 
 			_, err = lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
 			if err != nil {
-				err = errors.Wrap(err, "[ HandleCall.handleActual ] mb.Send failed to send AdditionalCallFromPreviousExecutor")
+				inslogger.FromContext(ctx).Error("[ HandleCall.handleActual ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
 			}
 		}
-
-		return nil, err
-	}
-
-	s := StartQueueProcessorIfNeeded{
-		es:  es,
-		dep: h.dep,
-		ref: &ref,
-	}
-	if err := f.Handle(ctx, s.Present); err != nil {
-		inslogger.FromContext(ctx).Warn("[ HandleCall.handleActual ] StartQueueProcessorIfNeeded returns error: ", err)
+		// and return RegisterRequest as usual
+	} else {
+		s := StartQueueProcessorIfNeeded{
+			es:  es,
+			dep: h.dep,
+			ref: &ref,
+		}
+		if err := f.Handle(ctx, s.Present); err != nil {
+			inslogger.FromContext(ctx).Warn("[ HandleCall.handleActual ] StartQueueProcessorIfNeeded returns error: ", err)
+		}
 	}
 
 	return &reply.RegisterRequest{
