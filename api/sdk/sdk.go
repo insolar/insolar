@@ -251,7 +251,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 }
 
 // Transfer method send money from one member to another
-func (sdk *SDK) Transfer(amount *big.Int, from *Member, to *Member) (string, error) {
+func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
 
 	type Transfer struct {
@@ -259,7 +259,7 @@ func (sdk *SDK) Transfer(amount *big.Int, from *Member, to *Member) (string, err
 		To     string `json:"to"`
 	}
 
-	transfer := Transfer{Amount: amount.String(), To: to.Reference}
+	transfer := Transfer{Amount: amount, To: to.Reference}
 	params, err := json.Marshal(transfer)
 	if err != nil {
 		return "", errors.Wrap(err, "[ Transfer ] failed marshal")
