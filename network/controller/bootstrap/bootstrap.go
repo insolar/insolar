@@ -221,16 +221,18 @@ func (bc *Bootstrap) checkActiveNode(node insolar.NetworkNode) error {
 }
 
 func (bc *Bootstrap) ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error) {
-	host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create a host")
-	}
-	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
-	bc.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{bc.NodeKeeper.GetOrigin()})
-	return &network.BootstrapResult{
-		Host: host,
-		// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
-	}, nil
+	panic("ZeroBootstrap DEPRECATED !!!")
+
+	// host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to create a host")
+	// }
+	// inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
+	// bc.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{bc.NodeKeeper.GetOrigin()})
+	// return &network.BootstrapResult{
+	// 	Host: host,
+	// 	// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
+	// }, nil
 }
 
 // BootstrapDiscovery bootstrapping as discovery node
