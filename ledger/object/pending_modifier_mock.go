@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -31,7 +31,7 @@ type PendingModifierMock struct {
 	SetFilamentPreCounter uint64
 	SetFilamentMock       mPendingModifierMockSetFilament
 
-	SetRequestFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r error)
+	SetRequestFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) (r error)
 	SetRequestCounter    uint64
 	SetRequestPreCounter uint64
 	SetRequestMock       mPendingModifierMockSetRequest
@@ -374,7 +374,6 @@ type PendingModifierMockSetRequestInput struct {
 	p1 insolar.PulseNumber
 	p2 insolar.ID
 	p3 insolar.ID
-	p4 record.Request
 }
 
 type PendingModifierMockSetRequestResult struct {
@@ -382,14 +381,14 @@ type PendingModifierMockSetRequestResult struct {
 }
 
 //Expect specifies that invocation of PendingModifier.SetRequest is expected from 1 to Infinity times
-func (m *mPendingModifierMockSetRequest) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) *mPendingModifierMockSetRequest {
+func (m *mPendingModifierMockSetRequest) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) *mPendingModifierMockSetRequest {
 	m.mock.SetRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &PendingModifierMockSetRequestExpectation{}
 	}
-	m.mainExpectation.input = &PendingModifierMockSetRequestInput{p, p1, p2, p3, p4}
+	m.mainExpectation.input = &PendingModifierMockSetRequestInput{p, p1, p2, p3}
 	return m
 }
 
@@ -406,12 +405,12 @@ func (m *mPendingModifierMockSetRequest) Return(r error) *PendingModifierMock {
 }
 
 //ExpectOnce specifies that invocation of PendingModifier.SetRequest is expected once
-func (m *mPendingModifierMockSetRequest) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) *PendingModifierMockSetRequestExpectation {
+func (m *mPendingModifierMockSetRequest) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) *PendingModifierMockSetRequestExpectation {
 	m.mock.SetRequestFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &PendingModifierMockSetRequestExpectation{}
-	expectation.input = &PendingModifierMockSetRequestInput{p, p1, p2, p3, p4}
+	expectation.input = &PendingModifierMockSetRequestInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -421,7 +420,7 @@ func (e *PendingModifierMockSetRequestExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of PendingModifier.SetRequest method
-func (m *mPendingModifierMockSetRequest) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r error)) *PendingModifierMock {
+func (m *mPendingModifierMockSetRequest) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) (r error)) *PendingModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -430,18 +429,18 @@ func (m *mPendingModifierMockSetRequest) Set(f func(p context.Context, p1 insola
 }
 
 //SetRequest implements github.com/insolar/insolar/ledger/object.PendingModifier interface
-func (m *PendingModifierMock) SetRequest(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r error) {
+func (m *PendingModifierMock) SetRequest(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) (r error) {
 	counter := atomic.AddUint64(&m.SetRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.SetRequestCounter, 1)
 
 	if len(m.SetRequestMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SetRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PendingModifierMock.SetRequest. %v %v %v %v %v", p, p1, p2, p3, p4)
+			m.t.Fatalf("Unexpected call to PendingModifierMock.SetRequest. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.SetRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PendingModifierMockSetRequestInput{p, p1, p2, p3, p4}, "PendingModifier.SetRequest got unexpected parameters")
+		testify_assert.Equal(m.t, *input, PendingModifierMockSetRequestInput{p, p1, p2, p3}, "PendingModifier.SetRequest got unexpected parameters")
 
 		result := m.SetRequestMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -458,7 +457,7 @@ func (m *PendingModifierMock) SetRequest(p context.Context, p1 insolar.PulseNumb
 
 		input := m.SetRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, PendingModifierMockSetRequestInput{p, p1, p2, p3, p4}, "PendingModifier.SetRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, PendingModifierMockSetRequestInput{p, p1, p2, p3}, "PendingModifier.SetRequest got unexpected parameters")
 		}
 
 		result := m.SetRequestMock.mainExpectation.result
@@ -472,11 +471,11 @@ func (m *PendingModifierMock) SetRequest(p context.Context, p1 insolar.PulseNumb
 	}
 
 	if m.SetRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to PendingModifierMock.SetRequest. %v %v %v %v %v", p, p1, p2, p3, p4)
+		m.t.Fatalf("Unexpected call to PendingModifierMock.SetRequest. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.SetRequestFunc(p, p1, p2, p3, p4)
+	return m.SetRequestFunc(p, p1, p2, p3)
 }
 
 //SetRequestMinimockCounter returns a count of PendingModifierMock.SetRequestFunc invocations

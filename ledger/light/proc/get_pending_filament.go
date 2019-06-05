@@ -64,7 +64,7 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 
 	p.repylyTo <- bus.Reply{
 		Reply: &reply.PendingFilament{
-			ID:                p.msg.ObjectID,
+			ObjID:             p.msg.ObjectID,
 			Records:           records,
 			HasFullChain:      isStateCalc,
 			PreviousPendingPN: lfl.PreviousPendingFilament,

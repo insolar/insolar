@@ -123,7 +123,7 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), calculatedID)
 
-			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID, *r)
+			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID)
 			if err != nil {
 				return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 			}

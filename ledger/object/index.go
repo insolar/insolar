@@ -88,7 +88,7 @@ type IndexBucketAccessor interface {
 // PendingModifier provides methods for modifying pending requests
 type PendingModifier interface {
 	// SetRequest sets a request for a specific object
-	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID, req record.Request) error
+	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error
 	// SetResult sets a result for a specific object. Also, if there is a not closed request for a provided result,
 	// the request will be closed
 	SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID, res record.Result) error

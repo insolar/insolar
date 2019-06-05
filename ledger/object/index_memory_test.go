@@ -333,7 +333,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		objID := gen.ID()
 		idx := NewInMemoryIndex(nil)
 
-		err := idx.SetRequest(ctx, pn, objID, insolar.ID{}, record.Request{})
+		err := idx.SetRequest(ctx, pn, objID, insolar.ID{})
 
 		require.Error(t, err, ErrLifelineNotFound)
 	})
@@ -345,11 +345,11 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		idx := NewInMemoryIndex(nil)
 		idx.createBucket(ctx, pn, objID)
 
-		objRef := gen.Reference()
-		req := record.Request{Object: &objRef}
+		// objRef := gen.Reference()
+		// req := record.Request{Object: &objRef}
 		reqID := insolar.NewID(1, []byte{1})
 
-		err := idx.SetRequest(ctx, pn, objID, *reqID, req)
+		err := idx.SetRequest(ctx, pn, objID, *reqID)
 		require.NoError(t, err)
 
 		buck := idx.buckets[pn][objID]
@@ -381,18 +381,18 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		idx := NewInMemoryIndex(nil)
 		idx.createBucket(ctx, pn, objID)
 
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
-		req := record.Request{Object: objRef}
+		// objRef := insolar.NewReference(*insolar.NewID(123, nil))
+		// req := record.Request{Object: objRef}
 		reqID := insolar.NewID(1, []byte{1})
 
-		err := idx.SetRequest(ctx, pn, objID, *reqID, req)
+		err := idx.SetRequest(ctx, pn, objID, *reqID)
 		require.NoError(t, err)
 
-		objRefS := insolar.NewReference(*insolar.NewID(321, nil))
-		reqS := record.Request{Object: objRefS}
+		// objRefS := insolar.NewReference(*insolar.NewID(321, nil))
+		// reqS := record.Request{Object: objRefS}
 		reqSID := insolar.NewID(2, []byte{2})
 
-		err = idx.SetRequest(ctx, pn, objID, *reqSID, reqS)
+		err = idx.SetRequest(ctx, pn, objID, *reqSID)
 		require.NoError(t, err)
 
 		buck := idx.buckets[pn][objID]
@@ -431,11 +431,9 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		buck := idx.buckets[pn][objID]
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, RecordsIDs: []insolar.ID{}})
 
-		objRef := gen.Reference()
-		req := record.Request{Object: &objRef}
 		reqID := insolar.NewID(1, []byte{1})
 
-		err := idx.SetRequest(ctx, pn, objID, *reqID, req)
+		err := idx.SetRequest(ctx, pn, objID, *reqID)
 		require.NoError(t, err)
 
 		require.Equal(t, 2, len(buck.pendingMeta.fullFilament))
@@ -529,7 +527,7 @@ func TestInMemoryIndex_Records(t *testing.T) {
 		idx := NewInMemoryIndex(rsm)
 		idx.createBucket(ctx, pn, objID)
 
-		_ = idx.SetRequest(ctx, pn, objID, *reqID, req)
+		_ = idx.SetRequest(ctx, pn, objID, *reqID)
 
 		data, err := idx.Records(ctx, pn, objID)
 
@@ -582,9 +580,9 @@ func TestInMemoryIndex_OpenRequestsForObjID(t *testing.T) {
 		idx := NewInMemoryIndex(rms)
 		idx.createBucket(ctx, pn, objID)
 
-		err := idx.SetRequest(ctx, pn, objID, *reqID, req)
+		err := idx.SetRequest(ctx, pn, objID, *reqID)
 		require.NoError(t, err)
-		err = idx.SetRequest(ctx, pn, objID, *reqSID, reqS)
+		err = idx.SetRequest(ctx, pn, objID, *reqSID)
 		require.NoError(t, err)
 
 		t.Run("query all", func(t *testing.T) {
@@ -704,8 +702,8 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		idx := NewInMemoryIndex(rms)
 		idx.createBucket(ctx, pn, objID)
-		_ = idx.SetRequest(ctx, pn, objID, *objRef.Record(), req)
-		_ = idx.SetRequest(ctx, pn, objID, *objRefS.Record(), reqS)
+		_ = idx.SetRequest(ctx, pn, objID, *objRef.Record())
+		_ = idx.SetRequest(ctx, pn, objID, *objRefS.Record())
 
 		err := idx.SetResult(ctx, pn, objID, *resID, res)
 		require.NoError(t, err)
