@@ -29,9 +29,11 @@ var (
 	// ContractNodeRecord is the node contract reference.
 	ContractNodeRecord = rootdomain.GenesisRef(insolar.GenesisNameNodeRecord)
 	// ContractRootMember is the root member contract reference.
-	ContractRootMember = rootdomain.GenesisRef(insolar.GenesisNameRootMember)
-	// ContractWallet is the wallet contract reference.
-	ContractWallet = rootdomain.GenesisRef(insolar.GenesisNameRootWallet)
-	// ContractAllowance is the allowance contract reference.
-	ContractAllowance = rootdomain.GenesisRef(insolar.GenesisNameAllowance)
+	ContractRootMember = rootdomain.GenesisRef("root" + insolar.GenesisNameMember)
+	// ContractRootWallet is the root wallet contract reference.
+	ContractRootWallet = rootdomain.GenesisRef("root" + insolar.GenesisNameWallet)
+	// ContractMDAdminMember is the md admin wallet contract reference.
+	ContractMDAdminMember = rootdomain.GenesisRef("mdadmin" + insolar.GenesisNameMember)
+	// ContractMDWallet is the md wallet contract reference.
+	ContractMDWallet = rootdomain.GenesisRef("md" + insolar.GenesisNameWallet)
 )

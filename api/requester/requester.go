@@ -154,7 +154,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 
 	callerRef, err := insolar.NewReferenceFromBase58(userCfg.Caller)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Failed to parse userCfg.Caller")
+		return nil, errors.Wrap(err, "[ Send ] Failed to parse userCfg.Caller reference: '"+userCfg.Caller+"'")
 	}
 
 	signedPayload := PostParams{
@@ -212,7 +212,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 
 	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ]")
+		return nil, errors.Wrap(err, "[ Send ] Can't send with seed")
 	}
 
 	return response, nil

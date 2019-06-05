@@ -20,7 +20,11 @@ echo "Start bench"
 sleep 1
 while :; do
     set -x
-    ./bin/benchmark -k=${LAUNCHNET_BASE_DIR}configs/root_member_keys.json $@
+    ./bin/benchmark -k=${LAUNCHNET_BASE_DIR}configs/root_member_keys.json \
+    -a=${LAUNCHNET_BASE_DIR}configs/md_admin_member_keys.json \
+    -d=${LAUNCHNET_BASE_DIR}configs/oracle0_member_keys.json \
+    -e=${LAUNCHNET_BASE_DIR}configs/oracle1_member_keys.json \
+    -f=${LAUNCHNET_BASE_DIR}configs/oracle2_member_keys.json $@
     { set +x; } 2>/dev/null
     sleep 5
 done

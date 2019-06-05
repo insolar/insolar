@@ -34,10 +34,19 @@ type Node struct {
 	KeysFile string `mapstructure:"keys_file"`
 }
 
+type Oracle struct {
+	Name     string `mapstructure:"name"`
+	KeysFile string `mapstructure:"keys_file"`
+}
+
 // Config contains all genesis config
 type Config struct {
 	// RootKeysFile is the root key place.
 	RootKeysFile string `mapstructure:"root_keys_file"`
+	// MDAdminKeysFile is the md admin key place.
+	MDAdminKeysFile string `mapstructure:"md_admin_keys_file"`
+	// OracleKeysFiles is the oracles keys places.
+	OracleKeysFiles []Oracle `mapstructure:"oracle_keys_file"`
 	// DiscoveryKeysDir is a default directory where save keys for discovery nodes.
 	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir"`
 	// KeysNameFormat is the default key file name format for discovery nodes.
@@ -48,7 +57,9 @@ type Config struct {
 	HeavyGeneisConfigFile string `mapstructure:"heavy_genesis_config_file"`
 
 	// RootBalance is a start balance for the root member's wallet.
-	RootBalance uint `mapstructure:"root_balance"`
+	RootBalance string `mapstructure:"root_balance"`
+	// MDBalance is a start balance for the md admin member's wallet.
+	MDBalance string `mapstructure:"md_balance"`
 
 	// Discovery settings.
 

@@ -28,12 +28,26 @@ import (
 const defaultURL = "http://localhost:19101/api"
 
 var (
-	memberKeys string
-	apiURL     string
+	rootKeysPath    string
+	mdAdminKeysPath string
+	oracle0KeysPath string
+	oracle1KeysPath string
+	oracle2KeysPath string
+	oracle0Name     string
+	oracle1Name     string
+	oracle2Name     string
+	apiURL          string
 )
 
 func parseInputParams() {
-	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to file with Member keys")
+	pflag.StringVarP(&rootKeysPath, "rootkeyspath", "k", "", "path to file with root member keys")
+	pflag.StringVarP(&mdAdminKeysPath, "mdadminkeyspath", "a", "", "path to file with md admin member keys")
+	pflag.StringVarP(&oracle0KeysPath, "oracle0keyspath", "d", "", "path to file with oracle0 member keys")
+	pflag.StringVarP(&oracle1KeysPath, "oracle1keyspath", "e", "", "path to file with oracle1 member keys")
+	pflag.StringVarP(&oracle2KeysPath, "oracle2keyspath", "f", "", "path to file with oracle2 member keys")
+	pflag.StringVarP(&oracle0Name, "oracle0name", "D", "oracle0", "oracle0 name")
+	pflag.StringVarP(&oracle1Name, "oracle1name", "E", "oracle1", "oracle1 name")
+	pflag.StringVarP(&oracle2Name, "oracle2name", "F", "oracle2", "oracle2 name")
 	pflag.StringVarP(&apiURL, "url", "u", defaultURL, "api url")
 	pflag.Parse()
 }
@@ -51,7 +65,8 @@ func main() {
 	err := log.SetLevel("error")
 	check("can't set 'error' level on logger: ", err)
 
-	insSDK, err := sdk.NewSDK([]string{apiURL}, memberKeys)
+	oracles := map[string]string{oracle0Name: oracle0KeysPath, oracle1Name: oracle1KeysPath, oracle2Name: oracle2KeysPath}
+	insSDK, err := sdk.NewSDK([]string{apiURL}, rootKeysPath, mdAdminKeysPath, oracles)
 	check("can't create SDK: ", err)
 
 	// you can modify this manual tests by commenting any of this functions or/and add some new functions if necessary

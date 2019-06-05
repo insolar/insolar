@@ -18,9 +18,9 @@ package wallet
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/insolar/insolar/application/contract/wallet/safemath"
-	"github.com/insolar/insolar/application/proxy/allowance"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -29,85 +29,80 @@ import (
 // Wallet - basic wallet contract
 type Wallet struct {
 	foundation.BaseContract
-	Balance uint
+	Balance string
+}
+
+// New creates new wallet
+func New(balance string) (*Wallet, error) {
+	return &Wallet{
+		Balance: balance,
+	}, nil
 }
 
 // Transfer transfers money to given wallet
-func (w *Wallet) Transfer(amount uint, to *insolar.Reference) error {
+func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) error {
 
-	toWallet, err := wallet.GetImplementationFrom(*to)
+	amount := new(big.Int)
+	amount, ok := amount.SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("[ Transfer ] can't parse returned balance")
+	}
+	balance := new(big.Int)
+	balance, ok = balance.SetString(w.Balance, 10)
+	if !ok {
+		return fmt.Errorf("[ Transfer ] can't parse returned balance")
+	}
+
+	toWallet, err := wallet.GetImplementationFrom(*toMember)
 	if err != nil {
 		return fmt.Errorf("[ Transfer ] Can't get implementation: %s", err.Error())
 	}
 
-	toWalletRef := toWallet.GetReference()
-
-	newBalance, err := safemath.Sub(w.Balance, amount)
+	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
 		return fmt.Errorf("[ Transfer ] Not enough balance for transfer: %s", err.Error())
 	}
+	w.Balance = newBalance.String()
 
-	ah := allowance.New(&toWalletRef, amount, w.GetContext().Time.Unix()+10)
-	a, err := ah.AsChild(w.GetReference())
-	if err != nil {
-		return fmt.Errorf("[ Transfer ] Can't save as child: %s", err.Error())
+	acceptErr := toWallet.Accept(amount.String())
+	if acceptErr != nil {
+		newBalance, err := safemath.Add(balance, amount)
+		if err != nil {
+			return fmt.Errorf("[ Transfer ] Couldn't add amount back to balance: %s", err.Error())
+		}
+		w.Balance = newBalance.String()
+
+		return fmt.Errorf("[ Transfer ] Cant accept balance to wallet: %s", acceptErr.Error())
+	} else {
+		return nil
 	}
-
-	// Changing balance only after allowance was successfully create
-	w.Balance = newBalance
-
-	r := a.GetReference()
-	err = toWallet.AcceptNoWait(&r)
-	return err
 }
 
-// Accept transforms allowance to balance
-func (w *Wallet) Accept(aRef *insolar.Reference) error {
-	b, err := allowance.GetObject(*aRef).TakeAmount()
-	if err != nil {
-		return fmt.Errorf("[ Accept ] Can't take amount: %s", err.Error())
+// Accept transfer to balance
+func (w *Wallet) Accept(amountStr string) (err error) {
+
+	amount := new(big.Int)
+	amount, ok := amount.SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("[ Accept ] can't parse returned balance")
 	}
-	w.Balance, err = safemath.Add(w.Balance, b)
+
+	balance := new(big.Int)
+	balance, ok = balance.SetString(w.Balance, 10)
+	if !ok {
+		return fmt.Errorf("[ Accept ] can't parse returned balance")
+	}
+
+	b, err := safemath.Add(balance, amount)
 	if err != nil {
 		return fmt.Errorf("[ Accept ] Couldn't add amount to balance: %s", err.Error())
 	}
+	w.Balance = b.String()
+
 	return nil
 }
 
 // GetBalance gets total balance
-func (w *Wallet) GetBalance() (uint, error) {
-	iterator, err := w.NewChildrenTypedIterator(allowance.GetPrototype())
-	if err != nil {
-		return 0, fmt.Errorf("[ GetBalance ] Can't get children: %s", err.Error())
-	}
-
-	for iterator.HasNext() {
-		cref, err := iterator.Next()
-		if err != nil {
-			return 0, fmt.Errorf("[ GetBalance ] Can't get next child: %s", err.Error())
-		}
-
-		if !cref.IsEmpty() {
-			a := allowance.GetObject(cref)
-			balance, err := a.GetExpiredBalance()
-
-			if err != nil {
-				balance = 0
-				//return 0, fmt.Errorf("[ GetBalance ] Can't get balance for owner: %s", err.Error())
-			}
-
-			w.Balance, err = safemath.Add(w.Balance, balance)
-			if err != nil {
-				return 0, fmt.Errorf("[ GetBalance ] Couldn't add expired allowance to balance: %s", err.Error())
-			}
-		}
-	}
+func (w *Wallet) GetBalance() (string, error) {
 	return w.Balance, nil
-}
-
-// New creates new allowance
-func New(balance uint) (*Wallet, error) {
-	return &Wallet{
-		Balance: balance,
-	}, nil
 }
