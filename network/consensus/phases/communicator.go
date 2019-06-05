@@ -594,13 +594,7 @@ func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacke
 		go nc.PulseHandler.HandlePulse(context.Background(), newPulse)
 	}
 
-	select {
-	case nc.phase1result <- phase1Result{id: sender, packet: p}:
-		// ok
-	default:
-		// if writing to the channel blocks it most likely means that we already received this type of packet
-		log.Warn("Type 1 packet was already processed! Ignoring.")
-	}
+	nc.phase1result <- phase1Result{id: sender, packet: p}
 }
 
 func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
@@ -617,13 +611,7 @@ func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacke
 		return
 	}
 
-	select {
-	case nc.phase2result <- phase2Result{id: sender, packet: p}:
-		// ok
-	default:
-		// if writing to the channel blocks it most likely means that we already received this type of packet
-		log.Warn("Type 2 packet was already processed! Ignoring.")
-	}
+	nc.phase2result <- phase2Result{id: sender, packet: p}
 }
 
 func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
@@ -635,7 +623,8 @@ func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacke
 	case nc.phase3result <- phase3Result{id: sender, packet: p}:
 		// ok
 	default:
-		// if writing to the channel blocks it most likely means that we already received this type of packet
+		// If writing to the channel blocks it most likely means that we already received this type of packet.
+		// This may happen e.g. if another type was resent which in turn caused type 3 packet to be resent.
 		log.Warn("Type 3 packet was already processed! Ignoring.")
 	}
 }
