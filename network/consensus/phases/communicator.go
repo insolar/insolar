@@ -53,6 +53,7 @@ package phases
 import (
 	"context"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -622,9 +623,9 @@ func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacke
 	select {
 	case nc.phase3result <- phase3Result{id: sender, packet: p}:
 		// ok
-	default:
+	case <-time.After(5 * time.Second):
 		// If writing to the channel blocks it most likely means that we already received this type of packet.
 		// This may happen e.g. if another type was resent which in turn caused type 3 packet to be resent.
-		log.Warn("Type 3 packet was already processed! Ignoring.")
+		log.Warn("It seems that type 3 packet was already processed! Ignoring.")
 	}
 }
