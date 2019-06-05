@@ -353,3 +353,24 @@ func (r *Two) Value() (int, error) {
 	resp := callMethod(t, obj, "Value")
 	require.Equal(t, float64(644), resp)
 }
+
+func TestContextPassingError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() (string, error) {
+	return r.GetPrototype().String(), nil
+}
+`
+	prototype := uploadContractOnce(t, "context_passing", contractOneCode)
+	obj := callConstructor(t, prototype)
+
+	resp := callMethod(t, obj, "Hello")
+	require.Equal(t, prototype.String(), resp)
+}
