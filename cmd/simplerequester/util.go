@@ -16,11 +16,6 @@ import (
 	"github.com/square/go-jose"
 )
 
-type SignedData struct {
-	JWK string `json:"jwk"`
-	JWS string `json:"jws"`
-}
-
 type DataToSign struct {
 	Reference string `json:"reference"`
 	Method    string `json:"method"`

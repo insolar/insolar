@@ -91,11 +91,6 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
 	}
-
-	if err != nil {
-		fmt.Println("Unmarshal error", err)
-	}
-
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with creating request")
@@ -167,6 +162,10 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	sp, err := json.Marshal(signedPayload)
 	verboseInfo(ctx, "Signing request ...")
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ES256, Key: userCfg.privateKeyObject}, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Problem with creating signer")
+	}
+
 	signature, err := signer.Sign(sp)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
@@ -182,7 +181,9 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 
 	jwk := jose.JSONWebKey{Key: key.Public()}
 	jwkjs, err := jwk.MarshalJSON()
-
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] JWK marshal error")
+	}
 	postParams := PostParams{
 		"jwk": string(jwkjs),
 		"jws": jws,

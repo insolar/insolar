@@ -185,8 +185,6 @@ func TestMain(m *testing.M) {
 func TestGetSeed(t *testing.T) {
 	seed, err := GetSeed(URL)
 	require.NoError(t, err)
-	//decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
-	//require.NoError(t, err)
 	require.Equal(t, "Test", seed)
 }
 
