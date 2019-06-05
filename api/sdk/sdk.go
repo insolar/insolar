@@ -187,6 +187,9 @@ func (sdk *SDK) AddBurnAddress(burnAddress string) (string, error) {
 	}
 	params := Params{BurnAddress: burnAddress}
 	paramsMarshaled, err := json.Marshal(params)
+	if err != nil {
+		return "", errors.Wrap(err, "[ AddBurnAddress ] failed marshal")
+	}
 
 	body, err := sdk.sendRequest(ctx, "AddBurnAddress", paramsMarshaled, sdk.mdAdminMember)
 	if err != nil {
@@ -226,6 +229,9 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	}
 	params := Params{Name: memberName}
 	paramsMarshaled, err := json.Marshal(params)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "[ CreateMember ] failed marshal")
+	}
 
 	body, err := sdk.sendRequest(ctx, "CreateMember", paramsMarshaled, sdk.rootMember)
 	if err != nil {
