@@ -4,15 +4,16 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	insJose "github.com/insolar/go-jose"
 	"github.com/insolar/insolar/platformpolicy"
 	xecdsa "github.com/insolar/x-crypto/ecdsa"
 	"github.com/insolar/x-crypto/x509"
 	"github.com/pkg/errors"
 	"github.com/square/go-jose"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 )
 
 type SignedData struct {

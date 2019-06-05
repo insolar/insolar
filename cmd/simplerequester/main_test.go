@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/platformpolicy"
 	xecdsa "github.com/insolar/x-crypto/ecdsa"
 	xelliptic "github.com/insolar/x-crypto/elliptic"
 	xrand "github.com/insolar/x-crypto/rand"
@@ -14,10 +14,12 @@ import (
 const HOST = "http://localhost:19101"
 const TestUrl = HOST + "/api"
 
-var memRef string
-var memRefK string
-var keys *memberKeys
-var keysK *memberKeys
+var (
+	memRef  string
+	memRefK string
+	keys    *memberKeys
+	keysK   *memberKeys
+)
 
 func TestCreateMemberP256K(t *testing.T) {
 	t.Skip()

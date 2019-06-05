@@ -12,24 +12,18 @@ import (
 )
 
 var (
-	memberKeysPath string
 	apiURL         string
-	paramsFile     string
 	method         string
 	params         string
 	memberRef      string
+	paramsFile     string
+	memberKeysPath string
 )
 
 type response struct {
 	Error   string
 	Result  interface{}
 	TraceID string
-}
-
-type RequestParams struct {
-	Reference string `json:"reference"`
-	Method    string `json:"reference"`
-	Params    string `json:"reference"`
 }
 
 const defaultURL = "http://localhost:19101/api"
