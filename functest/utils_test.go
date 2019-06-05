@@ -262,7 +262,7 @@ func newUserWithKeys() (*user, error) {
 	}, nil
 }
 
-func  uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
+func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.Upload",
