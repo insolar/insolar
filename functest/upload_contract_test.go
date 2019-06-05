@@ -19,6 +19,7 @@
 package functest
 
 import (
+	"github.com/insolar/insolar/testutils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -38,7 +39,9 @@ func TestCallUploadedContract(t *testing.T) {
 			return str, nil
 		}`
 
-	prototypeRef := uploadContract(t, "test", contractCode)
+
+	// if we running this test with count we need to get unique names
+	prototypeRef := uploadContract(t, testutils.RandStringBytes(16), contractCode)
 	objectRef := callConstructor(t, prototypeRef)
 
 	testParam := "test"
