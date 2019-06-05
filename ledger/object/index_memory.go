@@ -38,6 +38,9 @@ type filamentCache struct {
 	pendingMeta pendingMeta
 }
 
+type recordID insolar.ID
+type metaRecordID insolar.ID
+
 // pendingMeta contains info for calculating pending requests states
 // The structure contains full chain of pendings (they are grouped by pulse).
 // Groups are sorted by pulse, from a lowest to a highest
@@ -46,14 +49,14 @@ type pendingMeta struct {
 	isStateCalculated bool
 	fullFilament      []chainLink
 
-	notClosedRequestsIds      []insolar.ID
-	notClosedRequestsIdsIndex map[insolar.PulseNumber]map[insolar.ID]struct{}
-	requestPNIndex            map[insolar.ID]insolar.PulseNumber
+	notClosedRequestsIds      []recordID
+	notClosedRequestsIdsIndex map[insolar.PulseNumber]map[recordID]struct{}
+	requestPNIndex            map[recordID]insolar.PulseNumber
 }
 
 type chainLink struct {
-	PN         insolar.PulseNumber
-	RecordsIDs []insolar.ID
+	PN             insolar.PulseNumber
+	MetaRecordsIDs []metaRecordID
 }
 
 func (i *filamentCache) lifeline() (Lifeline, error) {
@@ -81,6 +84,7 @@ func (i *filamentCache) setLifelineLastUsed(pn insolar.PulseNumber) {
 // InMemoryIndex is a in-memory storage, that stores a collection of IndexBuckets
 type InMemoryIndex struct {
 	recordStorage RecordStorage
+	PCS           insolar.PlatformCryptographyScheme
 
 	bucketsLock sync.RWMutex
 	buckets     map[insolar.PulseNumber]map[insolar.ID]*filamentCache
@@ -105,9 +109,9 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 		},
 		pendingMeta: pendingMeta{
 			fullFilament:              []chainLink{},
-			notClosedRequestsIds:      []insolar.ID{},
-			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[insolar.ID]struct{}{},
-			requestPNIndex:            map[insolar.ID]insolar.PulseNumber{},
+			notClosedRequestsIds:      []recordID{},
+			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[recordID]struct{}{},
+			requestPNIndex:            map[recordID]insolar.PulseNumber{},
 			isStateCalculated:         false,
 		},
 	}
@@ -165,11 +169,11 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	bucks[bucket.ObjID] = &filamentCache{
 		objectMeta: bucket,
 		pendingMeta: pendingMeta{
-			notClosedRequestsIds:      []insolar.ID{},
+			notClosedRequestsIds:      []recordID{},
 			fullFilament:              []chainLink{},
 			isStateCalculated:         false,
-			requestPNIndex:            map[insolar.ID]insolar.PulseNumber{},
-			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[insolar.ID]struct{}{},
+			requestPNIndex:            map[recordID]insolar.PulseNumber{},
+			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[recordID]struct{}{},
 		},
 	}
 
@@ -267,31 +271,48 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	b.Lock()
 	defer b.Unlock()
 
-	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, reqID)
+	pf := record.PendingFilament{
+		RecordID: reqID,
+	}
+	if b.objectMeta.Lifeline.ChildPointer != nil {
+		pf.PreviousRecord = *b.objectMeta.Lifeline.ChildPointer
+	}
+
+	pfv := record.Wrap(pf)
+	hash := record.HashVirtual(i.PCS.ReferenceHasher(), pfv)
+	metaID := *insolar.NewID(pn, hash)
+
+	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
+	if err != nil {
+		return errors.Wrap(err, "failed to create a meta-record about pending request")
+	}
+
+	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, metaID)
+	b.objectMeta.Lifeline.ChildPointer = &metaID
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {
 		if chainPart.PN == pn {
-			b.pendingMeta.fullFilament[i].RecordsIDs = append(b.pendingMeta.fullFilament[i].RecordsIDs, reqID)
+			b.pendingMeta.fullFilament[i].MetaRecordsIDs = append(b.pendingMeta.fullFilament[i].MetaRecordsIDs, metaRecordID(metaID))
 			isInserted = true
 		}
 	}
 
 	if !isInserted {
-		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{RecordsIDs: []insolar.ID{reqID}, PN: pn})
+		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{MetaRecordsIDs: []metaRecordID{metaRecordID(metaID)}, PN: pn})
 		sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
 			return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 		})
 	}
 
-	b.pendingMeta.requestPNIndex[reqID] = pn
+	b.pendingMeta.requestPNIndex[recordID(reqID)] = pn
 
 	_, ok := b.pendingMeta.notClosedRequestsIdsIndex[pn]
 	if !ok {
-		b.pendingMeta.notClosedRequestsIdsIndex[pn] = map[insolar.ID]struct{}{}
+		b.pendingMeta.notClosedRequestsIdsIndex[pn] = map[recordID]struct{}{}
 	}
-	b.pendingMeta.notClosedRequestsIdsIndex[pn][reqID] = struct{}{}
-	b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds, reqID)
+	b.pendingMeta.notClosedRequestsIdsIndex[pn][recordID(reqID)] = struct{}{}
+	b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds, recordID(reqID))
 
 	stats.Record(ctx,
 		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
@@ -312,28 +333,45 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	b.Lock()
 	defer b.Unlock()
 
-	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, resID)
+	pf := record.PendingFilament{
+		RecordID: resID,
+	}
+	if b.objectMeta.Lifeline.ChildPointer != nil {
+		pf.PreviousRecord = *b.objectMeta.Lifeline.ChildPointer
+	}
+
+	pfv := record.Wrap(pf)
+	hash := record.HashVirtual(i.PCS.ReferenceHasher(), pfv)
+	metaID := *insolar.NewID(pn, hash)
+
+	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
+	if err != nil {
+		return errors.Wrap(err, "failed to create a meta-record about pending request")
+	}
+
+	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, metaID)
+	b.objectMeta.Lifeline.ChildPointer = &metaID
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {
 		if chainPart.PN == pn {
-			b.pendingMeta.fullFilament[i].RecordsIDs = append(b.pendingMeta.fullFilament[i].RecordsIDs, resID)
+			b.pendingMeta.fullFilament[i].MetaRecordsIDs = append(b.pendingMeta.fullFilament[i].MetaRecordsIDs, metaRecordID(metaID))
 			isInserted = true
 		}
 	}
 
 	if !isInserted {
-		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{RecordsIDs: []insolar.ID{resID}, PN: pn})
+		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{MetaRecordsIDs: []metaRecordID{metaRecordID(metaID)}, PN: pn})
 		sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
 			return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 		})
 	}
 
-	reqPN, ok := b.pendingMeta.requestPNIndex[*res.Request.Record()]
+	reqPN, ok := b.pendingMeta.requestPNIndex[recordID(*res.Request.Record())]
 	if ok {
-		delete(b.pendingMeta.notClosedRequestsIdsIndex[reqPN], *res.Request.Record())
+		delete(b.pendingMeta.notClosedRequestsIdsIndex[reqPN], recordID(*res.Request.Record()))
 		for i := 0; i < len(b.pendingMeta.notClosedRequestsIds); i++ {
-			if b.pendingMeta.notClosedRequestsIds[i] == *res.Request.Record() {
+			if insolar.ID(b.pendingMeta.notClosedRequestsIds[i]) == *res.Request.Record() {
 				b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds[:i], b.pendingMeta.notClosedRequestsIds[i+1:]...)
 				break
 			}
@@ -349,7 +387,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 
 // SetFilament adds a slice of records to an object with provided id and pulse. It's assumed, that the method is
 // called for setting records from another light, during the process of filling full chaing of pendings
-func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.MaterialWithID) error {
+func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.CompositeFilamentRecord) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
@@ -358,16 +396,20 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 	b.Lock()
 	defer b.Unlock()
 
-	recsIds := make([]insolar.ID, len(recs))
+	recsIds := make([]metaRecordID, len(recs))
 	for idx, rec := range recs {
-		recsIds[idx] = rec.ID
-		err := i.recordStorage.Set(ctx, rec.ID, rec.Record)
+		recsIds[idx] = metaRecordID(rec.MetaID)
+		err := i.recordStorage.Set(ctx, rec.MetaID, rec.Meta)
+		if err != nil {
+			return errors.Wrap(err, "filament update failed")
+		}
+		err = i.recordStorage.Set(ctx, rec.RecordID, rec.Record)
 		if err != nil {
 			return errors.Wrap(err, "filament update failed")
 		}
 	}
 
-	b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{RecordsIDs: recsIds, PN: filPN})
+	b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{MetaRecordsIDs: recsIds, PN: filPN})
 	sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
 		return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 	})
@@ -386,19 +428,26 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	defer b.Unlock()
 
 	for _, chainLink := range b.pendingMeta.fullFilament {
-		for _, recID := range chainLink.RecordsIDs {
-			rec, err := i.recordStorage.ForID(ctx, recID)
+		for _, metaID := range chainLink.MetaRecordsIDs {
+			metaRec, err := i.recordStorage.ForID(ctx, insolar.ID(metaID))
 			if err != nil {
 				return errors.Wrap(err, "failed to refresh an index state")
 			}
+
+			concreteMeta := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+			rec, err := i.recordStorage.ForID(ctx, concreteMeta.RecordID)
+			if err != nil {
+				return errors.Wrap(err, "failed to refresh an index state")
+			}
+
 			switch r := record.Unwrap(rec.Virtual).(type) {
 			case *record.Request:
-				b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN][*r.Object.Record()] = struct{}{}
-				b.pendingMeta.requestPNIndex[*r.Object.Record()] = chainLink.PN
+				b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN][recordID(*r.Object.Record())] = struct{}{}
+				b.pendingMeta.requestPNIndex[recordID(*r.Object.Record())] = chainLink.PN
 			case *record.Result:
-				reqPN, ok := b.pendingMeta.requestPNIndex[*r.Request.Record()]
+				reqPN, ok := b.pendingMeta.requestPNIndex[recordID(*r.Request.Record())]
 				if ok {
-					delete(b.pendingMeta.notClosedRequestsIdsIndex[reqPN], *r.Request.Record())
+					delete(b.pendingMeta.notClosedRequestsIdsIndex[reqPN], recordID(*r.Request.Record()))
 				}
 			}
 		}
@@ -454,7 +503,7 @@ func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN inso
 	res := make([]record.Request, count)
 
 	for idx := 0; idx < count; idx++ {
-		rec, err := i.recordStorage.ForID(ctx, b.pendingMeta.notClosedRequestsIds[idx])
+		rec, err := i.recordStorage.ForID(ctx, insolar.ID(b.pendingMeta.notClosedRequestsIds[idx]))
 		if err != nil {
 			return nil, err
 		}
@@ -471,7 +520,7 @@ func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN inso
 }
 
 // Records returns all the records for a provided object
-func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.MaterialWithID, error) {
+func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
 	b := i.bucket(currentPN, objID)
 	if b == nil {
 		return nil, ErrLifelineNotFound
@@ -480,15 +529,24 @@ func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumb
 	b.RLock()
 	defer b.RLock()
 
-	res := make([]record.MaterialWithID, len(b.objectMeta.PendingRecords))
+	res := make([]record.CompositeFilamentRecord, len(b.objectMeta.PendingRecords))
 	for idx, id := range b.objectMeta.PendingRecords {
-		rec, err := i.recordStorage.ForID(ctx, id)
+		metaRec, err := i.recordStorage.ForID(ctx, id)
 		if err != nil {
 			return nil, err
 		}
-		res[idx] = record.MaterialWithID{
-			Record: rec,
-			ID:     id,
+
+		concreteMeta := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+		rec, err := i.recordStorage.ForID(ctx, concreteMeta.RecordID)
+		if err != nil {
+			return nil, err
+		}
+
+		res[idx] = record.CompositeFilamentRecord{
+			Record:   rec,
+			RecordID: concreteMeta.RecordID,
+			Meta:     metaRec,
+			MetaID:   id,
 		}
 	}
 

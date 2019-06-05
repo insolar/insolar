@@ -130,9 +130,10 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
-// MaterialWithID is a key-value pair
-// We don't want to recalculate id continuously
-type MaterialWithID struct {
-	ID     insolar.ID
-	Record Material
+type CompositeFilamentRecord struct {
+	RecordID insolar.ID
+	Record   Material
+
+	MetaID insolar.ID
+	Meta   Material
 }
