@@ -38,7 +38,7 @@ func TestCallUploadedContract(t *testing.T) {
 			return str, nil
 		}`
 
-	prototypeRef := uploadContract(t, contractCode)
+	prototypeRef := uploadContract(t, "test", contractCode)
 	objectRef := callConstructor(t, prototypeRef)
 
 	testParam := "test"
