@@ -35,6 +35,9 @@ func createSignedData(keys *memberKeys, datas *DataToSign) (string, string, erro
 		return "", "", err
 	}
 	privateKey, err := importPrivateKeyPEM([]byte(keys.Private))
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ createSignedData ] failed import private key pem")
+	}
 
 	switch privateKey.Curve.Params().Name {
 
@@ -61,6 +64,9 @@ func createSignedData(keys *memberKeys, datas *DataToSign) (string, string, erro
 	default:
 		keyProcessor := platformpolicy.NewKeyProcessor()
 		privateKey, err := keyProcessor.ImportPrivateKeyPEM([]byte(keys.Private))
+		if err != nil {
+			return "", "", errors.Wrap(err, "[ createSignedData ] failed import private key pem by key processor")
+		}
 		publicKey := keyProcessor.ExtractPublicKey(privateKey)
 
 		pub := jose.JSONWebKey{Key: publicKey}

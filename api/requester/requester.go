@@ -160,6 +160,9 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 
 	sp, err := json.Marshal(signedPayload)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Failed marshal signed payload")
+	}
 	verboseInfo(ctx, "Signing request ...")
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ES256, Key: userCfg.privateKeyObject}, nil)
 	if err != nil {
