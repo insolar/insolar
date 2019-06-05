@@ -43,7 +43,7 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 	t.Run("saves correct index-value", func(t *testing.T) {
 		t.Parallel()
 
-		storage := NewInMemoryIndex(nil)
+		storage := NewInMemoryIndex(nil, nil)
 		pn := gen.PulseNumber()
 
 		err := storage.Set(ctx, pn, id, idx)
@@ -71,7 +71,7 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 		tID := insolar.NewID(3, nil)
 		fthID := insolar.NewID(4, nil)
 
-		storage := NewInMemoryIndex(nil)
+		storage := NewInMemoryIndex(nil, nil)
 		err := storage.Set(ctx, 1, *fID, idx)
 		require.NoError(t, err)
 		err = storage.Set(ctx, 1, *sID, idx)
@@ -93,7 +93,7 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
-		storage := NewInMemoryIndex(nil)
+		storage := NewInMemoryIndex(nil, nil)
 		pn := gen.PulseNumber()
 
 		err := storage.Set(ctx, pn, id, idx)
@@ -120,7 +120,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 	t.Run("returns correct index-value", func(t *testing.T) {
 		t.Parallel()
 
-		storage := NewInMemoryIndex(nil)
+		storage := NewInMemoryIndex(nil, nil)
 		pn := gen.PulseNumber()
 
 		err := storage.Set(ctx, pn, id, idx)
@@ -135,7 +135,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 	t.Run("returns error when no index-value for id", func(t *testing.T) {
 		t.Parallel()
 
-		storage := NewInMemoryIndex(nil)
+		storage := NewInMemoryIndex(nil, nil)
 		pn := gen.PulseNumber()
 
 		_, err := storage.ForID(ctx, pn, id)
@@ -176,7 +176,7 @@ func TestInMemoryIndex_ForPNAndJet(t *testing.T) {
 		Delegates:   []LifelineDelegate{},
 	}
 
-	index := NewInMemoryIndex(nil)
+	index := NewInMemoryIndex(nil, nil)
 
 	_ = index.Set(ctx, fPn, *fId, fIdx)
 	_ = index.Set(ctx, fPn, *sId, sIdx)
@@ -214,7 +214,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 
 	t.Run("saves correct bucket", func(t *testing.T) {
 		pn := gen.PulseNumber()
-		index := NewInMemoryIndex(nil)
+		index := NewInMemoryIndex(nil, nil)
 
 		err := index.SetBucket(ctx, pn, buck)
 		require.NoError(t, err)
@@ -230,7 +230,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 
 	t.Run("re-save works fine", func(t *testing.T) {
 		pn := gen.PulseNumber()
-		index := NewInMemoryIndex(nil)
+		index := NewInMemoryIndex(nil, nil)
 
 		err := index.SetBucket(ctx, pn, buck)
 		require.NoError(t, err)
@@ -278,7 +278,7 @@ func TestInMemoryIndex_SetLifelineUsage(t *testing.T) {
 	t.Run("works fine", func(t *testing.T) {
 		t.Parallel()
 
-		index := NewInMemoryIndex(nil)
+		index := NewInMemoryIndex(nil, nil)
 
 		_ = index.Set(ctx, pn, id, idx)
 
@@ -295,7 +295,7 @@ func TestInMemoryIndex_SetLifelineUsage(t *testing.T) {
 	t.Run("returns ErrLifelineNotFound if no bucket", func(t *testing.T) {
 		t.Parallel()
 
-		index := NewInMemoryIndex(nil)
+		index := NewInMemoryIndex(nil, nil)
 		err := index.SetLifelineUsage(ctx, pn, id)
 		require.Error(t, ErrLifelineNotFound, err)
 	})
@@ -310,7 +310,7 @@ func TestNewInMemoryIndex_DeleteForPN(t *testing.T) {
 	sPn := fPn + 1
 	tPn := sPn + 1
 
-	index := NewInMemoryIndex(nil)
+	index := NewInMemoryIndex(nil, nil)
 
 	index.buckets[fPn] = map[insolar.ID]*filamentCache{}
 	index.buckets[sPn] = map[insolar.ID]*filamentCache{}
@@ -331,7 +331,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
 		objID := gen.ID()
-		idx := NewInMemoryIndex(nil)
+		idx := NewInMemoryIndex(nil, nil)
 
 		err := idx.SetRequest(ctx, pn, objID, insolar.ID{})
 
@@ -342,7 +342,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
 		objID := gen.ID()
-		idx := NewInMemoryIndex(nil)
+		idx := NewInMemoryIndex(nil, nil)
 		idx.createBucket(ctx, pn, objID)
 
 		// objRef := gen.Reference()

@@ -84,15 +84,16 @@ func (i *filamentCache) setLifelineLastUsed(pn insolar.PulseNumber) {
 // InMemoryIndex is a in-memory storage, that stores a collection of IndexBuckets
 type InMemoryIndex struct {
 	recordStorage RecordStorage
-	PCS           insolar.PlatformCryptographyScheme
+	pcs           insolar.PlatformCryptographyScheme
 
 	bucketsLock sync.RWMutex
 	buckets     map[insolar.PulseNumber]map[insolar.ID]*filamentCache
 }
 
 // NewInMemoryIndex creates a new InMemoryIndex
-func NewInMemoryIndex(recordStorage RecordStorage) *InMemoryIndex {
+func NewInMemoryIndex(recordStorage RecordStorage, pcs insolar.PlatformCryptographyScheme) *InMemoryIndex {
 	return &InMemoryIndex{
+		pcs:           pcs,
 		recordStorage: recordStorage,
 		buckets:       map[insolar.PulseNumber]map[insolar.ID]*filamentCache{},
 	}
@@ -279,7 +280,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	}
 
 	pfv := record.Wrap(pf)
-	hash := record.HashVirtual(i.PCS.ReferenceHasher(), pfv)
+	hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
 	metaID := *insolar.NewID(pn, hash)
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
@@ -341,7 +342,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	}
 
 	pfv := record.Wrap(pf)
-	hash := record.HashVirtual(i.PCS.ReferenceHasher(), pfv)
+	hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
 	metaID := *insolar.NewID(pn, hash)
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})

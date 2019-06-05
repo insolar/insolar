@@ -219,7 +219,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewInMemoryIndex(records)
+		indexes := object.NewInMemoryIndex(records, CryptoScheme)
 		writeController := hot.NewWriteController()
 
 		c := component.Manager{}

@@ -90,7 +90,7 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	rsm := object.NewRecordStorageMock(t)
 	rsm.ForIDFunc = ra.ForIDFunc
 
-	indexMemoryStor := object.NewInMemoryIndex(rsm)
+	indexMemoryStor := object.NewInMemoryIndex(rsm, nil)
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
@@ -147,7 +147,7 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	rsm := object.NewRecordStorageMock(t)
 	rsm.ForIDFunc = ra.ForIDFunc
 
-	indexMemoryStor := object.NewInMemoryIndex(rsm)
+	indexMemoryStor := object.NewInMemoryIndex(rsm, nil)
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),

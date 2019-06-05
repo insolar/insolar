@@ -121,7 +121,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.recordModifier = recordStorage
 	s.recordAccessor = recordStorage
 
-	s.indexMemoryStor = object.NewInMemoryIndex(recordStorage)
+	s.indexMemoryStor = object.NewInMemoryIndex(recordStorage, nil)
 
 	s.cm.Inject(
 		s.scheme,
@@ -255,7 +255,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	mb.MustRegisterMock.Return()
 
 	pam := object.NewPendingAccessorMock(s.T())
-	pam.IsStateCalculatedMock.Return(true, nil)
 
 	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, pam, &configuration.Ledger{})
 	h.JetCoordinator = jc

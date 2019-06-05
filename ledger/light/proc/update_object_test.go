@@ -77,7 +77,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	recordStorage := object.NewRecordMemory()
 
 	scheme := testutils.NewPlatformCryptographyScheme()
-	indexMemoryStor := object.NewInMemoryIndex(recordStorage)
+	indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
 
 	idLockMock := object.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
@@ -159,7 +159,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 
 	scheme := testutils.NewPlatformCryptographyScheme()
 	recordStorage := object.NewRecordMemory()
-	indexMemoryStor := object.NewInMemoryIndex(recordStorage)
+	indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
 
 	idLockMock := object.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()

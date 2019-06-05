@@ -108,7 +108,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	conf := configuration.NewLedger()
 	recordStorage := object.NewRecordMemory()
 	memoryMockDB := store.NewMemoryMockDB()
-	index := object.NewInMemoryIndex(recordStorage)
+	index := object.NewInMemoryIndex(recordStorage, testutils.NewPlatformCryptographyScheme())
 
 	cm := &component.Manager{}
 	js := jet.NewStore()
