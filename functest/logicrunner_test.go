@@ -186,6 +186,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	}
 
 	// TODO разобраться с кастом рефов
+	// TODO может возвращать не реф а скасченный к стрингу реф? Reference.ToString() ?
 	//resp = callMethod(t, objectRef, "GetFriend")
 	//
 	//// this is base64 instead of base58
