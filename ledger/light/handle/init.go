@@ -83,6 +83,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		case payload.TypeGetCode:
 			h := NewGetCode(s.dep, s.message.WatermillMsg, false)
 			return f.Handle(ctx, h.Present)
+		case payload.TypeSetCode:
+			h := NewSetCode(s.dep, s.message.WatermillMsg, false)
+			return f.Handle(ctx, h.Present)
 		case payload.TypePass:
 			return s.handlePass(ctx, f)
 		case payload.TypeError:
@@ -161,6 +164,9 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case payload.TypeGetCode:
 		h := NewGetCode(s.dep, origin, true)
+		return f.Handle(ctx, h.Present)
+	case payload.TypeSetCode:
+		h := NewSetCode(s.dep, origin, true)
 		return f.Handle(ctx, h.Present)
 	}
 	return nil

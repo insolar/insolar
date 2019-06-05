@@ -194,3 +194,38 @@ func NewWaitHotWM(j insolar.JetID, pn insolar.PulseNumber, msg *message.Message)
 func (p *WaitHotWM) Proceed(ctx context.Context) error {
 	return p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
 }
+
+type CalculateID struct {
+	payload []byte
+	pulse   insolar.PulseNumber
+
+	Result struct {
+		ID insolar.ID
+	}
+
+	dep struct {
+		pcs insolar.PlatformCryptographyScheme
+	}
+}
+
+func NewCalculateID(payload []byte, pulse insolar.PulseNumber) *CalculateID {
+	return &CalculateID{
+		payload: payload,
+		pulse:   pulse,
+	}
+}
+
+func (p *CalculateID) Dep(pcs insolar.PlatformCryptographyScheme) {
+	p.dep.pcs = pcs
+}
+
+func (p *CalculateID) Proceed(ctx context.Context) error {
+	h := p.dep.pcs.ReferenceHasher()
+	_, err := h.Write(p.payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate id")
+	}
+
+	p.Result.ID = *insolar.NewID(p.pulse, h.Sum(nil))
+	return nil
+}
