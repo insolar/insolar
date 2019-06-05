@@ -19,7 +19,6 @@
 package functest
 
 import (
-	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -49,7 +48,7 @@ func (c *One) Dec() (int, error) {
 	return c.Number, nil
 }
 `
-	objectRef := callConstructor(t, uploadContract(t, contractCode))
+	objectRef := callConstructor(t, uploadContract(t, "test", contractCode))
 
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objectRef, "Get")
