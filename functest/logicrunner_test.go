@@ -279,3 +279,77 @@ func (r *Two) Hello(s string) (string, error) {
 	resp = callMethod(t, obj, "HelloFromDelegate", "ins")
 	require.Equal(t,"Hello you too, ins. 1288 times!", resp)
 }
+
+func TestBasicNotificationCallError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import two "github.com/insolar/insolar/application/proxy/basic_notification_call_two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() error {
+	holder := two.New()
+
+	friend, err := holder.AsDelegate(r.GetReference())
+	if err != nil {
+		return err
+	}
+
+	err = friend.HelloNoWait()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *One) Value() (int, error) {
+	friend, err := two.GetImplementationFrom(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	return friend.Value()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+}
+
+func New() (*Two, error) {
+	return &Two{X:322}, nil
+}
+
+func (r *Two) Hello() (string, error) {
+	r.X *= 2
+	return fmt.Sprintf("Hello %d times!", r.X), nil
+}
+
+func (r *Two) Value() (int, error) {
+	return r.X, nil
+}
+`
+	uploadContractOnce(t, "basic_notification_call_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "basic_notification_call_one", contractOneCode))
+
+	// no error
+	callMethod(t, obj, "Hello")
+
+	resp := callMethod(t, obj, "Value")
+	require.Equal(t, float64(644), resp)
+}
