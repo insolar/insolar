@@ -594,7 +594,13 @@ func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacke
 		go nc.PulseHandler.HandlePulse(context.Background(), newPulse)
 	}
 
-	nc.phase1result <- phase1Result{id: sender, packet: p}
+	select {
+	case nc.phase1result <- phase1Result{id: sender, packet: p}:
+		// ok
+	default:
+		// if writing to the channel blocks it most likely means that we already received this type of packet
+		log.Warn("Type 1 packet was already processed! Ignoring.")
+	}
 }
 
 func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
@@ -611,7 +617,13 @@ func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacke
 		return
 	}
 
-	nc.phase2result <- phase2Result{id: sender, packet: p}
+	select {
+	case nc.phase2result <- phase2Result{id: sender, packet: p}:
+		// ok
+	default:
+		// if writing to the channel blocks it most likely means that we already received this type of packet
+		log.Warn("Type 2 packet was already processed! Ignoring.")
+	}
 }
 
 func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
@@ -619,5 +631,11 @@ func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacke
 	if !ok {
 		log.Warn("failed to cast a type 3 packet to phase3packet")
 	}
-	nc.phase3result <- phase3Result{id: sender, packet: p}
+	select {
+	case nc.phase3result <- phase3Result{id: sender, packet: p}:
+		// ok
+	default:
+		// if writing to the channel blocks it most likely means that we already received this type of packet
+		log.Warn("Type 3 packet was already processed! Ignoring.")
+	}
 }
