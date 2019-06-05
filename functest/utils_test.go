@@ -325,7 +325,10 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 	return objectRef
 }
 
-func callMethod(t *testing.T, objectRef *insolar.Reference, method string, argsSerialized []byte) interface{} {
+func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) interface{} {
+	argsSerialized, err := insolar.Serialize(args)
+	require.NoError(t, err)
+
 	callMethodBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.CallMethod",
@@ -345,7 +348,7 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, argsS
 		Error   json2.Error         `json:"error"`
 	}{}
 
-	err := json.Unmarshal(callMethodBody, &callRes)
+	err = json.Unmarshal(callMethodBody, &callRes)
 	require.NoError(t, err)
 	require.Empty(t, callRes.Error)
 
