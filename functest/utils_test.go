@@ -42,6 +42,8 @@ import (
 
 const sendRetryCount = 5
 
+var contracts map[string]*insolar.Reference
+
 type postParams map[string]interface{}
 
 type RPCResponseInterface interface {
@@ -260,6 +262,14 @@ func newUserWithKeys() (*user, error) {
 		privKey: string(privKeyStr),
 		pubKey:  string(pubKeyStr),
 	}, nil
+}
+
+// this is needed for running tests with count
+func uploadContractOnce(t *testing.T, name string, code string) *insolar.Reference {
+	if _, ok := contracts[name]; !ok {
+		contracts[name] = uploadContract(t, name, code)
+	}
+	return contracts[name]
 }
 
 func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
