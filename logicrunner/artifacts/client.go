@@ -413,7 +413,13 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 			return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
 
-		return insolar.NewReference(requestID), &message.Parcel{Msg: &message.CallMethod{Request: *castedRecord}}, nil
+		serviceData := message.ServiceData{
+			LogTraceID:    inslogger.TraceID(ctx),
+			LogLevel:      inslogger.GetLoggerLevel(ctx),
+			TraceSpanData: instracer.MustSerialize(ctx),
+		}
+		return insolar.NewReference(requestID), &message.Parcel{Msg: &message.CallMethod{
+			Request: *castedRecord}, ServiceData: serviceData}, nil
 	case *reply.Error:
 		return nil, nil, r.Error()
 	default:
