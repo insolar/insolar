@@ -319,7 +319,7 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 		Version string                   `json:"jsonrpc"`
 		ID      string                   `json:"id"`
 		Result  api.CallConstructorReply `json:"result"`
-		Error   json2.Error              `json:"error"` // TODO check that it is json2.Error
+		Error   json2.Error              `json:"error"`
 	}{}
 
 	err := json.Unmarshal(objectBody, &callConstructorRes)
