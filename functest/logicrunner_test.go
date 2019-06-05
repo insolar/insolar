@@ -409,7 +409,6 @@ func (r *One) Kill() error {
 	require.Empty(t, err)
 }
 
-
 // TODO вернуться позже или забить или сделать отдельный тест не через общую ручку а напрямую поймать ошибку
 //func TestPanicError(t *testing.T) {
 //	var contractOneCode = `
@@ -437,3 +436,84 @@ func (r *One) Kill() error {
 //	_, err = callMethod(t, obj, "NotPanic") // no error
 //	require.Empty(t, err)
 //}
+
+func TestGetChildrenError(t *testing.T) {
+	goContract := `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	child "github.com/insolar/insolar/application/proxy/get_children_child"
+)
+
+type Contract struct {
+	foundation.BaseContract
+}
+
+func (c *Contract) NewChilds(cnt int) (int, error) {
+	s := 0
+	for i := 1; i < cnt; i++ {
+        child.New(i).AsChild(c.GetReference())
+		s += i
+	} 
+	return s, nil
+}
+
+func (c *Contract) SumChildsByIterator() (int, error) {
+	s := 0
+	iterator, err := c.NewChildrenTypedIterator(child.GetPrototype())
+	if err != nil {
+		return 0, err
+	}
+
+	for iterator.HasNext() {
+		chref, err := iterator.Next()
+		if err != nil {
+			return 0, err
+		}
+
+		o := child.GetObject(chref)
+		n, err := o.GetNum()
+		if err != nil {
+			return 0, err
+		}
+		s += n
+	}
+	return s, nil
+}
+
+`
+	goChild := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type Child struct {
+	foundation.BaseContract
+	Num int
+}
+
+func (c *Child) GetNum() (int, error) {
+	return c.Num, nil
+}
+
+
+func New(n int) (*Child, error) {
+	return &Child{Num: n}, nil
+}
+`
+
+	uploadContractOnce(t, "get_children_child", goChild)
+	obj := callConstructor(t, uploadContractOnce(t, "get_children_one", goContract))
+
+	resp, err := callMethod(t, obj, "SumChildsByIterator")
+	require.Empty(t, err, "empty children")
+	require.Equal(t, float64(0), resp)
+
+	resp, err = callMethod(t, obj, "NewChilds", 10)
+	require.Empty(t, err, "add children")
+	require.Equal(t, float64(45), resp)
+
+	resp, err = callMethod(t, obj, "SumChildsByIterator")
+	require.Empty(t, err, "sum real children")
+	require.Equal(t, float64(45), resp)
+}
