@@ -518,7 +518,7 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 
 	id := *es.Ref.Record()
 
-	parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
 		if err != insolar.ErrNoPendingRequest {
 			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
@@ -553,14 +553,11 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 		return nil
 	}
 
-	request := msg.GetReference()
-	request.SetRecord(id)
-
 	es.LedgerHasMoreRequests = ledgerHasMore
 	es.LedgerQueueElement = &ExecutionQueueElement{
 		ctx:        ctx,
 		parcel:     parcel,
-		request:    &request,
+		request:    requestRef,
 		fromLedger: true,
 	}
 
@@ -776,7 +773,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 	return nil
 }
-
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 	// lock is required to access lr.state

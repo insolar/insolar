@@ -183,23 +183,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name:                           "Happy path",
+			name: "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "ClarifyPendingState failed",
+			name: "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name:                           "StartQueueProcessorIfNeeded failed",
+			name: "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "Both procedures fail",
+			name: "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -1452,7 +1452,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	s.am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
+	s.am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 
 	es := NewExecutionState(s.objectRef)
 	es.pending = message.InPending
@@ -1541,8 +1541,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1620,7 +1620,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() 
 	es.LedgerHasMoreRequests = true
 
 	am := artifacts.NewClientMock(s.mc)
-	am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
+	am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 	s.lr.ArtifactManager = am
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
 	s.Equal(false, es.LedgerHasMoreRequests)
@@ -1634,7 +1634,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 		PulseNumber: s.oldRequestPulseNumber,
 		Msg:         &message.CallMethod{},
 	}
-	s.am.GetPendingRequestMock.Return(parcel, nil)
+	s.am.GetPendingRequestMock.Return(nil, parcel, nil)
 
 	// we doesn't authorized (pulse change in time we process function)
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
@@ -1649,11 +1649,13 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = true
 
+	testRequestRef := record.Request{Object: &s.ref}
+
 	parcel := &message.Parcel{
 		PulseNumber: s.oldRequestPulseNumber,
-		Msg:         &message.CallMethod{Request: record.Request{Object: &s.ref}},
+		Msg:         &message.CallMethod{Request: testRequestRef},
 	}
-	s.am.GetPendingRequestMock.Return(parcel, nil)
+	s.am.GetPendingRequestMock.Return(testRequestRef.Object, parcel, nil)
 
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(true, nil)
