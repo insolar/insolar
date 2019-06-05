@@ -26,6 +26,7 @@ import (
 	"github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -334,7 +335,7 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 	return objectRef
 }
 
-func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) interface{} {
+func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) (interface{}, *foundation.Error) {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
@@ -361,5 +362,5 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args 
 	require.NoError(t, err)
 	require.Empty(t, callRes.Error)
 
-	return callRes.Result.ExtractedReply
+	return callRes.Result.ExtractedReply, callRes.Result.Error
 }
