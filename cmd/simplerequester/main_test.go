@@ -1,14 +1,14 @@
 package main
 
 import (
-	"github.com/insolar/insolar/platformpolicy"
+	"testing"
 
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/api/requester"
 	xecdsa "github.com/insolar/x-crypto/ecdsa"
 	xelliptic "github.com/insolar/x-crypto/elliptic"
 	xrand "github.com/insolar/x-crypto/rand"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 const HOST = "http://localhost:19101"
@@ -20,7 +20,7 @@ var keys *memberKeys
 var keysK *memberKeys
 
 func TestCreateMemberP256K(t *testing.T) {
-
+	t.Skip()
 	privateKey, err := xecdsa.GenerateKey(xelliptic.P256K(), xrand.Reader)
 	require.NoError(t, err)
 	pk, err := ExportPrivateKeyPEM(*privateKey)
@@ -57,7 +57,7 @@ func TestCreateMemberP256K(t *testing.T) {
 }
 
 func TestGetBalanceP256K(t *testing.T) {
-
+	t.Skip()
 	seed, err := requester.GetSeed(TestUrl)
 	require.NoError(t, err)
 	t.Log("seed:" + string(seed))
@@ -86,7 +86,7 @@ func TestGetBalanceP256K(t *testing.T) {
 }
 
 func TestCreateMemberP256(t *testing.T) {
-
+	t.Skip()
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	privateKey, err := keyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
@@ -124,7 +124,7 @@ func TestCreateMemberP256(t *testing.T) {
 }
 
 func TestGetBalanceP256(t *testing.T) {
-
+	t.Skip()
 	seed, err := requester.GetSeed(TestUrl)
 	require.NoError(t, err)
 	t.Log("seed:" + string(seed))

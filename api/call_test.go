@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -55,12 +56,13 @@ func (suite *TimeoutSuite) TestRunner_callHandler() {
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
 
+	encoded := base64.StdEncoding.EncodeToString(seed[:])
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
 		&requester.RequestConfigJSON{},
-		string(seed[:]),
+		string(string(encoded)),
 	)
 	suite.NoError(err)
 
@@ -77,12 +79,13 @@ func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
 	suite.api.SeedManager.Add(*seed)
 
 	suite.delay = true
+	encoded := base64.StdEncoding.EncodeToString(seed[:])
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
 		&requester.RequestConfigJSON{},
-		string(seed[:]),
+		string(encoded),
 	)
 	suite.NoError(err)
 
