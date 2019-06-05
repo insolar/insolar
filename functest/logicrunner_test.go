@@ -275,10 +275,10 @@ func (r *Two) Hello(s string) (string, error) {
 	obj := callConstructor(t, uploadContractOnce(t, "injection_delegate_one", contractOneCode))
 
 	resp := callMethod(t, obj, "Hello", "ins")
-	require.Equal(t,"Hi, ins! Two said: Hello you too, ins. 644 times!", resp)
+	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resp)
 
 	resp = callMethod(t, obj, "HelloFromDelegate", "ins")
-	require.Equal(t,"Hello you too, ins. 1288 times!", resp)
+	require.Equal(t, "Hello you too, ins. 1288 times!", resp)
 }
 
 func TestBasicNotificationCallError(t *testing.T) {
