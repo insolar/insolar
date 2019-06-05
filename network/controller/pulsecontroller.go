@@ -54,17 +54,16 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/pulsar"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -104,15 +103,22 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Pac
 	if err != nil {
 		return nil, errors.Wrap(err, "[ pulseController ] processPulse: failed to verify pulse")
 	}
+
+	inslog := inslogger.FromContext(ctx)
 	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
 	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// Because we want to save our trace-context from a pulsar node
 		// We fetch TraceSpanData from msg and set a trace id and other stuff to current context
-		parent := instracer.MustDeserialize(data.TraceSpanData)
-		newCtx := instracer.WithParentSpan(context.Background(), parent)
+		newCtx := context.Background()
+		parent, err := instracer.Deserialize(data.TraceSpanData)
+		if err != nil {
+			inslog.Errorf("failed to deserialize trace spans data on pulse process: %v", err)
+		} else {
+			newCtx = instracer.WithParentSpan(newCtx, parent)
+		}
 		go pc.PulseHandler.HandlePulse(newCtx, pulse)
 	} else {
-		log.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
+		inslog.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
 		skipped := atomic.AddUint32(&pc.skippedPulses, 1)
 		if skipped >= skippedPulsesLimit {
 			// we definitely failed to receive pulse via phase1 packet and should exit

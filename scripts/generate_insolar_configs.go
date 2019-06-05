@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/bootstrap/genesis"
+	"github.com/insolar/insolar/bootstrap"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
@@ -53,11 +53,8 @@ var (
 	prometheusConfigTmpl = "scripts/prom/server.yml.tmpl"
 	prometheusFileName   = "prometheus.yaml"
 
-	genesisConfigTmpl = "scripts/insolard/bootstrap/genesis_template.yaml"
-	genesisFileName   = withBaseDir("genesis.yaml")
-
-	bootstrapInsolardConfigTmpl = "scripts/insolard/bootstrap/insolard_template.yaml"
-	bootstrapInsolardFileName   = withBaseDir("insolard.yaml")
+	bootstrapConfigTmpl = "scripts/insolard/bootstrap_template.yaml"
+	bootstrapFileName   = withBaseDir("bootstrap.yaml")
 
 	pulsardConfigTmpl = "scripts/insolard/pulsar_template.yaml"
 	pulsardFileName   = withBaseDir("pulsar.yaml")
@@ -116,14 +113,13 @@ func main() {
 	parseInputParams()
 
 	mustMakeDir(outputDir)
-	writeBootstrapInsolardConfig()
 	writeGenesisConfig()
 
-	genesisConf, err := genesis.ParseGenesisConfig(genesisFileName)
-	check("Can't read genesis config", err)
+	bootstrapConf, err := bootstrap.ParseConfig(bootstrapFileName)
+	check("Can't read bootstrap config", err)
 
 	pwConfig := pulsewatcher.Config{}
-	discoveryNodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
+	discoveryNodesConfigs := make([]configuration.Configuration, 0, len(bootstrapConf.DiscoveryNodes))
 
 	var gorundPorts [][]string
 
@@ -132,7 +128,7 @@ func main() {
 	}
 
 	// process discovery nodes
-	for index, node := range genesisConf.DiscoveryNodes {
+	for index, node := range bootstrapConf.DiscoveryNodes {
 		nodeIndex := index + 1
 
 		conf := newDefaultInsolardConfig()
@@ -156,7 +152,7 @@ func main() {
 		conf.Log.Adapter = "zerolog"
 		conf.Log.Formatter = "json"
 
-		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, nodeIndex)
+		conf.KeysPath = bootstrapConf.DiscoveryKeysDir + fmt.Sprintf(bootstrapConf.KeysNameFormat, nodeIndex)
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
 
@@ -171,8 +167,8 @@ func main() {
 	nodeDataDirectoryTemplate = filepath.Join(outputDir, nodeDataDirectoryTemplate)
 	nodeCertificatePathTemplate = filepath.Join(outputDir, nodeCertificatePathTemplate)
 
-	nodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
-	for index, node := range genesisConf.Nodes {
+	nodesConfigs := make([]configuration.Configuration, 0, len(bootstrapConf.DiscoveryNodes))
+	for index, node := range bootstrapConf.Nodes {
 		nodeIndex := index + 1
 
 		conf := newDefaultInsolardConfig()
@@ -180,7 +176,7 @@ func main() {
 		conf.Host.Transport.Address = node.Host
 		conf.Host.Transport.Protocol = "TCP"
 
-		rpcListenPort := 34300 + (index+nodeIndex+len(genesisConf.DiscoveryNodes)+1)*nodeIndex
+		rpcListenPort := 34300 + (index+nodeIndex+len(bootstrapConf.DiscoveryNodes)+1)*nodeIndex
 		conf.LogicRunner = configuration.NewLogicRunner()
 		conf.LogicRunner.GoPlugin.RunnerListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort-1)
 		conf.LogicRunner.RPCListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort)
@@ -188,8 +184,8 @@ func main() {
 			gorundPorts = append(gorundPorts, []string{strconv.Itoa(rpcListenPort - 1), strconv.Itoa(rpcListenPort)})
 		}
 
-		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex+len(genesisConf.DiscoveryNodes))
-		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex+len(genesisConf.DiscoveryNodes))
+		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
+		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
 
 		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
 		conf.Log.Level = debugLevel
@@ -215,7 +211,7 @@ func main() {
 	pulsarConf := &pulsarConfigVars{}
 	pulsarConf.DataDir = withBaseDir("pulsar_data")
 	pulsarConf.BaseDir = baseDir()
-	for _, node := range genesisConf.DiscoveryNodes {
+	for _, node := range bootstrapConf.DiscoveryNodes {
 		pulsarConf.BootstrapHosts = append(pulsarConf.BootstrapHosts, node.Host)
 	}
 	pulsarConf.AgentEndpoint = defaultJaegerEndPoint
@@ -234,27 +230,15 @@ type commonConfigVars struct {
 }
 
 func writeGenesisConfig() {
-	templates, err := template.ParseFiles(genesisConfigTmpl)
-	check("Can't parse template: "+genesisConfigTmpl, err)
+	templates, err := template.ParseFiles(bootstrapConfigTmpl)
+	check("Can't parse template: "+bootstrapConfigTmpl, err)
 
 	var b bytes.Buffer
 	err = templates.Execute(&b, &commonConfigVars{BaseDir: baseDir()})
-	check("Can't process template: "+genesisConfigTmpl, err)
+	check("Can't process template: "+bootstrapConfigTmpl, err)
 
-	err = makeFile(genesisFileName, b.String())
-	check("Can't makeFileWithDir: "+genesisFileName, err)
-}
-
-func writeBootstrapInsolardConfig() {
-	templates, err := template.ParseFiles(bootstrapInsolardConfigTmpl)
-	check("Can't parse template: "+bootstrapInsolardConfigTmpl, err)
-
-	var b bytes.Buffer
-	err = templates.Execute(&b, &commonConfigVars{BaseDir: baseDir()})
-	check("Can't process template: "+bootstrapInsolardConfigTmpl, err)
-
-	err = createFileWithDir(bootstrapInsolardFileName, b.String())
-	check("Can't makeFileWithDir: "+bootstrapInsolardFileName, err)
+	err = makeFile(bootstrapFileName, b.String())
+	check("Can't makeFileWithDir: "+bootstrapFileName, err)
 }
 
 var defaultInsloardConf *configuration.Configuration

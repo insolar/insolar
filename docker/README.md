@@ -9,7 +9,6 @@ It should have at least 2 files (1 optional):
 * `insolar.yaml` - configuration file for insolar. It'll be backuped at first
   run and all needed fields will be overwritten (look at genconfig.go for more
   information), optional. Default one would be created if it's not passed.
-* `genesis` (???)
 
 ### Configuration variables
 
