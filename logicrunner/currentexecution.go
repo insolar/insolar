@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 )
 
@@ -34,7 +33,6 @@ type CurrentExecution struct {
 	SentResult    bool
 	Nonce         uint64
 	Deactivate    bool
-	Message       *message.CallMethod
 }
 
 type CurrentExecutionList struct {

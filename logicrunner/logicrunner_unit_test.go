@@ -43,6 +43,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -50,7 +51,6 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
-	"github.com/insolar/insolar/insolar/utils"
 )
 
 type LogicRunnerCommonTestSuite struct {
@@ -184,23 +184,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name: "Happy path",
+			name:                           "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "ClarifyPendingState failed",
+			name:                           "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name: "StartQueueProcessorIfNeeded failed",
+			name:                           "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "Both procedures fail",
+			name:                           "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -578,8 +578,8 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	objectRef := testutils.RandomRef()
 	msg := &message.CallMethod{
 		Request: record.Request{
-			ReturnMode: record.ReturnResult,
-			Object:     &objectRef,
+			ReturnMode:   record.ReturnResult,
+			Object:       &objectRef,
 			APIRequestID: reqIdA,
 		},
 	}
@@ -728,19 +728,17 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	suite.lr.Executors[insolar.MachineTypeBuiltin] = mle
 	mle.CallMethodMock.Return(data, nil, nil)
 
-	msg := &message.CallMethod{
-		Request: record.Request{
-			Object: &randRef,
-			Method: "some",
-		},
+	request := &record.Request{
+		Object: &randRef,
+		Method: "some",
 	}
 
 	current := &CurrentExecution{
 		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &randRef,
-		Message:      msg,
+		Request:      request,
 	}
-	es.CurrentList.Set(msg.GetReference(), current)
+	es.CurrentList.Set(randRef, current)
 
 	// In this case Update isn't send to ledger (objects data/newData are the same)
 	suite.am.RegisterResultMock.Return(nil, nil)
@@ -1001,9 +999,9 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		go func(i int) {
 			msg := &message.CallMethod{
 				Request: record.Request{
-					Prototype: &protoRef,
-					Object:    &objectRef,
-					Method:    "some",
+					Prototype:    &protoRef,
+					Object:       &objectRef,
+					Method:       "some",
 					APIRequestID: utils.RandTraceID(),
 				},
 			}
@@ -1542,8 +1540,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
