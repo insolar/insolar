@@ -17,6 +17,21 @@ then
     echo "generate root member key"
     insolar gen-key-pair > $CONFIG_DIR/root_member_keys.json
 
+    echo "generate admin member_keys: $MD_ADMIN_MEMBER_KEYS_FILE"
+    insolar gen-key-pair > $CONFIG_DIR/md_admin_member_keys.json
+
+    echo "generate oracles member_keys"
+    insolar gen-key-pair > $CONFIG_DIR/oracle0_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/oracle1_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/oracle2_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/oracle3_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/oracle4_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/oracle5_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/oracle6_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/oracle7_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/oracle8_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/oracle9_member_keys.json
+
     echo "generate genesis"
     mkdir -vp $NODES_DATA
     mkdir -vp $CERTS_KEYS
