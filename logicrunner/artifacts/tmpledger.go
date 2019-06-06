@@ -99,7 +99,7 @@ func NewTestLedger(
 func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *artifactmanager.MessageHandler, *object.InMemoryIndex) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
-	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	pcs := testutils.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
 	ps := pulse.NewStorageMem()
 	index := object.NewInMemoryIndex()
@@ -129,7 +129,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		RecordModifier:        recordStorage,
 		IndexLifelineModifier: index,
 	}
-	_, err := genesisBaseRecord.CreateIfNeeded(ctx)
+	err := genesisBaseRecord.Create(ctx)
 	if err != nil {
 		t.Error(err, "failed to create base genesis record")
 	}

@@ -57,8 +57,8 @@ var stdout io.ReadCloser
 var stderr io.ReadCloser
 
 var (
-	insolarRootMemberKeysPath = launchnetPath("configs", insolarRootMemberKeys)
-	insolarGenesisConfigPath  = launchnetPath("genesis.yaml")
+	insolarRootMemberKeysPath  = launchnetPath("configs", insolarRootMemberKeys)
+	insolarBootstrapConfigPath = launchnetPath("bootstrap.yaml")
 )
 
 func launchnetPath(a ...string) string {
@@ -81,20 +81,20 @@ type user struct {
 }
 
 func getNumberNodes() (int, error) {
-	type genesisConf struct {
+	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
 	}
 
-	var conf genesisConf
+	var conf nodesConf
 
-	buff, err := ioutil.ReadFile(insolarGenesisConfigPath)
+	buff, err := ioutil.ReadFile(insolarBootstrapConfigPath)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't read genesis conf")
+		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't read bootstrap config")
 	}
 
 	err = yaml.Unmarshal(buff, &conf)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't parse genesis conf")
+		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't parse bootstrap config")
 	}
 
 	return len(conf.DiscoverNodes), nil

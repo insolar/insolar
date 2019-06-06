@@ -385,21 +385,20 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 	return ctx
 }
 
+
 // values here (boolean flags) are inverted here, since it's common "predicate" checking function
-func noLoopCheckerPredicate(current *CurrentExecution, predicateCtx interface{}) bool {
-	ctx := predicateCtx.(context.Context)
+func noLoopCheckerPredicate(current *CurrentExecution, args interface{}) bool {
+	apiReqID := args.(string)
 	if current.SentResult ||
 		current.Request.ReturnMode == record.ReturnNoWait ||
-		inslogger.TraceID(current.Context) != inslogger.TraceID(ctx) {
-
-		return true
+		current.Request.APIRequestID != apiReqID {
+			return true
 	}
 	return false
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
-	ctx context.Context, es *ExecutionState, parcel insolar.Parcel,
-) bool {
+	ctx context.Context, es *ExecutionState, parcel insolar.Parcel) bool {
 	if es.CurrentList.Empty() {
 		return false
 	}
@@ -409,13 +408,12 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if es.CurrentList.Check(noLoopCheckerPredicate, ctx) {
+	if es.CurrentList.Check(noLoopCheckerPredicate, msg.APIRequestID) {
 		return false
 	}
 
 	inslogger.FromContext(ctx).Debug("loop detected")
 	return true
-
 }
 
 // finishPendingIfNeeded checks whether last execution was a pending one.
@@ -456,7 +454,7 @@ func (lr *LogicRunner) executeOrValidate(ctx context.Context, es *ExecutionState
 
 	var re insolar.Reply
 	var err error
-	switch current.Message.CallType {
+	switch current.Request.CallType {
 	case record.CTMethod:
 		re, err = lr.executeMethodCall(ctx, es, current)
 
@@ -518,7 +516,7 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 
 	id := *es.Ref.Record()
 
-	parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
 		if err != insolar.ErrNoPendingRequest {
 			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
@@ -553,14 +551,11 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 		return nil
 	}
 
-	request := msg.GetReference()
-	request.SetRecord(id)
-
 	es.LedgerHasMoreRequests = ledgerHasMore
 	es.LedgerQueueElement = &ExecutionQueueElement{
 		ctx:        ctx,
 		parcel:     parcel,
-		request:    &request,
+		request:    requestRef,
 		fromLedger: true,
 	}
 
@@ -571,9 +566,9 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeMethodCall")
 	defer span.End()
 
-	msg := current.Message
+	request := current.Request
 
-	objDesc, err := lr.ArtifactManager.GetObject(ctx, *msg.Object)
+	objDesc, err := lr.ArtifactManager.GetObject(ctx, *request.Object)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
@@ -598,7 +593,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	current.LogicContext.Code = es.CodeDescriptor.Ref()
 	current.LogicContext.Parent = es.ObjectDescriptor.Parent()
 	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
-	if msg.Prototype != nil && !msg.Prototype.Equal(*es.PrototypeDescriptor.HeadRef()) {
+	if request.Prototype != nil && !request.Prototype.Equal(*es.PrototypeDescriptor.HeadRef()) {
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
 	}
 
@@ -608,7 +603,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	newData, result, err := executor.CallMethod(
-		ctx, current.LogicContext, *es.CodeDescriptor.Ref(), es.ObjectDescriptor.Memory(), msg.Method, msg.Arguments,
+		ctx, current.LogicContext, *es.CodeDescriptor.Ref(), es.ObjectDescriptor.Memory(), request.Method, request.Arguments,
 	)
 	if err != nil {
 		return nil, es.WrapError(current, err, "executor error")
@@ -628,7 +623,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 			return nil, es.WrapError(current, err, "couldn't update object")
 		}
 	}
-	_, err = am.RegisterResult(ctx, *msg.Object, *current.RequestRef, result)
+	_, err = am.RegisterResult(ctx, *request.Object, *current.RequestRef, result)
 	if err != nil {
 		return nil, es.WrapError(current, err, "couldn't save results")
 	}
@@ -667,17 +662,17 @@ func (lr *LogicRunner) executeConstructorCall(
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeConstructorCall")
 	defer span.End()
 
-	msg := current.Message
+	request := current.Request
 
 	if current.LogicContext.Caller.IsEmpty() {
 		return nil, es.WrapError(current, nil, "Call constructor from nowhere")
 	}
 
-	if msg.Prototype == nil {
+	if request.Prototype == nil {
 		return nil, es.WrapError(current, nil, "prototype reference is required")
 	}
 
-	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *msg.Prototype)
+	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *request.Prototype)
 	if err != nil {
 		return nil, es.WrapError(current, err, "couldn't descriptors")
 	}
@@ -690,16 +685,16 @@ func (lr *LogicRunner) executeConstructorCall(
 		return nil, es.WrapError(current, err, "no executer registered")
 	}
 
-	newData, err := executor.CallConstructor(ctx, current.LogicContext, *codeDesc.Ref(), msg.Method, msg.Arguments)
+	newData, err := executor.CallConstructor(ctx, current.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
 	if err != nil {
 		return nil, es.WrapError(current, err, "executer error")
 	}
 
-	switch msg.CallType {
+	switch request.CallType {
 	case record.CTSaveAsChild, record.CTSaveAsDelegate:
 		_, err = lr.ArtifactManager.ActivateObject(
 			ctx,
-			Ref{}, *current.RequestRef, *msg.Base, *msg.Prototype, msg.CallType == record.CTSaveAsDelegate, newData,
+			Ref{}, *current.RequestRef, *request.Base, *request.Prototype, request.CallType == record.CTSaveAsDelegate, newData,
 		)
 		if err != nil {
 			return nil, es.WrapError(current, err, "couldn't activate object")
@@ -776,7 +771,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 	return nil
 }
-
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 	// lock is required to access lr.state

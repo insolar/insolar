@@ -159,8 +159,8 @@ func (ar *Runner) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Can't start listening")
 	}
 	go func() {
-		if err := ar.server.Serve(listener); err != nil {
-			inslog.Error("Httpserver: ListenAndServe() error: ", err)
+		if err := ar.server.Serve(listener); err != http.ErrServerClosed {
+			inslog.Error("Http server: ListenAndServe() error: ", err)
 		}
 	}()
 	return nil

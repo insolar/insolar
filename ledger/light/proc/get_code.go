@@ -20,87 +20,122 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 type GetCode struct {
-	replyTo chan<- bus.Reply
-	code    insolar.Reference
+	message *message.Message
+	codeID  insolar.ID
+	pass    bool
 
 	Dep struct {
-		Bus            insolar.MessageBus
 		RecordAccessor object.RecordAccessor
 		Coordinator    jet.Coordinator
 		BlobAccessor   blob.Accessor
+		Sender         bus.Sender
+		JetFetcher     jet.Fetcher
 	}
 }
 
-func NewGetCode(code insolar.Reference, replyTo chan<- bus.Reply) *GetCode {
+func NewGetCode(msg *message.Message, codeID insolar.ID, pass bool) *GetCode {
 	return &GetCode{
-		code:    code,
-		replyTo: replyTo,
+		message: msg,
+		codeID:  codeID,
+		pass:    pass,
 	}
 }
 
 func (p *GetCode) Proceed(ctx context.Context) error {
-	p.replyTo <- p.reply(ctx)
-	return nil
-}
-
-func (p *GetCode) reply(ctx context.Context) bus.Reply {
-	codeID := *p.code.Record()
-	rec, err := p.Dep.RecordAccessor.ForID(ctx, codeID)
-	if err == object.ErrNotFound {
-		heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
-		if err != nil {
-			return bus.Reply{Err: errors.Wrap(err, "failed to calculate heavy")}
+	sendCode := func(rec record.Material) error {
+		virtual := record.Unwrap(rec.Virtual)
+		code, ok := virtual.(*record.Code)
+		if !ok {
+			return fmt.Errorf("invalid code record %#v", virtual)
 		}
-		genericReply, err := p.Dep.Bus.Send(ctx, &message.GetCode{
-			Code: p.code,
-		}, &insolar.MessageSendOptions{
-			Receiver: heavy,
+		b, err := p.Dep.BlobAccessor.ForID(ctx, code.Code)
+		if err != nil {
+			return errors.Wrap(err, "failed to fetch code blob")
+		}
+		buf, err := rec.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal record")
+		}
+		msg, err := payload.NewMessage(&payload.Code{
+			Record: buf,
+			Code:   b.Value,
 		})
 		if err != nil {
-			return bus.Reply{Err: errors.Wrap(err, "failed to fetch code from heavy")}
+			return errors.Wrap(err, "failed to create message")
 		}
-		rep, ok := genericReply.(*reply.Code)
-		if !ok {
-			err := fmt.Errorf(
-				"failed to fetch code from heavy: unexpected reply type %T",
-				genericReply,
-			)
-			return bus.Reply{Err: err}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
+
+		return nil
+	}
+
+	sendPassCode := func() error {
+		msg, err := payload.NewMessage(&payload.Pass{
+			Origin:        p.message.Payload,
+			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
 		}
-		return bus.Reply{Reply: rep}
-	}
-	if err != nil {
-		return bus.Reply{Err: errors.Wrap(err, "failed to fetch code")}
+
+		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), p.codeID.Pulse())
+		if err != nil {
+			return errors.Wrap(err, "failed to calculate pulse")
+		}
+		var node insolar.Reference
+		if onHeavy {
+			h, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+			if err != nil {
+				return errors.Wrap(err, "failed to calculate heavy")
+			}
+			node = *h
+		} else {
+			jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.codeID, p.codeID.Pulse())
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch jet")
+			}
+			l, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.codeID.Pulse())
+			if err != nil {
+				return errors.Wrap(err, "failed to calculate role")
+			}
+			node = *l
+		}
+
+		go func() {
+			_, done := p.Dep.Sender.SendTarget(ctx, msg, node)
+			done()
+		}()
+		return nil
 	}
 
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	codeRec, ok := concrete.(*record.Code)
-	if !ok {
-		return bus.Reply{Err: errors.Wrap(ErrInvalidRef, "failed to retrieve code record")}
+	logger := inslogger.FromContext(ctx)
+	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.codeID)
+	switch err {
+	case nil:
+		logger.Info("sending code")
+		return sendCode(rec)
+	case object.ErrNotFound:
+		if p.pass {
+			logger.Info("code not found (sending pass)")
+			return sendPassCode()
+		}
+		return errors.Wrap(err, "failed to fetch record")
+	default:
+		return errors.Wrap(err, "failed to fetch record")
 	}
-
-	code, err := p.Dep.BlobAccessor.ForID(ctx, codeRec.Code)
-	if err != nil {
-		return bus.Reply{Err: errors.Wrap(err, "failed to fetch code blob")}
-	}
-
-	rep := &reply.Code{
-		Code:        code.Value,
-		MachineType: codeRec.MachineType,
-	}
-	return bus.Reply{Reply: rep}
 }

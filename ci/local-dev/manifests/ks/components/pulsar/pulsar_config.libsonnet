@@ -30,7 +30,7 @@ local utils = params.utils;
 			]
 		}
 	},
-	"keyspath": "/opt/insolar/config/bootstrap_keys.json",
+	"keyspath": "/opt/insolar/config/pulsar_keys.json",
 	"log": {
 		"level": "Debug",
 		"adapter": "zerolog"

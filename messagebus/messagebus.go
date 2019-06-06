@@ -114,7 +114,6 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 		signmessages:             config.Host.SignMessages,
 		NextPulseMessagePoolChan: make(chan interface{}),
 	}
-	mb.Acquire(context.Background())
 	return mb, nil
 }
 

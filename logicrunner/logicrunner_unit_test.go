@@ -43,6 +43,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -568,29 +569,31 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	es := NewExecutionState(testutils.RandomRef())
 
+	reqIdA := utils.RandTraceID()
+	reqIdB := utils.RandTraceID()
+
 	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil)
 	suite.Require().False(loop)
-
-	ctxA, _ := inslogger.WithTraceField(suite.ctx, "a")
-	ctxB, _ := inslogger.WithTraceField(suite.ctx, "b")
 
 	objectRef := testutils.RandomRef()
 	msg := &message.CallMethod{
 		Request: record.Request{
-			ReturnMode: record.ReturnResult,
-			Object:     &objectRef,
+			ReturnMode:   record.ReturnResult,
+			Object:       &objectRef,
+			APIRequestID: reqIdA,
 		},
 	}
 	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
-		Request: &record.Request{ReturnMode: record.ReturnResult},
-		Context: ctxA,
+		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdA},
 	})
-
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().True(loop)
 
-	loop = suite.lr.CheckExecutionLoop(ctxB, es, parcel)
+	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
+		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdB},
+	})
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 
 	// intermediate env cleanup
@@ -605,27 +608,24 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
 		Request: &record.Request{ReturnMode: record.ReturnResult},
-		Context: ctxA,
 	})
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 	es.CurrentList.Cleanup()
 
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
 		Request: &record.Request{ReturnMode: record.ReturnNoWait},
-		Context: ctxA,
 	})
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 	es.CurrentList.Cleanup()
 
 	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
 		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
-		Context:    ctxA,
 		SentResult: true,
 	})
-	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 }
 
@@ -728,19 +728,17 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	suite.lr.Executors[insolar.MachineTypeBuiltin] = mle
 	mle.CallMethodMock.Return(data, nil, nil)
 
-	msg := &message.CallMethod{
-		Request: record.Request{
-			Object: &randRef,
-			Method: "some",
-		},
+	request := &record.Request{
+		Object: &randRef,
+		Method: "some",
 	}
 
 	current := &CurrentExecution{
 		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &randRef,
-		Message:      msg,
+		Request:      request,
 	}
-	es.CurrentList.Set(msg.GetReference(), current)
+	es.CurrentList.Set(randRef, current)
 
 	// In this case Update isn't send to ledger (objects data/newData are the same)
 	suite.am.RegisterResultMock.Return(nil, nil)
@@ -1001,9 +999,10 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		go func(i int) {
 			msg := &message.CallMethod{
 				Request: record.Request{
-					Prototype: &protoRef,
-					Object:    &objectRef,
-					Method:    "some",
+					Prototype:    &protoRef,
+					Object:       &objectRef,
+					Method:       "some",
+					APIRequestID: utils.RandTraceID(),
 				},
 			}
 
@@ -1452,7 +1451,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	s.am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
+	s.am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 
 	es := NewExecutionState(s.objectRef)
 	es.pending = message.InPending
@@ -1620,7 +1619,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() 
 	es.LedgerHasMoreRequests = true
 
 	am := artifacts.NewClientMock(s.mc)
-	am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
+	am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 	s.lr.ArtifactManager = am
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
 	s.Equal(false, es.LedgerHasMoreRequests)
@@ -1634,7 +1633,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 		PulseNumber: s.oldRequestPulseNumber,
 		Msg:         &message.CallMethod{},
 	}
-	s.am.GetPendingRequestMock.Return(parcel, nil)
+	s.am.GetPendingRequestMock.Return(nil, parcel, nil)
 
 	// we doesn't authorized (pulse change in time we process function)
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
@@ -1649,11 +1648,13 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = true
 
+	testRequestRef := record.Request{Object: &s.ref}
+
 	parcel := &message.Parcel{
 		PulseNumber: s.oldRequestPulseNumber,
-		Msg:         &message.CallMethod{Request: record.Request{Object: &s.ref}},
+		Msg:         &message.CallMethod{Request: testRequestRef},
 	}
-	s.am.GetPendingRequestMock.Return(parcel, nil)
+	s.am.GetPendingRequestMock.Return(testRequestRef.Object, parcel, nil)
 
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(true, nil)

@@ -21,42 +21,31 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
-
-	"github.com/insolar/insolar/bootstrap/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/server"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
-	configPath             string
-	isGenesis              bool
-	genesisConfigPath      string
-	heavyGenesisConfigPath string
-	genesisKeyOut          string
-	traceEnabled           bool
+	configPath        string
+	genesisConfigPath string
+	traceEnabled      bool
 }
 
 func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
-	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "genesis", "g", "", "path to genesis config file")
-	rootCmd.Flags().StringVarP(&result.heavyGenesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
-	rootCmd.Flags().StringVarP(&result.genesisKeyOut, "keyout", "", ".", "genesis certificates path")
+	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
 	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
-	}
-
-	if result.genesisConfigPath != "" {
-		result.isGenesis = true
 	}
 
 	return result
@@ -66,16 +55,6 @@ func main() {
 	params := parseInputParams()
 	jww.SetStdoutThreshold(jww.LevelDebug)
 
-	if params.isGenesis {
-		// move it to insolar command, when built-in would be ready
-		genesis.NewInitializer(
-			params.configPath,
-			params.genesisConfigPath,
-			params.genesisKeyOut,
-		).Run()
-		return
-	}
-
 	role, err := readRole(params.configPath)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
@@ -83,7 +62,7 @@ func main() {
 
 	switch role {
 	case insolar.StaticRoleHeavyMaterial:
-		s := server.NewHeavyServer(params.configPath, params.heavyGenesisConfigPath, params.traceEnabled)
+		s := server.NewHeavyServer(params.configPath, params.genesisConfigPath, params.traceEnabled)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
 		s := server.NewLightServer(params.configPath, params.traceEnabled)

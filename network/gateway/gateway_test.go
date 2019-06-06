@@ -80,6 +80,7 @@ func TestSWitch(t *testing.T) {
 	nodekeeper := testnet.NewNodeKeeperMock(t)
 	gatewayer := testnet.NewGatewayerMock(t)
 	GIL := testutils.NewGlobalInsolarLockMock(t)
+	GIL.AcquireMock.Return()
 	MB := testutils.NewMessageBusMock(t)
 
 	MB.MustRegisterFunc = func(p insolar.MessageType, p1 insolar.MessageHandler) {}
@@ -131,6 +132,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	nodekeeper := testnet.NewNodeKeeperMock(t)
 	gatewayer := testnet.NewGatewayerMock(t)
 	GIL := testutils.NewGlobalInsolarLockMock(t)
+	GIL.AcquireMock.Return()
 	MB := testutils.NewMessageBusMock(t)
 
 	MB.MustRegisterFunc = func(p insolar.MessageType, p1 insolar.MessageHandler) {}

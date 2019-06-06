@@ -21,62 +21,59 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
-type GetObject struct {
-	dep *proc.Dependencies
-
+type SetCode struct {
+	dep     *proc.Dependencies
 	message *message.Message
 	passed  bool
 }
 
-func NewGetObject(dep *proc.Dependencies, msg *message.Message, passed bool) *GetObject {
-	return &GetObject{
+func NewSetCode(dep *proc.Dependencies, msg *message.Message, passed bool) *SetCode {
+	return &SetCode{
 		dep:     dep,
 		message: msg,
 		passed:  passed,
 	}
 }
 
-func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
+func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 	pl, err := payload.UnmarshalFromMeta(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload")
 	}
-	msg, ok := pl.(*payload.GetObject)
+	msg, ok := pl.(*payload.SetCode)
 	if !ok {
 		return fmt.Errorf("unexpected payload type: %T", pl)
 	}
 
-	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
+	calc := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
+	s.dep.CalculateID(calc)
+	if err := f.Procedure(ctx, calc, true); err != nil {
+		return err
+	}
+	recID := calc.Result.ID
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(msg.ObjectID, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewCheckJet(recID, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)
-	if err := f.Procedure(ctx, jet, false); err != nil {
-		return err
-	}
-	objJetID := jet.Result.Jet
-
-	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
-	if err := f.Procedure(ctx, hot, false); err != nil {
+	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
 
-	idx := proc.NewGetIndexWM(msg.ObjectID, objJetID, s.message)
-	s.dep.GetIndexWM(idx)
-	if err := f.Procedure(ctx, idx, false); err != nil {
-		return err
+	rec := record.Code{}
+	err = rec.Unmarshal(msg.Record)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal record")
 	}
 
-	send := proc.NewSendObject(s.message, msg.ObjectID, idx.Result.Index)
-	s.dep.SendObject(send)
-	return f.Procedure(ctx, send, false)
+	setCode := proc.NewSetCode(s.message, rec, msg.Code, recID, jet.Result.Jet)
+	s.dep.SetCode(setCode)
+	return f.Procedure(ctx, setCode, false)
 }

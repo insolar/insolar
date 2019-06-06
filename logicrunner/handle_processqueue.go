@@ -80,7 +80,6 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 			RequesterNode: &sender,
 			Context:       qe.ctx,
 			Request:       &msg.Request,
-			Message:       msg,
 			LogicContext: &insolar.LogicCallContext{
 				Mode:            "execution",
 				Caller:          msg.GetCaller(),
