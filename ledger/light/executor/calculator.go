@@ -23,27 +23,27 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.Calculator -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetCalculator -o ./ -s _mock.go
 
-// Calculator provides methods for calculating jets
-type Calculator interface {
+// JetCalculator provides methods for calculating jets.
+type JetCalculator interface {
 	// MineForPulse returns current node's jets for a provided pulse
 	MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID
 }
 
-// CalculatorDefault is a struct, that implements jet.Calculator
-type CalculatorDefault struct {
+// JetCalculatorDefault is a struct, that implements jet.JetCalculator.
+type JetCalculatorDefault struct {
 	coordinator jet.Coordinator
 	jetAccessor jet.Accessor
 }
 
 // NewCalculator returns a new instance of a jet calculator.
-func NewCalculator(jetCoordinator jet.Coordinator, jetAccessor jet.Accessor) *CalculatorDefault {
-	return &CalculatorDefault{coordinator: jetCoordinator, jetAccessor: jetAccessor}
+func NewCalculator(jetCoordinator jet.Coordinator, jetAccessor jet.Accessor) *JetCalculatorDefault {
+	return &JetCalculatorDefault{coordinator: jetCoordinator, jetAccessor: jetAccessor}
 }
 
-// MineForPulse returns current node's jets for a provided pulse
-func (c *CalculatorDefault) MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
+// MineForPulse returns current node's jets for a provided pulse.
+func (c *JetCalculatorDefault) MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
 	var res []insolar.JetID
 
 	jetIDs := c.jetAccessor.All(ctx, pn)

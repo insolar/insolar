@@ -41,7 +41,7 @@ type LightReplicatorDefault struct {
 
 	syncWaitingPulses chan insolar.PulseNumber
 
-	jetCalculator   executor.Calculator
+	jetCalculator   executor.JetCalculator
 	dataGatherer    DataGatherer
 	cleaner         Cleaner
 	msgBus          insolar.MessageBus
@@ -50,7 +50,7 @@ type LightReplicatorDefault struct {
 
 // NewReplicatorDefault creates new instance of LightReplicator
 func NewReplicatorDefault(
-	jetCalculator executor.Calculator,
+	jetCalculator executor.JetCalculator,
 	dataGatherer DataGatherer,
 	cleaner Cleaner,
 	msgBus insolar.MessageBus,
