@@ -122,28 +122,28 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 
 	current.Nonce++
 
-	msg := &message.CallMethod{
-		Request: record.Request{
-			Caller:          req.Callee,
-			CallerPrototype: req.CalleePrototype,
-			Nonce:           current.Nonce,
+	reqRecord := record.Request{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           current.Nonce,
 
-			Immutable: req.Immutable,
+		Immutable: req.Immutable,
 
-			Object:    &req.Object,
-			Prototype: &req.Prototype,
-			Method:    req.Method,
-			Arguments: req.Arguments,
+		Object:    &req.Object,
+		Prototype: &req.Prototype,
+		Method:    req.Method,
+		Arguments: req.Arguments,
 
-			APIRequestID: current.Request.APIRequestID,
-		},
+		APIRequestID: current.Request.APIRequestID,
 	}
 
 	if !req.Wait {
-		msg.ReturnMode = record.ReturnNoWait
+		reqRecord.ReturnMode = record.ReturnNoWait
 	}
 
+	msg := &message.CallMethod{Request: reqRecord}
 	res, err := m.lr.ContractRequester.CallMethod(ctx, msg)
+	current.AddOutgoingRequest(ctx, reqRecord, rep.Result, nil, err)
 	if err != nil {
 		return err
 	}
@@ -171,23 +171,24 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 
 	current.Nonce++
 
-	msg := &message.CallMethod{
-		Request: record.Request{
-			Caller:          req.Callee,
-			CallerPrototype: req.CalleePrototype,
-			Nonce:           current.Nonce,
+	reqRecord := record.Request{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           current.Nonce,
 
-			CallType:  record.CTSaveAsChild,
-			Base:      &req.Parent,
-			Prototype: &req.Prototype,
-			Method:    req.ConstructorName,
-			Arguments: req.ArgsSerialized,
+		CallType:  record.CTSaveAsChild,
+		Base:      &req.Parent,
+		Prototype: &req.Prototype,
+		Method:    req.ConstructorName,
+		Arguments: req.ArgsSerialized,
 
-			APIRequestID: current.Request.APIRequestID,
-		},
+		APIRequestID: current.Request.APIRequestID,
 	}
 
+	msg := &message.CallMethod{Request: reqRecord}
+
 	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
+	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)
 
 	rep.Reference = ref
 
@@ -209,24 +210,23 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 	defer span.End()
 
 	current.Nonce++
+	reqRecord := record.Request{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           current.Nonce,
 
-	msg := &message.CallMethod{
-		Request: record.Request{
-			Caller:          req.Callee,
-			CallerPrototype: req.CalleePrototype,
-			Nonce:           current.Nonce,
+		CallType:  record.CTSaveAsDelegate,
+		Base:      &req.Into,
+		Prototype: &req.Prototype,
+		Method:    req.ConstructorName,
+		Arguments: req.ArgsSerialized,
 
-			CallType:  record.CTSaveAsDelegate,
-			Base:      &req.Into,
-			Prototype: &req.Prototype,
-			Method:    req.ConstructorName,
-			Arguments: req.ArgsSerialized,
-
-			APIRequestID: current.Request.APIRequestID,
-		},
+		APIRequestID: current.Request.APIRequestID,
 	}
+	msg := &message.CallMethod{Request: reqRecord}
 
 	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
+	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)
 
 	rep.Reference = ref
 	return err
