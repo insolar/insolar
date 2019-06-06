@@ -954,3 +954,96 @@ func (c *First) GetName() (string, error) {
 	require.NotEmpty(t, err)
 	require.Contains(t, "[ RouteCall ] on calling main API: CallMethod returns error: proxy call error: try to call method of prototype as method of another prototype", err.S)
 }
+
+func TestImmutableAnnotation(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import two "github.com/insolar/insolar/application/proxy/immutable_annotation_two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) ExternalImmutableCall() (int, error) {
+	holder := two.New()
+	objTwo, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+	return objTwo.ReturnNumberAsImmutable()
+}
+
+func (r *One) ExternalImmutableCallMakesExternalCall() (error) {
+	holder := two.New()
+	objTwo, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+	return objTwo.Immutable()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import three "github.com/insolar/insolar/application/proxy/immutable_annotation_three"
+
+type Two struct {
+	foundation.BaseContract
+}
+
+func New() (*Two, error) {
+	return &Two{}, nil
+}
+
+func (r *Two) ReturnNumber() (int, error) {
+	return 42, nil
+}
+
+//ins:immutable
+func (r *Two) Immutable() (error) {
+	holder := three.New()
+	objThree, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+	return objThree.DoNothing()
+}
+
+`
+
+	var contractThreeCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type Three struct {
+	foundation.BaseContract
+}
+
+func New() (*Three, error) {
+	return &Three{}, nil
+}
+
+func (r *Three) DoNothing() (error) {
+	return nil
+}
+
+`
+
+	uploadContractOnce(t, "immutable_annotation_three", contractThreeCode)
+	uploadContractOnce(t, "immutable_annotation_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "immutable_annotation_one", contractOneCode))
+
+	resp, err := callMethod(t, obj, "ExternalImmutableCall")
+	require.Empty(t, err)
+	require.Equal(t, float64(42), resp)
+
+	// TODO return 400, expects 200
+	_, err = callMethod(t, obj, "ExternalImmutableCallMakesExternalCall")
+	require.NotEmpty(t, err)
+	require.Contains(t, err.S, "[ RouteCall ] on calling main API: Try to call route from immutable method")
+}
