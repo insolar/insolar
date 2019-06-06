@@ -898,3 +898,59 @@ func TestNoLoopsWhileNotificationCallError(t *testing.T) {
 	require.Empty(t, err)
 	require.Equal(t, float64(100), resp)
 }
+
+func TestPrototypeMismatchError(t *testing.T) {
+	testContract := `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	first "github.com/insolar/insolar/application/proxy/prototype_mismatch_first"
+	"github.com/insolar/insolar/insolar"
+)
+
+type Contract struct {
+	foundation.BaseContract
+}
+
+func (c *Contract) Test(firstRef *insolar.Reference) (string, error) {
+	return first.GetObject(*firstRef).GetName()
+}
+`
+
+	// right contract
+	firstContract := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type First struct {
+	foundation.BaseContract
+}
+
+func (c *First) GetName() (string, error) {
+	return "first", nil
+}
+`
+
+	// malicious contract with same method signature and another behaviour
+	secondContract := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type First struct {
+	foundation.BaseContract
+}
+
+func (c *First) GetName() (string, error) {
+	return "YOU ARE ROBBED!", nil
+}
+`
+
+	uploadContractOnce(t, "prototype_mismatch_first", firstContract)
+	secondObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_second", secondContract))
+	testObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_test", testContract))
+
+	_, err := callMethod(t, testObj, "Test", *secondObj)
+	require.NotEmpty(t, err)
+	require.Contains(t, "[ RouteCall ] on calling main API: CallMethod returns error: proxy call error: try to call method of prototype as method of another prototype", err.S)
+}
