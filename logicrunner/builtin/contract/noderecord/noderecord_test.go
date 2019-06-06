@@ -19,8 +19,9 @@ package noderecord
 import (
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
 )
 
 const TestPubKey = "test"

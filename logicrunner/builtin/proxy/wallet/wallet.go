@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package allowance
+package wallet
 
 import (
 	"github.com/insolar/insolar/insolar"
@@ -24,10 +24,10 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112KLf85SMy2G8NcHbgYuKxNyDe5Y4tAfJph1xyHT.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A5gmRD1ZbHjQh7DgH9SrCK4a1qfwEUP5xAir6i8L.11111111111111111111111111111111")
 
-// Allowance holds proxy type
-type Allowance struct {
+// Wallet holds proxy type
+type Wallet struct {
 	Reference insolar.Reference
 	Prototype insolar.Reference
 	Code      insolar.Reference
@@ -40,26 +40,26 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Allowance, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Wallet, error) {
 	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Allowance{Reference: ref}, nil
+	return &Wallet{Reference: ref}, nil
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*Allowance, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*Wallet, error) {
 	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Allowance{Reference: ref}, nil
+	return &Wallet{Reference: ref}, nil
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *Allowance) {
-	return &Allowance{Reference: ref}
+func GetObject(ref insolar.Reference) (r *Wallet) {
+	return &Wallet{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
@@ -68,7 +68,7 @@ func GetPrototype() insolar.Reference {
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.Reference) (*Allowance, error) {
+func GetImplementationFrom(object insolar.Reference) (*Wallet, error) {
 	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -77,11 +77,9 @@ func GetImplementationFrom(object insolar.Reference) (*Allowance, error) {
 }
 
 // New is constructor
-func New(to *insolar.Reference, amount uint, expire int64) *ContractConstructorHolder {
-	var args [3]interface{}
-	args[0] = to
-	args[1] = amount
-	args[2] = expire
+func New(balance uint) *ContractConstructorHolder {
+	var args [1]interface{}
+	args[0] = balance
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -93,12 +91,12 @@ func New(to *insolar.Reference, amount uint, expire int64) *ContractConstructorH
 }
 
 // GetReference returns reference of the object
-func (r *Allowance) GetReference() insolar.Reference {
+func (r *Wallet) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *Allowance) GetPrototype() (insolar.Reference, error) {
+func (r *Wallet) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -128,7 +126,7 @@ func (r *Allowance) GetPrototype() (insolar.Reference, error) {
 }
 
 // GetCode returns reference to the code
-func (r *Allowance) GetCode() (insolar.Reference, error) {
+func (r *Wallet) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -156,42 +154,44 @@ func (r *Allowance) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// TakeAmount is proxy generated method
-func (r *Allowance) TakeAmount() (uint, error) {
-	var args [0]interface{}
+// Transfer is proxy generated method
+func (r *Wallet) Transfer(amount uint, to *insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amount
+	args[1] = to
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
-	var ret0 uint
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
 	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "TakeAmount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	if ret1 != nil {
-		return ret0, ret1
+	if ret0 != nil {
+		return ret0
 	}
-	return ret0, nil
+	return nil
 }
 
-// TakeAmountNoWait is proxy generated method
-func (r *Allowance) TakeAmountNoWait() error {
-	var args [0]interface{}
+// TransferNoWait is proxy generated method
+func (r *Wallet) TransferNoWait(amount uint, to *insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amount
+	args[1] = to
 
 	var argsSerialized []byte
 
@@ -200,7 +200,7 @@ func (r *Allowance) TakeAmountNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "TakeAmount", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -208,75 +208,75 @@ func (r *Allowance) TakeAmountNoWait() error {
 	return nil
 }
 
-// TakeAmountAsImmutable is proxy generated method
-func (r *Allowance) TakeAmountAsImmutable() (uint, error) {
-	var args [0]interface{}
+// TransferAsImmutable is proxy generated method
+func (r *Wallet) TransferAsImmutable(amount uint, to *insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amount
+	args[1] = to
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
-	var ret0 uint
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
 	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "TakeAmount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	if ret1 != nil {
-		return ret0, ret1
+	if ret0 != nil {
+		return ret0
 	}
-	return ret0, nil
+	return nil
 }
 
-// GetBalanceForOwner is proxy generated method
-func (r *Allowance) GetBalanceForOwner() (uint, error) {
-	var args [0]interface{}
+// Accept is proxy generated method
+func (r *Wallet) Accept(aRef *insolar.Reference) error {
+	var args [1]interface{}
+	args[0] = aRef
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
-	var ret0 uint
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
 	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetBalanceForOwner", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Accept", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	if ret1 != nil {
-		return ret0, ret1
+	if ret0 != nil {
+		return ret0
 	}
-	return ret0, nil
+	return nil
 }
 
-// GetBalanceForOwnerNoWait is proxy generated method
-func (r *Allowance) GetBalanceForOwnerNoWait() error {
-	var args [0]interface{}
+// AcceptNoWait is proxy generated method
+func (r *Wallet) AcceptNoWait(aRef *insolar.Reference) error {
+	var args [1]interface{}
+	args[0] = aRef
 
 	var argsSerialized []byte
 
@@ -285,7 +285,7 @@ func (r *Allowance) GetBalanceForOwnerNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetBalanceForOwner", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Accept", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -293,8 +293,40 @@ func (r *Allowance) GetBalanceForOwnerNoWait() error {
 	return nil
 }
 
-// GetBalanceForOwnerAsImmutable is proxy generated method
-func (r *Allowance) GetBalanceForOwnerAsImmutable() (uint, error) {
+// AcceptAsImmutable is proxy generated method
+func (r *Wallet) AcceptAsImmutable(aRef *insolar.Reference) error {
+	var args [1]interface{}
+	args[0] = aRef
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Accept", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// GetBalance is proxy generated method
+func (r *Wallet) GetBalance() (uint, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -310,7 +342,7 @@ func (r *Allowance) GetBalanceForOwnerAsImmutable() (uint, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetBalanceForOwner", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -326,41 +358,8 @@ func (r *Allowance) GetBalanceForOwnerAsImmutable() (uint, error) {
 	return ret0, nil
 }
 
-// GetExpiredBalance is proxy generated method
-func (r *Allowance) GetExpiredBalance() (uint, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := [2]interface{}{}
-	var ret0 uint
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetExpiredBalance", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, err
-	}
-
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetExpiredBalanceNoWait is proxy generated method
-func (r *Allowance) GetExpiredBalanceNoWait() error {
+// GetBalanceNoWait is proxy generated method
+func (r *Wallet) GetBalanceNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -370,7 +369,7 @@ func (r *Allowance) GetExpiredBalanceNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetExpiredBalance", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -378,8 +377,8 @@ func (r *Allowance) GetExpiredBalanceNoWait() error {
 	return nil
 }
 
-// GetExpiredBalanceAsImmutable is proxy generated method
-func (r *Allowance) GetExpiredBalanceAsImmutable() (uint, error) {
+// GetBalanceAsImmutable is proxy generated method
+func (r *Wallet) GetBalanceAsImmutable() (uint, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -395,7 +394,7 @@ func (r *Allowance) GetExpiredBalanceAsImmutable() (uint, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetExpiredBalance", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package member
+package noderecord
 
 import (
 	"github.com/insolar/insolar/insolar"
@@ -22,12 +22,17 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
+type RecordInfo struct {
+	PublicKey string
+	Role      insolar.StaticRole
+}
+
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111gRBQSJmwNCPUYU6YSXwQD2KKvMquuibjyCDwTS.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A5fZeApbGhcsLrbfGy82kKLgapF93GhNPMLSYaPY.11111111111111111111111111111111")
 
-// Member holds proxy type
-type Member struct {
+// NodeRecord holds proxy type
+type NodeRecord struct {
 	Reference insolar.Reference
 	Prototype insolar.Reference
 	Code      insolar.Reference
@@ -40,26 +45,26 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Member, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*NodeRecord, error) {
 	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Member{Reference: ref}, nil
+	return &NodeRecord{Reference: ref}, nil
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*Member, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*NodeRecord, error) {
 	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Member{Reference: ref}, nil
+	return &NodeRecord{Reference: ref}, nil
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *Member) {
-	return &Member{Reference: ref}
+func GetObject(ref insolar.Reference) (r *NodeRecord) {
+	return &NodeRecord{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
@@ -68,7 +73,7 @@ func GetPrototype() insolar.Reference {
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.Reference) (*Member, error) {
+func GetImplementationFrom(object insolar.Reference) (*NodeRecord, error) {
 	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -76,11 +81,11 @@ func GetImplementationFrom(object insolar.Reference) (*Member, error) {
 	return GetObject(ref), nil
 }
 
-// New is constructor
-func New(name string, key string) *ContractConstructorHolder {
+// NewNodeRecord is constructor
+func NewNodeRecord(publicKey string, roleStr string) *ContractConstructorHolder {
 	var args [2]interface{}
-	args[0] = name
-	args[1] = key
+	args[0] = publicKey
+	args[1] = roleStr
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -88,16 +93,16 @@ func New(name string, key string) *ContractConstructorHolder {
 		panic(err)
 	}
 
-	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
+	return &ContractConstructorHolder{constructorName: "NewNodeRecord", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object
-func (r *Member) GetReference() insolar.Reference {
+func (r *NodeRecord) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *Member) GetPrototype() (insolar.Reference, error) {
+func (r *NodeRecord) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -127,7 +132,7 @@ func (r *Member) GetPrototype() (insolar.Reference, error) {
 }
 
 // GetCode returns reference to the code
-func (r *Member) GetCode() (insolar.Reference, error) {
+func (r *NodeRecord) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -155,14 +160,14 @@ func (r *Member) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// GetName is proxy generated method
-func (r *Member) GetName() (string, error) {
+// GetNodeInfo is proxy generated method
+func (r *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 string
+	var ret0 RecordInfo
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -172,7 +177,7 @@ func (r *Member) GetName() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetName", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetNodeInfo", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -188,8 +193,8 @@ func (r *Member) GetName() (string, error) {
 	return ret0, nil
 }
 
-// GetNameNoWait is proxy generated method
-func (r *Member) GetNameNoWait() error {
+// GetNodeInfoNoWait is proxy generated method
+func (r *NodeRecord) GetNodeInfoNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -199,7 +204,7 @@ func (r *Member) GetNameNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetName", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetNodeInfo", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -207,14 +212,14 @@ func (r *Member) GetNameNoWait() error {
 	return nil
 }
 
-// GetNameAsImmutable is proxy generated method
-func (r *Member) GetNameAsImmutable() (string, error) {
+// GetNodeInfoAsImmutable is proxy generated method
+func (r *NodeRecord) GetNodeInfoAsImmutable() (RecordInfo, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 string
+	var ret0 RecordInfo
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -224,7 +229,7 @@ func (r *Member) GetNameAsImmutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetName", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetNodeInfo", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -241,7 +246,7 @@ func (r *Member) GetNameAsImmutable() (string, error) {
 }
 
 // GetPublicKey is proxy generated method
-func (r *Member) GetPublicKey() (string, error) {
+func (r *NodeRecord) GetPublicKey() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -274,7 +279,7 @@ func (r *Member) GetPublicKey() (string, error) {
 }
 
 // GetPublicKeyNoWait is proxy generated method
-func (r *Member) GetPublicKeyNoWait() error {
+func (r *NodeRecord) GetPublicKeyNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -293,7 +298,7 @@ func (r *Member) GetPublicKeyNoWait() error {
 }
 
 // GetPublicKeyAsImmutable is proxy generated method
-func (r *Member) GetPublicKeyAsImmutable() (string, error) {
+func (r *NodeRecord) GetPublicKeyAsImmutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -325,19 +330,14 @@ func (r *Member) GetPublicKeyAsImmutable() (string, error) {
 	return ret0, nil
 }
 
-// Call is proxy generated method
-func (r *Member) Call(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
-	var args [5]interface{}
-	args[0] = rootDomain
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+// GetRole is proxy generated method
+func (r *NodeRecord) GetRole() (insolar.StaticRole, error) {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 insolar.StaticRole
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -347,7 +347,7 @@ func (r *Member) Call(rootDomain insolar.Reference, method string, params []byte
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Call", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetRole", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -363,14 +363,9 @@ func (r *Member) Call(rootDomain insolar.Reference, method string, params []byte
 	return ret0, nil
 }
 
-// CallNoWait is proxy generated method
-func (r *Member) CallNoWait(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) error {
-	var args [5]interface{}
-	args[0] = rootDomain
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+// GetRoleNoWait is proxy generated method
+func (r *NodeRecord) GetRoleNoWait() error {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 
@@ -379,7 +374,7 @@ func (r *Member) CallNoWait(rootDomain insolar.Reference, method string, params 
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Call", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetRole", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -387,19 +382,14 @@ func (r *Member) CallNoWait(rootDomain insolar.Reference, method string, params 
 	return nil
 }
 
-// CallAsImmutable is proxy generated method
-func (r *Member) CallAsImmutable(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
-	var args [5]interface{}
-	args[0] = rootDomain
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+// GetRoleAsImmutable is proxy generated method
+func (r *NodeRecord) GetRoleAsImmutable() (insolar.StaticRole, error) {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 insolar.StaticRole
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -409,7 +399,7 @@ func (r *Member) CallAsImmutable(rootDomain insolar.Reference, method string, pa
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Call", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetRole", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -423,4 +413,85 @@ func (r *Member) CallAsImmutable(rootDomain insolar.Reference, method string, pa
 		return ret0, ret1
 	}
 	return ret0, nil
+}
+
+// Destroy is proxy generated method
+func (r *NodeRecord) Destroy() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Destroy", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// DestroyNoWait is proxy generated method
+func (r *NodeRecord) DestroyNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Destroy", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DestroyAsImmutable is proxy generated method
+func (r *NodeRecord) DestroyAsImmutable() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Destroy", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }

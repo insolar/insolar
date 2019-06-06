@@ -19,10 +19,10 @@ package wallet
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/application/contract/wallet/safemath"
-	"github.com/insolar/insolar/application/proxy/allowance"
-	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/allowance"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 

@@ -20,10 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/insolar/insolar/application/proxy/member"
-	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
