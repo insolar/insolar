@@ -86,5 +86,5 @@ type Options struct {
 	FakePulseDuration time.Duration
 
 	// CyclicBootstrapEnabled is a flag to enable/disable a cyclic bootstrap. Default - false
-	CyclicBootstrapEnabled bool
+	// CyclicBootstrapEnabled bool
 }

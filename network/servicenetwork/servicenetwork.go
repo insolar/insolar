@@ -193,10 +193,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewPulseController(),
 
 		baseGateway,
-		bootstrap.NewSessionManager(),
-		bootstrap.NewBootstrapper(options, nil /*n.connectToNewNetwork*/),
-		bootstrap.NewAuthorizationController(options),
-		bootstrap.NewNetworkBootstrapper(),
+		// bootstrap.NewSessionManager(),
+		bootstrap.NewBootstrapper(options /*n.connectToNewNetwork*/),
+		// bootstrap.NewAuthorizationController(options),
 	)
 	err = n.cm.Init(ctx)
 	if err != nil {
@@ -204,14 +203,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	n.SetGateway(baseGateway.NewGateway(insolar.NoNetworkState))
-
-	// if n.Gateway() == nil {
-	// 	n.SetGateway(baseGateway.NewGateway(insolar.NoNetworkState))
-	// 	// gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester, n.CryptographyService, n.MessageBus, n.CertificateManager)
-	// 	n.gateway.Run(ctx)
-	// 	inslogger.FromContext(ctx).Debug("Launch network gateway")
-	//
-	// }
 
 	return nil
 }
@@ -288,7 +279,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	if n.Gateway().ShoudIgnorePulse(ctx, newPulse) {
 		return
 	}
-	//todo call gaiwayer
+	//todo call gatewayer
 	/*
 		if !n.NodeKeeper.IsBootstrapped() {
 			n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)

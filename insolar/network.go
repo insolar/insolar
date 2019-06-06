@@ -64,6 +64,9 @@ type NetworkState int
 const (
 	// NoNetworkState state means that nodes doesn`t match majority_rule
 	NoNetworkState NetworkState = iota
+
+	JoinerBootstrap
+	DiscoveryBootstrap
 	// VoidNetworkState state means that nodes have not complete min_role_count rule for proper work
 	VoidNetworkState
 	// JetlessNetworkState state means that every Jet need proof completeness of stored data

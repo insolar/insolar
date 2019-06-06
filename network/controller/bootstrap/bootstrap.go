@@ -58,7 +58,6 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -70,7 +69,6 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -94,12 +92,11 @@ type DiscoveryNode struct {
 	Node insolar.DiscoveryNode
 }
 
-type Bootstrapper interface {
-	component.Initer
-
-	Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error)
-	ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error)
-}
+// type Bootstrapper interface {
+// 	component.Initer
+//
+// 	Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error)
+// }
 
 type DiscoveryBootstrapper interface {
 	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
@@ -130,7 +127,7 @@ type Bootstrap struct {
 
 	firstPulseTime time.Time
 
-	reconnectToNewNetwork func(ctx context.Context, address string)
+	// reconnectToNewNetwork func(ctx context.Context, address string)
 }
 
 func (bc *Bootstrap) GetFirstFakePulseTime() time.Time {
@@ -153,23 +150,7 @@ func (bc *Bootstrap) setRequest(ref insolar.Reference, req *packet.GenesisReques
 
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *Bootstrap) Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error) {
-	log.Info("Bootstrapping to discovery node")
-	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
-	defer span.End()
-	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
-	if utils.OriginIsDiscovery(bc.Certificate) {
-		discoveryNodes = RemoveOrigin(discoveryNodes, bc.NodeKeeper.GetOrigin().ID())
-	}
-	if len(discoveryNodes) == 0 {
-		return nil, nil, errors.New("There are 0 discovery nodes to connect to")
-	}
-	ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, 1)
-	result := bc.waitResultFromChannel(ctx, ch)
-	if result == nil {
-		return nil, nil, errors.New("Failed to bootstrap to any of discovery nodes")
-	}
-	discovery := FindDiscovery(bc.Certificate, result.Host.NodeID)
-	return result, &DiscoveryNode{result.Host, discovery}, nil
+
 }
 
 func (bc *Bootstrap) SetLastPulse(number insolar.PulseNumber) {
@@ -220,20 +201,6 @@ func (bc *Bootstrap) checkActiveNode(node insolar.NetworkNode) error {
 	return nil
 }
 
-// todo: should be removed
-func (bc *Bootstrap) ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error) {
-	host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create a host")
-	}
-	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
-	bc.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{bc.NodeKeeper.GetOrigin()})
-	return &network.BootstrapResult{
-		Host: host,
-		// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
-	}, nil
-}
-
 // BootstrapDiscovery bootstrapping as discovery node
 func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	logger := inslogger.FromContext(ctx)
@@ -243,7 +210,7 @@ func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.Bootstrap
 	discoveryNodes := RemoveOrigin(bc.Certificate.GetDiscoveryNodes(), *bc.Certificate.GetNodeRef())
 	discoveryCount := len(discoveryNodes)
 	if discoveryCount == 0 {
-		return bc.ZeroBootstrap(ctx)
+		panic("Zero bootstrap not allowed")
 	}
 
 	var bootstrapResults []*network.BootstrapResult
@@ -294,9 +261,9 @@ func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.Bootstrap
 	bc.NodeKeeper.SetInitialSnapshot(activeNodes)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 
-	if bc.options.CyclicBootstrapEnabled {
-		go bc.startCyclicBootstrap(ctx)
-	}
+	// if bc.options.CyclicBootstrapEnabled {
+	// 	go bc.startCyclicBootstrap(ctx)
+	// }
 
 	return parseBootstrapResults(bootstrapResults), nil
 }
@@ -529,47 +496,47 @@ func (bc *Bootstrap) startBootstrap(ctx context.Context, address string,
 	}, nil
 }
 
-func (bc *Bootstrap) startCyclicBootstrap(ctx context.Context) {
-	for atomic.LoadInt32(&bc.cyclicBootstrapStop) == 0 {
-		results := make([]*network.BootstrapResult, 0)
-		nodes := bc.getInactivenodes()
-		for _, node := range nodes {
-			res, err := bc.startBootstrap(ctx, node.GetHost(), nil)
-			if err != nil {
-				logger := inslogger.FromContext(ctx)
-				logger.Errorf("[ StartCyclicBootstrap ] ", err)
-				continue
-			}
-			results = append(results, res)
-		}
-		if len(results) != 0 {
-			index := bc.getLargerNetworkIndex(results)
-			if index >= 0 {
-				bc.reconnectToNewNetwork(ctx, nodes[index].GetHost())
-			}
-		}
-		time.Sleep(time.Second * bootstrapTimeout)
-	}
-}
+// func (bc *Bootstrap) startCyclicBootstrap(ctx context.Context) {
+// 	for atomic.LoadInt32(&bc.cyclicBootstrapStop) == 0 {
+// 		results := make([]*network.BootstrapResult, 0)
+// 		nodes := bc.getInactivenodes()
+// 		for _, node := range nodes {
+// 			res, err := bc.startBootstrap(ctx, node.GetHost(), nil)
+// 			if err != nil {
+// 				logger := inslogger.FromContext(ctx)
+// 				logger.Errorf("[ StartCyclicBootstrap ] ", err)
+// 				continue
+// 			}
+// 			results = append(results, res)
+// 		}
+// 		if len(results) != 0 {
+// 			index := bc.getLargerNetworkIndex(results)
+// 			if index >= 0 {
+// 				bc.reconnectToNewNetwork(ctx, nodes[index].GetHost())
+// 			}
+// 		}
+// 		time.Sleep(time.Second * bootstrapTimeout)
+// 	}
+// }
 
-func (bc *Bootstrap) getLargerNetworkIndex(results []*network.BootstrapResult) int {
-	networkSize := results[0].NetworkSize
-	index := 0
-	for i := 1; i < len(results); i++ {
-		if results[i].NetworkSize > networkSize {
-			networkSize = results[i].NetworkSize
-			index = i
-		}
-	}
-	if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
-		return index
-	}
-	return -1
-}
+// func (bc *Bootstrap) getLargerNetworkIndex(results []*network.BootstrapResult) int {
+// 	networkSize := results[0].NetworkSize
+// 	index := 0
+// 	for i := 1; i < len(results); i++ {
+// 		if results[i].NetworkSize > networkSize {
+// 			networkSize = results[i].NetworkSize
+// 			index = i
+// 		}
+// 	}
+// 	if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
+// 		return index
+// 	}
+// 	return -1
+// }
 
-func (bc *Bootstrap) StopCyclicBootstrap() {
-	atomic.StoreInt32(&bc.cyclicBootstrapStop, 1)
-}
+// func (bc *Bootstrap) StopCyclicBootstrap() {
+// 	atomic.StoreInt32(&bc.cyclicBootstrapStop, 1)
+// }
 
 func (bc *Bootstrap) nodeShouldReconnectAsJoiner(nodeID insolar.Reference) bool {
 	return bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState &&
@@ -683,15 +650,15 @@ func parseBootstrapResults(results []*network.BootstrapResult) *network.Bootstra
 	return results[minIDIndex]
 }
 
-func (bc *Bootstrap) getInactivenodes() []insolar.DiscoveryNode {
-	res := make([]insolar.DiscoveryNode, 0)
-	for _, node := range bc.Certificate.GetDiscoveryNodes() {
-		if bc.NodeKeeper.GetAccessor().GetActiveNode(*node.GetNodeRef()) != nil {
-			res = append(res, node)
-		}
-	}
-	return res
-}
+// func (bc *Bootstrap) getInactivenodes() []insolar.DiscoveryNode {
+// 	res := make([]insolar.DiscoveryNode, 0)
+// 	for _, node := range bc.Certificate.GetDiscoveryNodes() {
+// 		if bc.NodeKeeper.GetAccessor().GetActiveNode(*node.GetNodeRef()) != nil {
+// 			res = append(res, node)
+// 		}
+// 	}
+// 	return res
+// }
 
 func (bc *Bootstrap) checkPermission(permission *packet.Permission) error {
 	nodes := bc.Certificate.GetDiscoveryNodes()
@@ -744,11 +711,11 @@ func (bc *Bootstrap) signPermission(perm *packet.PermissionPayload) ([]byte, err
 	return sign.Bytes(), nil
 }
 
-func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, address string)) *Bootstrap {
+func NewBootstrapper(options *common.Options /*, reconnectToNewNetwork func(ctx context.Context, address string)*/) *Bootstrap {
 	return &Bootstrap{
 		options:                 options,
 		bootstrapLock:           make(chan struct{}),
 		genesisRequestsReceived: make(map[insolar.Reference]*packet.GenesisRequest),
-		reconnectToNewNetwork:   reconnectToNewNetwork,
+		// reconnectToNewNetwork:   reconnectToNewNetwork,
 	}
 }

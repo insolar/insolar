@@ -65,14 +65,15 @@ import (
 // Base is abstract class for gateways
 type Base struct {
 	Self                network.Gateway
-	Gatewayer           network.Gatewayer             `inject:""`
-	NodeKeeper          network.NodeKeeper            `inject:""`
-	ContractRequester   insolar.ContractRequester     `inject:""`
-	CryptographyService insolar.CryptographyService   `inject:""`
-	CertificateManager  insolar.CertificateManager    `inject:""`
-	GIL                 insolar.GlobalInsolarLock     `inject:""`
-	MessageBus          insolar.MessageBus            `inject:""`
-	Bootstrapper        bootstrap.NetworkBootstrapper `inject:""`
+	Gatewayer           network.Gatewayer               `inject:""`
+	NodeKeeper          network.NodeKeeper              `inject:""`
+	ContractRequester   insolar.ContractRequester       `inject:""`
+	CryptographyService insolar.CryptographyService     `inject:""`
+	CertificateManager  insolar.CertificateManager      `inject:""`
+	GIL                 insolar.GlobalInsolarLock       `inject:""`
+	MessageBus          insolar.MessageBus              `inject:""`
+	Bootstrapper        bootstrap.DiscoveryBootstrapper `inject:""`
+	HostNetwork         network.HostNetwork             `inject:""`
 }
 
 // NewGateway creates new gateway on top of existing

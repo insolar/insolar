@@ -53,20 +53,17 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
-	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/packets"
@@ -79,109 +76,20 @@ const (
 	registrationRetries = 20
 )
 
-type AuthorizationController interface {
-	component.Initer
-
-	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (*packet.AuthorizationData, error)
-	Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error
-}
+// type AuthorizationController interface {
+// 	component.Initer
+//
+// 	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (*packet.AuthorizationData, error)
+// 	Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error
+// }
 
 type authorizationController struct {
 	NodeKeeper     network.NodeKeeper  `inject:""`
 	Gatewayer      network.Gatewayer   `inject:""`
-	SessionManager SessionManager      `inject:""`
+	SessionManager SessionManager      // `inject:""`
 	Network        network.HostNetwork `inject:""`
 
 	options *common.Options
-}
-
-// Authorize node on the discovery node (step 2 of the bootstrap process)
-func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (*packet.AuthorizationData, error) {
-	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode.Host)
-	inslogger.FromContext(ctx).Infof("cert: %s", cert)
-
-	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Authorize")
-	span.AddAttributes(
-		trace.StringAttribute("node", discoveryNode.Node.GetNodeRef().String()),
-	)
-	defer span.End()
-	serializedCert, err := certificate.Serialize(cert)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error serializing certificate")
-	}
-
-	auth := &packet.AuthorizeRequest{Certificate: serializedCert}
-	future, err := ac.Network.SendRequestToHost(ctx, types.Authorize, auth, discoveryNode.Host)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Error sending authorize request")
-	}
-	response, err := future.WaitResponse(ac.options.PacketTimeout)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Error getting response for authorize request")
-	}
-	if response.GetResponse() == nil || response.GetResponse().GetAuthorize() == nil {
-		return nil, errors.Errorf("Authorize failed: got incorrect response: %s", response)
-	}
-	data := response.GetResponse().GetAuthorize()
-	if data.Code == packet.Denied {
-		return nil, errors.New("Authorize rejected: " + data.Error)
-	}
-	return data.Data, nil
-}
-
-// Register node on the discovery node (step 4 of the bootstrap process)
-func (ac *authorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
-	return ac.register(ctx, discoveryNode, sessionID, 0)
-}
-
-func (ac *authorizationController) register(ctx context.Context, discoveryNode *DiscoveryNode,
-	sessionID SessionID, attempt int) error {
-
-	if attempt == 0 {
-		inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode.Host)
-	} else {
-		inslogger.FromContext(ctx).Infof("Registering on host: %s; attempt: %d", discoveryNode.Host, attempt+1)
-	}
-
-	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Register")
-	span.AddAttributes(
-		trace.StringAttribute("node", discoveryNode.Node.GetNodeRef().String()),
-	)
-	defer span.End()
-	originClaim, err := ac.NodeKeeper.GetOriginJoinClaim()
-	if err != nil {
-		return errors.Wrap(err, "Failed to get origin claim")
-	}
-	request := &packet.RegisterRequest{
-		Version:   ac.NodeKeeper.GetOrigin().Version(),
-		SessionID: uint64(sessionID),
-		JoinClaim: originClaim,
-	}
-	future, err := ac.Network.SendRequestToHost(ctx, types.Register, request, discoveryNode.Host)
-	if err != nil {
-		return errors.Wrapf(err, "Error sending register request")
-	}
-	response, err := future.WaitResponse(ac.options.PacketTimeout)
-	if err != nil {
-		return errors.Wrapf(err, "Error getting response for register request")
-	}
-	if response.GetResponse() == nil || response.GetResponse().GetRegister() == nil {
-		return errors.Errorf("Register failed: got incorrect response: %s", response)
-	}
-	data := response.GetResponse().GetRegister()
-	if data.Code == packet.Denied {
-		return errors.New("Register rejected: " + data.Error)
-	}
-	if data.Code == packet.Retry {
-		if attempt >= registrationRetries {
-			return errors.Errorf("Exceeded maximum number of registration retries (%d)", registrationRetries)
-		}
-		log.Warnf("Failed to register on discovery node %s. Reason: node %s is already in network active list. "+
-			"Retrying registration in %v", discoveryNode.Host, ac.NodeKeeper.GetOrigin().ID(), data.RetryIn)
-		time.Sleep(time.Duration(data.RetryIn))
-		return ac.register(ctx, discoveryNode, sessionID, attempt+1)
-	}
-	return nil
 }
 
 func (ac *authorizationController) buildRegistrationResponse(sessionID SessionID, claim *packets.NodeJoinClaim) *packet.RegisterResponse {
@@ -284,6 +192,6 @@ func (ac *authorizationController) Init(ctx context.Context) error {
 	return nil
 }
 
-func NewAuthorizationController(options *common.Options) AuthorizationController {
-	return &authorizationController{options: options}
-}
+// func NewAuthorizationController(options *common.Options) AuthorizationController {
+// 	return &authorizationController{options: options}
+// }

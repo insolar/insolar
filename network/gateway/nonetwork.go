@@ -62,6 +62,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -89,8 +90,16 @@ type NoNetwork struct {
 }
 
 func (g *NoNetwork) Run(ctx context.Context) {
+
+	cert := g.CertificateManager.GetCertificate()
+	if len(cert.GetDiscoveryNodes()) == 0 {
+		g.zeroBootstrap(ctx)
+		// create complete network
+		return
+	}
+
 	// run bootstrap
-	g.isDiscovery = utils.OriginIsDiscovery(g.Base.CertificateManager.GetCertificate())
+	g.isDiscovery = utils.OriginIsDiscovery(cert)
 
 	log.Info("TODO: remove! Bootstrapping network...")
 	_, err := g.Bootstrapper.Bootstrap(ctx)
@@ -132,6 +141,11 @@ func (g *NoNetwork) connectToNewNetwork(ctx context.Context, address string) {
 	if err != nil {
 		logger.Errorf("Failed to authenticate a node: " + err.Error())
 	}
+}
+
+func (g *NoNetwork) zeroBootstrap(ctx context.Context) {
+	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
+	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{g.NodeKeeper.GetOrigin()})
 }
 
 func findNodeByAddress(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {

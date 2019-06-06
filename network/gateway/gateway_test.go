@@ -94,7 +94,6 @@ func TestSWitch(t *testing.T) {
 
 	ge.Run(ctx)
 
-	nodekeeper.IsBootstrappedFunc = func() (r bool) { return true }
 	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
 	gatewayer.SetGatewayFunc = func(p network.Gateway) { ge = p }
 	gilreleased := false
@@ -147,7 +146,6 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	ge.Run(ctx)
 
-	nodekeeper.IsBootstrappedFunc = func() (r bool) { return true }
 	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
 	gatewayer.SetGatewayFunc = func(p network.Gateway) { ge = p }
 	gilreleased := false
