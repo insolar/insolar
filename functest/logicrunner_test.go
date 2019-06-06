@@ -517,3 +517,71 @@ func New(n int) (*Child, error) {
 	require.Empty(t, err, "sum real children")
 	require.Equal(t, float64(45), resp)
 }
+
+
+// TODO return 400, expects 200
+//func TestErrorInterfaceError(t *testing.T) {
+//	var contractOneCode = `
+//package main
+//
+//import (
+//	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+//	two "github.com/insolar/insolar/application/proxy/error_interface_two"
+//)
+//
+//type One struct {
+//	foundation.BaseContract
+//}
+//
+//func (r *One) AnError() error {
+//	holder := two.New()
+//	friend, err := holder.AsChild(r.GetReference())
+//	if err != nil {
+//		return err
+//	}
+//
+//	return friend.AnError()
+//}
+//
+//func (r *One) NoError() error {
+//	holder := two.New()
+//	friend, err := holder.AsChild(r.GetReference())
+//	if err != nil {
+//		return err
+//	}
+//
+//	return friend.NoError()
+//}
+//`
+//
+//	var contractTwoCode = `
+//package main
+//
+//import (
+//	"errors"
+//
+//	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+//)
+//
+//type Two struct {
+//	foundation.BaseContract
+//}
+//func New() (*Two, error) {
+//	return &Two{}, nil
+//}
+//func (r *Two) AnError() error {
+//	return errors.New("an error")
+//}
+//func (r *Two) NoError() error {
+//	return nil
+//}
+//`
+//	uploadContractOnce(t, "error_interface_two", contractTwoCode)
+//	obj := callConstructor(t, uploadContractOnce(t, "error_interface_one", contractOneCode))
+//
+//	resp, err := callMethod(t, obj, "AnError")
+//	require.Equal(t, &foundation.Error{S: "an error"}, err)
+//
+//	resp, err = callMethod(t, obj, "NoError")
+//	require.Nil(t, resp)
+//}
