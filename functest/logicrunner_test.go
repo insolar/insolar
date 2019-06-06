@@ -802,3 +802,44 @@ func TestGetParentError(t *testing.T) {
 func TestGinsiderMustDieAfterInsolardError(t *testing.T) {
 	// can't kill LR in launch.sh from functest
 }
+
+func TestGetRemoteDataError(t *testing.T) {
+	var contractOneCode = `
+ package main
+ import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ import two "github.com/insolar/insolar/application/proxy/get_remote_data_two"
+ import "github.com/insolar/insolar/insolar"
+ type One struct {
+	foundation.BaseContract
+ }
+
+ func (r *One) GetChildPrototype() (string, error) {
+	holder := two.New()
+	child, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return insolar.Reference{}.String(), err
+	}
+
+	ref, err := child.GetPrototype()
+ 	return ref.String(), err
+ }
+`
+	var contractTwoCode = `
+ package main
+ import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ )
+ type Two struct {
+	foundation.BaseContract
+ }
+ func New() (*Two, error) {
+	return &Two{}, nil
+ }
+ `
+	codeTwoRef := uploadContractOnce(t, "get_remote_data_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "get_remote_data_one", contractOneCode))
+
+	res, err := callMethod(t, obj, "GetChildPrototype")
+	require.Empty(t, err)
+	require.Equal(t, codeTwoRef.String(), res.(string))
+}
