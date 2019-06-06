@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -68,6 +70,11 @@ func New() *Handler {
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
 		},
+		GetCode: func(p *proc.GetCode) {
+			p.Dep.Sender = h.Sender
+			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.BlobAccessor = h.BlobAccessor
+		},
 	}
 	h.dep = &dep
 	return h
@@ -108,99 +115,52 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		p := proc.NewPassState(msg)
 		h.dep.PassState(p)
 		return p.Proceed(ctx)
+	case *payload.GetCode:
+		p := proc.NewGetCode(msg)
+		h.dep.GetCode(p)
+		return p.Proceed(ctx)
+	case *payload.Pass:
+		return h.handlePass(ctx, msg)
 	default:
 		return fmt.Errorf("no handler for message type #%T", pl)
+	}
+}
+
+func (h *Handler) handlePass(ctx context.Context, msg *watermillMsg.Message) error {
+	pl, err := payload.UnmarshalFromMeta(msg.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal pass payload")
+	}
+	pass, ok := pl.(*payload.Pass)
+	if !ok {
+		return errors.New("wrong pass payload")
+	}
+
+	payloadType, err := payload.UnmarshalTypeFromMeta(pass.Origin)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload type")
+	}
+	origin := watermillMsg.NewMessage(watermill.NewUUID(), pass.Origin)
+	middleware.SetCorrelationID(string(pass.CorrelationID), origin)
+
+	switch payloadType { // nolint
+	case payload.TypeGetCode:
+		p := proc.NewGetCode(origin)
+		h.dep.GetCode(p)
+		return p.Proceed(ctx)
+	default:
+		return fmt.Errorf("no pass handler for message type %s", payloadType.String())
 	}
 }
 
 func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
 
-	h.Bus.MustRegister(insolar.TypeGetCode, h.handleGetCode)
 	h.Bus.MustRegister(insolar.TypeGetDelegate, h.handleGetDelegate)
 	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
 	h.Bus.MustRegister(insolar.TypeGetRequest, h.handleGetRequest)
 	return nil
-}
-
-func (h *Handler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetCode)
-
-	codeRec, err := h.getCode(ctx, msg.Code.Record())
-	if err != nil {
-		return nil, err
-	}
-
-	code, err := h.BlobAccessor.ForID(ctx, codeRec.Code)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch code blob")
-	}
-
-	rep := reply.Code{
-		Code:        code.Value,
-		MachineType: codeRec.MachineType,
-	}
-
-	return &rep, nil
-}
-
-func (h *Handler) handleGetObject(
-	ctx context.Context, parcel insolar.Parcel,
-) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetObject)
-
-	// Fetch object index. If not found redirect.
-	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch object index for %s", msg.Head.Record().DebugString())
-	}
-
-	// Determine object state id.
-	var stateID *insolar.ID
-	if msg.State != nil {
-		stateID = msg.State
-	} else {
-		stateID = idx.LatestState
-	}
-	if stateID == nil {
-		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
-	}
-
-	// Fetch state record.
-	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch state %s for %s", stateID.DebugString(), msg.Head.Record()))
-	}
-
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	state, ok := concrete.(record.State)
-	if !ok {
-		return nil, errors.New("invalid object record")
-	}
-	if state.ID() == record.StateDeactivation {
-		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-	}
-
-	rep := reply.Object{
-		Head:         msg.Head,
-		State:        *stateID,
-		Prototype:    state.GetImage(),
-		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: idx.ChildPointer,
-		Parent:       idx.Parent,
-	}
-
-	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
-		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch blob")
-		}
-		rep.Memory = b.Value
-	}
-
-	return &rep, nil
 }
 
 func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -337,22 +297,6 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 	buf := object.EncodeIndex(idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
-}
-
-func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (record.Code, error) {
-	rec, err := h.RecordAccessor.ForID(ctx, *id)
-	if err != nil {
-		return record.Code{}, errors.Wrap(err, "can't get record from storage")
-	}
-
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	codeRec, ok := concrete.(*record.Code)
-	if !ok {
-		return record.Code{}, errors.New("failed to retrieve code record")
-	}
-
-	return *codeRec, nil
 }
 
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {

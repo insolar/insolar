@@ -110,6 +110,8 @@ type client struct {
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
 	localStorage         *localStorage
+
+	codeCache map[insolar.ID]CodeDescriptor
 }
 
 // State returns hash state for artifact manager.
@@ -125,6 +127,7 @@ func NewClient(sender bus.Sender) *client { // nolint
 		senders:              messagebus.NewSenders(),
 		sender:               sender,
 		localStorage:         newLocalStorage(),
+		codeCache:            map[insolar.ID]CodeDescriptor{},
 	}
 }
 
@@ -198,32 +201,52 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		m.senders.CachedSender(m.PCS),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-
-	genericReact, err := sender(ctx, &message.GetCode{Code: code}, nil)
-
-	if err != nil {
-		return nil, err
+	if cd, ok := m.codeCache[*code.Record()]; ok {
+		return cd, nil
 	}
 
-	switch rep := genericReact.(type) {
-	case *reply.Code:
+	msg, err := payload.NewMessage(&payload.GetCode{
+		CodeID: *code.Record(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal message")
+	}
+
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, code)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply")
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.Code:
+		rec := record.Material{}
+		err := rec.Unmarshal(p.Record)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal record")
+		}
+		virtual := record.Unwrap(rec.Virtual)
+		codeRecord, ok := virtual.(*record.Code)
+		if !ok {
+			return nil, errors.Wrapf(err, "unexpected record %T", virtual)
+		}
 		desc = &codeDescriptor{
 			ref:         code,
-			machineType: rep.MachineType,
-			code:        rep.Code,
+			machineType: codeRecord.MachineType,
+			code:        p.Code,
 		}
+		m.codeCache[*code.Record()] = desc
 		return desc, nil
-	case *reply.Error:
-		return nil, rep.Error()
+	case *payload.Error:
+		return nil, errors.New(p.Text)
 	default:
-		return nil, fmt.Errorf("GetCode: unexpected reply: %#v", rep)
+		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
 	}
 }
 
@@ -586,31 +609,56 @@ func (m *client) DeployCode(
 		return nil, err
 	}
 
+	h := m.PCS.ReferenceHasher()
+	_, err = h.Write(code)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to calculate hash")
+	}
+	blobID := *insolar.NewID(currentPN, h.Sum(nil))
+
 	codeRec := record.Code{
 		Domain:      domain,
 		Request:     request,
-		Code:        *object.CalculateIDForBlob(m.PCS, currentPN, code),
+		Code:        blobID,
 		MachineType: machineType,
 	}
-	virtRec := record.Wrap(codeRec)
-	hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-	codeID := insolar.NewID(currentPN, hash)
-	codeRef := insolar.NewReference(*codeID)
-
-	_, err = m.setBlob(ctx, code, *codeRef)
+	buf, err := codeRec.Marshal()
 	if err != nil {
-		return nil, err
-	}
-	id, err := m.setRecord(
-		ctx,
-		virtRec,
-		*codeRef,
-	)
-	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal record")
 	}
 
-	return id, nil
+	h = m.PCS.ReferenceHasher()
+	_, err = h.Write(buf)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to calculate hash")
+	}
+	recID := *insolar.NewID(currentPN, h.Sum(nil))
+
+	msg, err := payload.NewMessage(&payload.SetCode{
+		Record: buf,
+		Code:   code,
+	})
+
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID))
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply")
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return &p.ID, nil
+	case *payload.Error:
+		return nil, errors.New(p.Text)
+	default:
+		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+	}
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype

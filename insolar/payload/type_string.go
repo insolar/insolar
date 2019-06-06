@@ -11,7 +11,6 @@ func _() {
 	_ = x[TypeUnknown-0]
 	_ = x[TypeError-1]
 	_ = x[TypeID-2]
-	_ = x[TypeObject-3]
 	_ = x[TypeState-4]
 	_ = x[TypeGetObject-5]
 	_ = x[TypePassState-6]
@@ -19,15 +18,29 @@ func _() {
 	_ = x[TypeObjState-8]
 	_ = x[TypeIndex-9]
 	_ = x[TypePass-10]
+	_ = x[TypeGetCode-11]
+	_ = x[TypeCode-12]
+	_ = x[TypeSetCode-13]
 }
 
-const _Type_name = "TypeUnknownTypeErrorTypeIDTypeObjectTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePass"
+const (
+	_Type_name_0 = "TypeUnknownTypeErrorTypeID"
+	_Type_name_1 = "TypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCode"
+)
 
-var _Type_index = [...]uint8{0, 11, 20, 26, 36, 45, 58, 71, 83, 95, 104, 112}
+var (
+	_Type_index_0 = [...]uint8{0, 11, 20, 26}
+	_Type_index_1 = [...]uint8{0, 9, 22, 35, 47, 59, 68, 76, 87, 95, 106}
+)
 
 func (i Type) String() string {
-	if i >= Type(len(_Type_index)-1) {
+	switch {
+	case 0 <= i && i <= 2:
+		return _Type_name_0[_Type_index_0[i]:_Type_index_0[i+1]]
+	case 4 <= i && i <= 13:
+		i -= 4
+		return _Type_name_1[_Type_index_1[i]:_Type_index_1[i+1]]
+	default:
 		return "Type(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _Type_name[_Type_index[i]:_Type_index[i+1]]
 }
