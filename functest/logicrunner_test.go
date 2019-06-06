@@ -844,3 +844,57 @@ func TestGetRemoteDataError(t *testing.T) {
 	require.Empty(t, err)
 	require.Equal(t, codeTwoRef.String(), res.(string))
 }
+
+func TestNoLoopsWhileNotificationCallError(t *testing.T) {
+	var contractOneCode = `
+ package main
+ import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ import two "github.com/insolar/insolar/application/proxy/no_loops_while_notification_call_two"
+
+ type One struct {
+	foundation.BaseContract 
+ }
+ func (r *One) IncrementBy100() (int, error) {
+	holder := two.New()
+	child, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	for i := 0; i < 100; i++ {
+		child.IncreaseNoWait()
+	}
+
+ 	return child.GetCounter()
+ }
+`
+	var contractTwoCode = `
+ package main
+ import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ )
+ type Two struct {
+	foundation.BaseContract
+	Counter int
+ }
+ func New() (*Two, error) {
+	return &Two{}, nil
+ }
+
+ func (r *Two) Increase() error {
+ 	r.Counter++
+	return nil
+ }
+
+ func (r *Two) GetCounter() (int, error) {
+	return r.Counter, nil
+ }
+
+`
+	uploadContractOnce(t, "no_loops_while_notification_call_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "no_loops_while_notification_call_one", contractOneCode))
+
+	resp, err := callMethod(t, obj, "IncrementBy100")
+	require.Empty(t, err)
+	require.Equal(t, float64(100), resp)
+}
