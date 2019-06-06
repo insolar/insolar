@@ -15,6 +15,7 @@ local make_min_roles() = {
 
     // common fields
     root_keys_file: '/opt/insolar/config/root_member_keys.json',
+    md_admin_keys_file: '/opt/insolar/config/md_admin_member_keys.json',
     node_keys_dir: '/opt/insolar/config/nodes',
     discovery_keys_dir: '/opt/insolar/config/discovery',
     heavy_genesis_config_file: "/opt/insolar/config/heavy_genesis.json",
@@ -22,6 +23,21 @@ local make_min_roles() = {
     majority_rule: 0,
     min_roles: make_min_roles(),
     pulsar_public_keys: ['pulsar_public_key'],
+    oracle_keys_file:
+        [
+            {
+                name: oracle_certs().name % id,
+                keys_file: oracle_certs().keys % id,
+            }
+            for id in std.range(0, 9)
+        ],
+
+    // generating oracles key config
+    local oracle_certs() = {
+        name: 'oracle%s',
+        keys: '/opt/insolar/config/oracle%s_member_keys.json',
+    },
+
 
     // generating discovery_nodes
     local discovery_nodes_tmpl() = {
