@@ -51,7 +51,6 @@ type pendingMeta struct {
 
 	notClosedRequestsIds      []recordID
 	notClosedRequestsIdsIndex map[insolar.PulseNumber]map[recordID]struct{}
-	requestPNIndex            map[recordID]insolar.PulseNumber
 }
 
 type chainLink struct {
@@ -112,7 +111,6 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 			fullFilament:              []chainLink{},
 			notClosedRequestsIds:      []recordID{},
 			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[recordID]struct{}{},
-			requestPNIndex:            map[recordID]insolar.PulseNumber{},
 			isStateCalculated:         false,
 		},
 	}
@@ -173,7 +171,6 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 			notClosedRequestsIds:      []recordID{},
 			fullFilament:              []chainLink{},
 			isStateCalculated:         false,
-			requestPNIndex:            map[recordID]insolar.PulseNumber{},
 			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[recordID]struct{}{},
 		},
 	}
@@ -306,8 +303,6 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 		})
 	}
 
-	b.pendingMeta.requestPNIndex[recordID(reqID)] = pn
-
 	_, ok := b.pendingMeta.notClosedRequestsIdsIndex[pn]
 	if !ok {
 		b.pendingMeta.notClosedRequestsIdsIndex[pn] = map[recordID]struct{}{}
@@ -368,9 +363,9 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 		})
 	}
 
-	reqPN, ok := b.pendingMeta.requestPNIndex[recordID(*res.Request.Record())]
+	reqsIDs, ok := b.pendingMeta.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
 	if ok {
-		delete(b.pendingMeta.notClosedRequestsIdsIndex[reqPN], recordID(*res.Request.Record()))
+		delete(reqsIDs, recordID(*res.Request.Record()))
 		for i := 0; i < len(b.pendingMeta.notClosedRequestsIds); i++ {
 			if insolar.ID(b.pendingMeta.notClosedRequestsIds[i]) == *res.Request.Record() {
 				b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds[:i], b.pendingMeta.notClosedRequestsIds[i+1:]...)
@@ -446,11 +441,10 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 			switch r := record.Unwrap(rec.Virtual).(type) {
 			case *record.Request:
 				b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN][recordID(*r.Object.Record())] = struct{}{}
-				b.pendingMeta.requestPNIndex[recordID(*r.Object.Record())] = chainLink.PN
 			case *record.Result:
-				reqPN, ok := b.pendingMeta.requestPNIndex[recordID(*r.Request.Record())]
+				openReqs, ok := b.pendingMeta.notClosedRequestsIdsIndex[r.Request.Record().Pulse()]
 				if ok {
-					delete(b.pendingMeta.notClosedRequestsIdsIndex[reqPN], recordID(*r.Request.Record()))
+					delete(openReqs, recordID(*r.Request.Record()))
 				}
 			}
 		}
