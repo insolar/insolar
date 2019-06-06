@@ -104,7 +104,7 @@ func TestSWitch(t *testing.T) {
 	ge.OnPulse(ctx, insolar.Pulse{})
 
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
-	require.True(t, gilreleased)
+	require.False(t, gilreleased)
 	cref := testutils.RandomRef()
 
 	for _, state := range []insolar.NetworkState{insolar.NoNetworkState,
@@ -158,7 +158,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	ge.OnPulse(ctx, insolar.Pulse{})
 
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
-	require.True(t, gilreleased)
+	require.False(t, gilreleased)
 
 	cref := testutils.RandomRef()
 

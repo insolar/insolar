@@ -77,7 +77,6 @@ type Complete struct {
 }
 
 func (g *Complete) Run(ctx context.Context) {
-	g.GIL.Release(ctx)
 	g.MessageBus.MustRegister(insolar.TypeNodeSignRequest, g.signCertHandler)
 	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 }
@@ -89,6 +88,10 @@ func (g *Complete) GetState() insolar.NetworkState {
 func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	inslogger.FromContext(ctx).Debugf("Gateway.Complete: pulse happens %d", pu.PulseNumber)
 	return nil
+}
+
+func (g *Complete) NeedLockMessageBus() bool {
+	return false
 }
 
 func (g *Complete) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {

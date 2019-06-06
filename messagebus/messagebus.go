@@ -82,7 +82,7 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 	defer span.End()
 
 	counter := atomic.AddInt64(&mb.counter, 1)
-	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
+	inslogger.FromContext(ctx).Warn("Call Acquire in MessageBus: ", counter)
 	if counter == 1 {
 		inslogger.FromContext(ctx).Info("Lock MB")
 		ctx, mb.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
@@ -98,7 +98,7 @@ func (mb *MessageBus) Release(ctx context.Context) {
 	if counter < 0 {
 		panic("Trying to unlock without locking")
 	}
-	inslogger.FromContext(ctx).Info("Call Release in MessageBus: ", counter)
+	inslogger.FromContext(ctx).Warn("Call Release in MessageBus: ", counter)
 	if counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
 		mb.Unlock(ctx)
@@ -140,11 +140,6 @@ func (mb *MessageBus) Unlock(ctx context.Context) {
 // Register sets a function as a handler for particular message type,
 // only one handler per type is allowed
 func (mb *MessageBus) Register(p insolar.MessageType, handler insolar.MessageHandler) error {
-	_, ok := mb.handlers[p]
-	if ok {
-		return errors.New("handler for this type already exists")
-	}
-
 	mb.handlers[p] = handler
 	return nil
 }
