@@ -36,7 +36,7 @@ import (
 func TestNewReplicatorDefault(t *testing.T) {
 	t.Parallel()
 	r := NewReplicatorDefault(
-		executor.NewCalculatorMock(t),
+		executor.NewJetCalculatorMock(t),
 		NewDataGathererMock(t),
 		NewCleanerMock(t),
 		testutils.NewMessageBusMock(t),
@@ -96,7 +96,7 @@ func TestLightReplicatorDefault_sync(t *testing.T) {
 	t.Parallel()
 	ctrl := minimock.NewController(t)
 	ctx := inslogger.TestContext(t)
-	jc := executor.NewCalculatorMock(ctrl)
+	jc := executor.NewJetCalculatorMock(ctrl)
 	c := NewCleanerMock(ctrl)
 	mb := testutils.NewMessageBusMock(ctrl)
 	pc := pulse.NewCalculatorMock(ctrl)
@@ -133,7 +133,7 @@ func TestLightReplicatorDefault_NotifyAboutPulse(t *testing.T) {
 	t.Parallel()
 	ctrl := minimock.NewController(t)
 	ctx := inslogger.TestContext(t)
-	jc := executor.NewCalculatorMock(ctrl)
+	jc := executor.NewJetCalculatorMock(ctrl)
 	c := NewCleanerMock(ctrl)
 	mb := testutils.NewMessageBusMock(ctrl)
 

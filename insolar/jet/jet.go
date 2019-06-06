@@ -142,3 +142,12 @@ func parsePrefix(s string) []byte {
 	}
 	return prefix
 }
+
+// Info holds info about jet.
+type Info struct {
+	ID       insolar.JetID
+	MineNext bool
+	Left     *Info
+	Right    *Info
+	Split    bool
+}
