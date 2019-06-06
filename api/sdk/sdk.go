@@ -25,7 +25,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/api/requester"
-	membercontract "github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
@@ -277,7 +276,23 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, response.TraceID, errors.New(response.Error)
 	}
 
-	return NewMember(response.Result.(string), string(privateKeyStr)), response.TraceID, nil
+	decoded, err := base64.StdEncoding.DecodeString(response.Result.(string))
+	if err != nil {
+		return nil, "", errors.Wrap(err, "[ CreateMember ] can't decode")
+	}
+
+	type CreateMemberOutput struct {
+		Reference   string
+		BurnAddress string
+	}
+
+	output := CreateMemberOutput{}
+	err = json.Unmarshal(decoded, &output)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "[ CreateMember ] can't unmarshal response")
+	}
+
+	return NewMember(output.Reference, string(privateKeyStr)), response.TraceID, nil
 }
 
 // Transfer method send money from one member to another
@@ -345,14 +360,19 @@ func (sdk *SDK) GetBalance(m *Member) (big.Int, error) {
 		return big.Int{}, errors.Wrap(err, "[ GetBalance ] can't decode")
 	}
 
-	balanceWithDeposits := membercontract.BalanceWithDeposits{}
-	err = json.Unmarshal(decoded, &balanceWithDeposits)
+	type GetBalanceOutput struct {
+		Balance string
+		//Deposits []map[string]string
+	}
+
+	getBalanceOutput := GetBalanceOutput{}
+	err = json.Unmarshal(decoded, &getBalanceOutput)
 	if err != nil {
 		return big.Int{}, errors.Wrap(err, "[ GetBalance ] can't unmarshal response")
 	}
 
 	result := new(big.Int)
-	result, ok := result.SetString(balanceWithDeposits.Balance, 10)
+	result, ok := result.SetString(getBalanceOutput.Balance, 10)
 	if !ok {
 		return big.Int{}, errors.Errorf("[ GetBalance ] can't parse returned balance")
 	}

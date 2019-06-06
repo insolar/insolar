@@ -24,24 +24,20 @@ import (
 	"math/big"
 )
 
+type SignedRequest struct {
+	PublicKey string `json:"jwk"`
+	Token     string `json:"jws"`
+}
 type SignedPayload struct {
 	Reference string `json:"reference"` // contract reference
 	Method    string `json:"method"`    // method name
 	Params    string `json:"params"`    // json object
 	Seed      string `json:"seed"`
 }
-type BalanceWithDeposits struct {
-	Balance string
-	//Deposits []map[string]string
-}
-type SignedRequest struct {
-	PublicKey string `json:"jwk"`
-	Token     string `json:"jws"`
-}
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113RG67XiB555Ze9E2DrJDi5D99VSDhwPaL3nujCN.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113DrUfNC1Uzj8KWm8S4iJxEwz4t6hNj48NxKA9JX.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {

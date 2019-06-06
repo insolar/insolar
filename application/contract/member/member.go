@@ -171,7 +171,7 @@ func (mdAdminMember *Member) AddBurnAddressCall(rdRef insolar.Reference, params 
 	input := Input{}
 	err = json.Unmarshal(params, &input)
 	if err != nil {
-		return 0, fmt.Errorf("[ AddBurnAddressCall ]: %s", err.Error())
+		return 0, fmt.Errorf("[ AddBurnAddressCall ] Failed unmarshal params: %s", err.Error())
 	}
 
 	err = rootDomain.AddBurnAddress(input.BurnAddress)
@@ -200,7 +200,7 @@ func (mdAdminMember *Member) AddBurnAddressesCall(rdRef insolar.Reference, param
 	input := Input{}
 	err = json.Unmarshal(params, &input)
 	if err != nil {
-		return 0, fmt.Errorf("[ AddBurnAddressesCall ]: %s", err.Error())
+		return 0, fmt.Errorf("[ AddBurnAddressesCall ] Failed unmarshal params: %s", err.Error())
 	}
 
 	err = rootDomain.AddBurnAddresses(input.BurnAddresses)
@@ -218,13 +218,13 @@ func (m *Member) createMemberCall(rdRef insolar.Reference, params []byte, public
 
 	key, err := public.MarshalJSON()
 	if err != nil {
-		return 0, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
+		return 0, fmt.Errorf("[ createMemberCall ] Failed marshal key: %s", err.Error())
 	}
 	input := Input{}
 
 	err = json.Unmarshal(params, &input)
 	if err != nil {
-		return 0, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
+		return 0, fmt.Errorf("[ createMemberCall ] Failed unmarshal params: %s", err.Error())
 	}
 
 	return m.createMemberByKey(rdRef, string(key))
@@ -250,7 +250,19 @@ func (m *Member) createMemberByKey(rdRef insolar.Reference, key string) (interfa
 		return nil, fmt.Errorf("[ createMemberByKey ] Can't add new member to maps: %s", err.Error())
 	}
 
-	return new.Reference.String(), nil
+	type CreateMemberOutput struct {
+		Reference   string
+		BurnAddress string
+	}
+	outputMarshaled, err := json.Marshal(CreateMemberOutput{
+		Reference:   new.Reference.String(),
+		BurnAddress: ba,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("[ createMemberByKey ] Failed marshal output: %s", err.Error())
+	}
+
+	return outputMarshaled, nil
 }
 
 func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key string) (*member.Member, error) {
@@ -302,11 +314,6 @@ func (m *Member) getDeposits() ([]map[string]string, error) {
 	return result, nil
 }
 
-type BalanceWithDeposits struct {
-	Balance string
-	//Deposits []map[string]string
-}
-
 func (caller *Member) getBalanceCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(rdRef)
 	rootMember, err := rootDomain.GetRootMemberRef()
@@ -353,6 +360,11 @@ func (m *Member) GetMyBalance() (interface{}, error) {
 	//if err != nil {
 	//	return nil, fmt.Errorf("[ getBalanceCall ] Can't get deposits: %s", err.Error())
 	//}
+
+	type BalanceWithDeposits struct {
+		Balance string
+		//Deposits []map[string]string
+	}
 
 	balanceWithDepositsMarshaled, err := json.Marshal(BalanceWithDeposits{
 		Balance: b,
