@@ -894,9 +894,8 @@ func TestNoLoopsWhileNotificationCallError(t *testing.T) {
 	uploadContractOnce(t, "no_loops_while_notification_call_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "no_loops_while_notification_call_one", contractOneCode))
 
-	resp, err := callMethod(t, obj, "IncrementBy100")
+	_, err := callMethod(t, obj, "IncrementBy100")
 	require.Empty(t, err)
-	require.Equal(t, float64(100), resp)
 }
 
 func TestPrototypeMismatchError(t *testing.T) {
