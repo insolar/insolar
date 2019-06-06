@@ -25,7 +25,6 @@ import (
 )
 
 func TestNodeCert(t *testing.T) {
-	panic("test panic")
 	const TESTPUBLICKEY = "some_fancy_public_key"
 	const testRole = "virtual"
 	res, err := signedRequest(&root, "RegisterNode", TESTPUBLICKEY, testRole)
