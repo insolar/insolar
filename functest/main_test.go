@@ -181,23 +181,40 @@ func stopInsolard() error {
 var insgorundCleaner func()
 var secondInsgorundCleaner func()
 
-func startInsgorund(listenPort string, upstreamPort string) (func(), error) {
+func makeInsgorundOutputDir() (string, error) {
+	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
+	if err != nil {
+		return "", errors.Wrap(err, "Couldn't receive path to github.com/insolar/insolar")
+	}
+	outputDir := filepath.Join(p.Dir, ".artifacts", "launchnet", "insgorund_logs")
+	err = os.MkdirAll(outputDir, os.ModePerm)
+	if err != nil {
+		return "", errors.Wrap(err, "[ startInsgorund ] couldn't create dir for insgorund output")
+	}
+	return outputDir, nil
+}
+
+func startInsgorund(listenPort string, upstreamPort string, combinedOutputDir string) (func(), error) {
 	// It starts on ports of "virtual" node
-	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort, false)
+	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort, false, filepath.Join(combinedOutputDir, listenPort+".log"))
 	if err != nil {
 		return cleaner, errors.Wrap(err, "[ startInsgorund ] couldn't wait for insolard to start completely: ")
 	}
 	return cleaner, nil
 }
 
-func startAllInsgorunds() (err error) {
-	insgorundCleaner, err = startInsgorund("33305", "33306")
+func startAllInsgorunds() error {
+	combinedOutputDir, err := makeInsgorundOutputDir()
+	if err != nil {
+		return errors.Wrap(err, "[ startInsgorund ] couldn't create dir for insgorund output")
+	}
+	insgorundCleaner, err = startInsgorund("33305", "33306", combinedOutputDir)
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
 	}
 	fmt.Println("[ startAllInsgorunds ] insgorund was successfully started")
 
-	secondInsgorundCleaner, err = startInsgorund("33327", "33328")
+	secondInsgorundCleaner, err = startInsgorund("33327", "33328", combinedOutputDir)
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start second insgorund: ")
 	}
