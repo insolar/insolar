@@ -20,6 +20,7 @@ package functest
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"github.com/magiconair/properties/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -113,11 +114,11 @@ func (r *One) Again(s string) (string, error) {
 	return "Hi, " + s + "! Two said: " + res, nil
 }
 
-func (r *One)GetFriend() (insolar.Reference, error) {
-	return r.Friend, nil
+func (r *One)GetFriend() (string, error) {
+	return r.Friend.String(), nil
 }
 
-func (r *One)TestPayload() (two.Payload, error) {
+func (r *One) TestPayload() (two.Payload, error) {
 	f := two.GetObject(r.Friend)
 	err := f.SetPayload(two.Payload{Int: 10, Str: "HiHere"})
 	if err != nil { return two.Payload{}, err }
@@ -192,28 +193,21 @@ func (r *Two) GetPayloadString() (string, error) {
 		assert.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), resp)
 	}
 
-	// TODO разобраться с кастом рефов
-	// TODO может возвращать не реф а скасченный к стрингу реф? Reference.ToString() ?
-	//resp = callMethod(t, objectRef, "GetFriend")
-	//
-	//// this is base64 instead of base58
-	//fmt.Println(">>> resp ", resp)
-	//fmt.Println(">>> CBORUnMarshal ", goplugintestutils.CBORUnMarshal(t, []byte(resp.(string))))
-	//fmt.Println(">>> resp.([]byte) ", []byte(resp.(string)))
-	//two := insolar.Reference{}.FromSlice([]byte(resp.(string)))
+	resp, err = callMethod(t, objectRef, "GetFriend")
+	require.Empty(t, err)
 
-	//r0 := resp.([]uint8)
-	//var two insolar.Reference
-	//for i := 0; i < 64; i++ {
-	//	two[i] = r0[i]
-	//}
+	two, err2 := insolar.NewReferenceFromBase58(resp.(string))
+	require.NoError(t, err2)
 
-	//for i := 6; i <= 9; i++ {
-	//	resp = callMethod(t, &two, "Hello", "Insolar")
-	//	assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), resp)
-	//}
-	//
-	//resp = callMethod(t, &two, "TestPayload")
+	for i := 6; i <= 9; i++ {
+		resp, err = callMethod(t, two, "Hello", "Insolar")
+		require.Empty(t, err)
+		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), resp)
+	}
+
+	// TODO return 400, expects 200
+	//resp, err = callMethod(t, objectRef, "TestPayload")
+	//require.Empty(t, err)
 	//res := resp.(map[interface{}]interface{})["Str"]
 	//assert.Equal(t,"HiHere", res)
 }
