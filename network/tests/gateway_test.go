@@ -77,6 +77,10 @@ func (g *FakeOk) OnPulse(context.Context, insolar.Pulse) error {
 	return nil
 }
 
+func (g *FakeOk) NeedLockMessageBus() bool {
+	return false
+}
+
 func (g *FakeOk) Run(context.Context) {
 }
 

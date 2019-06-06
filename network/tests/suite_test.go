@@ -500,9 +500,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager, false)
 	s.Require().NoError(err)
 
-	serviceNetwork.SetGateway(NewFakeOk())
-	serviceNetwork.Gateway().Run(context.Background())
-
 	amMock := staterMock{
 		stateFunc: func() ([]byte, error) {
 			return make([]byte, packets.HashLength), nil
@@ -539,6 +536,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
 		&amMock, certManager, cryptographyService, mblocker, GIL, serviceNetwork, keyProc, terminationHandler,
 		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t), senderMock)
+
+	serviceNetwork.SetGateway(NewFakeOk())
+	serviceNetwork.Gateway().Run(context.Background())
 
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler
