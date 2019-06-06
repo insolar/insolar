@@ -635,3 +635,53 @@ func (r *Two) Hello() (*string, error) {
 	require.Empty(t, err)
 	require.Nil(t, resp)
 }
+
+// TODO понять нафиг этот тест
+func TestRootDomainContractError(t *testing.T) {
+
+}
+
+func TestConstructorReturnNilError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	two "github.com/insolar/insolar/application/proxy/constructor_return_nil_two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() (*string, error) {
+	holder := two.New()
+	_, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return nil, err
+	}
+	ok := "all was well"
+	return &ok, nil
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() (*Two, error) {
+	return nil, nil
+}
+`
+	uploadContractOnce(t, "constructor_return_nil_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_nil_one", contractOneCode))
+
+	_, err := callMethod(t, obj, "Hello")
+	require.Contains(t, err.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil")
+}
