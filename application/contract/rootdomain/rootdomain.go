@@ -19,10 +19,8 @@ package rootdomain
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 // RootDomain is smart contract representing entrance point to system
@@ -86,17 +84,6 @@ func (rd *RootDomain) Info() (interface{}, error) {
 		return nil, fmt.Errorf("[ Info ] Can't marshal res: %s", err.Error())
 	}
 	return resJSON, nil
-}
-
-// DumpAllUsers processes dump all users request
-func (rd *RootDomain) DumpAllUsers() (*proxyctx.ChildrenTypedIterator, error) {
-	return rd.NewChildrenTypedIterator(member.GetPrototype())
-}
-
-func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
-	rd.FreeBurnAddresses = append(rd.FreeBurnAddresses, burnAddress)
-
-	return nil
 }
 
 func (rd *RootDomain) AddBurnAddresses(burnAddresses []string) error {
