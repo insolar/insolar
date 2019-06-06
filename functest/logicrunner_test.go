@@ -585,3 +585,53 @@ func New(n int) (*Child, error) {
 //	resp, err = callMethod(t, obj, "NoError")
 //	require.Nil(t, resp)
 //}
+
+func TestNilResultError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	two "github.com/insolar/insolar/application/proxy/nil_result_two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() (*string, error) {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return nil, err
+	}
+
+	return friend.Hello()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() (*Two, error) {
+	return &Two{}, nil
+}
+func (r *Two) Hello() (*string, error) {
+	return nil, nil
+}
+`
+
+	uploadContractOnce(t, "nil_result_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "nil_result_one", contractOneCode))
+
+	resp, err := callMethod(t, obj, "Hello")
+	require.Empty(t, err)
+	require.Nil(t, resp)
+}
