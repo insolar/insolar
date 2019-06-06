@@ -42,12 +42,6 @@ type Modifier interface {
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
-// Calculator provides methods for calculating jets
-type Calculator interface {
-	// MineForPulse returns current node's jets for a provided pulse
-	MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID
-}
-
 //go:generate minimock -i github.com/insolar/insolar/insolar/jet.Storage -o ./ -s _mock.go
 
 // Storage composes Accessor and Modifier interfaces.

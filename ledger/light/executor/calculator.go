@@ -14,24 +14,31 @@
 // limitations under the License.
 //
 
-package jet
+package executor
 
 import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Calculator -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.Calculator -o ./ -s _mock.go
+
+// Calculator provides methods for calculating jets
+type Calculator interface {
+	// MineForPulse returns current node's jets for a provided pulse
+	MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID
+}
 
 // CalculatorDefault is a struct, that implements jet.Calculator
 type CalculatorDefault struct {
-	coordinator Coordinator
-	jetAccessor Accessor
+	coordinator jet.Coordinator
+	jetAccessor jet.Accessor
 }
 
-// NewCalculator returns a new instance of a calculator
-func NewCalculator(jetCoordinator Coordinator, jetAccessor Accessor) *CalculatorDefault {
+// NewCalculator returns a new instance of a jet calculator.
+func NewCalculator(jetCoordinator jet.Coordinator, jetAccessor jet.Accessor) *CalculatorDefault {
 	return &CalculatorDefault{coordinator: jetCoordinator, jetAccessor: jetAccessor}
 }
 

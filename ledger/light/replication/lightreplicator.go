@@ -22,10 +22,10 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"go.opencensus.io/stats"
 )
 
@@ -41,7 +41,7 @@ type LightReplicatorDefault struct {
 
 	syncWaitingPulses chan insolar.PulseNumber
 
-	jetCalculator   jet.Calculator
+	jetCalculator   executor.Calculator
 	dataGatherer    DataGatherer
 	cleaner         Cleaner
 	msgBus          insolar.MessageBus
@@ -50,7 +50,7 @@ type LightReplicatorDefault struct {
 
 // NewReplicatorDefault creates new instance of LightReplicator
 func NewReplicatorDefault(
-	jetCalculator jet.Calculator,
+	jetCalculator executor.Calculator,
 	dataGatherer DataGatherer,
 	cleaner Cleaner,
 	msgBus insolar.MessageBus,

@@ -1,9 +1,9 @@
-package jet
+package executor
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Calculator" can be found in github.com/insolar/insolar/insolar/jet
+The original interface "Calculator" can be found in github.com/insolar/insolar/ledger/light/executor
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//CalculatorMock implements github.com/insolar/insolar/insolar/jet.Calculator
+//CalculatorMock implements github.com/insolar/insolar/ledger/light/executor.Calculator
 type CalculatorMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type CalculatorMock struct {
 	MineForPulseMock       mCalculatorMockMineForPulse
 }
 
-//NewCalculatorMock returns a mock for github.com/insolar/insolar/insolar/jet.Calculator
+//NewCalculatorMock returns a mock for github.com/insolar/insolar/ledger/light/executor.Calculator
 func NewCalculatorMock(t minimock.Tester) *CalculatorMock {
 	m := &CalculatorMock{t: t}
 
@@ -107,7 +107,7 @@ func (m *mCalculatorMockMineForPulse) Set(f func(p context.Context, p1 insolar.P
 	return m.mock
 }
 
-//MineForPulse implements github.com/insolar/insolar/insolar/jet.Calculator interface
+//MineForPulse implements github.com/insolar/insolar/ledger/light/executor.Calculator interface
 func (m *CalculatorMock) MineForPulse(p context.Context, p1 insolar.PulseNumber) (r []insolar.JetID) {
 	counter := atomic.AddUint64(&m.MineForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.MineForPulseCounter, 1)

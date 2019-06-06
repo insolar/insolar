@@ -24,11 +24,11 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +36,7 @@ import (
 func TestNewReplicatorDefault(t *testing.T) {
 	t.Parallel()
 	r := NewReplicatorDefault(
-		jet.NewCalculatorMock(t),
+		executor.NewCalculatorMock(t),
 		NewDataGathererMock(t),
 		NewCleanerMock(t),
 		testutils.NewMessageBusMock(t),
@@ -96,7 +96,7 @@ func TestLightReplicatorDefault_sync(t *testing.T) {
 	t.Parallel()
 	ctrl := minimock.NewController(t)
 	ctx := inslogger.TestContext(t)
-	jc := jet.NewCalculatorMock(ctrl)
+	jc := executor.NewCalculatorMock(ctrl)
 	c := NewCleanerMock(ctrl)
 	mb := testutils.NewMessageBusMock(ctrl)
 	pc := pulse.NewCalculatorMock(ctrl)
@@ -133,7 +133,7 @@ func TestLightReplicatorDefault_NotifyAboutPulse(t *testing.T) {
 	t.Parallel()
 	ctrl := minimock.NewController(t)
 	ctx := inslogger.TestContext(t)
-	jc := jet.NewCalculatorMock(ctrl)
+	jc := executor.NewCalculatorMock(ctrl)
 	c := NewCleanerMock(ctrl)
 	mb := testutils.NewMessageBusMock(ctrl)
 
