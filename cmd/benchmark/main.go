@@ -164,10 +164,13 @@ func addBurnAddresses(insSDK *sdk.SDK) int32 {
 	for i := 0; i < concurrent*2; i++ {
 		bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
 		for bof.Attempt() < backoffAttemptsCount {
-			ba := "fake_burn_address_" + strconv.Itoa(i)
-			traceID, err := insSDK.AddBurnAddress("fake_burn_address_" + strconv.Itoa(i))
+			burnAddresses := []string{}
+			for j := 0; j < 3; j++ {
+				burnAddresses = append(burnAddresses, "fake_burn_address_"+strconv.Itoa(i)+"_"+strconv.Itoa(j))
+			}
+			traceID, err := insSDK.AddBurnAddresses(burnAddresses)
 			if err == nil {
-				fmt.Printf("Burn address '%s' was added. TraceID: %s\n", ba, traceID)
+				fmt.Printf("Burn address '%s' was added. TraceID: %s\n", burnAddresses, traceID)
 				break
 			}
 

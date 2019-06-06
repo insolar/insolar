@@ -177,36 +177,6 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 	return res, nil
 }
 
-// AddBurnAddress api request add new burn address
-func (sdk *SDK) AddBurnAddress(burnAddress string) (string, error) {
-	ctx := inslogger.ContextWithTrace(context.Background(), "AddBurnAddress")
-
-	type Params struct {
-		BurnAddress string `json:"burn_address"`
-	}
-	params := Params{BurnAddress: burnAddress}
-	paramsMarshaled, err := json.Marshal(params)
-	if err != nil {
-		return "", errors.Wrap(err, "[ AddBurnAddress ] failed marshal")
-	}
-
-	body, err := sdk.sendRequest(ctx, "AddBurnAddress", paramsMarshaled, sdk.mdAdminMember)
-	if err != nil {
-		return "", errors.Wrap(err, "[ AddBurnAddress ] can't send request")
-	}
-
-	response, err := sdk.getResponse(body)
-	if err != nil {
-		return "", errors.Wrap(err, "[ AddBurnAddress ] can't get response")
-	}
-
-	if response.Error != "" {
-		return response.TraceID, errors.New(response.Error)
-	}
-
-	return response.TraceID, nil
-}
-
 // AddBurnAddress api request add new burn addresses
 func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "burnAddresses")
