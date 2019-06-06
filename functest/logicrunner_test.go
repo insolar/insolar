@@ -284,6 +284,7 @@ func (r *Two) Hello(s string) (string, error) {
 	require.Equal(t, "Hello you too, ins. 1288 times!", resp)
 }
 
+// TODO i suspect race here, place sleep 5 sec into two.Hello and you get it
 func TestBasicNotificationCallError(t *testing.T) {
 	var contractOneCode = `
 package main
