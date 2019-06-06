@@ -17,9 +17,6 @@
 package signer
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/insolar/go-jose"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -33,33 +30,4 @@ type SignedPayload struct {
 // UnmarshalParams unmarshalls params
 func UnmarshalParams(data []byte, to ...interface{}) error {
 	return insolar.Deserialize(data, to)
-}
-
-func VerifySignatureAndComparePublic(signedRequest []byte) (*SignedPayload, *jose.JSONWebKey, error) {
-	var jwks string
-	var jwss string
-
-	err := UnmarshalParams(signedRequest, &jwks, &jwss)
-
-	jwk := jose.JSONWebKey{}
-
-	err = jwk.UnmarshalJSON([]byte(jwks))
-	jws, err := jose.ParseSigned(jwss)
-
-	if err != nil {
-		return nil, nil, fmt.Errorf("[ Call ] Failed to unmarshal params: %s", err.Error())
-	}
-
-	payload, err := jws.Verify(jwk)
-	if err != nil {
-		return nil, nil, fmt.Errorf("[ verifySig ] Incorrect signature")
-	}
-	// Unmarshal payload
-	var payloadRequest = SignedPayload{}
-	err = json.Unmarshal(payload, &payloadRequest)
-	if err != nil {
-		return nil, nil, fmt.Errorf("[ Call1 ]: %s", err.Error())
-	}
-
-	return &payloadRequest, &jwk, nil
 }
