@@ -797,3 +797,8 @@ func TestGetParentError(t *testing.T) {
 	require.Empty(t, err)
 	require.Equal(t, obj.String(), res)
 }
+
+// TODO что делать с этим тестом?
+func TestGinsiderMustDieAfterInsolardError(t *testing.T) {
+	// can't kill LR in launch.sh from functest
+}
