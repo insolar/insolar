@@ -271,6 +271,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 		)
 
+		jetSplitter := &executor.JetSplitterDefault{
+			JetCoordinator: Coordinator,
+			JetAccessor:    Jets,
+			JetModifier:    Jets,
+
+			DropAccessor:          drops,
+			RecentStorageProvider: hots,
+		}
+
 		pm := pulsemanager.NewPulseManager(
 			conf,
 			drops,
@@ -279,6 +288,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 			records,
 			records,
+			jetSplitter,
 			indexes,
 			lthSyncer,
 			writeController,
