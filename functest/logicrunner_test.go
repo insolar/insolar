@@ -518,7 +518,6 @@ func New(n int) (*Child, error) {
 	require.Equal(t, float64(45), resp)
 }
 
-
 // TODO return 400, expects 200
 //func TestErrorInterfaceError(t *testing.T) {
 //	var contractOneCode = `
@@ -683,5 +682,37 @@ func New() (*Two, error) {
 	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_nil_one", contractOneCode))
 
 	_, err := callMethod(t, obj, "Hello")
+	require.NotEmpty(t, err)
 	require.Contains(t, err.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil")
 }
+
+// TODO return 400, expects 200
+//func TestRecursiveCallError(t *testing.T) {
+//	var contractOneCode = `
+//package main
+//
+//import (
+//	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+//	recursive "github.com/insolar/insolar/application/proxy/recursive_call_one"
+//)
+//type One struct {
+//	foundation.BaseContract
+//}
+//
+//func New() (*One, error) {
+//	return &One{}, nil
+//}
+//
+//func (r *One) Recursive() (error) {
+//	remoteSelf := recursive.GetObject(r.GetReference())
+//	err := remoteSelf.Recursive()
+//	return err
+//}
+//
+//`
+//	// callConstructor returns 400
+//	obj := callConstructor(t, uploadContractOnce(t, "recursive_call_one", contractOneCode))
+//	_, err := callMethod(t, obj, "Recursive")
+//	require.NotEmpty(t, err)
+//	require.Contains(t, err.Error(), "loop detected")
+//}
