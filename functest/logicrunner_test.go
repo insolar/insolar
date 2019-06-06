@@ -753,3 +753,53 @@ func (r *One) CreateAllowance(member string) (error) {
 	require.NotEmpty(t, err)
 	require.Contains(t, err.Error(), "[ New Allowance ] : Can't create allowance from not wallet contract")
 }
+
+func TestGetParentError(t *testing.T) {
+	var contractOneCode = `
+ package main
+ import ( 
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ 	"github.com/insolar/insolar/insolar"
+	two "github.com/insolar/insolar/application/proxy/get_parent_two"
+ )
+ 
+ type One struct {
+	foundation.BaseContract
+ }
+
+ func (r *One) AddChildAndReturnMyselfAsParent() (string, error) {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return insolar.Reference{}.String(), err
+	}
+
+ 	return friend.GetParent()
+}
+`
+	var contractTwoCode = `
+ package main
+ import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+ )
+
+ type Two struct {
+	foundation.BaseContract
+ }
+
+ func New() (*Two, error) {
+	return &Two{}, nil
+ }
+
+ func (r *Two) GetParent() (string, error) {
+	return r.GetContext().Parent.String(), nil
+ }
+`
+
+	uploadContractOnce(t, "get_parent_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "get_parent_one", contractOneCode))
+
+	res, err := callMethod(t, obj, "AddChildAndReturnMyselfAsParent")
+	require.Empty(t, err)
+	require.Equal(t, obj.String(), res)
+}
