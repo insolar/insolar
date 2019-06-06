@@ -104,8 +104,8 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 			if err != nil {
 				inslogger.FromContext(ctx).Warnf("can't send processExecutionQueueMsg: ", err)
 			}
-
 		}
+		es.Finished = append(es.Finished, &current)
 
 		lr.finishPendingIfNeeded(ctx, es)
 	}
