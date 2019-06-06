@@ -38,9 +38,6 @@ type filamentCache struct {
 	pendingMeta pendingMeta
 }
 
-type recordID insolar.ID
-type metaRecordID insolar.ID
-
 // pendingMeta contains info for calculating pending requests states
 // The structure contains full chain of pendings (they are grouped by pulse).
 // Groups are sorted by pulse, from a lowest to a highest
@@ -49,13 +46,13 @@ type pendingMeta struct {
 	isStateCalculated bool
 	fullFilament      []chainLink
 
-	notClosedRequestsIds      []recordID
-	notClosedRequestsIdsIndex map[insolar.PulseNumber]map[recordID]struct{}
+	notClosedRequestsIds      []insolar.ID
+	notClosedRequestsIdsIndex map[insolar.PulseNumber]map[insolar.ID]struct{}
 }
 
 type chainLink struct {
 	PN             insolar.PulseNumber
-	MetaRecordsIDs []metaRecordID
+	MetaRecordsIDs []insolar.ID
 }
 
 func (i *filamentCache) lifeline() (Lifeline, error) {
@@ -109,8 +106,8 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 		},
 		pendingMeta: pendingMeta{
 			fullFilament:              []chainLink{},
-			notClosedRequestsIds:      []recordID{},
-			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[recordID]struct{}{},
+			notClosedRequestsIds:      []insolar.ID{},
+			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[insolar.ID]struct{}{},
 			isStateCalculated:         false,
 		},
 	}
@@ -168,10 +165,10 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	bucks[bucket.ObjID] = &filamentCache{
 		objectMeta: bucket,
 		pendingMeta: pendingMeta{
-			notClosedRequestsIds:      []recordID{},
+			notClosedRequestsIds:      []insolar.ID{},
 			fullFilament:              []chainLink{},
 			isStateCalculated:         false,
-			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[recordID]struct{}{},
+			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[insolar.ID]struct{}{},
 		},
 	}
 
@@ -272,9 +269,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	pf := record.PendingFilament{
 		RecordID: reqID,
 	}
-	if b.objectMeta.Lifeline.ChildPointer != nil {
-		pf.PreviousRecord = *b.objectMeta.Lifeline.ChildPointer
-	}
+	pf.PreviousRecord = b.objectMeta.Lifeline.PendingPointer
 
 	pfv := record.Wrap(pf)
 	hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
@@ -286,18 +281,18 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	}
 
 	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, metaID)
-	b.objectMeta.Lifeline.ChildPointer = &metaID
+	b.objectMeta.Lifeline.PendingPointer = &metaID
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {
 		if chainPart.PN == pn {
-			b.pendingMeta.fullFilament[i].MetaRecordsIDs = append(b.pendingMeta.fullFilament[i].MetaRecordsIDs, metaRecordID(metaID))
+			b.pendingMeta.fullFilament[i].MetaRecordsIDs = append(b.pendingMeta.fullFilament[i].MetaRecordsIDs, metaID)
 			isInserted = true
 		}
 	}
 
 	if !isInserted {
-		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{MetaRecordsIDs: []metaRecordID{metaRecordID(metaID)}, PN: pn})
+		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{MetaRecordsIDs: []insolar.ID{metaID}, PN: pn})
 		sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
 			return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 		})
@@ -305,10 +300,10 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 
 	_, ok := b.pendingMeta.notClosedRequestsIdsIndex[pn]
 	if !ok {
-		b.pendingMeta.notClosedRequestsIdsIndex[pn] = map[recordID]struct{}{}
+		b.pendingMeta.notClosedRequestsIdsIndex[pn] = map[insolar.ID]struct{}{}
 	}
-	b.pendingMeta.notClosedRequestsIdsIndex[pn][recordID(reqID)] = struct{}{}
-	b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds, recordID(reqID))
+	b.pendingMeta.notClosedRequestsIdsIndex[pn][reqID] = struct{}{}
+	b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds, reqID)
 
 	stats.Record(ctx,
 		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
@@ -332,9 +327,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	pf := record.PendingFilament{
 		RecordID: resID,
 	}
-	if b.objectMeta.Lifeline.ChildPointer != nil {
-		pf.PreviousRecord = *b.objectMeta.Lifeline.ChildPointer
-	}
+	pf.PreviousRecord = b.objectMeta.Lifeline.PendingPointer
 
 	pfv := record.Wrap(pf)
 	hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
@@ -346,18 +339,18 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	}
 
 	b.objectMeta.PendingRecords = append(b.objectMeta.PendingRecords, metaID)
-	b.objectMeta.Lifeline.ChildPointer = &metaID
+	b.objectMeta.Lifeline.PendingPointer = &metaID
 
 	isInserted := false
 	for i, chainPart := range b.pendingMeta.fullFilament {
 		if chainPart.PN == pn {
-			b.pendingMeta.fullFilament[i].MetaRecordsIDs = append(b.pendingMeta.fullFilament[i].MetaRecordsIDs, metaRecordID(metaID))
+			b.pendingMeta.fullFilament[i].MetaRecordsIDs = append(b.pendingMeta.fullFilament[i].MetaRecordsIDs, metaID)
 			isInserted = true
 		}
 	}
 
 	if !isInserted {
-		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{MetaRecordsIDs: []metaRecordID{metaRecordID(metaID)}, PN: pn})
+		b.pendingMeta.fullFilament = append(b.pendingMeta.fullFilament, chainLink{MetaRecordsIDs: []insolar.ID{metaID}, PN: pn})
 		sort.Slice(b.pendingMeta.fullFilament, func(i, j int) bool {
 			return b.pendingMeta.fullFilament[i].PN < b.pendingMeta.fullFilament[j].PN
 		})
@@ -365,7 +358,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 
 	reqsIDs, ok := b.pendingMeta.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
 	if ok {
-		delete(reqsIDs, recordID(*res.Request.Record()))
+		delete(reqsIDs, *res.Request.Record())
 		for i := 0; i < len(b.pendingMeta.notClosedRequestsIds); i++ {
 			if insolar.ID(b.pendingMeta.notClosedRequestsIds[i]) == *res.Request.Record() {
 				b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds[:i], b.pendingMeta.notClosedRequestsIds[i+1:]...)
@@ -392,9 +385,9 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 	b.Lock()
 	defer b.Unlock()
 
-	recsIds := make([]metaRecordID, len(recs))
+	recsIds := make([]insolar.ID, len(recs))
 	for idx, rec := range recs {
-		recsIds[idx] = metaRecordID(rec.MetaID)
+		recsIds[idx] = rec.MetaID
 
 		recV := record.Wrap(rec.Meta)
 		err := i.recordStorage.Set(ctx, rec.MetaID, record.Material{Virtual: &recV})
@@ -440,11 +433,11 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 
 			switch r := record.Unwrap(rec.Virtual).(type) {
 			case *record.Request:
-				b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN][recordID(*r.Object.Record())] = struct{}{}
+				b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN][*r.Object.Record()] = struct{}{}
 			case *record.Result:
 				openReqs, ok := b.pendingMeta.notClosedRequestsIdsIndex[r.Request.Record().Pulse()]
 				if ok {
-					delete(openReqs, recordID(*r.Request.Record()))
+					delete(openReqs, *r.Request.Record())
 				}
 			}
 		}

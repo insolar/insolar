@@ -35,7 +35,7 @@ func TestIndex_Components(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	indexMemory := object.NewInMemoryIndex(nil)
+	indexMemory := object.NewInMemoryIndex(nil, nil)
 	indexDB := object.NewIndexDB(store.NewMemoryMockDB())
 
 	type tempIndex struct {
@@ -105,7 +105,7 @@ func TestIndex_Components(t *testing.T) {
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
-		indexMemory := object.NewInMemoryIndex(nil)
+		indexMemory := object.NewInMemoryIndex(nil, nil)
 		indexDB := object.NewIndexDB(store.NewMemoryMockDB())
 
 		for _, i := range indices {

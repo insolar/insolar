@@ -82,6 +82,12 @@ func Wrap(record Record) Virtual {
 				Deactivate: &generic,
 			},
 		}
+	case PendingFilament:
+		return Virtual{
+			Union: &Virtual_PendingFilament{
+				PendingFilament: &generic,
+			},
+		}
 	default:
 		panic(fmt.Sprintf("%T record is not registered", generic))
 	}
@@ -112,6 +118,8 @@ func Unwrap(v *Virtual) Record {
 		return r.Amend
 	case *Virtual_Deactivate:
 		return r.Deactivate
+	case *Virtual_PendingFilament:
+		return r.PendingFilament
 	default:
 		panic(fmt.Sprintf("%T virtual record unknown type", r))
 	}
