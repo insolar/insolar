@@ -184,23 +184,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name:                           "Happy path",
+			name: "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "ClarifyPendingState failed",
+			name: "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name:                           "StartQueueProcessorIfNeeded failed",
+			name: "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "Both procedures fail",
+			name: "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -1084,7 +1084,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			name: "pulse change in HasPendingRequests",
 			when: whenHasPendingRequest,
 			messagesExpected: []insolar.MessageType{
-				insolar.TypeExecutorResults, insolar.TypeAdditionalCallFromPreviousExecutor,
+				insolar.TypeExecutorResults,
 			},
 			pendingInExecutorResults:  message.PendingUnknown,
 			queueLenInExecutorResults: 1,
@@ -1158,6 +1158,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
 					if test.when == whenHasPendingRequest {
 						changePulse()
+
 						// We have to implicitly return ErrCancelled to make f.Procedure return ErrCancelled as well
 						// which will cause the correct code path to execute in logicrunner.HandleCall.
 						// Otherwise the test has a race condition - f.Procedure can be cancelled or return normally.
@@ -1540,8 +1541,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
