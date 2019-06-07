@@ -51,69 +51,11 @@
 package controller
 
 import (
-	"context"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
-
-// Controller contains network logic.
-type Controller struct {
-	Bootstrapper  bootstrap.NetworkBootstrapper `inject:""`
-	RPCController RPCController                 `inject:""`
-	Network       network.HostNetwork           `inject:""`
-}
-
-func (c *Controller) SetLastIgnoredPulse(number insolar.PulseNumber) {
-	c.Bootstrapper.SetLastPulse(number)
-}
-
-func (c *Controller) GetLastIgnoredPulse() insolar.PulseNumber {
-	return c.Bootstrapper.GetLastPulse()
-}
-
-// SendParcel send message to nodeID.
-func (c *Controller) SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error) {
-	return c.RPCController.SendMessage(nodeID, name, msg)
-}
-
-// SendBytes send message to nodeID.
-func (c *Controller) SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error) {
-	return c.RPCController.SendBytes(ctx, nodeID, name, msgBytes)
-}
-
-// RemoteProcedureRegister register remote procedure that will be executed when message is received.
-func (c *Controller) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
-	c.RPCController.RemoteProcedureRegister(name, method)
-}
-
-// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
-func (c *Controller) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
-	return c.RPCController.SendCascadeMessage(data, method, msg)
-}
-
-// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
-func (c *Controller) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
-	return c.Bootstrapper.Bootstrap(ctx)
-}
-
-// Inject inject components.
-func (c *Controller) Init(ctx context.Context) error {
-	c.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Packet) (network.Packet, error) {
-		return c.Network.BuildResponse(ctx, request, &packet.Ping{}), nil
-	})
-	return nil
-}
-
-func (c *Controller) AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error {
-	return c.Bootstrapper.AuthenticateToDiscoveryNode(ctx, nil)
-}
 
 // ConfigureOptions convert daemon configuration to controller options
 func ConfigureOptions(conf configuration.Configuration) *common.Options {
@@ -128,9 +70,4 @@ func ConfigureOptions(conf configuration.Configuration) *common.Options {
 		BootstrapTimeout:    10 * time.Second,
 		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
 	}
-}
-
-// NewNetworkController create new network controller.
-func NewNetworkController() network.Controller {
-	return &Controller{}
 }

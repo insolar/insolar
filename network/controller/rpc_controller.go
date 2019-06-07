@@ -73,6 +73,8 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/controller.RPCController -o ../../testutils/network -s _mock.go
+
 type RPCController interface {
 	component.Initer
 

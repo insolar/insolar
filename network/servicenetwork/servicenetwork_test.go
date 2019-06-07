@@ -186,14 +186,14 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 		}
 		return n
 	}
-	controller := networkUtils.NewControllerMock(t)
-	controller.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
+	rpc := networkUtils.NewRPCControllerMock(t)
+	rpc.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, errors.New("test error")
 	}
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock
-	serviceNetwork.Controller = controller
+	serviceNetwork.RPC = rpc
 	serviceNetwork.NodeKeeper = nodeN
 	var expectedMsg *message.Message
 	sender := bus.NewSenderMock(t)
@@ -226,14 +226,14 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 		}
 		return n
 	}
-	controller := networkUtils.NewControllerMock(t)
-	controller.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
+	rpc := networkUtils.NewRPCControllerMock(t)
+	rpc.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, nil
 	}
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock
-	serviceNetwork.Controller = controller
+	serviceNetwork.RPC = rpc
 	serviceNetwork.NodeKeeper = nodeN
 	var expectedMsg *message.Message
 	sender := bus.NewSenderMock(t)
@@ -264,14 +264,14 @@ func TestSendMessageHandler(t *testing.T) {
 		}
 		return n
 	}
-	controller := networkUtils.NewControllerMock(t)
-	controller.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
+	rpc := networkUtils.NewRPCControllerMock(t)
+	rpc.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return ack, nil
 	}
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock
-	serviceNetwork.Controller = controller
+	serviceNetwork.RPC = rpc
 	serviceNetwork.NodeKeeper = nodeN
 
 	payload := []byte{1, 2, 3, 4, 5}
