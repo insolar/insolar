@@ -48,6 +48,9 @@ type SendObject struct {
 		Blobs          blob.Accessor
 		Bus            insolar.MessageBus
 		Sender         bus.Sender
+
+		PendingAccessor object.PendingAccessor
+		PendingModifier object.PendingModifier
 	}
 }
 

@@ -67,6 +67,8 @@ type MessageHandler struct {
 	LifelineIndex         object.LifelineIndex
 	IndexBucketModifier   object.IndexBucketModifier
 	LifelineStateModifier object.LifelineStateModifier
+	PendingModifier       object.PendingModifier
+	PendingAccessor       object.PendingAccessor
 
 	conf           *configuration.Ledger
 	jetTreeUpdater jet.Fetcher
@@ -81,6 +83,8 @@ func NewMessageHandler(
 	index object.LifelineIndex,
 	indexBucketModifier object.IndexBucketModifier,
 	indexStateModifier object.LifelineStateModifier,
+	pendingModifier object.PendingModifier,
+	pendingAccessor object.PendingAccessor,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
@@ -90,6 +94,8 @@ func NewMessageHandler(
 		LifelineIndex:         index,
 		IndexBucketModifier:   indexBucketModifier,
 		LifelineStateModifier: indexStateModifier,
+		PendingModifier:       pendingModifier,
+		PendingAccessor:       pendingAccessor,
 	}
 
 	dep := &proc.Dependencies{
@@ -128,7 +134,9 @@ func NewMessageHandler(
 			p.Dep.Sender = h.Sender
 		},
 		SetRecord: func(p *proc.SetRecord) {
+			p.Dep.Bus = h.Bus
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.PendingModifier = h.PendingModifier
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
@@ -148,6 +156,8 @@ func NewMessageHandler(
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Sender = h.Sender
+			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.RecordAccessor = h.RecordAccessor
@@ -203,6 +213,18 @@ func NewMessageHandler(
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
+			p.Dep.PendingModifier = h.PendingModifier
+		},
+		GetPendingFilament: func(p *proc.GetPendingFilament) {
+			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.LifelineAccessor = h.LifelineIndex
+		},
+		RefreshPendingFilament: func(p *proc.RefreshPendingFilament) {
+			p.Dep.LifelineAccessor = h.LifelineIndex
+			p.Dep.PendingModifier = h.PendingModifier
+			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.Bus = h.Bus
 		},
 		PassState: func(p *proc.PassState) {
 			p.Dep.Blobs = h.BlobAccessor
