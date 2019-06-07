@@ -52,6 +52,8 @@ package common
 
 import (
 	"time"
+
+	"github.com/insolar/insolar/configuration"
 )
 
 // Options contains configuration options for the local host.
@@ -79,4 +81,19 @@ type Options struct {
 
 	// HandshakeSession TTL
 	HandshakeSessionTTL time.Duration
+}
+
+// ConfigureOptions convert daemon configuration to controller options
+func ConfigureOptions(conf configuration.Configuration) *Options {
+	config := conf.Host
+	return &Options{
+		InfinityBootstrap:   config.InfinityBootstrap,
+		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Second,
+		MinTimeout:          time.Duration(config.MinTimeout) * time.Second,
+		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Second,
+		PingTimeout:         1 * time.Second,
+		PacketTimeout:       10 * time.Second,
+		BootstrapTimeout:    10 * time.Second,
+		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
+	}
 }
