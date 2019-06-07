@@ -22,6 +22,21 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
+type Params struct {
+	Seed       string      `json:"seed"`
+	CallSite   string      `json:"callSite"`
+	CallParams interface{} `json:"callParams"`
+	Reference  string      `json:"reference"`
+	PublicKey  string      `json:"memberPubKey"`
+}
+type Request struct {
+	JsonRpc  string `json:"jsonrpc"`
+	Id       int    `json:"id"`
+	Method   string `json:"method"`
+	Params   Params `json:"params"`
+	LogLevel string `json:"logLevel,omitempty"`
+}
+
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
 var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2.11111111111111111111111111111111")
@@ -582,13 +597,10 @@ func (r *HelloWorld) CountChildAsImmutable() (interface{}, error) {
 }
 
 // Call is proxy generated method
-func (r *HelloWorld) Call(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
-	var args [5]interface{}
+func (r *HelloWorld) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
+	var args [2]interface{}
 	args[0] = rootDomain
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = signedRequest
 
 	var argsSerialized []byte
 
@@ -620,13 +632,10 @@ func (r *HelloWorld) Call(rootDomain insolar.Reference, method string, params []
 }
 
 // CallNoWait is proxy generated method
-func (r *HelloWorld) CallNoWait(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) error {
-	var args [5]interface{}
+func (r *HelloWorld) CallNoWait(rootDomain insolar.Reference, signedRequest []byte) error {
+	var args [2]interface{}
 	args[0] = rootDomain
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = signedRequest
 
 	var argsSerialized []byte
 
@@ -644,13 +653,10 @@ func (r *HelloWorld) CallNoWait(rootDomain insolar.Reference, method string, par
 }
 
 // CallAsImmutable is proxy generated method
-func (r *HelloWorld) CallAsImmutable(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
-	var args [5]interface{}
+func (r *HelloWorld) CallAsImmutable(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
+	var args [2]interface{}
 	args[0] = rootDomain
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = signedRequest
 
 	var argsSerialized []byte
 

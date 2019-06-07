@@ -300,7 +300,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [5]interface{}{}
+	args := [2]interface{}{}
 	var args0 insolar.Reference
 	args[0] = &args0
 	var args1 []byte

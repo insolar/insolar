@@ -20,8 +20,7 @@ package {{ .Package }}
 
 import (
 	"github.com/pkg/errors"
-
-{{- range $contract := .Contracts }}
+{{ range $contract := .Contracts }}
     {{ $contract.ImportName }} "{{ $contract.ImportPath }}"
 {{- end }}
 
@@ -61,6 +60,7 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
     rv := make([]XXX_artifacts.CodeDescriptor, 0)
 
     {{ range $contract := .Contracts -}}
+    // {{ $contract.Name }}
     rv = append(rv, XXX_artifacts.NewCodeDescriptor(
         /* code:        */ nil,
         /* machineType: */ XXX_insolar.MachineTypeBuiltin,
@@ -72,23 +72,22 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 }
 
 func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
-    var cRef, pRef XXX_insolar.Reference
-
     rv := make([]XXX_artifacts.ObjectDescriptor, 0)
 
-    {{ range $contract := .Contracts -}}
-    pRef = shouldLoadRef("{{ $contract.PrototypeReference }}")
-    cRef = shouldLoadRef("{{ $contract.CodeReference }}")
-    rv = append(rv, XXX_artifacts.NewObjectDescriptor(
-        /* head:         */ pRef,
-        /* state:        */ *pRef.Record(),
-        /* prototype:    */ &cRef,
-        /* isPrototype:  */ true,
-        /* childPointer: */ nil,
-        /* memory:       */ nil,
-        /* parent:       */ XXX_rootdomain.RootDomain.Ref(),
-    ))
-    {{- end }}
-
+    {{ range $contract := .Contracts }}
+    { // {{ $contract.Name }}
+        pRef := shouldLoadRef("{{ $contract.PrototypeReference }}")
+        cRef := shouldLoadRef("{{ $contract.CodeReference }}")
+        rv = append(rv, XXX_artifacts.NewObjectDescriptor(
+            /* head:         */ pRef,
+            /* state:        */ *pRef.Record(),
+            /* prototype:    */ &cRef,
+            /* isPrototype:  */ true,
+            /* childPointer: */ nil,
+            /* memory:       */ nil,
+            /* parent:       */ XXX_rootdomain.RootDomain.Ref(),
+        ))
+    }
+    {{ end }}
     return rv
 }

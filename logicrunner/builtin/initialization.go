@@ -19,8 +19,9 @@
 package builtin
 
 import (
-	helloworld "github.com/insolar/insolar/logicrunner/builtin/contract/helloworld"
 	"github.com/pkg/errors"
+
+	helloworld "github.com/insolar/insolar/logicrunner/builtin/contract/helloworld"
 
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	XXX_rootdomain "github.com/insolar/insolar/insolar/rootdomain"
@@ -53,6 +54,7 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 	rv := make([]XXX_artifacts.CodeDescriptor, 0)
 
+	// helloworld
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
@@ -63,21 +65,21 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 }
 
 func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
-	var cRef, pRef XXX_insolar.Reference
-
 	rv := make([]XXX_artifacts.ObjectDescriptor, 0)
 
-	pRef = shouldLoadRef("111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2.11111111111111111111111111111111")
-	cRef = shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")
-	rv = append(rv, XXX_artifacts.NewObjectDescriptor(
-		/* head:         */ pRef,
-		/* state:        */ *pRef.Record(),
-		/* prototype:    */ &cRef,
-		/* isPrototype:  */ true,
-		/* childPointer: */ nil,
-		/* memory:       */ nil,
-		/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
-	))
+	{ // helloworld
+		pRef := shouldLoadRef("111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2.11111111111111111111111111111111")
+		cRef := shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")
+		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
+			/* head:         */ pRef,
+			/* state:        */ *pRef.Record(),
+			/* prototype:    */ &cRef,
+			/* isPrototype:  */ true,
+			/* childPointer: */ nil,
+			/* memory:       */ nil,
+			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
+		))
+	}
 
 	return rv
 }
