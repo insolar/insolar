@@ -162,14 +162,14 @@ Domains establish governance of contracts and nodes, thus, acting as *super cont
 * Logic validation, e.g., consensus, number of voters.
 * Code mutability -- possibility of changing the code and change procedures.
 * Mutability of object history contained in the lifeline. These rules allow to implement GDPR or legal action via authorization requirements defined by the domain.
-* Applicability of custom cryptography schemes.
+* Applicability of custom cryptography schemes requested from the cloud that deploys them.
 
 .. _globulas:
 
 Globulas
 ~~~~~~~~
 
-Globula is a network of up to 1,000 :term:`nodes <node>`. It can run as a truly decentralized network with consistency established by a BFT-based consensus mechanism, a :ref:`globula network protocol <network_consensus>`.
+Globula is a network of up to 1,000 :term:`nodes <node>`. It can run as a truly decentralized network with consistency established by a leaderless, pure BFT-based consensus mechanism, a :ref:`globula network protocol <network_consensus>`.
 
 Insolar also supports larger node networks of up to 100 globulas (a total of 100,000 nodes) that behave transparently across such networks in accordance with whichever contract logic is in place. Such networks rely on the :ref:`inter-globula network protocol <network_consensus>` with leader-based consensus.
 
@@ -224,10 +224,10 @@ Virtual nodes are stateless, fast, easy to join and leave, and do not need data 
 Light material nodes
 ++++++++++++++++++++
 
-Light material nodes are stateful and require recovery upon restart but only for recent data. On the Insolar network, light material nodes do the following:
+Light material nodes are stateful and they automatically collect hot data and indices upon restart. On the Insolar network, light material nodes do the following:
 
 * build blocks;
-* manage data access;
+* manage data access and do audit;
 * provide caching for recent data;
 * enable scalability of network throughput;
 * perform data retrieval and storage operations for :ref:`virtual nodes <virtual>`;
@@ -403,7 +403,7 @@ Nodes with :ref:`virtual static roles <virtual>` carry out **virtual** execution
 
    #. Registers the request within the current :term:`pulse`.
 
-      In case the request refers to a 'busy' :term:`object <object>`, execution may be delayed and handed over to another executor due to state locks or multiple updates. Moreover, multiple requests can be executed within the same pulse when opportunistic execution/validation is allowed by the caller or by the called object.
+      In case the request arrives to a 'busy' virtual executor, it can delegate the execution of an :term:`object <object>` to other virtual nodes (not necessary to virtual executors). Moreover, multiple requests can be executed within the same pulse when opportunistic execution/validation is allowed by the caller or by the called object.
 
    #. Executes the request on the :term:`object <object>` (contract).
    #. Collects the results of outbound calls.
@@ -429,7 +429,7 @@ Material Execution & Validation
 
 Nodes with :ref:`light material static roles <virtual>` carry out **material** execution & validation:
 
-#. The network selects (determines based on :term:`entropy <pulse>`) a specific light material node to become a :ref:`material executor <dynamic_roles>`. Upon receiving data requests from the virtual executor in the current :term:`pulse <pulse>`, the material executor:
+#. The network selects (determines based on :term:`entropy <pulse>`) a specific light material node to become a :ref:`light material executor <dynamic_roles>`. Upon receiving data requests from the virtual executor in the current :term:`pulse <pulse>`, the light material executor:
 
    #. Manages data access for :term:`contracts <object>`.
    #. Performs data retrieval and storage operations for :ref:`virtual executors <dynamic_roles>`;
@@ -438,7 +438,7 @@ Nodes with :ref:`light material static roles <virtual>` carry out **material** e
 
 #. Once the executor’s status expires, the network selects :ref:`material validators <dynamic_roles>` from the list of active :ref:`light material nodes <light_material>` on a new :term:`pulse <pulse>`, meaning executors cannot predict which nodes will validate transactions, thereby avoiding a collusion scenario. 
 
-#. Each material validator checks that the material executor has formed the last :term:`block <jet drop>` correctly. The block must have:
+#. Each material validator checks that the light material executor has formed the last :term:`block <jet drop>` correctly. The block must have:
 
    * Correct hashes.
    * Correct order of new :term:`records <record>` in the affected :term:`filaments <filament>`. 
@@ -448,7 +448,7 @@ Nodes with :ref:`light material static roles <virtual>` carry out **material** e
 
 Upon each pulse, every light material node sends the data they formed to :ref:`heavy material nodes <heavy_material>`. However, light nodes keep hot data and share hot indices among a number of :ref:`light material stash <dynamic_roles>` nodes.
 
-Stash nodes are nodes which have been :ref:`material executors <dynamic_roles>` for a number of past :term:`pulses <pulse>`. The number is called a *stash history limit* and its default value is 5 but it is configurable within a :ref:`cloud <fed_of_clouds>`. Thus, stash material nodes provide caching for recent data.
+Light material stash nodes are nodes which have been :ref:`light material executors <dynamic_roles>` for a number of past :term:`pulses <pulse>`. The number is called a *stash history limit* and its default value is 5 but it is configurable within a :ref:`cloud <fed_of_clouds>`. Thus, stash material nodes provide caching for recent data.
 
 .. _consensuses:
 
@@ -532,7 +532,7 @@ As a consensus result, pulsars distribute the collaboratively-generated entropy 
 Ledger
 ~~~~~~
 
-Ledger is a common term for distributed storage, a network of nodes that store data. In the Insolar Platform, ledger is a distributed key-value storage.
+Ledger is a common term for distributed storage, a network of nodes that store data.
 
 As described in the :ref:`static roles section <static_roles>`, material nodes are responsible for storing data and providing it on requests for :ref:`virtual nodes <virtual>`. Virtual nodes create and sign new information and pass it to material nodes to store. So, material nodes do not create or modify information (:term:`objects <object>`) with the exception of specifically defined meta data.
 
