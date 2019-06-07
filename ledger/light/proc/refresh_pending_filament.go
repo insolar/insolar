@@ -65,7 +65,7 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 		return errors.Wrap(err, "[RefreshPendingFilament] can't fetch a lifeline state")
 	}
 
-	if lfl.PendingPointer == 0 {
+	if lfl.PendingPointer == nil {
 		return nil
 	}
 
@@ -75,7 +75,7 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 	}
 
 	if fp == nil {
-		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer, lfl.EarliestOpenRequest)
+		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer.Pulse(), lfl.EarliestOpenRequest)
 		if err != nil {
 			return err
 		}

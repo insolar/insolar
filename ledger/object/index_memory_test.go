@@ -874,21 +874,32 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		pn := gen.PulseNumber()
 		objID := gen.ID()
 
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
-		req := record.Request{Object: objRef}
-		reqID := insolar.NewID(111, nil)
+		reqID := insolar.NewID(pn+1, nil)
+		pf := record.PendingFilament{
+			RecordID: *reqID,
+		}
+		pfv := record.Wrap(pf)
+		hash := record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfv)
+		metaReqID := *insolar.NewID(pn+1, hash)
 
-		res := record.Result{Request: *objRef}
 		resID := insolar.NewID(222, nil)
+		pfr := record.PendingFilament{RecordID: *resID, PreviousRecord: reqID}
+		pfrv := record.Wrap(pfr)
+		hash = record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfrv)
+		metaResID := *insolar.NewID(pn, hash)
 
 		rsm := NewRecordStorageMock(t)
 		rsm.ForIDFunc = func(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
 			switch p1 {
+			case metaReqID:
+				return record.Material{Virtual: &pfv}, nil
+			case metaResID:
+				return record.Material{Virtual: &pfrv}, nil
 			case *reqID:
-				reqV := record.Wrap(req)
+				reqV := record.Wrap(record.Request{Object: insolar.NewReference(*reqID)})
 				return record.Material{Virtual: &reqV}, nil
 			case *resID:
-				resV := record.Wrap(res)
+				resV := record.Wrap(record.Result{Request: *insolar.NewReference(*reqID)})
 				return record.Material{Virtual: &resV}, nil
 			default:
 				panic("test is totaly broken")
@@ -904,55 +915,8 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 			pn:     {},
 		}
 
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, MetaRecordsIDs: []insolar.ID{*reqID}})
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, MetaRecordsIDs: []insolar.ID{*resID}})
-
-		err := idx.RefreshState(ctx, pn, objID)
-		require.NoError(t, err)
-
-		require.Equal(t, true, buck.pendingMeta.isStateCalculated)
-		require.Equal(t, 2, len(buck.pendingMeta.fullFilament))
-		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequestsIds))
-		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequestsIdsIndex[pn]))
-		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequestsIdsIndex[pn+1]))
-	})
-
-	t.Run("works fine. req and res", func(t *testing.T) {
-		ctx := inslogger.TestContext(t)
-		pn := gen.PulseNumber()
-		objID := gen.ID()
-
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
-		req := record.Request{Object: objRef}
-		reqID := insolar.NewID(111, nil)
-
-		res := record.Result{Request: *objRef}
-		resID := insolar.NewID(222, nil)
-
-		rsm := NewRecordStorageMock(t)
-		rsm.ForIDFunc = func(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
-			switch p1 {
-			case *reqID:
-				reqV := record.Wrap(req)
-				return record.Material{Virtual: &reqV}, nil
-			case *resID:
-				resV := record.Wrap(res)
-				return record.Material{Virtual: &resV}, nil
-			default:
-				panic("test is totally broken")
-			}
-		}
-
-		idx := NewInMemoryIndex(rsm, platformpolicy.NewPlatformCryptographyScheme())
-		idx.createBucket(ctx, pn, objID)
-		buck := idx.buckets[pn][objID]
-		buck.pendingMeta.notClosedRequestsIdsIndex = map[insolar.PulseNumber]map[insolar.ID]struct{}{
-			pn + 1: {},
-			pn:     {},
-		}
-
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, MetaRecordsIDs: []insolar.ID{*reqID}})
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, MetaRecordsIDs: []insolar.ID{*resID}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, MetaRecordsIDs: []insolar.ID{metaReqID}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, MetaRecordsIDs: []insolar.ID{metaResID}})
 
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
@@ -969,15 +933,18 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		pn := gen.PulseNumber()
 		objID := gen.ID()
 
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
-		req := record.Request{Object: objRef}
 		reqID := insolar.NewID(111, nil)
+		pf := record.PendingFilament{RecordID: *reqID}
+		pfID := gen.ID()
 
 		rsm := NewRecordStorageMock(t)
 		rsm.ForIDFunc = func(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
 			switch p1 {
+			case pfID:
+				metaV := record.Wrap(pf)
+				return record.Material{Virtual: &metaV}, nil
 			case *reqID:
-				reqV := record.Wrap(req)
+				reqV := record.Wrap(record.Request{Object: insolar.NewReference(*reqID)})
 				return record.Material{Virtual: &reqV}, nil
 			default:
 				panic("test is totally broken")
@@ -991,7 +958,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 			pn: {},
 		}
 
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, MetaRecordsIDs: []insolar.ID{*reqID}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, MetaRecordsIDs: []insolar.ID{pfID}})
 
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
@@ -999,7 +966,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		require.Equal(t, true, buck.pendingMeta.isStateCalculated)
 		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
 		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIds))
-		require.Equal(t, *objRef.Record(), buck.pendingMeta.notClosedRequestsIds[0])
+		require.Equal(t, *reqID, buck.pendingMeta.notClosedRequestsIds[0])
 		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIdsIndex[pn]))
 	})
 
@@ -1008,27 +975,74 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		pn := gen.PulseNumber()
 		objID := gen.ID()
 
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
+		objRef := insolar.NewReference(*insolar.NewID(pn, nil))
 		req := record.Request{Object: objRef}
 		reqV := record.Wrap(req)
+		pf := record.PendingFilament{
+			RecordID: *req.Object.Record(),
+		}
+		pfv := record.Wrap(pf)
+		hash := record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfv)
+		metaReqID := *insolar.NewID(pn, hash)
+
 		res := record.Result{Request: *objRef}
 		resV := record.Wrap(res)
 		resID := *insolar.NewID(321, nil)
+		pfRes := record.PendingFilament{
+			RecordID:       resID,
+			PreviousRecord: &metaReqID,
+		}
+		pfResV := record.Wrap(pfRes)
+		hash = record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfResV)
+		metaResID := *insolar.NewID(pn, hash)
 
-		objRefS := insolar.NewReference(*insolar.NewID(567, nil))
+		objRefS := insolar.NewReference(*insolar.NewID(pn+1, nil))
 		reqS := record.Request{Object: objRefS}
 		reqSV := record.Wrap(reqS)
 
-		objRefT := insolar.NewReference(*insolar.NewID(888, nil))
+		pfReqS := record.PendingFilament{
+			RecordID:       *reqS.Object.Record(),
+			PreviousRecord: &metaResID,
+		}
+		pfReqSV := record.Wrap(pfReqS)
+		hash = record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfReqSV)
+		metaReqSID := *insolar.NewID(pn+1, hash)
+
+		objRefT := insolar.NewReference(*insolar.NewID(pn+2, nil))
 		reqT := record.Request{Object: objRefT}
+		pfReqT := record.PendingFilament{
+			RecordID:       *reqT.Object.Record(),
+			PreviousRecord: &metaReqSID,
+		}
+		pfReqTV := record.Wrap(pfReqT)
+		hash = record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfReqTV)
+		metaReqTID := *insolar.NewID(pn, hash)
+
 		resT := record.Result{Request: *objRefT}
 		reqTV := record.Wrap(reqT)
 		resTV := record.Wrap(resT)
 		resTID := *insolar.NewID(999, nil)
+		pfResT := record.PendingFilament{
+			RecordID:       resTID,
+			PreviousRecord: &metaReqTID,
+		}
+		pfResTV := record.Wrap(pfResT)
+		hash = record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfResTV)
+		metaResTID := *insolar.NewID(pn, hash)
 
 		rsm := NewRecordStorageMock(t)
 		rsm.ForIDFunc = func(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
 			switch p1 {
+			case metaReqID:
+				return record.Material{Virtual: &pfv}, nil
+			case metaResID:
+				return record.Material{Virtual: &pfResV}, nil
+			case metaReqSID:
+				return record.Material{Virtual: &pfReqSV}, nil
+			case metaReqTID:
+				return record.Material{Virtual: &pfReqTV}, nil
+			case metaResTID:
+				return record.Material{Virtual: &pfResTV}, nil
 			case *req.Object.Record():
 				return record.Material{Virtual: &reqV}, nil
 			case resID:
@@ -1048,10 +1062,10 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
 
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, MetaRecordsIDs: []insolar.ID{*objRef.Record(), resID}})
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, MetaRecordsIDs: []insolar.ID{*objRefS.Record()}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn, MetaRecordsIDs: []insolar.ID{metaReqID, metaResID}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, MetaRecordsIDs: []insolar.ID{metaReqSID}})
 
-		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 2, MetaRecordsIDs: []insolar.ID{*objRefT.Record(), resTID}})
+		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 2, MetaRecordsIDs: []insolar.ID{metaReqTID, metaResTID}})
 
 		buck.pendingMeta.notClosedRequestsIdsIndex = map[insolar.PulseNumber]map[insolar.ID]struct{}{
 			pn:     {},

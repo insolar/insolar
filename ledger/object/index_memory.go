@@ -18,6 +18,7 @@ package object
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -435,10 +436,13 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 			case *record.Request:
 				b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN][*r.Object.Record()] = struct{}{}
 			case *record.Result:
+				println(r.Request.Record().Pulse())
 				openReqs, ok := b.pendingMeta.notClosedRequestsIdsIndex[r.Request.Record().Pulse()]
 				if ok {
 					delete(openReqs, *r.Request.Record())
 				}
+			default:
+				panic(fmt.Sprintf("unknow type - %v", r))
 			}
 		}
 	}
