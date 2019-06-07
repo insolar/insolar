@@ -274,7 +274,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			},
 
 			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
-			PluginsDir:      genesisCfg.PluginsDir,
 			ContractsConfig: genesisCfg.ContractsConfig,
 		}
 	}

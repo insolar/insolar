@@ -22,11 +22,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"os/exec"
 	"path"
 	"strconv"
-	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -35,7 +34,6 @@ import (
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 // Generator is a component for generating bootstrap files required for discovery nodes bootstrap and heavy genesis.
@@ -79,12 +77,6 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrap(err, "couldn't get root keys")
 	}
 	publicKey := platformpolicy.MustPublicKeyToString(pair.Public)
-
-	inslog.Info("[ bootstrap ] generate plugins")
-	err = g.generatePlugins()
-	if err != nil {
-		return errors.Wrap(err, "could't compile smart contracts via insgocc")
-	}
 
 	inslog.Info("[ bootstrap ] create keys ...")
 	discoveryNodes, err := createKeysInDir(
@@ -209,7 +201,6 @@ func (g *Generator) makeHeavyGenesisConfig(
 	}
 	cfg := &insolar.GenesisHeavyConfig{
 		DiscoveryNodes:  items,
-		PluginsDir:      g.config.HeavyGenesisPluginsDir,
 		ContractsConfig: contractsConfig,
 	}
 	b, err := json.MarshalIndent(cfg, "", "    ")
@@ -220,20 +211,6 @@ func (g *Generator) makeHeavyGenesisConfig(
 	err = ioutil.WriteFile(g.config.HeavyGenesisConfigFile, b, 0600)
 	return errors.Wrapf(err,
 		"failed to write heavy config %v", g.config.HeavyGenesisConfigFile)
-}
-
-func (g *Generator) generatePlugins() error {
-	insgoccBin := g.config.Contracts.Insgocc
-	args := []string{
-		"compile-genesis-plugins",
-		"-o", g.config.Contracts.OutDir,
-	}
-
-	fmt.Println(insgoccBin, strings.Join(args, " "))
-	gocc := exec.Command(insgoccBin, args...)
-	gocc.Stderr = os.Stderr
-	gocc.Stdout = os.Stdout
-	return gocc.Run()
 }
 
 func dumpAsJSON(data interface{}) string {

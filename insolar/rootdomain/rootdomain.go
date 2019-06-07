@@ -19,8 +19,27 @@ package rootdomain
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/allowance"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/nodedomain"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/noderecord"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/platformpolicy"
 )
+
+const (
+	GenesisPrototypeSuffix = "_proto"
+)
+
+var predefinedPrototypes = map[string]insolar.Reference{
+	insolar.GenesisNameRootDomain + GenesisPrototypeSuffix: *rootdomain.PrototypeReference,
+	insolar.GenesisNameNodeDomain + GenesisPrototypeSuffix: *nodedomain.PrototypeReference,
+	insolar.GenesisNameNodeRecord + GenesisPrototypeSuffix: *noderecord.PrototypeReference,
+	insolar.GenesisNameRootMember + GenesisPrototypeSuffix: *member.PrototypeReference,
+	insolar.GenesisNameRootWallet + GenesisPrototypeSuffix: *wallet.PrototypeReference,
+	insolar.GenesisNameAllowance + GenesisPrototypeSuffix:  *allowance.PrototypeReference,
+}
 
 var genesisPulse = insolar.GenesisPulse.PulseNumber
 
@@ -52,6 +71,9 @@ func (r Record) ID() insolar.ID {
 
 // GenesisRef returns reference to any genesis records based on the root domain.
 func GenesisRef(name string) insolar.Reference {
+	if ref, ok := predefinedPrototypes[name]; ok {
+		return ref
+	}
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	req := record.Request{
 		CallType: record.CTGenesis,

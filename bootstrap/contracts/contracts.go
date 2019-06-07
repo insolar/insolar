@@ -17,12 +17,12 @@
 package contracts
 
 import (
-	"github.com/insolar/insolar/application/contract/member"
-	"github.com/insolar/insolar/application/contract/nodedomain"
-	"github.com/insolar/insolar/application/contract/rootdomain"
-	"github.com/insolar/insolar/application/contract/wallet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 )
 
 // GenesisContractsStates returns list contract configs for genesis.
