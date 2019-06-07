@@ -182,10 +182,6 @@ func (s *consensusSuite) SetupTest() {
 		pulseReceivers = append(pulseReceivers, node.host)
 	}
 
-	log.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	s.Require().NoError(err)
-
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
@@ -224,6 +220,10 @@ func (s *consensusSuite) SetupTest() {
 		s.Require().Equal(s.getNodesCount(), len(activeNodes2))
 	}
 	fmt.Println("=================== SetupTest() Done")
+	log.Info("Start test pulsar")
+	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	s.Require().NoError(err)
+
 }
 
 func (s *testSuite) waitResults(results chan error, expected int) {
@@ -538,7 +538,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t), senderMock)
 
 	serviceNetwork.SetGateway(NewFakeGateway())
-	serviceNetwork.Gateway().Run(context.Background())
 
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler

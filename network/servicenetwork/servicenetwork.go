@@ -137,6 +137,7 @@ func (n *ServiceNetwork) SetGateway(g network.Gateway) {
 
 	if n.gateway != nil && n.gateway.GetState() == g.GetState() {
 		log.Warn("Trying to set gateway to the same state")
+		n.gatewayMu.Unlock()
 		return
 	}
 	n.gateway = g
