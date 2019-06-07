@@ -57,20 +57,36 @@ func recoverRPC(err *error) {
 	}
 }
 
+func (m *RPCMethods) getCurrent(
+	obj insolar.Reference, mode string, reqRef insolar.Reference,
+) (
+	*CurrentExecution, error,
+) {
+	os := m.lr.GetObjectState(obj)
+	if os == nil {
+		return nil, errors.New("Failed to find requested object state. ref: " + obj.String())
+	}
+	es, err := os.GetModeState(mode)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to find needed execution state")
+	}
+	cur := es.CurrentList.Get(reqRef)
+	if cur == nil {
+		return nil, errors.New("No current execution in the state for request " + reqRef.String())
+	}
+	return cur, nil
+}
+
 // GetCode is an RPC retrieving a code by its reference
 func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := m.lr.GetObjectState(req.Callee)
-	if os == nil {
-		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
-	}
-	es, err := os.GetModeState(req.Mode)
+	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
-		return errors.Wrap(err, "Failed to find needed execution state")
+		return errors.Wrap(err, "Failed to fetch current execution")
 	}
-	ctx := es.CurrentList.Get(req.Request).Context
 
+	ctx := current.Context
 	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
 	defer span.End()
 
@@ -89,15 +105,11 @@ func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCod
 func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := m.lr.GetObjectState(req.Callee)
-	if os == nil {
-		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
-	}
-	es, err := os.GetModeState(req.Mode)
+	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
-		return errors.Wrap(err, "Failed to find needed execution state")
+		return errors.Wrap(err, "Failed to fetch current execution")
 	}
-	current := es.CurrentList.Get(req.Request)
+
 	ctx := current.Context
 
 	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
@@ -110,28 +122,28 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 
 	current.Nonce++
 
-	msg := &message.CallMethod{
-		Request: record.Request{
-			Caller:          req.Callee,
-			CallerPrototype: req.CalleePrototype,
-			Nonce:           current.Nonce,
+	reqRecord := record.Request{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           current.Nonce,
 
-			Immutable: req.Immutable,
+		Immutable: req.Immutable,
 
-			Object:    &req.Object,
-			Prototype: &req.Prototype,
-			Method:    req.Method,
-			Arguments: req.Arguments,
+		Object:    &req.Object,
+		Prototype: &req.Prototype,
+		Method:    req.Method,
+		Arguments: req.Arguments,
 
-			APIRequestID: current.Request.APIRequestID,
-		},
+		APIRequestID: current.Request.APIRequestID,
 	}
 
 	if !req.Wait {
-		msg.ReturnMode = record.ReturnNoWait
+		reqRecord.ReturnMode = record.ReturnNoWait
 	}
 
+	msg := &message.CallMethod{Request: reqRecord}
 	res, err := m.lr.ContractRequester.CallMethod(ctx, msg)
+	current.AddOutgoingRequest(ctx, reqRecord, rep.Result, nil, err)
 	if err != nil {
 		return err
 	}
@@ -147,16 +159,10 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := m.lr.GetObjectState(req.Callee)
-	if os == nil {
-		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
-	}
-	es, err := os.GetModeState(req.Mode)
+	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
-		return errors.Wrap(err, "Failed to find needed execution state")
+		return errors.Wrap(err, "Failed to fetch current execution")
 	}
-
-	current := es.CurrentList.Get(req.Request)
 	ctx := current.Context
 
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
@@ -165,23 +171,24 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 
 	current.Nonce++
 
-	msg := &message.CallMethod{
-		Request: record.Request{
-			Caller:          req.Callee,
-			CallerPrototype: req.CalleePrototype,
-			Nonce:           current.Nonce,
+	reqRecord := record.Request{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           current.Nonce,
 
-			CallType:  record.CTSaveAsChild,
-			Base:      &req.Parent,
-			Prototype: &req.Prototype,
-			Method:    req.ConstructorName,
-			Arguments: req.ArgsSerialized,
+		CallType:  record.CTSaveAsChild,
+		Base:      &req.Parent,
+		Prototype: &req.Prototype,
+		Method:    req.ConstructorName,
+		Arguments: req.ArgsSerialized,
 
-			APIRequestID: current.Request.APIRequestID,
-		},
+		APIRequestID: current.Request.APIRequestID,
 	}
 
+	msg := &message.CallMethod{Request: reqRecord}
+
 	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
+	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)
 
 	rep.Reference = ref
 
@@ -192,15 +199,10 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := m.lr.GetObjectState(req.Callee)
-	if os == nil {
-		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
-	}
-	es, err := os.GetModeState(req.Mode)
+	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
-		return errors.Wrap(err, "Failed to find needed execution state")
+		return errors.Wrap(err, "Failed to fetch current execution")
 	}
-	current := es.CurrentList.Get(req.Request)
 	ctx := current.Context
 
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsDelegate")
@@ -208,24 +210,23 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 	defer span.End()
 
 	current.Nonce++
+	reqRecord := record.Request{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           current.Nonce,
 
-	msg := &message.CallMethod{
-		Request: record.Request{
-			Caller:          req.Callee,
-			CallerPrototype: req.CalleePrototype,
-			Nonce:           current.Nonce,
+		CallType:  record.CTSaveAsDelegate,
+		Base:      &req.Into,
+		Prototype: &req.Prototype,
+		Method:    req.ConstructorName,
+		Arguments: req.ArgsSerialized,
 
-			CallType:  record.CTSaveAsDelegate,
-			Base:      &req.Into,
-			Prototype: &req.Prototype,
-			Method:    req.ConstructorName,
-			Arguments: req.ArgsSerialized,
-
-			APIRequestID: current.Request.APIRequestID,
-		},
+		APIRequestID: current.Request.APIRequestID,
 	}
+	msg := &message.CallMethod{Request: reqRecord}
 
 	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
+	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)
 
 	rep.Reference = ref
 	return err
@@ -242,18 +243,14 @@ func (m *RPCMethods) GetObjChildrenIterator(
 ) (
 	err error,
 ) {
-
 	defer recoverRPC(&err)
 
-	os := m.lr.GetObjectState(req.Callee)
-	if os == nil {
-		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
-	}
-	es, err := os.GetModeState(req.Mode)
+	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
-		return errors.Wrap(err, "Failed to find needed execution state")
+		return errors.Wrap(err, "Failed to fetch current execution")
 	}
-	ctx := es.CurrentList.Get(req.Request).Context
+
+	ctx := current.Context
 
 	ctx, span := instracer.StartSpan(ctx, "RPC.GetObjChildrenIterator")
 	defer span.End()
@@ -330,15 +327,12 @@ func (m *RPCMethods) GetObjChildrenIterator(
 func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := m.lr.GetObjectState(req.Callee)
-	if os == nil {
-		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
-	}
-	es, err := os.GetModeState(req.Mode)
+	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
-		return errors.Wrap(err, "Failed to find needed execution state")
+		return errors.Wrap(err, "Failed to fetch current execution")
 	}
-	ctx := es.CurrentList.Get(req.Request).Context
+
+	ctx := current.Context
 
 	ref, err := m.lr.ArtifactManager.GetDelegate(ctx, req.Object, req.OfType)
 	if err != nil {
@@ -352,16 +346,12 @@ func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.Up
 func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
 	defer recoverRPC(&err)
 
-	os := m.lr.GetObjectState(req.Callee)
-	if os == nil {
-		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
-	}
-	es, err := os.GetModeState(req.Mode)
+	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
-		return errors.Wrap(err, "Failed to find needed execution state")
+		return errors.Wrap(err, "Failed to fetch current execution")
 	}
 
-	es.CurrentList.Get(req.Request).Deactivate = true
+	current.Deactivate = true
 
 	return nil
 }

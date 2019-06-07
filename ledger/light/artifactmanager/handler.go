@@ -67,6 +67,8 @@ type MessageHandler struct {
 	LifelineIndex         object.LifelineIndex
 	IndexBucketModifier   object.IndexBucketModifier
 	LifelineStateModifier object.LifelineStateModifier
+	PendingModifier       object.PendingModifier
+	PendingAccessor       object.PendingAccessor
 
 	conf           *configuration.Ledger
 	jetTreeUpdater jet.Fetcher
@@ -81,6 +83,8 @@ func NewMessageHandler(
 	index object.LifelineIndex,
 	indexBucketModifier object.IndexBucketModifier,
 	indexStateModifier object.LifelineStateModifier,
+	pendingModifier object.PendingModifier,
+	pendingAccessor object.PendingAccessor,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
@@ -90,6 +94,8 @@ func NewMessageHandler(
 		LifelineIndex:         index,
 		IndexBucketModifier:   indexBucketModifier,
 		LifelineStateModifier: indexStateModifier,
+		PendingModifier:       pendingModifier,
+		PendingAccessor:       pendingAccessor,
 	}
 
 	dep := &proc.Dependencies{
@@ -109,7 +115,7 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
-		FetchJetWM: func(p *proc.CheckJet) {
+		CheckJet: func(p *proc.CheckJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetFetcher = h.jetTreeUpdater
@@ -128,7 +134,9 @@ func NewMessageHandler(
 			p.Dep.Sender = h.Sender
 		},
 		SetRecord: func(p *proc.SetRecord) {
+			p.Dep.Bus = h.Bus
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.PendingModifier = h.PendingModifier
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
@@ -148,12 +156,15 @@ func NewMessageHandler(
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Sender = h.Sender
+			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetCode: func(p *proc.GetCode) {
-			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobAccessor = h.BlobAccessor
+			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.Sender = h.Sender
 		},
 		GetRequest: func(p *proc.GetRequest) {
 			p.Dep.RecordAccessor = h.RecordAccessor
@@ -202,11 +213,29 @@ func NewMessageHandler(
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
+			p.Dep.PendingModifier = h.PendingModifier
+		},
+		GetPendingFilament: func(p *proc.GetPendingFilament) {
+			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.LifelineAccessor = h.LifelineIndex
+		},
+		RefreshPendingFilament: func(p *proc.RefreshPendingFilament) {
+			p.Dep.LifelineAccessor = h.LifelineIndex
+			p.Dep.PendingModifier = h.PendingModifier
+			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.Bus = h.Bus
 		},
 		PassState: func(p *proc.PassState) {
 			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Sender = h.Sender
 			p.Dep.Records = h.RecordAccessor
+		},
+		CalculateID: func(p *proc.CalculateID) {
+			p.Dep(h.PCS)
+		},
+		SetCode: func(p *proc.SetCode) {
+			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender)
 		},
 	}
 

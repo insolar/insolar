@@ -37,6 +37,7 @@ type ExecutionState struct {
 	PrototypeDescriptor artifacts.ObjectDescriptor
 	CodeDescriptor      artifacts.CodeDescriptor
 
+	Finished              []*CurrentExecution
 	CurrentList           *CurrentExecutionList
 	Queue                 []ExecutionQueueElement
 	QueueProcessorActive  bool
@@ -162,5 +163,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 		}
 		es.PendingConfirmed = false
 	}
+	es.Finished = nil
+
 	return messages
 }

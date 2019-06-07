@@ -33,6 +33,27 @@ type CurrentExecution struct {
 	SentResult    bool
 	Nonce         uint64
 	Deactivate    bool
+
+	OutgoingRequests []OutgoingRequest
+}
+
+type OutgoingRequest struct {
+	Request   record.Request
+	NewObject *Ref
+	Response  []byte
+	Error     error
+}
+
+func (ce *CurrentExecution) AddOutgoingRequest(
+	ctx context.Context, request record.Request, result []byte, newObject *Ref, err error,
+) {
+	rec := OutgoingRequest{
+		Request: request,
+		Response: result,
+		NewObject: newObject,
+		Error: err,
+	}
+	ce.OutgoingRequests = append(ce.OutgoingRequests, rec)
 }
 
 type CurrentExecutionList struct {

@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -80,6 +81,12 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		case payload.TypePassState:
 			h := NewPassState(s.dep, s.message.WatermillMsg)
 			return f.Handle(ctx, h.Present)
+		case payload.TypeGetCode:
+			h := NewGetCode(s.dep, s.message.WatermillMsg, false)
+			return f.Handle(ctx, h.Present)
+		case payload.TypeSetCode:
+			h := NewSetCode(s.dep, s.message.WatermillMsg, false)
+			return f.Handle(ctx, h.Present)
 		case payload.TypePass:
 			return s.handlePass(ctx, f)
 		case payload.TypeError:
@@ -89,6 +96,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		}
 	}
 
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", s.message.Parcel.Message().Type().String()))
+	defer span.End()
+
 	switch s.message.Parcel.Message().Type() {
 	case insolar.TypeSetRecord:
 		msg := s.message.Parcel.Message().(*message.SetRecord)
@@ -97,10 +107,6 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeSetBlob:
 		msg := s.message.Parcel.Message().(*message.SetBlob)
 		h := NewSetBlob(s.dep, s.message.ReplyTo, msg)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetCode:
-		msg := s.message.Parcel.Message().(*message.GetCode)
-		h := NewGetCode(s.dep, s.message.ReplyTo, msg.Code)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetRequest:
 		msg := s.message.Parcel.Message().(*message.GetRequest)
@@ -134,6 +140,10 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		msg := s.message.Parcel.Message().(*message.HotData)
 		h := NewHotData(s.dep, s.message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetPendingFilament:
+		msg := s.message.Parcel.Message().(*message.GetPendingFilament)
+		h := NewGetPendingFilament(s.dep, msg, s.message.ReplyTo)
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.message.Parcel.Message().Type().String())
 	}
@@ -153,12 +163,18 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
+	origin := wmessage.NewMessage(watermill.NewUUID(), pass.Origin)
+	middleware.SetCorrelationID(string(pass.CorrelationID), origin)
 
-	switch payloadType { // nolint
+	switch payloadType {
 	case payload.TypeGetObject:
-		origin := wmessage.NewMessage(watermill.NewUUID(), pass.Origin)
-		middleware.SetCorrelationID(string(pass.CorrelationID), origin)
 		h := NewGetObject(s.dep, origin, true)
+		return f.Handle(ctx, h.Present)
+	case payload.TypeGetCode:
+		h := NewGetCode(s.dep, origin, true)
+		return f.Handle(ctx, h.Present)
+	case payload.TypeSetCode:
+		h := NewSetCode(s.dep, origin, true)
 		return f.Handle(ctx, h.Present)
 	}
 	return nil

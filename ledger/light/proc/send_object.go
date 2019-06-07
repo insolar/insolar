@@ -22,15 +22,15 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -48,6 +48,9 @@ type SendObject struct {
 		Blobs          blob.Accessor
 		Bus            insolar.MessageBus
 		Sender         bus.Sender
+
+		PendingAccessor object.PendingAccessor
+		PendingModifier object.PendingModifier
 	}
 }
 

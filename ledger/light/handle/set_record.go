@@ -19,9 +19,9 @@ package handle
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"

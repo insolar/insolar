@@ -18,41 +18,29 @@ package handle
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
-type GetCode struct {
+type GetPendingFilament struct {
 	dep     *proc.Dependencies
-	message *message.Message
-	passed  bool
+	msg     *message.GetPendingFilament
+	replyTo chan<- bus.Reply
 }
 
-func NewGetCode(dep *proc.Dependencies, msg *message.Message, passed bool) *GetCode {
-	return &GetCode{
+func NewGetPendingFilament(dep *proc.Dependencies, msg *message.GetPendingFilament, replyTo chan<- bus.Reply) *GetPendingFilament {
+	return &GetPendingFilament{
 		dep:     dep,
-		message: msg,
-		passed:  passed,
+		msg:     msg,
+		replyTo: replyTo,
 	}
 }
 
-func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	pl, err := payload.UnmarshalFromMeta(s.message.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
-	}
-	msg, ok := pl.(*payload.GetCode)
-	if !ok {
-		return fmt.Errorf("unexpected payload type: %T", pl)
-	}
-
-	passIfNotFound := !s.passed
-	code := proc.NewGetCode(s.message, msg.CodeID, passIfNotFound)
-	s.dep.GetCode(code)
-	return f.Procedure(ctx, code, false)
+func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
+	getFilament := proc.NewGetPendingFilament(s.msg, s.replyTo)
+	s.dep.GetPendingFilament(getFilament)
+	return f.Procedure(ctx, getFilament, false)
 }

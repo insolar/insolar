@@ -230,6 +230,8 @@ const (
 	TypeGetRequest
 	// TypeGetPendingRequestID fetches a pending request id from ledger
 	TypeGetPendingRequestID
+	// TypeGetPendingFilament fetches a part of a pending-filament from another light
+	TypeGetPendingFilament
 
 	// Heavy replication
 
