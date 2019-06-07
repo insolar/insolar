@@ -537,7 +537,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		&amMock, certManager, cryptographyService, mblocker, GIL, serviceNetwork, keyProc, terminationHandler,
 		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t), senderMock)
 
-	serviceNetwork.SetGateway(NewFakeOk())
+	serviceNetwork.SetGateway(NewFakeGateway())
 	serviceNetwork.Gateway().Run(context.Background())
 
 	node.serviceNetwork = serviceNetwork
