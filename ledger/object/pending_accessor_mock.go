@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -74,7 +74,7 @@ type PendingAccessorMockFirstPendingResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of PendingAccessor.FirstPending is expected from 1 to Infinity times
+//Expect specifies that invocation of PendingAccessor.FirstPending is expected from 1 to Infinity times
 func (m *mPendingAccessorMockFirstPending) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mPendingAccessorMockFirstPending {
 	m.mock.FirstPendingFunc = nil
 	m.expectationSeries = nil
@@ -86,7 +86,7 @@ func (m *mPendingAccessorMockFirstPending) Expect(p context.Context, p1 insolar.
 	return m
 }
 
-// Return specifies results of invocation of PendingAccessor.FirstPending
+//Return specifies results of invocation of PendingAccessor.FirstPending
 func (m *mPendingAccessorMockFirstPending) Return(r *record.PendingFilament, r1 error) *PendingAccessorMock {
 	m.mock.FirstPendingFunc = nil
 	m.expectationSeries = nil
@@ -98,7 +98,7 @@ func (m *mPendingAccessorMockFirstPending) Return(r *record.PendingFilament, r1 
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PendingAccessor.FirstPending is expected once
+//ExpectOnce specifies that invocation of PendingAccessor.FirstPending is expected once
 func (m *mPendingAccessorMockFirstPending) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *PendingAccessorMockFirstPendingExpectation {
 	m.mock.FirstPendingFunc = nil
 	m.mainExpectation = nil
@@ -113,7 +113,7 @@ func (e *PendingAccessorMockFirstPendingExpectation) Return(r *record.PendingFil
 	e.result = &PendingAccessorMockFirstPendingResult{r, r1}
 }
 
-// Set uses given function f as a mock of PendingAccessor.FirstPending method
+//Set uses given function f as a mock of PendingAccessor.FirstPending method
 func (m *mPendingAccessorMockFirstPending) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *record.PendingFilament, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -122,7 +122,7 @@ func (m *mPendingAccessorMockFirstPending) Set(f func(p context.Context, p1 inso
 	return m.mock
 }
 
-// FirstPending implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
+//FirstPending implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
 func (m *PendingAccessorMock) FirstPending(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *record.PendingFilament, r1 error) {
 	counter := atomic.AddUint64(&m.FirstPendingPreCounter, 1)
 	defer atomic.AddUint64(&m.FirstPendingCounter, 1)
@@ -174,17 +174,17 @@ func (m *PendingAccessorMock) FirstPending(p context.Context, p1 insolar.PulseNu
 	return m.FirstPendingFunc(p, p1, p2)
 }
 
-// FirstPendingMinimockCounter returns a count of PendingAccessorMock.FirstPendingFunc invocations
+//FirstPendingMinimockCounter returns a count of PendingAccessorMock.FirstPendingFunc invocations
 func (m *PendingAccessorMock) FirstPendingMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.FirstPendingCounter)
 }
 
-// FirstPendingMinimockPreCounter returns the value of PendingAccessorMock.FirstPending invocations
+//FirstPendingMinimockPreCounter returns the value of PendingAccessorMock.FirstPending invocations
 func (m *PendingAccessorMock) FirstPendingMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.FirstPendingPreCounter)
 }
 
-// FirstPendingFinished returns true if mock invocations count is ok
+//FirstPendingFinished returns true if mock invocations count is ok
 func (m *PendingAccessorMock) FirstPendingFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.FirstPendingMock.expectationSeries) > 0 {
