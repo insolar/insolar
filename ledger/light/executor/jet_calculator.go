@@ -25,13 +25,13 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetCalculator -o ./ -s _mock.go
 
-// JetCalculator provides methods for calculating jets.
+// JetCalculator provides get jets method for provided pulse.
 type JetCalculator interface {
 	// MineForPulse returns current node's jets for a provided pulse
 	MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID
 }
 
-// JetCalculatorDefault is a struct, that implements jet.JetCalculator.
+// JetCalculatorDefault implements JetCalculator.
 type JetCalculatorDefault struct {
 	coordinator jet.Coordinator
 	jetAccessor jet.Accessor

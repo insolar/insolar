@@ -30,15 +30,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-// JetSplitter provides methods for calculating jets.
+// JetSplitter provides method for processing and splitting jets.
 type JetSplitter interface {
-	// Do performs jets processing (decides which jets to split and returns result)
+	// Do performs jets processing, it decides which jets to split and returns list of resulting jets).
 	Do(ctx context.Context, previous, current, new insolar.PulseNumber) ([]jet.Info, error)
 }
 
 // TODO: move to JetSplitterDefault
 var splitCount = 5
 
+// JetSplitterDefault implements JetSplitter.
 type JetSplitterDefault struct {
 	JetCoordinator jet.Coordinator
 	JetAccessor    jet.Accessor
@@ -48,6 +49,7 @@ type JetSplitterDefault struct {
 	RecentStorageProvider recentstorage.Provider
 }
 
+// Do performs jets processing, it decides which jets to split and returns list of resulting jets.
 func (js *JetSplitterDefault) Do(
 	ctx context.Context, previous, current, new insolar.PulseNumber,
 ) ([]jet.Info, error) {
