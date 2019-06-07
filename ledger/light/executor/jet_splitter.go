@@ -41,12 +41,30 @@ var splitCount = 5
 
 // JetSplitterDefault implements JetSplitter.
 type JetSplitterDefault struct {
-	JetCoordinator jet.Coordinator
-	JetAccessor    jet.Accessor
-	JetModifier    jet.Modifier
+	jetCoordinator jet.Coordinator
+	jetAccessor    jet.Accessor
+	jetModifier    jet.Modifier
 
-	DropAccessor          drop.Accessor
-	RecentStorageProvider recentstorage.Provider
+	dropAccessor          drop.Accessor
+	recentStorageProvider recentstorage.Provider
+}
+
+// NewJetSplitter returns a new instance of a default jet splitter implementation.
+func NewJetSplitter(
+	jetCoordinator jet.Coordinator,
+	jetAccessor jet.Accessor,
+	jetModifier jet.Modifier,
+	dropAccessor drop.Accessor,
+	recentStorageProvider recentstorage.Provider,
+) *JetSplitterDefault {
+	return &JetSplitterDefault{
+		jetCoordinator: jetCoordinator,
+		jetAccessor:    jetAccessor,
+		jetModifier:    jetModifier,
+
+		dropAccessor:          dropAccessor,
+		recentStorageProvider: recentStorageProvider,
+	}
 }
 
 // Do performs jets processing, it decides which jets to split and returns list of resulting jets.
@@ -67,7 +85,7 @@ func (js *JetSplitterDefault) Do(
 }
 
 func (m *JetSplitterDefault) splitJets(ctx context.Context, jets []jet.Info, previous, current, new insolar.PulseNumber) ([]jet.Info, error) {
-	me := m.JetCoordinator.Me()
+	me := m.jetCoordinator.Me()
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"current_pulse": current,
 		"new_pulse":     new,
@@ -76,7 +94,7 @@ func (m *JetSplitterDefault) splitJets(ctx context.Context, jets []jet.Info, pre
 	for i, jetInfo := range jets {
 		newInfo := jet.Info{ID: jetInfo.ID}
 		if m.hasSplitIntention(ctx, previous, jetInfo.ID) {
-			leftJetID, rightJetID, err := m.JetModifier.Split(
+			leftJetID, rightJetID, err := m.jetModifier.Split(
 				ctx,
 				new,
 				jetInfo.ID,
@@ -87,25 +105,25 @@ func (m *JetSplitterDefault) splitJets(ctx context.Context, jets []jet.Info, pre
 			}
 
 			// Set actual because we are the last executor for jet.
-			m.JetModifier.Update(ctx, new, true, leftJetID, rightJetID)
+			m.jetModifier.Update(ctx, new, true, leftJetID, rightJetID)
 			newInfo.Left = &jet.Info{ID: leftJetID}
 			newInfo.Right = &jet.Info{ID: rightJetID}
 
-			nextLeftExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(leftJetID), new)
+			nextLeftExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(leftJetID), new)
 			if err != nil {
 				return nil, err
 			}
 			if *nextLeftExecutor == me {
 				newInfo.Left.MineNext = true
-				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(leftJetID))
+				m.recentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(leftJetID))
 			}
-			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), new)
+			nextRightExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), new)
 			if err != nil {
 				return nil, err
 			}
 			if *nextRightExecutor == me {
 				newInfo.Right.MineNext = true
-				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(rightJetID))
+				m.recentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(rightJetID))
 			}
 
 			logger.WithFields(map[string]interface{}{
@@ -116,8 +134,8 @@ func (m *JetSplitterDefault) splitJets(ctx context.Context, jets []jet.Info, pre
 			jets[i] = newInfo
 		} else {
 			// Set actual because we are the last executor for jet.
-			m.JetModifier.Update(ctx, new, true, jetInfo.ID)
-			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetInfo.ID), new)
+			m.jetModifier.Update(ctx, new, true, jetInfo.ID)
+			nextExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetInfo.ID), new)
 			if err != nil {
 				return nil, err
 			}
@@ -133,9 +151,9 @@ func (js *JetSplitterDefault) processJets(ctx context.Context, previous, current
 	ctx, span := instracer.StartSpan(ctx, "jets.process")
 	defer span.End()
 
-	js.JetModifier.Clone(ctx, current, new)
+	js.jetModifier.Clone(ctx, current, new)
 
-	ids := js.JetAccessor.All(ctx, current)
+	ids := js.jetAccessor.All(ctx, current)
 	ids, err := js.filterOtherExecutors(ctx, current, ids)
 	if err != nil {
 		return nil, err
@@ -168,10 +186,10 @@ func (js *JetSplitterDefault) processJets(ctx context.Context, previous, current
 }
 
 func (js *JetSplitterDefault) filterOtherExecutors(ctx context.Context, pulse insolar.PulseNumber, ids []insolar.JetID) ([]insolar.JetID, error) {
-	me := js.JetCoordinator.Me()
+	me := js.jetCoordinator.Me()
 	result := []insolar.JetID{}
 	for _, id := range ids {
-		executor, err := js.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
+		executor, err := js.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
 		if err != nil && err != node.ErrNoNodes {
 			return nil, err
 		}
@@ -191,7 +209,7 @@ func (js *JetSplitterDefault) hasSplitIntention(
 	previous insolar.PulseNumber,
 	id insolar.JetID,
 ) bool {
-	drop, err := js.DropAccessor.ForPulse(ctx, id, previous)
+	drop, err := js.dropAccessor.ForPulse(ctx, id, previous)
 	if err != nil {
 		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 			"previous_pulse": previous,

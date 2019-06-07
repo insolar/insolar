@@ -33,13 +33,16 @@ type JetCalculator interface {
 
 // JetCalculatorDefault implements JetCalculator.
 type JetCalculatorDefault struct {
-	coordinator jet.Coordinator
-	jetAccessor jet.Accessor
+	jetCoordinator jet.Coordinator
+	jetAccessor    jet.Accessor
 }
 
-// NewJetCalculator returns a new instance of a jet calculator.
+// NewJetCalculator returns a new instance of a default jet calculator implementation.
 func NewJetCalculator(jetCoordinator jet.Coordinator, jetAccessor jet.Accessor) *JetCalculatorDefault {
-	return &JetCalculatorDefault{coordinator: jetCoordinator, jetAccessor: jetAccessor}
+	return &JetCalculatorDefault{
+		jetCoordinator: jetCoordinator,
+		jetAccessor:    jetAccessor,
+	}
 }
 
 // MineForPulse returns current node's jets for a provided pulse.
@@ -47,10 +50,10 @@ func (c *JetCalculatorDefault) MineForPulse(ctx context.Context, pn insolar.Puls
 	var res []insolar.JetID
 
 	jetIDs := c.jetAccessor.All(ctx, pn)
-	me := c.coordinator.Me()
+	me := c.jetCoordinator.Me()
 
 	for _, jetID := range jetIDs {
-		executor, err := c.coordinator.LightExecutorForJet(ctx, insolar.ID(jetID), pn)
+		executor, err := c.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetID), pn)
 		if err != nil {
 			continue
 		}

@@ -15,3 +15,27 @@
 //
 
 package executor
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
+	"github.com/stretchr/testify/require"
+)
+
+func TestJetSplitter_New(t *testing.T) {
+	jc := jet.NewCoordinatorMock(t)
+	js := jet.NewStorageMock(t)
+	da := drop.NewAccessorMock(t)
+	rsp := recentstorage.NewProviderMock(t)
+	splitter := NewJetSplitter(
+		jc,
+		js,
+		js,
+		da,
+		rsp,
+	)
+	require.NotNil(t, splitter, "jet splitter created")
+}
