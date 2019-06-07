@@ -134,7 +134,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		oraclePubStrs[o.Name] = platformpolicy.MustPublicKeyToString(oracleKeys.Public)
 	}
 
-	for name, _ := range oraclePubStrs {
+	for name := range oraclePubStrs {
 		bootstrap.ContractOracleMembers[name] = rootdomain.GenesisRef(name + insolar.GenesisNameMember)
 	}
 
