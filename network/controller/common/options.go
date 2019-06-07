@@ -62,8 +62,6 @@ type Options struct {
 	// The maximum time to wait for a response to any packet.
 	PacketTimeout time.Duration
 
-	// InfiniteBootstrap bool
-
 	// Bootstrap reconnect timeout
 	BootstrapTimeout time.Duration
 
@@ -81,7 +79,4 @@ type Options struct {
 
 	// HandshakeSession TTL
 	HandshakeSessionTTL time.Duration
-
-	// CyclicBootstrapEnabled is a flag to enable/disable a cyclic bootstrap. Default - false
-	CyclicBootstrapEnabled bool
 }
