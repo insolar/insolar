@@ -616,6 +616,8 @@ type A struct{
 }
 
 func (s *PreprocessorSuite) TestProxyGeneration() {
+	s.T().Skip("This test is not ready for builtin contracts")
+
 	contracts, err := GetRealContractsNames()
 	s.Require().NoError(err)
 
@@ -631,8 +633,8 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 			a, r := assert.New(t), require.New(t)
 
 			parsed, err := ParseFile(path.Join(contractDir, contract, contract+".go"), insolar.MachineTypeGoPlugin)
-			a.NotNil(parsed, "have parsed object")
-			a.NoError(err)
+			r.NotNil(parsed, "have parsed object")
+			r.NoError(err)
 
 			proxyPath, err := GetRealApplicationDir("proxy")
 			a.NoError(err)

@@ -2108,6 +2108,8 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifac
 }
 
 func TestLogicRunnerFunc(t *testing.T) {
+	t.Skip()
+
 	if err := log.SetLevel("debug"); err != nil {
 		log.Error("Failed to set logLevel to debug: ", err.Error())
 	}

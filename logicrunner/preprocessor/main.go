@@ -604,7 +604,7 @@ func GetRealApplicationDir(dir string) (string, error) {
 	}
 	contractsPath := ""
 	for _, p := range strings.Split(gopath, ":") {
-		contractsPath = path.Join(p, "src/github.com/insolar/insolar/application/", dir)
+		contractsPath = path.Join(p, "src/github.com/insolar/insolar/logicrunner/builtin/", dir)
 		_, err := os.Stat(contractsPath)
 		if err == nil {
 			return contractsPath, nil
