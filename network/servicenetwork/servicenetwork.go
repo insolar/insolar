@@ -142,10 +142,8 @@ func (n *ServiceNetwork) SetGateway(g network.Gateway) {
 	n.gatewayMu.Unlock()
 	ctx := context.Background()
 	if n.gateway.NeedLockMessageBus() {
-		log.Warn("GIL ON")
 		n.GIL.Acquire(ctx)
 	} else {
-		log.Warn("GIL OFF")
 		n.GIL.Release(ctx)
 	}
 	n.gateway.Run(ctx)
