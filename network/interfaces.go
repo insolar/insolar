@@ -294,6 +294,7 @@ type Gateway interface {
 	OnPulse(context.Context, insolar.Pulse) error
 	NewGateway(insolar.NetworkState) Gateway
 	Auther() Auther
+	NeedLockMessageBus() bool
 }
 
 type Auther interface {
