@@ -834,6 +834,40 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		require.Equal(t, *objRefS.Record(), buck.pendingMeta.notClosedRequestsIds[0])
 	})
 
+	t.Run("close requests work fine. change of earliestState", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+
+		objRef := insolar.NewReference(*insolar.NewID(pn, []byte{1}))
+		req := record.Request{Object: objRef}
+		reqV := record.Wrap(req)
+
+		res := record.Result{Request: *objRef}
+		resV := record.Wrap(res)
+		resID := insolar.NewID(3, nil)
+
+		rms := NewRecordMemory()
+		_ = rms.Set(ctx, *objRef.Record(), record.Material{Virtual: &reqV})
+		_ = rms.Set(ctx, *resID, record.Material{Virtual: &resV})
+
+		idx := NewInMemoryIndex(rms, platformpolicy.NewPlatformCryptographyScheme())
+		idx.createBucket(ctx, pn, objID)
+		buck := idx.buckets[pn][objID]
+		buck.objectMeta.Lifeline.EarliestOpenRequest = &insolar.GenesisPulse.PulseNumber
+		_ = idx.SetRequest(ctx, pn, objID, *objRef.Record())
+
+		err := idx.SetResult(ctx, pn, objID, *resID, res)
+		require.NoError(t, err)
+
+		open, err := idx.OpenRequestsForObjID(ctx, pn, objID, 10)
+		require.NoError(t, err)
+
+		require.Equal(t, 0, len(open))
+
+		require.Nil(t, buck.objectMeta.Lifeline.EarliestOpenRequest)
+	})
+
 	t.Run("set result, there are other fillaments", func(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
@@ -1076,6 +1110,6 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
 
-		require.Equal(t, pn+1, buck.objectMeta.Lifeline.EarliestOpenRequest)
+		require.Equal(t, pn+1, *buck.objectMeta.Lifeline.EarliestOpenRequest)
 	})
 }

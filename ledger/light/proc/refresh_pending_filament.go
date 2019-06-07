@@ -65,7 +65,7 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 		return errors.Wrap(err, "[RefreshPendingFilament] can't fetch a lifeline state")
 	}
 
-	if lfl.PendingPointer == nil {
+	if lfl.PendingPointer == nil || lfl.EarliestOpenRequest == nil {
 		return nil
 	}
 
@@ -74,13 +74,13 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 		return err
 	}
 
-	if fp == nil {
-		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer.Pulse(), lfl.EarliestOpenRequest)
+	if fp == nil || fp.PreviousRecord == nil {
+		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest)
 		if err != nil {
 			return err
 		}
 	} else {
-		err = p.fillPendingFilament(ctx, p.pn, p.objID, fp.PreviousRecord.Pulse(), lfl.EarliestOpenRequest)
+		err = p.fillPendingFilament(ctx, p.pn, p.objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest)
 		if err != nil {
 			return err
 		}
@@ -106,6 +106,7 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 			return err
 		}
 		if isBeyond {
+			panic("we don't want to be here")
 			// We need to update our chain
 			// If oldest at the heavy
 			return nil

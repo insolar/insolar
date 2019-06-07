@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
 
@@ -64,12 +65,12 @@ func (s *GetPendingRequests) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	// refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, s.reqPulse, *s.msg.Object.Record())
-	// s.dep.RefreshPendingFilament(refreshPendingsState)
-	// if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
-	// 	panic(errors.Wrap(err, "something broken"))
-	// 	return err
-	// }
+	refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, s.reqPulse, *s.msg.Object.Record())
+	s.dep.RefreshPendingFilament(refreshPendingsState)
+	if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
+		panic(errors.Wrap(err, "something broken"))
+		return err
+	}
 
 	getPendingRequests := proc.NewGetPendingRequests(jet.Result.Jet, s.replyTo, s.msg, s.reqPulse)
 	s.dep.GetPendingRequests(getPendingRequests)

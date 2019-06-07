@@ -368,6 +368,10 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 		}
 	}
 
+	if len(b.pendingMeta.notClosedRequestsIds) == 0 {
+		b.objectMeta.Lifeline.EarliestOpenRequest = nil
+	}
+
 	stats.Record(ctx,
 		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
 	)
@@ -452,7 +456,7 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	for i, chainLink := range b.pendingMeta.fullFilament {
 		if len(b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN]) != 0 {
 			if !isEarliestFound {
-				b.objectMeta.Lifeline.EarliestOpenRequest = b.pendingMeta.fullFilament[i].PN
+				b.objectMeta.Lifeline.EarliestOpenRequest = &b.pendingMeta.fullFilament[i].PN
 				isEarliestFound = true
 			}
 
@@ -463,6 +467,10 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	}
 
 	b.pendingMeta.isStateCalculated = true
+
+	if len(b.pendingMeta.notClosedRequestsIds) == 0 {
+		b.objectMeta.Lifeline.EarliestOpenRequest = nil
+	}
 
 	return nil
 }

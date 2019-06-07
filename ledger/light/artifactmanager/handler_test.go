@@ -255,6 +255,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	mb.MustRegisterMock.Return()
 
 	pam := object.NewPendingAccessorMock(s.T())
+	lifelineIndex := object.NewLifelineIndexMock(s.T())
+	lifelineIndex.ForIDMock.Return(object.Lifeline{}, nil)
 
 	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, pam, &configuration.Ledger{})
 	h.JetCoordinator = jc
@@ -262,6 +264,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.HotDataWaiter = &waiterMock{}
+	h.LifelineIndex = lifelineIndex
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
