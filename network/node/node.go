@@ -52,14 +52,15 @@ package node
 
 import (
 	"crypto"
+	"hash/crc32"
 	"sync"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 type MutableNode interface {
@@ -70,6 +71,11 @@ type MutableNode interface {
 	ChangeState()
 	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
+}
+
+// GenerateUintShortID generate short ID for node without checking collisions
+func GenerateUintShortID(ref insolar.Reference) uint32 {
+	return crc32.ChecksumIEEE(ref[:])
 }
 
 type node struct {
@@ -121,7 +127,7 @@ func newMutableNode(
 
 	return &node{
 		NodeID:        id,
-		NodeShortID:   utils.GenerateUintShortID(id),
+		NodeShortID:   GenerateUintShortID(id),
 		NodeRole:      role,
 		NodePublicKey: publicKey,
 		NodeAddress:   address,

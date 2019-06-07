@@ -62,8 +62,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/utils"
 )
 
 // TODO Slightly ugly, decide how to inject anything without exporting Base
@@ -99,7 +97,7 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	}
 
 	// run bootstrap
-	g.isDiscovery = utils.OriginIsDiscovery(cert)
+	g.isDiscovery = network.OriginIsDiscovery(cert)
 
 	log.Info("TODO: remove! Bootstrapping network...")
 	_, err := g.Bootstrapper.Bootstrap(ctx)

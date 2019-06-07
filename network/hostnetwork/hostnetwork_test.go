@@ -56,6 +56,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -65,10 +69,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -391,7 +391,7 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
-	result := utils.WaitTimeout(&wg, time.Millisecond*100)
+	result := network.WaitTimeout(&wg, time.Millisecond*100)
 	require.False(t, result)
 }
 

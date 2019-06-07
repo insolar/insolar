@@ -61,9 +61,9 @@ import (
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const (
@@ -163,7 +163,7 @@ func (t *udpTransport) loop(ctx context.Context) {
 		n, addr, err := t.conn.ReadFrom(buf)
 
 		if err != nil {
-			if utils.IsConnectionClosed(err) {
+			if network.IsConnectionClosed(err) {
 				logger.Info("[ loop ] Connection closed, quiting ReadFrom loop")
 				return
 			}
@@ -187,7 +187,7 @@ func (t *udpTransport) Stop(ctx context.Context) error {
 		t.cancel()
 		err := t.conn.Close()
 		if err != nil {
-			if !utils.IsConnectionClosed(err) {
+			if !network.IsConnectionClosed(err) {
 				return err
 			}
 			logger.Error("[ Stop ] Connection already closed")

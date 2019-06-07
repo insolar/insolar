@@ -69,7 +69,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/version"
 )
 
@@ -80,7 +79,7 @@ func NewNodeNetwork(configuration configuration.Transport, certificate insolar.C
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
-	if !utils.OriginIsDiscovery(certificate) {
+	if !network.OriginIsDiscovery(certificate) {
 		origin.(node.MutableNode).SetState(insolar.NodePending)
 	}
 	return nodeKeeper, nil

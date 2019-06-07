@@ -48,11 +48,12 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package utils
+package network
 
 import (
-	"hash/crc32"
 	"io"
+	"math"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -61,6 +62,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/node"
 )
 
 func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
@@ -77,14 +79,80 @@ func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	}
 }
 
-// GenerateShortID generate short ID for node without checking collisions
-func GenerateShortID(ref insolar.Reference) insolar.ShortNodeID {
-	return insolar.ShortNodeID(GenerateUintShortID(ref))
+// CheckShortIDCollision returns true if nodes contains node with such ShortID
+func CheckShortIDCollision(nodes []insolar.NetworkNode, id insolar.ShortNodeID) bool {
+	for _, n := range nodes {
+		if id == n.ShortID() {
+			return true
+		}
+	}
+
+	return false
 }
 
-// GenerateShortID generate short ID for node without checking collisions
-func GenerateUintShortID(ref insolar.Reference) uint32 {
-	return crc32.ChecksumIEEE(ref[:])
+// GenerateUniqueShortID correct ShortID of the node so it does not conflict with existing active node list
+func GenerateUniqueShortID(nodes []insolar.NetworkNode, nodeID insolar.Reference) insolar.ShortNodeID {
+	shortID := insolar.ShortNodeID(node.GenerateUintShortID(nodeID))
+	if !CheckShortIDCollision(nodes, shortID) {
+		return shortID
+	}
+	return regenerateShortID(nodes, shortID)
+}
+
+func regenerateShortID(nodes []insolar.NetworkNode, shortID insolar.ShortNodeID) insolar.ShortNodeID {
+	shortIDs := make([]insolar.ShortNodeID, len(nodes))
+	for i, activeNode := range nodes {
+		shortIDs[i] = activeNode.ShortID()
+	}
+	sort.Slice(shortIDs, func(i, j int) bool {
+		return shortIDs[i] < shortIDs[j]
+	})
+	return generateNonConflictingID(shortIDs, shortID)
+}
+
+func generateNonConflictingID(sortedSlice []insolar.ShortNodeID, conflictingID insolar.ShortNodeID) insolar.ShortNodeID {
+	index := sort.Search(len(sortedSlice), func(i int) bool {
+		return sortedSlice[i] >= conflictingID
+	})
+	result := conflictingID
+	repeated := false
+	for {
+		if result == math.MaxUint32 {
+			if !repeated {
+				repeated = true
+				result = 0
+				index = 0
+			} else {
+				panic("[ generateNonConflictingID ] shortID overflow twice")
+			}
+		}
+		index++
+		result++
+		if index >= len(sortedSlice) || result != sortedSlice[index] {
+			return result
+		}
+	}
+}
+
+// ExcludeOrigin returns DiscoveryNode slice without Origin
+func ExcludeOrigin(discoveryNodes []insolar.DiscoveryNode, origin insolar.Reference) []insolar.DiscoveryNode {
+	for i, discoveryNode := range discoveryNodes {
+		if origin.Equal(*discoveryNode.GetNodeRef()) {
+			return append(discoveryNodes[:i], discoveryNodes[i+1:]...)
+		}
+	}
+	return discoveryNodes
+}
+
+// FindDiscoveryByRef tries to find discovery node in Certificate by reference
+func FindDiscoveryByRef(cert insolar.Certificate, ref insolar.Reference) insolar.DiscoveryNode {
+	bNodes := cert.GetDiscoveryNodes()
+	for _, discoveryNode := range bNodes {
+		if ref.Equal(*discoveryNode.GetNodeRef()) {
+			return discoveryNode
+		}
+	}
+	return nil
 }
 
 func OriginIsDiscovery(cert insolar.Certificate) bool {
@@ -92,13 +160,7 @@ func OriginIsDiscovery(cert insolar.Certificate) bool {
 }
 
 func IsDiscovery(nodeID insolar.Reference, cert insolar.Certificate) bool {
-	bNodes := cert.GetDiscoveryNodes()
-	for _, discoveryNode := range bNodes {
-		if nodeID.Equal(*discoveryNode.GetNodeRef()) {
-			return true
-		}
-	}
-	return false
+	return FindDiscoveryByRef(cert, nodeID) != nil
 }
 
 func CloseVerbose(closer io.Closer) {

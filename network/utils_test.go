@@ -48,19 +48,18 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package bootstrap
+package network
 
 import (
 	"crypto"
 	"testing"
 
-	"github.com/insolar/insolar/network/node"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/testutils"
 )
 
 func newTestNode() insolar.NetworkNode {
@@ -74,8 +73,8 @@ func newTestNodeWithShortID(id insolar.ShortNodeID) insolar.NetworkNode {
 }
 
 func TestCorrectShortIDCollision(t *testing.T) {
-	keeper := nodenetwork.NewNodeKeeper(newTestNode())
-	keeper.SetInitialSnapshot([]insolar.NetworkNode{
+
+	nodes := []insolar.NetworkNode{
 		newTestNodeWithShortID(0),
 		newTestNodeWithShortID(1),
 		newTestNodeWithShortID(30),
@@ -85,24 +84,24 @@ func TestCorrectShortIDCollision(t *testing.T) {
 		newTestNodeWithShortID(64),
 		newTestNodeWithShortID(1<<32 - 2),
 		newTestNodeWithShortID(1<<32 - 1),
-	})
+	}
 
-	require.False(t, CheckShortIDCollision(keeper, insolar.ShortNodeID(2)))
-	require.False(t, CheckShortIDCollision(keeper, insolar.ShortNodeID(31)))
-	require.False(t, CheckShortIDCollision(keeper, insolar.ShortNodeID(35)))
-	require.False(t, CheckShortIDCollision(keeper, insolar.ShortNodeID(65)))
+	require.False(t, CheckShortIDCollision(nodes, insolar.ShortNodeID(2)))
+	require.False(t, CheckShortIDCollision(nodes, insolar.ShortNodeID(31)))
+	require.False(t, CheckShortIDCollision(nodes, insolar.ShortNodeID(35)))
+	require.False(t, CheckShortIDCollision(nodes, insolar.ShortNodeID(65)))
 
-	require.True(t, CheckShortIDCollision(keeper, insolar.ShortNodeID(30)))
-	require.Equal(t, insolar.ShortNodeID(31), regenerateShortID(keeper, insolar.ShortNodeID(30)))
+	require.True(t, CheckShortIDCollision(nodes, insolar.ShortNodeID(30)))
+	require.Equal(t, insolar.ShortNodeID(31), regenerateShortID(nodes, insolar.ShortNodeID(30)))
 
-	require.True(t, CheckShortIDCollision(keeper, insolar.ShortNodeID(32)))
-	require.Equal(t, insolar.ShortNodeID(35), regenerateShortID(keeper, insolar.ShortNodeID(32)))
+	require.True(t, CheckShortIDCollision(nodes, insolar.ShortNodeID(32)))
+	require.Equal(t, insolar.ShortNodeID(35), regenerateShortID(nodes, insolar.ShortNodeID(32)))
 
-	require.True(t, CheckShortIDCollision(keeper, insolar.ShortNodeID(64)))
-	require.Equal(t, insolar.ShortNodeID(65), regenerateShortID(keeper, insolar.ShortNodeID(64)))
+	require.True(t, CheckShortIDCollision(nodes, insolar.ShortNodeID(64)))
+	require.Equal(t, insolar.ShortNodeID(65), regenerateShortID(nodes, insolar.ShortNodeID(64)))
 
-	require.True(t, CheckShortIDCollision(keeper, insolar.ShortNodeID(1<<32-2)))
-	require.Equal(t, insolar.ShortNodeID(2), regenerateShortID(keeper, insolar.ShortNodeID(1<<32-2)))
+	require.True(t, CheckShortIDCollision(nodes, insolar.ShortNodeID(1<<32-2)))
+	require.Equal(t, insolar.ShortNodeID(2), regenerateShortID(nodes, insolar.ShortNodeID(1<<32-2)))
 }
 
 type testNode struct {
@@ -121,29 +120,29 @@ func (t *testNode) GetHost() string {
 	return ""
 }
 
-func TestRemoveOrigin(t *testing.T) {
+func TestExcludeOrigin(t *testing.T) {
 	origin := testutils.RandomRef()
 	originNode := &testNode{origin}
 	first := &testNode{testutils.RandomRef()}
 	second := &testNode{testutils.RandomRef()}
 
 	discoveryNodes := []insolar.DiscoveryNode{first, originNode, second}
-	result := RemoveOrigin(discoveryNodes, origin)
+	result := ExcludeOrigin(discoveryNodes, origin)
 	assert.Equal(t, []insolar.DiscoveryNode{first, second}, result)
 
 	discoveryNodes = []insolar.DiscoveryNode{first, second}
-	result = RemoveOrigin(discoveryNodes, origin)
+	result = ExcludeOrigin(discoveryNodes, origin)
 	assert.Equal(t, discoveryNodes, result)
 
 	discoveryNodes = []insolar.DiscoveryNode{first, originNode}
-	result = RemoveOrigin(discoveryNodes, origin)
+	result = ExcludeOrigin(discoveryNodes, origin)
 	assert.Equal(t, []insolar.DiscoveryNode{first}, result)
 
 	discoveryNodes = []insolar.DiscoveryNode{originNode, first}
-	result = RemoveOrigin(discoveryNodes, origin)
+	result = ExcludeOrigin(discoveryNodes, origin)
 	assert.Equal(t, []insolar.DiscoveryNode{first}, result)
 
 	discoveryNodes = []insolar.DiscoveryNode{originNode}
-	result = RemoveOrigin(discoveryNodes, origin)
+	result = ExcludeOrigin(discoveryNodes, origin)
 	assert.Empty(t, result)
 }

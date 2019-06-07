@@ -60,8 +60,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const (
@@ -147,7 +147,7 @@ func (t *tcpTransport) listen(ctx context.Context) {
 
 		conn, err := t.listener.AcceptTCP()
 		if err != nil {
-			if utils.IsConnectionClosed(err) {
+			if network.IsConnectionClosed(err) {
 				logger.Info("[ listen ] Connection closed, quiting accept loop")
 				return
 			}
@@ -172,7 +172,7 @@ func (t *tcpTransport) Stop(ctx context.Context) error {
 		t.cancel()
 		err := t.listener.Close()
 		if err != nil {
-			if !utils.IsConnectionClosed(err) {
+			if !network.IsConnectionClosed(err) {
 				return err
 			}
 			logger.Info("[ Stop ] Connection already closed")

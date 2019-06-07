@@ -59,9 +59,9 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type onClose func(ctx context.Context, host *host.Host)
@@ -116,6 +116,6 @@ func (e *entry) dial(ctx context.Context) (io.ReadWriteCloser, error) {
 
 func (e *entry) close() {
 	if e.conn != nil {
-		utils.CloseVerbose(e.conn)
+		network.CloseVerbose(e.conn)
 	}
 }
