@@ -197,8 +197,7 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 
 func (s *Init) replyError(ctx context.Context, replyTo *wmessage.Message, err error) {
 	errCode := payload.CodeUnknown
-	switch err { // nolint
-	case flow.ErrCancelled:
+	if err == flow.ErrCancelled {
 		errCode = payload.CodeFlowCanceled
 	}
 	errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error(), Code: uint32(errCode)})

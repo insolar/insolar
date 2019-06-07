@@ -117,7 +117,7 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	case *payload.Pass:
 		err = h.handlePass(ctx, msg)
 	default:
-		err = fmt.Errorf("no handler for message type #%T", pl)
+		err = fmt.Errorf("no handler for message type %T", pl)
 	}
 	if err != nil {
 		h.replyError(ctx, msg, err)
