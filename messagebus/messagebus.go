@@ -114,7 +114,6 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 		signmessages:             config.Host.SignMessages,
 		NextPulseMessagePoolChan: make(chan interface{}),
 	}
-	mb.Acquire(context.Background())
 	return mb, nil
 }
 
@@ -213,7 +212,10 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 			return nil, errors.Wrap(err, "failed to calculate role")
 		}
 		res, done := mb.Sender.SendTarget(ctx, wmMsg, nodes[0])
-		repMsg := <-res
+		repMsg, ok := <-res
+		if !ok {
+			return nil, errors.New("can't get reply: reply channel was closed")
+		}
 		done()
 		return deserializePayload(repMsg)
 	}
@@ -223,6 +225,9 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 }
 
 func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
+	if msg == nil {
+		return nil, errors.New("can't deserialize payload of nil message")
+	}
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {

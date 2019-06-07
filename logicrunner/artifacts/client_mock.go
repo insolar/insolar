@@ -66,7 +66,7 @@ type ClientMock struct {
 	GetObjectPreCounter uint64
 	GetObjectMock       mClientMockGetObject
 
-	GetPendingRequestFunc       func(p context.Context, p1 insolar.ID) (r insolar.Parcel, r1 error)
+	GetPendingRequestFunc       func(p context.Context, p1 insolar.ID) (r *insolar.Reference, r1 insolar.Parcel, r2 error)
 	GetPendingRequestCounter    uint64
 	GetPendingRequestPreCounter uint64
 	GetPendingRequestMock       mClientMockGetPendingRequest
@@ -1548,8 +1548,9 @@ type ClientMockGetPendingRequestInput struct {
 }
 
 type ClientMockGetPendingRequestResult struct {
-	r  insolar.Parcel
-	r1 error
+	r  *insolar.Reference
+	r1 insolar.Parcel
+	r2 error
 }
 
 //Expect specifies that invocation of Client.GetPendingRequest is expected from 1 to Infinity times
@@ -1565,14 +1566,14 @@ func (m *mClientMockGetPendingRequest) Expect(p context.Context, p1 insolar.ID) 
 }
 
 //Return specifies results of invocation of Client.GetPendingRequest
-func (m *mClientMockGetPendingRequest) Return(r insolar.Parcel, r1 error) *ClientMock {
+func (m *mClientMockGetPendingRequest) Return(r *insolar.Reference, r1 insolar.Parcel, r2 error) *ClientMock {
 	m.mock.GetPendingRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockGetPendingRequestExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockGetPendingRequestResult{r, r1}
+	m.mainExpectation.result = &ClientMockGetPendingRequestResult{r, r1, r2}
 	return m.mock
 }
 
@@ -1587,12 +1588,12 @@ func (m *mClientMockGetPendingRequest) ExpectOnce(p context.Context, p1 insolar.
 	return expectation
 }
 
-func (e *ClientMockGetPendingRequestExpectation) Return(r insolar.Parcel, r1 error) {
-	e.result = &ClientMockGetPendingRequestResult{r, r1}
+func (e *ClientMockGetPendingRequestExpectation) Return(r *insolar.Reference, r1 insolar.Parcel, r2 error) {
+	e.result = &ClientMockGetPendingRequestResult{r, r1, r2}
 }
 
 //Set uses given function f as a mock of Client.GetPendingRequest method
-func (m *mClientMockGetPendingRequest) Set(f func(p context.Context, p1 insolar.ID) (r insolar.Parcel, r1 error)) *ClientMock {
+func (m *mClientMockGetPendingRequest) Set(f func(p context.Context, p1 insolar.ID) (r *insolar.Reference, r1 insolar.Parcel, r2 error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1601,7 +1602,7 @@ func (m *mClientMockGetPendingRequest) Set(f func(p context.Context, p1 insolar.
 }
 
 //GetPendingRequest implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r insolar.Parcel, r1 error) {
+func (m *ClientMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r *insolar.Reference, r1 insolar.Parcel, r2 error) {
 	counter := atomic.AddUint64(&m.GetPendingRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPendingRequestCounter, 1)
 
@@ -1622,6 +1623,7 @@ func (m *ClientMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r inso
 
 		r = result.r
 		r1 = result.r1
+		r2 = result.r2
 
 		return
 	}
@@ -1640,6 +1642,7 @@ func (m *ClientMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r inso
 
 		r = result.r
 		r1 = result.r1
+		r2 = result.r2
 
 		return
 	}

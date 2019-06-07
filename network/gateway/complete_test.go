@@ -178,6 +178,7 @@ func TestComplete_GetCert(t *testing.T) {
 
 	gatewayer := network.NewGatewayerMock(t)
 	GIL := testutils.NewGlobalInsolarLockMock(t)
+	GIL.AcquireMock.Return()
 	nodekeeper := network.NewNodeKeeperMock(t)
 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
@@ -215,6 +216,7 @@ func TestComplete_handler(t *testing.T) {
 
 	gatewayer := network.NewGatewayerMock(t)
 	GIL := testutils.NewGlobalInsolarLockMock(t)
+	GIL.AcquireMock.Return()
 	nodekeeper := network.NewNodeKeeperMock(t)
 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))

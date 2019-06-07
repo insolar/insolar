@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 )
 
@@ -34,7 +33,27 @@ type CurrentExecution struct {
 	SentResult    bool
 	Nonce         uint64
 	Deactivate    bool
-	Message       *message.CallMethod
+
+	OutgoingRequests []OutgoingRequest
+}
+
+type OutgoingRequest struct {
+	Request   record.Request
+	NewObject *Ref
+	Response  []byte
+	Error     error
+}
+
+func (ce *CurrentExecution) AddOutgoingRequest(
+	ctx context.Context, request record.Request, result []byte, newObject *Ref, err error,
+) {
+	rec := OutgoingRequest{
+		Request: request,
+		Response: result,
+		NewObject: newObject,
+		Error: err,
+	}
+	ce.OutgoingRequests = append(ce.OutgoingRequests, rec)
 }
 
 type CurrentExecutionList struct {
@@ -104,11 +123,11 @@ func (ces *CurrentExecutionList) Empty() bool {
 
 type CurrentExecutionPredicate func(*CurrentExecution, interface{}) bool
 
-func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, predicateCtx interface{}) bool {
+func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
 	rv := true
 	ces.lock.RLock()
 	for _, current := range ces.executions {
-		if !predicate(current, predicateCtx) {
+		if !predicate(current, args) {
 			rv = false
 			break
 		}

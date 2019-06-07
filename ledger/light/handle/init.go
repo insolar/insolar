@@ -81,6 +81,12 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		case payload.TypePassState:
 			h := NewPassState(s.dep, s.message.WatermillMsg)
 			return f.Handle(ctx, h.Present)
+		case payload.TypeGetCode:
+			h := NewGetCode(s.dep, s.message.WatermillMsg, false)
+			return f.Handle(ctx, h.Present)
+		case payload.TypeSetCode:
+			h := NewSetCode(s.dep, s.message.WatermillMsg, false)
+			return f.Handle(ctx, h.Present)
 		case payload.TypePass:
 			return s.handlePass(ctx, f)
 		case payload.TypeError:
@@ -101,10 +107,6 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeSetBlob:
 		msg := s.message.Parcel.Message().(*message.SetBlob)
 		h := NewSetBlob(s.dep, s.message.ReplyTo, msg)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetCode:
-		msg := s.message.Parcel.Message().(*message.GetCode)
-		h := NewGetCode(s.dep, s.message.ReplyTo, msg.Code)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetRequest:
 		msg := s.message.Parcel.Message().(*message.GetRequest)
@@ -161,12 +163,18 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
+	origin := wmessage.NewMessage(watermill.NewUUID(), pass.Origin)
+	middleware.SetCorrelationID(string(pass.CorrelationID), origin)
 
-	switch payloadType { // nolint
+	switch payloadType {
 	case payload.TypeGetObject:
-		origin := wmessage.NewMessage(watermill.NewUUID(), pass.Origin)
-		middleware.SetCorrelationID(string(pass.CorrelationID), origin)
 		h := NewGetObject(s.dep, origin, true)
+		return f.Handle(ctx, h.Present)
+	case payload.TypeGetCode:
+		h := NewGetCode(s.dep, origin, true)
+		return f.Handle(ctx, h.Present)
+	case payload.TypeSetCode:
+		h := NewSetCode(s.dep, origin, true)
 		return f.Handle(ctx, h.Present)
 	}
 	return nil

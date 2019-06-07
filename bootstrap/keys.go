@@ -14,12 +14,14 @@
 // limitations under the License.
 //
 
-package genesis
+package bootstrap
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/insolar/insolar/insolar/secrets"
@@ -110,4 +112,15 @@ func createKeysInDir(
 	}
 
 	return nodes, nil
+}
+
+// makeFileWithDir saves content into file with `name` in directory `dir`.
+// Creates directory if needed as well as file
+func makeFileWithDir(dir string, name string, content []byte) error {
+	err := os.MkdirAll(dir, 0700)
+	if err != nil {
+		return err
+	}
+	file := filepath.Join(dir, name)
+	return ioutil.WriteFile(file, content, 0600)
 }

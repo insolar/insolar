@@ -1,18 +1,17 @@
 local base_params = import '../params.libsonnet';
 local params = std.mergePatch( base_params.components.insolar, std.extVar("__ksonnet/params").components.insolar );
 
-local genesis = import 'genesis.libsonnet' ;
+local bootstrap_config = import 'bootstrap_config.libsonnet' ;
 local statefull_set() = import 'statefull_set.libsonnet';
-local genesis_insolard_conf() = import "insolard_genesis_config.libsonnet";
 local insolard_conf() = import "insolard_config.libsonnet";
 local k = import "k.libsonnet";
 local pulsar() = import 'pulsar/pulsar_common.libsonnet';
 
-local perisitant_claim() = {
+local persistent_claim() = {
   kind: "PersistentVolumeClaim",
   apiVersion: "v1",
   metadata: {
-    name: "bootstrap-config",
+    name: "init-configs",
     labels: {
       app: "bootstrap"
     }
@@ -62,19 +61,32 @@ local service() = {
   }
 };
 
-local configs() = {
+local bootstrap_config_map() = {
+  apiVersion: "v1",
+  kind: "ConfigMap",
+  metadata: {
+    name: "bootstrap-config-file"
+  },
+  data:{
+    "bootstrap.yaml": std.manifestYamlDoc(bootstrap_config.generate()),
+  },
+};
+
+local node_config_map() = {
   apiVersion: "v1",
   kind: "ConfigMap",
   metadata: {
     name: "node-config"
   },
   data:{
-            "genesis.yaml": std.manifestYamlDoc(genesis.generate_genesis()),
-            "insolar-genesis.yaml": std.manifestYamlDoc(genesis_insolard_conf()),
-            "insolar.yaml": std.manifestYamlDoc(insolard_conf()),
-    }
-
+    "insolar.yaml": std.manifestYamlDoc(insolard_conf()),
+  },
 };
 
-k.core.v1.list.new([configs(), service(), perisitant_claim(), statefull_set()])
-
+k.core.v1.list.new([
+    bootstrap_config_map(),
+    node_config_map(),
+    service(),
+    persistent_claim(),
+    statefull_set(),
+])

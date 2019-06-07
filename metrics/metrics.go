@@ -108,14 +108,9 @@ func (m *Metrics) Start(ctx context.Context) error {
 
 	go func() {
 		inslog.Debug("metrics server starting on", m.server.Addr)
-		err := m.server.Serve(listener)
-		if err == nil {
-			return
+		if err := m.server.Serve(listener); err != http.ErrServerClosed {
+			inslog.Error("failed to start metrics server", err)
 		}
-		if IsServerClosed(err) {
-			return
-		}
-		inslog.Error("falied to start metrics server", err)
 	}()
 
 	return nil
@@ -153,9 +148,4 @@ func (e *errorLogger) Println(v ...interface{}) {
 // IsAddrInUse checks error text for well known phrase.
 func IsAddrInUse(err error) bool {
 	return strings.Contains(err.Error(), "address already in use")
-}
-
-// IsServerClosed checks error text for well known phrase.
-func IsServerClosed(err error) bool {
-	return strings.Contains(err.Error(), "http: Server closed")
 }

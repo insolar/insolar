@@ -32,7 +32,7 @@ func TestComponents(t *testing.T) {
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 
-	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{})
+	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true})
 	require.NoError(t, err)
 
 	err = c.Start(ctx)

@@ -115,7 +115,7 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
-		FetchJetWM: func(p *proc.CheckJet) {
+		CheckJet: func(p *proc.CheckJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetFetcher = h.jetTreeUpdater
@@ -160,10 +160,11 @@ func NewMessageHandler(
 			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetCode: func(p *proc.GetCode) {
-			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobAccessor = h.BlobAccessor
+			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.Sender = h.Sender
 		},
 		GetRequest: func(p *proc.GetRequest) {
 			p.Dep.RecordAccessor = h.RecordAccessor
@@ -229,6 +230,12 @@ func NewMessageHandler(
 			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Sender = h.Sender
 			p.Dep.Records = h.RecordAccessor
+		},
+		CalculateID: func(p *proc.CalculateID) {
+			p.Dep(h.PCS)
+		},
+		SetCode: func(p *proc.SetCode) {
+			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender)
 		},
 	}
 

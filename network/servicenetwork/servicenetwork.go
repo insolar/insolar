@@ -104,6 +104,7 @@ type ServiceNetwork struct {
 	Pub                 message.Publisher           `inject:""`
 	MessageBus          insolar.MessageBus          `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
+	Sender              bus.Sender                  `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -372,30 +373,10 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 		logger.Error("failed to extract message type")
 	}
 
-	node, err := n.wrapMeta(msg)
+	err = n.sendMessage(ctx, msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send message")
-	}
-
-	// Short path when sending to self node. Skip serialization
-	origin := n.NodeKeeper.GetOrigin()
-	if node.Equal(origin.ID()) {
-		err := n.Pub.Publish(bus.TopicIncoming, msg)
-		if err != nil {
-			return nil, errors.Wrap(err, "error while publish msg to TopicIncoming")
-		}
+		n.replyError(ctx, msg, err)
 		return nil, nil
-	}
-	msgBytes, err := messageToBytes(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "error while converting message to bytes")
-	}
-	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
-	}
-	if !bytes.Equal(res, ack) {
-		return nil, errors.Errorf("reply is not ack: %s", res)
 	}
 
 	logger.WithFields(map[string]interface{}{
@@ -404,6 +385,57 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	}).Info("Network sent message")
 
 	return nil, nil
+}
+
+func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) error {
+	node, err := n.wrapMeta(msg)
+	if err != nil {
+		return errors.Wrap(err, "failed to send message")
+	}
+
+	// Short path when sending to self node. Skip serialization
+	origin := n.NodeKeeper.GetOrigin()
+	if node.Equal(origin.ID()) {
+		err := n.Pub.Publish(bus.TopicIncoming, msg)
+		if err != nil {
+			return errors.Wrap(err, "error while publish msg to TopicIncoming")
+		}
+		return nil
+	}
+	msgBytes, err := messageToBytes(msg)
+	if err != nil {
+		return errors.Wrap(err, "error while converting message to bytes")
+	}
+	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
+	if err != nil {
+		return errors.Wrap(err, "error while sending watermillMsg to controller")
+	}
+	if !bytes.Equal(res, ack) {
+		return errors.Errorf("reply is not ack: %s", res)
+	}
+	return nil
+}
+
+func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"correlation_id": middleware.MessageCorrelationID(msg),
+	})
+	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error()))
+		return
+	}
+	wrapper := payload.Meta{
+		Payload: msg.Payload,
+		Sender:  n.NodeKeeper.GetOrigin().ID(),
+	}
+	buf, err := wrapper.Marshal()
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to wrap error message (%s)", repErr.Error()))
+		return
+	}
+	msg.Payload = buf
+	n.Sender.Reply(ctx, msg, errMsg)
 }
 
 func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
