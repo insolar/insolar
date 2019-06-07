@@ -81,7 +81,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	amount := 111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, testutils.RandomRef().String())
-	require.Contains(t, err.Error(), "[ Transfer ] Can't get implementation: [ GetDelegate ] on calling main API")
+	require.Contains(t, err.Error(), "[ makeCall ] Error in called method: [ Transfer ] Can't get implementation:")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)

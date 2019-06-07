@@ -33,5 +33,5 @@ func TestGetBalance(t *testing.T) {
 
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
-	require.Contains(t, err.Error(), "[ getBalanceCall ] : [ GetDelegate ] on calling main API")
+	require.Contains(t, err.Error(), "[ makeCall ] Error in called method: [ getBalanceCall ] :")
 }

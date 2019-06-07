@@ -57,7 +57,7 @@ func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
 	return rpctypes.UpBaseReq{
 		Mode:            callContext.Mode,
 		Callee:          *callContext.Callee,
-		CalleePrototype: *callContext.CallerPrototype,
+		CalleePrototype: *callContext.Prototype,
 		Request:         *callContext.Request,
 	}
 }

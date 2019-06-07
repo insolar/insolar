@@ -57,8 +57,8 @@ func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCal
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
 	defer span.End()
 
-	gls.Set("callCtx", callCtx)
-	defer gls.Cleanup()
+	gls.Set(glsCallContextKey, callCtx)
+	defer gls.Set(glsCallContextKey, nil)
 
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {
@@ -80,8 +80,8 @@ func (b *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallCont
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallMethod")
 	defer span.End()
 
-	gls.Set("callCtx", callCtx)
-	defer gls.Cleanup()
+	gls.Set(glsCallContextKey, callCtx)
+	defer gls.Set(glsCallContextKey, nil)
 
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {
