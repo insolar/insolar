@@ -703,5 +703,5 @@ func GenerateInitializationList(out io.Writer, contracts ContractList) error {
 		"Package":   "builtin",
 	}
 
-	return formatAndWrite(out, "initialize", data)
+	return formatAndWrite(out, "initialization", data)
 }
