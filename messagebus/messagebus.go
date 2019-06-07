@@ -140,11 +140,6 @@ func (mb *MessageBus) Unlock(ctx context.Context) {
 // Register sets a function as a handler for particular message type,
 // only one handler per type is allowed
 func (mb *MessageBus) Register(p insolar.MessageType, handler insolar.MessageHandler) error {
-	_, ok := mb.handlers[p]
-	if ok {
-		return errors.New("handler for this type already exists")
-	}
-
 	mb.handlers[p] = handler
 	return nil
 }

@@ -136,8 +136,21 @@ func (n *ServiceNetwork) Gateway() network.Gateway {
 
 func (n *ServiceNetwork) SetGateway(g network.Gateway) {
 	n.gatewayMu.Lock()
-	defer n.gatewayMu.Unlock()
+
+	if n.gateway != nil && n.gateway.GetState() == g.GetState() {
+		log.Warn("Trying to set gateway to the same state")
+		n.gatewayMu.Unlock()
+		return
+	}
 	n.gateway = g
+	n.gatewayMu.Unlock()
+	ctx := context.Background()
+	if n.gateway.NeedLockMessageBus() {
+		n.GIL.Acquire(ctx)
+	} else {
+		n.GIL.Release(ctx)
+	}
+	n.gateway.Run(ctx)
 }
 
 func (n *ServiceNetwork) GetState() insolar.NetworkState {
@@ -203,13 +216,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	if n.Gateway() == nil {
-		n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
-			n.CryptographyService, n.MessageBus, n.CertificateManager)
-		n.gateway.Run(ctx)
-		inslogger.FromContext(ctx).Debug("Launch network gateway")
-
-	}
+	n.SetGateway(gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
+		n.CryptographyService, n.MessageBus, n.CertificateManager))
 
 	return nil
 }

@@ -182,10 +182,6 @@ func (s *consensusSuite) SetupTest() {
 		pulseReceivers = append(pulseReceivers, node.host)
 	}
 
-	log.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	s.Require().NoError(err)
-
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
@@ -224,6 +220,10 @@ func (s *consensusSuite) SetupTest() {
 		s.Require().Equal(s.getNodesCount(), len(activeNodes2))
 	}
 	fmt.Println("=================== SetupTest() Done")
+	log.Info("Start test pulsar")
+	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	s.Require().NoError(err)
+
 }
 
 func (s *testSuite) waitResults(results chan error, expected int) {
@@ -500,9 +500,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager, false)
 	s.Require().NoError(err)
 
-	serviceNetwork.SetGateway(NewFakeOk())
-	serviceNetwork.Gateway().Run(context.Background())
-
 	amMock := staterMock{
 		stateFunc: func() ([]byte, error) {
 			return make([]byte, packets.HashLength), nil
@@ -539,6 +536,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
 		&amMock, certManager, cryptographyService, mblocker, GIL, serviceNetwork, keyProc, terminationHandler,
 		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t), senderMock)
+
+	serviceNetwork.SetGateway(NewFakeGateway())
 
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler
