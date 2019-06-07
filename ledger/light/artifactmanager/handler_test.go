@@ -261,6 +261,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
+	h.HotDataWaiter = &waiterMock{}
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
@@ -307,6 +308,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
+	h.HotDataWaiter = &waiterMock{}
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
