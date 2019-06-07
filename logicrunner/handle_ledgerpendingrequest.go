@@ -20,9 +20,12 @@ import (
 	"context"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/pkg/errors"
 )
 
 type GetLedgerPendingRequest struct {
@@ -30,6 +33,8 @@ type GetLedgerPendingRequest struct {
 
 	Message *watermillMsg.Message
 }
+
+var ErrNoPendings = errors.New("no pendings")
 
 func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) error {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getLedgerPendingRequest")
@@ -44,10 +49,31 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	es.getLedgerPendingMutex.Lock()
 	defer es.getLedgerPendingMutex.Unlock()
 
-	ref := lr.unsafeGetLedgerPendingRequest(ctx, es)
-	if ref == nil {
+	proc := UnsafeGetLedgerPendingRequest{
+		es:  es,
+		dep: p.dep,
+	}
+
+	err := proc.Proceed(ctx)
+	if err != nil {
+		es.Lock()
+		defer es.Unlock()
+		if err == ErrNoPendings {
+			es.LedgerHasMoreRequests = false
+		} else {
+			inslogger.FromContext(ctx).Info("[ GetLedgerPendingRequest.Present ] ", err)
+		}
 		return nil
 	}
+
+	if proc.ledgerQueueElement != nil {
+		return nil
+	}
+
+	es.Lock()
+	es.LedgerHasMoreRequests = true
+	es.LedgerQueueElement = proc.ledgerQueueElement
+	es.Unlock()
 
 	insolarRef := Ref{}.FromSlice(p.Message.Payload)
 	h := StartQueueProcessorIfNeeded{
@@ -57,6 +83,66 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	}
 	if err := f.Handle(ctx, h.Present); err != nil {
 		inslogger.FromContext(ctx).Warn("[ GetLedgerPendingRequest.Present ] Couldn't start queue: ", err)
+	}
+
+	return nil
+}
+
+type UnsafeGetLedgerPendingRequest struct {
+	dep                *Dependencies
+	es                 *ExecutionState
+	ledgerQueueElement *ExecutionQueueElement
+}
+
+func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
+	es := u.es
+
+	es.Lock()
+	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
+		es.Unlock()
+		return nil
+	}
+	es.Unlock()
+
+	id := *es.Ref.Record()
+
+	lr := u.dep.lr
+
+	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	if err != nil {
+		if err != insolar.ErrNoPendingRequest {
+			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
+			return nil
+		}
+
+		es.Lock()
+		defer es.Unlock()
+		return ErrNoPendings
+	}
+
+	msg := parcel.Message().(*message.CallMethod)
+
+	parcel.SetSender(msg.Request.Sender)
+
+	pulse := lr.pulse(ctx).PulseNumber
+	authorized, err := lr.JetCoordinator.IsAuthorized(
+		ctx, insolar.DynamicRoleVirtualExecutor, id, pulse, lr.JetCoordinator.Me(),
+	)
+	if err != nil {
+		inslogger.FromContext(ctx).Debug("Authorization failed with error in getLedgerPendingRequest")
+		return nil
+	}
+
+	if !authorized {
+		inslogger.FromContext(ctx).Debug("pulse changed, can't process abandoned messages for this object")
+		return nil
+	}
+
+	u.ledgerQueueElement = &ExecutionQueueElement{
+		ctx:        ctx,
+		parcel:     parcel,
+		request:    requestRef,
+		fromLedger: true,
 	}
 
 	return nil

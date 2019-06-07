@@ -385,14 +385,13 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 	return ctx
 }
 
-
 // values here (boolean flags) are inverted here, since it's common "predicate" checking function
 func noLoopCheckerPredicate(current *CurrentExecution, args interface{}) bool {
 	apiReqID := args.(string)
 	if current.SentResult ||
 		current.Request.ReturnMode == record.ReturnNoWait ||
 		current.Request.APIRequestID != apiReqID {
-			return true
+		return true
 	}
 	return false
 }
@@ -502,64 +501,6 @@ func (lr *LogicRunner) executeOrValidate(ctx context.Context, es *ExecutionState
 			inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
 		}
 	}()
-}
-
-func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) *insolar.Reference {
-	es.Lock()
-	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
-		es.Unlock()
-		return nil
-	}
-	es.Unlock()
-
-	ledgerHasMore := true
-
-	id := *es.Ref.Record()
-
-	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
-	if err != nil {
-		if err != insolar.ErrNoPendingRequest {
-			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
-			return nil
-		}
-
-		ledgerHasMore = false
-	}
-	es.Lock()
-	defer es.Unlock()
-
-	if !ledgerHasMore {
-		es.LedgerHasMoreRequests = ledgerHasMore
-		return nil
-	}
-
-	msg := parcel.Message().(*message.CallMethod)
-
-	parcel.SetSender(msg.Request.Sender)
-
-	pulse := lr.pulse(ctx).PulseNumber
-	authorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, insolar.DynamicRoleVirtualExecutor, id, pulse, lr.JetCoordinator.Me(),
-	)
-	if err != nil {
-		inslogger.FromContext(ctx).Debug("Authorization failed with error in getLedgerPendingRequest")
-		return nil
-	}
-
-	if !authorized {
-		inslogger.FromContext(ctx).Debug("pulse changed, can't process abandoned messages for this object")
-		return nil
-	}
-
-	es.LedgerHasMoreRequests = ledgerHasMore
-	es.LedgerQueueElement = &ExecutionQueueElement{
-		ctx:        ctx,
-		parcel:     parcel,
-		request:    requestRef,
-		fromLedger: true,
-	}
-
-	return msg.DefaultTarget()
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, current *CurrentExecution) (insolar.Reply, error) {
