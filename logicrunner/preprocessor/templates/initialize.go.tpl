@@ -20,15 +20,14 @@ package {{ .Package }}
 
 import (
 	"github.com/pkg/errors"
-
-{{- range $contract := .Contracts }}
+{{ range $contract := .Contracts }}
     {{ $contract.ImportName }} "{{ $contract.ImportPath }}"
 {{- end }}
 
     XXX_insolar "github.com/insolar/insolar/insolar"
     XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
     XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
-    XXX_rootdomain "github.com/insolar/insolar/bootstrap/rootdomain"
+    XXX_rootdomain "github.com/insolar/insolar/insolar/rootdomain"
 )
 
 func InitializeContractMethods() map[string]XXX_preprocessor.ContractWrapper {
@@ -60,6 +59,7 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
     rv := make([]XXX_artifacts.CodeDescriptor, 0)
 
     {{ range $contract := .Contracts -}}
+    // {{ $contract.Name }}
     rv = append(rv, XXX_artifacts.NewCodeDescriptor(
         /* code:        */ nil,
         /* machineType: */ XXX_insolar.MachineTypeBuiltin,
@@ -70,22 +70,22 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 }
 
 func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
-    var cRef, pRef XXX_insolar.Reference
-
     rv := make([]XXX_artifacts.ObjectDescriptor, 0)
 
-    {{ range $contract := .Contracts -}}
-    pRef = shouldLoadRef("{{ $contract.PrototypeReference }}")
-    cRef = shouldLoadRef("{{ $contract.CodeReference }}")
-    rv = append(rv, XXX_artifacts.NewObjectDescriptor(
-        /* head:         */ pRef,
-        /* state:        */ *pRef.Record(),
-        /* prototype:    */ &cRef,
-        /* isPrototype:  */ true,
-        /* childPointer: */ nil,
-        /* memory:       */ nil,
-        /* parent:       */ XXX_rootdomain.RootDomain.Ref(),
-    ))
+    {{ range $contract := .Contracts }}
+    { // {{ $contract.Name }}
+        pRef := shouldLoadRef("{{ $contract.PrototypeReference }}")
+        cRef := shouldLoadRef("{{ $contract.CodeReference }}")
+        rv = append(rv, XXX_artifacts.NewObjectDescriptor(
+            /* head:         */ pRef,
+            /* state:        */ *pRef.Record(),
+            /* prototype:    */ &cRef,
+            /* isPrototype:  */ true,
+            /* childPointer: */ nil,
+            /* memory:       */ nil,
+            /* parent:       */ XXX_rootdomain.RootDomain.Ref(),
+        ))
+    }
     {{ end }}
     return rv
 }
