@@ -94,18 +94,13 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	err = h.handle(ctx, msg)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "handle error"))
-		errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
-		if err != nil {
-			logger.Error(errors.Wrap(err, "failed to reply error"))
-			return nil, nil
-		}
-		go h.Sender.Reply(ctx, msg, errMsg)
 	}
 
 	return nil, nil
 }
 
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
+	var err error
 	pl, err := payload.UnmarshalFromMeta(msg.Payload)
 	if err != nil {
 		return errors.Wrap(err, "can't deserialize meta payload")
@@ -114,19 +109,24 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	case *payload.PassState:
 		p := proc.NewPassState(msg)
 		h.dep.PassState(p)
-		return p.Proceed(ctx)
+		err = p.Proceed(ctx)
 	case *payload.GetCode:
 		p := proc.NewGetCode(msg)
 		h.dep.GetCode(p)
-		return p.Proceed(ctx)
+		err = p.Proceed(ctx)
 	case *payload.Pass:
-		return h.handlePass(ctx, msg)
+		err = h.handlePass(ctx, msg)
 	default:
-		return fmt.Errorf("no handler for message type #%T", pl)
+		err = fmt.Errorf("no handler for message type #%T", pl)
 	}
+	if err != nil {
+		h.replyError(ctx, msg, err)
+	}
+	return err
 }
 
 func (h *Handler) handlePass(ctx context.Context, msg *watermillMsg.Message) error {
+	var err error
 	pl, err := payload.UnmarshalFromMeta(msg.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal pass payload")
@@ -147,10 +147,22 @@ func (h *Handler) handlePass(ctx context.Context, msg *watermillMsg.Message) err
 	case payload.TypeGetCode:
 		p := proc.NewGetCode(origin)
 		h.dep.GetCode(p)
-		return p.Proceed(ctx)
+		err = p.Proceed(ctx)
 	default:
-		return fmt.Errorf("no pass handler for message type %s", payloadType.String())
+		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())
 	}
+	if err != nil {
+		h.replyError(ctx, msg, err)
+	}
+	return err
+}
+
+func (h *Handler) replyError(ctx context.Context, replyTo *watermillMsg.Message, err error) {
+	errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
+	}
+	go h.Sender.Reply(ctx, replyTo, errMsg)
 }
 
 func (h *Handler) Init(ctx context.Context) error {
