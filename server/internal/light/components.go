@@ -250,7 +250,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.WriteAccessor = writeController
 		handler.Sender = WmBus
 
-		jetCalculator := executor.NewCalculator(Coordinator, Jets)
+		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
 			Jets,
 			Nodes,

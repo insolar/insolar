@@ -37,8 +37,8 @@ type JetCalculatorDefault struct {
 	jetAccessor jet.Accessor
 }
 
-// NewCalculator returns a new instance of a jet calculator.
-func NewCalculator(jetCoordinator jet.Coordinator, jetAccessor jet.Accessor) *JetCalculatorDefault {
+// NewJetCalculator returns a new instance of a jet calculator.
+func NewJetCalculator(jetCoordinator jet.Coordinator, jetAccessor jet.Accessor) *JetCalculatorDefault {
 	return &JetCalculatorDefault{coordinator: jetCoordinator, jetAccessor: jetAccessor}
 }
 
