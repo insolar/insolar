@@ -38,7 +38,6 @@ local make_min_roles() = {
         keys: '/opt/insolar/config/oracle%s_member_keys.json',
     },
 
-
     // generating discovery_nodes
     local discovery_nodes_tmpl() = {
       host: utils.host_template,

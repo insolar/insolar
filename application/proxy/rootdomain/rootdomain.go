@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112NE8GdBUSsvgY1dLyex2fGbrSMY9CbpwHBo7Jy9.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111hjS6s4X4fxQLMXXi4ozdNCfSXSxNWsD3kvocTU.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -663,42 +663,42 @@ func (r *RootDomain) InfoAsImmutable() (interface{}, error) {
 	return ret0, nil
 }
 
-// DumpAllUsers is proxy generated method
-func (r *RootDomain) DumpAllUsers() (*proxyctx.ChildrenTypedIterator, error) {
-	var args [0]interface{}
+// AddBurnAddresses is proxy generated method
+func (r *RootDomain) AddBurnAddresses(burnAddresses []string) error {
+	var args [1]interface{}
+	args[0] = burnAddresses
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
-	var ret0 *proxyctx.ChildrenTypedIterator
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
 	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "DumpAllUsers", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "AddBurnAddresses", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	if ret1 != nil {
-		return ret0, ret1
+	if ret0 != nil {
+		return ret0
 	}
-	return ret0, nil
+	return nil
 }
 
-// DumpAllUsersNoWait is proxy generated method
-func (r *RootDomain) DumpAllUsersNoWait() error {
-	var args [0]interface{}
+// AddBurnAddressesNoWait is proxy generated method
+func (r *RootDomain) AddBurnAddressesNoWait(burnAddresses []string) error {
+	var args [1]interface{}
+	args[0] = burnAddresses
 
 	var argsSerialized []byte
 
@@ -707,7 +707,7 @@ func (r *RootDomain) DumpAllUsersNoWait() error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "DumpAllUsers", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "AddBurnAddresses", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -715,37 +715,36 @@ func (r *RootDomain) DumpAllUsersNoWait() error {
 	return nil
 }
 
-// DumpAllUsersAsImmutable is proxy generated method
-func (r *RootDomain) DumpAllUsersAsImmutable() (*proxyctx.ChildrenTypedIterator, error) {
-	var args [0]interface{}
+// AddBurnAddressesAsImmutable is proxy generated method
+func (r *RootDomain) AddBurnAddressesAsImmutable(burnAddresses []string) error {
+	var args [1]interface{}
+	args[0] = burnAddresses
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
-	var ret0 *proxyctx.ChildrenTypedIterator
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
 	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "DumpAllUsers", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "AddBurnAddresses", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	if ret1 != nil {
-		return ret0, ret1
+	if ret0 != nil {
+		return ret0
 	}
-	return ret0, nil
+	return nil
 }
 
 // AddBurnAddress is proxy generated method
@@ -817,90 +816,6 @@ func (r *RootDomain) AddBurnAddressAsImmutable(burnAddress string) error {
 	}
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "AddBurnAddress", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return err
-	}
-
-	if ret0 != nil {
-		return ret0
-	}
-	return nil
-}
-
-// AddBurnAddresses is proxy generated method
-func (r *RootDomain) AddBurnAddresses(burnAddresses []string) error {
-	var args [1]interface{}
-	args[0] = burnAddresses
-
-	var argsSerialized []byte
-
-	ret := [1]interface{}{}
-	var ret0 *foundation.Error
-	ret[0] = &ret0
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "AddBurnAddresses", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return err
-	}
-
-	if ret0 != nil {
-		return ret0
-	}
-	return nil
-}
-
-// AddBurnAddressesNoWait is proxy generated method
-func (r *RootDomain) AddBurnAddressesNoWait(burnAddresses []string) error {
-	var args [1]interface{}
-	args[0] = burnAddresses
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "AddBurnAddresses", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// AddBurnAddressesAsImmutable is proxy generated method
-func (r *RootDomain) AddBurnAddressesAsImmutable(burnAddresses []string) error {
-	var args [1]interface{}
-	args[0] = burnAddresses
-
-	var argsSerialized []byte
-
-	ret := [1]interface{}{}
-	var ret0 *foundation.Error
-	ret[0] = &ret0
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "AddBurnAddresses", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

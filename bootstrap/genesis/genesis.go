@@ -124,7 +124,21 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 	mdAdminPubStr := platformpolicy.MustPublicKeyToString(mdAdminKeys.Public)
 
-	err = g.activateSmartContracts(ctx, rootPubStr, mdAdminPubStr, prototypes)
+	inslog.Info("[ Genesis ] Read oracles keys file ...")
+	oraclePubStrs := map[string]string{}
+	for _, o := range g.config.OracleKeysFiles {
+		oracleKeys, err := secrets.ReadKeysFile(o.KeysFile)
+		if err != nil {
+			return errors.Wrap(err, "[ Genesis ] couldn't get md admin keys")
+		}
+		oraclePubStrs[o.Name] = platformpolicy.MustPublicKeyToString(oracleKeys.Public)
+	}
+
+	for name, _ := range oraclePubStrs {
+		bootstrap.ContractOracleMembers[name] = rootdomain.GenesisRef(name + insolar.GenesisNameMember)
+	}
+
+	err = g.activateSmartContracts(ctx, rootPubStr, oraclePubStrs, mdAdminPubStr, prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
@@ -307,6 +321,57 @@ func (g *Generator) activateRootMember(
 	return nil
 }
 
+func (g *Generator) activateOracleMembers(
+	ctx context.Context,
+	oraclePubKeys map[string]string,
+	memberContractProto insolar.Reference,
+) error {
+
+	for name, key := range oraclePubKeys {
+		m, err := member.New(name, key)
+		if err != nil {
+			return errors.Wrap(err, "[ activateOracleMembers ] oracle member constructor failed")
+		}
+
+		instanceData, err := insolar.Serialize(m)
+		if err != nil {
+			return errors.Wrap(err, "[ activateOracleMembers ] oracle member serialization failed")
+		}
+
+		contractID, err := g.artifactManager.RegisterRequest(
+			ctx,
+			record.Request{
+				CallType: record.CTGenesis,
+				Method:   name + insolar.GenesisNameMember,
+			},
+		)
+
+		if err != nil {
+			return errors.Wrap(err, "[ activateOracleMembers ] request register oracle instance failed")
+		}
+		contract := insolar.NewReference(rootdomain.RootDomain.ID(), *contractID)
+		memberDesc, err := g.artifactManager.ActivateObject(
+			ctx,
+			insolar.Reference{},
+			*contract,
+			bootstrap.ContractRootDomain,
+			memberContractProto,
+			false,
+			instanceData,
+		)
+		if err != nil {
+			return errors.Wrap(err, "[ activateOracleMembers ] activation oracle instance failed")
+		}
+		_, err = g.artifactManager.RegisterResult(ctx, bootstrap.ContractRootDomain, *contract, nil)
+		if err != nil {
+			return errors.Wrap(err, "[ activateOracleMembers ] result register oracle instance failed")
+		}
+
+		inslogger.FromContext(ctx).Infof("[ activateOracleMembers ] register by ref=%v", memberDesc.HeadRef().String())
+	}
+	return nil
+}
+
 func (g *Generator) activateMDAdminMember(
 	ctx context.Context,
 	mdAdminPubKey string,
@@ -450,6 +515,7 @@ func (g *Generator) activateMDWallet(
 func (g *Generator) activateSmartContracts(
 	ctx context.Context,
 	rootPubKey string,
+	oraclePubKeys map[string]string,
 	mdPubKey string,
 	prototypes prototypes,
 ) error {
@@ -472,7 +538,12 @@ func (g *Generator) activateSmartContracts(
 
 	err = g.activateRootWallet(ctx, *prototypes[insolar.GenesisNameWallet])
 	if err != nil {
-		return errors.Wrap(err, "failed to store root wallet contract")
+		return errors.Wrap(err, "failed to  store root wallet contract")
+	}
+
+	err = g.activateOracleMembers(ctx, oraclePubKeys, *prototypes[insolar.GenesisNameMember])
+	if err != nil {
+		return errors.Wrap(err, "failed to store oracle members contracts")
 	}
 
 	err = g.activateMDAdminMember(ctx, mdPubKey, *prototypes[insolar.GenesisNameMember])

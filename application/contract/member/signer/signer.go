@@ -20,6 +20,13 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+type SignedPayload struct {
+	Reference string `json:"reference"` // contract reference
+	Method    string `json:"method"`    // method name
+	Params    string `json:"params"`    // json object
+	Seed      string `json:"seed"`
+}
+
 // UnmarshalParams unmarshalls params
 func UnmarshalParams(data []byte, to ...interface{}) error {
 	return insolar.Deserialize(data, to)

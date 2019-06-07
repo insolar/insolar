@@ -35,21 +35,21 @@ SCRIPTS_DIR=scripts/insolard/
 
 CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs
 
-KEYS_FILE=$CONFIGS_DIR/bootstrap_keys.json
+KEYS_FILE=${CONFIGS_DIR}/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}/root_member_keys.json
 HEAVY_GENESIS_CONFIG_FILE=${CONFIGS_DIR}/heavy_genesis.json
 
-MD_ADMIN_MEMBER_KEYS_FILE=$CONFIGS_DIR/md_admin_member_keys.json
-ORACLE0_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle0_member_keys.json
-ORACLE1_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle1_member_keys.json
-ORACLE2_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle2_member_keys.json
-ORACLE3_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle3_member_keys.json
-ORACLE4_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle4_member_keys.json
-ORACLE5_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle5_member_keys.json
-ORACLE6_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle6_member_keys.json
-ORACLE7_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle7_member_keys.json
-ORACLE8_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle8_member_keys.json
-ORACLE9_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle9_member_keys.json
+MD_ADMIN_MEMBER_KEYS_FILE=${CONFIGS_DIR}/md_admin_member_keys.json
+ORACLE0_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle0_member_keys.json
+ORACLE1_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle1_member_keys.json
+ORACLE2_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle2_member_keys.json
+ORACLE3_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle3_member_keys.json
+ORACLE4_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle4_member_keys.json
+ORACLE5_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle5_member_keys.json
+ORACLE6_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle6_member_keys.json
+ORACLE7_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle7_member_keys.json
+ORACLE8_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle8_member_keys.json
+ORACLE9_MEMBER_KEYS_FILE=${CONFIGS_DIR}/oracle9_member_keys.json
 
 # TODO: use only heavy matereal data dir
 DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
@@ -62,7 +62,7 @@ BOOTSTRAP_INSOLARD_CONFIG=${LAUNCHNET_BASE_DIR}insolard.yaml
 
 PULSEWATCHER_CONFIG=${LAUNCHNET_BASE_DIR}pulsewatcher.yaml
 
-INSGORUND_PORT_FILE=$CONFIGS_DIR/insgorund_ports.txt
+INSGORUND_PORT_FILE=${CONFIGS_DIR}/insgorund_ports.txt
 
 set -x
 export INSOLAR_LOG_FORMATTER=${INSOLAR_LOG_FORMATTER}
