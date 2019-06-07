@@ -20,11 +20,6 @@ import (
 type RPCControllerMock struct {
 	t minimock.Tester
 
-	IAmRPCControllerFunc       func()
-	IAmRPCControllerCounter    uint64
-	IAmRPCControllerPreCounter uint64
-	IAmRPCControllerMock       mRPCControllerMockIAmRPCController
-
 	InitFunc       func(p context.Context) (r error)
 	InitCounter    uint64
 	InitPreCounter uint64
@@ -59,7 +54,6 @@ func NewRPCControllerMock(t minimock.Tester) *RPCControllerMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.IAmRPCControllerMock = mRPCControllerMockIAmRPCController{mock: m}
 	m.InitMock = mRPCControllerMockInit{mock: m}
 	m.RemoteProcedureRegisterMock = mRPCControllerMockRemoteProcedureRegister{mock: m}
 	m.SendBytesMock = mRPCControllerMockSendBytes{mock: m}
@@ -67,116 +61,6 @@ func NewRPCControllerMock(t minimock.Tester) *RPCControllerMock {
 	m.SendMessageMock = mRPCControllerMockSendMessage{mock: m}
 
 	return m
-}
-
-type mRPCControllerMockIAmRPCController struct {
-	mock              *RPCControllerMock
-	mainExpectation   *RPCControllerMockIAmRPCControllerExpectation
-	expectationSeries []*RPCControllerMockIAmRPCControllerExpectation
-}
-
-type RPCControllerMockIAmRPCControllerExpectation struct {
-}
-
-//Expect specifies that invocation of RPCController.IAmRPCController is expected from 1 to Infinity times
-func (m *mRPCControllerMockIAmRPCController) Expect() *mRPCControllerMockIAmRPCController {
-	m.mock.IAmRPCControllerFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &RPCControllerMockIAmRPCControllerExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of RPCController.IAmRPCController
-func (m *mRPCControllerMockIAmRPCController) Return() *RPCControllerMock {
-	m.mock.IAmRPCControllerFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &RPCControllerMockIAmRPCControllerExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of RPCController.IAmRPCController is expected once
-func (m *mRPCControllerMockIAmRPCController) ExpectOnce() *RPCControllerMockIAmRPCControllerExpectation {
-	m.mock.IAmRPCControllerFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &RPCControllerMockIAmRPCControllerExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of RPCController.IAmRPCController method
-func (m *mRPCControllerMockIAmRPCController) Set(f func()) *RPCControllerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.IAmRPCControllerFunc = f
-	return m.mock
-}
-
-//IAmRPCController implements github.com/insolar/insolar/network/controller.RPCController interface
-func (m *RPCControllerMock) IAmRPCController() {
-	counter := atomic.AddUint64(&m.IAmRPCControllerPreCounter, 1)
-	defer atomic.AddUint64(&m.IAmRPCControllerCounter, 1)
-
-	if len(m.IAmRPCControllerMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IAmRPCControllerMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RPCControllerMock.IAmRPCController.")
-			return
-		}
-
-		return
-	}
-
-	if m.IAmRPCControllerMock.mainExpectation != nil {
-
-		return
-	}
-
-	if m.IAmRPCControllerFunc == nil {
-		m.t.Fatalf("Unexpected call to RPCControllerMock.IAmRPCController.")
-		return
-	}
-
-	m.IAmRPCControllerFunc()
-}
-
-//IAmRPCControllerMinimockCounter returns a count of RPCControllerMock.IAmRPCControllerFunc invocations
-func (m *RPCControllerMock) IAmRPCControllerMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.IAmRPCControllerCounter)
-}
-
-//IAmRPCControllerMinimockPreCounter returns the value of RPCControllerMock.IAmRPCController invocations
-func (m *RPCControllerMock) IAmRPCControllerMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.IAmRPCControllerPreCounter)
-}
-
-//IAmRPCControllerFinished returns true if mock invocations count is ok
-func (m *RPCControllerMock) IAmRPCControllerFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IAmRPCControllerMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IAmRPCControllerCounter) == uint64(len(m.IAmRPCControllerMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.IAmRPCControllerMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IAmRPCControllerCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.IAmRPCControllerFunc != nil {
-		return atomic.LoadUint64(&m.IAmRPCControllerCounter) > 0
-	}
-
-	return true
 }
 
 type mRPCControllerMockInit struct {
@@ -908,10 +792,6 @@ func (m *RPCControllerMock) SendMessageFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RPCControllerMock) ValidateCallCounters() {
 
-	if !m.IAmRPCControllerFinished() {
-		m.t.Fatal("Expected call to RPCControllerMock.IAmRPCController")
-	}
-
 	if !m.InitFinished() {
 		m.t.Fatal("Expected call to RPCControllerMock.Init")
 	}
@@ -949,10 +829,6 @@ func (m *RPCControllerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *RPCControllerMock) MinimockFinish() {
 
-	if !m.IAmRPCControllerFinished() {
-		m.t.Fatal("Expected call to RPCControllerMock.IAmRPCController")
-	}
-
 	if !m.InitFinished() {
 		m.t.Fatal("Expected call to RPCControllerMock.Init")
 	}
@@ -987,7 +863,6 @@ func (m *RPCControllerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.IAmRPCControllerFinished()
 		ok = ok && m.InitFinished()
 		ok = ok && m.RemoteProcedureRegisterFinished()
 		ok = ok && m.SendBytesFinished()
@@ -1000,10 +875,6 @@ func (m *RPCControllerMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
-
-			if !m.IAmRPCControllerFinished() {
-				m.t.Error("Expected call to RPCControllerMock.IAmRPCController")
-			}
 
 			if !m.InitFinished() {
 				m.t.Error("Expected call to RPCControllerMock.Init")
@@ -1036,10 +907,6 @@ func (m *RPCControllerMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *RPCControllerMock) AllMocksCalled() bool {
-
-	if !m.IAmRPCControllerFinished() {
-		return false
-	}
 
 	if !m.InitFinished() {
 		return false

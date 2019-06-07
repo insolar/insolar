@@ -78,9 +78,6 @@ import (
 type RPCController interface {
 	component.Initer
 
-	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
-	IAmRPCController()
-
 	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
 	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
 	SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error
@@ -94,10 +91,6 @@ type rpcController struct {
 
 	options     *common.Options
 	methodTable map[string]insolar.RemoteProcedure
-}
-
-func (rpc *rpcController) IAmRPCController() {
-	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
 }
 
 func (rpc *rpcController) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
