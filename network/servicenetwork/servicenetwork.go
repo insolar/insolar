@@ -134,11 +134,12 @@ func (n *ServiceNetwork) Gateway() network.Gateway {
 
 func (n *ServiceNetwork) SetGateway(g network.Gateway) {
 	n.gatewayMu.Lock()
-	if n.gateway == nil || n.gateway.GetState() != g.GetState() {
-		n.gateway = g
-	} else {
+
+	if n.gateway != nil && n.gateway.GetState() == g.GetState() {
 		log.Warn("Trying to set gateway to the same state")
+		return
 	}
+	n.gateway = g
 	n.gatewayMu.Unlock()
 	ctx := context.Background()
 	if n.gateway.NeedLockMessageBus() {
