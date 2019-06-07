@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
 
@@ -39,11 +40,18 @@ type SetRecord struct {
 	jet     insolar.JetID
 
 	Dep struct {
+		Bus                   insolar.MessageBus
 		RecentStorageProvider recentstorage.Provider
-		PCS                   insolar.PlatformCryptographyScheme
-		RecordModifier        object.RecordModifier
-		WriteAccessor         hot.WriteAccessor
-		PendingRequestsLimit  int
+
+		Coordinator jet.Coordinator
+
+		PendingModifier object.PendingModifier
+		PendingAccessor object.PendingAccessor
+
+		PCS                  insolar.PlatformCryptographyScheme
+		RecordModifier       object.RecordModifier
+		WriteAccessor        hot.WriteAccessor
+		PendingRequestsLimit int
 	}
 }
 
@@ -76,24 +84,6 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	calculatedID := insolar.NewID(flow.Pulse(ctx), hash)
 
-	concrete := record.Unwrap(&virtRec)
-	switch r := concrete.(type) {
-	case *record.Request:
-		if r.CallType == record.CTMethod {
-			if r.Object == nil {
-				return bus.Reply{Err: errors.New("method call request without object reference")}
-			}
-			if p.Dep.RecentStorageProvider.Count() > p.Dep.PendingRequestsLimit {
-				return bus.Reply{Reply: &reply.Error{ErrType: reply.ErrTooManyPendingRequests}}
-			}
-			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
-			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), *calculatedID)
-		}
-	case *record.Result:
-		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
-	}
-
 	hash = record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	id := insolar.NewID(flow.Pulse(ctx), hash)
 	rec := record.Material{
@@ -110,5 +100,43 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.Wrap(err, "can't save record into storage")}
 	}
 
+	penReply := p.handlePendings(ctx, *calculatedID, &virtRec)
+	if penReply != nil {
+		return *penReply
+	}
+
 	return bus.Reply{Reply: &reply.ID{ID: *id}}
+}
+
+func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, virtRec *record.Virtual) *bus.Reply {
+	concrete := record.Unwrap(virtRec)
+	switch r := concrete.(type) {
+	case *record.Request:
+		// Skip object creation and genesis
+		if r.CallType == record.CTMethod {
+			if r.Object == nil {
+				return &bus.Reply{Err: errors.New("method call request without object reference")}
+			}
+			if p.Dep.RecentStorageProvider.Count() > p.Dep.PendingRequestsLimit {
+				return &bus.Reply{Reply: &reply.Error{ErrType: reply.ErrTooManyPendingRequests}}
+			}
+			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
+			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), calculatedID)
+
+			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID)
+			if err != nil {
+				return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+			}
+		}
+	case *record.Result:
+		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
+		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
+
+		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
+		if err != nil {
+			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+		}
+	}
+
+	return nil
 }

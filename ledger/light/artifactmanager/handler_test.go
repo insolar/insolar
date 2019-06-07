@@ -121,7 +121,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.recordModifier = recordStorage
 	s.recordAccessor = recordStorage
 
-	s.indexMemoryStor = object.NewInMemoryIndex()
+	s.indexMemoryStor = object.NewInMemoryIndex(recordStorage, nil)
 
 	s.cm.Inject(
 		s.scheme,
@@ -177,7 +177,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	mb.MustRegisterMock.Return()
 	jc := jet.NewCoordinatorMock(mc)
 
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 	h.JetStorage = s.jetStorage
@@ -254,7 +254,9 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
+	pam := object.NewPendingAccessorMock(s.T())
+
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, pam, &configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
@@ -300,7 +302,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
@@ -348,7 +350,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := jet.NewCoordinatorMock(mc)
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
 		LightChainLimit: 2,
 	})
 	h.JetStorage = s.jetStorage
@@ -420,7 +422,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
 		LightChainLimit: 2,
 	})
 	h.JetStorage = s.jetStorage
@@ -513,15 +515,14 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		LatestState: firstID,
 		JetID:       insolar.JetID(jetID),
 	})
-
 	hotIndexes := &message.HotData{
 		Jet:         *insolar.NewReference(insolar.ID(jetID)),
 		PulseNumber: insolar.FirstPulseNumber,
 		HotIndexes: []message.HotIndex{
 			{
-				Index:    firstIndex,
-				LastUsed: insolar.PulseNumber(234),
-				ObjID:    *firstID,
+				Index:            firstIndex,
+				LifelineLastUsed: insolar.PulseNumber(234),
+				ObjID:            *firstID,
 			},
 		},
 		PendingRequests: map[insolar.ID]recentstorage.PendingObjectContext{
@@ -550,7 +551,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	bucketMock := object.NewIndexBucketModifierMock(s.T())
 	idxMock := object.NewLifelineIndexMock(s.T())
 
-	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.IndexBucket) (r error) {
+	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.FilamentIndex) (r error) {
 		require.Equal(s.T(), *firstID, ib.ObjID)
 		require.Equal(s.T(), insolar.FirstPulseNumber, int(pn))
 		require.Equal(s.T(), *firstID, *ib.Lifeline.LatestState)
@@ -569,7 +570,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	h := NewMessageHandler(idxMock, bucketMock, idxStateModifierMock, &configuration.Ledger{})
+	h := NewMessageHandler(idxMock, bucketMock, idxStateModifierMock, nil, nil, &configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
@@ -590,6 +591,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	p.Dep.RecentStorageProvider = h.RecentStorageProvider
 	p.Dep.MessageBus = h.Bus
 	p.Dep.IndexBucketModifier = h.IndexBucketModifier
+	p.Dep.PendingModifier = h.PendingModifier
 	p.Dep.JetStorage = h.JetStorage
 	p.Dep.JetFetcher = h.jetTreeUpdater
 	p.Dep.JetReleaser = h.JetReleaser
@@ -629,7 +631,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	err := s.recordModifier.Set(s.ctx, *reqID, rec)
 	require.NoError(s.T(), err)
 
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
 	h.RecordAccessor = s.recordAccessor
 
 	replyTo := make(chan bus.Reply, 1)

@@ -134,6 +134,14 @@ message Deactivate {
     bytes PrevState = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
+message PendingFilament {
+    int32 polymorph = 16;
+
+    bytes RecordID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes PreviousRecord = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+}
+
+
 message Virtual {
     int32 polymorph = 16;
 
@@ -148,6 +156,7 @@ message Virtual {
         Activate Activate = 108;
         Amend Amend = 109;
         Deactivate Deactivate = 110;
+        PendingFilament PendingFilament = 111;
     }
 
     bytes Signature = 200;

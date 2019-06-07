@@ -17,30 +17,28 @@
 package object
 
 import (
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
 )
 
 var (
-	inmemoryStorage = insmetrics.MustTagKey("inmemorystorage")
-	dbStorage       = insmetrics.MustTagKey("dbstorage")
-)
-
-var (
-	statIndexInMemoryAddedCount = stats.Int64(
-		"indexstorage/added/count",
+	statBucketAddedCount = stats.Int64(
+		"object/bucket/added/count",
+		"How many bucket have been created on a node",
+		stats.UnitDimensionless,
+	)
+	statBucketRemovedCount = stats.Int64(
+		"object/bucket/removed/count",
+		"How many bucket have been removed from a node",
+		stats.UnitDimensionless,
+	)
+	statObjectPendingRequestsInMemoryAddedCount = stats.Int64(
+		"оbject/pendings/added/count",
 		"How many index-records have been saved in in-indexStorage index storage",
 		stats.UnitDimensionless,
 	)
-	statIndexInMemoryRemovedCount = stats.Int64(
-		"indexstorage/removed/count",
-		"How many index-records have been removed from an index storage",
-		stats.UnitDimensionless,
-	)
-	statIndexDBAddedCount = stats.Int64(
-		"indexstorage/added/count",
+	statObjectPendingRequestsInMemoryRemovedCount = stats.Int64(
+		"оbject/pendings/removed/count",
 		"How many index-records have been saved in in-indexStorage index storage",
 		stats.UnitDimensionless,
 	)
@@ -50,7 +48,7 @@ var (
 		stats.UnitDimensionless,
 	)
 	statRecordInMemoryRemovedCount = stats.Int64(
-		"recordstorage/added/count",
+		"recordstorage/removed/count",
 		"How many records have been removed from a in-memory storage",
 		stats.UnitDimensionless,
 	)
@@ -59,39 +57,28 @@ var (
 func init() {
 	err := view.Register(
 		&view.View{
-			Name:        statIndexInMemoryAddedCount.Name(),
-			Description: statIndexInMemoryAddedCount.Description(),
-			Measure:     statIndexInMemoryAddedCount,
-			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{inmemoryStorage},
+			Name:        statBucketAddedCount.Name(),
+			Description: statBucketAddedCount.Description(),
+			Measure:     statBucketAddedCount,
+			Aggregation: view.Sum(),
 		},
 		&view.View{
-			Name:        statIndexInMemoryRemovedCount.Name(),
-			Description: statIndexInMemoryRemovedCount.Description(),
-			Measure:     statIndexInMemoryRemovedCount,
-			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{inmemoryStorage},
-		},
-		&view.View{
-			Name:        statIndexDBAddedCount.Name(),
-			Description: statIndexDBAddedCount.Description(),
-			Measure:     statIndexDBAddedCount,
-			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{dbStorage},
+			Name:        statBucketRemovedCount.Name(),
+			Description: statBucketRemovedCount.Description(),
+			Measure:     statBucketRemovedCount,
+			Aggregation: view.Sum(),
 		},
 		&view.View{
 			Name:        statRecordInMemoryAddedCount.Name(),
 			Description: statRecordInMemoryAddedCount.Description(),
 			Measure:     statRecordInMemoryAddedCount,
-			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{inmemoryStorage},
+			Aggregation: view.Sum(),
 		},
 		&view.View{
 			Name:        statRecordInMemoryRemovedCount.Name(),
 			Description: statRecordInMemoryRemovedCount.Description(),
 			Measure:     statRecordInMemoryRemovedCount,
-			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{inmemoryStorage},
+			Aggregation: view.Sum(),
 		},
 	)
 	if err != nil {

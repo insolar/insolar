@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -95,6 +96,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		}
 	}
 
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", s.message.Parcel.Message().Type().String()))
+	defer span.End()
+
 	switch s.message.Parcel.Message().Type() {
 	case insolar.TypeSetRecord:
 		msg := s.message.Parcel.Message().(*message.SetRecord)
@@ -135,6 +139,10 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeHotRecords:
 		msg := s.message.Parcel.Message().(*message.HotData)
 		h := NewHotData(s.dep, s.message.ReplyTo, msg)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetPendingFilament:
+		msg := s.message.Parcel.Message().(*message.GetPendingFilament)
+		h := NewGetPendingFilament(s.dep, msg, s.message.ReplyTo)
 		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.message.Parcel.Message().Type().String())
