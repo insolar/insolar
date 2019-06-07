@@ -38,7 +38,7 @@ type HandleCall struct {
 	Message bus.Message
 }
 
-func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState, request *Ref, parcel insolar.Parcel) error {
+func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState, request *Ref, parcel insolar.Parcel) {
 	// If the flow has canceled during ClarifyPendingState there are two possibilities.
 	// 1. It's possible that we started to execute ClarifyPendingState, the pulse has
 	// changed and the execution queue was sent to the next executor in OnPulse method.
@@ -70,22 +70,18 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 		}
 	}
 
-	var err error
-
 	// it might be already collected in OnPulse, that is why it already might not be in es.Queue
 	if addedRequestIdx != -1 {
 		es.Queue = append(es.Queue[:addedRequestIdx], es.Queue[addedRequestIdx+1:]...)
 		// we must unlock it before send to prevent deadlock
 		es.Unlock()
-		_, err = h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
+		_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
 		if err != nil {
 			inslogger.FromContext(ctx).Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
 		}
 	} else {
 		es.Unlock()
 	}
-
-	return err
 }
 
 func (h *HandleCall) handleActual(
@@ -161,7 +157,9 @@ func (h *HandleCall) handleActual(
 
 	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
 		if err == flow.ErrCancelled {
-			err = h.sendToNextExecutor(ctx, es, request, parcel)
+			h.sendToNextExecutor(ctx, es, request, parcel)
+		} else {
+			inslogger.FromContext(ctx).Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
 		}
 		// and return RegisterRequest as usual
 	} else {
