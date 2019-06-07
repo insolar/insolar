@@ -58,14 +58,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/network/sequence"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/sequence"
 )
 
+// SessionID is session identifier
 type SessionID uint64
 
 const (
