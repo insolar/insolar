@@ -21,7 +21,7 @@ import (
 	{{ $import }}
 {{- end }}
 {{ if $.GenerateInitialize -}}
-    XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
+    XXX_insolar "github.com/insolar/insolar/insolar"
 {{- end }}
 )
 
@@ -179,16 +179,16 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
 {{ end }}
 
 {{ if $.GenerateInitialize -}}
-func Initialize() XXX_preprocessor.ContractWrapper {
-    return XXX_preprocessor.ContractWrapper{
+func Initialize() XXX_insolar.ContractWrapper {
+    return XXX_insolar.ContractWrapper{
         GetCode: INSMETHOD_GetCode,
         GetPrototype: INSMETHOD_GetPrototype,
-        Methods: XXX_preprocessor.ContractMethods{
+        Methods: XXX_insolar.ContractMethods{
             {{ range $method := .Methods -}}
                     "{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
             {{ end }}
         },
-        Constructors: XXX_preprocessor.ContractConstructors{
+        Constructors: XXX_insolar.ContractConstructors{
             {{ range $f := .Functions -}}
                     "{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
             {{ end }}

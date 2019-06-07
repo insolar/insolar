@@ -26,11 +26,10 @@ import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	XXX_rootdomain "github.com/insolar/insolar/insolar/rootdomain"
 	XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
-	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
-func InitializeContractMethods() map[string]XXX_preprocessor.ContractWrapper {
-	return map[string]XXX_preprocessor.ContractWrapper{
+func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
+	return map[string]XXX_insolar.ContractWrapper{
 		"helloworld": helloworld.Initialize(),
 	}
 }

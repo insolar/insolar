@@ -25,13 +25,12 @@ import (
 {{- end }}
 
     XXX_insolar "github.com/insolar/insolar/insolar"
-    XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
     XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
     XXX_rootdomain "github.com/insolar/insolar/insolar/rootdomain"
 )
 
-func InitializeContractMethods() map[string]XXX_preprocessor.ContractWrapper {
-    return map[string]XXX_preprocessor.ContractWrapper{
+func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
+    return map[string]XXX_insolar.ContractWrapper{
 {{- range $contract := .Contracts }}
         "{{ $contract.Name }}": {{ $contract.ImportName }}.Initialize(),
 {{- end }}
