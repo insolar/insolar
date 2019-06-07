@@ -87,12 +87,12 @@ func (js *JetSplitterDefault) Do(
 	return jets, nil
 }
 
-func (m *JetSplitterDefault) splitJets(
+func (js *JetSplitterDefault) splitJets(
 	ctx context.Context,
 	jets []jet.Info,
 	previous, current, newpulse insolar.PulseNumber,
 ) ([]jet.Info, error) {
-	me := m.jetCoordinator.Me()
+	me := js.jetCoordinator.Me()
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"current_pulse": current,
 		"new_pulse":     newpulse,
@@ -100,8 +100,8 @@ func (m *JetSplitterDefault) splitJets(
 
 	for i, jetInfo := range jets {
 		newInfo := jet.Info{ID: jetInfo.ID}
-		if m.hasSplitIntention(ctx, previous, jetInfo.ID) {
-			leftJetID, rightJetID, err := m.jetModifier.Split(
+		if js.hasSplitIntention(ctx, previous, jetInfo.ID) {
+			leftJetID, rightJetID, err := js.jetModifier.Split(
 				ctx,
 				newpulse,
 				jetInfo.ID,
@@ -111,28 +111,28 @@ func (m *JetSplitterDefault) splitJets(
 			}
 
 			// Set actual because we are the last executor for jet.
-			m.jetModifier.Update(ctx, newpulse, true, leftJetID, rightJetID)
+			js.jetModifier.Update(ctx, newpulse, true, leftJetID, rightJetID)
 			newInfo.Left = &jet.Info{ID: leftJetID}
 			newInfo.Right = &jet.Info{ID: rightJetID}
 
-			nextLeftExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(leftJetID), newpulse)
+			nextLeftExecutor, err := js.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(leftJetID), newpulse)
 			if err != nil {
 				return nil, err
 			}
 
 			if *nextLeftExecutor == me {
 				newInfo.Left.MineNext = true
-				m.recentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(leftJetID))
+				js.recentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(leftJetID))
 			}
 
-			nextRightExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), newpulse)
+			nextRightExecutor, err := js.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), newpulse)
 			if err != nil {
 				return nil, err
 			}
 
 			if *nextRightExecutor == me {
 				newInfo.Right.MineNext = true
-				m.recentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(rightJetID))
+				js.recentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(rightJetID))
 			}
 
 			logger.WithFields(map[string]interface{}{
@@ -143,8 +143,8 @@ func (m *JetSplitterDefault) splitJets(
 			jets[i] = newInfo
 		} else {
 			// Set actual because we are the last executor for jet.
-			m.jetModifier.Update(ctx, newpulse, true, jetInfo.ID)
-			nextExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetInfo.ID), newpulse)
+			js.jetModifier.Update(ctx, newpulse, true, jetInfo.ID)
+			nextExecutor, err := js.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetInfo.ID), newpulse)
 			if err != nil {
 				return nil, err
 			}
