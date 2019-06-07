@@ -361,7 +361,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	if ok {
 		delete(reqsIDs, *res.Request.Record())
 		for i := 0; i < len(b.pendingMeta.notClosedRequestsIds); i++ {
-			if insolar.ID(b.pendingMeta.notClosedRequestsIds[i]) == *res.Request.Record() {
+			if b.pendingMeta.notClosedRequestsIds[i] == *res.Request.Record() {
 				b.pendingMeta.notClosedRequestsIds = append(b.pendingMeta.notClosedRequestsIds[:i], b.pendingMeta.notClosedRequestsIds[i+1:]...)
 				break
 			}
@@ -421,7 +421,7 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 
 	for _, chainLink := range b.pendingMeta.fullFilament {
 		for _, metaID := range chainLink.MetaRecordsIDs {
-			metaRec, err := i.recordStorage.ForID(ctx, insolar.ID(metaID))
+			metaRec, err := i.recordStorage.ForID(ctx, metaID)
 			if err != nil {
 				return errors.Wrap(err, "failed to refresh an index state")
 			}
@@ -494,7 +494,7 @@ func (i *InMemoryIndex) FirstPending(ctx context.Context, currentPN insolar.Puls
 	}
 
 	metaID := b.pendingMeta.fullFilament[0].MetaRecordsIDs[0]
-	rec, err := i.recordStorage.ForID(ctx, insolar.ID(metaID))
+	rec, err := i.recordStorage.ForID(ctx, metaID)
 	if err != nil {
 		return nil, err
 	}
@@ -520,7 +520,7 @@ func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN inso
 	res := make([]record.Request, count)
 
 	for idx := 0; idx < count; idx++ {
-		rec, err := i.recordStorage.ForID(ctx, insolar.ID(b.pendingMeta.notClosedRequestsIds[idx]))
+		rec, err := i.recordStorage.ForID(ctx, b.pendingMeta.notClosedRequestsIds[idx])
 		if err != nil {
 			return nil, err
 		}
