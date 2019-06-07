@@ -445,7 +445,7 @@ func (m *Member) getDeposits() ([]map[string]string, error) {
 }
 
 // Migration methods
-func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
+func (oracleMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
 	rd := rootdomain.GetObject(rdRef)
 
 	// Get oracle members
@@ -453,8 +453,11 @@ func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAd
 	if err != nil {
 		return "", fmt.Errorf("[ migration ] Failed to get oracles map: %s", err.Error())
 	}
+	if len(oracleMembers) == 0 {
+		return "", fmt.Errorf("[ migration ] There is no active oracle")
+	}
 	// Check that caller is oracle
-	if _, ok := oracleMembers[mdMember.Name]; !ok {
+	if _, ok := oracleMembers[oracleMember.Name]; !ok {
 		return "", fmt.Errorf("[ migration ] This oracle is not in the list")
 	}
 
@@ -466,7 +469,7 @@ func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAd
 	m := member.GetObject(mRef)
 
 	// Find deposit for txHash
-	found, txDeposit, err := m.FindDeposit(txHash, amount)
+	found, txDeposit, err := m.FindDeposit(txHash, amount.String())
 	if err != nil {
 		return "", fmt.Errorf("[ migration ] Failed to get deposit: %s", err.Error())
 	}
@@ -477,7 +480,7 @@ func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAd
 		for name, _ := range oracleMembers {
 			oracleConfirms[name] = false
 		}
-		dHolder := deposit.New(oracleConfirms, txHash, amount, unHoldDate)
+		dHolder := deposit.New(oracleConfirms, txHash, amount.String(), unHoldDate)
 		txDepositP, err := dHolder.AsDelegate(mRef)
 		if err != nil {
 			return "", fmt.Errorf("[ migration ] Failed to save as delegate: %s", err.Error())
@@ -486,7 +489,7 @@ func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAd
 	}
 
 	// Confirm tx by oracle
-	confirms, err := txDeposit.Confirm(mdMember.Name, txHash, amount)
+	confirms, err := txDeposit.Confirm(oracleMember.Name, txHash, amount.String())
 	if err != nil {
 		return "", fmt.Errorf("[ migration ] Confirmed failed: %s", err.Error())
 	}
@@ -525,7 +528,14 @@ func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAd
 	//return insAddr.String(), nil
 	return strconv.Itoa(int(confirms)), nil
 }
-func (m *Member) FindDeposit(txHash string, amount big.Int) (bool, deposit.Deposit, error) {
+func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
+
+	inputAmount := new(big.Int)
+	inputAmount, ok := inputAmount.SetString(inputAmountStr, 10)
+	if !ok {
+		return false, deposit.Deposit{}, fmt.Errorf("[ Confirm ] can't parse input amount")
+	}
+
 	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
 	if err != nil {
 		return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] Failed to get children: %s", err.Error())
@@ -543,14 +553,22 @@ func (m *Member) FindDeposit(txHash string, amount big.Int) (bool, deposit.Depos
 			if err != nil {
 				return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] Failed to get tx hash: %s", err.Error())
 			}
-			a, err := d.GetAmount()
+			depositAmountStr, err := d.GetAmount()
 			if err != nil {
 				return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] Failed to get amount: %s", err.Error())
 			}
 
+			depositAmountInt := new(big.Int)
+			depositAmountInt, ok := depositAmountInt.SetString(depositAmountStr, 10)
+			if !ok {
+				return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] can't parse input amount")
+			}
+
 			if txHash == th {
-				if (&amount).Cmp(&a) == 0 {
+				if (inputAmount).Cmp(depositAmountInt) == 0 {
 					return true, *d, nil
+				} else {
+					return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] deposit with this tx hash has different amount")
 				}
 			}
 		}

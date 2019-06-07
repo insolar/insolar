@@ -134,7 +134,11 @@ func (g *Generator) Run(ctx context.Context) error {
 		oraclePubStrs[o.Name] = platformpolicy.MustPublicKeyToString(oracleKeys.Public)
 	}
 
-	err = g.activateSmartContracts(ctx, rootPubStr, mdAdminPubStr, prototypes)
+	for name, _ := range oraclePubStrs {
+		bootstrap.ContractOracleMembers[name] = rootdomain.GenesisRef(name + insolar.GenesisNameMember)
+	}
+
+	err = g.activateSmartContracts(ctx, rootPubStr, oraclePubStrs, mdAdminPubStr, prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
@@ -511,6 +515,7 @@ func (g *Generator) activateMDWallet(
 func (g *Generator) activateSmartContracts(
 	ctx context.Context,
 	rootPubKey string,
+	oraclePubKeys map[string]string,
 	mdPubKey string,
 	prototypes prototypes,
 ) error {
@@ -533,13 +538,13 @@ func (g *Generator) activateSmartContracts(
 
 	err = g.activateRootWallet(ctx, *prototypes[insolar.GenesisNameWallet])
 	if err != nil {
-		return errors.Wrap(err, "failed to store root wallet contract")
+		return errors.Wrap(err, "failed to  store root wallet contract")
 	}
 
-	//err = g.activateOracleMembers(ctx, oraclePubKeys, *prototypes[insolar.GenesisNameMember])
-	//if err != nil {
-	//	return errors.Wrap(err, "failed to store oracle members contracts")
-	//}
+	err = g.activateOracleMembers(ctx, oraclePubKeys, *prototypes[insolar.GenesisNameMember])
+	if err != nil {
+		return errors.Wrap(err, "failed to store oracle members contracts")
+	}
 
 	err = g.activateMDAdminMember(ctx, mdPubKey, *prototypes[insolar.GenesisNameMember])
 	if err != nil {

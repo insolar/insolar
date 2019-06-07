@@ -34,6 +34,8 @@ var (
 	ContractRootWallet = rootdomain.GenesisRef("root" + insolar.GenesisNameWallet)
 	// ContractMDAdminMember is the md admin wallet contract reference.
 	ContractMDAdminMember = rootdomain.GenesisRef("mdadmin" + insolar.GenesisNameMember)
+	// ContractMDAdminMember is the md admin wallet contract reference.
+	ContractOracleMembers = map[string]insolar.Reference{}
 	// ContractMDWallet is the md wallet contract reference.
 	ContractMDWallet = rootdomain.GenesisRef("md" + insolar.GenesisNameWallet)
 )

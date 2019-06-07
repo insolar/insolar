@@ -41,19 +41,21 @@ type Deposit struct {
 	OracleConfirms map[string]bool
 	Confirms       uint
 	TxHash         string
+	CreationDate   time.Time
 	UnHoldDate     time.Time
-	Amount         big.Int
+	Amount         string
+	Bonus          string
 }
 
 func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
 
-func (d *Deposit) GetAmount() (big.Int, error) {
+func (d *Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
-func New(oracleConfirms map[string]bool, txHash string, amount big.Int, unHoldDate time.Time) (*Deposit, error) {
+func New(oracleConfirms map[string]bool, txHash string, amount string, unHoldDate time.Time) (*Deposit, error) {
 	return &Deposit{
 		Status:         OPEN,
 		OracleConfirms: oracleConfirms,
@@ -69,16 +71,27 @@ func (d *Deposit) MapMarshal() (map[string]string, error) {
 		"Status":   string(d.Status),
 		"Confirms": strconv.Itoa(int(d.Confirms)),
 		"TxHash":   d.TxHash,
-		"Amount":   d.Amount.String(),
+		"Amount":   d.Amount,
 	}, nil
 }
 
-func (d *Deposit) Confirm(oracleName string, txHash string, amount big.Int) (uint, error) {
+func (d *Deposit) Confirm(oracleName string, txHash string, amountStr string) (uint, error) {
 	if txHash != d.TxHash {
 		return 0, fmt.Errorf("[ Confirm ] Transaction hash is incorrect")
 	}
 
-	if (&amount).Cmp(&d.Amount) != 0 {
+	inputAmount := new(big.Int)
+	inputAmount, ok := inputAmount.SetString(amountStr, 10)
+	if !ok {
+		return 0, fmt.Errorf("[ Confirm ] can't parse input amount")
+	}
+	depositAmount := new(big.Int)
+	depositAmount, ok = depositAmount.SetString(d.Amount, 10)
+	if !ok {
+		return 0, fmt.Errorf("[ Confirm ] can't parse Deposit amount")
+	}
+
+	if (inputAmount).Cmp(depositAmount) != 0 {
 		return 0, fmt.Errorf("[ Confirm ] Amount is incorrect")
 	}
 

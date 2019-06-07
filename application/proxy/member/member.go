@@ -21,12 +21,11 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
-	"math/big"
 )
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112vwrMVoYXFs1TWAJpQuBwwWQeAqMiSosK8u3A3J.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113KFNmuSaz8e3GH5u4HKRqTqEpm5EqCDeyhTdyCi.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -779,10 +778,10 @@ func (r *Member) GetMyBalanceAsImmutable() (interface{}, error) {
 }
 
 // FindDeposit is proxy generated method
-func (r *Member) FindDeposit(txHash string, amount big.Int) (bool, deposit.Deposit, error) {
+func (r *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 	var args [2]interface{}
 	args[0] = txHash
-	args[1] = amount
+	args[1] = inputAmountStr
 
 	var argsSerialized []byte
 
@@ -816,10 +815,10 @@ func (r *Member) FindDeposit(txHash string, amount big.Int) (bool, deposit.Depos
 }
 
 // FindDepositNoWait is proxy generated method
-func (r *Member) FindDepositNoWait(txHash string, amount big.Int) error {
+func (r *Member) FindDepositNoWait(txHash string, inputAmountStr string) error {
 	var args [2]interface{}
 	args[0] = txHash
-	args[1] = amount
+	args[1] = inputAmountStr
 
 	var argsSerialized []byte
 
@@ -837,10 +836,10 @@ func (r *Member) FindDepositNoWait(txHash string, amount big.Int) error {
 }
 
 // FindDepositAsImmutable is proxy generated method
-func (r *Member) FindDepositAsImmutable(txHash string, amount big.Int) (bool, deposit.Deposit, error) {
+func (r *Member) FindDepositAsImmutable(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 	var args [2]interface{}
 	args[0] = txHash
-	args[1] = amount
+	args[1] = inputAmountStr
 
 	var argsSerialized []byte
 
