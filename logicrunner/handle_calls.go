@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -98,7 +97,6 @@ func (h *HandleCall) handleActual(
 		parcel:  parcel,
 		request: request,
 	}
-	log.Error(request)
 
 	es.Queue = append(es.Queue, qElement)
 	es.Unlock()

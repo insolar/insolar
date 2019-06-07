@@ -57,6 +57,9 @@ func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCal
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
 	defer span.End()
 
+	gls.Set("callCtx", callCtx)
+	defer gls.Cleanup()
+
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {
 		return nil, errors.New("failed to find contract with reference")
