@@ -58,6 +58,12 @@ func (s *GetPendingRequests) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	s.dep.WaitHot(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
 	// refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, s.reqPulse, *s.msg.Object.Record())
 	// s.dep.RefreshPendingFilament(refreshPendingsState)
 	// if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
