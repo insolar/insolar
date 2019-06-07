@@ -32,11 +32,10 @@ import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	XXX_rootdomain "github.com/insolar/insolar/insolar/rootdomain"
 	XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
-	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
-func InitializeContractMethods() map[string]XXX_preprocessor.ContractWrapper {
-	return map[string]XXX_preprocessor.ContractWrapper{
+func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
+	return map[string]XXX_insolar.ContractWrapper{
 		"allowance":  allowance.Initialize(),
 		"helloworld": helloworld.Initialize(),
 		"member":     member.Initialize(),
@@ -134,6 +133,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
 		))
 	}
+
 	{ // helloworld
 		pRef := shouldLoadRef("111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2.11111111111111111111111111111111")
 		cRef := shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")
@@ -147,6 +147,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
 		))
 	}
+
 	{ // member
 		pRef := shouldLoadRef("111A7UqbgvFXj9vkCAaNYSAkWLapu62eU5AUSv3y4JY.11111111111111111111111111111111")
 		cRef := shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111")
@@ -160,6 +161,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
 		))
 	}
+
 	{ // nodedomain
 		pRef := shouldLoadRef("111A6NKbCjpzFr9MttfcWV8vX8eFjiyGPPfSH1AMtwN.11111111111111111111111111111111")
 		cRef := shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.11111111111111111111111111111111")
@@ -173,6 +175,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
 		))
 	}
+
 	{ // noderecord
 		pRef := shouldLoadRef("111A5fZeApbGhcsLrbfGy82kKLgapF93GhNPMLSYaPY.11111111111111111111111111111111")
 		cRef := shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111")
@@ -186,6 +189,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
 		))
 	}
+
 	{ // rootdomain
 		pRef := shouldLoadRef("111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5.11111111111111111111111111111111")
 		cRef := shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111")
@@ -199,6 +203,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
 		))
 	}
+
 	{ // wallet
 		pRef := shouldLoadRef("111A5gmRD1ZbHjQh7DgH9SrCK4a1qfwEUP5xAir6i8L.11111111111111111111111111111111")
 		cRef := shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.11111111111111111111111111111111")
@@ -212,5 +217,6 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
 		))
 	}
+
 	return rv
 }

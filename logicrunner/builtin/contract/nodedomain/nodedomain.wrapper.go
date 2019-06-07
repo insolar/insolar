@@ -18,8 +18,8 @@ package nodedomain
 
 import (
 	"github.com/insolar/insolar/insolar"
+	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 type ExtendableError struct {
@@ -236,16 +236,16 @@ func INSCONSTRUCTOR_NewNodeDomain(data []byte) ([]byte, error) {
 	return ret, err
 }
 
-func Initialize() XXX_preprocessor.ContractWrapper {
-	return XXX_preprocessor.ContractWrapper{
+func Initialize() XXX_insolar.ContractWrapper {
+	return XXX_insolar.ContractWrapper{
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
-		Methods: XXX_preprocessor.ContractMethods{
+		Methods: XXX_insolar.ContractMethods{
 			"RegisterNode":   INSMETHOD_RegisterNode,
 			"GetNodeRefByPK": INSMETHOD_GetNodeRefByPK,
 			"RemoveNode":     INSMETHOD_RemoveNode,
 		},
-		Constructors: XXX_preprocessor.ContractConstructors{
+		Constructors: XXX_insolar.ContractConstructors{
 			"NewNodeDomain": INSCONSTRUCTOR_NewNodeDomain,
 		},
 	}

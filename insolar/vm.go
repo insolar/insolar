@@ -82,3 +82,17 @@ type LogicCallContext struct {
 	Immutable       bool
 	TraceID         string
 }
+
+type ContractMethod func([]byte, []byte) ([]byte, []byte, error)
+type ContractMethods map[string]ContractMethod
+
+type ContractConstructor func([]byte) ([]byte, error)
+type ContractConstructors map[string]ContractConstructor
+
+type ContractWrapper struct {
+	GetCode      ContractMethod
+	GetPrototype ContractMethod
+
+	Methods      ContractMethods
+	Constructors ContractConstructors
+}

@@ -17,8 +17,8 @@
 package noderecord
 
 import (
+	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 type ExtendableError struct {
@@ -270,17 +270,17 @@ func INSCONSTRUCTOR_NewNodeRecord(data []byte) ([]byte, error) {
 	return ret, err
 }
 
-func Initialize() XXX_preprocessor.ContractWrapper {
-	return XXX_preprocessor.ContractWrapper{
+func Initialize() XXX_insolar.ContractWrapper {
+	return XXX_insolar.ContractWrapper{
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
-		Methods: XXX_preprocessor.ContractMethods{
+		Methods: XXX_insolar.ContractMethods{
 			"GetNodeInfo":  INSMETHOD_GetNodeInfo,
 			"GetPublicKey": INSMETHOD_GetPublicKey,
 			"GetRole":      INSMETHOD_GetRole,
 			"Destroy":      INSMETHOD_Destroy,
 		},
-		Constructors: XXX_preprocessor.ContractConstructors{
+		Constructors: XXX_insolar.ContractConstructors{
 			"NewNodeRecord": INSCONSTRUCTOR_NewNodeRecord,
 		},
 	}
