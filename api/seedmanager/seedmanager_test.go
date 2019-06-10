@@ -53,7 +53,7 @@ func getSeed(t *testing.T) Seed {
 }
 
 func TestSeedManager_Add(t *testing.T) {
-	sm := NewSpecified(time.Duration(5*time.Millisecond), DefaultCleanPeriod)
+	sm := NewSpecified(time.Duration(10 * time.Minute), DefaultCleanPeriod)
 	seed := getSeed(t)
 	sm.Add(seed)
 	require.True(t, sm.Exists(seed))
