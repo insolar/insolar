@@ -80,6 +80,12 @@ message Result {
     bytes Object = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes Request = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Payload = 22;
+
+    enum StatusCode {
+        Success = 0;
+        Expired = 1;
+    }
+    StatusCode Status = 23;
 }
 
 message Type {

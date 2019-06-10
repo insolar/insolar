@@ -860,6 +860,7 @@ func (m *client) RegisterResult(
 		Object:  *obj.Record(),
 		Request: request,
 		Payload: payload,
+		Status:  record.Success,
 	}
 	virtRec := record.Wrap(res)
 
