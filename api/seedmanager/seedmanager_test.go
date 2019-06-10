@@ -90,8 +90,8 @@ func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
 func TestRace(t *testing.T) {
 	const numConcurrent = 15
 
-	expTime := time.Duration(1 * time.Minute)
-	cleanPeriod := time.Duration(1 * time.Minute)
+	expTime := time.Duration(2 * time.Millisecond)
+	cleanPeriod := time.Duration(1 * time.Millisecond)
 	sm := NewSpecified(expTime, cleanPeriod)
 
 	wg := sync.WaitGroup{}
@@ -104,11 +104,7 @@ func TestRace(t *testing.T) {
 				seeds = append(seeds, getSeed(t))
 				sm.Add(seeds[len(seeds)-1])
 			}
-			for j := 0; j < 500; j++ {
-				sm.mutex.Lock()
-				sm.seedPool[seeds[j]] = time.Now().UnixNano() - 1000
-				sm.mutex.Unlock()
-			}
+			<-time.After(cleanPeriod)
 			for j := 0; j < 500; j++ {
 				sm.Exists(seeds[j])
 			}
