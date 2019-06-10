@@ -53,6 +53,7 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/network/gateway"
 	"strconv"
 	"sync"
 	"time"
@@ -77,7 +78,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/phases"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
-	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -159,7 +159,11 @@ func (n *ServiceNetwork) SetGateway(g network.Gateway) {
 }
 
 func (n *ServiceNetwork) GetState() insolar.NetworkState {
-	return n.Gateway().GetState()
+	g := n.Gateway()
+	if g == nil {
+		return insolar.NoNetworkState
+	}
+	return g.GetState()
 }
 
 // SendMessage sends a message from MessageBus.
@@ -221,9 +225,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	n.SetGateway(gateway.NewNoNetwork(n, n.NodeKeeper, n.ContractRequester,
-		n.CryptographyService, n.MessageBus, n.CertificateManager))
-
 	return nil
 }
 
@@ -244,6 +245,9 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	}
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
+
+	n.SetGateway(gateway.NewNoNetwork(n, n.NodeKeeper, n.ContractRequester,
+		n.CryptographyService, n.MessageBus, n.CertificateManager))
 
 	logger.Info("Service network started")
 	return nil

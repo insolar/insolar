@@ -55,9 +55,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/log" // TODO remove before merge
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 )
 
