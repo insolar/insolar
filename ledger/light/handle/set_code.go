@@ -22,6 +22,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -59,6 +60,7 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 	recID := calc.Result.ID
+	ctx, _ = inslogger.WithField(ctx, "code_id", recID.DebugString())
 
 	passIfNotExecutor := !s.passed
 	jet := proc.NewCheckJet(recID, flow.Pulse(ctx), s.message, passIfNotExecutor)
@@ -66,6 +68,7 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
+	inslogger.FromContext(ctx).Debug("calculated jet for set code: %s", jet.Result.Jet.DebugString())
 
 	rec := record.Code{}
 	err = rec.Unmarshal(msg.Record)

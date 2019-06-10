@@ -58,6 +58,7 @@ func NewGetCode(msg *message.Message, codeID insolar.ID, pass bool) *GetCode {
 }
 
 func (p *GetCode) Proceed(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
 	sendCode := func(rec record.Material) error {
 		virtual := record.Unwrap(rec.Virtual)
 		code, ok := virtual.(*record.Code)
@@ -109,6 +110,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch jet")
 			}
+			logger.Debug("calculated jet for pass: %s", jetID.DebugString())
 			l, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.codeID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate role")
@@ -119,16 +121,14 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		go func() {
 			_, done := p.Dep.Sender.SendTarget(ctx, msg, node)
 			done()
-			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+			logger.WithFields(map[string]interface{}{
 				"origin_correlation_id": middleware.MessageCorrelationID(p.message),
-				"correlation_id": middleware.MessageCorrelationID(msg),
-				"code_id": p.codeID.DebugString(),
+				"correlation_id":        middleware.MessageCorrelationID(msg),
 			}).Info("passed GetCode")
 		}()
 		return nil
 	}
 
-	logger := inslogger.FromContext(ctx)
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.codeID)
 	switch err {
 	case nil:

@@ -23,6 +23,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -50,6 +51,8 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 	if !ok {
 		return fmt.Errorf("unexpected payload type: %T", pl)
 	}
+
+	ctx, _ = inslogger.WithField(ctx, "code_id", msg.CodeID.DebugString())
 
 	passIfNotFound := !s.passed
 	code := proc.NewGetCode(s.message, msg.CodeID, passIfNotFound)
