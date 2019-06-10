@@ -52,41 +52,88 @@ package pinger
 
 import (
 	"context"
+	"sync/atomic"
+	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+
+	"github.com/insolar/insolar/insolar"
+
+	testutils "github.com/insolar/insolar/testutils/network"
+
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// Pinger is a light and stateless component that can ping remote host to receive its NodeID
-type Pinger struct {
-	transport network.HostNetwork
+func TestPing_Errors(t *testing.T) {
+	cm := component.NewManager(nil)
+	f := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	n, err := hostnetwork.NewHostNetwork(insolar.Reference{}.String())
+	require.NoError(t, err)
+	cm.Inject(f, n, testutils.NewRoutingTableMock(t))
+
+	pinger := NewPinger(n)
+	_, err = pinger.Ping(context.Background(), "invalid", time.Second)
+	assert.Error(t, err)
+	_, err = pinger.Ping(context.Background(), "127.0.0.1:0", time.Second)
+	assert.Error(t, err)
 }
 
-// Ping ping remote host with timeout
-func (p *Pinger) Ping(ctx context.Context, address string, timeout time.Duration) (*host.Host, error) {
-	ctx, span := instracer.StartSpan(ctx, "Pinger.Ping")
-	defer span.End()
-	h, err := host.NewHost(address)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to resolve address %s", address)
-	}
-	future, err := p.transport.SendRequestToHost(ctx, types.Ping, &packet.Ping{}, h)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to ping address %s", address)
-	}
-	result, err := future.WaitResponse(timeout)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to receive ping response from address %s", address)
-	}
-	return result.GetSenderHost(), nil
-}
+func TestPing_HappyPath(t *testing.T) {
+	ctx := context.Background()
 
-func NewPinger(transport network.HostNetwork) *Pinger {
-	return &Pinger{transport: transport}
+	cm2 := component.NewManager(nil)
+	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	n2, err := hostnetwork.NewHostNetwork(insolar.Reference{23}.String())
+	require.NoError(t, err)
+	defer n2.Stop(ctx)
+	var counter uint32
+	n2.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Packet) (network.Packet, error) {
+		value := atomic.AddUint32(&counter, 1)
+		if value%2 == 1 {
+			return n2.BuildResponse(ctx, request, &packet.Ping{}), nil
+		}
+		return nil, errors.New("Receiving side could not process incoming packet")
+	})
+	resolver2 := testutils.NewRoutingTableMock(t)
+	resolver2.AddToKnownHostsFunc = func(*host.Host) {}
+	cm2.Inject(f2, n2, resolver2)
+	err = cm2.Init(ctx)
+	require.NoError(t, err)
+	err = cm2.Start(ctx)
+	require.NoError(t, err)
+
+	cm := component.NewManager(nil)
+	f := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	n, err := hostnetwork.NewHostNetwork(insolar.Reference{12}.String())
+	defer n.Stop(ctx)
+	require.NoError(t, err)
+	resolver := testutils.NewRoutingTableMock(t)
+	resolver.AddToKnownHostsFunc = func(*host.Host) {}
+	cm.Inject(f, n, resolver)
+	err = cm.Init(ctx)
+	require.NoError(t, err)
+	err = cm.Start(ctx)
+	require.NoError(t, err)
+
+	pinger := NewPinger(n)
+
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Second*10)
+	assert.NoError(t, err)
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Millisecond*500)
+	assert.Error(t, err)
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Second*10)
+	assert.NoError(t, err)
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Millisecond*500)
+	assert.Error(t, err)
 }
