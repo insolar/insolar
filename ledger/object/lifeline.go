@@ -72,6 +72,16 @@ func CloneIndex(idx Lifeline) Lifeline {
 		idx.Delegates = []LifelineDelegate{}
 	}
 
+	if idx.EarliestOpenRequest != nil {
+		tmp := *idx.EarliestOpenRequest
+		idx.EarliestOpenRequest = &tmp
+	}
+
+	if idx.PendingPointer != nil {
+		tmp := *idx.PendingPointer
+		idx.PendingPointer = &tmp
+	}
+
 	return idx
 }
 

@@ -3,6 +3,7 @@ syntax = "proto3";
 package payload;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "github.com/insolar/insolar/insolar/record/record.proto";
 
 
 message Meta {
@@ -89,4 +90,19 @@ message Jet {
 
     bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
     bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
+
+
+message GetPendingFilament {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
+
+message PendingFilament {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    repeated record.CompositeFilamentRecord Records = 21 [(gogoproto.nullable) = false];
 }

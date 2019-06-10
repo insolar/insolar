@@ -20,45 +20,52 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
 type GetPendingFilament struct {
-	msg      *message.GetPendingFilament
-	repylyTo chan<- bus.Reply
+	message     *message.Message
+	objID       insolar.ID
+	pulseNumber insolar.PulseNumber
 
 	Dep struct {
 		PendingAccessor  object.PendingAccessor
 		LifelineAccessor object.LifelineAccessor
+		Sender           bus.Sender
 	}
 }
 
-func NewGetPendingFilament(msg *message.GetPendingFilament, rep chan<- bus.Reply) *GetPendingFilament {
+func NewGetPendingFilament(msg *message.Message, objID insolar.ID, pulseNumber insolar.PulseNumber) *GetPendingFilament {
 	return &GetPendingFilament{
-		msg:      msg,
-		repylyTo: rep,
+		message:     msg,
+		objID:       objID,
+		pulseNumber: pulseNumber,
 	}
 }
 
 func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("GetPendingFilament"))
 	defer span.End()
-
-	records, err := p.Dep.PendingAccessor.Records(ctx, p.msg.PN, p.msg.ObjectID)
+	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v", p.objID.DebugString())
+	records, err := p.Dep.PendingAccessor.Records(ctx, p.pulseNumber, p.objID)
 	if err != nil {
-		return errors.Wrap(err, "[GetPendingFilament] can't fetch pendings")
+		return errors.Wrap(err, fmt.Sprintf("[GetPendingFilament] can't fetch pendings, pn - %v,  %v", p.objID.DebugString(), p.pulseNumber))
 	}
-	p.repylyTo <- bus.Reply{
-		Reply: &reply.PendingFilament{
-			ObjID:   p.msg.ObjectID,
-			Records: records,
-		},
+	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, records - %v", p.objID.DebugString(), len(records))
+	msg, err := payload.NewMessage(&payload.PendingFilament{
+		ObjectID: p.objID,
+		Records:  records,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create a PendingFilament message")
 	}
-
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }

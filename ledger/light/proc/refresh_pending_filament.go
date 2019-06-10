@@ -21,10 +21,11 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
+	buswm "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -41,6 +42,7 @@ type RefreshPendingFilament struct {
 		LifelineAccessor object.LifelineAccessor
 		Coordinator      jet.Coordinator
 		Bus              insolar.MessageBus
+		BusWM            buswm.Sender
 	}
 }
 
@@ -60,34 +62,52 @@ func (p *RefreshPendingFilament) Proceed(ctx context.Context) error {
 }
 
 func (p *RefreshPendingFilament) process(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
 	lfl, err := p.Dep.LifelineAccessor.ForID(ctx, p.pn, p.objID)
 	if err != nil {
 		return errors.Wrap(err, "[RefreshPendingFilament] can't fetch a lifeline state")
 	}
 
-	if lfl.PendingPointer == nil || lfl.EarliestOpenRequest == nil {
+	logger.Debugf("RefreshPendingFilament objID - %V     lfl.PendingPointer == %v || lfl.EarliestOpenRequest == %v", p.objID.DebugString(), lfl.PendingPointer, *lfl.EarliestOpenRequest)
+
+	// No pendings
+	if lfl.PendingPointer == nil {
+		return nil
+	}
+	// No open pendings
+	if lfl.EarliestOpenRequest == nil {
+		return nil
+	}
+	// If an earliest pending created during current pulse
+	if lfl.EarliestOpenRequest != nil && *lfl.EarliestOpenRequest == p.pn {
 		return nil
 	}
 
 	fp, err := p.Dep.PendingAccessor.FirstPending(ctx, p.pn, p.objID)
 	if err != nil {
+		panic(err)
 		return err
 	}
+
+	logger.Debugf("RefreshPendingFilament fp == %v, obj - %v", fp, p.objID.DebugString())
 
 	if fp == nil || fp.PreviousRecord == nil {
 		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest)
 		if err != nil {
+			panic(err)
 			return err
 		}
 	} else {
 		err = p.fillPendingFilament(ctx, p.pn, p.objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest)
 		if err != nil {
+			panic(err)
 			return err
 		}
 	}
 
 	err = p.Dep.PendingModifier.RefreshState(ctx, p.pn, p.objID)
 	if err != nil {
+		panic(err)
 		return err
 	}
 
@@ -103,6 +123,7 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 	for continueFilling {
 		isBeyond, err := p.Dep.Coordinator.IsBeyondLimit(ctx, currentPN, destPN)
 		if err != nil {
+			panic(err)
 			return err
 		}
 		if isBeyond {
@@ -114,24 +135,39 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 
 		node, err := p.Dep.Coordinator.NodeForObject(ctx, objID, currentPN, destPN)
 		if err != nil {
+			panic(err)
 			return err
 		}
 
-		rep, err := p.Dep.Bus.Send(
-			ctx,
-			&message.GetPendingFilament{ObjectID: objID},
-			&insolar.MessageSendOptions{
-				Receiver: node,
-			},
-		)
+		msg, err := payload.NewMessage(&payload.GetPendingFilament{
+			ObjectID: objID,
+			Pulse:    destPN,
+		})
 		if err != nil {
-			return err
+			panic(err)
+			return errors.Wrap(err, "failed to create a GetPendingFilament message")
 		}
 
-		switch r := rep.(type) {
-		case *reply.PendingFilament:
+		rep, done := p.Dep.BusWM.SendTarget(ctx, msg, *node)
+		defer done()
+
+		res, ok := <-rep
+		if !ok {
+			panic(err)
+			return errors.New("no reply")
+		}
+
+		pl, err := payload.UnmarshalFromMeta(res.Payload)
+		if err != nil {
+			panic(err)
+			return errors.Wrap(err, "failed to unmarshal reply")
+		}
+
+		switch r := pl.(type) {
+		case *payload.PendingFilament:
 			err := p.Dep.PendingModifier.SetFilament(ctx, p.pn, objID, destPN, r.Records)
 			if err != nil {
+				panic(err)
 				return err
 			}
 
@@ -139,7 +175,8 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 				panic("unexpected behaviour")
 			}
 
-			if r.Records[0].Meta.PreviousRecord.Pulse() == 0 {
+			if r.Records[0].Meta.PreviousRecord == nil {
+				panic("we get here")
 				continueFilling = false
 			}
 
@@ -150,10 +187,12 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 			} else {
 				continueFilling = false
 			}
-		case *reply.Error:
-			return r.Error()
+		case *payload.Error:
+			panic(err)
+			return errors.New(r.Text)
 		default:
-			return fmt.Errorf("fillPendingFilament: unexpected reply: %#v", rep)
+			panic(err)
+			return fmt.Errorf("RefreshPendingFilament: unexpected reply: %#v", p)
 		}
 	}
 

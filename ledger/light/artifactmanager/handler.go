@@ -218,6 +218,7 @@ func NewMessageHandler(
 		GetPendingFilament: func(p *proc.GetPendingFilament) {
 			p.Dep.PendingAccessor = h.PendingAccessor
 			p.Dep.LifelineAccessor = h.LifelineIndex
+			p.Dep.Sender = h.Sender
 		},
 		RefreshPendingFilament: func(p *proc.RefreshPendingFilament) {
 			p.Dep.LifelineAccessor = h.LifelineIndex
@@ -225,6 +226,7 @@ func NewMessageHandler(
 			p.Dep.PendingAccessor = h.PendingAccessor
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
+			p.Dep.BusWM = h.Sender
 		},
 		PassState: func(p *proc.PassState) {
 			p.Dep.Blobs = h.BlobAccessor

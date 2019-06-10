@@ -33,12 +33,12 @@ var (
 		stats.UnitDimensionless,
 	)
 	statObjectPendingRequestsInMemoryAddedCount = stats.Int64(
-		"оbject/pendings/added/count",
+		"object/pendings/added/count",
 		"How many index-records have been saved in in-indexStorage index storage",
 		stats.UnitDimensionless,
 	)
 	statObjectPendingRequestsInMemoryRemovedCount = stats.Int64(
-		"оbject/pendings/removed/count",
+		"object/pendings/removed/count",
 		"How many index-records have been saved in in-indexStorage index storage",
 		stats.UnitDimensionless,
 	)
@@ -78,6 +78,18 @@ func init() {
 			Name:        statRecordInMemoryRemovedCount.Name(),
 			Description: statRecordInMemoryRemovedCount.Description(),
 			Measure:     statRecordInMemoryRemovedCount,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        statObjectPendingRequestsInMemoryAddedCount.Name(),
+			Description: statObjectPendingRequestsInMemoryAddedCount.Description(),
+			Measure:     statObjectPendingRequestsInMemoryAddedCount,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        statObjectPendingRequestsInMemoryRemovedCount.Name(),
+			Description: statObjectPendingRequestsInMemoryRemovedCount.Description(),
+			Measure:     statObjectPendingRequestsInMemoryRemovedCount,
 			Aggregation: view.Sum(),
 		},
 	)

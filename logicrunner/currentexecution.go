@@ -48,10 +48,10 @@ func (ce *CurrentExecution) AddOutgoingRequest(
 	ctx context.Context, request record.Request, result []byte, newObject *Ref, err error,
 ) {
 	rec := OutgoingRequest{
-		Request: request,
-		Response: result,
+		Request:   request,
+		Response:  result,
 		NewObject: newObject,
-		Error: err,
+		Error:     err,
 	}
 	ce.OutgoingRequests = append(ce.OutgoingRequests, rec)
 }

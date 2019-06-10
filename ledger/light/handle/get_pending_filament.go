@@ -18,29 +18,39 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 )
 
 type GetPendingFilament struct {
-	dep     *proc.Dependencies
-	msg     *message.GetPendingFilament
-	replyTo chan<- bus.Reply
+	dep *proc.Dependencies
+
+	message *message.Message
 }
 
-func NewGetPendingFilament(dep *proc.Dependencies, msg *message.GetPendingFilament, replyTo chan<- bus.Reply) *GetPendingFilament {
+func NewGetPendingFilament(dep *proc.Dependencies, msg *message.Message) *GetPendingFilament {
 	return &GetPendingFilament{
 		dep:     dep,
-		msg:     msg,
-		replyTo: replyTo,
+		message: msg,
 	}
 }
 
 func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
-	getFilament := proc.NewGetPendingFilament(s.msg, s.replyTo)
+	pl, err := payload.UnmarshalFromMeta(s.message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload")
+	}
+	msg, ok := pl.(*payload.GetPendingFilament)
+	if !ok {
+		return fmt.Errorf("unexpected payload type: %T", pl)
+	}
+
+	getFilament := proc.NewGetPendingFilament(s.message, msg.ObjectID, msg.Pulse)
 	s.dep.GetPendingFilament(getFilament)
 	return f.Procedure(ctx, getFilament, false)
 }

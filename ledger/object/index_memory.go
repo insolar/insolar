@@ -272,6 +272,10 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	}
 	pf.PreviousRecord = b.objectMeta.Lifeline.PendingPointer
 
+	if b.objectMeta.Lifeline.EarliestOpenRequest == nil {
+		b.objectMeta.Lifeline.EarliestOpenRequest = &pn
+	}
+
 	pfv := record.Wrap(pf)
 	hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
 	metaID := *insolar.NewID(pn, hash)
@@ -310,6 +314,8 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
 	)
 
+	inslogger.FromContext(ctx).Debugf("open requests - %v for - %v", len(b.pendingMeta.notClosedRequestsIds), objID.DebugString())
+
 	return nil
 
 }
@@ -317,8 +323,10 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 // SetResult sets a result for a specific object. Also, if there is a not closed request for a provided result,
 // the request will be closed
 func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID, res record.Result) error {
+	logger := inslogger.FromContext(ctx)
 	b := i.bucket(pn, objID)
 	if b == nil {
+		logger.Error("% for id - %v", ErrLifelineNotFound, objID.DebugString())
 		return ErrLifelineNotFound
 	}
 
@@ -369,6 +377,8 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	}
 
 	if len(b.pendingMeta.notClosedRequestsIds) == 0 {
+		logger.Debugf("no open requests for - %v", objID.DebugString())
+		logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), b.objectMeta.Lifeline.EarliestOpenRequest)
 		b.objectMeta.Lifeline.EarliestOpenRequest = nil
 	}
 
@@ -396,11 +406,11 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 
 		recV := record.Wrap(rec.Meta)
 		err := i.recordStorage.Set(ctx, rec.MetaID, record.Material{Virtual: &recV})
-		if err != nil {
+		if err != nil && err != ErrOverride {
 			return errors.Wrap(err, "filament update failed")
 		}
 		err = i.recordStorage.Set(ctx, rec.RecordID, rec.Record)
-		if err != nil {
+		if err != nil && err != ErrOverride {
 			return errors.Wrap(err, "filament update failed")
 		}
 	}
@@ -415,6 +425,7 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 
 // RefreshState recalculates state of the chain, marks requests as closed and opened.
 func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
+	logger := inslogger.FromContext(ctx)
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
@@ -457,6 +468,7 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 		if len(b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN]) != 0 {
 			if !isEarliestFound {
 				b.objectMeta.Lifeline.EarliestOpenRequest = &b.pendingMeta.fullFilament[i].PN
+				logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), b.objectMeta.Lifeline.EarliestOpenRequest)
 				isEarliestFound = true
 			}
 
@@ -470,6 +482,8 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 
 	if len(b.pendingMeta.notClosedRequestsIds) == 0 {
 		b.objectMeta.Lifeline.EarliestOpenRequest = nil
+		logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), b.objectMeta.Lifeline.EarliestOpenRequest)
+		logger.Debugf("no open requests for - %v", objID.DebugString())
 	}
 
 	return nil
@@ -498,6 +512,9 @@ func (i *InMemoryIndex) FirstPending(ctx context.Context, currentPN insolar.Puls
 	defer b.RUnlock()
 
 	if len(b.pendingMeta.fullFilament) == 0 {
+		return nil, nil
+	}
+	if len(b.pendingMeta.fullFilament[0].MetaRecordsIDs) == 0 {
 		return nil, nil
 	}
 
