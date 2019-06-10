@@ -220,3 +220,5 @@ generate-protobuf:
 regen-builtin: $(BININSGOCC)
 	$(BININSGOCC) regen-builtin
 
+build-track:
+	go build -o $(BIN_DIR)/track ./scripts/track.go
