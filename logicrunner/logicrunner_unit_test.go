@@ -1630,7 +1630,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() 
 	s.lr.ArtifactManager = am
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
-	s.Require().EqualError(ErrNoPendings, err.Error())
+	s.Require().NoError(err)
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {

@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/pkg/errors"
 )
 
 type GetLedgerPendingRequest struct {
@@ -33,8 +32,6 @@ type GetLedgerPendingRequest struct {
 
 	Message *watermillMsg.Message
 }
-
-var ErrNoPendings = errors.New("no pendings")
 
 func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) error {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getLedgerPendingRequest")
@@ -50,30 +47,20 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	defer es.getLedgerPendingMutex.Unlock()
 
 	proc := UnsafeGetLedgerPendingRequest{
-		es:  es,
-		dep: p.dep,
+		es:         es,
+		dep:        p.dep,
+		hasPending: false,
 	}
 
 	err := proc.Proceed(ctx)
 	if err != nil {
-		es.Lock()
-		defer es.Unlock()
-		if err == ErrNoPendings {
-			es.LedgerHasMoreRequests = false
-		} else {
-			inslogger.FromContext(ctx).Info("[ GetLedgerPendingRequest.Present ] ", err)
-		}
+		inslogger.FromContext(ctx).Debug("GetLedgerPendingRequest.Present err: ", err)
 		return nil
 	}
 
-	if proc.ledgerQueueElement != nil {
+	if !proc.hasPending {
 		return nil
 	}
-
-	es.Lock()
-	es.LedgerHasMoreRequests = true
-	es.LedgerQueueElement = proc.ledgerQueueElement
-	es.Unlock()
 
 	insolarRef := Ref{}.FromSlice(p.Message.Payload)
 	h := StartQueueProcessorIfNeeded{
@@ -92,11 +79,12 @@ type UnsafeGetLedgerPendingRequest struct {
 	dep                *Dependencies
 	es                 *ExecutionState
 	ledgerQueueElement *ExecutionQueueElement
+	hasPending         bool
 }
 
 func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	es := u.es
-
+	lr := u.dep.lr
 	es.Lock()
 	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
 		es.Unlock()
@@ -106,19 +94,27 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	id := *es.Ref.Record()
 
-	lr := u.dep.lr
-
 	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
 		if err != insolar.ErrNoPendingRequest {
 			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
 			return nil
 		}
-
 		es.Lock()
 		defer es.Unlock()
-		return ErrNoPendings
+
+		select {
+		case <-ctx.Done():
+			inslogger.FromContext(ctx).Debug("UnsafeGetLedgerPendingRequest: pulse changed. Do nothing")
+			return nil
+		default:
+		}
+
+		es.LedgerHasMoreRequests = false
+		return nil
 	}
+	es.Lock()
+	defer es.Unlock()
 
 	msg := parcel.Message().(*message.CallMethod)
 
@@ -138,7 +134,16 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	u.ledgerQueueElement = &ExecutionQueueElement{
+	select {
+	case <-ctx.Done():
+		inslogger.FromContext(ctx).Debug("UnsafeGetLedgerPendingRequest: pulse changed. Do nothing")
+		return nil
+	default:
+	}
+
+	u.hasPending = true
+	es.LedgerHasMoreRequests = true
+	es.LedgerQueueElement = &ExecutionQueueElement{
 		ctx:        ctx,
 		parcel:     parcel,
 		request:    requestRef,
