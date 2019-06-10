@@ -305,13 +305,13 @@ func TestServiceNetwork_StartStop(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	defer serviceNetwork.Stop(ctx)
+	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
 
-	gil := testutils.NewGlobalInsolarLockMock(t)
-	gil.AcquireFunc = func(context.Context) {}
-	gil.ReleaseFunc = func(context.Context) {}
+	})
+
 	cm.Inject(serviceNetwork, nk, certManager, testutils.NewCryptographyServiceMock(t), pulse.NewAccessorMock(t),
 		testutils.NewTerminationHandlerMock(t), testutils.NewPulseManagerMock(t), &PublisherMock{},
-		testutils.NewMessageBusMock(t), gil, testutils.NewContractRequesterMock(t),
+		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t),
 		bus.NewSenderMock(t), &stater{}, testutils.NewPlatformCryptographyScheme(), testutils.NewKeyProcessorMock(t))
 	err = serviceNetwork.Init(ctx)
 	require.NoError(t, err)

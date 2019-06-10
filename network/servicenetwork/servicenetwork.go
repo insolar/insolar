@@ -101,7 +101,6 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
-	GIL                 insolar.GlobalInsolarLock   `inject:""`
 	Pub                 message.Publisher           `inject:""`
 	MessageBus          insolar.MessageBus          `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
@@ -111,6 +110,8 @@ type ServiceNetwork struct {
 	PhaseManager phases.PhaseManager           `inject:"subcomponent"`
 	Bootstrapper bootstrap.NetworkBootstrapper `inject:"subcomponent"`
 	RPC          controller.RPCController      `inject:"subcomponent"`
+
+	OperableFunc func(ctx context.Context, operable bool)
 
 	isGenesis   bool
 	isDiscovery bool
@@ -126,6 +127,10 @@ type ServiceNetwork struct {
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis, skip: conf.Service.Skip}
 	return serviceNetwork, nil
+}
+
+func (n *ServiceNetwork) SetOperableFunc(f func(ctx context.Context, operable bool)) {
+	n.OperableFunc = f
 }
 
 func (n *ServiceNetwork) Gateway() network.Gateway {
@@ -146,9 +151,9 @@ func (n *ServiceNetwork) SetGateway(g network.Gateway) {
 	n.gatewayMu.Unlock()
 	ctx := context.Background()
 	if n.gateway.NeedLockMessageBus() {
-		n.GIL.Acquire(ctx)
+		n.OperableFunc(ctx, false)
 	} else {
-		n.GIL.Release(ctx)
+		n.OperableFunc(ctx, true)
 	}
 	n.gateway.Run(ctx)
 }
@@ -216,7 +221,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	n.SetGateway(gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
+	n.SetGateway(gateway.NewNoNetwork(n, n.NodeKeeper, n.ContractRequester,
 		n.CryptographyService, n.MessageBus, n.CertificateManager))
 
 	return nil

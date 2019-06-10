@@ -70,7 +70,6 @@ type Base struct {
 	ContractRequester   insolar.ContractRequester
 	CryptographyService insolar.CryptographyService
 	CertificateManager  insolar.CertificateManager
-	GIL                 insolar.GlobalInsolarLock
 	MessageBus          insolar.MessageBus
 }
 

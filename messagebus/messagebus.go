@@ -120,7 +120,13 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 // Start initializes message bus.
 func (mb *MessageBus) Start(ctx context.Context) error {
 	mb.Network.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
-
+	mb.Network.SetOperableFunc(func(ctx context.Context, operable bool) {
+		if operable {
+			mb.Release(ctx)
+		} else {
+			mb.Acquire(ctx)
+		}
+	})
 	return nil
 }
 
