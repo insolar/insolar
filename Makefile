@@ -56,7 +56,7 @@ clean:
 
 .PHONY: install-godep
 install-godep:
-	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep 22125cfaa6ddc71e145b1535d4b7ee9744fefff2
+	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep v0.5.3
 
 .PHONY: install-build-tools
 install-build-tools:
