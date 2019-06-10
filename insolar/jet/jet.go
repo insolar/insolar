@@ -28,7 +28,10 @@ import (
 
 // Accessor provides an interface for accessing jet IDs.
 type Accessor interface {
+	// All returns all jet from jet tree for provided pulse.
 	All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID
+	// ForID finds jet in jet tree for provided pulse and object.
+	// Always returns jet id and activity flag for this jet.
 	ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool)
 }
 
@@ -36,16 +39,14 @@ type Accessor interface {
 
 // Modifier provides an interface for modifying jet IDs.
 type Modifier interface {
+	// Update updates jet tree for specified pulse.
 	Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID)
+	// Split performs jet split and returns resulting jet ids.
 	Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error)
+	// Clone copies tree from one pulse to another. Use it to copy the past tree into new pulse.
 	Clone(ctx context.Context, from, to insolar.PulseNumber)
+	// Delete jets for pulse (concurrent safe).
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
-}
-
-// Calculator provides methods for calculating jets
-type Calculator interface {
-	// MineForPulse returns current node's jets for a provided pulse
-	MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/jet.Storage -o ./ -s _mock.go
@@ -147,4 +148,13 @@ func parsePrefix(s string) []byte {
 		tail = tail[offset:]
 	}
 	return prefix
+}
+
+// Info holds info about jet.
+type Info struct {
+	ID       insolar.JetID
+	MineNext bool
+	Left     *Info
+	Right    *Info
+	Split    bool
 }
