@@ -43,6 +43,7 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
@@ -249,7 +250,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.WriteAccessor = writeController
 		handler.Sender = WmBus
 
-		jetCalculator := jet.NewCalculator(Coordinator, Jets)
+		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
 			Jets,
 			Nodes,
@@ -270,6 +271,14 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 		)
 
+		jetSplitter := executor.NewJetSplitter(
+			Coordinator,
+			Jets,
+			Jets,
+			drops,
+			hots,
+		)
+
 		pm := pulsemanager.NewPulseManager(
 			conf,
 			drops,
@@ -278,6 +287,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 			records,
 			records,
+			jetSplitter,
 			indexes,
 			lthSyncer,
 			writeController,

@@ -48,147 +48,102 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package bootstrap
+package routing
 
 import (
-	"context"
+	"strconv"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func sessionMapLen(sm SessionManager) int {
-	s := sm.(*sessionManager)
-
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	return len(s.sessions)
+func newNode(id int) insolar.NetworkNode {
+	ref := insolar.Reference{byte(id)}
+	address := "127.0.0.1:" + strconv.Itoa(id)
+	result := node.NewNode(ref, insolar.StaticRoleUnknown, nil, address, "")
+	result.(node.MutableNode).SetShortID(insolar.ShortNodeID(id))
+	return result
 }
 
-func sessionMapDelete(sm SessionManager, id SessionID) {
-	s := sm.(*sessionManager)
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	delete(s.sessions, id)
+func newTable() *Table {
+	return &Table{NodeKeeper: nodenetwork.NewNodeKeeper(newNode(1))}
 }
 
-func TestNewSessionManager(t *testing.T) {
-	sm := NewSessionManager().(*sessionManager)
-
-	assert.Equal(t, sm.state, stateIdle)
-}
-
-func TestSessionManager_CleanupSimple(t *testing.T) {
-	sm := NewSessionManager()
-
-	err := sm.Start(context.Background())
+func TestTable_Resolve(t *testing.T) {
+	table := newTable()
+	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
+		newNode(2),
+	})
+	host, err := table.Resolve(insolar.Reference{2})
 	require.NoError(t, err)
+	assert.EqualValues(t, 2, host.ShortID)
+	assert.Equal(t, "127.0.0.1:2", host.Address.String())
 
-	sm.NewSession(insolar.Reference{}, nil, time.Second)
-	require.Equal(t, sessionMapLen(sm), 1)
-
-	time.Sleep(1500 * time.Millisecond)
-	assert.Equal(t, sessionMapLen(sm), 0)
-
-	err = sm.Stop(context.Background())
-	require.NoError(t, err)
-}
-
-func TestSessionManager_CleanupConcurrent(t *testing.T) {
-	sm := NewSessionManager()
-
-	err := sm.Start(context.Background())
-	require.NoError(t, err)
-
-	id := sm.NewSession(insolar.Reference{}, nil, time.Second)
-	require.Equal(t, sessionMapLen(sm), 1)
-
-	// delete session here and check nothing happened
-	sessionMapDelete(sm, id)
-
-	time.Sleep(1500 * time.Millisecond)
-	assert.Equal(t, sessionMapLen(sm), 0)
-
-	err = sm.Stop(context.Background())
-	require.NoError(t, err)
-}
-
-func TestSessionManager_CleanupOrder(t *testing.T) {
-	sm := NewSessionManager()
-
-	err := sm.Start(context.Background())
-	require.NoError(t, err)
-
-	sm.NewSession(insolar.Reference{}, nil, 2*time.Second)
-	sm.NewSession(insolar.Reference{}, nil, 2*time.Second)
-	sm.NewSession(insolar.Reference{}, nil, time.Second)
-	require.Equal(t, sessionMapLen(sm), 3)
-
-	time.Sleep(1500 * time.Millisecond)
-	assert.Equal(t, sessionMapLen(sm), 2)
-
-	err = sm.Stop(context.Background())
-	require.NoError(t, err)
-}
-
-func TestSessionManager_ImmediatelyStop(t *testing.T) {
-	sm := NewSessionManager()
-
-	err := sm.Start(context.Background())
-	require.NoError(t, err)
-
-	err = sm.Stop(context.Background())
-	require.NoError(t, err)
-}
-
-func TestSessionManager_DoubleStart(t *testing.T) {
-	sm := NewSessionManager()
-
-	err := sm.Start(context.Background())
-	require.NoError(t, err)
-
-	err = sm.Start(context.Background())
-	require.NoError(t, err)
-}
-
-func TestSessionManager_DoubleStop(t *testing.T) {
-	sm := NewSessionManager()
-
-	err := sm.Start(context.Background())
-	require.NoError(t, err)
-
-	err = sm.Stop(context.Background())
-	require.NoError(t, err)
-
-	err = sm.Stop(context.Background())
-	require.NoError(t, err)
-}
-
-func TestSessionManager_ProlongateSession(t *testing.T) {
-	sm := NewSessionManager()
-
-	err := sm.Start(context.Background())
-	require.NoError(t, err)
-
-	ref := testutils.RandomRef()
-	id := sm.NewSession(ref, nil, 2*time.Second)
-
-	session, err := sm.ReleaseSession(id)
-	require.NoError(t, err)
-	assert.Equal(t, ref, session.NodeID)
-	_, err = sm.ReleaseSession(id)
+	_, err = table.Resolve(insolar.Reference{4})
 	assert.Error(t, err)
+}
 
-	sm.ProlongateSession(id, session)
-
-	session, err = sm.ReleaseSession(id)
+func TestTable_AddToKnownHosts(t *testing.T) {
+	table := newTable()
+	h, err := host.NewHostN("127.0.0.1:234", testutils.RandomRef())
 	require.NoError(t, err)
-	assert.Equal(t, ref, session.NodeID)
+	table.AddToKnownHosts(h)
+}
+
+func TestTable_ResolveConsensus_equal(t *testing.T) {
+	table := newTable()
+	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
+		newNode(2),
+	})
+	h, err := table.ResolveConsensusRef(insolar.Reference{2})
+	require.NoError(t, err)
+	h2, err := table.Resolve(insolar.Reference{2})
+	require.NoError(t, err)
+	assert.True(t, h.Equal(*h2))
+}
+
+func TestTable_ResolveConsensus_equal2(t *testing.T) {
+	table := newTable()
+	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
+		newNode(2),
+	})
+	h, err := table.ResolveConsensusRef(insolar.Reference{2})
+	require.NoError(t, err)
+	h2, err := table.ResolveConsensus(2)
+	require.NoError(t, err)
+	assert.True(t, h.Equal(*h2))
+}
+
+func TestTable_ResolveConsensus(t *testing.T) {
+	table := newTable()
+	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
+		newNode(2),
+	})
+	table.NodeKeeper.GetConsensusInfo().AddTemporaryMapping(insolar.Reference{3}, 3, "127.0.0.1:3")
+	h, err := table.ResolveConsensusRef(insolar.Reference{2})
+	require.NoError(t, err)
+	h2, err := table.ResolveConsensus(2)
+	require.NoError(t, err)
+	assert.True(t, h.Equal(*h2))
+	assert.EqualValues(t, 2, h.ShortID)
+	assert.Equal(t, "127.0.0.1:2", h.Address.String())
+
+	h, err = table.ResolveConsensusRef(insolar.Reference{3})
+	require.NoError(t, err)
+	h2, err = table.ResolveConsensus(3)
+	require.NoError(t, err)
+	assert.True(t, h.Equal(*h2))
+	assert.EqualValues(t, 3, h.ShortID)
+	assert.Equal(t, "127.0.0.1:3", h.Address.String())
+
+	_, err = table.ResolveConsensusRef(insolar.Reference{4})
+	assert.Error(t, err)
+	_, err = table.ResolveConsensus(4)
+	assert.Error(t, err)
 }
