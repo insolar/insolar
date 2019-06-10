@@ -53,45 +53,45 @@ func getSeed(t *testing.T) Seed {
 }
 
 func TestSeedManager_Add(t *testing.T) {
-	sm := NewSpecified(time.Duration(10 * time.Minute), DefaultCleanPeriod)
+	sm := NewSpecified(time.Duration(1 * time.Minute), DefaultCleanPeriod)
 	seed := getSeed(t)
 	sm.Add(seed)
 	require.True(t, sm.Exists(seed))
 }
 
 func TestSeedManager_ExpiredSeed(t *testing.T) {
-	expTime := time.Duration(5 * time.Millisecond)
+	expTime := time.Duration(1 * time.Minute)
 	sm := NewSpecified(expTime, DefaultCleanPeriod)
 	seed := getSeed(t)
 	sm.Add(seed)
-	<-time.After(expTime * 2)
+	sm.seedPool[seed] = time.Now().UnixNano() - 1000
 	require.False(t, sm.Exists(seed))
 }
 
 func TestSeedManager_ExistsThanExpiredSeed(t *testing.T) {
 	seed := getSeed(t)
-	ttl := time.Duration(8 * time.Millisecond)
+	ttl := time.Duration(1 * time.Minute)
 	sm := NewSpecified(ttl, DefaultCleanPeriod)
 	sm.Add(seed)
 	require.True(t, sm.Exists(seed))
-	<-time.After(ttl * 2)
+	sm.seedPool[seed] = time.Now().UnixNano() - 1000
 	require.False(t, sm.Exists(seed))
 }
 
 func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
-	expTime := time.Duration(2 * time.Millisecond)
-	sm := NewSpecified(expTime, 2*time.Millisecond)
+	expTime := time.Duration(1 * time.Minute)
+	sm := NewSpecified(expTime, 1 * time.Minute)
 	seed := getSeed(t)
 	sm.Add(seed)
-	<-time.After(8 * time.Millisecond)
+	sm.seedPool[seed] = time.Now().UnixNano() - 1000
 	require.False(t, sm.Exists(seed))
 }
 
 func TestRace(t *testing.T) {
 	const numConcurrent = 15
 
-	expTime := time.Duration(2 * time.Millisecond)
-	cleanPeriod := time.Duration(1 * time.Millisecond)
+	expTime := time.Duration(1 * time.Minute)
+	cleanPeriod := time.Duration(1 * time.Minute)
 	sm := NewSpecified(expTime, cleanPeriod)
 
 	wg := sync.WaitGroup{}
@@ -104,7 +104,11 @@ func TestRace(t *testing.T) {
 				seeds = append(seeds, getSeed(t))
 				sm.Add(seeds[len(seeds)-1])
 			}
-			<-time.After(cleanPeriod)
+			for j := 0; j < 500; j++ {
+				sm.mutex.Lock()
+				sm.seedPool[seeds[j]] = time.Now().UnixNano() - 1000
+				sm.mutex.Unlock()
+			}
 			for j := 0; j < 500; j++ {
 				sm.Exists(seeds[j])
 			}
