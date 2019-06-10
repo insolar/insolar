@@ -58,7 +58,6 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -82,7 +81,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-const bootstrapTimeout time.Duration = 2 // seconds
 // const updateScheduleETA time.Duration = 60 // seconds
 
 var (
@@ -129,8 +127,6 @@ type Bootstrap struct {
 	genesisLock             sync.Mutex
 
 	firstPulseTime time.Time
-
-	reconnectToNewNetwork func(ctx context.Context, address string)
 }
 
 func (bc *Bootstrap) GetFirstFakePulseTime() time.Time {
@@ -292,10 +288,6 @@ func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.Bootstrap
 	activeNodes = append(activeNodes, bc.NodeKeeper.GetOrigin())
 	bc.NodeKeeper.SetInitialSnapshot(activeNodes)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
-
-	if bc.options.CyclicBootstrapEnabled {
-		go bc.startCyclicBootstrap(ctx)
-	}
 
 	return parseBootstrapResults(bootstrapResults), nil
 }
@@ -528,48 +520,6 @@ func (bc *Bootstrap) startBootstrap(ctx context.Context, address string,
 	}, nil
 }
 
-func (bc *Bootstrap) startCyclicBootstrap(ctx context.Context) {
-	for atomic.LoadInt32(&bc.cyclicBootstrapStop) == 0 {
-		results := make([]*network.BootstrapResult, 0)
-		nodes := bc.getInactivenodes()
-		for _, node := range nodes {
-			res, err := bc.startBootstrap(ctx, node.GetHost(), nil)
-			if err != nil {
-				logger := inslogger.FromContext(ctx)
-				logger.Errorf("[ StartCyclicBootstrap ] ", err)
-				continue
-			}
-			results = append(results, res)
-		}
-		if len(results) != 0 {
-			index := bc.getLargerNetworkIndex(results)
-			if index >= 0 {
-				bc.reconnectToNewNetwork(ctx, nodes[index].GetHost())
-			}
-		}
-		time.Sleep(time.Second * bootstrapTimeout)
-	}
-}
-
-func (bc *Bootstrap) getLargerNetworkIndex(results []*network.BootstrapResult) int {
-	networkSize := results[0].NetworkSize
-	index := 0
-	for i := 1; i < len(results); i++ {
-		if results[i].NetworkSize > networkSize {
-			networkSize = results[i].NetworkSize
-			index = i
-		}
-	}
-	if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
-		return index
-	}
-	return -1
-}
-
-func (bc *Bootstrap) StopCyclicBootstrap() {
-	atomic.StoreInt32(&bc.cyclicBootstrapStop, 1)
-}
-
 func (bc *Bootstrap) nodeShouldReconnectAsJoiner(nodeID insolar.Reference) bool {
 	return bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState &&
 		utils.IsDiscovery(nodeID, bc.Certificate)
@@ -666,6 +616,9 @@ func (bc *Bootstrap) processGenesis(ctx context.Context, request network.Packet)
 func (bc *Bootstrap) Init(ctx context.Context) error {
 	bc.firstPulseTime = time.Now()
 	bc.pinger = pinger.NewPinger(bc.Network)
+	bc.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Packet) (network.Packet, error) {
+		return bc.Network.BuildResponse(ctx, request, &packet.Ping{}), nil
+	})
 	bc.Network.RegisterRequestHandler(types.Bootstrap, bc.processBootstrap)
 	bc.Network.RegisterRequestHandler(types.Genesis, bc.processGenesis)
 	return nil
@@ -680,16 +633,6 @@ func parseBootstrapResults(results []*network.BootstrapResult) *network.Bootstra
 		}
 	}
 	return results[minIDIndex]
-}
-
-func (bc *Bootstrap) getInactivenodes() []insolar.DiscoveryNode {
-	res := make([]insolar.DiscoveryNode, 0)
-	for _, node := range bc.Certificate.GetDiscoveryNodes() {
-		if bc.NodeKeeper.GetAccessor().GetActiveNode(*node.GetNodeRef()) != nil {
-			res = append(res, node)
-		}
-	}
-	return res
 }
 
 func (bc *Bootstrap) checkPermission(permission *packet.Permission) error {
@@ -743,11 +686,10 @@ func (bc *Bootstrap) signPermission(perm *packet.PermissionPayload) ([]byte, err
 	return sign.Bytes(), nil
 }
 
-func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, address string)) *Bootstrap {
+func NewBootstrapper(options *common.Options) *Bootstrap {
 	return &Bootstrap{
 		options:                 options,
 		bootstrapLock:           make(chan struct{}),
 		genesisRequestsReceived: make(map[insolar.Reference]*packet.GenesisRequest),
-		reconnectToNewNetwork:   reconnectToNewNetwork,
 	}
 }
