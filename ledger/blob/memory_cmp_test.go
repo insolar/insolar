@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -60,7 +60,7 @@ func TestBlobStorages(t *testing.T) {
 	}
 	var blobs []blobToID
 	f := fuzz.New().Funcs(func(elem *blobToID, c fuzz.Continue) {
-		// IN REAL client code object.CalculateIDForBlob(os.PCS, gen.PulseNumber(), t.b)
+		// IN REAL client code object.CalculateIDForBlob(os.pcs, gen.PulseNumber(), t.b)
 		elem.b = Blob{
 			Value: slice(),
 			JetID: gen.JetID(),

@@ -343,9 +343,15 @@ func (*HotData) Type() insolar.MessageType {
 
 // HotIndex contains meat about hot-data
 type HotIndex struct {
-	LastUsed insolar.PulseNumber
-	ObjID    insolar.ID
-	Index    []byte
+	// ObjID is needed for identifying lifeline
+	ObjID insolar.ID
+
+	// Index is decoded because of the circle-loops in the project
+	// We can't store it here as a Lifeline, because a project won't build
+	Index []byte
+	// LifelineLastUsed is a mark of pulse, when the lifeline was used for the last time
+	// It's being used for `ttl` of indexes
+	LifelineLastUsed insolar.PulseNumber
 }
 
 // GetPendingRequests fetches pending requests for object.
@@ -481,5 +487,33 @@ func (*GetPendingRequestID) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (m *GetPendingRequestID) DefaultTarget() *insolar.Reference {
+	return insolar.NewReference(m.ObjectID)
+}
+
+// GetPendingFilament fetches a part of a pending-filament from another light
+type GetPendingFilament struct {
+	ledgerMessage
+
+	ObjectID insolar.ID
+	PN       insolar.PulseNumber
+}
+
+// Type implementation of Message interface.
+func (*GetPendingFilament) Type() insolar.MessageType {
+	return insolar.TypeGetPendingFilament
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetPendingFilament) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
+	return nil, insolar.DynamicRoleLightExecutor
+}
+
+// DefaultRole returns role for this event
+func (*GetPendingFilament) DefaultRole() insolar.DynamicRole {
+	return insolar.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetPendingFilament) DefaultTarget() *insolar.Reference {
 	return insolar.NewReference(m.ObjectID)
 }

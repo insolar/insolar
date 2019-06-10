@@ -100,9 +100,12 @@ func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	}
 	if g.Nodekeeper.IsBootstrapped() {
 		g.Network.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
-		g.Network.Gateway().Run(ctx)
 	}
 	return nil
+}
+
+func (g *Base) NeedLockMessageBus() bool {
+	return true
 }
 
 // Auther casts us to Auther or obtain it in another way

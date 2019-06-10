@@ -60,35 +60,39 @@ import (
 	"github.com/insolar/insolar/network/gateway"
 )
 
-type FakeOk struct {
+type FakeGateway struct {
 	gateway.Base
 	State insolar.NetworkState
 }
 
-func NewFakeOk() network.Gateway {
-	g := &FakeOk{}
+func NewFakeGateway() network.Gateway {
+	g := &FakeGateway{}
 	g.Base.Self = g
 	g.State = insolar.NoNetworkState
 	return g
 }
 
-func (g *FakeOk) OnPulse(context.Context, insolar.Pulse) error {
+func (g *FakeGateway) OnPulse(context.Context, insolar.Pulse) error {
 	g.State = insolar.CompleteNetworkState
 	return nil
 }
 
-func (g *FakeOk) Run(context.Context) {
+func (g *FakeGateway) NeedLockMessageBus() bool {
+	return false
 }
 
-func (g *FakeOk) GetState() insolar.NetworkState {
+func (g *FakeGateway) Run(context.Context) {
+}
+
+func (g *FakeGateway) GetState() insolar.NetworkState {
 	return g.State
 }
 
 // ValidateCert overloaded for test purpose
-func (g *FakeOk) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
+func (g *FakeGateway) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
 	return true, nil
 }
 
-func (g *FakeOk) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
+func (g *FakeGateway) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
 	return nodes
 }

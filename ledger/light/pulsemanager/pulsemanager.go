@@ -69,6 +69,7 @@ type PulseManager struct {
 	JetModifier jet.Modifier `inject:""`
 
 	IndexBucketAccessor object.IndexBucketAccessor
+	PendingAccessor     object.PendingAccessor
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -132,6 +133,7 @@ func NewPulseManager(
 	idxReplicaAccessor object.IndexBucketAccessor,
 	lightToHeavySyncer replication.LightReplicator,
 	writeManager hot.WriteManager,
+	pendingAccessor object.PendingAccessor,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 
@@ -151,6 +153,7 @@ func NewPulseManager(
 		IndexBucketAccessor: idxReplicaAccessor,
 		LightReplicator:     lightToHeavySyncer,
 		WriteManager:        writeManager,
+		PendingAccessor:     pendingAccessor,
 	}
 	return pm
 }
@@ -279,10 +282,11 @@ func (m *PulseManager) getExecutorHotData(
 		if meta.LifelineLastUsed < limitPN.PulseNumber {
 			continue
 		}
+
 		hotIndexes = append(hotIndexes, message.HotIndex{
-			LastUsed: meta.LifelineLastUsed,
-			ObjID:    meta.ObjID,
-			Index:    encoded,
+			LifelineLastUsed: meta.LifelineLastUsed,
+			ObjID:            meta.ObjID,
+			Index:            encoded,
 		})
 	}
 

@@ -209,9 +209,9 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(
 	for _, meta := range bucks {
 		encoded, _ := meta.Lifeline.Marshal()
 		hotIndexes = append(hotIndexes, message.HotIndex{
-			LastUsed: meta.LifelineLastUsed,
-			ObjID:    meta.ObjID,
-			Index:    encoded,
+			LifelineLastUsed: meta.LifelineLastUsed,
+			ObjID:            meta.ObjID,
+			Index:            encoded,
 		})
 	}
 

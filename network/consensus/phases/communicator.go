@@ -53,6 +53,7 @@ package phases
 import (
 	"context"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -129,9 +130,9 @@ func NewCommunicator() *ConsensusCommunicator {
 
 // Init method implements Initer interface
 func (nc *ConsensusCommunicator) Init(ctx context.Context) error {
-	nc.phase1result = make(chan phase1Result)
-	nc.phase2result = make(chan phase2Result)
-	nc.phase3result = make(chan phase3Result)
+	nc.phase1result = make(chan phase1Result, 1)
+	nc.phase2result = make(chan phase2Result, 1)
+	nc.phase3result = make(chan phase3Result, 1)
 	nc.ConsensusNetwork.RegisterPacketHandler(packets.Phase1, nc.phase1DataHandler)
 	nc.ConsensusNetwork.RegisterPacketHandler(packets.Phase2, nc.phase2DataHandler)
 	nc.ConsensusNetwork.RegisterPacketHandler(packets.Phase3, nc.phase3DataHandler)
@@ -616,5 +617,14 @@ func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacke
 	if !ok {
 		log.Warn("failed to cast a type 3 packet to phase3packet")
 	}
-	nc.phase3result <- phase3Result{id: sender, packet: p}
+	select {
+	case nc.phase3result <- phase3Result{id: sender, packet: p}:
+		// ok
+	case <-time.After(5 * time.Second):
+		// If writing to the channel blocks it may mean that we already received this type of packet.
+		// This may happen e.g. if another type was resent which in turn caused type 3 packet to be resent.
+		// It's also possible that the goroutine at the other end of the channel terminated by some other
+		// reason (e.g. ctx.Done). Anyway we shouldn't leave this goroutine hanging.
+		log.Warn("phase3DataHandler timed out")
+	}
 }

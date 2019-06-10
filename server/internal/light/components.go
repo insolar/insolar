@@ -219,7 +219,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewInMemoryIndex()
+		indexes := object.NewInMemoryIndex(records, CryptoScheme)
 		writeController := hot.NewWriteController()
 
 		c := component.Manager{}
@@ -228,7 +228,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		hots := recentstorage.NewProvider()
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, &conf)
+		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
@@ -281,6 +281,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			lthSyncer,
 			writeController,
+			indexes,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus

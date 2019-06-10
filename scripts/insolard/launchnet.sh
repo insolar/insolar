@@ -389,7 +389,7 @@ done
 
 echo "discovery nodes started ..."
 
-if [[ "$NUM_NODES" -ne "0" ]]
+if [[ "$NUM_NODES" -ne "0"  && "$run_insgorund" == "true" ]]
 then
     wait_for_complete_network_state
     ./scripts/insolard/start_nodes.sh

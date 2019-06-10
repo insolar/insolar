@@ -30,16 +30,11 @@ USE_GREP=${USE_GREP:-"0"}
 USE_AG=${USE_AG:-"0"}
 
 AG_BIN=$(which ag)
-LNAV_BIN=$(which lnav)
 
 SEARCH_PATTERN=$1
 shift
 
-if [[ ${LNAV_BIN} != "" && ${USE_GREP} != "1" && ${USE_AG} != "1" ]]; then
-    set -x
-    lnav $@ "$SEARCH_PATTERN" ${LAUNCHNET_BASE_DIR}logs/*nodes/*/output.log
-    { set +x; } 2>/dev/null
-elif [[ "${AG_BIN}" != "" && ${USE_GREP} != "1" ]]; then
+if [[ "${AG_BIN}" != "" && ${USE_GREP} != "1" ]]; then
     set -x
     ag $@ "$SEARCH_PATTERN" ${LAUNCHNET_BASE_DIR}logs/*nodes/*/output.log
     { set +x; } 2>/dev/null

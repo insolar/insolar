@@ -18,6 +18,8 @@ Globular Network
 ~~~~~~~~~~~~~~~~
 The backbone of a cloud. It is a set of protocols enabling the coordination of P2P networks of up to 1,000 nodes and a hierarchical network of up to 100,000 nodes (more details provided in Section 4.9).
 
+.. _omniscaling:
+
 OmniScaling
 ~~~~~~~~~~~
 Is an integral feature that utilizes a multi role model of nodes, a multichain organization of storage, and an innovative approach to distributing work across the network by combining a network-wide membership consensus with deterministic role allocation, and with individual validation groups per each transaction. As a result, OmniScaling enables near-linear and dynamic scalability by CPU, storage capacity, and traffic (network throughput) for domains running within a cloud.
