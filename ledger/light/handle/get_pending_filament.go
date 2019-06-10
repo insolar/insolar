@@ -43,10 +43,12 @@ func NewGetPendingFilament(dep *proc.Dependencies, msg *message.Message) *GetPen
 func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
 	pl, err := payload.UnmarshalFromMeta(s.message.Payload)
 	if err != nil {
+		panic("UnmarshalFromMeta")
 		return errors.Wrap(err, "failed to unmarshal payload")
 	}
 	msg, ok := pl.(*payload.GetPendingFilament)
 	if !ok {
+		panic("pl.(*payload.GetPendingFilament)")
 		return fmt.Errorf("unexpected payload type: %T", pl)
 	}
 

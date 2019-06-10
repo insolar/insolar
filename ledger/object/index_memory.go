@@ -344,6 +344,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
 	if err != nil {
+		panic(errors.Wrapf(err, "obj id - %v", metaID.DebugString()))
 		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 
@@ -407,10 +408,12 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 		recV := record.Wrap(rec.Meta)
 		err := i.recordStorage.Set(ctx, rec.MetaID, record.Material{Virtual: &recV})
 		if err != nil && err != ErrOverride {
+			panic(errors.Wrapf(err, "obj id - %v", rec.MetaID.DebugString()))
 			return errors.Wrap(err, "filament update failed")
 		}
 		err = i.recordStorage.Set(ctx, rec.RecordID, rec.Record)
 		if err != nil && err != ErrOverride {
+			panic(errors.Wrapf(err, "obj id - %v", rec.MetaID.DebugString()))
 			return errors.Wrap(err, "filament update failed")
 		}
 	}
@@ -438,17 +441,23 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 		for _, metaID := range chainLink.MetaRecordsIDs {
 			metaRec, err := i.recordStorage.ForID(ctx, metaID)
 			if err != nil {
+				panic(errors.Wrapf(err, "obj id - %v", metaID.DebugString()))
 				return errors.Wrap(err, "failed to refresh an index state")
 			}
 
 			concreteMeta := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
 			rec, err := i.recordStorage.ForID(ctx, concreteMeta.RecordID)
 			if err != nil {
+				panic(errors.Wrapf(err, "obj id - %v", concreteMeta.RecordID.DebugString()))
 				return errors.Wrap(err, "failed to refresh an index state")
 			}
 
 			switch r := record.Unwrap(rec.Virtual).(type) {
 			case *record.Request:
+				_, ok := b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN]
+				if !ok {
+					b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN] = map[insolar.ID]struct{}{}
+				}
 				b.pendingMeta.notClosedRequestsIdsIndex[chainLink.PN][*r.Object.Record()] = struct{}{}
 			case *record.Result:
 				println(r.Request.Record().Pulse())
@@ -488,19 +497,6 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 
 	return nil
 }
-
-// // IsStateCalculated returns status of a pending filament. Was it calculated or not
-// func (i *InMemoryIndex) IsStateCalculated(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (bool, error) {
-// 	b := i.bucket(currentPN, objID)
-// 	if b == nil {
-// 		return false, ErrLifelineNotFound
-// 	}
-//
-// 	b.RLock()
-// 	defer b.RUnlock()
-//
-// 	return b.pendingMeta.isStateCalculated, nil
-// }
 
 func (i *InMemoryIndex) FirstPending(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (*record.PendingFilament, error) {
 	b := i.bucket(currentPN, objID)

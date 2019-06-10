@@ -139,30 +139,48 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 			return err
 		}
 
-		msg, err := payload.NewMessage(&payload.GetPendingFilament{
-			ObjectID: objID,
-			Pulse:    destPN,
-		})
-		if err != nil {
-			panic(err)
-			return errors.Wrap(err, "failed to create a GetPendingFilament message")
+		var pl payload.Payload
+		// TODO: temp hack waiting for INS-2597 INS-2598 @egorikas
+		// Because a current node can be a previous LME for a object
+		if *node == p.Dep.Coordinator.Me() {
+			records, err := p.Dep.PendingAccessor.Records(ctx, destPN, p.objID)
+			if err != nil {
+				panic(err)
+				return errors.Wrap(err, fmt.Sprintf("[RefreshPendingFilament] can't fetch pendings, pn - %v,  %v", p.objID.DebugString(), destPN))
+			}
+			inslogger.FromContext(ctx).Debugf("RefreshPendingFilament objID == %v, records - %v", p.objID.DebugString(), len(records))
+
+			pl = &payload.PendingFilament{
+				ObjectID: p.objID,
+				Records:  records,
+			}
+		} else {
+			msg, err := payload.NewMessage(&payload.GetPendingFilament{
+				ObjectID: objID,
+				Pulse:    destPN,
+			})
+			if err != nil {
+				panic(err)
+				return errors.Wrap(err, "failed to create a GetPendingFilament message")
+			}
+
+			rep, done := p.Dep.BusWM.SendTarget(ctx, msg, *node)
+			defer done()
+
+			var ok bool
+			res, ok := <-rep
+			if !ok {
+				panic(err)
+				return errors.New("no reply")
+			}
+
+			pl, err = payload.UnmarshalFromMeta(res.Payload)
+			if err != nil {
+				panic(err)
+				return errors.Wrap(err, "failed to unmarshal reply")
+			}
+
 		}
-
-		rep, done := p.Dep.BusWM.SendTarget(ctx, msg, *node)
-		defer done()
-
-		res, ok := <-rep
-		if !ok {
-			panic(err)
-			return errors.New("no reply")
-		}
-
-		pl, err := payload.UnmarshalFromMeta(res.Payload)
-		if err != nil {
-			panic(err)
-			return errors.Wrap(err, "failed to unmarshal reply")
-		}
-
 		switch r := pl.(type) {
 		case *payload.PendingFilament:
 			err := p.Dep.PendingModifier.SetFilament(ctx, p.pn, objID, destPN, r.Records)
@@ -176,8 +194,8 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 			}
 
 			if r.Records[0].Meta.PreviousRecord == nil {
-				panic("we get here")
 				continueFilling = false
+				return nil
 			}
 
 			// If know border read to the start of the chain
@@ -191,8 +209,8 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 			panic(err)
 			return errors.New(r.Text)
 		default:
-			panic(err)
-			return fmt.Errorf("RefreshPendingFilament: unexpected reply: %#v", p)
+			panic(fmt.Errorf("RefreshPendingFilament: unexpected reply: %#v", r))
+			return fmt.Errorf("RefreshPendingFilament: unexpected reply: %#v")
 		}
 	}
 

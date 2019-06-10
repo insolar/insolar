@@ -96,8 +96,10 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *GetPendingFilament:
 		pl.Polymorph = uint32(TypeGetPendingFilament)
+		return pl.Marshal()
 	case *PendingFilament:
 		pl.Polymorph = uint32(TypePendingFilament)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
