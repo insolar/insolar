@@ -76,10 +76,9 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 }
 
 type UnsafeGetLedgerPendingRequest struct {
-	dep                *Dependencies
-	es                 *ExecutionState
-	ledgerQueueElement *ExecutionQueueElement
-	hasPending         bool
+	dep        *Dependencies
+	es         *ExecutionState
+	hasPending bool
 }
 
 func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
