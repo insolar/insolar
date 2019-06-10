@@ -246,3 +246,28 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 		return nil, nil
 	}
 }
+
+// wrapMeta wraps msg.Payload data with service fields
+// and set it as byte slice back to msg.Payload.
+// Note: this method has side effect - msg-argument mutating
+func (b *Bus) wrapMeta(ctx context.Context, msg *message.Message, target insolar.Reference) (payload.Meta, error) {
+	latestPulse, err := b.pulses.Latest(context.Background())
+	if err != nil {
+		return payload.Meta{}, errors.Wrap(err, "failed to fetch pulse")
+	}
+
+	wrapper := payload.Meta{
+		Payload:  msg.Payload,
+		Receiver: target,
+		Sender:   b.coordinator.Me(),
+		Pulse:    latestPulse.PulseNumber,
+	}
+
+	buf, err := wrapper.Marshal()
+	if err != nil {
+		return payload.Meta{}, errors.Wrap(err, "failed to marshal message")
+	}
+	msg.Payload = buf
+
+	return wrapper, nil
+}
