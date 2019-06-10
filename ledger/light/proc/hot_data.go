@@ -19,6 +19,7 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -46,6 +47,7 @@ type HotData struct {
 		JetStorage            jet.Storage
 		JetFetcher            jet.Fetcher
 		JetReleaser           hot.JetReleaser
+		Coordinator           jet.Coordinator
 	}
 }
 
@@ -135,6 +137,17 @@ func (p *HotData) process(ctx context.Context) error {
 			continue
 		}
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
+
+		if decodedIndex.EarliestOpenRequest != nil {
+			isBeyond, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), *decodedIndex.EarliestOpenRequest)
+			if err != nil {
+				logger.Error(errors.Wrapf(err, "[handleHotRecords] failed to save index - %v", meta.ObjID.DebugString()))
+				continue
+			}
+			if isBeyond {
+				go p.expireRequests(meta.ObjID, *decodedIndex.EarliestOpenRequest)
+			}
+		}
 	}
 
 	p.Dep.JetStorage.Update(
@@ -147,6 +160,10 @@ func (p *HotData) process(ctx context.Context) error {
 
 	p.releaseHotDataWaiters(ctx)
 	return nil
+}
+
+func (p *HotData) expireRequests(objID insolar.ID, expiredPN insolar.PulseNumber) {
+
 }
 
 func (p *HotData) releaseHotDataWaiters(ctx context.Context) {

@@ -33,13 +33,23 @@ var (
 		stats.UnitDimensionless,
 	)
 	statObjectPendingRequestsInMemoryAddedCount = stats.Int64(
-		"object/pendings/added/count",
-		"How many index-records have been saved in in-indexStorage index storage",
+		"object/pendings/requests/added/count",
+		"How many requests have been registered",
 		stats.UnitDimensionless,
 	)
-	statObjectPendingRequestsInMemoryRemovedCount = stats.Int64(
+	statObjectPendingResultsInMemoryAddedCount = stats.Int64(
+		"object/pendings/results/added/count",
+		"How many succeed results have been registered",
+		stats.UnitDimensionless,
+	)
+	statObjectPendingResultsExpiredInMemoryAddedCount = stats.Int64(
+		"object/pendings/results/expired/added/count",
+		"How many expired results have been registered",
+		stats.UnitDimensionless,
+	)
+	statObjectPendingRecordsInMemoryRemovedCount = stats.Int64(
 		"object/pendings/removed/count",
-		"How many index-records have been saved in in-indexStorage index storage",
+		"How many pending filament records have been cleaned",
 		stats.UnitDimensionless,
 	)
 	statRecordInMemoryAddedCount = stats.Int64(
@@ -87,9 +97,21 @@ func init() {
 			Aggregation: view.Sum(),
 		},
 		&view.View{
-			Name:        statObjectPendingRequestsInMemoryRemovedCount.Name(),
-			Description: statObjectPendingRequestsInMemoryRemovedCount.Description(),
-			Measure:     statObjectPendingRequestsInMemoryRemovedCount,
+			Name:        statObjectPendingRecordsInMemoryRemovedCount.Name(),
+			Description: statObjectPendingRecordsInMemoryRemovedCount.Description(),
+			Measure:     statObjectPendingRecordsInMemoryRemovedCount,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        statObjectPendingResultsInMemoryAddedCount.Name(),
+			Description: statObjectPendingResultsInMemoryAddedCount.Description(),
+			Measure:     statObjectPendingResultsInMemoryAddedCount,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        statObjectPendingResultsExpiredInMemoryAddedCount.Name(),
+			Description: statObjectPendingResultsExpiredInMemoryAddedCount.Description(),
+			Measure:     statObjectPendingResultsExpiredInMemoryAddedCount,
 			Aggregation: view.Sum(),
 		},
 	)

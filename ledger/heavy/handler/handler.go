@@ -54,6 +54,7 @@ type Handler struct {
 	IndexBucketModifier   object.IndexBucketModifier
 	DropModifier          drop.Modifier
 	Sender                bus.Sender
+	PendingAccessor       object.HeavyPendingAccessor
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -160,6 +161,7 @@ func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
 	h.Bus.MustRegister(insolar.TypeGetRequest, h.handleGetRequest)
+	h.Bus.MustRegister(insolar.TypeGetOpenRequests, h.handleGetOpenRequests)
 	return nil
 }
 
@@ -316,4 +318,14 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	)
 
 	return &reply.OK{}, nil
+}
+
+func (h *Handler) handleGetOpenRequests(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	msg := parcel.Message().(*message.GetOpenRequests)
+	recs, err := h.PendingAccessor.AllOpenRequestsForObjID(ctx, msg.PN, msg.ObjID)
+	if err != nil {
+		return &reply.HeavyError{Message: err.Error()}, nil
+	}
+
+	return &reply.OpenRequestsOnHeavy{ObjID: msg.ObjID, Requests: recs}, nil
 }

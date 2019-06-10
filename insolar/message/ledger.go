@@ -490,30 +490,29 @@ func (m *GetPendingRequestID) DefaultTarget() *insolar.Reference {
 	return insolar.NewReference(m.ObjectID)
 }
 
-// // GetPendingFilament fetches a part of a pending-filament from another light
-// type GetPendingFilament struct {
-// 	ledgerMessage
-//
-// 	ObjectID insolar.ID
-// 	PN       insolar.PulseNumber
-// }
+type GetOpenRequests struct {
+	ledgerMessage
 
-// // Type implementation of Message interface.
-// func (*GetPendingFilament) Type() insolar.MessageType {
-// 	return insolar.TypeGetPendingFilament
-// }
-//
-// // AllowedSenderObjectAndRole implements interface method
-// func (m *GetPendingFilament) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-// 	return nil, insolar.DynamicRoleLightExecutor
-// }
-//
-// // DefaultRole returns role for this event
-// func (*GetPendingFilament) DefaultRole() insolar.DynamicRole {
-// 	return insolar.DynamicRoleLightExecutor
-// }
-//
-// // DefaultTarget returns of target of this event.
-// func (m *GetPendingFilament) DefaultTarget() *insolar.Reference {
-// 	return insolar.NewReference(m.ObjectID)
-// }
+	ObjID insolar.ID
+	PN    insolar.PulseNumber
+}
+
+// Type implementation of Message interface.
+func (*GetOpenRequests) Type() insolar.MessageType {
+	return insolar.TypeGetOpenRequests
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetOpenRequests) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
+	return nil, insolar.DynamicRoleLightExecutor
+}
+
+// DefaultRole returns role for this event
+func (*GetOpenRequests) DefaultRole() insolar.DynamicRole {
+	return insolar.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetOpenRequests) DefaultTarget() *insolar.Reference {
+	return insolar.NewReference(m.ObjID)
+}

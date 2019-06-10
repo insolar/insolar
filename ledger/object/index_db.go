@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"go.opencensus.io/stats"
@@ -30,6 +31,8 @@ import (
 type IndexDB struct {
 	lock sync.RWMutex
 	db   store.DB
+
+	recordStore *RecordDB
 }
 
 type indexKey struct {
@@ -59,7 +62,7 @@ func (k lastKnownIndexPNKey) ID() []byte {
 
 // NewIndexDB creates a new instance of IndexDB
 func NewIndexDB(db store.DB) *IndexDB {
-	return &IndexDB{db: db}
+	return &IndexDB{db: db, recordStore: NewRecordDB(db)}
 }
 
 // Set sets a lifeline to a bucket with provided pulseNumber and ID
@@ -173,4 +176,63 @@ func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) 
 		return insolar.FirstPulseNumber, err
 	}
 	return insolar.NewPulseNumber(buff), err
+}
+
+func (i *IndexDB) OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error) {
+	panic("implement me")
+}
+
+func (i *IndexDB) AllOpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamnetID, error) {
+	buff, err := i.db.Get(indexKey{pn: currentPN, objID: objID})
+	if err == store.ErrNotFound {
+		return nil, ErrIndexBucketNotFound
+	}
+
+	bucket := FilamentIndex{}
+	err = bucket.Unmarshal(buff)
+	if err != nil {
+		return nil, err
+	}
+
+	tempRes := map[insolar.ID]insolar.ID{}
+
+	for _, metaID := range bucket.PendingRecords {
+		metaRec, err := i.recordStore.get(metaID)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err, "AllOpenRequestsForObjID failed with")
+		}
+		pend := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+		rec, err := i.recordStore.get(pend.RecordID)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err, "AllOpenRequestsForObjID failed with")
+		}
+
+		switch record.Unwrap(rec.Virtual).(type) {
+		case *record.Request:
+			tempRes[pend.RecordID] = metaID
+		case *record.Result:
+			delete(tempRes, pend.RecordID)
+		default:
+			panic("filament isn't in consistent state")
+		}
+	}
+
+	res := make([]record.CompositeFilamnetID, len(tempRes))
+	idx := 0
+	for k, v := range tempRes {
+		res[idx] = record.CompositeFilamnetID{
+			RecordID: k,
+			MetaID:   v,
+		}
+		idx++
+	}
+	return res, nil
+}
+
+func (i *IndexDB) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
+	panic("implement me")
+}
+
+func (i *IndexDB) FirstPending(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (*record.PendingFilament, error) {
+	panic("implement me")
 }

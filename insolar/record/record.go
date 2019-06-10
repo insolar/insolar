@@ -130,10 +130,7 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
-// type CompositeFilamentRecord struct {
-// 	RecordID insolar.ID
-// 	Record   Material
-//
-// 	MetaID insolar.ID
-// 	Meta   PendingFilament
-// }
+type CompositeFilamnetID struct {
+	MetaID   insolar.ID
+	RecordID insolar.ID
+}

@@ -252,7 +252,7 @@ func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 
 	for _, buck := range bucks {
 		stats.Record(ctx,
-			statObjectPendingRequestsInMemoryRemovedCount.M(int64(len(buck.objectMeta.PendingRecords))),
+			statObjectPendingRecordsInMemoryRemovedCount.M(int64(len(buck.objectMeta.PendingRecords))),
 		)
 	}
 }
@@ -383,9 +383,18 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 		b.objectMeta.Lifeline.EarliestOpenRequest = nil
 	}
 
-	stats.Record(ctx,
-		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
-	)
+	switch res.Status {
+	case record.Success:
+		stats.Record(ctx,
+			statObjectPendingResultsInMemoryAddedCount.M(int64(1)),
+		)
+	case record.Expired:
+		stats.Record(ctx,
+			statObjectPendingRecordsInMemoryRemovedCount.M(int64(1)),
+		)
+	default:
+		panic("unexpected situation")
+	}
 
 	return nil
 }
