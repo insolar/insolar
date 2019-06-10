@@ -83,12 +83,19 @@ type LogicCallContext struct {
 	TraceID         string
 }
 
+// ContractConstructor is a typedef for wrapper contract header
 type ContractMethod func([]byte, []byte) ([]byte, []byte, error)
+
+// ContractMethods maps name to contract method
 type ContractMethods map[string]ContractMethod
 
+// ContractConstructor is a typedef of typical contract constructor
 type ContractConstructor func([]byte) ([]byte, error)
+
+// ContractConstructors maps name to contract constructor
 type ContractConstructors map[string]ContractConstructor
 
+// ContractWrapper stores all needed about contract wrapper (it's methods/constructors)
 type ContractWrapper struct {
 	GetCode      ContractMethod
 	GetPrototype ContractMethod
