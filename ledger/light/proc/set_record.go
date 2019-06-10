@@ -123,19 +123,19 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), calculatedID)
 
-			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID)
-			if err != nil {
-				return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-			}
+			// err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID)
+			// if err != nil {
+			// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+			// }
 		}
 	case *record.Result:
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
-		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
-		if err != nil {
-			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-		}
+		// err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
+		// if err != nil {
+		// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+		// }
 	}
 
 	return nil
