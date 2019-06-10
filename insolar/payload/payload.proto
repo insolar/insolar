@@ -8,11 +8,12 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 message Meta {
     uint32 Polymorph = 16;
 
-    bytes Payload  = 20;
-    bytes Sender   = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Receiver = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Pulse    = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes Origin   = 42;
+    bytes Payload    = 20;
+    bytes Sender     = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Receiver   = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Pulse      = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes Origin     = 42;
+    bytes OriginHash = 43;
 }
 
 message Error {
