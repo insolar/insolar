@@ -381,6 +381,12 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	return nil, nil
 }
 
+// meta, err := b.wrapMeta(ctx, msg, target)
+// if err != nil {
+// inslogger.FromContext(ctx).Error("failed to wrap message", err)
+// return nil, nil
+// }
+
 func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) error {
 	node, err := n.wrapMeta(msg)
 	if err != nil {

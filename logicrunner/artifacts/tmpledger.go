@@ -186,7 +186,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	handler.PCS = pcs
 	handler.JetCoordinator = jc
 
-	clientSender, serverSender := makeSender(ps, jc, handler.FlowDispatcher.Process)
+	clientSender, serverSender := makeSender(ps, jc, handler.FlowDispatcher.Process, pcs)
 
 	handler.Sender = serverSender
 
@@ -302,7 +302,7 @@ func (p *pubSubMock) Close() error {
 	return nil
 }
 
-func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.HandlerFunc) (bus.Sender, bus.Sender) {
+func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.HandlerFunc, pcs insolar.PlatformCryptographyScheme) (bus.Sender, bus.Sender) {
 	clientPub := &pubSubMock{
 		pulses:  pulses,
 		handler: handle,
@@ -310,8 +310,8 @@ func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.Hand
 	serverPub := &pubSubMock{
 		pulses: pulses,
 	}
-	clientBus := bus.NewBus(clientPub, pulses, jets)
-	serverBus := bus.NewBus(serverPub, pulses, jets)
+	clientBus := bus.NewBus(clientPub, pulses, jets, pcs)
+	serverBus := bus.NewBus(serverPub, pulses, jets, pcs)
 	clientPub.bus = serverBus
 	serverPub.bus = clientBus
 	return clientBus, serverBus

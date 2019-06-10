@@ -18,6 +18,7 @@ package bus
 
 import (
 	"context"
+	"hash"
 	"sync"
 	"time"
 
@@ -95,19 +96,21 @@ type Bus struct {
 	timeout     time.Duration
 	pulses      pulse.Accessor
 	coordinator jet.Coordinator
+	pcs         insolar.PlatformCryptographyScheme
 
 	repliesMutex sync.RWMutex
 	replies      map[string]*lockedReply
 }
 
 // NewBus creates Bus instance with provided values.
-func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator) *Bus {
+func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator, pcs insolar.PlatformCryptographyScheme) *Bus {
 	return &Bus{
 		timeout:     time.Second * 8,
 		pub:         pub,
 		replies:     make(map[string]*lockedReply),
 		pulses:      pulses,
 		coordinator: jc,
+		pcs:         pcs,
 	}
 }
 
@@ -270,4 +273,12 @@ func (b *Bus) wrapMeta(ctx context.Context, msg *message.Message, target insolar
 	msg.Payload = buf
 
 	return wrapper, nil
+}
+
+func HashOrigin(h hash.Hash, buf []byte) []byte {
+	_, err := h.Write(buf)
+	if err != nil {
+		panic(err)
+	}
+	return h.Sum(nil)
 }
