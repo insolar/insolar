@@ -174,7 +174,7 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(pubsub, pulses, jc)
+	b := bus.NewBus(pubsub, pulses, jc, platformCryptographyScheme)
 
 	components := []interface{}{
 		b,

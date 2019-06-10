@@ -388,10 +388,17 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 }
 
 func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) error {
-	node, err := n.wrapMeta(msg)
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to send message")
+		return errors.Wrap(err, "failed to unwrap message")
 	}
+
+	if meta.Receiver.IsEmpty() {
+		return errors.New("failed to send message: Receiver in msg.Metadata not set")
+	}
+
+	node := meta.Receiver
 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
@@ -435,37 +442,37 @@ func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, r
 		return
 	}
 	msg.Payload = buf
-	n.Sender.Reply(ctx, msg, errMsg)
+	n.Sender.Reply(ctx, wrapper, errMsg)
 }
 
-func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
-	receiver := msg.Metadata.Get(bus.MetaReceiver)
-	if receiver == "" {
-		return insolar.Reference{}, errors.New("Receiver in msg.Metadata not set")
-	}
-	receiverRef, err := insolar.NewReferenceFromBase58(receiver)
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
-	}
-
-	latestPulse, err := n.PulseAccessor.Latest(context.Background())
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to fetch pulse")
-	}
-	wrapper := payload.Meta{
-		Payload:  msg.Payload,
-		Receiver: *receiverRef,
-		Sender:   n.NodeKeeper.GetOrigin().ID(),
-		Pulse:    latestPulse.PulseNumber,
-	}
-	buf, err := wrapper.Marshal()
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to wrap message")
-	}
-	msg.Payload = buf
-
-	return *receiverRef, nil
-}
+// func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
+// 	receiver := msg.Metadata.Get(bus.MetaReceiver)
+// 	if receiver == "" {
+// 		return insolar.Reference{}, errors.New("Receiver in msg.Metadata not set")
+// 	}
+// 	receiverRef, err := insolar.NewReferenceFromBase58(receiver)
+// 	if err != nil {
+// 		return insolar.Reference{}, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
+// 	}
+//
+// 	latestPulse, err := n.PulseAccessor.Latest(context.Background())
+// 	if err != nil {
+// 		return insolar.Reference{}, errors.Wrap(err, "failed to fetch pulse")
+// 	}
+// 	wrapper := payload.Meta{
+// 		Payload:  msg.Payload,
+// 		Receiver: *receiverRef,
+// 		Sender:   n.NodeKeeper.GetOrigin().ID(),
+// 		Pulse:    latestPulse.PulseNumber,
+// 	}
+// 	buf, err := wrapper.Marshal()
+// 	if err != nil {
+// 		return insolar.Reference{}, errors.Wrap(err, "failed to wrap message")
+// 	}
+// 	msg.Payload = buf
+//
+// 	return *receiverRef, nil
+// }
 
 func findNodeByAddress(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
 	for _, node := range nodes {

@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/blob"
@@ -35,9 +35,11 @@ type PassState struct {
 	message *message.Message
 
 	Dep struct {
-		Sender  bus.Sender
-		Records object.RecordAccessor
-		Blobs   blob.Accessor
+		Sender      bus.Sender
+		Records     object.RecordAccessor
+		Blobs       blob.Accessor
+		Coordinator jet.Coordinator
+		PCS         insolar.PlatformCryptographyScheme
 	}
 }
 
@@ -57,8 +59,14 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload type %T", pl)
 	}
 
-	replyTo := message.NewMessage(watermill.NewUUID(), pass.Origin)
-	middleware.SetCorrelationID(string(pass.CorrelationID), replyTo)
+	// replyTo := message.NewMessage(watermill.NewUUID(), pass.Origin)
+	// middleware.SetCorrelationID(string(pass.CorrelationID), replyTo)
+
+	replyTo := payload.Meta{
+		Payload:    pass.Origin,
+		Sender:     p.Dep.Coordinator.Me(),
+		OriginHash: pass.CorrelationID,
+	}
 
 	rec, err := p.Dep.Records.ForID(ctx, pass.StateID)
 	if err == object.ErrNotFound {

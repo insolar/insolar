@@ -23,7 +23,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	wmessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-
 	"github.com/insolar/insolar/insolar"
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -62,7 +61,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			logger.Error(errors.Wrap(err, "failed to reply error"))
 			return err
 		}
-		go s.sender.Reply(ctx, s.message.WatermillMsg, errMsg)
+		go s.sender.Reply(ctx, payload.Meta{Payload: s.message.WatermillMsg.Payload}, errMsg)
 	}
 	return err
 }

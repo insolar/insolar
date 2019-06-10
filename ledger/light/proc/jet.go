@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar"
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow/bus"
@@ -127,6 +126,7 @@ type CheckJet struct {
 		Coordinator jet.Coordinator
 		JetFetcher  jet.Fetcher
 		Sender      wbus.Sender
+		PCS         insolar.PlatformCryptographyScheme
 	}
 }
 
@@ -156,7 +156,7 @@ func (p *CheckJet) Proceed(ctx context.Context) error {
 
 		msg, err := payload.NewMessage(&payload.Pass{
 			Origin:        p.message.Payload,
-			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+			CorrelationID: wbus.HashOrigin(p.Dep.PCS.IntegrityHasher(), p.message.Payload),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

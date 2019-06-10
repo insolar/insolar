@@ -18,17 +18,17 @@ package bus
 
 import (
 	"context"
+	"hash"
 	"sync"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -48,7 +48,7 @@ const (
 	MetaType = "type"
 
 	// MetaReceiver is key for Receiver
-	MetaReceiver = "receiver"
+	// MetaReceiver = "receiver"
 
 	// MetaSender is key for Sender
 	MetaSender = "sender"
@@ -78,7 +78,7 @@ type Sender interface {
 	// (rep, ok := <-ch) because the channel will be closed on timeout.
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	// Reply sends message in response to another message.
-	Reply(ctx context.Context, origin, reply *message.Message)
+	Reply(ctx context.Context, origin payload.Meta, reply *message.Message)
 }
 
 type lockedReply struct {
@@ -95,19 +95,21 @@ type Bus struct {
 	timeout     time.Duration
 	pulses      pulse.Accessor
 	coordinator jet.Coordinator
+	pcs         insolar.PlatformCryptographyScheme
 
 	repliesMutex sync.RWMutex
 	replies      map[string]*lockedReply
 }
 
 // NewBus creates Bus instance with provided values.
-func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator) *Bus {
+func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator, pcs insolar.PlatformCryptographyScheme) *Bus {
 	return &Bus{
 		timeout:     time.Second * 8,
 		pub:         pub,
 		replies:     make(map[string]*lockedReply),
 		pulses:      pulses,
 		coordinator: jc,
+		pcs:         pcs,
 	}
 }
 
@@ -156,26 +158,45 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
-	id := watermill.NewUUID()
-	middleware.SetCorrelationID(id, msg)
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
-	msg.Metadata.Set(MetaReceiver, target.String())
 	msg.SetContext(ctx)
+
+	latestPulse, err := b.pulses.Latest(context.Background())
+	if err != nil {
+		inslogger.FromContext(ctx).Error("failed to fetch pulse", err.Error())
+		return nil, nil
+	}
+
+	wrapper := payload.Meta{
+		Payload:  msg.Payload,
+		Receiver: target,
+		Sender:   b.coordinator.Me(),
+		Pulse:    latestPulse.PulseNumber,
+	}
+	buf, err := wrapper.Marshal()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("failed to wrap message", err.Error())
+		return nil, nil
+	}
+	msg.Payload = buf
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
 	}
 
+	h := HashOrigin(b.pcs.IntegrityHasher(), wrapper.Payload)
+	id := corrID(h)
+
 	done := func() {
-		b.removeReplyChannel(ctx, id, reply)
+		b.removeReplyChannel(ctx, id.String(), reply)
 	}
 
 	b.repliesMutex.Lock()
-	b.replies[id] = reply
+	b.replies[id.String()] = reply
 	b.repliesMutex.Unlock()
 
-	err := b.pub.Publish(TopicOutgoing, msg)
+	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 		done()
@@ -183,14 +204,14 @@ func (b *Bus) SendTarget(
 	}
 
 	go func() {
-		inslogger.FromContext(ctx).WithField("correlation_id", id).Info("waiting for reply")
+		inslogger.FromContext(ctx).WithField("correlation_id", id.String()).Info("waiting for reply")
 		select {
 		case <-reply.done:
 			inslogger.FromContext(ctx).Infof("Done waiting replies for message with correlationID %s", id)
 		case <-time.After(b.timeout):
 			inslogger.FromContext(ctx).Error(
 				errors.Errorf(
-					"can't return result for message with correlationID %s: timeout for reading (%s) was exceeded", id, b.timeout),
+					"can't return result for message with correlationID %s: timeout for reading (%s) was exceeded", id.String(), b.timeout),
 			)
 			done()
 		}
@@ -200,20 +221,35 @@ func (b *Bus) SendTarget(
 }
 
 // Reply sends message in response to another message.
-func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
-	id := middleware.MessageCorrelationID(origin)
-	middleware.SetCorrelationID(id, reply)
-
-	originMeta := payload.Meta{}
-	err := originMeta.Unmarshal(origin.Payload)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send reply"))
-		return
-	}
-
-	reply.Metadata.Set(MetaReceiver, originMeta.Sender.String())
+func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
 	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	reply.SetContext(ctx)
+
+	latestPulse, err := b.pulses.Latest(context.Background())
+	if err != nil {
+		inslogger.FromContext(ctx).Error("failed to fetch pulse", err.Error())
+	}
+
+	var hash []byte
+
+	if origin.OriginHash == nil || len(origin.OriginHash) == 0 {
+		hash = HashOrigin(b.pcs.IntegrityHasher(), origin.Payload)
+	} else {
+		hash = origin.OriginHash
+	}
+
+	wrapper := payload.Meta{
+		Payload:    reply.Payload,
+		Receiver:   origin.Sender,
+		Sender:     b.coordinator.Me(),
+		Pulse:      latestPulse.PulseNumber,
+		OriginHash: hash,
+	}
+	buf, err := wrapper.Marshal()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("failed to wrap message", err.Error())
+	}
+	reply.Payload = buf
 
 	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
@@ -224,10 +260,16 @@ func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
 func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		id := middleware.MessageCorrelationID(msg)
+		meta := payload.Meta{}
+		err := meta.Unmarshal(msg.Payload) //TODO ERR
+		if err != nil {
+			panic("XYZ")
+		}
+
+		id := corrID(meta.OriginHash) //TODO проверка на пустоту
 
 		b.repliesMutex.RLock()
-		reply, ok := b.replies[id]
+		reply, ok := b.replies[id.String()]
 		if !ok {
 			b.repliesMutex.RUnlock()
 			return h(msg)
@@ -238,11 +280,36 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 
 		select {
 		case reply.messages <- msg:
-			inslogger.FromContext(context.Background()).Infof("result for message with correlationID %s was send", id)
+			inslogger.FromContext(context.Background()).Infof("result for message with correlationID %s was send", id.String())
 		case <-reply.done:
 		}
 		reply.wg.Done()
 
 		return nil, nil
 	}
+}
+
+type CorrelationID [32]byte
+
+func (id *CorrelationID) String() string {
+	return base58.Encode(id[:])
+}
+
+func (id CorrelationID) Bytes() []byte {
+	return id[:]
+}
+
+func corrID(buf []byte) CorrelationID {
+	var id CorrelationID
+	copy(id[:], buf)
+	return id
+}
+
+func HashOrigin(h hash.Hash, buf []byte) []byte {
+	_, err := h.Write(buf)
+	if err != nil {
+		panic(err)
+	}
+	slice := h.Sum(nil)
+	return slice
 }

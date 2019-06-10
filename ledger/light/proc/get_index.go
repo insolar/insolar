@@ -167,7 +167,12 @@ func (p *GetIndexWM) Proceed(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+		meta := payload.Meta{
+			Payload: p.message.Payload,
+			Sender:  p.Dep.Coordinator.Me(),
+		}
+		go p.Dep.Sender.Reply(ctx, meta, msg)
+		// go p.Dep.Sender.Reply(ctx, &payload.Meta{Payload: p.message.Payload}, msg)
 	}
 	return err
 }

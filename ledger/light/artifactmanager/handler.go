@@ -114,6 +114,7 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Sender = h.Sender
+			p.Dep.PCS = h.PCS
 		},
 		WaitHotWM: func(p *proc.WaitHotWM) {
 			p.Dep.Waiter = h.HotDataWaiter
@@ -148,6 +149,7 @@ func NewMessageHandler(
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Sender = h.Sender
+			p.Dep.PCS = h.PCS
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.Bus = h.Bus
@@ -207,6 +209,8 @@ func NewMessageHandler(
 			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Sender = h.Sender
 			p.Dep.Records = h.RecordAccessor
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.PCS = h.PCS
 		},
 	}
 

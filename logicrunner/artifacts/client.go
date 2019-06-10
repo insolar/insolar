@@ -270,6 +270,7 @@ func (m *client) GetObject(
 		statePayload *payload.State
 	)
 	success := func() bool {
+		inslogger.FromContext(ctx).Debug(" ======RRRRRRR====== ", index, "     ", statePayload)
 		return index != nil && statePayload != nil
 	}
 

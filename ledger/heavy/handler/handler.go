@@ -67,6 +67,8 @@ func New() *Handler {
 			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.PCS = h.PCS
 		},
 	}
 	h.dep = &dep
@@ -92,7 +94,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 			logger.Error(errors.Wrap(err, "failed to reply error"))
 			return nil, nil
 		}
-		go h.Sender.Reply(ctx, msg, errMsg)
+		go h.Sender.Reply(ctx, meta, errMsg)
 	}
 
 	return nil, nil

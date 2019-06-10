@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -48,6 +47,7 @@ type SendObject struct {
 		Blobs          blob.Accessor
 		Bus            insolar.MessageBus
 		Sender         bus.Sender
+		PCS            insolar.PlatformCryptographyScheme
 	}
 }
 
@@ -75,7 +75,14 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
-			go p.Dep.Sender.Reply(ctx, p.message, msg)
+
+			meta := payload.Meta{}
+			err = meta.Unmarshal(p.message.Payload)
+			if err != nil {
+				return errors.Wrap(err, "failed to unwrap message")
+			}
+
+			go p.Dep.Sender.Reply(ctx, meta, msg)
 			return nil
 		}
 
@@ -98,7 +105,14 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
 		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+
+		meta := payload.Meta{}
+		err = meta.Unmarshal(p.message.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unwrap message")
+		}
+
+		go p.Dep.Sender.Reply(ctx, meta, msg)
 
 		return nil
 	}
@@ -107,7 +121,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		msg, err := payload.NewMessage(&payload.PassState{
 			Origin:        p.message.Payload,
 			StateID:       stateID,
-			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+			CorrelationID: bus.HashOrigin(p.Dep.PCS.IntegrityHasher(), p.message.Payload),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
@@ -155,7 +169,14 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+
+		meta := payload.Meta{}
+		err = meta.Unmarshal(p.message.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unwrap message")
+		}
+
+		go p.Dep.Sender.Reply(ctx, meta, msg)
 		logger.Info("sending index")
 	}
 
