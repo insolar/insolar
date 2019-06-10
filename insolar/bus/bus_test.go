@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -40,7 +41,8 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	externalMsgCh, err := pubsub.Subscribe(ctx, TopicOutgoing)
 	require.NoError(t, err)
 
@@ -74,7 +76,8 @@ func (p *PublisherMock) Close() error {
 func TestMessageBus_Send_Publish_Err(t *testing.T) {
 	ctx := context.Background()
 	pub := &PublisherMock{pubErr: errors.New("test error in Publish")}
-	b := NewBus(pub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(pub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
@@ -89,7 +92,8 @@ func TestMessageBus_Send_Publish_Err(t *testing.T) {
 
 func TestMessageBus_Send_Close(t *testing.T) {
 	ctx := context.Background()
-	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
@@ -118,7 +122,8 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	b.timeout = time.Millisecond * 10
 
 	payload := []byte{1, 2, 3, 4, 5}
@@ -139,7 +144,8 @@ func TestMessageBus_Send_Timeout_Close_Race(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	b.timeout = time.Second
 
 	payload := []byte{1, 2, 3, 4, 5}
@@ -154,7 +160,8 @@ func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 
 	resMsg := message.NewMessage(watermill.NewUUID(), []byte{10, 20, 30, 40, 50})
 
@@ -178,7 +185,8 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	correlationId := watermill.NewUUID()
 	resChan := &lockedReply{
 		messages: make(chan *message.Message),
@@ -216,7 +224,8 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	b.timeout = time.Millisecond
 	correlationId := watermill.NewUUID()
 	resChan := &lockedReply{
@@ -242,7 +251,8 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 }
 
 func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
-	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}
@@ -275,7 +285,8 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
-	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	b.timeout = time.Millisecond * 10
 	ctx := context.Background()
 
@@ -300,7 +311,8 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
-	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	b.timeout = time.Millisecond * 10
 	ctx := context.Background()
 
@@ -328,7 +340,8 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	count := 100
 	isReplyOk := make(chan bool)
 	done := make(chan error)
-	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}
@@ -380,7 +393,8 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T) {
 	ctx := context.Background()
 	count := 100
-	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
+	pcs := testutils.NewPlatformCryptographyScheme()
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t), pcs)
 	b.timeout = time.Millisecond * time.Duration(rand.Intn(10))
 
 	payload := []byte{1, 2, 3, 4, 5}
