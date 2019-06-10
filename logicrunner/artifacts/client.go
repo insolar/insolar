@@ -217,6 +217,10 @@ func (m *client) GetCode(
 
 	rep, ok := <-reps
 	if !ok {
+		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+			"correlation_id": middleware.MessageCorrelationID(msg),
+			"code_id": code.Record().DebugString(),
+		}).Error("no reply")
 		return nil, errors.New("no reply")
 	}
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
@@ -653,6 +657,7 @@ func (m *client) DeployCode(
 
 	switch p := pl.(type) {
 	case *payload.ID:
+		inslogger.FromContext(ctx).WithField("code_id", p.ID.DebugString()).Infof("deployed code")
 		return &p.ID, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)

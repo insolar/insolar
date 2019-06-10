@@ -19,6 +19,7 @@ package proc
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
@@ -104,10 +105,12 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	material := record.Material{
 		Virtual: &virtual,
 	}
+
 	err = p.dep.records.Set(ctx, p.recordID, material)
 	if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
+	inslogger.FromContext(ctx).WithField("code_id", p.recordID.DebugString()).Infof("saved code")
 
 	msg, err := payload.NewMessage(&payload.ID{ID: p.recordID})
 	if err != nil {

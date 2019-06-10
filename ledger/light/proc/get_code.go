@@ -119,6 +119,11 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		go func() {
 			_, done := p.Dep.Sender.SendTarget(ctx, msg, node)
 			done()
+			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+				"origin_correlation_id": middleware.MessageCorrelationID(p.message),
+				"correlation_id": middleware.MessageCorrelationID(msg),
+				"code_id": p.codeID.DebugString(),
+			}).Info("passed GetCode")
 		}()
 		return nil
 	}
