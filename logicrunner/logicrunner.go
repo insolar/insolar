@@ -379,7 +379,7 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 }
 
 // values here (boolean flags) are inverted here, since it's common "predicate" checking function
-func noLoopCheckerPredicate(current *CurrentExecution, args interface{}) bool {
+func noLoopCheckerPredicate(current *Transcript, args interface{}) bool {
 	apiReqID := args.(string)
 	if current.SentResult ||
 		current.Request.ReturnMode == record.ReturnNoWait ||
@@ -437,7 +437,7 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 	}
 }
 
-func (lr *LogicRunner) executeOrValidate(ctx context.Context, es *ExecutionState, current *CurrentExecution) {
+func (lr *LogicRunner) executeOrValidate(ctx context.Context, es *ExecutionState, current *Transcript) {
 
 	inslogger.FromContext(ctx).Debug("executeOrValidate")
 
@@ -496,7 +496,7 @@ func (lr *LogicRunner) executeOrValidate(ctx context.Context, es *ExecutionState
 	}()
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, current *CurrentExecution) (insolar.Reply, error) {
+func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, current *Transcript) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeMethodCall")
 	defer span.End()
 
@@ -589,7 +589,7 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 }
 
 func (lr *LogicRunner) executeConstructorCall(
-	ctx context.Context, es *ExecutionState, current *CurrentExecution,
+	ctx context.Context, es *ExecutionState, current *Transcript,
 ) (
 	insolar.Reply, error,
 ) {

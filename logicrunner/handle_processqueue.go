@@ -18,7 +18,6 @@ package logicrunner
 
 import (
 	"context"
-	"time"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
@@ -69,34 +68,10 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 			transcript, es.Queue = es.Queue[0], es.Queue[1:]
 		}
 
-		msg, ok := transcript.Parcel.Message().(*message.CallMethod)
-		if !ok {
-			panic("Not a call method message, should never happen")
-		}
-
-		sender := transcript.Parcel.GetSender()
-		current := CurrentExecution{
-			RequestRef:    transcript.RequestRef,
-			RequesterNode: &sender,
-			Context:       transcript.Context,
-			Request:       &msg.Request,
-			LogicContext: &insolar.LogicCallContext{
-				Mode:            insolar.ExecuteCallMode,
-				Caller:          msg.GetCaller(),
-				Callee:          &es.Ref,
-				Request:         transcript.RequestRef,
-				Time:            time.Now(), // TODO: probably we should take it earlier
-				Pulse:           *lr.pulse(ctx),
-				TraceID:         inslogger.TraceID(ctx),
-				CallerPrototype: &msg.CallerPrototype,
-				Immutable:       msg.Immutable,
-			},
-		}
-
-		es.CurrentList.Set(*transcript.RequestRef, &current)
+		es.CurrentList.Set(*transcript.RequestRef, &transcript)
 		es.Unlock()
 
-		lr.executeOrValidate(current.Context, es, &current)
+		lr.executeOrValidate(transcript.Context, es, &transcript)
 
 		if transcript.FromLedger {
 			pub := p.dep.Publisher
@@ -105,7 +80,7 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 				inslogger.FromContext(ctx).Warnf("can't send processExecutionQueueMsg: ", err)
 			}
 		}
-		es.Finished = append(es.Finished, &current)
+		es.Finished = append(es.Finished, &transcript)
 
 		lr.finishPendingIfNeeded(ctx, es)
 	}

@@ -30,7 +30,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	list := NewCurrentExecutionList()
-	list.Set(testutils.RandomRef(), &CurrentExecution{})
+	list.Set(testutils.RandomRef(), &Transcript{})
 
 	table := []struct {
 		name             string

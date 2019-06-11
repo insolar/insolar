@@ -137,7 +137,7 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	}
 
 	es := NewExecutionState(objectRef)
-	es.CurrentList.Set(objectRef, &CurrentExecution{})
+	es.CurrentList.Set(objectRef, &Transcript{})
 	es.pending = message.NotPending
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
@@ -568,7 +568,7 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	suite.Require().NotNil(es)
 	suite.Require().Equal(message.NotPending, es.pending)
 
-	es.CurrentList.Set(objectRef, &CurrentExecution{})
+	es.CurrentList.Set(objectRef, &Transcript{})
 	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().Error(err)
 
@@ -597,13 +597,13 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 		},
 	}
 	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
+	es.CurrentList.Set(msg.GetReference(), &Transcript{
 		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdA},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().True(loop)
 
-	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
+	es.CurrentList.Set(msg.GetReference(), &Transcript{
 		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdB},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
@@ -619,7 +619,7 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 		},
 	}
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
+	es.CurrentList.Set(msg.GetReference(), &Transcript{
 		Request: &record.Request{ReturnMode: record.ReturnResult},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
@@ -627,14 +627,14 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	es.CurrentList.Cleanup()
 
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
+	es.CurrentList.Set(msg.GetReference(), &Transcript{
 		Request: &record.Request{ReturnMode: record.ReturnNoWait},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 	es.CurrentList.Cleanup()
 
-	es.CurrentList.Set(msg.GetReference(), &CurrentExecution{
+	es.CurrentList.Set(msg.GetReference(), &Transcript{
 		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
 		SentResult: true,
 	})
@@ -746,7 +746,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 		Method: "some",
 	}
 
-	current := &CurrentExecution{
+	current := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &randRef,
 		Request:      request,
@@ -820,7 +820,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 
 	es := NewExecutionState(ref)
 	es.pending = message.InPending
-	es.CurrentList.Set(ref, &CurrentExecution{})
+	es.CurrentList.Set(ref, &Transcript{})
 
 	// we are in pending and come to ourselves again
 	suite.lr.state[ref] = &ObjectState{ExecutionState: es}
@@ -1383,7 +1383,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestESWithValidationCurrent() {
 	s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}
 	// we should set empty current execution here, since we added new
 	// logic with not empty number of elements in CurrentList
-	es.CurrentList.Set(s.objectRef, &CurrentExecution{})
+	es.CurrentList.Set(s.objectRef, &Transcript{})
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
@@ -1399,7 +1399,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
 	es := NewExecutionState(s.objectRef)
-	es.CurrentList.Set(s.objectRef, &CurrentExecution{})
+	es.CurrentList.Set(s.objectRef, &Transcript{})
 	es.Queue = append(es.Queue, Transcript{Context: s.ctx})
 	es.pending = message.NotPending
 
@@ -1418,7 +1418,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithEmptyQueue() {
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
 	es := NewExecutionState(s.objectRef)
-	es.CurrentList.Set(s.objectRef, &CurrentExecution{})
+	es.CurrentList.Set(s.objectRef, &Transcript{})
 	es.pending = message.NotPending
 
 	s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}
@@ -1437,7 +1437,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 	es := NewExecutionState(s.objectRef)
 	es.pending = message.NotPending
 	s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}
-	es.CurrentList.Set(s.objectRef, &CurrentExecution{})
+	es.CurrentList.Set(s.objectRef, &Transcript{})
 	es.Queue = make([]Transcript, 0)
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
@@ -1453,7 +1453,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
 	es := NewExecutionState(s.objectRef)
-	es.CurrentList.Set(s.objectRef, &CurrentExecution{})
+	es.CurrentList.Set(s.objectRef, &Transcript{})
 	es.pending = message.InPending
 
 	s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}

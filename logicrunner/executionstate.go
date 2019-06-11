@@ -37,7 +37,7 @@ type ExecutionState struct {
 	PrototypeDescriptor artifacts.ObjectDescriptor
 	CodeDescriptor      artifacts.CodeDescriptor
 
-	Finished              []*CurrentExecution
+	Finished              []*Transcript
 	CurrentList           *CurrentExecutionList
 	Queue                 []Transcript
 	QueueProcessorActive  bool
@@ -59,7 +59,7 @@ func NewExecutionState(ref insolar.Reference) *ExecutionState {
 	}
 }
 
-func (es *ExecutionState) WrapError(current *CurrentExecution, err error, message string) error {
+func (es *ExecutionState) WrapError(current *Transcript, err error, message string) error {
 	if err == nil {
 		err = errors.New(message)
 	} else {

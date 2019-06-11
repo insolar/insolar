@@ -77,19 +77,6 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 	}
 }
 
-type CurrentExecution struct {
-	Context       context.Context
-	LogicContext  *insolar.LogicCallContext
-	RequestRef    *Ref
-	Request       *record.Request
-	RequesterNode *Ref
-	SentResult    bool
-	Nonce         uint64
-	Deactivate    bool
-
-	OutgoingRequests []OutgoingRequest
-}
-
 type OutgoingRequest struct {
 	Request   record.Request
 	NewObject *Ref
@@ -97,7 +84,7 @@ type OutgoingRequest struct {
 	Error     error
 }
 
-func (ce *CurrentExecution) AddOutgoingRequest(
+func (ce *Transcript) AddOutgoingRequest(
 	ctx context.Context, request record.Request, result []byte, newObject *Ref, err error,
 ) {
 	rec := OutgoingRequest{
@@ -111,17 +98,17 @@ func (ce *CurrentExecution) AddOutgoingRequest(
 
 type CurrentExecutionList struct {
 	lock       sync.RWMutex
-	executions map[insolar.Reference]*CurrentExecution
+	executions map[insolar.Reference]*Transcript
 }
 
-func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *CurrentExecution {
+func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *Transcript {
 	ces.lock.RLock()
 	rv := ces.executions[requestRef]
 	ces.lock.RUnlock()
 	return rv
 }
 
-func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *CurrentExecution) {
+func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *Transcript) {
 	ces.lock.Lock()
 	ces.executions[requestRef] = ce
 	ces.lock.Unlock()
@@ -133,7 +120,7 @@ func (ces *CurrentExecutionList) Delete(requestRef insolar.Reference) {
 	ces.lock.Unlock()
 }
 
-func (ces *CurrentExecutionList) GetByTraceID(traceid string) *CurrentExecution {
+func (ces *CurrentExecutionList) GetByTraceID(traceid string) *Transcript {
 	ces.lock.RLock()
 	for _, ce := range ces.executions {
 		if ce.LogicContext.TraceID == traceid {
@@ -145,7 +132,7 @@ func (ces *CurrentExecutionList) GetByTraceID(traceid string) *CurrentExecution 
 	return nil
 }
 
-func (ces *CurrentExecutionList) GetMutable() *CurrentExecution {
+func (ces *CurrentExecutionList) GetMutable() *Transcript {
 	ces.lock.RLock()
 	for _, ce := range ces.executions {
 		if !ce.LogicContext.Immutable {
@@ -159,7 +146,7 @@ func (ces *CurrentExecutionList) GetMutable() *CurrentExecution {
 
 func (ces *CurrentExecutionList) Cleanup() {
 	ces.lock.Lock()
-	ces.executions = make(map[insolar.Reference]*CurrentExecution)
+	ces.executions = make(map[insolar.Reference]*Transcript)
 	ces.lock.Unlock()
 }
 
@@ -174,7 +161,7 @@ func (ces *CurrentExecutionList) Empty() bool {
 	return ces.Length() == 0
 }
 
-type CurrentExecutionPredicate func(*CurrentExecution, interface{}) bool
+type CurrentExecutionPredicate func(*Transcript, interface{}) bool
 
 func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
 	rv := true
