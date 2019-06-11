@@ -37,12 +37,12 @@ type ExecutionState struct {
 	PrototypeDescriptor artifacts.ObjectDescriptor
 	CodeDescriptor      artifacts.CodeDescriptor
 
-	Finished              []*CurrentExecution
+	Finished              []*Transcript
 	CurrentList           *CurrentExecutionList
-	Queue                 []ExecutionQueueElement
+	Queue                 []Transcript
 	QueueProcessorActive  bool
 	LedgerHasMoreRequests bool
-	LedgerQueueElement    *ExecutionQueueElement
+	LedgerQueueElement    *Transcript
 	getLedgerPendingMutex sync.Mutex
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
@@ -55,11 +55,11 @@ func NewExecutionState(ref insolar.Reference) *ExecutionState {
 	return &ExecutionState{
 		Ref:         ref,
 		CurrentList: NewCurrentExecutionList(),
-		Queue:       make([]ExecutionQueueElement, 0),
+		Queue:       make([]Transcript, 0),
 	}
 }
 
-func (es *ExecutionState) WrapError(current *CurrentExecution, err error, message string) error {
+func (es *ExecutionState) WrapError(current *Transcript, err error, message string) error {
 	if err == nil {
 		err = errors.New(message)
 	} else {
@@ -76,7 +76,7 @@ func (es *ExecutionState) WrapError(current *CurrentExecution, err error, messag
 }
 
 // releaseQueue must be calling only with es.Lock
-func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
+func (es *ExecutionState) releaseQueue() ([]Transcript, bool) {
 	ledgerHasMoreRequest := false
 	q := es.Queue
 
@@ -85,7 +85,7 @@ func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
 		ledgerHasMoreRequest = true
 	}
 
-	es.Queue = make([]ExecutionQueueElement, 0)
+	es.Queue = make([]Transcript, 0)
 
 	return q, ledgerHasMoreRequest
 }
