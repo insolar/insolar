@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-// +build functest
-
 package api
 
 import (
@@ -37,14 +35,24 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-// ContractService is a service that provides ability to add custom contracts
-type ContractService struct {
+// ContractService is a service that provides ability to add custom contracts.
+type ContractService interface {
+	Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error
+	CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error
+	CallMethod(r *http.Request, args *CallMethodArgs, reply *CallMethodReply) error
+}
+
+// ContractServiceReal is the ContractService implementation that provides ability to add custom contracts.
+type ContractServiceReal struct {
 	runner *Runner
 }
 
 // NewContractService creates new Contract service instance.
-func NewContractService(runner *Runner) *ContractService {
-	return &ContractService{runner: runner}
+func NewContractService(runner *Runner, enable bool) ContractService {
+	if enable {
+		return &ContractServiceReal{runner: runner}
+	}
+	return &ContractServiceDummy{}
 }
 
 // UploadArgs is arguments that Contract.Upload accepts.
@@ -59,7 +67,7 @@ type UploadReply struct {
 }
 
 // Upload builds code and return prototype ref
-func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
+func (s *ContractServiceReal) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
 	_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
@@ -103,7 +111,7 @@ type CallConstructorReply struct {
 }
 
 // CallConstructor make an object from its prototype
-func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
+func (s *ContractServiceReal) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ ContractService.CallConstructor ] Incoming request: %s", r.RequestURI)
@@ -127,8 +135,8 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 	contractID, err := s.runner.ArtifactManager.RegisterRequest(
 		ctx,
 		record.Request{
-			CallType: record.CTSaveAsChild,
-			Prototype: &base,
+			CallType:     record.CTSaveAsChild,
+			Prototype:    &base,
 			APIRequestID: utils.TraceID(ctx),
 		},
 	)
@@ -175,7 +183,7 @@ type CallMethodReply struct {
 }
 
 // CallConstructor make an object from its prototype
-func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *CallMethodReply) error {
+func (s *ContractServiceReal) CallMethod(r *http.Request, args *CallMethodArgs, re *CallMethodReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ ContractService.CallMethod ] Incoming request: %s", r.RequestURI)
@@ -191,10 +199,10 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	msg := &message.CallMethod{
 		Request: record.Request{
-			Caller:    testutils.RandomRef(),
-			Object:    objectRef,
-			Method:    args.Method,
-			Arguments: args.MethodArgs,
+			Caller:       testutils.RandomRef(),
+			Object:       objectRef,
+			Method:       args.Method,
+			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
 		},
 	}

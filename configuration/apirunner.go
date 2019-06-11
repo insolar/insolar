@@ -26,6 +26,8 @@ type APIRunner struct {
 	Call    string
 	RPC     string
 	Timeout uint32
+	// EnableContractUploader enables contract uploader (need for debug/testing purposed).
+	EnableContractUploader bool
 }
 
 // NewAPIRunner creates new api config

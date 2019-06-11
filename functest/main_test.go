@@ -268,6 +268,31 @@ func waitForNet() error {
 	return nil
 }
 
+func redefineCmdEnvVars(cmd *exec.Cmd, extra ...string) {
+	env := cmd.Env
+	if env == nil {
+		env = os.Environ()
+	}
+	// prefix to kv pair map: "VARNAME=" -> "VARNAME=VALUE"
+	substituted := map[string]string{}
+	for _, e := range extra {
+		prefix := e[0 : strings.Index(e, "=")+1]
+		substituted[prefix] = e
+	}
+
+	for i, pair := range env {
+		for k, val := range substituted {
+			if !strings.HasPrefix(pair, k) {
+				continue
+			}
+			env[i] = val
+			delete(substituted, k)
+			break
+		}
+	}
+	cmd.Env = env
+}
+
 func startNet() error {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -281,6 +306,7 @@ func startNet() error {
 	}
 
 	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-ngw")
+	redefineCmdEnvVars(cmd, "INSOLAR_APIRUNNER_ENABLECONTRACTUPLOADER=true")
 	stdout, _ = cmd.StdoutPipe()
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] could't set stdout: ")

@@ -105,7 +105,7 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: cert")
 	}
 
-	err = rpcServer.RegisterService(NewContractService(ar), "contract")
+	err = rpcServer.RegisterService(NewContractService(ar, ar.cfg.EnableContractUploader), "contract")
 	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: contract")
 	}
