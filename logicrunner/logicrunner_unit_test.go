@@ -1213,12 +1213,8 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 				suite.am.GetCodeMock.Return(cd, nil)
 
-				suite.am.RegisterResultFunc = func(
-					ctx context.Context, r1 insolar.Reference, r2 insolar.Reference, mem []byte,
-				) (*insolar.ID, error) {
-					resId := testutils.RandomID()
-					return &resId, nil
-				}
+				resId := testutils.RandomID()
+				suite.am.RegisterResultMock.Return(&resId, nil)
 			}
 
 			wg := sync.WaitGroup{}
