@@ -1604,7 +1604,6 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 	es := NewExecutionState(s.ref)
 	es.LedgerQueueElement = &ExecutionQueueElement{}
 
-	//s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
@@ -1618,7 +1617,6 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecution
 	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = false
 
-	//s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
@@ -1652,7 +1650,6 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
 
-	//s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
@@ -1674,7 +1671,7 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(true, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
-	//s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
+
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
