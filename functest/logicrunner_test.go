@@ -513,72 +513,72 @@ func New(n int) (*Child, error) {
 	require.Equal(t, float64(45), resp.ExtractedReply)
 }
 
-// TODO return 400, expects 200
-//func TestErrorInterfaceError(t *testing.T) {
-//	var contractOneCode = `
-//package main
-//
-//import (
-//	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-//	two "github.com/insolar/insolar/application/proxy/error_interface_two"
-//)
-//
-//type One struct {
-//	foundation.BaseContract
-//}
-//
-//func (r *One) AnError() error {
-//	holder := two.New()
-//	friend, err := holder.AsChild(r.GetReference())
-//	if err != nil {
-//		return err
-//	}
-//
-//	return friend.AnError()
-//}
-//
-//func (r *One) NoError() error {
-//	holder := two.New()
-//	friend, err := holder.AsChild(r.GetReference())
-//	if err != nil {
-//		return err
-//	}
-//
-//	return friend.NoError()
-//}
-//`
-//
-//	var contractTwoCode = `
-//package main
-//
-//import (
-//	"errors"
-//
-//	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-//)
-//
-//type Two struct {
-//	foundation.BaseContract
-//}
-//func New() (*Two, error) {
-//	return &Two{}, nil
-//}
-//func (r *Two) AnError() error {
-//	return errors.New("an error")
-//}
-//func (r *Two) NoError() error {
-//	return nil
-//}
-//`
-//	uploadContractOnce(t, "error_interface_two", contractTwoCode)
-//	obj := callConstructor(t, uploadContractOnce(t, "error_interface_one", contractOneCode))
-//
-//	resp, err := callMethod(t, obj, "AnError")
-//	require.Equal(t, &foundation.Error{S: "an error"}, err)
-//
-//	resp, err = callMethod(t, obj, "NoError")
-//	require.Nil(t, resp)
-//}
+
+func TestErrorInterfaceError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	two "github.com/insolar/insolar/application/proxy/error_interface_two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) AnError() error {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+
+	return friend.AnError()
+}
+
+func (r *One) NoError() error {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+
+	return friend.NoError()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"errors"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() (*Two, error) {
+	return &Two{}, nil
+}
+func (r *Two) AnError() error {
+	return errors.New("an error")
+}
+func (r *Two) NoError() error {
+	return nil
+}
+`
+	uploadContractOnce(t, "error_interface_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "error_interface_one", contractOneCode))
+
+	resp := callMethod(t, obj, "AnError")
+	require.Equal(t, "an error", resp.ExtractedError)
+
+	resp = callMethod(t, obj, "NoError")
+	require.Nil(t, resp.Error)
+}
 
 func TestNilResultError(t *testing.T) {
 	var contractOneCode = `
@@ -683,36 +683,34 @@ func New() (*Two, error) {
 	//require.Contains(t, resp.Error.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil")
 }
 
-// TODO return 400, expects 200
-//func TestRecursiveCallError(t *testing.T) {
-//	var contractOneCode = `
-//package main
-//
-//import (
-//	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-//	recursive "github.com/insolar/insolar/application/proxy/recursive_call_one"
-//)
-//type One struct {
-//	foundation.BaseContract
-//}
-//
-//func New() (*One, error) {
-//	return &One{}, nil
-//}
-//
-//func (r *One) Recursive() (error) {
-//	remoteSelf := recursive.GetObject(r.GetReference())
-//	err := remoteSelf.Recursive()
-//	return err
-//}
-//
-//`
-//	// callConstructor returns 400
-//	obj := callConstructor(t, uploadContractOnce(t, "recursive_call_one", contractOneCode))
-//	_, err := callMethod(t, obj, "Recursive")
-//	require.NotEmpty(t, err)
-//	require.Contains(t, err.Error(), "loop detected")
-//}
+
+func TestRecursiveCallError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	recursive "github.com/insolar/insolar/application/proxy/recursive_call_one"
+)
+type One struct {
+	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
+}
+
+func (r *One) Recursive() (error) {
+	remoteSelf := recursive.GetObject(r.GetReference())
+	err := remoteSelf.Recursive()
+	return err
+}
+
+`
+	obj := callConstructor(t, uploadContractOnce(t, "recursive_call_one", contractOneCode))
+	resp := callMethod(t, obj, "Recursive")
+	require.Contains(t, resp.Error, "loop detected")
+}
 
 func TestNewAllowanceNotFromWalletError(t *testing.T) {
 	var contractOneCode = `
@@ -1049,6 +1047,7 @@ func (r *Three) DoNothing() (error) {
 	require.Empty(t, resp.Error)
 	require.Equal(t, float64(42), resp.ExtractedReply)
 
+	// TODO this works only with resp.ExtractedError hack
 	resp = callMethod(t, obj, "ExternalImmutableCallMakesExternalCall")
 	require.Contains(
 		t,
