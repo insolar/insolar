@@ -65,7 +65,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, replyTo, msg)
+		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.message.Sender}, replyTo, msg)
 		return nil
 	}
 	if err != nil {
@@ -84,7 +84,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, replyTo, msg)
+		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.message.Sender}, replyTo, msg)
 		return nil
 	}
 
@@ -107,7 +107,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
 	}
-	go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, replyTo, msg)
+	go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.message.Sender}, replyTo, msg)
 
 	return nil
 }

@@ -107,9 +107,16 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	if err != nil {
 		return errors.Wrap(err, "can't deserialize meta payload")
 	}
+
+	metaMsg := payload.Meta{}
+	err = metaMsg.Unmarshal(msg.Payload)
+	if err != nil {
+		panic("unreachable code")
+	}
+
 	switch pl.(type) {
 	case *payload.PassState:
-		p := proc.NewPassState(msg)
+		p := proc.NewPassState(metaMsg)
 		h.dep.PassState(p)
 		err = p.Proceed(ctx)
 	case *payload.GetCode:
