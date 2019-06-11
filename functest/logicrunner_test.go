@@ -21,6 +21,7 @@ package functest
 import (
 	"fmt"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/magiconair/properties/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -205,11 +206,19 @@ func (r *Two) GetPayloadString() (string, error) {
 		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), resp.ExtractedReply)
 	}
 
-	// TODO return 400, expects 200
-	//resp, err = callMethod(t, objectRef, "TestPayload")
-	//require.Empty(t, err)
-	//res := resp.(map[interface{}]interface{})["Str"]
-	//assert.Equal(t,"HiHere", res)
+	type Payload struct {
+		Int int
+		Str string
+	}
+
+	expected := []interface{}{Payload{Int:10, Str:"HiHere"}, nil}
+
+	resp = callMethod(t, objectRef, "TestPayload")
+	require.Equal(
+		t,
+		goplugintestutils.CBORMarshal(t, expected),
+		resp.Reply.Result,
+	)
 }
 
 func TestInjectingDelegateError(t *testing.T) {
@@ -512,7 +521,6 @@ func New(n int) (*Child, error) {
 	require.Empty(t, resp.Error, "sum real children")
 	require.Equal(t, float64(45), resp.ExtractedReply)
 }
-
 
 func TestErrorInterfaceError(t *testing.T) {
 	var contractOneCode = `
