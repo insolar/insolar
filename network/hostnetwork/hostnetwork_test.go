@@ -306,6 +306,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 
 func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	ctx := context.Background()
+	ctx = inslogger.WithLoggerLevel(ctx, insolar.DebugLevel)
 	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
@@ -344,6 +345,7 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 
 func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	ctx := context.Background()
+	ctx = inslogger.WithLoggerLevel(ctx, insolar.DebugLevel)
 	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
