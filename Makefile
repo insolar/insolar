@@ -208,6 +208,7 @@ docker-insgorund:
 .PHONY: docker
 docker: docker-insolard docker-genesis docker-insgorund
 
+GOPATH=`go env GOPATH`
 generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
