@@ -416,12 +416,12 @@ func setup() error {
 }
 
 func pulseWatcherPath() (string, string, error) {
-	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
+	p, err := build.Default.Import(insolar.RootModule, "", build.FindOnly)
 	if err != nil {
-		return "", "", errors.Wrap(err, "Couldn't receive path to github.com/insolar/insolar")
+		return "", "", errors.Wrapf(err, "Couldn't receive path to %v", insolar.RootModule)
 	}
 	pulseWatcher := filepath.Join(p.Dir, "bin", "pulsewatcher")
-	config := filepath.Join(p.Dir, ".artifacts", "launchnet", "pulsewatcher.yaml")
+	config := launchnetPath("pulsewatcher.yaml")
 	return pulseWatcher, config, nil
 }
 
