@@ -637,11 +637,6 @@ func (r *Two) Hello() (*string, error) {
 	require.Nil(t, resp.ExtractedReply)
 }
 
-// TODO понять нафиг этот тест
-func TestRootDomainContractError(t *testing.T) {
-
-}
-
 func TestConstructorReturnNilError(t *testing.T) {
 	var contractOneCode = `
 package main
