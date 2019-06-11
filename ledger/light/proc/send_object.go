@@ -73,12 +73,18 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return fmt.Errorf("invalid object record %#v", virtual)
 		}
 
+		//TODO remove
+		temp := payload.Meta{}
+		err := temp.Unmarshal(p.message.Payload)
+		if err != nil {
+			panic("8888888888888")
+		}
 		if state.ID() == record.StateDeactivation {
 			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
-			go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, p.message, msg)
+			go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
 			return nil
 		}
 
@@ -101,7 +107,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
 		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, p.message, msg)
+		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
 
 		return nil
 	}
@@ -158,7 +164,13 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, p.message, msg)
+		//TODO remove
+		temp := payload.Meta{}
+		err = temp.Unmarshal(p.message.Payload)
+		if err != nil {
+			panic("8888888888888")
+		}
+		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
 		logger.Info("sending index")
 	}
 

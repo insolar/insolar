@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -167,6 +168,10 @@ func (b *Bus) SendTarget(
 		return nil, nil
 	}
 
+	hashID := hashOrigin(b.pcs.IntegrityHasher(), msg.Payload)
+	cID := corrID(hashID)
+	_ = cID
+
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
@@ -216,9 +221,9 @@ func (b *Bus) Reply(ctx context.Context, originMetaZZZ payload.Meta, origin, rep
 		return
 	}
 
-	hashID := HashOrigin(b.pcs.IntegrityHasher(), originMeta.Payload)
+	hashID := hashOrigin(b.pcs.IntegrityHasher(), originMeta.Payload)
 
-	_, err = b.wrapMeta(reply, originMeta.Sender, b.coordinator.Me(), hashID[:])
+	_, err = b.wrapMeta(reply, originMetaZZZ.Sender, b.coordinator.Me(), hashID)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
 		return
@@ -292,13 +297,14 @@ func (b *Bus) wrapMeta(
 	return wrapper, nil
 }
 
-func HashOrigin(h hash.Hash, buf []byte) [32]byte {
+func hashOrigin(h hash.Hash, buf []byte) []byte {
 	_, err := h.Write(buf)
 	if err != nil {
 		panic(err)
 	}
-	slice := h.Sum(nil)
-	var res [32]byte
-	copy(res[:], slice)
-	return res
+	return h.Sum(nil)
+}
+
+func corrID(hash []byte) string {
+	return base58.Encode(hash[:])
 }

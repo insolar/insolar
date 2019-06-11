@@ -117,7 +117,13 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
-	go p.dep.sender.Reply(ctx, payload.Meta{Sender: p.dep.coordinator.Me()}, p.message, msg)
+	//TODO remove
+	temp := payload.Meta{}
+	err = temp.Unmarshal(p.message.Payload)
+	if err != nil {
+		panic("8888888888888")
+	}
+	go p.dep.sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
 
 	return nil
 }

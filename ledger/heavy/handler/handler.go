@@ -171,7 +171,13 @@ func (h *Handler) replyError(ctx context.Context, replyTo *watermillMsg.Message,
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
-	go h.Sender.Reply(ctx, payload.Meta{Sender: h.JetCoordinator.Me()}, replyTo, errMsg)
+	//TODO remove
+	temp := payload.Meta{}
+	err = temp.Unmarshal(replyTo.Payload)
+	if err != nil {
+		panic("8888888888888")
+	}
+	go h.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, replyTo, errMsg)
 }
 
 func (h *Handler) Init(ctx context.Context) error {

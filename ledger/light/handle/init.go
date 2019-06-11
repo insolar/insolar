@@ -211,5 +211,11 @@ func (s *Init) replyError(ctx context.Context, replyTo *wmessage.Message, err er
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
-	go s.sender.Reply(ctx, payload.Meta{}, replyTo, errMsg) //TODO Add Sender to Meta
+	//TODO remove
+	temp := payload.Meta{}
+	err = temp.Unmarshal(replyTo.Payload)
+	if err != nil {
+		panic("8888888888888")
+	}
+	go s.sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, replyTo, errMsg) //TODO Add Sender to Meta
 }
