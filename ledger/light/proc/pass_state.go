@@ -33,7 +33,7 @@ import (
 )
 
 type PassState struct {
-	message *message.Message
+	metaMsg payload.Meta
 
 	Dep struct {
 		Sender      bus.Sender
@@ -43,14 +43,14 @@ type PassState struct {
 	}
 }
 
-func NewPassState(msg *message.Message) *PassState {
+func NewPassState(meta payload.Meta) *PassState {
 	return &PassState{
-		message: msg,
+		metaMsg: meta,
 	}
 }
 
 func (p *PassState) Proceed(ctx context.Context) error {
-	pl, err := payload.UnmarshalFromMeta(p.message.Payload)
+	pl, err := payload.UnmarshalFromMeta(p.metaMsg.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode payload")
 	}

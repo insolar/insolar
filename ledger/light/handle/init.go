@@ -70,12 +70,19 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal payload type")
 		}
+
+		metaMsg := payload.Meta{}
+		err = metaMsg.Unmarshal(s.message.WatermillMsg.Payload)
+		if err != nil {
+			panic("unreachable code")
+		}
+
 		switch payloadType {
 		case payload.TypeGetObject:
 			h := NewGetObject(s.dep, s.message.WatermillMsg, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypePassState:
-			h := NewPassState(s.dep, s.message.WatermillMsg)
+			h := NewPassState(s.dep, metaMsg)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeGetCode:
 			h := NewGetCode(s.dep, s.message.WatermillMsg, false)
