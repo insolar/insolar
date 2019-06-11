@@ -160,7 +160,7 @@ type hostSuite struct {
 	resolver *MockResolver
 }
 
-func newHostSuite(t *testing.T) *hostSuite {
+func newHostSuite(ctx context.Context, t *testing.T) *hostSuite {
 	resolver := newMockResolver()
 	id1 := ID1 + DOMAIN
 	id2 := ID2 + DOMAIN
@@ -176,8 +176,6 @@ func newHostSuite(t *testing.T) *hostSuite {
 	n2, err := NewHostNetwork(id2)
 	require.NoError(t, err)
 	cm2.Inject(f2, n2, resolver)
-
-	ctx := context.Background()
 
 	err = n1.Init(ctx)
 	require.NoError(t, err)
@@ -210,7 +208,8 @@ func (s *hostSuite) Stop() {
 }
 
 func TestNewHostNetwork(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	count := 10
@@ -276,7 +275,8 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket2(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	wg := sync.WaitGroup{}
@@ -305,7 +305,8 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket3(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
@@ -342,7 +343,8 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
@@ -370,7 +372,8 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 }
 
 func TestHostNetwork_WrongHandler(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	wg := sync.WaitGroup{}
@@ -396,7 +399,8 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 }
 
 func TestStartStopSend(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	wg := sync.WaitGroup{}
