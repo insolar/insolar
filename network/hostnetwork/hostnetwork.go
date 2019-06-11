@@ -175,7 +175,7 @@ func (hn *hostNetwork) PublicAddress() string {
 }
 
 func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.Packet) {
-	ctx, logger := inslogger.WithTraceField(ctx, p.TraceID)
+	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Got %s request from host %s; RequestID = %d", p.GetType(), p.Sender, p.RequestID)
 	handler, exist := hn.handlers[p.GetType()]
 	if !exist {
