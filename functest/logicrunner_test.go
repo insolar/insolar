@@ -709,7 +709,7 @@ func (r *One) Recursive() (error) {
 `
 	obj := callConstructor(t, uploadContractOnce(t, "recursive_call_one", contractOneCode))
 	resp := callMethod(t, obj, "Recursive")
-	require.Contains(t, resp.Error, "loop detected")
+	require.Contains(t, resp.ExtractedError, "loop detected")
 }
 
 func TestNewAllowanceNotFromWalletError(t *testing.T) {
