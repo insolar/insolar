@@ -260,6 +260,7 @@ func templatePathConstruct(tplType string) string {
 	return path.Join(TemplateDirectory, tplType+".go.tpl")
 }
 
+// AALEKSEEV: TODO change here! data.{Methods|Functions}[XXX].SagaInfo
 func formatAndWrite(out io.Writer, templateName string, data map[string]interface{}) error {
 	templatePath := templatePathConstruct(templateName)
 	tmpl, err := openTemplate(templatePath)
