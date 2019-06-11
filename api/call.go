@@ -165,6 +165,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		}()
 
 		resp.Result.TraceID = traceID
+		resp.JsonRpc = request.JsonRpc
+		resp.Id = request.Id
 
 		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
 
