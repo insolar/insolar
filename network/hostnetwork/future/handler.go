@@ -79,15 +79,16 @@ func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
 		"type":       response.Type,
 		"request_id": response.RequestID,
 	})
-	logger.Debug("[ processResponse ] Processing response")
+	logger.Debugf("[ processResponse ] Processing %s response from host %s; RequestID: %d",
+		response.GetType(), response.Sender, response.RequestID)
 
 	future := ph.futureManager.Get(response)
 	if future != nil {
 		if shouldProcessPacket(future, response) {
-			logger.Debug("[ processResponse ] Processing future")
+			logger.Debugf("[ processResponse ] Processing future RequestID = %d", future.ID())
 			future.SetResponse(response)
 		} else {
-			logger.Debug("[ processResponse ] Canceling future")
+			logger.Debugf("[ processResponse ] Canceling future RequestID = %d", future.ID())
 			future.Cancel()
 		}
 	}
