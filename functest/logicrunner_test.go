@@ -20,11 +20,12 @@ package functest
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/magiconair/properties/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestSingleContractError(t *testing.T) {
@@ -211,7 +212,7 @@ func (r *Two) GetPayloadString() (string, error) {
 		Str string
 	}
 
-	expected := []interface{}{Payload{Int:10, Str:"HiHere"}, nil}
+	expected := []interface{}{Payload{Int: 10, Str: "HiHere"}, nil}
 
 	resp = callMethod(t, objectRef, "TestPayload")
 	require.Equal(
@@ -683,13 +684,15 @@ func New() (*Two, error) {
 	uploadContractOnce(t, "constructor_return_nil_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_nil_one", contractOneCode))
 
-	// TODO fix
 	resp := callMethod(t, obj, "Hello")
-	fmt.Println(">>> resp ", resp)
-	//require.NotEmpty(t, resp.Error)
-	//require.Contains(t, resp.Error.Error(), "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil")
-}
+	require.NotEmpty(t, resp.Reply)
 
+	require.Contains(
+		t,
+		string(resp.Reply.Result),
+		"[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil",
+	)
+}
 
 func TestRecursiveCallError(t *testing.T) {
 	var contractOneCode = `

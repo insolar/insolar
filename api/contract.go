@@ -211,6 +211,8 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 		return errors.Wrap(err, "Can't extract response")
 	}
 
+	// TODO need to understand why sometimes errors goes to reply
+	// see tests TestConstructorReturnNil, TestContractCallingContract
 	switch extractedReply.(type) {
 	case map[interface{}]interface{}:
 		replyMap := extractedReply.(map[interface{}]interface{})
