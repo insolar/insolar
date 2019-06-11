@@ -120,11 +120,6 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		return errors.Wrap(err, "can't get protoRef")
 	}
 
-	domain, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
-	if err != nil {
-		return errors.Wrap(err, "can't get domain reference")
-	}
-
 	base := testutils.RandomRef()
 
 	contractID, err := s.runner.ArtifactManager.RegisterRequest(
@@ -147,7 +142,6 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 
 	_, err = s.runner.ArtifactManager.ActivateObject(
 		ctx,
-		*domain,
 		objectRef,
 		insolar.GenesisRecord.Ref(),
 		*protoRef,

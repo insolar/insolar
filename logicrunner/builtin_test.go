@@ -138,7 +138,7 @@ func TestBareHelloworld(t *testing.T) {
 	reqref.SetRecord(*contract)
 
 	_, err = am.ActivateObject(
-		ctx, *domain, reqref, insolar.GenesisRecord.Ref(), *protoRef, false,
+		ctx, reqref, insolar.GenesisRecord.Ref(), *protoRef, false,
 		goplugintestutils.CBORMarshal(t, hw),
 	)
 	assert.NoError(t, err)

@@ -73,7 +73,7 @@ type DatagramTransport interface {
 
 // StreamHandler interface provides callback method to process data stream
 type StreamHandler interface {
-	HandleStream(address string, stream io.ReadWriteCloser)
+	HandleStream(ctx context.Context, address string, stream io.ReadWriteCloser)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/transport.StreamTransport -o ../../testutils/network -s _mock.go

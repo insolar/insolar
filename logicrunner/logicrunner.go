@@ -546,20 +546,23 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	am := lr.ArtifactManager
 	if current.Deactivate {
 		_, err := am.DeactivateObject(
-			ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor,
+			ctx, *current.RequestRef, es.ObjectDescriptor, result,
 		)
 		if err != nil {
 			return nil, es.WrapError(current, err, "couldn't deactivate object")
 		}
 	} else if !bytes.Equal(es.ObjectDescriptor.Memory(), newData) {
-		_, err := am.UpdateObject(ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor, newData)
+		_, err := am.UpdateObject(
+			ctx, *current.RequestRef, es.ObjectDescriptor, newData, result,
+		)
 		if err != nil {
 			return nil, es.WrapError(current, err, "couldn't update object")
 		}
-	}
-	_, err = am.RegisterResult(ctx, *request.Object, *current.RequestRef, result)
-	if err != nil {
-		return nil, es.WrapError(current, err, "couldn't save results")
+	} else {
+		_, err = am.RegisterResult(ctx, *request.Object, *current.RequestRef, result)
+		if err != nil {
+			return nil, es.WrapError(current, err, "couldn't save results")
+		}
 	}
 
 	return &reply.CallMethod{Result: result}, nil
@@ -628,14 +631,10 @@ func (lr *LogicRunner) executeConstructorCall(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate:
 		_, err = lr.ArtifactManager.ActivateObject(
 			ctx,
-			Ref{}, *current.RequestRef, *request.Base, *request.Prototype, request.CallType == record.CTSaveAsDelegate, newData,
+			*current.RequestRef, *request.Base, *request.Prototype, request.CallType == record.CTSaveAsDelegate, newData,
 		)
 		if err != nil {
 			return nil, es.WrapError(current, err, "couldn't activate object")
-		}
-		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.RequestRef, *current.RequestRef, nil)
-		if err != nil {
-			return nil, es.WrapError(current, err, "couldn't save results")
 		}
 		return &reply.CallConstructor{Object: current.RequestRef}, err
 

@@ -66,6 +66,9 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 	jet := proc.NewCheckJet(recID, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
+		if err == proc.ErrNotExecutor && passIfNotExecutor {
+			return nil
+		}
 		return err
 	}
 	inslogger.FromContext(ctx).Debug("calculated jet for set code: %s", jet.Result.Jet.DebugString())

@@ -171,7 +171,7 @@ func (f *fakeStreamTransport) Dial(ctx context.Context, address string) (io.Read
 	}
 
 	conn1, conn2 := net.Pipe()
-	go h.HandleStream(f.address, conn2)
+	go h.HandleStream(ctx, f.address, conn2)
 
 	return conn1, nil
 }

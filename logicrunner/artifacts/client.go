@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -554,39 +555,6 @@ func (m *client) GetChildren(
 	return iter, err
 }
 
-// DeclareType creates new type record in storage.
-//
-// Type is a contract interface. It contains one method signature.
-func (m *client) DeclareType(
-	ctx context.Context, domain, request insolar.Reference, typeDec []byte,
-) (*insolar.ID, error) {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeclareType")
-	instrumenter := instrument(ctx, "DeclareType").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	typeRec := record.Type{
-		Domain:          domain,
-		Request:         request,
-		TypeDeclaration: typeDec,
-	}
-	virtRec := record.Wrap(typeRec)
-
-	recid, err := m.setRecord(
-		ctx,
-		virtRec,
-		request,
-	)
-
-	return recid, err
-}
-
 // DeployCode creates new code record in storage.
 //
 // CodeRef records are used to activate prototype or as migration code for an object.
@@ -672,7 +640,7 @@ func (m *client) DeployCode(
 // Request reference will be this object's identifier and referred as "object head".
 func (m *client) ActivatePrototype(
 	ctx context.Context,
-	domain, object, parent, code insolar.Reference,
+	object, parent, code insolar.Reference,
 	memory []byte,
 ) (ObjectDescriptor, error) {
 	var err error
@@ -685,7 +653,7 @@ func (m *client) ActivatePrototype(
 		span.End()
 		instrumenter.end()
 	}()
-	desc, err := m.activateObject(ctx, domain, object, code, true, parent, false, memory)
+	desc, err := m.activateObject(ctx, object, code, true, parent, false, memory)
 	return desc, err
 }
 
@@ -695,7 +663,7 @@ func (m *client) ActivatePrototype(
 // Request reference will be this object's identifier and referred as "object head".
 func (m *client) ActivateObject(
 	ctx context.Context,
-	domain, object, parent, prototype insolar.Reference,
+	object, parent, prototype insolar.Reference,
 	asDelegate bool,
 	memory []byte,
 ) (ObjectDescriptor, error) {
@@ -709,7 +677,7 @@ func (m *client) ActivateObject(
 		span.End()
 		instrumenter.end()
 	}()
-	desc, err := m.activateObject(ctx, domain, object, prototype, false, parent, asDelegate, memory)
+	desc, err := m.activateObject(ctx, object, prototype, false, parent, asDelegate, memory)
 	return desc, err
 }
 
@@ -718,7 +686,7 @@ func (m *client) ActivateObject(
 //
 // Deactivated object cannot be changed.
 func (m *client) DeactivateObject(
-	ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor,
+	ctx context.Context, request insolar.Reference, obj ObjectDescriptor, result []byte,
 ) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
@@ -732,15 +700,19 @@ func (m *client) DeactivateObject(
 	}()
 
 	deactivate := record.Deactivate{
-		Domain:    domain,
 		Request:   request,
 		PrevState: *obj.StateID(),
 	}
-	virtRec := record.Wrap(deactivate)
+	resultRecord := record.Result{
+		Object:  *obj.HeadRef().Record(),
+		Request: request,
+		Payload: result,
+	}
 
 	desc, err := m.sendUpdateObject(
 		ctx,
-		virtRec,
+		record.Wrap(deactivate),
+		record.Wrap(resultRecord),
 		*obj.HeadRef(),
 		nil,
 	)
@@ -750,45 +722,16 @@ func (m *client) DeactivateObject(
 	return &desc.State, nil
 }
 
-// UpdatePrototype creates amend object record in storage. Provided reference should be a reference to the head of the
-// prototype. Provided memory well be the new object memory.
-//
-// Returned reference will be the latest object state (exact) reference.
-func (m *client) UpdatePrototype(
-	ctx context.Context,
-	domain, request insolar.Reference,
-	object ObjectDescriptor,
-	memory []byte,
-	code *insolar.Reference,
-) (ObjectDescriptor, error) {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdatePrototype")
-	instrumenter := instrument(ctx, "UpdatePrototype").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	if !object.IsPrototype() {
-		err = errors.New("object is not a prototype")
-		return nil, err
-	}
-	desc, err := m.updateObject(ctx, domain, request, object, code, memory)
-	return desc, err
-}
-
 // UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 // object. Provided memory well be the new object memory.
 //
 // Returned reference will be the latest object state (exact) reference.
 func (m *client) UpdateObject(
 	ctx context.Context,
-	domain, request insolar.Reference,
+	request insolar.Reference,
 	object ObjectDescriptor,
 	memory []byte,
+	result []byte,
 ) (ObjectDescriptor, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdateObject")
@@ -805,7 +748,7 @@ func (m *client) UpdateObject(
 		err = errors.New("object is not an instance")
 		return nil, err
 	}
-	desc, err := m.updateObject(ctx, domain, request, object, nil, memory)
+	desc, err := m.updateObject(ctx, request, object, memory, result)
 	return desc, err
 }
 
@@ -889,7 +832,6 @@ func (m *client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) 
 
 func (m *client) activateObject(
 	ctx context.Context,
-	domain insolar.Reference,
 	obj insolar.Reference,
 	prototype insolar.Reference,
 	isPrototype bool,
@@ -907,7 +849,6 @@ func (m *client) activateObject(
 	}
 
 	activate := record.Activate{
-		Domain:      domain,
 		Request:     obj,
 		Memory:      *object.CalculateIDForBlob(m.PCS, currentPN, memory),
 		Image:       prototype,
@@ -915,11 +856,16 @@ func (m *client) activateObject(
 		Parent:      parent,
 		IsDelegate:  asDelegate,
 	}
-	virtRec := record.Wrap(activate)
+
+	result := record.Result{
+		Object:  *obj.Record(),
+		Request: obj,
+	}
 
 	o, err := m.sendUpdateObject(
 		ctx,
-		virtRec,
+		record.Wrap(activate),
+		record.Wrap(result),
 		obj,
 		memory,
 	)
@@ -962,21 +908,17 @@ func (m *client) activateObject(
 
 func (m *client) updateObject(
 	ctx context.Context,
-	domain, request insolar.Reference,
+	request insolar.Reference,
 	obj ObjectDescriptor,
-	code *insolar.Reference,
 	memory []byte,
+	result []byte,
 ) (ObjectDescriptor, error) {
 	var (
 		image *insolar.Reference
 		err   error
 	)
 	if obj.IsPrototype() {
-		if code != nil {
-			image = code
-		} else {
-			image, err = obj.Code()
-		}
+		image, err = obj.Code()
 	} else {
 		image, err = obj.Prototype()
 	}
@@ -985,17 +927,22 @@ func (m *client) updateObject(
 	}
 
 	amend := record.Amend{
-		Domain:      domain,
 		Request:     request,
 		Image:       *image,
 		IsPrototype: obj.IsPrototype(),
 		PrevState:   *obj.StateID(),
 	}
-	virtRec := record.Wrap(amend)
+
+	resultRecord := record.Result{
+		Object:  *obj.HeadRef().Record(),
+		Request: request,
+		Payload: result,
+	}
 
 	o, err := m.sendUpdateObject(
 		ctx,
-		virtRec,
+		record.Wrap(amend),
+		record.Wrap(resultRecord),
 		*obj.HeadRef(),
 		memory,
 	)
@@ -1079,11 +1026,16 @@ func (m *client) setBlob(
 
 func (m *client) sendUpdateObject(
 	ctx context.Context,
-	rec record.Virtual,
+	objRec record.Virtual,
+	resRec record.Virtual,
 	obj insolar.Reference,
 	memory []byte,
 ) (*reply.Object, error) {
-	data, err := rec.Marshal()
+	objRecData, err := objRec.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "setRecord: can't serialize record")
+	}
+	resRecData, err := resRec.Marshal()
 	if err != nil {
 		return nil, errors.Wrap(err, "setRecord: can't serialize record")
 	}
@@ -1096,9 +1048,10 @@ func (m *client) sendUpdateObject(
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
-			Record: data,
-			Object: obj,
-			Memory: memory,
+			Record:       objRecData,
+			ResultRecord: resRecData,
+			Object:       obj,
+			Memory:       memory,
 		}, nil)
 
 	if err != nil {
