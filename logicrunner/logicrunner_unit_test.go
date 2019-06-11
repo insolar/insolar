@@ -184,23 +184,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name:                           "Happy path",
+			name: "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "ClarifyPendingState failed",
+			name: "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name:                           "StartQueueProcessorIfNeeded failed",
+			name: "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "Both procedures fail",
+			name: "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -1084,7 +1084,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			name: "pulse change in HasPendingRequests",
 			when: whenHasPendingRequest,
 			messagesExpected: []insolar.MessageType{
-				insolar.TypeExecutorResults, insolar.TypeAdditionalCallFromPreviousExecutor,
+				insolar.TypeAdditionalCallFromPreviousExecutor, insolar.TypeExecutorResults,
 			},
 			pendingInExecutorResults:  message.PendingUnknown,
 			queueLenInExecutorResults: 1,
@@ -1158,6 +1158,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
 					if test.when == whenHasPendingRequest {
 						changePulse()
+
 						// We have to implicitly return ErrCancelled to make f.Procedure return ErrCancelled as well
 						// which will cause the correct code path to execute in logicrunner.HandleCall.
 						// Otherwise the test has a race condition - f.Procedure can be cancelled or return normally.
@@ -1227,7 +1228,11 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.mb.SendFunc = func(
 					ctx context.Context, msg insolar.Message, opts *insolar.MessageSendOptions,
 				) (insolar.Reply, error) {
-					require.Contains(t, test.messagesExpected, msg.Type())
+
+					if test.when == whenHasPendingRequest {
+						// in case of whenHasPendingRequest we wait for at least one message from messagesExpected appear
+						wg.Done()
+					}
 					wg.Done()
 
 					if msg.Type() == insolar.TypeExecutorResults {
@@ -1540,8 +1545,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1599,7 +1604,9 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 	es := NewExecutionState(s.ref)
 	es.LedgerQueueElement = &ExecutionQueueElement{}
 
-	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
+	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	err := proc.Proceed(s.ctx)
+	s.Require().NoError(err)
 
 	// we check that there is no unexpected calls to A.M., as we already have element
 	// from ledger another call to the ledger will return the same request, so we make
@@ -1610,7 +1617,9 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecution
 	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = false
 
-	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
+	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	err := proc.Proceed(s.ctx)
+	s.Require().NoError(err)
 	s.Require().Nil(es.LedgerQueueElement)
 }
 
@@ -1621,8 +1630,9 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() 
 	am := artifacts.NewClientMock(s.mc)
 	am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 	s.lr.ArtifactManager = am
-	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
-	s.Equal(false, es.LedgerHasMoreRequests)
+	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	err := proc.Proceed(s.ctx)
+	s.Require().NoError(err)
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
@@ -1640,7 +1650,9 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
 
-	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
+	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	err := proc.Proceed(s.ctx)
+	s.Require().NoError(err)
 	s.Require().Nil(es.LedgerQueueElement)
 }
 
@@ -1659,7 +1671,10 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(true, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
-	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
+
+	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	err := proc.Proceed(s.ctx)
+	s.Require().NoError(err)
 
 	s.Require().Equal(true, es.LedgerHasMoreRequests)
 	s.Require().Equal(parcel, es.LedgerQueueElement.parcel)

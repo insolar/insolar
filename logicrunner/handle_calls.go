@@ -38,6 +38,52 @@ type HandleCall struct {
 	Message bus.Message
 }
 
+func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState, request *Ref, parcel insolar.Parcel) {
+	// If the flow has canceled during ClarifyPendingState there are two possibilities.
+	// 1. It's possible that we started to execute ClarifyPendingState, the pulse has
+	// changed and the execution queue was sent to the next executor in OnPulse method.
+	// This means that the next executor already has the last queue element, it's OK.
+	// 2. It's also possible that the pulse has changed after RegisterRequest but
+	// before adding an item to the execution queue. In this case the queue was sent to the
+	// next executor without the last item. We could just return ErrCanceled to make the
+	// caller to resend the request. However this will cause a slow request deduplication
+	// process on the LME side (it will be caused anyway by another modifying request if
+	// the object is used a lot, but many requests are read-only and don't cause deduplication).
+	// As an optimization we decided to send a special message type to the next executor.
+	// It's possible that while we send the message the pulse will change once again and
+	// the receiver will be not an executor of the object anymore. However in this case
+	// MessageBus will automatically resend the message to the right VE.
+
+	additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
+		ObjectReference: es.Ref,
+		Parcel:          parcel,
+		Request:         request,
+	}
+
+	es.Lock()
+	// We want to remove element we have just added to es.Queue to eliminate doubling
+	addedRequestIdx := -1
+	for i := len(es.Queue) - 1; i >= 0; i-- {
+		if es.Queue[i].request.Equal(*request) {
+			addedRequestIdx = i
+			break
+		}
+	}
+
+	// it might be already collected in OnPulse, that is why it already might not be in es.Queue
+	if addedRequestIdx != -1 {
+		es.Queue = append(es.Queue[:addedRequestIdx], es.Queue[addedRequestIdx+1:]...)
+		// we must unlock it before send to prevent deadlock
+		es.Unlock()
+		_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
+		}
+	} else {
+		es.Unlock()
+	}
+}
+
 func (h *HandleCall) handleActual(
 	ctx context.Context,
 	parcel insolar.Parcel,
@@ -111,31 +157,9 @@ func (h *HandleCall) handleActual(
 
 	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
 		if err == flow.ErrCancelled {
-			// If the flow has canceled during ClarifyPendingState there are two possibilities.
-			// 1. It's possible that we started to execute ClarifyPendingState, the pulse has
-			// changed and the execution queue was sent to the next executor in OnPulse method.
-			// This means that the next executor already has the last queue element, it's OK.
-			// 2. It's also possible that the pulse has changed after RegisterRequest but
-			// before adding an item to the execution queue. In this case the queue was sent to the
-			// next executor without the last item. We could just return ErrCanceled to make the
-			// caller to resend the request. However this will cause a slow request deduplication
-			// process on the LME side (it will be caused anyway by another modifying request if
-			// the object is used a lot, but many requests are read-only and don't cause deduplication).
-			// As an optimization we decided to send a special message type to the next executor.
-			// It's possible that while we send the message the pulse will change once again and
-			// the receiver will be not an executor of the object anymore. However in this case
-			// MessageBus will automatically resend the message to the right VE.
-
-			additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
-				ObjectReference: ref,
-				Parcel:          parcel,
-				Request:         request,
-			}
-
-			_, err = lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
-			if err != nil {
-				inslogger.FromContext(ctx).Error("[ HandleCall.handleActual ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
-			}
+			h.sendToNextExecutor(ctx, es, request, parcel)
+		} else {
+			inslogger.FromContext(ctx).Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
 		}
 		// and return RegisterRequest as usual
 	} else {
