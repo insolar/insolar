@@ -669,7 +669,7 @@ func (s *PreprocessorSuite) TestExtractSagaInfo() {
 	res = extractSagaInfo("//ins:saga(Ololo,Trololo) ", info)
 	s.Require().True(res)
 	s.Require().True(info.IsSaga)
-	s.Require().Equal(info.AcceptMethodName, "Ololo")
+	s.Require().Equal(info.CanAcceptMethodName, "Ololo")
 	s.Require().Equal(info.RollbackMethodName, "Trololo")
 }
 

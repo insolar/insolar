@@ -124,6 +124,8 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		}
 	}
 
+	// AALEKSEEV TODO add some sort of check here - saga methods
+	// AALEKSEEV TODO add GET_SAGAS_INFO method, use it in insolard
 	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
 	if err != nil {
 		return errors.Wrapf(
