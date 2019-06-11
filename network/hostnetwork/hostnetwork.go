@@ -174,9 +174,9 @@ func (hn *hostNetwork) PublicAddress() string {
 	return hn.getOrigin().Address.String()
 }
 
-func (hn *hostNetwork) handleRequest(p *packet.Packet) {
-	ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
-	logger.Debugf("Got %s request from host %s; RequestID: %d", p.GetType(), p.Sender, p.RequestID)
+func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.Packet) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("Got %s request from host %s; RequestID = %d", p.GetType(), p.Sender, p.RequestID)
 	handler, exist := hn.handlers[p.GetType()]
 	if !exist {
 		logger.Errorf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
@@ -213,7 +213,7 @@ func (hn *hostNetwork) SendRequestToHost(ctx context.Context, packetType types.P
 
 	p := hn.buildRequest(ctx, packetType, requestData, receiver)
 
-	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.Type, p.Receiver, p.RequestID)
+	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.GetType(), p.Receiver, p.RequestID)
 
 	f := hn.futureManager.Create(p)
 	err := SendPacket(ctx, hn.pool, p)

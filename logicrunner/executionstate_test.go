@@ -30,7 +30,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	list := NewCurrentExecutionList()
-	list.Set(testutils.RandomRef(), &CurrentExecution{})
+	list.Set(testutils.RandomRef(), &Transcript{})
 
 	table := []struct {
 		name             string
@@ -44,7 +44,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		},
 		{
 			name:             "we have queue",
-			es:               ExecutionState{Queue: []ExecutionQueueElement{{ctx: ctx}}},
+			es:               ExecutionState{Queue: []Transcript{{Context: ctx}}},
 			numberOfMessages: 1,
 			checkES: func(t *testing.T, es *ExecutionState) {
 				require.Len(t, es.Queue, 0)
@@ -53,7 +53,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		{
 			name:             "we have queue, we are next",
 			meNext:           true,
-			es:               ExecutionState{Queue: []ExecutionQueueElement{{ctx: ctx}}},
+			es:               ExecutionState{Queue: []Transcript{{Context: ctx}}},
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
 				require.Len(t, es.Queue, 1)
@@ -71,7 +71,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		{
 			name:             "running something without queue, we're next",
 			es:               ExecutionState{CurrentList: list},
-			meNext: true,
+			meNext:           true,
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
 				require.Len(t, es.Queue, 0)
@@ -88,13 +88,12 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		{
 			name:             "in not confirmed pending and no queue, we're next",
 			es:               ExecutionState{pending: message.InPending},
-			meNext: true,
+			meNext:           true,
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
 				require.Equal(t, message.NotPending, es.pending)
 			},
 		},
-
 	}
 
 	for _, test := range table {
