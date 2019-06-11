@@ -35,6 +35,7 @@ type ExpirePending struct {
 	replyTo   chan<- bus.Reply
 	expiredPN insolar.PulseNumber
 	objID     insolar.ID
+	jetID     insolar.JetID
 
 	Dep struct {
 		Coordinator           jet.Coordinator
@@ -43,7 +44,7 @@ type ExpirePending struct {
 	}
 }
 
-func NewExpirePending(replyTo chan<- bus.Reply, expiredPN insolar.PulseNumber, objID insolar.ID) *ExpirePending {
+func NewExpirePending(replyTo chan<- bus.Reply, expiredPN insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID) *ExpirePending {
 	return &ExpirePending{
 		replyTo:   replyTo,
 		expiredPN: expiredPN,
@@ -85,7 +86,7 @@ func (p *ExpirePending) process(ctx context.Context) error {
 	}
 	switch rep := genericReact.(type) {
 	case *reply.OpenRequestsOnHeavy:
-		return p.Dep.FilamentStateModifier.ExpireRequests(ctx, flow.Pulse(ctx), p.objID, rep.Requests)
+		return p.Dep.FilamentStateModifier.ExpireRequests(ctx, flow.Pulse(ctx), p.objID, p.jetID, rep.Requests)
 	case *reply.Error:
 		logger.Errorf("expireRequests failed with: %v", rep.Error())
 		return rep.Error()

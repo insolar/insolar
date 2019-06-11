@@ -88,10 +88,10 @@ type IndexBucketAccessor interface {
 // PendingModifier provides methods for modifying pending requests
 type PendingModifier interface {
 	// SetRequest sets a request for a specific object
-	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error
+	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, reqID insolar.ID) error
 	// SetResult sets a result for a specific object. Also, if there is a not closed request for a provided result,
 	// the request will be closed
-	SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID, res record.Result) error
+	SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error
 	// SetFilament adds a slice of records to an object with provided id and pulse. It's assumed, that the method is
 	// called for setting records from another light, during the process of filling full chaing of pendings
 	SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.CompositeFilamentRecord) error
@@ -106,7 +106,7 @@ type PendingFilamentStateAccessor interface {
 type PendingFilamentStateModifier interface {
 	// RefreshState recalculates state of the chain, marks requests as closed and opened.
 	RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
-	ExpireRequests(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqs []insolar.ID) error
+	ExpireRequests(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, reqs []insolar.ID) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingAccessor -o ./ -s _mock.go

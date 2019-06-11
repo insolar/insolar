@@ -260,7 +260,7 @@ func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 }
 
 // SetRequest sets a request for a specific object
-func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
+func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, reqID insolar.ID) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
@@ -270,9 +270,9 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	defer b.Unlock()
 
 	pf := record.PendingFilament{
-		RecordID: reqID,
+		RecordID:       reqID,
+		PreviousRecord: b.objectMeta.Lifeline.PendingPointer,
 	}
-	pf.PreviousRecord = b.objectMeta.Lifeline.PendingPointer
 
 	if b.objectMeta.Lifeline.EarliestOpenRequest == nil {
 		b.objectMeta.Lifeline.EarliestOpenRequest = &pn
@@ -282,7 +282,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
 	metaID := *insolar.NewID(pn, hash)
 
-	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
+	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
 	if err != nil {
 		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
@@ -308,7 +308,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 
 // SetResult sets a result for a specific object. Also, if there is a not closed request for a provided result,
 // the request will be closed
-func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID, res record.Result) error {
+func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error {
 	logger := inslogger.FromContext(ctx)
 	b := i.bucket(pn, objID)
 	if b == nil {
@@ -328,7 +328,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
 	metaID := *insolar.NewID(pn, hash)
 
-	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
+	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
 	if err != nil {
 		panic(errors.Wrapf(err, "obj id - %v", metaID.DebugString()))
 		return errors.Wrap(err, "failed to create a meta-record about pending request")
@@ -410,6 +410,7 @@ func (i *InMemoryIndex) WaitForRefresh(ctx context.Context, pn insolar.PulseNumb
 
 // RefreshState recalculates state of the chain, marks requests as closed and opened.
 func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
+	println("RefreshState")
 	logger := inslogger.FromContext(ctx)
 	b := i.bucket(pn, objID)
 	if b == nil {
@@ -486,7 +487,7 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	return nil
 }
 
-func (i *InMemoryIndex) ExpireRequests(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqs []insolar.ID) error {
+func (i *InMemoryIndex) ExpireRequests(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, reqs []insolar.ID) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
@@ -511,7 +512,7 @@ func (i *InMemoryIndex) ExpireRequests(ctx context.Context, pn insolar.PulseNumb
 		)
 		hash := record.HashVirtual(i.pcs.ReferenceHasher(), expRes)
 		resID := insolar.NewID(pn, hash)
-		err := i.recordStorage.Set(ctx, *resID, record.Material{Virtual: &expRes})
+		err := i.recordStorage.Set(ctx, *resID, record.Material{Virtual: &expRes, JetID: jetID})
 		if err != nil {
 			return err
 		}
@@ -526,7 +527,7 @@ func (i *InMemoryIndex) ExpireRequests(ctx context.Context, pn insolar.PulseNumb
 		hash = record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
 		metaID := *insolar.NewID(pn, hash)
 
-		err = i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
+		err = i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
 		if err != nil {
 			panic(errors.Wrapf(err, "obj id - %v", metaID.DebugString()))
 			return errors.Wrap(err, "failed to create a meta-record about pending request")

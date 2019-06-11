@@ -334,7 +334,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		objID := gen.ID()
 		idx := NewInMemoryIndex(nil, platformpolicy.NewPlatformCryptographyScheme())
 
-		err := idx.SetRequest(ctx, pn, objID, insolar.ID{})
+		err := idx.SetRequest(ctx, pn, objID, insolar.JetID{}, insolar.ID{})
 
 		require.Error(t, err, ErrLifelineNotFound)
 	})
@@ -370,7 +370,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		idx.createBucket(ctx, pn, objID)
 		idx.buckets[pn][objID].objectMeta.Lifeline.PendingPointer = &prevPending
 
-		err := idx.SetRequest(ctx, pn, objID, *reqID)
+		err := idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqID)
 		require.NoError(t, err)
 
 		buck := idx.buckets[pn][objID]
@@ -443,10 +443,10 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		buck := idx.buckets[pn][objID]
 		buck.objectMeta.Lifeline.PendingPointer = &firstPending
 
-		err := idx.SetRequest(ctx, pn, objID, *reqID)
+		err := idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqID)
 		require.NoError(t, err)
 
-		err = idx.SetRequest(ctx, pn, objID, *reqSID)
+		err = idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqSID)
 		require.NoError(t, err)
 
 		require.Equal(t, 2, len(buck.objectMeta.PendingRecords))
@@ -487,7 +487,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		buck := idx.buckets[pn][objID]
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, MetaRecordsIDs: []insolar.ID{}})
 
-		err := idx.SetRequest(ctx, pn, objID, *reqID)
+		err := idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqID)
 		require.NoError(t, err)
 
 		require.Equal(t, 2, len(buck.pendingMeta.fullFilament))
@@ -611,7 +611,7 @@ func TestInMemoryIndex_Records(t *testing.T) {
 		idx := NewInMemoryIndex(rsm, platformpolicy.NewPlatformCryptographyScheme())
 		idx.createBucket(ctx, pn, objID)
 
-		_ = idx.SetRequest(ctx, pn, objID, *reqID)
+		_ = idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqID)
 
 		data, err := idx.Records(ctx, pn, objID)
 
@@ -660,9 +660,9 @@ func TestInMemoryIndex_OpenRequestsForObjID(t *testing.T) {
 		idx := NewInMemoryIndex(rms, platformpolicy.NewPlatformCryptographyScheme())
 		idx.createBucket(ctx, pn, objID)
 
-		err := idx.SetRequest(ctx, pn, objID, *reqID)
+		err := idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqID)
 		require.NoError(t, err)
-		err = idx.SetRequest(ctx, pn, objID, *reqSID)
+		err = idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqSID)
 		require.NoError(t, err)
 
 		t.Run("query all", func(t *testing.T) {
@@ -689,7 +689,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		objID := gen.ID()
 		idx := NewInMemoryIndex(nil, platformpolicy.NewPlatformCryptographyScheme())
 
-		err := idx.SetResult(ctx, pn, objID, insolar.ID{}, record.Result{})
+		err := idx.SetResult(ctx, pn, objID, insolar.JetID{}, insolar.ID{}, record.Result{})
 
 		require.Error(t, err, ErrLifelineNotFound)
 	})
@@ -727,7 +727,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		buck := idx.buckets[pn][objID]
 		buck.objectMeta.Lifeline.PendingPointer = &previousPen
 
-		err := idx.SetResult(ctx, pn, objID, *resID, res)
+		err := idx.SetResult(ctx, pn, objID, insolar.JetID{}, *resID, res)
 
 		require.NoError(t, err)
 
@@ -766,9 +766,9 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		hash = record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfsv)
 		secondMetaID := *insolar.NewID(pn, hash)
 
-		err := idx.SetResult(ctx, pn, objID, *resID, res)
+		err := idx.SetResult(ctx, pn, objID, insolar.JetID{}, *resID, res)
 		require.NoError(t, err)
-		err = idx.SetResult(ctx, pn, objID, *resSID, resS)
+		err = idx.SetResult(ctx, pn, objID, insolar.JetID{}, *resSID, resS)
 		require.NoError(t, err)
 
 		buck := idx.buckets[pn][objID]
@@ -809,10 +809,10 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		idx := NewInMemoryIndex(rms, platformpolicy.NewPlatformCryptographyScheme())
 		idx.createBucket(ctx, pn, objID)
-		_ = idx.SetRequest(ctx, pn, objID, *objRef.Record())
-		_ = idx.SetRequest(ctx, pn, objID, *objRefS.Record())
+		_ = idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *objRef.Record())
+		_ = idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *objRefS.Record())
 
-		err := idx.SetResult(ctx, pn, objID, *resID, res)
+		err := idx.SetResult(ctx, pn, objID, insolar.JetID{}, *resID, res)
 		require.NoError(t, err)
 
 		open, err := idx.OpenRequestsForObjID(ctx, pn, objID, 10)
@@ -855,9 +855,9 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		idx.createBucket(ctx, pn, objID)
 		buck := idx.buckets[pn][objID]
 		buck.objectMeta.Lifeline.EarliestOpenRequest = &insolar.GenesisPulse.PulseNumber
-		_ = idx.SetRequest(ctx, pn, objID, *objRef.Record())
+		_ = idx.SetRequest(ctx, pn, objID, insolar.JetID{}, *objRef.Record())
 
-		err := idx.SetResult(ctx, pn, objID, *resID, res)
+		err := idx.SetResult(ctx, pn, objID, insolar.JetID{}, *resID, res)
 		require.NoError(t, err)
 
 		open, err := idx.OpenRequestsForObjID(ctx, pn, objID, 10)
@@ -881,7 +881,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		res := record.Result{Request: *objRef}
 		resID := insolar.NewID(1, nil)
 
-		err := idx.SetResult(ctx, pn, objID, *resID, res)
+		err := idx.SetResult(ctx, pn, objID, insolar.JetID{}, *resID, res)
 
 		require.NoError(t, err)
 

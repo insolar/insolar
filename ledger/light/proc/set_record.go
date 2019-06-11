@@ -100,7 +100,7 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.Wrap(err, "can't save record into storage")}
 	}
 
-	penReply := p.handlePendings(ctx, *calculatedID, &virtRec)
+	penReply := p.handlePendings(ctx, *calculatedID, p.jet, &virtRec)
 	if penReply != nil {
 		return *penReply
 	}
@@ -108,7 +108,7 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 	return bus.Reply{Reply: &reply.ID{ID: *id}}
 }
 
-func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, virtRec *record.Virtual) *bus.Reply {
+func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, jetID insolar.JetID, virtRec *record.Virtual) *bus.Reply {
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
 	case *record.Request:
@@ -123,7 +123,7 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), calculatedID)
 
-			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID)
+			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), jetID, calculatedID)
 			if err != nil {
 				return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 			}
@@ -132,7 +132,7 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
-		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
+		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, jetID, calculatedID, *r)
 		if err != nil {
 			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 		}

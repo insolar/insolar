@@ -94,7 +94,6 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 
 	earliestOpenRequest := *lfl.EarliestOpenRequest
 	if isBeyond {
-
 		lastLight, err := p.Dep.PulseCalculator.Forwards(ctx, earliestOpenRequest, 1)
 		if err != nil {
 			return err
@@ -208,7 +207,7 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 			}
 
 			if len(r.Records) == 0 {
-				panic("unexpected behaviour")
+				panic(fmt.Sprintf("unexpected behaviour -% v", earlistOpenRequest))
 			}
 
 			if r.Records[0].Meta.PreviousRecord == nil {

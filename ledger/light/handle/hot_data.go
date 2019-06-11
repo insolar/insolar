@@ -19,6 +19,7 @@ package handle
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
@@ -63,7 +64,7 @@ func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
 				panic(errors.Wrap(err, "something broken"))
 			}
 			if lfl.EarliestOpenRequest != nil {
-				expirePendings := proc.NewExpirePending(s.replyTo, *lfl.EarliestOpenRequest, meta.ObjID)
+				expirePendings := proc.NewExpirePending(s.replyTo, *lfl.EarliestOpenRequest, meta.ObjID, insolar.JetID(*s.message.Jet.Record()))
 				s.dep.ExpirePending(expirePendings)
 				if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
 					panic(errors.Wrap(err, "something broken"))
