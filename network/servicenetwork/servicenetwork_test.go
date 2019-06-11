@@ -52,26 +52,24 @@ package servicenetwork
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/gateway"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/insolar/insolar/network/node"
-
-	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/network/nodenetwork"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -342,4 +340,40 @@ func TestServiceNetwork_processIncoming(t *testing.T) {
 	pub.Error = errors.New("Failed to publish message")
 	_, err = serviceNetwork.processIncoming(ctx, data)
 	assert.Error(t, err)
+}
+
+func TestServiceNetwork_SetGateway(t *testing.T) {
+	sn, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{}, false)
+	require.NoError(t, err)
+	mb := testutils.NewMessageBusMock(t)
+	mb.MustRegisterMock.Return()
+	sn.MessageBus = mb
+	op := false
+	tick := 0
+	sn.SetOperableFunc(func(ctx context.Context, operable bool) {
+		op = operable
+		tick++
+	})
+
+	// initial set
+	sn.SetGateway(gateway.NewNoNetwork(sn, sn.NodeKeeper, sn.ContractRequester,
+		sn.CryptographyService, sn.MessageBus, sn.CertificateManager))
+	assert.Equal(t, 1, tick)
+	assert.False(t, op)
+
+	type Test struct {
+		state insolar.NetworkState
+		lock  bool
+	}
+
+	for i, T := range []Test{
+		{insolar.NoNetworkState, false},
+		{insolar.CompleteNetworkState, true},
+		{insolar.NoNetworkState, false},
+	} {
+		sn.SetGateway(sn.Gateway().NewGateway(T.state))
+		assert.Equal(t, i+1, tick)
+		assert.Equal(t, T.lock, op)
+
+	}
 }
