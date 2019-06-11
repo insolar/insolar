@@ -45,7 +45,7 @@ func TestCallUploadedContract(t *testing.T) {
 	objectRef := callConstructor(t, prototypeRef)
 
 	testParam := "test"
-	methodResult, err := callMethod(t, objectRef, "Hello", testParam)
-	require.Empty(t, err)
-	require.Equal(t, testParam, methodResult)
+	methodResult:= callMethod(t, objectRef, "Hello", testParam)
+	require.Empty(t, methodResult.Error)
+	require.Equal(t, testParam, methodResult.ExtractedReply)
 }
