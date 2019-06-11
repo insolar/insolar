@@ -802,7 +802,7 @@ func TestGetParentError(t *testing.T) {
 	require.Equal(t, obj.String(), resp.ExtractedReply)
 }
 
-// TODO что делать с этим тестом?
+// TODO need to move it into jepsen tests
 func TestGinsiderMustDieAfterInsolardError(t *testing.T) {
 	// can't kill LR in launch.sh from functest
 }
