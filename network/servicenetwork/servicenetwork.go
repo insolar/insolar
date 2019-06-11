@@ -438,35 +438,6 @@ func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, r
 	n.Sender.Reply(ctx, wrapper, msg, errMsg)
 }
 
-func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
-	receiver := msg.Metadata.Get(bus.MetaReceiver)
-	if receiver == "" {
-		return insolar.Reference{}, errors.New("Receiver in msg.Metadata not set")
-	}
-	receiverRef, err := insolar.NewReferenceFromBase58(receiver)
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
-	}
-
-	latestPulse, err := n.PulseAccessor.Latest(context.Background())
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to fetch pulse")
-	}
-	wrapper := payload.Meta{
-		Payload:  msg.Payload,
-		Receiver: *receiverRef,
-		Sender:   n.NodeKeeper.GetOrigin().ID(),
-		Pulse:    latestPulse.PulseNumber,
-	}
-	buf, err := wrapper.Marshal()
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to wrap message")
-	}
-	msg.Payload = buf
-
-	return *receiverRef, nil
-}
-
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }

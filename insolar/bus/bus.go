@@ -48,9 +48,6 @@ const (
 	// MetaType is key for Type
 	MetaType = "type"
 
-	// MetaReceiver is key for Receiver
-	MetaReceiver = "receiver"
-
 	// MetaSender is key for Sender
 	MetaSender = "sender"
 
@@ -162,7 +159,6 @@ func (b *Bus) SendTarget(
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, msg)
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
-	msg.Metadata.Set(MetaReceiver, target.String())
 	msg.SetContext(ctx)
 
 	_, err := b.wrapMeta(msg, target, b.coordinator.Me())
@@ -226,7 +222,6 @@ func (b *Bus) Reply(ctx context.Context, originMetaZZZ payload.Meta, origin, rep
 		return
 	}
 
-	reply.Metadata.Set(MetaReceiver, originMeta.Sender.String())
 	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	reply.SetContext(ctx)
 
