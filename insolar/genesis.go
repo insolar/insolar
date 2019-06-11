@@ -27,8 +27,12 @@ const (
 	GenesisNameRootMember = "member"
 	// GenesisNameRootWallet is the name of wallet contract for genesis record.
 	GenesisNameRootWallet = "wallet"
-	// GenesisNameAllowance is the name of allowance contract for genesis record.
-	GenesisNameAllowance = "allowance"
+	// GenesisNameDeposit is the name of deposit contract for genesis record.
+	GenesisNameDeposit = "deposit"
+	// GenesisNameTariff is the name of tariff contract for genesis record.
+	GenesisNameTariff = "tariff"
+	// GenesisNameCostCenter is the name of costcenter contract for genesis record.
+	GenesisNameCostCenter = "costcenter"
 )
 
 type genesisBinary []byte
@@ -62,7 +66,7 @@ type GenesisContractState struct {
 
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
-	RootBalance   uint
+	RootBalance   string
 	RootPublicKey string
 }
 

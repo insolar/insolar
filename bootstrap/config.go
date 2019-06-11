@@ -57,7 +57,7 @@ type Config struct {
 	HeavyGenesisPluginsDir string `mapstructure:"heavy_genesis_plugins_dir"`
 
 	// RootBalance is a start balance for the root member's wallet.
-	RootBalance uint `mapstructure:"root_balance"`
+	RootBalance string `mapstructure:"root_balance"`
 	Contracts   Contracts
 
 	// Discovery settings.

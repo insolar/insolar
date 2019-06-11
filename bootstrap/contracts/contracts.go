@@ -43,8 +43,8 @@ func rootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			RootMember:    genesisrefs.ContractRootMember,
-			NodeDomainRef: genesisrefs.ContractNodeDomain,
+			RootMember: genesisrefs.ContractRootMember,
+			NodeDomain: genesisrefs.ContractNodeDomain,
 		}),
 	}
 }
@@ -71,7 +71,7 @@ func rootMember(publicKey string) insolar.GenesisContractState {
 	}
 }
 
-func rootWallet(balance uint) insolar.GenesisContractState {
+func rootWallet(balance string) insolar.GenesisContractState {
 	w, err := wallet.New(balance)
 	if err != nil {
 		panic("failed to create wallet instance")
