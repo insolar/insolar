@@ -204,5 +204,5 @@ func (s *Init) replyError(ctx context.Context, replyTo *wmessage.Message, err er
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
-	go s.sender.Reply(ctx, replyTo, errMsg)
+	go s.sender.Reply(ctx, payload.Meta{}, replyTo, errMsg) //TODO Add Sender to Meta
 }

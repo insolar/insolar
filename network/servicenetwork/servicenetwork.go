@@ -381,17 +381,17 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	return nil, nil
 }
 
-// meta, err := b.wrapMeta(ctx, msg, target)
-// if err != nil {
-// inslogger.FromContext(ctx).Error("failed to wrap message", err)
-// return nil, nil
-// }
-
 func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) error {
-	node, err := n.wrapMeta(msg)
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to send message")
+		return errors.Wrap(err, "failed to unwrap message")
 	}
+	if meta.Receiver.IsEmpty() {
+		return errors.New("failed to send message: Receiver in msg.Metadata not set")
+	}
+
+	node := meta.Receiver
 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
@@ -435,7 +435,7 @@ func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, r
 		return
 	}
 	msg.Payload = buf
-	n.Sender.Reply(ctx, msg, errMsg)
+	n.Sender.Reply(ctx, wrapper, msg, errMsg)
 }
 
 func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {

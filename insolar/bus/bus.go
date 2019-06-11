@@ -79,7 +79,7 @@ type Sender interface {
 	// (rep, ok := <-ch) because the channel will be closed on timeout.
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	// Reply sends message in response to another message.
-	Reply(ctx context.Context, origin, reply *message.Message)
+	Reply(ctx context.Context, originMeta payload.Meta, origin, reply *message.Message)
 }
 
 type lockedReply struct {
@@ -165,6 +165,12 @@ func (b *Bus) SendTarget(
 	msg.Metadata.Set(MetaReceiver, target.String())
 	msg.SetContext(ctx)
 
+	_, err := b.wrapMeta(msg, target, b.coordinator.Me())
+	if err != nil {
+		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
+		return nil, nil
+	}
+
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
@@ -178,7 +184,7 @@ func (b *Bus) SendTarget(
 	b.replies[id] = reply
 	b.repliesMutex.Unlock()
 
-	err := b.pub.Publish(TopicOutgoing, msg)
+	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 		done()
@@ -203,7 +209,7 @@ func (b *Bus) SendTarget(
 }
 
 // Reply sends message in response to another message.
-func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
+func (b *Bus) Reply(ctx context.Context, originMetaZZZ payload.Meta, origin, reply *message.Message) { //TODO: remove origin as msg and add origin as meta
 	id := middleware.MessageCorrelationID(origin)
 	middleware.SetCorrelationID(id, reply)
 
@@ -211,6 +217,12 @@ func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 	err := originMeta.Unmarshal(origin.Payload)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send reply"))
+		return
+	}
+
+	_, err = b.wrapMeta(reply, originMeta.Sender, b.coordinator.Me())
+	if err != nil {
+		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
 		return
 	}
 
@@ -250,27 +262,25 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 	}
 }
 
-// wrapMeta wraps msg.Payload data with service fields
+// wrapMeta wraps origin.Payload data with service fields
 // and set it as byte slice back to msg.Payload.
-// Note: this method has side effect - msg-argument mutating
-func (b *Bus) wrapMeta(ctx context.Context, msg *message.Message, target insolar.Reference) (payload.Meta, error) {
+// Note: this method has side effect - origin-argument mutating
+func (b *Bus) wrapMeta(origin *message.Message, receiver insolar.Reference, sender insolar.Reference) (payload.Meta, error) {
 	latestPulse, err := b.pulses.Latest(context.Background())
 	if err != nil {
 		return payload.Meta{}, errors.Wrap(err, "failed to fetch pulse")
 	}
-
 	wrapper := payload.Meta{
-		Payload:  msg.Payload,
-		Receiver: target,
-		Sender:   b.coordinator.Me(),
+		Payload:  origin.Payload,
+		Receiver: receiver,
+		Sender:   sender,
 		Pulse:    latestPulse.PulseNumber,
 	}
-
 	buf, err := wrapper.Marshal()
 	if err != nil {
-		return payload.Meta{}, errors.Wrap(err, "failed to marshal message")
+		return payload.Meta{}, errors.Wrap(err, "failed to wrap message")
 	}
-	msg.Payload = buf
+	origin.Payload = buf
 
 	return wrapper, nil
 }

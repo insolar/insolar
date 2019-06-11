@@ -24,6 +24,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/blob"
@@ -35,9 +36,10 @@ type PassState struct {
 	message *message.Message
 
 	Dep struct {
-		Sender  bus.Sender
-		Records object.RecordAccessor
-		Blobs   blob.Accessor
+		Sender      bus.Sender
+		Records     object.RecordAccessor
+		Blobs       blob.Accessor
+		Coordinator jet.Coordinator
 	}
 }
 
@@ -66,7 +68,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, replyTo, msg)
+		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, replyTo, msg)
 		return nil
 	}
 	if err != nil {
@@ -85,7 +87,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, replyTo, msg)
+		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, replyTo, msg)
 		return nil
 	}
 
@@ -108,7 +110,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
 	}
-	go p.Dep.Sender.Reply(ctx, replyTo, msg)
+	go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, replyTo, msg)
 
 	return nil
 }

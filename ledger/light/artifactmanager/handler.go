@@ -165,6 +165,7 @@ func NewMessageHandler(
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Sender = h.Sender
+			p.Dep.Coordinator = h.JetCoordinator
 		},
 		GetRequest: func(p *proc.GetRequest) {
 			p.Dep.RecordAccessor = h.RecordAccessor
@@ -230,12 +231,13 @@ func NewMessageHandler(
 			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Sender = h.Sender
 			p.Dep.Records = h.RecordAccessor
+			p.Dep.Coordinator = h.JetCoordinator
 		},
 		CalculateID: func(p *proc.CalculateID) {
 			p.Dep(h.PCS)
 		},
 		SetCode: func(p *proc.SetCode) {
-			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender)
+			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender, h.JetCoordinator)
 		},
 	}
 

@@ -69,11 +69,13 @@ func New() *Handler {
 			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
+			p.Dep.Coordinator = h.JetCoordinator
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.Sender = h.Sender
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.BlobAccessor = h.BlobAccessor
+			p.Dep.Coordinator = h.JetCoordinator
 		},
 	}
 	h.dep = &dep
@@ -162,7 +164,7 @@ func (h *Handler) replyError(ctx context.Context, replyTo *watermillMsg.Message,
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
-	go h.Sender.Reply(ctx, replyTo, errMsg)
+	go h.Sender.Reply(ctx, payload.Meta{Sender: h.JetCoordinator.Me()}, replyTo, errMsg)
 }
 
 func (h *Handler) Init(ctx context.Context) error {

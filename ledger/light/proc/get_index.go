@@ -167,7 +167,7 @@ func (p *GetIndexWM) Proceed(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, p.message, msg)
 	}
 	return err
 }

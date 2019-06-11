@@ -112,7 +112,7 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	serviceNetwork := prepareNetwork(t, cfg)
 	sender := bus.NewSenderMock(t)
 	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
+	sender.ReplyFunc = func(p context.Context, p0 payload.Meta, p1 *message.Message, p2 *message.Message) {
 		expectedMsg = p2
 	}
 
@@ -134,7 +134,7 @@ func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
 	serviceNetwork := prepareNetwork(t, cfg)
 	sender := bus.NewSenderMock(t)
 	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
+	sender.ReplyFunc = func(p context.Context, p0 payload.Meta, p1 *message.Message, p2 *message.Message) {
 		expectedMsg = p2
 	}
 
@@ -203,7 +203,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	var expectedMsg *message.Message
 	sender := bus.NewSenderMock(t)
 	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
+	sender.ReplyFunc = func(p context.Context, p0 payload.Meta, p1 *message.Message, p2 *message.Message) {
 		expectedMsg = p2
 	}
 
@@ -243,7 +243,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	var expectedMsg *message.Message
 	sender := bus.NewSenderMock(t)
 	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
+	sender.ReplyFunc = func(p context.Context, p0 payload.Meta, p1 *message.Message, p2 *message.Message) {
 		expectedMsg = p2
 	}
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/blob"
@@ -36,6 +37,7 @@ type GetCode struct {
 		RecordAccessor object.RecordAccessor
 		BlobAccessor   blob.Accessor
 		Sender         bus.Sender
+		Coordinator    jet.Coordinator
 	}
 }
 
@@ -79,7 +81,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
 	}
-	go p.Dep.Sender.Reply(ctx, p.message, msg)
+	go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: p.Dep.Coordinator.Me()}, p.message, msg)
 
 	return nil
 }
