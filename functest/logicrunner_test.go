@@ -1055,7 +1055,6 @@ func (r *Three) DoNothing() (error) {
 	require.Empty(t, resp.Error)
 	require.Equal(t, float64(42), resp.ExtractedReply)
 
-	// TODO this works only with resp.ExtractedError hack
 	resp = callMethod(t, obj, "ExternalImmutableCallMakesExternalCall")
 	require.Contains(
 		t,
