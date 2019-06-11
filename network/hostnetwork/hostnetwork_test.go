@@ -59,7 +59,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -218,7 +218,7 @@ func TestNewHostNetwork(t *testing.T) {
 	wg.Add(count)
 
 	handler := func(ctx context.Context, request network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	}
@@ -283,7 +283,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 	wg.Add(1)
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
 		require.Equal(t, *ref, r.GetSender())
@@ -309,7 +309,7 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	defer s.Stop()
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		data := r.GetRequest().GetPulse()
 		error := string(data.TraceSpanData) + string(data.TraceSpanData)
 		return s.n2.BuildResponse(ctx, r, &packet.BasicResponse{Error: error}), nil
@@ -346,7 +346,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	defer s.Stop()
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		time.Sleep(time.Millisecond * 100)
 		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
@@ -377,7 +377,7 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 	wg.Add(1)
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, r, nil), nil
 	}
@@ -403,7 +403,7 @@ func TestStartStopSend(t *testing.T) {
 	wg.Add(2)
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
