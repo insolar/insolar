@@ -81,7 +81,7 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 			Context:       transcript.Context,
 			Request:       &msg.Request,
 			LogicContext: &insolar.LogicCallContext{
-				Mode:            "execution",
+				Mode:            insolar.ExecuteCallMode,
 				Caller:          msg.GetCaller(),
 				Callee:          &es.Ref,
 				Request:         transcript.RequestRef,

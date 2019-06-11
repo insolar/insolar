@@ -58,7 +58,7 @@ func recoverRPC(err *error) {
 }
 
 func (m *RPCMethods) getCurrent(
-	obj insolar.Reference, mode string, reqRef insolar.Reference,
+	obj insolar.Reference, mode insolar.CallMode, reqRef insolar.Reference,
 ) (
 	*CurrentExecution, error,
 ) {

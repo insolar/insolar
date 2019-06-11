@@ -88,14 +88,14 @@ func (lre Error) Error() string {
 	return buffer.String()
 }
 
-func (st *ObjectState) GetModeState(mode string) (rv *ExecutionState, err error) {
+func (st *ObjectState) GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error) {
 	switch mode {
-	case "execution":
+	case insolar.ExecuteCallMode:
 		rv = st.ExecutionState
-	case "validation":
+	case insolar.ValidateCallMode:
 		rv = st.Validation
 	default:
-		err = errors.Errorf("'%s' is unknown object processing mode", mode)
+		err = errors.Errorf("'%d' is unknown object processing mode", mode)
 	}
 
 	if rv == nil && err != nil {
@@ -104,7 +104,7 @@ func (st *ObjectState) GetModeState(mode string) (rv *ExecutionState, err error)
 	return rv, err
 }
 
-func (st *ObjectState) MustModeState(mode string) *ExecutionState {
+func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
 	res, err := st.GetModeState(mode)
 	if err != nil {
 		panic(err)

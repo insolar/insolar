@@ -50,7 +50,7 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 	msg := parcel.Message().(*message.CallMethod)
 
 	logicalContext := &insolar.LogicCallContext{
-		Mode:            "execution",
+		Mode:            insolar.ExecuteCallMode,
 		Caller:          msg.GetCaller(),
 		Callee:          &callee,
 		Request:         requestRef,
