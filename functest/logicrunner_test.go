@@ -958,16 +958,14 @@ func (c *First) GetName() (string, error) {
 	secondObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_second", secondContract))
 	testObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_test", testContract))
 
-	// TODO из прокси работает норм а напрямую приходиться костылить с ErrorString
-	// TODO fix
 	resp := callMethod(t, testObj, "Test", *secondObj)
 	fmt.Println(">>> resp ", resp)
-	//require.NotEmpty(t, resp.Error)
-	//require.Contains(
-	//	t,
-	//	"[ RouteCall ] on calling main API: CallMethod returns error: proxy call error: try to call method of prototype as method of another prototype",
-	//	resp.Error,
-	//)
+
+	require.Contains(
+		t,
+		string(resp.Reply.Result),
+		"[ RouteCall ] on calling main API: CallMethod returns error: proxy call error: try to call method of prototype as method of another prototype",
+	)
 }
 
 func TestImmutableAnnotation(t *testing.T) {

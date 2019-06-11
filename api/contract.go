@@ -212,7 +212,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	}
 
 	// TODO need to understand why sometimes errors goes to reply
-	// see tests TestConstructorReturnNil, TestContractCallingContract
+	// see tests TestConstructorReturnNil, TestContractCallingContract, TestPrototypeMismatch
 	switch extractedReply.(type) {
 	case map[interface{}]interface{}:
 		replyMap := extractedReply.(map[interface{}]interface{})
