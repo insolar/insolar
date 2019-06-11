@@ -20,10 +20,12 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 type GetPendingRequests struct {
@@ -33,7 +35,8 @@ type GetPendingRequests struct {
 	reqPulse insolar.PulseNumber
 
 	Dep struct {
-		RecentStorageProvider recentstorage.Provider
+		RecentStorageProvider        recentstorage.Provider
+		PendingFilamentStateAccessor object.PendingFilamentStateAccessor
 	}
 }
 
@@ -49,6 +52,12 @@ func NewGetPendingRequests(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *m
 func (p *GetPendingRequests) Proceed(ctx context.Context) error {
 	msg := p.msg
 	jetID := insolar.ID(p.jet)
+
+	wait, err := p.Dep.PendingFilamentStateAccessor.WaitForRefresh(ctx, flow.Pulse(ctx), *msg.Object.Record())
+	if err != nil {
+		return err
+	}
+	<-wait
 
 	hasPendingRequests := false
 	pendingStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, jetID)

@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,11 +20,6 @@ import (
 //PendingModifierMock implements github.com/insolar/insolar/ledger/object.PendingModifier
 type PendingModifierMock struct {
 	t minimock.Tester
-
-	RefreshStateFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r error)
-	RefreshStateCounter    uint64
-	RefreshStatePreCounter uint64
-	RefreshStateMock       mPendingModifierMockRefreshState
 
 	SetFilamentFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.PulseNumber, p4 []record.CompositeFilamentRecord) (r error)
 	SetFilamentCounter    uint64
@@ -50,161 +45,11 @@ func NewPendingModifierMock(t minimock.Tester) *PendingModifierMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.RefreshStateMock = mPendingModifierMockRefreshState{mock: m}
 	m.SetFilamentMock = mPendingModifierMockSetFilament{mock: m}
 	m.SetRequestMock = mPendingModifierMockSetRequest{mock: m}
 	m.SetResultMock = mPendingModifierMockSetResult{mock: m}
 
 	return m
-}
-
-type mPendingModifierMockRefreshState struct {
-	mock              *PendingModifierMock
-	mainExpectation   *PendingModifierMockRefreshStateExpectation
-	expectationSeries []*PendingModifierMockRefreshStateExpectation
-}
-
-type PendingModifierMockRefreshStateExpectation struct {
-	input  *PendingModifierMockRefreshStateInput
-	result *PendingModifierMockRefreshStateResult
-}
-
-type PendingModifierMockRefreshStateInput struct {
-	p  context.Context
-	p1 insolar.PulseNumber
-	p2 insolar.ID
-}
-
-type PendingModifierMockRefreshStateResult struct {
-	r error
-}
-
-//Expect specifies that invocation of PendingModifier.RefreshState is expected from 1 to Infinity times
-func (m *mPendingModifierMockRefreshState) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mPendingModifierMockRefreshState {
-	m.mock.RefreshStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingModifierMockRefreshStateExpectation{}
-	}
-	m.mainExpectation.input = &PendingModifierMockRefreshStateInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of PendingModifier.RefreshState
-func (m *mPendingModifierMockRefreshState) Return(r error) *PendingModifierMock {
-	m.mock.RefreshStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingModifierMockRefreshStateExpectation{}
-	}
-	m.mainExpectation.result = &PendingModifierMockRefreshStateResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of PendingModifier.RefreshState is expected once
-func (m *mPendingModifierMockRefreshState) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *PendingModifierMockRefreshStateExpectation {
-	m.mock.RefreshStateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &PendingModifierMockRefreshStateExpectation{}
-	expectation.input = &PendingModifierMockRefreshStateInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *PendingModifierMockRefreshStateExpectation) Return(r error) {
-	e.result = &PendingModifierMockRefreshStateResult{r}
-}
-
-//Set uses given function f as a mock of PendingModifier.RefreshState method
-func (m *mPendingModifierMockRefreshState) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r error)) *PendingModifierMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.RefreshStateFunc = f
-	return m.mock
-}
-
-//RefreshState implements github.com/insolar/insolar/ledger/object.PendingModifier interface
-func (m *PendingModifierMock) RefreshState(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r error) {
-	counter := atomic.AddUint64(&m.RefreshStatePreCounter, 1)
-	defer atomic.AddUint64(&m.RefreshStateCounter, 1)
-
-	if len(m.RefreshStateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RefreshStateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PendingModifierMock.RefreshState. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.RefreshStateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PendingModifierMockRefreshStateInput{p, p1, p2}, "PendingModifier.RefreshState got unexpected parameters")
-
-		result := m.RefreshStateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the PendingModifierMock.RefreshState")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RefreshStateMock.mainExpectation != nil {
-
-		input := m.RefreshStateMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, PendingModifierMockRefreshStateInput{p, p1, p2}, "PendingModifier.RefreshState got unexpected parameters")
-		}
-
-		result := m.RefreshStateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the PendingModifierMock.RefreshState")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RefreshStateFunc == nil {
-		m.t.Fatalf("Unexpected call to PendingModifierMock.RefreshState. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.RefreshStateFunc(p, p1, p2)
-}
-
-//RefreshStateMinimockCounter returns a count of PendingModifierMock.RefreshStateFunc invocations
-func (m *PendingModifierMock) RefreshStateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RefreshStateCounter)
-}
-
-//RefreshStateMinimockPreCounter returns the value of PendingModifierMock.RefreshState invocations
-func (m *PendingModifierMock) RefreshStateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RefreshStatePreCounter)
-}
-
-//RefreshStateFinished returns true if mock invocations count is ok
-func (m *PendingModifierMock) RefreshStateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RefreshStateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RefreshStateCounter) == uint64(len(m.RefreshStateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.RefreshStateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RefreshStateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.RefreshStateFunc != nil {
-		return atomic.LoadUint64(&m.RefreshStateCounter) > 0
-	}
-
-	return true
 }
 
 type mPendingModifierMockSetFilament struct {
@@ -663,10 +508,6 @@ func (m *PendingModifierMock) SetResultFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PendingModifierMock) ValidateCallCounters() {
 
-	if !m.RefreshStateFinished() {
-		m.t.Fatal("Expected call to PendingModifierMock.RefreshState")
-	}
-
 	if !m.SetFilamentFinished() {
 		m.t.Fatal("Expected call to PendingModifierMock.SetFilament")
 	}
@@ -696,10 +537,6 @@ func (m *PendingModifierMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PendingModifierMock) MinimockFinish() {
 
-	if !m.RefreshStateFinished() {
-		m.t.Fatal("Expected call to PendingModifierMock.RefreshState")
-	}
-
 	if !m.SetFilamentFinished() {
 		m.t.Fatal("Expected call to PendingModifierMock.SetFilament")
 	}
@@ -726,7 +563,6 @@ func (m *PendingModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.RefreshStateFinished()
 		ok = ok && m.SetFilamentFinished()
 		ok = ok && m.SetRequestFinished()
 		ok = ok && m.SetResultFinished()
@@ -737,10 +573,6 @@ func (m *PendingModifierMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
-
-			if !m.RefreshStateFinished() {
-				m.t.Error("Expected call to PendingModifierMock.RefreshState")
-			}
 
 			if !m.SetFilamentFinished() {
 				m.t.Error("Expected call to PendingModifierMock.SetFilament")
@@ -765,10 +597,6 @@ func (m *PendingModifierMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PendingModifierMock) AllMocksCalled() bool {
-
-	if !m.RefreshStateFinished() {
-		return false
-	}
 
 	if !m.SetFilamentFinished() {
 		return false

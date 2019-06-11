@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/network/storage"
 )
 
 // MessageHandler processes messages for local storage interaction.
@@ -69,6 +70,8 @@ type MessageHandler struct {
 	LifelineStateModifier object.LifelineStateModifier
 	PendingModifier       object.PendingModifier
 	PendingAccessor       object.PendingAccessor
+	PendingStateModifier  object.PendingFilamentStateModifier
+	PulseCalculator       storage.PulseCalculator
 
 	conf           *configuration.Ledger
 	jetTreeUpdater jet.Fetcher
@@ -221,10 +224,12 @@ func NewMessageHandler(
 			p.Dep.Sender = h.Sender
 		},
 		RefreshPendingFilament: func(p *proc.RefreshPendingFilament) {
-			p.Dep.LifelineAccessor = h.LifelineIndex
-			p.Dep.PendingModifier = h.PendingModifier
 			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.PendingStateModifier = h.PendingStateModifier
+			p.Dep.PendingModifier = h.PendingModifier
+			p.Dep.LifelineAccessor = h.LifelineIndex
 			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.PulseCalculator = h.PulseCalculator
 			p.Dep.Bus = h.Bus
 			p.Dep.BusWM = h.Sender
 		},
@@ -238,6 +243,11 @@ func NewMessageHandler(
 		},
 		SetCode: func(p *proc.SetCode) {
 			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender)
+		},
+		ExpirePending: func(p *proc.ExpirePending) {
+			p.Dep.FilamentStateModifier = h.PendingStateModifier
+			p.Dep.MessageBus = h.Bus
+			p.Dep.Coordinator = h.JetCoordinator
 		},
 	}
 

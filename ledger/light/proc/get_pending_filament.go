@@ -24,9 +24,11 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/network/storage"
 	"github.com/pkg/errors"
 )
 
@@ -39,6 +41,7 @@ type GetPendingFilament struct {
 		PendingAccessor  object.PendingAccessor
 		LifelineAccessor object.LifelineAccessor
 		Sender           bus.Sender
+		PulseCalculator  storage.PulseCalculator
 	}
 }
 
@@ -58,6 +61,29 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("[GetPendingFilament] can't fetch pendings, pn - %v,  %v", p.objID.DebugString(), p.pulseNumber))
 	}
+
+	lfl, err := p.Dep.LifelineAccessor.ForID(ctx, p.pulseNumber, p.objID)
+	if err != nil {
+		return err
+	}
+
+	if lfl.EarliestOpenRequest == nil {
+		records = []record.CompositeFilamentRecord{}
+	}
+
+	// we want to skip closed segments of the filament
+	if len(records) > 0 {
+		idx := 0
+		traverse := true
+
+		for ; traverse; idx++ {
+			if records[idx].RecordID.Pulse() >= *lfl.EarliestOpenRequest {
+				traverse = false
+			}
+		}
+		records = records[idx:]
+	}
+
 	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, records - %v", p.objID.DebugString(), len(records))
 	msg, err := payload.NewMessage(&payload.PendingFilament{
 		ObjectID: p.objID,

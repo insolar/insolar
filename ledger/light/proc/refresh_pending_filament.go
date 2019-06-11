@@ -22,12 +22,14 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	buswm "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/network/storage"
 	"github.com/pkg/errors"
 )
 
@@ -37,12 +39,14 @@ type RefreshPendingFilament struct {
 	pn      insolar.PulseNumber
 
 	Dep struct {
-		PendingAccessor  object.PendingAccessor
-		PendingModifier  object.PendingModifier
-		LifelineAccessor object.LifelineAccessor
-		Coordinator      jet.Coordinator
-		Bus              insolar.MessageBus
-		BusWM            buswm.Sender
+		PendingAccessor      object.PendingAccessor
+		PendingStateModifier object.PendingFilamentStateModifier
+		PendingModifier      object.PendingModifier
+		LifelineAccessor     object.LifelineAccessor
+		Coordinator          jet.Coordinator
+		PulseCalculator      storage.PulseCalculator
+		Bus                  insolar.MessageBus
+		BusWM                buswm.Sender
 	}
 }
 
@@ -83,6 +87,21 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 		return nil
 	}
 
+	isBeyond, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), *lfl.EarliestOpenRequest)
+	if err != nil {
+		return err
+	}
+
+	earliestOpenRequest := *lfl.EarliestOpenRequest
+	if isBeyond {
+
+		lastLight, err := p.Dep.PulseCalculator.Forwards(ctx, earliestOpenRequest, 1)
+		if err != nil {
+			return err
+		}
+		earliestOpenRequest = lastLight.PulseNumber
+	}
+
 	fp, err := p.Dep.PendingAccessor.FirstPending(ctx, p.pn, p.objID)
 	if err != nil {
 		panic(err)
@@ -92,20 +111,20 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 	logger.Debugf("RefreshPendingFilament fp == %v, obj - %v", fp, p.objID.DebugString())
 
 	if fp == nil || fp.PreviousRecord == nil {
-		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest)
+		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer.Pulse(), earliestOpenRequest)
 		if err != nil {
 			panic(err)
 			return err
 		}
 	} else {
-		err = p.fillPendingFilament(ctx, p.pn, p.objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest)
+		err = p.fillPendingFilament(ctx, p.pn, p.objID, fp.PreviousRecord.Pulse(), earliestOpenRequest)
 		if err != nil {
 			panic(err)
 			return err
 		}
 	}
 
-	err = p.Dep.PendingModifier.RefreshState(ctx, p.pn, p.objID)
+	err = p.Dep.PendingStateModifier.RefreshState(ctx, p.pn, p.objID)
 	if err != nil {
 		panic(err)
 		return err
@@ -149,7 +168,6 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 				return errors.Wrap(err, fmt.Sprintf("[RefreshPendingFilament] can't fetch pendings, pn - %v,  %v", p.objID.DebugString(), destPN))
 			}
 			inslogger.FromContext(ctx).Debugf("RefreshPendingFilament objID == %v, records - %v", p.objID.DebugString(), len(records))
-
 			pl = &payload.PendingFilament{
 				ObjectID: p.objID,
 				Records:  records,

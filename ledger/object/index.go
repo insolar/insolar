@@ -95,8 +95,16 @@ type PendingModifier interface {
 	// SetFilament adds a slice of records to an object with provided id and pulse. It's assumed, that the method is
 	// called for setting records from another light, during the process of filling full chaing of pendings
 	SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.CompositeFilamentRecord) error
+}
+
+type PendingFilamentStateAccessor interface {
+	WaitForRefresh(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (<-chan struct{}, error)
+}
+
+type PendingFilamentStateModifier interface {
 	// RefreshState recalculates state of the chain, marks requests as closed and opened.
 	RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
+	ExpireRequests(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqs []insolar.ID) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingAccessor -o ./ -s _mock.go
@@ -112,5 +120,5 @@ type PendingAccessor interface {
 
 type HeavyPendingAccessor interface {
 	// AllOpenRequestsForObjID returns all open requests for the provided object and pulse
-	AllOpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamnetID, error)
+	AllOpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]insolar.ID, error)
 }

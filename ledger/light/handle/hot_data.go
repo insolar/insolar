@@ -23,6 +23,8 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/insolar/insolar/ledger/object"
+	"github.com/pkg/errors"
 )
 
 type HotData struct {
@@ -40,7 +42,36 @@ func NewHotData(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.HotDa
 }
 
 func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
-	proc := proc.NewHotData(s.message, s.replyTo)
-	s.dep.HotData(proc)
-	return f.Procedure(ctx, proc, false)
+	hdProc := proc.NewHotData(s.message, s.replyTo)
+	s.dep.HotData(hdProc)
+	if err := f.Procedure(ctx, hdProc, false); err != nil {
+		panic(errors.Wrap(err, "something broken"))
+		return err
+	}
+
+	for _, meta := range s.message.HotIndexes {
+		go func(hi message.HotIndex) {
+			refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, flow.Pulse(ctx), meta.ObjID)
+			s.dep.RefreshPendingFilament(refreshPendingsState)
+			if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
+				panic(errors.Wrap(err, "something broken"))
+			}
+
+			lfl := object.Lifeline{}
+			err := lfl.Unmarshal(meta.Index)
+			if err != nil {
+				panic(errors.Wrap(err, "something broken"))
+			}
+			if lfl.EarliestOpenRequest != nil {
+				expirePendings := proc.NewExpirePending(s.replyTo, *lfl.EarliestOpenRequest, meta.ObjID)
+				s.dep.ExpirePending(expirePendings)
+				if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
+					panic(errors.Wrap(err, "something broken"))
+				}
+			}
+
+		}(meta)
+	}
+
+	return nil
 }

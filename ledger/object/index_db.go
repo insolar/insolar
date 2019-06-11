@@ -178,11 +178,7 @@ func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) 
 	return insolar.NewPulseNumber(buff), err
 }
 
-func (i *IndexDB) OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error) {
-	panic("implement me")
-}
-
-func (i *IndexDB) AllOpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamnetID, error) {
+func (i *IndexDB) AllOpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]insolar.ID, error) {
 	buff, err := i.db.Get(indexKey{pn: currentPN, objID: objID})
 	if err == store.ErrNotFound {
 		return nil, ErrIndexBucketNotFound
@@ -217,22 +213,11 @@ func (i *IndexDB) AllOpenRequestsForObjID(ctx context.Context, currentPN insolar
 		}
 	}
 
-	res := make([]record.CompositeFilamnetID, len(tempRes))
+	res := make([]insolar.ID, len(tempRes))
 	idx := 0
-	for k, v := range tempRes {
-		res[idx] = record.CompositeFilamnetID{
-			RecordID: k,
-			MetaID:   v,
-		}
+	for k := range tempRes {
+		res[idx] = k
 		idx++
 	}
 	return res, nil
-}
-
-func (i *IndexDB) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
-	panic("implement me")
-}
-
-func (i *IndexDB) FirstPending(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (*record.PendingFilament, error) {
-	panic("implement me")
 }

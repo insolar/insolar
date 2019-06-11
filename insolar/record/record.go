@@ -129,8 +129,3 @@ func (Genesis) GetImage() *insolar.Reference {
 func (Genesis) GetIsPrototype() bool {
 	return false
 }
-
-type CompositeFilamnetID struct {
-	MetaID   insolar.ID
-	RecordID insolar.ID
-}

@@ -47,6 +47,7 @@ type Dependencies struct {
 	SetCode                func(*SetCode)
 	GetPendingFilament     func(*GetPendingFilament)
 	RefreshPendingFilament func(*RefreshPendingFilament)
+	ExpirePending          func(*ExpirePending)
 }
 
 type ReturnReply struct {

@@ -18,7 +18,6 @@ package reply
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
 )
 
 // Code is code from storage.
@@ -135,7 +134,7 @@ func (r *Request) Type() insolar.ReplyType {
 // OpenRequestsOnHeavy contains
 type OpenRequestsOnHeavy struct {
 	ObjID    insolar.ID
-	Requests []record.CompositeFilamnetID
+	Requests []insolar.ID // record.CompositeFilamentRecord
 }
 
 // Type implementation of Reply interface.
