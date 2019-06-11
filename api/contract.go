@@ -21,18 +21,18 @@ package api
 import (
 	"context"
 	"net/http"
-
-	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"reflect"
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
 )
@@ -130,8 +130,8 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 	contractID, err := s.runner.ArtifactManager.RegisterRequest(
 		ctx,
 		record.Request{
-			CallType: record.CTSaveAsChild,
-			Prototype: &base,
+			CallType:     record.CTSaveAsChild,
+			Prototype:    &base,
 			APIRequestID: utils.TraceID(ctx),
 		},
 	)
@@ -176,6 +176,7 @@ type CallMethodReply struct {
 	Reply          reply.CallMethod  `json:"Reply"`
 	ExtractedReply interface{}       `json:"ExtractedReply"`
 	Error          *foundation.Error `json:"Error"`
+	ExtractedError string            `json:"ExtractedError"`
 }
 
 // CallConstructor make an object from its prototype
@@ -195,10 +196,10 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	msg := &message.CallMethod{
 		Request: record.Request{
-			Caller:    testutils.RandomRef(),
-			Object:    objectRef,
-			Method:    args.Method,
-			Arguments: args.MethodArgs,
+			Caller:       testutils.RandomRef(),
+			Object:       objectRef,
+			Method:       args.Method,
+			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
 		},
 	}
@@ -209,10 +210,25 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	}
 
 	re.Reply = *callMethodReply.(*reply.CallMethod)
-	re.ExtractedReply, re.Error, err = extractor.CallResponse(re.Reply.Result)
 
+	var extractedReply interface{}
+	extractedReply, _, err = extractor.CallResponse(re.Reply.Result)
 	if err != nil {
 		return errors.Wrap(err, "Can't extract response")
+	}
+
+	switch extractedReply.(type) {
+	case map[interface{}]interface{}:
+		replyMap := extractedReply.(map[interface{}]interface{})
+		if len(replyMap) == 1 {
+			for k, v := range replyMap {
+				if reflect.ValueOf(k).String() == "S" && len(reflect.TypeOf(v).String()) > 0 {
+					re.ExtractedError = reflect.ValueOf(v).String()
+				}
+			}
+		}
+	default:
+		re.ExtractedReply = extractedReply
 	}
 
 	return nil
