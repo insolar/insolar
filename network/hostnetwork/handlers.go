@@ -99,7 +99,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 			mainLogger.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
 		} else {
 			packetCtx, logger := inslogger.WithTraceField(packetCtx, p.TraceID)
-			logger.Debug("[ HandleStream ] Handling packet RequestID = ", p.RequestID)
+			logger.Debugf("[ HandleStream ] Handling packet RequestID = %d", p.RequestID)
 
 			if p.IsResponse() {
 				go s.responseHandler.Handle(packetCtx, p)
