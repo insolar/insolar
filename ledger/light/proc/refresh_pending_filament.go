@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
@@ -210,15 +211,16 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 				panic(fmt.Sprintf("unexpected behaviour -% v", earlistOpenRequest))
 			}
 
-			if r.Records[0].Meta.PreviousRecord == nil {
+			firstRec := record.Unwrap(r.Records[0].Meta.Virtual).(*record.PendingFilament)
+			if firstRec.PreviousRecord == nil {
 				continueFilling = false
 				return nil
 			}
 
 			// If know border read to the start of the chain
 			// In other words, we read until limit
-			if earlistOpenRequest == 0 || r.Records[0].Meta.PreviousRecord.Pulse() > earlistOpenRequest {
-				destPN = r.Records[0].Meta.PreviousRecord.Pulse()
+			if earlistOpenRequest == 0 || firstRec.PreviousRecord.Pulse() > earlistOpenRequest {
+				destPN = firstRec.PreviousRecord.Pulse()
 			} else {
 				continueFilling = false
 			}

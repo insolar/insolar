@@ -375,8 +375,7 @@ func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber,
 	for idx, rec := range recs {
 		recsIds[idx] = rec.MetaID
 
-		recV := record.Wrap(rec.Meta)
-		err := i.recordStorage.Set(ctx, rec.MetaID, record.Material{Virtual: &recV})
+		err := i.recordStorage.Set(ctx, rec.MetaID, rec.Meta)
 		if err != nil && err != ErrOverride {
 			panic(errors.Wrapf(err, "obj id - %v", rec.MetaID.DebugString()))
 			return errors.Wrap(err, "filament update failed")
@@ -654,7 +653,7 @@ func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumb
 		res[idx] = record.CompositeFilamentRecord{
 			Record:   rec,
 			RecordID: concreteMeta.RecordID,
-			Meta:     *concreteMeta,
+			Meta:     metaRec,
 			MetaID:   id,
 		}
 	}

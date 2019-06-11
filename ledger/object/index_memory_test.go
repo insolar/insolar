@@ -549,7 +549,7 @@ func TestInMemoryIndex_SetFilament(t *testing.T) {
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn + 1, MetaRecordsIDs: []insolar.ID{}})
 		buck.pendingMeta.fullFilament = append(buck.pendingMeta.fullFilament, chainLink{PN: pn - 10, MetaRecordsIDs: []insolar.ID{}})
 
-		fill := []record.CompositeFilamentRecord{{MetaID: firstMeta, Meta: pf, RecordID: reqID, Record: record.Material{Virtual: &reqRecV}}}
+		fill := []record.CompositeFilamentRecord{{MetaID: firstMeta, Meta: record.Material{Virtual: &pfv}, RecordID: reqID, Record: record.Material{Virtual: &reqRecV}}}
 		err := idx.SetFilament(ctx, pn, objID, pn, fill)
 		require.NoError(t, err)
 
@@ -619,7 +619,7 @@ func TestInMemoryIndex_Records(t *testing.T) {
 		require.Equal(t, 1, len(data))
 		require.Equal(t, record.Wrap(req), *data[0].Record.Virtual)
 		require.Equal(t, *reqID, data[0].RecordID)
-		require.Equal(t, metaReq, data[0].Meta)
+		require.Equal(t, record.Material{Virtual: &metaReqV}, data[0].Meta)
 		require.Equal(t, savedReqID, data[0].MetaID)
 	})
 }
