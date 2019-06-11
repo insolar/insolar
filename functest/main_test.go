@@ -467,3 +467,10 @@ func testMainWrapper(m *testing.M) int {
 	}
 	return code
 }
+
+func TestMain(m *testing.M) {
+	if os.Getenv("INSOLAR_FUNCTEST") == "" {
+		return
+	}
+	os.Exit(testMainWrapper(m))
+}

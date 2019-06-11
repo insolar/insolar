@@ -133,7 +133,7 @@ test_unit:
 
 .PHONY: functest
 functest:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest ./functest -count=1
+	INSOLAR_FUNCTEST=1 CGO_ENABLED=1 go test $(TEST_ARGS) ./functest -count=1
 
 .PHONY: test_func
 test_func: functest
@@ -178,7 +178,7 @@ ci_test_slow:
 
 .PHONY: ci_test_func
 ci_test_func:
-	CGO_ENABLED=1 INSOLAR_LOG_LEVEL=error go test $(TEST_ARGS) -json -tags functest -v ./functest -count 3 -failfast | tee ci_test_func.json
+	INSOLAR_FUNCTEST=1 CGO_ENABLED=1 INSOLAR_LOG_LEVEL=error go test $(TEST_ARGS) -json -v ./functest -count 3 -failfast | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest:
