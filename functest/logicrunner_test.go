@@ -413,33 +413,32 @@ func (r *One) Kill() error {
 	require.Empty(t, resp.Error)
 }
 
-// TODO вернуться позже или забить или сделать отдельный тест не через общую ручку а напрямую поймать ошибку
-//func TestPanicError(t *testing.T) {
-//	var contractOneCode = `
-//package main
-//
-//import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-//import "errors"
-//
-//type One struct {
-//	foundation.BaseContract
-//}
-//
-//func (r *One) Panic() error {
-//	return errors.New("test")
-//}
-//func (r *One) NotPanic() error {
-//	return nil
-//}
-//`
-//	obj := callConstructor(t, uploadContractOnce(t, "panic", contractOneCode))
-//
-//	_, err := callMethod(t, obj, "Panic") // need to check error
-//	require.Equal(t, errors.New("test"), err.S)
-//
-//	_, err = callMethod(t, obj, "NotPanic") // no error
-//	require.Empty(t, err)
-//}
+func TestPanicError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "errors"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Panic() error {
+	return errors.New("test")
+}
+func (r *One) NotPanic() error {
+	return nil
+}
+`
+	obj := callConstructor(t, uploadContractOnce(t, "panic", contractOneCode))
+
+	resp := callMethod(t, obj, "Panic") // need to check error
+	require.Equal(t, "test", resp.ExtractedError)
+
+	resp = callMethod(t, obj, "NotPanic") // no error
+	require.Empty(t, resp.ExtractedError)
+}
 
 func TestGetChildrenError(t *testing.T) {
 	goContract := `
