@@ -266,6 +266,13 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.HotDataWaiter = &waiterMock{}
 	h.LifelineIndex = lifelineIndex
 
+	pfsa := object.NewPendingFilamentStateAccessorMock(mc)
+	ch := make(chan struct{})
+	close(ch)
+	pfsa.WaitForRefreshMock.Return(ch, nil)
+
+	h.PendingStateAccessor = pfsa
+
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
@@ -312,6 +319,13 @@ func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.HotDataWaiter = &waiterMock{}
+
+	pfsa := object.NewPendingFilamentStateAccessorMock(mc)
+	ch := make(chan struct{})
+	close(ch)
+	pfsa.WaitForRefreshMock.Return(ch, nil)
+
+	h.PendingStateAccessor = pfsa
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)

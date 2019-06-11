@@ -97,6 +97,8 @@ type PendingModifier interface {
 	SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.CompositeFilamentRecord) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingFilamentStateAccessor -o ./ -s _mock.go
+
 type PendingFilamentStateAccessor interface {
 	WaitForRefresh(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (<-chan struct{}, error)
 }

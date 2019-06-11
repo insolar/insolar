@@ -71,6 +71,7 @@ type MessageHandler struct {
 	PendingModifier       object.PendingModifier
 	PendingAccessor       object.PendingAccessor
 	PendingStateModifier  object.PendingFilamentStateModifier
+	PendingStateAccessor  object.PendingFilamentStateAccessor
 	PulseCalculator       storage.PulseCalculator
 
 	conf           *configuration.Ledger
@@ -201,9 +202,11 @@ func NewMessageHandler(
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.PendingFilamentStateAccessor = h.PendingStateAccessor
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.PendingFilamentStateAccessor = h.PendingStateAccessor
 		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep.Jets = h.JetStorage

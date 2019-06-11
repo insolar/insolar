@@ -955,7 +955,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
 
-		require.Equal(t, true, buck.pendingMeta.isStateCalculated)
+		require.NotNil(t, buck.pendingMeta.isStateCalculated)
 		require.Equal(t, 2, len(buck.pendingMeta.fullFilament))
 		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequestsIds))
 		require.Equal(t, 0, len(buck.pendingMeta.notClosedRequestsIdsIndex[pn]))
@@ -997,7 +997,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		err := idx.RefreshState(ctx, pn, objID)
 		require.NoError(t, err)
 
-		require.Equal(t, true, buck.pendingMeta.isStateCalculated)
+		require.NotNil(t, buck.pendingMeta.isStateCalculated)
 		require.Equal(t, 1, len(buck.pendingMeta.fullFilament))
 		require.Equal(t, 1, len(buck.pendingMeta.notClosedRequestsIds))
 		require.Equal(t, *reqID, buck.pendingMeta.notClosedRequestsIds[0])

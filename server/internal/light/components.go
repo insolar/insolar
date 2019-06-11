@@ -229,6 +229,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		waiter := hot.NewChannelWaiter()
 
 		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, indexes, indexes, &conf)
+		handler.PendingStateAccessor = indexes
+		handler.PendingStateModifier = indexes
+		handler.PulseCalculator = Pulses
+
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme

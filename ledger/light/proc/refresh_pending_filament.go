@@ -228,7 +228,7 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 			return errors.New(r.Text)
 		default:
 			panic(fmt.Errorf("RefreshPendingFilament: unexpected reply: %#v", r))
-			return fmt.Errorf("RefreshPendingFilament: unexpected reply: %#v")
+			return fmt.Errorf("RefreshPendingFilament: unexpected reply: %#v", r)
 		}
 	}
 
