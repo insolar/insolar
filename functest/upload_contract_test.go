@@ -14,14 +14,12 @@
 // limitations under the License.
 ///
 
-// +build functest
-
 package functest
 
 import (
-	"github.com/insolar/insolar/insolar"
 	"testing"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
 

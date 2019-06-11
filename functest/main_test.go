@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-// +build functest
-
 package functest
 
 import (
@@ -468,8 +466,4 @@ func testMainWrapper(m *testing.M) int {
 		fmt.Println(string(out))
 	}
 	return code
-}
-
-func TestMain(m *testing.M) {
-	os.Exit(testMainWrapper(m))
 }

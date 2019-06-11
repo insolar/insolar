@@ -14,31 +14,18 @@
 // limitations under the License.
 //
 
+// +build !functest
+
 package functest
 
 import (
-	"io/ioutil"
-	"net/http"
+	"os"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
-func TestChangeLogLevelOk(t *testing.T) {
-	url := HOST_DEBUG + "/debug/loglevel?level=debug"
-	resp, err := http.Get(url)
-	defer resp.Body.Close()
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	resBody, err := ioutil.ReadAll(resp.Body)
-	require.Nil(t, err)
-	require.Equal(t, "New log level: 'debug'\n", string(resBody))
-}
-
-func TestChangeLogLevelFail(t *testing.T) {
-	url := HOST_DEBUG + "/debug/loglevel?level=ololo"
-	resp, err := http.Get(url)
-	defer resp.Body.Close()
-	require.NoError(t, err)
-	require.NotEqual(t, http.StatusOK, resp.StatusCode)
+func TestMain(m *testing.M) {
+	if os.Getenv("INSOLAR_FUNCTEST") == "" {
+		return
+	}
+	os.Exit(testMainWrapper(m))
 }

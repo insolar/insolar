@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-// +build functest
-
 package functest
 
 import (
@@ -23,8 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -32,10 +28,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
