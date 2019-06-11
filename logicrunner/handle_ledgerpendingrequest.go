@@ -142,12 +142,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	u.hasPending = true
 	es.LedgerHasMoreRequests = true
-	es.LedgerQueueElement = &ExecutionQueueElement{
-		ctx:        ctx,
-		parcel:     parcel,
-		request:    requestRef,
-		fromLedger: true,
-	}
-
+	es.LedgerQueueElement = NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
+	es.LedgerQueueElement.FromLedger = true
 	return nil
 }

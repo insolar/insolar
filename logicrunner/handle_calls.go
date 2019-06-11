@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -64,7 +63,7 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 	// We want to remove element we have just added to es.Queue to eliminate doubling
 	addedRequestIdx := -1
 	for i := len(es.Queue) - 1; i >= 0; i-- {
-		if es.Queue[i].request.Equal(*request) {
+		if es.Queue[i].Request.Equal(*request) {
 			addedRequestIdx = i
 			break
 		}
@@ -139,13 +138,7 @@ func (h *HandleCall) handleActual(
 	request := procRegisterRequest.getResult()
 
 	es.Lock()
-	qElement := ExecutionQueueElement{
-		ctx:     ctx,
-		parcel:  parcel,
-		request: request,
-	}
-	log.Error(request)
-
+	qElement := *NewTranscript(ctx, parcel, request, lr.pulse(ctx), es.Ref)
 	es.Queue = append(es.Queue, qElement)
 	es.Unlock()
 
@@ -234,11 +227,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	os.Unlock()
 
 	es.Lock()
-	qElement := ExecutionQueueElement{
-		ctx:     ctx,
-		parcel:  msg.Parcel,
-		request: msg.Request,
-	}
+	qElement := *NewTranscript(ctx, msg.Parcel, msg.Request, lr.pulse(ctx), es.Ref)
 	es.Queue = append(es.Queue, qElement)
 	es.Unlock()
 
