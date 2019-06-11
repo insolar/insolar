@@ -656,6 +656,23 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 	}
 }
 
+func (s *PreprocessorSuite) TestExtractSagaInfo() {
+	info := &SagaInfo{}
+	res := extractSagaInfo("", info)
+	s.Require().False(res)
+	s.Require().False(info.IsSaga)
+
+	res = extractSagaInfo("ololo", info)
+	s.Require().False(res)
+	s.Require().False(info.IsSaga)
+
+	res = extractSagaInfo("//ins:saga(Ololo,Trololo) ", info)
+	s.Require().True(res)
+	s.Require().True(info.IsSaga)
+	s.Require().Equal(info.AcceptMethodName, "Ololo")
+	s.Require().Equal(info.RollbackMethodName, "Trololo")
+}
+
 func TestPreprocessor(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(PreprocessorSuite))

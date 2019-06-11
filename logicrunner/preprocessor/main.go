@@ -49,12 +49,28 @@ var corePath = "github.com/insolar/insolar/insolar"
 
 var immutableFlag = "//ins:immutable"
 
+var sagaFlagStart = "//ins:saga("
+var sagaFlagEnd = ")"
+var sagaFlagStartLength = len(sagaFlagStart)
+var sagaFlagEndLen = len(sagaFlagEnd)
+
 const (
 	TemplateDirectory = "templates"
 
 	mainPkg   = "main"
 	errorType = "error"
 )
+
+// SagaInfo stores sagas-related information for given contract method.
+// If a contract is marked with //ins:saga(Accept,Rollback) SagaInfo
+// stores IsSaga: true, AcceptMethodName: "Accept", RollbackMethodName: "Rollback".
+// Otherwise the structure stores IsSaga: false and other fields should be ignored.
+// No additional whitespaces are allowed anywhere is //ins:saga... comment.
+type SagaInfo struct {
+	IsSaga             bool
+	AcceptMethodName   string
+	RollbackMethodName string
+}
 
 // ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
@@ -303,6 +319,7 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 			"Results":             numberedVars(fun.Type.Results, "ret"),
 			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, errorType),
 			"Immutable":           isImmutable(fun), // only for methods, not constructors
+			"SagaInfo":            sagaInfo(fun),    // only for methods, not constructors
 		}
 		res = append(res, info)
 	}
@@ -366,6 +383,7 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]in
 			"ResultsNilError": commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "nil"),
 			"ResultsTypes":    genFieldList(pf, fun.Type.Results, false),
 			"Immutable":       isImmutable(fun),
+			"SagaInfo":        sagaInfo(fun), // AALEKSEEV: TODO do we need this for proxies?
 		}
 		res = append(res, info)
 	}
@@ -656,6 +674,36 @@ func isImmutable(decl *ast.FuncDecl) bool {
 		}
 	}
 	return isImmutable
+}
+
+func extractSagaInfo(comment string, info *SagaInfo) bool {
+	slice := strings.Trim(comment, " \r\n\t")
+	if strings.HasPrefix(slice, sagaFlagStart) &&
+		strings.HasSuffix(slice, sagaFlagEnd) {
+		commaIdx := strings.Index(slice, ",")
+		if commaIdx != -1 {
+			info.IsSaga = true
+			info.AcceptMethodName = slice[sagaFlagStartLength:commaIdx]
+			info.RollbackMethodName = slice[commaIdx+1 : len(slice)-1]
+			return true
+		}
+	}
+	return false
+}
+
+func sagaInfo(decl *ast.FuncDecl) (info *SagaInfo) {
+	info = &SagaInfo{}
+	if decl.Doc == nil || decl.Doc.List == nil {
+		return // there are no comments
+	}
+
+	for _, comment := range decl.Doc.List {
+		if extractSagaInfo(comment.Text, info) {
+			return // info found
+		}
+	}
+
+	return // no saga comment found
 }
 
 type ContractListEntry struct {
