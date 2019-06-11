@@ -64,13 +64,6 @@ type ObjectState struct {
 	Consensus      *Consensus
 }
 
-type ExecutionQueueElement struct {
-	ctx        context.Context
-	parcel     insolar.Parcel
-	request    *Ref
-	fromLedger bool
-}
-
 type Error struct {
 	Err      error
 	Request  *Ref
@@ -759,16 +752,16 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Messa
 	}
 }
 
-func convertQueueToMessageQueue(ctx context.Context, queue []ExecutionQueueElement) []message.ExecutionQueueElement {
+func convertQueueToMessageQueue(ctx context.Context, queue []Transcript) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
 	var traces string
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			Parcel:  elem.parcel,
-			Request: elem.request,
+			Parcel:  elem.Parcel,
+			Request: elem.RequestRef,
 		})
 
-		traces += inslogger.TraceID(elem.ctx) + ", "
+		traces += inslogger.TraceID(elem.Context) + ", "
 	}
 
 	inslogger.FromContext(ctx).Debug("convertQueueToMessageQueue: ", traces)

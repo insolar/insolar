@@ -61,30 +61,30 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 			return nil
 		}
 
-		var qe ExecutionQueueElement
+		var transcript Transcript
 		if es.LedgerQueueElement != nil {
-			qe = *es.LedgerQueueElement
+			transcript = *es.LedgerQueueElement
 			es.LedgerQueueElement = nil
 		} else {
-			qe, es.Queue = es.Queue[0], es.Queue[1:]
+			transcript, es.Queue = es.Queue[0], es.Queue[1:]
 		}
 
-		msg, ok := qe.parcel.Message().(*message.CallMethod)
+		msg, ok := transcript.Parcel.Message().(*message.CallMethod)
 		if !ok {
 			panic("Not a call method message, should never happen")
 		}
 
-		sender := qe.parcel.GetSender()
+		sender := transcript.Parcel.GetSender()
 		current := CurrentExecution{
-			RequestRef:    qe.request,
+			RequestRef:    transcript.RequestRef,
 			RequesterNode: &sender,
-			Context:       qe.ctx,
+			Context:       transcript.Context,
 			Request:       &msg.Request,
 			LogicContext: &insolar.LogicCallContext{
 				Mode:            "execution",
 				Caller:          msg.GetCaller(),
 				Callee:          &es.Ref,
-				Request:         qe.request,
+				Request:         transcript.RequestRef,
 				Time:            time.Now(), // TODO: probably we should take it earlier
 				Pulse:           *lr.pulse(ctx),
 				TraceID:         inslogger.TraceID(ctx),
@@ -93,12 +93,12 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 			},
 		}
 
-		es.CurrentList.Set(*qe.request, &current)
+		es.CurrentList.Set(*transcript.RequestRef, &current)
 		es.Unlock()
 
 		lr.executeOrValidate(current.Context, es, &current)
 
-		if qe.fromLedger {
+		if transcript.FromLedger {
 			pub := p.dep.Publisher
 			err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, p.Message.Payload, getLedgerPendingRequestMsg))
 			if err != nil {
