@@ -161,7 +161,7 @@ func (b *Bus) SendTarget(
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	msg.SetContext(ctx)
 
-	_, err := b.wrapMeta(msg, target, b.coordinator.Me())
+	_, err := b.wrapMeta(msg, target, b.coordinator.Me(), nil)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
 		return nil, nil
@@ -216,7 +216,9 @@ func (b *Bus) Reply(ctx context.Context, originMetaZZZ payload.Meta, origin, rep
 		return
 	}
 
-	_, err = b.wrapMeta(reply, originMeta.Sender, b.coordinator.Me())
+	hashID := HashOrigin(b.pcs.IntegrityHasher(), originMeta.Payload)
+
+	_, err = b.wrapMeta(reply, originMeta.Sender, b.coordinator.Me(), hashID[:])
 	if err != nil {
 		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
 		return
@@ -260,7 +262,12 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 // wrapMeta wraps origin.Payload data with service fields
 // and set it as byte slice back to msg.Payload.
 // Note: this method has side effect - origin-argument mutating
-func (b *Bus) wrapMeta(origin *message.Message, receiver insolar.Reference, sender insolar.Reference) (payload.Meta, error) {
+func (b *Bus) wrapMeta(
+	origin *message.Message,
+	receiver insolar.Reference,
+	sender insolar.Reference,
+	hash []byte,
+) (payload.Meta, error) {
 	latestPulse, err := b.pulses.Latest(context.Background())
 	if err != nil {
 		return payload.Meta{}, errors.Wrap(err, "failed to fetch pulse")
@@ -271,6 +278,11 @@ func (b *Bus) wrapMeta(origin *message.Message, receiver insolar.Reference, send
 		Sender:   sender,
 		Pulse:    latestPulse.PulseNumber,
 	}
+
+	if hash != nil {
+		wrapper.OriginHash = hash
+	}
+
 	buf, err := wrapper.Marshal()
 	if err != nil {
 		return payload.Meta{}, errors.Wrap(err, "failed to wrap message")
@@ -280,10 +292,13 @@ func (b *Bus) wrapMeta(origin *message.Message, receiver insolar.Reference, send
 	return wrapper, nil
 }
 
-func HashOrigin(h hash.Hash, buf []byte) []byte {
+func HashOrigin(h hash.Hash, buf []byte) [32]byte {
 	_, err := h.Write(buf)
 	if err != nil {
 		panic(err)
 	}
-	return h.Sum(nil)
+	slice := h.Sum(nil)
+	var res [32]byte
+	copy(res[:], slice)
+	return res
 }
