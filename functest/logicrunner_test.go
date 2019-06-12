@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/magiconair/properties/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -192,7 +191,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	for i := 2; i <= 5; i++ {
 		resp = callMethod(t, objectRef, "Again", "ins")
 		require.Empty(t, resp.Error)
-		assert.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), resp.ExtractedReply)
+		require.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), resp.ExtractedReply)
 	}
 
 	resp = callMethod(t, objectRef, "GetFriend")
@@ -204,7 +203,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	for i := 6; i <= 9; i++ {
 		resp = callMethod(t, two, "Hello", "Insolar")
 		require.Empty(t, resp.Error)
-		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), resp.ExtractedReply)
+		require.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), resp.ExtractedReply)
 	}
 
 	type Payload struct {
