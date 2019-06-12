@@ -148,11 +148,15 @@ func (g *Complete) requestCertSign(ctx context.Context, discoveryNode insolar.Di
 		NodeRef: *registeredNodeRef,
 	}
 	future, err := g.HostNetwork.SendRequest(ctx, types.SignCert, request, *discoveryNode.GetNodeRef())
+	if err != nil {
+		return nil, err
+	}
+
 	p, err := future.WaitResponse(10 * time.Second)
 	if err != nil {
 		return nil, err
 	} else if p.GetResponse().GetError() != nil {
-		return nil, fmt.Errorf("[requestCertSign] Remote said %s", p.GetResponse().GetError().Error)
+		return nil, fmt.Errorf("[requestCertSign] Remote (%s) said %s", p.GetSender(), p.GetResponse().GetError().Error)
 	}
 
 	sign = p.GetResponse().GetSignCert().Sign
@@ -191,7 +195,7 @@ func (g *Complete) signCert(ctx context.Context, registeredNodeRef *insolar.Refe
 // signCertHandler is handler that signs certificate for some node with node own key
 func (g *Complete) signCertHandler(ctx context.Context, request network.Packet) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetSignCert() == nil {
-		inslogger.FromContext(ctx).Warnf("process RPC: got invalid request protobuf message: %s", request)
+		inslogger.FromContext(ctx).Warnf("process SignCert: got invalid request protobuf message: %s", request)
 	}
 	sign, err := g.signCert(ctx, &request.GetRequest().GetSignCert().NodeRef)
 	if err != nil {
