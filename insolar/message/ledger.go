@@ -143,9 +143,10 @@ func (*GetDelegate) Type() insolar.MessageType {
 type UpdateObject struct {
 	ledgerMessage
 
-	Record []byte
-	Object insolar.Reference
-	Memory []byte
+	Record       []byte
+	ResultRecord []byte
+	Object       insolar.Reference
+	Memory       []byte
 }
 
 // AllowedSenderObjectAndRole implements interface method
