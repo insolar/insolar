@@ -52,7 +52,6 @@ var immutableFlag = "//ins:immutable"
 var sagaFlagStart = "//ins:saga("
 var sagaFlagEnd = ")"
 var sagaFlagStartLength = len(sagaFlagStart)
-var sagaFlagEndLen = len(sagaFlagEnd)
 
 const (
 	TemplateDirectory = "templates"
@@ -353,7 +352,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	allMethodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
 
-	sagaRollbackMethods := make(map[string]struct{}, 0)
+	sagaRollbackMethods := make(map[string]struct{})
 	for _, methodInfo := range allMethodsProxies {
 		sagaInfo := methodInfo["SagaInfo"].(*SagaInfo)
 		if sagaInfo.IsSaga {
