@@ -103,7 +103,6 @@ type ServiceNetwork struct {
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	GIL                 insolar.GlobalInsolarLock   `inject:""`
 	Pub                 message.Publisher           `inject:""`
-	MessageBus          insolar.MessageBus          `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	Sender              bus.Sender                  `inject:""`
 
@@ -217,7 +216,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	n.SetGateway(gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
-		n.CryptographyService, n.MessageBus, n.CertificateManager))
+		n.CryptographyService, hostNetwork, n.CertificateManager))
 
 	return nil
 }

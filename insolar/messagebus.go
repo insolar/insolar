@@ -244,11 +244,6 @@ const (
 
 	// TypeGenesisRequest used for bootstrap object generation.
 	TypeGenesisRequest
-
-	// NetworkCoordinator
-
-	// TypeNodeSignRequest used to request sign for new node
-	TypeNodeSignRequest
 )
 
 // DelegationTokenType is an enum type of delegation token
