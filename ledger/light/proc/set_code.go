@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/blob"
@@ -40,12 +39,11 @@ type SetCode struct {
 	jetID    insolar.JetID
 
 	dep struct {
-		writer      hot.WriteAccessor
-		records     object.RecordModifier
-		blobs       blob.Modifier
-		pcs         insolar.PlatformCryptographyScheme
-		sender      bus.Sender
-		coordinator jet.Coordinator
+		writer  hot.WriteAccessor
+		records object.RecordModifier
+		blobs   blob.Modifier
+		pcs     insolar.PlatformCryptographyScheme
+		sender  bus.Sender
 	}
 }
 
@@ -65,14 +63,12 @@ func (p *SetCode) Dep(
 	b blob.Modifier,
 	pcs insolar.PlatformCryptographyScheme,
 	s bus.Sender,
-	c jet.Coordinator,
 ) {
 	p.dep.writer = w
 	p.dep.records = r
 	p.dep.blobs = b
 	p.dep.pcs = pcs
 	p.dep.sender = s
-	p.dep.coordinator = c
 }
 
 func (p *SetCode) Proceed(ctx context.Context) error {

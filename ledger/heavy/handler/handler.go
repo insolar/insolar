@@ -67,13 +67,11 @@ func New() *Handler {
 			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
-			p.Dep.Coordinator = h.JetCoordinator
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.Sender = h.Sender
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.BlobAccessor = h.BlobAccessor
-			p.Dep.Coordinator = h.JetCoordinator
 		},
 	}
 	h.dep = &dep

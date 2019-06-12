@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/blob"
@@ -36,7 +35,6 @@ type GetCode struct {
 		RecordAccessor object.RecordAccessor
 		BlobAccessor   blob.Accessor
 		Sender         bus.Sender
-		Coordinator    jet.Coordinator
 	}
 }
 
