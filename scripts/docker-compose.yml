@@ -68,4 +68,3 @@ services:
       retries: 5
       start_period: 30s
     restart: on-failure
-    # restart: on-failure
