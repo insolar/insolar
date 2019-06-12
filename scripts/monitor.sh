@@ -25,7 +25,7 @@ set -e
 
 export PROMETHEUS_CONFIG_DIR=../${LAUNCHNET_BASE_DIR}
 
-if [ $# -lt 1 ]; then
+if [[ $# -lt 1 ]]; then
 # 1) if started without params  pretend to be clever and do what is expected:
 # * prepare configuration
 # * shutdown ans start all monitoring services
