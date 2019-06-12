@@ -48,7 +48,6 @@ message Pass {
     uint32 Polymorph = 16;
 
     bytes Origin   = 20;
-    bytes CorrelationID = 22;
 }
 
 message SetCode {
