@@ -67,9 +67,8 @@ const (
 // Otherwise the structure stores IsSaga: false and other fields should be ignored.
 // No additional whitespaces are allowed anywhere is //ins:saga... comment.
 type SagaInfo struct {
-	IsSaga              bool
-	CanAcceptMethodName string
-	RollbackMethodName  string
+	IsSaga             bool
+	RollbackMethodName string
 }
 
 // ParsedFile struct with prepared info we extract from source code
@@ -681,11 +680,13 @@ func extractSagaInfo(comment string, info *SagaInfo) bool {
 	slice := strings.Trim(comment, " \r\n\t")
 	if strings.HasPrefix(slice, sagaFlagStart) &&
 		strings.HasSuffix(slice, sagaFlagEnd) {
-		commaIdx := strings.Index(slice, ",")
-		if commaIdx != -1 {
+		rollbackName := slice[sagaFlagStartLength : len(slice)-1]
+		rollbackNameLen := len(rollbackName)
+		if rollbackNameLen > 0 {
+			sliceCopy := make([]byte, rollbackNameLen)
+			copy(sliceCopy, rollbackName)
 			info.IsSaga = true
-			info.CanAcceptMethodName = slice[sagaFlagStartLength:commaIdx]
-			info.RollbackMethodName = slice[commaIdx+1 : len(slice)-1]
+			info.RollbackMethodName = string(sliceCopy)
 			return true
 		}
 	}

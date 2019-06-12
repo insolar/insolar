@@ -666,11 +666,14 @@ func (s *PreprocessorSuite) TestExtractSagaInfo() {
 	s.Require().False(res)
 	s.Require().False(info.IsSaga)
 
-	res = extractSagaInfo("//ins:saga(Ololo,Trololo) ", info)
+	res = extractSagaInfo("//ins:saga()", info)
+	s.Require().False(res)
+	s.Require().False(info.IsSaga)
+
+	res = extractSagaInfo("//ins:saga(SomeRollbackMethodName) ", info)
 	s.Require().True(res)
 	s.Require().True(info.IsSaga)
-	s.Require().Equal(info.CanAcceptMethodName, "Ololo")
-	s.Require().Equal(info.RollbackMethodName, "Trololo")
+	s.Require().Equal(info.RollbackMethodName, "SomeRollbackMethodName")
 }
 
 func TestPreprocessor(t *testing.T) {
