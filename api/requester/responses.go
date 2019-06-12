@@ -22,7 +22,7 @@ type rpcResponse struct {
 }
 
 type seedResponse struct {
-	Seed    []byte `json:"Seed"`
+	Seed    string `json:"Seed"`
 	TraceID string `json:"TraceID"`
 }
 type rpcSeedResponse struct {

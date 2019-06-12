@@ -19,6 +19,7 @@ package requester
 import (
 	"crypto"
 	"encoding/json"
+	"github.com/insolar/insolar/api"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -37,9 +38,19 @@ type UserConfigJSON struct {
 
 // RequestConfigJSON holds info about request
 type RequestConfigJSON struct {
-	Params   []interface{} `json:"params"`
-	Method   string        `json:"method"`
-	LogLevel interface{}   `json:"logLevel,omitempty"`
+	JsonRpc  string  `json:"jsonrpc"`
+	Id       int     `json:"id"`
+	Method   string  `json:"method"`
+	Params   Params  `json:"params"`
+	LogLevel *string `json:"logLevel,omitempty"`
+}
+
+type Params struct {
+	Seed       string `json:"seed"`
+	CallSite   string `json:"callSite"`
+	CallParams string `json:"callParams"`
+	Reference  string `json:"reference"`
+	Pem        string `json:"pem"`
 }
 
 func readFile(path string, configType interface{}) error {
@@ -93,8 +104,8 @@ func ReadUserConfigFromFile(file string) (*UserConfigJSON, error) {
 }
 
 // ReadRequestConfigFromFile read request config from file
-func ReadRequestConfigFromFile(path string) (*RequestConfigJSON, error) {
-	rConfig := &RequestConfigJSON{}
+func ReadRequestConfigFromFile(path string) (*api.Request, error) {
+	rConfig := &api.Request{}
 	err := readFile(path, rConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readRequesterConfigFromFile ] ")

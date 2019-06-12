@@ -40,19 +40,19 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	JsonRpc  string  `json:"jsonrpc"`
-	Id       int     `json:"id"`
-	Method   string  `json:"method"`
-	Params   Params  `json:"params"`
-	LogLevel *string `json:"logLevel,omitempty"`
+	JsonRpc  string `json:"jsonrpc"`
+	Id       int    `json:"id"`
+	Method   string `json:"method"`
+	Params   Params `json:"params"`
+	LogLevel string `json:"logLevel,omitempty"`
 }
 
 type Params struct {
-	Seed       string `json:"seed"`
-	CallSite   string `json:"callSite"`
-	CallParams string `json:"callParams"`
-	Reference  string `json:"reference"`
-	Pem        string `json:"pem"`
+	Seed       string      `json:"seed"`
+	CallSite   string      `json:"callSite"`
+	CallParams interface{} `json:"callParams"`
+	Reference  string      `json:"reference"`
+	PublicKey  string      `json:"memberPubKey"`
 }
 
 type Answer struct {
@@ -197,8 +197,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		if request.LogLevel != nil {
-			logLevelNumber, err := insolar.ParseLevel(*request.LogLevel)
+		if len(request.LogLevel) > 0 {
+			logLevelNumber, err := insolar.ParseLevel(request.LogLevel)
 			if err != nil {
 				processError(err, "Can't parse logLevel", &resp, insLog)
 				return
@@ -249,14 +249,12 @@ func validateRequestHeaders(digest string, richSignature string, body []byte) (s
 	h := sha256.New()
 	h.Write(body)
 	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	if sha == digest {
-		// keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>
-		fields := strings.Split(richSignature, ",")
-		fields = strings.Split(fields[len(fields)-1], "=")
-		if len(fields[len(fields)-1]) == 0 {
+	if sha == digest[strings.IndexByte(digest, '=')+1:] {
+		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
+		if len(sig) == 0 {
 			return "", errors.New("Empty signature")
 		}
-		return fields[len(fields)-1], nil
+		return sig, nil
 
 	} else {
 		return "", errors.New("Cant get signature from header")
