@@ -217,6 +217,7 @@ func (m *client) GetCode(
 	defer done()
 
 	rep, ok := <-reps
+	ctx = inslogger.WithLoggerLevel(ctx,insolar.ErrorLevel)
 	if !ok {
 		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 			"correlation_id": middleware.MessageCorrelationID(msg),
@@ -224,6 +225,11 @@ func (m *client) GetCode(
 		}).Error("no reply")
 		return nil, errors.New("no reply")
 	}
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"correlation_id": middleware.MessageCorrelationID(msg),
+		"code_id": code.Record().DebugString(),
+	}).Error("reply ok")
+
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal reply")

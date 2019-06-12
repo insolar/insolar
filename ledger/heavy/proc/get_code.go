@@ -19,6 +19,7 @@ package proc
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
@@ -56,6 +57,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload type: %T", pl)
 	}
 
+	ctx = inslogger.WithLoggerLevel(ctx,insolar.ErrorLevel)
 	ctx, _ = inslogger.WithField(ctx, "code_id", getCode.CodeID.DebugString())
 
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, getCode.CodeID)

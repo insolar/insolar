@@ -19,6 +19,7 @@ package handle
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
@@ -52,6 +53,7 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("unexpected payload type: %T", pl)
 	}
 
+	ctx = inslogger.WithLoggerLevel(ctx,insolar.ErrorLevel)
 	ctx, _ = inslogger.WithField(ctx, "code_id", msg.CodeID.DebugString())
 
 	passIfNotFound := !s.passed

@@ -19,6 +19,7 @@ package handle
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/record"
@@ -60,6 +61,7 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 	recID := calc.Result.ID
+	ctx = inslogger.WithLoggerLevel(ctx,insolar.ErrorLevel)
 	ctx, _ = inslogger.WithField(ctx, "code_id", recID.DebugString())
 
 	passIfNotExecutor := !s.passed
