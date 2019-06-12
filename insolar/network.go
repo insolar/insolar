@@ -48,7 +48,7 @@ type Network interface {
 	// GetState returns our current thoughs about whole network
 	GetState() NetworkState
 	// SetOperableFunc registers callback for notifying of network state
-	SetOperableFunc(f func(ctx context.Context, operable bool))
+	SetOperableFunc(f func(ctx context.Context, isNetworkOperable bool))
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go
