@@ -31,8 +31,6 @@ message Request {
         PulseRequest Pulse = 4;
         BootstrapRequest Bootstrap = 5;
         AuthorizeRequest Authorize = 6;
-        RegisterRequest Register = 7;
-        GenesisRequest Genesis = 8;
     }
 }
 
@@ -43,8 +41,6 @@ message Response {
         BasicResponse Basic = 3; // response for Cascade and Pulse requests
         BootstrapResponse Bootstrap = 4;
         AuthorizeResponse Authorize = 5;
-        RegisterResponse Register = 6;
-        GenesisResponse Genesis = 7;
     }
 }
 
@@ -77,22 +73,18 @@ message PulseRequest {
 message BootstrapRequest {
     bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
     uint32 LastNodePulse = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    Permission Permission = 3;
+    Permit Permit = 3;
+}
+
+message AuthorizeData {
+    bytes Certificate = 1;
+    int64 Timestamp = 2;
+    string Version = 3;
 }
 
 message AuthorizeRequest {
-    bytes Certificate = 1;
-}
-
-message RegisterRequest {
-    uint64 SessionID = 1;
-    string Version = 2;
-    bytes JoinClaim = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
-}
-
-message GenesisRequest {
-    uint32 LastPulse = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes Discovery = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
+    AuthorizeData AuthorizeData = 1;
+    bytes Signature = 2;
 }
 
 message RPCResponse {
@@ -108,16 +100,16 @@ enum ResponseCode {
     UpdateSchedule = 4;
 }
 
-message Permission {
-    PermissionPayload Payload = 1 [(gogoproto.nullable) = false];
+message Permit {
+    PermitPayload Payload = 1 [(gogoproto.nullable) = false];
     bytes Signature = 2;
 }
 
-message PermissionPayload {
+message PermitPayload {
     bytes JoinerPublicKey = 1;
-	int64 UTC = 2;
-    string ReconnectTo = 3;
-    bytes DiscoveryRef = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+	int64 ExpireTimestamp = 2;
+    bytes ReconnectTo = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
+    bytes AuthorityNodeRef = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message BootstrapResponse {
@@ -128,7 +120,6 @@ message BootstrapResponse {
     uint32 UpdateSincePulse = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     string RedirectHost = 6;
     uint32 NetworkSize = 7;
-    Permission Permission = 8;
 }
 
 message BasicResponse {
@@ -136,30 +127,18 @@ message BasicResponse {
     string Error = 2;
 }
 
-enum BasicResponseCode {
-    Confirmed = 0;
-    Denied = 1;
-    Retry = 2;
+enum AuthorizeResponseCode {
+    Success = 0;
+    WrongTimestamp = 1;
+    WrongMandate = 2;
+    WrongVersion = 3;
 }
 
 message AuthorizeResponse {
-    BasicResponseCode Code = 1;
+    AuthorizeResponseCode Code = 1;
     string Error = 2;
-    AuthorizationData Data = 3;
-}
-
-message AuthorizationData {
-    uint64 SessionID = 1;
-    uint32 AssignShortID = 2;
-}
-
-message RegisterResponse {
-    BasicResponseCode Code = 1;
-    int64 RetryIn = 2;
-    string Error = 3;
-}
-
-message GenesisResponse {
-    GenesisRequest Response = 1;
-    string Error = 2;
+    Permit Permit = 3;
+    uint32 DiscoveryCount = 4;
+    uint32 PulseNumber = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    uint32 NetworkState = 6;
 }

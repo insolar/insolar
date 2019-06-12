@@ -206,10 +206,15 @@ func TestPacket_GetRequest_GetRPC(t *testing.T) {
 
 func TestPacket_GetRequest_GetAuthorize(t *testing.T) {
 	ss := []byte("onetwothree")
-	auth := AuthorizeRequest{Certificate: ss}
+	sign := []byte("abcdefg")
+	auth := AuthorizeRequest{AuthorizeData: &AuthorizeData{Certificate: ss, Version: "ver1"}, Signature: sign}
 	_, p2 := marshalUnmarshalPacketRequest(t, &auth)
 	require.NotNil(t, p2.GetRequest().GetAuthorize())
-	assert.Equal(t, ss, p2.GetRequest().GetAuthorize().Certificate)
+	require.NotNil(t, p2.GetRequest().GetAuthorize().AuthorizeData)
+
+	assert.Equal(t, ss, p2.GetRequest().GetAuthorize().AuthorizeData.Certificate)
+	assert.Equal(t, sign, p2.GetRequest().GetAuthorize().Signature)
+	assert.Equal(t, "ver1", p2.GetRequest().GetAuthorize().AuthorizeData.Version)
 }
 
 func TestPacket_GetResponse(t *testing.T) {
