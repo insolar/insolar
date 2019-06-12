@@ -26,6 +26,7 @@ BUILD_TIME = $(shell date "+%H:%M:%S")
 BUILD_HASH = $(shell git rev-parse --short HEAD)
 BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
 
+GOPATH ?= `go env GOPATH`
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildNumber=${BUILD_NUMBER}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
