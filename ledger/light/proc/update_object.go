@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -46,7 +45,6 @@ type UpdateObject struct {
 		Bus                   insolar.MessageBus
 		Coordinator           jet.Coordinator
 		BlobModifier          blob.Modifier
-		RecentStorageProvider recentstorage.Provider
 		PCS                   insolar.PlatformCryptographyScheme
 		IDLocker              object.IDLocker
 		LifelineIndex         object.LifelineIndex

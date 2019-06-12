@@ -33,14 +33,12 @@ import (
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/network/storage"
 )
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	RecentStorageProvider  recentstorage.Provider             `inject:""`
 	Bus                    insolar.MessageBus                 `inject:""`
 	PCS                    insolar.PlatformCryptographyScheme `inject:""`
 	JetCoordinator         jet.Coordinator                    `inject:""`
@@ -177,7 +175,6 @@ func NewMessageHandler(
 			p.Dep.Bus = h.Bus
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.PCS = h.PCS
 			p.Dep.IDLocker = h.IDLocker
 			p.Dep.LifelineStateModifier = h.LifelineStateModifier
