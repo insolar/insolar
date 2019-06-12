@@ -237,10 +237,6 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 			inslogger.FromContext(context.Background()).Error("can't unmarshal meta message")
 		}
 
-		if len(meta.OriginHash) == 0 {
-			inslogger.FromContext(context.Background()).Error("empty Meta.OriginHash")
-		}
-
 		id := base58.Encode(meta.OriginHash)
 
 		b.repliesMutex.RLock()

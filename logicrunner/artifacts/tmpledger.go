@@ -23,7 +23,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -276,19 +275,6 @@ type pubSubMock struct {
 
 func (p *pubSubMock) Publish(topic string, messages ...*message.Message) error {
 	for _, msg := range messages {
-		pn, err := p.pulses.Latest(context.Background())
-		if err != nil {
-			return err
-		}
-		pl := payload.Meta{
-			Payload: msg.Payload,
-			Pulse:   pn.PulseNumber,
-		}
-		buf, err := pl.Marshal()
-		if err != nil {
-			return err
-		}
-		msg.Payload = buf
 		_, _ = p.bus.IncomingMessageRouter(p.handler)(msg)
 	}
 	return nil
