@@ -62,18 +62,28 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func getController(t *testing.T) pulseController {
+func getController(t *testing.T) *pulseController {
 	proc := platformpolicy.NewKeyProcessor()
 	key, err := proc.GeneratePrivateKey()
 	require.NoError(t, err)
-	return pulseController{
+
+	pulseHandler := network.NewPulseHandlerMock(t)
+	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse) {}
+	net := network.NewHostNetworkMock(t)
+	net.BuildResponseMock.Return(packet.NewPacket(nil, nil, types.Pulse, 1))
+
+	return &pulseController{
+		PulseHandler:        pulseHandler,
+		Network:             net,
 		CryptographyScheme:  platformpolicy.NewPlatformCryptographyScheme(),
 		KeyProcessor:        proc,
 		CryptographyService: cryptography.NewKeyBoundCryptographyService(key),
@@ -91,6 +101,17 @@ func getKeys(t *testing.T) (public string, private crypto.PrivateKey) {
 	return string(pubKey), privKey
 }
 
+func signPulsePayload(t *testing.T, psc insolar.PulseSenderConfirmation, key crypto.PrivateKey) []byte {
+	payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
+	hasher := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
+	hash, err := payload.Hash(hasher)
+	require.NoError(t, err)
+	service := cryptography.NewKeyBoundCryptographyService(key)
+	sign, err := service.Sign(hash)
+	require.NoError(t, err)
+	return sign.Bytes()
+}
+
 func TestVerifyPulseSignTrue(t *testing.T) {
 	controller := getController(t)
 	keyStr, privateKey := getKeys(t)
@@ -101,18 +122,7 @@ func TestVerifyPulseSignTrue(t *testing.T) {
 		Entropy:         randomEntropy(),
 	}
 
-	signPulsePayload := func(t *testing.T, psc insolar.PulseSenderConfirmation) []byte {
-		payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
-		hasher := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
-		hash, err := payload.Hash(hasher)
-		require.NoError(t, err)
-		service := cryptography.NewKeyBoundCryptographyService(privateKey)
-		sign, err := service.Sign(hash)
-		require.NoError(t, err)
-		return sign.Bytes()
-	}
-
-	psc.Signature = signPulsePayload(t, psc)
+	psc.Signature = signPulsePayload(t, psc, privateKey)
 
 	pulse := pulsar.NewPulse(1, 0, &entropygenerator.StandardEntropyGenerator{})
 	pulse.Signs = make(map[string]insolar.PulseSenderConfirmation)
@@ -122,7 +132,7 @@ func TestVerifyPulseSignTrue(t *testing.T) {
 	assert.NoError(t, err)
 
 	psc.ChosenPublicKey = "some_other_key"
-	psc.Signature = signPulsePayload(t, psc)
+	psc.Signature = signPulsePayload(t, psc, privateKey)
 	pulse.Signs[keyStr] = psc
 	err = controller.verifyPulseSign(*pulse)
 	assert.NoError(t, err)
@@ -193,16 +203,42 @@ func TestProcessPulseVerifyFailure(t *testing.T) {
 	controller := &pulseController{}
 	request := newPulsePacket(t)
 	request.SetRequest(&packet.PulseRequest{
-		Pulse: pulse.ToProto(&insolar.Pulse{
-			PulseNumber:      150,
-			PrevPulseNumber:  140,
-			NextPulseNumber:  160,
-			PulseTimestamp:   1111111,
-			EpochPulseNumber: 1,
-			Entropy:          insolar.Entropy{1},
-			Signs:            nil,
-		}),
-	})
+		Pulse: pulse.ToProto(pulsar.NewPulse(10, 140,
+			&entropygenerator.StandardEntropyGenerator{}))},
+	)
 	_, err := controller.processPulse(context.Background(), request)
 	assert.Error(t, err)
+}
+
+func newSignedPulse(t *testing.T) *insolar.Pulse {
+	keyStr, privateKey := getKeys(t)
+
+	psc := insolar.PulseSenderConfirmation{
+		PulseNumber:     1,
+		ChosenPublicKey: keyStr,
+		Entropy:         randomEntropy(),
+	}
+
+	psc.Signature = signPulsePayload(t, psc, privateKey)
+
+	pulse := pulsar.NewPulse(10, 140, &entropygenerator.StandardEntropyGenerator{})
+	pulse.Signs = make(map[string]insolar.PulseSenderConfirmation)
+	pulse.Signs[keyStr] = psc
+
+	return pulse
+}
+
+func TestProcessPulseHappyPath(t *testing.T) {
+	controller := getController(t)
+
+	nk := network.NewNodeKeeperMock(t)
+	nk.GetConsensusInfoMock.Return(nodenetwork.NewConsensusInfo())
+	controller.NodeKeeper = nk
+
+	request := newPulsePacket(t)
+	request.SetRequest(&packet.PulseRequest{
+		Pulse: pulse.ToProto(newSignedPulse(t)),
+	})
+	_, err := controller.processPulse(context.Background(), request)
+	assert.NoError(t, err)
 }

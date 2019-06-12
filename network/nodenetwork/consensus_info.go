@@ -125,7 +125,7 @@ func (ci *ConsensusInfo) Flush(nodesJoinedDuringPrevPulse bool) {
 	ci.nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse
 }
 
-func newConsensusInfo() *ConsensusInfo {
+func NewConsensusInfo() *ConsensusInfo {
 	return &ConsensusInfo{
 		tempMapR: make(map[insolar.Reference]*host.Host),
 		tempMapS: make(map[insolar.ShortNodeID]*host.Host),
