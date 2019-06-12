@@ -87,7 +87,6 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 
 	err := s.cb.Build(contractMap)
 	if err != nil {
-		inslog.Infof("[ ContractService.Upload ] can't build contract %#v", err)
 		return errors.Wrap(err, "can't build contract")
 	}
 	reference := *s.cb.Prototypes[args.Name]
