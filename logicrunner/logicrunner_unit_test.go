@@ -1359,7 +1359,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyESWithValidation() {
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: NewExecutionState(s.objectRef),
 		Validation:     NewExecutionState(s.objectRef),
-		Consensus:      &Consensus{},
 	}
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
