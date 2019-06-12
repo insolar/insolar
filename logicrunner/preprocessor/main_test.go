@@ -656,6 +656,57 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 	}
 }
 
+// Make sure proxy doesn't contain:
+// 1. Rollback method
+// 2. AsImmutable-versions of Accept/Rollback methods
+// 3. NoWait-versions of Accept/Rollback methods
+func (s *PreprocessorSuite) TestSagaAdditionalMethodsAreMissingInProxy() {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+package main
+
+import (
+	"fmt"
+	"errors"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type SagaTestWallet struct {
+	foundation.BaseContract
+	Amount int
+}
+
+//ins:saga(TheRollbackMethod)
+func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
+	w.Amount += amount
+}
+
+func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
+	w.Amount -= amount
+}
+`)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	s.NoError(err)
+	proxyCode := bufProxy.String()
+	s.Contains(proxyCode, "TheAcceptMethod")
+	s.NotContains(proxyCode, "TheRollbackMethod") // AALEKSEEV TODO make all tests pass
+	//	s.NotContains(proxyCode, "TheAcceptMethodNoWait")
+	//	s.NotContains(proxyCode, "TheRollbackMethodNoWait")
+	//	s.NotContains(proxyCode, "TheAcceptMethodAsImmutable")
+	//	s.NotContains(proxyCode, "TheRollbackMethodAsImmutable")
+}
+
 func (s *PreprocessorSuite) TestExtractSagaInfo() {
 	info := &SagaInfo{}
 	res := extractSagaInfo("", info)
