@@ -57,7 +57,12 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 		ObjectReference: es.Ref,
 		Parcel:          parcel,
 		Request:         request,
-		Pending:         es.pending,
+	}
+
+	if es.pending == message.PendingUnknown {
+		additionalCallMsg.Pending = message.NotPending
+	} else {
+		additionalCallMsg.Pending = es.pending
 	}
 
 	es.Lock()
@@ -105,9 +110,9 @@ func (h *HandleCall) handleActual(
 	es.Lock()
 
 	procCheckRole := CheckOurRole{
-		msg:  msg,
-		role: insolar.DynamicRoleVirtualExecutor,
-		lr:   lr,
+		msg:         msg,
+		role:        insolar.DynamicRoleVirtualExecutor,
+		lr:          lr,
 		pulseNumber: flow.Pulse(ctx),
 	}
 
