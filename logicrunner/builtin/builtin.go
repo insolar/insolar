@@ -40,7 +40,6 @@ type BuiltIn struct {
 }
 
 // NewBuiltIn is an constructor
-// AALEKSEEV TODO don't forget about sagas from built-in contracts
 func NewBuiltIn(_ insolar.MessageBus, _ artifacts.Client) *BuiltIn {
 	return &BuiltIn{
 		CodeRefRegistry: InitializeCodeRefs(),
