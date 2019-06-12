@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"github.com/insolar/insolar/api"
 	"io/ioutil"
+	"strconv"
 	"sync"
 
 	"github.com/insolar/insolar/api/requester"
@@ -61,24 +62,31 @@ type memberKeys struct {
 
 // SDK is used to send messages to API
 type SDK struct {
-	apiURLs    *ringBuffer
-	rootMember *requester.UserConfigJSON
-	logLevel   interface{}
+	apiURLs               *ringBuffer
+	rootMember            *requester.UserConfigJSON
+	migrationAdminMember  *requester.UserConfigJSON
+	migrationDamonMembers [10]*requester.UserConfigJSON
+	logLevel              interface{}
 }
 
 // NewSDK creates insSDK object
-func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
+func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 	buffer := &ringBuffer{urls: urls}
 
-	rawConf, err := ioutil.ReadFile(rootMemberKeysPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewSDK ] can't read keys from file")
-	}
+	getMember := func(keyPath string, ref string) (*requester.UserConfigJSON, error) {
 
-	keys := memberKeys{}
-	err = json.Unmarshal(rawConf, &keys)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewSDK ] can't unmarshal keys")
+		rawConf, err := ioutil.ReadFile(keyPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ getMember ] can't read keys from file")
+		}
+
+		keys := memberKeys{}
+		err = json.Unmarshal(rawConf, &keys)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ getMember ] can't unmarshal keys")
+		}
+
+		return requester.CreateUserConfig(ref, keys.Private)
 	}
 
 	response, err := requester.Info(buffer.next())
@@ -86,17 +94,32 @@ func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
 		return nil, errors.Wrap(err, "[ NewSDK ] can't get info")
 	}
 
-	rootMember, err := requester.CreateUserConfig(response.RootMember, keys.Private)
+	rootMember, err := getMember(memberKeysDirPath+"root_member_keys.json", response.RootMember)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NewSDK ] can't create user config")
+		return nil, errors.Wrap(err, "[ NewSDK ] can't get root member")
 	}
 
-	return &SDK{
-		apiURLs:    buffer,
-		rootMember: rootMember,
-		logLevel:   nil,
-	}, nil
+	migrationAdminMember, err := getMember(memberKeysDirPath+"migration_admin_member_keys.json", response.MigrationAdminMember)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NewSDK ] can't get migration admin member")
+	}
 
+	result := &SDK{
+		apiURLs:               buffer,
+		rootMember:            rootMember,
+		migrationAdminMember:  migrationAdminMember,
+		migrationDamonMembers: [10]*requester.UserConfigJSON{},
+		logLevel:              nil,
+	}
+
+	for i := 0; i < 10; i++ {
+		result.migrationDamonMembers[i], err = getMember(memberKeysDirPath+"migration_damon"+strconv.Itoa(i)+"_member_keys.json", response.MigrationDamonMember)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration damon members")
+		}
+	}
+
+	return result, nil
 }
 
 func (sdk *SDK) SetLogLevel(logLevel string) error {
@@ -110,7 +133,7 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params []interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
 	reqCfg := &api.Request{
-		Params:   api.Params{CallParams:params},
+		Params:   api.Params{CallParams: params},
 		Method:   method,
 		LogLevel: sdk.logLevel.(string),
 	}

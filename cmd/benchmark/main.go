@@ -65,7 +65,7 @@ func parseInputParams() {
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
-	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to file with member keys")
+	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to dir with members keys")
 	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19101/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.StringVarP(&logLevelServer, "loglevelserver", "L", "", "server log level")

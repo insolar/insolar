@@ -60,8 +60,8 @@ type Answer struct {
 }
 
 type Result struct {
-	Result  string `json:"result"`
-	TraceID string `json:"traceID,omitempty"`
+	Data    interface{} `json:"data"`
+	TraceID string      `json:"traceID,omitempty"`
 }
 
 func extractReference(response []byte, requestTypeMsg string) insolar.Reference {
@@ -76,29 +76,24 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 		os.Exit(1)
 	}
 
-	ref, err := insolar.NewReferenceFromBase58(r.Result.Result)
+	ref, err := insolar.NewReferenceFromBase58(r.Result.Data.(string))
 	checkError(fmt.Sprintf("Failed to construct ref from '%s' node response", requestTypeMsg), err)
 
 	return *ref
 }
 
 func (g *certGen) registerNode() insolar.Reference {
-	type NodeRegistrationInput struct {
-		Public string `json:"public"`
-		Role   string `json:"role"`
-	}
 	userCfg := g.getUserConfig()
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
-	input := NodeRegistrationInput{Public: string(keySerialized), Role: g.staticRole.String()}
 	request := api.Request{
 		JsonRpc: "2.0",
 		Id:      1,
 		Method:  "api.call",
 		Params: api.Params{
 			CallSite:   "contract.registerNode",
-			CallParams: input,
+			CallParams: map[string]string{"public": string(keySerialized), "role": g.staticRole.String()},
 		},
 	}
 
@@ -119,22 +114,26 @@ type ErrorData struct {
 
 type GetCertificateResponse struct {
 	Version string               `json:"jsonrpc"`
-	ID      string               `json:"id"`
+	ID      int                  `json:"id"`
 	Result  GetCertificateResult `json:"result"`
 	Error   ErrorData            `json:"error"`
 }
 
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
+	fmt.Println("INCOMING REF", ref.String())
+
 	response, err := requester.GetResponseBody(g.API+"/rpc", api.Request{
 		JsonRpc: "2.0",
 		Method:  "cert.Get",
 		Id:      1,
-		Params:  api.Params{CallParams: ref.String()},
+		XYU:     ref.String(),
 	}, "")
 	checkError("Failed to get certificate for the registered node:", err)
 
 	r := GetCertificateResponse{}
+
+	fmt.Println("CERT", string(response))
 	err = json.Unmarshal(response, &r)
 	checkError("Failed to parse response from get certificate request:", err)
 

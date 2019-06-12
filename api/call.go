@@ -40,11 +40,12 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	JsonRpc  string `json:"jsonrpc"`
-	Id       int    `json:"id"`
-	Method   string `json:"method"`
-	Params   Params `json:"params"`
-	LogLevel string `json:"logLevel,omitempty"`
+	JsonRpc  string      `json:"jsonrpc"`
+	Id       int         `json:"id"`
+	Method   string      `json:"method"`
+	Params   Params      `json:"params"`
+	XYU      interface{} `json:"xyu"`
+	LogLevel string      `json:"logLevel,omitempty"`
 }
 
 type Params struct {
@@ -63,8 +64,8 @@ type Answer struct {
 }
 
 type Result struct {
-	Data    interface{}
-	TraceID string `json:"traceID,omitempty"`
+	Data    interface{} `json:"data"`
+	TraceID string      `json:"traceID,omitempty"`
 }
 
 // UnmarshalRequest unmarshals request to api

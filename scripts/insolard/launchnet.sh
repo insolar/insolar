@@ -185,8 +185,20 @@ generate_pulsar_keys()
 
 generate_root_member_keys()
 {
-    echo "generate root member_keys: $ROOT_MEMBER_KEYS_FILE"
+    echo "generate members keys: $ROOT_MEMBER_KEYS_FILE"
     bin/insolar gen-key-pair > $ROOT_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_0_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_1_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_2_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_3_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_4_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_5_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_6_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_7_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_8_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_9_member_keys.json
+
 }
 
 check_working_dir()
