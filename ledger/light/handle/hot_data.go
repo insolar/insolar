@@ -19,12 +19,10 @@ package handle
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
@@ -57,19 +55,19 @@ func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
 			if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
 				panic(errors.Wrap(err, "something broken"))
 			}
-
-			lfl := object.Lifeline{}
-			err := lfl.Unmarshal(meta.Index)
-			if err != nil {
-				panic(errors.Wrap(err, "something broken"))
-			}
-			if lfl.EarliestOpenRequest != nil {
-				expirePendings := proc.NewExpirePending(s.replyTo, *lfl.EarliestOpenRequest, meta.ObjID, insolar.JetID(*s.message.Jet.Record()))
-				s.dep.ExpirePending(expirePendings)
-				if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
-					panic(errors.Wrap(err, "something broken"))
-				}
-			}
+			//
+			// lfl := object.Lifeline{}
+			// err := lfl.Unmarshal(meta.Index)
+			// if err != nil {
+			// 	panic(errors.Wrap(err, "something broken"))
+			// }
+			// if lfl.EarliestOpenRequest != nil {
+			// 	expirePendings := proc.NewExpirePending(s.replyTo, *lfl.EarliestOpenRequest, meta.ObjID, insolar.JetID(*s.message.Jet.Record()))
+			// 	s.dep.ExpirePending(expirePendings)
+			// 	if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
+			// 		panic(errors.Wrap(err, "something broken"))
+			// 	}
+			// }
 
 		}(meta)
 	}

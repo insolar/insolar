@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	buswm "github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -88,20 +87,6 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 		return nil
 	}
 
-	isBeyond, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), *lfl.EarliestOpenRequest)
-	if err != nil {
-		return err
-	}
-
-	earliestOpenRequest := *lfl.EarliestOpenRequest
-	if isBeyond {
-		lastLight, err := p.Dep.PulseCalculator.Forwards(ctx, earliestOpenRequest, 1)
-		if err != nil {
-			return err
-		}
-		earliestOpenRequest = lastLight.PulseNumber
-	}
-
 	fp, err := p.Dep.PendingAccessor.FirstPending(ctx, p.pn, p.objID)
 	if err != nil {
 		panic(err)
@@ -111,13 +96,13 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 	logger.Debugf("RefreshPendingFilament fp == %v, obj - %v", fp, p.objID.DebugString())
 
 	if fp == nil || fp.PreviousRecord == nil {
-		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer.Pulse(), earliestOpenRequest)
+		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest)
 		if err != nil {
 			panic(err)
 			return err
 		}
 	} else {
-		err = p.fillPendingFilament(ctx, p.pn, p.objID, fp.PreviousRecord.Pulse(), earliestOpenRequest)
+		err = p.fillPendingFilament(ctx, p.pn, p.objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest)
 		if err != nil {
 			panic(err)
 			return err
@@ -140,18 +125,6 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 	continueFilling := true
 
 	for continueFilling {
-		isBeyond, err := p.Dep.Coordinator.IsBeyondLimit(ctx, currentPN, destPN)
-		if err != nil {
-			panic(err)
-			return err
-		}
-		if isBeyond {
-			panic("we don't want to be here")
-			// We need to update our chain
-			// If oldest at the heavy
-			return nil
-		}
-
 		node, err := p.Dep.Coordinator.NodeForObject(ctx, objID, currentPN, destPN)
 		if err != nil {
 			panic(err)
@@ -219,7 +192,7 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 
 			// If know border read to the start of the chain
 			// In other words, we read until limit
-			if earlistOpenRequest == 0 || firstRec.PreviousRecord.Pulse() > earlistOpenRequest {
+			if firstRec.PreviousRecord.Pulse() > earlistOpenRequest {
 				destPN = firstRec.PreviousRecord.Pulse()
 			} else {
 				continueFilling = false
