@@ -91,6 +91,8 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
+
+	ctx = inslogger.WithLoggerLevel(ctx,insolar.ErrorLevel)
 	inslogger.FromContext(ctx).WithField("code_id", p.recordID.DebugString()).Infof("saved code")
 
 	msg, err := payload.NewMessage(&payload.ID{ID: p.recordID})
