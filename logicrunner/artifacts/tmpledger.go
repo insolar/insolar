@@ -39,7 +39,6 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
@@ -244,18 +243,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 
 	handler.HotDataWaiter = hdw
 	handler.JetReleaser = hdw
-
-	pendingMock := recentstorage.NewPendingStorageMock(t)
-
-	pendingMock.GetRequestsForObjectMock.Return(nil)
-	pendingMock.AddPendingRequestMock.Return()
-	pendingMock.RemovePendingRequestMock.Return()
-
-	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetPendingStorageMock.Return(pendingMock)
-	provideMock.CountMock.Return(0)
-
-	handler.RecentStorageProvider = provideMock
 
 	err = handler.Init(ctx)
 	if err != nil {

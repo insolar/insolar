@@ -40,7 +40,6 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -59,7 +58,6 @@ type PulseManager struct {
 	GIL                        insolar.GlobalInsolarLock          `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	RecentStorageProvider      recentstorage.Provider             `inject:""`
 	ActiveListSwapper          ActiveListSwapper                  `inject:""`
 	MessageHandler             *artifactmanager.MessageHandler
 
@@ -215,8 +213,6 @@ func (m *PulseManager) processEndPulse(
 				go sender(*msg, info.left.id)
 				go sender(*msg, info.right.id)
 			}
-
-			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(info.id))
 
 			return nil
 		})
@@ -397,7 +393,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		if err != nil {
 			return err
 		}
-		m.postProcessJets(ctx, jets)
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
@@ -555,7 +550,6 @@ func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, previous, 
 			}
 			if *nextLeftExecutor == me {
 				info.left.mineNext = true
-				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jet.id), insolar.ID(leftJetID))
 			}
 			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), new)
 			if err != nil {
@@ -563,7 +557,6 @@ func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, previous, 
 			}
 			if *nextRightExecutor == me {
 				info.right.mineNext = true
-				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jet.id), insolar.ID(rightJetID))
 			}
 
 			logger.WithFields(map[string]interface{}{
@@ -597,17 +590,6 @@ func (m *PulseManager) hasSplitIntention(ctx context.Context, previous insolar.P
 		return false
 	}
 	return drop.Split
-}
-
-func (m *PulseManager) postProcessJets(ctx context.Context, jets []jetInfo) {
-	ctx, span := instracer.StartSpan(ctx, "jets.post_process")
-	defer span.End()
-
-	for _, jetInfo := range jets {
-		if !jetInfo.mineNext {
-			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(jetInfo.id))
-		}
-	}
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse insolar.Pulse) {
