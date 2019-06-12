@@ -114,8 +114,7 @@ type PendingFilamentStateModifier interface {
 // PendingAccessor provides methods for fetching pending requests.
 type PendingAccessor interface {
 	// OpenRequestsForObjID returns a specific number of open requests for a specific object
-	// OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
-
+	OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
 	// Records returns all the records for a provided object
 	Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error)
 	FirstPending(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (*record.PendingFilament, error)
