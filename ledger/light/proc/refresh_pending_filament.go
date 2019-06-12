@@ -147,8 +147,9 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 			}
 		} else {
 			msg, err := payload.NewMessage(&payload.GetPendingFilament{
-				ObjectID: objID,
-				Pulse:    destPN,
+				ObjectID:  objID,
+				StartFrom: destPN,
+				ReadUntil: earlistOpenRequest,
 			})
 			if err != nil {
 				panic(err)

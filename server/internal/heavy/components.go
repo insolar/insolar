@@ -238,7 +238,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.PulseAppender = pulses
 
 		h := handler.New()
-		h.PendingAccessor = indexes
 		h.RecordAccessor = records
 		h.RecordModifier = records
 		h.JetCoordinator = Coordinator

@@ -223,7 +223,6 @@ func NewMessageHandler(
 		},
 		GetPendingFilament: func(p *proc.GetPendingFilament) {
 			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.LifelineAccessor = h.LifelineIndex
 			p.Dep.Sender = h.Sender
 		},
 		RefreshPendingFilament: func(p *proc.RefreshPendingFilament) {
