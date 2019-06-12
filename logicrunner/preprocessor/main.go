@@ -352,14 +352,39 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		return err
 	}
 
-	methodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
+	allMethodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
+
+	// AALEKSEEV TODO cleanup code
+	/////var sagaAcceptMethods []string
+	sagaRollbackMethods := make(map[string]struct{}, 0)
+	//var methodIndices map[string] int
+	for _, methodInfo := range allMethodsProxies {
+		///currentMethodName := methodInfo["Name"].(string)
+		sagaInfo := methodInfo["SagaInfo"].(*SagaInfo)
+		//methodIndices[currentMethodName] = idx
+		if sagaInfo.IsSaga {
+			////sagaAcceptMethods = append(sagaAcceptMethods, currentMethodName)
+			sagaRollbackMethods[sagaInfo.RollbackMethodName] = struct{}{}
+		}
+	}
+
+	// explicitly remove all saga Rollback methods from the proxy
+	var filteredMethodsProxies []map[string]interface{}
+	for _, methodInfo := range allMethodsProxies {
+		currentMethodName := methodInfo["Name"].(string)
+		_, isRollback := sagaRollbackMethods[currentMethodName]
+		if isRollback {
+			break
+		}
+		filteredMethodsProxies = append(filteredMethodsProxies, methodInfo)
+	}
 
 	data := map[string]interface{}{
 		"PackageName":         proxyPackageName,
 		"Types":               generateTypes(pf),
 		"ContractType":        pf.contract,
-		"MethodsProxies":      methodsProxies,
+		"MethodsProxies":      filteredMethodsProxies,
 		"ConstructorsProxies": constructorProxies,
 		"ClassReference":      classReference,
 		"Imports":             pf.generateImports(false),
@@ -383,7 +408,7 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]in
 			"ResultsNilError": commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "nil"),
 			"ResultsTypes":    genFieldList(pf, fun.Type.Results, false),
 			"Immutable":       isImmutable(fun),
-			"SagaInfo":        sagaInfo(fun), // AALEKSEEV: TODO do we need this for proxies?
+			"SagaInfo":        sagaInfo(fun),
 		}
 		res = append(res, info)
 	}
