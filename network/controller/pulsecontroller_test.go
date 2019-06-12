@@ -51,12 +51,17 @@
 package controller
 
 import (
+	"context"
 	"crypto"
 	"crypto/rand"
 	"testing"
 
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -163,4 +168,41 @@ func randomEntropy() [64]byte {
 		panic(buf)
 	}
 	return buf
+}
+
+func newPulsePacket(t *testing.T) *packet.Packet {
+	sender, err := host.NewHostN("127.0.0.1:3344", insolar.Reference{0})
+	require.NoError(t, err)
+	receiver, err := host.NewHostN("127.0.0.1:3345", insolar.Reference{1})
+	require.NoError(t, err)
+	return packet.NewPacket(sender, receiver, types.Pulse, 1)
+}
+
+func TestProcessIncorrectPacket(t *testing.T) {
+	controller := &pulseController{}
+	request := newPulsePacket(t)
+	request.SetRequest(&packet.Ping{})
+	_, err := controller.processPulse(context.Background(), request)
+	assert.Error(t, err)
+	request.SetResponse(&packet.BasicResponse{Success: true})
+	_, err = controller.processPulse(context.Background(), request)
+	assert.Error(t, err)
+}
+
+func TestProcessPulseVerifyFailure(t *testing.T) {
+	controller := &pulseController{}
+	request := newPulsePacket(t)
+	request.SetRequest(&packet.PulseRequest{
+		Pulse: pulse.ToProto(&insolar.Pulse{
+			PulseNumber:      150,
+			PrevPulseNumber:  140,
+			NextPulseNumber:  160,
+			PulseTimestamp:   1111111,
+			EpochPulseNumber: 1,
+			Entropy:          insolar.Entropy{1},
+			Signs:            nil,
+		}),
+	})
+	_, err := controller.processPulse(context.Background(), request)
+	assert.Error(t, err)
 }
