@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/insolar/insolar/network/gateway"
+	"github.com/insolar/insolar/network/storage"
 	"strconv"
 	"sync"
 	"time"
@@ -96,13 +97,13 @@ type ServiceNetwork struct {
 
 	// dependencies
 	CertificateManager  insolar.CertificateManager  `inject:""`
-	PulseManager        insolar.PulseManager        `inject:""`
-	PulseAccessor       pulse.Accessor              `inject:""`
+	PulseManager        storage.PulseAppender       `inject:""`
+	DB                  storage.DB                  `inject:""`
+	PulseAccessor       storage.PulseAccessor       `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	Pub                 message.Publisher           `inject:""`
-	MessageBus          insolar.MessageBus          `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	Sender              bus.Sender                  `inject:""`
 
@@ -247,7 +248,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
 	n.SetGateway(gateway.NewNoNetwork(n, n.NodeKeeper, n.ContractRequester,
-		n.CryptographyService, n.MessageBus, n.CertificateManager))
+		n.CryptographyService, n.CertificateManager))
 
 	logger.Info("Service network started")
 	return nil
@@ -338,7 +339,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	}
 
 	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
+	err := n.PulseManager.Append(ctx, newPulse)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
