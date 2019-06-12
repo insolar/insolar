@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"github.com/insolar/insolar/api"
 	"io/ioutil"
+	"math/big"
 	"strconv"
 	"sync"
 
@@ -28,8 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
-
 	"github.com/pkg/errors"
 )
 
@@ -158,8 +157,6 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 
 // CreateMember api request creates member with new random keys
 func (sdk *SDK) CreateMember() (*Member, string, error) {
-	ctx := inslogger.ContextWithTrace(context.Background(), "CreateMember")
-	memberName := testutils.RandomString()
 	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, err := ks.GeneratePrivateKey()
@@ -177,19 +174,9 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't extract public key")
 	}
 
-	params := []interface{}{memberName, string(memberPubKeyStr)}
-	body, err := sdk.sendRequest(ctx, "CreateMember", params, sdk.rootMember)
+	response, err := sdk.DoRequest(sdk.rootMember.Caller, sdk.rootMember.PrivateKey, "CreateMember", []interface{}{string(memberPubKeyStr)})
 	if err != nil {
-		return nil, "", errors.Wrap(err, "[ CreateMember ] can't send request")
-	}
-
-	response, err := sdk.getResponse(body)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "[ CreateMember ] can't get response")
-	}
-
-	if response.Error != "" {
-		return nil, response.TraceID, errors.New(response.Error)
+		return nil, "", errors.Wrap(err, "[ CreateMember ] request was failed ")
 	}
 
 	return NewMember(response.Result.(string), string(privateKeyStr)), response.TraceID, nil
@@ -197,53 +184,50 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 
 // Transfer method send money from one member to another
 func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
-	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
-	params := []interface{}{amount, to.Reference}
-	config, err := requester.CreateUserConfig(from.Reference, from.PrivateKey)
+	response, err := sdk.DoRequest(from.Reference, from.PrivateKey, "Transfer", []interface{}{amount, to.Reference})
 	if err != nil {
-		return "", errors.Wrap(err, "[ Transfer ] can't create user config")
-	}
-
-	body, err := sdk.sendRequest(ctx, "Transfer", params, config)
-	if err != nil {
-		return "", errors.Wrap(err, "[ Transfer ] can't send request")
-	}
-
-	response, err := sdk.getResponse(body)
-	if err != nil {
-		return "", errors.Wrap(err, "[ Transfer ] can't get response")
-	}
-
-	if response.Error != "" {
-		return response.TraceID, errors.New(response.Error)
+		return "", errors.Wrap(err, "[ Transfer ] request was failed ")
 	}
 
 	return response.TraceID, nil
 }
 
 // GetBalance returns current balance of the given member.
-func (sdk *SDK) GetBalance(m *Member) (uint64, error) {
-	ctx := inslogger.ContextWithTrace(context.Background(), "GetBalance")
-	params := []interface{}{m.Reference}
-	config, err := requester.CreateUserConfig(m.Reference, m.PrivateKey)
+func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
+	response, err := sdk.DoRequest(m.Reference, m.PrivateKey, "GetBalance", []interface{}{m.Reference})
 	if err != nil {
-		return 0, errors.Wrap(err, "[ GetBalance ] can't create user config")
+		return new(big.Int), errors.Wrap(err, "[ GetBalance ] request was failed ")
 	}
 
-	body, err := sdk.sendRequest(ctx, "GetBalance", params, config)
+	result, ok := new(big.Int).SetString(response.Result.(string), 10)
+	if !ok {
+		return new(big.Int), errors.Errorf("[ GetBalance ] can't parse returned balance")
+	}
+
+	return result, nil
+}
+
+func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params []interface{}) (*response, error) {
+	ctx := inslogger.ContextWithTrace(context.Background(), method)
+	config, err := requester.CreateUserConfig(callerRef, callerKey)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ GetBalance ] can't send request")
+		return nil, errors.Wrap(err, "[ DoRequest ] can't create user config")
+	}
+
+	body, err := sdk.sendRequest(ctx, method, params, config)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ DoRequest ] can't send request")
 	}
 
 	response, err := sdk.getResponse(body)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ GetBalance ] can't get response")
+		return nil, errors.Wrap(err, "[ DoRequest ] can't get response")
 	}
 
 	if response.Error != "" {
-		return 0, errors.New(response.Error + ". TraceId: " + response.TraceID)
+		return nil, errors.New(response.Error + ". TraceId: " + response.TraceID)
 	}
 
-	// TODO FIXME don't transfer money in floats!
-	return uint64(response.Result.(float64)), nil
+	return response, nil
+
 }

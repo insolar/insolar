@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -170,10 +171,10 @@ func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
 	return members, retriesCount
 }
 
-func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance uint64, penRetires int32) {
+func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance *big.Int, penRetires int32) {
 	type Result struct {
 		num     int
-		balance uint64
+		balance *big.Int
 		err     error
 	}
 
@@ -207,6 +208,7 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance uint6
 	}
 
 	wg.Wait()
+	totalBalance = big.NewInt(0)
 	for i := 0; i < nmembers; i++ {
 		res := <-results
 		if res.err != nil {
@@ -215,7 +217,8 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance uint6
 			}
 			continue
 		}
-		totalBalance += res.balance
+		b := totalBalance
+		totalBalance.Add(b, res.balance)
 	}
 
 	return totalBalance, penRetires
@@ -308,7 +311,7 @@ func main() {
 	members, crMemPenBefore, err := getMembers(insSDK)
 	check("Error while loading members: ", err)
 
-	var totalBalanceBefore uint64
+	var totalBalanceBefore *big.Int
 	var balancePenRetries int32
 	if !noCheckBalance {
 		totalBalanceBefore, balancePenRetries = getTotalBalance(insSDK, members)
@@ -349,10 +352,10 @@ func main() {
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
 	if !noCheckBalance {
-		totalBalanceAfter := uint64(0)
+		totalBalanceAfter := big.NewInt(0)
 		for nretries := 0; nretries < 3; nretries++ {
 			totalBalanceAfter, _ = getTotalBalance(insSDK, members)
-			if totalBalanceAfter == totalBalanceBefore {
+			if totalBalanceAfter.Cmp(totalBalanceBefore) == 0 {
 				break
 			}
 			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
@@ -361,7 +364,7 @@ func main() {
 
 		}
 		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
-		if totalBalanceBefore != totalBalanceAfter {
+		if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
 			log.Fatal("Total balance mismatch!\n")
 		}
 	}
