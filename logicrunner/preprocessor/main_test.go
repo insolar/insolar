@@ -707,6 +707,7 @@ func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
 	//	s.NotContains(proxyCode, "TheRollbackMethodAsImmutable")
 }
 
+// Low-level tests for extractSagaInfo procedure
 func (s *PreprocessorSuite) TestExtractSagaInfo() {
 	info := &SagaInfo{}
 	res := extractSagaInfo("", info)
