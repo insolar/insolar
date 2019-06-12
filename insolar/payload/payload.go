@@ -18,6 +18,7 @@ package payload
 
 import (
 	"github.com/gogo/protobuf/proto"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -175,4 +176,13 @@ func UnmarshalTypeFromMeta(data []byte) (Type, error) {
 	}
 
 	return UnmarshalType(m.Payload)
+}
+
+func OriginHash(payload []byte) string {
+	meta := Meta{}
+	err := meta.Unmarshal(payload)
+	if err != nil {
+		return ""
+	}
+	return base58.Encode(meta.OriginHash)
 }

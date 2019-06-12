@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -331,7 +330,7 @@ func (m *client) GetObject(
 		}
 	}
 	if !success() {
-		logger.WithField("correlation_id", middleware.MessageCorrelationID(msg)).Error("no reply")
+		logger.WithField("origin_hash", payload.OriginHash(msg.Payload)).Error("no reply")
 		return nil, errors.New("no reply")
 	}
 

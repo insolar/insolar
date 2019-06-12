@@ -120,7 +120,7 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 
 		reply.wg.Wait()
 		close(reply.messages)
-		inslogger.FromContext(ctx).Infof("close reply channel for message with correlationID %s", id)
+		inslogger.FromContext(ctx).Infof("close reply channel for message with origin_hash %s", id)
 	})
 }
 
@@ -163,8 +163,8 @@ func (b *Bus) SendTarget(
 		return nil, nil
 	}
 
-	hashID := hashOrigin(b.pcs.IntegrityHasher(), msg.Payload)
-	id := corrID(hashID)
+	h := hashOrigin(b.pcs.IntegrityHasher(), msg.Payload)
+	id := base58.Encode(h)
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
@@ -187,14 +187,14 @@ func (b *Bus) SendTarget(
 	}
 
 	go func() {
-		inslogger.FromContext(ctx).WithField("correlation_id", id).Info("waiting for reply")
+		inslogger.FromContext(ctx).WithField("origin_hash", id).Info("waiting for reply")
 		select {
 		case <-reply.done:
-			inslogger.FromContext(ctx).Infof("Done waiting replies for message with correlationID %s", id)
+			inslogger.FromContext(ctx).Infof("Done waiting replies for message with origin_hash %s", id)
 		case <-time.After(b.timeout):
 			inslogger.FromContext(ctx).Error(
 				errors.Errorf(
-					"can't return result for message with correlationID %s: timeout for reading (%s) was exceeded", id, b.timeout),
+					"can't return result for message with origin_hash %s: timeout for reading (%s) was exceeded", id, b.timeout),
 			)
 			done()
 		}
@@ -234,10 +234,16 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 		meta := payload.Meta{}
 		err := meta.Unmarshal(msg.Payload)
 		if err != nil {
-			inslogger.FromContext(context.Background()).Error("can't unmarshal meta message", err.Error())
+			inslogger.FromContext(context.Background()).Error("can't unmarshal meta message ", err.Error())
+			return nil, err
 		}
 
-		id := corrID(meta.OriginHash)
+		if len(meta.OriginHash) == 0 {
+			inslogger.FromContext(context.Background()).Error("empty Meta.OriginHash")
+			return nil, errors.New("empty Meta.OriginHash")
+		}
+
+		id := base58.Encode(meta.OriginHash)
 
 		b.repliesMutex.RLock()
 		reply, ok := b.replies[id]
@@ -251,7 +257,7 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 
 		select {
 		case reply.messages <- msg:
-			inslogger.FromContext(context.Background()).Infof("result for message with correlationID %s was send", id)
+			inslogger.FromContext(context.Background()).Infof("result for message with origin_hash %s was send", id)
 		case <-reply.done:
 		}
 		reply.wg.Done()
@@ -298,8 +304,4 @@ func hashOrigin(h hash.Hash, buf []byte) []byte {
 		panic(err)
 	}
 	return h.Sum(nil)
-}
-
-func corrID(hash []byte) string {
-	return base58.Encode(hash[:])
 }

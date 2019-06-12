@@ -22,7 +22,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -36,6 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
@@ -206,8 +206,8 @@ func initComponents(
 
 func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
 	inslogger.FromContext(context.Background()).WithField(
-		"correlation_id",
-		middleware.MessageCorrelationID(msg),
+		"origin_hash",
+		payload.OriginHash(msg.Payload),
 	).Error("no reply channel")
 	return nil, nil
 }

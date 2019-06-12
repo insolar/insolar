@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -265,7 +266,7 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	data, _ := meta.Marshal()
 
 	hash := hashOrigin(pcs.IntegrityHasher(), data)
-	id := corrID(hash)
+	id := base58.Encode(hash)
 	b.replies[id] = resChan
 
 	meta.OriginHash = hash

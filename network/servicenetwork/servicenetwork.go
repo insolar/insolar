@@ -58,7 +58,6 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/network/controller/common"
@@ -374,8 +373,8 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	}
 
 	logger.WithFields(map[string]interface{}{
-		"msg_type":       msgType.String(),
-		"correlation_id": middleware.MessageCorrelationID(msg),
+		"msg_type":    msgType.String(),
+		"origin_hash": payload.OriginHash(msg.Payload),
 	}).Info("Network sent message")
 
 	return nil, nil
@@ -418,7 +417,7 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 
 func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"correlation_id": middleware.MessageCorrelationID(msg),
+		"origin_hash": payload.OriginHash(msg.Payload),
 	})
 	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
 	if err != nil {
@@ -455,8 +454,8 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 		logger.Error("failed to extract message type")
 	}
 	logger.WithFields(map[string]interface{}{
-		"msg_type":       msgType.String(),
-		"correlation_id": middleware.MessageCorrelationID(msg),
+		"msg_type":    msgType.String(),
+		"origin_hash": payload.OriginHash(msg.Payload),
 	}).Info("Network received message")
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)

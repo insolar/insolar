@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -50,8 +49,7 @@ func (s *Error) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	inslogger.FromContext(ctx).WithField(
-		"correlation_id",
-		middleware.MessageCorrelationID(s.message),
+		"origin_hash", payload.OriginHash(s.message.Payload),
 	).Error("received error: ", p.Text)
 	return nil
 }
