@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSingleContractError(t *testing.T) {
+func TestSingleContract(t *testing.T) {
 	var contractCode = `
 package main
 
@@ -76,7 +76,7 @@ func (c *One) Dec() (int, error) {
 	require.Equal(t, float64(0), result.ExtractedReply)
 }
 
-func TestContractCallingContractError(t *testing.T) {
+func TestContractCallingContract(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -221,7 +221,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	)
 }
 
-func TestInjectingDelegateError(t *testing.T) {
+func TestInjectingDelegate(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -293,7 +293,7 @@ func (r *Two) Hello(s string) (string, error) {
 	require.Equal(t, "Hello you too, ins. 1288 times!", resp.ExtractedReply)
 }
 
-func TestBasicNotificationCallError(t *testing.T) {
+func TestBasicNotificationCall(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -368,7 +368,7 @@ func (r *Two) Value() (int, error) {
 	require.Equal(t, float64(644), resp.ExtractedReply)
 }
 
-func TestContextPassingError(t *testing.T) {
+func TestContextPassing(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -390,7 +390,7 @@ func (r *One) Hello() (string, error) {
 	require.Equal(t, prototype.String(), resp.ExtractedReply)
 }
 
-func TestDeactivationError(t *testing.T) {
+func TestDeactivation(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -412,7 +412,7 @@ func (r *One) Kill() error {
 	require.Empty(t, resp.Error)
 }
 
-func TestPanicError(t *testing.T) {
+func TestPanic(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -439,7 +439,7 @@ func (r *One) NotPanic() error {
 	require.Empty(t, resp.ExtractedError)
 }
 
-func TestGetChildrenError(t *testing.T) {
+func TestGetChildren(t *testing.T) {
 	goContract := `
 package main
 
@@ -520,7 +520,7 @@ func New(n int) (*Child, error) {
 	require.Equal(t, float64(45), resp.ExtractedReply)
 }
 
-func TestErrorInterfaceError(t *testing.T) {
+func TestErrorInterface(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -586,7 +586,7 @@ func (r *Two) NoError() error {
 	require.Nil(t, resp.Error)
 }
 
-func TestNilResultError(t *testing.T) {
+func TestNilResult(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -636,7 +636,7 @@ func (r *Two) Hello() (*string, error) {
 	require.Nil(t, resp.ExtractedReply)
 }
 
-func TestConstructorReturnNilError(t *testing.T) {
+func TestConstructorReturnNil(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -715,7 +715,7 @@ func (r *One) Recursive() (error) {
 	require.Contains(t, resp.ExtractedError, "loop detected")
 }
 
-func TestNewAllowanceNotFromWalletError(t *testing.T) {
+func TestNewAllowanceNotFromWallet(t *testing.T) {
 	t.Skip("Unskip after fixing `can't open plugin` error ")
 	var contractOneCode = `
 package main
@@ -752,7 +752,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	require.Contains(t, resp.Error.Error(), "[ New Allowance ] : Can't create allowance from not wallet contract")
 }
 
-func TestGetParentError(t *testing.T) {
+func TestGetParent(t *testing.T) {
 	var contractOneCode = `
  package main
  import ( 
@@ -807,7 +807,7 @@ func TestGinsiderMustDieAfterInsolardError(t *testing.T) {
 	// can't kill LR in launch.sh from functest
 }
 
-func TestGetRemoteDataError(t *testing.T) {
+func TestGetRemoteData(t *testing.T) {
 	var contractOneCode = `
  package main
  import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -848,7 +848,7 @@ func TestGetRemoteDataError(t *testing.T) {
 	require.Equal(t, codeTwoRef.String(), resp.ExtractedReply.(string))
 }
 
-func TestNoLoopsWhileNotificationCallError(t *testing.T) {
+func TestNoLoopsWhileNotificationCall(t *testing.T) {
 	var contractOneCode = `
  package main
  import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -901,7 +901,7 @@ func TestNoLoopsWhileNotificationCallError(t *testing.T) {
 	require.Empty(t, resp.Error)
 }
 
-func TestPrototypeMismatchError(t *testing.T) {
+func TestPrototypeMismatch(t *testing.T) {
 	testContract := `
 package main
 
