@@ -361,7 +361,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	// explicitly remove all saga Rollback methods from the proxy
-	var filteredMethodsProxies []map[string]interface{}
+	var filteredMethodsProxies []map[string]interface{} //nolint:prealloc
 	for _, methodInfo := range allMethodsProxies {
 		currentMethodName := methodInfo["Name"].(string)
 		_, isRollback := sagaRollbackMethods[currentMethodName]
