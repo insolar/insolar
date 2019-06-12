@@ -12,5 +12,6 @@
 
     ./scripts/bench.sh -c=2 -r=40
 
-## if you want to use jaeger in launchnet, add ENV param 
+## if you want to use jaeger in launchnet, add ENV param
+
 	INSOLAR_TRACER_JAEGER_AGENTENDPOINT=<jaeger-addr>
