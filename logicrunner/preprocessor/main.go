@@ -49,12 +49,25 @@ var corePath = "github.com/insolar/insolar/insolar"
 
 var immutableFlag = "//ins:immutable"
 
+var sagaFlagStart = "//ins:saga("
+var sagaFlagEnd = ")"
+var sagaFlagStartLength = len(sagaFlagStart)
+
 const (
 	TemplateDirectory = "templates"
 
 	mainPkg   = "main"
 	errorType = "error"
 )
+
+// SagaInfo stores sagas-related information for given contract method.
+// If a method is marked with //ins:saga(Rollback) SagaInfo stores
+// `IsSaga: true, RollbackMethodName: "Rollback"`. Otherwise the structure
+// stores `IsSaga: false` and other fields should be ignored.
+type SagaInfo struct {
+	IsSaga             bool
+	RollbackMethodName string
+}
 
 // ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
@@ -303,6 +316,7 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 			"Results":             numberedVars(fun.Type.Results, "ret"),
 			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, errorType),
 			"Immutable":           isImmutable(fun), // only for methods, not constructors
+			"SagaInfo":            sagaInfo(fun),    // only for methods, not constructors
 		}
 		res = append(res, info)
 	}
@@ -335,14 +349,33 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		return err
 	}
 
-	methodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
+	allMethodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
+
+	sagaRollbackMethods := make(map[string]struct{})
+	for _, methodInfo := range allMethodsProxies {
+		sagaInfo := methodInfo["SagaInfo"].(*SagaInfo)
+		if sagaInfo.IsSaga {
+			sagaRollbackMethods[sagaInfo.RollbackMethodName] = struct{}{}
+		}
+	}
+
+	// explicitly remove all saga Rollback methods from the proxy
+	var filteredMethodsProxies []map[string]interface{} //nolint:prealloc
+	for _, methodInfo := range allMethodsProxies {
+		currentMethodName := methodInfo["Name"].(string)
+		_, isRollback := sagaRollbackMethods[currentMethodName]
+		if isRollback {
+			break
+		}
+		filteredMethodsProxies = append(filteredMethodsProxies, methodInfo)
+	}
 
 	data := map[string]interface{}{
 		"PackageName":         proxyPackageName,
 		"Types":               generateTypes(pf),
 		"ContractType":        pf.contract,
-		"MethodsProxies":      methodsProxies,
+		"MethodsProxies":      filteredMethodsProxies,
 		"ConstructorsProxies": constructorProxies,
 		"ClassReference":      classReference,
 		"Imports":             pf.generateImports(false),
@@ -366,6 +399,7 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]in
 			"ResultsNilError": commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "nil"),
 			"ResultsTypes":    genFieldList(pf, fun.Type.Results, false),
 			"Immutable":       isImmutable(fun),
+			"SagaInfo":        sagaInfo(fun),
 		}
 		res = append(res, info)
 	}
@@ -656,6 +690,38 @@ func isImmutable(decl *ast.FuncDecl) bool {
 		}
 	}
 	return isImmutable
+}
+
+func extractSagaInfo(comment string, info *SagaInfo) bool {
+	slice := strings.Trim(comment, " \r\n\t")
+	if strings.HasPrefix(slice, sagaFlagStart) &&
+		strings.HasSuffix(slice, sagaFlagEnd) {
+		rollbackName := slice[sagaFlagStartLength : len(slice)-1]
+		rollbackNameLen := len(rollbackName)
+		if rollbackNameLen > 0 {
+			sliceCopy := make([]byte, rollbackNameLen)
+			copy(sliceCopy, rollbackName)
+			info.IsSaga = true
+			info.RollbackMethodName = string(sliceCopy)
+			return true
+		}
+	}
+	return false
+}
+
+func sagaInfo(decl *ast.FuncDecl) (info *SagaInfo) {
+	info = &SagaInfo{}
+	if decl.Doc == nil || decl.Doc.List == nil {
+		return // there are no comments
+	}
+
+	for _, comment := range decl.Doc.List {
+		if extractSagaInfo(comment.Text, info) {
+			return // info found
+		}
+	}
+
+	return // no saga comment found
 }
 
 type ContractListEntry struct {
