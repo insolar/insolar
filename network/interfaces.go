@@ -295,6 +295,7 @@ type Gateway interface {
 	OnPulse(context.Context, insolar.Pulse) error
 	NewGateway(insolar.NetworkState) Gateway
 	Auther() Auther
+	Bootstrapper() Bootstrapper
 
 	ShoudIgnorePulse(context.Context, insolar.Pulse) bool
 }
@@ -308,4 +309,9 @@ type Auther interface {
 
 	// FilterJoinerNodes returns nodes which allowed to connect to this network in this state.
 	FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode
+}
+
+type Bootstrapper interface {
+	HandleNodeAuthorizeRequest(context.Context, Packet) (Packet, error)
+	HandleNodeBootstrapRequest(context.Context, Packet) (Packet, error)
 }

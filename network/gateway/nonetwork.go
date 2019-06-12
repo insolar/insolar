@@ -59,32 +59,20 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/packets"
 )
 
-// TODO Slightly ugly, decide how to inject anything without exporting Base
-// TODO Remove message bus here and switch communication to network.rpc
-// NewNoNetwork this initial constructor have special signature to be called outside
-func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock,
-	nk network.NodeKeeper, cr insolar.ContractRequester,
-	cs insolar.CryptographyService, mb insolar.MessageBus,
-	cm insolar.CertificateManager) network.Gateway {
-	return (&Base{
-		Gatewayer: n, GIL: gil,
-		NodeKeeper: nk, ContractRequester: cr,
-		CryptographyService: cs, MessageBus: mb,
-		CertificateManager: cm,
-	}).NewGateway(insolar.NoNetworkState)
+func NewNoNetwork(b *Base) *NoNetwork {
+	return &NoNetwork{b}
 }
 
 // NoNetwork initial state
 type NoNetwork struct {
 	*Base
 
-	isDiscovery bool
-	skip        uint32
+	// isDiscovery bool
+	// skip        uint32
 }
 
 func (g *NoNetwork) Run(ctx context.Context) {
@@ -97,14 +85,9 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	}
 
 	// run bootstrap
-	g.isDiscovery = network.OriginIsDiscovery(cert)
+	isDiscovery := network.OriginIsDiscovery(cert)
 
-	log.Info("TODO: remove! Bootstrapping network...")
-	_, err := g.Bootstrapper.Bootstrap(ctx)
-	if err != nil {
-		err = errors.Wrap(err, "Failed to bootstrap network")
-		panic(err.Error())
-	}
+	getAuth
 
 }
 
@@ -117,13 +100,15 @@ func (g *NoNetwork) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 }
 
 func (g *NoNetwork) ShoudIgnorePulse(ctx context.Context, newPulse insolar.Pulse) bool {
-	if true { //!g.Base.NodeKeeper.IsBootstrapped() { always true here
-		g.Bootstrapper.SetLastPulse(newPulse.NextPulseNumber)
-		return true
-	}
-
-	return g.isDiscovery && !g.NodeKeeper.GetConsensusInfo().IsJoiner() &&
-		newPulse.PulseNumber <= g.Bootstrapper.GetLastPulse()+insolar.PulseNumber(g.skip)
+	// if true { //!g.Base.NodeKeeper.IsBootstrapped() { always true here
+	// 	g.Bootstrapper.SetLastPulse(newPulse.NextPulseNumber)
+	// 	return true
+	// }
+	//
+	// return g.isDiscovery && !g.NodeKeeper.GetConsensusInfo().IsJoiner() &&
+	// 	newPulse.PulseNumber <= g.Bootstrapper.GetLastPulse()+insolar.PulseNumber(g.skip)
+	// TODO: ??
+	return true
 }
 
 func (g *NoNetwork) connectToNewNetwork(ctx context.Context, address string) {

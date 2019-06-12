@@ -9,15 +9,17 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[NoNetworkState-0]
-	_ = x[VoidNetworkState-1]
-	_ = x[JetlessNetworkState-2]
-	_ = x[AuthorizationNetworkState-3]
-	_ = x[CompleteNetworkState-4]
+	_ = x[JoinerBootstrap-1]
+	_ = x[DiscoveryBootstrap-2]
+	_ = x[VoidNetworkState-3]
+	_ = x[JetlessNetworkState-4]
+	_ = x[AuthorizationNetworkState-5]
+	_ = x[CompleteNetworkState-6]
 }
 
-const _NetworkState_name = "NoNetworkStateVoidNetworkStateJetlessNetworkStateAuthorizationNetworkStateCompleteNetworkState"
+const _NetworkState_name = "NoNetworkStateJoinerBootstrapDiscoveryBootstrapVoidNetworkStateJetlessNetworkStateAuthorizationNetworkStateCompleteNetworkState"
 
-var _NetworkState_index = [...]uint8{0, 14, 30, 49, 74, 94}
+var _NetworkState_index = [...]uint8{0, 14, 29, 47, 63, 82, 107, 127}
 
 func (i NetworkState) String() string {
 	if i < 0 || i >= NetworkState(len(_NetworkState_index)-1) {

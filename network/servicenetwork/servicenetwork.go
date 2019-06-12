@@ -64,6 +64,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/network/gateway/bootstrap"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -76,7 +77,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/consensus/phases"
 	"github.com/insolar/insolar/network/controller"
-	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
@@ -111,7 +111,6 @@ type ServiceNetwork struct {
 
 	isGenesis bool
 	// isDiscovery bool
-	skip int // ToDO: move to gateway
 
 	lock sync.Mutex
 
@@ -121,7 +120,7 @@ type ServiceNetwork struct {
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis, skip: conf.Service.Skip}
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis}
 	return serviceNetwork, nil
 }
 
@@ -193,9 +192,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewPulseController(),
 
 		baseGateway,
-		// bootstrap.NewSessionManager(),
-		bootstrap.NewBootstrapper(options /*n.connectToNewNetwork*/),
-		// bootstrap.NewAuthorizationController(options),
+		bootstrap.NewSessionManager(),
 	)
 	err = n.cm.Init(ctx)
 	if err != nil {

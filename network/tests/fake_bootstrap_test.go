@@ -59,7 +59,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/controller/bootstrap"
+	bootstrap2 "github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/version"
 )
@@ -77,7 +77,7 @@ func (b *fakeBootstrap) Init(ctx context.Context) error {
 
 func (b *fakeBootstrap) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	if atomic.LoadUint32(&b.suite.discoveriesAreBootstrapped) == 1 {
-		return nil, bootstrap.ErrReconnectRequired
+		return nil, bootstrap2.ErrReconnectRequired
 	}
 	nodes := make([]insolar.NetworkNode, 0)
 	for _, bNode := range b.suite.bootstrapNodes {
