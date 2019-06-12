@@ -80,7 +80,6 @@ type pulseController struct {
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
 	CryptographyService insolar.CryptographyService        `inject:""`
-	Resolver            network.RoutingTable               `inject:""`
 	Network             network.HostNetwork                `inject:""`
 	TerminationHandler  insolar.TerminationHandler         `inject:""`
 
