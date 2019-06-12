@@ -31,8 +31,10 @@ func TestComponents(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
+	cfg.Metrics.ListenAddress = "0.0.0.0:0"
+	cfg.APIRunner.Address = "0.0.0.0:0"
 
-	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{}
+	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true})
 	require.NoError(t, err)
 
 	err = c.Start(ctx)

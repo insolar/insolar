@@ -52,17 +52,14 @@ package bootstrap
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/version"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"

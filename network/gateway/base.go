@@ -52,11 +52,9 @@ package gateway
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -64,13 +62,13 @@ import (
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 )
 
 // Base is abstract class for gateways
+
 type Base struct {
 	component.Initer
 
@@ -92,7 +90,7 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 	log.Infof("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
-		g.Self = &NoNetwork{Base: g}
+		g.Self = &NoNetwork{g}
 	case insolar.VoidNetworkState:
 		g.Self = NewVoid(g)
 	case insolar.JetlessNetworkState:
@@ -125,6 +123,10 @@ func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	// 	g.Gatewayer.Gateway().Run(ctx)
 	// }
 	return nil
+}
+
+func (g *Base) NeedLockMessageBus() bool {
+	return true
 }
 
 // Auther casts us to Auther or obtain it in another way

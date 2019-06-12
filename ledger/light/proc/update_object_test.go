@@ -70,12 +70,17 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
+	pendingModifierMock := object.NewPendingModifierMock(t)
+	pendingModifierMock.SetResultMock.Return(nil)
+
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterMock.Return()
 	jc := jet.NewCoordinatorMock(t)
 
+	recordStorage := object.NewRecordMemory()
+
 	scheme := testutils.NewPlatformCryptographyScheme()
-	indexMemoryStor := object.NewInMemoryIndex()
+	indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
 
 	idLockMock := object.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
@@ -90,13 +95,22 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	virtAmend := record.Wrap(amendRecord)
-	data, err := virtAmend.Marshal()
+	amendVirt := record.Wrap(amendRecord)
+	amendData, err := amendVirt.Marshal()
+	require.NoError(t, err)
+
+	objectRef := genRandomRef(0)
+	resultRecord := record.Result{
+		Object: *objectRef.Record(),
+	}
+	resultVirt := record.Wrap(resultRecord)
+	resultData, err := resultVirt.Marshal()
 	require.NoError(t, err)
 
 	msg := message.UpdateObject{
-		Record: data,
-		Object: *genRandomRef(0),
+		Record: amendData,
+		ResultRecord: resultData,
+		Object: *objectRef,
 	}
 
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
@@ -113,8 +127,6 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	heavyRef := genRandomRef(0)
 	jc.HeavyMock.Return(heavyRef, nil)
 
-	recordStorage := object.NewRecordMemory()
-
 	updateObject := UpdateObject{
 		JetID:       insolar.JetID(jetID),
 		Message:     &msg,
@@ -129,6 +141,8 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = indexMemoryStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
+	updateObject.Dep.RecentStorageProvider = provideMock
+	updateObject.Dep.PendingModifier = pendingModifierMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)
@@ -152,14 +166,17 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
+	pendingModifierMock := object.NewPendingModifierMock(t)
+	pendingModifierMock.SetResultMock.Return(nil)
+
 	writeManagerMock := hot.NewWriteAccessorMock(t)
 	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
 		return func() {}, nil
 	}
 
 	scheme := testutils.NewPlatformCryptographyScheme()
-	indexMemoryStor := object.NewInMemoryIndex()
 	recordStorage := object.NewRecordMemory()
+	indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
 
 	idLockMock := object.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
@@ -174,13 +191,22 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	virtAmend := record.Wrap(amendRecord)
-	data, err := virtAmend.Marshal()
+	amendVirt := record.Wrap(amendRecord)
+	amendData, err := amendVirt.Marshal()
+	require.NoError(t, err)
+
+	objectRef := genRandomRef(0)
+	resultRecord := record.Result{
+		Object: *objectRef.Record(),
+	}
+	resultVirt := record.Wrap(resultRecord)
+	resultData, err := resultVirt.Marshal()
 	require.NoError(t, err)
 
 	msg := message.UpdateObject{
-		Record: data,
-		Object: *genRandomRef(0),
+		Record: amendData,
+		ResultRecord: resultData,
+		Object: *objectRef,
 	}
 	ctx := context.Background()
 	err = indexMemoryStor.Set(ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)
@@ -199,6 +225,8 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = indexMemoryStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
+	updateObject.Dep.RecentStorageProvider = provideMock
+	updateObject.Dep.PendingModifier = pendingModifierMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)

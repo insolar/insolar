@@ -63,7 +63,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -160,7 +160,7 @@ type hostSuite struct {
 	resolver *MockResolver
 }
 
-func newHostSuite(t *testing.T) *hostSuite {
+func newHostSuite(ctx context.Context, t *testing.T) *hostSuite {
 	resolver := newMockResolver()
 	id1 := ID1 + DOMAIN
 	id2 := ID2 + DOMAIN
@@ -176,8 +176,6 @@ func newHostSuite(t *testing.T) *hostSuite {
 	n2, err := NewHostNetwork(id2)
 	require.NoError(t, err)
 	cm2.Inject(f2, n2, resolver)
-
-	ctx := context.Background()
 
 	err = n1.Init(ctx)
 	require.NoError(t, err)
@@ -210,7 +208,8 @@ func (s *hostSuite) Stop() {
 }
 
 func TestNewHostNetwork(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	count := 10
@@ -218,7 +217,7 @@ func TestNewHostNetwork(t *testing.T) {
 	wg.Add(count)
 
 	handler := func(ctx context.Context, request network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	}
@@ -276,14 +275,15 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket2(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
 		require.Equal(t, *ref, r.GetSender())
@@ -305,11 +305,13 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket3(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	ctx = inslogger.WithLoggerLevel(ctx, insolar.DebugLevel)
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		data := r.GetRequest().GetPulse()
 		error := string(data.TraceSpanData) + string(data.TraceSpanData)
 		return s.n2.BuildResponse(ctx, r, &packet.BasicResponse{Error: error}), nil
@@ -342,11 +344,13 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	ctx = inslogger.WithLoggerLevel(ctx, insolar.DebugLevel)
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		time.Sleep(time.Millisecond * 100)
 		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
@@ -370,14 +374,15 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 }
 
 func TestHostNetwork_WrongHandler(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, r, nil), nil
 	}
@@ -396,14 +401,15 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 }
 
 func TestStartStopSend(t *testing.T) {
-	s := newHostSuite(t)
+	ctx := context.Background()
+	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
-		log.Info("handler triggered")
+		inslogger.FromContext(ctx).Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}

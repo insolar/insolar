@@ -20,18 +20,20 @@
 package ginsider
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/rpc"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -54,15 +56,28 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 
 	insgoccPath := binaryPath + "/insgocc"
 	healthcheckPath := binaryPath + "/healthcheck"
-	contractPath := currentPath + "/healthcheck/healthcheck.go"
 	if _, err = os.Stat(healthcheckPath); err != nil {
 		s.Failf("Binary file %s is not found, please run make build", healthcheckPath)
 	}
 
-	pathToTmp, err := filepath.Rel(currentPath, tmpDir)
+	if !strings.HasPrefix(tmpDir, "/") {
+		tmpDir, err = filepath.Rel(currentPath, tmpDir)
+		s.Require().NoError(err, "failed to compose relative path")
+	}
 
-	execResult, err := exec.Command(insgoccPath, "compile", "-o", pathToTmp, contractPath).CombinedOutput()
-	log.Warnf("%s", execResult)
+	args := []string{
+		"compile-genesis-plugins",
+		"--no-proxy",
+		"--sources-dir", currentPath,
+		"-o", tmpDir,
+		"healthcheck",
+	}
+
+	fmt.Println(insgoccPath, strings.Join(args, " "))
+	gocc := exec.Command(insgoccPath, args...)
+	gocc.Stderr = os.Stderr
+	gocc.Stdout = os.Stdout
+	err = gocc.Run()
 	s.Require().NoError(err, "failed to compile contract")
 
 	// start GoInsider
@@ -71,19 +86,23 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	refString := "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"
 	ref, err := insolar.NewReferenceFromBase58(refString)
 	s.Require().NoError(err)
-	err = gi.AddPlugin(*ref, tmpDir+"/main.so")
-	s.Require().NoError(err, "failed to add plugin")
+
+	healthcheckSoFile := path.Join(tmpDir, "healthcheck.so")
+	err = gi.AddPlugin(*ref, healthcheckSoFile)
+	s.Require().NoError(err, "failed to add plugin by path "+healthcheckSoFile)
 
 	s.prepareGoInsider(gi, protocol, socket)
 
-	cmd := exec.Command(healthcheckPath,
+	healthcheckArgs := []string{
 		"-a", socket,
 		"-p", protocol,
-		"-r", refString)
+		"-r", refString,
+	}
 
-	output, err := cmd.CombinedOutput()
-
-	log.Warnf("%+v", output)
+	cmd := exec.Command(healthcheckPath, healthcheckArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
 
 	s.NoError(err)
 }

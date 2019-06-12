@@ -65,6 +65,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/suite"
 
@@ -181,10 +182,6 @@ func (s *consensusSuite) SetupTest() {
 		pulseReceivers = append(pulseReceivers, node.host)
 	}
 
-	log.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	s.Require().NoError(err)
-
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
@@ -223,6 +220,10 @@ func (s *consensusSuite) SetupTest() {
 		s.Require().Equal(s.getNodesCount(), len(activeNodes2))
 	}
 	fmt.Println("=================== SetupTest() Done")
+	log.Info("Start test pulsar")
+	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	s.Require().NoError(err)
+
 }
 
 func (s *testSuite) waitResults(results chan error, expected int) {
@@ -499,9 +500,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager, false)
 	s.Require().NoError(err)
 
-	serviceNetwork.SetGateway(NewFakeOk())
-	serviceNetwork.Gateway().Run(context.Background())
-
 	amMock := staterMock{
 		stateFunc: func() ([]byte, error) {
 			return make([]byte, packets.HashLength), nil
@@ -518,11 +516,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
 	mblocker := testutils.NewMessageBusLockerMock(t)
-	GIL := testutils.NewGlobalInsolarLockMock(t)
-	GIL.AcquireMock.Return()
-	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
+	senderMock := bus.NewSenderMock(t)
 	if UseFakeTransport {
 		// little hack: this Register will override transport.Factory
 		// in servicenetwork internal component manager with fake factory
@@ -534,9 +530,16 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		node.componentManager.Register(newFakeBootstrap(s.fixture()))
 	}
 
+	mb := testutils.NewMessageBusMock(t)
+	mb.MustRegisterMock.Return()
+
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
-		&amMock, certManager, cryptographyService, mblocker, GIL, serviceNetwork, keyProc, terminationHandler,
-		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t))
+		&amMock, certManager, cryptographyService, mblocker, serviceNetwork, keyProc, terminationHandler,
+		mb, testutils.NewContractRequesterMock(t), senderMock)
+
+	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
+	})
+	serviceNetwork.SetGateway(NewFakeGateway())
 
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler

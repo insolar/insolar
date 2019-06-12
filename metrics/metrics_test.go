@@ -17,12 +17,15 @@
 package metrics_test
 
 import (
+	"context"
 	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
@@ -34,55 +37,74 @@ import (
 	"go.opencensus.io/tag"
 )
 
-func newMetrics(t *testing.T) {
+func testMetricsServerOutput(t *testing.T) {
+	// checks is metrics server properly exports metrics added with opencensus on prometheus http endpoint
 	ctx := inslogger.TestContext(t)
 	testm, err := testmetrics.Start(ctx, t)
 	require.NoError(t, err, "metrics server start")
 
 	var (
-		// https://godoc.org/go.opencensus.io/stats
-		videoCount = stats.Int64("video_count", "number of processed videos", stats.UnitDimensionless)
-		videoSize  = stats.Int64("video_size", "size of processed video", stats.UnitBytes)
+		metricCount = stats.Int64("some_count", "number of processed videos", stats.UnitDimensionless)
+		metricDist  = stats.Int64("some_distribution", "size of processed video", stats.UnitBytes)
 	)
-	osxtag := insmetrics.MustTagKey("osx")
+	someTag := insmetrics.MustTagKey("xyz")
 
 	err = view.Register(
 		&view.View{
-			Name:        "video_count",
-			Measure:     videoCount,
+			Name:        "some_metric_count",
+			Measure:     metricCount,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{osxtag},
+			TagKeys:     []tag.Key{someTag},
 		},
 		&view.View{
-			Name:        "video_size",
-			Measure:     videoSize,
+			Name:        "some_metric_distribution",
+			Measure:     metricDist,
 			Aggregation: view.Distribution(0, 1<<16, 1<<32),
-			TagKeys:     []tag.Key{osxtag},
+			TagKeys:     []tag.Key{someTag},
 		},
 	)
 	require.NoError(t, err)
 
-	newctx := insmetrics.ChangeTags(ctx, tag.Insert(osxtag, "11.12.13"))
-	stats.Record(newctx, videoCount.M(1), videoSize.M(rand.Int63()))
+	var (
+		countRe = regexp.MustCompile(`insolar_some_metric_count{[^}]*xyz="11\.12\.13"[^}]*} 1`)
+		distRe  = regexp.MustCompile(`insolar_some_metric_distribution_count{[^}]*xyz="11\.12\.13"[^}]*} 1`)
+	)
 
-	content, err := testm.FetchContent()
-	require.NoError(t, err, "fetch content failed")
+	metricsCtx := insmetrics.ChangeTags(context.Background(), tag.Insert(someTag, "11.12.13"))
+	stats.Record(metricsCtx, metricCount.M(1), metricDist.M(rand.Int63()))
 
+	var (
+		content  string
+		fetchErr error
+	)
+	// loop because at some strange circumstances at CI one fetch is not enough
+	for i := 0; i < 1000; i++ {
+		time.Sleep(500 * time.Millisecond)
+		content, fetchErr = testm.FetchContent()
+		if fetchErr != nil {
+			continue
+		}
+		if strings.Contains(content, "insolar_some_metric") {
+			break
+		}
+	}
+
+	require.NoError(t, fetchErr, "fetch content failed")
 	assert.Regexp(t,
-		regexp.MustCompile(`insolar_video_size_count{[^}]*osx="11\.12\.13"[^}]*} 1`),
+		countRe,
 		content,
-		"insolar_video_size_count distribution count value is equal to 1")
+		"counter value is equal to 1")
 	assert.Regexp(t,
-		regexp.MustCompile(`insolar_video_count{[^}]*osx="11\.12\.13"[^}]*} 1`),
+		distRe,
 		content,
-		"insolar_video_count counter value is equal to 1")
+		"distribution counter value is equal to 1")
 
 	assert.NoError(t, testm.Stop(), "metrics server is stopped")
 }
 
 func TestMetrics_NewMetrics(t *testing.T) {
 	if os.Getenv("ISOLATE_METRICS_STATE") == "1" {
-		newMetrics(t)
+		testMetricsServerOutput(t)
 		return
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=TestMetrics_NewMetrics")

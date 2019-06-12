@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/insolar/utils"
 )
 
 // ContractRequester helps to call contracts
@@ -93,6 +94,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 			Object:    ref,
 			Method:    method,
 			Arguments: args,
+			APIRequestID: utils.TraceID(ctx),
 		},
 	}
 

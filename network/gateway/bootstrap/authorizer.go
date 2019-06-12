@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"

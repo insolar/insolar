@@ -147,10 +147,15 @@ func (ar *Runner) IsAPIRunner() bool {
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
 	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork)
-	http.HandleFunc("/healthcheck", hc.CheckHandler)
+
+	router := http.NewServeMux()
+	ar.server.Handler = router
 	ar.SeedManager = seedmanager.New()
-	http.HandleFunc(ar.cfg.Call, ar.callHandler())
-	http.Handle(ar.cfg.RPC, ar.rpcServer)
+
+	router.HandleFunc("/healthcheck", hc.CheckHandler)
+	router.HandleFunc(ar.cfg.Call, ar.callHandler())
+	router.Handle(ar.cfg.RPC, ar.rpcServer)
+
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")
 	inslog.Info("Config: ", ar.cfg)
@@ -159,8 +164,8 @@ func (ar *Runner) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Can't start listening")
 	}
 	go func() {
-		if err := ar.server.Serve(listener); err != nil {
-			inslog.Error("Httpserver: ListenAndServe() error: ", err)
+		if err := ar.server.Serve(listener); err != http.ErrServerClosed {
+			inslog.Error("Http server: ListenAndServe() error: ", err)
 		}
 	}()
 	return nil

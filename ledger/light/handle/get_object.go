@@ -58,8 +58,11 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 
 	passIfNotExecutor := !s.passed
 	jet := proc.NewCheckJet(msg.ObjectID, flow.Pulse(ctx), s.message, passIfNotExecutor)
-	s.dep.FetchJetWM(jet)
+	s.dep.CheckJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
+		if err == proc.ErrNotExecutor && passIfNotExecutor {
+			return nil
+		}
 		return err
 	}
 	objJetID := jet.Result.Jet

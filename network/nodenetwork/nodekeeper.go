@@ -123,7 +123,7 @@ func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 	nk := &nodekeeper{
 		origin:        origin,
 		claimQueue:    newClaimQueue(),
-		consensusInfo: newConsensusInfo(),
+		consensusInfo: NewConsensusInfo(),
 		syncNodes:     make([]insolar.NetworkNode, 0),
 		syncClaims:    make([]packets.ReferendumClaim, 0),
 	}

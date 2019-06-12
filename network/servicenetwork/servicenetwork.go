@@ -57,8 +57,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/gateway"
+
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/network/controller/common"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -100,14 +105,16 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
-	GIL                 insolar.GlobalInsolarLock   `inject:""`
 	Pub                 message.Publisher           `inject:""`
-	MessageBus          insolar.MessageBus          `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
+	Sender              bus.Sender                  `inject:""`
 
 	// subcomponents
-	PhaseManager phases.PhaseManager `inject:"subcomponent"`
-	Controller   network.Controller  `inject:"subcomponent"`
+	PhaseManager phases.PhaseManager      `inject:"subcomponent"`
+	RPC          controller.RPCController `inject:"subcomponent"`
+
+	HostNetwork  network.HostNetwork
+	OperableFunc func(ctx context.Context, operable bool)
 
 	isGenesis bool
 	// isDiscovery bool
@@ -124,6 +131,10 @@ func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manag
 	return serviceNetwork, nil
 }
 
+func (n *ServiceNetwork) SetOperableFunc(f func(ctx context.Context, operable bool)) {
+	n.OperableFunc = f
+}
+
 func (n *ServiceNetwork) Gateway() network.Gateway {
 	n.gatewayMu.RLock()
 	defer n.gatewayMu.RUnlock()
@@ -132,27 +143,44 @@ func (n *ServiceNetwork) Gateway() network.Gateway {
 
 func (n *ServiceNetwork) SetGateway(g network.Gateway) {
 	n.gatewayMu.Lock()
-	defer n.gatewayMu.Unlock()
+
+	if n.gateway != nil && n.gateway.GetState() == g.GetState() {
+		log.Warn("Trying to set gateway to the same state")
+		n.gatewayMu.Unlock()
+		return
+	}
 	n.gateway = g
+	n.gatewayMu.Unlock()
+	ctx := context.Background()
+	if n.gateway.NeedLockMessageBus() {
+		n.OperableFunc(ctx, false)
+	} else {
+		n.OperableFunc(ctx, true)
+	}
+	n.gateway.Run(ctx)
 }
 
 func (n *ServiceNetwork) GetState() insolar.NetworkState {
-	return n.Gateway().GetState()
+	g := n.Gateway()
+	if g == nil {
+		return insolar.NoNetworkState
+	}
+	return g.GetState()
 }
 
 // SendMessage sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
-	return n.Controller.SendMessage(nodeID, method, msg)
+	return n.RPC.SendMessage(nodeID, method, msg)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes
 func (n *ServiceNetwork) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
-	return n.Controller.SendCascadeMessage(data, method, msg)
+	return n.RPC.SendCascadeMessage(data, method, msg)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
-	n.Controller.RemoteProcedureRegister(name, method)
+	n.RPC.RemoteProcedureRegister(name, method)
 }
 
 // Init implements component.Initer
@@ -161,6 +189,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
+	n.HostNetwork = hostNetwork
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
@@ -170,7 +199,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
-	options := controller.ConfigureOptions(n.cfg)
+	options := common.ConfigureOptions(n.cfg)
 
 	cert := n.CertificateManager.GetCertificate()
 
@@ -187,18 +216,17 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewSecondPhase(),
 		phases.NewThirdPhase(),
 		phases.NewPhaseManager(n.cfg.Service.Consensus),
-		controller.NewNetworkController(),
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 
 		baseGateway,
-		bootstrap.NewSessionManager(),
 	)
 	err = n.cm.Init(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
+	// todo ??
 	n.SetGateway(baseGateway.NewGateway(insolar.NoNetworkState))
 
 	return nil
@@ -353,30 +381,10 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 		logger.Error("failed to extract message type")
 	}
 
-	node, err := n.wrapMeta(msg)
+	err = n.sendMessage(ctx, msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send message")
-	}
-
-	// Short path when sending to self node. Skip serialization
-	origin := n.NodeKeeper.GetOrigin()
-	if node.Equal(origin.ID()) {
-		err := n.Pub.Publish(bus.TopicIncoming, msg)
-		if err != nil {
-			return nil, errors.Wrap(err, "error while publish msg to TopicIncoming")
-		}
+		n.replyError(ctx, msg, err)
 		return nil, nil
-	}
-	msgBytes, err := messageToBytes(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "error while converting message to bytes")
-	}
-	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
-	}
-	if !bytes.Equal(res, ack) {
-		return nil, errors.Errorf("reply is not ack: %s", res)
 	}
 
 	logger.WithFields(map[string]interface{}{
@@ -385,6 +393,57 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	}).Info("Network sent message")
 
 	return nil, nil
+}
+
+func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) error {
+	node, err := n.wrapMeta(msg)
+	if err != nil {
+		return errors.Wrap(err, "failed to send message")
+	}
+
+	// Short path when sending to self node. Skip serialization
+	origin := n.NodeKeeper.GetOrigin()
+	if node.Equal(origin.ID()) {
+		err := n.Pub.Publish(bus.TopicIncoming, msg)
+		if err != nil {
+			return errors.Wrap(err, "error while publish msg to TopicIncoming")
+		}
+		return nil
+	}
+	msgBytes, err := messageToBytes(msg)
+	if err != nil {
+		return errors.Wrap(err, "error while converting message to bytes")
+	}
+	res, err := n.RPC.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
+	if err != nil {
+		return errors.Wrap(err, "error while sending watermillMsg to controller")
+	}
+	if !bytes.Equal(res, ack) {
+		return errors.Errorf("reply is not ack: %s", res)
+	}
+	return nil
+}
+
+func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"correlation_id": middleware.MessageCorrelationID(msg),
+	})
+	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error()))
+		return
+	}
+	wrapper := payload.Meta{
+		Payload: msg.Payload,
+		Sender:  n.NodeKeeper.GetOrigin().ID(),
+	}
+	buf, err := wrapper.Marshal()
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to wrap error message (%s)", repErr.Error()))
+		return
+	}
+	msg.Payload = buf
+	n.Sender.Reply(ctx, msg, errMsg)
 }
 
 func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
@@ -428,8 +487,10 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 		logger.Error(err)
 		return nil, err
 	}
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 	logger = inslogger.FromContext(ctx)
+	if inslogger.TraceID(ctx) != msg.Metadata.Get(bus.MetaTraceID) {
+		logger.Errorf("traceID from context (%s) is different from traceID from message Metadata (%s)", inslogger.TraceID(ctx), msg.Metadata.Get(bus.MetaTraceID))
+	}
 	// TODO: check pulse here
 
 	msgType, err := payload.UnmarshalTypeFromMeta(msg.Payload)

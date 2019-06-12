@@ -36,6 +36,7 @@ type SeedManager struct {
 	mutex    sync.RWMutex
 	seedPool map[Seed]Expiration
 	ttl      time.Duration
+	stopped  bool
 }
 
 // New creates new seed manager with default params
@@ -45,14 +46,25 @@ func New() *SeedManager {
 
 // NewSpecified creates new seed manager with custom params
 func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
-	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: ttl}
+	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: ttl, stopped: false}
 	go func() {
 		for range time.Tick(cleanPeriod) {
 			sm.deleteExpired()
+			sm.mutex.RLock()
+			if sm.stopped {
+				break
+			}
+			sm.mutex.RUnlock()
 		}
 	}()
 
 	return &sm
+}
+
+func (sm *SeedManager) Stop() {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	sm.stopped = true
 }
 
 // Add adds seed to pool

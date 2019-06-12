@@ -31,6 +31,7 @@ message Request {
         PulseRequest Pulse = 4;
         BootstrapRequest Bootstrap = 5;
         AuthorizeRequest Authorize = 6;
+        SignCertRequest SignCert = 7;
     }
 }
 
@@ -41,6 +42,8 @@ message Response {
         BasicResponse Basic = 3; // response for Cascade and Pulse requests
         BootstrapResponse Bootstrap = 4;
         AuthorizeResponse Authorize = 5;
+        SignCertResponse SignCert = 6;
+        ErrorResponse Error = 7;
     }
 }
 
@@ -85,6 +88,11 @@ message AuthorizeData {
 message AuthorizeRequest {
     AuthorizeData AuthorizeData = 1;
     bytes Signature = 2;
+}
+
+
+message SignCertRequest {
+    bytes NodeRef = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message RPCResponse {
@@ -141,4 +149,12 @@ message AuthorizeResponse {
     uint32 DiscoveryCount = 4;
     uint32 PulseNumber = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     uint32 NetworkState = 6;
+}
+
+message SignCertResponse {
+    bytes Sign = 1;
+}
+
+message ErrorResponse {
+    string Error = 1;
 }

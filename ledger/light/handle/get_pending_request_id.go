@@ -49,6 +49,12 @@ func (s *GetPendingRequestID) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	s.dep.WaitHot(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
 	getPendingRequestID := proc.NewGetPendingRequestID(jet.Result.Jet, s.replyTo, s.msg, s.reqPulse)
 	s.dep.GetPendingRequestID(getPendingRequestID)
 	if err := f.Procedure(ctx, getPendingRequestID, false); err != nil {

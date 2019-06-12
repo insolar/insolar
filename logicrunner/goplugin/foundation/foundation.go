@@ -21,7 +21,7 @@ import (
 	"github.com/tylerb/gls"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 // BaseContract is a base class for all contracts.
@@ -80,12 +80,12 @@ func GetContext() *insolar.LogicCallContext {
 
 // GetImplementationFor finds delegate typed r in object and returns it
 func GetImplementationFor(object, ofType insolar.Reference) (insolar.Reference, error) {
-	return proxyctx.Current.GetDelegate(object, ofType)
+	return common.CurrentProxyCtx.GetDelegate(object, ofType)
 }
 
 // NewChildrenTypedIterator returns children with corresponding type iterator
-func (bc *BaseContract) NewChildrenTypedIterator(childPrototype insolar.Reference) (*proxyctx.ChildrenTypedIterator, error) {
-	return proxyctx.Current.GetObjChildrenIterator(bc.GetReference(), childPrototype, "")
+func (bc *BaseContract) NewChildrenTypedIterator(childPrototype insolar.Reference) (*common.ChildrenTypedIterator, error) {
+	return common.CurrentProxyCtx.GetObjChildrenIterator(bc.GetReference(), childPrototype, "")
 }
 
 // GetObject create proxy by address
@@ -96,7 +96,7 @@ func GetObject(ref insolar.Reference) ProxyInterface {
 
 // SelfDestruct contract will be marked as deleted
 func (bc *BaseContract) SelfDestruct() error {
-	return proxyctx.Current.DeactivateObject(bc.GetReference())
+	return common.CurrentProxyCtx.DeactivateObject(bc.GetReference())
 }
 
 // Error elementary string based error struct satisfying builtin error interface
