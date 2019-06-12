@@ -21,6 +21,7 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/api"
 	"io"
 	"os"
 
@@ -51,14 +52,20 @@ func (g *certGen) loadKeys() {
 	g.pubKey = g.keyProcessor.ExtractPublicKey(g.privKey)
 }
 
-type RegisterResult struct {
-	Error   string `json:"error"`
+type Answer struct {
+	JsonRpc string `json:"jsonrpc"`
+	Id      int    `json:"id"`
+	Error   string `json:"error,omitempty"`
+	Result  Result `json:"result,omitempty"`
+}
+
+type Result struct {
 	Result  string `json:"result"`
-	TraceID string `json:"traceID"`
+	TraceID string `json:"traceID,omitempty"`
 }
 
 func extractReference(response []byte, requestTypeMsg string) insolar.Reference {
-	r := RegisterResult{}
+	r := Answer{}
 	err := json.Unmarshal(response, &r)
 	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
 	if verbose {
@@ -69,7 +76,7 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 		os.Exit(1)
 	}
 
-	ref, err := insolar.NewReferenceFromBase58(r.Result)
+	ref, err := insolar.NewReferenceFromBase58(r.Result.Result)
 	checkError(fmt.Sprintf("Failed to construct ref from '%s' node response", requestTypeMsg), err)
 
 	return *ref
@@ -80,9 +87,14 @@ func (g *certGen) registerNode() insolar.Reference {
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
-	request := requester.RequestConfigJSON{
-		Method: "RegisterNode",
-		Params: []interface{}{keySerialized, g.staticRole.String()},
+	request := api.Request{
+		JsonRpc: "2.0",
+		Id:      1,
+		Method:  "api.call",
+		Params: api.Params{
+			CallSite:   "contract.registerNode",
+			CallParams: []interface{}{keySerialized, g.staticRole.String()},
+		},
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
@@ -108,15 +120,13 @@ type GetCertificateResponse struct {
 }
 
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
-	params := requester.PostParams{
-		"ref": ref.String(),
-	}
-	response, err := requester.GetResponseBody(g.API+"/rpc", requester.PostParams{
-		"jsonrpc": "2.0",
-		"method":  "cert.Get",
-		"id":      "",
-		"params":  params,
-	})
+
+	response, err := requester.GetResponseBody(g.API+"/rpc", api.Request{
+		JsonRpc: "2.0",
+		Method:  "cert.Get",
+		Id:      1,
+		Params:  api.Params{CallParams: ref.String()},
+	}, "")
 	checkError("Failed to get certificate for the registered node:", err)
 
 	r := GetCertificateResponse{}
@@ -191,9 +201,14 @@ func (g *certGen) getNodeRefByPk() insolar.Reference {
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.privKey)
 	checkError("Failed to export public key:", err)
-	request := requester.RequestConfigJSON{
-		Method: "GetNodeRef",
-		Params: []interface{}{keySerialized},
+	request := api.Request{
+		JsonRpc: "2.0",
+		Id:      1,
+		Method:  "api.call",
+		Params: api.Params{
+			CallSite:   "contract.getNodeRef",
+			CallParams: []interface{}{keySerialized},
+		},
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")

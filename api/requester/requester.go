@@ -19,14 +19,21 @@ package requester
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/api"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
@@ -76,10 +83,10 @@ func SetVerbose(verb bool) {
 }
 
 // PostParams represents params struct
-type PostParams = map[string]interface{}
+//type PostParams = map[string]interface{}
 
 // GetResponseBody makes request and extracts body
-func GetResponseBody(url string, postP PostParams) ([]byte, error) {
+func GetResponseBody(url string, postP api.Request, signature string) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
@@ -90,6 +97,12 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with creating request")
 	}
 	req.Header.Set("Content-Type", "application/json")
+
+	h := sha256.New()
+	h.Write(jsonValue)
+	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	req.Header.Set("Digest", "SHA-256="+sha)
+	req.Header.Set("Signature", "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
 	postResp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with sending request")
@@ -113,85 +126,61 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 }
 
 // GetSeed makes rpc request to seed.Get method and extracts it
-func GetSeed(url string) ([]byte, error) {
-	body, err := GetResponseBody(url+"/rpc", PostParams{
-		"jsonrpc": "2.0",
-		"method":  "seed.Get",
-		"id":      "",
-	})
+func GetSeed(url string) (string, error) {
+	body, err := GetResponseBody(url+"/rpc", api.Request{
+		JsonRpc: "2.0",
+		Method:  "seed.Get",
+		Id:      1,
+	}, "")
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getSeed ]")
+		return "", errors.Wrap(err, "[ getSeed ]")
 	}
 
 	seedResp := rpcSeedResponse{}
 
 	err = json.Unmarshal(body, &seedResp)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getSeed ] Can't unmarshal")
+		return "", errors.Wrap(err, "[ getSeed ] Can't unmarshal")
 	}
 	if seedResp.Error != nil {
-		return nil, errors.New("[ getSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
+		return "", errors.New("[ getSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
 	}
 	if len(seedResp.Result.Seed) == 0 {
-		return nil, errors.New("[ getSeed ] Field seed is empty")
+		return "", errors.New("[ getSeed ] Field seed is empty")
 	}
 
 	return seedResp.Result.Seed, nil
 }
 
-func constructParams(params []interface{}) ([]byte, error) {
-	args, err := insolar.MarshalArgs(params...)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ constructParams ]")
-	}
-	return args, nil
-}
-
 // SendWithSeed sends request with known seed
-func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
+func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *api.Request, seed string) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ Send ] Configs must be initialized")
 	}
 
-	params, err := constructParams(reqCfg.Params)
+	ks := platformpolicy.NewKeyProcessor()
+
+	pem, err := ks.ExportPublicKeyPEM(userCfg.privateKeyObject.(*ecdsa.PrivateKey).Public())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
+		return nil, errors.Wrap(err, "[ Send ] Cant export public key to PEM")
 	}
 
-	callerRef, err := insolar.NewReferenceFromBase58(userCfg.Caller)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Failed to parse userCfg.Caller")
-	}
-
-	serRequest, err := insolar.MarshalArgs(
-		*callerRef,
-		reqCfg.Method,
-		params,
-		seed)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
-	}
+	reqCfg.Params.Reference = userCfg.Caller
+	reqCfg.Params.PublicKey = string(pem)
+	reqCfg.Params.Seed = seed
 
 	verboseInfo(ctx, "Signing request ...")
-	cs := scheme.Signer(userCfg.privateKeyObject)
-	signature, err := cs.Sign(serRequest)
+	dataToSign, err := json.Marshal(reqCfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Cant marshal struct")
+	}
+	signature, err := sign(userCfg.privateKeyObject, dataToSign)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}
 	verboseInfo(ctx, "Signing request completed")
 
-	postParams := PostParams{
-		"params":    params,
-		"method":    reqCfg.Method,
-		"reference": userCfg.Caller,
-		"seed":      seed,
-		"signature": signature.Bytes(),
-	}
-	if reqCfg.LogLevel != nil {
-		postParams["logLevel"] = reqCfg.LogLevel
-	}
-
-	body, err := GetResponseBody(url, postParams)
+	body, err := GetResponseBody(url, *reqCfg, signature)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with sending target request")
@@ -200,8 +189,36 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	return body, nil
 }
 
+func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
+	hash := sha256.Sum256(data)
+
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey.(*ecdsa.PrivateKey), hash[:])
+	if err != nil {
+		panic(err)
+	}
+
+	return PointsToDER(r, s), nil
+}
+
+// TODO: choose encoding format
+func PointsToDER(r, s *big.Int) string {
+
+	// DER encoding:
+	// 0x30 + z + 0x02 + len(rb) + rb + 0x02 + len(sb) + sb
+	length := 2 + len(r.Bytes()) + 2 + len(s.Bytes())
+
+	der := append([]byte{0x30, byte(length), 0x02, byte(len(r.Bytes()))}, r.Bytes()...)
+	der = append(der, 0x02, byte(len(s.Bytes())))
+	der = append(der, s.Bytes()...)
+
+	encoded := make([]byte, hex.EncodedLen(len(der)))
+	hex.Encode(encoded, der)
+
+	return base64.StdEncoding.EncodeToString(encoded)
+}
+
 // Send first gets seed and after that makes target request
-func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
+func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *api.Request) ([]byte, error) {
 	verboseInfo(ctx, "Sending GETSEED request ...")
 	seed, err := GetSeed(url)
 	if err != nil {
@@ -209,7 +226,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	}
 	verboseInfo(ctx, "GETSEED request completed. seed: "+string(seed))
 
-	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
+	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, string(seed))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}
@@ -217,11 +234,11 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	return response, nil
 }
 
-func getDefaultRPCParams(method string) PostParams {
-	return PostParams{
-		"jsonrpc": "2.0",
-		"id":      "",
-		"method":  method,
+func getDefaultRPCParams(method string) api.Request {
+	return api.Request{
+		JsonRpc: "2.0",
+		Id:      1,
+		Method:  method,
 	}
 }
 
@@ -229,7 +246,7 @@ func getDefaultRPCParams(method string) PostParams {
 func Info(url string) (*InfoResponse, error) {
 	params := getDefaultRPCParams("info.Get")
 
-	body, err := GetResponseBody(url+"/rpc", params)
+	body, err := GetResponseBody(url+"/rpc", params, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Info ]")
 	}
@@ -251,7 +268,7 @@ func Info(url string) (*InfoResponse, error) {
 func Status(url string) (*StatusResponse, error) {
 	params := getDefaultRPCParams("status.Get")
 
-	body, err := GetResponseBody(url+"/rpc", params)
+	body, err := GetResponseBody(url+"/rpc", params, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Status ]")
 	}
@@ -273,7 +290,7 @@ func Status(url string) (*StatusResponse, error) {
 func LogOff(url string) (*StatusResponse, error) {
 	params := getDefaultRPCParams("status.LogOff")
 
-	body, err := GetResponseBody(url+"/rpc", params)
+	body, err := GetResponseBody(url+"/rpc", params, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Status ]")
 	}

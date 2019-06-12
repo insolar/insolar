@@ -19,6 +19,7 @@ package sdk
 import (
 	"context"
 	"encoding/json"
+	"github.com/insolar/insolar/api"
 	"io/ioutil"
 	"sync"
 
@@ -108,10 +109,10 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 }
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params []interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
-	reqCfg := &requester.RequestConfigJSON{
-		Params:   params,
+	reqCfg := &api.Request{
+		Params:   api.Params{CallParams:params},
 		Method:   method,
-		LogLevel: sdk.logLevel,
+		LogLevel: sdk.logLevel.(string),
 	}
 
 	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, reqCfg)
