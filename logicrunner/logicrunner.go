@@ -61,7 +61,6 @@ type ObjectState struct {
 
 	ExecutionState *ExecutionState
 	Validation     *ExecutionState
-	Consensus      *Consensus
 }
 
 type Error struct {
@@ -667,9 +666,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 		)
 		state.Lock()
 
-		// some old stuff
-		state.RefreshConsensus()
-
 		if es := state.ExecutionState; es != nil {
 			es.Lock()
 
@@ -687,7 +683,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 			es.Unlock()
 		}
 
-		if state.ExecutionState == nil && state.Validation == nil && state.Consensus == nil {
+		if state.ExecutionState == nil && state.Validation == nil {
 			delete(lr.state, ref)
 		}
 

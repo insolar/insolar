@@ -81,6 +81,8 @@ func (p *Packet) SetRequest(request interface{}) {
 		r = &Request_Register{t}
 	case *GenesisRequest:
 		r = &Request_Genesis{t}
+	case *SignCertRequest:
+		r = &Request_SignCert{t}
 	default:
 		panic("Request payload is not a valid protobuf struct!")
 	}
@@ -104,6 +106,10 @@ func (p *Packet) SetResponse(response interface{}) {
 		r = &Response_Register{t}
 	case *GenesisResponse:
 		r = &Response_Genesis{t}
+	case *SignCertResponse:
+		r = &Response_SignCert{t}
+	case *ErrorResponse:
+		r = &Response_Error{t}
 	default:
 		panic("Response payload is not a valid protobuf struct!")
 	}

@@ -64,12 +64,12 @@ import (
 // NewNoNetwork this initial constructor have special signature to be called outside
 func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock,
 	nk network.NodeKeeper, cr insolar.ContractRequester,
-	cs insolar.CryptographyService, mb insolar.MessageBus,
+	cs insolar.CryptographyService, hn network.HostNetwork,
 	cm insolar.CertificateManager) network.Gateway {
 	return (&Base{
 		Network: n, GIL: gil,
 		Nodekeeper: nk, ContractRequester: cr,
-		CryptographyService: cs, MessageBus: mb,
+		CryptographyService: cs, HostNetwork: hn,
 		CertificateManager: cm,
 	}).NewGateway(insolar.NoNetworkState)
 }

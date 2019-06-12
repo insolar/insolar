@@ -56,6 +56,7 @@ func NewExecutionState(ref insolar.Reference) *ExecutionState {
 		Ref:         ref,
 		CurrentList: NewCurrentExecutionList(),
 		Queue:       make([]Transcript, 0),
+		pending:     message.PendingUnknown,
 	}
 }
 
