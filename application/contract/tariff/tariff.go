@@ -45,7 +45,7 @@ func (t Tariff) GetCommission(amountStr string) (string, error) {
 	}
 
 	preResult := new(big.Int).Mul(amount, commissionRate)
-	result := new(big.Int).Div(preResult, big.NewInt(1000000))
+	result := new(big.Int).Div(preResult, big.NewInt(10000000000))
 
 	return result.String(), nil
 }

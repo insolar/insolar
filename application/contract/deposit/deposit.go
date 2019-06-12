@@ -19,7 +19,6 @@ package deposit
 import (
 	"fmt"
 	"math/big"
-	"strconv"
 	"time"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -37,14 +36,14 @@ const (
 
 type Deposit struct {
 	foundation.BaseContract
-	Status         DepositStatus
-	OracleConfirms map[string]bool
-	Confirms       uint
-	TxHash         string
-	CreationDate   time.Time
-	UnHoldDate     time.Time
-	Amount         string
-	Bonus          string
+	Timestamp       time.Time
+	HoldReleaseDate time.Time
+	OracleConfirms  map[string]bool
+	Confirms        uint
+	Amount          string
+	Bonus           string
+	TxHash          string
+	Status          DepositStatus
 }
 
 func (d *Deposit) GetTxHash() (string, error) {
@@ -55,23 +54,25 @@ func (d *Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
-func New(oracleConfirms map[string]bool, txHash string, amount string, unHoldDate time.Time) (*Deposit, error) {
+func New(oracleConfirms map[string]bool, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
 	return &Deposit{
-		Status:         Open,
-		OracleConfirms: oracleConfirms,
-		Confirms:       0,
-		TxHash:         txHash,
-		UnHoldDate:     unHoldDate,
-		Amount:         amount,
+
+		OracleConfirms:  oracleConfirms,
+		Confirms:        0,
+		TxHash:          txHash,
+		HoldReleaseDate: holdReleaseDate,
+		Amount:          amount,
+		Status:          Open,
 	}, nil
 }
 
 func (d *Deposit) MapMarshal() (map[string]string, error) {
 	return map[string]string{
-		"Status":   string(d.Status),
-		"Confirms": strconv.Itoa(int(d.Confirms)),
-		"TxHash":   d.TxHash,
-		"Amount":   d.Amount,
+		"timestamp":       d.Timestamp.String(),
+		"holdReleaseDate": d.HoldReleaseDate.String(),
+		"amount":          d.Amount,
+		"bonus":           d.Bonus,
+		"txId":            d.TxHash,
 	}, nil
 }
 
