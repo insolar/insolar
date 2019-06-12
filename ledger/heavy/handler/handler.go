@@ -152,7 +152,7 @@ func (h *Handler) handlePass(ctx context.Context, msg *watermillMsg.Message) err
 		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())
 	}
 	if err != nil {
-		h.replyError(ctx, msg, err)
+		h.replyError(ctx, origin, err)
 	}
 	return err
 }
