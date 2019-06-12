@@ -107,12 +107,15 @@ func (h *HandleCall) handleActual(
 		msg:  msg,
 		role: insolar.DynamicRoleVirtualExecutor,
 		lr:   lr,
+		pulseNumber: flow.Pulse(ctx),
 	}
 
 	if err := f.Procedure(ctx, &procCheckRole, true); err != nil {
 		es.Unlock()
-		if err == flow.ErrCancelled {
-			return nil, err // message bus will retry on the calling side in ContractRequester
+		// rewrite "can't execute this object" to "flow cancelled" for force retry message
+		// just temporary fix till mb moved to watermill
+		if err == flow.ErrCancelled || err == ErrCantExecute {
+			return nil, flow.ErrCancelled
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't play role")
 	}

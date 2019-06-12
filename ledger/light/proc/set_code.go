@@ -18,8 +18,6 @@ package proc
 
 import (
 	"context"
-	"fmt"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
@@ -27,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -82,24 +81,6 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 		return err
 	}
 	defer done()
-
-	h := p.dep.pcs.ReferenceHasher()
-	_, err = h.Write(p.code)
-	if err != nil {
-		return errors.Wrap(err, "failed to calculate code id")
-	}
-	blobID := *insolar.NewID(flow.Pulse(ctx), h.Sum(nil))
-	if blobID != p.record.Code {
-		return fmt.Errorf(
-			"received blob id %s does not match with %s",
-			p.record.Code.DebugString(),
-			blobID.DebugString(),
-		)
-	}
-	err = p.dep.blobs.Set(ctx, blobID, blob.Blob{Value: p.code, JetID: p.jetID})
-	if err != nil {
-		return errors.Wrap(err, "failed to store blob")
-	}
 
 	virtual := record.Wrap(p.record)
 	material := record.Material{
