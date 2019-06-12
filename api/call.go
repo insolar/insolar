@@ -40,12 +40,13 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	JsonRpc  string      `json:"jsonrpc"`
-	Id       int         `json:"id"`
-	Method   string      `json:"method"`
-	Params   Params      `json:"params"`
-	XYU      interface{} `json:"xyu"`
-	LogLevel string      `json:"logLevel,omitempty"`
+	JsonRpc        string      `json:"jsonrpc"`
+	Id             int         `json:"id"`
+	Method         string      `json:"method"`
+	// TODO: hack do refactor
+	ContractParams Params      `json:"contractparams"`
+	PlatformParams interface{} `json:"params"`
+	LogLevel       string      `json:"logLevel,omitempty"`
 }
 
 type Params struct {
@@ -56,15 +57,10 @@ type Params struct {
 	PublicKey  string      `json:"memberPubKey"`
 }
 
-type Answer struct {
-	JsonRpc string `json:"jsonrpc"`
-	Id      int    `json:"id"`
-	Error   string `json:"error,omitempty"`
-	Result  Result `json:"result,omitempty"`
-}
-
-type Result struct {
-	Data    interface{} `json:"data"`
+// TODO: update answer struct
+type answer struct {
+	Error   string      `json:"error,omitempty"`
+	Result  interface{} `json:"result,omitempty"`
 	TraceID string      `json:"traceID,omitempty"`
 }
 
@@ -106,7 +102,7 @@ func (ar *Runner) makeCall(ctx context.Context, request Request, rawBody []byte,
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
 	defer span.End()
 
-	reference, err := insolar.NewReferenceFromBase58(request.Params.Reference)
+	reference, err := insolar.NewReferenceFromBase58(request.ContractParams.Reference)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
@@ -140,7 +136,7 @@ func (ar *Runner) makeCall(ctx context.Context, request Request, rawBody []byte,
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *Answer, insLog insolar.Logger) {
+func processError(err error, extraMsg string, resp *answer, insLog insolar.Logger) {
 	resp.Error = err.Error()
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
@@ -154,7 +150,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		defer span.End()
 
 		request := Request{}
-		resp := Answer{}
+		resp := answer{}
 
 		startTime := time.Now()
 		defer func() {
@@ -165,9 +161,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			metrics.APIContractExecutionTime.WithLabelValues(request.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
 
-		resp.Result.TraceID = traceID
-		resp.JsonRpc = request.JsonRpc
-		resp.Id = request.Id
+		resp.TraceID = traceID
 
 		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
 
@@ -207,7 +201,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed(request.Params.Seed)
+		err = ar.checkSeed(request.ContractParams.Seed)
 		if err != nil {
 			processError(err, "Can't checkSeed", &resp, insLog)
 			return
@@ -232,14 +226,14 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				processError(err, "Can't makeCall", &resp, insLog)
 				return
 			}
-			resp.Result.Data = result
+			resp.Result = result
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
 			resp.Error = "Messagebus timeout exceeded"
 			return
 		}
 
-		resp.Result.Data = result
+		resp.Result = result
 	}
 }
 

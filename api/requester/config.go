@@ -36,23 +36,6 @@ type UserConfigJSON struct {
 	privateKeyObject crypto.PrivateKey
 }
 
-// RequestConfigJSON holds info about request
-type RequestConfigJSON struct {
-	JsonRpc  string  `json:"jsonrpc"`
-	Id       int     `json:"id"`
-	Method   string  `json:"method"`
-	Params   Params  `json:"params"`
-	LogLevel *string `json:"logLevel,omitempty"`
-}
-
-type Params struct {
-	Seed       string `json:"seed"`
-	CallSite   string `json:"callSite"`
-	CallParams string `json:"callParams"`
-	Reference  string `json:"reference"`
-	Pem        string `json:"pem"`
-}
-
 func readFile(path string, configType interface{}) error {
 	var rawConf []byte
 	var err error

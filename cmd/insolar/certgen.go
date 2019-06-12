@@ -52,20 +52,14 @@ func (g *certGen) loadKeys() {
 	g.pubKey = g.keyProcessor.ExtractPublicKey(g.privKey)
 }
 
-type Answer struct {
-	JsonRpc string `json:"jsonrpc"`
-	Id      int    `json:"id"`
-	Error   string `json:"error,omitempty"`
-	Result  Result `json:"result,omitempty"`
-}
-
-type Result struct {
-	Data    interface{} `json:"data"`
-	TraceID string      `json:"traceID,omitempty"`
+type RegisterResult struct {
+	Error   string `json:"error"`
+	Result  string `json:"result"`
+	TraceID string `json:"traceID"`
 }
 
 func extractReference(response []byte, requestTypeMsg string) insolar.Reference {
-	r := Answer{}
+	r := RegisterResult{}
 	err := json.Unmarshal(response, &r)
 	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
 	if verbose {
@@ -76,7 +70,7 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 		os.Exit(1)
 	}
 
-	ref, err := insolar.NewReferenceFromBase58(r.Result.Data.(string))
+	ref, err := insolar.NewReferenceFromBase58(r.Result)
 	checkError(fmt.Sprintf("Failed to construct ref from '%s' node response", requestTypeMsg), err)
 
 	return *ref
@@ -91,7 +85,7 @@ func (g *certGen) registerNode() insolar.Reference {
 		JsonRpc: "2.0",
 		Id:      1,
 		Method:  "api.call",
-		Params: api.Params{
+		ContractParams: api.Params{
 			CallSite:   "contract.registerNode",
 			CallParams: map[string]string{"public": string(keySerialized), "role": g.staticRole.String()},
 		},
@@ -121,19 +115,16 @@ type GetCertificateResponse struct {
 
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
-	fmt.Println("INCOMING REF", ref.String())
-
 	response, err := requester.GetResponseBody(g.API+"/rpc", api.Request{
-		JsonRpc: "2.0",
-		Method:  "cert.Get",
-		Id:      1,
-		XYU:     ref.String(),
+		JsonRpc:        "2.0",
+		Method:         "cert.Get",
+		Id:             1,
+		PlatformParams: map[string]string{"ref": ref.String()},
 	}, "")
 	checkError("Failed to get certificate for the registered node:", err)
 
 	r := GetCertificateResponse{}
 
-	fmt.Println("CERT", string(response))
 	err = json.Unmarshal(response, &r)
 	checkError("Failed to parse response from get certificate request:", err)
 
@@ -209,7 +200,7 @@ func (g *certGen) getNodeRefByPk() insolar.Reference {
 		JsonRpc: "2.0",
 		Id:      1,
 		Method:  "api.call",
-		Params: api.Params{
+		ContractParams: api.Params{
 			CallSite:   "contract.getNodeRef",
 			CallParams: []interface{}{keySerialized},
 		},

@@ -165,9 +165,9 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.Wrap(err, "[ Send ] Cant export public key to PEM")
 	}
 
-	reqCfg.Params.Reference = userCfg.Caller
-	reqCfg.Params.PublicKey = string(pem)
-	reqCfg.Params.Seed = seed
+	reqCfg.ContractParams.Reference = userCfg.Caller
+	reqCfg.ContractParams.PublicKey = string(pem)
+	reqCfg.ContractParams.Seed = seed
 
 	verboseInfo(ctx, "Signing request ...")
 	dataToSign, err := json.Marshal(reqCfg)
