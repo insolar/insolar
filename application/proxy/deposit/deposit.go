@@ -27,7 +27,7 @@ type DepositStatus string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11117yZeTaXhMFAMBqWwEJbEWjiEmtJfazmttqX3ZP.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111GF6XFpdJZYy6SkcaYjMsZqra8QTFVWSP2LzpJF.11111111111111111111111111111111")
 
 // Deposit holds proxy type
 type Deposit struct {
@@ -80,12 +80,12 @@ func GetImplementationFrom(object insolar.Reference) (*Deposit, error) {
 }
 
 // New is constructor
-func New(oracleConfirms map[string]bool, txHash string, amount string, unHoldDate time.Time) *ContractConstructorHolder {
+func New(oracleConfirms map[string]bool, txHash string, amount string, holdReleaseDate time.Time) *ContractConstructorHolder {
 	var args [4]interface{}
 	args[0] = oracleConfirms
 	args[1] = txHash
 	args[2] = amount
-	args[3] = unHoldDate
+	args[3] = holdReleaseDate
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)

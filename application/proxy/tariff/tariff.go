@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112JPf7sMhuYNU6eG8LHBqHMyvYJqpYsUEdq8jxRy.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111WGU1izeiSyT2XMdDQodp3B3BwmCpYDGZcqQbwd.11111111111111111111111111111111")
 
 // Tariff holds proxy type
 type Tariff struct {

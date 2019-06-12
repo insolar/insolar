@@ -1125,7 +1125,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 		s.T().Parallel()
 	}
 
-	contracts := []string{"member", "allowance", "wallet", "rootdomain"}
+	contracts := []string{"member", "deposit", "wallet", "rootdomain", "costcenter", "tariff"}
 	contractCode := s.LoadBasicContracts(contracts)
 	ctx := context.TODO()
 	// TODO need use pulseManager to sync all refs
@@ -1204,7 +1204,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	member1PubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(member1Key))
 	s.NoError(err)
 
-	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member1", member1PubKey})
+	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{member1PubKey})
 	member1Ref := res1.(string)
 	s.NotEqual("", member1Ref)
 
@@ -1214,18 +1214,18 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	member2PubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(member2Key))
 	s.NoError(err)
 
-	res2 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member2", member2PubKey})
+	res2 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{member2PubKey})
 	member2Ref := res2.(string)
 	s.NotEqual("", member2Ref)
 
-	// Transfer 1 coin from Member1 to Member2
+	// Transfer 1 coin from RootMember to Member2
 	csMember1 := cryptography.NewKeyBoundCryptographyService(member1Key)
 	member1 := Caller{member1Ref, lr, csMember1, s}
-	resTransfer := member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", *cb.Prototypes["member"], []interface{}{1, member2Ref})
+	resTransfer := root.SignedCall(ctx, pm, *rootDomainRef, "Transfer", *cb.Prototypes["member"], []interface{}{1, member2Ref})
 	s.Nil(resTransfer)
 
 	var result interface{}
-	// Verify Member1 balance
+	// Verify root balance
 	for i := 1; i <= 10; i++ {
 		result = root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member1Ref})
 		if result.(uint64) == 999999999 {
@@ -1240,14 +1240,14 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	// Verify Member2 balance
 	for i := 1; i <= 10; i++ {
 		result = root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member2Ref})
-		if result.(uint64) == 1000000001 {
+		if result.(uint64) == 1 {
 			break
 		}
 		ms := time.Millisecond * 100 * time.Duration(math.Pow(2, float64(i)))
 		log.Debug("sleeping", ms)
 		time.Sleep(ms)
 	}
-	s.Equal(1000000001, int(result.(uint64)))
+	s.Equal(1, int(result.(uint64)))
 }
 
 func (s *LogicRunnerFuncSuite) TestFullValidationCycleError() {
@@ -1489,154 +1489,6 @@ func (r *One) Recursive() (error) {
 	s.NoError(err, "unmarshal answer")
 	s.NotNil(contractErr)
 	s.Contains(contractErr.Error(), "loop detected")
-}
-
-func (s *LogicRunnerFuncSuite) TestNewAllowanceNotFromWalletError() {
-	if parallel {
-		s.T().Parallel()
-	}
-	var contractOneCode = `
-package main
-import (
-	"fmt"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/application/proxy/allowance"
-	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/insolar"
-)
-type One struct {
-	foundation.BaseContract
-}
-func (r *One) CreateAllowance(member string) (error) {
-	memberRef, refErr := insolar.NewReferenceFromBase58(member)
-	if refErr != nil {
-		return refErr
-	}
-	w, _ := wallet.GetImplementationFrom(*memberRef)
-	walletRef := w.GetReference()
-	ah := allowance.New(&walletRef, 111, r.GetContext().Time.Unix()+10)
-	_, err := ah.AsChild(walletRef)
-	if err != nil {
-		return fmt.Errorf("Error:", err.Error())
-	}
-	return nil
-}
-`
-	contracts := []string{"member", "allowance", "wallet", "rootdomain"}
-	contractCode := s.LoadBasicContracts(contracts)
-	contractCode["one"] = contractOneCode
-
-	ctx := context.TODO()
-	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
-	defer cleaner()
-	changePulse(ctx, lr, msgHandler)
-	err := cb.Build(contractCode)
-	s.NoError(err)
-
-	kp := platformpolicy.NewKeyProcessor()
-
-	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(
-		ctx,
-		record.Request{
-			CallType: record.CTGenesis,
-			Method:   "RootDomain",
-		},
-	)
-	s.NoError(err)
-	rootDomainRef := getRefFromID(rootDomainID)
-	rootDomainDesc, err := am.ActivateObject(
-		ctx,
-		*rootDomainRef,
-		insolar.GenesisRecord.Ref(),
-		*cb.Prototypes["rootdomain"],
-		false,
-		goplugintestutils.CBORMarshal(s.T(), nil),
-	)
-	s.NoError(err, "create contract")
-	s.NotEqual(rootDomainRef, nil, "contract created")
-
-	// Creating Root member
-	rootKey, err := kp.GeneratePrivateKey()
-	s.NoError(err)
-	rootPubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(rootKey))
-	s.NoError(err)
-
-	rootMemberID, err := am.RegisterRequest(
-		ctx,
-		record.Request{
-			CallType: record.CTGenesis,
-			Method:   "RootMember",
-		},
-	)
-	s.NoError(err)
-	rootMemberRef := getRefFromID(rootMemberID)
-
-	m, err := member.New("root", string(rootPubKey))
-	s.NoError(err)
-
-	_, err = am.ActivateObject(
-		ctx,
-		*rootMemberRef,
-		*rootDomainRef,
-		*cb.Prototypes["member"],
-		false,
-		goplugintestutils.CBORMarshal(s.T(), m),
-	)
-	s.NoError(err)
-
-	// Updating root domain with root member
-	_, err = am.UpdateObject(
-		ctx, insolar.Reference{}, rootDomainDesc,
-		goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}),
-		[]byte{},
-	)
-	s.NoError(err)
-
-	cs := cryptography.NewKeyBoundCryptographyService(rootKey)
-	root := Caller{rootMemberRef.String(), lr, cs, s}
-
-	// Creating Member
-	memberKey, err := kp.GeneratePrivateKey()
-	s.NoError(err)
-	memberPubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(memberKey))
-	s.NoError(err)
-
-	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member", string(memberPubKey)})
-	memberRef := res1.(string)
-	s.NotEqual("", memberRef)
-
-	// Call CreateAllowance method in custom contract
-	contractID, err := am.RegisterRequest(
-		ctx,
-		record.Request{CallType: record.CTSaveAsChild},
-	)
-	s.NoError(err)
-	contract := getRefFromID(contractID)
-	_, err = am.ActivateObject(
-		ctx,
-		*contract,
-		insolar.GenesisRecord.Ref(),
-		*cb.Prototypes["one"],
-		false,
-		goplugintestutils.CBORMarshal(s.T(), nil),
-	)
-	s.NoError(err, "create contract")
-	s.NotEqual(contract, nil, "contract created")
-
-	resp, err := executeMethod(ctx, lr, pm, *contract, *cb.Prototypes["one"], 0, "CreateAllowance", memberRef)
-	s.NoError(err, "contract call")
-
-	var contractErr *foundation.Error
-
-	err = signer.UnmarshalParams(resp.(*reply.CallMethod).Result, &contractErr)
-	s.NoError(err, "unmarshal answer")
-	s.NotNil(contractErr)
-	s.Contains(contractErr.Error(), "[ New Allowance ] : Can't create allowance from not wallet contract")
-
-	// Verify Member balance
-	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{memberRef})
-	s.Equal(1000000000, int(res3.(uint64)))
 }
 
 func (s *LogicRunnerFuncSuite) TestGetParentError() {

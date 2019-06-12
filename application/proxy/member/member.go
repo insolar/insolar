@@ -25,7 +25,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111121SC9dGVLHBFHHeVavHx3wPCGibG4FywRrPKt1p.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112JckBfTY8aAkHJA3H7Tg66oRZzk3vC66J2Y1aBu.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
