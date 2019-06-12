@@ -234,13 +234,11 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 		meta := payload.Meta{}
 		err := meta.Unmarshal(msg.Payload)
 		if err != nil {
-			inslogger.FromContext(context.Background()).Error("can't unmarshal meta message ", err.Error())
-			return nil, err
+			inslogger.FromContext(context.Background()).Error("can't unmarshal meta message")
 		}
 
 		if len(meta.OriginHash) == 0 {
 			inslogger.FromContext(context.Background()).Error("empty Meta.OriginHash")
-			return nil, errors.New("empty Meta.OriginHash")
 		}
 
 		id := base58.Encode(meta.OriginHash)
