@@ -27,7 +27,9 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
@@ -132,6 +134,43 @@ func (p *RefreshPendingFilament) startFilamentRefreshing(ctx context.Context, ob
 		return err
 	}
 
+	return p.sendAbandonedRequest(ctx, objID)
+}
+
+func (p *RefreshPendingFilament) sendAbandonedRequest(ctx context.Context, objID insolar.ID) error {
+	logger := inslogger.FromContext(ctx)
+	lfl, err := p.Dep.LifelineAccessor.ForID(ctx, p.pn, objID)
+	if err != nil {
+		panic(err)
+		return err
+	}
+	if lfl.EarliestOpenRequest == nil {
+		return nil
+	}
+
+	notifyPoint, err := p.Dep.PulseCalculator.Backwards(ctx, p.pn, 2)
+	if err != nil && err != pulse.ErrNotFound {
+		return err
+	}
+	if err == pulse.ErrNotFound {
+		return nil
+	}
+
+	if notifyPoint.PulseNumber < *lfl.EarliestOpenRequest {
+		return nil
+	}
+
+	rep, err := p.Dep.Bus.Send(ctx, &message.AbandonedRequestsNotification{
+		Object: objID,
+	}, nil)
+	if err != nil {
+		logger.Error("failed to notify about pending requests")
+		return err
+	}
+	if _, ok := rep.(*reply.OK); !ok {
+		logger.Error("received unexpected reply on pending notification")
+		return errors.New("received unexpected reply on pending notification")
+	}
 	return nil
 }
 

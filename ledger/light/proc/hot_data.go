@@ -94,24 +94,6 @@ func (p *HotData) process(ctx context.Context) error {
 		pendingStorage.SetContextToObject(ctx, objID, objContext)
 	}
 
-	// go func() {
-	// 	for _, objID := range notificationList {
-	// 		go func(objID insolar.ID) {
-	// 			rep, err := p.Dep.MessageBus.Send(ctx, &message.AbandonedRequestsNotification{
-	// 				Object: objID,
-	// 			}, nil)
-	//
-	// 			if err != nil {
-	// 				logger.Error("failed to notify about pending requests")
-	// 				return
-	// 			}
-	// 			if _, ok := rep.(*reply.OK); !ok {
-	// 				logger.Error("received unexpected reply on pending notification")
-	// 			}
-	// 		}(objID)
-	// 	}
-	// }()
-
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
 	for _, meta := range p.msg.HotIndexes {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
