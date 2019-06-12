@@ -42,7 +42,6 @@ message PassState {
 
     bytes Origin   = 20;
     bytes StateID  = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    bytes CorrelationID = 22;
 }
 
 message Pass {
