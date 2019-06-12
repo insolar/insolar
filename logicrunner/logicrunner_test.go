@@ -1147,7 +1147,6 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
-		insolar.Reference{},
 		*rootDomainRef,
 		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["rootdomain"],
@@ -1180,7 +1179,6 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 
 	_, err = am.ActivateObject(
 		ctx,
-		insolar.Reference{},
 		*rootMemberRef,
 		*rootDomainRef,
 		*cb.Prototypes["member"],
@@ -1190,7 +1188,11 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	s.NoError(err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(
+		ctx, insolar.Reference{}, rootDomainDesc,
+		goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}),
+		[]byte{},
+	)
 	s.NoError(err)
 
 	csRoot := cryptography.NewKeyBoundCryptographyService(rootKey)
@@ -1545,7 +1547,6 @@ func (r *One) CreateAllowance(member string) (error) {
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
-		insolar.Reference{},
 		*rootDomainRef,
 		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["rootdomain"],
@@ -1576,7 +1577,6 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	_, err = am.ActivateObject(
 		ctx,
-		insolar.Reference{},
 		*rootMemberRef,
 		*rootDomainRef,
 		*cb.Prototypes["member"],
@@ -1586,7 +1586,11 @@ func (r *One) CreateAllowance(member string) (error) {
 	s.NoError(err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(
+		ctx, insolar.Reference{}, rootDomainDesc,
+		goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}),
+		[]byte{},
+	)
 	s.NoError(err)
 
 	cs := cryptography.NewKeyBoundCryptographyService(rootKey)
@@ -1603,8 +1607,6 @@ func (r *One) CreateAllowance(member string) (error) {
 	s.NotEqual("", memberRef)
 
 	// Call CreateAllowance method in custom contract
-	domain, err := insolar.NewReferenceFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
-	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(
 		ctx,
 		record.Request{CallType: record.CTSaveAsChild},
@@ -1613,7 +1615,6 @@ func (r *One) CreateAllowance(member string) (error) {
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		*domain,
 		*contract,
 		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["one"],
@@ -2080,9 +2081,6 @@ func (c *First) GetName() (string, error) {
 }
 
 func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifacts.Client, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.Reference, *insolar.Reference) {
-	domain, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
-	s.Require().NoError(err)
-
 	proto := testutils.RandomRef()
 
 	contractID, err := am.RegisterRequest(
@@ -2094,7 +2092,6 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifac
 
 	_, err = am.ActivateObject(
 		ctx,
-		*domain,
 		*objectRef,
 		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes[contractName],

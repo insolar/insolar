@@ -84,15 +84,12 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 
 	// prepare Queue
 	if p.msg.Queue != nil {
-		queueFromMessage := make([]ExecutionQueueElement, 0)
+		queueFromMessage := make([]Transcript, 0)
 		for _, qe := range p.msg.Queue {
 			queueFromMessage = append(
 				queueFromMessage,
-				ExecutionQueueElement{
-					ctx:     qe.Parcel.Context(context.Background()),
-					parcel:  qe.Parcel,
-					request: qe.Request,
-				})
+				*NewTranscript(qe.Parcel.Context(context.Background()), qe.Parcel, qe.Request, p.LR.pulse(ctx), es.Ref),
+			)
 		}
 		es.Queue = append(queueFromMessage, es.Queue...)
 	}

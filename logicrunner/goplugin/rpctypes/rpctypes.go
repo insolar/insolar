@@ -56,7 +56,7 @@ type DownCallConstructorResp struct {
 
 // UpBaseReq  is a base type for all insgorund -> logicrunner requests
 type UpBaseReq struct {
-	Mode            string
+	Mode            insolar.CallMode
 	Callee          insolar.Reference
 	CalleePrototype insolar.Reference
 	Request         insolar.Reference
