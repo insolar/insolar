@@ -63,8 +63,13 @@ func Test_IDLockDifferent(t *testing.T) {
 	}()
 	select {
 	case <-end:
-	case <-time.After(500 * time.Millisecond):
-		t.Fatal("Got deadlock. Different record.ID should not lock each other.")
+	case <-time.After(5 * time.Second):
+		// Different record.ID should not lock each other.
+		// 5s should be enough for any slow test environment.
+		t.Fatalf(
+			"Probably got deadlock (id1=%v, id2=%v).",
+			id1.String(), id2.String(),
+		)
 	}
 
 	expectsteps := []string{
