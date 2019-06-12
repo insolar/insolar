@@ -728,7 +728,20 @@ func (s *PreprocessorSuite) TestSagaMetaInfoIsPresentInProxy() {
 	proxyCode := bufProxy.String()
 	s.Contains(proxyCode, "INSMETHOD_TheAcceptMethod")
 	s.Contains(proxyCode, "INSMETHOD_TheRollbackMethod")
-	s.Contains(proxyCode, "INS_META_INFO") // AALEKSEEV TODO make this test pass
+	s.Contains(proxyCode, `
+func INS_META_INFO() []map[string]string {
+	var info map[string]string
+	result := make([]map[string]string, 0)
+
+	info = make(map[string]string, 3)
+	info["Type"] = "SagaInfo"
+	info["MethodName"] = "TheAcceptMethod"
+	info["RollbackMethodName"] = "TheRollbackMethod"
+	result = append(result, info)
+
+	return result
+}
+`)
 }
 
 // Low-level tests for extractSagaInfo procedure
