@@ -20,10 +20,10 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -34,8 +34,8 @@ type GetPendingRequests struct {
 	reqPulse insolar.PulseNumber
 
 	Dep struct {
-		RecentStorageProvider        recentstorage.Provider
 		PendingFilamentStateAccessor object.PendingFilamentStateAccessor
+		PendingAccessor              object.PendingAccessor
 	}
 }
 
@@ -50,22 +50,18 @@ func NewGetPendingRequests(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *m
 
 func (p *GetPendingRequests) Proceed(ctx context.Context) error {
 	msg := p.msg
-	jetID := insolar.ID(p.jet)
 
-	// wait, err := p.Dep.PendingFilamentStateAccessor.WaitForRefresh(ctx, flow.Pulse(ctx), *msg.Object.Record())
-	// if err != nil {
-	// 	return err
-	// }
-	// <-wait
-
-	hasPendingRequests := false
-	pendingStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-	for _, reqID := range pendingStorage.GetRequestsForObject(*msg.Object.Record()) {
-		if reqID.Pulse() < p.reqPulse {
-			hasPendingRequests = true
-			break
-		}
+	wait, err := p.Dep.PendingFilamentStateAccessor.WaitForRefresh(ctx, flow.Pulse(ctx), *msg.Object.Record())
+	if err != nil {
+		return err
 	}
-	p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{Has: hasPendingRequests}}
+	<-wait
+
+	pends, err := p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, flow.Pulse(ctx), *msg.Object.Record(), 1)
+	if err != nil || p == nil || len(pends) == 0 {
+		p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{Has: false}}
+		return nil
+	}
+	p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{Has: true}}
 	return nil
 }

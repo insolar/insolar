@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -35,7 +34,6 @@ type GetPendingRequestID struct {
 	reqPulse insolar.PulseNumber
 
 	Dep struct {
-		RecentStorageProvider        recentstorage.Provider
 		PendingFilamentStateAccessor object.PendingFilamentStateAccessor
 		PendingAccessor              object.PendingAccessor
 	}

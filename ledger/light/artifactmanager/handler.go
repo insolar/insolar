@@ -201,12 +201,12 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.PendingFilamentStateAccessor = h.PendingStateAccessor
+			p.Dep.PendingAccessor = h.PendingAccessor
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.PendingFilamentStateAccessor = h.PendingStateAccessor
+			p.Dep.PendingAccessor = h.PendingAccessor
 		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep.Jets = h.JetStorage
