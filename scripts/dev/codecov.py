@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 #
 # codecov.py is a try to implement https://codecov.io/ coverage algo for Go.
 #

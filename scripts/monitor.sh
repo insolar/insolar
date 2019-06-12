@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 # Helper for running monitoring stack for launchnet
 #
 # 1. without arguments just (re)creates all containers:
