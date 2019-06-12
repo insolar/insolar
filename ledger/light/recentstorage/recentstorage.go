@@ -26,7 +26,7 @@ import (
 
 // Provider provides different types of storages for a specific jet
 type Provider interface {
-	GetPendingStorage(ctx context.Context, jetID insolar.ID) PendingStorage
+	// GetPendingStorage(ctx context.Context, jetID insolar.ID) PendingStorage
 
 	Count() int
 
