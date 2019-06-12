@@ -730,14 +730,15 @@ func (s *PreprocessorSuite) TestSagaMetaInfoIsPresentInProxy() {
 	s.Contains(proxyCode, "INSMETHOD_TheRollbackMethod")
 	s.Contains(proxyCode, `
 func INS_META_INFO() []map[string]string {
-	var info map[string]string
 	result := make([]map[string]string, 0)
 
-	info = make(map[string]string, 3)
-	info["Type"] = "SagaInfo"
-	info["MethodName"] = "TheAcceptMethod"
-	info["RollbackMethodName"] = "TheRollbackMethod"
-	result = append(result, info)
+	{
+		info := make(map[string]string, 3)
+		info["Type"] = "SagaInfo"
+		info["MethodName"] = "TheAcceptMethod"
+		info["RollbackMethodName"] = "TheRollbackMethod"
+		result = append(result, info)
+	}
 
 	return result
 }
