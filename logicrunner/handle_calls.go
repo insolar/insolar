@@ -57,6 +57,7 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 		ObjectReference: es.Ref,
 		Parcel:          parcel,
 		Request:         request,
+		Pending:         es.pending,
 	}
 
 	es.Lock()
@@ -227,12 +228,25 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	os.Unlock()
 
 	es.Lock()
-	if es.pending == message.PendingUnknown {
+	if msg.Pending == message.NotPending {
 		es.pending = message.NotPending
 	}
 	qElement := *NewTranscript(ctx, msg.Parcel, msg.Request, lr.pulse(ctx), es.Ref)
 	es.Queue = append(es.Queue, qElement)
 	es.Unlock()
+
+	procClarifyPendingState := ClarifyPendingState{
+		es:              es,
+		parcel:          msg.Parcel,
+		ArtifactManager: lr.ArtifactManager,
+	}
+
+	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
+		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor.handleActual ] ClarifyPendingState returns error: ", err)
+		// We intentionally report OK to the previous executor here. There is no point
+		// in resending the message or anything.
+		return
+	}
 
 	s := StartQueueProcessorIfNeeded{
 		es:  es,
