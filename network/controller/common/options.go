@@ -76,9 +76,6 @@ type Options struct {
 	// Multiplier for boostrap retry time
 	TimeoutMult time.Duration
 
-	// True - infinity tries to bootstrap
-	InfinityBootstrap bool
-
 	// HandshakeSession TTL
 	HandshakeSessionTTL time.Duration
 
