@@ -134,10 +134,10 @@ type PendingStorageConcrete struct {
 // Also it contains a boolean-flag for determination object's status
 // If It's false, current LME, when it gets a hot-data, needs to send
 // notifications about forgotten requests
-type PendingObjectContext struct {
-	Active   bool
-	Requests []insolar.ID
-}
+// type PendingObjectContext struct {
+// 	Active   bool
+// 	Requests []insolar.ID
+// }
 
 type lockedPendingObjectContext struct {
 	Context *PendingObjectContext

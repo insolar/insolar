@@ -19,7 +19,6 @@ package message
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 )
 
 // FIXME: @andreyromancev. 21.12.18. Remove this and create 'LogicRunnerMessage' interface to get rid of 'GetCaller' in ledger.
@@ -314,11 +313,10 @@ func (*GetObjectIndex) Type() insolar.MessageType {
 // HotData contains hot-data
 type HotData struct {
 	ledgerMessage
-	Jet             insolar.Reference
-	Drop            drop.Drop
-	HotIndexes      []HotIndex
-	PendingRequests map[insolar.ID]recentstorage.PendingObjectContext
-	PulseNumber     insolar.PulseNumber
+	Jet         insolar.Reference
+	Drop        drop.Drop
+	HotIndexes  []HotIndex
+	PulseNumber insolar.PulseNumber
 }
 
 // AllowedSenderObjectAndRole implements interface method

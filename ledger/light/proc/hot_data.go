@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -38,15 +37,14 @@ type HotData struct {
 	msg     *message.HotData
 
 	Dep struct {
-		DropModifier          drop.Modifier
-		RecentStorageProvider recentstorage.Provider
-		MessageBus            insolar.MessageBus
-		IndexBucketModifier   object.IndexBucketModifier
-		PendingModifier       object.PendingModifier
-		JetStorage            jet.Storage
-		JetFetcher            jet.Fetcher
-		JetReleaser           hot.JetReleaser
-		Coordinator           jet.Coordinator
+		DropModifier        drop.Modifier
+		MessageBus          insolar.MessageBus
+		IndexBucketModifier object.IndexBucketModifier
+		PendingModifier     object.PendingModifier
+		JetStorage          jet.Storage
+		JetFetcher          jet.Fetcher
+		JetReleaser         hot.JetReleaser
+		Coordinator         jet.Coordinator
 	}
 }
 
@@ -79,19 +77,6 @@ func (p *HotData) process(ctx context.Context) error {
 	}
 	if err != nil {
 		return errors.Wrapf(err, "[jet]: drop error (pulse: %v)", p.msg.Drop.Pulse)
-	}
-
-	pendingStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
-	logger.Debugf("received %d pending requests", len(p.msg.PendingRequests))
-
-	var notificationList []insolar.ID
-	for objID, objContext := range p.msg.PendingRequests {
-		if !objContext.Active {
-			notificationList = append(notificationList, objID)
-		}
-
-		objContext.Active = false
-		pendingStorage.SetContextToObject(ctx, objID, objContext)
 	}
 
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
