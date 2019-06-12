@@ -22,9 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -77,7 +75,7 @@ type Sender interface {
 	// (rep, ok := <-ch) because the channel will be closed on timeout.
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	// Reply sends message in response to another message.
-	Reply(ctx context.Context, originMeta payload.Meta, origin, reply *message.Message)
+	Reply(ctx context.Context, origin payload.Meta, reply *message.Message)
 }
 
 type lockedReply struct {
@@ -157,20 +155,16 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
-	id := watermill.NewUUID()
-	middleware.SetCorrelationID(id, msg)
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	msg.SetContext(ctx)
-
-	_, err := b.wrapMeta(msg, target, b.coordinator.Me(), nil)
+	err := b.wrapMeta(msg, target, nil)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
 		return nil, nil
 	}
 
 	hashID := hashOrigin(b.pcs.IntegrityHasher(), msg.Payload)
-	cID := corrID(hashID)
-	_ = cID
+	id := corrID(hashID)
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
@@ -210,20 +204,16 @@ func (b *Bus) SendTarget(
 }
 
 // Reply sends message in response to another message.
-func (b *Bus) Reply(ctx context.Context, originMetaZZZ payload.Meta, origin, reply *message.Message) { //TODO: remove origin as msg and add origin as meta
-	id := middleware.MessageCorrelationID(origin)
-	middleware.SetCorrelationID(id, reply)
-
-	originMeta := payload.Meta{}
-	err := originMeta.Unmarshal(origin.Payload)
+func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
+	originBin, err := origin.Marshal()
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send reply"))
 		return
 	}
 
-	hashID := hashOrigin(b.pcs.IntegrityHasher(), originMeta.Payload)
+	hashID := hashOrigin(b.pcs.IntegrityHasher(), originBin)
 
-	_, err = b.wrapMeta(reply, originMetaZZZ.Sender, b.coordinator.Me(), hashID)
+	err = b.wrapMeta(reply, origin.Sender, hashID)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
 		return
@@ -241,7 +231,13 @@ func (b *Bus) Reply(ctx context.Context, originMetaZZZ payload.Meta, origin, rep
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
 func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		id := middleware.MessageCorrelationID(msg)
+		meta := payload.Meta{}
+		err := meta.Unmarshal(msg.Payload)
+		if err != nil {
+			inslogger.FromContext(context.Background()).Error("can't unmarshal meta message", err.Error())
+		}
+
+		id := corrID(meta.OriginHash)
 
 		b.repliesMutex.RLock()
 		reply, ok := b.replies[id]
@@ -270,17 +266,16 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 func (b *Bus) wrapMeta(
 	origin *message.Message,
 	receiver insolar.Reference,
-	sender insolar.Reference,
 	hash []byte,
-) (payload.Meta, error) {
+) error {
 	latestPulse, err := b.pulses.Latest(context.Background())
 	if err != nil {
-		return payload.Meta{}, errors.Wrap(err, "failed to fetch pulse")
+		return errors.Wrap(err, "failed to fetch pulse")
 	}
 	wrapper := payload.Meta{
 		Payload:  origin.Payload,
 		Receiver: receiver,
-		Sender:   sender,
+		Sender:   b.coordinator.Me(),
 		Pulse:    latestPulse.PulseNumber,
 	}
 
@@ -290,11 +285,11 @@ func (b *Bus) wrapMeta(
 
 	buf, err := wrapper.Marshal()
 	if err != nil {
-		return payload.Meta{}, errors.Wrap(err, "failed to wrap message")
+		return errors.Wrap(err, "failed to wrap message")
 	}
 	origin.Payload = buf
 
-	return wrapper, nil
+	return nil
 }
 
 func hashOrigin(h hash.Hash, buf []byte) []byte {

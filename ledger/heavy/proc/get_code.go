@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -31,7 +30,7 @@ import (
 )
 
 type GetCode struct {
-	message *message.Message
+	message payload.Meta
 
 	Dep struct {
 		RecordAccessor object.RecordAccessor
@@ -41,20 +40,17 @@ type GetCode struct {
 	}
 }
 
-func NewGetCode(msg *message.Message) *GetCode {
+func NewGetCode(msg payload.Meta) *GetCode {
 	return &GetCode{
 		message: msg,
 	}
 }
 
 func (p *GetCode) Proceed(ctx context.Context) error {
-	pl, err := payload.UnmarshalFromMeta(p.message.Payload)
+	getCode := payload.GetCode{}
+	err := getCode.Unmarshal(p.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
-	}
-	getCode, ok := pl.(*payload.GetCode)
-	if !ok {
-		return fmt.Errorf("unexpected payload type: %T", pl)
+		return errors.Wrap(err, "failed to unmarshal GetCode message")
 	}
 
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, getCode.CodeID)
@@ -82,14 +78,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create message")
 	}
 
-	//TODO remove
-	temp := payload.Meta{}
-	err = temp.Unmarshal(p.message.Payload)
-	if err != nil {
-		panic("8888888888888")
-	}
-
-	go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 
 	return nil
 }

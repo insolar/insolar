@@ -388,7 +388,7 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 		return errors.Wrap(err, "failed to unwrap message")
 	}
 	if meta.Receiver.IsEmpty() {
-		return errors.New("failed to send message: Receiver in msg.Metadata not set")
+		return errors.New("failed to send message: Receiver in meta message not set")
 	}
 
 	node := meta.Receiver
@@ -425,17 +425,13 @@ func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, r
 		logger.Error(errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error()))
 		return
 	}
-	wrapper := payload.Meta{
-		Payload: msg.Payload,
-		Sender:  n.NodeKeeper.GetOrigin().ID(),
-	}
-	buf, err := wrapper.Marshal()
+	wrapper := payload.Meta{}
+	err = wrapper.Unmarshal(msg.Payload)
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to wrap error message (%s)", repErr.Error()))
+		logger.Error(errors.Wrapf(err, "failed to unwrap meta message for error reply - (%s)", err))
 		return
 	}
-	msg.Payload = buf
-	n.Sender.Reply(ctx, wrapper, msg, errMsg)
+	n.Sender.Reply(ctx, wrapper, errMsg)
 }
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {

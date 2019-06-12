@@ -20,9 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -56,8 +53,11 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode PassState payload")
 	}
 
-	replyTo := message.NewMessage(watermill.NewUUID(), pass.Origin)
-	middleware.SetCorrelationID(string(pass.CorrelationID), replyTo)
+	origin := payload.Meta{}
+	err = origin.Unmarshal(pass.Origin)
+	if err != nil {
+		return errors.Wrap(err, "failed to decode origin message")
+	}
 
 	rec, err := p.Dep.Records.ForID(ctx, pass.StateID)
 	if err == object.ErrNotFound {
@@ -65,13 +65,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		//TODO remove
-		temp := payload.Meta{}
-		err = temp.Unmarshal(replyTo.Payload)
-		if err != nil {
-			panic("8888888888888")
-		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, replyTo, msg)
+		go p.Dep.Sender.Reply(ctx, origin, msg)
 		return nil
 	}
 	if err != nil {
@@ -90,13 +84,8 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		//TODO remove
-		temp := payload.Meta{}
-		err = temp.Unmarshal(replyTo.Payload)
-		if err != nil {
-			panic("8888888888888")
-		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, replyTo, msg)
+
+		go p.Dep.Sender.Reply(ctx, origin, msg)
 		return nil
 	}
 
@@ -119,13 +108,8 @@ func (p *PassState) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
 	}
-	//TODO remove
-	temp := payload.Meta{}
-	err = temp.Unmarshal(replyTo.Payload)
-	if err != nil {
-		panic("8888888888888")
-	}
-	go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, replyTo, msg)
+
+	go p.Dep.Sender.Reply(ctx, origin, msg)
 
 	return nil
 }

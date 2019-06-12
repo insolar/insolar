@@ -22,7 +22,7 @@ import (
 type SenderMock struct {
 	t minimock.Tester
 
-	ReplyFunc       func(p context.Context, p1 payload.Meta, p2 *message.Message, p3 *message.Message)
+	ReplyFunc       func(p context.Context, p1 payload.Meta, p2 *message.Message)
 	ReplyCounter    uint64
 	ReplyPreCounter uint64
 	ReplyMock       mSenderMockReply
@@ -67,18 +67,17 @@ type SenderMockReplyInput struct {
 	p  context.Context
 	p1 payload.Meta
 	p2 *message.Message
-	p3 *message.Message
 }
 
 //Expect specifies that invocation of Sender.Reply is expected from 1 to Infinity times
-func (m *mSenderMockReply) Expect(p context.Context, p1 payload.Meta, p2 *message.Message, p3 *message.Message) *mSenderMockReply {
+func (m *mSenderMockReply) Expect(p context.Context, p1 payload.Meta, p2 *message.Message) *mSenderMockReply {
 	m.mock.ReplyFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &SenderMockReplyExpectation{}
 	}
-	m.mainExpectation.input = &SenderMockReplyInput{p, p1, p2, p3}
+	m.mainExpectation.input = &SenderMockReplyInput{p, p1, p2}
 	return m
 }
 
@@ -95,18 +94,18 @@ func (m *mSenderMockReply) Return() *SenderMock {
 }
 
 //ExpectOnce specifies that invocation of Sender.Reply is expected once
-func (m *mSenderMockReply) ExpectOnce(p context.Context, p1 payload.Meta, p2 *message.Message, p3 *message.Message) *SenderMockReplyExpectation {
+func (m *mSenderMockReply) ExpectOnce(p context.Context, p1 payload.Meta, p2 *message.Message) *SenderMockReplyExpectation {
 	m.mock.ReplyFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &SenderMockReplyExpectation{}
-	expectation.input = &SenderMockReplyInput{p, p1, p2, p3}
+	expectation.input = &SenderMockReplyInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of Sender.Reply method
-func (m *mSenderMockReply) Set(f func(p context.Context, p1 payload.Meta, p2 *message.Message, p3 *message.Message)) *SenderMock {
+func (m *mSenderMockReply) Set(f func(p context.Context, p1 payload.Meta, p2 *message.Message)) *SenderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -115,18 +114,18 @@ func (m *mSenderMockReply) Set(f func(p context.Context, p1 payload.Meta, p2 *me
 }
 
 //Reply implements github.com/insolar/insolar/insolar/bus.Sender interface
-func (m *SenderMock) Reply(p context.Context, p1 payload.Meta, p2 *message.Message, p3 *message.Message) {
+func (m *SenderMock) Reply(p context.Context, p1 payload.Meta, p2 *message.Message) {
 	counter := atomic.AddUint64(&m.ReplyPreCounter, 1)
 	defer atomic.AddUint64(&m.ReplyCounter, 1)
 
 	if len(m.ReplyMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ReplyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to SenderMock.Reply. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to SenderMock.Reply. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.ReplyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, SenderMockReplyInput{p, p1, p2, p3}, "Sender.Reply got unexpected parameters")
+		testify_assert.Equal(m.t, *input, SenderMockReplyInput{p, p1, p2}, "Sender.Reply got unexpected parameters")
 
 		return
 	}
@@ -135,18 +134,18 @@ func (m *SenderMock) Reply(p context.Context, p1 payload.Meta, p2 *message.Messa
 
 		input := m.ReplyMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, SenderMockReplyInput{p, p1, p2, p3}, "Sender.Reply got unexpected parameters")
+			testify_assert.Equal(m.t, *input, SenderMockReplyInput{p, p1, p2}, "Sender.Reply got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.ReplyFunc == nil {
-		m.t.Fatalf("Unexpected call to SenderMock.Reply. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to SenderMock.Reply. %v %v %v", p, p1, p2)
 		return
 	}
 
-	m.ReplyFunc(p, p1, p2, p3)
+	m.ReplyFunc(p, p1, p2)
 }
 
 //ReplyMinimockCounter returns a count of SenderMock.ReplyFunc invocations

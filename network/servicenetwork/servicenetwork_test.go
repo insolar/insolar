@@ -112,7 +112,7 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	serviceNetwork := prepareNetwork(t, cfg)
 	sender := bus.NewSenderMock(t)
 	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p0 payload.Meta, p1 *message.Message, p2 *message.Message) {
+	sender.ReplyFunc = func(p context.Context, p1 payload.Meta, p2 *message.Message) {
 		expectedMsg = p2
 	}
 
@@ -127,7 +127,7 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
-	checkRepliedMsg(t, expectedMsg, "failed to send message: Receiver in msg.Metadata not set")
+	checkRepliedMsg(t, expectedMsg, "failed to send message: Receiver in meta message not set")
 	require.Nil(t, outMsgs)
 }
 
@@ -192,7 +192,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	var expectedMsg *message.Message
 	sender := bus.NewSenderMock(t)
 	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p0 payload.Meta, p1 *message.Message, p2 *message.Message) {
+	sender.ReplyFunc = func(p context.Context, p1 payload.Meta, p2 *message.Message) {
 		expectedMsg = p2
 	}
 
@@ -238,7 +238,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	var expectedMsg *message.Message
 	sender := bus.NewSenderMock(t)
 	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p0 payload.Meta, p1 *message.Message, p2 *message.Message) {
+	sender.ReplyFunc = func(p context.Context, p1 payload.Meta, p2 *message.Message) {
 		expectedMsg = p2
 	}
 

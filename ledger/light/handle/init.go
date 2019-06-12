@@ -20,10 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
-	wmessage "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-
 	"github.com/insolar/insolar/insolar"
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -79,16 +75,17 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 
 		switch payloadType {
 		case payload.TypeGetObject:
-			h := NewGetObject(s.dep, s.message.WatermillMsg, false)
+			h := NewGetObject(s.dep, metaMsg, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypePassState:
+
 			h := NewPassState(s.dep, metaMsg)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeGetCode:
-			h := NewGetCode(s.dep, s.message.WatermillMsg, false)
+			h := NewGetCode(s.dep, metaMsg, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeSetCode:
-			h := NewSetCode(s.dep, s.message.WatermillMsg, false)
+			h := NewSetCode(s.dep, metaMsg, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypePass:
 			err = s.handlePass(ctx, f)
@@ -98,7 +95,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 			err = fmt.Errorf("no handler for message type %s", payloadType.String())
 		}
 		if err != nil {
-			s.replyError(ctx, s.message.WatermillMsg, err)
+			s.replyError(ctx, metaMsg, err)
 		}
 		return err
 	}
@@ -172,8 +169,12 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
-	origin := wmessage.NewMessage(watermill.NewUUID(), pass.Origin)
-	middleware.SetCorrelationID(string(pass.CorrelationID), origin)
+
+	origin := payload.Meta{}
+	err = origin.Unmarshal(pass.Origin)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal origin message")
+	}
 
 	switch payloadType {
 	case payload.TypeGetObject:
@@ -202,7 +203,7 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	}, false)
 }
 
-func (s *Init) replyError(ctx context.Context, replyTo *wmessage.Message, err error) {
+func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) {
 	errCode := payload.CodeUnknown
 	if err == flow.ErrCancelled {
 		errCode = payload.CodeFlowCanceled
@@ -211,11 +212,5 @@ func (s *Init) replyError(ctx context.Context, replyTo *wmessage.Message, err er
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
-	//TODO remove
-	temp := payload.Meta{}
-	err = temp.Unmarshal(replyTo.Payload)
-	if err != nil {
-		panic("8888888888888")
-	}
-	go s.sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, replyTo, errMsg) //TODO Add Sender to Meta
+	go s.sender.Reply(ctx, replyTo, errMsg)
 }

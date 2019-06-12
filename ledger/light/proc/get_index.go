@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	wmessage "github.com/ThreeDotsLabs/watermill/message"
-
 	"github.com/insolar/insolar/insolar"
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -136,7 +134,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 type GetIndexWM struct {
 	object  insolar.ID
 	jet     insolar.JetID
-	message *wmessage.Message
+	message payload.Meta
 
 	Result struct {
 		Index object.Lifeline
@@ -152,7 +150,7 @@ type GetIndexWM struct {
 	}
 }
 
-func NewGetIndexWM(obj insolar.ID, jetID insolar.JetID, msg *wmessage.Message) *GetIndexWM {
+func NewGetIndexWM(obj insolar.ID, jetID insolar.JetID, msg payload.Meta) *GetIndexWM {
 	return &GetIndexWM{
 		object:  obj,
 		jet:     jetID,
@@ -167,13 +165,7 @@ func (p *GetIndexWM) Proceed(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		//TODO remove
-		temp := payload.Meta{}
-		err = temp.Unmarshal(p.message.Payload)
-		if err != nil {
-			panic("8888888888888")
-		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }

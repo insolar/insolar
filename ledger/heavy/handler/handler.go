@@ -20,9 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -120,37 +118,53 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.dep.PassState(p)
 		err = p.Proceed(ctx)
 	case *payload.GetCode:
-		p := proc.NewGetCode(msg)
+		p := proc.NewGetCode(metaMsg)
 		h.dep.GetCode(p)
 		err = p.Proceed(ctx)
 	case *payload.Pass:
-		err = h.handlePass(ctx, msg)
+		err = h.handlePass(ctx, metaMsg)
+	case *payload.Error:
+		h.handleError(ctx, metaMsg)
 	default:
 		err = fmt.Errorf("no handler for message type %T", pl)
 	}
 	if err != nil {
-		h.replyError(ctx, msg, err)
+		h.replyError(ctx, metaMsg, err)
 	}
 	return err
 }
 
-func (h *Handler) handlePass(ctx context.Context, msg *watermillMsg.Message) error {
-	var err error
-	pl, err := payload.UnmarshalFromMeta(msg.Payload)
+func (h *Handler) handleError(ctx context.Context, msg payload.Meta) {
+	pl := payload.Error{}
+	err := pl.Unmarshal(msg.Payload)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to unmarshal error"))
+		return
+	}
+
+	inslogger.FromContext(ctx).WithField(
+		"origin_hash",
+		msg.OriginHash, //TODO: fixme
+	).Error("received error: ", pl.Text)
+}
+
+func (h *Handler) handlePass(ctx context.Context, msg payload.Meta) error {
+	pass := payload.Pass{}
+	err := pass.Unmarshal(msg.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal pass payload")
-	}
-	pass, ok := pl.(*payload.Pass)
-	if !ok {
-		return errors.New("wrong pass payload")
 	}
 
 	payloadType, err := payload.UnmarshalTypeFromMeta(pass.Origin)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
-	origin := watermillMsg.NewMessage(watermill.NewUUID(), pass.Origin)
-	middleware.SetCorrelationID(string(pass.CorrelationID), origin)
+
+	origin := payload.Meta{}
+	err = origin.Unmarshal(pass.Origin)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal origin message")
+	}
 
 	switch payloadType { // nolint
 	case payload.TypeGetCode:
@@ -161,23 +175,17 @@ func (h *Handler) handlePass(ctx context.Context, msg *watermillMsg.Message) err
 		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())
 	}
 	if err != nil {
-		h.replyError(ctx, msg, err)
+		h.replyError(ctx, origin, err)
 	}
 	return err
 }
 
-func (h *Handler) replyError(ctx context.Context, replyTo *watermillMsg.Message, err error) {
+func (h *Handler) replyError(ctx context.Context, replyTo payload.Meta, err error) {
 	errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
-	//TODO remove
-	temp := payload.Meta{}
-	err = temp.Unmarshal(replyTo.Payload)
-	if err != nil {
-		panic("8888888888888")
-	}
-	go h.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, replyTo, errMsg)
+	go h.Sender.Reply(ctx, replyTo, errMsg)
 }
 
 func (h *Handler) Init(ctx context.Context) error {

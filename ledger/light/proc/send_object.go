@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -36,7 +34,7 @@ import (
 )
 
 type SendObject struct {
-	message  *message.Message
+	message  payload.Meta
 	objectID insolar.ID
 	index    object.Lifeline
 
@@ -55,7 +53,9 @@ type SendObject struct {
 }
 
 func NewSendObject(
-	msg *message.Message, id insolar.ID, idx object.Lifeline,
+	msg payload.Meta,
+	id insolar.ID,
+	idx object.Lifeline,
 ) *SendObject {
 	return &SendObject{
 		message:  msg,
@@ -73,18 +73,12 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return fmt.Errorf("invalid object record %#v", virtual)
 		}
 
-		//TODO remove
-		temp := payload.Meta{}
-		err := temp.Unmarshal(p.message.Payload)
-		if err != nil {
-			panic("8888888888888")
-		}
 		if state.ID() == record.StateDeactivation {
 			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
-			go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
+			go p.Dep.Sender.Reply(ctx, p.message, msg)
 			return nil
 		}
 
@@ -107,16 +101,20 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
 		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 
 		return nil
 	}
 
 	sendPassState := func(stateID insolar.ID) error {
+		originMeta, err := p.message.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal origin meta message")
+		}
+
 		msg, err := payload.NewMessage(&payload.PassState{
-			Origin:        p.message.Payload,
-			StateID:       stateID,
-			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+			Origin:  originMeta,
+			StateID: stateID,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
@@ -164,13 +162,8 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		//TODO remove
-		temp := payload.Meta{}
-		err = temp.Unmarshal(p.message.Payload)
-		if err != nil {
-			panic("8888888888888")
-		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
+
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		logger.Info("sending index")
 	}
 

@@ -354,7 +354,6 @@ func startWatermill(
 	inRouter.AddMiddleware(
 		middleware.InstantAck,
 		b.IncomingMessageRouter,
-		middleware.CorrelationID,
 	)
 
 	inRouter.AddNoPublisherHandler(

@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/pkg/errors"
 
@@ -36,7 +34,7 @@ import (
 )
 
 type GetCode struct {
-	message *message.Message
+	message payload.Meta
 	codeID  insolar.ID
 	pass    bool
 
@@ -49,7 +47,7 @@ type GetCode struct {
 	}
 }
 
-func NewGetCode(msg *message.Message, codeID insolar.ID, pass bool) *GetCode {
+func NewGetCode(msg payload.Meta, codeID insolar.ID, pass bool) *GetCode {
 	return &GetCode{
 		message: msg,
 		codeID:  codeID,
@@ -79,21 +77,19 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
 		}
-		//TODO remove
-		temp := payload.Meta{}
-		err = temp.Unmarshal(p.message.Payload)
-		if err != nil {
-			panic("8888888888888")
-		}
-		go p.Dep.Sender.Reply(ctx, payload.Meta{Sender: temp.Sender}, p.message, msg)
+
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 
 		return nil
 	}
 
 	sendPassCode := func() error {
+		originMeta, err := p.message.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal origin meta message")
+		}
 		msg, err := payload.NewMessage(&payload.Pass{
-			Origin:        p.message.Payload,
-			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+			Origin: originMeta,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -245,12 +246,10 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 
 	b := NewBus(pubsub, pulseMock, coordinatorMock, pcs)
 
-	correlationId := watermill.NewUUID()
 	resChan := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
 	}
-	b.replies[correlationId] = resChan
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		incomingHandlerCalls++
@@ -258,8 +257,21 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	}
 	handler := b.IncomingMessageRouter(incomingHandler)
 
-	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
-	middleware.SetCorrelationID(correlationId, msg)
+	p := []byte{1, 2, 3, 4, 5}
+	meta := payload.Meta{
+		Payload: p,
+	}
+
+	data, _ := meta.Marshal()
+
+	hash := hashOrigin(pcs.IntegrityHasher(), data)
+	id := corrID(hash)
+	b.replies[id] = resChan
+
+	meta.OriginHash = hash
+	data, _ = meta.Marshal()
+
+	msg := message.NewMessage(watermill.NewUUID(), data)
 
 	var receivedMsg *message.Message
 	done := make(chan struct{})
@@ -319,20 +331,22 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
-
 	coordinatorMock := jet.NewCoordinatorMock(t)
 	coordinatorMock.MeMock.Return(insolar.Reference{})
-
 	pcs := testutils.NewPlatformCryptographyScheme()
-
 	b := NewBus(&PublisherMock{pubErr: nil}, pulseMock, coordinatorMock, pcs)
-
 	ctx := context.Background()
 
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg := message.NewMessage(watermill.NewUUID(), slice())
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
+
+	meta := payload.Meta{
+		OriginHash: hashOrigin(pcs.IntegrityHasher(), msg.Payload),
+	}
+
+	metaBin, _ := meta.Marshal()
+	msgWithHash := message.NewMessage(watermill.NewUUID(), metaBin)
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
@@ -348,14 +362,14 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 		l.Unlock()
 	}()
 
-	res, err := handler(msg)
+	res, err := handler(msgWithHash)
 	require.NoError(t, err)
 	require.Nil(t, res)
 
 	l.RLock()
 	require.True(t, ok)
 	l.RUnlock()
-	require.Equal(t, msg, receivedMsg)
+	require.Equal(t, msgWithHash, receivedMsg)
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
@@ -433,20 +447,15 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
-
 	coordinatorMock := jet.NewCoordinatorMock(t)
 	coordinatorMock.MeMock.Return(insolar.Reference{})
-
 	pcs := testutils.NewPlatformCryptographyScheme()
-
 	b := NewBus(&PublisherMock{pubErr: nil}, pulseMock, coordinatorMock, pcs)
-
 	ctx := context.Background()
 
-	payload := []byte{1, 2, 3, 4, 5}
 	var msg []*message.Message
 	for i := 0; i < count; i++ {
-		msg = append(msg, message.NewMessage(watermill.NewUUID(), payload))
+		msg = append(msg, message.NewMessage(watermill.NewUUID(), slice()))
 	}
 
 	// send messages
@@ -470,10 +479,20 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	}
 	handler := b.IncomingMessageRouter(incomingHandler)
 
+	var msgWithHash []*message.Message
+	for _, value := range msg {
+		meta := payload.Meta{
+			OriginHash: hashOrigin(pcs.IntegrityHasher(), value.Payload),
+		}
+
+		metaBin, _ := meta.Marshal()
+		msgWithHash = append(msgWithHash, message.NewMessage(watermill.NewUUID(), metaBin))
+	}
+
 	// reply to messages
 	for i := 0; i < count; i++ {
 		go func(i int) {
-			_, err := handler(msg[i])
+			_, err := handler(msgWithHash[i])
 			done <- err
 		}(i)
 	}
@@ -527,4 +546,17 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T
 	for i := 0; i < count; i++ {
 		<-results
 	}
+}
+
+// sizedSlice generates random byte slice fixed size.
+func sizedSlice(size int32) (blob []byte) {
+	blob = make([]byte, size)
+	rand.Read(blob)
+	return
+}
+
+// slice generates random byte slice with random size between 0 and 1024.
+func slice() []byte {
+	size := rand.Int31n(1024)
+	return sizedSlice(size)
 }
