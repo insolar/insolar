@@ -42,11 +42,6 @@ var (
 		"How many succeed results have been registered",
 		stats.UnitDimensionless,
 	)
-	statObjectPendingResultsExpiredInMemoryAddedCount = stats.Int64(
-		"object/pendings/results/expired/added/count",
-		"How many expired results have been registered",
-		stats.UnitDimensionless,
-	)
 	statObjectPendingRecordsInMemoryRemovedCount = stats.Int64(
 		"object/pendings/removed/count",
 		"How many pending filament records have been cleaned",
@@ -106,12 +101,6 @@ func init() {
 			Name:        statObjectPendingResultsInMemoryAddedCount.Name(),
 			Description: statObjectPendingResultsInMemoryAddedCount.Description(),
 			Measure:     statObjectPendingResultsInMemoryAddedCount,
-			Aggregation: view.Sum(),
-		},
-		&view.View{
-			Name:        statObjectPendingResultsExpiredInMemoryAddedCount.Name(),
-			Description: statObjectPendingResultsExpiredInMemoryAddedCount.Description(),
-			Measure:     statObjectPendingResultsExpiredInMemoryAddedCount,
 			Aggregation: view.Sum(),
 		},
 	)

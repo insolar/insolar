@@ -72,7 +72,7 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 		return errors.Wrap(err, "[RefreshPendingFilament] can't fetch a lifeline state")
 	}
 
-	logger.Debugf("RefreshPendingFilament objID - %V     lfl.PendingPointer == %v || lfl.EarliestOpenRequest == %v", p.objID.DebugString(), lfl.PendingPointer, *lfl.EarliestOpenRequest)
+	logger.Debugf("RefreshPendingFilament objID - %v     lfl.PendingPointer == %v || lfl.EarliestOpenRequest == %v", p.objID.DebugString(), lfl.PendingPointer, lfl.EarliestOpenRequest)
 
 	// No pendings
 	if lfl.PendingPointer == nil {
@@ -182,7 +182,7 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 			}
 
 			if len(r.Records) == 0 {
-				panic(fmt.Sprintf("unexpected behaviour -% v", earlistOpenRequest))
+				panic(fmt.Sprintf("unexpected behaviour - %v", earlistOpenRequest))
 			}
 
 			firstRec := record.Unwrap(r.Records[0].Meta.Virtual).(*record.PendingFilament)

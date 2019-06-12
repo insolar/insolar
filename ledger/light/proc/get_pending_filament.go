@@ -55,10 +55,15 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("GetPendingFilament"))
 	defer span.End()
 
-	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v", p.objID.DebugString())
+	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID: %v, startFrom: %v, readUntil: %v", p.objID.DebugString(), p.startFrom, p.readUntil)
 	records, err := p.Dep.PendingAccessor.Records(ctx, p.startFrom, p.objID)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("[GetPendingFilament] can't fetch pendings, pn - %v,  %v", p.objID.DebugString(), p.startFrom))
+	}
+
+	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, len of records - %v", p.objID.DebugString(), len(records))
+	for _, r := range records {
+		inslogger.FromContext(ctx).Debugf("GetPendingFilament records - %v", r.RecordID.DebugString())
 	}
 
 	// we want to skip closed segments of the filament
@@ -66,12 +71,18 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 		idx := 0
 		traverse := true
 
-		for ; traverse; idx++ {
+		for traverse {
 			if records[idx].RecordID.Pulse() >= p.readUntil {
 				traverse = false
+			} else {
+				idx++
 			}
 		}
 		records = records[idx:]
+	}
+
+	if len(records) == 0 {
+		panic("why this happened?")
 	}
 
 	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, records - %v", p.objID.DebugString(), len(records))

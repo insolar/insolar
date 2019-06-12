@@ -272,7 +272,7 @@ func (m *PulseManager) getExecutorHotData(
 		return nil, err
 	}
 
-	hotIndexes := make([]message.HotIndex, len(bucks))
+	var hotIndexes []message.HotIndex
 	for _, meta := range bucks {
 		encoded, err := meta.Lifeline.Marshal()
 		if err != nil {
@@ -283,7 +283,7 @@ func (m *PulseManager) getExecutorHotData(
 			continue
 		}
 
-		inslogger.FromContext(ctx).Debugf("RefreshPendingFilament hotData - %v", meta.Lifeline.EarliestOpenRequest)
+		inslogger.FromContext(ctx).Debugf("RefreshPendingFilament hotData id - %v, EarliestOpenRequest - %v", meta.ObjID.DebugString(), meta.Lifeline.EarliestOpenRequest)
 		hotIndexes = append(hotIndexes, message.HotIndex{
 			LifelineLastUsed: meta.LifelineLastUsed,
 			ObjID:            meta.ObjID,

@@ -44,8 +44,10 @@ type filamentCache struct {
 // Groups are sorted by pulse, from a lowest to a highest
 // There are a few maps inside, that help not to search through full fillament every SetRequest/SetResult
 type pendingMeta struct {
-	isStateCalculated chan struct{}
-	fullFilament      []chainLink
+	stateCalculationBarrier chan struct{}
+	isStateCalculated       bool
+
+	fullFilament []chainLink
 
 	notClosedRequestsIds      []insolar.ID
 	notClosedRequestsIdsIndex map[insolar.PulseNumber]map[insolar.ID]struct{}
@@ -111,7 +113,8 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 			fullFilament:              []chainLink{},
 			notClosedRequestsIds:      []insolar.ID{},
 			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[insolar.ID]struct{}{},
-			isStateCalculated:         make(chan struct{}),
+			stateCalculationBarrier:   make(chan struct{}),
+			isStateCalculated:         false,
 		},
 	}
 
@@ -120,7 +123,11 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 		objsByPn = map[insolar.ID]*filamentCache{}
 		i.buckets[pn] = objsByPn
 	}
-	objsByPn[objID] = bucket
+
+	_, ok = objsByPn[objID]
+	if !ok {
+		objsByPn[objID] = bucket
+	}
 
 	inslogger.FromContext(ctx).Debugf("[createBucket] create bucket for obj - %v was created successfully", objID.DebugString())
 	return bucket
@@ -170,7 +177,8 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 		pendingMeta: pendingMeta{
 			notClosedRequestsIds:      []insolar.ID{},
 			fullFilament:              []chainLink{},
-			isStateCalculated:         make(chan struct{}),
+			isStateCalculated:         false,
+			stateCalculationBarrier:   make(chan struct{}),
 			notClosedRequestsIdsIndex: map[insolar.PulseNumber]map[insolar.ID]struct{}{},
 		},
 	}
@@ -404,13 +412,14 @@ func (i *InMemoryIndex) WaitForRefresh(ctx context.Context, pn insolar.PulseNumb
 	b.RLock()
 	defer b.RUnlock()
 
-	return b.pendingMeta.isStateCalculated, nil
+	return b.pendingMeta.stateCalculationBarrier, nil
 }
 
 // RefreshState recalculates state of the chain, marks requests as closed and opened.
 func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
 	println("RefreshState")
 	logger := inslogger.FromContext(ctx)
+	logger.Debugf("RefreshState for objID: %v pn: %v", objID.DebugString(), pn)
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
@@ -418,6 +427,10 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 
 	b.Lock()
 	defer b.Unlock()
+
+	if b.pendingMeta.isStateCalculated {
+		return nil
+	}
 
 	for _, chainLink := range b.pendingMeta.fullFilament {
 		for _, metaID := range chainLink.MetaRecordsIDs {
@@ -445,13 +458,15 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 				println(r.Request.Record().Pulse())
 				openReqs, ok := b.pendingMeta.notClosedRequestsIdsIndex[r.Request.Record().Pulse()]
 				if ok {
-					_, ok = openReqs[*r.Request.Record()]
-					if ok {
-						delete(openReqs, *r.Request.Record())
-					} else {
-						panic("uxu, it's for a oudated req")
-						b.pendingMeta.resultsForOutOfLimitRequests[*r.Request.Record()] = struct{}{}
-					}
+					delete(openReqs, *r.Request.Record())
+					//
+					// _, ok = openReqs[*r.Request.Record()]
+					// if ok {
+					// 	delete(openReqs, *r.Request.Record())
+					// } else {
+					// 	panic("uxu, it's for a oudated req")
+					// 	b.pendingMeta.resultsForOutOfLimitRequests[*r.Request.Record()] = struct{}{}
+					// }
 				}
 			default:
 				panic(fmt.Sprintf("unknow type - %v", r))
@@ -475,7 +490,9 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 		}
 	}
 
-	close(b.pendingMeta.isStateCalculated)
+	logger.Debugf("RefreshState. Close channel for objID: %v pn: %v", objID.DebugString(), pn)
+	close(b.pendingMeta.stateCalculationBarrier)
+	b.pendingMeta.isStateCalculated = true
 
 	if len(b.pendingMeta.notClosedRequestsIds) == 0 {
 		b.objectMeta.Lifeline.EarliestOpenRequest = nil

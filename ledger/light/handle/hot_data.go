@@ -50,12 +50,12 @@ func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
 
 	for _, meta := range s.message.HotIndexes {
 		go func(hi message.HotIndex) {
-			refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, flow.Pulse(ctx), meta.ObjID)
+			refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, flow.Pulse(ctx), hi.ObjID)
 			s.dep.RefreshPendingFilament(refreshPendingsState)
 			if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
 				panic(errors.Wrap(err, "something broken"))
 			}
-			//
+
 			// lfl := object.Lifeline{}
 			// err := lfl.Unmarshal(meta.Index)
 			// if err != nil {
