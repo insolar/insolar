@@ -155,7 +155,6 @@ func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*Filament
 	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
 	if err == store.ErrNotFound {
 		return nil, ErrIndexBucketNotFound
-
 	}
 	if err != nil {
 		return nil, err
@@ -176,6 +175,54 @@ func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) 
 		return insolar.FirstPulseNumber, err
 	}
 	return insolar.NewPulseNumber(buff), err
+}
+
+func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
+	currentPN := readFrom
+	var res []record.CompositeFilamentRecord
+
+	for currentPN <= readUntil {
+		b, err := i.getBucket(currentPN, objID)
+		if err != nil {
+			return nil, err
+		}
+
+		tempRes := make([]record.CompositeFilamentRecord, len(b.PendingRecords))
+
+		for idx, metaID := range b.PendingRecords {
+			metaRec, err := i.recordStore.get(metaID)
+			if err != nil {
+				return nil, err
+			}
+			pend := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+			rec, err := i.recordStore.get(pend.RecordID)
+			if err != nil {
+				return nil, err
+			}
+
+			tempRes[idx] = record.CompositeFilamentRecord{
+				Meta:     metaRec,
+				MetaID:   metaID,
+				Record:   rec,
+				RecordID: pend.RecordID,
+			}
+		}
+
+		res = append(tempRes, res...)
+
+		if len(b.PendingRecords) > 0 {
+			firstRecord := b.PendingRecords[0]
+			metaRec, err := i.recordStore.get(firstRecord)
+			if err != nil {
+				return nil, err
+			}
+			currentPN = record.Unwrap(metaRec.Virtual).(*record.PendingFilament).PreviousRecord.Pulse()
+		} else {
+			panic("unexpected situation")
+		}
+	}
+
+	return res, nil
 }
 
 func (i *IndexDB) AllOpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]insolar.ID, error) {

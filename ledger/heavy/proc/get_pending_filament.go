@@ -1,18 +1,18 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 
 package proc
 
@@ -37,7 +37,7 @@ type GetPendingFilament struct {
 	readUntil insolar.PulseNumber
 
 	Dep struct {
-		PendingAccessor object.PendingAccessor
+		PendingAccessor object.HeavyPendingAccessor
 		Sender          bus.Sender
 	}
 }
@@ -56,22 +56,10 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 	defer span.End()
 
 	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v", p.objID.DebugString())
-	records, err := p.Dep.PendingAccessor.Records(ctx, p.startFrom, p.objID)
+	records, err := p.Dep.PendingAccessor.Records(ctx, p.startFrom, p.readUntil, p.objID)
 	if err != nil {
+		panic(err)
 		return errors.Wrap(err, fmt.Sprintf("[GetPendingFilament] can't fetch pendings, pn - %v,  %v", p.objID.DebugString(), p.startFrom))
-	}
-
-	// we want to skip closed segments of the filament
-	if len(records) > 0 {
-		idx := 0
-		traverse := true
-
-		for ; traverse; idx++ {
-			if records[idx].RecordID.Pulse() >= p.readUntil {
-				traverse = false
-			}
-		}
-		records = records[idx:]
 	}
 
 	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, records - %v", p.objID.DebugString(), len(records))
@@ -80,6 +68,7 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 		Records:  records,
 	})
 	if err != nil {
+		panic(err)
 		return errors.Wrap(err, "failed to create a PendingFilament message")
 	}
 	go p.Dep.Sender.Reply(ctx, p.message, msg)

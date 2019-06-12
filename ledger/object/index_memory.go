@@ -595,37 +595,37 @@ func (i *InMemoryIndex) FirstPending(ctx context.Context, currentPN insolar.Puls
 }
 
 // OpenRequestsForObjID returns open requests for a specific object
-func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error) {
-	b := i.bucket(currentPN, objID)
-	if b == nil {
-		return nil, ErrLifelineNotFound
-	}
-
-	b.RLock()
-	defer b.RUnlock()
-
-	if len(b.pendingMeta.notClosedRequestsIds) < count {
-		count = len(b.pendingMeta.notClosedRequestsIds)
-	}
-
-	res := make([]record.Request, count)
-
-	for idx := 0; idx < count; idx++ {
-		rec, err := i.recordStorage.ForID(ctx, b.pendingMeta.notClosedRequestsIds[idx])
-		if err != nil {
-			return nil, err
-		}
-
-		switch r := record.Unwrap(rec.Virtual).(type) {
-		case *record.Request:
-			res[idx] = *r
-		default:
-			panic("filament is totally broken")
-		}
-	}
-
-	return res, nil
-}
+// func (i *InMemoryIndex) OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error) {
+// 	b := i.bucket(currentPN, objID)
+// 	if b == nil {
+// 		return nil, ErrLifelineNotFound
+// 	}
+//
+// 	b.RLock()
+// 	defer b.RUnlock()
+//
+// 	if len(b.pendingMeta.notClosedRequestsIds) < count {
+// 		count = len(b.pendingMeta.notClosedRequestsIds)
+// 	}
+//
+// 	res := make([]record.Request, count)
+//
+// 	for idx := 0; idx < count; idx++ {
+// 		rec, err := i.recordStorage.ForID(ctx, b.pendingMeta.notClosedRequestsIds[idx])
+// 		if err != nil {
+// 			return nil, err
+// 		}
+//
+// 		switch r := record.Unwrap(rec.Virtual).(type) {
+// 		case *record.Request:
+// 			res[idx] = *r
+// 		default:
+// 			panic("filament is totally broken")
+// 		}
+// 	}
+//
+// 	return res, nil
+// }
 
 // Records returns all the records for a provided object
 func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {

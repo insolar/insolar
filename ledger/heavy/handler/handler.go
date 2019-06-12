@@ -42,7 +42,6 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
-	WmBus                 bus.Bus
 	Bus                   insolar.MessageBus
 	JetCoordinator        jet.Coordinator
 	PCS                   insolar.PlatformCryptographyScheme
@@ -54,7 +53,7 @@ type Handler struct {
 	IndexBucketModifier   object.IndexBucketModifier
 	DropModifier          drop.Modifier
 	Sender                bus.Sender
-	PendingAccessor       object.HeavyPendingAccessor
+	HeavyPendingAccessor  object.HeavyPendingAccessor
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -75,6 +74,10 @@ func New() *Handler {
 			p.Dep.Sender = h.Sender
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.BlobAccessor = h.BlobAccessor
+		},
+		GetPendingFilament: func(p *proc.GetPendingFilament) {
+			p.Dep.Sender = h.Sender
+			p.Dep.PendingAccessor = h.HeavyPendingAccessor
 		},
 	}
 	h.dep = &dep
@@ -111,7 +114,11 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	if err != nil {
 		return errors.Wrap(err, "can't deserialize meta payload")
 	}
-	switch pl.(type) {
+	switch c := pl.(type) {
+	case *payload.GetPendingFilament:
+		p := proc.NewGetPendingFilament(msg, c.ObjectID, c.StartFrom, c.ReadUntil)
+		h.dep.GetPendingFilament(p)
+		return p.Proceed(ctx)
 	case *payload.PassState:
 		p := proc.NewPassState(msg)
 		h.dep.PassState(p)
@@ -322,7 +329,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 
 func (h *Handler) handleGetOpenRequests(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetOpenRequests)
-	recs, err := h.PendingAccessor.AllOpenRequestsForObjID(ctx, msg.PN, msg.ObjID)
+	recs, err := h.HeavyPendingAccessor.AllOpenRequestsForObjID(ctx, msg.PN, msg.ObjID)
 	if err != nil {
 		return &reply.HeavyError{Message: err.Error()}, nil
 	}

@@ -52,7 +52,7 @@ func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("unexpected payload type: %T", pl)
 	}
 
-	getFilament := proc.NewGetPendingFilament(s.message, msg.ObjectID, msg.Pulse)
+	getFilament := proc.NewGetPendingFilament(s.message, msg.ObjectID, msg.StartFrom, msg.ReadUntil)
 	s.dep.GetPendingFilament(getFilament)
 	return f.Procedure(ctx, getFilament, false)
 }
