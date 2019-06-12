@@ -270,15 +270,10 @@ func (m *Scope) DeployCode(
 	code []byte,
 	machineType insolar.MachineType,
 ) (*insolar.ID, error) {
-	blobID, err := m.setBlob(ctx, code)
-	if err != nil {
-		return nil, err
-	}
-
 	codeRec := record.Code{
 		Domain:      domain,
 		Request:     request,
-		Code:        *blobID,
+		Code:        code,
 		MachineType: machineType,
 	}
 

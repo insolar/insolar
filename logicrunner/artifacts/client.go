@@ -577,17 +577,10 @@ func (m *client) DeployCode(
 		return nil, err
 	}
 
-	h := m.PCS.ReferenceHasher()
-	_, err = h.Write(code)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to calculate hash")
-	}
-	blobID := *insolar.NewID(currentPN, h.Sum(nil))
-
 	codeRec := record.Code{
 		Domain:      domain,
 		Request:     request,
-		Code:        blobID,
+		Code:        code,
 		MachineType: machineType,
 	}
 	buf, err := codeRec.Marshal()
@@ -595,7 +588,7 @@ func (m *client) DeployCode(
 		return nil, errors.Wrap(err, "failed to marshal record")
 	}
 
-	h = m.PCS.ReferenceHasher()
+	h := m.PCS.ReferenceHasher()
 	_, err = h.Write(buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to calculate hash")

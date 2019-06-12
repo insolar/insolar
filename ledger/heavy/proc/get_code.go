@@ -64,17 +64,13 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	if !ok {
 		return fmt.Errorf("invalid code record %#v", virtual)
 	}
-	b, err := p.Dep.BlobAccessor.ForID(ctx, code.Code)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch code blob")
-	}
 	buf, err := rec.Marshal()
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal record")
 	}
 	msg, err := payload.NewMessage(&payload.Code{
 		Record: buf,
-		Code:   b.Value,
+		Code:   code.Code,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
