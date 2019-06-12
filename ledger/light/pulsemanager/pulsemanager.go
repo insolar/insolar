@@ -261,8 +261,6 @@ func (m *PulseManager) getExecutorHotData(
 	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
 	defer span.End()
 
-	pendingRequests := map[insolar.ID]recentstorage.PendingObjectContext{}
-
 	bucks := m.IndexBucketAccessor.ForPNAndJet(ctx, currentPN, jetID)
 	limitPN, err := m.PulseCalculator.Backwards(ctx, currentPN, m.options.lightChainLimit)
 	if err == pulse.ErrNotFound {
@@ -291,26 +289,15 @@ func (m *PulseManager) getExecutorHotData(
 		})
 	}
 
-	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
-	requestCount := 0
-	for objID, objContext := range pendingStorage.GetRequests() {
-		if len(objContext.Requests) > 0 {
-			pendingRequests[objID] = objContext
-			requestCount += len(objContext.Requests)
-		}
-	}
-
 	stats.Record(
 		ctx,
 		statHotObjectsSent.M(int64(len(hotIndexes))),
-		statPendingSent.M(int64(requestCount)),
 	)
 
 	msg := &message.HotData{
-		Drop:            *drop,
-		PulseNumber:     newPulsePN,
-		HotIndexes:      hotIndexes,
-		PendingRequests: pendingRequests,
+		Drop:        *drop,
+		PulseNumber: newPulsePN,
+		HotIndexes:  hotIndexes,
 	}
 	return msg, nil
 }

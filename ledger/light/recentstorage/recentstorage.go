@@ -26,8 +26,6 @@ import (
 
 // Provider provides different types of storages for a specific jet
 type Provider interface {
-	// GetPendingStorage(ctx context.Context, jetID insolar.ID) PendingStorage
-
 	Count() int
 
 	ClonePendingStorage(ctx context.Context, fromJetID, toJetID insolar.ID)
@@ -38,9 +36,7 @@ type Provider interface {
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage -o ./ -s _mock.go
 type PendingStorage interface {
 	AddPendingRequest(ctx context.Context, obj, req insolar.ID)
-	SetContextToObject(ctx context.Context, obj insolar.ID, objContext PendingObjectContext)
 
-	GetRequests() map[insolar.ID]PendingObjectContext
 	GetRequestsForObject(obj insolar.ID) []insolar.ID
 
 	RemovePendingRequest(ctx context.Context, obj, req insolar.ID)

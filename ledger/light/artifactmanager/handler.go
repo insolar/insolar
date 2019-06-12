@@ -139,7 +139,6 @@ func NewMessageHandler(
 		},
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.Bus = h.Bus
-			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.PendingModifier = h.PendingModifier
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.PCS = h.PCS
@@ -213,7 +212,6 @@ func NewMessageHandler(
 		},
 		HotData: func(p *proc.HotData) {
 			p.Dep.DropModifier = h.DropModifier
-			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.MessageBus = h.Bus
 			p.Dep.IndexBucketModifier = h.IndexBucketModifier
 			p.Dep.JetStorage = h.JetStorage
