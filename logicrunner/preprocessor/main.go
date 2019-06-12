@@ -355,16 +355,10 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	allMethodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
 
-	// AALEKSEEV TODO cleanup code
-	/////var sagaAcceptMethods []string
 	sagaRollbackMethods := make(map[string]struct{}, 0)
-	//var methodIndices map[string] int
 	for _, methodInfo := range allMethodsProxies {
-		///currentMethodName := methodInfo["Name"].(string)
 		sagaInfo := methodInfo["SagaInfo"].(*SagaInfo)
-		//methodIndices[currentMethodName] = idx
 		if sagaInfo.IsSaga {
-			////sagaAcceptMethods = append(sagaAcceptMethods, currentMethodName)
 			sagaRollbackMethods[sagaInfo.RollbackMethodName] = struct{}{}
 		}
 	}

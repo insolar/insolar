@@ -701,9 +701,9 @@ func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
 	proxyCode := bufProxy.String()
 	s.Contains(proxyCode, "TheAcceptMethod")
 	s.NotContains(proxyCode, "TheRollbackMethod") // AALEKSEEV TODO make all tests pass
-	//	s.NotContains(proxyCode, "TheAcceptMethodNoWait")
+	s.NotContains(proxyCode, "TheAcceptMethodNoWait")
 	s.NotContains(proxyCode, "TheRollbackMethodNoWait")
-	//	s.NotContains(proxyCode, "TheAcceptMethodAsImmutable")
+	s.NotContains(proxyCode, "TheAcceptMethodAsImmutable")
 	s.NotContains(proxyCode, "TheRollbackMethodAsImmutable")
 }
 
