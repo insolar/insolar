@@ -185,26 +185,12 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 	}{
 		{
 			name:                           "Happy path",
-			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
-		},
-		{
-			name:                           "ClarifyPendingState failed",
-			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
-			expectedClarifyPendingStateCtr: 1,
 		},
 		{
 			name:                           "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
-			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
-		},
-		{
-			name:                           "Both procedures fail",
-			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
-			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
-			expectedClarifyPendingStateCtr: 1,
-			expectedStartQueueProcessorCtr: 0,
 		},
 	}
 
