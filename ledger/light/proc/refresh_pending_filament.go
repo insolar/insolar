@@ -74,7 +74,7 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 		go func(objID insolar.ID) {
 			err := p.startFilamentRefreshing(ctx, objID)
 			if err != nil {
-				panic(errors.Wrap(err, "bux"))
+				panic(errors.Wrap(err, "bux2"))
 			}
 		}(hi.ObjID)
 	}

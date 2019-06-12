@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
@@ -52,11 +53,11 @@ func (p *GetPendingRequests) Proceed(ctx context.Context) error {
 	msg := p.msg
 	jetID := insolar.ID(p.jet)
 
-	// wait, err := p.Dep.PendingFilamentStateAccessor.WaitForRefresh(ctx, flow.Pulse(ctx), *msg.Object.Record())
-	// if err != nil {
-	// 	return err
-	// }
-	// <-wait
+	wait, err := p.Dep.PendingFilamentStateAccessor.WaitForRefresh(ctx, flow.Pulse(ctx), *msg.Object.Record())
+	if err != nil {
+		return err
+	}
+	<-wait
 
 	hasPendingRequests := false
 	pendingStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, jetID)
