@@ -47,30 +47,10 @@ func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
 		panic(errors.Wrap(err, "something broken"))
 		return err
 	}
-
-	for _, meta := range s.message.HotIndexes {
-		go func(hi message.HotIndex) {
-			refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, flow.Pulse(ctx), hi.ObjID)
-			s.dep.RefreshPendingFilament(refreshPendingsState)
-			if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
-				panic(errors.Wrap(err, "something broken"))
-			}
-
-			// lfl := object.Lifeline{}
-			// err := lfl.Unmarshal(meta.Index)
-			// if err != nil {
-			// 	panic(errors.Wrap(err, "something broken"))
-			// }
-			// if lfl.EarliestOpenRequest != nil {
-			// 	expirePendings := proc.NewExpirePending(s.replyTo, *lfl.EarliestOpenRequest, meta.ObjID, insolar.JetID(*s.message.Jet.Record()))
-			// 	s.dep.ExpirePending(expirePendings)
-			// 	if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
-			// 		panic(errors.Wrap(err, "something broken"))
-			// 	}
-			// }
-
-		}(meta)
+	refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, flow.Pulse(ctx), s.message.HotIndexes)
+	s.dep.RefreshPendingFilament(refreshPendingsState)
+	if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
+		panic(errors.Wrap(err, "something broken"))
 	}
-
 	return nil
 }

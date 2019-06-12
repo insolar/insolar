@@ -19,11 +19,13 @@ package proc
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	buswm "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -34,9 +36,9 @@ import (
 )
 
 type RefreshPendingFilament struct {
-	replyTo chan<- bus.Reply
-	objID   insolar.ID
-	pn      insolar.PulseNumber
+	replyTo    chan<- bus.Reply
+	hotIndexes []message.HotIndex
+	pn         insolar.PulseNumber
 
 	Dep struct {
 		PendingAccessor      object.PendingAccessor
@@ -50,8 +52,8 @@ type RefreshPendingFilament struct {
 	}
 }
 
-func NewRefreshPendingFilament(replyTo chan<- bus.Reply, pn insolar.PulseNumber, objID insolar.ID) *RefreshPendingFilament {
-	return &RefreshPendingFilament{replyTo: replyTo, objID: objID, pn: pn}
+func NewRefreshPendingFilament(replyTo chan<- bus.Reply, pn insolar.PulseNumber, hotIndexes []message.HotIndex) *RefreshPendingFilament {
+	return &RefreshPendingFilament{replyTo: replyTo, hotIndexes: hotIndexes, pn: pn}
 }
 
 func (p *RefreshPendingFilament) Proceed(ctx context.Context) error {
@@ -66,13 +68,28 @@ func (p *RefreshPendingFilament) Proceed(ctx context.Context) error {
 }
 
 func (p *RefreshPendingFilament) process(ctx context.Context) error {
+	wg := sync.WaitGroup{}
+	wg.Add(len(p.hotIndexes))
+	for _, hi := range p.hotIndexes {
+		go func(objID insolar.ID) {
+			err := p.startFilamentRefreshing(ctx, objID)
+			if err != nil {
+				panic(errors.Wrap(err, "bux"))
+			}
+		}(hi.ObjID)
+	}
+	wg.Wait()
+	return nil
+}
+
+func (p *RefreshPendingFilament) startFilamentRefreshing(ctx context.Context, objID insolar.ID) error {
 	logger := inslogger.FromContext(ctx)
-	lfl, err := p.Dep.LifelineAccessor.ForID(ctx, p.pn, p.objID)
+	lfl, err := p.Dep.LifelineAccessor.ForID(ctx, p.pn, objID)
 	if err != nil {
 		return errors.Wrap(err, "[RefreshPendingFilament] can't fetch a lifeline state")
 	}
 
-	logger.Debugf("RefreshPendingFilament objID - %v     lfl.PendingPointer == %v || lfl.EarliestOpenRequest == %v", p.objID.DebugString(), lfl.PendingPointer, lfl.EarliestOpenRequest)
+	// logger.Debugf("RefreshPendingFilament objID - %v     lfl.PendingPointer == %v || lfl.EarliestOpenRequest == %v", p.objID.DebugString(), lfl.PendingPointer, lfl.EarliestOpenRequest)
 
 	// No pendings
 	if lfl.PendingPointer == nil {
@@ -87,29 +104,29 @@ func (p *RefreshPendingFilament) process(ctx context.Context) error {
 		return nil
 	}
 
-	fp, err := p.Dep.PendingAccessor.FirstPending(ctx, p.pn, p.objID)
+	fp, err := p.Dep.PendingAccessor.FirstPending(ctx, p.pn, objID)
 	if err != nil {
 		panic(err)
 		return err
 	}
 
-	logger.Debugf("RefreshPendingFilament fp == %v, obj - %v", fp, p.objID.DebugString())
+	logger.Debugf("RefreshPendingFilament fp == %v, obj - %v", fp, objID.DebugString())
 
 	if fp == nil || fp.PreviousRecord == nil {
-		err = p.fillPendingFilament(ctx, p.pn, p.objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest)
+		err = p.fillPendingFilament(ctx, p.pn, objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest)
 		if err != nil {
 			panic(err)
 			return err
 		}
 	} else {
-		err = p.fillPendingFilament(ctx, p.pn, p.objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest)
+		err = p.fillPendingFilament(ctx, p.pn, objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest)
 		if err != nil {
 			panic(err)
 			return err
 		}
 	}
 
-	err = p.Dep.PendingStateModifier.RefreshState(ctx, p.pn, p.objID)
+	err = p.Dep.PendingStateModifier.RefreshState(ctx, p.pn, objID)
 	if err != nil {
 		panic(err)
 		return err
@@ -135,14 +152,14 @@ func (p *RefreshPendingFilament) fillPendingFilament(ctx context.Context, curren
 		// TODO: temp hack waiting for INS-2597 INS-2598 @egorikas
 		// Because a current node can be a previous LME for a object
 		if *node == p.Dep.Coordinator.Me() {
-			records, err := p.Dep.PendingAccessor.Records(ctx, destPN, p.objID)
+			records, err := p.Dep.PendingAccessor.Records(ctx, destPN, objID)
 			if err != nil {
 				panic(err)
-				return errors.Wrap(err, fmt.Sprintf("[RefreshPendingFilament] can't fetch pendings, pn - %v,  %v", p.objID.DebugString(), destPN))
+				return errors.Wrap(err, fmt.Sprintf("[RefreshPendingFilament] can't fetch pendings, pn - %v,  %v", objID.DebugString(), destPN))
 			}
-			inslogger.FromContext(ctx).Debugf("RefreshPendingFilament objID == %v, records - %v", p.objID.DebugString(), len(records))
+			inslogger.FromContext(ctx).Debugf("RefreshPendingFilament objID == %v, records - %v", objID.DebugString(), len(records))
 			pl = &payload.PendingFilament{
-				ObjectID: p.objID,
+				ObjectID: objID,
 				Records:  records,
 			}
 		} else {
