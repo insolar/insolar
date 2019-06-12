@@ -62,10 +62,9 @@ const (
 )
 
 // SagaInfo stores sagas-related information for given contract method.
-// If a contract is marked with //ins:saga(Accept,Rollback) SagaInfo
-// stores IsSaga: true, CanAcceptMethodName: "Accept", RollbackMethodName: "Rollback".
-// Otherwise the structure stores IsSaga: false and other fields should be ignored.
-// No additional whitespaces are allowed anywhere is //ins:saga... comment.
+// If a method is marked with //ins:saga(Rollback) SagaInfo stores
+// `IsSaga: true, RollbackMethodName: "Rollback"`. Otherwise the structure
+// stores `IsSaga: false` and other fields should be ignored.
 type SagaInfo struct {
 	IsSaga             bool
 	RollbackMethodName string
