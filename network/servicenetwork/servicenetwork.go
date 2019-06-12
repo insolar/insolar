@@ -53,10 +53,11 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
-	"github.com/insolar/insolar/network/gateway"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
@@ -110,6 +111,7 @@ type ServiceNetwork struct {
 	Bootstrapper bootstrap.NetworkBootstrapper `inject:"subcomponent"`
 	RPC          controller.RPCController      `inject:"subcomponent"`
 
+	HostNetwork  network.HostNetwork
 	OperableFunc func(ctx context.Context, operable bool)
 
 	isGenesis   bool
@@ -186,6 +188,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
+	n.HostNetwork = hostNetwork
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
@@ -246,7 +249,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
 	n.SetGateway(gateway.NewNoNetwork(n, n.NodeKeeper, n.ContractRequester,
-		n.CryptographyService, n.MessageBus, n.CertificateManager))
+		n.CryptographyService, n.HostNetwork, n.CertificateManager))
 
 	logger.Info("Service network started")
 	return nil

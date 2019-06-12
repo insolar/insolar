@@ -52,8 +52,9 @@ package servicenetwork
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/gateway"
 	"testing"
+
+	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -345,9 +346,6 @@ func TestServiceNetwork_processIncoming(t *testing.T) {
 func TestServiceNetwork_SetGateway(t *testing.T) {
 	sn, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{}, false)
 	require.NoError(t, err)
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterMock.Return()
-	sn.MessageBus = mb
 	op := false
 	tick := 0
 	sn.SetOperableFunc(func(ctx context.Context, operable bool) {
@@ -355,9 +353,13 @@ func TestServiceNetwork_SetGateway(t *testing.T) {
 		tick++
 	})
 
+	hn := networkUtils.NewHostNetworkMock(t)
+	hn.RegisterRequestHandlerMock.Return()
+	sn.HostNetwork = hn
+
 	// initial set
 	sn.SetGateway(gateway.NewNoNetwork(sn, sn.NodeKeeper, sn.ContractRequester,
-		sn.CryptographyService, sn.MessageBus, sn.CertificateManager))
+		sn.CryptographyService, sn.HostNetwork, sn.CertificateManager))
 	assert.Equal(t, 1, tick)
 	assert.False(t, op)
 
