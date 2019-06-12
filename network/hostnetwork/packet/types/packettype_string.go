@@ -15,13 +15,12 @@ func _() {
 	_ = x[Pulse-4]
 	_ = x[Bootstrap-5]
 	_ = x[Authorize-6]
-	_ = x[Genesis-7]
-	_ = x[Disconnect-8]
+	_ = x[Disconnect-7]
 }
 
-const _PacketType_name = "UnknownPingRPCCascadePulseBootstrapAuthorizeGenesisDisconnect"
+const _PacketType_name = "UnknownPingRPCCascadePulseBootstrapAuthorizeDisconnect"
 
-var _PacketType_index = [...]uint8{0, 7, 11, 14, 21, 26, 35, 44, 51, 61}
+var _PacketType_index = [...]uint8{0, 7, 11, 14, 21, 26, 35, 44, 54}
 
 func (i PacketType) String() string {
 	if i < 0 || i >= PacketType(len(_PacketType_index)-1) {

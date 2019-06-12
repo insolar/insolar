@@ -67,8 +67,6 @@ const (
 	Bootstrap
 	// Authorize is packet type to authorize bootstrapping node on discovery node.
 	Authorize
-	// Genesis is packet type for active list exchange between discovery nodes
-	Genesis
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
 )
