@@ -75,13 +75,3 @@ const (
 	// CompleteNetworkState state means network is ok and ready for proper work
 	CompleteNetworkState
 )
-
-// TODO This Interface seems to duplicate MBLocker
-//go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go
-
-// GlobalInsolarLock is lock of all incoming and outcoming network calls.
-// It's not intended to be used in multiple threads. And main use of it is `Set` method of `PulseManager`.
-type GlobalInsolarLock interface {
-	Acquire(ctx context.Context)
-	Release(ctx context.Context)
-}
