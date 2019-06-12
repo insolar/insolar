@@ -83,17 +83,22 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 }
 
 func (g *certGen) registerNode() insolar.Reference {
+	type NodeRegistrationInput struct {
+		Public string `json:"public"`
+		Role   string `json:"role"`
+	}
 	userCfg := g.getUserConfig()
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
+	input := NodeRegistrationInput{Public: string(keySerialized), Role: g.staticRole.String()}
 	request := api.Request{
 		JsonRpc: "2.0",
 		Id:      1,
 		Method:  "api.call",
 		Params: api.Params{
 			CallSite:   "contract.registerNode",
-			CallParams: []interface{}{keySerialized, g.staticRole.String()},
+			CallParams: input,
 		},
 	}
 
