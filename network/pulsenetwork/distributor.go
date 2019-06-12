@@ -116,7 +116,7 @@ func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistribut
 }
 
 func (d *distributor) Init(ctx context.Context) error {
-	handler := hostnetwork.NewStreamHandler(func(p *packet.Packet) {}, d.responseHandler)
+	handler := hostnetwork.NewStreamHandler(func(context.Context, *packet.Packet) {}, d.responseHandler)
 
 	var err error
 	d.transport, err = d.Factory.CreateStreamTransport(handler)

@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 func (g *certGen) generateKeys() {
@@ -95,10 +96,15 @@ type GetCertificateResult struct {
 	Cert json.RawMessage `json:"cert"`
 }
 
+type ErrorData struct {
+	Message string `json:"message"`
+}
+
 type GetCertificateResponse struct {
 	Version string               `json:"jsonrpc"`
 	ID      string               `json:"id"`
 	Result  GetCertificateResult `json:"result"`
+	Error   ErrorData            `json:"error"`
 }
 
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
@@ -116,6 +122,10 @@ func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 	r := GetCertificateResponse{}
 	err = json.Unmarshal(response, &r)
 	checkError("Failed to parse response from get certificate request:", err)
+
+	if len(r.Error.Message) != 0 {
+		checkError("Get error inside response while get certificate: ", errors.New(r.Error.Message))
+	}
 
 	cert, err := r.Result.Cert.MarshalJSON()
 	checkError("Failed to marshal certificate from API response:", err)

@@ -78,7 +78,6 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 			h := NewGetObject(s.dep, metaMsg, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypePassState:
-
 			h := NewPassState(s.dep, metaMsg)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeGetCode:
@@ -156,7 +155,13 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 	var err error
 
-	pl, err := payload.UnmarshalFromMeta(s.message.WatermillMsg.Payload)
+	meta := payload.Meta{}
+	err = meta.Unmarshal(s.message.WatermillMsg.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal pass payload")
+	}
+
+	pl, err := payload.Unmarshal(meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal pass payload")
 	}
@@ -165,7 +170,13 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 		return errors.New("wrong pass payload")
 	}
 
-	payloadType, err := payload.UnmarshalTypeFromMeta(pass.Origin)
+	originMeta := payload.Meta{}
+	err = originMeta.Unmarshal(pass.Origin)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload type")
+	}
+
+	payloadType, err := payload.UnmarshalType(originMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
@@ -174,6 +185,11 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 	err = origin.Unmarshal(pass.Origin)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal origin message")
+	}
+
+	if origin.Pulse != meta.Pulse {
+		s.replyError(ctx, origin, flow.ErrCancelled)
+		return flow.ErrCancelled
 	}
 
 	switch payloadType {

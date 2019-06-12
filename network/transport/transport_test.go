@@ -56,6 +56,7 @@ import (
 	"log"
 	"testing"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
@@ -79,8 +80,8 @@ type fakeNode struct {
 	tcpBuf chan []byte
 }
 
-func (f *fakeNode) HandleStream(address string, stream io.ReadWriteCloser) {
-	log.Printf("HandleStream from %s", address)
+func (f *fakeNode) HandleStream(ctx context.Context, address string, stream io.ReadWriteCloser) {
+	inslogger.FromContext(ctx).Infof("HandleStream from %s", address)
 
 	b := make([]byte, 3)
 	_, err := stream.Read(b)

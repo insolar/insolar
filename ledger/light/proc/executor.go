@@ -166,7 +166,7 @@ func (p *CheckJet) Proceed(ctx context.Context) error {
 			_, done := p.Dep.Sender.SendTarget(ctx, msg, *executor)
 			done()
 		}()
-		return nil
+		return ErrNotExecutor
 	}
 
 	p.Result.Jet = insolar.JetID(*jetID)

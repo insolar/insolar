@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/insolar/flow"
 )
 
 type CaseRequest struct {
@@ -195,8 +196,14 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 		msg:  msg,
 		role: insolar.DynamicRoleVirtualValidator,
 		lr:   lr,
+		pulseNumber: lr.pulse(ctx).PulseNumber,
 	}
 	if err := procCheckRole.Proceed(ctx); err != nil {
+		// rewrite "can't execute this object" to "flow cancelled" for force retry message
+		// just temporary fix till mb moved to watermill
+		if err == flow.ErrCancelled || err == ErrCantExecute {
+			return nil, flow.ErrCancelled
+		}
 		return nil, errors.Wrap(err, "[ HandleValidateCaseBindMessage ] can't play role")
 	}
 
