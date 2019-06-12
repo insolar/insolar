@@ -18,9 +18,12 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -37,18 +40,31 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	Reference string  `json:"reference"`
-	Method    string  `json:"method"`
-	Params    []byte  `json:"params"`
-	Seed      []byte  `json:"seed"`
-	Signature []byte  `json:"signature"`
-	LogLevel  *string `json:"logLevel,omitempty"`
+	JsonRpc  string  `json:"jsonrpc"`
+	Id       int     `json:"id"`
+	Method   string  `json:"method"`
+	Params   Params  `json:"params"`
+	LogLevel *string `json:"logLevel,omitempty"`
 }
 
-type answer struct {
-	Error   string      `json:"error,omitempty"`
-	Result  interface{} `json:"result,omitempty"`
-	TraceID string      `json:"traceID,omitempty"`
+type Params struct {
+	Seed       string `json:"seed"`
+	CallSite   string `json:"callSite"`
+	CallParams string `json:"callParams"`
+	Reference  string `json:"reference"`
+	Pem        string `json:"pem"`
+}
+
+type Answer struct {
+	JsonRpc string `json:"jsonrpc"`
+	Id      int    `json:"id"`
+	Error   string `json:"error,omitempty"`
+	Result  Result `json:"result,omitempty"`
+}
+
+type Result struct {
+	Data    interface{}
+	TraceID string `json:"traceID,omitempty"`
 }
 
 // UnmarshalRequest unmarshals request to api
@@ -68,8 +84,12 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	return body, nil
 }
 
-func (ar *Runner) checkSeed(paramsSeed []byte) error {
-	seed := seedmanager.SeedFromBytes(paramsSeed)
+func (ar *Runner) checkSeed(paramsSeed string) error {
+	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
+	if err != nil {
+		return errors.New("[ checkSeed ] Decode error")
+	}
+	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {
 		return errors.New("[ checkSeed ] Bad seed param")
 	}
@@ -81,20 +101,26 @@ func (ar *Runner) checkSeed(paramsSeed []byte) error {
 	return nil
 }
 
-func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, error) {
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+params.Method)
+func (ar *Runner) makeCall(ctx context.Context, request Request, rawBody []byte, signature string, pulseTimeStamp int64) (interface{}, error) {
+	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
 	defer span.End()
 
-	reference, err := insolar.NewReferenceFromBase58(params.Reference)
+	reference, err := insolar.NewReferenceFromBase58(request.Params.Reference)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
-	requestArgs := []interface{}{
-		*ar.CertificateManager.GetCertificate().GetRootDomainReference(),
-		params.Method, params.Params, params.Seed, params.Signature,
+	requestArgs, err := insolar.MarshalArgs(rawBody, signature, pulseTimeStamp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}
-	res, err := ar.ContractRequester.SendRequest(ctx, reference, "Call", requestArgs)
+
+	res, err := ar.ContractRequester.SendRequest(
+		ctx,
+		reference,
+		"Call",
+		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), requestArgs},
+	)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
@@ -113,7 +139,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *answer, insLog insolar.Logger) {
+func processError(err error, extraMsg string, resp *Answer, insLog insolar.Logger) {
 	resp.Error = err.Error()
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
@@ -126,8 +152,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		ctx, span := instracer.StartSpan(ctx, "callHandler")
 		defer span.End()
 
-		params := Request{}
-		resp := answer{}
+		request := Request{}
+		resp := Answer{}
 
 		startTime := time.Now()
 		defer func() {
@@ -135,10 +161,12 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			if resp.Error != "" {
 				success = "fail"
 			}
-			metrics.APIContractExecutionTime.WithLabelValues(params.Method, success).Observe(time.Since(startTime).Seconds())
+			metrics.APIContractExecutionTime.WithLabelValues(request.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
 
-		resp.TraceID = traceID
+		resp.Result.TraceID = traceID
+		resp.JsonRpc = request.JsonRpc
+		resp.Id = request.Id
 
 		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
 
@@ -154,14 +182,23 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 
-		_, err := UnmarshalRequest(req, &params)
+		rawBody, err := UnmarshalRequest(req, &request)
 		if err != nil {
 			processError(err, "Can't unmarshal request", &resp, insLog)
 			return
 		}
 
-		if params.LogLevel != nil {
-			logLevelNumber, err := insolar.ParseLevel(*params.LogLevel)
+		digest := req.Header.Get("Digest")
+		richSignature := req.Header.Get("Signature")
+
+		signature, err := validateRequestHeaders(digest, richSignature, rawBody)
+		if err != nil {
+			processError(err, "Can't validate request", &resp, insLog)
+			return
+		}
+
+		if request.LogLevel != nil {
+			logLevelNumber, err := insolar.ParseLevel(*request.LogLevel)
 			if err != nil {
 				processError(err, "Can't parse logLevel", &resp, insLog)
 				return
@@ -169,16 +206,22 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed(params.Seed)
+		err = ar.checkSeed(request.Params.Seed)
 		if err != nil {
 			processError(err, "Can't checkSeed", &resp, insLog)
+			return
+		}
+
+		pulse, err := ar.PulseAccessor.Latest(ctx)
+		if err != nil {
+			processError(err, "Can't get last pulse", &resp, insLog)
 			return
 		}
 
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, params)
+			result, err = ar.makeCall(ctx, request, rawBody, signature, pulse.PulseTimestamp)
 			ch <- nil
 		}()
 		select {
@@ -188,14 +231,34 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				processError(err, "Can't makeCall", &resp, insLog)
 				return
 			}
-			resp.Result = result
+			resp.Result.Data = result
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
 			resp.Error = "Messagebus timeout exceeded"
 			return
-
 		}
 
-		resp.Result = result
+		resp.Result.Data = result
+	}
+}
+
+func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
+	if len(digest) == 0 || len(richSignature) == 0 || len(body) == 0 {
+		return "", errors.New("Invalid input data")
+	}
+	h := sha256.New()
+	h.Write(body)
+	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	if sha == digest {
+		// keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>
+		fields := strings.Split(richSignature, ",")
+		fields = strings.Split(fields[len(fields)-1], "=")
+		if len(fields[len(fields)-1]) == 0 {
+			return "", errors.New("Empty signature")
+		}
+		return fields[len(fields)-1], nil
+
+	} else {
+		return "", errors.New("Cant get signature from header")
 	}
 }
