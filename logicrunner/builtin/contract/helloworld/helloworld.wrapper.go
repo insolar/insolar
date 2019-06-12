@@ -30,6 +30,12 @@ func (e *ExtendableError) Error() string {
 	return e.S
 }
 
+func INS_META_INFO() []map[string]string {
+	result := make([]map[string]string, 0)
+
+	return result
+}
+
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	self := new(HelloWorld)

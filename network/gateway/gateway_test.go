@@ -70,7 +70,7 @@ import (
 func emtygateway(t *testing.T) network.Gateway {
 	return NewNoNetwork(testnet.NewGatewayerMock(t),
 		testnet.NewNodeKeeperMock(t), testutils.NewContractRequesterMock(t),
-		testutils.NewCryptographyServiceMock(t), testutils.NewMessageBusMock(t),
+		testutils.NewCryptographyServiceMock(t), testnet.NewHostNetworkMock(t),
 		testutils.NewCertificateManagerMock(t))
 }
 
@@ -79,13 +79,10 @@ func TestSWitch(t *testing.T) {
 
 	nodekeeper := testnet.NewNodeKeeperMock(t)
 	gatewayer := testnet.NewGatewayerMock(t)
-	MB := testutils.NewMessageBusMock(t)
-
-	MB.MustRegisterFunc = func(p insolar.MessageType, p1 insolar.MessageHandler) {}
 
 	ge := NewNoNetwork(gatewayer,
 		nodekeeper, testutils.NewContractRequesterMock(t),
-		testutils.NewCryptographyServiceMock(t), MB,
+		testutils.NewCryptographyServiceMock(t), testnet.NewHostNetworkMock(t),
 		testutils.NewCertificateManagerMock(t))
 
 	require.NotNil(t, ge)
@@ -128,15 +125,13 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	nodekeeper := testnet.NewNodeKeeperMock(t)
 	gatewayer := testnet.NewGatewayerMock(t)
-	MB := testutils.NewMessageBusMock(t)
-
-	MB.MustRegisterFunc = func(p insolar.MessageType, p1 insolar.MessageHandler) {}
 
 	CR := testutils.NewContractRequesterMock(t)
 	CM := testutils.NewCertificateManagerMock(t)
 	ge := NewNoNetwork(gatewayer,
 		nodekeeper, CR,
-		testutils.NewCryptographyServiceMock(t), MB,
+		testutils.NewCryptographyServiceMock(t),
+		testnet.NewHostNetworkMock(t),
 		CM)
 
 	require.NotNil(t, ge)

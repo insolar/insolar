@@ -57,7 +57,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -65,7 +64,7 @@ import (
 )
 
 // RequestHandler is callback function for request handling
-type RequestHandler func(p *packet.Packet)
+type RequestHandler func(ctx context.Context, p *packet.Packet)
 
 // StreamHandler parses packets from data stream and calls request handler or response handler
 type StreamHandler struct {
@@ -81,25 +80,31 @@ func NewStreamHandler(requestHandler RequestHandler, responseHandler future.Pack
 	}
 }
 
-func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) {
+func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader io.ReadWriteCloser) {
+	mainLogger := inslogger.FromContext(ctx)
+
+	logLevel := inslogger.GetLoggerLevel(ctx)
+	// get only log level from context, discard TraceID in favor of packet TraceID
+	packetCtx := inslogger.WithLoggerLevel(context.Background(), logLevel)
+
 	for {
-		p, err := packet.DeserializePacket(reader)
+		p, err := packet.DeserializePacket(mainLogger, reader)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				log.Info("[ HandleStream ] Connection closed by peer")
+				mainLogger.Info("[ HandleStream ] Connection closed by peer")
 				return
 			}
 
-			log.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
+			mainLogger.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
 		} else {
-			ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
-			logger.Debug("[ HandleStream ] Handling packet RequestID = ", p.RequestID)
+			packetCtx, logger := inslogger.WithTraceField(packetCtx, p.TraceID)
+			logger.Debugf("[ HandleStream ] Handling packet RequestID = %d", p.RequestID)
 
 			if p.IsResponse() {
-				go s.responseHandler.Handle(ctx, p)
+				go s.responseHandler.Handle(packetCtx, p)
 			} else {
-				go s.requestHandler(p)
+				go s.requestHandler(packetCtx, p)
 			}
 		}
 	}

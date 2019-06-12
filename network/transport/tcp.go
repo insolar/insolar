@@ -158,7 +158,7 @@ func (t *tcpTransport) listen(ctx context.Context) {
 		logger.Infof("[ listen ] Accepted new connection")
 		setupConnection(ctx, conn)
 
-		go t.handler.HandleStream(conn.RemoteAddr().String(), conn)
+		go t.handler.HandleStream(ctx, conn.RemoteAddr().String(), conn)
 	}
 }
 

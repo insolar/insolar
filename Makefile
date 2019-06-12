@@ -17,12 +17,16 @@ COVERPROFILE ?= coverage.txt
 TEST_ARGS ?= -timeout 1200s
 BUILD_TAGS ?=
 
+CI_GOMAXPROCS ?= 8
+CI_TEST_ARGS ?= -p 4
+
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 BUILD_DATE = $(shell date "+%Y-%m-%d")
 BUILD_TIME = $(shell date "+%H:%M:%S")
 BUILD_HASH = $(shell git rev-parse --short HEAD)
 BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
 
+GOPATH ?= `go env GOPATH`
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildNumber=${BUILD_NUMBER}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
@@ -56,7 +60,7 @@ clean:
 
 .PHONY: install-godep
 install-godep:
-	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep 22125cfaa6ddc71e145b1535d4b7ee9744fefff2
+	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep v0.5.3
 
 .PHONY: install-build-tools
 install-build-tools:
@@ -166,23 +170,30 @@ $(ARTIFACTS_DIR):
 
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic  -tags slowtest $(ALL_PACKAGES)
+	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic -tags slowtest $(ALL_PACKAGES)
 
 .PHONY: ci_test_unit
 ci_test_unit:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
+	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
 
 .PHONY: ci_test_slow
 ci_test_slow:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... -count 1 | tee -a ci_test_unit.json
+	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func:
-	CGO_ENABLED=1 INSOLAR_LOG_LEVEL=error go test $(TEST_ARGS) -json -tags functest -v ./functest -count 3 -failfast | tee ci_test_func.json
+	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
+	# so try to be more honest with processors allocation.
+	GOMAXPROCS=2 CGO_ENABLED=1 INSOLAR_LOG_LEVEL=error \
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags functest -v ./functest -count 3 -failfast | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=1 | tee ci_test_integrtest.json
+	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=1 | tee ci_test_integrtest.json
 
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
@@ -220,3 +231,5 @@ generate-protobuf:
 regen-builtin: $(BININSGOCC)
 	$(BININSGOCC) regen-builtin
 
+build-track:
+	go build -o $(BIN_DIR)/track ./scripts/cmd/track/track.go

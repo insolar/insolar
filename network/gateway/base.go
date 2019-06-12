@@ -66,10 +66,10 @@ type Base struct {
 	Self                network.Gateway
 	Network             network.Gatewayer
 	Nodekeeper          network.NodeKeeper
+	HostNetwork         network.HostNetwork
 	ContractRequester   insolar.ContractRequester
 	CryptographyService insolar.CryptographyService
 	CertificateManager  insolar.CertificateManager
-	MessageBus          insolar.MessageBus
 }
 
 // NewGateway creates new gateway on top of existing

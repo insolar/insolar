@@ -102,7 +102,6 @@ type ServiceNetwork struct {
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	Pub                 message.Publisher           `inject:""`
-	MessageBus          insolar.MessageBus          `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	Sender              bus.Sender                  `inject:""`
 
@@ -482,8 +481,10 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 		logger.Error(err)
 		return nil, err
 	}
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 	logger = inslogger.FromContext(ctx)
+	if inslogger.TraceID(ctx) != msg.Metadata.Get(bus.MetaTraceID) {
+		logger.Errorf("traceID from context (%s) is different from traceID from message Metadata (%s)", inslogger.TraceID(ctx), msg.Metadata.Get(bus.MetaTraceID))
+	}
 	// TODO: check pulse here
 
 	msgType, err := payload.UnmarshalTypeFromMeta(msg.Payload)
