@@ -228,7 +228,9 @@ func TestNewHostNetwork(t *testing.T) {
 	for i := 0; i < count; i++ {
 		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
-		_, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
+		f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
+		require.NoError(t, err)
+		_, err = f.WaitResponse(time.Second)
 		require.NoError(t, err)
 	}
 
