@@ -55,9 +55,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/log" // TODO remove before merge
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 )
 
@@ -67,11 +66,10 @@ type Base struct {
 	Self                network.Gateway
 	Network             network.Gatewayer
 	Nodekeeper          network.NodeKeeper
+	HostNetwork         network.HostNetwork
 	ContractRequester   insolar.ContractRequester
 	CryptographyService insolar.CryptographyService
 	CertificateManager  insolar.CertificateManager
-	GIL                 insolar.GlobalInsolarLock
-	MessageBus          insolar.MessageBus
 }
 
 // NewGateway creates new gateway on top of existing

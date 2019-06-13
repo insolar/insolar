@@ -656,6 +656,116 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 	}
 }
 
+var sagaTestContract = `
+package main
+
+import (
+"fmt"
+"errors"
+
+"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type SagaTestWallet struct {
+	foundation.BaseContract
+	Amount int
+}
+
+//ins:saga(TheRollbackMethod)
+func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
+	w.Amount += amount
+}
+
+func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
+	w.Amount -= amount
+}
+`
+
+// Make sure proxy doesn't contain:
+// 1. Rollback method of the saga
+// 2. AsImmutable-versions of Accept/Rollback methods
+// 3. NoWait-versions of Accept/Rollback methods
+func (s *PreprocessorSuite) TestSagaAdditionalMethodsAreMissingInProxy() {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, sagaTestContract)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	s.NoError(err)
+	proxyCode := bufProxy.String()
+	s.Contains(proxyCode, "TheAcceptMethod")
+	s.NotContains(proxyCode, "TheRollbackMethod")
+	s.NotContains(proxyCode, "TheAcceptMethodNoWait")
+	s.NotContains(proxyCode, "TheRollbackMethodNoWait")
+	s.NotContains(proxyCode, "TheAcceptMethodAsImmutable")
+	s.NotContains(proxyCode, "TheRollbackMethodAsImmutable")
+}
+
+// Make sure wrapper contains meta information about saga
+func (s *PreprocessorSuite) TestSagaMetaInfoIsPresentInProxy() {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, sagaTestContract)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
+	s.NoError(err)
+	proxyCode := bufProxy.String()
+	s.Contains(proxyCode, "INSMETHOD_TheAcceptMethod")
+	s.Contains(proxyCode, "INSMETHOD_TheRollbackMethod")
+	s.Contains(proxyCode, `
+func INS_META_INFO() []map[string]string {
+	result := make([]map[string]string, 0)
+
+	{
+		info := make(map[string]string, 3)
+		info["Type"] = "SagaInfo"
+		info["MethodName"] = "TheAcceptMethod"
+		info["RollbackMethodName"] = "TheRollbackMethod"
+		result = append(result, info)
+	}
+
+	return result
+}
+`)
+}
+
+// Low-level tests for extractSagaInfo procedure
+func (s *PreprocessorSuite) TestExtractSagaInfo() {
+	info := &SagaInfo{}
+	res := extractSagaInfo("", info)
+	s.Require().False(res)
+	s.Require().False(info.IsSaga)
+
+	res = extractSagaInfo("ololo", info)
+	s.Require().False(res)
+	s.Require().False(info.IsSaga)
+
+	res = extractSagaInfo("//ins:saga()", info)
+	s.Require().False(res)
+	s.Require().False(info.IsSaga)
+
+	res = extractSagaInfo("//ins:saga(SomeRollbackMethodName) ", info)
+	s.Require().True(res)
+	s.Require().True(info.IsSaga)
+	s.Require().Equal(info.RollbackMethodName, "SomeRollbackMethodName")
+}
+
 func TestPreprocessor(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(PreprocessorSuite))

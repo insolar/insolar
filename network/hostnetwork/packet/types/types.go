@@ -77,6 +77,8 @@ const (
 	Challenge2
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
+	// SignCert used to request signature of certificate from another node
+	SignCert
 )
 
 // RequestID is 64 bit unsigned int request id.

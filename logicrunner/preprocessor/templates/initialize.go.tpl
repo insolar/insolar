@@ -28,7 +28,7 @@ import (
     XXX_insolar "github.com/insolar/insolar/insolar"
     XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
     XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
-    XXX_rootdomain "github.com/insolar/insolar/bootstrap/rootdomain"
+    XXX_rootdomain "github.com/insolar/insolar/insolar/rootdomain"
 )
 
 func InitializeContractMethods() map[string]XXX_preprocessor.ContractWrapper {
