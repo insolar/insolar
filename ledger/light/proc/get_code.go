@@ -119,10 +119,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		go func() {
 			_, done := p.Dep.Sender.SendTarget(ctx, msg, node)
 			done()
-			logger.WithFields(map[string]interface{}{
-				"origin_correlation_id": middleware.MessageCorrelationID(p.message),
-				"correlation_id":        middleware.MessageCorrelationID(msg),
-			}).Info("passed GetCode")
+			logger.Debug("passed GetCode")
 		}()
 		return nil
 	}
@@ -130,7 +127,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.codeID)
 	switch err {
 	case nil:
-		logger.Info("sending code")
+		logger.Debug("sending code")
 		return sendCode(rec)
 	case object.ErrNotFound:
 		if p.pass {
