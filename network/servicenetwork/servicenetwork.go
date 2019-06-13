@@ -103,7 +103,6 @@ type ServiceNetwork struct {
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	Pub                 message.Publisher           `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
-	Sender              bus.Sender                  `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager           `inject:"subcomponent"`
@@ -371,23 +370,11 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-	logger := inslogger.FromContext(ctx)
-	msgType, err := payload.UnmarshalType(msg.Payload)
+
+	err := n.sendMessage(ctx, msg)
 	if err != nil {
-		logger.Error("failed to extract message type")
+		return nil, errors.Wrap(err, "failed to send message")
 	}
-
-	err = n.sendMessage(ctx, msg)
-	if err != nil {
-		n.replyError(ctx, msg, err)
-		return nil, nil
-	}
-
-	logger.WithFields(map[string]interface{}{
-		"msg_type":    msgType.String(),
-		"origin_hash": payload.OriginHash(msg.Payload),
-	}).Info("Network sent message")
-
 	return nil, nil
 }
 
@@ -426,24 +413,6 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	return nil
 }
 
-func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) {
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"origin_hash": payload.OriginHash(msg.Payload),
-	})
-	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error()))
-		return
-	}
-	wrapper := payload.Meta{}
-	err = wrapper.Unmarshal(msg.Payload)
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to unwrap meta message for error reply - (%s)", err))
-		return
-	}
-	n.Sender.Reply(ctx, wrapper, errMsg)
-}
-
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }
@@ -461,15 +430,6 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 		logger.Errorf("traceID from context (%s) is different from traceID from message Metadata (%s)", inslogger.TraceID(ctx), msg.Metadata.Get(bus.MetaTraceID))
 	}
 	// TODO: check pulse here
-
-	msgType, err := payload.UnmarshalTypeFromMeta(msg.Payload)
-	if err != nil {
-		logger.Error("failed to extract message type")
-	}
-	logger.WithFields(map[string]interface{}{
-		"msg_type":    msgType.String(),
-		"origin_hash": payload.OriginHash(msg.Payload),
-	}).Info("Network received message")
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {

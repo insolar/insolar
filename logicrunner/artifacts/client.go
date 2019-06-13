@@ -330,7 +330,7 @@ func (m *client) GetObject(
 		}
 	}
 	if !success() {
-		logger.WithField("origin_hash", payload.OriginHash(msg.Payload)).Error("no reply")
+		logger.Error("no reply")
 		return nil, errors.New("no reply")
 	}
 

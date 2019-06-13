@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
@@ -204,11 +203,8 @@ func initComponents(
 	return &cm, terminationHandler
 }
 
-func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
-	inslogger.FromContext(context.Background()).WithField(
-		"origin_hash",
-		payload.OriginHash(msg.Payload),
-	).Error("no reply channel")
+func notFound(_ *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+	inslogger.FromContext(context.Background()).Error("no reply channel")
 	return nil, nil
 }
 

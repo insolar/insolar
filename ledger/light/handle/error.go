@@ -48,8 +48,6 @@ func (s *Error) Present(ctx context.Context, f flow.Flow) error {
 		return nil
 	}
 
-	inslogger.FromContext(ctx).WithField(
-		"origin_hash", payload.OriginHash(s.message.Payload),
-	).Error("received error: ", p.Text)
+	inslogger.FromContext(ctx).Error("received error: ", p.Text)
 	return nil
 }
