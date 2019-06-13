@@ -292,10 +292,16 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		return err
 	}
 
+	methodsInfo := pf.functionInfoForWrapper(pf.methods[pf.contract])
+	err := pf.checkSagaRollbackMethodsExist(methodsInfo)
+	if err != nil {
+		return err
+	}
+
 	data := map[string]interface{}{
 		"Package":            packageName,
 		"ContractType":       pf.contract,
-		"Methods":            pf.functionInfoForWrapper(pf.methods[pf.contract]),
+		"Methods":            methodsInfo,
 		"Functions":          pf.functionInfoForWrapper(pf.constructors[pf.contract]),
 		"ParsedCode":         pf.code,
 		"FoundationPath":     foundationPath,
@@ -304,6 +310,29 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 	}
 
 	return formatAndWrite(out, "wrapper", data)
+}
+
+func (pf *ParsedFile) checkSagaRollbackMethodsExist(funcInfo []map[string]interface{}) error {
+	methodNames := make(map[string]struct{})
+	for _, info := range funcInfo {
+		methodNames[info["Name"].(string)] = struct{}{}
+	}
+
+	for _, info := range funcInfo {
+		sagaInfo := info["SagaInfo"].(*SagaInfo)
+		if !sagaInfo.IsSaga {
+			continue
+		}
+
+		_, exists := methodNames[sagaInfo.RollbackMethodName]
+		if !exists {
+			return fmt.Errorf(
+				"Semantic error: '%v' is a saga with rollback method '%v', "+
+					"but '%v' is not declared. Maybe a typo?",
+				info["Name"].(string), sagaInfo.RollbackMethodName, sagaInfo.RollbackMethodName)
+		}
+	}
+	return nil
 }
 
 func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
@@ -350,6 +379,12 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	allMethodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
+
+	err = pf.checkSagaRollbackMethodsExist(allMethodsProxies)
+	if err != nil {
+		return err
+	}
+
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
 
 	sagaRollbackMethods := make(map[string]struct{})

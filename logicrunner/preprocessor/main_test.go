@@ -781,9 +781,13 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 	var bufProxy bytes.Buffer
 	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
 	s.Error(err)
+	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with rollback method 'TheRollbackMethod', "+
+		"but 'TheRollbackMethod' is not declared. Maybe a typo?", err.Error())
 
 	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
 	s.Error(err)
+	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with rollback method 'TheRollbackMethod', "+
+		"but 'TheRollbackMethod' is not declared. Maybe a typo?", err.Error())
 }
 
 // Low-level tests for extractSagaInfo procedure
