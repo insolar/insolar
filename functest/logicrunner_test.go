@@ -716,7 +716,7 @@ func (r *One) Recursive() (error) {
 }
 
 func TestNewAllowanceNotFromWallet(t *testing.T) {
-	t.Skip("Unskip after fixing `can't open plugin` error ")
+	t.Skip("INS-2706 Unskip after fixing `can't open plugin` error ")
 	var contractOneCode = `
 package main
 import (
