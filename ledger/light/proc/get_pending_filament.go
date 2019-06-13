@@ -71,7 +71,7 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 		idx := 0
 		traverse := true
 
-		for traverse {
+		for traverse && idx < len(records) {
 			if records[idx].RecordID.Pulse() >= p.readUntil {
 				traverse = false
 			} else {
