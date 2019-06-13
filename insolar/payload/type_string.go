@@ -21,23 +21,24 @@ func _() {
 	_ = x[TypeGetCode-11]
 	_ = x[TypeCode-12]
 	_ = x[TypeSetCode-13]
+	_ = x[TypeSetRequest-14]
 }
 
 const (
 	_Type_name_0 = "TypeUnknownTypeErrorTypeID"
-	_Type_name_1 = "TypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCode"
+	_Type_name_1 = "TypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetRequest"
 )
 
 var (
 	_Type_index_0 = [...]uint8{0, 11, 20, 26}
-	_Type_index_1 = [...]uint8{0, 9, 22, 35, 47, 59, 68, 76, 87, 95, 106}
+	_Type_index_1 = [...]uint8{0, 9, 22, 35, 47, 59, 68, 76, 87, 95, 106, 120}
 )
 
 func (i Type) String() string {
 	switch {
 	case 0 <= i && i <= 2:
 		return _Type_name_0[_Type_index_0[i]:_Type_index_0[i+1]]
-	case 4 <= i && i <= 13:
+	case 4 <= i && i <= 14:
 		i -= 4
 		return _Type_name_1[_Type_index_1[i]:_Type_index_1[i+1]]
 	default:
