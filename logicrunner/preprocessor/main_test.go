@@ -893,7 +893,7 @@ func (w *SagaTestWallet) TheRollbackMethod(amount string) error {
 }
 
 // Low-level tests for extractSagaInfoFromComment procedure
-func (s *PreprocessorSuite) TestExtractSagaInfo() {
+func (s *PreprocessorSuite) TestExtractSagaInfoFromComment() {
 	info := &SagaInfo{}
 	res := extractSagaInfoFromComment("", info)
 	s.Require().False(res)
