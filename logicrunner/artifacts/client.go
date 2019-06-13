@@ -621,14 +621,14 @@ func (m *client) DeployCode(
 	case *payload.Error:
 		return nil, errors.New(p.Text)
 	default:
-		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		return nil, fmt.Errorf("DeployCode: unexpected reply: %#v", p)
 	}
 }
 
 func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (payload.Payload, error) {
 	for tries > 0 {
 		msg, err := payload.NewMessage(ppl)
-		if err == nil {
+		if err != nil {
 			return nil, err
 		}
 
