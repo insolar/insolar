@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -94,7 +94,7 @@ type Bus struct {
 	pcs         insolar.PlatformCryptographyScheme
 
 	repliesMutex sync.RWMutex
-	replies      map[string]*lockedReply
+	replies      map[payload.MessageHash]*lockedReply
 }
 
 // NewBus creates Bus instance with provided values.
@@ -102,24 +102,24 @@ func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator, pc
 	return &Bus{
 		timeout:     time.Second * 8,
 		pub:         pub,
-		replies:     make(map[string]*lockedReply),
+		replies:     make(map[payload.MessageHash]*lockedReply),
 		pulses:      pulses,
 		coordinator: jc,
 		pcs:         pcs,
 	}
 }
 
-func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedReply) {
+func (b *Bus) removeReplyChannel(ctx context.Context, h payload.MessageHash, reply *lockedReply) {
 	reply.once.Do(func() {
 		close(reply.done)
 
 		b.repliesMutex.Lock()
 		defer b.repliesMutex.Unlock()
-		delete(b.replies, id)
+		delete(b.replies, h)
 
 		reply.wg.Wait()
 		close(reply.messages)
-		inslogger.FromContext(ctx).Infof("close reply channel for message with origin_hash %s", id)
+		inslogger.FromContext(ctx).Infof("close reply channel for message with hash %s", h.String())
 	})
 }
 
@@ -158,7 +158,7 @@ func (b *Bus) SendTarget(
 
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	msg.SetContext(ctx)
-	err := b.wrapMeta(msg, target, nil)
+	err := b.wrapMeta(msg, target, payload.MessageHash{})
 	if err != nil {
 		logger.Error("can't wrap meta message ", err.Error())
 		return nil, nil
@@ -170,7 +170,12 @@ func (b *Bus) SendTarget(
 		logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
 		return nil, nil
 	}
-	id := base58.Encode(h.Sum(nil))
+	msgHash := payload.MessageHash{}
+	err = msgHash.Unmarshal(h.Sum(nil))
+	if err != nil {
+		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
+		return nil, nil
+	}
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
@@ -178,14 +183,14 @@ func (b *Bus) SendTarget(
 	}
 
 	done := func() {
-		b.removeReplyChannel(ctx, id, reply)
+		b.removeReplyChannel(ctx, msgHash, reply)
 	}
 
 	b.repliesMutex.Lock()
-	b.replies[id] = reply
+	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	logger.Debugf("sending message %s", id)
+	logger.Debugf("sending message %s", msgHash.String())
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		logger.Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
@@ -197,11 +202,14 @@ func (b *Bus) SendTarget(
 		logger.Debug("waiting for reply")
 		select {
 		case <-reply.done:
-			logger.Debugf("Done waiting replies for message with origin_hash %s", id)
+			logger.Debugf("Done waiting replies for message with hash %s", msgHash.String())
 		case <-time.After(b.timeout):
 			logger.Error(
 				errors.Errorf(
-					"can't return result for message with origin_hash %s: timeout for reading (%s) was exceeded", id, b.timeout),
+					"can't return result for message with hash %s: timeout for reading (%s) was exceeded",
+					msgHash.String(),
+					b.timeout,
+				),
 			)
 			done()
 		}
@@ -225,7 +233,12 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
 		return
 	}
-	originHash := h.Sum(nil)
+	originHash := payload.MessageHash{}
+	err = originHash.Unmarshal(h.Sum(nil))
+	if err != nil {
+		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
+		return
+	}
 
 	err = b.wrapMeta(reply, origin.Sender, originHash)
 	if err != nil {
@@ -258,12 +271,17 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		h := b.pcs.IntegrityHasher()
 		_, err := h.Write(msg.Payload)
 		if err != nil {
-			logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
+			logger.Error(errors.Wrap(err, "failed to calculate hash"))
 			return nil, nil
 		}
-		id := base58.Encode(h.Sum(nil))
-		msg.Metadata.Set("msg_hash", id)
-		logger = logger.WithField("msg_hash", id)
+		msgHash := payload.MessageHash{}
+		err = msgHash.Unmarshal(h.Sum(nil))
+		if err != nil {
+			logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
+			return nil, nil
+		}
+		msg.Metadata.Set("msg_hash", msgHash.String())
+		logger = logger.WithField("msg_hash", msgHash.String())
 
 		meta := payload.Meta{}
 		err = meta.Unmarshal(msg.Payload)
@@ -274,17 +292,16 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 
 		msg.Metadata.Set("pulse", meta.Pulse.String())
 
-		if len(meta.OriginHash) == 0 {
+		if meta.OriginHash.IsZero() {
 			logger.Debug("not a reply")
 			return handle(msg)
 		}
 
-		originID := base58.Encode(meta.OriginHash)
-		msg.Metadata.Set("msg_hash_origin", originID)
-		logger = logger.WithField("msg_hash_origin", originID)
+		msg.Metadata.Set("msg_hash_origin", meta.OriginHash.String())
+		logger = logger.WithField("msg_hash_origin", meta.OriginHash.String())
 
 		b.repliesMutex.RLock()
-		reply, ok := b.replies[originID]
+		reply, ok := b.replies[meta.OriginHash]
 		if !ok {
 			logger.Warn("reply discarded")
 			b.repliesMutex.RUnlock()
@@ -311,7 +328,7 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 func (b *Bus) wrapMeta(
 	msg *message.Message,
 	receiver insolar.Reference,
-	originHash []byte,
+	originHash payload.MessageHash,
 ) error {
 	latestPulse, err := b.pulses.Latest(context.Background())
 	if err != nil {

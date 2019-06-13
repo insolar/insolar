@@ -26,7 +26,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
@@ -35,7 +34,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
-	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -138,9 +136,9 @@ func TestMessageBus_Send_Close(t *testing.T) {
 	require.Equal(t, mapSizeBefore, len(b.replies))
 }
 
-func isReplyExist(b *Bus, id string) bool {
+func isReplyExist(b *Bus, h payload.MessageHash) bool {
 	b.repliesMutex.RLock()
-	_, ok := b.replies[id]
+	_, ok := b.replies[h]
 	b.repliesMutex.RUnlock()
 	return ok
 }
@@ -161,8 +159,13 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	b := NewBus(pubsub, pulseMock, coordinatorMock, pcs)
 	b.timeout = time.Millisecond * 10
 
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
+	h := pcs.IntegrityHasher()
+	_, err := h.Write(msg.Payload)
+	require.NoError(t, err)
+	msgHash := payload.MessageHash{}
+	err = msgHash.Unmarshal(h.Sum(nil))
+	require.NoError(t, err)
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
@@ -171,7 +174,7 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	require.False(t, ok)
 	require.Nil(t, res)
 
-	ok = isReplyExist(b, middleware.MessageCorrelationID(msg))
+	ok = isReplyExist(b, msgHash)
 	require.False(t, ok)
 }
 
@@ -263,10 +266,12 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	h := b.pcs.IntegrityHasher()
 	_, err = h.Write(data)
 	require.NoError(t, err)
-	originHash := h.Sum(nil)
-	id := base58.Encode(originHash)
 
-	b.replies[id] = resChan
+	originHash := payload.MessageHash{}
+	err = originHash.Unmarshal(h.Sum(nil))
+	require.NoError(t, err)
+
+	b.replies[originHash] = resChan
 
 	replyMeta := payload.Meta{
 		OriginHash: originHash,
@@ -307,12 +312,10 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 
 	b := NewBus(pubsub, pulseMock, coordinatorMock, pcs)
 	b.timeout = time.Millisecond
-	correlationId := watermill.NewUUID()
 	resChan := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
 	}
-	b.replies[correlationId] = resChan
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		incomingHandlerCalls++
@@ -321,7 +324,6 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	handler := b.IncomingMessageRouter(incomingHandler)
 
 	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
-	middleware.SetCorrelationID(correlationId, msg)
 
 	close(resChan.done)
 
@@ -346,8 +348,9 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 	h := b.pcs.IntegrityHasher()
 	_, err := h.Write(msg.Payload)
 	require.NoError(t, err)
-	hash := h.Sum(nil)
-
+	hash := payload.MessageHash{}
+	err = hash.Unmarshal(h.Sum(nil))
+	require.NoError(t, err)
 	meta := payload.Meta{
 		OriginHash: hash,
 	}
@@ -491,7 +494,9 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 		h := b.pcs.IntegrityHasher()
 		_, err := h.Write(msg.Payload)
 		require.NoError(t, err)
-		hash := h.Sum(nil)
+		hash := payload.MessageHash{}
+		err = hash.Unmarshal(h.Sum(nil))
+		require.NoError(t, err)
 
 		meta := payload.Meta{
 			OriginHash: hash,

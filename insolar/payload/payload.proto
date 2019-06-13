@@ -13,7 +13,7 @@ message Meta {
     bytes Receiver   = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Pulse      = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     bytes ID         = 24;
-    bytes OriginHash = 25;
+    bytes OriginHash = 25 [(gogoproto.customtype) = "MessageHash", (gogoproto.nullable) = false];
 }
 
 message Error {
