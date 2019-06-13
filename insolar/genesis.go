@@ -16,6 +16,8 @@
 
 package insolar
 
+import "strconv"
+
 const (
 	// GenesisNameRootDomain is the name of root domain contract for genesis record.
 	GenesisNameRootDomain = "rootdomain"
@@ -23,17 +25,54 @@ const (
 	GenesisNameNodeDomain = "nodedomain"
 	// GenesisNameNodeRecord is the name of node contract for genesis record.
 	GenesisNameNodeRecord = "noderecord"
-	// GenesisNameRootMember is the name of root member contract for genesis record.
-	GenesisNameRootMember = "member"
-	// GenesisNameRootWallet is the name of wallet contract for genesis record.
-	GenesisNameRootWallet = "wallet"
+	// GenesisNameMember is the name of member contract for genesis record.
+	GenesisNameMember = "member"
+	// GenesisNameWallet is the name of wallet contract for genesis record.
+	GenesisNameWallet = "wallet"
 	// GenesisNameDeposit is the name of deposit contract for genesis record.
 	GenesisNameDeposit = "deposit"
 	// GenesisNameTariff is the name of tariff contract for genesis record.
 	GenesisNameTariff = "tariff"
-	// GenesisNameCostCenter is the name of costcenter contract for genesis record.
+	// GenesisNameCostCenter is the name of cost center contract for genesis record.
 	GenesisNameCostCenter = "costcenter"
 )
+
+func GetGenesisNameRootDomain() string {
+	return GenesisNameRootDomain
+}
+func GetGenesisNameNodeDomain() string {
+	return GenesisNameNodeDomain
+}
+func GetGenesisNameNodeRecord() string {
+	return GenesisNameNodeRecord
+}
+func GetGenesisNameRootMember() string {
+	return "root" + GenesisNameMember
+}
+func GetGenesisNameRootWallet() string {
+	return "root" + GenesisNameWallet
+}
+func GetGenesisNameMigrationAdminMember() string {
+	return "mdadmin" + GenesisNameMember
+}
+func GetGenesisNameMigrationWallet() string {
+	return "md" + GenesisNameWallet
+}
+func GetGenesisNameMigrationDamonMembers() (result [10]string) {
+	for i := 0; i < 10; i++ {
+		result[i] = "migration_damon_" + strconv.Itoa(i) + GenesisNameMember
+	}
+	return
+}
+func GetGenesisNameDeposit() string {
+	return GenesisNameDeposit
+}
+func GetGenesisNameTariff() string {
+	return GenesisNameTariff
+}
+func GetGenesisNameCostCenter() string {
+	return GenesisNameCostCenter
+}
 
 type genesisBinary []byte
 

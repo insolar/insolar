@@ -39,7 +39,7 @@ func GenesisContractsStates(cfg insolar.GenesisContractsConfig) []insolar.Genesi
 
 func rootDomain() insolar.GenesisContractState {
 	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameRootDomain,
+		Name:       insolar.GetGenesisNameRootDomain(),
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
@@ -52,8 +52,8 @@ func rootDomain() insolar.GenesisContractState {
 func nodeDomain() insolar.GenesisContractState {
 	nd, _ := nodedomain.NewNodeDomain()
 	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameNodeDomain,
-		ParentName: insolar.GenesisNameRootDomain,
+		Name:       insolar.GetGenesisNameNodeDomain(),
+		ParentName: insolar.GetGenesisNameRootDomain(),
 		Memory:     mustGenMemory(nd),
 	}
 }
@@ -92,8 +92,8 @@ func rootMember(publicKey string) insolar.GenesisContractState {
 	}
 
 	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameRootMember,
-		ParentName: insolar.GenesisNameRootDomain,
+		Name:       insolar.GetGenesisNameRootMember(),
+		ParentName: insolar.GetGenesisNameRootDomain(),
 		Memory:     mustGenMemory(m),
 	}
 }
@@ -105,8 +105,8 @@ func rootWallet(balance string) insolar.GenesisContractState {
 	}
 
 	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameRootWallet,
-		ParentName: insolar.GenesisNameRootMember,
+		Name:       insolar.GetGenesisNameRootWallet(),
+		ParentName: insolar.GetGenesisNameRootMember(),
 		Delegate:   true,
 		Memory:     mustGenMemory(w),
 	}

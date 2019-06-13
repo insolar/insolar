@@ -25,17 +25,23 @@ var (
 	// ContractRootDomain is the root domain contract reference.
 	ContractRootDomain = rootdomain.RootDomain.Ref()
 	// ContractNodeDomain is the node domain contract reference.
-	ContractNodeDomain = rootdomain.GenesisRef(insolar.GenesisNameNodeDomain)
+	ContractNodeDomain = rootdomain.GenesisRef(insolar.GetGenesisNameNodeDomain())
 	// ContractNodeRecord is the node contract reference.
-	ContractNodeRecord = rootdomain.GenesisRef(insolar.GenesisNameNodeRecord)
+	ContractNodeRecord = rootdomain.GenesisRef(insolar.GetGenesisNameNodeRecord())
 	// ContractRootMember is the root member contract reference.
-	ContractRootMember = rootdomain.GenesisRef(insolar.GenesisNameRootMember)
-	// ContractWallet is the wallet contract reference.
-	ContractWallet = rootdomain.GenesisRef(insolar.GenesisNameRootWallet)
+	ContractRootMember = rootdomain.GenesisRef(insolar.GetGenesisNameRootMember())
+	// ContractWallet is the root wallet contract reference.
+	ContractRootWallet = rootdomain.GenesisRef(insolar.GetGenesisNameRootWallet())
+	// ContractMigrationAdminMember is the migration admin member contract reference.
+	ContractMigrationAdminMember = rootdomain.GenesisRef(insolar.GetGenesisNameMigrationAdminMember())
+	// ContractMigrationWallet is the migration wallet contract reference.
+	ContractMigrationWallet = rootdomain.GenesisRef(insolar.GetGenesisNameMigrationWallet())
+	// ContractMigrationAdminMembers is the migration damon members contracts references.
+	ContractMigrationDamonMembers = [10]insolar.Reference{}
 	// ContractDeposit is the deposit contract reference.
-	ContractDeposit = rootdomain.GenesisRef(insolar.GenesisNameDeposit)
+	ContractDeposit = rootdomain.GenesisRef(insolar.GetGenesisNameDeposit())
 	// ContractTariff is the tariff contract reference.
-	ContractTariff = rootdomain.GenesisRef(insolar.GenesisNameTariff)
+	ContractTariff = rootdomain.GenesisRef(insolar.GetGenesisNameTariff())
 	// ContractCostCenter is the cost center contract reference.
-	ContractCostCenter = rootdomain.GenesisRef(insolar.GenesisNameCostCenter)
+	ContractCostCenter = rootdomain.GenesisRef(insolar.GetGenesisNameCostCenter())
 )
