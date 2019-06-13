@@ -62,11 +62,15 @@ const (
 
 // SagaInfo stores sagas-related information for given contract method.
 // If a method is marked with //ins:saga(Rollback) SagaInfo stores
-// `IsSaga: true, RollbackMethodName: "Rollback"`. Otherwise the structure
-// stores `IsSaga: false` and other fields should be ignored.
+// `IsSaga: true, RollbackMethodName: "Rollback"`. Also Arguments always stores
+// a comma separated list of arguments and NumArguments always stores the number
+// of arguments.
 type SagaInfo struct {
 	IsSaga             bool
 	RollbackMethodName string
+	// we have to duplicate argument list here because it's not always used in templates
+	Arguments    string
+	NumArguments int
 }
 
 // ParsedFile struct with prepared info we extract from source code
@@ -292,10 +296,16 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		return err
 	}
 
+	methodsInfo := pf.functionInfoForWrapper(pf.methods[pf.contract])
+	err := pf.checkSagaRollbackMethodsExistAndMatch(methodsInfo)
+	if err != nil {
+		return err
+	}
+
 	data := map[string]interface{}{
 		"Package":            packageName,
 		"ContractType":       pf.contract,
-		"Methods":            pf.functionInfoForWrapper(pf.methods[pf.contract]),
+		"Methods":            methodsInfo,
 		"Functions":          pf.functionInfoForWrapper(pf.constructors[pf.contract]),
 		"ParsedCode":         pf.code,
 		"FoundationPath":     foundationPath,
@@ -304,6 +314,51 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 	}
 
 	return formatAndWrite(out, "wrapper", data)
+}
+
+func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[string]interface{}) error {
+	type methodInfo struct {
+		arguments string
+	}
+	methodNames := make(map[string]methodInfo)
+
+	for _, info := range funcInfo {
+		methodNames[info["Name"].(string)] = methodInfo{
+			arguments: info["SagaInfo"].(*SagaInfo).Arguments,
+		}
+	}
+
+	for _, info := range funcInfo {
+		sagaInfo := info["SagaInfo"].(*SagaInfo)
+		if !sagaInfo.IsSaga {
+			continue
+		}
+
+		if sagaInfo.NumArguments != 1 {
+			return fmt.Errorf(
+				"Semantic error: '%v' is a saga with %v arguments. "+
+					"Currently only one argument is allowed.",
+				info["Name"].(string), sagaInfo.NumArguments)
+		}
+
+		rollbackInfo, exists := methodNames[sagaInfo.RollbackMethodName]
+		if !exists {
+			return fmt.Errorf(
+				"Semantic error: '%v' is a saga with rollback method '%v', "+
+					"but '%v' is not declared. Maybe a typo?",
+				info["Name"].(string), sagaInfo.RollbackMethodName, sagaInfo.RollbackMethodName)
+		}
+
+		acceptArguments := info["SagaInfo"].(*SagaInfo).Arguments
+		if acceptArguments != rollbackInfo.arguments {
+			return fmt.Errorf(
+				"Semantic error: '%v' is a saga with arguments '%v' and rollback method '%v', "+
+					"but '%v' arguments '%v' dont't match. They should be exactly the same.",
+				info["Name"].(string), acceptArguments, sagaInfo.RollbackMethodName,
+				sagaInfo.RollbackMethodName, rollbackInfo.arguments)
+		}
+	}
+	return nil
 }
 
 func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
@@ -315,8 +370,8 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 			"Arguments":           numberedVars(fun.Type.Params, "args"),
 			"Results":             numberedVars(fun.Type.Results, "ret"),
 			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, errorType),
-			"Immutable":           isImmutable(fun), // only for methods, not constructors
-			"SagaInfo":            sagaInfo(fun),    // only for methods, not constructors
+			"Immutable":           isImmutable(fun),  // only for methods, not constructors
+			"SagaInfo":            sagaInfo(pf, fun), // only for methods, not constructors
 		}
 		res = append(res, info)
 	}
@@ -350,6 +405,12 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	allMethodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
+
+	err = pf.checkSagaRollbackMethodsExistAndMatch(allMethodsProxies)
+	if err != nil {
+		return err
+	}
+
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
 
 	sagaRollbackMethods := make(map[string]struct{})
@@ -399,7 +460,7 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]in
 			"ResultsNilError": commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "nil"),
 			"ResultsTypes":    genFieldList(pf, fun.Type.Results, false),
 			"Immutable":       isImmutable(fun),
-			"SagaInfo":        sagaInfo(fun),
+			"SagaInfo":        sagaInfo(pf, fun),
 		}
 		res = append(res, info)
 	}
@@ -692,7 +753,7 @@ func isImmutable(decl *ast.FuncDecl) bool {
 	return isImmutable
 }
 
-func extractSagaInfo(comment string, info *SagaInfo) bool {
+func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
 	slice := strings.Trim(comment, " \r\n\t")
 	if strings.HasPrefix(slice, sagaFlagStart) &&
 		strings.HasSuffix(slice, sagaFlagEnd) {
@@ -709,14 +770,17 @@ func extractSagaInfo(comment string, info *SagaInfo) bool {
 	return false
 }
 
-func sagaInfo(decl *ast.FuncDecl) (info *SagaInfo) {
-	info = &SagaInfo{}
+func sagaInfo(pf *ParsedFile, decl *ast.FuncDecl) (info *SagaInfo) {
+	info = &SagaInfo{
+		Arguments:    genFieldList(pf, decl.Type.Params, true),
+		NumArguments: len(decl.Type.Params.List),
+	}
 	if decl.Doc == nil || decl.Doc.List == nil {
 		return // there are no comments
 	}
 
 	for _, comment := range decl.Doc.List {
-		if extractSagaInfo(comment.Text, info) {
+		if extractSagaInfoFromComment(comment.Text, info) {
 			return // info found
 		}
 	}
