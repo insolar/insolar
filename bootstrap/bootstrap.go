@@ -34,7 +34,6 @@ import (
 	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -73,12 +72,22 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	inslog := inslogger.FromContext(ctx)
 
-	inslog.Info("[ bootstrap ] read keys file")
-	pair, err := secrets.ReadKeysFile(g.config.RootKeysFile)
+	inslog.Info("[ bootstrap ] read keys files")
+	rootPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "root_member_keys.json")
 	if err != nil {
 		return errors.Wrap(err, "couldn't get root keys")
 	}
-	publicKey := platformpolicy.MustPublicKeyToString(pair.Public)
+	migrationAdminPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_admin_member_keys.json")
+	if err != nil {
+		return errors.Wrap(err, "couldn't get migration admin keys")
+	}
+	migrationDamonPublicKeys := [10]string{}
+	for i := 0; i < 10; i++ {
+		migrationDamonPublicKeys[i], err = secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_damon_" + strconv.Itoa(i) + "_member_keys.json")
+		if err != nil {
+			return errors.Wrap(err, "couldn't get migration damon keys")
+		}
+	}
 
 	inslog.Info("[ bootstrap ] generate plugins")
 	err = g.generatePlugins()
@@ -106,8 +115,11 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
-		RootBalance:   g.config.RootBalance,
-		RootPublicKey: publicKey,
+		RootBalance:             g.config.RootBalance,
+		MDBalance:               g.config.MDBalance,
+		RootPublicKey:           rootPublicKey,
+		MigrationAdminPublicKey: migrationAdminPublicKey,
+		MigrationDamonPublicKey: migrationDamonPublicKeys,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {

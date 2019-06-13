@@ -44,8 +44,8 @@ type Contracts struct {
 
 // Config contains configuration required for bootstrap.
 type Config struct {
-	// RootKeysFile is the root key place.
-	RootKeysFile string `mapstructure:"root_keys_file"`
+	// MembersKeysDir is the root key place.
+	MembersKeysDir string `mapstructure:"members_keys_dir"`
 	// DiscoveryKeysDir is a default directory where save keys for discovery nodes.
 	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir"`
 	// KeysNameFormat is the default key file name format for discovery nodes.
@@ -58,7 +58,9 @@ type Config struct {
 
 	// RootBalance is a start balance for the root member's wallet.
 	RootBalance string `mapstructure:"root_balance"`
-	Contracts   Contracts
+	// MDBalance is a start balance for the migration admin member's wallet.
+	MDBalance string `mapstructure:"md_balance"`
+	Contracts Contracts
 
 	// Discovery settings.
 
