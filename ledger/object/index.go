@@ -23,40 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineIndex -o ./ -s _mock.go
-
-// LifelineIndex is a base storage for lifelines.
-type LifelineIndex interface {
-	// LifelineAccessor provides methods for fetching lifelines.
-	LifelineAccessor
-	// LifelineModifier provides methods for modifying lifelines.
-	LifelineModifier
-}
-
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./ -s _mock.go
-
-// LifelineAccessor provides methods for fetching lifelines.
-type LifelineAccessor interface {
-	// ForID returns a lifeline from a bucket with provided PN and ObjID
-	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineModifier -o ./ -s _mock.go
-
-// LifelineModifier provides methods for modifying lifelines.
-type LifelineModifier interface {
-	// Set set a lifeline to a bucket with provided pulseNumber and ID
-	Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
-}
-
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineStateModifier -o ./ -s _mock.go
-
-// LifelineStateModifier provides an interface for changing a state of lifeline.
-type LifelineStateModifier interface {
-	// SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
-	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
-}
-
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go
 
 // IndexCleaner provides an interface for removing backets from a storage.

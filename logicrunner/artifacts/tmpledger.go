@@ -95,7 +95,7 @@ func NewTestLedger(
 // TmpLedger creates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // DEPRECATED
-func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *artifactmanager.MessageHandler, *object.InMemoryIndex) {
+func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *artifactmanager.MessageHandler, *object.FilamentCacheStorage) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := testutils.NewPlatformCryptographyScheme()

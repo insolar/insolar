@@ -17,8 +17,98 @@
 package object
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"go.opencensus.io/stats"
 )
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineIndex -o ./ -s _mock.go
+
+// LifelineIndex is a base storage for lifelines.
+type LifelineIndex interface {
+	// LifelineAccessor provides methods for fetching lifelines.
+	LifelineAccessor
+	// LifelineModifier provides methods for modifying lifelines.
+	LifelineModifier
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./ -s _mock.go
+
+// LifelineAccessor provides methods for fetching lifelines.
+type LifelineAccessor interface {
+	// ForID returns a lifeline from a bucket with provided PN and ObjID
+	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineModifier -o ./ -s _mock.go
+
+// LifelineModifier provides methods for modifying lifelines.
+type LifelineModifier interface {
+	// Set set a lifeline to a bucket with provided pulseNumber and ID
+	Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineStateModifier -o ./ -s _mock.go
+
+// LifelineStateModifier provides an interface for changing a state of lifeline.
+type LifelineStateModifier interface {
+	// SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
+	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
+}
+
+type LifelineStorage struct {
+	indexes IndexStorage
+}
+
+// ForID returns a lifeline from a bucket with provided PN and ObjID
+func (i *LifelineStorage) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
+	b := i.indexes.Index(pn, objID)
+	if b == nil {
+		return Lifeline{}, ErrLifelineNotFound
+	}
+	b.RLock()
+	b.RUnlock()
+
+	return CloneIndex(b.objectMeta.Lifeline), nil
+}
+
+// Set sets a lifeline to a bucket with provided pulseNumber and ID
+func (i *LifelineStorage) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
+	b := i.indexes.Index(pn, objID)
+	if b == nil {
+		b = i.indexes.CreateIndex(ctx, pn, objID)
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	b.objectMeta.Lifeline = lifeline
+	b.objectMeta.LifelineLastUsed = pn
+
+	stats.Record(ctx,
+		statBucketAddedCount.M(1),
+	)
+
+	inslogger.FromContext(ctx).Debugf("[Set] lifeline for obj - %v was set successfully", objID.DebugString())
+	return nil
+}
+
+// SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
+func (i *LifelineStorage) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
+	b := i.indexes.Index(pn, objID)
+	if b == nil {
+		return ErrLifelineNotFound
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	b.objectMeta.LifelineLastUsed = pn
+
+	return nil
+}
 
 // EncodeIndex converts lifeline index into binary format.
 func EncodeIndex(index Lifeline) []byte {

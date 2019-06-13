@@ -190,7 +190,7 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(
 	lr insolar.LogicRunner,
 	pm insolar.PulseManager,
 	messageHandler *artifactmanager.MessageHandler,
-	index *object.InMemoryIndex,
+	index *object.FilamentCacheStorage,
 ) {
 	pulseStorage := pm.(*pulsemanager.PulseManager).PulseAccessor
 
