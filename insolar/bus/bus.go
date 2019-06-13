@@ -18,7 +18,6 @@ package bus
 
 import (
 	"context"
-	"hash"
 	"sync"
 	"time"
 
@@ -155,16 +154,23 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	logger := inslogger.FromContext(ctx)
+
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	msg.SetContext(ctx)
 	err := b.wrapMeta(msg, target, nil)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
+		logger.Error("can't wrap meta message ", err.Error())
 		return nil, nil
 	}
 
-	h := hashOrigin(b.pcs.IntegrityHasher(), msg.Payload)
-	id := base58.Encode(h)
+	h := b.pcs.IntegrityHasher()
+	_, err = h.Write(msg.Payload)
+	if err != nil {
+		logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
+		return nil, nil
+	}
+	id := base58.Encode(h.Sum(nil))
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
@@ -181,18 +187,18 @@ func (b *Bus) SendTarget(
 
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
+		logger.Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 		done()
 		return nil, nil
 	}
 
 	go func() {
-		inslogger.FromContext(ctx).WithField("origin_hash", id).Info("waiting for reply")
+		logger.WithField("origin_hash", id).Info("waiting for reply")
 		select {
 		case <-reply.done:
-			inslogger.FromContext(ctx).Infof("Done waiting replies for message with origin_hash %s", id)
+			logger.Infof("Done waiting replies for message with origin_hash %s", id)
 		case <-time.After(b.timeout):
-			inslogger.FromContext(ctx).Error(
+			logger.Error(
 				errors.Errorf(
 					"can't return result for message with origin_hash %s: timeout for reading (%s) was exceeded", id, b.timeout),
 			)
@@ -205,15 +211,22 @@ func (b *Bus) SendTarget(
 
 // Reply sends message in response to another message.
 func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
-	originBin, err := origin.Marshal()
+	logger := inslogger.FromContext(ctx)
+
+	buf, err := origin.Marshal()
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send reply"))
 		return
 	}
+	h := b.pcs.IntegrityHasher()
+	_, err = h.Write(buf)
+	if err != nil {
+		logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
+		return
+	}
+	originHash := h.Sum(nil)
 
-	hashID := hashOrigin(b.pcs.IntegrityHasher(), originBin)
-
-	err = b.wrapMeta(reply, origin.Sender, hashID)
+	err = b.wrapMeta(reply, origin.Sender, originHash)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
 		return
@@ -264,38 +277,27 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 // and set it as byte slice back to msg.Payload.
 // Note: this method has side effect - origin-argument mutating
 func (b *Bus) wrapMeta(
-	origin *message.Message,
+	msg *message.Message,
 	receiver insolar.Reference,
-	hash []byte,
+	originHash []byte,
 ) error {
 	latestPulse, err := b.pulses.Latest(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch pulse")
 	}
-	wrapper := payload.Meta{
-		Payload:  origin.Payload,
-		Receiver: receiver,
-		Sender:   b.coordinator.Me(),
-		Pulse:    latestPulse.PulseNumber,
+	meta := payload.Meta{
+		Payload:    msg.Payload,
+		Receiver:   receiver,
+		Sender:     b.coordinator.Me(),
+		Pulse:      latestPulse.PulseNumber,
+		OriginHash: originHash,
 	}
 
-	if hash != nil {
-		wrapper.OriginHash = hash
-	}
-
-	buf, err := wrapper.Marshal()
+	buf, err := meta.Marshal()
 	if err != nil {
 		return errors.Wrap(err, "failed to wrap message")
 	}
-	origin.Payload = buf
+	msg.Payload = buf
 
 	return nil
-}
-
-func hashOrigin(h hash.Hash, buf []byte) []byte {
-	_, err := h.Write(buf)
-	if err != nil {
-		panic(err)
-	}
-	return h.Sum(nil)
 }

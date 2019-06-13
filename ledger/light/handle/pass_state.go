@@ -26,19 +26,19 @@ import (
 )
 
 type PassState struct {
-	dep  *proc.Dependencies
-	meta payload.Meta
+	dep     *proc.Dependencies
+	message payload.Meta
 }
 
-func NewPassState(dep *proc.Dependencies, meta payload.Meta) *PassState {
+func NewPassState(dep *proc.Dependencies, msg payload.Meta) *PassState {
 	return &PassState{
-		dep:  dep,
-		meta: meta,
+		dep:     dep,
+		message: msg,
 	}
 }
 
 func (s *PassState) Present(ctx context.Context, f flow.Flow) error {
-	state := proc.NewPassState(s.meta)
+	state := proc.NewPassState(s.message)
 	s.dep.PassState(state)
 	return f.Procedure(ctx, state, false)
 }

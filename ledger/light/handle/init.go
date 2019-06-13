@@ -62,39 +62,39 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	if s.message.WatermillMsg != nil {
 		var err error
-		payloadType, err := payload.UnmarshalTypeFromMeta(s.message.WatermillMsg.Payload)
+
+		meta := payload.Meta{}
+		err = meta.Unmarshal(s.message.WatermillMsg.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal meta")
+		}
+		payloadType, err := payload.UnmarshalType(meta.Payload)
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal payload type")
 		}
 
-		metaMsg := payload.Meta{}
-		err = metaMsg.Unmarshal(s.message.WatermillMsg.Payload)
-		if err != nil {
-			panic("unreachable code")
-		}
-
 		switch payloadType {
 		case payload.TypeGetObject:
-			h := NewGetObject(s.dep, metaMsg, false)
+			h := NewGetObject(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypePassState:
-			h := NewPassState(s.dep, metaMsg)
+			h := NewPassState(s.dep, meta)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeGetCode:
-			h := NewGetCode(s.dep, metaMsg, false)
+			h := NewGetCode(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeSetCode:
-			h := NewSetCode(s.dep, metaMsg, false)
+			h := NewSetCode(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypePass:
-			err = s.handlePass(ctx, f)
+			err = s.handlePass(ctx, f, meta)
 		case payload.TypeError:
 			err = f.Handle(ctx, NewError(s.message.WatermillMsg).Present)
 		default:
 			err = fmt.Errorf("no handler for message type %s", payloadType.String())
 		}
 		if err != nil {
-			s.replyError(ctx, metaMsg, err)
+			s.replyError(ctx, meta, err)
 		}
 		return err
 	}
@@ -152,15 +152,8 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	}
 }
 
-func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
+func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) error {
 	var err error
-
-	meta := payload.Meta{}
-	err = meta.Unmarshal(s.message.WatermillMsg.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal pass payload")
-	}
-
 	pl, err := payload.Unmarshal(meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal pass payload")
@@ -175,38 +168,31 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
-
 	payloadType, err := payload.UnmarshalType(originMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-	origin := payload.Meta{}
-	err = origin.Unmarshal(pass.Origin)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal origin message")
-	}
-
-	if origin.Pulse != meta.Pulse {
-		s.replyError(ctx, origin, flow.ErrCancelled)
+	if originMeta.Pulse != meta.Pulse {
+		s.replyError(ctx, originMeta, flow.ErrCancelled)
 		return flow.ErrCancelled
 	}
 
 	switch payloadType {
 	case payload.TypeGetObject:
-		h := NewGetObject(s.dep, origin, true)
+		h := NewGetObject(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetCode:
-		h := NewGetCode(s.dep, origin, true)
+		h := NewGetCode(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeSetCode:
-		h := NewSetCode(s.dep, origin, true)
+		h := NewSetCode(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
 	if err != nil {
-		s.replyError(ctx, origin, err)
+		s.replyError(ctx, originMeta, err)
 	}
 
 	return err

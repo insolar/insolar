@@ -107,13 +107,12 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 	}
 
 	sendPassState := func(stateID insolar.ID) error {
-		originMeta, err := p.message.Marshal()
+		buf, err := p.message.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal origin meta message")
 		}
-
 		msg, err := payload.NewMessage(&payload.PassState{
-			Origin:  originMeta,
+			Origin:  buf,
 			StateID: stateID,
 		})
 		if err != nil {

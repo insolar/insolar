@@ -152,12 +152,12 @@ func (p *CheckJet) Proceed(ctx context.Context) error {
 			return ErrNotExecutor
 		}
 
-		originMeta, err := p.message.Marshal()
+		buf, err := p.message.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal origin meta message")
 		}
 		msg, err := payload.NewMessage(&payload.Pass{
-			Origin: originMeta,
+			Origin: buf,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

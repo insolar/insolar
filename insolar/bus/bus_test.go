@@ -265,7 +265,11 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 
 	data, _ := meta.Marshal()
 
-	hash := hashOrigin(pcs.IntegrityHasher(), data)
+	h := b.pcs.IntegrityHasher()
+	_, err := h.Write(data)
+	require.NoError(t, err)
+	hash := h.Sum(nil)
+
 	id := base58.Encode(hash)
 	b.replies[id] = resChan
 
@@ -342,8 +346,13 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
+	h := b.pcs.IntegrityHasher()
+	_, err := h.Write(msg.Payload)
+	require.NoError(t, err)
+	hash := h.Sum(nil)
+
 	meta := payload.Meta{
-		OriginHash: hashOrigin(pcs.IntegrityHasher(), msg.Payload),
+		OriginHash: hash,
 	}
 
 	metaBin, _ := meta.Marshal()
@@ -482,8 +491,13 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 
 	var msgWithHash []*message.Message
 	for _, value := range msg {
+		h := b.pcs.IntegrityHasher()
+		_, err := h.Write(value.Payload)
+		require.NoError(t, err)
+		hash := h.Sum(nil)
+
 		meta := payload.Meta{
-			OriginHash: hashOrigin(pcs.IntegrityHasher(), value.Payload),
+			OriginHash: hash,
 		}
 
 		metaBin, _ := meta.Marshal()

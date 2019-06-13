@@ -100,35 +100,35 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	var err error
-	pl, err := payload.UnmarshalFromMeta(msg.Payload)
+
+	meta := payload.Meta{}
+	err = meta.Unmarshal(msg.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+
+	pl, err := payload.Unmarshal(meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "can't deserialize meta payload")
 	}
-
-	metaMsg := payload.Meta{}
-	err = metaMsg.Unmarshal(msg.Payload)
-	if err != nil {
-		panic("unreachable code")
-	}
-
 	switch pl.(type) {
 	case *payload.PassState:
-		p := proc.NewPassState(metaMsg)
+		p := proc.NewPassState(meta)
 		h.dep.PassState(p)
 		err = p.Proceed(ctx)
 	case *payload.GetCode:
-		p := proc.NewGetCode(metaMsg)
+		p := proc.NewGetCode(meta)
 		h.dep.GetCode(p)
 		err = p.Proceed(ctx)
 	case *payload.Pass:
-		err = h.handlePass(ctx, metaMsg)
+		err = h.handlePass(ctx, meta)
 	case *payload.Error:
-		h.handleError(ctx, metaMsg)
+		h.handleError(ctx, meta)
 	default:
 		err = fmt.Errorf("no handler for message type %T", pl)
 	}
 	if err != nil {
-		h.replyError(ctx, metaMsg, err)
+		h.replyError(ctx, meta, err)
 	}
 	return err
 }
@@ -143,38 +143,33 @@ func (h *Handler) handleError(ctx context.Context, msg payload.Meta) {
 
 	inslogger.FromContext(ctx).WithField(
 		"origin_hash",
-		base58.Encode(msg.OriginHash[:]),
+		base58.Encode(msg.OriginHash),
 	).Error("received error: ", pl.Text)
 }
 
-func (h *Handler) handlePass(ctx context.Context, msg payload.Meta) error {
+func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
 	pass := payload.Pass{}
-	err := pass.Unmarshal(msg.Payload)
+	err := pass.Unmarshal(meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal pass payload")
 	}
 
-	payloadType, err := payload.UnmarshalTypeFromMeta(pass.Origin)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload type")
-	}
-
-	origin := payload.Meta{}
-	err = origin.Unmarshal(pass.Origin)
+	originMeta := payload.Meta{}
+	err = originMeta.Unmarshal(pass.Origin)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal origin message")
 	}
 
-	switch payloadType { // nolint
+	switch originMeta.Polymorph { // nolint
 	case payload.TypeGetCode:
-		p := proc.NewGetCode(origin)
+		p := proc.NewGetCode(originMeta)
 		h.dep.GetCode(p)
 		err = p.Proceed(ctx)
 	default:
-		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())
+		err = fmt.Errorf("no pass handler for message type %s", payload.Type(originMeta.Polymorph).String())
 	}
 	if err != nil {
-		h.replyError(ctx, origin, err)
+		h.replyError(ctx, originMeta, err)
 	}
 	return err
 }
