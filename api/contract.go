@@ -61,7 +61,7 @@ type UploadReply struct {
 
 // Upload builds code and return prototype ref
 func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
-	_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
 
@@ -85,7 +85,7 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 	contractMap := make(map[string]string)
 	contractMap[args.Name] = args.Code
 
-	err := s.cb.Build(contractMap)
+	err := s.cb.Build(ctx, contractMap)
 	if err != nil {
 		return errors.Wrap(err, "can't build contract")
 	}
