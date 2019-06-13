@@ -24,7 +24,6 @@ linters:
     - goconst
     - unparam
     - nakedret
-    - prealloc
     - scopelint
     - gocritic
 
