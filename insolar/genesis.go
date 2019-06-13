@@ -98,6 +98,7 @@ type DiscoveryNodeRegister struct {
 // GenesisContractState carries data required for contract object creation via genesis.
 type GenesisContractState struct {
 	Name       string
+	Prototype  string
 	ParentName string
 	Delegate   bool
 	Memory     []byte
