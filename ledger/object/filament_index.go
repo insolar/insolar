@@ -43,8 +43,9 @@ type FilamentCacheStorage struct {
 // Groups are sorted by pulse, from a lowest to a highest
 // There are a few maps inside, that help not to search through full fillament every SetRequest/SetResult
 type pendingMeta struct {
-	stateCalculationBarrier chan struct{}
-	isStateCalculated       bool
+	sync.RWMutex
+
+	isStateCalculated bool
 
 	fullFilament []chainLink
 
@@ -59,12 +60,12 @@ type chainLink struct {
 	MetaRecordsIDs []insolar.ID
 }
 
-// NewInMemoryIndex creates a new FilamentCacheStorage
-func NewInMemoryIndex(recordStorage RecordStorage, pcs insolar.PlatformCryptographyScheme) *FilamentCacheStorage {
+// NewFilamentCacheStorage creates a new FilamentCacheStorage
+func NewFilamentCacheStorage(recordStorage RecordStorage, pcs insolar.PlatformCryptographyScheme) *FilamentCacheStorage {
 	return &FilamentCacheStorage{
 		pcs:           pcs,
 		recordStorage: recordStorage,
-		buckets:       map[insolar.PulseNumber]map[insolar.ID]*filamentCache{},
+		buckets:       map[insolar.PulseNumber]map[insolar.ID]*pendingMeta{},
 	}
 }
 
@@ -429,68 +430,6 @@ func (i *FilamentCacheStorage) RefreshState(ctx context.Context, pn insolar.Puls
 		b.objectMeta.Lifeline.EarliestOpenRequest = nil
 		logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), b.objectMeta.Lifeline.EarliestOpenRequest)
 		logger.Debugf("no open requests for - %v", objID.DebugString())
-	}
-
-	return nil
-}
-
-func (i *FilamentCacheStorage) ExpireRequests(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, reqs []insolar.ID) error {
-	b := i.bucket(pn, objID)
-	if b == nil {
-		return ErrLifelineNotFound
-	}
-
-	b.Lock()
-	defer b.Unlock()
-
-	for _, req := range reqs {
-		_, ok := b.pendingMeta.resultsForOutOfLimitRequests[req]
-		if ok {
-			delete(b.pendingMeta.resultsForOutOfLimitRequests, req)
-			continue
-		}
-
-		expRes := record.Wrap(
-			record.Result{
-				Status:  record.Expired,
-				Request: *insolar.NewReference(req),
-				Object:  objID,
-			},
-		)
-		hash := record.HashVirtual(i.pcs.ReferenceHasher(), expRes)
-		resID := insolar.NewID(pn, hash)
-		err := i.recordStorage.Set(ctx, *resID, record.Material{Virtual: &expRes, JetID: jetID})
-		if err != nil {
-			return err
-		}
-
-		pf := record.PendingFilament{
-			RecordID:       *resID,
-			PreviousRecord: b.objectMeta.Lifeline.PendingPointer,
-		}
-		pf.PreviousRecord = b.objectMeta.Lifeline.PendingPointer
-
-		pfv := record.Wrap(pf)
-		hash = record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
-		metaID := *insolar.NewID(pn, hash)
-
-		err = i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
-		if err != nil {
-			panic(errors.Wrapf(err, "obj id - %v", metaID.DebugString()))
-			return errors.Wrap(err, "failed to create a meta-record about pending request")
-		}
-
-		b.addMetaIDToFilament(pn, metaID)
-
-		delete(b.pendingMeta.resultsForOutOfLimitRequests, req)
-
-		stats.Record(ctx,
-			statObjectPendingRecordsInMemoryRemovedCount.M(int64(1)),
-		)
-	}
-
-	if len(b.pendingMeta.resultsForOutOfLimitRequests) != 0 {
-		panic("we have no idea about request. it's impossible situation")
 	}
 
 	return nil
