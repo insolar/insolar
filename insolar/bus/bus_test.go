@@ -535,11 +535,8 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T
 	b := NewBus(&PublisherMock{pubErr: nil}, pulseMock, coordinatorMock, pcs)
 	b.timeout = time.Millisecond * time.Duration(rand.Intn(10))
 
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
-
 	// send message
-	results, _ := b.SendTarget(ctx, msg, gen.Reference())
+	results, _ := b.SendTarget(ctx, message.NewMessage(watermill.NewUUID(), nil), gen.Reference())
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
@@ -550,7 +547,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T
 	for i := 0; i < count; i++ {
 		go func() {
 			time.Sleep(time.Millisecond * 5)
-			_, _ = handler(msg)
+			_, _ = handler(message.NewMessage(watermill.NewUUID(), nil))
 		}()
 	}
 
