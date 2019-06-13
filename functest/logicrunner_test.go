@@ -953,7 +953,6 @@ func (c *First) GetName() (string, error) {
 	testObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_test", testContract))
 
 	resp := callMethod(t, testObj, "Test", *secondObj)
-	fmt.Println(">>> resp ", resp)
 
 	require.Contains(
 		t,

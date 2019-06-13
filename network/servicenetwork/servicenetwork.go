@@ -367,16 +367,21 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 		logger.Error("failed to extract message type")
 	}
 
-	err = n.sendMessage(ctx, msg)
-	if err != nil {
-		n.replyError(ctx, msg, err)
-		return nil, nil
-	}
-
 	logger.WithFields(map[string]interface{}{
 		"msg_type":       msgType.String(),
 		"correlation_id": middleware.MessageCorrelationID(msg),
 	}).Info("Network sent message")
+
+	err = n.sendMessage(ctx, msg)
+
+	if err != nil {
+		logger.WithFields(map[string]interface{}{
+			"msg_type":       msgType.String(),
+			"correlation_id": middleware.MessageCorrelationID(msg),
+		}).Info("Send failed")
+		n.replyError(ctx, msg, err)
+		return nil, nil
+	}
 
 	return nil, nil
 }
