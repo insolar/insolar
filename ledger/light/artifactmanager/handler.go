@@ -199,6 +199,7 @@ func NewMessageHandler(
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep.PendingFilamentStateAccessor = h.PendingStateAccessor
 			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.LifelineAccessor = h.LifelineIndex
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
 			p.Dep.PendingFilamentStateAccessor = h.PendingStateAccessor
