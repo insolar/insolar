@@ -745,6 +745,47 @@ func INS_META_INFO() []map[string]string {
 `)
 }
 
+// Make sure saga doesn't compile when saga's rollback method doesn't exist
+func (s *PreprocessorSuite) TestSagaDoesntCompileWhenRollbackIsMissing() {
+	var testSaga = `
+package main
+
+import (
+"fmt"
+"errors"
+
+"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type SagaTestWallet struct {
+	foundation.BaseContract
+	Amount int
+}
+
+//ins:saga(TheRollbackMethod)
+func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
+	w.Amount += amount
+}
+`
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, testSaga)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
+	s.Error(err)
+
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	s.Error(err)
+}
+
 // Low-level tests for extractSagaInfo procedure
 func (s *PreprocessorSuite) TestExtractSagaInfo() {
 	info := &SagaInfo{}
