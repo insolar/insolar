@@ -297,7 +297,6 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 
 		select {
 		case reply.messages <- msg:
-			logger.Debugf("result for message with origin_hash %s was send", id)
 		case <-reply.done:
 		}
 		reply.wg.Done()
@@ -324,6 +323,7 @@ func (b *Bus) wrapMeta(
 		Sender:     b.coordinator.Me(),
 		Pulse:      latestPulse.PulseNumber,
 		OriginHash: originHash,
+		ID:         []byte(msg.UUID),
 	}
 
 	buf, err := meta.Marshal()

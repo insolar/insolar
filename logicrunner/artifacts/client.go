@@ -278,12 +278,15 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
+	logger := inslogger.FromContext(ctx).WithField("object", head.Record().DebugString())
+
 	msg, err := payload.NewMessage(&payload.GetObject{
 		ObjectID: *head.Record(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
+
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
@@ -295,7 +298,6 @@ func (m *client) GetObject(
 		return index != nil && statePayload != nil
 	}
 
-	logger := inslogger.FromContext(ctx)
 	for rep := range reps {
 		replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
@@ -304,17 +306,17 @@ func (m *client) GetObject(
 
 		switch p := replyPayload.(type) {
 		case *payload.Index:
-			logger.Info("rep index")
+			logger.Debug("reply index")
 			index = &object.Lifeline{}
 			err := index.Unmarshal(p.Index)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal index")
 			}
 		case *payload.State:
-			logger.Info("rep state")
+			logger.Debug("reply state")
 			statePayload = p
 		case *payload.Error:
-			logger.Info("rep error: ", p.Text)
+			logger.Debug("reply error: ", p.Text)
 			switch p.Code {
 			case payload.CodeDeactivated:
 				return nil, insolar.ErrDeactivated

@@ -12,7 +12,8 @@ message Meta {
     bytes Sender     = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Receiver   = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Pulse      = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes OriginHash = 42;
+    bytes ID         = 24;
+    bytes OriginHash = 25;
 }
 
 message Error {
@@ -21,7 +22,6 @@ message Error {
     uint32 Code = 20;
     string Text = 21;
 }
-
 
 message GetObject {
     uint32 Polymorph = 16;
