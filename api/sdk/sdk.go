@@ -112,7 +112,7 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 	}
 
 	for i := 0; i < 10; i++ {
-		result.migrationDamonMembers[i], err = getMember(memberKeysDirPath+"migration_damon"+strconv.Itoa(i)+"_member_keys.json", response.MigrationDamonMember)
+		result.migrationDamonMembers[i], err = getMember(memberKeysDirPath+"migration_damon_"+strconv.Itoa(i)+"_member_keys.json", response.MigrationDamonMember)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration damon members")
 		}
@@ -124,7 +124,7 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 func (sdk *SDK) SetLogLevel(logLevel string) error {
 	_, err := insolar.ParseLevel(logLevel)
 	if err != nil {
-		return errors.Wrap(err, "Invalid log level provided")
+		return errors.Wrap(err, "[ SetLogLevel ] Invalid log level provided")
 	}
 	sdk.logLevel = logLevel
 	return nil

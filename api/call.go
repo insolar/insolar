@@ -55,13 +55,21 @@ type Params struct {
 	PublicKey  string      `json:"memberPubKey"`
 }
 
-// TODO: update answer struct
-type answer struct {
-	JsonRpc string      `json:"jsonrpc"`
-	Id      int         `json:"id"`
-	Error   string      `json:"error,omitempty"`
-	Result  interface{} `json:"result,omitempty"`
-	TraceID string      `json:"traceID,omitempty"`
+type ContractAnswer struct {
+	JsonRpc string `json:"jsonrpc"`
+	Id      int    `json:"id"`
+	Result  Result `json:"result,omitempty"`
+	Error   Error  `json:"error,omitempty"`
+}
+
+type Error struct {
+	Code    int    `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+type Result struct {
+	ContractResult interface{} `json:"payload"`
+	TraceID        string      `json:"traceID,omitempty"`
 }
 
 // UnmarshalRequest unmarshals request to api
@@ -136,8 +144,9 @@ func (ar *Runner) makeCall(ctx context.Context, request Request, rawBody []byte,
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *answer, insLog insolar.Logger) {
-	resp.Error = err.Error()
+func processError(err error, extraMsg string, resp *ContractAnswer, insLog insolar.Logger) {
+	resp.Error.Message = err.Error()
+	resp.Error.Code = -214
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
@@ -150,25 +159,25 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		defer span.End()
 
 		request := Request{}
-		resp := answer{}
+		resp := ContractAnswer{}
 
 		startTime := time.Now()
 		defer func() {
 			success := "success"
-			if resp.Error != "" {
+			if resp.Error.Message != "" {
 				success = "fail"
 			}
 			metrics.APIContractExecutionTime.WithLabelValues(request.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
 
-		resp.TraceID = traceID
+		resp.Result.TraceID = traceID
 
 		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
 
 		defer func() {
 			res, err := json.MarshalIndent(resp, "", "    ")
 			if err != nil {
-				res = []byte(`{"error": "can't marshal answer to json'"}`)
+				res = []byte(`{"error": "can't marshal ContractAnswer to json'"}`)
 			}
 			response.Header().Add("Content-Type", "application/json")
 			_, err = response.Write(res)
@@ -229,14 +238,15 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				processError(err, "Can't makeCall", &resp, insLog)
 				return
 			}
-			resp.Result = result
+			resp.Result.ContractResult = result
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
-			resp.Error = "Messagebus timeout exceeded"
+			resp.Error.Message = "Messagebus timeout exceeded"
+			resp.Error.Code = -215 // TODO: need correct number
 			return
 		}
 
-		resp.Result = result
+		resp.Result.ContractResult = result
 	}
 }
 

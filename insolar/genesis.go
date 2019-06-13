@@ -66,8 +66,11 @@ type GenesisContractState struct {
 
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
-	RootBalance   string
-	RootPublicKey string
+	RootBalance             string
+	MDBalance               string
+	RootPublicKey           string
+	MigrationAdminPublicKey string
+	MigrationDamonPublicKey [10]string
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
