@@ -444,11 +444,11 @@ func (migrationDamonMember *Member) migration(rdRef insolar.Reference, txHash st
 
 	// If deposit doesn't exist - create new deposit
 	if !found {
-		migraiondamonConfirms := map[insolar.Reference]bool{}
+		migraionDamonConfirms := map[insolar.Reference]bool{}
 		for _, ref := range migrationDamonMembers {
-			migraiondamonConfirms[ref] = false
+			migraionDamonConfirms[ref] = false
 		}
-		dHolder := deposit.New(migraiondamonConfirms, txHash, amount.String(), unHoldDate)
+		dHolder := deposit.New(migraionDamonConfirms, txHash, amount.String(), unHoldDate)
 		txDepositP, err := dHolder.AsDelegate(mRef)
 		if err != nil {
 			return "", fmt.Errorf("[ migration ] Failed to save as delegate: %s", err.Error())
@@ -457,7 +457,7 @@ func (migrationDamonMember *Member) migration(rdRef insolar.Reference, txHash st
 	}
 
 	// Confirm tx by migraion damon
-	confirms, err := txDeposit.Confirm(migrationDamonMember.Name, txHash, amount.String())
+	confirms, err := txDeposit.Confirm(migrationDamonMember.GetReference(), txHash, amount.String())
 	if err != nil {
 		return "", fmt.Errorf("[ migration ] Confirmed failed: %s", err.Error())
 	}

@@ -18,6 +18,7 @@ package deposit
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"math/big"
 	"time"
 
@@ -38,7 +39,7 @@ type Deposit struct {
 	foundation.BaseContract
 	Timestamp       time.Time
 	HoldReleaseDate time.Time
-	OracleConfirms  map[string]bool
+	OracleConfirms  map[insolar.Reference]bool
 	Confirms        uint
 	Amount          string
 	Bonus           string
@@ -54,7 +55,7 @@ func (d *Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
-func New(oracleConfirms map[string]bool, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
+func New(oracleConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
 	return &Deposit{
 
 		OracleConfirms:  oracleConfirms,
@@ -76,7 +77,7 @@ func (d *Deposit) MapMarshal() (map[string]string, error) {
 	}, nil
 }
 
-func (d *Deposit) Confirm(oracleName string, txHash string, amountStr string) (uint, error) {
+func (d *Deposit) Confirm(migrationDamon insolar.Reference, txHash string, amountStr string) (uint, error) {
 	if txHash != d.TxHash {
 		return 0, fmt.Errorf("[ Confirm ] Transaction hash is incorrect")
 	}
@@ -96,11 +97,11 @@ func (d *Deposit) Confirm(oracleName string, txHash string, amountStr string) (u
 		return 0, fmt.Errorf("[ Confirm ] Amount is incorrect")
 	}
 
-	if confirm, ok := d.OracleConfirms[oracleName]; ok {
+	if confirm, ok := d.OracleConfirms[migrationDamon]; ok {
 		if confirm {
-			return 0, fmt.Errorf("[ Confirm ] Confirm from the oracle " + oracleName + " already exists")
+			return 0, fmt.Errorf("[ Confirm ] Confirm from the oracle " + migrationDamon.String() + " already exists")
 		} else {
-			d.OracleConfirms[oracleName] = true
+			d.OracleConfirms[migrationDamon] = true
 			d.Confirms++
 			if d.Confirms == DepositConfirms {
 				d.Status = Holding
