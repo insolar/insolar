@@ -59,6 +59,12 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 		Request:         request,
 	}
 
+	if es.pending == message.PendingUnknown {
+		additionalCallMsg.Pending = message.NotPending
+	} else {
+		additionalCallMsg.Pending = es.pending
+	}
+
 	es.Lock()
 	// We want to remove element we have just added to es.Queue to eliminate doubling
 	addedRequestIdx := -1
@@ -104,9 +110,9 @@ func (h *HandleCall) handleActual(
 	es.Lock()
 
 	procCheckRole := CheckOurRole{
-		msg:  msg,
-		role: insolar.DynamicRoleVirtualExecutor,
-		lr:   lr,
+		msg:         msg,
+		role:        insolar.DynamicRoleVirtualExecutor,
+		lr:          lr,
 		pulseNumber: flow.Pulse(ctx),
 	}
 
@@ -230,6 +236,9 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	os.Unlock()
 
 	es.Lock()
+	if msg.Pending == message.NotPending {
+		es.pending = message.NotPending
+	}
 	qElement := *NewTranscript(ctx, msg.Parcel, msg.Request, lr.pulse(ctx), es.Ref)
 	es.Queue = append(es.Queue, qElement)
 	es.Unlock()

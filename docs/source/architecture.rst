@@ -24,8 +24,8 @@ Let's take a closer look at the *three bottom layers* since they are the Insolar
 
 .. _key_design_concepts:
 
-Key Design Concepts
--------------------
+Architecture Diagram
+--------------------
 
 Below is the platform architecture diagram aimed to address the aforementioned interconnected layers. The architecture has multiple components and consensuses to address the complexity and variety of requirements.
 
@@ -85,6 +85,7 @@ Components in the diagram are *clickable*, the links will lead you to respective
       database "[[../architecture.html#ledger Ledger]]" as db {
          frame "[[../architecture.html#storage-consensus Storage, validation & consensus]]" {
          rectangle ldgr [
+           ....
            - Permissions
            ....
            - Integrity & replication
@@ -96,6 +97,7 @@ Components in the diagram are *clickable*, the links will lead you to respective
       node "[[../architecture.html#execution-validation Processing]]" as process {
          frame "[[../architecture.html#logic-consensus Logic validation & consensus]]" {
          rectangle proc [
+           ....
            - Compilers
            ....
            - Artifact cache 
@@ -130,7 +132,7 @@ All components communicate via messaging to achieve respective :ref:`consensuses
 .. _fed_of_clouds:
 
 Clouds and Their Federations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
 :term:`Clouds <cloud>` organize and unify software capabilities, hardware capacities, and the financial and legal liability of :term:`nodes <node>` to ensure seamless operation of business services. The Insolar Platform transparently connects multiple clouds and each cloud is governed independently, e.g., by a community, company, industry consortia, or national agency. Thus, multiple clouds can unite into a federation on the Insolar network. 
 
@@ -153,7 +155,7 @@ The cloud itself establishes governance of both network operations and business 
 .. _domains:
 
 Domains
-~~~~~~~
+-------
 
 Domains establish governance of contracts and nodes, thus, acting as *super contracts* that can contain :term:`objects <object>` and their history (:term:`lifelines <lifeline>`) and can apply varying policies to the lifelines contained within. Policies can differ with regards to particular rules:
 
@@ -167,7 +169,7 @@ Domains establish governance of contracts and nodes, thus, acting as *super cont
 .. _globulas:
 
 Globulas
-~~~~~~~~
+--------
 
 Globula is a network of up to 1,000 :term:`nodes <node>`. It can run as a truly decentralized network with consistency established by a leaderless, pure BFT-based consensus mechanism, a :ref:`globula network protocol <network_consensus>`.
 
@@ -176,14 +178,14 @@ Insolar also supports larger node networks of up to 100 globulas (a total of 100
 .. _multi_role_nodes:
 
 Multi-Role Nodes
-~~~~~~~~~~~~~~~~
+----------------
 
 Insolar utilizes a multi-role model for :term:`nodes <node>`: each node has a single :ref:`static role <static_roles>` that defines its primary purpose and a set of :ref:`dynamically assigned roles <dynamic_roles>`. Dynamic role allocation functions enable the :ref:`omni-scaling <omniscaling>` feature of the Insolar Platform.
 
 .. _static_roles:
 
 Static Roles
-^^^^^^^^^^^^
+~~~~~~~~~~~~
 
 The node’s static role defines what kind of resource and functionality are delivered by that node to the network, and how the network uses such nodes. The network recognizes four static role categories:
 
@@ -197,7 +199,7 @@ Static role correlates with the type of resource the node can provide to the clo
 .. _neutral:
 
 Neutral nodes
-+++++++++++++
+^^^^^^^^^^^^^
 
 Neutral nodes participate in the :ref:`network consensus <network_consensus>` but do not receive any workload automatically distributed by the Insolar network. Neutral nodes serve particular functions:
 
@@ -209,7 +211,7 @@ Neutral nodes participate in the :ref:`network consensus <network_consensus>` bu
 .. _virtual:
 
 Virtual nodes
-+++++++++++++
+^^^^^^^^^^^^^
 
 Virtual nodes are stateless, fast, easy to join and leave, and do not need data recovery. On the Insolar network, virtual nodes do the following:
 
@@ -222,7 +224,7 @@ Virtual nodes are stateless, fast, easy to join and leave, and do not need data 
 .. _light_material:
 
 Light material nodes
-++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^
 
 Light material nodes are stateful and they automatically collect hot data and indices upon restart. On the Insolar network, light material nodes do the following:
 
@@ -243,7 +245,7 @@ Although light nodes can add dust, in case of :term:`lifelines <lifeline>`, they
 .. _heavy_material:
 
 Heavy material nodes
-++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^
 
 Heavy material nodes are stateful and require recovery and content revalidation (proof-of-storage), both periodically and upon rejoining the network. On the Insolar network, heavy material nodes do the following:
 
@@ -264,7 +266,7 @@ Moreover, additional network protocol is implemented to maintain backups and arc
 .. _dynamic_roles:
 
 Dynamic Roles
-^^^^^^^^^^^^^
+~~~~~~~~~~~~~
 
 In addition to the node's static role, it can be equipped with dynamic ones -- roles able to change.
 
@@ -292,13 +294,14 @@ Dynamic roles are designed to:
 .. _utulity_roles:
 
 Delegated and Utility Roles
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 In addition to static and dynamic roles, nodes can take on delegated and utility roles that serve additional functions: caching, inter-globula coordination, and node joining.
 
 .. _contracts:
 
 Contracts
-~~~~~~~~~
+---------
 
 The Insolar's main principle is that everything is a :term:`contract <object>` on the Insolar Platform. Contracts are stored as :term:`lifelines <lifeline>` in the :ref:`ledger <ledger>` and are based on general-purpose programming languages such as Golang or Java. They allow existing practices, libraries, and development environments to be used straightforwardly.
 
@@ -325,7 +328,7 @@ For practical enterprise use, Insolar contracts can store and transfer large dat
 .. _contract_determinism:
 
 Contract Determinism
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~
 
 As the platform already reduces determinism via network messaging, Insolar applies relatively relaxed requirements regarding the determinism of :ref:`contracts <contracts>`. As such, a method invocation:
 
@@ -349,7 +352,7 @@ To provide contract execution determinism, Insolar utilizes its :ref:`network co
 .. _network_consistency:
 
 Network Consistency
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 Insolar uses the :ref:`network layer <network_consensus>` to ensure view consistency across the whole network. The next step is to facilitate the efficient and secure execution of contracts across all :ref:`virtual nodes <virtual>`.
 
@@ -382,7 +385,7 @@ Processing costs can be traded off against:
 .. _execution_validation:
 
 Execution & Validation
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 The Insolar Platform works on the principle of actions executed by one node, validated by many.
 
@@ -395,7 +398,7 @@ Since Insolar sets apart functionality using :ref:`node roles <multi_role_nodes>
 .. _virtual_execution_validation:
 
 Virtual Execution & Validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Nodes with :ref:`virtual static roles <virtual>` carry out **virtual** execution & validation:
 
@@ -425,7 +428,7 @@ A single virtual executor can execute long requests that span several pulses. To
 .. _material_execution_validation:
 
 Material Execution & Validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Nodes with :ref:`light material static roles <virtual>` carry out **material** execution & validation:
 
@@ -453,7 +456,7 @@ Light material stash nodes are nodes which have been :ref:`light material execut
 .. _consensuses:
 
 Consensuses
-~~~~~~~~~~~
+-----------
 
 Consensus procedures vary in their degree of control by business logic, with two consensus procedures available:
 
@@ -465,7 +468,7 @@ Different sets of consensus procedures affect every action applied to :term:`lif
 .. _logic_consensus:
 
 Logic Consensus
-^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~
 
 Ensures that actions applied to an :term:`object` were performed correctly considering the object’s state, input parameters, and external dependencies (calls).
 
@@ -474,7 +477,7 @@ For more information on logic consensus, see the :ref:`virtual execution & valid
 .. _storage_consensus:
 
 Storage Consensus
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 
 Ensures that:
 
@@ -486,7 +489,7 @@ For more information on storage consensus, see the :ref:`material execution & va
 .. _network_consensus:
 
 Network Consensus
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 
 Ensures :term:`node` availability and synchronization of time and state among nodes and provides consistent allocation of :ref:`dynamic roles <dynamic_roles>` to nodes. There are two consensus protocols behind the network consensus:
 
@@ -502,7 +505,7 @@ In addition to the aforementioned consensuses, :ref:`pulsars <pulsars>` can have
 .. _pulsars:
 
 Pulsars
-~~~~~~~
+-------
 
 Pulsars running on a pulsar protocol represent a separate logical layer that is responsible for network synchronization and provides a source of randomness (:term:`pulses <pulse>`). Interoperability of :term:`nodes <node>` within a single :term:`cloud` depends on pulses and all nodes must be on the same pulse to process new requests or operations.
 
@@ -517,7 +520,7 @@ In case of multiple pulsars on the network, their consensus generates the :term:
 .. _pulsar_consensus:
 
 Pulsar Consensus
-^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~
 
 :term:`Clouds <cloud>` define the pulsar selection rules and they can vary significantly. On enterprise networks, servers that complete no other operations manage the selection, whereas on public networks, it may be a random subset of 10 to 50 nodes with high uptime. Other configurations are also possible for different network types.
 
@@ -530,7 +533,7 @@ As a consensus result, pulsars distribute the collaboratively-generated entropy 
 .. _ledger:
 
 Ledger
-~~~~~~
+------
 
 Ledger is a common term for distributed storage, a network of nodes that store data.
 
@@ -551,7 +554,7 @@ A typical :term:`object <object>` workflow is as follows:
 .. _records:
 
 Records
-^^^^^^^
+~~~~~~~
 
 Data is stored in the ledger as a series of immutable :term:`records <record>`. All records are created and signed by :ref:`virtual nodes <virtual>`. Each record is addressed by its hash and a :term:`pulse <pulse>` number. Records can contain a reference to another record, thus, creating a chain. An example of a chain is the :term:`object's <object>` :term:`lifeline <lifeline>`. Each :ref:`material node <static_roles>` is responsible for its own lifelines determined by their hashes.
 
@@ -564,21 +567,21 @@ In the Insolar's key-value storage, the key is a fixed structure -- a combinatio
 .. _requests:
 
 Requests
-^^^^^^^^
+~~~~~~~~
 
 Each operation performed by :ref:`virtual nodes <virtual>` is registered as a request on the ledger. Request is a single :ref:`record <records>` that contains information necessary to perform an operation. Each request belongs to an :term:`object <object>` and is affined to it.
 
 .. _results:
 
 Results
-^^^^^^^
+~~~~~~~
 
 Each operation performed by :ref:`virtual nodes <virtual>` has exactly one result. Although an operation can have many side effects (:term:`records <record>` stored on the ledger), result represents a summary of that operation. So, each finished request has its own result, i.e., result references its request. A request without an associated result stored on the ledger is a *pending* one.
 
 .. _objects:
 
 Objects
-^^^^^^^
+~~~~~~~
 
 :term:`Objects <object>` (contracts) are fundamental application building blocks. Borrowing OOP terminology, an object is a class instance. In other words, an object is a series of :ref:`records <records>` that can be accessed via an index.
 
@@ -689,7 +692,7 @@ Object's lifeline is not the only chain, though. The ledger stores any requests 
 .. _object_address:
 
 Object's Address
-++++++++++++++++
+^^^^^^^^^^^^^^^^
 
 Object's address is more complicated than that of a simple :ref:`record <records>`. An :term:`object <object>` consists of many :ref:`records <records>` but should have only one address. So, the ledger considers a request for a "create object" operation to be the object's address.
 
@@ -698,7 +701,7 @@ In other words, the object's address is its index since the index has all the in
 .. _relations:
 
 Relations
-^^^^^^^^^
+~~~~~~~~~
 
 Objects have relations to other entities and to each other. Most of those relations are references in the object's :ref:`activation record <objects>`.
 

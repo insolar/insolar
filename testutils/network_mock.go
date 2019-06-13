@@ -44,6 +44,11 @@ type NetworkMock struct {
 	SendMessageCounter    uint64
 	SendMessagePreCounter uint64
 	SendMessageMock       mNetworkMockSendMessage
+
+	SetOperableFuncFunc       func(p func(p context.Context, p1 bool))
+	SetOperableFuncCounter    uint64
+	SetOperableFuncPreCounter uint64
+	SetOperableFuncMock       mNetworkMockSetOperableFunc
 }
 
 //NewNetworkMock returns a mock for github.com/insolar/insolar/insolar.Network
@@ -59,6 +64,7 @@ func NewNetworkMock(t minimock.Tester) *NetworkMock {
 	m.RemoteProcedureRegisterMock = mNetworkMockRemoteProcedureRegister{mock: m}
 	m.SendCascadeMessageMock = mNetworkMockSendCascadeMessage{mock: m}
 	m.SendMessageMock = mNetworkMockSendMessage{mock: m}
+	m.SetOperableFuncMock = mNetworkMockSetOperableFunc{mock: m}
 
 	return m
 }
@@ -746,6 +752,129 @@ func (m *NetworkMock) SendMessageFinished() bool {
 	return true
 }
 
+type mNetworkMockSetOperableFunc struct {
+	mock              *NetworkMock
+	mainExpectation   *NetworkMockSetOperableFuncExpectation
+	expectationSeries []*NetworkMockSetOperableFuncExpectation
+}
+
+type NetworkMockSetOperableFuncExpectation struct {
+	input *NetworkMockSetOperableFuncInput
+}
+
+type NetworkMockSetOperableFuncInput struct {
+	p func(p context.Context, p1 bool)
+}
+
+//Expect specifies that invocation of Network.SetOperableFunc is expected from 1 to Infinity times
+func (m *mNetworkMockSetOperableFunc) Expect(p func(p context.Context, p1 bool)) *mNetworkMockSetOperableFunc {
+	m.mock.SetOperableFuncFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkMockSetOperableFuncExpectation{}
+	}
+	m.mainExpectation.input = &NetworkMockSetOperableFuncInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Network.SetOperableFunc
+func (m *mNetworkMockSetOperableFunc) Return() *NetworkMock {
+	m.mock.SetOperableFuncFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkMockSetOperableFuncExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Network.SetOperableFunc is expected once
+func (m *mNetworkMockSetOperableFunc) ExpectOnce(p func(p context.Context, p1 bool)) *NetworkMockSetOperableFuncExpectation {
+	m.mock.SetOperableFuncFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NetworkMockSetOperableFuncExpectation{}
+	expectation.input = &NetworkMockSetOperableFuncInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Network.SetOperableFunc method
+func (m *mNetworkMockSetOperableFunc) Set(f func(p func(p context.Context, p1 bool))) *NetworkMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SetOperableFuncFunc = f
+	return m.mock
+}
+
+//SetOperableFunc implements github.com/insolar/insolar/insolar.Network interface
+func (m *NetworkMock) SetOperableFunc(p func(p context.Context, p1 bool)) {
+	counter := atomic.AddUint64(&m.SetOperableFuncPreCounter, 1)
+	defer atomic.AddUint64(&m.SetOperableFuncCounter, 1)
+
+	if len(m.SetOperableFuncMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetOperableFuncMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NetworkMock.SetOperableFunc. %v", p)
+			return
+		}
+
+		input := m.SetOperableFuncMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, NetworkMockSetOperableFuncInput{p}, "Network.SetOperableFunc got unexpected parameters")
+
+		return
+	}
+
+	if m.SetOperableFuncMock.mainExpectation != nil {
+
+		input := m.SetOperableFuncMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, NetworkMockSetOperableFuncInput{p}, "Network.SetOperableFunc got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.SetOperableFuncFunc == nil {
+		m.t.Fatalf("Unexpected call to NetworkMock.SetOperableFunc. %v", p)
+		return
+	}
+
+	m.SetOperableFuncFunc(p)
+}
+
+//SetOperableFuncMinimockCounter returns a count of NetworkMock.SetOperableFuncFunc invocations
+func (m *NetworkMock) SetOperableFuncMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SetOperableFuncCounter)
+}
+
+//SetOperableFuncMinimockPreCounter returns the value of NetworkMock.SetOperableFunc invocations
+func (m *NetworkMock) SetOperableFuncMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SetOperableFuncPreCounter)
+}
+
+//SetOperableFuncFinished returns true if mock invocations count is ok
+func (m *NetworkMock) SetOperableFuncFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SetOperableFuncMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetOperableFuncCounter) == uint64(len(m.SetOperableFuncMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SetOperableFuncMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetOperableFuncCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SetOperableFuncFunc != nil {
+		return atomic.LoadUint64(&m.SetOperableFuncCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NetworkMock) ValidateCallCounters() {
@@ -768,6 +897,10 @@ func (m *NetworkMock) ValidateCallCounters() {
 
 	if !m.SendMessageFinished() {
 		m.t.Fatal("Expected call to NetworkMock.SendMessage")
+	}
+
+	if !m.SetOperableFuncFinished() {
+		m.t.Fatal("Expected call to NetworkMock.SetOperableFunc")
 	}
 
 }
@@ -807,6 +940,10 @@ func (m *NetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NetworkMock.SendMessage")
 	}
 
+	if !m.SetOperableFuncFinished() {
+		m.t.Fatal("Expected call to NetworkMock.SetOperableFunc")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -826,6 +963,7 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.RemoteProcedureRegisterFinished()
 		ok = ok && m.SendCascadeMessageFinished()
 		ok = ok && m.SendMessageFinished()
+		ok = ok && m.SetOperableFuncFinished()
 
 		if ok {
 			return
@@ -852,6 +990,10 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SendMessageFinished() {
 				m.t.Error("Expected call to NetworkMock.SendMessage")
+			}
+
+			if !m.SetOperableFuncFinished() {
+				m.t.Error("Expected call to NetworkMock.SetOperableFunc")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -883,6 +1025,10 @@ func (m *NetworkMock) AllMocksCalled() bool {
 	}
 
 	if !m.SendMessageFinished() {
+		return false
+	}
+
+	if !m.SetOperableFuncFinished() {
 		return false
 	}
 

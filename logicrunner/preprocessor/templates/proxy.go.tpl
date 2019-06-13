@@ -189,6 +189,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 	return {{ $method.ResultsNilError }}
 }
 
+{{if not $method.SagaInfo.IsSaga}}
 // {{ $method.Name }}NoWait is proxy generated method
 func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }} ) error {
 	{{ $method.InitArgs }}
@@ -234,4 +235,5 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if not $method.Immutable}}AsI
 	}
 	return {{ $method.ResultsNilError }}
 }
+{{ end }}
 {{ end }}

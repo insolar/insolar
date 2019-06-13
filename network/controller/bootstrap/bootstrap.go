@@ -521,6 +521,9 @@ func (bc *Bootstrap) startBootstrap(ctx context.Context, address string,
 }
 
 func (bc *Bootstrap) nodeShouldReconnectAsJoiner(nodeID insolar.Reference) bool {
+	if bc.Gatewayer.Gateway() == nil {
+		return false
+	}
 	return bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState &&
 		utils.IsDiscovery(nodeID, bc.Certificate)
 }

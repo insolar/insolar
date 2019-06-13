@@ -3,7 +3,7 @@ services:
   prometheus:
     image: "prom/prometheus:v2.7.0"
     volumes:
-      - ${PWD}/monitor/prometheus/:/etc/prometheus:ro
+      - ${PROMETHEUS_CONFIG_DIR}:/etc/prometheus:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yaml'
     ports:
@@ -68,4 +68,3 @@ services:
       retries: 5
       start_period: 30s
     restart: on-failure
-    # restart: on-failure

@@ -80,7 +80,6 @@ type pulseController struct {
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
 	CryptographyService insolar.CryptographyService        `inject:""`
-	Resolver            network.RoutingTable               `inject:""`
 	Network             network.HostNetwork                `inject:""`
 	TerminationHandler  insolar.TerminationHandler         `inject:""`
 
@@ -129,10 +128,10 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Pac
 }
 
 func (pc *pulseController) verifyPulseSign(pulse insolar.Pulse) error {
-	hashProvider := pc.CryptographyScheme.IntegrityHasher()
 	if len(pulse.Signs) == 0 {
 		return errors.New("received empty pulse signs")
 	}
+	hashProvider := pc.CryptographyScheme.IntegrityHasher()
 	for key, psc := range pulse.Signs {
 		payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
 		hash, err := payload.Hash(hashProvider)
