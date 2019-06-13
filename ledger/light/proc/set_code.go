@@ -19,7 +19,6 @@ package proc
 import (
 	"context"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -32,7 +31,7 @@ import (
 )
 
 type SetCode struct {
-	message  *message.Message
+	message  payload.Meta
 	record   record.Code
 	code     []byte
 	recordID insolar.ID
@@ -47,7 +46,7 @@ type SetCode struct {
 	}
 }
 
-func NewSetCode(msg *message.Message, rec record.Code, code []byte, recID insolar.ID, jetID insolar.JetID) *SetCode {
+func NewSetCode(msg payload.Meta, rec record.Code, code []byte, recID insolar.ID, jetID insolar.JetID) *SetCode {
 	return &SetCode{
 		message:  msg,
 		record:   rec,
@@ -94,6 +93,7 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
+
 	go p.dep.sender.Reply(ctx, p.message, msg)
 
 	return nil
