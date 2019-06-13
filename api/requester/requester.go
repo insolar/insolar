@@ -81,9 +81,7 @@ func SetVerbose(verb bool) {
 	verbose = verb
 }
 
-// PostParams represents params struct
-//type PostParams = map[string]interface{}
-
+// PlatformRequest represents params struct
 type PlatformRequest struct {
 	JSONRPC        string      `json:"jsonrpc"`
 	ID             int         `json:"id"`
@@ -129,7 +127,7 @@ func GetResponseBodyContract(url string, postP api.Request, signature string) ([
 
 	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with reading body")
+		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with reading body")
 	}
 
 	return body, nil
@@ -163,7 +161,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 
 	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with reading body")
+		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with reading body")
 	}
 
 	return body, nil
@@ -177,7 +175,7 @@ func GetSeed(url string) (string, error) {
 		ID:      1,
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "[ getSeed ]")
+		return "", errors.Wrap(err, "[ getSeed ] seed request")
 	}
 
 	seedResp := rpcSeedResponse{}
