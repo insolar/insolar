@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -38,19 +37,13 @@ type SetRequest struct {
 	record  []byte
 	jet     insolar.JetID
 
-	Dep struct {
-		Bus                   insolar.MessageBus
-		RecentStorageProvider recentstorage.Provider
-
-		Coordinator jet.Coordinator
-
-		PendingModifier object.PendingModifier
-		PendingAccessor object.PendingAccessor
-
-		PCS                  insolar.PlatformCryptographyScheme
-		RecordModifier       object.RecordModifier
-		WriteAccessor        hot.WriteAccessor
-		PendingRequestsLimit int
+	dep struct {
+		pcs           insolar.PlatformCryptographyScheme
+		writer        hot.WriteAccessor
+		records       object.RecordModifier
+		recentStorage recentstorage.Provider
+		pendings      object.PendingModifier
+		pendingsLimit int
 	}
 }
 
@@ -68,7 +61,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 }
 
 func (p *SetRequest) reply(ctx context.Context) bus.Reply {
-	done, err := p.Dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err == hot.ErrWriteClosed {
 		return bus.Reply{Err: flow.ErrCancelled}
 	}
@@ -80,17 +73,17 @@ func (p *SetRequest) reply(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.Wrap(err, "can't deserialize record")}
 	}
 
-	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
+	hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtRec)
 	calculatedID := insolar.NewID(flow.Pulse(ctx), hash)
 
-	hash = record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
+	hash = record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtRec)
 	id := insolar.NewID(flow.Pulse(ctx), hash)
 	rec := record.Material{
 		Virtual: &virtRec,
 		JetID:   p.jet,
 	}
 
-	err = p.Dep.RecordModifier.Set(ctx, *id, rec)
+	err = p.dep.records.Set(ctx, *id, rec)
 
 	if err == object.ErrOverride {
 		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
@@ -116,22 +109,22 @@ func (p *SetRequest) handlePendings(ctx context.Context, calculatedID insolar.ID
 			if r.Object == nil {
 				return &bus.Reply{Err: errors.New("method call request without object reference")}
 			}
-			if p.Dep.RecentStorageProvider.Count() > p.Dep.PendingRequestsLimit {
+			if p.dep.recentStorage.Count() > p.dep.pendingsLimit {
 				return &bus.Reply{Reply: &reply.Error{ErrType: reply.ErrTooManyPendingRequests}}
 			}
-			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
+			recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jet))
 			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), calculatedID)
 
-			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID)
+			err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID)
 			if err != nil {
 				return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 			}
 		}
 	case *record.Result:
-		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
+		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
-		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
+		err := p.dep.pendings.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
 		if err != nil {
 			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 		}
