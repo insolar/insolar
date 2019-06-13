@@ -35,44 +35,19 @@ const (
 	GenesisNameTariff = "tariff"
 	// GenesisNameCostCenter is the name of cost center contract for genesis record.
 	GenesisNameCostCenter = "costcenter"
+
+	GenesisNameRootMember           = "root" + GenesisNameMember
+	GenesisNameRootWallet           = "root" + GenesisNameWallet
+	GenesisNameMigrationAdminMember = "migrationadmin" + GenesisNameMember
+	GenesisNameMigrationWallet      = "migration" + GenesisNameWallet
 )
 
-func GetGenesisNameRootDomain() string {
-	return GenesisNameRootDomain
-}
-func GetGenesisNameNodeDomain() string {
-	return GenesisNameNodeDomain
-}
-func GetGenesisNameNodeRecord() string {
-	return GenesisNameNodeRecord
-}
-func GetGenesisNameRootMember() string {
-	return "root" + GenesisNameMember
-}
-func GetGenesisNameRootWallet() string {
-	return "root" + GenesisNameWallet
-}
-func GetGenesisNameMigrationAdminMember() string {
-	return "mdadmin" + GenesisNameMember
-}
-func GetGenesisNameMigrationWallet() string {
-	return "md" + GenesisNameWallet
-}
-func GetGenesisNameMigrationDamonMembers() (result [10]string) {
+var GenesisNameMigrationDamonMembers = func() (result [10]string) {
 	for i := 0; i < 10; i++ {
 		result[i] = "migration_damon_" + strconv.Itoa(i) + GenesisNameMember
 	}
 	return
-}
-func GetGenesisNameDeposit() string {
-	return GenesisNameDeposit
-}
-func GetGenesisNameTariff() string {
-	return GenesisNameTariff
-}
-func GetGenesisNameCostCenter() string {
-	return GenesisNameCostCenter
-}
+}()
 
 type genesisBinary []byte
 
