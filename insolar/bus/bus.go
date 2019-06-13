@@ -197,7 +197,7 @@ func (b *Bus) SendTarget(
 		logger.Debug("waiting for reply")
 		select {
 		case <-reply.done:
-			logger.Infof("Done waiting replies for message with origin_hash %s", id)
+			logger.Debugf("Done waiting replies for message with origin_hash %s", id)
 		case <-time.After(b.timeout):
 			logger.Error(
 				errors.Errorf(
@@ -279,29 +279,26 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 			return handle(msg)
 		}
 
-		b.repliesMutex.RLock()
-		defer b.repliesMutex.RUnlock()
-
 		originID := base58.Encode(meta.OriginHash)
 		msg.Metadata.Set("msg_hash_origin", originID)
 		logger = logger.WithField("msg_hash_origin", originID)
 
+		b.repliesMutex.RLock()
 		reply, ok := b.replies[originID]
 		if !ok {
 			logger.Warn("reply discarded")
+			b.repliesMutex.RUnlock()
 			return nil, nil
 		}
 
 		logger.Debug("reply received")
 		reply.wg.Add(1)
-		go func() {
-			select {
-			case reply.messages <- msg:
-				logger.Debugf("result for message with origin_hash %s was send", id)
-			case <-reply.done:
-			}
-			reply.wg.Done()
-		}()
+		select {
+		case reply.messages <- msg:
+			logger.Debugf("result for message with origin_hash %s was send", id)
+		case <-reply.done:
+		}
+		reply.wg.Done()
 
 		return nil, nil
 	}
