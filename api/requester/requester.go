@@ -85,16 +85,24 @@ func SetVerbose(verb bool) {
 // PostParams represents params struct
 //type PostParams = map[string]interface{}
 
-// GetResponseBody makes request and extracts body
-func GetResponseBody(url string, postP api.Request, signature string) ([]byte, error) {
+type PlatformRequest struct {
+	JsonRpc        string      `json:"jsonrpc"`
+	Id             int         `json:"id"`
+	Method         string      `json:"method"`
+	PlatformParams interface{} `json:"params"`
+	LogLevel       string      `json:"logLevel,omitempty"`
+}
+
+// GetResponseBodyContract makes request to contract and extracts body
+func GetResponseBodyContract(url string, postP api.Request, signature string) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
+		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with marshaling params")
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with creating request")
+		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with creating request")
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -105,16 +113,50 @@ func GetResponseBody(url string, postP api.Request, signature string) ([]byte, e
 	req.Header.Set("Signature", "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
 	postResp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with sending request")
+		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with sending request")
 	}
 
 	if postResp == nil {
-		return nil, errors.Wrap(err, "[ getResponseBody ] Reponse is nil")
+		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Reponse is nil")
 	}
 
 	defer postResp.Body.Close()
 	if http.StatusOK != postResp.StatusCode {
-		return nil, errors.New("[ getResponseBody ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
+		return nil, errors.New("[ getResponseBodyContract ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
+	}
+
+	body, err := ioutil.ReadAll(postResp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with reading body")
+	}
+
+	return body, nil
+}
+
+// GetResponseBodyContract makes request to platform and extracts body
+func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) {
+	jsonValue, err := json.Marshal(postP)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBodyPlatform ] Problem with marshaling params")
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBodyPlatform ] Problem with creating request")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	postResp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with sending request")
+	}
+
+	if postResp == nil {
+		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Reponse is nil")
+	}
+
+	defer postResp.Body.Close()
+	if http.StatusOK != postResp.StatusCode {
+		return nil, errors.New("[ getResponseBodyContract ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -127,11 +169,11 @@ func GetResponseBody(url string, postP api.Request, signature string) ([]byte, e
 
 // GetSeed makes rpc request to seed.Get method and extracts it
 func GetSeed(url string) (string, error) {
-	body, err := GetResponseBody(url+"/rpc", api.Request{
+	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
 		JsonRpc: "2.0",
 		Method:  "seed.Get",
 		Id:      1,
-	}, "")
+	})
 	if err != nil {
 		return "", errors.Wrap(err, "[ getSeed ]")
 	}
@@ -165,9 +207,9 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.Wrap(err, "[ Send ] Cant export public key to PEM")
 	}
 
-	reqCfg.ContractParams.Reference = userCfg.Caller
-	reqCfg.ContractParams.PublicKey = string(pem)
-	reqCfg.ContractParams.Seed = seed
+	reqCfg.Params.Reference = userCfg.Caller
+	reqCfg.Params.PublicKey = string(pem)
+	reqCfg.Params.Seed = seed
 
 	verboseInfo(ctx, "Signing request ...")
 	dataToSign, err := json.Marshal(reqCfg)
@@ -180,7 +222,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 	verboseInfo(ctx, "Signing request completed")
 
-	body, err := GetResponseBody(url, *reqCfg, signature)
+	body, err := GetResponseBodyContract(url, *reqCfg, signature)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with sending target request")
@@ -234,8 +276,8 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *api.
 	return response, nil
 }
 
-func getDefaultRPCParams(method string) api.Request {
-	return api.Request{
+func getDefaultRPCParams(method string) PlatformRequest {
+	return PlatformRequest{
 		JsonRpc: "2.0",
 		Id:      1,
 		Method:  method,
@@ -246,7 +288,7 @@ func getDefaultRPCParams(method string) api.Request {
 func Info(url string) (*InfoResponse, error) {
 	params := getDefaultRPCParams("info.Get")
 
-	body, err := GetResponseBody(url+"/rpc", params, "")
+	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Info ]")
 	}
@@ -268,7 +310,7 @@ func Info(url string) (*InfoResponse, error) {
 func Status(url string) (*StatusResponse, error) {
 	params := getDefaultRPCParams("status.Get")
 
-	body, err := GetResponseBody(url+"/rpc", params, "")
+	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Status ]")
 	}
@@ -290,7 +332,7 @@ func Status(url string) (*StatusResponse, error) {
 func LogOff(url string) (*StatusResponse, error) {
 	params := getDefaultRPCParams("status.LogOff")
 
-	body, err := GetResponseBody(url+"/rpc", params, "")
+	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Status ]")
 	}

@@ -85,7 +85,7 @@ func (g *certGen) registerNode() insolar.Reference {
 		JsonRpc: "2.0",
 		Id:      1,
 		Method:  "api.call",
-		ContractParams: api.Params{
+		Params: api.Params{
 			CallSite:   "contract.registerNode",
 			CallParams: map[string]string{"public": string(keySerialized), "role": g.staticRole.String()},
 		},
@@ -115,12 +115,12 @@ type GetCertificateResponse struct {
 
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
-	response, err := requester.GetResponseBody(g.API+"/rpc", api.Request{
+	response, err := requester.GetResponseBodyPlatform(g.API+"/rpc", requester.PlatformRequest{
 		JsonRpc:        "2.0",
 		Method:         "cert.Get",
 		Id:             1,
 		PlatformParams: map[string]string{"ref": ref.String()},
-	}, "")
+	})
 	checkError("Failed to get certificate for the registered node:", err)
 
 	r := GetCertificateResponse{}
@@ -200,7 +200,7 @@ func (g *certGen) getNodeRefByPk() insolar.Reference {
 		JsonRpc: "2.0",
 		Id:      1,
 		Method:  "api.call",
-		ContractParams: api.Params{
+		Params: api.Params{
 			CallSite:   "contract.getNodeRef",
 			CallParams: []interface{}{keySerialized},
 		},

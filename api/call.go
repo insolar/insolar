@@ -40,13 +40,11 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	JsonRpc        string      `json:"jsonrpc"`
-	Id             int         `json:"id"`
-	Method         string      `json:"method"`
-	// TODO: hack do refactor
-	ContractParams Params      `json:"contractparams"`
-	PlatformParams interface{} `json:"params"`
-	LogLevel       string      `json:"logLevel,omitempty"`
+	JsonRpc  string `json:"jsonrpc"`
+	Id       int    `json:"id"`
+	Method   string `json:"method"`
+	Params   Params `json:"params"`
+	LogLevel string `json:"logLevel,omitempty"`
 }
 
 type Params struct {
@@ -102,7 +100,7 @@ func (ar *Runner) makeCall(ctx context.Context, request Request, rawBody []byte,
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
 	defer span.End()
 
-	reference, err := insolar.NewReferenceFromBase58(request.ContractParams.Reference)
+	reference, err := insolar.NewReferenceFromBase58(request.Params.Reference)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
@@ -201,7 +199,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed(request.ContractParams.Seed)
+		err = ar.checkSeed(request.Params.Seed)
 		if err != nil {
 			processError(err, "Can't checkSeed", &resp, insLog)
 			return

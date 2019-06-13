@@ -78,7 +78,7 @@ type Request struct {
 	JsonRpc  string `json:"jsonrpc"`
 	Id       int    `json:"id"`
 	Method   string `json:"method"`
-	Params   Params `json:"contractparams"`
+	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
 }
 
