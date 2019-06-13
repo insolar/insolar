@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/insolar"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
@@ -32,7 +31,7 @@ import (
 )
 
 type GetCode struct {
-	message *message.Message
+	message payload.Meta
 
 	Dep struct {
 		RecordAccessor object.RecordAccessor
@@ -41,20 +40,17 @@ type GetCode struct {
 	}
 }
 
-func NewGetCode(msg *message.Message) *GetCode {
+func NewGetCode(msg payload.Meta) *GetCode {
 	return &GetCode{
 		message: msg,
 	}
 }
 
 func (p *GetCode) Proceed(ctx context.Context) error {
-	pl, err := payload.UnmarshalFromMeta(p.message.Payload)
+	getCode := payload.GetCode{}
+	err := getCode.Unmarshal(p.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
-	}
-	getCode, ok := pl.(*payload.GetCode)
-	if !ok {
-		return fmt.Errorf("unexpected payload type: %T", pl)
+		return errors.Wrap(err, "failed to unmarshal GetCode message")
 	}
 
 	ctx = inslogger.WithLoggerLevel(ctx,insolar.ErrorLevel)
@@ -80,6 +76,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
 	}
+
 	go p.Dep.Sender.Reply(ctx, p.message, msg)
 
 	return nil
