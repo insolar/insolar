@@ -448,7 +448,7 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
-	count := 100
+	count := 1000
 	isReplyOk := make(chan bool)
 	done := make(chan error)
 
@@ -460,15 +460,15 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	b := NewBus(&PublisherMock{pubErr: nil}, pulseMock, coordinatorMock, pcs)
 	ctx := context.Background()
 
-	var msg []*message.Message
+	var msgs []*message.Message
 	for i := 0; i < count; i++ {
-		msg = append(msg, message.NewMessage(watermill.NewUUID(), slice()))
+		msgs = append(msgs, message.NewMessage(watermill.NewUUID(), slice()))
 	}
 
 	// send messages
 	for i := 0; i < count; i++ {
 		go func(i int) {
-			results, _ := b.SendTarget(ctx, msg[i], gen.Reference())
+			results, _ := b.SendTarget(ctx, msgs[i], gen.Reference())
 			done <- nil
 			_, ok := <-results
 			isReplyOk <- ok
@@ -486,25 +486,25 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	}
 	handler := b.IncomingMessageRouter(incomingHandler)
 
-	var msgWithHash []*message.Message
-	for _, value := range msg {
+	var reps []*message.Message
+	for _, msg := range msgs {
 		h := b.pcs.IntegrityHasher()
-		_, err := h.Write(value.Payload)
+		_, err := h.Write(msg.Payload)
 		require.NoError(t, err)
 		hash := h.Sum(nil)
 
 		meta := payload.Meta{
 			OriginHash: hash,
 		}
-
-		metaBin, _ := meta.Marshal()
-		msgWithHash = append(msgWithHash, message.NewMessage(watermill.NewUUID(), metaBin))
+		buf, err := meta.Marshal()
+		require.NoError(t, err)
+		reps = append(reps, message.NewMessage(watermill.NewUUID(), buf))
 	}
 
 	// reply to messages
 	for i := 0; i < count; i++ {
 		go func(i int) {
-			_, err := handler(msgWithHash[i])
+			_, err := handler(reps[i])
 			done <- err
 		}(i)
 	}
@@ -518,6 +518,9 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 		ok := <-isReplyOk
 		require.True(t, ok)
 	}
+
+	// try to send again
+	b.SendTarget(ctx, message.NewMessage(watermill.NewUUID(), nil), gen.Reference())
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T) {

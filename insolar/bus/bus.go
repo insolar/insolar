@@ -293,6 +293,8 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 
 		logger.Debug("reply received")
 		reply.wg.Add(1)
+		b.repliesMutex.RUnlock()
+
 		select {
 		case reply.messages <- msg:
 			logger.Debugf("result for message with origin_hash %s was send", id)
