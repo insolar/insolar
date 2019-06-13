@@ -5,8 +5,11 @@ import (
 )
 
 func TrimPK(public string) string {
-	public = between(public, "KEY-----", "-----END")
-	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(public), "\n"), ""))
+	return TrimBurn(between(public, "KEY-----", "-----END"))
+}
+
+func TrimBurn(value string) string {
+	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(value), "\n"), ""))
 }
 
 func between(value string, a string, b string) string {

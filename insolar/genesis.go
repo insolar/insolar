@@ -16,6 +16,8 @@
 
 package insolar
 
+import "strconv"
+
 const (
 	// GenesisNameRootDomain is the name of root domain contract for genesis record.
 	GenesisNameRootDomain = "rootdomain"
@@ -23,17 +25,29 @@ const (
 	GenesisNameNodeDomain = "nodedomain"
 	// GenesisNameNodeRecord is the name of node contract for genesis record.
 	GenesisNameNodeRecord = "noderecord"
-	// GenesisNameRootMember is the name of root member contract for genesis record.
-	GenesisNameRootMember = "member"
-	// GenesisNameRootWallet is the name of wallet contract for genesis record.
-	GenesisNameRootWallet = "wallet"
+	// GenesisNameMember is the name of member contract for genesis record.
+	GenesisNameMember = "member"
+	// GenesisNameWallet is the name of wallet contract for genesis record.
+	GenesisNameWallet = "wallet"
 	// GenesisNameDeposit is the name of deposit contract for genesis record.
 	GenesisNameDeposit = "deposit"
 	// GenesisNameTariff is the name of tariff contract for genesis record.
 	GenesisNameTariff = "tariff"
-	// GenesisNameCostCenter is the name of costcenter contract for genesis record.
+	// GenesisNameCostCenter is the name of cost center contract for genesis record.
 	GenesisNameCostCenter = "costcenter"
+
+	GenesisNameRootMember           = "root" + GenesisNameMember
+	GenesisNameRootWallet           = "root" + GenesisNameWallet
+	GenesisNameMigrationAdminMember = "migrationadmin" + GenesisNameMember
+	GenesisNameMigrationWallet      = "migration" + GenesisNameWallet
 )
+
+var GenesisNameMigrationDamonMembers = func() (result [10]string) {
+	for i := 0; i < 10; i++ {
+		result[i] = "migration_damon_" + strconv.Itoa(i) + GenesisNameMember
+	}
+	return
+}()
 
 type genesisBinary []byte
 
@@ -59,6 +73,7 @@ type DiscoveryNodeRegister struct {
 // GenesisContractState carries data required for contract object creation via genesis.
 type GenesisContractState struct {
 	Name       string
+	Prototype  string
 	ParentName string
 	Delegate   bool
 	Memory     []byte
