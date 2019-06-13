@@ -53,8 +53,8 @@ func (g *certGen) loadKeys() {
 }
 
 type RegisterResult struct {
-	JsonRpc string `json:"jsonrpc"`
-	Id      int    `json:"id"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
 	Result  Result `json:"result,omitempty"`
 	Error   Error  `json:"error,omitempty"`
 }
