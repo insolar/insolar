@@ -230,8 +230,7 @@ func TestNewHostNetwork(t *testing.T) {
 		require.NoError(t, err)
 		f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 		require.NoError(t, err)
-		_, err = f.WaitResponse(time.Second)
-		require.NoError(t, err)
+		f.Cancel()
 	}
 
 	wg.Wait()
