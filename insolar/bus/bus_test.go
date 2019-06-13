@@ -211,25 +211,23 @@ func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 	coordinatorMock.MeMock.Return(insolar.Reference{})
 
 	pcs := testutils.NewPlatformCryptographyScheme()
-
 	b := NewBus(pubsub, pulseMock, coordinatorMock, pcs)
 
 	resMsg := message.NewMessage(watermill.NewUUID(), []byte{10, 20, 30, 40, 50})
-
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		incomingHandlerCalls++
 		return []*message.Message{resMsg}, nil
 	}
-	handler := b.IncomingMessageRouter(incomingHandler)
 
-	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
-	middleware.SetCorrelationID(watermill.NewUUID(), msg)
-
-	res, err := handler(msg)
-
+	meta := payload.Meta{}
+	buf, err := meta.Marshal()
 	require.NoError(t, err)
-	require.Equal(t, []*message.Message{resMsg}, res)
+	msg := message.NewMessage(watermill.NewUUID(), buf)
+
+	res, err := b.IncomingMessageRouter(incomingHandler)(msg)
+	require.NoError(t, err)
 	require.Equal(t, 1, incomingHandlerCalls)
+	require.Equal(t, []*message.Message{resMsg}, res)
 }
 
 func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
@@ -256,27 +254,26 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 		incomingHandlerCalls++
 		return nil, nil
 	}
-	handler := b.IncomingMessageRouter(incomingHandler)
 
-	p := []byte{1, 2, 3, 4, 5}
-	meta := payload.Meta{
-		Payload: p,
+	originMeta := payload.Meta{
+		Payload: []byte{1, 2, 3, 4, 5},
 	}
-
-	data, _ := meta.Marshal()
-
-	h := b.pcs.IntegrityHasher()
-	_, err := h.Write(data)
+	data, err := originMeta.Marshal()
 	require.NoError(t, err)
-	hash := h.Sum(nil)
+	h := b.pcs.IntegrityHasher()
+	_, err = h.Write(data)
+	require.NoError(t, err)
+	originHash := h.Sum(nil)
+	id := base58.Encode(originHash)
 
-	id := base58.Encode(hash)
 	b.replies[id] = resChan
 
-	meta.OriginHash = hash
-	data, _ = meta.Marshal()
-
-	msg := message.NewMessage(watermill.NewUUID(), data)
+	replyMeta := payload.Meta{
+		OriginHash: originHash,
+	}
+	replyBuf, err := replyMeta.Marshal()
+	require.NoError(t, err)
+	reply := message.NewMessage(watermill.NewUUID(), replyBuf)
 
 	var receivedMsg *message.Message
 	done := make(chan struct{})
@@ -286,13 +283,13 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 		done <- struct{}{}
 	}()
 
-	res, err := handler(msg)
+	res, err := b.IncomingMessageRouter(incomingHandler)(reply)
 	require.NoError(t, err)
 	require.Nil(t, res)
 
 	require.Equal(t, 0, incomingHandlerCalls)
 	<-done
-	require.Equal(t, msg, receivedMsg)
+	require.Equal(t, reply, receivedMsg)
 }
 
 func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {

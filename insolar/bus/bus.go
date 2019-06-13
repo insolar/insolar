@@ -268,7 +268,7 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		meta := payload.Meta{}
 		err = meta.Unmarshal(msg.Payload)
 		if err != nil {
-			logger.Error("can't unmarshal meta message")
+			logger.Error(errors.Wrap(err, "failed to receive message"))
 			return nil, nil
 		}
 
@@ -286,7 +286,7 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		msg.Metadata.Set("msg_hash_origin", originID)
 		logger = logger.WithField("msg_hash_origin", originID)
 
-		reply, ok := b.replies[id]
+		reply, ok := b.replies[originID]
 		if !ok {
 			logger.Warn("reply discarded")
 			return nil, nil

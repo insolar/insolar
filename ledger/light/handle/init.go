@@ -73,6 +73,8 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 			return errors.Wrap(err, "failed to unmarshal payload type")
 		}
 
+		ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
 		switch payloadType {
 		case payload.TypeGetObject:
 			h := NewGetObject(s.dep, meta, false)
@@ -172,6 +174,8 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
+
+	ctx, _ = inslogger.WithField(ctx, "msg_type_original", payloadType.String())
 
 	if originMeta.Pulse != meta.Pulse {
 		s.replyError(ctx, originMeta, flow.ErrCancelled)

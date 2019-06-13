@@ -114,6 +114,7 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
+	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	switch payloadType {
 	case payload.TypePassState:
@@ -167,6 +168,8 @@ func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
+
+	ctx, _ = inslogger.WithField(ctx, "msg_type_original", payloadType.String())
 
 	switch payloadType { // nolint
 	case payload.TypeGetCode:
