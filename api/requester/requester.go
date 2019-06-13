@@ -24,7 +24,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/insolar/insolar/api"
@@ -244,19 +243,30 @@ func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 
 // TODO: choose encoding format
 func PointsToDER(r, s *big.Int) string {
+	prefixPoint := func(b []byte) []byte {
+		if len(b) == 0 {
+			b = []byte{0x00}
+		}
+		if b[0]&0x80 != 0 {
+			paddedBytes := make([]byte, len(b)+1)
+			copy(paddedBytes[1:], b)
+			b = paddedBytes
+		}
+		return b
+	}
+
+	rb := prefixPoint(r.Bytes())
+	sb := prefixPoint(s.Bytes())
 
 	// DER encoding:
 	// 0x30 + z + 0x02 + len(rb) + rb + 0x02 + len(sb) + sb
-	length := 2 + len(r.Bytes()) + 2 + len(s.Bytes())
+	length := 2 + len(rb) + 2 + len(sb)
 
-	der := append([]byte{0x30, byte(length), 0x02, byte(len(r.Bytes()))}, r.Bytes()...)
-	der = append(der, 0x02, byte(len(s.Bytes())))
-	der = append(der, s.Bytes()...)
+	der := append([]byte{0x30, byte(length), 0x02, byte(len(rb))}, rb...)
+	der = append(der, 0x02, byte(len(sb)))
+	der = append(der, sb...)
 
-	encoded := make([]byte, hex.EncodedLen(len(der)))
-	hex.Encode(encoded, der)
-
-	return base64.StdEncoding.EncodeToString(encoded)
+	return base64.StdEncoding.EncodeToString(der)
 }
 
 // Send first gets seed and after that makes target request

@@ -17,7 +17,10 @@
 package member
 
 import (
+	"encoding/asn1"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"github.com/insolar/insolar/application/contract/member/helper"
 	"github.com/insolar/insolar/application/contract/member/signer"
@@ -28,6 +31,9 @@ import (
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/sha256"
+	"github.com/insolar/x-crypto/x509"
 	"math/big"
 	"strconv"
 	"time"
@@ -56,25 +62,61 @@ func New(name string, key string) (*Member, error) {
 	}, nil
 }
 
-func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byte) error {
-	args, err := insolar.MarshalArgs(m.GetReference(), method, params, seed)
-	if err != nil {
-		return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
+func PointsFromDER(der []byte) (R, S *big.Int) {
+	R, S = &big.Int{}, &big.Int{}
+
+	data := asn1.RawValue{}
+	if _, err := asn1.Unmarshal(der, &data); err != nil {
+		panic(err.Error())
 	}
+
+	// The format of our DER string is 0x02 + rlen + r + 0x02 + slen + s
+	rLen := data.Bytes[1] // The entire length of R + offset of 2 for 0x02 and rlen
+	r := data.Bytes[2 : rLen+2]
+	// Ignore the next 0x02 and slen bytes and just take the start of S to the end of the byte array
+	s := data.Bytes[rLen+4:]
+
+	R.SetBytes(r)
+	S.SetBytes(s)
+
+	return
+}
+
+func (m *Member) verifySig(request Request, rawRequest []byte, signature string) error {
+	sig, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		return fmt.Errorf("[ verifySig ]: Cant decode signature %s", err.Error())
+	}
+
+	R, S := PointsFromDER(sig)
+
+	rawpublicpem := request.Params.PublicKey
+
 	key, err := m.GetPublicKey()
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
 
-	publicKey, err := foundation.ImportPublicKey(key)
-	if err != nil {
-		return fmt.Errorf("[ verifySig ] Invalid public key")
+	if key != rawpublicpem {
+		return fmt.Errorf("[ verifySig ] Access denied. Key - %v", rawpublicpem)
 	}
 
-	verified := foundation.Verify(args, sign, publicKey)
-	if !verified {
-		return fmt.Errorf("[ verifySig ] Incorrect signature")
+	blockPub, _ := pem.Decode([]byte(rawpublicpem))
+	if blockPub == nil {
+		return fmt.Errorf("[ verifySig ] Problems with decoding. Key - %v", rawpublicpem)
 	}
+	x509EncodedPub := blockPub.Bytes
+	publicKey, err := x509.ParsePKIXPublicKey(x509EncodedPub)
+	if err != nil {
+		return fmt.Errorf("[ verifySig ] Problems with parsing. Key - %v", rawpublicpem)
+	}
+
+	hash := sha256.Sum256(rawRequest)
+	valid := ecdsa.Verify(publicKey.(*ecdsa.PublicKey), hash[:], R, S)
+	if !valid {
+		return fmt.Errorf("[ verifySig ]: Invalid signature")
+	}
+
 	return nil
 }
 
@@ -115,12 +157,15 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 
 	params := request.Params.CallParams.(map[string]interface{})
 
+	err = m.verifySig(request, rawRequest, signature)
+	if err != nil {
+		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
+	}
+
 	switch request.Params.CallSite {
 	case "createMember":
 		return m.createMemberByKey(rootDomain, params["publicKey"].(string))
 	}
-
-	// TODO: do verify ecdsa.Verify(&privateKey.PublicKey, hash[:], r, s)
 
 	switch request.Params.CallSite {
 	case "contract.registerNode":
