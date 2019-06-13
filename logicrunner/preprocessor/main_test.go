@@ -765,6 +765,7 @@ type SagaTestWallet struct {
 //ins:saga(TheRollbackMethod)
 func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 	w.Amount += amount
+    return nil
 }
 `
 	tmpDir, err := ioutil.TempDir("", "test-")
@@ -790,22 +791,74 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 		"but 'TheRollbackMethod' is not declared. Maybe a typo?", err.Error())
 }
 
-// Low-level tests for extractSagaInfo procedure
+// Make sure saga doesn't compile when saga's rollback method has arguments that don't match
+func (s *PreprocessorSuite) TestSagaDoesntCompileWhenRollbackArgumentsDontMatch() {
+	var testSaga = `
+package main
+
+import (
+"fmt"
+"errors"
+
+"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type SagaTestWallet struct {
+	foundation.BaseContract
+	Amount int
+}
+
+//ins:saga(TheRollbackMethod)
+func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
+	w.Amount += amount
+    return nil
+}
+
+func (w *SagaTestWallet) TheRollbackMethod(amount string) error {
+	return nil
+}
+`
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, testSaga)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
+	s.Error(err)
+	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with arguments 'amount int' and rollback method "+
+		"'TheRollbackMethod', but 'TheRollbackMethod' arguments 'amount string' dont't match. "+
+		"They should be exactly the same.", err.Error())
+
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	s.Error(err)
+	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with arguments 'amount int' and rollback method "+
+		"'TheRollbackMethod', but 'TheRollbackMethod' arguments 'amount string' dont't match. "+
+		"They should be exactly the same.", err.Error())
+}
+
+// Low-level tests for extractSagaInfoFromComment procedure
 func (s *PreprocessorSuite) TestExtractSagaInfo() {
 	info := &SagaInfo{}
-	res := extractSagaInfo("", info)
+	res := extractSagaInfoFromComment("", info)
 	s.Require().False(res)
 	s.Require().False(info.IsSaga)
 
-	res = extractSagaInfo("ololo", info)
+	res = extractSagaInfoFromComment("ololo", info)
 	s.Require().False(res)
 	s.Require().False(info.IsSaga)
 
-	res = extractSagaInfo("//ins:saga()", info)
+	res = extractSagaInfoFromComment("//ins:saga()", info)
 	s.Require().False(res)
 	s.Require().False(info.IsSaga)
 
-	res = extractSagaInfo("//ins:saga(SomeRollbackMethodName) ", info)
+	res = extractSagaInfoFromComment("//ins:saga(SomeRollbackMethodName) ", info)
 	s.Require().True(res)
 	s.Require().True(info.IsSaga)
 	s.Require().Equal(info.RollbackMethodName, "SomeRollbackMethodName")
