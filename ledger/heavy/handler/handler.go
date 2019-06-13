@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/proc"
-	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -146,10 +145,7 @@ func (h *Handler) handleError(ctx context.Context, msg payload.Meta) {
 		return
 	}
 
-	inslogger.FromContext(ctx).WithField(
-		"origin_hash",
-		base58.Encode(msg.OriginHash),
-	).Error("received error: ", pl.Text)
+	inslogger.FromContext(ctx).Error("received error: ", pl.Text)
 }
 
 func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
