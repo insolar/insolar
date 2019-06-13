@@ -57,6 +57,8 @@ type Params struct {
 
 // TODO: update answer struct
 type answer struct {
+	JsonRpc string      `json:"jsonrpc"`
+	Id      int         `json:"id"`
 	Error   string      `json:"error,omitempty"`
 	Result  interface{} `json:"result,omitempty"`
 	TraceID string      `json:"traceID,omitempty"`
@@ -180,6 +182,9 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			processError(err, "Can't unmarshal request", &resp, insLog)
 			return
 		}
+
+		resp.JsonRpc = request.JsonRpc
+		resp.Id = request.Id
 
 		digest := req.Header.Get("Digest")
 		richSignature := req.Header.Get("Signature")
