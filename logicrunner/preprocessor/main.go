@@ -63,12 +63,14 @@ const (
 // SagaInfo stores sagas-related information for given contract method.
 // If a method is marked with //ins:saga(Rollback) SagaInfo stores
 // `IsSaga: true, RollbackMethodName: "Rollback"`. Also Arguments always stores
-// a comma separated list of arguments.
+// a comma separated list of arguments and NumArguments always stores the number
+// of arguments.
 type SagaInfo struct {
 	IsSaga             bool
 	RollbackMethodName string
 	// we have to duplicate argument list here because it's not always used in templates
-	Arguments string
+	Arguments    string
+	NumArguments int
 }
 
 // ParsedFile struct with prepared info we extract from source code
@@ -330,6 +332,13 @@ func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[strin
 		sagaInfo := info["SagaInfo"].(*SagaInfo)
 		if !sagaInfo.IsSaga {
 			continue
+		}
+
+		if sagaInfo.NumArguments != 1 {
+			return fmt.Errorf(
+				"Semantic error: '%v' is a saga with %v arguments. "+
+					"Currently only one argument is allowed.",
+				info["Name"].(string), sagaInfo.NumArguments)
 		}
 
 		rollbackInfo, exists := methodNames[sagaInfo.RollbackMethodName]
@@ -763,7 +772,8 @@ func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
 
 func sagaInfo(pf *ParsedFile, decl *ast.FuncDecl) (info *SagaInfo) {
 	info = &SagaInfo{
-		Arguments: genFieldList(pf, decl.Type.Params, true),
+		Arguments:    genFieldList(pf, decl.Type.Params, true),
+		NumArguments: len(decl.Type.Params.List),
 	}
 	if decl.Doc == nil || decl.Doc.List == nil {
 		return // there are no comments

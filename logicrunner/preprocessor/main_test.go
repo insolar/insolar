@@ -791,6 +791,55 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 		"but 'TheRollbackMethod' is not declared. Maybe a typo?", err.Error())
 }
 
+// Make sure saga doesn't compile if the accept method has more then one argument
+func (s *PreprocessorSuite) TestSagaDoesntCompileWhenAcceptHasMultipleArguments() {
+	var testSaga = `
+package main
+
+import (
+"fmt"
+"errors"
+
+"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type SagaTestWallet struct {
+	foundation.BaseContract
+	Amount int
+}
+
+//ins:saga(TheRollbackMethod)
+func (w *SagaTestWallet) TheAcceptMethod(arg1 int, arg2 string) error {
+    return nil
+}
+
+func (w *SagaTestWallet) TheRollbackMethod(arg1 int, arg2 string) error {
+    return nil
+}
+`
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, testSaga)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
+	s.Error(err)
+	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed.",
+		err.Error())
+
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	s.Error(err)
+	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed.",
+		err.Error())
+}
+
 // Make sure saga doesn't compile when saga's rollback method has arguments that don't match
 func (s *PreprocessorSuite) TestSagaDoesntCompileWhenRollbackArgumentsDontMatch() {
 	var testSaga = `
