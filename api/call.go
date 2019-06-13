@@ -242,7 +242,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
 			resp.Error.Message = "Messagebus timeout exceeded"
-			resp.Error.Code = -215 // TODO: need correct number
+			resp.Error.Code = -215
 			resp.Error.TraceID = traceID
 			return
 		}

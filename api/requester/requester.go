@@ -214,7 +214,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	verboseInfo(ctx, "Signing request ...")
 	dataToSign, err := json.Marshal(reqCfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Cant marshal struct")
+		return nil, errors.Wrap(err, "[ Send ] Config request marshaling failed")
 	}
 	signature, err := sign(userCfg.privateKeyObject, dataToSign)
 	if err != nil {
@@ -241,7 +241,6 @@ func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 	return PointsToDER(r, s), nil
 }
 
-// TODO: choose encoding format
 func PointsToDER(r, s *big.Int) string {
 	prefixPoint := func(b []byte) []byte {
 		if len(b) == 0 {
@@ -276,9 +275,9 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *api.
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}
-	verboseInfo(ctx, "GETSEED request completed. seed: "+string(seed))
+	verboseInfo(ctx, "GETSEED request completed. seed: " + seed)
 
-	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, string(seed))
+	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}
