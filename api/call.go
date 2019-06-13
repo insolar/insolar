@@ -40,8 +40,8 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	JsonRpc  string `json:"jsonrpc"`
-	Id       int    `json:"id"`
+	JSONRPC  string `json:"jsonrpc"`
+	ID       int    `json:"id"`
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
@@ -56,8 +56,8 @@ type Params struct {
 }
 
 type ContractAnswer struct {
-	JsonRpc string `json:"jsonrpc"`
-	Id      int    `json:"id"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
 	Result  Result `json:"result,omitempty"`
 	Error   Error  `json:"error,omitempty"`
 }
@@ -65,6 +65,7 @@ type ContractAnswer struct {
 type Error struct {
 	Code    int    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
+	TraceID string `json:"traceID,omitempty"`
 }
 
 type Result struct {
@@ -144,9 +145,10 @@ func (ar *Runner) makeCall(ctx context.Context, request Request, rawBody []byte,
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *ContractAnswer, insLog insolar.Logger) {
+func processError(err error, extraMsg string, resp *ContractAnswer, insLog insolar.Logger, traceID string) {
 	resp.Error.Message = err.Error()
 	resp.Error.Code = -214
+	resp.Error.TraceID = traceID
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
@@ -170,8 +172,6 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			metrics.APIContractExecutionTime.WithLabelValues(request.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
 
-		resp.Result.TraceID = traceID
-
 		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
 
 		defer func() {
@@ -188,26 +188,26 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		rawBody, err := UnmarshalRequest(req, &request)
 		if err != nil {
-			processError(err, "Can't unmarshal request", &resp, insLog)
+			processError(err, "Can't unmarshal request", &resp, insLog, traceID)
 			return
 		}
 
-		resp.JsonRpc = request.JsonRpc
-		resp.Id = request.Id
+		resp.JSONRPC = request.JSONRPC
+		resp.ID = request.ID
 
 		digest := req.Header.Get("Digest")
 		richSignature := req.Header.Get("Signature")
 
 		signature, err := validateRequestHeaders(digest, richSignature, rawBody)
 		if err != nil {
-			processError(err, "Can't validate request", &resp, insLog)
+			processError(err, "Can't validate request", &resp, insLog, traceID)
 			return
 		}
 
 		if len(request.LogLevel) > 0 {
 			logLevelNumber, err := insolar.ParseLevel(request.LogLevel)
 			if err != nil {
-				processError(err, "Can't parse logLevel", &resp, insLog)
+				processError(err, "Can't parse logLevel", &resp, insLog, traceID)
 				return
 			}
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
@@ -215,13 +215,13 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		err = ar.checkSeed(request.Params.Seed)
 		if err != nil {
-			processError(err, "Can't checkSeed", &resp, insLog)
+			processError(err, "Can't checkSeed", &resp, insLog, traceID)
 			return
 		}
 
 		pulse, err := ar.PulseAccessor.Latest(ctx)
 		if err != nil {
-			processError(err, "Can't get last pulse", &resp, insLog)
+			processError(err, "Can't get last pulse", &resp, insLog, traceID)
 			return
 		}
 
@@ -235,7 +235,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		case <-ch:
 			if err != nil {
-				processError(err, "Can't makeCall", &resp, insLog)
+				processError(err, "Can't makeCall", &resp, insLog, traceID)
 				return
 			}
 			resp.Result.ContractResult = result
@@ -243,10 +243,12 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
 			resp.Error.Message = "Messagebus timeout exceeded"
 			resp.Error.Code = -215 // TODO: need correct number
+			resp.Error.TraceID = traceID
 			return
 		}
 
 		resp.Result.ContractResult = result
+		resp.Result.TraceID = traceID
 	}
 }
 
@@ -255,7 +257,10 @@ func validateRequestHeaders(digest string, richSignature string, body []byte) (s
 		return "", errors.New("Invalid input data")
 	}
 	h := sha256.New()
-	h.Write(body)
+	_, err := h.Write(body)
+	if err != nil {
+		return "", errors.Wrap(err, "Cant get hash")
+	}
 	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
 	if sha == digest[strings.IndexByte(digest, '=')+1:] {
 		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
@@ -264,7 +269,6 @@ func validateRequestHeaders(digest string, richSignature string, body []byte) (s
 		}
 		return sig, nil
 
-	} else {
-		return "", errors.New("Cant get signature from header")
 	}
+	return "", errors.New("Cant get signature from header")
 }

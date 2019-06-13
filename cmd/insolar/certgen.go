@@ -53,8 +53,8 @@ func (g *certGen) loadKeys() {
 }
 
 type RegisterResult struct {
-	JsonRpc string `json:"jsonrpc"`
-	Id      int    `json:"id"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
 	Result  Result `json:"result,omitempty"`
 	Error   Error  `json:"error,omitempty"`
 }
@@ -93,8 +93,8 @@ func (g *certGen) registerNode() insolar.Reference {
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
 	request := api.Request{
-		JsonRpc: "2.0",
-		Id:      1,
+		JSONRPC: "2.0",
+		ID:      1,
 		Method:  "api.call",
 		Params: api.Params{
 			CallSite:   "contract.registerNode",
@@ -127,9 +127,9 @@ type GetCertificateResponse struct {
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
 	response, err := requester.GetResponseBodyPlatform(g.API+"/rpc", requester.PlatformRequest{
-		JsonRpc:        "2.0",
+		JSONRPC:        "2.0",
 		Method:         "cert.Get",
-		Id:             1,
+		ID:             1,
 		PlatformParams: map[string]string{"ref": ref.String()},
 	})
 	checkError("Failed to get certificate for the registered node:", err)
@@ -208,8 +208,8 @@ func (g *certGen) getNodeRefByPk() insolar.Reference {
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.privKey)
 	checkError("Failed to export public key:", err)
 	request := api.Request{
-		JsonRpc: "2.0",
-		Id:      1,
+		JSONRPC: "2.0",
+		ID:      1,
 		Method:  "api.call",
 		Params: api.Params{
 			CallSite:   "contract.getNodeRef",
