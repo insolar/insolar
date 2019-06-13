@@ -185,6 +185,7 @@ func (b *Bus) SendTarget(
 	b.replies[id] = reply
 	b.repliesMutex.Unlock()
 
+	logger.Debugf("sending message %s", id)
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		logger.Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
@@ -193,7 +194,7 @@ func (b *Bus) SendTarget(
 	}
 
 	go func() {
-		logger.WithField("origin_hash", id).Info("waiting for reply")
+		logger.Debug("waiting for reply")
 		select {
 		case <-reply.done:
 			logger.Infof("Done waiting replies for message with origin_hash %s", id)
@@ -215,7 +216,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 
 	buf, err := origin.Marshal()
 	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send reply"))
+		logger.Error(errors.Wrap(err, "failed to send reply"))
 		return
 	}
 	h := b.pcs.IntegrityHasher()
@@ -228,46 +229,79 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 
 	err = b.wrapMeta(reply, origin.Sender, originHash)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("can't wrap meta message ", err.Error())
+		logger.Error("can't wrap meta message ", err.Error())
 		return
 	}
+	h = b.pcs.IntegrityHasher()
+	_, err = h.Write(reply.Payload)
+	if err != nil {
+		logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
+		return
+	}
+	replyHash := h.Sum(nil)
 
 	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	reply.SetContext(ctx)
 
+	logger.Debugf("sending reply %s", base58.Encode(replyHash))
 	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
+		logger.Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 	}
 }
 
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
-func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
+func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		meta := payload.Meta{}
-		err := meta.Unmarshal(msg.Payload)
+		logger := inslogger.FromContext(context.Background())
+
+		h := b.pcs.IntegrityHasher()
+		_, err := h.Write(msg.Payload)
 		if err != nil {
-			inslogger.FromContext(context.Background()).Error("can't unmarshal meta message")
+			logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
+			return nil, nil
+		}
+		id := base58.Encode(h.Sum(nil))
+		msg.Metadata.Set("msg_hash", id)
+		logger = logger.WithField("msg_hash", id)
+
+		meta := payload.Meta{}
+		err = meta.Unmarshal(msg.Payload)
+		if err != nil {
+			logger.Error("can't unmarshal meta message")
+			return nil, nil
 		}
 
-		id := base58.Encode(meta.OriginHash)
+		msg.Metadata.Set("pulse", meta.Pulse.String())
+
+		if len(meta.OriginHash) == 0 {
+			logger.Debug("not a reply")
+			return handle(msg)
+		}
 
 		b.repliesMutex.RLock()
+		defer b.repliesMutex.RUnlock()
+
+		originID := base58.Encode(meta.OriginHash)
+		msg.Metadata.Set("msg_hash_origin", originID)
+		logger = logger.WithField("msg_hash_origin", originID)
+
 		reply, ok := b.replies[id]
 		if !ok {
-			b.repliesMutex.RUnlock()
-			return h(msg)
+			logger.Warn("reply discarded")
+			return nil, nil
 		}
 
+		logger.Debug("reply received")
 		reply.wg.Add(1)
-		b.repliesMutex.RUnlock()
-
-		select {
-		case reply.messages <- msg:
-			inslogger.FromContext(context.Background()).Infof("result for message with origin_hash %s was send", id)
-		case <-reply.done:
-		}
-		reply.wg.Done()
+		go func() {
+			select {
+			case reply.messages <- msg:
+				logger.Debugf("result for message with origin_hash %s was send", id)
+			case <-reply.done:
+			}
+			reply.wg.Done()
+		}()
 
 		return nil, nil
 	}
