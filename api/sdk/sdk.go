@@ -32,12 +32,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type response struct {
-	Error   string
-	Result  interface{}
-	TraceID string
-}
-
 type ringBuffer struct {
 	sync.Mutex
 	urls   []string
@@ -130,10 +124,10 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 	return nil
 }
 
-func (sdk *SDK) sendRequest(ctx context.Context, method string, params []interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
+func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
 	reqCfg := &api.Request{
-		Params:   api.Params{CallParams: params},
-		Method:   method,
+		Params:   api.Params{CallParams: params, CallSite: method},
+		Method:   "api.Call",
 		LogLevel: sdk.logLevel.(string),
 	}
 
@@ -145,8 +139,8 @@ func (sdk *SDK) sendRequest(ctx context.Context, method string, params []interfa
 	return body, nil
 }
 
-func (sdk *SDK) getResponse(body []byte) (*response, error) {
-	res := &response{}
+func (sdk *SDK) getResponse(body []byte) (*api.ContractAnswer, error) {
+	res := &api.ContractAnswer{}
 	err := json.Unmarshal(body, &res)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponse ] problems with unmarshal response")
@@ -174,32 +168,32 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't extract public key")
 	}
 
-	response, err := sdk.DoRequest(sdk.rootMember.Caller, sdk.rootMember.PrivateKey, "CreateMember", []interface{}{string(memberPubKeyStr)})
+	response, err := sdk.DoRequest(sdk.rootMember.Caller, sdk.rootMember.PrivateKey, "CreateMember", map[string]interface{}{"publicKey": string(memberPubKeyStr)})
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] request was failed ")
 	}
 
-	return NewMember(response.Result.(string), string(privateKeyStr)), response.TraceID, nil
+	return NewMember(response.Result.ContractResult.(string), string(privateKeyStr)), response.Result.TraceID, nil
 }
 
 // Transfer method send money from one member to another
 func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
-	response, err := sdk.DoRequest(from.Reference, from.PrivateKey, "Transfer", []interface{}{amount, to.Reference})
+	response, err := sdk.DoRequest(from.Reference, from.PrivateKey, "Transfer", map[string]interface{}{"amount": amount, "to": to.Reference})
 	if err != nil {
 		return "", errors.Wrap(err, "[ Transfer ] request was failed ")
 	}
 
-	return response.TraceID, nil
+	return response.Result.TraceID, nil
 }
 
 // GetBalance returns current balance of the given member.
 func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
-	response, err := sdk.DoRequest(m.Reference, m.PrivateKey, "GetBalance", []interface{}{m.Reference})
+	response, err := sdk.DoRequest(m.Reference, m.PrivateKey, "GetBalance", map[string]interface{}{"reference": m.Reference})
 	if err != nil {
 		return new(big.Int), errors.Wrap(err, "[ GetBalance ] request was failed ")
 	}
 
-	result, ok := new(big.Int).SetString(response.Result.(string), 10)
+	result, ok := new(big.Int).SetString(response.Result.ContractResult.(string), 10)
 	if !ok {
 		return new(big.Int), errors.Errorf("[ GetBalance ] can't parse returned balance")
 	}
@@ -207,7 +201,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	return result, nil
 }
 
-func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params []interface{}) (*response, error) {
+func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params map[string]interface{}) (*api.ContractAnswer, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 	config, err := requester.CreateUserConfig(callerRef, callerKey)
 	if err != nil {
@@ -224,8 +218,8 @@ func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, par
 		return nil, errors.Wrap(err, "[ DoRequest ] can't get response")
 	}
 
-	if response.Error != "" {
-		return nil, errors.New(response.Error + ". TraceId: " + response.TraceID)
+	if response.Error.Message != "" {
+		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Result.TraceID)
 	}
 
 	return response, nil
