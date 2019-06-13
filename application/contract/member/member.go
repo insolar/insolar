@@ -119,6 +119,8 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	switch request.Params.CallSite {
 	case "contract.registerNode":
 		return m.registerNodeCall(rootDomain, request.Params.CallParams.(map[string]interface{}))
+	case "contract.getReferenceByPK":
+		return m.getReferenceByPK(rootDomain, request.Params.PublicKey)
 		//case "GetNodeRef":
 		//	return m.getNodeRefCall(rootDomain, params)
 		//
@@ -271,6 +273,16 @@ func (m *Member) registerNode(rdRef insolar.Reference, public string, role strin
 	}
 
 	return string(cert), nil
+}
+
+func (m *Member) getReferenceByPK(rdRef insolar.Reference, publicKey string) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(rdRef)
+	ref, err := rootDomain.GetReferenceByPK(publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("[ getNodeRef ] Failed to get getRefByPK: %s", err.Error())
+	}
+	return ref, nil
+
 }
 
 //func (m *Member) getNodeRef(rdRef insolar.Reference, publicKey string) (interface{}, error) {

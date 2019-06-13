@@ -19,6 +19,7 @@ package rootdomain
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/application/contract/rootdomain/util"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -108,10 +109,13 @@ func (rd RootDomain) GetBurnAddress() (string, error) {
 }
 
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
-	rd.PublicKeyMap[publicKey] = memberRef
+	rd.PublicKeyMap[util.TrimPK(publicKey)] = memberRef
 	rd.BurnAddressMap[burnAddress] = memberRef
-
 	return nil
+}
+
+func (rd RootDomain) GetReferenceByPK(publicKey string) (insolar.Reference, error) {
+	return rd.PublicKeyMap[util.TrimPK(publicKey)], nil
 }
 
 func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
