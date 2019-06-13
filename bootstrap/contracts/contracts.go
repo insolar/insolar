@@ -58,6 +58,33 @@ func nodeDomain() insolar.GenesisContractState {
 	}
 }
 
+func getMemberGenesisContractState(publicKey string, name string, parrent string) insolar.GenesisContractState {
+	m, err := member.New(name, publicKey)
+	if err != nil {
+		panic("`" + name + "` member constructor failed")
+	}
+
+	return insolar.GenesisContractState{
+		Name:       name,
+		ParentName: parrent,
+		Memory:     mustGenMemory(m),
+	}
+}
+
+func getWalletGenesisContractState(balance string, name string, parrent string) insolar.GenesisContractState {
+	w, err := wallet.New(balance)
+	if err != nil {
+		panic("failed to create ` " + name + "` wallet instance")
+	}
+
+	return insolar.GenesisContractState{
+		Name:       name,
+		ParentName: parrent,
+		Delegate:   true,
+		Memory:     mustGenMemory(w),
+	}
+}
+
 func rootMember(publicKey string) insolar.GenesisContractState {
 	m, err := member.New("RootMember", publicKey)
 	if err != nil {

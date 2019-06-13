@@ -36,7 +36,6 @@ import (
 type Member struct {
 	foundation.BaseContract
 	Name      string
-	EthAddr   string
 	PublicKey string
 }
 
@@ -505,8 +504,8 @@ func (m *Member) getReferenceByPK(rdRef insolar.Reference, publicKey string) (in
 	rootDomain := rootdomain.GetObject(rdRef)
 	ref, err := rootDomain.GetReferenceByPK(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("[ getNodeRef ] Failed to get getRefByPK: %s", err.Error())
+		return nil, fmt.Errorf("[ getReferenceByPK ] Failed to get get reference by public key: %s", err.Error())
 	}
-	return ref, nil
+	return ref.String(), nil
 
 }

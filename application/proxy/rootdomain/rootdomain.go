@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113JDyLhuqB8eevtzW3b6mwG72zAdF4cx8ecwvXre.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113Eme9z5x8sDVC44MS1sUJ71UPhyiAqd9RYR4n3n.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -1004,6 +1004,94 @@ func (r *RootDomain) AddNewMemberToMapsAsImmutable(publicKey string, burnAddress
 		return ret0
 	}
 	return nil
+}
+
+// GetReferenceByPK is proxy generated method
+func (r *RootDomain) GetReferenceByPK(publicKey string) (insolar.Reference, error) {
+	var args [1]interface{}
+	args[0] = publicKey
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetReferenceByPK", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetReferenceByPKNoWait is proxy generated method
+func (r *RootDomain) GetReferenceByPKNoWait(publicKey string) error {
+	var args [1]interface{}
+	args[0] = publicKey
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetReferenceByPK", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetReferenceByPKAsImmutable is proxy generated method
+func (r *RootDomain) GetReferenceByPKAsImmutable(publicKey string) (insolar.Reference, error) {
+	var args [1]interface{}
+	args[0] = publicKey
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetReferenceByPK", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetMemberByBurnAddress is proxy generated method
