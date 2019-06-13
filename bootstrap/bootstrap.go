@@ -115,11 +115,11 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
-		RootBalance:             g.config.RootBalance,
-		MDBalance:               g.config.MDBalance,
-		RootPublicKey:           rootPublicKey,
-		MigrationAdminPublicKey: migrationAdminPublicKey,
-		MigrationDamonPublicKey: migrationDamonPublicKeys,
+		RootBalance:              g.config.RootBalance,
+		MDBalance:                g.config.MDBalance,
+		RootPublicKey:            rootPublicKey,
+		MigrationAdminPublicKey:  migrationAdminPublicKey,
+		MigrationDamonPublicKeys: migrationDamonPublicKeys,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {

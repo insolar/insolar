@@ -27,15 +27,16 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
-	RootMember        insolar.Reference
-	OracleMembers     map[string]insolar.Reference
-	MDAdminMember     insolar.Reference
-	MDWallet          insolar.Reference
-	CostCenter        insolar.Reference
-	BurnAddressMap    map[string]insolar.Reference
-	PublicKeyMap      map[string]insolar.Reference
-	FreeBurnAddresses []string
-	NodeDomain        insolar.Reference
+	RootMember            insolar.Reference
+	MigrationDamonMembers []insolar.Reference
+	MigrationAdminMember  insolar.Reference
+	MigrationWallet       insolar.Reference
+	CostCenter            insolar.Reference
+	CommissionWallet      insolar.Reference
+	BurnAddressMap        map[string]insolar.Reference
+	PublicKeyMap          map[string]insolar.Reference
+	FreeBurnAddresses     []string
+	NodeDomain            insolar.Reference
 }
 
 var INSATTR_CreateMember_API = true
@@ -45,16 +46,16 @@ func NewRootDomain() (*RootDomain, error) {
 	return &RootDomain{}, nil
 }
 
-func (rd RootDomain) GetMDAdminMemberRef() (*insolar.Reference, error) {
-	return &rd.MDAdminMember, nil
+func (rd RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
+	return &rd.MigrationAdminMember, nil
 }
 
-func (rd RootDomain) GetMDWalletRef() (*insolar.Reference, error) {
-	return &rd.MDWallet, nil
+func (rd RootDomain) GetMigrationWalletRef() (*insolar.Reference, error) {
+	return &rd.MigrationWallet, nil
 }
 
-func (rd RootDomain) GetOracleMembers() (map[string]insolar.Reference, error) {
-	return rd.OracleMembers, nil
+func (rd RootDomain) GetMigrationDamonMembers() ([]insolar.Reference, error) {
+	return rd.MigrationDamonMembers, nil
 }
 
 func (rd RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
@@ -70,16 +71,16 @@ var INSATTR_Info_API = true
 
 // Info returns information about basic objects
 func (rd RootDomain) Info() (interface{}, error) {
-	oracleMembersOut := map[string]string{}
-	for name, ref := range rd.OracleMembers {
-		oracleMembersOut[name] = ref.String()
+	oracleMembersOut := []string{}
+	for _, ref := range rd.MigrationDamonMembers {
+		oracleMembersOut = append(oracleMembersOut, ref.String())
 	}
 
 	res := map[string]interface{}{
-		"root_member":     rd.RootMember.String(),
-		"oracle_members":  oracleMembersOut,
-		"md_admin_member": rd.MDAdminMember.String(),
-		"node_domain":     rd.NodeDomain.String(),
+		"root_member":             rd.RootMember.String(),
+		"migration_damon_members": oracleMembersOut,
+		"md_admin_member":         rd.MigrationAdminMember.String(),
+		"node_domain":             rd.NodeDomain.String(),
 	}
 	resJSON, err := json.Marshal(res)
 	if err != nil {

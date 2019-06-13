@@ -191,15 +191,15 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	return nil, &foundation.Error{S: "Unknown method: '" + request.Params.CallSite + "'"}
 }
 
-func (mdAdminMember *Member) addBurnAddressesCall(rdRef insolar.Reference, params map[string]interface{}) (interface{}, error) {
+func (migrationAdminMember *Member) addBurnAddressesCall(rdRef insolar.Reference, params map[string]interface{}) (interface{}, error) {
 
 	rootDomain := rootdomain.GetObject(rdRef)
-	mdAdminRef, err := rootDomain.GetMDAdminMemberRef()
+	migrationAdminRef, err := rootDomain.GetMigrationAdminMemberRef()
 	if err != nil {
 		return nil, fmt.Errorf("[ addBurnAddressesCall ] Failed to get migration deamon admin reference from root domain: %s", err.Error())
 	}
 
-	if mdAdminMember.GetReference() != *mdAdminRef {
+	if migrationAdminMember.GetReference() != *migrationAdminRef {
 		return nil, fmt.Errorf("[ addBurnAddressesCall ] Only migration deamon admin can call this method")
 	}
 
@@ -247,7 +247,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 }
 func (mdMember *Member) migrationCall(rdRef insolar.Reference, params map[string]interface{}) (string, error) {
 	if mdMember.Name == "" {
-		return "", fmt.Errorf("[ migrationCall ] Only oracles can call migrationCall")
+		return "", fmt.Errorf("[ migrationCall ] Only migraion damons can call migrationCall")
 	}
 
 	amount := new(big.Int)
@@ -413,20 +413,20 @@ func (m *Member) getDeposits() ([]map[string]string, error) {
 }
 
 // Migration methods
-func (oracleMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
+func (migrationDamonMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
 	rd := rootdomain.GetObject(rdRef)
 
-	// Get oracle members
-	oracleMembers, err := rd.GetOracleMembers()
+	// Get migraion damon members
+	migrationDamonMembers, err := rd.GetMigrationDamonMembers()
 	if err != nil {
-		return "", fmt.Errorf("[ migration ] Failed to get oracles map: %s", err.Error())
+		return "", fmt.Errorf("[ migration ] Failed to get migraion damons map: %s", err.Error())
 	}
-	if len(oracleMembers) == 0 {
-		return "", fmt.Errorf("[ migration ] There is no active oracle")
+	if len(migrationDamonMembers) == 0 {
+		return "", fmt.Errorf("[ migration ] There is no active migraion damon")
 	}
-	// Check that caller is oracle
-	if _, ok := oracleMembers[oracleMember.Name]; !ok {
-		return "", fmt.Errorf("[ migration ] This oracle is not in the list")
+	// Check that caller is migraion damon
+	if helper.Contains(migrationDamonMembers, migrationDamonMember.GetReference()) {
+		return "", fmt.Errorf("[ migration ] This migraion damon is not in the list")
 	}
 
 	// Get member by burn address
@@ -444,11 +444,11 @@ func (oracleMember *Member) migration(rdRef insolar.Reference, txHash string, bu
 
 	// If deposit doesn't exist - create new deposit
 	if !found {
-		oracleConfirms := map[string]bool{}
-		for name, _ := range oracleMembers {
-			oracleConfirms[name] = false
+		migraiondamonConfirms := map[insolar.Reference]bool{}
+		for _, ref := range migrationDamonMembers {
+			migraiondamonConfirms[ref] = false
 		}
-		dHolder := deposit.New(oracleConfirms, txHash, amount.String(), unHoldDate)
+		dHolder := deposit.New(migraiondamonConfirms, txHash, amount.String(), unHoldDate)
 		txDepositP, err := dHolder.AsDelegate(mRef)
 		if err != nil {
 			return "", fmt.Errorf("[ migration ] Failed to save as delegate: %s", err.Error())
@@ -456,8 +456,8 @@ func (oracleMember *Member) migration(rdRef insolar.Reference, txHash string, bu
 		txDeposit = *txDepositP
 	}
 
-	// Confirm tx by oracle
-	confirms, err := txDeposit.Confirm(oracleMember.Name, txHash, amount.String())
+	// Confirm tx by migraion damon
+	confirms, err := txDeposit.Confirm(migrationDamonMember.Name, txHash, amount.String())
 	if err != nil {
 		return "", fmt.Errorf("[ migration ] Confirmed failed: %s", err.Error())
 	}
@@ -473,7 +473,7 @@ func (oracleMember *Member) migration(rdRef insolar.Reference, txHash string, bu
 	//	}
 	//
 	//	getMdWallet := func() (*wallet.Wallet, error) {
-	//		mdWalletRef, err := rd.GetMDWalletRef()
+	//		mdWalletRef, err := rd.GetMigrationWalletRef()
 	//		if err != nil {
 	//			return nil, fmt.Errorf("[ migration ] Failed to get md wallet ref: %s", err.Error())
 	//		}

@@ -40,6 +40,9 @@ const (
 	GenesisNameRootWallet           = "root" + GenesisNameWallet
 	GenesisNameMigrationAdminMember = "migrationadmin" + GenesisNameMember
 	GenesisNameMigrationWallet      = "migration" + GenesisNameWallet
+	GenesisNameCommissionWallet     = "commission" + GenesisNameWallet
+
+	GenesisNameStandardTariff = "standard" + GenesisNameTariff
 )
 
 var GenesisNameMigrationDamonMembers = func() (result [10]string) {
@@ -81,11 +84,11 @@ type GenesisContractState struct {
 
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
-	RootBalance             string
-	MDBalance               string
-	RootPublicKey           string
-	MigrationAdminPublicKey string
-	MigrationDamonPublicKey [10]string
+	RootBalance              string
+	MDBalance                string
+	RootPublicKey            string
+	MigrationAdminPublicKey  string
+	MigrationDamonPublicKeys [10]string
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.

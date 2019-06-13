@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113Eme9z5x8sDVC44MS1sUJ71UPhyiAqd9RYR4n3n.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111Q2KYgSvG6F1hbw3G8rEh1V37RtTgAwAk4bWS14.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -153,8 +153,8 @@ func (r *RootDomain) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// GetMDAdminMemberRef is proxy generated method
-func (r *RootDomain) GetMDAdminMemberRef() (*insolar.Reference, error) {
+// GetMigrationAdminMemberRef is proxy generated method
+func (r *RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -170,7 +170,7 @@ func (r *RootDomain) GetMDAdminMemberRef() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMDAdminMemberRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -186,8 +186,8 @@ func (r *RootDomain) GetMDAdminMemberRef() (*insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetMDAdminMemberRefNoWait is proxy generated method
-func (r *RootDomain) GetMDAdminMemberRefNoWait() error {
+// GetMigrationAdminMemberRefNoWait is proxy generated method
+func (r *RootDomain) GetMigrationAdminMemberRefNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -197,7 +197,7 @@ func (r *RootDomain) GetMDAdminMemberRefNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMDAdminMemberRef", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -205,8 +205,8 @@ func (r *RootDomain) GetMDAdminMemberRefNoWait() error {
 	return nil
 }
 
-// GetMDAdminMemberRefAsImmutable is proxy generated method
-func (r *RootDomain) GetMDAdminMemberRefAsImmutable() (*insolar.Reference, error) {
+// GetMigrationAdminMemberRefAsImmutable is proxy generated method
+func (r *RootDomain) GetMigrationAdminMemberRefAsImmutable() (*insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -222,7 +222,7 @@ func (r *RootDomain) GetMDAdminMemberRefAsImmutable() (*insolar.Reference, error
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMDAdminMemberRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -238,8 +238,8 @@ func (r *RootDomain) GetMDAdminMemberRefAsImmutable() (*insolar.Reference, error
 	return ret0, nil
 }
 
-// GetMDWalletRef is proxy generated method
-func (r *RootDomain) GetMDWalletRef() (*insolar.Reference, error) {
+// GetMigrationWalletRef is proxy generated method
+func (r *RootDomain) GetMigrationWalletRef() (*insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -255,7 +255,7 @@ func (r *RootDomain) GetMDWalletRef() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMDWalletRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -271,8 +271,8 @@ func (r *RootDomain) GetMDWalletRef() (*insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetMDWalletRefNoWait is proxy generated method
-func (r *RootDomain) GetMDWalletRefNoWait() error {
+// GetMigrationWalletRefNoWait is proxy generated method
+func (r *RootDomain) GetMigrationWalletRefNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -282,7 +282,7 @@ func (r *RootDomain) GetMDWalletRefNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMDWalletRef", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -290,8 +290,8 @@ func (r *RootDomain) GetMDWalletRefNoWait() error {
 	return nil
 }
 
-// GetMDWalletRefAsImmutable is proxy generated method
-func (r *RootDomain) GetMDWalletRefAsImmutable() (*insolar.Reference, error) {
+// GetMigrationWalletRefAsImmutable is proxy generated method
+func (r *RootDomain) GetMigrationWalletRefAsImmutable() (*insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -307,7 +307,7 @@ func (r *RootDomain) GetMDWalletRefAsImmutable() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMDWalletRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -323,14 +323,14 @@ func (r *RootDomain) GetMDWalletRefAsImmutable() (*insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetOracleMembers is proxy generated method
-func (r *RootDomain) GetOracleMembers() (map[string]insolar.Reference, error) {
+// GetMigrationDamonMembers is proxy generated method
+func (r *RootDomain) GetMigrationDamonMembers() ([]insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 map[string]insolar.Reference
+	var ret0 []insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -340,7 +340,7 @@ func (r *RootDomain) GetOracleMembers() (map[string]insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetOracleMembers", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMigrationDamonMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -356,8 +356,8 @@ func (r *RootDomain) GetOracleMembers() (map[string]insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetOracleMembersNoWait is proxy generated method
-func (r *RootDomain) GetOracleMembersNoWait() error {
+// GetMigrationDamonMembersNoWait is proxy generated method
+func (r *RootDomain) GetMigrationDamonMembersNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -367,7 +367,7 @@ func (r *RootDomain) GetOracleMembersNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetOracleMembers", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMigrationDamonMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -375,14 +375,14 @@ func (r *RootDomain) GetOracleMembersNoWait() error {
 	return nil
 }
 
-// GetOracleMembersAsImmutable is proxy generated method
-func (r *RootDomain) GetOracleMembersAsImmutable() (map[string]insolar.Reference, error) {
+// GetMigrationDamonMembersAsImmutable is proxy generated method
+func (r *RootDomain) GetMigrationDamonMembersAsImmutable() ([]insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 map[string]insolar.Reference
+	var ret0 []insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -392,7 +392,7 @@ func (r *RootDomain) GetOracleMembersAsImmutable() (map[string]insolar.Reference
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetOracleMembers", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMigrationDamonMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
