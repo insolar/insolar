@@ -112,9 +112,7 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	//	return m.createMemberCall(rootDomain, request.Params.CallParams)
 	//}
 
-	//if err := m.verifySig(method, params, seed, sign); err != nil {
-	//	return nil, fmt.Errorf("[ Call ]: %s", err.Error())
-	//}
+	// TODO: do verify ecdsa.Verify(&privateKey.PublicKey, hash[:], r, s)
 
 	switch request.Params.CallSite {
 	case "contract.registerNode":
