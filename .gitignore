@@ -54,15 +54,3 @@ network_cache
 # Local doc build directory
 /docs/build
 
-###  Directories and files created in runtime
-/false
-/on
-/logicrunner/false
-/logicrunner/on
-_db
-data_pulsar
-new-data
-pprof
-/*.file
-/ci_*.json
-*.orig
