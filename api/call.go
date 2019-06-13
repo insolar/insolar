@@ -40,8 +40,8 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	JsonRpc  string `json:"jsonrpc"`
-	Id       int    `json:"id"`
+	JSONRPC  string `json:"jsonrpc"`
+	ID       int    `json:"id"`
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
@@ -56,8 +56,8 @@ type Params struct {
 }
 
 type ContractAnswer struct {
-	JsonRpc string `json:"jsonrpc"`
-	Id      int    `json:"id"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
 	Result  Result `json:"result,omitempty"`
 	Error   Error  `json:"error,omitempty"`
 }
@@ -145,10 +145,10 @@ func (ar *Runner) makeCall(ctx context.Context, request Request, rawBody []byte,
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *ContractAnswer, insLog insolar.Logger, traceId string) {
+func processError(err error, extraMsg string, resp *ContractAnswer, insLog insolar.Logger, traceID string) {
 	resp.Error.Message = err.Error()
 	resp.Error.Code = -214
-	resp.Error.TraceID = traceId
+	resp.Error.TraceID = traceID
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
@@ -192,8 +192,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		resp.JsonRpc = request.JsonRpc
-		resp.Id = request.Id
+		resp.JSONRPC = request.JSONRPC
+		resp.ID = request.ID
 
 		digest := req.Header.Get("Digest")
 		richSignature := req.Header.Get("Signature")
@@ -257,7 +257,10 @@ func validateRequestHeaders(digest string, richSignature string, body []byte) (s
 		return "", errors.New("Invalid input data")
 	}
 	h := sha256.New()
-	h.Write(body)
+	_, err := h.Write(body)
+	if err != nil {
+		return "", errors.Wrap(err, "Cant get hash")
+	}
 	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
 	if sha == digest[strings.IndexByte(digest, '=')+1:] {
 		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
@@ -266,7 +269,6 @@ func validateRequestHeaders(digest string, richSignature string, body []byte) (s
 		}
 		return sig, nil
 
-	} else {
-		return "", errors.New("Cant get signature from header")
 	}
+	return "", errors.New("Cant get signature from header")
 }

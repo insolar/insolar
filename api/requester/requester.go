@@ -85,8 +85,8 @@ func SetVerbose(verb bool) {
 //type PostParams = map[string]interface{}
 
 type PlatformRequest struct {
-	JsonRpc        string      `json:"jsonrpc"`
-	Id             int         `json:"id"`
+	JSONRPC        string      `json:"jsonrpc"`
+	ID             int         `json:"id"`
 	Method         string      `json:"method"`
 	PlatformParams interface{} `json:"params"`
 	LogLevel       string      `json:"logLevel,omitempty"`
@@ -106,7 +106,10 @@ func GetResponseBodyContract(url string, postP api.Request, signature string) ([
 	req.Header.Set("Content-Type", "application/json")
 
 	h := sha256.New()
-	h.Write(jsonValue)
+	_, err = h.Write(jsonValue)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Cant get hash")
+	}
 	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
 	req.Header.Set("Digest", "SHA-256="+sha)
 	req.Header.Set("Signature", "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
@@ -169,9 +172,9 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 // GetSeed makes rpc request to seed.Get method and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
-		JsonRpc: "2.0",
+		JSONRPC: "2.0",
 		Method:  "seed.Get",
-		Id:      1,
+		ID:      1,
 	})
 	if err != nil {
 		return "", errors.Wrap(err, "[ getSeed ]")
@@ -235,7 +238,7 @@ func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey.(*ecdsa.PrivateKey), hash[:])
 	if err != nil {
-		panic(err)
+		return "", errors.Wrap(err, "[ Send ] Cant sign data")
 	}
 
 	return PointsToDER(r, s), nil
@@ -288,8 +291,8 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *api.
 
 func getDefaultRPCParams(method string) PlatformRequest {
 	return PlatformRequest{
-		JsonRpc: "2.0",
-		Id:      1,
+		JSONRPC: "2.0",
+		ID:      1,
 		Method:  method,
 	}
 }
