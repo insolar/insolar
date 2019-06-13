@@ -628,6 +628,9 @@ func (m *client) DeployCode(
 func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (payload.Payload, error) {
 	for tries > 0 {
 		msg, err := payload.NewMessage(ppl)
+		if err == nil {
+			return nil, err
+		}
 
 		reps, done := m.sender.SendRole(ctx, msg, role, ref)
 		rep, ok := <-reps
