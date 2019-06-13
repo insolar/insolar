@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -60,15 +59,6 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 
 func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-
-	pendingMock := recentstorage.NewPendingStorageMock(t)
-
-	pendingMock.GetRequestsForObjectMock.Return(nil)
-	pendingMock.AddPendingRequestMock.Return()
-	pendingMock.RemovePendingRequestMock.Return()
-
-	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterMock.Return()
@@ -142,15 +132,6 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 
 func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-
-	pendingMock := recentstorage.NewPendingStorageMock(t)
-
-	pendingMock.GetRequestsForObjectMock.Return(nil)
-	pendingMock.AddPendingRequestMock.Return()
-	pendingMock.RemovePendingRequestMock.Return()
-
-	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	writeManagerMock := hot.NewWriteAccessorMock(t)
 	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
