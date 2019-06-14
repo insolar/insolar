@@ -58,18 +58,16 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/network/gateway"
+	"github.com/insolar/insolar/network/gateway/bootstrap"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/network/gateway/bootstrap"
+	"github.com/insolar/insolar/network/controller/common"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -82,7 +80,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/consensus/phases"
 	"github.com/insolar/insolar/network/controller"
-	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -218,7 +215,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewPhaseManager(n.cfg.Service.Consensus),
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
-
+		bootstrap.NewAuthorizer(options),
 		baseGateway,
 	)
 	err = n.cm.Init(ctx)
