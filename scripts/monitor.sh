@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 # Helper for running monitoring stack for launchnet
 #
 # 1. without arguments just (re)creates all containers:
@@ -23,12 +23,16 @@ CONFIG_DIR=scripts/monitor/prometheus/
 
 set -e
 
+export PROMETHEUS_CONFIG_DIR=../${LAUNCHNET_BASE_DIR}
 
-if [ $# -lt 1 ]; then
-    echo "pregen configs (required for prometheus config generation)"
+if [[ $# -lt 1 ]]; then
+# 1) if started without params  pretend to be clever and do what is expected:
+# * prepare configuration
+# * shutdown ans start all monitoring services
+# * wait until Jaeger starts (we want to be sure tracer works before start benchmark)
+    echo "pre-gen launchnet configs (required for prometheus config generation)"
     ./scripts/insolard/launchnet.sh -C
     mkdir -p ${CONFIG_DIR}
-    cp ${PROMETHEUS_IN_CONFIG} ${CONFIG_DIR}
 
     echo "start monitoring stack"
     cd scripts/
@@ -41,7 +45,11 @@ if [ $# -lt 1 ]; then
     set +e
     for i in {1..10}; do
         curl -s -f 'http://localhost:16687/'
-        if [ $? -eq 0 ]; then
+        if [[ $? -eq 0 ]]; then
+            break
+        fi
+        if [[ $i -eq 10 ]]; then
+            echo "jaeger wait is failed"
             break
         fi
         sleep 2
@@ -52,6 +60,8 @@ if [ $# -lt 1 ]; then
     echo "# Kibana: http://localhost:5601 (starts slowly, be patient)"
     exit
 fi
+
+# 2) with arguments just work as thin docker-compose wrapper
 
 cd scripts/
 docker-compose $@

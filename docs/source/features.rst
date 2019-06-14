@@ -5,18 +5,17 @@ Distinctive Features
 The Insolar platform is built to satisfy enterprise requirements by combining distributed and cloud technologies and dozens of industry-first features. Insolar is currently designing the proposed platform in an incremental fashion allowing it to progressively grow into the ultimate decentralized collaborative environment for various kinds of industries, companies, governments, and communities.
 Insolar sees these many features and capabilities as a mandatory part of blockchain implementation and integrates them as part of the Insolar platform.
 
-
 Federation of Clouds
 ~~~~~~~~~~~~~~~~~~~~
 Transparently connects multiple clouds based on Insolar technology, where each cloud runs and is governed independently (e.g., by a community, company, industry consortia, or national agency).
 
 Cloud
 ~~~~~
-Organizes and unifies software capabilities, hardware capacities, and the financial and legal liability of nodes to ensure the transparent and seamless operation of business services (more details provided in Section 4.14).
+Organizes and unifies software capabilities, hardware capacities, and the financial and legal liability of nodes to ensure the transparent and seamless operation of business services.
 
 Globular Network
 ~~~~~~~~~~~~~~~~
-The backbone of a cloud. It is a set of protocols enabling the coordination of P2P networks of up to 1,000 nodes and a hierarchical network of up to 100,000 nodes (more details provided in Section 4.9).
+The backbone of a cloud. It is a set of protocols enabling the coordination of P2P networks of up to 1,000 nodes and a hierarchical network of up to 100,000 nodes.
 
 .. _omniscaling:
 
@@ -26,7 +25,7 @@ Is an integral feature that utilizes a multi role model of nodes, a multichain o
 
 Domain
 ~~~~~~
-Enables different governance models, it defines policies for data and contracts, such as to allow public or permissioned models, or to apply national or industry standards (more details provided in Section 4.13).
+Enables different governance models, it defines policies for data and contracts, such as to allow public or permissioned models, or to apply national or industry standards.
 
 Data Safety
 ~~~~~~~~~~~
@@ -34,7 +33,7 @@ Cost-efficient data safety and leakage prevention for shared cloud solutions thr
 
 Capacity Marketplace
 ~~~~~~~~~~~~~~~~~~~~
-A special domain within a cloud that defines procedures for business services to do spot and long-term trading for CPU, storage, and traffic as commodities (more details provided in Section 9.3).
+A special domain within a cloud that defines procedures for business services to do spot and long-term trading for CPU, storage, and traffic as commodities.
 
 Separation of Business Logic
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,7 +41,7 @@ Helps to focus on what is essential for a business to operate and allows for the
 
 Business Templates
 ~~~~~~~~~~~~~~~~~~
-Come from a separation of business logic with the use of domains, making the reuse of business logic possible either as components or as full application templates for easy deployment (more details provided in Section 9.1.3).
+Come from a separation of business logic with the use of domains, making the reuse of business logic possible either as components or as full application templates for easy deployment.
 
 Per-transaction Consensus
 ~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -54,24 +54,23 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
-	"github.com/insolar/insolar/network/node"
-
-	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -83,13 +82,6 @@ func (p *PublisherMock) Publish(topic string, messages ...*message.Message) erro
 
 func (p *PublisherMock) Close() error {
 	return nil
-}
-
-func checkRepliedMsg(t *testing.T, expectedMsg *message.Message, errText string) {
-	require.NotNil(t, expectedMsg)
-	replyPayload, err := payload.Unmarshal(expectedMsg.Payload)
-	require.NoError(t, err)
-	require.Contains(t, replyPayload.(*payload.Error).Text, errText)
 }
 
 func prepareNetwork(t *testing.T, cfg configuration.Configuration) *ServiceNetwork {
@@ -107,45 +99,20 @@ func prepareNetwork(t *testing.T, cfg configuration.Configuration) *ServiceNetwo
 
 func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	var expectedMsg *message.Message
 
 	serviceNetwork := prepareNetwork(t, cfg)
-	sender := bus.NewSenderMock(t)
-	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
-		expectedMsg = p2
-	}
 
 	p := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), p)
-
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
-	require.NoError(t, err)
-	checkRepliedMsg(t, expectedMsg, "failed to send message: Receiver in msg.Metadata not set")
-	require.Nil(t, outMsgs)
-}
-
-func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	cfg.Service.Skip = 5
-
-	var expectedMsg *message.Message
-
-	serviceNetwork := prepareNetwork(t, cfg)
-	sender := bus.NewSenderMock(t)
-	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
-		expectedMsg = p2
+	meta := payload.Meta{
+		Payload: p,
 	}
-
-	p := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), p)
-	inMsg.Metadata.Set(bus.MetaReceiver, "someBadValue")
-
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
+	data, err := meta.Marshal()
 	require.NoError(t, err)
-	checkRepliedMsg(t, expectedMsg, "incorrect Receiver in msg.Metadata")
-	require.Nil(t, outMsgs)
+
+	inMsg := message.NewMessage(watermill.NewUUID(), data)
+
+	_, err = serviceNetwork.SendMessageHandler(inMsg)
+	require.Error(t, err)
 }
 
 func TestSendMessageHandler_SameNode(t *testing.T) {
@@ -168,9 +135,15 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 	serviceNetwork.NodeKeeper = nodeN
 	serviceNetwork.Pub = pubMock
 
-	payload := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), payload)
-	inMsg.Metadata.Set(bus.MetaReceiver, nodeRef.String())
+	p := []byte{1, 2, 3, 4, 5}
+	meta := payload.Meta{
+		Payload:  p,
+		Receiver: nodeRef,
+	}
+	data, err := meta.Marshal()
+	require.NoError(t, err)
+
+	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
@@ -200,21 +173,19 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.RPC = rpc
 	serviceNetwork.NodeKeeper = nodeN
-	var expectedMsg *message.Message
-	sender := bus.NewSenderMock(t)
-	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
-		expectedMsg = p2
-	}
 
 	p := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), p)
-	inMsg.Metadata.Set(bus.MetaReceiver, testutils.RandomRef().String())
-
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
+	meta := payload.Meta{
+		Payload:  p,
+		Receiver: testutils.RandomRef(),
+	}
+	data, err := meta.Marshal()
 	require.NoError(t, err)
-	checkRepliedMsg(t, expectedMsg, "error while sending watermillMsg to controller")
-	require.Nil(t, outMsgs)
+
+	inMsg := message.NewMessage(watermill.NewUUID(), data)
+
+	_, err = serviceNetwork.SendMessageHandler(inMsg)
+	require.Error(t, err)
 }
 
 func TestSendMessageHandler_WrongReply(t *testing.T) {
@@ -240,21 +211,19 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.RPC = rpc
 	serviceNetwork.NodeKeeper = nodeN
-	var expectedMsg *message.Message
-	sender := bus.NewSenderMock(t)
-	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
-		expectedMsg = p2
+
+	p := []byte{1, 2, 3, 4, 5}
+	meta := payload.Meta{
+		Payload:  p,
+		Receiver: testutils.RandomRef(),
 	}
-
-	payload := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), payload)
-	inMsg.Metadata.Set(bus.MetaReceiver, testutils.RandomRef().String())
-
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
+	data, err := meta.Marshal()
 	require.NoError(t, err)
-	checkRepliedMsg(t, expectedMsg, "reply is not ack")
-	require.Nil(t, outMsgs)
+
+	inMsg := message.NewMessage(watermill.NewUUID(), data)
+
+	_, err = serviceNetwork.SendMessageHandler(inMsg)
+	require.Error(t, err)
 }
 
 func TestSendMessageHandler(t *testing.T) {
@@ -279,9 +248,15 @@ func TestSendMessageHandler(t *testing.T) {
 	serviceNetwork.RPC = rpc
 	serviceNetwork.NodeKeeper = nodeN
 
-	payload := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), payload)
-	inMsg.Metadata.Set(bus.MetaReceiver, testutils.RandomRef().String())
+	p := []byte{1, 2, 3, 4, 5}
+	meta := payload.Meta{
+		Payload:  p,
+		Receiver: testutils.RandomRef(),
+	}
+	data, err := meta.Marshal()
+	require.NoError(t, err)
+
+	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
@@ -305,13 +280,13 @@ func TestServiceNetwork_StartStop(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	defer serviceNetwork.Stop(ctx)
+	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
 
-	gil := testutils.NewGlobalInsolarLockMock(t)
-	gil.AcquireFunc = func(context.Context) {}
-	gil.ReleaseFunc = func(context.Context) {}
+	})
+
 	cm.Inject(serviceNetwork, nk, certManager, testutils.NewCryptographyServiceMock(t), pulse.NewAccessorMock(t),
 		testutils.NewTerminationHandlerMock(t), testutils.NewPulseManagerMock(t), &PublisherMock{},
-		testutils.NewMessageBusMock(t), gil, testutils.NewContractRequesterMock(t),
+		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t),
 		bus.NewSenderMock(t), &stater{}, testutils.NewPlatformCryptographyScheme(), testutils.NewKeyProcessorMock(t))
 	err = serviceNetwork.Init(ctx)
 	require.NoError(t, err)
@@ -342,4 +317,41 @@ func TestServiceNetwork_processIncoming(t *testing.T) {
 	pub.Error = errors.New("Failed to publish message")
 	_, err = serviceNetwork.processIncoming(ctx, data)
 	assert.Error(t, err)
+}
+
+func TestServiceNetwork_SetGateway(t *testing.T) {
+	sn, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{}, false)
+	require.NoError(t, err)
+	op := false
+	tick := 0
+	sn.SetOperableFunc(func(ctx context.Context, operable bool) {
+		op = operable
+		tick++
+	})
+
+	hn := networkUtils.NewHostNetworkMock(t)
+	hn.RegisterRequestHandlerMock.Return()
+	sn.HostNetwork = hn
+
+	// initial set
+	sn.SetGateway(gateway.NewNoNetwork(sn, sn.NodeKeeper, sn.ContractRequester,
+		sn.CryptographyService, sn.HostNetwork, sn.CertificateManager))
+	assert.Equal(t, 1, tick)
+	assert.False(t, op)
+
+	type Test struct {
+		state insolar.NetworkState
+		lock  bool
+	}
+
+	for i, T := range []Test{
+		{insolar.NoNetworkState, false},
+		{insolar.CompleteNetworkState, true},
+		{insolar.NoNetworkState, false},
+	} {
+		sn.SetGateway(sn.Gateway().NewGateway(T.state))
+		assert.Equal(t, i+1, tick)
+		assert.Equal(t, T.lock, op)
+
+	}
 }

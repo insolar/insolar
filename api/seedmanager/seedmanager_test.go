@@ -88,7 +88,7 @@ func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
 }
 
 func TestRace(t *testing.T) {
-	const numConcurrent = 15
+	const numConcurrent = 10
 
 	expTime := time.Duration(2 * time.Millisecond)
 	cleanPeriod := time.Duration(1 * time.Millisecond)
@@ -100,15 +100,17 @@ func TestRace(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			var seeds []Seed
-			for j := 0; j < 500; j++ {
+			numIterations := 300
+			for j := 0; j < numIterations; j++ {
 				seeds = append(seeds, getSeed(t))
 				sm.Add(seeds[len(seeds)-1])
 			}
 			<-time.After(cleanPeriod)
-			for j := 0; j < 500; j++ {
+			for j := 0; j < numIterations; j++ {
 				sm.Exists(seeds[j])
 			}
 		}()
 	}
 	wg.Wait()
+	sm.Stop()
 }

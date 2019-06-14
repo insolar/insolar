@@ -279,6 +279,7 @@ type AdditionalCallFromPreviousExecutor struct {
 	ObjectReference insolar.Reference
 	Parcel          insolar.Parcel
 	Request         *insolar.Reference
+	Pending         PendingState
 }
 
 func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {

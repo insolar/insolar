@@ -43,7 +43,7 @@ func baseDir() string {
 var (
 	defaultOutputConfigNameTmpl      = "%d/insolard.yaml"
 	defaultHost                      = "127.0.0.1"
-	defaultJaegerEndPoint            = defaultHost + ":6831"
+	defaultJaegerEndPoint            = ""
 	discoveryDataDirectoryTemplate   = withBaseDir("discoverynodes/%d/data")
 	discoveryCertificatePathTemplate = withBaseDir("discoverynodes/certs/discovery_cert_%d.json")
 	nodeDataDirectoryTemplate        = "nodes/%d/data"

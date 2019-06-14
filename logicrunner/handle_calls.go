@@ -59,6 +59,12 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 		Request:         request,
 	}
 
+	if es.pending == message.PendingUnknown {
+		additionalCallMsg.Pending = message.NotPending
+	} else {
+		additionalCallMsg.Pending = es.pending
+	}
+
 	es.Lock()
 	// We want to remove element we have just added to es.Queue to eliminate doubling
 	addedRequestIdx := -1
@@ -104,15 +110,18 @@ func (h *HandleCall) handleActual(
 	es.Lock()
 
 	procCheckRole := CheckOurRole{
-		msg:  msg,
-		role: insolar.DynamicRoleVirtualExecutor,
-		lr:   lr,
+		msg:         msg,
+		role:        insolar.DynamicRoleVirtualExecutor,
+		lr:          lr,
+		pulseNumber: flow.Pulse(ctx),
 	}
 
 	if err := f.Procedure(ctx, &procCheckRole, true); err != nil {
 		es.Unlock()
-		if err == flow.ErrCancelled {
-			return nil, err // message bus will retry on the calling side in ContractRequester
+		// rewrite "can't execute this object" to "flow cancelled" for force retry message
+		// just temporary fix till mb moved to watermill
+		if err == flow.ErrCancelled || err == ErrCantExecute {
+			return nil, flow.ErrCancelled
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't play role")
 	}
@@ -227,6 +236,9 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	os.Unlock()
 
 	es.Lock()
+	if msg.Pending == message.NotPending {
+		es.pending = message.NotPending
+	}
 	qElement := *NewTranscript(ctx, msg.Parcel, msg.Request, lr.pulse(ctx), es.Ref)
 	es.Queue = append(es.Queue, qElement)
 	es.Unlock()

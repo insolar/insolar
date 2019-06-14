@@ -46,13 +46,13 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	es.getLedgerPendingMutex.Lock()
 	defer es.getLedgerPendingMutex.Unlock()
 
-	proc := UnsafeGetLedgerPendingRequest{
+	proc := &UnsafeGetLedgerPendingRequest{
 		es:         es,
 		dep:        p.dep,
 		hasPending: false,
 	}
 
-	err := proc.Proceed(ctx)
+	err := f.Procedure(ctx, proc, true)
 	if err != nil {
 		inslogger.FromContext(ctx).Debug("GetLedgerPendingRequest.Present err: ", err)
 		return nil

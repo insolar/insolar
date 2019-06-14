@@ -24,6 +24,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -32,24 +36,27 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 const CallUrl = "http://localhost:19192/api/call"
 
 type TimeoutSuite struct {
 	suite.Suite
+
+	mc    *minimock.Controller
 	ctx   context.Context
 	api   *Runner
 	user  *requester.UserConfigJSON
-	delay bool
+	delay chan struct{}
 }
 
-func (suite *TimeoutSuite) TestRunner_callHandler() {
+func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
+
+	close(suite.delay)
+	suite.api.cfg.Timeout = 60
 
 	seeds := base64.StdEncoding.EncodeToString(seed[:])
 
@@ -69,12 +76,13 @@ func (suite *TimeoutSuite) TestRunner_callHandler() {
 	suite.Equal("OK", result.Result.ContractResult)
 }
 
-func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
+func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
 
-	suite.delay = true
+	suite.api.cfg.Timeout = 1
+
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
@@ -83,6 +91,8 @@ func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
 		string(seed[:]),
 	)
 	suite.NoError(err)
+
+	close(suite.delay)
 
 	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
@@ -94,6 +104,7 @@ func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
 func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite := new(TimeoutSuite)
 	timeoutSuite.ctx, _ = inslogger.WithTraceField(context.Background(), "APItests")
+	timeoutSuite.mc = minimock.NewController(t)
 
 	ks := platformpolicy.NewKeyProcessor()
 	sKey, err := ks.GeneratePrivateKey()
@@ -114,19 +125,19 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)
 
-	cert := testutils.NewCertificateMock(t)
+	cert := testutils.NewCertificateMock(timeoutSuite.mc)
 	cert.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
 		ref := testutils.RandomRef()
 		return &ref
 	}
 
-	cm := testutils.NewCertificateManagerMock(t)
+	cm := testutils.NewCertificateManagerMock(timeoutSuite.mc)
 	cm.GetCertificateFunc = func() (r insolar.Certificate) {
 		return cert
 	}
 
 	// TODO: refactor this mock
-	cr := testutils.NewContractRequesterMock(t)
+	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
 	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
 		switch method {
 		case "GetPublicKey":
@@ -137,9 +148,7 @@ func TestTimeoutSuite(t *testing.T) {
 				Result: data,
 			}, nil
 		default:
-			if timeoutSuite.delay {
-				time.Sleep(time.Second * 21)
-			}
+			<-timeoutSuite.delay
 			var result = "OK"
 			var contractErr *foundation.Error
 			data, _ := insolar.MarshalArgs(result, contractErr)
@@ -157,4 +166,13 @@ func TestTimeoutSuite(t *testing.T) {
 	suite.Run(t, timeoutSuite)
 
 	timeoutSuite.api.Stop(timeoutSuite.ctx)
+}
+
+func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
+	suite.delay = make(chan struct{}, 0)
+}
+
+func (suite *TimeoutSuite) AfterTest(suiteName, testName string) {
+	suite.mc.Wait(1*time.Minute)
+	suite.mc.Finish()
 }
