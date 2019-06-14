@@ -170,6 +170,16 @@ type MessageBusLocker interface {
 	Unlock(ctx context.Context)
 }
 
+// TODO This Interface seems to duplicate MBLocker
+//go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go
+
+// GlobalInsolarLock is lock of all incoming and outcoming network calls.
+// It's not intended to be used in multiple threads. And main use of it is `Set` method of `PulseManager`.
+type GlobalInsolarLock interface {
+	Acquire(ctx context.Context)
+	Release(ctx context.Context)
+}
+
 // MessageHandler is a function for message handling. It should be registered via Register method.
 type MessageHandler func(context.Context, Parcel) (Reply, error)
 
