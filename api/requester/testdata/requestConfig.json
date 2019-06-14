@@ -1,9 +1,8 @@
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "api.call",
+  "method": "api.Call",
   "params": {
-    "seed": "U1wGm8xl+WUFIPFLdFupTXKMXbLoJbv0nA/ImZAtHZk=",
     "callSite": "wallet.CreateMember",
     "callParams": {
       "name": "memberName"
