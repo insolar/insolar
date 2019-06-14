@@ -126,7 +126,6 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 
 func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	cfg.Service.Skip = 5
 
 	var expectedMsg *message.Message
 
@@ -149,7 +148,6 @@ func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
 
 func TestSendMessageHandler_SameNode(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	cfg.Service.Skip = 5
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
 	nodeRef := testutils.RandomRef()
 	nodeN := networkUtils.NewNodeKeeperMock(t)
@@ -178,7 +176,6 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 
 func TestSendMessageHandler_SendError(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	cfg.Service.Skip = 5
 	pubMock := &PublisherMock{}
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
 	serviceNetwork.Pub = pubMock
@@ -218,7 +215,6 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 
 func TestSendMessageHandler_WrongReply(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	cfg.Service.Skip = 5
 	pubMock := &PublisherMock{}
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
 	serviceNetwork.Pub = pubMock
@@ -258,7 +254,6 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 
 func TestSendMessageHandler(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	cfg.Service.Skip = 5
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {

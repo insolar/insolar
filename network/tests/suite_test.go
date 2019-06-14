@@ -488,7 +488,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
 	cfg.Pulsar.PulseTime = pulseTimeMs
 	cfg.Host.Transport.Address = node.host
-	cfg.Service.Skip = 5
 	cfg.Service.CacheDirectory = cacheDir + node.host
 	cfg.Service.Consensus.Phase1Timeout = Phase1Timeout
 	cfg.Service.Consensus.Phase2Timeout = Phase2Timeout
