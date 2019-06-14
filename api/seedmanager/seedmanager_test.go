@@ -53,7 +53,7 @@ func getSeed(t *testing.T) Seed {
 }
 
 func TestSeedManager_Add(t *testing.T) {
-	sm := NewSpecified(time.Duration(1 * time.Minute), DefaultCleanPeriod)
+	sm := NewSpecified(time.Duration(1*time.Minute), DefaultCleanPeriod)
 	seed := getSeed(t)
 	sm.Add(seed)
 	require.True(t, sm.Exists(seed))
@@ -80,7 +80,7 @@ func TestSeedManager_ExistsThanExpiredSeed(t *testing.T) {
 
 func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
 	expTime := time.Duration(1 * time.Minute)
-	sm := NewSpecified(expTime, 1 * time.Minute)
+	sm := NewSpecified(expTime, 1*time.Minute)
 	seed := getSeed(t)
 	sm.Add(seed)
 	sm.seedPool[seed] = time.Now().UnixNano() - 1000

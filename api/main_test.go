@@ -48,8 +48,8 @@ func (suite *MainAPISuite) TestGetRequest() {
 
 func (suite *MainAPISuite) TestSerialization() {
 	var a uint = 1
-	var b bool = true
-	var c string = "test"
+	var b = true
+	var c = "test"
 
 	serArgs, err := insolar.MarshalArgs(a, b, c)
 	suite.NoError(err)

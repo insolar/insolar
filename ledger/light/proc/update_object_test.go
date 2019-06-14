@@ -108,9 +108,9 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := message.UpdateObject{
-		Record: amendData,
+		Record:       amendData,
 		ResultRecord: resultData,
-		Object: *objectRef,
+		Object:       *objectRef,
 	}
 
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
@@ -204,9 +204,9 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := message.UpdateObject{
-		Record: amendData,
+		Record:       amendData,
 		ResultRecord: resultData,
-		Object: *objectRef,
+		Object:       *objectRef,
 	}
 	ctx := context.Background()
 	err = indexMemoryStor.Set(ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)

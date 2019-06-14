@@ -173,7 +173,6 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-
 	payloadType, err := payload.UnmarshalType(originMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
@@ -186,7 +185,6 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 		s.replyError(ctx, origin, flow.ErrCancelled)
 		return flow.ErrCancelled
 	}
-
 
 	switch payloadType {
 	case payload.TypeGetObject:
