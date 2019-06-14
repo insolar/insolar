@@ -164,7 +164,7 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 
 	switch request.Params.CallSite {
 	case "contract.createMember":
-		return m.createMemberByKey(rootDomain, params["publicKey"].(string))
+		return m.createMemberByKey(rootDomain, request.Params.PublicKey)
 	}
 
 	switch request.Params.CallSite {

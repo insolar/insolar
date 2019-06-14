@@ -225,6 +225,30 @@
   version = "v1.0"
 
 [[projects]]
+  digest = "1:9f86b5f5862a8ae44a5e2461619ac8f0fd1c75d670b735e40c4319f61bcb4bd3"
+  name = "github.com/insolar/x-crypto"
+  packages = [
+    ".",
+    "dsa",
+    "ecdsa",
+    "elliptic",
+    "internal/randutil",
+    "md5",
+    "rand",
+    "rand/internal/unix",
+    "rsa",
+    "sha1",
+    "sha256",
+    "sha512",
+    "subtle",
+    "x509",
+    "x509/pkix",
+  ]
+  pruneopts = "UT"
+  revision = "f1d1a11a87990a129e7cc24fe4b7efb46dbdbe01"
+  version = "1.1"
+
+[[projects]]
   branch = "master"
   digest = "1:fa3a7dc0a780fb19838fb96d4e18c0b9a019d9bb618798308d7b6ca48fcb9876"
   name = "github.com/jbenet/go-base58"
@@ -233,12 +257,9 @@
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
-  digest = "1:53e8c5c79716437e601696140e8b1801aae4204f4ec54a504333702a49572c4f"
+  digest = "1:c568d7727aa262c32bdf8a3f7db83614f7af0ed661474b24588de635c20024c7"
   name = "github.com/magiconair/properties"
-  packages = [
-    ".",
-    "assert",
-  ]
+  packages = ["."]
   pruneopts = "UT"
   revision = "c2353362d570a7bfa228149c62842019201cfb71"
   version = "v1.8.0"
@@ -512,9 +533,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:07bed7db52308c8338e0848cde9b26ec6fdab68c6c79ab1098dc728b6a899e45"
+  digest = "1:9640ece35e10e0e4a724cdb9c2ef09f1f4545844435a00510d940153b63fddf6"
   name = "golang.org/x/crypto"
-  packages = ["sha3"]
+  packages = [
+    "cryptobyte",
+    "cryptobyte/asn1",
+    "sha3",
+  ]
   pruneopts = "UT"
   revision = "eb0de9b17e854e9b1ccd9963efafc79862359959"
 
@@ -543,9 +568,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8775d8a768d9e65e8b659172804aac5db1fc8d563ba766470a6c2698c57c61a7"
+  digest = "1:b5822e8b1920b7225e6282614078af440c70f0a2243676063a571f715cd77d58"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "cpu",
+    "unix",
+  ]
   pruneopts = "UT"
   revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
 
@@ -621,6 +649,9 @@
     "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
+    "github.com/insolar/x-crypto/ecdsa",
+    "github.com/insolar/x-crypto/sha256",
+    "github.com/insolar/x-crypto/x509",
     "github.com/jbenet/go-base58",
     "github.com/olekukonko/tablewriter",
     "github.com/onrik/gomerkle",
