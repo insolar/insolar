@@ -168,7 +168,12 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't extract public key")
 	}
 
-	response, err := sdk.DoRequest(sdk.rootMember.Caller, sdk.rootMember.PrivateKey, "CreateMember", map[string]interface{}{"publicKey": string(memberPubKeyStr)})
+	response, err := sdk.DoRequest(
+		sdk.rootMember.Caller,
+		sdk.rootMember.PrivateKey,
+		"contract.createMember",
+		map[string]interface{}{"publicKey": string(memberPubKeyStr)},
+	)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] request was failed ")
 	}
@@ -176,9 +181,29 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	return NewMember(response.Result.ContractResult.(string), string(privateKeyStr)), response.Result.TraceID, nil
 }
 
+// AddBurnAddresses method add burn addresses
+func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
+	response, err := sdk.DoRequest(
+		sdk.migrationAdminMember.Caller,
+		sdk.migrationAdminMember.PrivateKey,
+		"wallet.addBurnAddresses",
+		map[string]interface{}{"burnAddresses": burnAddresses},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "[ Transfer ] request was failed ")
+	}
+
+	return response.Result.TraceID, nil
+}
+
 // Transfer method send money from one member to another
 func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
-	response, err := sdk.DoRequest(from.Reference, from.PrivateKey, "Transfer", map[string]interface{}{"amount": amount, "to": to.Reference})
+	response, err := sdk.DoRequest(
+		from.Reference,
+		from.PrivateKey,
+		"wallet.transfer",
+		map[string]interface{}{"amount": amount, "to": to.Reference},
+	)
 	if err != nil {
 		return "", errors.Wrap(err, "[ Transfer ] request was failed ")
 	}
@@ -188,7 +213,11 @@ func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) 
 
 // GetBalance returns current balance of the given member.
 func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
-	response, err := sdk.DoRequest(m.Reference, m.PrivateKey, "GetBalance", map[string]interface{}{"reference": m.Reference})
+	response, err := sdk.DoRequest(m.Reference,
+		m.PrivateKey,
+		"wallet.getBalance",
+		map[string]interface{}{"reference": m.Reference},
+	)
 	if err != nil {
 		return new(big.Int), errors.Wrap(err, "[ GetBalance ] request was failed ")
 	}

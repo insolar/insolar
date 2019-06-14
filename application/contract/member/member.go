@@ -163,7 +163,7 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	}
 
 	switch request.Params.CallSite {
-	case "createMember":
+	case "contract.createMember":
 		return m.createMemberByKey(rootDomain, params["publicKey"].(string))
 	}
 
@@ -175,13 +175,13 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	}
 
 	switch request.Params.CallSite {
-	case "AddBurnAddresses":
+	case "wallet.addBurnAddresses":
 		return m.addBurnAddressesCall(rootDomain, params)
-	case "GetBalance":
+	case "wallet.getBalance":
 		return m.getBalanceCall(rootDomain, params)
-	case "GetMyBalance":
+	case "wallet.getMyBalance":
 		return m.GetMyBalance()
-	case "Transfer":
+	case "wallet.transfer":
 		return m.transferCall(params)
 	case "Migration":
 		return m.migrationCall(rootDomain, params)
