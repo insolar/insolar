@@ -173,6 +173,6 @@ func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *TimeoutSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(1*time.Minute)
+	suite.mc.Wait(1 * time.Minute)
 	suite.mc.Finish()
 }
