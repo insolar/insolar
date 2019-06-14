@@ -167,11 +167,11 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	return body, nil
 }
 
-// GetSeed makes rpc request to seed.Get method and extracts it
+// GetSeed makes rpc request to node.GetSeed method and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
 		JSONRPC: "2.0",
-		Method:  "seed.Get",
+		Method:  "node.GetSeed",
 		ID:      1,
 	})
 	if err != nil {
@@ -293,9 +293,9 @@ func getDefaultRPCParams(method string) PlatformRequest {
 	}
 }
 
-// Info makes rpc request to info.Get method and extracts it
+// Info makes rpc request to network.GetInfo method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	params := getDefaultRPCParams("info.Get")
+	params := getDefaultRPCParams("network.GetInfo")
 
 	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {
@@ -317,7 +317,7 @@ func Info(url string) (*InfoResponse, error) {
 
 // Status makes rpc request to info.Status method and extracts it
 func Status(url string) (*StatusResponse, error) {
-	params := getDefaultRPCParams("status.Get")
+	params := getDefaultRPCParams("node.GetStatus")
 
 	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {

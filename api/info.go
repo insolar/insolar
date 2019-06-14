@@ -51,7 +51,7 @@ func NewInfoService(runner *Runner) *InfoService {
 //   Request structure:
 //   {
 //     "jsonrpc": "2.0",
-//     "method": "info.Get",
+//     "method": "node.GetInfo",
 //     "id": str|int|null
 //   }
 //
@@ -67,7 +67,7 @@ func NewInfoService(runner *Runner) *InfoService {
 // 		"id": str|int|null // same as in request
 // 	}
 //
-func (s *InfoService) Get(r *http.Request, args *InfoArgs, reply *InfoReply) error {
+func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, reply *InfoReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ INFO ] Incoming request: %s", r.RequestURI)

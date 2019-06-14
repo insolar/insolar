@@ -92,11 +92,11 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	}
 
 	switch rpcReq.Method {
-	case "status.Get":
+	case "node.GetStatus":
 		answer["result"] = testStatusResponse
-	case "info.Get":
+	case "network.GetInfo":
 		answer["result"] = testInfoResponse
-	case "seed.Get":
+	case "node.GetSeed":
 		answer["result"] = testSeedResponse
 	}
 	writeReponse(response, answer)

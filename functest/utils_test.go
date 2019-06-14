@@ -137,7 +137,7 @@ func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte 
 func getSeed(t *testing.T) string {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "seed.Get",
+		"method":  "node.GetSeed",
 		"id":      "",
 	})
 	getSeedResponse := &getSeedResponse{}
@@ -149,7 +149,7 @@ func getSeed(t *testing.T) string {
 func getInfo(t *testing.T) infoResponse {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "info.Get",
+		"method":  "network.GetInfo",
 		"id":      "",
 	})
 	rpcInfoResponse := &rpcInfoResponse{}
@@ -161,7 +161,7 @@ func getInfo(t *testing.T) infoResponse {
 func getStatus(t *testing.T) statusResponse {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "status.Get",
+		"method":  "node.GetStatus",
 		"id":      "",
 	})
 	rpcStatusResponse := &rpcStatusResponse{}
