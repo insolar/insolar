@@ -21,7 +21,6 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/api"
 	"io"
 	"os"
 
@@ -92,11 +91,11 @@ func (g *certGen) registerNode() insolar.Reference {
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
-	request := api.Request{
+	request := requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params: api.Params{
+		Params: requester.Params{
 			CallSite:   "contract.registerNode",
 			CallParams: map[string]string{"public": string(keySerialized), "role": g.staticRole.String()},
 		},
@@ -207,11 +206,11 @@ func (g *certGen) getNodeRefByPk() insolar.Reference {
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.privKey)
 	checkError("Failed to export public key:", err)
-	request := api.Request{
+	request := requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params: api.Params{
+		Params: requester.Params{
 			CallSite:   "contract.getNodeRef",
 			CallParams: []interface{}{keySerialized},
 		},

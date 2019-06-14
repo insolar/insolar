@@ -19,7 +19,6 @@ package sdk
 import (
 	"context"
 	"encoding/json"
-	"github.com/insolar/insolar/api"
 	"io/ioutil"
 	"math/big"
 	"strconv"
@@ -125,8 +124,8 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 }
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
-	reqCfg := &api.Request{
-		Params:   api.Params{CallParams: params, CallSite: method},
+	reqCfg := &requester.Request{
+		Params:   requester.Params{CallParams: params, CallSite: method},
 		Method:   "api.Call",
 		LogLevel: sdk.logLevel.(string),
 	}
@@ -139,8 +138,8 @@ func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[strin
 	return body, nil
 }
 
-func (sdk *SDK) getResponse(body []byte) (*api.ContractAnswer, error) {
-	res := &api.ContractAnswer{}
+func (sdk *SDK) getResponse(body []byte) (*requester.ContractAnswer, error) {
+	res := &requester.ContractAnswer{}
 	err := json.Unmarshal(body, &res)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponse ] problems with unmarshal response")
@@ -230,7 +229,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	return result, nil
 }
 
-func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params map[string]interface{}) (*api.ContractAnswer, error) {
+func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params map[string]interface{}) (*requester.ContractAnswer, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 	config, err := requester.CreateUserConfig(callerRef, callerKey)
 	if err != nil {

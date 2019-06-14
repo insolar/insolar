@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -45,30 +46,27 @@ type TimeoutSuite struct {
 	delay bool
 }
 
-type APIresp struct {
-	Result string
-	Error  string
-}
-
 func (suite *TimeoutSuite) TestRunner_callHandler() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
 
+	seeds := base64.StdEncoding.EncodeToString(seed[:])
+
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.RequestConfigJSON{},
-		seed[:],
+		&requester.Request{},
+		seeds,
 	)
 	suite.NoError(err)
 
-	var result APIresp
+	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("", result.Error)
-	suite.Equal("OK", result.Result)
+	suite.Equal("", result.Error.Message)
+	suite.Equal("OK", result.Result.ContractResult)
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
@@ -81,16 +79,16 @@ func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.RequestConfigJSON{},
-		seed[:],
+		&requester.Request{},
+		string(seed[:]),
 	)
 	suite.NoError(err)
 
-	var result APIresp
+	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("Messagebus timeout exceeded", result.Error)
-	suite.Equal("", result.Result)
+	suite.Equal("Messagebus timeout exceeded", result.Error.Message)
+	suite.Equal("", result.Result.ContractResult)
 }
 
 func TestTimeoutSuite(t *testing.T) {
@@ -127,6 +125,7 @@ func TestTimeoutSuite(t *testing.T) {
 		return cert
 	}
 
+	// TODO: refactor this mock
 	cr := testutils.NewContractRequesterMock(t)
 	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
 		switch method {

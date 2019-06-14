@@ -20,13 +20,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -60,8 +60,8 @@ func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 
-	params := api.Request{}
-	_, err := api.UnmarshalRequest(req, &params)
+	params := Request{}
+	_, err := unmarshalRequest(req, &params)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
@@ -84,7 +84,7 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 		"id":      "",
 	}
 	rpcReq := rpcRequest{}
-	_, err := api.UnmarshalRequest(req, &rpcReq)
+	_, err := unmarshalRequest(req, &rpcReq)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
@@ -203,7 +203,7 @@ func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 }
 
 func TestGetResponseBody(t *testing.T) {
-	data, err := GetResponseBodyContract(URL+"/call", api.Request{}, "")
+	data, err := GetResponseBodyContract(URL+"/call", Request{}, "")
 	require.NoError(t, err)
 	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
 }
@@ -216,7 +216,7 @@ func TestSetVerbose(t *testing.T) {
 	SetVerbose(false)
 }
 
-func readConfigs(t *testing.T) (*UserConfigJSON, *api.Request) {
+func readConfigs(t *testing.T) (*UserConfigJSON, *Request) {
 	userConf, err := ReadUserConfigFromFile("testdata/userConfig.json")
 	require.NoError(t, err)
 	reqConf, err := ReadRequestConfigFromFile("testdata/requestConfig.json")
@@ -268,4 +268,21 @@ func TestStatus(t *testing.T) {
 	resp, err := Status(URL)
 	require.NoError(t, err)
 	require.Equal(t, resp, &testStatusResponse)
+}
+
+// UnmarshalRequest unmarshals request to api
+func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ UnmarshalRequest ] Can't read body. So strange")
+	}
+	if len(body) == 0 {
+		return nil, errors.New("[ UnmarshalRequest ] Empty body")
+	}
+
+	err = json.Unmarshal(body, &params)
+	if err != nil {
+		return body, errors.Wrap(err, "[ UnmarshalRequest ] Can't unmarshal input params")
+	}
+	return body, nil
 }
