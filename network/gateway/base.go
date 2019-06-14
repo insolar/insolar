@@ -83,6 +83,7 @@ type Base struct {
 	DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
 	HostNetwork           network.HostNetwork             `inject:""`
 	PulseAccessor         pulse.Accessor                  `inject:""`
+	Authorizer            bootstrap.Authorizer            `inject:""`
 }
 
 // NewGateway creates new gateway on top of existing
