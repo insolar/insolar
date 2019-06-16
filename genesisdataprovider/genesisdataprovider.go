@@ -31,9 +31,11 @@ type GenesisDataProvider struct {
 	CertificateManager insolar.CertificateManager `inject:""`
 	ContractRequester  insolar.ContractRequester  `inject:""`
 
-	rootMemberRef *insolar.Reference
-	nodeDomainRef *insolar.Reference
-	lock          sync.RWMutex
+	rootMemberRef             *insolar.Reference
+	migrationDamonMembersRefs []*insolar.Reference
+	migrationAdminMemberRef   *insolar.Reference
+	nodeDomainRef             *insolar.Reference
+	lock                      sync.RWMutex
 }
 
 // New creates new GenesisDataProvider
@@ -56,6 +58,20 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.RootMember")
 	}
 	gdp.rootMemberRef = rootMemberRef
+	migrationAdminMemberRef, err := insolar.NewReferenceFromBase58(info.MigrationAdminMember)
+	if err != nil {
+		return errors.Wrap(err, "[ setInfo ] Failed to parse info.MigrationAdminMember")
+	}
+	gdp.migrationAdminMemberRef = migrationAdminMemberRef
+	migrationDamonsMembers := []*insolar.Reference{}
+	for _, refStr := range info.MigrationDamonsMembers {
+		ref, err := insolar.NewReferenceFromBase58(refStr)
+		if err != nil {
+			return errors.Wrap(err, "[ setInfo ] Failed to parse info.MigrationDamonsMembers ref: '"+refStr+"'")
+		}
+		migrationDamonsMembers = append(migrationDamonsMembers, ref)
+	}
+	gdp.migrationDamonMembersRefs = migrationDamonsMembers
 	nodeDomainRef, err := insolar.NewReferenceFromBase58(info.NodeDomain)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.NodeDomain")
@@ -94,4 +110,30 @@ func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*insolar.Ref
 		}
 	}
 	return gdp.rootMemberRef, nil
+}
+
+// GetRootMember returns reference to RootMember
+func (gdp *GenesisDataProvider) GetMigrationDamonMembers(ctx context.Context) ([]*insolar.Reference, error) {
+	gdp.lock.Lock()
+	defer gdp.lock.Unlock()
+	if gdp.migrationDamonMembersRefs == nil {
+		err := gdp.setInfo(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetMigrationDamonMembers ] Can't get info")
+		}
+	}
+	return gdp.migrationDamonMembersRefs, nil
+}
+
+// GetRootMember returns reference to RootMember
+func (gdp *GenesisDataProvider) GetMigrationAdminMember(ctx context.Context) (*insolar.Reference, error) {
+	gdp.lock.Lock()
+	defer gdp.lock.Unlock()
+	if gdp.migrationAdminMemberRef == nil {
+		err := gdp.setInfo(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetMigrationAdminMember ] Can't get info")
+		}
+	}
+	return gdp.migrationAdminMemberRef, nil
 }

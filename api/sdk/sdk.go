@@ -24,11 +24,12 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 type ringBuffer struct {
@@ -57,7 +58,7 @@ type SDK struct {
 	apiURLs               *ringBuffer
 	rootMember            *requester.UserConfigJSON
 	migrationAdminMember  *requester.UserConfigJSON
-	migrationDamonMembers [10]*requester.UserConfigJSON
+	migrationDamonMembers []*requester.UserConfigJSON
 	logLevel              interface{}
 }
 
@@ -100,15 +101,20 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 		apiURLs:               buffer,
 		rootMember:            rootMember,
 		migrationAdminMember:  migrationAdminMember,
-		migrationDamonMembers: [10]*requester.UserConfigJSON{},
+		migrationDamonMembers: []*requester.UserConfigJSON{},
 		logLevel:              nil,
 	}
 
-	for i := 0; i < 10; i++ {
-		result.migrationDamonMembers[i], err = getMember(memberKeysDirPath+"migration_damon_"+strconv.Itoa(i)+"_member_keys.json", response.MigrationDamonMember)
+	if len(response.MigrationDamonMembers) < 3 {
+		return nil, errors.Wrap(err, "[ NewSDK ] need at least 3 migration damons")
+	}
+
+	for i := 0; i < 3; i++ {
+		m, err := getMember(memberKeysDirPath+"migration_damon_"+strconv.Itoa(i)+"_member_keys.json", response.MigrationDamonMembers[i])
 		if err != nil {
-			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration damon members")
+			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration damon member; member's index: '"+strconv.Itoa(i)+"'")
 		}
+		result.migrationDamonMembers = append(result.migrationDamonMembers, m)
 	}
 
 	return result, nil
@@ -189,7 +195,7 @@ func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
 		map[string]interface{}{"burnAddresses": burnAddresses},
 	)
 	if err != nil {
-		return "", errors.Wrap(err, "[ Transfer ] request was failed ")
+		return "", errors.Wrap(err, "[ AddBurnAddresses ] request was failed ")
 	}
 
 	return response.Result.TraceID, nil

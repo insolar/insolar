@@ -26,9 +26,11 @@ import (
 
 // InfoResponse represents response from Info() method of RootDomain contract
 type Info struct {
-	RootDomain string `json:"root_domain"`
-	RootMember string `json:"root_member"`
-	NodeDomain string `json:"node_domain"`
+	RootDomain             string   `json:"rootDomain"`
+	RootMember             string   `json:"rootMember"`
+	MigrationDamonsMembers []string `json:"migrationDamonMembers"`
+	MigrationAdminMember   string   `json:"mdAdminMember"`
+	NodeDomain             string   `json:"nodeDomain"`
 }
 
 // InfoResponse returns response from Info() method of RootDomain contract

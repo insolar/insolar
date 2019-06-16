@@ -22,6 +22,10 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"math/big"
+	"strconv"
+	"time"
+
 	"github.com/insolar/insolar/application/contract/member/helper"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/deposit"
@@ -34,9 +38,6 @@ import (
 	"github.com/insolar/x-crypto/ecdsa"
 	"github.com/insolar/x-crypto/sha256"
 	"github.com/insolar/x-crypto/x509"
-	"math/big"
-	"strconv"
-	"time"
 )
 
 type Member struct {
@@ -203,7 +204,13 @@ func (migrationAdminMember *Member) addBurnAddressesCall(rdRef insolar.Reference
 		return nil, fmt.Errorf("[ addBurnAddressesCall ] Only migration deamon admin can call this method")
 	}
 
-	err = rootDomain.AddBurnAddresses(params["burnAddresses"].([]string))
+	burnAddressesInterfaces := params["burnAddresses"].([]interface{})
+	burnAddressesStrs := make([]string, len(burnAddressesInterfaces))
+	for i, ba := range burnAddressesInterfaces {
+		burnAddressesStrs[i] = ba.(string)
+	}
+
+	err = rootDomain.AddBurnAddresses(burnAddressesStrs)
 	if err != nil {
 		return nil, fmt.Errorf("[ addBurnAddressesCall ] Failed to add burn address: %s", err.Error())
 	}
