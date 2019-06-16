@@ -99,7 +99,7 @@ func (m *Member) verifySig(request Request, rawRequest []byte, signature string)
 	}
 
 	if key != rawpublicpem {
-		return fmt.Errorf("[ verifySig ] Access denied. Key - %v", rawpublicpem)
+		return fmt.Errorf("[ verifySig ] Access denied. Key - %v; v - %v", rawpublicpem)
 	}
 
 	blockPub, _ := pem.Decode([]byte(rawpublicpem))
@@ -156,17 +156,17 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 		return nil, fmt.Errorf(" Failed to unmarshal: %s", err.Error())
 	}
 
-	params := request.Params.CallParams.(map[string]interface{})
-
 	err = m.verifySig(request, rawRequest, signature)
 	if err != nil {
 		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
 	}
 
 	switch request.Params.CallSite {
-	case "contract.createMember":
-		return m.createMemberByKey(rootDomain, request.Params.PublicKey)
+	case "wallet.getMyBalance":
+		return m.GetMyBalance()
 	}
+
+	params := request.Params.CallParams.(map[string]interface{})
 
 	switch request.Params.CallSite {
 	case "contract.registerNode":
@@ -176,12 +176,12 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	}
 
 	switch request.Params.CallSite {
+	case "contract.createMember":
+		return m.createMemberByKey(rootDomain, params["publicKey"].(string))
 	case "wallet.addBurnAddresses":
 		return m.addBurnAddressesCall(rootDomain, params)
 	case "wallet.getBalance":
 		return m.getBalanceCall(rootDomain, params)
-	case "wallet.getMyBalance":
-		return m.GetMyBalance()
 	case "wallet.transfer":
 		return m.transferCall(params)
 	case "Migration":
@@ -308,36 +308,24 @@ func (m *Member) getNodeRef(rdRef insolar.Reference, publicKey string) (interfac
 func (m *Member) createMemberByKey(rdRef insolar.Reference, key string) (interface{}, error) {
 
 	rootDomain := rootdomain.GetObject(rdRef)
-	ba, err := rootDomain.GetBurnAddress()
+	burnAddresses, err := rootDomain.GetBurnAddress()
 	if err != nil {
 		return nil, fmt.Errorf("[ createMemberByKey ] Failed to get burn address: %s", err.Error())
 	}
 
-	new, err := m.createMember(rdRef, ba, key)
+	new, err := m.createMember(rdRef, burnAddresses, key)
 	if err != nil {
-		if e := rootDomain.AddBurnAddress(ba); e != nil {
+		if e := rootDomain.AddBurnAddress(burnAddresses); e != nil {
 			return nil, fmt.Errorf("[ createMemberByKey ] Failed to add burn address back: %s; after error: %s", e.Error(), err.Error())
 		}
 		return nil, fmt.Errorf("[ createMemberByKey ] Failed to create member: %s", err.Error())
 	}
 
-	if err = rootDomain.AddNewMemberToMaps(key, ba, new.Reference); err != nil {
+	if err = rootDomain.AddNewMemberToMaps(key, burnAddresses, new.Reference); err != nil {
 		return nil, fmt.Errorf("[ createMemberByKey ] Failed to add new member to maps: %s", err.Error())
 	}
 
-	type CreateMemberOutput struct {
-		Reference   string
-		BurnAddress string
-	}
-	outputMarshaled, err := json.Marshal(CreateMemberOutput{
-		Reference:   new.Reference.String(),
-		BurnAddress: ba,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("[ createMemberByKey ] Failed marshal output: %s", err.Error())
-	}
-
-	return outputMarshaled, nil
+	return new.Reference.String(), nil
 }
 func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key string) (*member.Member, error) {
 	if key == "" {
@@ -370,25 +358,12 @@ func (m *Member) GetMyBalance() (interface{}, error) {
 		return nil, fmt.Errorf("[ getMyBalanceCall ] Failed to get balance: %s", err.Error())
 	}
 
-	d, err := m.getDeposits()
-	if err != nil {
-		return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
-	}
+	// d, err := m.getDeposits()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
+	// }
 
-	type GetMyBalanceOutput struct {
-		Balance  string
-		Deposits []map[string]string
-	}
-
-	balanceWithDepositsMarshaled, err := json.Marshal(GetMyBalanceOutput{
-		Balance:  b,
-		Deposits: d,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("[ getMyBalanceCall ] Failed to marshal: %s", err.Error())
-	}
-
-	return balanceWithDepositsMarshaled, nil
+	return b, nil
 }
 func (m *Member) getDeposits() ([]map[string]string, error) {
 

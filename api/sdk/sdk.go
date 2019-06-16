@@ -202,12 +202,12 @@ func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
 }
 
 // Transfer method send money from one member to another
-func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
+func (sdk *SDK) Transfer(amount *big.Int, from *Member, to *Member) (string, error) {
 	response, err := sdk.DoRequest(
 		from.Reference,
 		from.PrivateKey,
 		"wallet.transfer",
-		map[string]interface{}{"amount": amount, "to": to.Reference},
+		map[string]interface{}{"amount": amount.String(), "to": to.Reference},
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "[ Transfer ] request was failed ")
@@ -220,8 +220,8 @@ func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) 
 func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	response, err := sdk.DoRequest(m.Reference,
 		m.PrivateKey,
-		"wallet.getBalance",
-		map[string]interface{}{"reference": m.Reference},
+		"wallet.getMyBalance",
+		map[string]interface{}{},
 	)
 	if err != nil {
 		return new(big.Int), errors.Wrap(err, "[ GetBalance ] request was failed ")
