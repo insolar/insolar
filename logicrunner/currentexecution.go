@@ -426,13 +426,35 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	q.processLock.Unlock()
 }
 
+type ExecutionBrokerRotationResult struct {
+	Requests              []*Transcript
+	Finished              []*Transcript
+	LedgerHasMoreRequests bool
+}
+
 // TODO: Probably should be rewritten (all rotation in one place)
-func (q *ExecutionBroker) TakeAndRotate(count int) ([]*Transcript, []*Transcript) {
+func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
+	// take mutables, then, if we can, take immutables, if something was left -
 	q.mutableLock.Lock()
-	head := q.mutable.Take(count)
-	tail := q.mutable.Rotate()
+	rv := &ExecutionBrokerRotationResult{
+		Requests:              q.mutable.Take(count),
+		Finished:              q.finished.Rotate(),
+		LedgerHasMoreRequests: false,
+	}
+
+	if leftCount := count - len(rv.Requests); leftCount > 0 {
+		rv.Requests = append(rv.Requests, q.immutable.Take(leftCount)...)
+	}
+
+	if len(rv.Requests) > 0 && (q.mutable.Len() > 0 || q.immutable.Len() > 0) {
+		rv.LedgerHasMoreRequests = true
+	}
+
+	_ = q.mutable.Rotate()
+	_ = q.immutable.Rotate()
+
 	q.mutableLock.Unlock()
-	return head, tail
+	return rv
 }
 
 func (q *ExecutionBroker) RotateImmutable() []*Transcript {

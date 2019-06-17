@@ -100,7 +100,11 @@ func TestTranscriptDequeue_Take(t *testing.T) {
 		d.Push(&Transcript{Nonce: uint64(i)})
 	}
 
-	trs := d.Take(10)
+	trs := d.Take(0)
+	r.NotNil(d)
+	a.Len(trs, 0)
+
+	trs = d.Take(10)
 	r.NotNil(d)
 	a.Len(trs, 10)
 

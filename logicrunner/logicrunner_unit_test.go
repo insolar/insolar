@@ -689,9 +689,9 @@ func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 			es := NewExecutionState(testutils.RandomRef())
 			es.Broker = NewBroker(suite.ctx, tc.QueueLength)
 
-			mq, hasMore := es.releaseQueue()
-			a.Equal(tc.ExpectedLength, len(mq))
-			a.Equal(tc.ExpectedHasMore, hasMore)
+			rotationResults := es.Broker.Rotate(maxQueueLength)
+			a.Equal(tc.ExpectedLength, len(rotationResults.Requests))
+			a.Equal(tc.ExpectedHasMore, rotationResults.LedgerHasMoreRequests)
 		})
 	}
 }

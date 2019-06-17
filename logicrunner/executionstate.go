@@ -83,16 +83,6 @@ func (es *ExecutionState) WrapError(current *Transcript, err error, message stri
 	return res
 }
 
-// releaseQueue must be calling only with es.Lock
-func (es *ExecutionState) releaseQueue() ([]*Transcript, bool) {
-	head, tail := es.Broker.TakeAndRotate(maxQueueLength)
-	ledgerHasMoreRequests := false
-	if len(tail) > 0 {
-		ledgerHasMoreRequests = true
-	}
-	return head, ledgerHasMoreRequests
-}
-
 func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Message {
 	if es == nil {
 		return nil
@@ -126,11 +116,12 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			es.LedgerHasMoreRequests = true
 		}
 
-		queue, ledgerHasMoreRequest := es.releaseQueue()
-		if len(queue) > 0 || sendExecResults {
+		// rotation results also contain finished requests
+		rotationResults := es.Broker.Rotate(maxQueueLength)
+		if len(rotationResults.Requests) > 0 || sendExecResults {
 			// TODO: we also should send when executed something for validation
 			// TODO: now validation is disabled
-			messagesQueue := convertQueueToMessageQueue(ctx, queue)
+			messagesQueue := convertQueueToMessageQueue(ctx, rotationResults.Requests)
 
 			messages = append(
 				messages,
@@ -143,7 +134,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 					RecordRef:             ref,
 					Pending:               es.pending,
 					Queue:                 messagesQueue,
-					LedgerHasMoreRequests: es.LedgerHasMoreRequests || ledgerHasMoreRequest,
+					LedgerHasMoreRequests: es.LedgerHasMoreRequests || rotationResults.LedgerHasMoreRequests,
 				},
 			)
 		}
