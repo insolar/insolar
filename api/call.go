@@ -225,8 +225,10 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 }
 
 func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
+	// Digest = "SHA-256=<hashString>"
+	// Signature = "keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>"
 	if len(digest) == 0 || len(richSignature) == 0 || len(body) == 0 {
-		return "", errors.New("Invalid input data")
+		return "", errors.Errorf("Invalid input data length digest: %d, signature: %d, body: %d", len(digest), len(richSignature), len(body))
 	}
 	h := sha256.New()
 	_, err := h.Write(body)

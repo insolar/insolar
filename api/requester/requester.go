@@ -44,6 +44,7 @@ const (
 	Digest         = "Digest"
 	Signature      = "Signature"
 	ContentType    = "Content-Type"
+	JSONRPCVersion = "2.0"
 )
 
 func init() {
@@ -146,7 +147,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with creating request")
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(ContentType, "application/json")
 	postResp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with sending request")
@@ -172,7 +173,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 // GetSeed makes rpc request to node.GetSeed method and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		Method:  "node.GetSeed",
 		ID:      1,
 	})
@@ -290,7 +291,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 
 func getDefaultRPCParams(method string) PlatformRequest {
 	return PlatformRequest{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		ID:      1,
 		Method:  method,
 	}
