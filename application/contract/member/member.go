@@ -164,6 +164,8 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	switch request.Params.CallSite {
 	case "wallet.getMyBalance":
 		return m.GetMyBalance()
+	case "CreateHelloWorld":
+		return rootdomain.GetObject(rootDomain).CreateHelloWorld()
 	}
 
 	params := request.Params.CallParams.(map[string]interface{})
@@ -358,13 +360,15 @@ func (m *Member) GetMyBalance() (interface{}, error) {
 		return nil, fmt.Errorf("[ getMyBalanceCall ] Failed to get balance: %s", err.Error())
 	}
 
-	// d, err := m.getDeposits()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
-	// }
+	//d, err := m.getDeposits()
+	//if err != nil {
+	//	return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
+	//}
+	//return map[string]interface{}{"balance" : b, "deposit": d}, nil
 
 	return b, nil
 }
+
 func (m *Member) getDeposits() ([]map[string]string, error) {
 
 	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())

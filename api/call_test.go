@@ -58,14 +58,14 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	close(suite.delay)
 	suite.api.cfg.Timeout = 60
 
-	seeds := base64.StdEncoding.EncodeToString(seed[:])
+	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
 		&requester.Request{},
-		seeds,
+		seedString,
 	)
 	suite.NoError(err)
 

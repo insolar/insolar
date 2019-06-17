@@ -41,6 +41,10 @@ var httpClient *http.Client
 
 const (
 	RequestTimeout = 15 * time.Second
+	Digest         = "Digest"
+	Signature      = "Signature"
+	ContentType    = "Content-Type"
+	JSONRPCVersion = "2.0"
 )
 
 func init() {
@@ -93,30 +97,30 @@ type PlatformRequest struct {
 func GetResponseBodyContract(url string, postP Request, signature string) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with marshaling params")
+		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with marshaling params")
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with creating request")
+		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with creating request")
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(ContentType, "application/json")
 
 	h := sha256.New()
 	_, err = h.Write(jsonValue)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Cant get hash")
+		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Cant get hash")
 	}
 	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	req.Header.Set("Digest", "SHA-256="+sha)
-	req.Header.Set("Signature", "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
+	req.Header.Set(Digest, "SHA-256="+sha)
+	req.Header.Set(Signature, "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
 	postResp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with sending request")
+		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with sending request")
 	}
 
 	if postResp == nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Reponse is nil")
+		return nil, errors.New("[ GetResponseBodyContract ] Reponse is nil")
 	}
 
 	defer postResp.Body.Close()
@@ -126,7 +130,7 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 
 	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with reading body")
+		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with reading body")
 	}
 
 	return body, nil
@@ -136,31 +140,31 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyPlatform ] Problem with marshaling params")
+		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with marshaling params")
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyPlatform ] Problem with creating request")
+		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with creating request")
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(ContentType, "application/json")
 	postResp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with sending request")
+		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with sending request")
 	}
 
 	if postResp == nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Reponse is nil")
+		return nil, errors.New("[ GetResponseBodyPlatform ] Reponse is nil")
 	}
 
 	defer postResp.Body.Close()
 	if http.StatusOK != postResp.StatusCode {
-		return nil, errors.New("[ getResponseBodyContract ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
+		return nil, errors.New("[ GetResponseBodyPlatform ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with reading body")
+		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with reading body")
 	}
 
 	return body, nil
@@ -169,25 +173,25 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 // GetSeed makes rpc request to node.GetSeed method and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		Method:  "node.GetSeed",
 		ID:      1,
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "[ getSeed ] seed request")
+		return "", errors.Wrap(err, "[ GetSeed ] seed request")
 	}
 
 	seedResp := rpcSeedResponse{}
 
 	err = json.Unmarshal(body, &seedResp)
 	if err != nil {
-		return "", errors.Wrap(err, "[ getSeed ] Can't unmarshal")
+		return "", errors.Wrap(err, "[ GetSeed ] Can't unmarshal")
 	}
 	if seedResp.Error != nil {
-		return "", errors.New("[ getSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
+		return "", errors.New("[ GetSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
 	}
 	if len(seedResp.Result.Seed) == 0 {
-		return "", errors.New("[ getSeed ] Field seed is empty")
+		return "", errors.New("[ GetSeed ] Field seed is empty")
 	}
 
 	return seedResp.Result.Seed, nil
@@ -196,14 +200,14 @@ func GetSeed(url string) (string, error) {
 // SendWithSeed sends request with known seed
 func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Request, seed string) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
-		return nil, errors.New("[ Send ] Configs must be initialized")
+		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
 	}
 
 	ks := platformpolicy.NewKeyProcessor()
 
 	pem, err := ks.ExportPublicKeyPEM(userCfg.privateKeyObject.(*ecdsa.PrivateKey).Public())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Cant export public key to PEM")
+		return nil, errors.Wrap(err, "[ SendWithSeed ] Cant export public key to PEM")
 	}
 
 	reqCfg.Params.Reference = userCfg.Caller
@@ -213,34 +217,35 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	verboseInfo(ctx, "Signing request ...")
 	dataToSign, err := json.Marshal(reqCfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Config request marshaling failed")
+		return nil, errors.Wrap(err, "[ SendWithSeed ] Config request marshaling failed")
 	}
-	signature, err := Sign(userCfg.privateKeyObject, dataToSign)
+	signature, err := sign(userCfg.privateKeyObject, dataToSign)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
+		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with signing request")
 	}
 	verboseInfo(ctx, "Signing request completed")
 
 	body, err := GetResponseBodyContract(url, *reqCfg, signature)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with sending target request")
+		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with sending target request")
 	}
 
 	return body, nil
 }
 
-func Sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
+func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 	hash := sha256.Sum256(data)
 
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey.(*ecdsa.PrivateKey), hash[:])
 	if err != nil {
-		return "", errors.Wrap(err, "[ Send ] Cant sign data")
+		return "", errors.Wrap(err, "[ sign ] Cant sign data")
 	}
 
-	return pointsToDER(r, s), nil
+	return PointsToDER(r, s), nil
 }
 
-func pointsToDER(r, s *big.Int) string {
+// Convert signature points do DER format
+func PointsToDER(r, s *big.Int) string {
 	prefixPoint := func(b []byte) []byte {
 		if len(b) == 0 {
 			b = []byte{0x00}
@@ -286,7 +291,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 
 func getDefaultRPCParams(method string) PlatformRequest {
 	return PlatformRequest{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		ID:      1,
 		Method:  method,
 	}

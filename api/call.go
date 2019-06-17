@@ -40,6 +40,11 @@ import (
 	"github.com/insolar/insolar/metrics"
 )
 
+const (
+	TimeoutError = -215
+	ResultError  = -217
+)
+
 // UnmarshalRequest unmarshals request to api
 func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	body, err := ioutil.ReadAll(req.Body)
@@ -114,7 +119,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 
 func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
 	resp.Error.Message = err.Error()
-	resp.Error.Code = -214
+	resp.Error.Code = ResultError
 	resp.Error.TraceID = traceID
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
@@ -162,8 +167,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		resp.JSONRPC = request.JSONRPC
 		resp.ID = request.ID
 
-		digest := req.Header.Get("Digest")
-		richSignature := req.Header.Get("Signature")
+		digest := req.Header.Get(requester.Digest)
+		richSignature := req.Header.Get(requester.Signature)
 
 		signature, err := validateRequestHeaders(digest, richSignature, rawBody)
 		if err != nil {
@@ -209,7 +214,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
 			resp.Error.Message = "Messagebus timeout exceeded"
-			resp.Error.Code = -215
+			resp.Error.Code = TimeoutError
 			resp.Error.TraceID = traceID
 			return
 		}
@@ -220,8 +225,10 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 }
 
 func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
+	// Digest = "SHA-256=<hashString>"
+	// Signature = "keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>"
 	if len(digest) == 0 || len(richSignature) == 0 || len(body) == 0 {
-		return "", errors.New("Invalid input data")
+		return "", errors.Errorf("Invalid input data length digest: %d, signature: %d, body: %d", len(digest), len(richSignature), len(body))
 	}
 	h := sha256.New()
 	_, err := h.Write(body)

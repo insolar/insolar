@@ -194,12 +194,12 @@ func TestGetSeed(t *testing.T) {
 
 func TestGetResponseBodyEmpty(t *testing.T) {
 	_, err := GetResponseBodyPlatform("test", PlatformRequest{})
-	require.EqualError(t, err, "[ getResponseBodyContract ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
+	require.EqualError(t, err, "[ GetResponseBodyPlatform ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
 }
 
 func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 	_, err := GetResponseBodyPlatform(URL+"TEST", PlatformRequest{})
-	require.EqualError(t, err, "[ getResponseBodyContract ] Bad http response code: 404")
+	require.EqualError(t, err, "[ GetResponseBodyPlatform ] Bad http response code: 404")
 }
 
 func TestGetResponseBody(t *testing.T) {
@@ -249,13 +249,13 @@ func TestSendWithSeed_WithBadUrl(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
 	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, TESTSEED)
-	require.EqualError(t, err, "[ Send ] Problem with sending target request: [ getResponseBodyContract ] Bad http response code: 404")
+	require.EqualError(t, err, "[ SendWithSeed ] Problem with sending target request: [ getResponseBodyContract ] Bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
 	_, err := SendWithSeed(ctx, URL, nil, nil, TESTSEED)
-	require.EqualError(t, err, "[ Send ] Configs must be initialized")
+	require.EqualError(t, err, "[ SendWithSeed ] Configs must be initialized")
 }
 
 func TestInfo(t *testing.T) {

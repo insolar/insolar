@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/application/contract/rootdomain/util"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -127,4 +128,14 @@ func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Referen
 
 func (rd RootDomain) GetCostCenter() (insolar.Reference, error) {
 	return rd.CostCenter, nil
+}
+
+func (rd *RootDomain) CreateHelloWorld() (string, error) {
+	helloWorldHolder := helloworld.New()
+	m, err := helloWorldHolder.AsChild(rd.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("[ CreateHelloWorld ] Can't save as child: %s", err.Error())
+	}
+
+	return m.GetReference().String(), nil
 }

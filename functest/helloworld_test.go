@@ -49,7 +49,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		Method: "CreateHelloWorld",
 		Params: nil,
 	}, seed)
@@ -86,7 +86,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		Method: "Greet",
 		Params: []interface{}{name},
 	}, seed)
@@ -116,7 +116,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		Method: "Count",
 		Params: []interface{}{},
 	}, seed)
@@ -146,7 +146,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		Method: "CreateChild",
 		Params: []interface{}{},
 	}, seed)
@@ -183,7 +183,7 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		Method: "CountChild",
 		Params: []interface{}{},
 	}, seed)
