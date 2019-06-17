@@ -83,7 +83,7 @@ func PointsFromDER(der []byte) (R, S *big.Int) {
 	return
 }
 
-func (m *Member) verifySig(request Request, rawRequest []byte, signature string) error {
+func (m *Member) verifySig(request Request, rawRequest []byte, signature string, selfSigned bool) error {
 	sig, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: Cant decode signature %s", err.Error())
@@ -98,7 +98,7 @@ func (m *Member) verifySig(request Request, rawRequest []byte, signature string)
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
 
-	if key != rawpublicpem {
+	if key != rawpublicpem && !selfSigned {
 		return fmt.Errorf("[ verifySig ] Access denied. Key - %v", rawpublicpem)
 	}
 
@@ -144,6 +144,7 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	var signature string
 	var pulseTimeStamp int64
 	var rawRequest []byte
+	selfSigned := false
 
 	err := signer.UnmarshalParams(signedRequest, &rawRequest, &signature, &pulseTimeStamp)
 	if err != nil {
@@ -156,7 +157,10 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 		return nil, fmt.Errorf(" Failed to unmarshal: %s", err.Error())
 	}
 
-	err = m.verifySig(request, rawRequest, signature)
+	if request.Params.CallSite == "contract.createMember" {
+		selfSigned = true
+	}
+	err = m.verifySig(request, rawRequest, signature, selfSigned)
 	if err != nil {
 		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
 	}

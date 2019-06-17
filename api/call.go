@@ -143,7 +143,6 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 			metrics.APIContractExecutionTime.WithLabelValues(request.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
-
 		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
 
 		defer func() {
@@ -191,16 +190,17 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		pulse, err := ar.PulseAccessor.Latest(ctx)
-		if err != nil {
-			processError(err, "Can't get last pulse", &resp, insLog, traceID)
-			return
-		}
+		// pulse, err := ar.PulseAccessor.Latest(ctx)
+		// if err != nil {
+		// 	processError(err, "Can't get last pulse", &resp, insLog, traceID)
+		// 	return
+		// }
 
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, request, rawBody, signature, pulse.PulseTimestamp)
+			// result, err = ar.makeCall(ctx, request, rawBody, signature, pulse.PulseTimestamp)
+			result, err = ar.makeCall(ctx, request, rawBody, signature, 0)
 			ch <- nil
 		}()
 		select {

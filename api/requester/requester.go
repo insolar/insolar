@@ -219,7 +219,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Config request marshaling failed")
 	}
-	signature, err := sign(userCfg.privateKeyObject, dataToSign)
+	signature, err := Sign(userCfg.privateKeyObject, dataToSign)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with signing request")
 	}
@@ -233,7 +233,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	return body, nil
 }
 
-func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
+func Sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 	hash := sha256.Sum256(data)
 
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey.(*ecdsa.PrivateKey), hash[:])
@@ -241,11 +241,11 @@ func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 		return "", errors.Wrap(err, "[ sign ] Cant sign data")
 	}
 
-	return PointsToDER(r, s), nil
+	return pointsToDER(r, s), nil
 }
 
 // Convert signature points do DER format
-func PointsToDER(r, s *big.Int) string {
+func pointsToDER(r, s *big.Int) string {
 	prefixPoint := func(b []byte) []byte {
 		if len(b) == 0 {
 			b = []byte{0x00}
