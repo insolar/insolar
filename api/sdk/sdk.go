@@ -163,10 +163,11 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't generate private key")
 	}
 
-	privateKeyStr, err := ks.ExportPrivateKeyPEM(privateKey)
+	privateKeyBytes, err := ks.ExportPrivateKeyPEM(privateKey)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't export private key")
 	}
+	privateKeyStr := string(privateKeyBytes)
 
 	memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
 	if err != nil {
@@ -175,7 +176,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 
 	response, err := sdk.DoRequest(
 		sdk.rootMember.Caller,
-		sdk.rootMember.PrivateKey,
+		privateKeyStr,
 		"contract.createMember",
 		map[string]interface{}{"publicKey": string(memberPubKeyStr)},
 	)
@@ -183,7 +184,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] request was failed ")
 	}
 
-	return NewMember(response.Result.ContractResult.(string), string(privateKeyStr)), response.Result.TraceID, nil
+	return NewMember(response.ContractResult.(string), privateKeyStr), response.TraceID, nil
 }
 
 // AddBurnAddresses method add burn addresses
@@ -198,7 +199,7 @@ func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
 		return "", errors.Wrap(err, "[ AddBurnAddresses ] request was failed ")
 	}
 
-	return response.Result.TraceID, nil
+	return response.TraceID, nil
 }
 
 // Transfer method send money from one member to another
@@ -213,7 +214,7 @@ func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error
 		return "", errors.Wrap(err, "[ Transfer ] request was failed ")
 	}
 
-	return response.Result.TraceID, nil
+	return response.TraceID, nil
 }
 
 // GetBalance returns current balance of the given member.
@@ -227,7 +228,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 		return new(big.Int), errors.Wrap(err, "[ GetBalance ] request was failed ")
 	}
 
-	result, ok := new(big.Int).SetString(response.Result.ContractResult.(string), 10)
+	result, ok := new(big.Int).SetString(response.ContractResult.(string), 10)
 	if !ok {
 		return new(big.Int), errors.Errorf("[ GetBalance ] can't parse returned balance")
 	}
@@ -235,7 +236,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	return result, nil
 }
 
-func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params map[string]interface{}) (*requester.ContractAnswer, error) {
+func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params map[string]interface{}) (*requester.Result, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 	config, err := requester.CreateUserConfig(callerRef, callerKey)
 	if err != nil {
@@ -252,10 +253,10 @@ func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, par
 		return nil, errors.Wrap(err, "[ DoRequest ] can't get response")
 	}
 
-	if response.Error.Message != "" {
-		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Result.TraceID)
+	if response.Error != nil {
+		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.TraceID)
 	}
 
-	return response, nil
+	return response.Result, nil
 
 }
