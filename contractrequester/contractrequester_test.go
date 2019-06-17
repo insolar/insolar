@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -47,11 +48,12 @@ func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMoc
 func TestNew(t *testing.T) {
 	messageBus := mockMessageBus(t, nil)
 	pulseAccessor := pulse.NewAccessorMock(t)
+	jetCoordinator := jet.NewCoordinatorMock(t)
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(messageBus, contractRequester, pulseAccessor)
+	cm.Inject(messageBus, contractRequester, pulseAccessor, jetCoordinator)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
@@ -70,6 +72,14 @@ func mockPulseAccessor(t *testing.T) pulse.Accessor {
 	return pulseAccessor
 }
 
+func mockJetCoordinator(t *testing.T) jet.Coordinator {
+	coordinator := jet.NewCoordinatorMock(t)
+	coordinator.MeFunc = func() (r insolar.Reference) {
+		return testutils.RandomRef()
+	}
+	return coordinator
+}
+
 func TestContractRequester_SendRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ref := testutils.RandomRef()
@@ -80,6 +90,8 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	cReq.MessageBus = mbm
 
 	cReq.PulseAccessor = mockPulseAccessor(t)
+
+	cReq.JetCoordinator = mockJetCoordinator(t)
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
@@ -117,6 +129,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
 	cReq.PulseAccessor = mockPulseAccessor(t)
+	cReq.JetCoordinator = mockJetCoordinator(t)
 
 	mbm.MustRegisterMock.Return()
 	err = cReq.Start(ctx)
@@ -160,6 +173,7 @@ func TestCallMethodCanceled(t *testing.T) {
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
 	cr.PulseAccessor = mockPulseAccessor(t)
+	cr.JetCoordinator = mockJetCoordinator(t)
 
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
@@ -199,6 +213,7 @@ func TestCallMethodWaitResults(t *testing.T) {
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
 	cr.PulseAccessor = mockPulseAccessor(t)
+	cr.JetCoordinator = mockJetCoordinator(t)
 
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()

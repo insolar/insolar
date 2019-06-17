@@ -88,7 +88,7 @@ func (*CallMethod) DefaultRole() insolar.DynamicRole {
 func (cm *CallMethod) DefaultTarget() *insolar.Reference {
 	switch cm.CallType {
 	case record.CTSaveAsChild:
-		return genRequest(cm.PulseNum, MustSerializeBytes(cm), &insolar.DomainID)
+		return genRequest(cm.PulseNum, MustSerializeBytes(cm))
 	case record.CTSaveAsDelegate:
 		return cm.Base
 	default:
@@ -98,7 +98,7 @@ func (cm *CallMethod) DefaultTarget() *insolar.Reference {
 
 func (cm *CallMethod) GetReference() insolar.Reference {
 	if cm.CallType != record.CTMethod {
-		return *genRequest(cm.PulseNum, MustSerializeBytes(cm), &insolar.DomainID)
+		return *genRequest(cm.PulseNum, MustSerializeBytes(cm))
 	}
 	return *cm.Object
 }
@@ -237,11 +237,8 @@ func (vr *ValidationResults) GetReference() insolar.Reference {
 var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
 
 // GenRequest calculates Reference for request message from pulse number and request's payload.
-func genRequest(pn insolar.PulseNumber, payload []byte, domain *insolar.ID) *insolar.Reference {
-	ref := insolar.NewReference(
-		*domain,
-		*insolar.NewID(pn, hasher.Hash(payload)),
-	)
+func genRequest(pn insolar.PulseNumber, payload []byte) *insolar.Reference {
+	ref := insolar.NewReference(*insolar.NewID(pn, hasher.Hash(payload)))
 	return ref
 }
 
@@ -271,6 +268,40 @@ func (pf *PendingFinished) DefaultTarget() *insolar.Reference {
 
 func (pf *PendingFinished) Type() insolar.MessageType {
 	return insolar.TypePendingFinished
+}
+
+// AdditionalCallFromPreviousExecutor is sent to the current executor
+// by previous executor when Flow cancels after registering the request
+// but before adding the request to the execution queue. For this reason
+// this one request may be invisible by OnPulse handler. See HandleCall
+// for more details.
+type AdditionalCallFromPreviousExecutor struct {
+	ObjectReference insolar.Reference
+	Parcel          insolar.Parcel
+	Request         *insolar.Reference
+	Pending         PendingState
+}
+
+func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {
+	// Contract that initiated this call
+	return &m.ObjectReference
+}
+
+func (m *AdditionalCallFromPreviousExecutor) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
+	// This type of message currently can be send from any node
+	return nil, 0
+}
+
+func (m *AdditionalCallFromPreviousExecutor) DefaultRole() insolar.DynamicRole {
+	return insolar.DynamicRoleVirtualExecutor
+}
+
+func (m *AdditionalCallFromPreviousExecutor) DefaultTarget() *insolar.Reference {
+	return &m.ObjectReference
+}
+
+func (m *AdditionalCallFromPreviousExecutor) Type() insolar.MessageType {
+	return insolar.TypeAdditionalCallFromPreviousExecutor
 }
 
 // StillExecuting

@@ -51,7 +51,8 @@
 package merkle
 
 import (
-	"github.com/insolar/insolar/insolar"
+	"hash"
+
 	"github.com/onrik/gomerkle"
 	"github.com/pkg/errors"
 )
@@ -60,7 +61,7 @@ type tree interface {
 	Root() []byte
 }
 
-func treeFromHashList(list [][]byte, hasher insolar.Hasher) (tree, error) {
+func treeFromHashList(list [][]byte, hasher hash.Hash) (tree, error) {
 	mt := gomerkle.NewTree(hasher)
 	mt.AddHash(list...)
 

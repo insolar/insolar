@@ -108,7 +108,7 @@ type Bus struct {
 // NewBus creates Sender instance with provided values.
 func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator) *Bus {
 	return &Bus{
-		timeout:     time.Second * 200,
+		timeout:     time.Second * 8,
 		pub:         pub,
 		replies:     make(map[string]*lockedReply),
 		pulses:      pulses,
@@ -195,8 +195,8 @@ func (b *Bus) SendTarget(
 	fmt.Println("create msg with id ", id, msg.Metadata.Get(MetaType), inslogger.TraceID(ctx))
 	middleware.SetCorrelationID(id, msg)
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
-
 	msg.Metadata.Set(MetaReceiver, target.String())
+	msg.SetContext(ctx)
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
@@ -219,9 +219,10 @@ func (b *Bus) SendTarget(
 	}
 
 	go func() {
+		inslogger.FromContext(ctx).WithField("correlation_id", id).Info("waiting for reply")
 		select {
 		case <-reply.done:
-			inslogger.FromContext(msg.Context()).Infof("Done waiting replies for message with correlationID %s", id)
+			inslogger.FromContext(ctx).Infof("Done waiting replies for message with correlationID %s", id)
 		case <-time.After(b.timeout):
 			inslogger.FromContext(ctx).Error(
 				errors.Errorf(
@@ -240,15 +241,18 @@ func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 	middleware.SetCorrelationID(id, reply)
 	fmt.Println("it was reply ", id, origin.Metadata.Get(MetaType), reply.Metadata.Get(MetaType), origin.Metadata.Get(MetaTraceID))
 
-	originSender := origin.Metadata.Get(MetaSender)
-	if originSender == "" {
-		inslogger.FromContext(ctx).Error("failed to send reply (no sender)")
+	originMeta := payload.Meta{}
+	err := originMeta.Unmarshal(origin.Payload)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send reply"))
 		return
 	}
-	reply.Metadata.Set(MetaReceiver, originSender)
-	reply.Metadata.Set(MetaTraceID, origin.Metadata.Get(MetaTraceID))
 
-	err := b.pub.Publish(TopicOutgoing, reply)
+	reply.Metadata.Set(MetaReceiver, originMeta.Sender.String())
+	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+	reply.SetContext(ctx)
+
+	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 	}
@@ -288,7 +292,7 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 		}
 		select {
 		case reply.messages <- msg:
-			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
+			inslogger.FromContext(context.Background()).Infof("result for message with correlationID %s was send", id)
 		case <-reply.done:
 		}
 		reply.wg.Done()

@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package handle
 
@@ -46,6 +46,12 @@ func (s *GetPendingRequestID) Present(ctx context.Context, f flow.Flow) error {
 	jet := proc.NewFetchJet(*s.msg.DefaultTarget().Record(), flow.Pulse(ctx), s.wmmessage)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
+		return err
+	}
+
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.wmmessage)
+	s.dep.WaitHot(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 

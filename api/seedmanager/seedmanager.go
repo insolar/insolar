@@ -25,10 +25,10 @@ import (
 type Expiration = int64
 
 // DefaultTTL is default time period for deleting expired seeds
-const DefaultTTL = time.Duration(1 * time.Second)
+const DefaultTTL = 1 * time.Second
 
 // DefaultCleanPeriod default time period for launching cleaning goroutine
-const DefaultCleanPeriod = time.Duration(1 * time.Second)
+const DefaultCleanPeriod = 1 * time.Second
 
 // SeedManager manages working with seed pool
 // It's thread safe
@@ -36,6 +36,7 @@ type SeedManager struct {
 	mutex    sync.RWMutex
 	seedPool map[Seed]Expiration
 	ttl      time.Duration
+	stopped  bool
 }
 
 // New creates new seed manager with default params
@@ -44,15 +45,26 @@ func New() *SeedManager {
 }
 
 // NewSpecified creates new seed manager with custom params
-func NewSpecified(TTL time.Duration, cleanPeriod time.Duration) *SeedManager {
-	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: TTL}
+func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
+	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: ttl, stopped: false}
 	go func() {
 		for range time.Tick(cleanPeriod) {
 			sm.deleteExpired()
+			sm.mutex.RLock()
+			if sm.stopped {
+				break
+			}
+			sm.mutex.RUnlock()
 		}
 	}()
 
 	return &sm
+}
+
+func (sm *SeedManager) Stop() {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	sm.stopped = true
 }
 
 // Add adds seed to pool

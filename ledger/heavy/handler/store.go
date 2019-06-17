@@ -35,7 +35,7 @@ func storeIndexBuckets(
 	pn insolar.PulseNumber,
 ) error {
 	for _, rwb := range rawBuckets {
-		buck := object.IndexBucket{}
+		buck := object.FilamentIndex{}
 		err := buck.Unmarshal(rwb)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)

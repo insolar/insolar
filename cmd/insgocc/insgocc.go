@@ -22,9 +22,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -244,7 +242,7 @@ func findContractPath(contractDirPath string) *string {
 }
 
 func main() {
-	var reference, outdir string
+	var reference string
 	output := newOutputFlag("-")
 	proxyOut := newOutputFlag("")
 	machineType := newMachineTypeFlag("go")
@@ -309,67 +307,6 @@ func main() {
 	cmdImports.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
 	cmdImports.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 
-	// PLEASE NOTE that `insgocc compile` is in fact not used for compiling contracts by insolard.
-	// Instead contracts are compiled when `insolard genesis` is executed without using `insgocc`.
-	keepTemp := false
-	var cmdCompile = &cobra.Command{
-		Use:   "compile [flags] <file name to compile>",
-		Short: "Compile contract",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			dir, err := os.Getwd()
-			checkError(err)
-
-			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
-			checkError(err)
-
-			// make temporary dir
-			tmpDir, err := ioutil.TempDir("", "temp-")
-			checkError(err)
-
-			defer func() {
-				if keepTemp {
-					fmt.Printf("Temp directory: %s\n", tmpDir)
-				} else {
-					os.RemoveAll(tmpDir) // nolint: errcheck
-				}
-			}()
-
-			name := parsed.ContractName()
-
-			contract, err := os.Create(filepath.Join(tmpDir, name+".go"))
-			checkError(err)
-			defer contract.Close()
-
-			parsed.ChangePackageToMain()
-			err = parsed.Write(contract)
-			checkError(err)
-
-			wrapper, err := os.Create(filepath.Join(tmpDir, name+".wrapper.go"))
-			checkError(err)
-			defer wrapper.Close()
-
-			err = parsed.WriteWrapper(wrapper, "main")
-			checkError(err)
-
-			err = os.Chdir(tmpDir)
-			checkError(err)
-
-			contractPath := path.Join(dir, outdir, name+".so")
-			cmdArgs := []string{"build", "-buildmode=plugin", "-o", contractPath}
-			out, err := exec.Command("go", cmdArgs...).CombinedOutput()
-			if err != nil {
-				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
-				os.Exit(1)
-			}
-		},
-	}
-	// default value for string flags is displayed automatically
-	cmdCompile.Flags().StringVarP(&outdir, "output-dir", "o", ".", "output dir")
-	// default value for bool flags is not displayed automatically, thus it's done manually here
-	cmdCompile.Flags().BoolVarP(&keepTemp, "keep-temp", "k", false, "keep temp directory (default \"false\")")
-	cmdCompile.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
-
 	var cmdGenerateBuiltins = &cobra.Command{
 		Use:   "regen-builtin [flags] <dir path to builtin contracts>",
 		Short: "Build builtin proxy, wrappers and initializator",
@@ -413,7 +350,7 @@ func main() {
 				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed)
 				checkError(err)
 
-				reference := contract.GenerateReference()
+				reference := contract.GenerateReference(preprocessor.PrototypeType)
 				err = contract.Parsed.WriteProxy(reference.String(), output.writer)
 				checkError(err)
 
@@ -436,7 +373,8 @@ func main() {
 	}
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
-	rootCmd.AddCommand(cmdProxy, cmdWrapper, cmdImports, cmdCompile, cmdGenerateBuiltins)
+	rootCmd.AddCommand(
+		cmdProxy, cmdWrapper, cmdImports, cmdGenerateBuiltins, genesisCompile())
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println(err)

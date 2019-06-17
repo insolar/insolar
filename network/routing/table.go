@@ -92,11 +92,11 @@ func (t *Table) isLocalNode(insolar.Reference) bool {
 	return true
 }
 
-func (t *Table) resolveRemoteNode(ref insolar.Reference) (*host.Host, error) {
+func (t *Table) resolveRemoteNode(insolar.Reference) (*host.Host, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (t *Table) addRemoteHost(h *host.Host) {
+func (t *Table) addRemoteHost(*host.Host) {
 	log.Warn("not implemented")
 }
 

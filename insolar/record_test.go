@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,7 +50,7 @@ func TestNewRefFromBase58(t *testing.T) {
 	domainID := testutils.RandomID()
 	refStr := recordID.String() + insolar.RecordRefIDSeparator + domainID.String()
 
-	expectedRef := insolar.NewReference(domainID, recordID)
+	expectedRef := insolar.NewReference(recordID)
 	actualRef, err := insolar.NewReferenceFromBase58(refStr)
 	require.NoError(t, err)
 
@@ -59,7 +59,7 @@ func TestNewRefFromBase58(t *testing.T) {
 
 func TestRecordRef_String(t *testing.T) {
 	ref := testutils.RandomRef()
-	expectedRefStr := ref.Record().String() + insolar.RecordRefIDSeparator + ref.Domain().String()
+	expectedRefStr := ref.Record().String() + insolar.RecordRefIDSeparator + "11111111111111111111111111111111"
 
 	assert.Equal(t, expectedRefStr, ref.String())
 }

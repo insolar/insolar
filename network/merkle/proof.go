@@ -89,6 +89,6 @@ type CloudProof struct {
 	BaseProof
 }
 
-func (cp *CloudProof) hash(cloudHash []byte, helper *merkleHelper) []byte {
+func (cp *CloudProof) hash(cloudHash []byte, _ *merkleHelper) []byte {
 	return cloudHash
 }

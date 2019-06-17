@@ -133,7 +133,7 @@ func (dbs *bitsetImpl) Serialize() ([]byte, error) {
 
 	length := len(dbs.array)
 	var result bytes.Buffer
-	firstByte = firstByte << 1
+	firstByte <<= 1
 	if bits.Len(uint(length)) > lowLengthSize {
 		err = dbs.serializeWithHLength(firstByte, length, &result)
 		if err != nil {
@@ -154,10 +154,10 @@ func (dbs *bitsetImpl) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (dbs *bitsetImpl) serializeWithHLength(firstByte uint8, length int, result *bytes.Buffer) error {
+func (dbs *bitsetImpl) serializeWithHLength(firstByte uint8, length int, result io.Writer) error {
 	var secondByte uint8 // hBitLength
 	firstByte++
-	firstByte = firstByte << lowLengthSize // move compressed and hBitLength bits to right
+	firstByte <<= lowLengthSize // move compressed and hBitLength bits to right
 	secondByte = uint8(length & 0xff)
 	lowByte := uint8(length >> 8)
 	if lowByte != 0 {
@@ -175,8 +175,8 @@ func (dbs *bitsetImpl) serializeWithHLength(firstByte uint8, length int, result 
 	return nil
 }
 
-func (dbs *bitsetImpl) serializeWithLLength(firstByte uint8, length int, result *bytes.Buffer) error {
-	firstByte = firstByte << lowLengthSize // move compressed and hbit flags to right
+func (dbs *bitsetImpl) serializeWithLLength(firstByte uint8, length int, result io.Writer) error {
+	firstByte <<= lowLengthSize // move compressed and hbit flags to right
 	firstByte += uint8(length)
 	err := binary.Write(result, defaultByteOrder, firstByte)
 	if err != nil {

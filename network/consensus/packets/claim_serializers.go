@@ -264,7 +264,7 @@ func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
 	return nil
 }
 
-func (nac *NodeAnnounceClaim) Update(nodeJoinerID insolar.Reference, crypto insolar.CryptographyService) error {
+func (nac *NodeAnnounceClaim) Update(nodeJoinerID insolar.Reference, crypto insolar.Signer) error {
 	index, err := nac.BitSetMapper.RefToIndex(nodeJoinerID)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeAnnounceClaim.Update ] failed to map joiner node ID to bitset index")

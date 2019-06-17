@@ -77,6 +77,9 @@ func (p *Parcel) Message() insolar.Message {
 func (p *Parcel) Context(ctx context.Context) context.Context {
 	ctx = inslogger.ContextWithTrace(ctx, p.ServiceData.LogTraceID)
 	ctx = inslogger.WithLoggerLevel(ctx, p.ServiceData.LogLevel)
+	if p.ServiceData.TraceSpanData == nil {
+		return ctx
+	}
 	parentspan := instracer.MustDeserialize(p.ServiceData.TraceSpanData)
 	return instracer.WithParentSpan(ctx, parentspan)
 }
@@ -101,6 +104,10 @@ func (p *Parcel) GetSign() []byte {
 
 func (p *Parcel) GetSender() insolar.Reference {
 	return p.Sender
+}
+
+func (p *Parcel) SetSender(sender insolar.Reference) {
+	p.Sender = sender
 }
 
 func (p *Parcel) AddDelegationToken(token insolar.DelegationToken) {

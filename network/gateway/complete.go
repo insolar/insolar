@@ -52,11 +52,14 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/certificate"
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar/reply"
@@ -77,8 +80,7 @@ type Complete struct {
 }
 
 func (g *Complete) Run(ctx context.Context) {
-	g.GIL.Release(ctx)
-	g.MessageBus.MustRegister(insolar.TypeNodeSignRequest, g.signCertHandler)
+	g.HostNetwork.RegisterRequestHandler(types.SignCert, g.signCertHandler)
 	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 }
 
@@ -89,6 +91,10 @@ func (g *Complete) GetState() insolar.NetworkState {
 func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	inslogger.FromContext(ctx).Debugf("Gateway.Complete: pulse happens %d", pu.PulseNumber)
 	return nil
+}
+
+func (g *Complete) NeedLockMessageBus() bool {
+	return false
 }
 
 func (g *Complete) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
@@ -135,19 +141,25 @@ func (g *Complete) requestCertSign(ctx context.Context, discoveryNode insolar.Di
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		msg := &message.NodeSignPayload{
-			NodeRef: registeredNodeRef,
-		}
-		opts := &insolar.MessageSendOptions{
-			Receiver: discoveryNode.GetNodeRef(),
-		}
-		r, err := g.MessageBus.Send(ctx, msg, opts)
-		if err != nil {
-			return nil, err
-		}
-		sign = r.(reply.NodeSignInt).GetSign()
+		return sign, nil
 	}
+
+	request := &packet.SignCertRequest{
+		NodeRef: *registeredNodeRef,
+	}
+	future, err := g.HostNetwork.SendRequest(ctx, types.SignCert, request, *discoveryNode.GetNodeRef())
+	if err != nil {
+		return nil, err
+	}
+
+	p, err := future.WaitResponse(10 * time.Second)
+	if err != nil {
+		return nil, err
+	} else if p.GetResponse().GetError() != nil {
+		return nil, fmt.Errorf("[requestCertSign] Remote (%s) said %s", p.GetSender(), p.GetResponse().GetError().Error)
+	}
+
+	sign = p.GetResponse().GetSignCert().Sign
 
 	return sign, nil
 }
@@ -180,14 +192,15 @@ func (g *Complete) signCert(ctx context.Context, registeredNodeRef *insolar.Refe
 	return sign.Bytes(), nil
 }
 
-// signCertHandler is MsgBus handler that signs certificate for some node with node own key
-func (g *Complete) signCertHandler(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
-	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
-	sign, err := g.signCert(ctx, nodeRef)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
+// signCertHandler is handler that signs certificate for some node with node own key
+func (g *Complete) signCertHandler(ctx context.Context, request network.Packet) (network.Packet, error) {
+	if request.GetRequest() == nil || request.GetRequest().GetSignCert() == nil {
+		inslogger.FromContext(ctx).Warnf("process SignCert: got invalid request protobuf message: %s", request)
 	}
-	return &reply.NodeSign{
-		Sign: sign,
-	}, nil
+	sign, err := g.signCert(ctx, &request.GetRequest().GetSignCert().NodeRef)
+	if err != nil {
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.ErrorResponse{Error: err.Error()}), nil
+	}
+
+	return g.HostNetwork.BuildResponse(ctx, request, &packet.SignCertResponse{Sign: sign}), nil
 }

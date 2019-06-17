@@ -75,6 +75,13 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeAdditionalCallFromPreviousExecutor.String():
+		h := &HandleAdditionalCallFromPreviousExecutor{
+			dep:     s.dep,
+			Message: s.Message,
+			Parcel:  parcel,
+		}
+		return f.Handle(ctx, h.Present)
 	case insolar.TypePendingFinished.String():
 		h := &HandlePendingFinished{
 			dep:     s.dep,

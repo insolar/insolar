@@ -12,7 +12,6 @@ import (
 	pulse "github.com/insolar/insolar/insolar/pulse"
 	github_com_insolar_insolar_network_consensus_packets "github.com/insolar/insolar/network/consensus/packets"
 	github_com_insolar_insolar_network_hostnetwork_host "github.com/insolar/insolar/network/hostnetwork/host"
-	github_com_insolar_insolar_network_hostnetwork_packet_types "github.com/insolar/insolar/network/hostnetwork/packet/types"
 	io "io"
 	math "math"
 	reflect "reflect"
@@ -86,11 +85,12 @@ func (BasicResponseCode) EnumDescriptor() ([]byte, []int) {
 }
 
 type Packet struct {
-	Sender    *github_com_insolar_insolar_network_hostnetwork_host.Host `protobuf:"bytes,1,opt,name=Sender,proto3,customtype=github.com/insolar/insolar/network/hostnetwork/host.Host" json:"Sender,omitempty"`
-	Receiver  *github_com_insolar_insolar_network_hostnetwork_host.Host `protobuf:"bytes,2,opt,name=Receiver,proto3,customtype=github.com/insolar/insolar/network/hostnetwork/host.Host" json:"Receiver,omitempty"`
-	RequestID uint64                                                    `protobuf:"varint,3,opt,name=RequestID,proto3" json:"RequestID,omitempty"`
-	TraceID   string                                                    `protobuf:"bytes,4,opt,name=TraceID,proto3" json:"TraceID,omitempty"`
-	Type      uint32                                                    `protobuf:"varint,5,opt,name=Type,proto3" json:"Type,omitempty"`
+	Polymorph int32                                                     `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
+	Sender    *github_com_insolar_insolar_network_hostnetwork_host.Host `protobuf:"bytes,20,opt,name=Sender,proto3,customtype=github.com/insolar/insolar/network/hostnetwork/host.Host" json:"Sender,omitempty"`
+	Receiver  *github_com_insolar_insolar_network_hostnetwork_host.Host `protobuf:"bytes,21,opt,name=Receiver,proto3,customtype=github.com/insolar/insolar/network/hostnetwork/host.Host" json:"Receiver,omitempty"`
+	RequestID uint64                                                    `protobuf:"varint,22,opt,name=RequestID,proto3" json:"RequestID,omitempty"`
+	TraceID   string                                                    `protobuf:"bytes,23,opt,name=TraceID,proto3" json:"TraceID,omitempty"`
+	Type      uint32                                                    `protobuf:"varint,24,opt,name=Type,proto3" json:"Type,omitempty"`
 	// Types that are valid to be assigned to Payload:
 	//	*Packet_Request
 	//	*Packet_Response
@@ -137,10 +137,10 @@ type isPacket_Payload interface {
 }
 
 type Packet_Request struct {
-	Request *Request `protobuf:"bytes,6,opt,name=Request,proto3,oneof"`
+	Request *Request `protobuf:"bytes,25,opt,name=Request,proto3,oneof"`
 }
 type Packet_Response struct {
-	Response *Response `protobuf:"bytes,7,opt,name=Response,proto3,oneof"`
+	Response *Response `protobuf:"bytes,26,opt,name=Response,proto3,oneof"`
 }
 
 func (*Packet_Request) isPacket_Payload()  {}
@@ -180,12 +180,12 @@ func _Packet_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	// Payload
 	switch x := m.Payload.(type) {
 	case *Packet_Request:
-		_ = b.EncodeVarint(6<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(25<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Request); err != nil {
 			return err
 		}
 	case *Packet_Response:
-		_ = b.EncodeVarint(7<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(26<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Response); err != nil {
 			return err
 		}
@@ -199,7 +199,7 @@ func _Packet_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 func _Packet_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
 	m := msg.(*Packet)
 	switch tag {
-	case 6: // Payload.Request
+	case 25: // Payload.Request
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -207,7 +207,7 @@ func _Packet_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer)
 		err := b.DecodeMessage(msg)
 		m.Payload = &Packet_Request{msg}
 		return true, err
-	case 7: // Payload.Response
+	case 26: // Payload.Response
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -226,12 +226,12 @@ func _Packet_OneofSizer(msg proto.Message) (n int) {
 	switch x := m.Payload.(type) {
 	case *Packet_Request:
 		s := proto.Size(x.Request)
-		n += 1 // tag and wire
+		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
 	case *Packet_Response:
 		s := proto.Size(x.Response)
-		n += 1 // tag and wire
+		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
 	case nil:
@@ -251,6 +251,7 @@ type Request struct {
 	//	*Request_Authorize
 	//	*Request_Register
 	//	*Request_Genesis
+	//	*Request_SignCert
 	Request isRequest_Request `protobuf_oneof:"Request"`
 }
 
@@ -317,6 +318,9 @@ type Request_Register struct {
 type Request_Genesis struct {
 	Genesis *GenesisRequest `protobuf:"bytes,8,opt,name=Genesis,proto3,oneof"`
 }
+type Request_SignCert struct {
+	SignCert *SignCertRequest `protobuf:"bytes,9,opt,name=SignCert,proto3,oneof"`
+}
 
 func (*Request_Ping) isRequest_Request()      {}
 func (*Request_RPC) isRequest_Request()       {}
@@ -326,6 +330,7 @@ func (*Request_Bootstrap) isRequest_Request() {}
 func (*Request_Authorize) isRequest_Request() {}
 func (*Request_Register) isRequest_Request()  {}
 func (*Request_Genesis) isRequest_Request()   {}
+func (*Request_SignCert) isRequest_Request()  {}
 
 func (m *Request) GetRequest() isRequest_Request {
 	if m != nil {
@@ -390,6 +395,13 @@ func (m *Request) GetGenesis() *GenesisRequest {
 	return nil
 }
 
+func (m *Request) GetSignCert() *SignCertRequest {
+	if x, ok := m.GetRequest().(*Request_SignCert); ok {
+		return x.SignCert
+	}
+	return nil
+}
+
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*Request) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _Request_OneofMarshaler, _Request_OneofUnmarshaler, _Request_OneofSizer, []interface{}{
@@ -401,6 +413,7 @@ func (*Request) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error
 		(*Request_Authorize)(nil),
 		(*Request_Register)(nil),
 		(*Request_Genesis)(nil),
+		(*Request_SignCert)(nil),
 	}
 }
 
@@ -446,6 +459,11 @@ func _Request_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	case *Request_Genesis:
 		_ = b.EncodeVarint(8<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Genesis); err != nil {
+			return err
+		}
+	case *Request_SignCert:
+		_ = b.EncodeVarint(9<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.SignCert); err != nil {
 			return err
 		}
 	case nil:
@@ -522,6 +540,14 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Genesis{msg}
 		return true, err
+	case 9: // Request.SignCert
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(SignCertRequest)
+		err := b.DecodeMessage(msg)
+		m.Request = &Request_SignCert{msg}
+		return true, err
 	default:
 		return false, nil
 	}
@@ -571,6 +597,11 @@ func _Request_OneofSizer(msg proto.Message) (n int) {
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
+	case *Request_SignCert:
+		s := proto.Size(x.SignCert)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
 	case nil:
 	default:
 		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
@@ -587,6 +618,8 @@ type Response struct {
 	//	*Response_Authorize
 	//	*Response_Register
 	//	*Response_Genesis
+	//	*Response_SignCert
+	//	*Response_Error
 	Response isResponse_Response `protobuf_oneof:"Response"`
 }
 
@@ -650,6 +683,12 @@ type Response_Register struct {
 type Response_Genesis struct {
 	Genesis *GenesisResponse `protobuf:"bytes,7,opt,name=Genesis,proto3,oneof"`
 }
+type Response_SignCert struct {
+	SignCert *SignCertResponse `protobuf:"bytes,8,opt,name=SignCert,proto3,oneof"`
+}
+type Response_Error struct {
+	Error *ErrorResponse `protobuf:"bytes,9,opt,name=Error,proto3,oneof"`
+}
 
 func (*Response_Ping) isResponse_Response()      {}
 func (*Response_RPC) isResponse_Response()       {}
@@ -658,6 +697,8 @@ func (*Response_Bootstrap) isResponse_Response() {}
 func (*Response_Authorize) isResponse_Response() {}
 func (*Response_Register) isResponse_Response()  {}
 func (*Response_Genesis) isResponse_Response()   {}
+func (*Response_SignCert) isResponse_Response()  {}
+func (*Response_Error) isResponse_Response()     {}
 
 func (m *Response) GetResponse() isResponse_Response {
 	if m != nil {
@@ -715,6 +756,20 @@ func (m *Response) GetGenesis() *GenesisResponse {
 	return nil
 }
 
+func (m *Response) GetSignCert() *SignCertResponse {
+	if x, ok := m.GetResponse().(*Response_SignCert); ok {
+		return x.SignCert
+	}
+	return nil
+}
+
+func (m *Response) GetError() *ErrorResponse {
+	if x, ok := m.GetResponse().(*Response_Error); ok {
+		return x.Error
+	}
+	return nil
+}
+
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*Response) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _Response_OneofMarshaler, _Response_OneofUnmarshaler, _Response_OneofSizer, []interface{}{
@@ -725,6 +780,8 @@ func (*Response) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) erro
 		(*Response_Authorize)(nil),
 		(*Response_Register)(nil),
 		(*Response_Genesis)(nil),
+		(*Response_SignCert)(nil),
+		(*Response_Error)(nil),
 	}
 }
 
@@ -765,6 +822,16 @@ func _Response_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	case *Response_Genesis:
 		_ = b.EncodeVarint(7<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Genesis); err != nil {
+			return err
+		}
+	case *Response_SignCert:
+		_ = b.EncodeVarint(8<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.SignCert); err != nil {
+			return err
+		}
+	case *Response_Error:
+		_ = b.EncodeVarint(9<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Error); err != nil {
 			return err
 		}
 	case nil:
@@ -833,6 +900,22 @@ func _Response_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffe
 		err := b.DecodeMessage(msg)
 		m.Response = &Response_Genesis{msg}
 		return true, err
+	case 8: // Response.SignCert
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(SignCertResponse)
+		err := b.DecodeMessage(msg)
+		m.Response = &Response_SignCert{msg}
+		return true, err
+	case 9: // Response.Error
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(ErrorResponse)
+		err := b.DecodeMessage(msg)
+		m.Response = &Response_Error{msg}
+		return true, err
 	default:
 		return false, nil
 	}
@@ -874,6 +957,16 @@ func _Response_OneofSizer(msg proto.Message) (n int) {
 		n += s
 	case *Response_Genesis:
 		s := proto.Size(x.Genesis)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Response_SignCert:
+		s := proto.Size(x.SignCert)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Response_Error:
+		s := proto.Size(x.Error)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -920,8 +1013,8 @@ func (m *Ping) XXX_DiscardUnknown() {
 var xxx_messageInfo_Ping proto.InternalMessageInfo
 
 type RPCRequest struct {
-	Method string                                                                 `protobuf:"bytes,1,opt,name=Method,proto3" json:"Method,omitempty"`
-	Data   github_com_insolar_insolar_network_hostnetwork_packet_types.RPCPayload `protobuf:"bytes,2,opt,name=Data,proto3,customtype=github.com/insolar/insolar/network/hostnetwork/packet/types.RPCPayload" json:"Data"`
+	Method string `protobuf:"bytes,1,opt,name=Method,proto3" json:"Method,omitempty"`
+	Data   []byte `protobuf:"bytes,2,opt,name=Data,proto3" json:"Data,omitempty"`
 }
 
 func (m *RPCRequest) Reset()      { *m = RPCRequest{} }
@@ -1218,6 +1311,42 @@ func (m *GenesisRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GenesisRequest proto.InternalMessageInfo
 
+type SignCertRequest struct {
+	NodeRef github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,1,opt,name=NodeRef,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"NodeRef"`
+}
+
+func (m *SignCertRequest) Reset()      { *m = SignCertRequest{} }
+func (*SignCertRequest) ProtoMessage() {}
+func (*SignCertRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3f826366adfd81c, []int{12}
+}
+func (m *SignCertRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SignCertRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SignCertRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SignCertRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignCertRequest.Merge(m, src)
+}
+func (m *SignCertRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *SignCertRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignCertRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignCertRequest proto.InternalMessageInfo
+
 type RPCResponse struct {
 	Result []byte `protobuf:"bytes,1,opt,name=Result,proto3" json:"Result,omitempty"`
 	Error  string `protobuf:"bytes,2,opt,name=Error,proto3" json:"Error,omitempty"`
@@ -1226,7 +1355,7 @@ type RPCResponse struct {
 func (m *RPCResponse) Reset()      { *m = RPCResponse{} }
 func (*RPCResponse) ProtoMessage() {}
 func (*RPCResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{12}
+	return fileDescriptor_c3f826366adfd81c, []int{13}
 }
 func (m *RPCResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1263,7 +1392,7 @@ type Permission struct {
 func (m *Permission) Reset()      { *m = Permission{} }
 func (*Permission) ProtoMessage() {}
 func (*Permission) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{13}
+	return fileDescriptor_c3f826366adfd81c, []int{14}
 }
 func (m *Permission) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1302,7 +1431,7 @@ type PermissionPayload struct {
 func (m *PermissionPayload) Reset()      { *m = PermissionPayload{} }
 func (*PermissionPayload) ProtoMessage() {}
 func (*PermissionPayload) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{14}
+	return fileDescriptor_c3f826366adfd81c, []int{15}
 }
 func (m *PermissionPayload) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1345,7 +1474,7 @@ type BootstrapResponse struct {
 func (m *BootstrapResponse) Reset()      { *m = BootstrapResponse{} }
 func (*BootstrapResponse) ProtoMessage() {}
 func (*BootstrapResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{15}
+	return fileDescriptor_c3f826366adfd81c, []int{16}
 }
 func (m *BootstrapResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1382,7 +1511,7 @@ type BasicResponse struct {
 func (m *BasicResponse) Reset()      { *m = BasicResponse{} }
 func (*BasicResponse) ProtoMessage() {}
 func (*BasicResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{16}
+	return fileDescriptor_c3f826366adfd81c, []int{17}
 }
 func (m *BasicResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1420,7 +1549,7 @@ type AuthorizeResponse struct {
 func (m *AuthorizeResponse) Reset()      { *m = AuthorizeResponse{} }
 func (*AuthorizeResponse) ProtoMessage() {}
 func (*AuthorizeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{17}
+	return fileDescriptor_c3f826366adfd81c, []int{18}
 }
 func (m *AuthorizeResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1457,7 +1586,7 @@ type AuthorizationData struct {
 func (m *AuthorizationData) Reset()      { *m = AuthorizationData{} }
 func (*AuthorizationData) ProtoMessage() {}
 func (*AuthorizationData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{18}
+	return fileDescriptor_c3f826366adfd81c, []int{19}
 }
 func (m *AuthorizationData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1495,7 +1624,7 @@ type RegisterResponse struct {
 func (m *RegisterResponse) Reset()      { *m = RegisterResponse{} }
 func (*RegisterResponse) ProtoMessage() {}
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{19}
+	return fileDescriptor_c3f826366adfd81c, []int{20}
 }
 func (m *RegisterResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1532,7 +1661,7 @@ type GenesisResponse struct {
 func (m *GenesisResponse) Reset()      { *m = GenesisResponse{} }
 func (*GenesisResponse) ProtoMessage() {}
 func (*GenesisResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{20}
+	return fileDescriptor_c3f826366adfd81c, []int{21}
 }
 func (m *GenesisResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1561,6 +1690,78 @@ func (m *GenesisResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GenesisResponse proto.InternalMessageInfo
 
+type SignCertResponse struct {
+	Sign []byte `protobuf:"bytes,1,opt,name=Sign,proto3" json:"Sign,omitempty"`
+}
+
+func (m *SignCertResponse) Reset()      { *m = SignCertResponse{} }
+func (*SignCertResponse) ProtoMessage() {}
+func (*SignCertResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3f826366adfd81c, []int{22}
+}
+func (m *SignCertResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SignCertResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SignCertResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SignCertResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignCertResponse.Merge(m, src)
+}
+func (m *SignCertResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *SignCertResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignCertResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignCertResponse proto.InternalMessageInfo
+
+type ErrorResponse struct {
+	Error string `protobuf:"bytes,1,opt,name=Error,proto3" json:"Error,omitempty"`
+}
+
+func (m *ErrorResponse) Reset()      { *m = ErrorResponse{} }
+func (*ErrorResponse) ProtoMessage() {}
+func (*ErrorResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3f826366adfd81c, []int{23}
+}
+func (m *ErrorResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ErrorResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ErrorResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ErrorResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ErrorResponse.Merge(m, src)
+}
+func (m *ErrorResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *ErrorResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ErrorResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ErrorResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterEnum("packet.ResponseCode", ResponseCode_name, ResponseCode_value)
 	proto.RegisterEnum("packet.BasicResponseCode", BasicResponseCode_name, BasicResponseCode_value)
@@ -1576,6 +1777,7 @@ func init() {
 	proto.RegisterType((*AuthorizeRequest)(nil), "packet.AuthorizeRequest")
 	proto.RegisterType((*RegisterRequest)(nil), "packet.RegisterRequest")
 	proto.RegisterType((*GenesisRequest)(nil), "packet.GenesisRequest")
+	proto.RegisterType((*SignCertRequest)(nil), "packet.SignCertRequest")
 	proto.RegisterType((*RPCResponse)(nil), "packet.RPCResponse")
 	proto.RegisterType((*Permission)(nil), "packet.Permission")
 	proto.RegisterType((*PermissionPayload)(nil), "packet.PermissionPayload")
@@ -1585,6 +1787,8 @@ func init() {
 	proto.RegisterType((*AuthorizationData)(nil), "packet.AuthorizationData")
 	proto.RegisterType((*RegisterResponse)(nil), "packet.RegisterResponse")
 	proto.RegisterType((*GenesisResponse)(nil), "packet.GenesisResponse")
+	proto.RegisterType((*SignCertResponse)(nil), "packet.SignCertResponse")
+	proto.RegisterType((*ErrorResponse)(nil), "packet.ErrorResponse")
 }
 
 func init() {
@@ -1592,99 +1796,105 @@ func init() {
 }
 
 var fileDescriptor_c3f826366adfd81c = []byte{
-	// 1468 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x57, 0x41, 0x6f, 0x1b, 0x45,
-	0x14, 0xf6, 0xda, 0x8e, 0x1d, 0x3f, 0xdb, 0x89, 0x33, 0xb4, 0xc5, 0xad, 0xd0, 0x26, 0x5a, 0x55,
-	0xd4, 0x94, 0xd6, 0x45, 0x6e, 0xa9, 0x1a, 0x51, 0x09, 0xc5, 0x49, 0x4b, 0x52, 0x4a, 0x64, 0x4d,
-	0x52, 0xa8, 0x04, 0x1c, 0xd6, 0xbb, 0x13, 0x67, 0xa9, 0xb3, 0xe3, 0xee, 0x8c, 0x8b, 0x02, 0x17,
-	0x6e, 0x20, 0x4e, 0xfc, 0x05, 0x6e, 0xdc, 0xf8, 0x1b, 0x95, 0xe0, 0x50, 0x6e, 0x55, 0x0e, 0x11,
-	0x71, 0x2f, 0x1c, 0x38, 0xf4, 0x82, 0xe0, 0x88, 0x66, 0x76, 0x76, 0x67, 0xd7, 0x36, 0x6d, 0x0a,
-	0xe5, 0x92, 0xec, 0xbc, 0x79, 0xef, 0xcd, 0xcc, 0xf7, 0xbe, 0xf9, 0xe6, 0x19, 0xce, 0xf9, 0x84,
-	0x7f, 0x4e, 0x83, 0x7b, 0x97, 0x76, 0x29, 0xe3, 0xd1, 0xf7, 0xc0, 0x76, 0xee, 0x11, 0xae, 0xfe,
-	0x35, 0x07, 0x01, 0xe5, 0x14, 0x15, 0xc2, 0xd1, 0x99, 0x8b, 0x3d, 0x8f, 0xef, 0x0e, 0xbb, 0x4d,
-	0x87, 0xee, 0x5d, 0xea, 0xd1, 0x1e, 0xbd, 0x24, 0xa7, 0xbb, 0xc3, 0x1d, 0x39, 0x92, 0x03, 0xf9,
-	0x15, 0x86, 0x9d, 0xb9, 0x92, 0x70, 0xf7, 0x7c, 0x46, 0xfb, 0x76, 0x30, 0xf1, 0x7f, 0x30, 0xec,
-	0x33, 0x12, 0xfe, 0x0d, 0xa3, 0xac, 0xdf, 0xb3, 0x50, 0xe8, 0xc8, 0xf5, 0xd0, 0x36, 0x14, 0xb6,
-	0x88, 0xef, 0x92, 0xa0, 0x6e, 0x2c, 0x19, 0x8d, 0x4a, 0xfb, 0xfa, 0xc1, 0xe1, 0xe2, 0xb5, 0x67,
-	0x24, 0x9d, 0x76, 0x1e, 0xf1, 0xdd, 0x5c, 0xa7, 0x8c, 0x63, 0x95, 0x0b, 0xdd, 0x85, 0x59, 0x4c,
-	0x1c, 0xe2, 0x3d, 0x20, 0x41, 0x3d, 0xfb, 0x12, 0xf2, 0xc6, 0xd9, 0xd0, 0x6b, 0x50, 0xc2, 0xe4,
-	0xfe, 0x90, 0x30, 0xbe, 0xb1, 0x56, 0xcf, 0x2d, 0x19, 0x8d, 0x3c, 0xd6, 0x06, 0x54, 0x87, 0xe2,
-	0x76, 0x60, 0x3b, 0x64, 0x63, 0xad, 0x9e, 0x5f, 0x32, 0x1a, 0x25, 0x1c, 0x0d, 0x11, 0x82, 0xfc,
-	0xf6, 0xfe, 0x80, 0xd4, 0x67, 0x96, 0x8c, 0x46, 0x15, 0xcb, 0x6f, 0xf4, 0x26, 0x14, 0x55, 0x68,
-	0xbd, 0xb0, 0x64, 0x34, 0xca, 0xad, 0xf9, 0xa6, 0xaa, 0x89, 0x32, 0xaf, 0x67, 0x70, 0xe4, 0x81,
-	0x9a, 0xe2, 0x48, 0x6c, 0x40, 0x7d, 0x46, 0xea, 0x45, 0xe9, 0x5d, 0xd3, 0xde, 0xa1, 0x7d, 0x3d,
-	0x83, 0x63, 0x9f, 0x76, 0x09, 0x8a, 0x1d, 0x7b, 0xbf, 0x4f, 0x6d, 0xd7, 0xfa, 0x3e, 0x17, 0x2f,
-	0x84, 0x2c, 0xc8, 0x77, 0x3c, 0xbf, 0x27, 0xd1, 0x2e, 0xb7, 0x2a, 0x51, 0x0a, 0x61, 0x5b, 0xcf,
-	0x60, 0x39, 0x87, 0x5e, 0x87, 0x1c, 0xee, 0xac, 0x4a, 0xe0, 0xca, 0x2d, 0x14, 0xaf, 0xd2, 0x59,
-	0xd5, 0xdb, 0x12, 0x0e, 0xa8, 0x05, 0xc5, 0x55, 0x9b, 0x39, 0xb6, 0x4b, 0x24, 0x12, 0xe5, 0xd6,
-	0xa9, 0xc8, 0x57, 0x99, 0x13, 0xc7, 0x50, 0x16, 0x74, 0x01, 0x66, 0x3a, 0x82, 0x09, 0x12, 0x9f,
-	0x72, 0xeb, 0x44, 0xbc, 0x01, 0x61, 0xd4, 0xfe, 0xa1, 0x13, 0xba, 0x06, 0xa5, 0x36, 0xa5, 0x9c,
-	0xf1, 0xc0, 0x1e, 0x48, 0xe8, 0xca, 0xad, 0x7a, 0x14, 0x11, 0x4f, 0xe8, 0x28, 0xed, 0x2c, 0x22,
-	0x57, 0x86, 0x7c, 0x97, 0x06, 0xde, 0x17, 0x44, 0xa1, 0x1b, 0x47, 0xc6, 0x13, 0x89, 0xc8, 0xd8,
-	0x86, 0xde, 0x16, 0x40, 0xf7, 0x3c, 0xc6, 0x49, 0xa0, 0x80, 0x7e, 0x55, 0x03, 0x1d, 0xda, 0x75,
-	0x5c, 0xec, 0x2a, 0xc0, 0x78, 0x8f, 0xf8, 0x84, 0x79, 0xac, 0x3e, 0x9b, 0x06, 0x43, 0x99, 0x13,
-	0x60, 0x28, 0x8b, 0xa8, 0x91, 0xb2, 0x5a, 0x7f, 0x64, 0x75, 0x7d, 0x8f, 0x55, 0xa4, 0x73, 0xc9,
-	0x22, 0xbd, 0x92, 0x2a, 0x52, 0xcc, 0x06, 0x59, 0xa5, 0x8b, 0x30, 0xd3, 0xb6, 0x99, 0xe7, 0xa8,
-	0x1a, 0x9d, 0x8c, 0xf1, 0x13, 0xc6, 0x84, 0x73, 0xe8, 0x85, 0x96, 0x93, 0x90, 0x87, 0x45, 0x3a,
-	0x3d, 0x05, 0xf2, 0x38, 0x2c, 0x81, 0xf9, 0x72, 0x12, 0xf3, 0x99, 0x74, 0x68, 0x02, 0x73, 0x1d,
-	0xaa, 0x41, 0xbf, 0x9a, 0x00, 0x7d, 0xac, 0x5a, 0x1a, 0xf4, 0x24, 0xcb, 0x15, 0xea, 0x97, 0x35,
-	0xea, 0x63, 0xb5, 0x8a, 0x51, 0x8f, 0xa3, 0x62, 0xd8, 0x41, 0x43, 0x6d, 0x15, 0x42, 0xa8, 0xad,
-	0x6f, 0x0c, 0x00, 0xcd, 0x70, 0x74, 0x0a, 0x0a, 0x1f, 0x10, 0xbe, 0x4b, 0x5d, 0x59, 0x83, 0x12,
-	0x56, 0x23, 0xd4, 0x85, 0xfc, 0x9a, 0xcd, 0x6d, 0x25, 0x2a, 0x9b, 0x0f, 0x0f, 0x17, 0x33, 0x07,
-	0x87, 0x8b, 0x37, 0x5f, 0x50, 0x58, 0x94, 0x00, 0xf3, 0xfd, 0x01, 0x61, 0xa2, 0x64, 0xea, 0xa2,
-	0x62, 0x99, 0xdb, 0xfa, 0xc5, 0x88, 0xef, 0x15, 0xba, 0x05, 0xc5, 0x4d, 0xea, 0x92, 0x0d, 0x97,
-	0xd5, 0x8d, 0xa5, 0x5c, 0xa3, 0xd2, 0x7e, 0xeb, 0xe0, 0x70, 0xf1, 0xc2, 0xf3, 0x45, 0xb7, 0x89,
-	0xc9, 0x0e, 0x09, 0x88, 0xef, 0x10, 0x1c, 0x25, 0x40, 0xb7, 0xa1, 0x78, 0xc3, 0xe7, 0x01, 0x1d,
-	0xec, 0xab, 0xed, 0xb7, 0xd4, 0xf6, 0xcf, 0x1f, 0x23, 0x9f, 0x8a, 0xc4, 0x51, 0x0a, 0x74, 0x01,
-	0x16, 0x30, 0x19, 0xf4, 0x3d, 0xc7, 0xe6, 0x1e, 0xf5, 0x6f, 0xda, 0x0e, 0xa7, 0x81, 0xa4, 0x58,
-	0x15, 0x4f, 0x4e, 0x58, 0x5f, 0xc2, 0x5c, 0x5a, 0x13, 0x92, 0x52, 0x69, 0xa4, 0xa5, 0xf2, 0xec,
-	0x73, 0xe4, 0x27, 0xa4, 0xf5, 0x1b, 0xe3, 0xe2, 0x33, 0x3f, 0x2e, 0x3e, 0xd1, 0xbc, 0xf5, 0x29,
-	0x54, 0x92, 0xf2, 0x82, 0xce, 0x45, 0x1a, 0x14, 0xde, 0xaf, 0x85, 0x66, 0xf8, 0x36, 0x49, 0x5b,
-	0x47, 0x3c, 0x50, 0x91, 0xfc, 0x9c, 0x85, 0xaa, 0xdc, 0xd4, 0xd6, 0xc0, 0xf6, 0x75, 0xd9, 0x71,
-	0xda, 0x68, 0x7d, 0x9b, 0x85, 0xda, 0xb8, 0x18, 0x21, 0x17, 0x4a, 0xb7, 0xa8, 0xe7, 0xaf, 0xf6,
-	0x6d, 0x6f, 0x4f, 0x3d, 0x6d, 0x37, 0x0f, 0x0e, 0x17, 0xdb, 0xc7, 0x60, 0x8a, 0x23, 0x88, 0xe9,
-	0xb3, 0x21, 0x53, 0x3c, 0x61, 0x4d, 0x51, 0xc1, 0x38, 0x1b, 0xd6, 0x89, 0xd1, 0x27, 0x50, 0xbd,
-	0x6d, 0x33, 0x2e, 0xe6, 0xc3, 0x13, 0x89, 0x0d, 0x56, 0xdb, 0x57, 0x55, 0x61, 0x9b, 0xc7, 0x28,
-	0xac, 0x8c, 0xdb, 0x1c, 0xee, 0x75, 0x49, 0x80, 0xd3, 0xc9, 0x50, 0x0b, 0xa0, 0x43, 0x82, 0x3d,
-	0x8f, 0x31, 0x8f, 0xfa, 0x0a, 0xe5, 0xb8, 0x1e, 0x7a, 0x06, 0x27, 0xbc, 0xac, 0x2b, 0x50, 0x1b,
-	0x97, 0x57, 0xb4, 0x04, 0xe5, 0x55, 0x12, 0x70, 0x6f, 0x47, 0x70, 0x22, 0x44, 0xbd, 0x82, 0x93,
-	0x26, 0xeb, 0x47, 0x03, 0xe6, 0xc7, 0xc4, 0x55, 0xbc, 0xb4, 0x5b, 0x44, 0x26, 0x55, 0x14, 0xc9,
-	0x63, 0x6d, 0x10, 0xf4, 0xf9, 0x90, 0x04, 0x72, 0x63, 0xd9, 0x90, 0x3e, 0x6a, 0x98, 0x46, 0x3e,
-	0xf7, 0x3f, 0x21, 0x6f, 0xfd, 0x6c, 0xc0, 0x5c, 0x5a, 0xd8, 0xd1, 0x36, 0x94, 0x04, 0x7e, 0x9a,
-	0x5a, 0xff, 0xbe, 0x10, 0x3a, 0x91, 0x38, 0xce, 0x9a, 0xc7, 0x1c, 0xfa, 0x80, 0x04, 0xd1, 0xbd,
-	0x7d, 0x69, 0xc7, 0x89, 0x13, 0x5b, 0xef, 0x40, 0x39, 0xf1, 0x74, 0x08, 0xf9, 0xc3, 0x84, 0x0d,
-	0xfb, 0x5c, 0x15, 0x4b, 0x8d, 0xd0, 0x09, 0x98, 0xb9, 0x11, 0x04, 0x34, 0x50, 0x98, 0x87, 0x03,
-	0x8b, 0x24, 0x79, 0x82, 0x96, 0xe3, 0xc6, 0x43, 0xdd, 0xaf, 0xd3, 0x93, 0x94, 0x51, 0x0e, 0xed,
-	0xbc, 0xc0, 0x07, 0x47, 0xfe, 0xb2, 0xe4, 0x5e, 0xcf, 0xb7, 0xf9, 0x30, 0x20, 0xea, 0xae, 0x69,
-	0x83, 0xf5, 0x93, 0x01, 0x0b, 0x13, 0x29, 0x50, 0x03, 0xe6, 0xc5, 0x89, 0x48, 0xd0, 0x19, 0x76,
-	0xfb, 0x9e, 0xf3, 0x3e, 0xd9, 0x57, 0x7b, 0x1e, 0x37, 0xa3, 0x1a, 0xe4, 0xee, 0x6c, 0x87, 0xba,
-	0x92, 0xc3, 0xe2, 0x53, 0x10, 0x13, 0x13, 0x87, 0xfa, 0x3e, 0x71, 0xf8, 0x36, 0x95, 0x64, 0x29,
-	0xe1, 0xa4, 0x09, 0xdd, 0x85, 0x4a, 0x0c, 0x12, 0x26, 0x3b, 0xf2, 0x41, 0xac, 0xb4, 0xaf, 0xa8,
-	0xb2, 0xbe, 0x98, 0x10, 0xa7, 0x32, 0x59, 0x7f, 0x66, 0x61, 0x61, 0xe2, 0x3d, 0x45, 0x0d, 0xc8,
-	0xaf, 0x52, 0x37, 0xa4, 0xcf, 0x9c, 0xee, 0x8e, 0xa2, 0x79, 0x31, 0x87, 0xa5, 0x07, 0xb2, 0xa0,
-	0x82, 0xc9, 0x67, 0xc4, 0xe1, 0x98, 0xd8, 0x2c, 0xbe, 0x05, 0x29, 0x9b, 0x38, 0xf1, 0x8d, 0xed,
-	0x15, 0xa5, 0xca, 0xe2, 0x53, 0x28, 0xda, 0x0a, 0x63, 0x5e, 0xcf, 0xdf, 0xda, 0xa5, 0x01, 0x57,
-	0x6d, 0x6a, 0x15, 0xa7, 0x8d, 0xa8, 0x0b, 0xb5, 0x3b, 0x03, 0xd7, 0xe6, 0x64, 0xcb, 0xf3, 0x1d,
-	0xa5, 0x2c, 0x33, 0xff, 0x89, 0xd0, 0x13, 0xf9, 0xc2, 0xfd, 0xbb, 0x5e, 0x40, 0x1c, 0x2e, 0x5a,
-	0x6c, 0xf9, 0xea, 0xcb, 0xfd, 0x6b, 0x9b, 0xa8, 0xcf, 0x66, 0xc8, 0xe5, 0x2d, 0xd1, 0x52, 0x14,
-	0xe5, 0x5e, 0x93, 0xa6, 0x31, 0x89, 0x9a, 0x3d, 0x96, 0x44, 0xbd, 0x0b, 0xd5, 0x54, 0xef, 0x23,
-	0xb4, 0x64, 0x6b, 0xe8, 0x38, 0x84, 0x31, 0x89, 0xfb, 0x2c, 0x8e, 0x86, 0xff, 0xc0, 0xf7, 0xaf,
-	0x0d, 0x58, 0x98, 0xe8, 0x67, 0xd0, 0xc5, 0x54, 0xe9, 0x4e, 0x4f, 0x6d, 0xb3, 0x12, 0xf5, 0x9b,
-	0x9a, 0x5a, 0x24, 0x91, 0x0f, 0x4d, 0x6e, 0x7a, 0xf7, 0x24, 0x9f, 0x54, 0xe1, 0xa0, 0x5a, 0x85,
-	0x8f, 0xf4, 0x46, 0xe2, 0xa9, 0xe7, 0x08, 0xe7, 0x04, 0x03, 0xb2, 0x53, 0x18, 0x60, 0xdd, 0x87,
-	0xda, 0x78, 0xdf, 0xf5, 0xa2, 0x07, 0xac, 0x8b, 0xe6, 0x96, 0x07, 0xfb, 0x1b, 0xbe, 0xba, 0x72,
-	0xd1, 0x50, 0x1f, 0x3d, 0x97, 0x44, 0xf5, 0x63, 0x98, 0x1f, 0xeb, 0xd9, 0x50, 0x2b, 0xf1, 0x9b,
-	0xc7, 0x78, 0x56, 0x53, 0xad, 0x7f, 0xf7, 0x4c, 0xc7, 0xf5, 0x3c, 0x11, 0x6c, 0xd3, 0x5b, 0x44,
-	0x15, 0x98, 0x5d, 0x71, 0x1c, 0x32, 0xe0, 0xc4, 0xad, 0x65, 0xc4, 0x28, 0xbc, 0x37, 0xc4, 0xad,
-	0x19, 0x68, 0x0e, 0x20, 0x62, 0x21, 0x71, 0x6b, 0x59, 0x74, 0x52, 0x74, 0x3a, 0x4a, 0x12, 0xc4,
-	0x7a, 0x5e, 0x40, 0xdc, 0x5a, 0x0e, 0x21, 0x98, 0x53, 0xa4, 0x76, 0x76, 0x89, 0x3b, 0xec, 0x93,
-	0x5a, 0xfe, 0xfc, 0x32, 0x2c, 0x4c, 0xc0, 0x81, 0xaa, 0x50, 0x5a, 0xa5, 0xfe, 0x8e, 0x17, 0xec,
-	0xc9, 0xc5, 0x00, 0x0a, 0x6b, 0xc4, 0xf7, 0xe4, 0x52, 0x25, 0x98, 0x91, 0xa0, 0xd4, 0xb2, 0xed,
-	0xeb, 0x0f, 0x8f, 0xcc, 0xcc, 0xa3, 0x23, 0x33, 0xf3, 0xf8, 0xc8, 0xcc, 0x3c, 0x3d, 0x32, 0x8d,
-	0xbf, 0x8e, 0xcc, 0xcc, 0x57, 0x23, 0xd3, 0xf8, 0x61, 0x64, 0x1a, 0x0f, 0x47, 0xa6, 0xf1, 0x68,
-	0x64, 0x1a, 0xbf, 0x8e, 0x4c, 0xe3, 0xb7, 0x91, 0x99, 0x79, 0x3a, 0x32, 0x8d, 0xef, 0x9e, 0x98,
-	0x99, 0x47, 0x4f, 0xcc, 0xcc, 0xe3, 0x27, 0x66, 0xa6, 0x5b, 0x90, 0x3f, 0xac, 0x2f, 0xff, 0x1d,
-	0x00, 0x00, 0xff, 0xff, 0xb4, 0x9e, 0xa7, 0x00, 0xf0, 0x0f, 0x00, 0x00,
+	// 1553 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x58, 0x4f, 0x6f, 0xdb, 0xc6,
+	0x12, 0x17, 0x2d, 0x59, 0xb2, 0x26, 0x92, 0x4d, 0xef, 0xcb, 0x1f, 0x3a, 0x78, 0xa0, 0x05, 0x22,
+	0x2f, 0xd1, 0xcb, 0x4b, 0x94, 0x07, 0x27, 0x0d, 0x62, 0x34, 0x40, 0x61, 0xd9, 0x49, 0xed, 0x34,
+	0x35, 0x84, 0x95, 0xd3, 0x06, 0x68, 0x7b, 0xa0, 0xc9, 0xb5, 0xcc, 0x46, 0xe6, 0x2a, 0x4b, 0x2a,
+	0x85, 0xdb, 0x4b, 0x6f, 0x05, 0x72, 0xea, 0xc7, 0xe8, 0xad, 0x5f, 0x23, 0x40, 0x7b, 0x48, 0x6f,
+	0x81, 0x51, 0x18, 0xb5, 0x73, 0xe9, 0x31, 0xb7, 0xf6, 0x58, 0xec, 0x72, 0xc9, 0x5d, 0x4a, 0x4e,
+	0xe2, 0x26, 0xe9, 0xc5, 0xda, 0xfd, 0xed, 0xcc, 0xec, 0xee, 0xfc, 0x66, 0x66, 0x87, 0x86, 0x0b,
+	0x21, 0x89, 0xbf, 0xa2, 0xec, 0xc1, 0x95, 0x6d, 0x1a, 0xc5, 0xe9, 0x78, 0xe0, 0x7a, 0x0f, 0x48,
+	0x2c, 0x7f, 0x5a, 0x03, 0x46, 0x63, 0x8a, 0xca, 0xc9, 0xec, 0xec, 0xe5, 0x5e, 0x10, 0x6f, 0x0f,
+	0x37, 0x5b, 0x1e, 0xdd, 0xb9, 0xd2, 0xa3, 0x3d, 0x7a, 0x45, 0x2c, 0x6f, 0x0e, 0xb7, 0xc4, 0x4c,
+	0x4c, 0xc4, 0x28, 0x51, 0x3b, 0x7b, 0x4d, 0x13, 0x0f, 0xc2, 0x88, 0xf6, 0x5d, 0x36, 0xf6, 0x3b,
+	0x18, 0xf6, 0x23, 0x92, 0xfc, 0x4d, 0xb4, 0x9c, 0xc7, 0x45, 0x28, 0x77, 0xc4, 0x7e, 0xe8, 0xdf,
+	0x50, 0x1d, 0xd0, 0xfe, 0xee, 0x0e, 0x65, 0x83, 0x6d, 0xcb, 0x6c, 0x18, 0xcd, 0x49, 0xac, 0x00,
+	0xb4, 0x01, 0xe5, 0x2e, 0x09, 0x7d, 0xc2, 0xac, 0x93, 0x0d, 0xa3, 0x59, 0x6b, 0xdf, 0xdc, 0xdb,
+	0x9f, 0xbf, 0xf1, 0x8a, 0x2d, 0x8f, 0xba, 0x2d, 0x1f, 0xb7, 0x56, 0x69, 0x14, 0x63, 0x69, 0x0b,
+	0xdd, 0x87, 0x29, 0x4c, 0x3c, 0x12, 0x3c, 0x22, 0xcc, 0x3a, 0xf5, 0x0e, 0xec, 0x66, 0xd6, 0xf8,
+	0x6d, 0x30, 0x79, 0x38, 0x24, 0x51, 0xbc, 0xb6, 0x62, 0x9d, 0x6e, 0x18, 0xcd, 0x12, 0x56, 0x00,
+	0xb2, 0xa0, 0xb2, 0xc1, 0x5c, 0x8f, 0xac, 0xad, 0x58, 0x67, 0x1a, 0x46, 0xb3, 0x8a, 0xd3, 0x29,
+	0x42, 0x50, 0xda, 0xd8, 0x1d, 0x10, 0xcb, 0x6a, 0x18, 0xcd, 0x3a, 0x16, 0x63, 0xf4, 0x3f, 0xa8,
+	0x48, 0x55, 0x6b, 0xae, 0x61, 0x34, 0x4f, 0x2c, 0xcc, 0xb4, 0x24, 0x63, 0x12, 0x5e, 0x2d, 0xe0,
+	0x54, 0x02, 0xb5, 0xf8, 0x95, 0xa2, 0x01, 0x0d, 0x23, 0x62, 0x9d, 0x15, 0xd2, 0xa6, 0x92, 0x4e,
+	0xf0, 0xd5, 0x02, 0xce, 0x64, 0xda, 0x55, 0xa8, 0x74, 0xdc, 0xdd, 0x3e, 0x75, 0x7d, 0xe7, 0x59,
+	0x31, 0xdb, 0x08, 0x39, 0x50, 0xea, 0x04, 0x61, 0xcf, 0x32, 0x84, 0x89, 0x5a, 0x6a, 0x82, 0x63,
+	0xab, 0x05, 0x2c, 0xd6, 0xd0, 0x79, 0x28, 0xe2, 0xce, 0xb2, 0x35, 0x21, 0x44, 0x50, 0xb6, 0x4b,
+	0x67, 0x59, 0x1d, 0x8b, 0x0b, 0xa0, 0x05, 0xa8, 0x2c, 0xbb, 0x91, 0xe7, 0xfa, 0xc4, 0x2a, 0x0a,
+	0xd9, 0xd3, 0xa9, 0xac, 0x84, 0xb5, 0x6b, 0x48, 0x04, 0x5d, 0x82, 0xc9, 0x0e, 0x8f, 0x13, 0xab,
+	0x24, 0x34, 0x4e, 0x66, 0x07, 0xe0, 0xa0, 0x92, 0x4f, 0x84, 0xd0, 0x0d, 0xa8, 0xb6, 0x29, 0x8d,
+	0xa3, 0x98, 0xb9, 0x03, 0x6b, 0x52, 0x68, 0x58, 0xa9, 0x46, 0xb6, 0xa0, 0xb4, 0x94, 0x30, 0xd7,
+	0x5c, 0x1a, 0xc6, 0xdb, 0x94, 0x05, 0x5f, 0x13, 0xab, 0x9c, 0xd7, 0xcc, 0x16, 0x34, 0xcd, 0x0c,
+	0x43, 0xef, 0x71, 0x47, 0xf7, 0x82, 0x28, 0x26, 0xcc, 0xaa, 0x08, 0xc5, 0x33, 0xca, 0xd1, 0x09,
+	0xae, 0xf4, 0x32, 0x51, 0xee, 0x8c, 0x0f, 0x49, 0x48, 0xa2, 0x20, 0xb2, 0xa6, 0xf2, 0xce, 0x90,
+	0xb0, 0xe6, 0x0c, 0x89, 0xf0, 0xad, 0xba, 0x41, 0x2f, 0x5c, 0x26, 0x2c, 0xb6, 0xaa, 0xf9, 0xad,
+	0x52, 0x5c, 0xdb, 0x2a, 0x85, 0x38, 0xb5, 0x12, 0x76, 0x7e, 0x2d, 0xaa, 0xb0, 0x38, 0x16, 0xb7,
+	0x17, 0x74, 0x6e, 0xff, 0x95, 0xe3, 0x36, 0x0b, 0x22, 0x41, 0xee, 0x65, 0x98, 0x6c, 0xbb, 0x51,
+	0xe0, 0x49, 0x6a, 0x4f, 0x65, 0x6e, 0xe7, 0xa0, 0x26, 0x9c, 0x48, 0xa1, 0x45, 0x9d, 0xa9, 0x84,
+	0xdb, 0xb9, 0x23, 0x98, 0xca, 0xd4, 0x34, 0xaa, 0x16, 0x75, 0xaa, 0x26, 0xf3, 0xaa, 0x1a, 0x55,
+	0x4a, 0x55, 0x71, 0x75, 0x5d, 0xe3, 0x6a, 0x84, 0x64, 0xc5, 0x95, 0x9e, 0x1c, 0x92, 0xac, 0xab,
+	0x8a, 0xac, 0x11, 0x8a, 0x33, 0xb2, 0x32, 0xad, 0x8c, 0xad, 0xeb, 0x1a, 0x5b, 0x53, 0xf9, 0xcd,
+	0x14, 0x5b, 0x6a, 0xb3, 0x14, 0xe3, 0x9e, 0xbc, 0xc5, 0x18, 0x65, 0x92, 0xe2, 0xcc, 0x93, 0x02,
+	0xd4, 0x3d, 0x29, 0x80, 0x36, 0x28, 0x46, 0x9d, 0x72, 0xc2, 0xa8, 0x73, 0x03, 0x40, 0xa5, 0x1f,
+	0x3a, 0x0d, 0xe5, 0x8f, 0x49, 0xbc, 0x4d, 0x7d, 0xc1, 0x74, 0x15, 0xcb, 0x19, 0xaf, 0x31, 0x2b,
+	0x6e, 0xec, 0x0a, 0x72, 0x6b, 0x58, 0x8c, 0x9d, 0x5f, 0x8c, 0x2c, 0x49, 0xd1, 0x1d, 0xa8, 0xac,
+	0x53, 0x9f, 0xac, 0xf9, 0x91, 0x65, 0x34, 0x8a, 0xcd, 0x5a, 0xfb, 0xff, 0x7b, 0xfb, 0xf3, 0x97,
+	0x5e, 0x5f, 0xdf, 0x5b, 0x98, 0x6c, 0x11, 0x46, 0x42, 0x8f, 0xe0, 0xd4, 0x00, 0xba, 0x0b, 0x95,
+	0x5b, 0x61, 0xcc, 0xe8, 0x60, 0x37, 0xd9, 0xae, 0xbd, 0xf0, 0x64, 0x7f, 0xbe, 0xb0, 0xb7, 0x3f,
+	0x7f, 0xf1, 0x18, 0xf6, 0xa4, 0x26, 0x4e, 0x4d, 0xa0, 0x4b, 0x30, 0x8b, 0xc9, 0xa0, 0x1f, 0x78,
+	0x6e, 0x1c, 0xd0, 0xf0, 0xb6, 0xeb, 0xc5, 0x94, 0x89, 0xc0, 0xab, 0xe3, 0xf1, 0x05, 0xe7, 0x1b,
+	0x98, 0xce, 0x17, 0x18, 0xbd, 0xee, 0x1a, 0xf9, 0xba, 0x7b, 0xee, 0x35, 0xb5, 0x2c, 0x09, 0xf6,
+	0xff, 0x8e, 0x56, 0xb2, 0x99, 0xd1, 0x4a, 0x96, 0xae, 0x3b, 0x5f, 0x40, 0x4d, 0xaf, 0x55, 0xe8,
+	0x42, 0x5a, 0xd0, 0x92, 0xac, 0x9b, 0x6d, 0x25, 0xcf, 0xa0, 0xc0, 0x3a, 0xfc, 0x2d, 0x4c, 0x6b,
+	0xd9, 0x39, 0xa8, 0x8b, 0x43, 0x75, 0x07, 0x6e, 0xa8, 0xd1, 0x94, 0x07, 0x9d, 0xc7, 0x13, 0x60,
+	0x8e, 0x56, 0x36, 0xe4, 0x43, 0xf5, 0x0e, 0x0d, 0xc2, 0xe5, 0xbe, 0x1b, 0xec, 0x88, 0x7d, 0x6a,
+	0xed, 0xdb, 0x7b, 0xfb, 0xf3, 0xed, 0x63, 0xbc, 0x67, 0x1e, 0x8f, 0xa3, 0x30, 0x1a, 0x46, 0xb2,
+	0x19, 0x88, 0x5a, 0x9c, 0xc1, 0xcc, 0x1a, 0x56, 0x86, 0xd1, 0xe7, 0x50, 0xbf, 0xeb, 0x46, 0x31,
+	0x5f, 0x4f, 0x6e, 0xc4, 0x0f, 0x58, 0x6f, 0x5f, 0x97, 0xc4, 0xb6, 0x8e, 0x41, 0xac, 0xd0, 0x5b,
+	0x1f, 0xee, 0x6c, 0x12, 0x86, 0xf3, 0xc6, 0xd0, 0x02, 0x40, 0x87, 0xb0, 0x9d, 0x20, 0x8a, 0x02,
+	0x1a, 0x4a, 0x2f, 0x67, 0x7c, 0xa8, 0x15, 0xac, 0x49, 0x39, 0xd7, 0xc0, 0x1c, 0xad, 0xd5, 0xa8,
+	0x01, 0x27, 0x78, 0x56, 0x05, 0x5b, 0x3c, 0x26, 0x12, 0xaf, 0xd7, 0xb0, 0x0e, 0x39, 0x3f, 0x1a,
+	0x30, 0x33, 0x52, 0xa9, 0xf9, 0xb3, 0xdd, 0x25, 0xc2, 0xa8, 0x0c, 0x91, 0x12, 0x56, 0x00, 0x0f,
+	0x9f, 0x4f, 0x08, 0x13, 0x07, 0x9b, 0x48, 0xc2, 0x47, 0x4e, 0xf3, 0x9e, 0x2f, 0xfe, 0x43, 0x9e,
+	0x77, 0x7e, 0x36, 0x60, 0x3a, 0xff, 0x4a, 0xa0, 0x0d, 0xa8, 0x72, 0xff, 0xa9, 0xd0, 0x7a, 0x73,
+	0x22, 0x94, 0x21, 0x7e, 0x9d, 0x95, 0x20, 0xf2, 0xe8, 0x23, 0xc2, 0xd2, 0xbc, 0x7d, 0x67, 0xd7,
+	0xc9, 0x0c, 0x3b, 0x2e, 0xcc, 0x8c, 0x3c, 0x5f, 0x68, 0x3d, 0x29, 0x3d, 0x98, 0x6c, 0xc9, 0xf8,
+	0xbd, 0x26, 0x2f, 0xf3, 0x06, 0xe5, 0x07, 0x93, 0x2d, 0xe7, 0x7d, 0x38, 0xa1, 0xbd, 0x59, 0xbc,
+	0x22, 0x62, 0x12, 0x0d, 0xfb, 0xb1, 0x8c, 0x07, 0x39, 0x43, 0x27, 0xd3, 0xd2, 0x9b, 0xd0, 0x9a,
+	0x4c, 0x1c, 0xa2, 0x87, 0x22, 0x5a, 0xcc, 0x1a, 0x25, 0x99, 0xc2, 0x73, 0xe3, 0x51, 0x29, 0x05,
+	0xda, 0x25, 0x7e, 0x6a, 0x9c, 0xca, 0x8b, 0xa8, 0x0a, 0x7a, 0xa1, 0x1b, 0x0f, 0x19, 0x91, 0xe9,
+	0xac, 0x00, 0xe7, 0x27, 0x03, 0x66, 0xc7, 0x4c, 0xa0, 0x26, 0xcc, 0x70, 0xa7, 0x11, 0xd6, 0x19,
+	0x6e, 0xf6, 0x03, 0xef, 0x23, 0xb2, 0x2b, 0xcf, 0x3c, 0x0a, 0x23, 0x13, 0x8a, 0xf7, 0x36, 0x92,
+	0xd2, 0x55, 0xc4, 0x7c, 0xc8, 0x63, 0x1f, 0x13, 0x8f, 0x86, 0x21, 0xf1, 0xe2, 0x0d, 0x2a, 0xe2,
+	0xb1, 0x8a, 0x75, 0x08, 0xdd, 0x87, 0x5a, 0xc6, 0x03, 0x77, 0x76, 0xe9, 0x2d, 0x9c, 0x9d, 0xb3,
+	0xe4, 0xfc, 0x31, 0x01, 0xb3, 0x63, 0x0f, 0x39, 0x6a, 0x42, 0x69, 0x99, 0xfa, 0x49, 0x84, 0x4e,
+	0xab, 0x6e, 0x2e, 0x5d, 0xe7, 0x6b, 0x58, 0x48, 0x20, 0x07, 0x6a, 0x98, 0x7c, 0x49, 0xbc, 0x18,
+	0x13, 0x37, 0xca, 0x12, 0x2d, 0x87, 0xf1, 0x1b, 0xdf, 0xda, 0x58, 0x92, 0x85, 0x9f, 0x0f, 0x79,
+	0xd1, 0x5c, 0x8a, 0xa2, 0xa0, 0x17, 0x76, 0xb7, 0x29, 0xe3, 0x2d, 0x77, 0x49, 0xac, 0xe5, 0x41,
+	0xb4, 0x09, 0xe6, 0xbd, 0x81, 0xef, 0xc6, 0xa4, 0x1b, 0x84, 0x9e, 0x2c, 0x5e, 0x93, 0x6f, 0x95,
+	0x33, 0x63, 0xf6, 0x92, 0xf3, 0xfb, 0x01, 0x23, 0x5e, 0xcc, 0x3f, 0x09, 0x44, 0xbb, 0x21, 0xce,
+	0xaf, 0x30, 0xce, 0xcf, 0x7a, 0x92, 0x2e, 0x5d, 0xde, 0xcb, 0x54, 0xc4, 0x59, 0x75, 0x68, 0xa4,
+	0x0a, 0x4e, 0x1d, 0xab, 0x0a, 0x7e, 0x00, 0xf5, 0x5c, 0xd3, 0xc5, 0xcb, 0x55, 0x77, 0xe8, 0x79,
+	0x24, 0x8a, 0x84, 0xdf, 0xa7, 0x70, 0x3a, 0x7d, 0x49, 0xbc, 0x7f, 0x67, 0xc0, 0xec, 0x58, 0x23,
+	0x85, 0x2e, 0xe7, 0xa8, 0x9b, 0x3b, 0xb2, 0xbf, 0xd3, 0xf8, 0x3b, 0xd2, 0x34, 0x37, 0x22, 0xde,
+	0xb2, 0xe2, 0xd1, 0x6d, 0x9b, 0x78, 0xb5, 0xb9, 0x80, 0xec, 0x46, 0x3e, 0x55, 0x07, 0xc9, 0x96,
+	0x5e, 0x53, 0x9b, 0xc7, 0x22, 0x60, 0xe2, 0x88, 0x08, 0x70, 0x1e, 0x82, 0x39, 0xda, 0xf0, 0xfd,
+	0xdd, 0x0b, 0x5a, 0xbc, 0xab, 0x8e, 0xd9, 0xee, 0x5a, 0x28, 0x53, 0x2e, 0x9d, 0xaa, 0xab, 0x17,
+	0x75, 0xaf, 0x7e, 0x06, 0x33, 0x23, 0xcd, 0x22, 0x5a, 0xd0, 0xbe, 0xd1, 0x8c, 0x57, 0x7d, 0x04,
+	0xa8, 0xef, 0xb4, 0x97, 0x50, 0x76, 0x1e, 0xcc, 0xd1, 0x9e, 0x92, 0xb7, 0x77, 0x1c, 0x93, 0xe5,
+	0x42, 0x8c, 0x9d, 0xff, 0x40, 0x3d, 0xd7, 0x46, 0x2a, 0x73, 0x86, 0x66, 0xee, 0x22, 0xe1, 0xc1,
+	0xab, 0x6e, 0x8c, 0x6a, 0x30, 0xb5, 0xe4, 0x79, 0x64, 0x10, 0x13, 0xdf, 0x2c, 0xf0, 0x59, 0x92,
+	0x86, 0xc4, 0x37, 0x0d, 0x34, 0x0d, 0x90, 0x06, 0x35, 0xf1, 0xcd, 0x09, 0x74, 0x8a, 0xf7, 0x66,
+	0xb2, 0xc2, 0xf0, 0xe3, 0x07, 0x8c, 0xf8, 0x66, 0x11, 0x21, 0x98, 0x96, 0x39, 0xe2, 0x6d, 0x13,
+	0x7f, 0xd8, 0x27, 0x66, 0xe9, 0xe2, 0x22, 0xcc, 0x8e, 0x79, 0x17, 0xd5, 0xa1, 0xba, 0x4c, 0xc3,
+	0xad, 0x80, 0xed, 0x88, 0xcd, 0x00, 0xca, 0x2b, 0x24, 0x0c, 0xc4, 0x56, 0x55, 0x98, 0x14, 0x3e,
+	0x36, 0x27, 0xda, 0x37, 0x9f, 0x1c, 0xd8, 0x85, 0xa7, 0x07, 0x76, 0xe1, 0xd9, 0x81, 0x5d, 0x78,
+	0x71, 0x60, 0x1b, 0x7f, 0x1e, 0xd8, 0x85, 0x6f, 0x0f, 0x6d, 0xe3, 0x87, 0x43, 0xdb, 0x78, 0x72,
+	0x68, 0x1b, 0x4f, 0x0f, 0x6d, 0xe3, 0xb7, 0x43, 0xdb, 0xf8, 0xfd, 0xd0, 0x2e, 0xbc, 0x38, 0xb4,
+	0x8d, 0xef, 0x9f, 0xdb, 0x85, 0xa7, 0xcf, 0xed, 0xc2, 0xb3, 0xe7, 0x76, 0x61, 0xb3, 0x2c, 0xfe,
+	0xeb, 0x70, 0xf5, 0xaf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x55, 0x96, 0xeb, 0xd9, 0x0d, 0x11, 0x00,
+	0x00,
 }
 
 func (x ResponseCode) String() string {
@@ -1718,6 +1928,9 @@ func (this *Packet) Equal(that interface{}) bool {
 	if that1 == nil {
 		return this == nil
 	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
 		return false
 	}
 	if that1.Sender == nil {
@@ -2024,6 +2237,30 @@ func (this *Request_Genesis) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *Request_SignCert) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Request_SignCert)
+	if !ok {
+		that2, ok := that.(Request_SignCert)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.SignCert.Equal(that1.SignCert) {
+		return false
+	}
+	return true
+}
 func (this *Response) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -2222,6 +2459,54 @@ func (this *Response_Genesis) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *Response_SignCert) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Response_SignCert)
+	if !ok {
+		that2, ok := that.(Response_SignCert)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.SignCert.Equal(that1.SignCert) {
+		return false
+	}
+	return true
+}
+func (this *Response_Error) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Response_Error)
+	if !ok {
+		that2, ok := that.(Response_Error)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.Error.Equal(that1.Error) {
+		return false
+	}
+	return true
+}
 func (this *Ping) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -2265,7 +2550,7 @@ func (this *RPCRequest) Equal(that interface{}) bool {
 	if this.Method != that1.Method {
 		return false
 	}
-	if !this.Data.Equal(that1.Data) {
+	if !bytes.Equal(this.Data, that1.Data) {
 		return false
 	}
 	return true
@@ -2481,6 +2766,30 @@ func (this *GenesisRequest) Equal(that interface{}) bool {
 			return false
 		}
 	} else if !this.Discovery.Equal(*that1.Discovery) {
+		return false
+	}
+	return true
+}
+func (this *SignCertRequest) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*SignCertRequest)
+	if !ok {
+		that2, ok := that.(SignCertRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.NodeRef.Equal(that1.NodeRef) {
 		return false
 	}
 	return true
@@ -2758,12 +3067,61 @@ func (this *GenesisResponse) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *SignCertResponse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*SignCertResponse)
+	if !ok {
+		that2, ok := that.(SignCertResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !bytes.Equal(this.Sign, that1.Sign) {
+		return false
+	}
+	return true
+}
+func (this *ErrorResponse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*ErrorResponse)
+	if !ok {
+		that2, ok := that.(ErrorResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Error != that1.Error {
+		return false
+	}
+	return true
+}
 func (this *Packet) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 11)
+	s := make([]string, 0, 12)
 	s = append(s, "&packet.Packet{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Sender: "+fmt.Sprintf("%#v", this.Sender)+",\n")
 	s = append(s, "Receiver: "+fmt.Sprintf("%#v", this.Receiver)+",\n")
 	s = append(s, "RequestID: "+fmt.Sprintf("%#v", this.RequestID)+",\n")
@@ -2795,7 +3153,7 @@ func (this *Request) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 12)
+	s := make([]string, 0, 13)
 	s = append(s, "&packet.Request{")
 	if this.Request != nil {
 		s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
@@ -2867,11 +3225,19 @@ func (this *Request_Genesis) GoString() string {
 		`Genesis:` + fmt.Sprintf("%#v", this.Genesis) + `}`}, ", ")
 	return s
 }
+func (this *Request_SignCert) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&packet.Request_SignCert{` +
+		`SignCert:` + fmt.Sprintf("%#v", this.SignCert) + `}`}, ", ")
+	return s
+}
 func (this *Response) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 11)
+	s := make([]string, 0, 13)
 	s = append(s, "&packet.Response{")
 	if this.Response != nil {
 		s = append(s, "Response: "+fmt.Sprintf("%#v", this.Response)+",\n")
@@ -2933,6 +3299,22 @@ func (this *Response_Genesis) GoString() string {
 	}
 	s := strings.Join([]string{`&packet.Response_Genesis{` +
 		`Genesis:` + fmt.Sprintf("%#v", this.Genesis) + `}`}, ", ")
+	return s
+}
+func (this *Response_SignCert) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&packet.Response_SignCert{` +
+		`SignCert:` + fmt.Sprintf("%#v", this.SignCert) + `}`}, ", ")
+	return s
+}
+func (this *Response_Error) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&packet.Response_Error{` +
+		`Error:` + fmt.Sprintf("%#v", this.Error) + `}`}, ", ")
 	return s
 }
 func (this *Ping) GoString() string {
@@ -3040,6 +3422,16 @@ func (this *GenesisRequest) GoString() string {
 	s = append(s, "&packet.GenesisRequest{")
 	s = append(s, "LastPulse: "+fmt.Sprintf("%#v", this.LastPulse)+",\n")
 	s = append(s, "Discovery: "+fmt.Sprintf("%#v", this.Discovery)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *SignCertRequest) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&packet.SignCertRequest{")
+	s = append(s, "NodeRef: "+fmt.Sprintf("%#v", this.NodeRef)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -3158,6 +3550,26 @@ func (this *GenesisResponse) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *SignCertResponse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&packet.SignCertResponse{")
+	s = append(s, "Sign: "+fmt.Sprintf("%#v", this.Sign)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *ErrorResponse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&packet.ErrorResponse{")
+	s = append(s, "Error: "+fmt.Sprintf("%#v", this.Error)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func valueToGoStringPacket(v interface{}, typ string) string {
 	rv := reflect.ValueOf(v)
 	if rv.IsNil() {
@@ -3181,8 +3593,17 @@ func (m *Packet) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(m.Polymorph))
+	}
 	if m.Sender != nil {
-		dAtA[i] = 0xa
+		dAtA[i] = 0xa2
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Sender.Size()))
 		n1, err := m.Sender.MarshalTo(dAtA[i:])
@@ -3192,7 +3613,9 @@ func (m *Packet) MarshalTo(dAtA []byte) (int, error) {
 		i += n1
 	}
 	if m.Receiver != nil {
-		dAtA[i] = 0x12
+		dAtA[i] = 0xaa
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Receiver.Size()))
 		n2, err := m.Receiver.MarshalTo(dAtA[i:])
@@ -3202,18 +3625,24 @@ func (m *Packet) MarshalTo(dAtA []byte) (int, error) {
 		i += n2
 	}
 	if m.RequestID != 0 {
-		dAtA[i] = 0x18
+		dAtA[i] = 0xb0
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.RequestID))
 	}
 	if len(m.TraceID) > 0 {
-		dAtA[i] = 0x22
+		dAtA[i] = 0xba
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(len(m.TraceID)))
 		i += copy(dAtA[i:], m.TraceID)
 	}
 	if m.Type != 0 {
-		dAtA[i] = 0x28
+		dAtA[i] = 0xc0
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Type))
 	}
@@ -3230,7 +3659,9 @@ func (m *Packet) MarshalTo(dAtA []byte) (int, error) {
 func (m *Packet_Request) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Request != nil {
-		dAtA[i] = 0x32
+		dAtA[i] = 0xca
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Request.Size()))
 		n4, err := m.Request.MarshalTo(dAtA[i:])
@@ -3244,7 +3675,9 @@ func (m *Packet_Request) MarshalTo(dAtA []byte) (int, error) {
 func (m *Packet_Response) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Response != nil {
-		dAtA[i] = 0x3a
+		dAtA[i] = 0xd2
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Response.Size()))
 		n5, err := m.Response.MarshalTo(dAtA[i:])
@@ -3392,6 +3825,20 @@ func (m *Request_Genesis) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
+func (m *Request_SignCert) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.SignCert != nil {
+		dAtA[i] = 0x4a
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(m.SignCert.Size()))
+		n15, err := m.SignCert.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n15
+	}
+	return i, nil
+}
 func (m *Response) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -3408,11 +3855,11 @@ func (m *Response) MarshalTo(dAtA []byte) (int, error) {
 	var l int
 	_ = l
 	if m.Response != nil {
-		nn15, err := m.Response.MarshalTo(dAtA[i:])
+		nn16, err := m.Response.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += nn15
+		i += nn16
 	}
 	return i, nil
 }
@@ -3423,11 +3870,11 @@ func (m *Response_Ping) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Ping.Size()))
-		n16, err := m.Ping.MarshalTo(dAtA[i:])
+		n17, err := m.Ping.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n16
+		i += n17
 	}
 	return i, nil
 }
@@ -3437,11 +3884,11 @@ func (m *Response_RPC) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.RPC.Size()))
-		n17, err := m.RPC.MarshalTo(dAtA[i:])
+		n18, err := m.RPC.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n17
+		i += n18
 	}
 	return i, nil
 }
@@ -3451,11 +3898,11 @@ func (m *Response_Basic) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Basic.Size()))
-		n18, err := m.Basic.MarshalTo(dAtA[i:])
+		n19, err := m.Basic.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n18
+		i += n19
 	}
 	return i, nil
 }
@@ -3465,11 +3912,11 @@ func (m *Response_Bootstrap) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x22
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Bootstrap.Size()))
-		n19, err := m.Bootstrap.MarshalTo(dAtA[i:])
+		n20, err := m.Bootstrap.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n19
+		i += n20
 	}
 	return i, nil
 }
@@ -3479,11 +3926,11 @@ func (m *Response_Authorize) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x2a
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Authorize.Size()))
-		n20, err := m.Authorize.MarshalTo(dAtA[i:])
+		n21, err := m.Authorize.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n20
+		i += n21
 	}
 	return i, nil
 }
@@ -3493,11 +3940,11 @@ func (m *Response_Register) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x32
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Register.Size()))
-		n21, err := m.Register.MarshalTo(dAtA[i:])
+		n22, err := m.Register.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n21
+		i += n22
 	}
 	return i, nil
 }
@@ -3507,11 +3954,39 @@ func (m *Response_Genesis) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x3a
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Genesis.Size()))
-		n22, err := m.Genesis.MarshalTo(dAtA[i:])
+		n23, err := m.Genesis.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n22
+		i += n23
+	}
+	return i, nil
+}
+func (m *Response_SignCert) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.SignCert != nil {
+		dAtA[i] = 0x42
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(m.SignCert.Size()))
+		n24, err := m.SignCert.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n24
+	}
+	return i, nil
+}
+func (m *Response_Error) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.Error != nil {
+		dAtA[i] = 0x4a
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(m.Error.Size()))
+		n25, err := m.Error.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n25
 	}
 	return i, nil
 }
@@ -3554,14 +4029,12 @@ func (m *RPCRequest) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintPacket(dAtA, i, uint64(len(m.Method)))
 		i += copy(dAtA[i:], m.Method)
 	}
-	dAtA[i] = 0x12
-	i++
-	i = encodeVarintPacket(dAtA, i, uint64(m.Data.Size()))
-	n23, err := m.Data.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	if len(m.Data) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(len(m.Data)))
+		i += copy(dAtA[i:], m.Data)
 	}
-	i += n23
 	return i, nil
 }
 
@@ -3595,11 +4068,11 @@ func (m *Cascade) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintPacket(dAtA, i, uint64(m.Entropy.Size()))
-	n24, err := m.Entropy.MarshalTo(dAtA[i:])
+	n26, err := m.Entropy.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n24
+	i += n26
 	if m.ReplicationFactor != 0 {
 		dAtA[i] = 0x18
 		i++
@@ -3633,21 +4106,21 @@ func (m *CascadeRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.RPC.Size()))
-		n25, err := m.RPC.MarshalTo(dAtA[i:])
+		n27, err := m.RPC.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n25
+		i += n27
 	}
 	if m.Cascade != nil {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Cascade.Size()))
-		n26, err := m.Cascade.MarshalTo(dAtA[i:])
+		n28, err := m.Cascade.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n26
+		i += n28
 	}
 	return i, nil
 }
@@ -3671,11 +4144,11 @@ func (m *PulseRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Pulse.Size()))
-		n27, err := m.Pulse.MarshalTo(dAtA[i:])
+		n29, err := m.Pulse.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n27
+		i += n29
 	}
 	if len(m.TraceSpanData) > 0 {
 		dAtA[i] = 0x12
@@ -3705,11 +4178,11 @@ func (m *BootstrapRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.JoinClaim.Size()))
-		n28, err := m.JoinClaim.MarshalTo(dAtA[i:])
+		n30, err := m.JoinClaim.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n28
+		i += n30
 	}
 	if m.LastNodePulse != 0 {
 		dAtA[i] = 0x10
@@ -3720,11 +4193,11 @@ func (m *BootstrapRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Permission.Size()))
-		n29, err := m.Permission.MarshalTo(dAtA[i:])
+		n31, err := m.Permission.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n29
+		i += n31
 	}
 	return i, nil
 }
@@ -3783,11 +4256,11 @@ func (m *RegisterRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.JoinClaim.Size()))
-		n30, err := m.JoinClaim.MarshalTo(dAtA[i:])
+		n32, err := m.JoinClaim.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n30
+		i += n32
 	}
 	return i, nil
 }
@@ -3816,12 +4289,38 @@ func (m *GenesisRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Discovery.Size()))
-		n31, err := m.Discovery.MarshalTo(dAtA[i:])
+		n33, err := m.Discovery.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n31
+		i += n33
 	}
+	return i, nil
+}
+
+func (m *SignCertRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SignCertRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintPacket(dAtA, i, uint64(m.NodeRef.Size()))
+	n34, err := m.NodeRef.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n34
 	return i, nil
 }
 
@@ -3873,11 +4372,11 @@ func (m *Permission) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPacket(dAtA, i, uint64(m.Payload.Size()))
-	n32, err := m.Payload.MarshalTo(dAtA[i:])
+	n35, err := m.Payload.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n32
+	i += n35
 	if len(m.Signature) > 0 {
 		dAtA[i] = 0x12
 		i++
@@ -3922,11 +4421,11 @@ func (m *PermissionPayload) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x22
 	i++
 	i = encodeVarintPacket(dAtA, i, uint64(m.DiscoveryRef.Size()))
-	n33, err := m.DiscoveryRef.MarshalTo(dAtA[i:])
+	n36, err := m.DiscoveryRef.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n33
+	i += n36
 	return i, nil
 }
 
@@ -3986,11 +4485,11 @@ func (m *BootstrapResponse) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x42
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Permission.Size()))
-		n34, err := m.Permission.MarshalTo(dAtA[i:])
+		n37, err := m.Permission.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n34
+		i += n37
 	}
 	return i, nil
 }
@@ -4059,11 +4558,11 @@ func (m *AuthorizeResponse) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Data.Size()))
-		n35, err := m.Data.MarshalTo(dAtA[i:])
+		n38, err := m.Data.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n35
+		i += n38
 	}
 	return i, nil
 }
@@ -4149,14 +4648,62 @@ func (m *GenesisResponse) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Response.Size()))
-		n36, err := m.Response.MarshalTo(dAtA[i:])
+		n39, err := m.Response.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n36
+		i += n39
 	}
 	if len(m.Error) > 0 {
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(len(m.Error)))
+		i += copy(dAtA[i:], m.Error)
+	}
+	return i, nil
+}
+
+func (m *SignCertResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SignCertResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Sign) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(len(m.Sign)))
+		i += copy(dAtA[i:], m.Sign)
+	}
+	return i, nil
+}
+
+func (m *ErrorResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ErrorResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Error) > 0 {
+		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(len(m.Error)))
 		i += copy(dAtA[i:], m.Error)
@@ -4179,23 +4726,26 @@ func (m *Packet) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovPacket(uint64(m.Polymorph))
+	}
 	if m.Sender != nil {
 		l = m.Sender.Size()
-		n += 1 + l + sovPacket(uint64(l))
+		n += 2 + l + sovPacket(uint64(l))
 	}
 	if m.Receiver != nil {
 		l = m.Receiver.Size()
-		n += 1 + l + sovPacket(uint64(l))
+		n += 2 + l + sovPacket(uint64(l))
 	}
 	if m.RequestID != 0 {
-		n += 1 + sovPacket(uint64(m.RequestID))
+		n += 2 + sovPacket(uint64(m.RequestID))
 	}
 	l = len(m.TraceID)
 	if l > 0 {
-		n += 1 + l + sovPacket(uint64(l))
+		n += 2 + l + sovPacket(uint64(l))
 	}
 	if m.Type != 0 {
-		n += 1 + sovPacket(uint64(m.Type))
+		n += 2 + sovPacket(uint64(m.Type))
 	}
 	if m.Payload != nil {
 		n += m.Payload.Size()
@@ -4211,7 +4761,7 @@ func (m *Packet_Request) Size() (n int) {
 	_ = l
 	if m.Request != nil {
 		l = m.Request.Size()
-		n += 1 + l + sovPacket(uint64(l))
+		n += 2 + l + sovPacket(uint64(l))
 	}
 	return n
 }
@@ -4223,7 +4773,7 @@ func (m *Packet_Response) Size() (n int) {
 	_ = l
 	if m.Response != nil {
 		l = m.Response.Size()
-		n += 1 + l + sovPacket(uint64(l))
+		n += 2 + l + sovPacket(uint64(l))
 	}
 	return n
 }
@@ -4335,6 +4885,18 @@ func (m *Request_Genesis) Size() (n int) {
 	}
 	return n
 }
+func (m *Request_SignCert) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SignCert != nil {
+		l = m.SignCert.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
 func (m *Response) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4431,6 +4993,30 @@ func (m *Response_Genesis) Size() (n int) {
 	}
 	return n
 }
+func (m *Response_SignCert) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SignCert != nil {
+		l = m.SignCert.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
+func (m *Response_Error) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Error != nil {
+		l = m.Error.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
 func (m *Ping) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4450,8 +5036,10 @@ func (m *RPCRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovPacket(uint64(l))
 	}
-	l = m.Data.Size()
-	n += 1 + l + sovPacket(uint64(l))
+	l = len(m.Data)
+	if l > 0 {
+		n += 1 + l + sovPacket(uint64(l))
+	}
 	return n
 }
 
@@ -4579,6 +5167,17 @@ func (m *GenesisRequest) Size() (n int) {
 		l = m.Discovery.Size()
 		n += 1 + l + sovPacket(uint64(l))
 	}
+	return n
+}
+
+func (m *SignCertRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.NodeRef.Size()
+	n += 1 + l + sovPacket(uint64(l))
 	return n
 }
 
@@ -4759,6 +5358,32 @@ func (m *GenesisResponse) Size() (n int) {
 	return n
 }
 
+func (m *SignCertResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Sign)
+	if l > 0 {
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
+
+func (m *ErrorResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Error)
+	if l > 0 {
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
+
 func sovPacket(x uint64) (n int) {
 	for {
 		n++
@@ -4777,6 +5402,7 @@ func (this *Packet) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Packet{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Sender:` + fmt.Sprintf("%v", this.Sender) + `,`,
 		`Receiver:` + fmt.Sprintf("%v", this.Receiver) + `,`,
 		`RequestID:` + fmt.Sprintf("%v", this.RequestID) + `,`,
@@ -4897,6 +5523,16 @@ func (this *Request_Genesis) String() string {
 	}, "")
 	return s
 }
+func (this *Request_SignCert) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Request_SignCert{`,
+		`SignCert:` + strings.Replace(fmt.Sprintf("%v", this.SignCert), "SignCertRequest", "SignCertRequest", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *Response) String() string {
 	if this == nil {
 		return "nil"
@@ -4973,6 +5609,26 @@ func (this *Response_Genesis) String() string {
 	}
 	s := strings.Join([]string{`&Response_Genesis{`,
 		`Genesis:` + strings.Replace(fmt.Sprintf("%v", this.Genesis), "GenesisResponse", "GenesisResponse", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Response_SignCert) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Response_SignCert{`,
+		`SignCert:` + strings.Replace(fmt.Sprintf("%v", this.SignCert), "SignCertResponse", "SignCertResponse", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Response_Error) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Response_Error{`,
+		`Error:` + strings.Replace(fmt.Sprintf("%v", this.Error), "ErrorResponse", "ErrorResponse", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5073,6 +5729,16 @@ func (this *GenesisRequest) String() string {
 	s := strings.Join([]string{`&GenesisRequest{`,
 		`LastPulse:` + fmt.Sprintf("%v", this.LastPulse) + `,`,
 		`Discovery:` + fmt.Sprintf("%v", this.Discovery) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *SignCertRequest) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&SignCertRequest{`,
+		`NodeRef:` + fmt.Sprintf("%v", this.NodeRef) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5186,6 +5852,26 @@ func (this *GenesisResponse) String() string {
 	}, "")
 	return s
 }
+func (this *SignCertResponse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&SignCertResponse{`,
+		`Sign:` + fmt.Sprintf("%v", this.Sign) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ErrorResponse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ErrorResponse{`,
+		`Error:` + fmt.Sprintf("%v", this.Error) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func valueToStringPacket(v interface{}) string {
 	rv := reflect.ValueOf(v)
 	if rv.IsNil() {
@@ -5223,7 +5909,26 @@ func (m *Packet) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: Packet: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Sender", wireType)
 			}
@@ -5258,7 +5963,7 @@ func (m *Packet) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 2:
+		case 21:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Receiver", wireType)
 			}
@@ -5293,7 +5998,7 @@ func (m *Packet) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 3:
+		case 22:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RequestID", wireType)
 			}
@@ -5312,7 +6017,7 @@ func (m *Packet) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 4:
+		case 23:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field TraceID", wireType)
 			}
@@ -5344,7 +6049,7 @@ func (m *Packet) Unmarshal(dAtA []byte) error {
 			}
 			m.TraceID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
+		case 24:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Type", wireType)
 			}
@@ -5363,7 +6068,7 @@ func (m *Packet) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 6:
+		case 25:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
 			}
@@ -5398,7 +6103,7 @@ func (m *Packet) Unmarshal(dAtA []byte) error {
 			}
 			m.Payload = &Packet_Request{v}
 			iNdEx = postIndex
-		case 7:
+		case 26:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Response", wireType)
 			}
@@ -5766,6 +6471,41 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 			}
 			m.Request = &Request_Genesis{v}
 			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SignCert", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &SignCertRequest{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Request = &Request_SignCert{v}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPacket(dAtA[iNdEx:])
@@ -6064,6 +6804,76 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 			}
 			m.Response = &Response_Genesis{v}
 			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SignCert", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &SignCertResponse{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Response = &Response_SignCert{v}
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &ErrorResponse{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Response = &Response_Error{v}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPacket(dAtA[iNdEx:])
@@ -6231,8 +7041,9 @@ func (m *RPCRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if err := m.Data.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+			m.Data = append(m.Data[:0], dAtA[iNdEx:postIndex]...)
+			if m.Data == nil {
+				m.Data = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -7128,6 +7939,92 @@ func (m *GenesisRequest) Unmarshal(dAtA []byte) error {
 			var v github_com_insolar_insolar_network_consensus_packets.NodeJoinClaim
 			m.Discovery = &v
 			if err := m.Discovery.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPacket(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SignCertRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPacket
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SignCertRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SignCertRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NodeRef", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.NodeRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -8338,6 +9235,178 @@ func (m *GenesisResponse) Unmarshal(dAtA []byte) error {
 			}
 			iNdEx = postIndex
 		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Error = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPacket(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SignCertResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPacket
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SignCertResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SignCertResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sign", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Sign = append(m.Sign[:0], dAtA[iNdEx:postIndex]...)
+			if m.Sign == nil {
+				m.Sign = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPacket(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ErrorResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPacket
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ErrorResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ErrorResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
 			}

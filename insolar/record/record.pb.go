@@ -203,6 +203,8 @@ type Request struct {
 	Prototype       *github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,29,opt,name=Prototype,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Prototype,omitempty"`
 	Method          string                                        `protobuf:"bytes,30,opt,name=Method,proto3" json:"Method,omitempty"`
 	Arguments       []byte                                        `protobuf:"bytes,31,opt,name=Arguments,proto3" json:"Arguments,omitempty"`
+	Sender          github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,32,opt,name=Sender,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Sender"`
+	APIRequestID    string                                        `protobuf:"bytes,33,opt,name=APIRequestID,proto3" json:"APIRequestID,omitempty"`
 }
 
 func (m *Request) Reset()      { *m = Request{} }
@@ -319,7 +321,7 @@ type Code struct {
 	Polymorph   int32                                          `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	Domain      github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,20,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
 	Request     github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,21,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
-	Code        github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,22,opt,name=Code,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Code"`
+	Code        []byte                                         `protobuf:"bytes,22,opt,name=Code,proto3" json:"Code,omitempty"`
 	MachineType github_com_insolar_insolar_insolar.MachineType `protobuf:"varint,23,opt,name=MachineType,proto3,customtype=github.com/insolar/insolar/insolar.MachineType" json:"MachineType"`
 }
 
@@ -479,6 +481,44 @@ func (m *Deactivate) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Deactivate proto.InternalMessageInfo
 
+type PendingFilament struct {
+	Polymorph      int32                                  `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
+	RecordID       github_com_insolar_insolar_insolar.ID  `protobuf:"bytes,20,opt,name=RecordID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"RecordID"`
+	PreviousRecord *github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=PreviousRecord,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"PreviousRecord,omitempty"`
+}
+
+func (m *PendingFilament) Reset()      { *m = PendingFilament{} }
+func (*PendingFilament) ProtoMessage() {}
+func (*PendingFilament) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0c86cc3f6f53fe45, []int{10}
+}
+func (m *PendingFilament) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PendingFilament) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PendingFilament.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PendingFilament) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PendingFilament.Merge(m, src)
+}
+func (m *PendingFilament) XXX_Size() int {
+	return m.Size()
+}
+func (m *PendingFilament) XXX_DiscardUnknown() {
+	xxx_messageInfo_PendingFilament.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PendingFilament proto.InternalMessageInfo
+
 type Virtual struct {
 	Polymorph int32 `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	// Types that are valid to be assigned to Union:
@@ -492,6 +532,7 @@ type Virtual struct {
 	//	*Virtual_Activate
 	//	*Virtual_Amend
 	//	*Virtual_Deactivate
+	//	*Virtual_PendingFilament
 	Union     isVirtual_Union `protobuf_oneof:"union"`
 	Signature []byte          `protobuf:"bytes,200,opt,name=Signature,proto3" json:"Signature,omitempty"`
 }
@@ -499,7 +540,7 @@ type Virtual struct {
 func (m *Virtual) Reset()      { *m = Virtual{} }
 func (*Virtual) ProtoMessage() {}
 func (*Virtual) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0c86cc3f6f53fe45, []int{10}
+	return fileDescriptor_0c86cc3f6f53fe45, []int{11}
 }
 func (m *Virtual) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -565,17 +606,21 @@ type Virtual_Amend struct {
 type Virtual_Deactivate struct {
 	Deactivate *Deactivate `protobuf:"bytes,110,opt,name=Deactivate,proto3,oneof"`
 }
+type Virtual_PendingFilament struct {
+	PendingFilament *PendingFilament `protobuf:"bytes,111,opt,name=PendingFilament,proto3,oneof"`
+}
 
-func (*Virtual_Genesis) isVirtual_Union()    {}
-func (*Virtual_Child) isVirtual_Union()      {}
-func (*Virtual_Jet) isVirtual_Union()        {}
-func (*Virtual_Request) isVirtual_Union()    {}
-func (*Virtual_Result) isVirtual_Union()     {}
-func (*Virtual_Type) isVirtual_Union()       {}
-func (*Virtual_Code) isVirtual_Union()       {}
-func (*Virtual_Activate) isVirtual_Union()   {}
-func (*Virtual_Amend) isVirtual_Union()      {}
-func (*Virtual_Deactivate) isVirtual_Union() {}
+func (*Virtual_Genesis) isVirtual_Union()         {}
+func (*Virtual_Child) isVirtual_Union()           {}
+func (*Virtual_Jet) isVirtual_Union()             {}
+func (*Virtual_Request) isVirtual_Union()         {}
+func (*Virtual_Result) isVirtual_Union()          {}
+func (*Virtual_Type) isVirtual_Union()            {}
+func (*Virtual_Code) isVirtual_Union()            {}
+func (*Virtual_Activate) isVirtual_Union()        {}
+func (*Virtual_Amend) isVirtual_Union()           {}
+func (*Virtual_Deactivate) isVirtual_Union()      {}
+func (*Virtual_PendingFilament) isVirtual_Union() {}
 
 func (m *Virtual) GetUnion() isVirtual_Union {
 	if m != nil {
@@ -654,6 +699,13 @@ func (m *Virtual) GetDeactivate() *Deactivate {
 	return nil
 }
 
+func (m *Virtual) GetPendingFilament() *PendingFilament {
+	if x, ok := m.GetUnion().(*Virtual_PendingFilament); ok {
+		return x.PendingFilament
+	}
+	return nil
+}
+
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*Virtual) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _Virtual_OneofMarshaler, _Virtual_OneofUnmarshaler, _Virtual_OneofSizer, []interface{}{
@@ -667,6 +719,7 @@ func (*Virtual) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error
 		(*Virtual_Activate)(nil),
 		(*Virtual_Amend)(nil),
 		(*Virtual_Deactivate)(nil),
+		(*Virtual_PendingFilament)(nil),
 	}
 }
 
@@ -722,6 +775,11 @@ func _Virtual_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	case *Virtual_Deactivate:
 		_ = b.EncodeVarint(110<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Deactivate); err != nil {
+			return err
+		}
+	case *Virtual_PendingFilament:
+		_ = b.EncodeVarint(111<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.PendingFilament); err != nil {
 			return err
 		}
 	case nil:
@@ -814,6 +872,14 @@ func _Virtual_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Deactivate{msg}
 		return true, err
+	case 111: // union.PendingFilament
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(PendingFilament)
+		err := b.DecodeMessage(msg)
+		m.Union = &Virtual_PendingFilament{msg}
+		return true, err
 	default:
 		return false, nil
 	}
@@ -873,6 +939,11 @@ func _Virtual_OneofSizer(msg proto.Message) (n int) {
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
+	case *Virtual_PendingFilament:
+		s := proto.Size(x.PendingFilament)
+		n += 2 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
 	case nil:
 	default:
 		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
@@ -890,7 +961,7 @@ type Material struct {
 func (m *Material) Reset()      { *m = Material{} }
 func (*Material) ProtoMessage() {}
 func (*Material) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0c86cc3f6f53fe45, []int{11}
+	return fileDescriptor_0c86cc3f6f53fe45, []int{12}
 }
 func (m *Material) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -932,6 +1003,7 @@ func init() {
 	proto.RegisterType((*Activate)(nil), "record.Activate")
 	proto.RegisterType((*Amend)(nil), "record.Amend")
 	proto.RegisterType((*Deactivate)(nil), "record.Deactivate")
+	proto.RegisterType((*PendingFilament)(nil), "record.PendingFilament")
 	proto.RegisterType((*Virtual)(nil), "record.Virtual")
 	proto.RegisterType((*Material)(nil), "record.Material")
 }
@@ -939,75 +1011,81 @@ func init() {
 func init() { proto.RegisterFile("insolar/record/record.proto", fileDescriptor_0c86cc3f6f53fe45) }
 
 var fileDescriptor_0c86cc3f6f53fe45 = []byte{
-	// 1076 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x57, 0xcf, 0x6f, 0x1b, 0x45,
-	0x14, 0xde, 0x89, 0x7f, 0xc4, 0x79, 0x49, 0x5a, 0x33, 0x0a, 0x61, 0x9a, 0xb6, 0x1b, 0xcb, 0x52,
-	0x24, 0x57, 0xa5, 0x4e, 0x15, 0x2a, 0x84, 0xb8, 0x39, 0x76, 0x8b, 0x1d, 0xea, 0x10, 0x4d, 0x2c,
-	0xe0, 0x84, 0x34, 0xb1, 0x27, 0xf6, 0x96, 0xf5, 0x6e, 0xd8, 0x9d, 0x8d, 0x94, 0x1b, 0x7f, 0x02,
-	0x17, 0x4e, 0x5c, 0x38, 0xf6, 0x6f, 0xe0, 0xc4, 0x05, 0x29, 0xc7, 0x1c, 0x2b, 0x24, 0x2a, 0xe2,
-	0x08, 0x09, 0x6e, 0x11, 0x7f, 0x01, 0x9a, 0x1f, 0xbb, 0xeb, 0x44, 0xa8, 0x4e, 0x1d, 0x84, 0x54,
-	0xc4, 0xc9, 0x3b, 0x6f, 0xbf, 0xf9, 0xbc, 0xdf, 0x37, 0xf3, 0xde, 0xbc, 0x81, 0xdb, 0x8e, 0x17,
-	0xfa, 0x2e, 0x0b, 0xd6, 0x03, 0xde, 0xf5, 0x83, 0x9e, 0xf9, 0xa9, 0x1e, 0x04, 0xbe, 0xf0, 0x71,
-	0x5e, 0x8f, 0x56, 0x1e, 0xf4, 0x1d, 0x31, 0x88, 0xf6, 0xaa, 0x5d, 0x7f, 0xb8, 0xde, 0xf7, 0xfb,
-	0xfe, 0xba, 0x7a, 0xbd, 0x17, 0xed, 0xab, 0x91, 0x1a, 0xa8, 0x27, 0x3d, 0xad, 0x5c, 0x83, 0xd9,
-	0x8f, 0xb8, 0xc7, 0x43, 0x27, 0xc4, 0x77, 0x60, 0xee, 0xc0, 0x77, 0x8f, 0x86, 0x7e, 0x70, 0x30,
-	0x20, 0xc5, 0x12, 0xaa, 0xe4, 0x68, 0x1a, 0xc0, 0x18, 0xb2, 0x4d, 0x16, 0x0e, 0xc8, 0x52, 0x09,
-	0x55, 0x16, 0xa8, 0x7a, 0xfe, 0x30, 0xfb, 0xfc, 0xfb, 0x55, 0x54, 0xfe, 0x11, 0x41, 0xae, 0x3e,
-	0x70, 0xdc, 0xde, 0x04, 0x86, 0x8f, 0x61, 0x6e, 0x27, 0xe0, 0x87, 0x0a, 0xaa, 0x69, 0x36, 0x1f,
-	0x1c, 0xbf, 0x5c, 0xb5, 0x7e, 0x7e, 0xb9, 0xba, 0x36, 0xf6, 0xd1, 0xb1, 0xc8, 0x4b, 0xbf, 0xd5,
-	0x56, 0x83, 0xa6, 0xf3, 0xf1, 0x13, 0xc8, 0x50, 0xbe, 0x4f, 0xde, 0x56, 0x34, 0x8f, 0x0c, 0xcd,
-	0xbb, 0x57, 0xa0, 0xa1, 0x7c, 0x9f, 0x07, 0xdc, 0xeb, 0x72, 0x2a, 0x09, 0x8c, 0x84, 0x7b, 0x90,
-	0xd9, 0xe2, 0xe2, 0xd5, 0xdf, 0x6f, 0xa0, 0xdf, 0xe5, 0x61, 0x96, 0xf2, 0xaf, 0x22, 0x1e, 0x4e,
-	0xc0, 0xe3, 0x2a, 0x14, 0xea, 0xcc, 0x75, 0x3b, 0x47, 0x07, 0x5c, 0xc9, 0xbd, 0xb1, 0x81, 0xab,
-	0x66, 0xc9, 0x0c, 0x41, 0xb5, 0xde, 0xa1, 0x09, 0x06, 0x3f, 0x85, 0xbc, 0x7c, 0xe6, 0xc1, 0xb5,
-	0x54, 0x19, 0x0e, 0xfc, 0x05, 0xdc, 0xd4, 0x4f, 0x3b, 0x72, 0x9d, 0x85, 0xfc, 0x88, 0xe5, 0x6b,
-	0xd0, 0x5e, 0x26, 0xc3, 0x4b, 0x90, 0xdb, 0xf6, 0xbd, 0x2e, 0x27, 0xef, 0x94, 0x50, 0x25, 0x4b,
-	0xf5, 0x00, 0xaf, 0x40, 0x61, 0x57, 0x6a, 0x93, 0x2f, 0x88, 0x7a, 0x91, 0x8c, 0xf1, 0x06, 0x00,
-	0xe5, 0x22, 0x0a, 0xbc, 0xb6, 0xdf, 0xe3, 0xe4, 0xd6, 0xdf, 0x3b, 0x42, 0xdb, 0x74, 0x0c, 0x25,
-	0x1d, 0x6e, 0x0d, 0x87, 0x91, 0x60, 0x7b, 0x2e, 0x27, 0x2b, 0x25, 0x54, 0x29, 0xd0, 0x34, 0x80,
-	0x1b, 0x90, 0xdd, 0x64, 0x21, 0x27, 0xb7, 0x95, 0xb0, 0x87, 0xaf, 0x2d, 0x4a, 0xcd, 0xc6, 0x4d,
-	0xc8, 0x7f, 0xb2, 0xf7, 0x8c, 0x77, 0x05, 0xb9, 0x33, 0x25, 0x8f, 0x99, 0x8f, 0xb7, 0xe5, 0x0e,
-	0x8f, 0xdd, 0xbe, 0x3b, 0x25, 0x59, 0x4a, 0x81, 0x97, 0x21, 0xdf, 0xe6, 0x62, 0xe0, 0xf7, 0x88,
-	0x5d, 0x42, 0x95, 0x39, 0x6a, 0x46, 0xd2, 0x95, 0x5a, 0xd0, 0x8f, 0x86, 0xdc, 0x13, 0x21, 0x59,
-	0x55, 0x09, 0x99, 0x06, 0xca, 0x5b, 0x30, 0x53, 0xef, 0xe0, 0x05, 0x28, 0xd4, 0x3b, 0x1a, 0x5f,
-	0xb4, 0xf0, 0x5b, 0xb0, 0x58, 0xef, 0xec, 0xb2, 0x43, 0x5e, 0x0b, 0x55, 0xfe, 0x14, 0x11, 0x5e,
-	0x82, 0x62, 0x1c, 0x6a, 0x70, 0x97, 0xf7, 0x99, 0xe0, 0xc5, 0x19, 0xbc, 0x08, 0x73, 0xf5, 0x8e,
-	0xa9, 0x08, 0xc5, 0x4c, 0xb9, 0x02, 0x33, 0xb4, 0x8d, 0x8b, 0xb0, 0xa0, 0xd7, 0x84, 0xf2, 0x30,
-	0x72, 0x45, 0xd1, 0x4a, 0x23, 0xdb, 0xfe, 0x67, 0xcc, 0x11, 0x45, 0x64, 0xb2, 0xe3, 0x17, 0x04,
-	0x79, 0x0d, 0x9a, 0x90, 0x1c, 0x8f, 0x13, 0xd3, 0xa7, 0xaa, 0x04, 0xa9, 0xe3, 0x71, 0x32, 0x5e,
-	0x2b, 0x69, 0x92, 0x8c, 0x26, 0x30, 0xbb, 0xc3, 0x8e, 0x5c, 0x9f, 0xf5, 0x74, 0xb6, 0xd0, 0x78,
-	0x68, 0xf4, 0xfd, 0x89, 0x20, 0xab, 0x92, 0xf5, 0xd5, 0xea, 0x9e, 0x42, 0xbe, 0xe1, 0x0f, 0x99,
-	0xe3, 0x19, 0x75, 0x53, 0xa6, 0xb2, 0xe6, 0xf8, 0xc7, 0x45, 0x56, 0xe0, 0xa6, 0xd4, 0xd0, 0xe0,
-	0x5d, 0x97, 0x05, 0x4c, 0x38, 0xbe, 0x67, 0xc4, 0x5e, 0x0e, 0x1b, 0xd1, 0xbf, 0xcd, 0x40, 0xb6,
-	0x6e, 0xb2, 0xf1, 0x8d, 0x15, 0x5d, 0xd3, 0x1a, 0x4c, 0x11, 0x7c, 0xcd, 0xed, 0xa6, 0xe5, 0x7f,
-	0x0e, 0xf3, 0x6d, 0xd6, 0x1d, 0x38, 0x1e, 0x57, 0x35, 0x5d, 0x16, 0xbe, 0xc5, 0xcd, 0xf7, 0x0d,
-	0x53, 0xf5, 0x0a, 0x4c, 0x63, 0xb3, 0xe9, 0x38, 0x95, 0xf1, 0xf9, 0x8f, 0x0c, 0x14, 0x6a, 0x5d,
-	0xe1, 0x1c, 0x32, 0xf1, 0x66, 0x7b, 0xfd, 0x58, 0xd6, 0xad, 0xa1, 0x1f, 0x1c, 0x4d, 0xe7, 0xb6,
-	0x99, 0x8c, 0xb7, 0x20, 0xd7, 0x1a, 0xb2, 0xbe, 0x76, 0x7a, 0xda, 0x8f, 0xd2, 0x14, 0xb8, 0x04,
-	0xf3, 0xad, 0x30, 0x2d, 0xce, 0x44, 0x1d, 0x25, 0xe3, 0x21, 0x69, 0xe9, 0x0e, 0x0b, 0xb8, 0x27,
-	0xd4, 0xd1, 0x34, 0xb5, 0xa5, 0x9a, 0x03, 0xdb, 0x00, 0xad, 0xa4, 0xae, 0x9a, 0x93, 0x6b, 0x2c,
-	0x52, 0xfe, 0x29, 0x03, 0xb9, 0xda, 0x90, 0x7b, 0xbd, 0xff, 0x17, 0xfa, 0xdf, 0x5e, 0x68, 0xd3,
-	0x87, 0xee, 0x0a, 0xb9, 0x32, 0xb7, 0xa6, 0xee, 0x43, 0xd5, 0xfc, 0xf2, 0xb7, 0x33, 0x00, 0x0d,
-	0xce, 0xfe, 0x0b, 0x59, 0x7b, 0xc1, 0x97, 0xe5, 0x6b, 0xfa, 0x72, 0x9e, 0x81, 0xd9, 0x4f, 0x9d,
-	0x40, 0x44, 0xcc, 0x9d, 0x60, 0xca, 0xfd, 0xe4, 0x06, 0x42, 0x78, 0x09, 0x55, 0xe6, 0x37, 0x6e,
-	0xc6, 0x3d, 0xa1, 0x09, 0x37, 0x2d, 0x9a, 0xdc, 0x51, 0xd6, 0xcc, 0x55, 0x83, 0xec, 0x2b, 0xe8,
-	0x62, 0x0c, 0x55, 0xc1, 0xa6, 0x45, 0xcd, 0x45, 0x64, 0x55, 0xf5, 0xf3, 0xa4, 0xaf, 0x40, 0xf3,
-	0x31, 0x68, 0x8b, 0x8b, 0xa6, 0x45, 0x55, 0xa7, 0x7f, 0x3f, 0xf5, 0x6e, 0x70, 0xf1, 0x4f, 0x4d,
-	0x58, 0xfe, 0x69, 0x7a, 0x5e, 0x9a, 0x9e, 0x86, 0x38, 0x0a, 0x7b, 0x23, 0xc5, 0xca, 0x68, 0xd3,
-	0xa2, 0x71, 0xcf, 0x53, 0xd6, 0xdd, 0x01, 0x79, 0xa6, 0x70, 0x0b, 0x31, 0x4e, 0xc6, 0x9a, 0x16,
-	0xd5, 0x9d, 0x43, 0xd9, 0x1c, 0x44, 0x5f, 0x5e, 0xc4, 0xc8, 0x98, 0xc4, 0xa8, 0x93, 0xa6, 0x9a,
-	0x1e, 0x04, 0xc4, 0x55, 0xb8, 0x62, 0x8c, 0x8b, 0xe3, 0x4d, 0x8b, 0xa6, 0x87, 0xc5, 0x9a, 0x29,
-	0x26, 0x64, 0x78, 0xd1, 0x16, 0x15, 0x94, 0xb6, 0xe8, 0x52, 0xf3, 0x68, 0x7c, 0xaf, 0x12, 0x4f,
-	0x61, 0x93, 0x0e, 0x3c, 0x7d, 0xd3, 0xb4, 0xe8, 0xf8, 0x9e, 0xbe, 0x0b, 0x73, 0xbb, 0x4e, 0xdf,
-	0x63, 0x22, 0x0a, 0x38, 0x39, 0x46, 0xba, 0xdd, 0x4c, 0x22, 0x9b, 0xb3, 0x90, 0x8b, 0x3c, 0xc7,
-	0xf7, 0xca, 0x3f, 0x20, 0x28, 0xb4, 0x99, 0xe0, 0x81, 0x33, 0x71, 0xcd, 0xef, 0x25, 0x9b, 0x43,
-	0x65, 0xc2, 0x98, 0xfd, 0x26, 0x4c, 0x93, 0xcd, 0xf3, 0x04, 0x72, 0x5b, 0x5c, 0xb4, 0x1a, 0x66,
-	0x8f, 0x3f, 0x34, 0x3b, 0xb2, 0x72, 0x85, 0x1d, 0xa9, 0xe6, 0x51, 0x3d, 0x7d, 0x92, 0x8a, 0x0f,
-	0x8e, 0x4f, 0x6d, 0xeb, 0xe4, 0xd4, 0xb6, 0x5e, 0x9c, 0xda, 0xd6, 0xf9, 0xa9, 0x8d, 0xbe, 0x1e,
-	0xd9, 0xe8, 0xf9, 0xc8, 0x46, 0xc7, 0x23, 0x1b, 0x9d, 0x8c, 0x6c, 0xf4, 0xeb, 0xc8, 0x46, 0xbf,
-	0x8f, 0x6c, 0xeb, 0x7c, 0x64, 0xa3, 0x6f, 0xce, 0x6c, 0xeb, 0xe4, 0xcc, 0xb6, 0x5e, 0x9c, 0xd9,
-	0xd6, 0x5e, 0x5e, 0x5d, 0xa4, 0xdf, 0xfb, 0x2b, 0x00, 0x00, 0xff, 0xff, 0x75, 0x52, 0x0c, 0x3f,
-	0x9e, 0x0f, 0x00, 0x00,
+	// 1172 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x58, 0xcb, 0x6f, 0x1b, 0x45,
+	0x18, 0xdf, 0x49, 0xfc, 0xca, 0x97, 0x97, 0x19, 0x85, 0x74, 0x9a, 0xb6, 0x1b, 0x63, 0x29, 0x92,
+	0xab, 0x52, 0xa7, 0x0a, 0x15, 0x42, 0xdc, 0x1c, 0xbb, 0xc1, 0x0e, 0x75, 0xb0, 0x26, 0xe6, 0x71,
+	0x42, 0x9a, 0xd8, 0x13, 0x7b, 0xcb, 0x7a, 0x37, 0xec, 0x23, 0x52, 0x6e, 0xfc, 0x03, 0x48, 0x5c,
+	0xb8, 0x73, 0xec, 0x3f, 0x00, 0x07, 0x4e, 0x5c, 0x90, 0x72, 0x0c, 0xb7, 0x0a, 0x89, 0x8a, 0x38,
+	0x17, 0xb8, 0x55, 0xfc, 0x05, 0x68, 0x1e, 0xbb, 0xeb, 0xa4, 0xa8, 0x4e, 0x1d, 0x84, 0x54, 0xd4,
+	0x93, 0x77, 0xbe, 0xfd, 0xbe, 0xdf, 0xce, 0xef, 0x9b, 0xef, 0x35, 0x86, 0x1b, 0x96, 0xe3, 0xbb,
+	0x36, 0xf3, 0xd6, 0x3d, 0xde, 0x71, 0xbd, 0xae, 0xfe, 0x29, 0x1f, 0x78, 0x6e, 0xe0, 0xe2, 0x8c,
+	0x5a, 0xad, 0xdc, 0xed, 0x59, 0x41, 0x3f, 0xdc, 0x2b, 0x77, 0xdc, 0xc1, 0x7a, 0xcf, 0xed, 0xb9,
+	0xeb, 0xf2, 0xf5, 0x5e, 0xb8, 0x2f, 0x57, 0x72, 0x21, 0x9f, 0x94, 0x59, 0xb1, 0x02, 0xd9, 0x0f,
+	0xb8, 0xc3, 0x7d, 0xcb, 0xc7, 0x37, 0x61, 0xe6, 0xc0, 0xb5, 0x8f, 0x06, 0xae, 0x77, 0xd0, 0x27,
+	0xf9, 0x02, 0x2a, 0xa5, 0x69, 0x22, 0xc0, 0x18, 0x52, 0x75, 0xe6, 0xf7, 0xc9, 0x52, 0x01, 0x95,
+	0xe6, 0xa8, 0x7c, 0x7e, 0x3f, 0xf5, 0xf8, 0xbb, 0x55, 0x54, 0xfc, 0x09, 0x41, 0xba, 0xda, 0xb7,
+	0xec, 0xee, 0x18, 0x84, 0x0f, 0x61, 0xa6, 0xe5, 0xf1, 0x43, 0xa9, 0xaa, 0x60, 0x36, 0xef, 0x1e,
+	0x3f, 0x5d, 0x35, 0x7e, 0x7d, 0xba, 0xba, 0x36, 0xb2, 0xe9, 0x88, 0xe4, 0x85, 0xdf, 0x72, 0xa3,
+	0x46, 0x13, 0x7b, 0xbc, 0x05, 0xd3, 0x94, 0xef, 0x93, 0x37, 0x25, 0xcc, 0x7d, 0x0d, 0xf3, 0xf6,
+	0x25, 0x60, 0x28, 0xdf, 0xe7, 0x1e, 0x77, 0x3a, 0x9c, 0x0a, 0x00, 0x4d, 0xe1, 0x36, 0x4c, 0x6f,
+	0xf3, 0xe0, 0xc5, 0xfb, 0xd7, 0xaa, 0x5f, 0x67, 0x21, 0x4b, 0xf9, 0x97, 0x21, 0xf7, 0xc7, 0xe8,
+	0xe3, 0x32, 0xe4, 0xaa, 0xcc, 0xb6, 0xdb, 0x47, 0x07, 0x5c, 0xd2, 0x5d, 0xd8, 0xc0, 0x65, 0x7d,
+	0x64, 0x1a, 0xa0, 0x5c, 0x6d, 0xd3, 0x58, 0x07, 0x3f, 0x84, 0x8c, 0x78, 0xe6, 0xde, 0x95, 0x58,
+	0x69, 0x0c, 0xfc, 0x39, 0x2c, 0xaa, 0xa7, 0x96, 0x38, 0xe7, 0x40, 0x6c, 0x62, 0xf9, 0x0a, 0xb0,
+	0x17, 0xc1, 0xf0, 0x12, 0xa4, 0x77, 0x5c, 0xa7, 0xc3, 0xc9, 0xb5, 0x02, 0x2a, 0xa5, 0xa8, 0x5a,
+	0xe0, 0x15, 0xc8, 0xed, 0x0a, 0x6e, 0xe2, 0x05, 0x91, 0x2f, 0xe2, 0x35, 0xde, 0x00, 0xa0, 0x3c,
+	0x08, 0x3d, 0xa7, 0xe9, 0x76, 0x39, 0xb9, 0xfe, 0xcf, 0x1e, 0xa1, 0x4d, 0x3a, 0xa2, 0x25, 0x3c,
+	0xdc, 0x18, 0x0c, 0xc2, 0x80, 0xed, 0xd9, 0x9c, 0xac, 0x14, 0x50, 0x29, 0x47, 0x13, 0x01, 0xae,
+	0x41, 0x6a, 0x93, 0xf9, 0x9c, 0xdc, 0x90, 0xc4, 0xee, 0xbd, 0x34, 0x29, 0x69, 0x8d, 0xeb, 0x90,
+	0xf9, 0x68, 0xef, 0x11, 0xef, 0x04, 0xe4, 0xe6, 0x84, 0x38, 0xda, 0x1e, 0xef, 0x88, 0x08, 0x8f,
+	0xbc, 0x7d, 0x6b, 0x42, 0xb0, 0x04, 0x02, 0x2f, 0x43, 0xa6, 0xc9, 0x83, 0xbe, 0xdb, 0x25, 0x66,
+	0x01, 0x95, 0x66, 0xa8, 0x5e, 0x09, 0xaf, 0x54, 0xbc, 0x5e, 0x38, 0xe0, 0x4e, 0xe0, 0x93, 0x55,
+	0x99, 0x90, 0x89, 0x40, 0xc4, 0xd1, 0x2e, 0x77, 0xba, 0xdc, 0x23, 0x85, 0xab, 0xc4, 0x91, 0xc2,
+	0xc0, 0x45, 0x98, 0xab, 0xb4, 0x1a, 0xfa, 0x78, 0x1a, 0x35, 0xf2, 0x96, 0xdc, 0xc9, 0x39, 0x59,
+	0x71, 0x1b, 0xa6, 0xaa, 0x6d, 0x3c, 0x07, 0xb9, 0x6a, 0x5b, 0xed, 0x30, 0x6f, 0xe0, 0x37, 0x60,
+	0xbe, 0xda, 0xde, 0x65, 0x87, 0xbc, 0xe2, 0xcb, 0x8c, 0xcd, 0x23, 0xbc, 0x04, 0xf9, 0x48, 0x54,
+	0xe3, 0x36, 0xef, 0xb1, 0x80, 0xe7, 0xa7, 0xf0, 0x3c, 0xcc, 0x54, 0xdb, 0xba, 0x06, 0xe5, 0xa7,
+	0x8b, 0x25, 0x98, 0xa2, 0x4d, 0x9c, 0x87, 0x39, 0x15, 0x05, 0x94, 0xfb, 0xa1, 0x1d, 0xe4, 0x8d,
+	0x44, 0xb2, 0xe3, 0x7e, 0xca, 0xac, 0x20, 0x8f, 0x74, 0x3e, 0xfe, 0x86, 0x20, 0xa3, 0x94, 0xc6,
+	0xa4, 0xe3, 0x83, 0xf8, 0x98, 0x27, 0xaa, 0x3d, 0xc9, 0x19, 0x47, 0xe9, 0x7f, 0xa5, 0x34, 0x8d,
+	0x6b, 0x08, 0x81, 0x6c, 0x8b, 0x1d, 0xd9, 0x2e, 0xeb, 0xaa, 0xfc, 0xa4, 0xd1, 0x52, 0xf3, 0xfb,
+	0x0b, 0x41, 0x4a, 0x96, 0x87, 0x17, 0xb3, 0x7b, 0x08, 0x99, 0x9a, 0x3b, 0x60, 0x96, 0xa3, 0xd9,
+	0x4d, 0x78, 0xe8, 0x0a, 0xe3, 0x5f, 0x27, 0x59, 0x82, 0x45, 0xc1, 0xa1, 0xc6, 0x3b, 0x36, 0xf3,
+	0x58, 0x60, 0xb9, 0x8e, 0x26, 0x7b, 0x51, 0xac, 0x49, 0xff, 0x30, 0x05, 0xa9, 0xaa, 0xce, 0xff,
+	0x57, 0x96, 0x34, 0x56, 0x1c, 0x34, 0x53, 0xc5, 0xe7, 0x33, 0x98, 0x6d, 0xb2, 0x4e, 0xdf, 0x72,
+	0xb8, 0x6c, 0x0b, 0xa2, 0x76, 0xce, 0x6f, 0xbe, 0xab, 0xbf, 0x53, 0xbe, 0xc4, 0x77, 0x46, 0xac,
+	0xe9, 0x28, 0x94, 0x76, 0xdc, 0x9f, 0xd3, 0x90, 0xab, 0x74, 0x02, 0xeb, 0x90, 0x05, 0xaf, 0xb6,
+	0xf3, 0x1e, 0x88, 0xd2, 0x37, 0x70, 0xbd, 0x23, 0xdd, 0xb5, 0x5e, 0x36, 0x5b, 0x95, 0x31, 0xde,
+	0x86, 0x74, 0x63, 0xc0, 0x7a, 0xca, 0xd3, 0x93, 0x6e, 0x4a, 0x41, 0xe0, 0x02, 0xcc, 0x36, 0xfc,
+	0xa4, 0xbe, 0x13, 0xd9, 0x8d, 0x46, 0x45, 0xc2, 0xa5, 0x2d, 0xe6, 0x71, 0x27, 0x90, 0xdd, 0x6d,
+	0x62, 0x97, 0x2a, 0x0c, 0x6c, 0x02, 0x34, 0xe2, 0x42, 0xa9, 0x9b, 0xdf, 0x88, 0xa4, 0xf8, 0xf3,
+	0x34, 0xa4, 0x2b, 0x03, 0xee, 0x74, 0x5f, 0x1f, 0xf4, 0x7f, 0x7d, 0xd0, 0x7a, 0x94, 0xdd, 0x0d,
+	0xc4, 0xc9, 0x5c, 0x9f, 0x78, 0x94, 0x95, 0xf6, 0xc5, 0x6f, 0xa7, 0x00, 0x6a, 0x9c, 0xfd, 0x1f,
+	0xb2, 0xf6, 0x9c, 0x5f, 0x96, 0xaf, 0xe8, 0x97, 0x5f, 0x10, 0x2c, 0xb6, 0xb8, 0xd3, 0xb5, 0x9c,
+	0xde, 0x96, 0x65, 0x33, 0x31, 0xdc, 0x8c, 0x71, 0x4e, 0x03, 0x72, 0x54, 0x8e, 0x93, 0x8d, 0xda,
+	0x64, 0x4d, 0x3e, 0x36, 0xc7, 0x1f, 0xc3, 0x82, 0xd8, 0x89, 0xe5, 0x86, 0xbe, 0x92, 0x69, 0x07,
+	0x09, 0x40, 0x74, 0x79, 0xc0, 0x0b, 0x20, 0xc5, 0xef, 0x53, 0x90, 0xfd, 0xc4, 0xf2, 0x82, 0x90,
+	0xd9, 0x63, 0xb8, 0xdc, 0x89, 0x2f, 0x66, 0x84, 0x17, 0x50, 0x69, 0x76, 0x63, 0x31, 0x1a, 0x95,
+	0xb5, 0xb8, 0x6e, 0xd0, 0xf8, 0xea, 0xb6, 0xa6, 0x6f, 0x60, 0x64, 0x5f, 0xaa, 0xce, 0x47, 0xaa,
+	0x52, 0x58, 0x37, 0xa8, 0xbe, 0x9f, 0xad, 0xca, 0x6b, 0x0e, 0xe9, 0x49, 0xa5, 0xd9, 0x48, 0x69,
+	0x9b, 0x07, 0x75, 0x83, 0xca, 0x0b, 0xd0, 0x9d, 0x24, 0x1e, 0xfa, 0xe7, 0x3f, 0xaa, 0xc5, 0xe2,
+	0xa3, 0x49, 0x53, 0xd7, 0x83, 0x17, 0xb1, 0xa4, 0xee, 0x42, 0xa2, 0x2b, 0xa4, 0x75, 0x83, 0x46,
+	0x83, 0x59, 0x51, 0x8d, 0x30, 0xe4, 0x91, 0xd4, 0x9b, 0x8b, 0xf4, 0x84, 0xac, 0x6e, 0x50, 0x35,
+	0xde, 0x14, 0x75, 0xb7, 0xfc, 0xe2, 0xbc, 0x8e, 0x90, 0x09, 0x1d, 0xd9, 0x3d, 0xcb, 0x49, 0x73,
+	0x23, 0xb6, 0xd4, 0xcb, 0x47, 0x7a, 0x91, 0xbc, 0x6e, 0xd0, 0xa4, 0x01, 0xae, 0xe9, 0x02, 0x49,
+	0x06, 0xe7, 0xdd, 0x22, 0x85, 0xc2, 0x2d, 0xaa, 0x7c, 0xde, 0x1f, 0xcd, 0x3f, 0xe2, 0x48, 0xdd,
+	0xf8, 0x62, 0x92, 0xbc, 0xa9, 0x1b, 0x74, 0x34, 0x4f, 0xab, 0xcf, 0x45, 0x27, 0x71, 0xa5, 0xe9,
+	0xb5, 0xc8, 0xf4, 0xc2, 0xeb, 0xba, 0x41, 0x9f, 0x8b, 0xe7, 0x5b, 0x30, 0xb3, 0x6b, 0xf5, 0x1c,
+	0x16, 0x84, 0x1e, 0x27, 0xc7, 0x48, 0x8d, 0xf2, 0xb1, 0x64, 0x33, 0x0b, 0xe9, 0xd0, 0xb1, 0x5c,
+	0xa7, 0xf8, 0x23, 0x82, 0x5c, 0x93, 0x05, 0xdc, 0xb3, 0xc6, 0x06, 0xce, 0xed, 0x38, 0xc2, 0x64,
+	0x0e, 0x8c, 0x9c, 0xa1, 0x16, 0xd3, 0x38, 0x02, 0xb7, 0x20, 0xbd, 0xcd, 0xc5, 0x50, 0xaf, 0x62,
+	0xfb, 0x9e, 0x4e, 0x96, 0xd2, 0x25, 0x62, 0x5b, 0xda, 0x51, 0x65, 0x3e, 0x8e, 0xc5, 0x7b, 0xc7,
+	0xa7, 0xa6, 0x71, 0x72, 0x6a, 0x1a, 0x4f, 0x4e, 0x4d, 0xe3, 0xd9, 0xa9, 0x89, 0xbe, 0x1a, 0x9a,
+	0xe8, 0xf1, 0xd0, 0x44, 0xc7, 0x43, 0x13, 0x9d, 0x0c, 0x4d, 0xf4, 0xfb, 0xd0, 0x44, 0x7f, 0x0c,
+	0x4d, 0xe3, 0xd9, 0xd0, 0x44, 0xdf, 0x9c, 0x99, 0xc6, 0xc9, 0x99, 0x69, 0x3c, 0x39, 0x33, 0x8d,
+	0xbd, 0x8c, 0xfc, 0x93, 0xe2, 0x9d, 0xbf, 0x03, 0x00, 0x00, 0xff, 0xff, 0x37, 0xd1, 0x2a, 0x3a,
+	0xfa, 0x10, 0x00, 0x00,
 }
 
 func (x Request_CT) String() string {
@@ -1175,6 +1253,12 @@ func (this *Request) Equal(that interface{}) bool {
 	if !bytes.Equal(this.Arguments, that1.Arguments) {
 		return false
 	}
+	if !this.Sender.Equal(that1.Sender) {
+		return false
+	}
+	if this.APIRequestID != that1.APIRequestID {
+		return false
+	}
 	return true
 }
 func (this *Result) Equal(that interface{}) bool {
@@ -1271,7 +1355,7 @@ func (this *Code) Equal(that interface{}) bool {
 	if !this.Request.Equal(that1.Request) {
 		return false
 	}
-	if !this.Code.Equal(that1.Code) {
+	if !bytes.Equal(this.Code, that1.Code) {
 		return false
 	}
 	if !this.MachineType.Equal(that1.MachineType) {
@@ -1395,6 +1479,40 @@ func (this *Deactivate) Equal(that interface{}) bool {
 		return false
 	}
 	if !this.PrevState.Equal(that1.PrevState) {
+		return false
+	}
+	return true
+}
+func (this *PendingFilament) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PendingFilament)
+	if !ok {
+		that2, ok := that.(PendingFilament)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
+		return false
+	}
+	if !this.RecordID.Equal(that1.RecordID) {
+		return false
+	}
+	if that1.PreviousRecord == nil {
+		if this.PreviousRecord != nil {
+			return false
+		}
+	} else if !this.PreviousRecord.Equal(*that1.PreviousRecord) {
 		return false
 	}
 	return true
@@ -1675,6 +1793,30 @@ func (this *Virtual_Deactivate) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *Virtual_PendingFilament) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Virtual_PendingFilament)
+	if !ok {
+		that2, ok := that.(Virtual_PendingFilament)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.PendingFilament.Equal(that1.PendingFilament) {
+		return false
+	}
+	return true
+}
 func (this *Material) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -1811,6 +1953,8 @@ type RequestFace interface {
 	GetPrototype() *github_com_insolar_insolar_insolar.Reference
 	GetMethod() string
 	GetArguments() []byte
+	GetSender() github_com_insolar_insolar_insolar.Reference
+	GetAPIRequestID() string
 }
 
 func (this *Request) Proto() github_com_gogo_protobuf_proto.Message {
@@ -1873,6 +2017,14 @@ func (this *Request) GetArguments() []byte {
 	return this.Arguments
 }
 
+func (this *Request) GetSender() github_com_insolar_insolar_insolar.Reference {
+	return this.Sender
+}
+
+func (this *Request) GetAPIRequestID() string {
+	return this.APIRequestID
+}
+
 func NewRequestFromFace(that RequestFace) *Request {
 	this := &Request{}
 	this.Polymorph = that.GetPolymorph()
@@ -1888,6 +2040,8 @@ func NewRequestFromFace(that RequestFace) *Request {
 	this.Prototype = that.GetPrototype()
 	this.Method = that.GetMethod()
 	this.Arguments = that.GetArguments()
+	this.Sender = that.GetSender()
+	this.APIRequestID = that.GetAPIRequestID()
 	return this
 }
 
@@ -1978,7 +2132,7 @@ type CodeFace interface {
 	GetPolymorph() int32
 	GetDomain() github_com_insolar_insolar_insolar.Reference
 	GetRequest() github_com_insolar_insolar_insolar.Reference
-	GetCode() github_com_insolar_insolar_insolar.ID
+	GetCode() []byte
 	GetMachineType() github_com_insolar_insolar_insolar.MachineType
 }
 
@@ -2002,7 +2156,7 @@ func (this *Code) GetRequest() github_com_insolar_insolar_insolar.Reference {
 	return this.Request
 }
 
-func (this *Code) GetCode() github_com_insolar_insolar_insolar.ID {
+func (this *Code) GetCode() []byte {
 	return this.Code
 }
 
@@ -2057,7 +2211,7 @@ func (this *Request) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 17)
+	s := make([]string, 0, 19)
 	s = append(s, "&record.Request{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "CallType: "+fmt.Sprintf("%#v", this.CallType)+",\n")
@@ -2072,6 +2226,8 @@ func (this *Request) GoString() string {
 	s = append(s, "Prototype: "+fmt.Sprintf("%#v", this.Prototype)+",\n")
 	s = append(s, "Method: "+fmt.Sprintf("%#v", this.Method)+",\n")
 	s = append(s, "Arguments: "+fmt.Sprintf("%#v", this.Arguments)+",\n")
+	s = append(s, "Sender: "+fmt.Sprintf("%#v", this.Sender)+",\n")
+	s = append(s, "APIRequestID: "+fmt.Sprintf("%#v", this.APIRequestID)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2161,11 +2317,23 @@ func (this *Deactivate) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *PendingFilament) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 7)
+	s = append(s, "&record.PendingFilament{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "RecordID: "+fmt.Sprintf("%#v", this.RecordID)+",\n")
+	s = append(s, "PreviousRecord: "+fmt.Sprintf("%#v", this.PreviousRecord)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func (this *Virtual) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 16)
+	s := make([]string, 0, 17)
 	s = append(s, "&record.Virtual{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	if this.Union != nil {
@@ -2253,6 +2421,14 @@ func (this *Virtual_Deactivate) GoString() string {
 	}
 	s := strings.Join([]string{`&record.Virtual_Deactivate{` +
 		`Deactivate:` + fmt.Sprintf("%#v", this.Deactivate) + `}`}, ", ")
+	return s
+}
+func (this *Virtual_PendingFilament) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&record.Virtual_PendingFilament{` +
+		`PendingFilament:` + fmt.Sprintf("%#v", this.PendingFilament) + `}`}, ", ")
 	return s
 }
 func (this *Material) GoString() string {
@@ -2515,6 +2691,24 @@ func (m *Request) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintRecord(dAtA, i, uint64(len(m.Arguments)))
 		i += copy(dAtA[i:], m.Arguments)
 	}
+	dAtA[i] = 0x82
+	i++
+	dAtA[i] = 0x2
+	i++
+	i = encodeVarintRecord(dAtA, i, uint64(m.Sender.Size()))
+	n8, err := m.Sender.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n8
+	if len(m.APIRequestID) > 0 {
+		dAtA[i] = 0x8a
+		i++
+		dAtA[i] = 0x2
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(len(m.APIRequestID)))
+		i += copy(dAtA[i:], m.APIRequestID)
+	}
 	return i, nil
 }
 
@@ -2545,21 +2739,21 @@ func (m *Result) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Object.Size()))
-	n8, err := m.Object.MarshalTo(dAtA[i:])
+	n9, err := m.Object.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n8
+	i += n9
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n9, err := m.Request.MarshalTo(dAtA[i:])
+	n10, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n9
+	i += n10
 	if len(m.Payload) > 0 {
 		dAtA[i] = 0xb2
 		i++
@@ -2598,21 +2792,21 @@ func (m *Type) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n10, err := m.Domain.MarshalTo(dAtA[i:])
+	n11, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n10
+	i += n11
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n11, err := m.Request.MarshalTo(dAtA[i:])
+	n12, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n11
+	i += n12
 	if len(m.TypeDeclaration) > 0 {
 		dAtA[i] = 0xb2
 		i++
@@ -2651,31 +2845,29 @@ func (m *Code) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n12, err := m.Domain.MarshalTo(dAtA[i:])
+	n13, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n12
+	i += n13
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n13, err := m.Request.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n13
-	dAtA[i] = 0xb2
-	i++
-	dAtA[i] = 0x1
-	i++
-	i = encodeVarintRecord(dAtA, i, uint64(m.Code.Size()))
-	n14, err := m.Code.MarshalTo(dAtA[i:])
+	n14, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
 	i += n14
+	if len(m.Code) > 0 {
+		dAtA[i] = 0xb2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(len(m.Code)))
+		i += copy(dAtA[i:], m.Code)
+	}
 	if m.MachineType != 0 {
 		dAtA[i] = 0xb8
 		i++
@@ -2927,6 +3119,53 @@ func (m *Deactivate) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *PendingFilament) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PendingFilament) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.Polymorph))
+	}
+	dAtA[i] = 0xa2
+	i++
+	dAtA[i] = 0x1
+	i++
+	i = encodeVarintRecord(dAtA, i, uint64(m.RecordID.Size()))
+	n28, err := m.RecordID.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n28
+	if m.PreviousRecord != nil {
+		dAtA[i] = 0xaa
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.PreviousRecord.Size()))
+		n29, err := m.PreviousRecord.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n29
+	}
+	return i, nil
+}
+
 func (m *Virtual) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2950,11 +3189,11 @@ func (m *Virtual) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintRecord(dAtA, i, uint64(m.Polymorph))
 	}
 	if m.Union != nil {
-		nn28, err := m.Union.MarshalTo(dAtA[i:])
+		nn30, err := m.Union.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += nn28
+		i += nn30
 	}
 	if len(m.Signature) > 0 {
 		dAtA[i] = 0xc2
@@ -2975,11 +3214,11 @@ func (m *Virtual_Genesis) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Genesis.Size()))
-		n29, err := m.Genesis.MarshalTo(dAtA[i:])
+		n31, err := m.Genesis.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n29
+		i += n31
 	}
 	return i, nil
 }
@@ -2991,11 +3230,11 @@ func (m *Virtual_Child) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Child.Size()))
-		n30, err := m.Child.MarshalTo(dAtA[i:])
+		n32, err := m.Child.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n30
+		i += n32
 	}
 	return i, nil
 }
@@ -3007,11 +3246,11 @@ func (m *Virtual_Jet) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Jet.Size()))
-		n31, err := m.Jet.MarshalTo(dAtA[i:])
+		n33, err := m.Jet.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n31
+		i += n33
 	}
 	return i, nil
 }
@@ -3023,11 +3262,11 @@ func (m *Virtual_Request) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-		n32, err := m.Request.MarshalTo(dAtA[i:])
+		n34, err := m.Request.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n32
+		i += n34
 	}
 	return i, nil
 }
@@ -3039,11 +3278,11 @@ func (m *Virtual_Result) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Result.Size()))
-		n33, err := m.Result.MarshalTo(dAtA[i:])
+		n35, err := m.Result.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n33
+		i += n35
 	}
 	return i, nil
 }
@@ -3055,11 +3294,11 @@ func (m *Virtual_Type) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Type.Size()))
-		n34, err := m.Type.MarshalTo(dAtA[i:])
+		n36, err := m.Type.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n34
+		i += n36
 	}
 	return i, nil
 }
@@ -3071,11 +3310,11 @@ func (m *Virtual_Code) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Code.Size()))
-		n35, err := m.Code.MarshalTo(dAtA[i:])
+		n37, err := m.Code.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n35
+		i += n37
 	}
 	return i, nil
 }
@@ -3087,11 +3326,11 @@ func (m *Virtual_Activate) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Activate.Size()))
-		n36, err := m.Activate.MarshalTo(dAtA[i:])
+		n38, err := m.Activate.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n36
+		i += n38
 	}
 	return i, nil
 }
@@ -3103,11 +3342,11 @@ func (m *Virtual_Amend) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Amend.Size()))
-		n37, err := m.Amend.MarshalTo(dAtA[i:])
+		n39, err := m.Amend.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n37
+		i += n39
 	}
 	return i, nil
 }
@@ -3119,11 +3358,27 @@ func (m *Virtual_Deactivate) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Deactivate.Size()))
-		n38, err := m.Deactivate.MarshalTo(dAtA[i:])
+		n40, err := m.Deactivate.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n38
+		i += n40
+	}
+	return i, nil
+}
+func (m *Virtual_PendingFilament) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.PendingFilament != nil {
+		dAtA[i] = 0xfa
+		i++
+		dAtA[i] = 0x6
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.PendingFilament.Size()))
+		n41, err := m.PendingFilament.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n41
 	}
 	return i, nil
 }
@@ -3155,22 +3410,22 @@ func (m *Material) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Virtual.Size()))
-		n39, err := m.Virtual.MarshalTo(dAtA[i:])
+		n42, err := m.Virtual.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n39
+		i += n42
 	}
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.JetID.Size()))
-	n40, err := m.JetID.MarshalTo(dAtA[i:])
+	n43, err := m.JetID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n40
+	i += n43
 	if len(m.Signature) > 0 {
 		dAtA[i] = 0xc2
 		i++
@@ -3283,6 +3538,12 @@ func (m *Request) Size() (n int) {
 	if l > 0 {
 		n += 2 + l + sovRecord(uint64(l))
 	}
+	l = m.Sender.Size()
+	n += 2 + l + sovRecord(uint64(l))
+	l = len(m.APIRequestID)
+	if l > 0 {
+		n += 2 + l + sovRecord(uint64(l))
+	}
 	return n
 }
 
@@ -3339,8 +3600,10 @@ func (m *Code) Size() (n int) {
 	n += 2 + l + sovRecord(uint64(l))
 	l = m.Request.Size()
 	n += 2 + l + sovRecord(uint64(l))
-	l = m.Code.Size()
-	n += 2 + l + sovRecord(uint64(l))
+	l = len(m.Code)
+	if l > 0 {
+		n += 2 + l + sovRecord(uint64(l))
+	}
 	if m.MachineType != 0 {
 		n += 2 + sovRecord(uint64(m.MachineType))
 	}
@@ -3415,6 +3678,24 @@ func (m *Deactivate) Size() (n int) {
 	n += 2 + l + sovRecord(uint64(l))
 	l = m.PrevState.Size()
 	n += 2 + l + sovRecord(uint64(l))
+	return n
+}
+
+func (m *PendingFilament) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovRecord(uint64(m.Polymorph))
+	}
+	l = m.RecordID.Size()
+	n += 2 + l + sovRecord(uint64(l))
+	if m.PreviousRecord != nil {
+		l = m.PreviousRecord.Size()
+		n += 2 + l + sovRecord(uint64(l))
+	}
 	return n
 }
 
@@ -3557,6 +3838,18 @@ func (m *Virtual_Deactivate) Size() (n int) {
 	}
 	return n
 }
+func (m *Virtual_PendingFilament) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.PendingFilament != nil {
+		l = m.PendingFilament.Size()
+		n += 2 + l + sovRecord(uint64(l))
+	}
+	return n
+}
 func (m *Material) Size() (n int) {
 	if m == nil {
 		return 0
@@ -3643,6 +3936,8 @@ func (this *Request) String() string {
 		`Prototype:` + fmt.Sprintf("%v", this.Prototype) + `,`,
 		`Method:` + fmt.Sprintf("%v", this.Method) + `,`,
 		`Arguments:` + fmt.Sprintf("%v", this.Arguments) + `,`,
+		`Sender:` + fmt.Sprintf("%v", this.Sender) + `,`,
+		`APIRequestID:` + fmt.Sprintf("%v", this.APIRequestID) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -3729,6 +4024,18 @@ func (this *Deactivate) String() string {
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
 		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`PrevState:` + fmt.Sprintf("%v", this.PrevState) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *PendingFilament) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&PendingFilament{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`RecordID:` + fmt.Sprintf("%v", this.RecordID) + `,`,
+		`PreviousRecord:` + fmt.Sprintf("%v", this.PreviousRecord) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -3841,6 +4148,16 @@ func (this *Virtual_Deactivate) String() string {
 	}
 	s := strings.Join([]string{`&Virtual_Deactivate{`,
 		`Deactivate:` + strings.Replace(fmt.Sprintf("%v", this.Deactivate), "Deactivate", "Deactivate", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Virtual_PendingFilament) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Virtual_PendingFilament{`,
+		`PendingFilament:` + strings.Replace(fmt.Sprintf("%v", this.PendingFilament), "PendingFilament", "PendingFilament", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4563,6 +4880,71 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 				m.Arguments = []byte{}
 			}
 			iNdEx = postIndex
+		case 32:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sender", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Sender.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 33:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field APIRequestID", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.APIRequestID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipRecord(dAtA[iNdEx:])
@@ -5074,8 +5456,9 @@ func (m *Code) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if err := m.Code.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+			m.Code = append(m.Code[:0], dAtA[iNdEx:postIndex]...)
+			if m.Code == nil {
+				m.Code = []byte{}
 			}
 			iNdEx = postIndex
 		case 23:
@@ -5826,6 +6209,146 @@ func (m *Deactivate) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *PendingFilament) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PendingFilament: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PendingFilament: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RecordID", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.RecordID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 21:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PreviousRecord", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			var v github_com_insolar_insolar_insolar.ID
+			m.PreviousRecord = &v
+			if err := m.PreviousRecord.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *Virtual) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -6223,6 +6746,41 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Union = &Virtual_Deactivate{v}
+			iNdEx = postIndex
+		case 111:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PendingFilament", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &PendingFilament{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Union = &Virtual_PendingFilament{v}
 			iNdEx = postIndex
 		case 200:
 			if wireType != 2 {

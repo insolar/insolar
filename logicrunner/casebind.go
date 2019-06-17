@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/insolar/flow"
 )
 
 type CaseRequest struct {
@@ -65,7 +66,7 @@ func NewCaseBindFromExecutorResultsMessage(msg *message.ExecutorResults) *CaseBi
 	panic("not implemented")
 }
 
-func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBindRequest {
+func (cb *CaseBind) getCaseBindForMessage(_ context.Context) []message.CaseBindRequest {
 	return make([]message.CaseBindRequest, 0)
 	// TODO: we don't validate at the moment, just send empty case bind
 	//
@@ -195,8 +196,14 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 		msg:  msg,
 		role: insolar.DynamicRoleVirtualValidator,
 		lr:   lr,
+		pulseNumber: lr.pulse(ctx).PulseNumber,
 	}
 	if err := procCheckRole.Proceed(ctx); err != nil {
+		// rewrite "can't execute this object" to "flow cancelled" for force retry message
+		// just temporary fix till mb moved to watermill
+		if err == flow.ErrCancelled || err == ErrCantExecute {
+			return nil, flow.ErrCancelled
+		}
 		return nil, errors.Wrap(err, "[ HandleValidateCaseBindMessage ] can't play role")
 	}
 
@@ -220,15 +227,11 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
 	ctx = loggerWithTargetID(ctx, inmsg)
 	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidationResultsMessage starts ...")
-	msg, ok := inmsg.Message().(*message.ValidationResults)
+	_, ok := inmsg.Message().(*message.ValidationResults)
 	if !ok {
 		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
 	}
 
-	c := lr.GetConsensus(ctx, msg.RecordRef)
-	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
-		return nil, err
-	}
 	return &reply.OK{}, nil
 }
 

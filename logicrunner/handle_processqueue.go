@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 type ProcessExecutionQueue struct {
@@ -35,8 +36,13 @@ type ProcessExecutionQueue struct {
 }
 
 func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error {
+	ctx, span := instracer.StartSpan(ctx, "ProcessExecutionQueue")
+	defer span.End()
+
+	inslogger.FromContext(ctx).Debug("ProcessExecutionQueue")
+
 	lr := p.dep.lr
-	es := lr.getExecStateFromRef(ctx, p.Message.Payload)
+	es := lr.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
 	if es == nil {
 		return nil
 	}
@@ -44,46 +50,37 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 	for {
 		es.Lock()
 		if len(es.Queue) == 0 && es.LedgerQueueElement == nil {
-			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
+			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty. Ref: ", es.Ref.String())
 			es.QueueProcessorActive = false
-			es.Current = nil
+
+			if mutable := es.CurrentList.GetMutable(); mutable != nil {
+				es.CurrentList.Delete(*mutable.LogicContext.Request)
+			}
 			es.Unlock()
 			return nil
 		}
 
-		var qe ExecutionQueueElement
+		var transcript Transcript
 		if es.LedgerQueueElement != nil {
-			qe = *es.LedgerQueueElement
+			transcript = *es.LedgerQueueElement
 			es.LedgerQueueElement = nil
 		} else {
-			qe, es.Queue = es.Queue[0], es.Queue[1:]
+			transcript, es.Queue = es.Queue[0], es.Queue[1:]
 		}
 
-		sender := qe.parcel.GetSender()
-		current := CurrentExecution{
-			RequestRef:    qe.request,
-			RequesterNode: &sender,
-			Context:       qe.ctx,
-		}
-		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
-			current.Request = &msg.Request
-		} else {
-			panic("Not a call method message, should never happen")
-		}
-		es.Current = &current
-
+		es.CurrentList.Set(*transcript.RequestRef, &transcript)
 		es.Unlock()
 
-		lr.executeOrValidate(current.Context, es, qe.parcel)
+		lr.executeOrValidate(transcript.Context, es, &transcript)
 
-		if qe.fromLedger {
+		if transcript.FromLedger {
 			pub := p.dep.Publisher
 			err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, p.Message.Payload, getLedgerPendingRequestMsg))
 			if err != nil {
 				inslogger.FromContext(ctx).Warnf("can't send processExecutionQueueMsg: ", err)
 			}
-
 		}
+		es.Finished = append(es.Finished, &transcript)
 
 		lr.finishPendingIfNeeded(ctx, es)
 	}
@@ -98,6 +95,9 @@ type StartQueueProcessorIfNeeded struct {
 }
 
 func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) error {
+	ctx, span := instracer.StartSpan(ctx, "StartQueueProcessorIfNeeded")
+	defer span.End()
+
 	s.es.Lock()
 	defer s.es.Unlock()
 
@@ -118,9 +118,6 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 		return nil
 	}
 
-	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-	s.es.QueueProcessorActive = true
-
 	pub := s.dep.Publisher
 	rawRef := s.ref.Bytes()
 	err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, processExecutionQueueMsg))
@@ -131,6 +128,9 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 	if err != nil {
 		return errors.Wrap(err, "can't send getLedgerPendingRequestMsg")
 	}
+
+	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+	s.es.QueueProcessorActive = true
 
 	return nil
 }

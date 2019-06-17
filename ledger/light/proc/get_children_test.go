@@ -1,3 +1,19 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package proc
 
 import (
@@ -67,7 +83,14 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	}
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	indexMemoryStor := object.NewInMemoryIndex()
+	ra := object.NewRecordAccessorMock(t)
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
+		return record.Material{}, object.ErrNotFound
+	}
+	rsm := object.NewRecordStorageMock(t)
+	rsm.ForIDFunc = ra.ForIDFunc
+
+	indexMemoryStor := object.NewInMemoryIndex(rsm, nil)
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
@@ -88,10 +111,7 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	gc.Dep.Coordinator = jc
 	gc.Dep.JetStorage = jet.NewStore()
 	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
-	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
-		return record.Material{}, object.ErrNotFound
-	}
+
 	gc.Dep.RecordAccessor = ra
 
 	tf := testutils.NewDelegationTokenFactoryMock(t)
@@ -120,7 +140,14 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	}
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	indexMemoryStor := object.NewInMemoryIndex()
+	ra := object.NewRecordAccessorMock(t)
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
+		return record.Material{}, object.ErrNotFound
+	}
+	rsm := object.NewRecordStorageMock(t)
+	rsm.ForIDFunc = ra.ForIDFunc
+
+	indexMemoryStor := object.NewInMemoryIndex(rsm, nil)
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
@@ -141,10 +168,6 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	gc.Dep.Coordinator = jc
 	gc.Dep.JetStorage = jet.NewStore()
 	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
-	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
-		return record.Material{}, object.ErrNotFound
-	}
 	gc.Dep.RecordAccessor = ra
 
 	tf := testutils.NewDelegationTokenFactoryMock(t)

@@ -226,8 +226,14 @@ func (jc *Coordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) (*i
 // IsBeyondLimit calculates if target pulse is behind clean-up limit
 // or if currentPN|targetPN didn't found in in-memory pulse-storage.
 func (jc *Coordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error) {
+	// Genesis case. When there is no any data on a lme
+	if targetPN <= insolar.GenesisPulse.PulseNumber {
+		return true, nil
+	}
+
 	backPN, err := jc.PulseCalculator.Backwards(ctx, currentPN, jc.lightChainLimit)
-	// We are not aware of pulses beyond limit. Returning false is the only way.
+	// We are not aware of pulses beyond limit. Returning false is the only way when the network is less than limit
+	// pulses old.
 	if err == pulse.ErrNotFound {
 		return false, nil
 	}
@@ -244,11 +250,6 @@ func (jc *Coordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN in
 
 // NodeForJet calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
 func (jc *Coordinator) NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
-	// Genesis case. When there is no any data on a lme
-	if targetPN <= insolar.GenesisPulse.PulseNumber {
-		return jc.Heavy(ctx, rootPN)
-	}
-
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
 		return nil, errors.Wrapf(err, "[IsBeyondLimit] failed, rootPN - %v, targetPN - %v", rootPN, targetPN)
@@ -262,11 +263,6 @@ func (jc *Coordinator) NodeForJet(ctx context.Context, jetID insolar.ID, rootPN,
 
 // NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
 func (jc *Coordinator) NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
-	// Genesis case. When there is no any data on a lme
-	if targetPN <= insolar.GenesisPulse.PulseNumber {
-		return jc.Heavy(ctx, rootPN)
-	}
-
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
 		return nil, err

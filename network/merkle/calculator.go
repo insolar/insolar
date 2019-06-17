@@ -80,7 +80,7 @@ func (c *calculator) Init(ctx context.Context) error {
 	return nil
 }
 
-func (c *calculator) getStateHash(role insolar.StaticRole) (OriginHash, error) {
+func (c *calculator) getStateHash(_ insolar.StaticRole) (OriginHash, error) {
 	// TODO: do something with role
 	return c.ArtifactManager.State()
 }

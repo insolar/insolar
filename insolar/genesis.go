@@ -43,17 +43,36 @@ func (r genesisBinary) ID() ID {
 
 // Ref returns genesis record reference.
 func (r genesisBinary) Ref() Reference {
-	id := r.ID()
-	return *NewReference(id, id)
+	return *NewReference(r.ID())
 }
 
-// DiscoveryNodeRegister carries data required for registering discovery node on genesis phase.
+// DiscoveryNodeRegister carries data required for registering discovery node via genesis.
 type DiscoveryNodeRegister struct {
 	Role      string
 	PublicKey string
 }
 
+// GenesisContractState carries data required for contract object creation via genesis.
+type GenesisContractState struct {
+	Name       string
+	ParentName string
+	Delegate   bool
+	Memory     []byte
+}
+
+// GenesisContractsConfig carries data required for contract object initialization via genesis.
+type GenesisContractsConfig struct {
+	RootBalance   uint
+	RootPublicKey string
+}
+
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
 type GenesisHeavyConfig struct {
+	// DiscoveryNodes is the list with discovery node info.
 	DiscoveryNodes []DiscoveryNodeRegister
+	// ContractsDir is the directory with contracts plugins and memory files.
+	PluginsDir      string
+	ContractsConfig GenesisContractsConfig
+	// Skip is flag for skipping genesis on heavy node. Useful for some test cases.
+	Skip bool
 }

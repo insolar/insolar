@@ -73,43 +73,23 @@ func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
 	return res
 }
 
+func (lr *LogicRunner) GetExecutionState(ref Ref) *ExecutionState {
+	os := lr.GetObjectState(ref)
+	if os == nil {
+		return nil
+	}
+
+	os.Lock()
+	defer os.Unlock()
+	return os.ExecutionState
+}
+
 func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 	pulse, err := lr.PulseAccessor.Latest(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return &pulse
-}
-
-func (lr *LogicRunner) GetConsensus(ctx context.Context, ref Ref) *Consensus {
-	state := lr.UpsertObjectState(ref)
-
-	state.Lock()
-	defer state.Unlock()
-
-	if state.Consensus == nil {
-		validators, err := lr.JetCoordinator.QueryRole(
-			ctx,
-			insolar.DynamicRoleVirtualValidator,
-			*ref.Record(),
-			lr.pulse(ctx).PulseNumber,
-		)
-		if err != nil {
-			panic("cannot QueryRole")
-		}
-		// TODO INS-732 check pulse of message and ensure we deal with right validator
-		state.Consensus = newConsensus(lr, validators)
-	}
-	return state.Consensus
-}
-
-func (st *ObjectState) RefreshConsensus() {
-	if st.Consensus == nil {
-		return
-	}
-
-	st.Consensus.ready = true
-	st.Consensus = nil
 }
 
 func (st *ObjectState) StartValidation(ref Ref) *ExecutionState {
@@ -119,6 +99,6 @@ func (st *ObjectState) StartValidation(ref Ref) *ExecutionState {
 	if st.Validation != nil {
 		panic("Unexpected. Validation already in progress")
 	}
-	st.Validation = &ExecutionState{Ref: ref}
+	st.Validation = NewExecutionState(ref)
 	return st.Validation
 }

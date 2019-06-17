@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package preprocessor
 
 import (

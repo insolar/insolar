@@ -43,6 +43,7 @@ type HotData struct {
 		RecentStorageProvider recentstorage.Provider
 		MessageBus            insolar.MessageBus
 		IndexBucketModifier   object.IndexBucketModifier
+		PendingModifier       object.PendingModifier
 		JetStorage            jet.Storage
 		JetFetcher            jet.Fetcher
 		JetReleaser           hot.JetReleaser
@@ -125,12 +126,12 @@ func (p *HotData) process(ctx context.Context) error {
 		err = p.Dep.IndexBucketModifier.SetBucket(
 			ctx,
 			p.msg.PulseNumber,
-			object.IndexBucket{
+			object.FilamentIndex{
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
-				LifelineLastUsed: meta.LastUsed,
-				Results:          []insolar.ID{},
-				Requests:         []insolar.ID{}},
+				LifelineLastUsed: meta.LifelineLastUsed,
+				PendingRecords:   []insolar.ID{},
+			},
 		)
 		if err != nil {
 			logger.Error(errors.Wrapf(err, "[handleHotRecords] failed to save index - %v", meta.ObjID.DebugString()))

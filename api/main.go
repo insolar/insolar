@@ -30,6 +30,7 @@ import (
 	"github.com/gorilla/rpc/v2"
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
@@ -53,6 +54,7 @@ type Runner struct {
 	ServiceNetwork      insolar.Network             `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	ArtifactManager     artifacts.Client            `inject:""`
+	JetCoordinator      jet.Coordinator             `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
@@ -145,10 +147,15 @@ func (ar *Runner) IsAPIRunner() bool {
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
 	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork)
-	http.HandleFunc("/healthcheck", hc.CheckHandler)
+
+	router := http.NewServeMux()
+	ar.server.Handler = router
 	ar.SeedManager = seedmanager.New()
-	http.HandleFunc(ar.cfg.Call, ar.callHandler())
-	http.Handle(ar.cfg.RPC, ar.rpcServer)
+
+	router.HandleFunc("/healthcheck", hc.CheckHandler)
+	router.HandleFunc(ar.cfg.Call, ar.callHandler())
+	router.Handle(ar.cfg.RPC, ar.rpcServer)
+
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")
 	inslog.Info("Config: ", ar.cfg)
@@ -157,8 +164,8 @@ func (ar *Runner) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Can't start listening")
 	}
 	go func() {
-		if err := ar.server.Serve(listener); err != nil {
-			inslog.Error("Httpserver: ListenAndServe() error: ", err)
+		if err := ar.server.Serve(listener); err != http.ErrServerClosed {
+			inslog.Error("Http server: ListenAndServe() error: ", err)
 		}
 	}()
 	return nil

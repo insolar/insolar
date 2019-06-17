@@ -66,9 +66,7 @@ func CloneIndex(idx Lifeline) Lifeline {
 
 	if idx.Delegates != nil {
 		cp := make([]LifelineDelegate, len(idx.Delegates))
-		for k, v := range idx.Delegates {
-			cp[k] = v
-		}
+		copy(cp, idx.Delegates)
 		idx.Delegates = cp
 	} else {
 		idx.Delegates = []LifelineDelegate{}

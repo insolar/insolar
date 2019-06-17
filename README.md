@@ -73,12 +73,12 @@ Run launcher:
 
     scripts/insolard/launchnet.sh -g
 
-It will generate genesis data and launch a number of nodes. Default number is 5, you can uncomment more nodes in `scripts/insolard/bootstrap/genesis_template.yaml`.
+It will generate bootstrap data and launch a number of nodes. Default number is 5, you can uncomment more nodes in `scripts/insolard/bootstrap_template.yaml`.
 
 After node processes are started you will see messages like “NODE 3 STARTED in background” in log and a PulseWatcher will be started.
 When you see `Ready` in Insolar State you can run test scripts and benchmarks:
 
-    bin/apirequester -k=scripts/insolard/configs/root_member_keys.json -u=http://127.0.0.1:19101/api
+    bin/apirequester -k=.artifacts/launchnet/configs/root_member_keys.json -u=http://127.0.0.1:19101/api
 
 This tool runs a scenario: creates a number of users with wallets and transfers some money between them. For the first time, the script does it sequentially, upon subsequent runs — concurrently.
 

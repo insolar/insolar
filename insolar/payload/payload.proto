@@ -12,6 +12,7 @@ message Meta {
     bytes Sender   = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Receiver = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Pulse    = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes Origin   = 42;
 }
 
 message Error {
@@ -21,6 +22,7 @@ message Error {
     string Text = 21;
 }
 
+
 message GetObject {
     uint32 Polymorph = 16;
 
@@ -28,10 +30,52 @@ message GetObject {
     bytes ObjectRequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
-message SetRecord {
+message GetCode {
+    uint32 Polymorph = 16;
+
+    bytes CodeID     = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message PassState {
+    uint32 Polymorph = 16;
+
+    bytes Origin   = 20;
+    bytes StateID  = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes CorrelationID = 22;
+}
+
+message Pass {
+    uint32 Polymorph = 16;
+
+    bytes Origin   = 20;
+    bytes CorrelationID = 22;
+}
+
+message SetCode {
     uint32 Polymorph = 16;
 
     bytes Record = 20;
+    bytes Code   = 21;
+}
+
+message Index {
+    uint32 Polymorph = 16;
+
+    bytes Index = 20;
+}
+
+message Code {
+    uint32 Polymorph = 16;
+
+    bytes Record   = 20;
+    bytes Code     = 21;
+}
+
+message State {
+    uint32 Polymorph = 16;
+
+    bytes Record   = 20;
+    bytes Memory   = 21;
 }
 
 message ID {

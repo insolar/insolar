@@ -101,6 +101,7 @@ type Message interface {
 type MessageSignature interface {
 	GetSign() []byte
 	GetSender() Reference
+	SetSender(Reference)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Parcel -o ../testutils -s _mock.go
@@ -163,10 +164,13 @@ type MessageBus interface {
 	OnPulse(context.Context, Pulse) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.MessageBusLocker -o ../testutils -s _mock.go
-type MessageBusLocker interface {
-	Lock(ctx context.Context)
-	Unlock(ctx context.Context)
+//go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go
+
+// GlobalInsolarLock is lock of all incoming and outcoming network calls.
+// It's not intended to be used in multiple threads. And main use of it is `Set` method of `PulseManager`.
+type GlobalInsolarLock interface {
+	Acquire(ctx context.Context)
+	Release(ctx context.Context)
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
@@ -188,6 +192,9 @@ const (
 	TypeValidationResults
 	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
 	TypePendingFinished
+	// TypeAdditionalCallFromPreviousExecutor is sent by the old executor to the current executor when Flow
+	// cancels after registering the request but before adding the request to the execution queue.
+	TypeAdditionalCallFromPreviousExecutor
 	// TypeStillExecuting is sent by an old executor on pulse switch if it wants to continue executing
 	// to the current executor
 	TypeStillExecuting
@@ -226,6 +233,8 @@ const (
 	TypeGetRequest
 	// TypeGetPendingRequestID fetches a pending request id from ledger
 	TypeGetPendingRequestID
+	// TypeGetPendingFilament fetches a part of a pending-filament from another light
+	TypeGetPendingFilament
 
 	// Heavy replication
 
@@ -238,11 +247,6 @@ const (
 
 	// TypeGenesisRequest used for bootstrap object generation.
 	TypeGenesisRequest
-
-	// NetworkCoordinator
-
-	// TypeNodeSignRequest used to request sign for new node
-	TypeNodeSignRequest
 )
 
 // DelegationTokenType is an enum type of delegation token

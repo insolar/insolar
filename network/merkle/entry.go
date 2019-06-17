@@ -74,11 +74,11 @@ type GlobuleEntry struct {
 }
 
 func (ge *GlobuleEntry) hash(helper *merkleHelper) ([]byte, error) {
-	nodeEntryByRole := nodeEntryByRole(ge.PulseEntry, ge.ProofSet)
-	var bucketHashes [][]byte
+	neByRole := nodeEntryByRole(ge.PulseEntry, ge.ProofSet)
+	bucketHashes := make([][]byte, 0, len(insolar.AllStaticRoles))
 
 	for _, role := range insolar.AllStaticRoles {
-		roleEntries, ok := nodeEntryByRole[role]
+		roleEntries, ok := neByRole[role]
 		if !ok {
 			continue
 		}
@@ -110,7 +110,7 @@ type CloudEntry struct {
 }
 
 func (ce *CloudEntry) hash(helper *merkleHelper) ([]byte, error) {
-	var result [][]byte
+	result := make([][]byte, 0, len(ce.ProofSet))
 
 	for _, proof := range ce.ProofSet {
 		globuleInfoHash := helper.globuleInfoHash(ce.PrevCloudHash, uint32(proof.GlobuleID), proof.NodeCount)
@@ -158,7 +158,7 @@ func sortEntries(roleEntries []*nodeEntry) {
 }
 
 func roleEntryRoot(roleEntries []*nodeEntry, helper *merkleHelper) ([]byte, error) {
-	var roleEntriesHashes [][]byte
+	roleEntriesHashes := make([][]byte, 0, len(roleEntries))
 	for index, entry := range roleEntries {
 		bucketEntryHash := helper.bucketEntryHash(uint32(index), entry.hash(helper))
 		roleEntriesHashes = append(roleEntriesHashes, bucketEntryHash)

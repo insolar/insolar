@@ -46,5 +46,5 @@ func (h *hashWrapper) BlockSize() int {
 }
 
 func (h *hashWrapper) Hash(b []byte) []byte {
-	return h.sumFunc(b)[:]
+	return h.sumFunc(b)
 }

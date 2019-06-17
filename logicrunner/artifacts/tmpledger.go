@@ -20,7 +20,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -80,7 +83,7 @@ func (l *TMPLedger) GetArtifactManager() Client {
 // private members (suitable for tests).
 func NewTestLedger(
 	am Client,
-	pm *pulsemanager.PulseManager,
+	pm insolar.PulseManager,
 	jc jet.Coordinator,
 ) *TMPLedger {
 	return &TMPLedger{
@@ -96,16 +99,16 @@ func NewTestLedger(
 func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *artifactmanager.MessageHandler, *object.InMemoryIndex) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
-	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	pcs := testutils.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
 	ps := pulse.NewStorageMem()
-	index := object.NewInMemoryIndex()
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	recordStorage := object.NewRecordMemory()
 	memoryMockDB := store.NewMemoryMockDB()
+	index := object.NewInMemoryIndex(recordStorage, testutils.NewPlatformCryptographyScheme())
 
 	cm := &component.Manager{}
 	js := jet.NewStore()
@@ -126,16 +129,13 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		RecordModifier:        recordStorage,
 		IndexLifelineModifier: index,
 	}
-	_, err := genesisBaseRecord.CreateIfNeeded(ctx)
+	err := genesisBaseRecord.Create(ctx)
 	if err != nil {
 		t.Error(err, "failed to create base genesis record")
 	}
 
 	recordAccessor := recordStorage
 	recordModifier := recordStorage
-
-	am := NewClient()
-	am.PCS = testutils.NewPlatformCryptographyScheme()
 
 	pm := pulsemanager.NewPulseManager()
 	jc := jet.NewCoordinatorMock(mc)
@@ -144,6 +144,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	jc.HeavyMock.Return(&insolar.Reference{}, nil)
 	jc.MeMock.Return(insolar.Reference{})
 	jc.IsBeyondLimitMock.Return(false, nil)
+	jc.QueryRoleMock.Return([]insolar.Reference{{}}, nil)
 
 	// Init components.
 	if c.MessageBus == nil {
@@ -164,7 +165,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(index, index, index, &conf)
+	handler := artifactmanager.NewMessageHandler(index, index, index, index, index, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
 	handler.LifelineIndex = index
@@ -185,6 +186,12 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	handler.PCS = pcs
 	handler.JetCoordinator = jc
 
+	clientSender, serverSender := makeSender(ps, jc, handler.FlowDispatcher.Process)
+
+	handler.Sender = serverSender
+
+	am := NewClient(clientSender)
+	am.PCS = testutils.NewPlatformCryptographyScheme()
 	am.DefaultBus = c.MessageBus
 	am.JetCoordinator = jc
 
@@ -259,4 +266,53 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	l := NewTestLedger(am, pm, jc)
 
 	return l, handler, index
+}
+
+type pubSubMock struct {
+	bus     *bus.Bus
+	handler message.HandlerFunc
+	pulses  pulse.Accessor
+}
+
+func (p *pubSubMock) Publish(topic string, messages ...*message.Message) error {
+	for _, msg := range messages {
+		pn, err := p.pulses.Latest(context.Background())
+		if err != nil {
+			return err
+		}
+		pl := payload.Meta{
+			Payload: msg.Payload,
+			Pulse:   pn.PulseNumber,
+		}
+		buf, err := pl.Marshal()
+		if err != nil {
+			return err
+		}
+		msg.Payload = buf
+		_, _ = p.bus.IncomingMessageRouter(p.handler)(msg)
+	}
+	return nil
+}
+
+func (p *pubSubMock) handle(msg *message.Message) ([]*message.Message, error) { // nolint
+	return p.handler(msg)
+}
+
+func (p *pubSubMock) Close() error {
+	return nil
+}
+
+func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.HandlerFunc) (bus.Sender, bus.Sender) {
+	clientPub := &pubSubMock{
+		pulses:  pulses,
+		handler: handle,
+	}
+	serverPub := &pubSubMock{
+		pulses: pulses,
+	}
+	clientBus := bus.NewBus(clientPub, pulses, jets)
+	serverBus := bus.NewBus(serverPub, pulses, jets)
+	clientPub.bus = serverBus
+	serverPub.bus = clientBus
+	return clientBus, serverBus
 }

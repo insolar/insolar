@@ -18,60 +18,67 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetObject struct {
-	dep *proc.Dependencies
+	dep     *proc.Dependencies
+	message *message.Message
+	passed  bool
+}
 
-	Message *watermillMsg.Message
-	Parcel  insolar.Parcel
+func NewGetObject(dep *proc.Dependencies, msg *message.Message, passed bool) *GetObject {
+	return &GetObject{
+		dep:     dep,
+		message: msg,
+		passed:  passed,
+	}
 }
 
 func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := s.Parcel.Message().(*message.GetObject)
-	ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
-
-	var jetID insolar.JetID
-	var pn insolar.PulseNumber
-	if s.Parcel.DelegationToken() == nil {
-		jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.Message)
-		s.dep.FetchJet(jet)
-		if err := f.Procedure(ctx, jet, false); err != nil {
-			return err
-		}
-		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message)
-		s.dep.WaitHot(hot)
-		if err := f.Procedure(ctx, hot, false); err != nil {
-			return err
-		}
-
-		jetID = jet.Result.Jet
-		pn = flow.Pulse(ctx)
-	} else {
-		// Workaround to fetch object states.
-		jet := proc.NewFetchJet(*msg.Head.Record(), msg.State.Pulse(), s.Message)
-		s.dep.FetchJet(jet)
-		if err := f.Procedure(ctx, jet, false); err != nil {
-			return err
-		}
-		jetID = jet.Result.Jet
-		pn = msg.State.Pulse()
+	pl, err := payload.UnmarshalFromMeta(s.message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload")
+	}
+	msg, ok := pl.(*payload.GetObject)
+	if !ok {
+		return fmt.Errorf("unexpected payload type: %T", pl)
 	}
 
-	idx := proc.NewGetIndex(msg.Head, jetID, s.Message, pn)
-	s.dep.GetIndex(idx)
+	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
+
+	passIfNotExecutor := !s.passed
+	jet := proc.NewCheckJet(msg.ObjectID, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.CheckJet(jet)
+	if err := f.Procedure(ctx, jet, false); err != nil {
+		if err == proc.ErrNotExecutor && passIfNotExecutor {
+			return nil
+		}
+		return err
+	}
+	objJetID := jet.Result.Jet
+
+	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHotWM(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
+	idx := proc.NewGetIndexWM(msg.ObjectID, objJetID, s.message)
+	s.dep.GetIndexWM(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 
-	send := proc.NewSendObject(s.Message, s.Parcel, jetID, idx.Result.Index)
+	send := proc.NewSendObject(s.message, msg.ObjectID, idx.Result.Index)
 	s.dep.SendObject(send)
 	return f.Procedure(ctx, send, false)
 }

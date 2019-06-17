@@ -23,27 +23,30 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/insolar/utils"
 )
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	MessageBus    insolar.MessageBus `inject:""`
-	ResultMutex   sync.Mutex
-	ResultMap     map[uint64]chan *message.ReturnResults
-	Sequence      uint64
-	PulseAccessor pulse.Accessor `inject:""`
+	MessageBus     insolar.MessageBus `inject:""`
+	ResultMutex    sync.Mutex
+	ResultMap      map[uint64]chan *message.ReturnResults
+	Sequence       uint64
+	PulseAccessor  pulse.Accessor  `inject:""`
+	JetCoordinator jet.Coordinator `inject:""`
 	// callTimeout is mainly needed for unit tests which
 	// sometimes may unpredictably fail on CI with a default timeout
 	callTimeout time.Duration
@@ -91,6 +94,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 			Object:    ref,
 			Method:    method,
 			Arguments: args,
+			APIRequestID: utils.TraceID(ctx),
 		},
 	}
 
@@ -113,6 +117,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	if msg.Nonce == 0 {
 		msg.Nonce = randomUint64()
 	}
+	msg.Sender = cr.JetCoordinator.Me()
 
 	var seq uint64
 	var ch chan *message.ReturnResults
@@ -128,7 +133,11 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		cr.ResultMutex.Unlock()
 	}
 
-	sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
+	sender := messagebus.BuildSender(
+		cr.MessageBus.Send,
+		messagebus.RetryIncorrectPulse(cr.PulseAccessor),
+		messagebus.RetryFlowCancelled(cr.PulseAccessor),
+	)
 	res, err := sender(ctx, msg, nil)
 
 	if err != nil {
@@ -147,11 +156,11 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
 	defer cancel()
 
-	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
+	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request, ". Method: ", msg.Method, ". SeqId: ", seq)
 
 	select {
 	case ret := <-ch:
-		inslogger.FromContext(ctx).Debug("Got Method results")
+		inslogger.FromContext(ctx).Debug("Got Method results. SeqId: ", seq)
 		if ret.Error != "" {
 			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}

@@ -109,13 +109,13 @@ func (d *Dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, 
 // Process handles incoming message.
 func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	ctx := context.Background()
-	logger := inslogger.FromContext(ctx)
+
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize meta payload")
+		return nil, errors.Wrap(err, "failed to unmarshal meta")
 	}
-	ctx, _ = inslogger.WithField(ctx, "pulse", fmt.Sprint(meta.Pulse))
+	ctx, logger := inslogger.WithField(ctx, "pulse", fmt.Sprintf("%d", meta.Pulse))
 	ctx = pulse.ContextWith(ctx, meta.Pulse)
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
 	go func() {
@@ -123,7 +123,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 		handle := d.getHandleByPulse(meta.Pulse)
 		err := f.Run(ctx, handle(msg))
 		if err != nil {
-			logger.Error("Handling failed: ", err)
+			logger.Error(errors.Wrap(err, "Handling failed"))
 		}
 	}()
 	return nil, nil

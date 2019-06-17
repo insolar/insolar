@@ -48,5 +48,5 @@
 9. Launch benchmark:
      ```
      kubectl exec -ti seed-0 -c insolard  -- bash  # login to first insolard node
-     /go/bin/benchmark -c 2 -r 10 -k=/opt/bootstrap-config/root_member_keys.json -u "http://seed-0:19191/api". # start benchmark
+     /go/bin/benchmark -c 2 -r 10 -k=/opt/insolar/config/root_member_keys.json -u "http://seed-0:19191/api". # start benchmark
      ```

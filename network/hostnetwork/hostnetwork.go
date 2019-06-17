@@ -162,13 +162,9 @@ func (hn *hostNetwork) Stop(ctx context.Context) error {
 
 func (hn *hostNetwork) buildRequest(ctx context.Context, packetType types.PacketType,
 	requestData interface{}, receiver *host.Host) *packet.Packet {
-	result := &packet.Packet{
-		Sender:    hn.getOrigin(),
-		Receiver:  receiver,
-		RequestID: uint64(hn.sequenceGenerator.Generate()),
-		TraceID:   inslogger.TraceID(ctx),
-		Type:      uint32(packetType),
-	}
+
+	result := packet.NewPacket(hn.getOrigin(), receiver, packetType, uint64(hn.sequenceGenerator.Generate()))
+	result.TraceID = inslogger.TraceID(ctx)
 	result.SetRequest(requestData)
 	return result
 }
@@ -178,9 +174,9 @@ func (hn *hostNetwork) PublicAddress() string {
 	return hn.getOrigin().Address.String()
 }
 
-func (hn *hostNetwork) handleRequest(p *packet.Packet) {
-	ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
-	logger.Debugf("Got %s request from host %s; RequestID: %d", p.GetType(), p.Sender, p.RequestID)
+func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.Packet) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("Got %s request from host %s; RequestID = %d", p.GetType(), p.Sender, p.RequestID)
 	handler, exist := hn.handlers[p.GetType()]
 	if !exist {
 		logger.Errorf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
@@ -217,7 +213,7 @@ func (hn *hostNetwork) SendRequestToHost(ctx context.Context, packetType types.P
 
 	p := hn.buildRequest(ctx, packetType, requestData, receiver)
 
-	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.Type, p.Receiver, p.RequestID)
+	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.GetType(), p.Receiver, p.RequestID)
 
 	f := hn.futureManager.Create(p)
 	err := SendPacket(ctx, hn.pool, p)
@@ -240,13 +236,8 @@ func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network
 
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Packet, responseData interface{}) network.Packet {
-	result := &packet.Packet{
-		Sender:    hn.getOrigin(),
-		Receiver:  request.GetSenderHost(),
-		RequestID: uint64(request.GetRequestID()),
-		TraceID:   inslogger.TraceID(ctx),
-		Type:      uint32(request.GetType()),
-	}
+	result := packet.NewPacket(hn.getOrigin(), request.GetSenderHost(), request.GetType(), uint64(request.GetRequestID()))
+	result.TraceID = inslogger.TraceID(ctx)
 	result.SetResponse(responseData)
 	return result
 }

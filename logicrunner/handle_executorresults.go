@@ -50,10 +50,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 
 	state.Lock()
 	if state.ExecutionState == nil {
-		state.ExecutionState = &ExecutionState{
-			Ref:   ref,
-			Queue: make([]ExecutionQueueElement, 0),
-		}
+		state.ExecutionState = NewExecutionState(ref)
 	}
 	es := state.ExecutionState
 	p.Result.es = es
@@ -64,7 +61,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	es.Lock()
 
 	if es.pending == message.InPending {
-		if es.Current != nil {
+		if !es.CurrentList.Empty() {
 			logger.Debug("execution returned to node that is still executing pending")
 
 			es.pending = message.NotPending
@@ -89,15 +86,12 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 
 	// prepare Queue
 	if p.msg.Queue != nil {
-		queueFromMessage := make([]ExecutionQueueElement, 0)
+		queueFromMessage := make([]Transcript, 0)
 		for _, qe := range p.msg.Queue {
 			queueFromMessage = append(
 				queueFromMessage,
-				ExecutionQueueElement{
-					ctx:     qe.Parcel.Context(context.Background()),
-					parcel:  qe.Parcel,
-					request: qe.Request,
-				})
+				*NewTranscript(qe.Parcel.Context(context.Background()), qe.Parcel, qe.Request, p.LR.pulse(ctx), es.Ref),
+			)
 		}
 		es.Queue = append(queueFromMessage, es.Queue...)
 	}

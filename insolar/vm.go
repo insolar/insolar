@@ -66,9 +66,28 @@ type LogicRunner interface {
 	OnPulse(context.Context, Pulse) error
 }
 
+// CallMode indicates whether we execute or validate
+type CallMode int
+
+const (
+	ExecuteCallMode CallMode = iota
+	ValidateCallMode
+)
+
+func (m CallMode) String() string {
+	switch m {
+	case ExecuteCallMode:
+		return "execute"
+	case ValidateCallMode:
+		return "validate"
+	default:
+		return "unknown"
+	}
+}
+
 // LogicCallContext is a context of contract execution
 type LogicCallContext struct {
-	Mode            string     // either "execution" or "validation"
+	Mode            CallMode   // either "execution" or "validation"
 	Callee          *Reference // Contract that was called
 	Request         *Reference // ref of request
 	Prototype       *Reference // Image of the callee

@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/messagebus"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
@@ -110,10 +109,6 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	}
 }
 
-var (
-	domainID = *genRandomID(0)
-)
-
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
 	_, err := rand.Read(buff[:])
@@ -124,59 +119,16 @@ func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 }
 
 func genRefWithID(id *insolar.ID) *insolar.Reference {
-	return insolar.NewReference(domainID, *id)
+	return insolar.NewReference(*id)
 }
 
 func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
-	code := []byte("test_code")
-	codeRef := testutils.RandomRef()
-
-	mb := testutils.NewMessageBusMock(s.T())
-	mb.SendFunc = func(p context.Context, p1 insolar.Message, p3 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		return &reply.Code{
-			Code: code,
-		}, nil
-	}
-
-	jc := jet.NewCoordinatorMock(s.T())
-	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
-	jc.MeMock.Return(insolar.Reference{})
-
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-
-	am := client{
-		DefaultBus:     mb,
-		PulseAccessor:  pa,
-		JetCoordinator: jc,
-		PCS:            s.scheme,
-		senders:        messagebus.NewSenders(),
-	}
-
-	desc, err := am.GetCode(s.ctx, codeRef)
-	receivedCode, err := desc.Code()
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), code, receivedCode)
-
-	mb.SendFunc = func(p context.Context, p1 insolar.Message, p3 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		s.T().Fatal("Func must not be called here")
-		return nil, nil
-	}
-
-	desc, err = am.GetCode(s.ctx, codeRef)
-	receivedCode, err = desc.Code()
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), code, receivedCode)
-
-}
-
 func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 	mc := minimock.NewController(s.T())
-	am := NewClient()
+	am := NewClient(nil)
 	mb := testutils.NewMessageBusMock(mc)
 
 	objRef := genRandomRef(0)
@@ -211,7 +163,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	defer mc.Finish()
 
 	cs := platformpolicy.NewPlatformCryptographyScheme()
-	am := NewClient()
+	am := NewClient(nil)
 	am.PCS = cs
 	pa := pulse.NewAccessorMock(s.T())
 	pa.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
@@ -301,13 +253,13 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 		}
 	}
 
-	am := NewClient()
+	am := NewClient(nil)
 	am.JetCoordinator = jc
 	am.DefaultBus = mb
 	am.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
+	_, res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
 
 	// Assert
 	require.NoError(s.T(), err)

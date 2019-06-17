@@ -42,6 +42,7 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
@@ -220,16 +221,16 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewInMemoryIndex()
+		indexes := object.NewInMemoryIndex(records, CryptoScheme)
 		writeController := hot.NewWriteController()
 
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
-		hots := recentstorage.NewRecentStorageProvider()
+		hots := recentstorage.NewProvider()
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, &conf)
+		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
@@ -249,8 +250,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.JetReleaser = waiter
 		handler.Sender = WmBus
 		handler.WriteAccessor = writeController
+		handler.Sender = WmBus
 
-		jetCalculator := jet.NewCalculator(Coordinator, Jets)
+		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
 			Jets,
 			Nodes,
@@ -271,6 +273,14 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 		)
 
+		jetSplitter := executor.NewJetSplitter(
+			Coordinator,
+			Jets,
+			Jets,
+			drops,
+			hots,
+		)
+
 		pm := pulsemanager.NewPulseManager(
 			conf,
 			drops,
@@ -279,9 +289,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 			records,
 			records,
+			jetSplitter,
 			indexes,
 			lthSyncer,
 			writeController,
+			indexes,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus
@@ -318,7 +330,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Requester,
 		Tokens,
 		Parcels,
-		artifacts.NewClient(),
+		artifacts.NewClient(WmBus),
 		Genesis,
 		API,
 		KeyProcessor,
