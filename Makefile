@@ -69,8 +69,13 @@ install-build-tools:
 	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
 	./scripts/build/fetchdeps github.com/gogo/protobuf/protoc-gen-gogoslick v1.2.1
 
+
+.PHONY: install-go-lib
+install-go-lib:
+	go get github.com/insolar/x-crypto
+
 .PHONY: install-deps
-install-deps: install-godep install-build-tools
+install-deps: install-godep install-build-tools install-go-lib
 
 .PHONY: pre-build
 pre-build: ensure generate
