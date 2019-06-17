@@ -153,7 +153,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	}
 
 	if postResp == nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Reponse is nil")
+		return nil, errors.New("[ GetResponseBodyPlatform ] Reponse is nil")
 	}
 
 	defer postResp.Body.Close()

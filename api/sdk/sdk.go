@@ -106,7 +106,7 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 	}
 
 	if len(response.MigrationDamonMembers) < insolar.GenesisAmountActiveMigrationDamonMembers {
-		return nil, errors.Wrap(err, "[ NewSDK ] need at least '"+strconv.Itoa(insolar.GenesisAmountActiveMigrationDamonMembers)+"' migration damons")
+		return nil, errors.New("[ NewSDK ] need at least '" + strconv.Itoa(insolar.GenesisAmountActiveMigrationDamonMembers) + "' migration damons")
 	}
 
 	for i := 0; i < insolar.GenesisAmountActiveMigrationDamonMembers; i++ {
