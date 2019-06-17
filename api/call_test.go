@@ -50,6 +50,11 @@ type TimeoutSuite struct {
 	delay chan struct{}
 }
 
+type APIresp struct {
+	Result string
+	Error  string
+}
+
 func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
@@ -57,6 +62,30 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 
 	close(suite.delay)
 	suite.api.cfg.Timeout = 60
+	seedString := base64.StdEncoding.EncodeToString(seed[:])
+
+	resp, err := requester.SendWithSeed(
+		suite.ctx,
+		CallUrl,
+		suite.user,
+		&requester.Request{},
+		seedString,
+	)
+	suite.NoError(err)
+
+	var result APIresp
+	err = json.Unmarshal(resp, &result)
+	suite.NoError(err)
+	suite.Equal("", result.Error)
+	suite.Equal("OK", result.Result)
+}
+
+func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
+	seed, err := suite.api.SeedGenerator.Next()
+	suite.NoError(err)
+	suite.api.SeedManager.Add(*seed)
+
+	suite.api.cfg.Timeout = 1
 
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
@@ -69,36 +98,13 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	)
 	suite.NoError(err)
 
-	var result requester.ContractAnswer
-	err = json.Unmarshal(resp, &result)
-	suite.NoError(err)
-	suite.Equal("", result.Error.Message)
-	suite.Equal("OK", result.Result.ContractResult)
-}
-
-func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
-	seed, err := suite.api.SeedGenerator.Next()
-	suite.NoError(err)
-	suite.api.SeedManager.Add(*seed)
-
-	suite.api.cfg.Timeout = 1
-
-	resp, err := requester.SendWithSeed(
-		suite.ctx,
-		CallUrl,
-		suite.user,
-		&requester.Request{},
-		string(seed[:]),
-	)
-	suite.NoError(err)
-
 	close(suite.delay)
 
-	var result requester.ContractAnswer
+	var result APIresp
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("Messagebus timeout exceeded", result.Error.Message)
-	suite.Equal("", result.Result.ContractResult)
+	suite.Equal("Messagebus timeout exceeded", result.Error)
+	suite.Equal("", result.Result)
 }
 
 func TestTimeoutSuite(t *testing.T) {
@@ -136,7 +142,6 @@ func TestTimeoutSuite(t *testing.T) {
 		return cert
 	}
 
-	// TODO: refactor this mock
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
 	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
 		switch method {
