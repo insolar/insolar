@@ -79,6 +79,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	es.Lock()
 	if es.Broker.HasLedgerRequest(ctx) != nil || !es.LedgerHasMoreRequests {
+		es.Unlock()
 		return nil
 	}
 	es.Unlock()

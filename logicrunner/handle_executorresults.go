@@ -141,7 +141,6 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 		}
 	}
 
-	// ref := msg.GetReference()
 	es := procInitializeExecutionState.Result.es
 	es.Broker.StartProcessorIfNeeded(ctx)
 	return nil

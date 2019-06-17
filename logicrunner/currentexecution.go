@@ -296,7 +296,7 @@ type ExecutionBroker struct {
 var ErrRetryLater = errors.New("Failed to start task, retry next time")
 
 func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Transcript) {
-	logger := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx).WithField("RequestReference", transcript.RequestRef)
 
 	if q.processFunc != nil {
 		err := q.processFunc(ctx, transcript, q.processFuncArgs)
@@ -305,8 +305,7 @@ func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Tran
 			q.finished.Push(transcript)
 			return
 		} else if err != ErrRetryLater {
-			// TODO: we should consider what should be done in that case
-			logger.Error("Failed to process immutable transcript:", err)
+			logger.Error("Failed to process immutable Transcript:", err)
 			return
 		}
 	}
@@ -402,15 +401,18 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 				}
 
 				// processing mutable queue
-				for elem := q.Get(ctx); elem != nil; elem = q.Get(ctx) {
-					err = q.processFunc(ctx, elem, q.processFuncArgs)
+				for transcript := q.Get(ctx); transcript != nil; transcript = q.Get(ctx) {
+					logger := logger.WithField("RequestReference", transcript.RequestRef)
+
+					err = q.processFunc(ctx, transcript, q.processFuncArgs)
 					if err == ErrRetryLater {
-						q.Prepend(ctx, false, elem)
+						q.Prepend(ctx, false, transcript)
 						break
 					} else if err != nil {
 						logger.Error("Failed to process transcript:", err)
 					}
-					q.finished.Push(elem)
+
+					q.finished.Push(transcript)
 				}
 			}
 

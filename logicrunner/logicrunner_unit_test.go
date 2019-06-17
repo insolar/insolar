@@ -160,22 +160,6 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	suite.Require().Equal(message.NotPending, es.pending)
 }
 
-/*
-func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending() {
-	es := NewExecutionState(testutils.RandomRef())
-	es.pending = message.InPending
-	es.Queue = append(es.Queue, Transcript{})
-
-	s := StartQueueProcessorIfNeeded{
-		es: es,
-	}
-
-	err := s.Present(suite.ctx, nil)
-
-	suite.Require().NoError(err)
-	suite.Require().Equal(message.InPending, es.pending)
-}*/
-
 func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor() {
 	table := []struct {
 		name                           string
@@ -185,23 +169,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name: "Happy path",
+			name:                           "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "ClarifyPendingState failed",
+			name:                           "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name: "StartQueueProcessorIfNeeded failed",
+			name:                           "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "Both procedures fail",
+			name:                           "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -248,8 +232,8 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 
 			h.handleActual(suite.ctx, &msg, f)
 
-			assert.Equal(suite.T(), test.expectedClarifyPendingStateCtr, atomic.LoadInt32(&clarifyPendingStateCtr))
 			os := suite.lr.UpsertObjectState(msg.ObjectReference)
+			assert.Equal(suite.T(), test.expectedClarifyPendingStateCtr, atomic.LoadInt32(&clarifyPendingStateCtr))
 			assert.Equal(suite.T(), test.expectedStartQueueProcessorCtr, os.ExecutionState.Broker.StartProcessorIfNeededCount)
 		})
 	}
@@ -1553,8 +1537,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, test.Broker.mutable.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 

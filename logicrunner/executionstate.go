@@ -194,8 +194,6 @@ func (es *ExecutionState) checkExecute(ctx context.Context) error {
 	return nil
 }
 
-// TODO: Payload for publisher.Publish is lost "in translation"
-//       We should check ways to obtain it
 func (es *ExecutionState) executeTranscript(ctx context.Context, t *Transcript, rawArgs interface{}) error {
 	args := rawArgs.(*ExecuteTranscriptArgs)
 	logger := inslogger.FromContext(ctx)
@@ -211,8 +209,7 @@ func (es *ExecutionState) executeTranscript(ctx context.Context, t *Transcript, 
 	// Ask ledger kindly to give us next pending task and continue execution
 	// note: should be done only once
 	args.ledgerChecked.Do(func() {
-		payload := t.RequestRef.Bytes()
-		wmMessage := makeWMMessage(ctx, payload, getLedgerPendingRequestMsg)
+		wmMessage := makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg)
 		if err := pub.Publish(InnerMsgTopic, wmMessage); err != nil {
 			logger.Warnf("can't send processExecutionQueueMsg: ", err)
 		}
@@ -231,8 +228,7 @@ func (es *ExecutionState) executeTranscript(ctx context.Context, t *Transcript, 
 	if t.FromLedger {
 		// we've already told ledger that we've processed it's task;
 		// trying to take another one
-		payload := t.RequestRef.Bytes()
-		wmMessage := makeWMMessage(ctx, payload, getLedgerPendingRequestMsg)
+		wmMessage := makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg)
 		if err := pub.Publish(InnerMsgTopic, wmMessage); err != nil {
 			logger.Warnf("can't send processExecutionQueueMsg: ", err)
 		}
