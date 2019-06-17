@@ -10,8 +10,22 @@ CERTS_KEYS=$CONFIG_DIR/certs
 ls -alhR /opt
 if [[ "$HOSTNAME" = "seed-0" && ! $(test -e /opt/insolar/config/finished) ]]
 then
-    echo "generate root member keys"
+#    echo "generate root member keys"
+#    insolar gen-key-pair > ${CONFIG_DIR}/root_member_keys.json
+
+    echo "generate members keys in dir: $CONFIG_DIR"
     insolar gen-key-pair > ${CONFIG_DIR}/root_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_admin_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_0_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_1_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_2_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_3_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_4_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_5_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_6_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_7_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_8_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_damon_9_member_keys.json
 
     echo "generate bootstrap files"
     mkdir -vp $CERTS_KEYS
