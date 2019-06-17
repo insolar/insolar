@@ -64,7 +64,7 @@ func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
 			break
 		}
 	}
-	var rv *Transcript = nil
+	var rv *Transcript
 	if toDelete != -1 {
 		rv = d.queue[toDelete]
 		d.queue = append(d.queue[:toDelete], d.queue[toDelete+1:]...)
@@ -281,9 +281,7 @@ type ExecutionBroker struct {
 	mutableLock sync.RWMutex
 	mutable     *TranscriptDequeue
 	immutable   *TranscriptDequeue
-
-	finishedLock sync.RWMutex
-	finished     *TranscriptDequeue
+	finished    *TranscriptDequeue
 
 	checkFunc       CheckCallback
 	processFunc     ExecuteTranscriptCallback
@@ -388,7 +386,7 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	// both cases means we knew what we are doing and so it's just an
 	// unneeded optimisation
 	if !q.processActive {
-		q.StartProcessorIfNeededCount += 1
+		q.StartProcessorIfNeededCount++
 		logger.Info("Starting a new queue processor")
 
 		go func() {

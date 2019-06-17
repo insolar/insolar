@@ -55,12 +55,6 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 
 	logger := inslogger.FromContext(ctx)
 
-	if es.pending == message.PendingUnknown {
-		additionalCallMsg.Pending = message.NotPending
-	} else {
-		additionalCallMsg.Pending = es.pending
-	}
-
 	es.Lock()
 	// We want to remove element we have just added to es.Queue to eliminate doubling
 	request := es.Broker.GetByReference(ctx, requestRef)
@@ -72,6 +66,11 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 			ObjectReference: es.Ref,
 			Parcel:          parcel,
 			Request:         requestRef,
+		}
+		if es.pending == message.PendingUnknown {
+			additionalCallMsg.Pending = message.NotPending
+		} else {
+			additionalCallMsg.Pending = es.pending
 		}
 
 		if _, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil); err != nil {
