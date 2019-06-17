@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -158,20 +158,13 @@ func (b *Bus) SendTarget(
 
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	msg.SetContext(ctx)
-	err := b.wrapMeta(msg, target, payload.MessageHash{})
+	wrapped, err := b.wrapMeta(msg, target, payload.MessageHash{})
 	if err != nil {
 		logger.Error("can't wrap meta message ", err.Error())
 		return nil, nil
 	}
-
-	h := b.pcs.IntegrityHasher()
-	_, err = h.Write(msg.Payload)
-	if err != nil {
-		logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
-		return nil, nil
-	}
 	msgHash := payload.MessageHash{}
-	err = msgHash.Unmarshal(h.Sum(nil))
+	err = msgHash.Unmarshal(wrapped.ID)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
 		return nil, nil
@@ -222,36 +215,20 @@ func (b *Bus) SendTarget(
 func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
 	logger := inslogger.FromContext(ctx)
 
-	buf, err := origin.Marshal()
-	if err != nil {
-		logger.Error(errors.Wrap(err, "failed to send reply"))
-		return
-	}
-	h := b.pcs.IntegrityHasher()
-	_, err = h.Write(buf)
-	if err != nil {
-		logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
-		return
-	}
 	originHash := payload.MessageHash{}
-	err = originHash.Unmarshal(h.Sum(nil))
+	err := originHash.Unmarshal(origin.ID)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
 		return
 	}
 
-	err = b.wrapMeta(reply, origin.Sender, originHash)
+	wrapped, err := b.wrapMeta(reply, origin.Sender, originHash)
 	if err != nil {
 		logger.Error("can't wrap meta message ", err.Error())
 		return
 	}
-	h = b.pcs.IntegrityHasher()
-	_, err = h.Write(reply.Payload)
-	if err != nil {
-		logger.Error(errors.Wrap(err, "failed to calculate origin hash"))
-		return
-	}
-	replyHash := h.Sum(nil)
+
+	replyHash := wrapped.ID
 
 	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	reply.SetContext(ctx)
@@ -268,27 +245,16 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 	return func(msg *message.Message) ([]*message.Message, error) {
 		logger := inslogger.FromContext(context.Background())
 
-		h := b.pcs.IntegrityHasher()
-		_, err := h.Write(msg.Payload)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "failed to calculate hash"))
-			return nil, nil
-		}
-		msgHash := payload.MessageHash{}
-		err = msgHash.Unmarshal(h.Sum(nil))
-		if err != nil {
-			logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
-			return nil, nil
-		}
-		msg.Metadata.Set("msg_hash", msgHash.String())
-		logger = logger.WithField("msg_hash", msgHash.String())
-
 		meta := payload.Meta{}
-		err = meta.Unmarshal(msg.Payload)
+		err := meta.Unmarshal(msg.Payload)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "failed to receive message"))
 			return nil, nil
 		}
+		msgHash := meta.OriginHash
+
+		msg.Metadata.Set("msg_hash", msgHash.String())
+		logger = logger.WithField("msg_hash", msgHash.String())
 
 		msg.Metadata.Set("pulse", meta.Pulse.String())
 
@@ -329,10 +295,10 @@ func (b *Bus) wrapMeta(
 	msg *message.Message,
 	receiver insolar.Reference,
 	originHash payload.MessageHash,
-) error {
+) (payload.Meta, error) {
 	latestPulse, err := b.pulses.Latest(context.Background())
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch pulse")
+		return payload.Meta{}, errors.Wrap(err, "failed to fetch pulse")
 	}
 	meta := payload.Meta{
 		Payload:    msg.Payload,
@@ -345,9 +311,9 @@ func (b *Bus) wrapMeta(
 
 	buf, err := meta.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to wrap message")
+		return payload.Meta{}, errors.Wrap(err, "failed to wrap message")
 	}
 	msg.Payload = buf
 
-	return nil
+	return meta, nil
 }
