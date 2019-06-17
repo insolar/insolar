@@ -45,7 +45,7 @@ type rpcRequest struct {
 	Method     string `json:"method"`
 }
 
-func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
+func writeReponse(response http.ResponseWriter, answer interface{}) {
 	serJSON, err := json.MarshalIndent(answer, "", "    ")
 	if err != nil {
 		log.Errorf("Can't serialize response\n")
@@ -67,14 +67,15 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	answer := map[string]interface{}{}
-	if params.Method == "CreateMember" {
-		answer["reference"] = TESTREFERENCE
+	var respData = Result{}
+
+	if params.Method == "contract.createMember" {
+		respData.ContractResult = TESTREFERENCE
 	} else {
-		answer["random_data"] = TESTSEED
+		respData.ContractResult = TESTSEED
 	}
 
-	writeReponse(response, answer)
+	writeReponse(response, respData)
 }
 
 func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
@@ -204,8 +205,10 @@ func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 
 func TestGetResponseBody(t *testing.T) {
 	data, err := GetResponseBodyContract(URL+"/call", Request{}, "")
+	result := Result{}
+	_ = json.Unmarshal(data, &result)
 	require.NoError(t, err)
-	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
+	require.Contains(t, result.ContractResult, "VGVzdA==")
 }
 
 func TestSetVerbose(t *testing.T) {
@@ -225,21 +228,19 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *Request) {
 	return userConf, reqConf
 }
 
-// TODO: refactor this test
 func TestSend(t *testing.T) {
-	t.Skip()
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
+	reqConf.Method = "contract.createMember"
 	resp, err := Send(ctx, URL, userConf, reqConf)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
 
-// TODO: refactor this test
 func TestSendWithSeed(t *testing.T) {
-	t.Skip()
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
+	reqConf.Method = "contract.createMember"
 	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, TESTSEED)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
