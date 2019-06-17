@@ -105,11 +105,11 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 		logLevel:              nil,
 	}
 
-	if len(response.MigrationDamonMembers) < 3 {
-		return nil, errors.Wrap(err, "[ NewSDK ] need at least 3 migration damons")
+	if len(response.MigrationDamonMembers) < insolar.GenesisAmountActiveMigrationDamonMembers {
+		return nil, errors.Wrap(err, "[ NewSDK ] need at least '"+strconv.Itoa(insolar.GenesisAmountActiveMigrationDamonMembers)+"' migration damons")
 	}
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < insolar.GenesisAmountActiveMigrationDamonMembers; i++ {
 		m, err := getMember(memberKeysDirPath+"migration_damon_"+strconv.Itoa(i)+"_member_keys.json", response.MigrationDamonMembers[i])
 		if err != nil {
 			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration damon member; member's index: '"+strconv.Itoa(i)+"'")
