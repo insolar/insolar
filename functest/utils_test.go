@@ -236,6 +236,11 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 	if resp.Error == nil {
 		return resp.Result.ContractResult, errors.New("")
 	}
+
+	if resp.Result == nil {
+		return nil, errors.New(resp.Error.Message)
+	}
+
 	return resp.Result.ContractResult, errors.New(resp.Error.Message)
 }
 
