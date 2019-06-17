@@ -167,8 +167,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		resp.JSONRPC = request.JSONRPC
 		resp.ID = request.ID
 
-		digest := req.Header.Get("Digest")
-		richSignature := req.Header.Get("Signature")
+		digest := req.Header.Get(requester.Digest)
+		richSignature := req.Header.Get(requester.Signature)
 
 		signature, err := validateRequestHeaders(digest, richSignature, rawBody)
 		if err != nil {

@@ -40,10 +40,10 @@ import (
 var httpClient *http.Client
 
 const (
-	RequestTimeout  = 15 * time.Second
-	DigestHeader    = "Digest"
-	SignatureHeader = "Signature"
-	ContentType     = "Content-Type"
+	RequestTimeout = 15 * time.Second
+	Digest    = "Digest"
+	Signature = "Signature"
+	ContentType = "Content-Type"
 )
 
 func init() {
@@ -111,8 +111,8 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Cant get hash")
 	}
 	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	req.Header.Set(DigestHeader, "SHA-256="+sha)
-	req.Header.Set(SignatureHeader, "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
+	req.Header.Set(Digest, "SHA-256="+sha)
+	req.Header.Set(Signature, "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
 	postResp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with sending request")
