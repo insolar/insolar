@@ -147,29 +147,27 @@ func addBurnAddresses(insSDK *sdk.SDK) int32 {
 	var err error
 	var retriesCount int32
 
-	for i := 0; i < concurrent*2; i++ {
-		bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
-		for bof.Attempt() < backoffAttemptsCount {
-			burnAddresses := []string{}
-			for j := 0; j < 3; j++ {
-				burnAddresses = append(burnAddresses, "fake_burn_address_"+strconv.Itoa(i)+"_"+strconv.Itoa(j))
-			}
-			traceID, err := insSDK.AddBurnAddresses(burnAddresses)
-			if err == nil {
-				fmt.Printf("Burn address '%s' was added. TraceID: %s\n", burnAddresses, traceID)
-				break
-			}
-
-			if strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
-				retriesCount++
-			} else {
-				fmt.Printf("Retry to add burn address. TraceID: %s Error is: %s\n", traceID, err.Error())
-			}
-			time.Sleep(bof.Duration())
+	bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
+	for bof.Attempt() < backoffAttemptsCount {
+		burnAddresses := []string{}
+		for j := 0; j < concurrent*2; j++ {
+			burnAddresses = append(burnAddresses, "fake_burn_address_"+strconv.Itoa(j))
 		}
-		check(fmt.Sprintf("Couldn't add burn address after retries: %d", backoffAttemptsCount), err)
-		bof.Reset()
+		traceID, err := insSDK.AddBurnAddresses(burnAddresses)
+		if err == nil {
+			break
+		}
+
+		if strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
+			retriesCount++
+		} else {
+			fmt.Printf("Retry to add burn address. TraceID: %s Error is: %s\n", traceID, err.Error())
+		}
+		time.Sleep(bof.Duration())
 	}
+	check(fmt.Sprintf("Couldn't add burn address after retries: %d", backoffAttemptsCount), err)
+	bof.Reset()
+
 	return retriesCount
 }
 

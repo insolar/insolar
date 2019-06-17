@@ -202,12 +202,12 @@ func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
 }
 
 // Transfer method send money from one member to another
-func (sdk *SDK) Transfer(amount *big.Int, from *Member, to *Member) (string, error) {
+func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error) {
 	response, err := sdk.DoRequest(
 		from.Reference,
 		from.PrivateKey,
 		"wallet.transfer",
-		map[string]interface{}{"amount": amount.String(), "to": to.Reference},
+		map[string]interface{}{"amount": amount, "to": to.Reference},
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "[ Transfer ] request was failed ")

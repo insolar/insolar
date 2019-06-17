@@ -99,7 +99,7 @@ func (m *Member) verifySig(request Request, rawRequest []byte, signature string)
 	}
 
 	if key != rawpublicpem {
-		return fmt.Errorf("[ verifySig ] Access denied. Key - %v; v - %v", rawpublicpem)
+		return fmt.Errorf("[ verifySig ] Access denied. Key - %v", rawpublicpem)
 	}
 
 	blockPub, _ := pem.Decode([]byte(rawpublicpem))

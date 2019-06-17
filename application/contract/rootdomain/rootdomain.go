@@ -81,7 +81,7 @@ func (rd RootDomain) Info() (interface{}, error) {
 		"rootDomain":            rd.GetReference().String(),
 		"rootMember":            rd.RootMember.String(),
 		"migrationDamonMembers": migrationDamonsMembersOut,
-		"mdAdminMember":         rd.MigrationAdminMember.String(),
+		"migrationAdminMember":  rd.MigrationAdminMember.String(),
 		"nodeDomain":            rd.NodeDomain.String(),
 	}
 	resJSON, err := json.Marshal(res)

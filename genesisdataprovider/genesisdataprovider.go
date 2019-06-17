@@ -32,8 +32,8 @@ type GenesisDataProvider struct {
 	ContractRequester  insolar.ContractRequester  `inject:""`
 
 	rootMemberRef             *insolar.Reference
-	migrationDamonMembersRefs []*insolar.Reference
 	migrationAdminMemberRef   *insolar.Reference
+	migrationDamonMembersRefs []*insolar.Reference
 	nodeDomainRef             *insolar.Reference
 	lock                      sync.RWMutex
 }

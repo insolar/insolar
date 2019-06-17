@@ -130,7 +130,7 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 		retry := true
 		for retry && bof.Attempt() < backoffAttemptsCount {
 			start = time.Now()
-			traceID, err = s.insSDK.Transfer(big.NewInt(1), from, to)
+			traceID, err = s.insSDK.Transfer(big.NewInt(1).String(), from, to)
 			stop = time.Since(start)
 
 			if err != nil && strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {

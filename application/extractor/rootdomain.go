@@ -29,7 +29,7 @@ type Info struct {
 	RootDomain             string   `json:"rootDomain"`
 	RootMember             string   `json:"rootMember"`
 	MigrationDamonsMembers []string `json:"migrationDamonMembers"`
-	MigrationAdminMember   string   `json:"mdAdminMember"`
+	MigrationAdminMember   string   `json:"migrationAdminMember"`
 	NodeDomain             string   `json:"nodeDomain"`
 }
 
