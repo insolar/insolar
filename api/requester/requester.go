@@ -41,9 +41,9 @@ var httpClient *http.Client
 
 const (
 	RequestTimeout = 15 * time.Second
-
-	Digest    = "Digest"
-	Signature = "Signature"
+	Digest         = "Digest"
+	Signature      = "Signature"
+	ContentType    = "Content-Type"
 )
 
 func init() {
@@ -103,7 +103,7 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with creating request")
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(ContentType, "application/json")
 
 	h := sha256.New()
 	_, err = h.Write(jsonValue)
@@ -153,7 +153,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	}
 
 	if postResp == nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Reponse is nil")
+		return nil, errors.New("[ GetResponseBodyPlatform ] Reponse is nil")
 	}
 
 	defer postResp.Body.Close()
@@ -243,6 +243,7 @@ func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 	return PointsToDER(r, s), nil
 }
 
+// Convert signature points do DER format
 func PointsToDER(r, s *big.Int) string {
 	prefixPoint := func(b []byte) []byte {
 		if len(b) == 0 {
