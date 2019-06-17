@@ -119,7 +119,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 }
 
 func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
-	errResponse := &requester.Error{Message: "Messagebus timeout exceeded", Code: ResultError, TraceID: traceID}
+	errResponse := &requester.Error{Message: extraMsg, Code: ResultError, TraceID: traceID}
 	resp.Error = errResponse
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
