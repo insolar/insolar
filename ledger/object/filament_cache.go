@@ -56,7 +56,6 @@ type PendingAccessor interface {
 	OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
 	// Records returns all the records for a provided object
 	Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error)
-	FirstPending(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (*record.PendingFilament, error)
 }
 
 type HeavyPendingAccessor interface {
@@ -412,7 +411,7 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 		}
 	}
 
-	err = i.refresh(ctx, pn, objID)
+	err = i.refresh(ctx, idx, pb)
 	if err != nil {
 		panic(err)
 		return err
@@ -593,23 +592,7 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 }
 
 // RefreshState recalculates state of the chain, marks requests as closed and opened.
-func (i *FilamentCacheStorage) refresh(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
-	println("RefreshState")
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("RefreshState for objID: %v pn: %v", objID.DebugString(), pn)
-
-	idx := i.idxAccessor.Index(pn, objID)
-	if idx == nil {
-		return ErrLifelineNotFound
-	}
-	pb := i.pendingBucket(pn, objID)
-	if pb == nil {
-		return ErrLifelineNotFound
-	}
-
-	pb.Lock()
-	defer pb.Unlock()
-
+func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *LockedIndex, pb *pendingMeta) error {
 	if pb.isStateCalculated {
 		return nil
 	}
@@ -654,7 +637,6 @@ func (i *FilamentCacheStorage) refresh(ctx context.Context, pn insolar.PulseNumb
 		if len(pb.notClosedRequestsIdsIndex[chainLink.PN]) != 0 {
 			if !isEarliestFound {
 				idx.objectMeta.Lifeline.EarliestOpenRequest = &pb.fullFilament[i].PN
-				logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), idx.objectMeta.Lifeline.EarliestOpenRequest)
 				isEarliestFound = true
 			}
 
@@ -664,13 +646,10 @@ func (i *FilamentCacheStorage) refresh(ctx context.Context, pn insolar.PulseNumb
 		}
 	}
 
-	logger.Debugf("RefreshState. Close channel for objID: %v pn: %v", objID.DebugString(), pn)
 	pb.isStateCalculated = true
 
 	if len(pb.notClosedRequestsIds) == 0 {
 		idx.objectMeta.Lifeline.EarliestOpenRequest = nil
-		logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), idx.objectMeta.Lifeline.EarliestOpenRequest)
-		logger.Debugf("no open requests for - %v", objID.DebugString())
 	}
 
 	return nil
