@@ -27,9 +27,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/api/requester"
 )
 
 func contractError(body []byte) error {
@@ -51,9 +51,11 @@ func TestBadSeed(t *testing.T) {
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		Method: "CreateMember",
-		Params: nil,
-	}, []byte("111"))
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "call.api",
+		Params:  requester.Params{CallSite: "contract.createMember"},
+	}, "111")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
@@ -63,9 +65,11 @@ func TestIncorrectSeed(t *testing.T) {
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		Method: "CreateMember",
-		Params: nil,
-	}, []byte("12345678901234567890123456789012"))
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "call.api",
+		Params:  requester.Params{CallSite: "contract.createMember"},
+	}, "12345678901234567890123456789012")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
 }
@@ -104,17 +108,18 @@ func TestCrazyJSON(t *testing.T) {
 }
 
 func TestIncorrectSign(t *testing.T) {
-	args, err := insolar.MarshalArgs(nil)
-	require.NoError(t, err)
 	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
-	body, err := requester.GetResponseBody(TestCallUrl, requester.PostParams{
-		"params":    args,
-		"method":    "SomeMethod",
-		"reference": root.ref,
-		"seed":      seed,
-		"signature": []byte("1234567890"),
-	})
+	body, err := requester.GetResponseBodyContract(
+		TestCallUrl,
+		requester.Request{
+			JSONRPC: "2.0",
+			ID:      1,
+			Method:  "SomeMethod",
+			Params:  requester.Params{Seed: seed},
+		},
+		"1234567890",
+	)
 	require.NoError(t, err)
 	var res map[string]interface{}
 	err = json.Unmarshal(body, &res)
