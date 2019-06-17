@@ -259,9 +259,6 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 	return nil, w.Transfer(params["amount"].(string), toMember)
 }
 func (mdMember *Member) migrationCall(rdRef insolar.Reference, params map[string]interface{}) (string, error) {
-	if mdMember.Name == "" {
-		return "", fmt.Errorf("[ migrationCall ] Only migraion damons can call migrationCall")
-	}
 
 	amount := new(big.Int)
 	amount, ok := amount.SetString(params["inAmount"].(string), 10)
