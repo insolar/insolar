@@ -116,7 +116,7 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 	}
 
 	if postResp == nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Reponse is nil")
+		return nil, errors.New("[ GetResponseBodyContract ] Reponse is nil")
 	}
 
 	defer postResp.Body.Close()
