@@ -231,9 +231,9 @@ func (bi *badgerIterator) Next() bool {
 		return false
 	}
 
-	prev := bi.it.Item().KeyCopy(bi.prevKey)
+	prev := bi.it.Item().KeyCopy(nil)
 	bi.prevKey = prev[len(bi.scope.Bytes()):]
-	prev, err := bi.it.Item().ValueCopy(bi.prevValue)
+	prev, err := bi.it.Item().ValueCopy(nil)
 	if err != nil {
 		return false
 	}

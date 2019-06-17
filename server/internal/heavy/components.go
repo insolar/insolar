@@ -277,8 +277,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			BaseRecord: &genesis.BaseRecord{
 				DB:                    DB,
 				DropModifier:          drops,
-				PulseAppender:         pulses,
-				PulseAccessor:         pulses,
+				PulseAppender:         Pulses,
+				PulseAccessor:         Pulses,
 				RecordModifier:        records,
 				IndexLifelineModifier: indexes,
 			},

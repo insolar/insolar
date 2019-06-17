@@ -29,8 +29,11 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
+// JetKeeper provides a method for adding jet to storage, checking pulse completion and getting access to highest synced pulse.
 type JetKeeper interface {
+	// Add performs adding jet to storage and checks pulse completion.
 	Add(context.Context, insolar.PulseNumber, insolar.JetID) error
+	// TopSyncPulse provides access to highest synced (replicated) pulse.
 	TopSyncPulse() insolar.PulseNumber
 }
 
@@ -111,7 +114,7 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 		return errors.Wrapf(err, "failed to update consistent pulse")
 	}
 
-	logger.Infof("[CheckPulseConsistency] pulse #%v complete", pulse)
+	logger.Debugf("pulse #%v complete", pulse)
 	return nil
 }
 
