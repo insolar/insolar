@@ -74,11 +74,13 @@ func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
 }
 
 func (d *TranscriptDequeue) HasFromLedger() *Transcript {
+	d.lock.Lock()
 	for _, t := range d.queue {
 		if t.FromLedger {
 			return t
 		}
 	}
+	d.lock.Unlock()
 	return nil
 }
 
