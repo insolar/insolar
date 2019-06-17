@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar/secrets"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"math/big"
 	"testing"
@@ -41,17 +42,24 @@ func TestCreateMemberP256K(t *testing.T) {
 	publicKey := privateKey.PublicKey
 	publicKeyPem, err := exportPublicKeyPEM(&publicKey)
 	require.NoError(t, err)
-	privateKeyPem, err := exportPrivateKeyPEM(privateKey)
+	// privateKeyPem, err := exportPrivateKeyPEM(privateKey)
 	require.NoError(t, err)
 
-	params := api.Params{
+	kp := platformpolicy.NewKeyProcessor()
+	// rootDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	rootKeyPair, err := secrets.ReadKeysFile(".artifacts/launchnet/configs/root_member_keys.json")
+	require.NoError(t, err)
+	rootPem, err := kp.ExportPrivateKeyPEM(rootKeyPair.Private)
+	require.NoError(t, err)
+
+	params := requester.Params{
 		Seed:       seed,
 		CallSite:   "contract.createMember",
-		CallParams: []interface{}{"name"},
+		CallParams: []interface{}{},
 		Reference:  "1tJC7WqTjHrN5YvPC2x7dSiL4gouoHtoAVBUjK7JB6.11111111111111111111111111111111",
 		PublicKey:  string(publicKeyPem),
 	}
-	datas := api.Request{
+	datas := requester.Request{
 		JSONRPC: "2.0",
 		ID:      0,
 		Method:  "api.call",
@@ -62,7 +70,7 @@ func TestCreateMemberP256K(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(string(dataToSign))
 
-	signature, err := sign(string(privateKeyPem), dataToSign)
+	signature, err := sign(string(rootPem), dataToSign)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(TestUrl+"/call", datas, signature)
 	require.NoError(t, err)
@@ -89,14 +97,14 @@ func TestGetBalanceP256K(t *testing.T) {
 	privateKeyPem, err := exportPrivateKeyPEM(privateKey)
 	require.NoError(t, err)
 
-	params := api.Params{
+	params := requester.Params{
 		Seed:       seed,
 		CallSite:   "wallet.getBalance",
 		CallParams: []interface{}{memRefK},
 		Reference:  memRefK,
 		PublicKey:  string(publicKeyPem),
 	}
-	datas := api.Request{
+	datas := requester.Request{
 		JSONRPC: "2.0",
 		ID:      0,
 		Method:  "api.call",

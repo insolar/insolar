@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,9 +24,9 @@ func getResponse(body []byte) (*response, error) {
 	return res, nil
 }
 
-func readRequestParams(path string) (*api.Request, error) {
+func readRequestParams(path string) (*requester.Request, error) {
 
-	fileParams := &api.Request{}
+	fileParams := &requester.Request{}
 	err := readFile(path, fileParams)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readRequestParams ] ")

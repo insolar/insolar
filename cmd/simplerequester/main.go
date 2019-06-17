@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/api"
 	"io/ioutil"
 	"os"
 
@@ -22,9 +21,10 @@ var (
 )
 
 type response struct {
-	Error   string
+	Jsonrpc string
+	id      int64
+	Error   interface{}
 	Result  interface{}
-	TraceID string
 }
 
 const defaultURL = "http://localhost:19101/api"
@@ -53,7 +53,7 @@ func main() {
 
 	err := log.SetLevel("error")
 	check("can't set 'error' level on logger: ", err)
-	request := &api.Request{
+	request := &requester.Request{
 		JSONRPC: "2.0",
 		ID:      0,
 		Method:  "api.call",
