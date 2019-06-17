@@ -160,7 +160,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		rawBody, err := UnmarshalRequest(req, &contractRequest)
 		if err != nil {
-			processError(err, "Can't unmarshal contractRequest", &contractAnswer, insLog, traceID)
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
 		}
 
@@ -172,7 +172,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		signature, err := validateRequestHeaders(digest, richSignature, rawBody)
 		if err != nil {
-			processError(err, "Can't validate contractRequest", &contractAnswer, insLog, traceID)
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
 		}
 
@@ -187,7 +187,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		err = ar.checkSeed(contractRequest.Params.Seed)
 		if err != nil {
-			processError(err, "Can't checkSeed", &contractAnswer, insLog, traceID)
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
 		}
 

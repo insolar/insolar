@@ -69,7 +69,7 @@ func TestIncorrectSeed(t *testing.T) {
 		ID:      1,
 		Method:  "call.api",
 		Params:  requester.Params{CallSite: "contract.createMember"},
-	}, "12345678901234567890123456789012")
+	}, "z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
