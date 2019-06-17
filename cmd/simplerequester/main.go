@@ -62,20 +62,21 @@ func main() {
 		request, err = readRequestParams(paramsFile)
 		check("[ simpleRequester ]", err)
 	} else {
-		if memberRef == "" {
-			response, err := requester.Info(apiURL)
-			check("[ simpleRequester ]", err)
-			request.Params.Reference = response.RootMember
-		} else {
-			request.Params.Reference = memberRef
-		}
 		if method != "" {
 			request.Params.CallSite = method
 		}
 		if params != "" {
 			request.Params.CallParams = params
 		}
+		request.Params.Reference = memberRef
 	}
+
+	if request.Params.Reference == "" {
+		response, err := requester.Info(apiURL)
+		check("[ simpleRequester ]", err)
+		request.Params.Reference = response.RootMember
+	}
+
 	if request.Params.CallSite == "" {
 		fmt.Println("Method cannot be null", err)
 		os.Exit(1)
@@ -85,7 +86,7 @@ func main() {
 	check("[ simpleRequester ]", err)
 
 	stringParams, _ := json.Marshal(request.Params.CallParams)
-	fmt.Println("Params: " + string(stringParams))
+	fmt.Println("callParams: " + string(stringParams))
 	fmt.Println("Method: " + request.Method)
 	fmt.Println("Reference: " + request.Params.Reference)
 

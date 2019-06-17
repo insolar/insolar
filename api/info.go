@@ -54,7 +54,7 @@ func NewInfoService(runner *Runner) *InfoService {
 //   Request structure:
 //   {
 //     "jsonrpc": "2.0",
-//     "method": "node.GetInfo",
+//     "method": "network.getInfo",
 //     "id": str|int|null
 //   }
 //

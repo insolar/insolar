@@ -76,6 +76,9 @@ func execute(url string, keys memberKeys, request requester.Request) (*response,
 	check("[Execute]", err)
 	signature, err := sign(keys.Private, dataToSign)
 	check("[Execute]", err)
+
+	fmt.Println("Request: " + string(dataToSign))
+
 	body, err := requester.GetResponseBodyContract(url+"/call", request, signature)
 	check("[Execute]", err)
 	return getResponse(body)
