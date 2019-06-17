@@ -81,12 +81,13 @@ func (g *Generator) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't get migration admin keys")
 	}
-	migrationDamonPublicKeys := [10]string{}
-	for i := 0; i < 10; i++ {
-		migrationDamonPublicKeys[i], err = secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_damon_" + strconv.Itoa(i) + "_member_keys.json")
+	migrationDamonPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountMigrationDamonMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_damon_" + strconv.Itoa(i) + "_member_keys.json")
 		if err != nil {
 			return errors.Wrap(err, "couldn't get migration damon keys")
 		}
+		migrationDamonPublicKeys = append(migrationDamonPublicKeys, k)
 	}
 
 	inslog.Info("[ bootstrap ] generate plugins")

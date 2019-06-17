@@ -17,6 +17,8 @@
 package contracts
 
 import (
+	"strconv"
+
 	"github.com/insolar/insolar/application/contract/costcenter"
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
@@ -50,8 +52,8 @@ func GenesisContractsStates(cfg insolar.GenesisContractsConfig) []insolar.Genesi
 }
 
 func rootDomain() insolar.GenesisContractState {
-	if len(genesisrefs.ContractMigrationDamonMembers) < 3 {
-		panic("need at least 3 migration damons")
+	if len(genesisrefs.ContractMigrationDamonMembers) < insolar.GenesisAmountActiveMigrationDamonMembers {
+		panic("need at least '" + strconv.Itoa(insolar.GenesisAmountActiveMigrationDamonMembers) + "' migration damons")
 	}
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameRootDomain,
@@ -60,7 +62,7 @@ func rootDomain() insolar.GenesisContractState {
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
 			RootMember:            genesisrefs.ContractRootMember,
-			MigrationDamonMembers: genesisrefs.ContractMigrationDamonMembers[:3],
+			MigrationDamonMembers: genesisrefs.ContractMigrationDamonMembers[:insolar.GenesisAmountActiveMigrationDamonMembers],
 			MigrationAdminMember:  genesisrefs.ContractMigrationAdminMember,
 			MigrationWallet:       genesisrefs.ContractMigrationWallet,
 			CostCenter:            genesisrefs.ContractCostCenter,

@@ -46,9 +46,9 @@ var (
 	ContractCommissionWallet = rootdomain.GenesisRef(insolar.GenesisNameCommissionWallet)
 
 	// ContractMigrationDamonMembers is the migration damon members contracts references.
-	ContractMigrationDamonMembers = func() (result [10]insolar.Reference) {
-		for i, name := range insolar.GenesisNameMigrationDamonMembers {
-			result[i] = rootdomain.GenesisRef(name)
+	ContractMigrationDamonMembers = func() (result []insolar.Reference) {
+		for _, name := range insolar.GenesisNameMigrationDamonMembers {
+			result = append(result, rootdomain.GenesisRef(name))
 		}
 		return
 	}()

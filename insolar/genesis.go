@@ -43,11 +43,14 @@ const (
 	GenesisNameCommissionWallet     = "commission" + GenesisNameWallet
 
 	GenesisNameStandardTariff = "standard" + GenesisNameTariff
+
+	GenesisAmountMigrationDamonMembers       = 10
+	GenesisAmountActiveMigrationDamonMembers = 3
 )
 
-var GenesisNameMigrationDamonMembers = func() (result [10]string) {
-	for i := 0; i < 10; i++ {
-		result[i] = "migration_damon_" + strconv.Itoa(i) + GenesisNameMember
+var GenesisNameMigrationDamonMembers = func() (result []string) {
+	for i := 0; i < GenesisAmountMigrationDamonMembers; i++ {
+		result = append(result, "migration_damon_"+strconv.Itoa(i)+GenesisNameMember)
 	}
 	return
 }()
@@ -88,7 +91,7 @@ type GenesisContractsConfig struct {
 	MDBalance                string
 	RootPublicKey            string
 	MigrationAdminPublicKey  string
-	MigrationDamonPublicKeys [10]string
+	MigrationDamonPublicKeys []string
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
