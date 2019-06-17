@@ -72,6 +72,7 @@ install-build-tools:
 
 .PHONY: install-go-lib
 install-go-lib:
+	go get golang.org/x/crypto
 	go get github.com/insolar/x-crypto
 
 .PHONY: install-deps
