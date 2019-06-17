@@ -57,8 +57,8 @@ var stdout io.ReadCloser
 var stderr io.ReadCloser
 
 var (
-	insolarRootMemberKeysPath = launchnetPath("configs", insolarRootMemberKeys)
-	insolarGenesisConfigPath  = launchnetPath("genesis.yaml")
+	insolarRootMemberKeysPath  = launchnetPath("configs", insolarRootMemberKeys)
+	insolarBootstrapConfigPath = launchnetPath("bootstrap.yaml")
 )
 
 func launchnetPath(a ...string) string {
@@ -81,20 +81,20 @@ type user struct {
 }
 
 func getNumberNodes() (int, error) {
-	type genesisConf struct {
+	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
 	}
 
-	var conf genesisConf
+	var conf nodesConf
 
-	buff, err := ioutil.ReadFile(insolarGenesisConfigPath)
+	buff, err := ioutil.ReadFile(insolarBootstrapConfigPath)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't read genesis conf")
+		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't read bootstrap config")
 	}
 
 	err = yaml.Unmarshal(buff, &conf)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't parse genesis conf")
+		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't parse bootstrap config")
 	}
 
 	return len(conf.DiscoverNodes), nil
@@ -181,23 +181,40 @@ func stopInsolard() error {
 var insgorundCleaner func()
 var secondInsgorundCleaner func()
 
-func startInsgorund(listenPort string, upstreamPort string) (func(), error) {
+func makeInsgorundOutputDir() (string, error) {
+	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
+	if err != nil {
+		return "", errors.Wrap(err, "Couldn't receive path to github.com/insolar/insolar")
+	}
+	outputDir := filepath.Join(p.Dir, ".artifacts", "launchnet", "insgorund_logs")
+	err = os.MkdirAll(outputDir, os.ModePerm)
+	if err != nil {
+		return "", errors.Wrap(err, "[ startInsgorund ] couldn't create dir for insgorund output")
+	}
+	return outputDir, nil
+}
+
+func startInsgorund(listenPort string, upstreamPort string, combinedOutputDir string) (func(), error) {
 	// It starts on ports of "virtual" node
-	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort, false)
+	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort, false, filepath.Join(combinedOutputDir, listenPort+".log"))
 	if err != nil {
 		return cleaner, errors.Wrap(err, "[ startInsgorund ] couldn't wait for insolard to start completely: ")
 	}
 	return cleaner, nil
 }
 
-func startAllInsgorunds() (err error) {
-	insgorundCleaner, err = startInsgorund("33305", "33306")
+func startAllInsgorunds() error {
+	combinedOutputDir, err := makeInsgorundOutputDir()
+	if err != nil {
+		return errors.Wrap(err, "[ startInsgorund ] couldn't create dir for insgorund output")
+	}
+	insgorundCleaner, err = startInsgorund("33305", "33306", combinedOutputDir)
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
 	}
 	fmt.Println("[ startAllInsgorunds ] insgorund was successfully started")
 
-	secondInsgorundCleaner, err = startInsgorund("33327", "33328")
+	secondInsgorundCleaner, err = startInsgorund("33327", "33328", combinedOutputDir)
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start second insgorund: ")
 	}

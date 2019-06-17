@@ -55,6 +55,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/testutils"
@@ -91,7 +92,7 @@ func TestDeserializePacket(t *testing.T) {
 
 	buffer.Write(serialized)
 
-	deserialized, err := DeserializePacket(&buffer)
+	deserialized, err := DeserializePacket(log.GlobalLogger, &buffer)
 
 	require.NoError(t, err)
 	require.Equal(t, deserialized, msg)
@@ -110,7 +111,7 @@ func TestDeserializeBigPacket(t *testing.T) {
 	var buffer bytes.Buffer
 	buffer.Write(serialized)
 
-	deserializedMsg, err := DeserializePacket(&buffer)
+	deserializedMsg, err := DeserializePacket(log.GlobalLogger, &buffer)
 	require.NoError(t, err)
 
 	deserializedData := deserializedMsg.GetRequest().GetRPC().Data

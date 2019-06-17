@@ -32,7 +32,7 @@ import (
 const insolarLogLevel = "INSOLAR_LOG_LEVEL"
 
 // StartInsgorund starts `insgorund` process
-func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string, notifyLongExecution bool) (func(), error) {
+func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string, notifyLongExecution bool, combinedOutputPath string) (func(), error) {
 	id := testutils.RandomString()
 	log.Debug("Starting 'insgorund' ", id)
 
@@ -76,8 +76,18 @@ func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string,
 	}
 
 	runner := exec.Command(cmdPath, args...)
-	runner.Stdout = os.Stdout
-	runner.Stderr = os.Stderr
+	if combinedOutputPath != "" {
+		outfile, err := os.Create(combinedOutputPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't create file for insgorund output")
+		}
+		defer outfile.Close()
+		runner.Stdout = outfile
+		runner.Stderr = outfile
+	} else {
+		runner.Stdout = os.Stdout
+		runner.Stderr = os.Stderr
+	}
 	err := runner.Start()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't start `insgorund`")

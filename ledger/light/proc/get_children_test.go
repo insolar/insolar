@@ -83,7 +83,14 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	}
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	indexMemoryStor := object.NewInMemoryIndex()
+	ra := object.NewRecordAccessorMock(t)
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
+		return record.Material{}, object.ErrNotFound
+	}
+	rsm := object.NewRecordStorageMock(t)
+	rsm.ForIDFunc = ra.ForIDFunc
+
+	indexMemoryStor := object.NewInMemoryIndex(rsm, nil)
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
@@ -105,10 +112,6 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	gc.Dep.JetStorage = jet.NewStore()
 	err = gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
 	require.NoError(t, err)
-	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
-		return record.Material{}, object.ErrNotFound
-	}
 	gc.Dep.RecordAccessor = ra
 
 	tf := testutils.NewDelegationTokenFactoryMock(t)
@@ -137,7 +140,14 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	}
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	indexMemoryStor := object.NewInMemoryIndex()
+	ra := object.NewRecordAccessorMock(t)
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
+		return record.Material{}, object.ErrNotFound
+	}
+	rsm := object.NewRecordStorageMock(t)
+	rsm.ForIDFunc = ra.ForIDFunc
+
+	indexMemoryStor := object.NewInMemoryIndex(rsm, nil)
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
@@ -159,10 +169,6 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	gc.Dep.JetStorage = jet.NewStore()
 	err = gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
 	require.NoError(t, err)
-	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
-		return record.Material{}, object.ErrNotFound
-	}
 	gc.Dep.RecordAccessor = ra
 
 	tf := testutils.NewDelegationTokenFactoryMock(t)

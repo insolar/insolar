@@ -32,41 +32,32 @@ local image_params = params.insolar.image;
 						"tty": true,
 						"stdin": true,
 						"command": [
-							"/bin/sh", "-ec", importstr "launch.sh"
+							"/bin/bash", "-c", importstr "launch.sh"
 						],
 						"env": [
 							{
 								"name": "HOME",
 								"value": "/opt/insolar"
 							},
-							{
-								"name": "INSOLAR_LEDGER_STORAGE_DATADIRECTORY",
-								"value": "/opt/insolar/config/data"
-							}
 						],
 						"volumeMounts": [
 							{
-								"name": "bootstrap-config",
-								"mountPath": "/opt/insolar/config"
+								"name": "init-configs",
+								"mountPath": "/opt/insolar/config",
 							},
 							{
 								"name": "code",
-								"mountPath": "/tmp/code"
+								"mountPath": "/tmp/code",
 							},
 							{
-								"name": "node-config",
-								"mountPath": "/opt/insolar/config/insolar-genesis.yaml",
-								"subPath": "insolar-genesis.yaml"
-							},
-							{
-								"name": "node-config",
-								"mountPath": "/opt/insolar/config/genesis.yaml",
-								"subPath": "genesis.yaml"
+								"name": "bootstrap-config-file",
+								"mountPath": "/opt/insolar/config/bootstrap.yaml",
+								"subPath": "bootstrap.yaml",
 							},
 							{
 								"name": "work",
-								"mountPath": "/opt/work"
-							}
+								"mountPath": "/opt/work",
+							},
 						]
 					}
 				],
@@ -125,7 +116,7 @@ local image_params = params.insolar.image;
 						"workingDir": "/opt/insolar",
 						"tty": true,
 						"stdin": true,
-						launch_cmd :: "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --heavy-genesis=/opt/bootstrap-config/heavy_genesis.json --trace 2>&1",
+						launch_cmd :: "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --heavy-genesis=/opt/insolar/config/heavy_genesis.json --trace 2>&1",
 						"command": [
 							"bash",
 							"-c",
@@ -172,10 +163,6 @@ local image_params = params.insolar.image;
 								"mountPath": "/opt/insolar"
 							},
 							{
-								"name": "bootstrap-config",
-								"mountPath": "/opt/bootstrap-config"
-							},
-							{
 								"name": "code",
 								"mountPath": "/tmp/code"
 							},
@@ -193,9 +180,9 @@ local image_params = params.insolar.image;
 				],
 				"volumes": [
 					{
-						"name": "bootstrap-config",
+						"name": "init-configs",
 						"persistentVolumeClaim": {
-							"claimName": "bootstrap-config"
+							"claimName": "init-configs"
 						}
 					},
 					{
@@ -206,6 +193,12 @@ local image_params = params.insolar.image;
 						"name": "node-config",
 						"configMap": {
 							"name": "node-config"
+						}
+					},
+					{
+						"name": "bootstrap-config-file",
+						"configMap": {
+							"name": "bootstrap-config-file"
 						}
 					},
 					{

@@ -56,6 +56,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -168,4 +169,26 @@ func TestSessionManager_DoubleStop(t *testing.T) {
 
 	err = sm.Stop(context.Background())
 	require.NoError(t, err)
+}
+
+func TestSessionManager_ProlongateSession(t *testing.T) {
+	sm := NewSessionManager()
+
+	err := sm.Start(context.Background())
+	require.NoError(t, err)
+
+	ref := testutils.RandomRef()
+	id := sm.NewSession(ref, nil, 2*time.Second)
+
+	session, err := sm.ReleaseSession(id)
+	require.NoError(t, err)
+	assert.Equal(t, ref, session.NodeID)
+	_, err = sm.ReleaseSession(id)
+	assert.Error(t, err)
+
+	sm.ProlongateSession(id, session)
+
+	session, err = sm.ReleaseSession(id)
+	require.NoError(t, err)
+	assert.Equal(t, ref, session.NodeID)
 }

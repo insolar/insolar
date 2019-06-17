@@ -23,7 +23,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -99,16 +98,16 @@ func NewTestLedger(
 func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *artifactmanager.MessageHandler, *object.InMemoryIndex) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
-	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	pcs := testutils.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
 	ps := pulse.NewStorageMem()
-	index := object.NewInMemoryIndex()
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	recordStorage := object.NewRecordMemory()
 	memoryMockDB := store.NewMemoryMockDB()
+	index := object.NewInMemoryIndex(recordStorage, testutils.NewPlatformCryptographyScheme())
 
 	cm := &component.Manager{}
 	js := jet.NewStore()
@@ -129,7 +128,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		RecordModifier:        recordStorage,
 		IndexLifelineModifier: index,
 	}
-	_, err := genesisBaseRecord.CreateIfNeeded(ctx)
+	err := genesisBaseRecord.Create(ctx)
 	if err != nil {
 		t.Error(err, "failed to create base genesis record")
 	}
@@ -165,7 +164,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(index, index, index, &conf)
+	handler := artifactmanager.NewMessageHandler(index, index, index, index, index, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
 	handler.LifelineIndex = index
@@ -186,7 +185,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	handler.PCS = pcs
 	handler.JetCoordinator = jc
 
-	clientSender, serverSender := makeSender(ps, jc, handler.FlowDispatcher.Process)
+	clientSender, serverSender := makeSender(ps, jc, handler.FlowDispatcher.Process, pcs)
 
 	handler.Sender = serverSender
 
@@ -276,33 +275,16 @@ type pubSubMock struct {
 
 func (p *pubSubMock) Publish(topic string, messages ...*message.Message) error {
 	for _, msg := range messages {
-		pn, err := p.pulses.Latest(context.Background())
-		if err != nil {
-			return err
-		}
-		pl := payload.Meta{
-			Payload: msg.Payload,
-			Pulse:   pn.PulseNumber,
-		}
-		buf, err := pl.Marshal()
-		if err != nil {
-			return err
-		}
-		msg.Payload = buf
 		_, _ = p.bus.IncomingMessageRouter(p.handler)(msg)
 	}
 	return nil
-}
-
-func (p *pubSubMock) handle(msg *message.Message) ([]*message.Message, error) { // nolint
-	return p.handler(msg)
 }
 
 func (p *pubSubMock) Close() error {
 	return nil
 }
 
-func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.HandlerFunc) (bus.Sender, bus.Sender) {
+func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.HandlerFunc, pcs insolar.PlatformCryptographyScheme) (bus.Sender, bus.Sender) {
 	clientPub := &pubSubMock{
 		pulses:  pulses,
 		handler: handle,
@@ -310,8 +292,8 @@ func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.Hand
 	serverPub := &pubSubMock{
 		pulses: pulses,
 	}
-	clientBus := bus.NewBus(clientPub, pulses, jets)
-	serverBus := bus.NewBus(serverPub, pulses, jets)
+	clientBus := bus.NewBus(clientPub, pulses, jets, pcs)
+	serverBus := bus.NewBus(serverPub, pulses, jets, pcs)
 	clientPub.bus = serverBus
 	serverPub.bus = clientBus
 	return clientBus, serverBus

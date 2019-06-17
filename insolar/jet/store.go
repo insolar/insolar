@@ -114,7 +114,7 @@ func (s *Store) Split(
 	return left, right, nil
 }
 
-// Clone copies tree from one pulse to another. Use it to copy past tree into new pulse.
+// Clone copies tree from one pulse to another. Use it to copy the past tree into new pulse.
 func (s *Store) Clone(
 	ctx context.Context, from, to insolar.PulseNumber,
 ) error {
@@ -128,7 +128,7 @@ func (s *Store) Clone(
 	return nil
 }
 
-// Delete concurrent safe.
+// Delete jets for pulse (concurrent safe).
 func (s *Store) DeleteForPN(
 	ctx context.Context, pulse insolar.PulseNumber,
 ) {

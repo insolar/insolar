@@ -70,15 +70,14 @@ import (
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhaseImpl{}
 
-	node := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
-	nodeKeeper := nodenetwork.NewNodeKeeper(node)
-	nodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{node})
+	n := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	nodeKeeper := nodenetwork.NewNodeKeeper(n)
+	nodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{n})
 
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := NewCommunicatorMock(t)
 	consensusNetworkMock := network.NewConsensusNetworkMock(t)
 	terminationHandler := testutils.NewTerminationHandlerMock(t)
-	messageBus := testutils.NewMessageBusLockerMock(t)
 	CertificateManager := testutils.NewCertificateManagerMock(t)
 	Gatewayer := network.NewGatewayerMock(t)
 	cryptoServ := testutils.NewCryptographyServiceMock(t)
@@ -92,7 +91,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 
 	cm := component.Manager{}
 	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock,
-		consensusNetworkMock, terminationHandler, messageBus, CertificateManager, Gatewayer)
+		consensusNetworkMock, terminationHandler, CertificateManager, Gatewayer)
 
 	require.NotNil(t, firstPhase.Calculator)
 	require.NotNil(t, firstPhase.NodeKeeper)

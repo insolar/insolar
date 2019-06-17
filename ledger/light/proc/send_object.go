@@ -20,23 +20,21 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
 type SendObject struct {
-	message  *message.Message
+	message  payload.Meta
 	objectID insolar.ID
 	index    object.Lifeline
 
@@ -48,11 +46,16 @@ type SendObject struct {
 		Blobs          blob.Accessor
 		Bus            insolar.MessageBus
 		Sender         bus.Sender
+
+		PendingAccessor object.PendingAccessor
+		PendingModifier object.PendingModifier
 	}
 }
 
 func NewSendObject(
-	msg *message.Message, id insolar.ID, idx object.Lifeline,
+	msg payload.Meta,
+	id insolar.ID,
+	idx object.Lifeline,
 ) *SendObject {
 	return &SendObject{
 		message:  msg,
@@ -104,24 +107,43 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 	}
 
 	sendPassState := func(stateID insolar.ID) error {
+		buf, err := p.message.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal origin meta message")
+		}
 		msg, err := payload.NewMessage(&payload.PassState{
-			Origin:        p.message.Payload,
-			StateID:       stateID,
-			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+			Origin:  buf,
+			StateID: stateID,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
+
+		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), stateID.Pulse())
 		if err != nil {
-			return errors.Wrap(err, "failed to fetch jet")
+			return errors.Wrap(err, "failed to calculate pulse")
 		}
-		node, err := p.Dep.Coordinator.NodeForJet(ctx, *jetID, flow.Pulse(ctx), stateID.Pulse())
-		if err != nil {
-			return errors.Wrap(err, "failed to calculate role")
+		var node insolar.Reference
+		if onHeavy {
+			h, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+			if err != nil {
+				return errors.Wrap(err, "failed to calculate heavy")
+			}
+			node = *h
+		} else {
+			jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch jet")
+			}
+			l, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, stateID.Pulse())
+			if err != nil {
+				return errors.Wrap(err, "failed to calculate role")
+			}
+			node = *l
 		}
+
 		go func() {
-			_, done := p.Dep.Sender.SendTarget(ctx, msg, *node)
+			_, done := p.Dep.Sender.SendTarget(ctx, msg, node)
 			done()
 		}()
 		return nil
@@ -139,6 +161,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
+
 		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		logger.Info("sending index")
 	}

@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/rpc"
 	"os"
 	"path"
@@ -109,7 +110,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
-	rundCleaner, err := goplugintestutils.StartInsgorund(s.runnerBin, "unix", rundSock, "unix", lrSock, true)
+	rundCleaner, err := goplugintestutils.StartInsgorund(s.runnerBin, "unix", rundSock, "unix", lrSock, true, "")
 	s.NoError(err)
 
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
@@ -208,9 +209,9 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(
 	for _, meta := range bucks {
 		encoded, _ := meta.Lifeline.Marshal()
 		hotIndexes = append(hotIndexes, message.HotIndex{
-			LastUsed: meta.LifelineLastUsed,
-			ObjID:    meta.ObjID,
-			Index:    encoded,
+			LifelineLastUsed: meta.LifelineLastUsed,
+			ObjID:            meta.ObjID,
+			Index:            encoded,
 		})
 	}
 
@@ -1146,7 +1147,6 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
-		insolar.Reference{},
 		*rootDomainRef,
 		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["rootdomain"],
@@ -1179,7 +1179,6 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 
 	_, err = am.ActivateObject(
 		ctx,
-		insolar.Reference{},
 		*rootMemberRef,
 		*rootDomainRef,
 		*cb.Prototypes["member"],
@@ -1189,7 +1188,11 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	s.NoError(err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(
+		ctx, insolar.Reference{}, rootDomainDesc,
+		goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}),
+		[]byte{},
+	)
 	s.NoError(err)
 
 	csRoot := cryptography.NewKeyBoundCryptographyService(rootKey)
@@ -1221,13 +1224,30 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	resTransfer := member1.SignedCall(ctx, pm, *rootDomainRef, "Transfer", *cb.Prototypes["member"], []interface{}{1, member2Ref})
 	s.Nil(resTransfer)
 
+	var result interface{}
 	// Verify Member1 balance
-	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member1Ref})
-	s.Equal(999999999, int(res3.(uint64)))
+	for i := 1; i <= 10; i++ {
+		result = root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member1Ref})
+		if result.(uint64) == 999999999 {
+			break
+		}
+		ms := time.Millisecond * 100 * time.Duration(math.Pow(2, float64(i)))
+		log.Debug("sleeping", ms)
+		time.Sleep(ms)
+	}
+	s.Equal(999999999, int(result.(uint64)))
 
 	// Verify Member2 balance
-	res4 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member2Ref})
-	s.Equal(1000000001, int(res4.(uint64)))
+	for i := 1; i <= 10; i++ {
+		result = root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member2Ref})
+		if result.(uint64) == 1000000001 {
+			break
+		}
+		ms := time.Millisecond * 100 * time.Duration(math.Pow(2, float64(i)))
+		log.Debug("sleeping", ms)
+		time.Sleep(ms)
+	}
+	s.Equal(1000000001, int(result.(uint64)))
 }
 
 func (s *LogicRunnerFuncSuite) TestFullValidationCycleError() {
@@ -1527,7 +1547,6 @@ func (r *One) CreateAllowance(member string) (error) {
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
-		insolar.Reference{},
 		*rootDomainRef,
 		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["rootdomain"],
@@ -1558,7 +1577,6 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	_, err = am.ActivateObject(
 		ctx,
-		insolar.Reference{},
 		*rootMemberRef,
 		*rootDomainRef,
 		*cb.Prototypes["member"],
@@ -1568,7 +1586,11 @@ func (r *One) CreateAllowance(member string) (error) {
 	s.NoError(err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(
+		ctx, insolar.Reference{}, rootDomainDesc,
+		goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}),
+		[]byte{},
+	)
 	s.NoError(err)
 
 	cs := cryptography.NewKeyBoundCryptographyService(rootKey)
@@ -1585,8 +1607,6 @@ func (r *One) CreateAllowance(member string) (error) {
 	s.NotEqual("", memberRef)
 
 	// Call CreateAllowance method in custom contract
-	domain, err := insolar.NewReferenceFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
-	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(
 		ctx,
 		record.Request{CallType: record.CTSaveAsChild},
@@ -1595,7 +1615,6 @@ func (r *One) CreateAllowance(member string) (error) {
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		*domain,
 		*contract,
 		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["one"],
@@ -1834,7 +1853,7 @@ func (r *One) EmptyMethod() (error) {
 	}
 
 	// emulate death
-	err = rlr.sock.Close()
+	err = rlr.rpc.Stop(ctx)
 	s.Require().NoError(err)
 
 	client, err := gp.Downstream(ctx)
@@ -2062,9 +2081,6 @@ func (c *First) GetName() (string, error) {
 }
 
 func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifacts.Client, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.Reference, *insolar.Reference) {
-	domain, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
-	s.Require().NoError(err)
-
 	proto := testutils.RandomRef()
 
 	contractID, err := am.RegisterRequest(
@@ -2076,7 +2092,6 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifac
 
 	_, err = am.ActivateObject(
 		ctx,
-		*domain,
 		*objectRef,
 		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes[contractName],

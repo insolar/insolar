@@ -19,10 +19,10 @@
 
 project = 'Insolar'
 copyright = '2019, Insolar'
-author = 'Sofia Yemelianova'
+author = 'Sofia Yemelianova and collaborators'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '1.0'
 version = 'latest'
 
 
@@ -37,6 +37,9 @@ extensions = [
 	'sphinxcontrib.plantuml',
 	'sphinx_copybutton'
 ]
+
+plantuml_output_format = 'svg'
+plantuml_latex_output_format = 'png'
 
 master_doc = 'index'
 
@@ -71,6 +74,7 @@ html_theme_options = {
     'style_nav_header_background': '#343131',
     'logo_only': True,
     # Toc options
+    'collapse_navigation': False,
     'sticky_navigation': True,
     'navigation_depth': 4,
     'includehidden': True,

@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 #
 # Example of profiling 60 second profile on all insolard node
 # (by default profiles 30 seconds):

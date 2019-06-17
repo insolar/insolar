@@ -68,7 +68,7 @@ type Pinger struct {
 	transport network.HostNetwork
 }
 
-// PingWithTimeout ping remote host with timeout
+// Ping ping remote host with timeout
 func (p *Pinger) Ping(ctx context.Context, address string, timeout time.Duration) (*host.Host, error) {
 	ctx, span := instracer.StartSpan(ctx, "Pinger.Ping")
 	defer span.End()

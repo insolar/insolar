@@ -82,6 +82,8 @@ func (m *Member) Call(rootDomain insolar.Reference, method string, params []byte
 	switch method {
 	case "CreateMember":
 		return m.createMemberCall(rootDomain, params)
+	case "CreateHelloWorld":
+		return rootdomain.GetObject(rootDomain).CreateHelloWorld()
 	}
 
 	if err := m.verifySig(method, params, seed, sign); err != nil {

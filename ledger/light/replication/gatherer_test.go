@@ -17,7 +17,6 @@
 package replication
 
 import (
-	"math/rand"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -66,7 +65,7 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 		LatestState:  insolar.NewID(gen.PulseNumber(), nil),
 	}
 	idxID := gen.ID()
-	bucks := []object.IndexBucket{
+	bucks := []object.FilamentIndex{
 		{
 			ObjID:    idxID,
 			Lifeline: idx,
@@ -104,8 +103,8 @@ func TestDataGatherer_ForPulseAndJet_DropFetchingFailed(t *testing.T) {
 }
 
 func TestLightDataGatherer_convertIndexBuckets(t *testing.T) {
-	var idxs []object.IndexBucket
-	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.IndexBucket, c fuzz.Continue) {
+	var idxs []object.FilamentIndex
+	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.FilamentIndex, c fuzz.Continue) {
 		elem.Lifeline = object.Lifeline{
 			JetID:        gen.JetID(),
 			LatestUpdate: gen.PulseNumber(),
@@ -187,17 +186,4 @@ func getMaterialRecord() record.Material {
 	}
 
 	return materialRecord
-}
-
-// sizedSlice generates random byte slice fixed size.
-func sizedSlice(size int32) (blob []byte) {
-	blob = make([]byte, size)
-	rand.Read(blob)
-	return
-}
-
-// slice generates random byte slice with random size between 0 and 1024.
-func slice() []byte {
-	size := rand.Int31n(1024)
-	return sizedSlice(size)
 }

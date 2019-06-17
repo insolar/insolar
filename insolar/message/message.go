@@ -47,6 +47,8 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &ValidationResults{}, nil
 	case insolar.TypePendingFinished:
 		return &PendingFinished{}, nil
+	case insolar.TypeAdditionalCallFromPreviousExecutor:
+		return &AdditionalCallFromPreviousExecutor{}, nil
 	case insolar.TypeStillExecuting:
 		return &StillExecuting{}, nil
 
@@ -84,10 +86,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 	// Genesis
 	case insolar.TypeGenesisRequest:
 		return &GenesisRequest{}, nil
-
-	// NodeCert
-	case insolar.TypeNodeSignRequest:
-		return &NodeSignPayload{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented message type %d", mt)
 	}
@@ -186,13 +184,11 @@ func ParcelMessageHash(pcs insolar.PlatformCryptographyScheme, parcel insolar.Pa
 }
 
 func init() {
-	// Bootstrap
-	gob.Register(&NodeSignPayload{})
-
 	// Logicrunner
 	gob.Register(&CallMethod{})
 	gob.Register(&ReturnResults{})
 	gob.Register(&ExecutorResults{})
+	gob.Register(&AdditionalCallFromPreviousExecutor{})
 	gob.Register(&ValidateCaseBind{})
 	gob.Register(&ValidationResults{})
 	gob.Register(&PendingFinished{})
@@ -213,6 +209,7 @@ func init() {
 	gob.Register(&AbandonedRequestsNotification{})
 	gob.Register(&HotData{})
 	gob.Register(&GetPendingRequestID{})
+	gob.Register(&GetPendingFilament{})
 	gob.Register(&GetRequest{})
 
 	// heavy
@@ -223,7 +220,4 @@ func init() {
 	gob.Register(&Parcel{})
 	gob.Register(insolar.Reference{})
 	gob.Register(&GetChildren{})
-
-	// NodeCert
-	gob.Register(&NodeSignPayload{})
 }
