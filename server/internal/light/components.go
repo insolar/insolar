@@ -218,18 +218,21 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewInMemoryIndex(records, CryptoScheme)
+		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
+
+		filamentCache := object.NewFilamentCacheStorage(indexes, records, Coordinator, CryptoScheme, Pulses, Bus, WmBus)
+
+		lifelines := object.NewLifelineStorage(indexes, indexes)
 
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, indexes, indexes, &conf)
-		handler.PendingStateAccessor = indexes
-		handler.PendingStateModifier = indexes
+		handler := artifactmanager.NewMessageHandler(lifelines, indexes, lifelines, filamentCache, filamentCache, &conf)
 		handler.PulseCalculator = Pulses
+		handler.FilamentCacheManager = filamentCache
 
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
@@ -282,7 +285,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			lthSyncer,
 			writeController,
-			indexes,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus

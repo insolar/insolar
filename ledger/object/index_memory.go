@@ -25,13 +25,13 @@ import (
 	"go.opencensus.io/stats"
 )
 
-type IndexStorageConcrete struct {
+type IndexStorageMemory struct {
 	bucketsLock sync.RWMutex
 	buckets     map[insolar.PulseNumber]map[insolar.ID]*LockedIndex
 }
 
-func NewIndexStorageConcrete() *IndexStorageConcrete {
-	return &IndexStorageConcrete{buckets: map[insolar.PulseNumber]map[insolar.ID]*LockedIndex{}}
+func NewIndexStorageMemory() *IndexStorageMemory {
+	return &IndexStorageMemory{buckets: map[insolar.PulseNumber]map[insolar.ID]*LockedIndex{}}
 }
 
 type LockedIndex struct {
@@ -40,7 +40,7 @@ type LockedIndex struct {
 	objectMeta FilamentIndex
 }
 
-func (i *IndexStorageConcrete) Index(pn insolar.PulseNumber, objID insolar.ID) *LockedIndex {
+func (i *IndexStorageMemory) Index(pn insolar.PulseNumber, objID insolar.ID) *LockedIndex {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
@@ -53,7 +53,7 @@ func (i *IndexStorageConcrete) Index(pn insolar.PulseNumber, objID insolar.ID) *
 }
 
 // ForPNAndJet returns a collection of buckets for a provided pn and jetID
-func (i *IndexStorageConcrete) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
+func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
@@ -85,7 +85,7 @@ func (i *IndexStorageConcrete) ForPNAndJet(ctx context.Context, pn insolar.Pulse
 	return res
 }
 
-func (i *IndexStorageConcrete) CreateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndex {
+func (i *IndexStorageMemory) CreateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndex {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
@@ -112,7 +112,7 @@ func (i *IndexStorageConcrete) CreateIndex(ctx context.Context, pn insolar.Pulse
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
-func (i *IndexStorageConcrete) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
+func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
@@ -134,7 +134,7 @@ func (i *IndexStorageConcrete) SetIndex(ctx context.Context, pn insolar.PulseNum
 }
 
 // DeleteForPN deletes all buckets for a provided pulse number
-func (i *IndexStorageConcrete) DeleteForPN(ctx context.Context, pn insolar.PulseNumber) {
+func (i *IndexStorageMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNumber) {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 

@@ -68,9 +68,9 @@ type MessageHandler struct {
 	LifelineStateModifier object.LifelineStateModifier
 	PendingModifier       object.PendingModifier
 	PendingAccessor       object.PendingAccessor
-	PendingStateModifier  object.PendingFilamentStateModifier
-	PendingStateAccessor  object.PendingFilamentStateAccessor
 	PulseCalculator       storage.PulseCalculator
+
+	FilamentCacheManager object.FilamentCacheManager
 
 	conf           *configuration.Ledger
 	jetTreeUpdater jet.Fetcher
@@ -197,12 +197,9 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep.PendingFilamentStateAccessor = h.PendingStateAccessor
 			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.LifelineAccessor = h.LifelineIndex
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep.PendingFilamentStateAccessor = h.PendingStateAccessor
 			p.Dep.PendingAccessor = h.PendingAccessor
 		},
 		GetJet: func(p *proc.GetJet) {
@@ -215,21 +212,11 @@ func NewMessageHandler(
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
-			p.Dep.PendingModifier = h.PendingModifier
+			p.Dep.FilamentCacheManager = h.FilamentCacheManager
 		},
 		GetPendingFilament: func(p *proc.GetPendingFilament) {
 			p.Dep.PendingAccessor = h.PendingAccessor
 			p.Dep.Sender = h.Sender
-		},
-		RefreshPendingFilament: func(p *proc.RefreshPendingFilament) {
-			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.PendingStateModifier = h.PendingStateModifier
-			p.Dep.PendingModifier = h.PendingModifier
-			p.Dep.LifelineAccessor = h.LifelineIndex
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.PulseCalculator = h.PulseCalculator
-			p.Dep.Bus = h.Bus
-			p.Dep.BusWM = h.Sender
 		},
 		PassState: func(p *proc.PassState) {
 			p.Dep.Blobs = h.BlobAccessor
@@ -241,11 +228,6 @@ func NewMessageHandler(
 		},
 		SetCode: func(p *proc.SetCode) {
 			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender)
-		},
-		ExpirePending: func(p *proc.ExpirePending) {
-			p.Dep.FilamentStateModifier = h.PendingStateModifier
-			p.Dep.MessageBus = h.Bus
-			p.Dep.Coordinator = h.JetCoordinator
 		},
 	}
 

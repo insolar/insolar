@@ -50,7 +50,7 @@ type Handler struct {
 	RecordAccessor        object.RecordAccessor
 	RecordModifier        object.RecordModifier
 	IndexLifelineAccessor object.LifelineAccessor
-	IndexBucketModifier   object.IndexModifier
+	IndexModifier         object.IndexHeavyModifier
 	DropModifier          drop.Modifier
 	Sender                bus.Sender
 	HeavyPendingAccessor  object.HeavyPendingAccessor
@@ -168,7 +168,6 @@ func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
 	h.Bus.MustRegister(insolar.TypeGetRequest, h.handleGetRequest)
-	h.Bus.MustRegister(insolar.TypeGetOpenRequests, h.handleGetOpenRequests)
 	return nil
 }
 
@@ -312,7 +311,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
 	storeRecords(ctx, h.RecordModifier, h.PCS, msg.PulseNum, msg.Records)
-	if err := storeIndexBuckets(ctx, h.IndexBucketModifier, msg.IndexBuckets, msg.PulseNum); err != nil {
+	if err := storeIndexBuckets(ctx, h.IndexModifier, msg.IndexBuckets, msg.PulseNum); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 	if err := storeDrop(ctx, h.DropModifier, msg.Drop); err != nil {

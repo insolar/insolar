@@ -107,7 +107,9 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	conf := configuration.NewLedger()
 	recordStorage := object.NewRecordMemory()
 	memoryMockDB := store.NewMemoryMockDB()
-	index := object.NewInMemoryIndex(recordStorage, testutils.NewPlatformCryptographyScheme())
+	idxStor := object.NewIndexStorageMemory()
+	lifelines := object.NewLifelineStorage(idxStor, idxStor)
+	filemanetCache := object.NewFilamentCacheStorage(idxStor, recordStorage, nil, nil, nil, nil, nil)
 
 	cm := &component.Manager{}
 	js := jet.NewStore()
@@ -126,7 +128,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		PulseAppender:         ps,
 		PulseAccessor:         ps,
 		RecordModifier:        recordStorage,
-		IndexLifelineModifier: index,
+		IndexLifelineModifier: lifelines,
 	}
 	err := genesisBaseRecord.Create(ctx)
 	if err != nil {
@@ -164,10 +166,10 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(index, index, index, index, index, &conf)
+	handler := artifactmanager.NewMessageHandler(lifelines, idxStor, lifelines, filemanetCache, filemanetCache, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
-	handler.LifelineIndex = index
+	handler.LifelineIndex = lifelines
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
 	handler.BlobAccessor = bs
@@ -199,7 +201,8 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		memoryMockDB,
 		js,
 		ns,
-		index,
+		lifelines,
+		filemanetCache,
 		ps,
 		ps,
 		ds,
@@ -252,7 +255,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	// Create ledger.
 	l := NewTestLedger(am, pm, jc)
 
-	return l, handler, index
+	return l, handler, filemanetCache
 }
 
 type pubSubMock struct {
