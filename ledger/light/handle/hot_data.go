@@ -47,10 +47,5 @@ func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
 		panic(errors.Wrap(err, "something broken"))
 		return err
 	}
-	refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, flow.Pulse(ctx), s.message.HotIndexes)
-	s.dep.RefreshPendingFilament(refreshPendingsState)
-	if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
-		panic(errors.Wrap(err, "something broken"))
-	}
 	return nil
 }
