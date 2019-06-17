@@ -21,8 +21,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
@@ -30,68 +29,74 @@ import (
 
 type SetRequest struct {
 	dep     *proc.Dependencies
-	msg     *message.SetRecord // TODO: watermill.Message
-	replyTo chan<- bus.Reply
+	message payload.Meta
+	passed  bool
 }
 
-func NewSetRequest(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.SetRecord) *SetRequest { // TODO: watermill.Message
+func NewSetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetRequest {
 	return &SetRequest{
 		dep:     dep,
-		msg:     msg,
-		replyTo: rep,
+		message: msg,
+		passed:  passed,
 	}
 }
 
 func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.replyTo)
-	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, true); err != nil {
+	msg := payload.SetRequest{}
+	err := msg.Unmarshal(s.message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal SetRequest message")
+	}
+
+	calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
+	s.dep.CalculateID(calc)
+	if err := f.Procedure(ctx, calc, true); err != nil {
 		return err
 	}
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
-	s.dep.WaitHot(hot)
-	if err := f.Procedure(ctx, hot, true); err != nil {
+	reqID := calc.Result.ID
+
+	passIfNotExecutor := !s.passed
+	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.CheckJet(jet)
+	if err := f.Procedure(ctx, jet, true); err != nil {
+		if err == proc.ErrNotExecutor && passIfNotExecutor {
+			return nil
+		}
 		return err
+	}
+	reqJetID := jet.Result.Jet
+
+	hot := proc.NewWaitHotWM(reqJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHotWM(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
+	request := record.Request{}
+	err = request.Unmarshal(msg.Request)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal Request record")
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, SetRequest fails because it should update light's index state
-	err := s.ensureIndex(ctx, jet, f)
+	err = s.ensureIndex(ctx, request, reqJetID, f)
 	if err != nil {
 		return err
 	}
 
-	setRequest := proc.NewSetRequest(jet.Result.Jet, s.replyTo, s.msg.Record)
+	setRequest := proc.NewSetRequest(s.message, request, reqID, reqJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }
 
-func (s *SetRequest) ensureIndex(ctx context.Context, jet *proc.FetchJet, f flow.Flow) error {
-
-	virtRec := record.Virtual{}
-	err := virtRec.Unmarshal(s.msg.Record)
-	if err != nil {
-		return errors.Wrap(err, "can't deserialize record")
-	}
-
-	concrete := record.Unwrap(&virtRec)
-	var objID insolar.ID
-	switch r := concrete.(type) {
-	case *record.Request:
-		// Skip object creation and genesis
-		if r.CallType != record.CTMethod {
-			return nil
-		}
-		objID = *r.GetObject().Record()
-	case *record.Result:
-		objID = r.Object
-	default:
+func (s *SetRequest) ensureIndex(ctx context.Context, req record.Request, jet insolar.JetID, f flow.Flow) error {
+	if req.CallType != record.CTMethod {
 		return nil
 	}
+	objID := *req.GetObject().Record()
 
-	objRef := *insolar.NewReference(objID)
-
-	idx := proc.NewGetIndex(objRef, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
-	s.dep.GetIndex(idx)
+	idx := proc.NewGetIndexWM(objID, jet, s.message)
+	s.dep.GetIndexWM(idx)
 	return f.Procedure(ctx, idx, false)
 }
