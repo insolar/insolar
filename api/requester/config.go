@@ -46,10 +46,10 @@ type Params struct {
 }
 
 type ContractAnswer struct {
-	JSONRPC string `json:"jsonrpc"`
-	ID      int    `json:"id"`
-	Result  Result `json:"result,omitempty"`
-	Error   Error  `json:"error,omitempty"`
+	JSONRPC string  `json:"jsonrpc"`
+	ID      int     `json:"id"`
+	Result  *Result `json:"result,omitempty"`
+	Error   *Error  `json:"error,omitempty"`
 }
 
 type Error struct {
@@ -59,7 +59,7 @@ type Error struct {
 }
 
 type Result struct {
-	ContractResult interface{} `json:"payload"`
+	ContractResult interface{} `json:"payload,omitempty"`
 	TraceID        string      `json:"traceID,omitempty"`
 }
 

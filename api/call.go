@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/metrics"
+
 	"github.com/insolar/insolar/api/requester"
 
 	"github.com/pkg/errors"
@@ -37,7 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/metrics"
 )
 
 const (
@@ -118,9 +119,8 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 }
 
 func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
-	resp.Error.Message = err.Error()
-	resp.Error.Code = ResultError
-	resp.Error.TraceID = traceID
+	errResponse := &requester.Error{Message: "Messagebus timeout exceeded", Code: ResultError, TraceID: traceID}
+	resp.Error = errResponse
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
@@ -132,22 +132,22 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		ctx, span := instracer.StartSpan(ctx, "callHandler")
 		defer span.End()
 
-		request := requester.Request{}
-		resp := requester.ContractAnswer{}
+		contractRequest := requester.Request{}
+		contractAnswer := requester.ContractAnswer{}
 
 		startTime := time.Now()
 		defer func() {
 			success := "success"
-			if resp.Error.Message != "" {
+			if contractAnswer.Error != nil {
 				success = "fail"
 			}
-			metrics.APIContractExecutionTime.WithLabelValues(request.Method, success).Observe(time.Since(startTime).Seconds())
+			metrics.APIContractExecutionTime.WithLabelValues(contractRequest.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
 
-		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
+		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
 
 		defer func() {
-			res, err := json.MarshalIndent(resp, "", "    ")
+			res, err := json.MarshalIndent(contractAnswer, "", "    ")
 			if err != nil {
 				res = []byte(`{"error": "can't marshal ContractAnswer to json'"}`)
 			}
@@ -158,67 +158,66 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 
-		rawBody, err := UnmarshalRequest(req, &request)
+		rawBody, err := UnmarshalRequest(req, &contractRequest)
 		if err != nil {
-			processError(err, "Can't unmarshal request", &resp, insLog, traceID)
+			processError(err, "Can't unmarshal contractRequest", &contractAnswer, insLog, traceID)
 			return
 		}
 
-		resp.JSONRPC = request.JSONRPC
-		resp.ID = request.ID
+		contractAnswer.JSONRPC = contractRequest.JSONRPC
+		contractAnswer.ID = contractRequest.ID
 
 		digest := req.Header.Get(requester.Digest)
 		richSignature := req.Header.Get(requester.Signature)
 
 		signature, err := validateRequestHeaders(digest, richSignature, rawBody)
 		if err != nil {
-			processError(err, "Can't validate request", &resp, insLog, traceID)
+			processError(err, "Can't validate contractRequest", &contractAnswer, insLog, traceID)
 			return
 		}
 
-		if len(request.LogLevel) > 0 {
-			logLevelNumber, err := insolar.ParseLevel(request.LogLevel)
+		if len(contractRequest.LogLevel) > 0 {
+			logLevelNumber, err := insolar.ParseLevel(contractRequest.LogLevel)
 			if err != nil {
-				processError(err, "Can't parse logLevel", &resp, insLog, traceID)
+				processError(err, "Can't parse logLevel", &contractAnswer, insLog, traceID)
 				return
 			}
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed(request.Params.Seed)
+		err = ar.checkSeed(contractRequest.Params.Seed)
 		if err != nil {
-			processError(err, "Can't checkSeed", &resp, insLog, traceID)
+			processError(err, "Can't checkSeed", &contractAnswer, insLog, traceID)
 			return
 		}
 
 		// pulse, err := ar.PulseAccessor.Latest(ctx)
 		// if err != nil {
-		// 	processError(err, "Can't get last pulse", &resp, insLog, traceID)
+		// 	processError(err, "Can't get last pulse", &contractAnswer, insLog, traceID)
 		// 	return
 		// }
 
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			// result, err = ar.makeCall(ctx, request, rawBody, signature, pulse.PulseTimestamp)
-			result, err = ar.makeCall(ctx, request, rawBody, signature, 0)
+			// result, err = ar.makeCall(ctx, contractRequest, rawBody, signature, pulse.PulseTimestamp)
+			result, err = ar.makeCall(ctx, contractRequest, rawBody, signature, 0)
 			ch <- nil
 		}()
 		select {
 
 		case <-ch:
 			if err != nil {
-				processError(err, "Can't makeCall", &resp, insLog, traceID)
+				processError(err, "Can't makeCall", &contractAnswer, insLog, traceID)
 				return
 			}
-			resp.Result.ContractResult = result
-			resp.Result.TraceID = traceID
+			contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
+			contractAnswer.Result = contractResult
 			return
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
-			resp.Error.Message = "Messagebus timeout exceeded"
-			resp.Error.Code = TimeoutError
-			resp.Error.TraceID = traceID
+			errResponse := &requester.Error{Message: "Messagebus timeout exceeded", Code: TimeoutError, TraceID: traceID}
+			contractAnswer.Error = errResponse
 			return
 		}
 	}
