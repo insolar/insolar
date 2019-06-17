@@ -251,10 +251,9 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 			logger.Error(errors.Wrap(err, "failed to receive message"))
 			return nil, nil
 		}
-		msgHash := meta.OriginHash
 
-		msg.Metadata.Set("msg_hash", msgHash.String())
-		logger = logger.WithField("msg_hash", msgHash.String())
+		msg.Metadata.Set("msg_hash", meta.OriginHash.String())
+		logger = logger.WithField("msg_hash", meta.OriginHash.String())
 
 		msg.Metadata.Set("pulse", meta.Pulse.String())
 
