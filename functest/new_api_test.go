@@ -39,7 +39,7 @@ func contractError(body []byte) error {
 		return err
 	}
 	if e, ok := t["error"]; ok {
-		if ee, ok := e.(string); ok && ee != "" {
+		if ee, ok := e.(map[string]interface{})["message"].(string); ok && ee != "" {
 			return errors.New(ee)
 		}
 	}
@@ -98,13 +98,13 @@ func customSend(data string) (map[string]interface{}, error) {
 func TestEmptyBody(t *testing.T) {
 	res, err := customSend("")
 	require.NoError(t, err)
-	require.Equal(t, "[ UnmarshalRequest ] Empty body", res["error"])
+	require.Equal(t, "[ UnmarshalRequest ] Empty body", res["error"].(map[string]interface{})["message"].(string))
 }
 
 func TestCrazyJSON(t *testing.T) {
 	res, err := customSend("[dh")
 	require.NoError(t, err)
-	require.Contains(t, res["error"], "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
+	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
 }
 
 func TestIncorrectSign(t *testing.T) {
