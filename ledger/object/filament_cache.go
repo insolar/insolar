@@ -60,8 +60,6 @@ type PendingAccessor interface {
 }
 
 type HeavyPendingAccessor interface {
-	// AllOpenRequestsForObjID returns all open requests for the provided object and pulse
-	AllOpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]insolar.ID, error)
 	Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error)
 }
 

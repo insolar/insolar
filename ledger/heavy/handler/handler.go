@@ -326,13 +326,3 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 
 	return &reply.OK{}, nil
 }
-
-func (h *Handler) handleGetOpenRequests(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetOpenRequests)
-	recs, err := h.HeavyPendingAccessor.AllOpenRequestsForObjID(ctx, msg.PN, msg.ObjID)
-	if err != nil {
-		return &reply.HeavyError{Message: err.Error()}, nil
-	}
-
-	return &reply.OpenRequestsOnHeavy{ObjID: msg.ObjID, Requests: recs}, nil
-}
