@@ -42,16 +42,6 @@ func NewSetCode(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetCode 
 }
 
 func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
-	// pl, err := payload.UnmarshalFromMeta(s.message.Payload)
-	// if err != nil {
-	// 	panic("1")
-	// 	return errors.Wrap(err, "failed to unmarshal payload")
-	// }
-	// msg, ok := pl.(*payload.SetCode)
-	// if !ok {
-	// 	return fmt.Errorf("unexpected payload type: %T", pl)
-	// }
-
 	msg := payload.SetCode{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
