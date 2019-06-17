@@ -358,13 +358,14 @@ func (m *Member) GetMyBalance() (interface{}, error) {
 		return nil, fmt.Errorf("[ getMyBalanceCall ] Failed to get balance: %s", err.Error())
 	}
 
-	// d, err := m.getDeposits()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
-	// }
+	//d, err := m.getDeposits()
+	//if err != nil {
+	//	return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
+	//}
+	//return map[string]interface{}{"balance" : b, "deposit": d}, nil
 
 	return b, nil
-}
+}x
 func (m *Member) getDeposits() ([]map[string]string, error) {
 
 	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
