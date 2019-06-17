@@ -40,7 +40,10 @@ import (
 var httpClient *http.Client
 
 const (
-	RequestTimeout = 15 * time.Second
+	RequestTimeout  = 15 * time.Second
+	DigestHeader    = "Digest"
+	SignatureHeader = "Signature"
+	ContentType     = "Content-Type"
 )
 
 func init() {
@@ -100,7 +103,7 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with creating request")
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(ContentType, "application/json")
 
 	h := sha256.New()
 	_, err = h.Write(jsonValue)
@@ -108,8 +111,8 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Cant get hash")
 	}
 	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	req.Header.Set("Digest", "SHA-256="+sha)
-	req.Header.Set("Signature", "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
+	req.Header.Set(DigestHeader, "SHA-256="+sha)
+	req.Header.Set(SignatureHeader, "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
 	postResp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with sending request")
@@ -240,6 +243,7 @@ func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 	return PointsToDER(r, s), nil
 }
 
+// Convert signature points do DER format
 func PointsToDER(r, s *big.Int) string {
 	prefixPoint := func(b []byte) []byte {
 		if len(b) == 0 {
