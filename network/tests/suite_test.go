@@ -515,7 +515,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
-	mblocker := testutils.NewMessageBusLockerMock(t)
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
 	senderMock := bus.NewSenderMock(t)
@@ -534,7 +533,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	mb.MustRegisterMock.Return()
 
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
-		&amMock, certManager, cryptographyService, mblocker, serviceNetwork, keyProc, terminationHandler,
+		&amMock, certManager, cryptographyService, serviceNetwork, keyProc, terminationHandler,
 		mb, testutils.NewContractRequesterMock(t), senderMock)
 
 	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {

@@ -205,7 +205,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(pubSub, Pulses, Coordinator)
+		WmBus = bus.NewBus(pubSub, Pulses, Coordinator, CryptoScheme)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -354,7 +354,6 @@ func startWatermill(
 	inRouter.AddMiddleware(
 		middleware.InstantAck,
 		b.IncomingMessageRouter,
-		middleware.CorrelationID,
 	)
 
 	inRouter.AddNoPublisherHandler(

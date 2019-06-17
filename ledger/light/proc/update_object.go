@@ -76,6 +76,9 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	if err == hot.ErrWriteClosed {
 		return bus.Reply{Err: flow.ErrCancelled}
 	}
+	if err != nil {
+		return bus.Reply{Err: errors.Wrap(err, "failed to start write")}
+	}
 	defer done()
 
 	logger := inslogger.FromContext(ctx)
