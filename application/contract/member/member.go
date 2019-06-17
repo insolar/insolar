@@ -164,6 +164,8 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	switch request.Params.CallSite {
 	case "wallet.getMyBalance":
 		return m.GetMyBalance()
+	case "CreateHelloWorld":
+		return rootdomain.GetObject(rootDomain).CreateHelloWorld()
 	}
 
 	params := request.Params.CallParams.(map[string]interface{})

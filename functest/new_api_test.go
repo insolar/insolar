@@ -50,7 +50,7 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		Method: "CreateMember",
 		Params: nil,
 	}, []byte("111"))
@@ -62,7 +62,7 @@ func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		Method: "CreateMember",
 		Params: nil,
 	}, []byte("12345678901234567890123456789012"))
