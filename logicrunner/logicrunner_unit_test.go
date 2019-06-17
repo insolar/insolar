@@ -160,6 +160,7 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	suite.Require().Equal(message.NotPending, es.pending)
 }
 
+/*
 func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending() {
 	es := NewExecutionState(testutils.RandomRef())
 	es.pending = message.InPending
@@ -173,7 +174,7 @@ func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueu
 
 	suite.Require().NoError(err)
 	suite.Require().Equal(message.InPending, es.pending)
-}
+}*/
 
 func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor() {
 	table := []struct {
@@ -246,8 +247,10 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 			}
 
 			h.handleActual(suite.ctx, &msg, f)
-			require.Equal(suite.T(), test.expectedClarifyPendingStateCtr, atomic.LoadInt32(&clarifyPendingStateCtr))
-			require.Equal(suite.T(), test.expectedStartQueueProcessorCtr, atomic.LoadInt32(&startQueueProcessorCtr))
+
+			assert.Equal(suite.T(), test.expectedClarifyPendingStateCtr, atomic.LoadInt32(&clarifyPendingStateCtr))
+			os := suite.lr.UpsertObjectState(msg.ObjectReference)
+			assert.Equal(suite.T(), test.expectedStartQueueProcessorCtr, os.ExecutionState.Broker.StartProcessorIfNeededCount)
 		})
 	}
 }
@@ -519,10 +522,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				for test.object.queueLen > 0 {
 					test.object.queueLen--
 
-					os.ExecutionState.Queue = append(
-						os.ExecutionState.Queue,
-						Transcript{},
-					)
+					os.ExecutionState.Broker.mutable.Push(&Transcript{})
 				}
 			}
 
@@ -542,7 +542,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 
 			suite.Require().NoError(err)
 			suite.Require().Equal(test.expected.pending, suite.lr.state[object].ExecutionState.pending)
-			suite.Require().Equal(test.expected.queueLen, len(suite.lr.state[object].ExecutionState.Queue))
+			suite.Require().Equal(test.expected.queueLen, suite.lr.state[object].ExecutionState.Broker.mutable.Len())
 		})
 	}
 }
@@ -703,7 +703,7 @@ func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 			a := assert.New(t)
 
 			es := NewExecutionState(testutils.RandomRef())
-			es.Queue = makeQueue(suite.ctx, tc.QueueLength)
+			es.Broker = NewBroker(suite.ctx, tc.QueueLength)
 
 			mq, hasMore := es.releaseQueue()
 			a.Equal(tc.ExpectedLength, len(mq))
@@ -731,7 +731,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	randRef := testutils.RandomRef()
 
 	es := NewExecutionState(randRef)
-	es.Queue = makeQueue(suite.ctx, 1)
+	es.Broker = NewBroker(suite.ctx, 1)
 	es.PrototypeDescriptor = pDesc
 	es.CodeDescriptor = cDesc
 	data := []byte(testutils.RandomString())
@@ -878,7 +878,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 		}
 
 		es := NewExecutionState(ref)
-		es.QueueProcessorActive = true
+		es.Broker.processActive = true
 		es.LedgerHasMoreRequests = test.objectStateStatus
 		suite.lr.state[ref] = &ObjectState{ExecutionState: es}
 
@@ -1395,7 +1395,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 
 	es := NewExecutionState(s.objectRef)
 	es.CurrentList.Set(s.objectRef, &Transcript{})
-	es.Queue = append(es.Queue, Transcript{Context: s.ctx})
+	es.Broker.mutable.Push(&Transcript{Context: s.ctx})
 	es.pending = message.NotPending
 
 	s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}
@@ -1433,7 +1433,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 	es.pending = message.NotPending
 	s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}
 	es.CurrentList.Set(s.objectRef, &Transcript{})
-	es.Queue = make([]Transcript, 0)
+	es.Broker = NewBroker(s.ctx, 0)
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
@@ -1533,15 +1533,15 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 	s.jc.MeMock.Return(insolar.Reference{})
 
 	var testCases = map[string]struct {
-		queue           []Transcript
+		Broker          *ExecutionBroker
 		hasMoreRequests bool
 	}{
 		"Has": {
-			makeQueue(s.ctx, maxQueueLength+1),
+			NewBroker(s.ctx, maxQueueLength+1),
 			true,
 		},
 		"Don't": {
-			makeQueue(s.ctx, maxQueueLength),
+			NewBroker(s.ctx, maxQueueLength),
 			false,
 		},
 	}
@@ -1550,7 +1550,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 		s.T().Run(name, func(t *testing.T) {
 			a := assert.New(t)
 
-			messagesQueue := convertQueueToMessageQueue(s.ctx, test.queue[:maxQueueLength])
+			messagesQueue := convertQueueToMessageQueue(s.ctx, test.Broker.mutable.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
 				RecordRef: s.objectRef,
@@ -1567,7 +1567,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			})
 
 			es := NewExecutionState(s.objectRef)
-			es.Queue = test.queue
+			es.Broker = test.Broker
+
 			s.lr.state[s.objectRef] = &ObjectState{ExecutionState: es}
 
 			err := s.lr.OnPulse(s.ctx, s.pulse)
@@ -1610,7 +1611,10 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) AfterTest(suiteName, testName
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueElement() {
 	es := NewExecutionState(s.ref)
-	es.LedgerQueueElement = &Transcript{}
+	es.Broker.Put(s.ctx, false, &Transcript{
+		FromLedger:   true,
+		LogicContext: &insolar.LogicCallContext{Immutable: false}},
+	)
 
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
@@ -1628,7 +1632,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecution
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
-	s.Require().Nil(es.LedgerQueueElement)
+	s.Require().Nil(es.Broker.HasLedgerRequest(s.ctx))
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() {
@@ -1661,7 +1665,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
-	s.Require().Nil(es.LedgerQueueElement)
+	s.Require().Nil(es.Broker.HasLedgerRequest(s.ctx))
 }
 
 func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequest() {
@@ -1685,5 +1689,6 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	s.Require().NoError(err)
 
 	s.Require().Equal(true, es.LedgerHasMoreRequests)
-	s.Require().Equal(parcel, es.LedgerQueueElement.Parcel)
+	ledgerRequest := es.Broker.HasLedgerRequest(s.ctx)
+	s.Require().NotNil(ledgerRequest)
 }

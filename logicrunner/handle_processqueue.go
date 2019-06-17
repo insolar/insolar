@@ -16,19 +16,7 @@
 
 package logicrunner
 
-import (
-	"context"
-
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
-)
-
+/*
 type ProcessExecutionQueue struct {
 	dep *Dependencies
 
@@ -86,6 +74,7 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 	}
 }
 
+// TODO: we're losing "fromLedger usage here"
 // ---------------- StartQueueProcessorIfNeeded
 
 type StartQueueProcessorIfNeeded struct {
@@ -100,16 +89,6 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 
 	s.es.Lock()
 	defer s.es.Unlock()
-
-	if !s.es.haveSomeToProcess() {
-		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
-		return nil
-	}
-
-	if s.es.QueueProcessorActive {
-		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
-		return nil
-	}
 
 	if s.es.pending == message.PendingUnknown {
 		return errors.New("shouldn't start queue processor with unknown pending state")
@@ -134,3 +113,4 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 
 	return nil
 }
+*/

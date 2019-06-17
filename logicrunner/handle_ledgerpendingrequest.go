@@ -62,16 +62,8 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 		return nil
 	}
 
-	insolarRef := Ref{}.FromSlice(p.Message.Payload)
-	h := StartQueueProcessorIfNeeded{
-		es:  es,
-		dep: p.dep,
-		ref: &insolarRef,
-	}
-	if err := f.Handle(ctx, h.Present); err != nil {
-		inslogger.FromContext(ctx).Warn("[ GetLedgerPendingRequest.Present ] Couldn't start queue: ", err)
-	}
-
+	// insolarRef := Ref{}.FromSlice(p.Message.Payload)
+	es.Broker.StartProcessorIfNeeded(ctx)
 	return nil
 }
 
@@ -84,9 +76,9 @@ type UnsafeGetLedgerPendingRequest struct {
 func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	es := u.es
 	lr := u.dep.lr
+
 	es.Lock()
-	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
-		es.Unlock()
+	if es.Broker.HasLedgerRequest(ctx) != nil || !es.LedgerHasMoreRequests {
 		return nil
 	}
 	es.Unlock()
@@ -141,8 +133,11 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	}
 
 	u.hasPending = true
+
 	es.LedgerHasMoreRequests = true
-	es.LedgerQueueElement = NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
-	es.LedgerQueueElement.FromLedger = true
+	t := NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
+	t.FromLedger = true
+	es.Broker.Prepend(ctx, true, t)
+
 	return nil
 }

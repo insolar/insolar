@@ -31,7 +31,7 @@ const InnerMsgTopic = "InnerMsg"
 const MessageTypeField = "Type"
 
 const (
-	processExecutionQueueMsg   = "ProcessExecutionQueue"
+	// processExecutionQueueMsg   = "ProcessExecutionQueue"
 	getLedgerPendingRequestMsg = "GetLedgerPendingRequest"
 )
 
@@ -101,12 +101,12 @@ type InnerInit struct {
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Metadata.Get(MessageTypeField) {
-	case processExecutionQueueMsg:
-		h := ProcessExecutionQueue{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
+	/* case processExecutionQueueMsg:
+	h := ProcessExecutionQueue{
+		dep:     s.dep,
+		Message: s.Message,
+	}
+	return f.Handle(ctx, h.Present) */
 	case getLedgerPendingRequestMsg:
 		h := GetLedgerPendingRequest{
 			dep:     s.dep,

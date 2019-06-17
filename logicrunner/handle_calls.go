@@ -37,7 +37,7 @@ type HandleCall struct {
 	Message bus.Message
 }
 
-func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState, request *Ref, parcel insolar.Parcel) {
+func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState, requestRef *Ref, parcel insolar.Parcel) {
 	// If the flow has canceled during ClarifyPendingState there are two possibilities.
 	// 1. It's possible that we started to execute ClarifyPendingState, the pulse has
 	// changed and the execution queue was sent to the next executor in OnPulse method.
@@ -53,11 +53,7 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 	// the receiver will be not an executor of the object anymore. However in this case
 	// MessageBus will automatically resend the message to the right VE.
 
-	additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
-		ObjectReference: es.Ref,
-		Parcel:          parcel,
-		Request:         request,
-	}
+	logger := inslogger.FromContext(ctx)
 
 	if es.pending == message.PendingUnknown {
 		additionalCallMsg.Pending = message.NotPending
@@ -67,25 +63,20 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 
 	es.Lock()
 	// We want to remove element we have just added to es.Queue to eliminate doubling
-	addedRequestIdx := -1
-	for i := len(es.Queue) - 1; i >= 0; i-- {
-		if es.Queue[i].Request.Equal(*request) {
-			addedRequestIdx = i
-			break
-		}
-	}
+	request := es.Broker.GetByReference(ctx, requestRef)
+	es.Unlock()
 
 	// it might be already collected in OnPulse, that is why it already might not be in es.Queue
-	if addedRequestIdx != -1 {
-		es.Queue = append(es.Queue[:addedRequestIdx], es.Queue[addedRequestIdx+1:]...)
-		// we must unlock it before send to prevent deadlock
-		es.Unlock()
-		_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
-		if err != nil {
-			inslogger.FromContext(ctx).Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
+	if request != nil {
+		additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
+			ObjectReference: es.Ref,
+			Parcel:          parcel,
+			Request:         requestRef,
 		}
-	} else {
-		es.Unlock()
+
+		if _, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil); err != nil {
+			logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
+		}
 	}
 }
 
@@ -103,6 +94,7 @@ func (h *HandleCall) handleActual(
 	os.Lock()
 	if os.ExecutionState == nil {
 		os.ExecutionState = NewExecutionState(ref)
+		os.ExecutionState.RegisterLogicRunner(lr)
 	}
 	es := os.ExecutionState
 	os.Unlock()
@@ -147,8 +139,7 @@ func (h *HandleCall) handleActual(
 	request := procRegisterRequest.getResult()
 
 	es.Lock()
-	qElement := *NewTranscript(ctx, parcel, request, lr.pulse(ctx), es.Ref)
-	es.Queue = append(es.Queue, qElement)
+	es.Broker.Put(ctx, false, NewTranscript(ctx, parcel, request, lr.pulse(ctx), es.Ref))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
@@ -165,14 +156,8 @@ func (h *HandleCall) handleActual(
 		}
 		// and return RegisterRequest as usual
 	} else {
-		s := StartQueueProcessorIfNeeded{
-			es:  es,
-			dep: h.dep,
-			ref: &ref,
-		}
-		if err := f.Handle(ctx, s.Present); err != nil {
-			inslogger.FromContext(ctx).Warn("[ HandleCall.handleActual ] StartQueueProcessorIfNeeded returns error: ", err)
-		}
+		// it's 'fast' operation, so we don't need to check that pulse ends
+		es.Broker.StartProcessorIfNeeded(ctx)
 	}
 
 	return &reply.RegisterRequest{
@@ -231,6 +216,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	os.Lock()
 	if os.ExecutionState == nil {
 		os.ExecutionState = NewExecutionState(ref)
+		os.ExecutionState.RegisterLogicRunner(lr)
 	}
 	es := os.ExecutionState
 	os.Unlock()
@@ -239,8 +225,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	if msg.Pending == message.NotPending {
 		es.pending = message.NotPending
 	}
-	qElement := *NewTranscript(ctx, msg.Parcel, msg.Request, lr.pulse(ctx), es.Ref)
-	es.Queue = append(es.Queue, qElement)
+	es.Broker.Put(ctx, false, NewTranscript(ctx, msg.Parcel, msg.Request, lr.pulse(ctx), es.Ref))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
@@ -256,14 +241,8 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 		return
 	}
 
-	s := StartQueueProcessorIfNeeded{
-		es:  es,
-		dep: h.dep,
-		ref: &ref,
-	}
-	if err := f.Handle(ctx, s.Present); err != nil {
-		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor.handleActual ] StartQueueProcessorIfNeeded returns error: ", err)
-	}
+	// it's 'fast' operation, so we don't need to check that pulse ends
+	es.Broker.StartProcessorIfNeeded(ctx)
 }
 
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
