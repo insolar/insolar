@@ -82,10 +82,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	seed, err := requester.GetSeed(apiURL)
-	check("[ simpleRequester ]", err)
-	request.Params.Seed = seed
-
 	rawConf, err := ioutil.ReadFile(memberKeysPath)
 	check("[ simpleRequester ]", err)
 
@@ -93,29 +89,11 @@ func main() {
 	fmt.Println("Params: " + string(stringParams))
 	fmt.Println("Method: " + request.Method)
 	fmt.Println("Reference: " + request.Params.Reference)
-	fmt.Println("Seed: " + request.Params.Seed)
 
 	keys := &memberKeys{}
 	err = json.Unmarshal(rawConf, keys)
 	check("[ simpleRequester ]", err)
-	request.Params.PublicKey = keys.Public
-	dataToSign, err := json.Marshal(request)
-	check("[ simpleRequester ]", err)
-
-	// ks := platformpolicy.NewKeyProcessor()
-	// publicKey, err := ks.ImportPublicKeyPEM([]byte(keys.Public))
-	// check("[ simpleRequester ]", err)
-	signature, err := requester.Sign(keys.Public, dataToSign)
-	check("[ simpleRequester ]", err)
-
-	fmt.Println("signature: " + signature)
-	body, err := requester.GetResponseBodyContract(apiURL+"/call", *request, signature)
-	check("[ simpleRequester ]", err)
-	if len(body) == 0 {
-		fmt.Println("[ simpleRequester ] Response body is Empty")
-	}
-
-	response, err := getResponse(body)
+	response, err := execute(apiURL, *keys, *request)
 	check("[ simpleRequester ]", err)
 
 	fmt.Println("Execute result: ", response)
