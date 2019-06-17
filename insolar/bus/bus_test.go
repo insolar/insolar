@@ -471,9 +471,10 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	// send messages
 	for i := 0; i < count; i++ {
 		go func(i int) {
-			results, _ := b.SendTarget(ctx, msgs[i], gen.Reference())
+			results, doneWait := b.SendTarget(ctx, msgs[i], gen.Reference())
 			done <- nil
 			_, ok := <-results
+			doneWait()
 			isReplyOk <- ok
 		}(i)
 	}
