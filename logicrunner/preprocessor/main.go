@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -432,9 +433,13 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		filteredMethodsProxies = append(filteredMethodsProxies, methodInfo)
 	}
 
+	// Need to guarantee order for generated files
+	types := generateTypes(pf)
+	sort.Strings(types)
+
 	data := map[string]interface{}{
 		"PackageName":         proxyPackageName,
-		"Types":               generateTypes(pf),
+		"Types":               types,
 		"ContractType":        pf.contract,
 		"MethodsProxies":      filteredMethodsProxies,
 		"ConstructorsProxies": constructorProxies,
