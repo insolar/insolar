@@ -41,9 +41,9 @@ var httpClient *http.Client
 
 const (
 	RequestTimeout = 15 * time.Second
-	Digest    = "Digest"
-	Signature = "Signature"
-	ContentType = "Content-Type"
+	Digest         = "Digest"
+	Signature      = "Signature"
+	ContentType    = "Content-Type"
 )
 
 func init() {
