@@ -26,7 +26,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/api"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -91,7 +90,7 @@ type PlatformRequest struct {
 }
 
 // GetResponseBodyContract makes request to contract and extracts body
-func GetResponseBodyContract(url string, postP api.Request, signature string) ([]byte, error) {
+func GetResponseBodyContract(url string, postP Request, signature string) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBodyContract ] Problem with marshaling params")
@@ -167,11 +166,11 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	return body, nil
 }
 
-// GetSeed makes rpc request to seed.Get method and extracts it
+// GetSeed makes rpc request to node.GetSeed method and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
 		JSONRPC: "2.0",
-		Method:  "seed.Get",
+		Method:  "node.GetSeed",
 		ID:      1,
 	})
 	if err != nil {
@@ -195,7 +194,7 @@ func GetSeed(url string) (string, error) {
 }
 
 // SendWithSeed sends request with known seed
-func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *api.Request, seed string) ([]byte, error) {
+func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Request, seed string) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ Send ] Configs must be initialized")
 	}
@@ -269,7 +268,7 @@ func pointsToDER(r, s *big.Int) string {
 }
 
 // Send first gets seed and after that makes target request
-func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *api.Request) ([]byte, error) {
+func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Request) ([]byte, error) {
 	verboseInfo(ctx, "Sending GETSEED request ...")
 	seed, err := GetSeed(url)
 	if err != nil {
@@ -293,9 +292,9 @@ func getDefaultRPCParams(method string) PlatformRequest {
 	}
 }
 
-// Info makes rpc request to info.Get method and extracts it
+// Info makes rpc request to network.GetInfo method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	params := getDefaultRPCParams("info.Get")
+	params := getDefaultRPCParams("network.GetInfo")
 
 	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {
@@ -317,7 +316,7 @@ func Info(url string) (*InfoResponse, error) {
 
 // Status makes rpc request to info.Status method and extracts it
 func Status(url string) (*StatusResponse, error) {
-	params := getDefaultRPCParams("status.Get")
+	params := getDefaultRPCParams("node.GetStatus")
 
 	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {

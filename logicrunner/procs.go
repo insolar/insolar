@@ -33,9 +33,12 @@ import (
 type CheckOurRole struct {
 	msg  insolar.Message
 	role insolar.DynamicRole
+	pulseNumber insolar.PulseNumber
 
 	lr *LogicRunner
 }
+
+var ErrCantExecute = errors.New("can't execute this object")
 
 func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "CheckOurRole")
@@ -44,14 +47,13 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := ch.msg.DefaultTarget()
 	isAuthorized, err := ch.lr.JetCoordinator.IsAuthorized(
-		// TODO: change ch.Dep.lr.pulse(ctx).PulseNumber -> flow.Pulse(ctx)
-		ctx, ch.role, *target.Record(), ch.lr.pulse(ctx).PulseNumber, ch.lr.JetCoordinator.Me(),
+		ctx, ch.role, *target.Record(), ch.pulseNumber, ch.lr.JetCoordinator.Me(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
 	}
 	if !isAuthorized {
-		return errors.New("can't execute this object")
+		return ErrCantExecute
 	}
 	return nil
 }

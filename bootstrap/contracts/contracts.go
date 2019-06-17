@@ -50,6 +50,9 @@ func GenesisContractsStates(cfg insolar.GenesisContractsConfig) []insolar.Genesi
 }
 
 func rootDomain() insolar.GenesisContractState {
+	if len(genesisrefs.ContractMigrationDamonMembers) < 3 {
+		panic("need at least 3 migration damons")
+	}
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameRootDomain,
 		Prototype:  insolar.GenesisNameRootDomain,

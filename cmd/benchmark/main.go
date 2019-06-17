@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -140,6 +141,34 @@ func printResults(s scenario) {
 		),
 	)
 	s.printResult()
+}
+
+func addBurnAddresses(insSDK *sdk.SDK) int32 {
+	var err error
+	var retriesCount int32
+
+	bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
+	for bof.Attempt() < backoffAttemptsCount {
+		burnAddresses := []string{}
+		for j := 0; j < concurrent*2; j++ {
+			burnAddresses = append(burnAddresses, "fake_burn_address_"+strconv.Itoa(j))
+		}
+		traceID, err := insSDK.AddBurnAddresses(burnAddresses)
+		if err == nil {
+			break
+		}
+
+		if strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
+			retriesCount++
+		} else {
+			fmt.Printf("Retry to add burn address. TraceID: %s Error is: %s\n", traceID, err.Error())
+		}
+		time.Sleep(bof.Duration())
+	}
+	check(fmt.Sprintf("Couldn't add burn address after retries: %d", backoffAttemptsCount), err)
+	bof.Reset()
+
+	return retriesCount
 }
 
 func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
@@ -308,6 +337,9 @@ func main() {
 	err = insSDK.SetLogLevel(logLevelServer)
 	check("Failed to parse log level: ", err)
 
+	crBaPenBefore := addBurnAddresses(insSDK)
+	check("Error while adding burn addresses: ", err)
+
 	members, crMemPenBefore, err := getMembers(insSDK)
 	check("Error while loading members: ", err)
 
@@ -323,7 +355,7 @@ func main() {
 	var sigChan = make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 
-	s := newScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore+balancePenRetries)
+	s := newScenarios(out, insSDK, members, concurrent, repetitions, crBaPenBefore+crMemPenBefore+balancePenRetries)
 	go func() {
 		stopGracefully := true
 		for {

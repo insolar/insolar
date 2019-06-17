@@ -46,18 +46,8 @@ type StatusReply struct {
 	Version         string
 }
 
-// StatusService is a service that provides API for getting status of node.
-type StatusService struct {
-	runner *Runner
-}
-
-// NewStatusService creates new StatusService instance.
-func NewStatusService(runner *Runner) *StatusService {
-	return &StatusService{runner: runner}
-}
-
 // Get returns status info
-func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusReply) error {
+func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *StatusReply) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
@@ -101,11 +91,11 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	return nil
 }
 
-func (s *StatusService) LogOff(r *http.Request, args *interface{}, reply *StatusReply) error {
+func (s *NodeService) LogOff(r *http.Request, args *interface{}, reply *StatusReply) error {
 	g := s.runner.Gatewayer
 	g.SetGateway(g.Gateway().NewGateway(insolar.NoNetworkState))
 
-	err := s.Get(r, args, reply)
+	err := s.GetStatus(r, args, reply)
 	if err != nil {
 		return err
 	}

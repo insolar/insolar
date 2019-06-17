@@ -18,10 +18,15 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/configuration"
@@ -31,71 +36,75 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 const CallUrl = "http://localhost:19192/api/call"
 
 type TimeoutSuite struct {
 	suite.Suite
+
+	mc    *minimock.Controller
 	ctx   context.Context
 	api   *Runner
 	user  *requester.UserConfigJSON
-	delay bool
+	delay chan struct{}
 }
 
-type APIresp struct {
-	Result string
-	Error  string
-}
-
-func (suite *TimeoutSuite) TestRunner_callHandler() {
+func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
+
+	close(suite.delay)
+	suite.api.cfg.Timeout = 60
+
+	seeds := base64.StdEncoding.EncodeToString(seed[:])
 
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.RequestConfigJSON{},
-		seed[:],
+		&requester.Request{},
+		seeds,
 	)
 	suite.NoError(err)
 
-	var result APIresp
+	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("", result.Error)
-	suite.Equal("OK", result.Result)
+	suite.Equal("", result.Error.Message)
+	suite.Equal("OK", result.Result.ContractResult)
 }
 
-func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
+func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
 
-	suite.delay = true
+	suite.api.cfg.Timeout = 1
+
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.RequestConfigJSON{},
-		seed[:],
+		&requester.Request{},
+		string(seed[:]),
 	)
 	suite.NoError(err)
 
-	var result APIresp
+	close(suite.delay)
+
+	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("Messagebus timeout exceeded", result.Error)
-	suite.Equal("", result.Result)
+	suite.Equal("Messagebus timeout exceeded", result.Error.Message)
+	suite.Equal("", result.Result.ContractResult)
 }
 
 func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite := new(TimeoutSuite)
 	timeoutSuite.ctx, _ = inslogger.WithTraceField(context.Background(), "APItests")
+	timeoutSuite.mc = minimock.NewController(t)
 
 	ks := platformpolicy.NewKeyProcessor()
 	sKey, err := ks.GeneratePrivateKey()
@@ -116,18 +125,19 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)
 
-	cert := testutils.NewCertificateMock(t)
+	cert := testutils.NewCertificateMock(timeoutSuite.mc)
 	cert.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
 		ref := testutils.RandomRef()
 		return &ref
 	}
 
-	cm := testutils.NewCertificateManagerMock(t)
+	cm := testutils.NewCertificateManagerMock(timeoutSuite.mc)
 	cm.GetCertificateFunc = func() (r insolar.Certificate) {
 		return cert
 	}
 
-	cr := testutils.NewContractRequesterMock(t)
+	// TODO: refactor this mock
+	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
 	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
 		switch method {
 		case "GetPublicKey":
@@ -138,9 +148,7 @@ func TestTimeoutSuite(t *testing.T) {
 				Result: data,
 			}, nil
 		default:
-			if timeoutSuite.delay {
-				time.Sleep(time.Second * 21)
-			}
+			<-timeoutSuite.delay
 			var result = "OK"
 			var contractErr *foundation.Error
 			data, _ := insolar.MarshalArgs(result, contractErr)
@@ -158,4 +166,13 @@ func TestTimeoutSuite(t *testing.T) {
 	suite.Run(t, timeoutSuite)
 
 	timeoutSuite.api.Stop(timeoutSuite.ctx)
+}
+
+func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
+	suite.delay = make(chan struct{}, 0)
+}
+
+func (suite *TimeoutSuite) AfterTest(suiteName, testName string) {
+	suite.mc.Wait(1 * time.Minute)
+	suite.mc.Finish()
 }

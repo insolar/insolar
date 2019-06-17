@@ -19,7 +19,6 @@ package requester
 import (
 	"crypto"
 	"encoding/json"
-	"github.com/insolar/insolar/api"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -28,6 +27,41 @@ import (
 
 	"github.com/pkg/errors"
 )
+
+// Request is a representation of request struct to api
+type Request struct {
+	JSONRPC  string `json:"jsonrpc"`
+	ID       int    `json:"id"`
+	Method   string `json:"method"`
+	Params   Params `json:"params"`
+	LogLevel string `json:"logLevel,omitempty"`
+}
+
+type Params struct {
+	Seed       string      `json:"seed"`
+	CallSite   string      `json:"callSite"`
+	CallParams interface{} `json:"callParams"`
+	Reference  string      `json:"reference"`
+	PublicKey  string      `json:"memberPubKey"`
+}
+
+type ContractAnswer struct {
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
+	Result  Result `json:"result,omitempty"`
+	Error   Error  `json:"error,omitempty"`
+}
+
+type Error struct {
+	Code    int    `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+	TraceID string `json:"traceID,omitempty"`
+}
+
+type Result struct {
+	ContractResult interface{} `json:"payload"`
+	TraceID        string      `json:"traceID,omitempty"`
+}
 
 // UserConfigJSON holds info about user
 type UserConfigJSON struct {
@@ -87,8 +121,8 @@ func ReadUserConfigFromFile(file string) (*UserConfigJSON, error) {
 }
 
 // ReadRequestConfigFromFile read request config from file
-func ReadRequestConfigFromFile(path string) (*api.Request, error) {
-	rConfig := &api.Request{}
+func ReadRequestConfigFromFile(path string) (*Request, error) {
+	rConfig := &Request{}
 	err := readFile(path, rConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readRequesterConfigFromFile ] ")

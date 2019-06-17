@@ -20,16 +20,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -72,6 +72,9 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 	done, err := p.Dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err == hot.ErrWriteClosed {
 		return bus.Reply{Err: flow.ErrCancelled}
+	}
+	if err != nil {
+		return bus.Reply{Err: errors.Wrap(err, "failed to start write")}
 	}
 	defer done()
 

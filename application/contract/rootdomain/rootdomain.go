@@ -19,6 +19,7 @@ package rootdomain
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/insolar/insolar/application/contract/rootdomain/util"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -71,16 +72,17 @@ var INSATTR_Info_API = true
 
 // Info returns information about basic objects
 func (rd RootDomain) Info() (interface{}, error) {
-	oracleMembersOut := []string{}
+	migrationDamonsMembersOut := []string{}
 	for _, ref := range rd.MigrationDamonMembers {
-		oracleMembersOut = append(oracleMembersOut, ref.String())
+		migrationDamonsMembersOut = append(migrationDamonsMembersOut, ref.String())
 	}
 
 	res := map[string]interface{}{
-		"root_member":             rd.RootMember.String(),
-		"migration_damon_members": oracleMembersOut,
-		"md_admin_member":         rd.MigrationAdminMember.String(),
-		"node_domain":             rd.NodeDomain.String(),
+		"rootDomain":            rd.GetReference().String(),
+		"rootMember":            rd.RootMember.String(),
+		"migrationDamonMembers": migrationDamonsMembersOut,
+		"migrationAdminMember":  rd.MigrationAdminMember.String(),
+		"nodeDomain":            rd.NodeDomain.String(),
 	}
 	resJSON, err := json.Marshal(res)
 	if err != nil {

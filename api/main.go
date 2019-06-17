@@ -85,19 +85,14 @@ func checkConfig(cfg *configuration.APIRunner) error {
 }
 
 func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
-	err := rpcServer.RegisterService(NewSeedService(ar), "seed")
+	err := rpcServer.RegisterService(NewNodeService(ar), "node")
 	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: seed")
 	}
 
-	err = rpcServer.RegisterService(NewInfoService(ar), "info")
+	err = rpcServer.RegisterService(NewInfoService(ar), "network")
 	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: info")
-	}
-
-	err = rpcServer.RegisterService(NewStatusService(ar), "status")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: status")
 	}
 
 	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
@@ -147,10 +142,15 @@ func (ar *Runner) IsAPIRunner() bool {
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
 	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork)
-	http.HandleFunc("/healthcheck", hc.CheckHandler)
+
+	router := http.NewServeMux()
+	ar.server.Handler = router
 	ar.SeedManager = seedmanager.New()
-	http.HandleFunc(ar.cfg.Call, ar.callHandler())
-	http.Handle(ar.cfg.RPC, ar.rpcServer)
+
+	router.HandleFunc("/healthcheck", hc.CheckHandler)
+	router.HandleFunc(ar.cfg.Call, ar.callHandler())
+	router.Handle(ar.cfg.RPC, ar.rpcServer)
+
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")
 	inslog.Info("Config: ", ar.cfg)

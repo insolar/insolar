@@ -30,7 +30,7 @@ type rpcSeedResponse struct {
 	Result seedResponse `json:"result"`
 }
 
-// StatusResponse represents response from rpc on status.Get method
+// StatusResponse represents response from rpc on node.GetStatus method
 type StatusResponse struct {
 	NetworkState string `json:"NetworkState"`
 }
@@ -40,14 +40,14 @@ type rpcStatusResponse struct {
 	Result StatusResponse `json:"result"`
 }
 
-// InfoResponse represents response from rpc on info.Get method
+// InfoResponse represents response from rpc on network.GetInfo method
 type InfoResponse struct {
-	RootDomain           string `json:"RootDomain"`
-	RootMember           string `json:"RootMember"`
-	MigrationAdminMember string `json:"MigrationAdminMember"`
-	MigrationDamonMember string `json:"MigrationDamon"`
-	NodeDomain           string `json:"NodeDomain"`
-	TraceID              string `json:"TraceID"`
+	RootDomain            string   `json:"RootDomain"`
+	RootMember            string   `json:"RootMember"`
+	MigrationAdminMember  string   `json:"MigrationAdminMember"`
+	MigrationDamonMembers []string `json:"MigrationDamonMembers"`
+	NodeDomain            string   `json:"NodeDomain"`
+	TraceID               string   `json:"TraceID"`
 }
 
 type rpcInfoResponse struct {

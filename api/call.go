@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/api/requester"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
@@ -37,41 +39,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
 )
-
-// Request is a representation of request struct to api
-type Request struct {
-	JSONRPC  string `json:"jsonrpc"`
-	ID       int    `json:"id"`
-	Method   string `json:"method"`
-	Params   Params `json:"params"`
-	LogLevel string `json:"logLevel,omitempty"`
-}
-
-type Params struct {
-	Seed       string      `json:"seed"`
-	CallSite   string      `json:"callSite"`
-	CallParams interface{} `json:"callParams"`
-	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"memberPubKey"`
-}
-
-type ContractAnswer struct {
-	JSONRPC string `json:"jsonrpc"`
-	ID      int    `json:"id"`
-	Result  Result `json:"result,omitempty"`
-	Error   Error  `json:"error,omitempty"`
-}
-
-type Error struct {
-	Code    int    `json:"code,omitempty"`
-	Message string `json:"message,omitempty"`
-	TraceID string `json:"traceID,omitempty"`
-}
-
-type Result struct {
-	ContractResult interface{} `json:"payload"`
-	TraceID        string      `json:"traceID,omitempty"`
-}
 
 // UnmarshalRequest unmarshals request to api
 func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
@@ -107,7 +74,7 @@ func (ar *Runner) checkSeed(paramsSeed string) error {
 	return nil
 }
 
-func (ar *Runner) makeCall(ctx context.Context, request Request, rawBody []byte, signature string, pulseTimeStamp int64) (interface{}, error) {
+func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64) (interface{}, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
 	defer span.End()
 
@@ -145,7 +112,7 @@ func (ar *Runner) makeCall(ctx context.Context, request Request, rawBody []byte,
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *ContractAnswer, insLog insolar.Logger, traceID string) {
+func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
 	resp.Error.Message = err.Error()
 	resp.Error.Code = -214
 	resp.Error.TraceID = traceID
@@ -160,8 +127,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		ctx, span := instracer.StartSpan(ctx, "callHandler")
 		defer span.End()
 
-		request := Request{}
-		resp := ContractAnswer{}
+		request := requester.Request{}
+		resp := requester.ContractAnswer{}
 
 		startTime := time.Now()
 		defer func() {

@@ -164,10 +164,13 @@ type MessageBus interface {
 	OnPulse(context.Context, Pulse) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.MessageBusLocker -o ../testutils -s _mock.go
-type MessageBusLocker interface {
-	Lock(ctx context.Context)
-	Unlock(ctx context.Context)
+//go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go
+
+// GlobalInsolarLock is lock of all incoming and outcoming network calls.
+// It's not intended to be used in multiple threads. And main use of it is `Set` method of `PulseManager`.
+type GlobalInsolarLock interface {
+	Acquire(ctx context.Context)
+	Release(ctx context.Context)
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
@@ -244,11 +247,6 @@ const (
 
 	// TypeGenesisRequest used for bootstrap object generation.
 	TypeGenesisRequest
-
-	// NetworkCoordinator
-
-	// TypeNodeSignRequest used to request sign for new node
-	TypeNodeSignRequest
 )
 
 // DelegationTokenType is an enum type of delegation token

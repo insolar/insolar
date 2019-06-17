@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/api"
 	"io"
 	"os"
 
@@ -200,11 +199,11 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	check("Problems with creating user config:", err)
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	req := api.Request{
+	req := requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params: api.Params{
+		Params: requester.Params{
 			CallSite:   "contract.createMember",
 			CallParams: []interface{}{userName, cfg.PublicKey},
 		},

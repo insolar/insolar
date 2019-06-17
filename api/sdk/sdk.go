@@ -19,17 +19,17 @@ package sdk
 import (
 	"context"
 	"encoding/json"
-	"github.com/insolar/insolar/api"
 	"io/ioutil"
 	"math/big"
 	"strconv"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 type ringBuffer struct {
@@ -58,7 +58,7 @@ type SDK struct {
 	apiURLs               *ringBuffer
 	rootMember            *requester.UserConfigJSON
 	migrationAdminMember  *requester.UserConfigJSON
-	migrationDamonMembers [10]*requester.UserConfigJSON
+	migrationDamonMembers []*requester.UserConfigJSON
 	logLevel              interface{}
 }
 
@@ -101,15 +101,20 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 		apiURLs:               buffer,
 		rootMember:            rootMember,
 		migrationAdminMember:  migrationAdminMember,
-		migrationDamonMembers: [10]*requester.UserConfigJSON{},
+		migrationDamonMembers: []*requester.UserConfigJSON{},
 		logLevel:              nil,
 	}
 
-	for i := 0; i < 10; i++ {
-		result.migrationDamonMembers[i], err = getMember(memberKeysDirPath+"migration_damon_"+strconv.Itoa(i)+"_member_keys.json", response.MigrationDamonMember)
+	if len(response.MigrationDamonMembers) < 3 {
+		return nil, errors.Wrap(err, "[ NewSDK ] need at least 3 migration damons")
+	}
+
+	for i := 0; i < 3; i++ {
+		m, err := getMember(memberKeysDirPath+"migration_damon_"+strconv.Itoa(i)+"_member_keys.json", response.MigrationDamonMembers[i])
 		if err != nil {
-			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration damon members")
+			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration damon member; member's index: '"+strconv.Itoa(i)+"'")
 		}
+		result.migrationDamonMembers = append(result.migrationDamonMembers, m)
 	}
 
 	return result, nil
@@ -125,8 +130,8 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 }
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
-	reqCfg := &api.Request{
-		Params:   api.Params{CallParams: params, CallSite: method},
+	reqCfg := &requester.Request{
+		Params:   requester.Params{CallParams: params, CallSite: method},
 		Method:   "api.Call",
 		LogLevel: sdk.logLevel.(string),
 	}
@@ -139,8 +144,8 @@ func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[strin
 	return body, nil
 }
 
-func (sdk *SDK) getResponse(body []byte) (*api.ContractAnswer, error) {
-	res := &api.ContractAnswer{}
+func (sdk *SDK) getResponse(body []byte) (*requester.ContractAnswer, error) {
+	res := &requester.ContractAnswer{}
 	err := json.Unmarshal(body, &res)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponse ] problems with unmarshal response")
@@ -168,7 +173,12 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't extract public key")
 	}
 
-	response, err := sdk.DoRequest(sdk.rootMember.Caller, sdk.rootMember.PrivateKey, "CreateMember", map[string]interface{}{"publicKey": string(memberPubKeyStr)})
+	response, err := sdk.DoRequest(
+		sdk.rootMember.Caller,
+		sdk.rootMember.PrivateKey,
+		"contract.createMember",
+		map[string]interface{}{"publicKey": string(memberPubKeyStr)},
+	)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] request was failed ")
 	}
@@ -176,9 +186,29 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	return NewMember(response.Result.ContractResult.(string), string(privateKeyStr)), response.Result.TraceID, nil
 }
 
+// AddBurnAddresses method add burn addresses
+func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
+	response, err := sdk.DoRequest(
+		sdk.migrationAdminMember.Caller,
+		sdk.migrationAdminMember.PrivateKey,
+		"wallet.addBurnAddresses",
+		map[string]interface{}{"burnAddresses": burnAddresses},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "[ AddBurnAddresses ] request was failed ")
+	}
+
+	return response.Result.TraceID, nil
+}
+
 // Transfer method send money from one member to another
-func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
-	response, err := sdk.DoRequest(from.Reference, from.PrivateKey, "Transfer", map[string]interface{}{"amount": amount, "to": to.Reference})
+func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error) {
+	response, err := sdk.DoRequest(
+		from.Reference,
+		from.PrivateKey,
+		"wallet.transfer",
+		map[string]interface{}{"amount": amount, "to": to.Reference},
+	)
 	if err != nil {
 		return "", errors.Wrap(err, "[ Transfer ] request was failed ")
 	}
@@ -188,7 +218,11 @@ func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) 
 
 // GetBalance returns current balance of the given member.
 func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
-	response, err := sdk.DoRequest(m.Reference, m.PrivateKey, "GetBalance", map[string]interface{}{"reference": m.Reference})
+	response, err := sdk.DoRequest(m.Reference,
+		m.PrivateKey,
+		"wallet.getMyBalance",
+		map[string]interface{}{},
+	)
 	if err != nil {
 		return new(big.Int), errors.Wrap(err, "[ GetBalance ] request was failed ")
 	}
@@ -201,7 +235,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	return result, nil
 }
 
-func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params map[string]interface{}) (*api.ContractAnswer, error) {
+func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params map[string]interface{}) (*requester.ContractAnswer, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 	config, err := requester.CreateUserConfig(callerRef, callerKey)
 	if err != nil {
