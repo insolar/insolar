@@ -93,6 +93,9 @@ func sign(privateKeyPem string, data []byte) (string, error) {
 	case "P-256":
 		ks := platformpolicy.NewKeyProcessor()
 		privateKey, err := ks.ImportPrivateKeyPEM([]byte(privateKeyPem))
+		if err != nil {
+			panic(err)
+		}
 		r, s, err := ecdsa.Sign(rand.Reader, privateKey.(*ecdsa.PrivateKey), hash[:])
 		if err != nil {
 			panic(err)

@@ -44,11 +44,11 @@ func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) error {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
-		return fmt.Errorf("[ Transfer ] can't parse returned balance")
+		return fmt.Errorf("[ Transfer ] can't parse input amount")
 	}
 	balance, ok := new(big.Int).SetString(w.Balance, 10)
 	if !ok {
-		return fmt.Errorf("[ Transfer ] can't parse returned balance")
+		return fmt.Errorf("[ Transfer ] can't parse wallet balance")
 	}
 
 	toWallet, err := wallet.GetImplementationFrom(*toMember)
@@ -82,13 +82,13 @@ func (w *Wallet) Accept(amountStr string) (err error) {
 	amount := new(big.Int)
 	amount, ok := amount.SetString(amountStr, 10)
 	if !ok {
-		return fmt.Errorf("[ Accept ] can't parse returned balance")
+		return fmt.Errorf("[ Accept ] can't parse input amount")
 	}
 
 	balance := new(big.Int)
 	balance, ok = balance.SetString(w.Balance, 10)
 	if !ok {
-		return fmt.Errorf("[ Accept ] can't parse returned balance")
+		return fmt.Errorf("[ Accept ] can't parse wallet balance")
 	}
 
 	b, err := safemath.Add(balance, amount)

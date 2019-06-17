@@ -649,6 +649,7 @@
     "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
+    "github.com/insolar/x-crypto",
     "github.com/insolar/x-crypto/ecdsa",
     "github.com/insolar/x-crypto/elliptic",
     "github.com/insolar/x-crypto/rand",
