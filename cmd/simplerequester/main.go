@@ -22,7 +22,6 @@ var (
 
 type response struct {
 	Jsonrpc string
-	id      int64
 	Error   interface{}
 	Result  interface{}
 }
@@ -92,9 +91,9 @@ func main() {
 
 	keys := &memberKeys{}
 	err = json.Unmarshal(rawConf, keys)
-	check("[ simpleRequester ]", err)
+	check("[ simpleRequester ] failed to unmarshal", err)
 	response, err := execute(apiURL, *keys, *request)
-	check("[ simpleRequester ]", err)
+	check("[ simpleRequester ] failed to execute", err)
 
 	fmt.Println("Execute result: ", response)
 }
