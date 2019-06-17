@@ -25,7 +25,7 @@ type IndexAccessorMock struct {
 	ForPNAndJetPreCounter uint64
 	ForPNAndJetMock       mIndexAccessorMockForPNAndJet
 
-	IndexFunc       func(p insolar.PulseNumber, p1 insolar.ID) (r *LockedIndex)
+	IndexFunc       func(p insolar.PulseNumber, p1 insolar.ID) (r *FilamentIndex)
 	IndexCounter    uint64
 	IndexPreCounter uint64
 	IndexMock       mIndexAccessorMockIndex
@@ -211,7 +211,7 @@ type IndexAccessorMockIndexInput struct {
 }
 
 type IndexAccessorMockIndexResult struct {
-	r *LockedIndex
+	r *FilamentIndex
 }
 
 // Expect specifies that invocation of IndexAccessor.Index is expected from 1 to Infinity times
@@ -227,7 +227,7 @@ func (m *mIndexAccessorMockIndex) Expect(p insolar.PulseNumber, p1 insolar.ID) *
 }
 
 // Return specifies results of invocation of IndexAccessor.Index
-func (m *mIndexAccessorMockIndex) Return(r *LockedIndex) *IndexAccessorMock {
+func (m *mIndexAccessorMockIndex) Return(r *FilamentIndex) *IndexAccessorMock {
 	m.mock.IndexFunc = nil
 	m.expectationSeries = nil
 
@@ -249,12 +249,12 @@ func (m *mIndexAccessorMockIndex) ExpectOnce(p insolar.PulseNumber, p1 insolar.I
 	return expectation
 }
 
-func (e *IndexAccessorMockIndexExpectation) Return(r *LockedIndex) {
+func (e *IndexAccessorMockIndexExpectation) Return(r *FilamentIndex) {
 	e.result = &IndexAccessorMockIndexResult{r}
 }
 
 // Set uses given function f as a mock of IndexAccessor.Index method
-func (m *mIndexAccessorMockIndex) Set(f func(p insolar.PulseNumber, p1 insolar.ID) (r *LockedIndex)) *IndexAccessorMock {
+func (m *mIndexAccessorMockIndex) Set(f func(p insolar.PulseNumber, p1 insolar.ID) (r *FilamentIndex)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -263,7 +263,7 @@ func (m *mIndexAccessorMockIndex) Set(f func(p insolar.PulseNumber, p1 insolar.I
 }
 
 // Index implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
-func (m *IndexAccessorMock) Index(p insolar.PulseNumber, p1 insolar.ID) (r *LockedIndex) {
+func (m *IndexAccessorMock) Index(p insolar.PulseNumber, p1 insolar.ID) (r *FilamentIndex) {
 	counter := atomic.AddUint64(&m.IndexPreCounter, 1)
 	defer atomic.AddUint64(&m.IndexCounter, 1)
 

@@ -75,6 +75,8 @@ type FilamentCacheCleaner interface {
 // FilamentCacheStorage is a in-memory storage, that stores a collection of IndexBuckets
 type FilamentCacheStorage struct {
 	idxAccessor     IndexAccessor
+	idxModifier     IndexModifier
+	idLocker        IDLocker
 	recordStorage   RecordStorage
 	coordinator     jet.Coordinator
 	pcs             insolar.PlatformCryptographyScheme
@@ -88,6 +90,8 @@ type FilamentCacheStorage struct {
 
 func NewFilamentCacheStorage(
 	idxAccessor IndexAccessor,
+	idxModifier IndexModifier,
+	idLocker IDLocker,
 	recordStorage RecordStorage,
 	coordinator jet.Coordinator,
 	pcs insolar.PlatformCryptographyScheme,
@@ -97,6 +101,8 @@ func NewFilamentCacheStorage(
 ) *FilamentCacheStorage {
 	return &FilamentCacheStorage{
 		idxAccessor:     idxAccessor,
+		idxModifier:     idxModifier,
+		idLocker:        idLocker,
 		recordStorage:   recordStorage,
 		coordinator:     coordinator,
 		pcs:             pcs,
@@ -181,8 +187,8 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 	if idx == nil {
 		return ErrLifelineNotFound
 	}
-	idx.Lock()
-	defer idx.Unlock()
+	i.idLocker.Lock(&objID)
+	defer i.idLocker.Lock(&objID)
 
 	pb := i.pendingBucket(pn, objID)
 	if pb == nil {
@@ -192,7 +198,7 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 	pb.Lock()
 	defer pb.Unlock()
 
-	lfl := idx.objectMeta.Lifeline
+	lfl := idx.Lifeline
 
 	if lfl.PendingPointer != nil && reqID.Pulse() < lfl.PendingPointer.Pulse() {
 		return errors.New("request from the past")
@@ -200,7 +206,7 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 
 	pf := record.PendingFilament{
 		RecordID:       reqID,
-		PreviousRecord: idx.objectMeta.Lifeline.PendingPointer,
+		PreviousRecord: idx.Lifeline.PendingPointer,
 	}
 
 	if lfl.EarliestOpenRequest == nil {
@@ -216,9 +222,14 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 
-	idx.objectMeta.PendingRecords = append(idx.objectMeta.PendingRecords, metaID)
+	idx.PendingRecords = append(idx.PendingRecords, metaID)
 	lfl.PendingPointer = &metaID
-	idx.objectMeta.Lifeline = lfl
+	idx.Lifeline = lfl
+
+	err = i.idxModifier.SetIndex(ctx, pn, *idx)
+	if err != nil {
+		panic(err)
+	}
 
 	pb.addMetaIDToFilament(pn, metaID)
 
@@ -257,12 +268,13 @@ func (b *pendingMeta) addMetaIDToFilament(pn insolar.PulseNumber, metaID insolar
 // the request will be closed
 func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error {
 	logger := inslogger.FromContext(ctx)
+	i.idLocker.Lock(&objID)
+	defer i.idLocker.Lock(&objID)
+
 	idx := i.idxAccessor.Index(pn, objID)
 	if idx == nil {
 		return ErrLifelineNotFound
 	}
-	idx.Lock()
-	defer idx.Unlock()
 
 	pb := i.pendingBucket(pn, objID)
 	if pb == nil {
@@ -277,7 +289,7 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 		return errors.New("not known result")
 	}
 
-	lfl := idx.objectMeta.Lifeline
+	lfl := idx.Lifeline
 
 	pf := record.PendingFilament{
 		RecordID:       resID,
@@ -313,7 +325,12 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 		lfl.EarliestOpenRequest = nil
 	}
 
-	idx.objectMeta.Lifeline = lfl
+	idx.Lifeline = lfl
+
+	err = i.idxModifier.SetIndex(ctx, pn, *idx)
+	if err != nil {
+		panic(err)
+	}
 
 	stats.Record(ctx,
 		statObjectPendingResultsInMemoryAddedCount.M(int64(1)),
@@ -355,8 +372,8 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 		return ErrLifelineNotFound
 	}
 
-	idx.Lock()
-	defer idx.Unlock()
+	i.idLocker.Lock(&objID)
+	defer i.idLocker.Lock(&objID)
 
 	pb := i.pendingBucket(pn, objID)
 	if pb == nil {
@@ -367,7 +384,7 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 	defer pb.Unlock()
 
 	logger := inslogger.FromContext(ctx)
-	lfl := idx.objectMeta.Lifeline
+	lfl := idx.Lifeline
 
 	// state already calculated
 	if pb.isStateCalculated {
@@ -398,13 +415,13 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 	}
 
 	if fp == nil || fp.PreviousRecord == nil {
-		err = i.fillPendingFilament(ctx, pn, objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest, idx.objectMeta.PendingRecords, pb)
+		err = i.fillPendingFilament(ctx, pn, objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest, idx.PendingRecords, pb)
 		if err != nil {
 			panic(err)
 			return err
 		}
 	} else {
-		err = i.fillPendingFilament(ctx, pn, objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest, idx.objectMeta.PendingRecords, pb)
+		err = i.fillPendingFilament(ctx, pn, objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest, idx.PendingRecords, pb)
 		if err != nil {
 			panic(err)
 			return err
@@ -417,6 +434,11 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 		return err
 	}
 
+	err = i.idxModifier.SetIndex(ctx, pn, *idx)
+	if err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 
@@ -427,10 +449,7 @@ func (i *FilamentCacheStorage) SendAbandonedNotification(ctx context.Context, cu
 		return ErrLifelineNotFound
 	}
 
-	idx.RLock()
-	defer idx.RUnlock()
-
-	if idx.objectMeta.Lifeline.EarliestOpenRequest == nil {
+	if idx.Lifeline.EarliestOpenRequest == nil {
 		return nil
 	}
 
@@ -441,7 +460,7 @@ func (i *FilamentCacheStorage) SendAbandonedNotification(ctx context.Context, cu
 	if err != nil {
 		return err
 	}
-	if notifyPoint.PulseNumber < *idx.objectMeta.Lifeline.EarliestOpenRequest {
+	if notifyPoint.PulseNumber < *idx.Lifeline.EarliestOpenRequest {
 		return nil
 	}
 
@@ -592,7 +611,7 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 }
 
 // RefreshState recalculates state of the chain, marks requests as closed and opened.
-func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *LockedIndex, pb *pendingMeta) error {
+func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *FilamentIndex, pb *pendingMeta) error {
 	if pb.isStateCalculated {
 		return nil
 	}
@@ -636,7 +655,7 @@ func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *LockedIndex, pb
 	for i, chainLink := range pb.fullFilament {
 		if len(pb.notClosedRequestsIdsIndex[chainLink.PN]) != 0 {
 			if !isEarliestFound {
-				idx.objectMeta.Lifeline.EarliestOpenRequest = &pb.fullFilament[i].PN
+				idx.Lifeline.EarliestOpenRequest = &pb.fullFilament[i].PN
 				isEarliestFound = true
 			}
 
@@ -649,7 +668,7 @@ func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *LockedIndex, pb
 	pb.isStateCalculated = true
 
 	if len(pb.notClosedRequestsIds) == 0 {
-		idx.objectMeta.Lifeline.EarliestOpenRequest = nil
+		idx.Lifeline.EarliestOpenRequest = nil
 	}
 
 	return nil
@@ -699,13 +718,11 @@ func (i *FilamentCacheStorage) Records(ctx context.Context, currentPN insolar.Pu
 		return nil, ErrLifelineNotFound
 	}
 
-	idx.RLock()
-	defer idx.RUnlock()
 	b.RLock()
 	defer b.RLock()
 
-	res := make([]record.CompositeFilamentRecord, len(idx.objectMeta.PendingRecords))
-	for idx, id := range idx.objectMeta.PendingRecords {
+	res := make([]record.CompositeFilamentRecord, len(idx.PendingRecords))
+	for idx, id := range idx.PendingRecords {
 		metaRec, err := i.recordStorage.ForID(ctx, id)
 		if err != nil {
 			return nil, err

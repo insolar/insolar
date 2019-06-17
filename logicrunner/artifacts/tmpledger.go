@@ -109,7 +109,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	memoryMockDB := store.NewMemoryMockDB()
 	idxStor := object.NewIndexStorageMemory()
 	lifelines := object.NewLifelineStorage(idxStor, idxStor)
-	filemanetCache := object.NewFilamentCacheStorage(idxStor, recordStorage, nil, nil, nil, nil, nil)
+	filemanetCache := object.NewFilamentCacheStorage(idxStor, idxStor, nil, recordStorage, nil, nil, nil, nil, nil)
 
 	cm := &component.Manager{}
 	js := jet.NewStore()

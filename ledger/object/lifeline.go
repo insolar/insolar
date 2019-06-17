@@ -73,10 +73,8 @@ func (i *LifelineStorage) ForID(ctx context.Context, pn insolar.PulseNumber, obj
 	if b == nil {
 		return Lifeline{}, ErrLifelineNotFound
 	}
-	b.RLock()
-	b.RUnlock()
 
-	return CloneLifeline(b.objectMeta.Lifeline), nil
+	return CloneLifeline(b.Lifeline), nil
 }
 
 // Set sets a lifeline to a bucket with provided pulseNumber and ID
@@ -86,11 +84,8 @@ func (i *LifelineStorage) Set(ctx context.Context, pn insolar.PulseNumber, objID
 		b = i.idxModifier.CreateIndex(ctx, pn, objID)
 	}
 
-	b.Lock()
-	defer b.Unlock()
-
-	b.objectMeta.Lifeline = lifeline
-	b.objectMeta.LifelineLastUsed = pn
+	b.Lifeline = lifeline
+	b.LifelineLastUsed = pn
 
 	stats.Record(ctx,
 		statBucketAddedCount.M(1),
@@ -107,10 +102,7 @@ func (i *LifelineStorage) SetLifelineUsage(ctx context.Context, pn insolar.Pulse
 		return ErrLifelineNotFound
 	}
 
-	b.Lock()
-	defer b.Unlock()
-
-	b.objectMeta.LifelineLastUsed = pn
+	b.LifelineLastUsed = pn
 
 	return nil
 }

@@ -221,7 +221,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
 
-		filamentCache := object.NewFilamentCacheStorage(indexes, records, Coordinator, CryptoScheme, Pulses, Bus, WmBus)
+		filamentCache := object.NewFilamentCacheStorage(indexes, indexes, idLocker, records, Coordinator, CryptoScheme, Pulses, Bus, WmBus)
 
 		lifelines := object.NewLifelineStorage(indexes, indexes)
 

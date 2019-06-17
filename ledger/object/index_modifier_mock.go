@@ -20,7 +20,7 @@ import (
 type IndexModifierMock struct {
 	t minimock.Tester
 
-	CreateIndexFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *LockedIndex)
+	CreateIndexFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *FilamentIndex)
 	CreateIndexCounter    uint64
 	CreateIndexPreCounter uint64
 	CreateIndexMock       mIndexModifierMockCreateIndex
@@ -63,7 +63,7 @@ type IndexModifierMockCreateIndexInput struct {
 }
 
 type IndexModifierMockCreateIndexResult struct {
-	r *LockedIndex
+	r *FilamentIndex
 }
 
 // Expect specifies that invocation of IndexModifier.CreateIndex is expected from 1 to Infinity times
@@ -79,7 +79,7 @@ func (m *mIndexModifierMockCreateIndex) Expect(p context.Context, p1 insolar.Pul
 }
 
 // Return specifies results of invocation of IndexModifier.CreateIndex
-func (m *mIndexModifierMockCreateIndex) Return(r *LockedIndex) *IndexModifierMock {
+func (m *mIndexModifierMockCreateIndex) Return(r *FilamentIndex) *IndexModifierMock {
 	m.mock.CreateIndexFunc = nil
 	m.expectationSeries = nil
 
@@ -101,12 +101,12 @@ func (m *mIndexModifierMockCreateIndex) ExpectOnce(p context.Context, p1 insolar
 	return expectation
 }
 
-func (e *IndexModifierMockCreateIndexExpectation) Return(r *LockedIndex) {
+func (e *IndexModifierMockCreateIndexExpectation) Return(r *FilamentIndex) {
 	e.result = &IndexModifierMockCreateIndexResult{r}
 }
 
 // Set uses given function f as a mock of IndexModifier.CreateIndex method
-func (m *mIndexModifierMockCreateIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *LockedIndex)) *IndexModifierMock {
+func (m *mIndexModifierMockCreateIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *FilamentIndex)) *IndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -115,7 +115,7 @@ func (m *mIndexModifierMockCreateIndex) Set(f func(p context.Context, p1 insolar
 }
 
 // CreateIndex implements github.com/insolar/insolar/ledger/object.IndexModifier interface
-func (m *IndexModifierMock) CreateIndex(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *LockedIndex) {
+func (m *IndexModifierMock) CreateIndex(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *FilamentIndex) {
 	counter := atomic.AddUint64(&m.CreateIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.CreateIndexCounter, 1)
 

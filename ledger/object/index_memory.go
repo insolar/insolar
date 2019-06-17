@@ -27,20 +27,14 @@ import (
 
 type IndexStorageMemory struct {
 	bucketsLock sync.RWMutex
-	buckets     map[insolar.PulseNumber]map[insolar.ID]*LockedIndex
+	buckets     map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex
 }
 
 func NewIndexStorageMemory() *IndexStorageMemory {
-	return &IndexStorageMemory{buckets: map[insolar.PulseNumber]map[insolar.ID]*LockedIndex{}}
+	return &IndexStorageMemory{buckets: map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{}}
 }
 
-type LockedIndex struct {
-	sync.RWMutex
-
-	objectMeta FilamentIndex
-}
-
-func (i *IndexStorageMemory) Index(pn insolar.PulseNumber, objID insolar.ID) *LockedIndex {
+func (i *IndexStorageMemory) Index(pn insolar.PulseNumber, objID insolar.ID) *FilamentIndex {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
@@ -54,8 +48,8 @@ func (i *IndexStorageMemory) Index(pn insolar.PulseNumber, objID insolar.ID) *Lo
 
 // ForPNAndJet returns a collection of buckets for a provided pn and jetID
 func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
-	i.bucketsLock.Lock()
-	defer i.bucketsLock.Unlock()
+	i.bucketsLock.RLock()
+	defer i.bucketsLock.RUnlock()
 
 	bucks, ok := i.buckets[pn]
 	if !ok {
@@ -65,19 +59,19 @@ func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNu
 	var res []FilamentIndex
 
 	for _, b := range bucks {
-		if b.objectMeta.Lifeline.JetID != jetID {
+		if b.Lifeline.JetID != jetID {
 			continue
 		}
 
-		clonedLfl := CloneLifeline(b.objectMeta.Lifeline)
+		clonedLfl := CloneLifeline(b.Lifeline)
 		var clonedRecords []insolar.ID
 
-		clonedRecords = append(clonedRecords, b.objectMeta.PendingRecords...)
+		clonedRecords = append(clonedRecords, b.PendingRecords...)
 
 		res = append(res, FilamentIndex{
-			ObjID:            b.objectMeta.ObjID,
+			ObjID:            b.ObjID,
 			Lifeline:         clonedLfl,
-			LifelineLastUsed: b.objectMeta.LifelineLastUsed,
+			LifelineLastUsed: b.LifelineLastUsed,
 			PendingRecords:   clonedRecords,
 		})
 	}
@@ -85,20 +79,18 @@ func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNu
 	return res
 }
 
-func (i *IndexStorageMemory) CreateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndex {
+func (i *IndexStorageMemory) CreateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *FilamentIndex {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	bucket := &LockedIndex{
-		objectMeta: FilamentIndex{
-			ObjID:          objID,
-			PendingRecords: []insolar.ID{},
-		},
+	bucket := &FilamentIndex{
+		ObjID:          objID,
+		PendingRecords: []insolar.ID{},
 	}
 
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
-		objsByPn = map[insolar.ID]*LockedIndex{}
+		objsByPn = map[insolar.ID]*FilamentIndex{}
 		i.buckets[pn] = objsByPn
 	}
 
@@ -118,13 +110,11 @@ func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumbe
 
 	bucks, ok := i.buckets[pn]
 	if !ok {
-		bucks = map[insolar.ID]*LockedIndex{}
+		bucks = map[insolar.ID]*FilamentIndex{}
 		i.buckets[pn] = bucks
 	}
 
-	bucks[bucket.ObjID] = &LockedIndex{
-		objectMeta: bucket,
-	}
+	bucks[bucket.ObjID] = &bucket
 
 	stats.Record(ctx,
 		statBucketAddedCount.M(1),
@@ -151,7 +141,7 @@ func (i *IndexStorageMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNu
 
 	for _, buck := range bucks {
 		stats.Record(ctx,
-			statObjectPendingRecordsInMemoryRemovedCount.M(int64(len(buck.objectMeta.PendingRecords))),
+			statObjectPendingRecordsInMemoryRemovedCount.M(int64(len(buck.PendingRecords))),
 		)
 	}
 }
