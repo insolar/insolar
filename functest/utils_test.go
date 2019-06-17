@@ -23,14 +23,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/pkg/errors"
 
@@ -196,9 +197,11 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 	var resp response
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
-			Method: method,
-			Params: params,
+		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
+			JSONRPC: "2.0",
+			ID:      1,
+			Method:  "call.api",
+			Params:  requester.Params{CallSite: method, CallParams: params},
 		})
 
 		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
