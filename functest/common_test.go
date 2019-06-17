@@ -26,6 +26,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/api/requester"
 )
 
 func TestWrongUrl(t *testing.T) {
@@ -45,7 +47,7 @@ func TestGetRequest(t *testing.T) {
 	body, err := ioutil.ReadAll(postResp.Body)
 	require.NoError(t, err)
 
-	getResponse := &response{}
+	getResponse := &requester.ContractAnswer{}
 	unmarshalCallResponse(t, body, getResponse)
 	require.NotNil(t, getResponse.Error)
 
@@ -61,7 +63,7 @@ func TestWrongJson(t *testing.T) {
 	body, err := ioutil.ReadAll(postResp.Body)
 	require.NoError(t, err)
 
-	response := &response{}
+	response := &requester.ContractAnswer{}
 	unmarshalCallResponse(t, body, response)
 	require.NotNil(t, response.Error)
 

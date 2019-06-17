@@ -26,7 +26,7 @@ import (
 )
 
 func TestInsgorundReload(t *testing.T) {
-	_, err := signedRequest(&root, "DumpAllUsers")
+	_, err := signedRequest(&root, "DumpAllUsers", map[string]interface{}{})
 	require.NoError(t, err)
 
 	err = stopAllInsgorunds()
@@ -36,6 +36,6 @@ func TestInsgorundReload(t *testing.T) {
 	err = startAllInsgorunds()
 	require.NoError(t, err)
 
-	_, err = signedRequest(&root, "DumpAllUsers")
+	_, err = signedRequest(&root, "DumpAllUsers", map[string]interface{}{})
 	require.NoError(t, err)
 }

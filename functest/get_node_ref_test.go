@@ -26,8 +26,8 @@ import (
 
 const NOTEXISTINGPUBLICKEY = "not_existing_public_key"
 
-func getNodeRefSignedCall(params ...interface{}) (string, error) {
-	res, err := signedRequest(&root, "GetNodeRef", params...)
+func getNodeRefSignedCall(params map[string]interface{}) (string, error) {
+	res, err := signedRequest(&root, "GetNodeRef", params)
 	if err != nil {
 		return "", err
 	}
@@ -36,33 +36,33 @@ func getNodeRefSignedCall(params ...interface{}) (string, error) {
 
 func TestGetNodeRefByPK(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	nodeRef, err := getNodeRefSignedCall(TESTPUBLICKEY)
+	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"public": TESTPUBLICKEY})
 	require.NoError(t, err)
 	require.Equal(t, ref, nodeRef)
 }
 
 func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	nodeRef, err := getNodeRefSignedCall(NOTEXISTINGPUBLICKEY)
+	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"public": NOTEXISTINGPUBLICKEY})
 	require.Equal(t, "", nodeRef)
 	require.Contains(t, err.Error(), "[ GetNodeRefByPK ] NetworkNode not found by PK: ")
 }
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	nodeRef, err := getNodeRefSignedCall(123)
+	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"public": 123})
 	require.Equal(t, "", nodeRef)
 	require.Contains(t, err.Error(), "[ getNodeRefCall ] Can't unmarshal params: ")
 }

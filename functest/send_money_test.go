@@ -49,7 +49,7 @@ func TestTransferMoney(t *testing.T) {
 
 	amount := 111
 
-	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	_, err := signedRequest(firstMember, "Transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
 	require.NoError(t, err)
 
 	// Skip validation of balance before/after transfer
@@ -67,7 +67,7 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 
 	amount := 111
 
-	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	_, err := signedRequest(firstMember, "Transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
 	require.Contains(t, err.Error(), "not found")
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
@@ -80,7 +80,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 
 	amount := 111
 
-	_, err := signedRequest(firstMember, "Transfer", amount, testutils.RandomRef().String())
+	_, err := signedRequest(firstMember, "Transfer", map[string]interface{}{"amount": amount, "to": testutils.RandomRef().String()})
 	require.Contains(t, err.Error(), "[ Transfer ] Can't get implementation: [ GetDelegate ] on calling main API")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
@@ -95,7 +95,7 @@ func TestTransferNegativeAmount(t *testing.T) {
 
 	amount := -111
 
-	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	_, err := signedRequest(firstMember, "Transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
 	require.Error(t, err)
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
@@ -114,7 +114,7 @@ func TestTransferAllAmount(t *testing.T) {
 
 	amount := oldFirstBalance
 
-	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	_, err := signedRequest(firstMember, "Transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
 	require.NoError(t, err)
 
 	checkBalanceFewTimes(t, secondMember, secondMember.ref, oldSecondBalance+oldFirstBalance)
@@ -130,7 +130,7 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 
 	amount := oldFirstBalance + 100
 
-	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	_, err := signedRequest(firstMember, "Transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
 	require.Contains(t, err.Error(), "[ Transfer ] Not enough balance for transfer: subtrahend must be smaller than minuend")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
@@ -145,7 +145,7 @@ func TestTransferToMyself(t *testing.T) {
 
 	amount := 100
 
-	_, err := signedRequest(member, "Transfer", amount, member.ref)
+	_, err := signedRequest(member, "Transfer", map[string]interface{}{"amount": amount, "to": member.ref})
 	require.Contains(t, err.Error(), "[ transferCall ] Recipient must be different from the sender")
 
 	newMemberBalance := getBalanceNoErr(t, member, member.ref)
@@ -165,9 +165,9 @@ func TestTransferTwoTimes(t *testing.T) {
 
 	amount := 100
 
-	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	_, err := signedRequest(firstMember, "Transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
 	require.NoError(t, err)
-	_, err = signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	_, err = signedRequest(firstMember, "Transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
 	require.NoError(t, err)
 
 	// Skip validation of balance before/after transfer

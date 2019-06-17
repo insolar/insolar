@@ -99,7 +99,7 @@ type rpcStatusResponse struct {
 func createMember(t *testing.T, name string) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	result, err := signedRequest(&root, "CreateMember", name, member.pubKey)
+	result, err := signedRequest(&root, "contract.createMember", map[string]interface{}{"publicKey": member.pubKey})
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
@@ -114,7 +114,7 @@ func getBalanceNoErr(t *testing.T, caller *user, reference string) int {
 }
 
 func getBalance(caller *user, reference string) (int, error) {
-	res, err := signedRequest(caller, "GetBalance", reference)
+	res, err := signedRequest(caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
 		return 0, err
 	}
@@ -178,23 +178,18 @@ func unmarshalRPCResponse(t *testing.T, body []byte, response RPCResponseInterfa
 	require.Nil(t, response.getError())
 }
 
-func unmarshalCallResponse(t *testing.T, body []byte, response *response) {
+func unmarshalCallResponse(t *testing.T, body []byte, response *requester.ContractAnswer) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 }
 
-type response struct {
-	Result interface{}
-	Error  string
-}
-
-func signedRequest(user *user, method string, params ...interface{}) (interface{}, error) {
+func signedRequest(user *user, method string, params map[string]interface{}) (interface{}, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
 	if err != nil {
 		return nil, err
 	}
-	var resp response
+	var resp requester.ContractAnswer
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
@@ -208,23 +203,23 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
-			resp.Error = netErr.Error()
+			resp.Error.Message = netErr.Error()
 			continue
 		} else if err != nil {
 			return nil, err
 		}
 
-		resp = response{}
+		resp = requester.ContractAnswer{}
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
 			return nil, err
 		}
 
-		if resp.Error == "" {
+		if resp.Error.Message == "" {
 			return resp.Result, nil
 		}
 
-		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
+		if strings.Contains(resp.Error.Message, "Messagebus timeout exceeded") {
 			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
@@ -235,10 +230,10 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 	}
 
 	if currentIterNum > sendRetryCount {
-		return nil, errors.New("Number of retries exceeded. " + resp.Error)
+		return nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
 	}
 
-	return resp.Result, errors.New(resp.Error)
+	return resp.Result.ContractResult, errors.New(resp.Error.Message)
 }
 
 func newUserWithKeys() (*user, error) {

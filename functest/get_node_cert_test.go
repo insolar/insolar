@@ -27,7 +27,7 @@ import (
 func TestNodeCert(t *testing.T) {
 	const TESTPUBLICKEY = "some_fancy_public_key"
 	const testRole = "virtual"
-	res, err := signedRequest(&root, "RegisterNode", TESTPUBLICKEY, testRole)
+	res, err := signedRequest(&root, "RegisterNode", map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	body := getRPSResponseBody(t, postParams{

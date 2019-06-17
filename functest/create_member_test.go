@@ -25,38 +25,33 @@ import (
 )
 
 func TestCreateMember(t *testing.T) {
-	result, err := signedRequest(&root, "CreateMember", "Member", "000")
+	result, err := signedRequest(&root, "contract.createMember", map[string]interface{}{"publicKey": "000"})
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
 	require.NotEqual(t, "", ref)
 }
 
-func TestCreateMemberWrongNameType(t *testing.T) {
-	_, err := signedRequest(&root, "CreateMember", 111, "000")
-	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
-}
-
 func TestCreateMemberWrongKeyType(t *testing.T) {
-	_, err := signedRequest(&root, "CreateMember", "Member", 111)
+	_, err := signedRequest(&root, "contract.createMember", map[string]interface{}{"publicKey": "000"})
 	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
 // no error
 func _TestCreateMemberOneParameter(t *testing.T) {
-	_, err := signedRequest(&root, "CreateMember", "text")
+	_, err := signedRequest(&root, "contract.createMember", map[string]interface{}{"publicKey": "000"})
 	require.NoError(t, err)
 }
 
 func TestCreateMemberOneParameterOtherType(t *testing.T) {
-	_, err := signedRequest(&root, "CreateMember", 111)
+	_, err := signedRequest(&root, "contract.createMember", map[string]interface{}{"publicKey": 123})
 	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
 func TestCreateMembersWithSameName(t *testing.T) {
-	firstMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
+	firstMemberRef, err := signedRequest(&root, "contract.createMember", map[string]interface{}{"publicKey": "000"})
 	require.NoError(t, err)
-	secondMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
+	secondMemberRef, err := signedRequest(&root, "contract.createMember", map[string]interface{}{"publicKey": "000"})
 	require.NoError(t, err)
 
 	require.NotEqual(t, firstMemberRef, secondMemberRef)
@@ -64,6 +59,6 @@ func TestCreateMembersWithSameName(t *testing.T) {
 
 func TestCreateMemberByNoRoot(t *testing.T) {
 	member := createMember(t, "Member1")
-	_, err := signedRequest(member, "CreateMember", "Member2", "000")
+	_, err := signedRequest(member, "contract.createMember", map[string]interface{}{"publicKey": "000"})
 	require.NoError(t, err)
 }

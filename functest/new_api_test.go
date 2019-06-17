@@ -57,7 +57,7 @@ func TestBadSeed(t *testing.T) {
 		Params:  requester.Params{CallSite: "contract.createMember"},
 	}, "111")
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
+	require.EqualError(t, contractError(res), "[ checkSeed ] Decode error")
 }
 
 func TestIncorrectSeed(t *testing.T) {
@@ -71,7 +71,7 @@ func TestIncorrectSeed(t *testing.T) {
 		Params:  requester.Params{CallSite: "contract.createMember"},
 	}, "12345678901234567890123456789012")
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
+	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
 
 func customSend(data string) (map[string]interface{}, error) {
@@ -124,5 +124,5 @@ func TestIncorrectSign(t *testing.T) {
 	var res map[string]interface{}
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res["error"], "Incorrect signature")
+	require.Contains(t, res["error"], "bad reference format")
 }
