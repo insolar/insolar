@@ -40,6 +40,11 @@ import (
 	"github.com/insolar/insolar/metrics"
 )
 
+const (
+	TimeoutError = -215
+	ResultError  = -217
+)
+
 // UnmarshalRequest unmarshals request to api
 func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	body, err := ioutil.ReadAll(req.Body)
@@ -114,7 +119,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 
 func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
 	resp.Error.Message = err.Error()
-	resp.Error.Code = -214
+	resp.Error.Code = ResultError
 	resp.Error.TraceID = traceID
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
@@ -209,7 +214,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
 			resp.Error.Message = "Messagebus timeout exceeded"
-			resp.Error.Code = -215
+			resp.Error.Code = TimeoutError
 			resp.Error.TraceID = traceID
 			return
 		}

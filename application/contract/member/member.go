@@ -365,7 +365,8 @@ func (m *Member) GetMyBalance() (interface{}, error) {
 	//return map[string]interface{}{"balance" : b, "deposit": d}, nil
 
 	return b, nil
-}x
+}
+
 func (m *Member) getDeposits() ([]map[string]string, error) {
 
 	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
