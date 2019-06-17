@@ -209,8 +209,11 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			if err != nil {
 				processError(err, "Can't makeCall", &resp, insLog, traceID)
 				return
+			} else {
+				resp.Result.ContractResult = result
+				resp.Result.TraceID = traceID
+				return
 			}
-			resp.Result.ContractResult = result
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
 			resp.Error.Message = "Messagebus timeout exceeded"
@@ -218,9 +221,6 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			resp.Error.TraceID = traceID
 			return
 		}
-
-		resp.Result.ContractResult = result
-		resp.Result.TraceID = traceID
 	}
 }
 
