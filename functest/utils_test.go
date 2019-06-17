@@ -233,6 +233,9 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 		return nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
 	}
 
+	if resp.Error == nil {
+		return resp.Result.ContractResult, errors.New("")
+	}
 	return resp.Result.ContractResult, errors.New(resp.Error.Message)
 }
 
