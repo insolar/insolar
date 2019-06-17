@@ -50,11 +50,6 @@ type TimeoutSuite struct {
 	delay chan struct{}
 }
 
-type APIresp struct {
-	Result string
-	Error  string
-}
-
 func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
@@ -68,16 +63,21 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.Request{},
+		&requester.Request{
+			JSONRPC: "2.0",
+			ID:      1,
+			Method:  "api.call",
+			Params:  requester.Params{CallSite: "contract.createMember"},
+		},
 		seedString,
 	)
 	suite.NoError(err)
 
-	var result APIresp
+	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("", result.Error)
-	suite.Equal("OK", result.Result)
+	suite.Equal("", result.Error.Message)
+	suite.Equal("OK", result.Result.ContractResult)
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
@@ -100,11 +100,11 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 
 	close(suite.delay)
 
-	var result APIresp
+	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("Messagebus timeout exceeded", result.Error)
-	suite.Equal("", result.Result)
+	suite.Equal("Messagebus timeout exceeded", result.Error.Message)
+	suite.Equal(nil, result.Result.ContractResult)
 }
 
 func TestTimeoutSuite(t *testing.T) {

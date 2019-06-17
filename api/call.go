@@ -143,6 +143,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 			metrics.APIContractExecutionTime.WithLabelValues(request.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
+
 		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
 
 		defer func() {
