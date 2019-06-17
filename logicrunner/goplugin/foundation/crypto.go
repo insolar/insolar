@@ -67,8 +67,8 @@ func ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
 	return keyProcessor.ExtractPublicKey(privateKey)
 }
 
-func PointsFromDER(der []byte) (R, S *big.Int) {
-	R, S = &big.Int{}, &big.Int{}
+func PointsFromDER(der []byte) (*big.Int, *big.Int) {
+	R, S := &big.Int{}, &big.Int{}
 
 	data := asn1.RawValue{}
 	if _, err := asn1.Unmarshal(der, &data); err != nil {
@@ -84,7 +84,7 @@ func PointsFromDER(der []byte) (R, S *big.Int) {
 	R.SetBytes(r)
 	S.SetBytes(s)
 
-	return
+	return R, S
 }
 
 func VerifySignature(rawRequest []byte, signature string, key string, rawpublicpem string, selfSigned bool) error {
