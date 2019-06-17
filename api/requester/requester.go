@@ -216,7 +216,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Config request marshaling failed")
 	}
-	signature, err := sign(userCfg.privateKeyObject, dataToSign)
+	signature, err := Sign(userCfg.privateKeyObject, dataToSign)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}
@@ -230,7 +230,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	return body, nil
 }
 
-func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
+func Sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 	hash := sha256.Sum256(data)
 
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey.(*ecdsa.PrivateKey), hash[:])
@@ -238,10 +238,10 @@ func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 		return "", errors.Wrap(err, "[ Send ] Cant sign data")
 	}
 
-	return PointsToDER(r, s), nil
+	return pointsToDER(r, s), nil
 }
 
-func PointsToDER(r, s *big.Int) string {
+func pointsToDER(r, s *big.Int) string {
 	prefixPoint := func(b []byte) []byte {
 		if len(b) == 0 {
 			b = []byte{0x00}
@@ -275,7 +275,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *api.
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}
-	verboseInfo(ctx, "GETSEED request completed. seed: " + seed)
+	verboseInfo(ctx, "GETSEED request completed. seed: "+seed)
 
 	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
 	if err != nil {
