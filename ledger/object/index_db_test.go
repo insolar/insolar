@@ -127,7 +127,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		pn := gen.PulseNumber()
 		index := NewIndexDB(store.NewMemoryMockDB())
 
-		err := index.SetBucket(ctx, pn, buck)
+		err := index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
 
 		res, err := index.ForID(ctx, pn, objID)
@@ -143,7 +143,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		pn := gen.PulseNumber()
 		index := NewIndexDB(store.NewMemoryMockDB())
 
-		err := index.SetBucket(ctx, pn, buck)
+		err := index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
@@ -157,7 +157,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 			},
 		}
 
-		err = index.SetBucket(ctx, pn, sBuck)
+		err = index.SetIndex(ctx, pn, sBuck)
 		require.NoError(t, err)
 
 		res, err := index.ForID(ctx, pn, objID)

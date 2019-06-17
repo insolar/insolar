@@ -25,12 +25,6 @@ import (
 	"go.opencensus.io/stats"
 )
 
-type IndexStorage interface {
-	Index(pn insolar.PulseNumber, objID insolar.ID) *LockedIndex
-	CreateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndex
-	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
-}
-
 type IndexStorageConcrete struct {
 	bucketsLock sync.RWMutex
 	buckets     map[insolar.PulseNumber]map[insolar.ID]*LockedIndex
@@ -58,6 +52,39 @@ func (i *IndexStorageConcrete) Index(pn insolar.PulseNumber, objID insolar.ID) *
 	return objsByPn[objID]
 }
 
+// ForPNAndJet returns a collection of buckets for a provided pn and jetID
+func (i *IndexStorageConcrete) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
+	i.bucketsLock.Lock()
+	defer i.bucketsLock.Unlock()
+
+	bucks, ok := i.buckets[pn]
+	if !ok {
+		return nil
+	}
+
+	var res []FilamentIndex
+
+	for _, b := range bucks {
+		if b.objectMeta.Lifeline.JetID != jetID {
+			continue
+		}
+
+		clonedLfl := CloneLifeline(b.objectMeta.Lifeline)
+		var clonedRecords []insolar.ID
+
+		clonedRecords = append(clonedRecords, b.objectMeta.PendingRecords...)
+
+		res = append(res, FilamentIndex{
+			ObjID:            b.objectMeta.ObjID,
+			Lifeline:         clonedLfl,
+			LifelineLastUsed: b.objectMeta.LifelineLastUsed,
+			PendingRecords:   clonedRecords,
+		})
+	}
+
+	return res
+}
+
 func (i *IndexStorageConcrete) CreateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndex {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
@@ -80,8 +107,30 @@ func (i *IndexStorageConcrete) CreateIndex(ctx context.Context, pn insolar.Pulse
 		objsByPn[objID] = bucket
 	}
 
-	inslogger.FromContext(ctx).Debugf("[createBucket] create bucket for obj - %v was created successfully", objID.DebugString())
+	inslogger.FromContext(ctx).Debugf("[createPendingBucket] create bucket for obj - %v was created successfully", objID.DebugString())
 	return bucket
+}
+
+// SetIndex adds a bucket with provided pulseNumber and ID
+func (i *IndexStorageConcrete) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
+	i.bucketsLock.Lock()
+	defer i.bucketsLock.Unlock()
+
+	bucks, ok := i.buckets[pn]
+	if !ok {
+		bucks = map[insolar.ID]*LockedIndex{}
+		i.buckets[pn] = bucks
+	}
+
+	bucks[bucket.ObjID] = &LockedIndex{
+		objectMeta: bucket,
+	}
+
+	stats.Record(ctx,
+		statBucketAddedCount.M(1),
+	)
+
+	return nil
 }
 
 // DeleteForPN deletes all buckets for a provided pulse number

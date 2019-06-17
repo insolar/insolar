@@ -210,7 +210,7 @@ func (p *UpdateObject) saveIndexFromHeavy(
 	if !ok {
 		return object.Lifeline{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx, err := object.DecodeIndex(rep.Index)
+	idx, err := object.DecodeLifeline(rep.Index)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to decode")
 	}

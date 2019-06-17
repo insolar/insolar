@@ -64,7 +64,7 @@ type MessageHandler struct {
 	WriteAccessor hot.WriteAccessor
 
 	LifelineIndex         object.LifelineIndex
-	IndexBucketModifier   object.IndexBucketModifier
+	IndexBucketModifier   object.IndexModifier
 	LifelineStateModifier object.LifelineStateModifier
 	PendingModifier       object.PendingModifier
 	PendingAccessor       object.PendingAccessor
@@ -83,7 +83,7 @@ type MessageHandler struct {
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
 	index object.LifelineIndex,
-	indexBucketModifier object.IndexBucketModifier,
+	indexBucketModifier object.IndexModifier,
 	indexStateModifier object.LifelineStateModifier,
 	pendingModifier object.PendingModifier,
 	pendingAccessor object.PendingAccessor,

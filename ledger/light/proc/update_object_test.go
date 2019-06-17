@@ -94,7 +94,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Object, m.Object)
-			buf := object.EncodeIndex(objIndex)
+			buf := object.EncodeLifeline(objIndex)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
 

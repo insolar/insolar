@@ -50,7 +50,7 @@ type Handler struct {
 	RecordAccessor        object.RecordAccessor
 	RecordModifier        object.RecordModifier
 	IndexLifelineAccessor object.LifelineAccessor
-	IndexBucketModifier   object.IndexBucketModifier
+	IndexBucketModifier   object.IndexModifier
 	DropModifier          drop.Modifier
 	Sender                bus.Sender
 	HeavyPendingAccessor  object.HeavyPendingAccessor
@@ -303,7 +303,7 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 		return nil, errors.Wrapf(err, "failed to fetch object index for %v", msg.Object.Record().String())
 	}
 
-	buf := object.EncodeIndex(idx)
+	buf := object.EncodeLifeline(idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
 }

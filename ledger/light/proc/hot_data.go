@@ -39,7 +39,7 @@ type HotData struct {
 	Dep struct {
 		DropModifier        drop.Modifier
 		MessageBus          insolar.MessageBus
-		IndexBucketModifier object.IndexBucketModifier
+		IndexBucketModifier object.IndexModifier
 		PendingModifier     object.PendingModifier
 		JetStorage          jet.Storage
 		JetFetcher          jet.Fetcher
@@ -81,14 +81,14 @@ func (p *HotData) process(ctx context.Context) error {
 
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
 	for _, meta := range p.msg.HotIndexes {
-		decodedIndex, err := object.DecodeIndex(meta.Index)
+		decodedIndex, err := object.DecodeLifeline(meta.Index)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
 
 		decodedIndex.JetID = jetID
-		err = p.Dep.IndexBucketModifier.SetBucket(
+		err = p.Dep.IndexBucketModifier.SetIndex(
 			ctx,
 			p.msg.PulseNumber,
 			object.FilamentIndex{

@@ -59,26 +59,31 @@ type LifelineStateModifier interface {
 }
 
 type LifelineStorage struct {
-	indexes IndexStorage
+	idxAccessor IndexAccessor
+	idxModifier IndexModifier
+}
+
+func NewLifelineStorage(idxAccessor IndexAccessor, idxModifier IndexModifier) *LifelineStorage {
+	return &LifelineStorage{idxAccessor: idxAccessor, idxModifier: idxModifier}
 }
 
 // ForID returns a lifeline from a bucket with provided PN and ObjID
 func (i *LifelineStorage) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
-	b := i.indexes.Index(pn, objID)
+	b := i.idxAccessor.Index(pn, objID)
 	if b == nil {
 		return Lifeline{}, ErrLifelineNotFound
 	}
 	b.RLock()
 	b.RUnlock()
 
-	return CloneIndex(b.objectMeta.Lifeline), nil
+	return CloneLifeline(b.objectMeta.Lifeline), nil
 }
 
 // Set sets a lifeline to a bucket with provided pulseNumber and ID
 func (i *LifelineStorage) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
-	b := i.indexes.Index(pn, objID)
+	b := i.idxAccessor.Index(pn, objID)
 	if b == nil {
-		b = i.indexes.CreateIndex(ctx, pn, objID)
+		b = i.idxModifier.CreateIndex(ctx, pn, objID)
 	}
 
 	b.Lock()
@@ -97,7 +102,7 @@ func (i *LifelineStorage) Set(ctx context.Context, pn insolar.PulseNumber, objID
 
 // SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
 func (i *LifelineStorage) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
-	b := i.indexes.Index(pn, objID)
+	b := i.idxAccessor.Index(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
 	}
@@ -110,8 +115,8 @@ func (i *LifelineStorage) SetLifelineUsage(ctx context.Context, pn insolar.Pulse
 	return nil
 }
 
-// EncodeIndex converts lifeline index into binary format.
-func EncodeIndex(index Lifeline) []byte {
+// EncodeLifeline converts lifeline index into binary format.
+func EncodeLifeline(index Lifeline) []byte {
 	res, err := index.Marshal()
 	if err != nil {
 		panic(err)
@@ -120,9 +125,9 @@ func EncodeIndex(index Lifeline) []byte {
 	return res
 }
 
-// MustDecodeIndex converts byte array into lifeline index struct.
-func MustDecodeIndex(buff []byte) (index Lifeline) {
-	idx, err := DecodeIndex(buff)
+// MustDecodeLifeline converts byte array into lifeline index struct.
+func MustDecodeLifeline(buff []byte) (index Lifeline) {
+	idx, err := DecodeLifeline(buff)
 	if err != nil {
 		panic(err)
 	}
@@ -130,15 +135,15 @@ func MustDecodeIndex(buff []byte) (index Lifeline) {
 	return idx
 }
 
-// DecodeIndex converts byte array into lifeline index struct.
-func DecodeIndex(buff []byte) (Lifeline, error) {
+// DecodeLifeline converts byte array into lifeline index struct.
+func DecodeLifeline(buff []byte) (Lifeline, error) {
 	lfl := Lifeline{}
 	err := lfl.Unmarshal(buff)
 	return lfl, err
 }
 
-// CloneIndex returns copy of argument idx value.
-func CloneIndex(idx Lifeline) Lifeline {
+// CloneLifeline returns copy of argument idx value.
+func CloneLifeline(idx Lifeline) Lifeline {
 	if idx.LatestState != nil {
 		tmp := *idx.LatestState
 		idx.LatestState = &tmp
@@ -175,19 +180,19 @@ func CloneIndex(idx Lifeline) Lifeline {
 	return idx
 }
 
-func (l *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
-	for _, d := range l.Delegates {
+func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
+	for _, d := range m.Delegates {
 		if d.Key == key {
 			d.Value = value
 			return
 		}
 	}
 
-	l.Delegates = append(l.Delegates, LifelineDelegate{Key: key, Value: value})
+	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
 }
 
-func (l *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
-	for _, d := range l.Delegates {
+func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
+	for _, d := range m.Delegates {
 		if d.Key == key {
 			return d.Value, true
 		}

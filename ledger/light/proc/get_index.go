@@ -115,7 +115,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch index from heavy: unexpected reply type %T", genericReply)
 	}
 
-	p.Result.Index, err = object.DecodeIndex(rep.Index)
+	p.Result.Index, err = object.DecodeLifeline(rep.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode index")
 	}
@@ -213,7 +213,7 @@ func (p *GetIndexWM) process(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch index from heavy: unexpected reply type %T", genericReply)
 	}
 
-	p.Result.Index, err = object.DecodeIndex(rep.Index)
+	p.Result.Index, err = object.DecodeLifeline(rep.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode index")
 	}

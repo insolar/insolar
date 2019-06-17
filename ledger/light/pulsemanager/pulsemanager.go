@@ -66,7 +66,7 @@ type PulseManager struct {
 	JetAccessor jet.Accessor `inject:""`
 	JetModifier jet.Modifier `inject:""`
 
-	IndexBucketAccessor object.IndexBucketAccessor
+	IndexBucketAccessor object.IndexAccessor
 	PendingAccessor     object.PendingAccessor
 
 	NodeSetter node.Modifier `inject:""`
@@ -128,7 +128,7 @@ func NewPulseManager(
 	pulseShifter pulse.Shifter,
 	recCleaner object.RecordCleaner,
 	recSyncAccessor object.RecordCollectionAccessor,
-	idxReplicaAccessor object.IndexBucketAccessor,
+	idxReplicaAccessor object.IndexAccessor,
 	lightToHeavySyncer replication.LightReplicator,
 	writeManager hot.WriteManager,
 	pendingAccessor object.PendingAccessor,

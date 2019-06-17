@@ -193,7 +193,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Head, m.Object)
-			buf := object.EncodeIndex(objIndex)
+			buf := object.EncodeLifeline(objIndex)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
 
@@ -457,7 +457,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	firstIndex := object.EncodeIndex(object.Lifeline{
+	firstIndex := object.EncodeLifeline(object.Lifeline{
 		LatestState: firstID,
 	})
 	err := s.indexMemoryStor.Set(s.ctx, insolar.FirstPulseNumber, *firstID, object.Lifeline{

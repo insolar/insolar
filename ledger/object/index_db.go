@@ -101,8 +101,8 @@ func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar
 	return nil
 }
 
-// SetBucket adds a bucket with provided pulseNumber and ID
-func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
+// SetIndex adds a bucket with provided pulseNumber and ID
+func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -115,7 +115,7 @@ func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket 
 		statBucketAddedCount.M(1),
 	)
 
-	inslogger.FromContext(ctx).Debugf("[SetBucket] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
+	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
 	return i.setLastKnownPN(pn, bucket.ObjID)
 }
 
