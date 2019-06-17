@@ -32,6 +32,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	JSONRPCVersion = "2.0"
+)
+
 func (g *certGen) generateKeys() {
 	privKey, err := g.keyProcessor.GeneratePrivateKey()
 	checkError("Failed to generate private key:", err)
@@ -92,7 +96,7 @@ func (g *certGen) registerNode() insolar.Reference {
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
 	request := requester.Request{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		ID:      1,
 		Method:  "api.call",
 		Params: requester.Params{
@@ -126,7 +130,7 @@ type GetCertificateResponse struct {
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
 	response, err := requester.GetResponseBodyPlatform(g.API+"/rpc", requester.PlatformRequest{
-		JSONRPC:        "2.0",
+		JSONRPC:        JSONRPCVersion,
 		Method:         "cert.Get",
 		ID:             1,
 		PlatformParams: map[string]string{"ref": ref.String()},
@@ -207,7 +211,7 @@ func (g *certGen) getNodeRefByPk() insolar.Reference {
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.privKey)
 	checkError("Failed to export public key:", err)
 	request := requester.Request{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		ID:      1,
 		Method:  "api.call",
 		Params: requester.Params{
