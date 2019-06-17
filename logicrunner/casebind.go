@@ -134,14 +134,14 @@ func (r *CaseBindReplay) NextRequest() *CaseRequest {
 }
 
 func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, cb CaseBind) (int, error) {
-	//os := lr.UpsertObjectState(ref)
+	//os := LogicRunner.UpsertObjectState(ref)
 	//vs := os.StartValidation(ref)
 	//
 	//vs.Lock()
 	//defer vs.Unlock()
 	//
 	//checker := &ValidationChecker{
-	//	lr: lr,
+	//	LogicRunner: LogicRunner,
 	//	cb: NewCaseBindReplay(cb),
 	//}
 	//vs.Behaviour = checker
@@ -168,7 +168,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, c
 	//	rep, err := func() (insolar.Reply, error) {
 	//		vs.Unlock()
 	//		defer vs.Lock()
-	//		return lr.executeOrValidate(ctx, vs, request.Parcel)
+	//		return LogicRunner.executeAndReply(ctx, vs, request.Parcel)
 	//	}()
 	//
 	//	err = vs.Behaviour.Result(rep, err)
