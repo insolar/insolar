@@ -1,16 +1,20 @@
 package logicrunner
 
 import (
+	"context"
+	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 )
 
-type TranscriptDequeueSuite struct {
-	suite.Suite
-}
+type TranscriptDequeueSuite struct{ suite.Suite }
+
+func TestTranscriptDequeue(t *testing.T) { suite.Run(t, new(TranscriptDequeueSuite)) }
 
 func (s *TranscriptDequeueSuite) TestBasic() {
 	d := NewTranscriptDequeue()
@@ -115,6 +119,170 @@ func (s *TranscriptDequeueSuite) TestTake() {
 	s.Len(trs, 0)
 }
 
-func TestTranscriptDequeue(t *testing.T) {
-	suite.Run(t, new(TranscriptDequeueSuite))
+type ExecutionBrokerSuite struct{ suite.Suite }
+
+func TestExecutionBroker(t *testing.T) { suite.Run(t, new(ExecutionBrokerSuite)) }
+
+// wait is Exponential retries waiting function
+// example usage: require.True(wait(func))
+func wait(check func() bool) bool {
+	for i := 0; i < 15; i++ {
+		time.Sleep(time.Millisecond * time.Duration(math.Pow(2, float64(i))))
+		if check() {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *ExecutionBrokerSuite) TestPut() {
+	ctx := context.TODO()
+	allowProcessingFunc := func(_ context.Context) error { return nil }
+	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
+
+	b := NewExecutionBroker(allowProcessingFunc, executeFunc, nil)
+	tr := &Transcript{LogicContext: &insolar.LogicCallContext{Immutable: false}}
+	b.Put(ctx, false, tr)
+	s.False(b.processActive) // this flag should be disbaled
+
+	s.Len(b.mutable.queue, 1)
+
+	b.Put(ctx, true, tr)
+	s.True(b.processActive) // this flag should be enabled
+
+	finishProcessing := func() bool { return b.finished.Len() == 2 }
+	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Len(b.mutable.queue, 0)
+	s.Len(b.immutable.queue, 0)
+	s.Len(b.finished.queue, 2)
+
+	rotationResults := b.Rotate(10)
+	s.Len(rotationResults.Requests, 0)
+	s.Equal(rotationResults.LedgerHasMoreRequests, false)
+	s.Len(rotationResults.Finished, 2)
+}
+
+func (s *ExecutionBrokerSuite) TestPrepend() {
+	ctx := context.TODO()
+	allowProcessingFunc := func(_ context.Context) error { return nil }
+	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
+
+	b := NewExecutionBroker(allowProcessingFunc, executeFunc, nil)
+	tr := &Transcript{LogicContext: &insolar.LogicCallContext{Immutable: false}}
+	b.Prepend(ctx, false, tr)
+	s.False(b.processActive) // this flag should be disbaled
+
+	s.Len(b.mutable.queue, 1)
+
+	b.Prepend(ctx, true, tr)
+	s.True(b.processActive) // this flag should be enabled
+
+	finishProcessing := func() bool { return b.finished.Len() == 2 }
+	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Len(b.mutable.queue, 0)
+	s.Len(b.immutable.queue, 0)
+	s.Len(b.finished.queue, 2)
+
+	rotationResults := b.Rotate(10)
+	s.Len(rotationResults.Requests, 0)
+	s.Equal(rotationResults.LedgerHasMoreRequests, false)
+	s.Len(rotationResults.Finished, 2)
+}
+
+func (s *ExecutionBrokerSuite) TestImmutable() {
+	ctx := context.TODO()
+	forbidProcessingFunc := func(_ context.Context) error { return ErrRetryLater }
+	allowProcessingFunc := func(_ context.Context) error { return nil }
+	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
+
+	b := NewExecutionBroker(allowProcessingFunc, executeFunc, nil)
+	tr := &Transcript{LogicContext: &insolar.LogicCallContext{Immutable: true}}
+	b.Prepend(ctx, false, tr)
+	s.False(b.processActive) // we're not starting processor, but job is started
+
+	finishProcessing := func() bool { return b.finished.Len() == 1 }
+	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+
+	b.Prepend(ctx, true, tr)
+	s.True(b.processActive) // we're not starting processor, but job is started
+	finishProcessing = func() bool { return b.finished.Len() == 2 }
+	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+
+	// we can't process messages, do not do it
+	b.checkFunc = forbidProcessingFunc
+	b.Prepend(ctx, false, tr)
+	s.False(b.processActive) // we're not starting processor, but job is started
+
+	finishProcessing = func() bool { return b.immutable.Len() == 1 }
+	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+
+	b.Prepend(ctx, true, tr)
+	s.True(b.processActive) // we're not starting processor, but job is started
+	finishProcessing = func() bool { return b.immutable.Len() == 2 }
+	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+
+	b.StartProcessorIfNeeded(ctx)
+	s.True(b.processActive) // we're not starting processor, but job is started
+	finishProcessing = func() bool { return b.processActive == false }
+	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+
+	rotationResults := b.Rotate(10)
+	s.Len(rotationResults.Requests, 2)
+	s.Equal(rotationResults.LedgerHasMoreRequests, false)
+	s.Len(rotationResults.Finished, 2)
+}
+
+func (s *ExecutionBrokerSuite) TestRotate() {
+	b := NewExecutionBroker(nil, nil, nil)
+
+	for i := 0; i < 4; i++ {
+		b.immutable.Push(&Transcript{})
+		b.mutable.Push(&Transcript{})
+	}
+
+	rotationResults := b.Rotate(10)
+	s.Len(b.immutable.queue, 0)
+	s.Len(b.mutable.queue, 0)
+	s.Len(b.finished.queue, 0)
+	s.Len(rotationResults.Requests, 8)
+	s.Len(rotationResults.Finished, 0)
+	s.False(rotationResults.LedgerHasMoreRequests)
+
+	for i := 0; i < 4; i++ {
+		b.immutable.Push(&Transcript{})
+	}
+
+	rotationResults = b.Rotate(10)
+	s.Len(b.immutable.queue, 0)
+	s.Len(b.mutable.queue, 0)
+	s.Len(b.finished.queue, 0)
+	s.Len(rotationResults.Requests, 4)
+	s.Len(rotationResults.Finished, 0)
+	s.False(rotationResults.LedgerHasMoreRequests)
+
+	for i := 0; i < 5; i++ {
+		b.mutable.Push(&Transcript{})
+		b.immutable.Push(&Transcript{})
+	}
+
+	rotationResults = b.Rotate(10)
+	s.Len(b.immutable.queue, 0)
+	s.Len(b.mutable.queue, 0)
+	s.Len(b.finished.queue, 0)
+	s.Len(rotationResults.Requests, 10)
+	s.Len(rotationResults.Finished, 0)
+	s.False(rotationResults.LedgerHasMoreRequests)
+
+	for i := 0; i < 6; i++ {
+		b.mutable.Push(&Transcript{})
+		b.immutable.Push(&Transcript{})
+	}
+
+	rotationResults = b.Rotate(10)
+	s.Len(b.immutable.queue, 0)
+	s.Len(b.mutable.queue, 0)
+	s.Len(b.finished.queue, 0)
+	s.Len(rotationResults.Requests, 10)
+	s.Len(rotationResults.Finished, 0)
+	s.True(rotationResults.LedgerHasMoreRequests)
 }
