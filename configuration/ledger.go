@@ -86,10 +86,10 @@ func NewLedger() Ledger {
 		PulseManager: PulseManager{
 			SplitThreshold: 10 * 100, // 10 megabytes.
 		},
-		LightChainLimit: 20, // pulses
+		LightChainLimit: 5, // 5 pulses
 
 		Exporter: Exporter{
-			ExportLag: 40, // seconds
+			ExportLag: 40, // 40 seconds
 		},
 
 		PendingRequestsLimit: 1000,
