@@ -150,7 +150,7 @@ func (m *client) RegisterRequest(
 		return nil, err
 	}
 
-	// virtRec := record.Wrap(request)
+	virtRec := record.Wrap(request)
 
 	buf, err := request.Marshal()
 	if err != nil {
@@ -166,16 +166,16 @@ func (m *client) RegisterRequest(
 	case record.CTMethod:
 		recRef = request.Object
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		// hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-		// recID := insolar.NewID(currentPN, hash)
-		// recRef = insolar.NewReference(*recID)
-		h := m.PCS.ReferenceHasher()
-		_, err = h.Write(buf)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to calculate hash")
-		}
-		recID := *insolar.NewID(currentPN, h.Sum(nil))
-		recRef = insolar.NewReference(recID)
+		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
+		recID := insolar.NewID(currentPN, hash)
+		recRef = insolar.NewReference(*recID)
+		// h := m.PCS.ReferenceHasher()
+		// _, err = h.Write(buf)
+		// if err != nil {
+		// 	return nil, errors.Wrap(err, "failed to calculate hash")
+		// }
+		// recID := *insolar.NewID(currentPN, h.Sum(nil))
+		// recRef = insolar.NewReference(recID)
 	default:
 		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
