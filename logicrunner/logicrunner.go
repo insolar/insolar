@@ -747,7 +747,7 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Messa
 	}
 }
 
-func convertQueueToMessageQueue(ctx context.Context, queue []Transcript) []message.ExecutionQueueElement {
+func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
 	var traces string
 	for _, elem := range queue {
