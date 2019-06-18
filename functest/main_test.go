@@ -28,7 +28,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -140,7 +139,8 @@ func loadMemberKeys(keysPath string, member *user) error {
 }
 
 func loadAllMembersKeys() error {
-	if err := loadMemberKeys(insolarRootMemberKeysPath, &root); err != nil {
+	err := loadMemberKeys(insolarRootMemberKeysPath, &root)
+	if err != nil {
 		return err
 	}
 	return loadMemberKeys(insolarMigrationAdminMemberKeysPath, &migrationAdmin)
@@ -376,9 +376,9 @@ func setup() error {
 
 	err = loadAllMembersKeys()
 	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't load root keys: ")
+		return errors.Wrap(err, "[ setup ] could't load keys: ")
 	}
-	fmt.Println("[ setup ] root keys successfully loaded")
+	fmt.Println("[ setup ] all keys successfully loaded")
 
 	numAttempts := 60
 	for i := 0; i < numAttempts; i++ {
@@ -397,15 +397,6 @@ func setup() error {
 	fmt.Println("[ setup ] references successfully received")
 	root.ref = info.RootMember
 	migrationAdmin.ref = info.MigrationAdminMember
-
-	baList := []string{}
-	for i := 0; i < 1000; i++ {
-		baList = append(baList, "fake_ba_"+strconv.Itoa(i))
-	}
-	_, err = signedRequest(&migrationAdmin, "wallet.addBurnAddresses", map[string]interface{}{"burnAddresses": baList})
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't add burn addresses ")
-	}
 
 	return nil
 }
