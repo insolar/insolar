@@ -203,7 +203,7 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
-			resp.Error = requester.Error{Message: netErr.Error()}
+			resp.Error = &requester.Error{Message: netErr.Error()}
 			continue
 		} else if err != nil {
 			return nil, err
