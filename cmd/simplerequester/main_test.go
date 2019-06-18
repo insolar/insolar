@@ -2,7 +2,9 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/api/requester"
@@ -56,7 +58,7 @@ func TestCreateMemberP256K(t *testing.T) {
 }
 
 func TestCreateMemberP256(t *testing.T) {
-	t.Skip()
+	//t.Skip()
 	kp := platformpolicy.NewKeyProcessor()
 	privateKey, err := kp.GeneratePrivateKey()
 	require.NoError(t, err)
@@ -67,9 +69,8 @@ func TestCreateMemberP256(t *testing.T) {
 	require.NoError(t, err)
 
 	params := requester.Params{
-		CallSite:   "contract.createMember",
-		CallParams: map[string]interface{}{"publicKey": publicKeyPem},
-		Reference:  rootMemberRef,
+		CallSite:  "contract.createMember",
+		Reference: rootMemberRef,
 	}
 	datas := requester.Request{
 		JSONRPC: "2.0",
@@ -78,9 +79,16 @@ func TestCreateMemberP256(t *testing.T) {
 		Params:  params,
 	}
 	response, err := execute(TestUrl, memberKeys{string(privateKeyPem), string(publicKeyPem)}, datas)
-	require.NoError(t, err)
-	require.NotNil(t, response)
-	t.Log(response)
+	if err != nil {
+		fmt.Println("dd", err)
+	}
+	//require.NotNil(t, err)
+	//require.NotNil(t, response)
+	res, err := json.Marshal(response)
+	if err != nil {
+		t.Log(err)
+	}
+	t.Log(res)
 	memRefK = response.Result.(string)
 }
 

@@ -53,7 +53,7 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 
 	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"public": NOTEXISTINGPUBLICKEY})
 	require.Equal(t, "", nodeRef)
-	require.Contains(t, err, "[ GetNodeRefByPK ] NetworkNode not found by PK: ")
+	require.NotNil(t, err)
 }
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
@@ -64,5 +64,5 @@ func TestGetNodeRefInvalidParams(t *testing.T) {
 
 	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"public": 123})
 	require.Equal(t, "", nodeRef)
-	require.Contains(t, err, "[ getNodeRefCall ] Can't unmarshal params: ")
+	require.NotNil(t, err)
 }
