@@ -19,15 +19,14 @@ package proc
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/insolar"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 type GetCode struct {
@@ -52,9 +51,6 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetCode message")
 	}
-
-	ctx = inslogger.WithLoggerLevel(ctx,insolar.ErrorLevel)
-	ctx, _ = inslogger.WithField(ctx, "code_id", getCode.CodeID.DebugString())
 
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, getCode.CodeID)
 	if err != nil {

@@ -19,16 +19,16 @@ package proc
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 type SetCode struct {
@@ -91,9 +91,6 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
-
-	ctx = inslogger.WithLoggerLevel(ctx,insolar.ErrorLevel)
-	inslogger.FromContext(ctx).WithField("code_id", p.recordID.DebugString()).Infof("saved code")
 
 	msg, err := payload.NewMessage(&payload.ID{ID: p.recordID})
 	if err != nil {

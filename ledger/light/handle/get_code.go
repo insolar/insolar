@@ -18,13 +18,12 @@ package handle
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type GetCode struct {
@@ -47,9 +46,6 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetCode message")
 	}
-
-	ctx = inslogger.WithLoggerLevel(ctx,insolar.ErrorLevel)
-	ctx, _ = inslogger.WithField(ctx, "code_id", msg.CodeID.DebugString())
 
 	passIfNotFound := !s.passed
 	code := proc.NewGetCode(s.message, msg.CodeID, passIfNotFound)
