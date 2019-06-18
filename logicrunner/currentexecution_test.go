@@ -144,17 +144,29 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
 
 	b := NewExecutionBroker(allowProcessingFunc, executeFunc, nil)
+	processGoroutineExits := func() bool {
+		b.processLock.Lock()
+		defer b.processLock.Unlock()
+		return b.processActive == false
+	}
+
 	tr := &Transcript{LogicContext: &insolar.LogicCallContext{Immutable: false}}
 	b.Put(ctx, false, tr)
+	b.processLock.Lock()
 	s.False(b.processActive) // this flag should be disbaled
+	b.processLock.Unlock()
 
 	s.Len(b.mutable.queue, 1)
 
 	b.Put(ctx, true, tr)
+	b.processLock.Lock()
 	s.True(b.processActive) // this flag should be enabled
+	b.processLock.Unlock()
 
 	finishProcessing := func() bool { return b.finished.Len() == 2 }
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(wait(processGoroutineExits))
+
 	s.Len(b.mutable.queue, 0)
 	s.Len(b.immutable.queue, 0)
 	s.Len(b.finished.queue, 2)
@@ -171,17 +183,28 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
 
 	b := NewExecutionBroker(allowProcessingFunc, executeFunc, nil)
+	processGoroutineExits := func() bool {
+		b.processLock.Lock()
+		defer b.processLock.Unlock()
+		return b.processActive == false
+	}
+
 	tr := &Transcript{LogicContext: &insolar.LogicCallContext{Immutable: false}}
 	b.Prepend(ctx, false, tr)
+	b.processLock.Lock()
 	s.False(b.processActive) // this flag should be disbaled
+	b.processLock.Unlock()
 
 	s.Len(b.mutable.queue, 1)
 
 	b.Prepend(ctx, true, tr)
+	b.processLock.Lock()
 	s.True(b.processActive) // this flag should be enabled
+	b.processLock.Unlock()
 
 	finishProcessing := func() bool { return b.finished.Len() == 2 }
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(wait(processGoroutineExits))
 	s.Len(b.mutable.queue, 0)
 	s.Len(b.immutable.queue, 0)
 	s.Len(b.finished.queue, 2)
@@ -193,41 +216,67 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 }
 
 func (s *ExecutionBrokerSuite) TestImmutable() {
+
 	ctx := context.TODO()
 	forbidProcessingFunc := func(_ context.Context) error { return ErrRetryLater }
 	allowProcessingFunc := func(_ context.Context) error { return nil }
 	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
 
 	b := NewExecutionBroker(allowProcessingFunc, executeFunc, nil)
+	processGoroutineExits := func() bool {
+		b.processLock.Lock()
+		defer b.processLock.Unlock()
+		return b.processActive == false
+	}
+
 	tr := &Transcript{LogicContext: &insolar.LogicCallContext{Immutable: true}}
 	b.Prepend(ctx, false, tr)
+	b.processLock.Lock()
 	s.False(b.processActive) // we're not starting processor, but job is started
+	b.processLock.Unlock()
 
 	finishProcessing := func() bool { return b.finished.Len() == 1 }
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(wait(processGoroutineExits))
 
 	b.Prepend(ctx, true, tr)
+	b.processLock.Lock()
 	s.True(b.processActive) // we're not starting processor, but job is started
+	b.processLock.Unlock()
 	finishProcessing = func() bool { return b.finished.Len() == 2 }
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(wait(processGoroutineExits))
 
 	// we can't process messages, do not do it
 	b.checkFunc = forbidProcessingFunc
 	b.Prepend(ctx, false, tr)
+	b.processLock.Lock()
 	s.False(b.processActive) // we're not starting processor, but job is started
+	b.processLock.Unlock()
 
 	finishProcessing = func() bool { return b.immutable.Len() == 1 }
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(wait(processGoroutineExits))
 
 	b.Prepend(ctx, true, tr)
+	b.processLock.Lock()
 	s.True(b.processActive) // we're not starting processor, but job is started
+	b.processLock.Unlock()
 	finishProcessing = func() bool { return b.immutable.Len() == 2 }
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(wait(processGoroutineExits))
 
 	b.StartProcessorIfNeeded(ctx)
+	b.processLock.Lock()
 	s.True(b.processActive) // we're not starting processor, but job is started
-	finishProcessing = func() bool { return b.processActive == false }
+	b.processLock.Unlock()
+	finishProcessing = func() bool {
+		b.processLock.Lock()
+		defer b.processLock.Unlock()
+		return b.processActive == false
+	}
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(wait(processGoroutineExits))
 
 	rotationResults := b.Rotate(10)
 	s.Len(rotationResults.Requests, 2)
@@ -239,8 +288,10 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	b := NewExecutionBroker(nil, nil, nil)
 
 	for i := 0; i < 4; i++ {
+		b.mutableLock.Lock()
 		b.immutable.Push(&Transcript{})
 		b.mutable.Push(&Transcript{})
+		b.mutableLock.Unlock()
 	}
 
 	rotationResults := b.Rotate(10)
@@ -252,7 +303,9 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	s.False(rotationResults.LedgerHasMoreRequests)
 
 	for i := 0; i < 4; i++ {
+		b.mutableLock.Lock()
 		b.immutable.Push(&Transcript{})
+		b.mutableLock.Unlock()
 	}
 
 	rotationResults = b.Rotate(10)
