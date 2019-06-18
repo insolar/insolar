@@ -76,7 +76,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("", result.Error.Message)
+	suite.Nil(result.Error)
 	suite.Equal("OK", result.Result.ContractResult)
 }
 
@@ -104,7 +104,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
 	suite.Equal("Messagebus timeout exceeded", result.Error.Message)
-	suite.Equal(nil, result.Result.ContractResult)
+	suite.Nil(result.Result)
 }
 
 func TestTimeoutSuite(t *testing.T) {

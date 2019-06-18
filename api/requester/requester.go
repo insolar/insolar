@@ -262,6 +262,14 @@ func pointsToDER(r, s *big.Int) string {
 	sb := prefixPoint(s.Bytes())
 
 	// DER encoding:
+	// der prefix - 30
+	// length of the res of signature - 45
+	// marker for r value - 02
+	// length of r value - 21
+	// r value
+	// marker for s value - 02
+	// length of s value - 21
+	// s value
 	// 0x30 + z + 0x02 + len(rb) + rb + 0x02 + len(sb) + sb
 	length := 2 + len(rb) + 2 + len(sb)
 
