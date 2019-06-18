@@ -34,7 +34,7 @@ var keyProcessor = platformpolicy.NewKeyProcessor()
 const TESTPUBLICKEY = "some_fancy_public_key"
 
 func registerNodeSignedCall(params map[string]interface{}) (string, error) {
-	res, err := signedRequest(&root, "RegisterNode", params)
+	res, err := signedRequest(&root, "contract.registerNode", params)
 	if err != nil {
 		return "", err
 	}

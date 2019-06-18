@@ -26,16 +26,13 @@ import (
 )
 
 func TestInsgorundReload(t *testing.T) {
-	_, err := signedRequest(&root, "DumpAllUsers", map[string]interface{}{})
-	require.NoError(t, err)
-
-	err = stopAllInsgorunds()
+	_ = getBalanceNoErr(t, &root, root.ref)
+	err := stopAllInsgorunds()
 	// No need to stop test if this fails. All tests may stack
 	assert.NoError(t, err)
 
 	err = startAllInsgorunds()
 	require.NoError(t, err)
 
-	_, err = signedRequest(&root, "DumpAllUsers", map[string]interface{}{})
-	require.NoError(t, err)
+	_ = getBalanceNoErr(t, &root, root.ref)
 }
