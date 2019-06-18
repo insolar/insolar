@@ -56,7 +56,7 @@ func TestCreateMemberP256K(t *testing.T) {
 }
 
 func TestCreateMemberP256(t *testing.T) {
-	//t.Skip()
+	t.Skip()
 	kp := platformpolicy.NewKeyProcessor()
 	privateKey, err := kp.GeneratePrivateKey()
 	require.NoError(t, err)
