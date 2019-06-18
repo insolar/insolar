@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
@@ -55,11 +56,11 @@ type memberKeys struct {
 
 // SDK is used to send messages to API
 type SDK struct {
-	apiURLs               *ringBuffer
-	rootMember            *requester.UserConfigJSON
-	migrationAdminMember  *requester.UserConfigJSON
-	migrationDamonMembers []*requester.UserConfigJSON
-	logLevel              interface{}
+	apiURLs                *ringBuffer
+	rootMember             *requester.UserConfigJSON
+	migrationAdminMember   *requester.UserConfigJSON
+	migrationDaemonMembers []*requester.UserConfigJSON
+	logLevel               interface{}
 }
 
 // NewSDK creates insSDK object
@@ -98,23 +99,23 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 	}
 
 	result := &SDK{
-		apiURLs:               buffer,
-		rootMember:            rootMember,
-		migrationAdminMember:  migrationAdminMember,
-		migrationDamonMembers: []*requester.UserConfigJSON{},
-		logLevel:              nil,
+		apiURLs:                buffer,
+		rootMember:             rootMember,
+		migrationAdminMember:   migrationAdminMember,
+		migrationDaemonMembers: []*requester.UserConfigJSON{},
+		logLevel:               nil,
 	}
 
-	if len(response.MigrationDamonMembers) < insolar.GenesisAmountActiveMigrationDamonMembers {
-		return nil, errors.New("[ NewSDK ] need at least '" + strconv.Itoa(insolar.GenesisAmountActiveMigrationDamonMembers) + "' migration damons")
+	if len(response.MigrationDaemonMembers) < insolar.GenesisAmountActiveMigrationDaemonMembers {
+		return nil, errors.New("[ NewSDK ] need at least '" + strconv.Itoa(insolar.GenesisAmountActiveMigrationDaemonMembers) + "' migration daemons")
 	}
 
-	for i := 0; i < insolar.GenesisAmountActiveMigrationDamonMembers; i++ {
-		m, err := getMember(memberKeysDirPath+"migration_damon_"+strconv.Itoa(i)+"_member_keys.json", response.MigrationDamonMembers[i])
+	for i := 0; i < insolar.GenesisAmountActiveMigrationDaemonMembers; i++ {
+		m, err := getMember(memberKeysDirPath+bootstrap.GetMDPath(i), response.MigrationDaemonMembers[i])
 		if err != nil {
-			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration damon member; member's index: '"+strconv.Itoa(i)+"'")
+			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration daemon member; member's index: '"+strconv.Itoa(i)+"'")
 		}
-		result.migrationDamonMembers = append(result.migrationDamonMembers, m)
+		result.migrationDaemonMembers = append(result.migrationDaemonMembers, m)
 	}
 
 	return result, nil

@@ -31,12 +31,12 @@ type InfoArgs struct{}
 
 // InfoReply is reply for Info service requests.
 type InfoReply struct {
-	RootDomain            string   `json:"RootDomain"`
-	RootMember            string   `json:"RootMember"`
-	MigrationAdminMember  string   `json:"MigrationAdminMember"`
-	MigrationDamonMembers []string `json:"MigrationDamonMembers"`
-	NodeDomain            string   `json:"NodeDomain"`
-	TraceID               string   `json:"TraceID"`
+	RootDomain             string   `json:"RootDomain"`
+	RootMember             string   `json:"RootMember"`
+	MigrationAdminMember   string   `json:"MigrationAdminMember"`
+	MigrationDaemonMembers []string `json:"MigrationDaemonMembers"`
+	NodeDomain             string   `json:"NodeDomain"`
+	TraceID                string   `json:"TraceID"`
 }
 
 // InfoService is a service that provides API for getting info about genesis objects.
@@ -92,20 +92,20 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, reply *InfoReply)
 		inslog.Error(msg)
 		return errors.New(msg)
 	}
-	migrationDamonMembers, err := s.runner.GenesisDataProvider.GetMigrationDamonMembers(ctx)
+	migrationDaemonMembers, err := s.runner.GenesisDataProvider.GetMigrationDaemonMembers(ctx)
 	if err != nil {
-		msg := "[ INFO ] Can't get migration damon members refs"
+		msg := "[ INFO ] Can't get migration daemon members refs"
 		inslog.Error(errors.Wrap(err, msg))
 		return errors.Wrap(err, msg)
 	}
-	migrationDamonMembersStrs := []string{}
-	for _, r := range migrationDamonMembers {
+	migrationDaemonMembersStrs := []string{}
+	for _, r := range migrationDaemonMembers {
 		if r == nil {
-			msg := "[ INFO ] migration damon members refs are nil"
+			msg := "[ INFO ] migration daemon members refs are nil"
 			inslog.Error(msg)
 			return errors.New(msg)
 		}
-		migrationDamonMembersStrs = append(migrationDamonMembersStrs, r.String())
+		migrationDaemonMembersStrs = append(migrationDaemonMembersStrs, r.String())
 	}
 	migrationAdminMember, err := s.runner.GenesisDataProvider.GetMigrationAdminMember(ctx)
 	if err != nil {
@@ -133,7 +133,7 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, reply *InfoReply)
 	reply.RootDomain = rootDomain.String()
 	reply.RootMember = rootMember.String()
 	reply.MigrationAdminMember = migrationAdminMember.String()
-	reply.MigrationDamonMembers = migrationDamonMembersStrs
+	reply.MigrationDaemonMembers = migrationDaemonMembersStrs
 	reply.NodeDomain = nodeDomain.String()
 	reply.TraceID = utils.RandTraceID()
 

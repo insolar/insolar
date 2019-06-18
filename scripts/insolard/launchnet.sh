@@ -189,16 +189,16 @@ generate_root_member_keys()
     echo "generate members keys in dir: $CONFIGS_DIR"
     bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_0_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_1_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_2_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_3_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_4_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_5_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_6_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_7_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_8_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_9_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_0_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_1_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_2_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_3_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_4_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_5_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_6_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_7_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_8_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_9_member_keys.json
 
 }
 

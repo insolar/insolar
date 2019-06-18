@@ -44,16 +44,16 @@ func GenesisContractsStates(cfg insolar.GenesisContractsConfig) []insolar.Genesi
 		getTariffGenesisContractState(),
 	}
 
-	for i, key := range cfg.MigrationDamonPublicKeys {
-		result = append(result, getMemberGenesisContractState(key, insolar.GenesisNameMigrationDamonMembers[i], insolar.GenesisNameRootDomain))
+	for i, key := range cfg.MigrationDaemonPublicKeys {
+		result = append(result, getMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain))
 	}
 
 	return result
 }
 
 func rootDomain() insolar.GenesisContractState {
-	if len(genesisrefs.ContractMigrationDamonMembers) < insolar.GenesisAmountActiveMigrationDamonMembers {
-		panic("need at least '" + strconv.Itoa(insolar.GenesisAmountActiveMigrationDamonMembers) + "' migration damons")
+	if len(genesisrefs.ContractMigrationDaemonMembers) < insolar.GenesisAmountActiveMigrationDaemonMembers {
+		panic("need at least '" + strconv.Itoa(insolar.GenesisAmountActiveMigrationDaemonMembers) + "' migration daemons")
 	}
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameRootDomain,
@@ -61,16 +61,16 @@ func rootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			RootMember:            genesisrefs.ContractRootMember,
-			MigrationDamonMembers: genesisrefs.ContractMigrationDamonMembers[:insolar.GenesisAmountActiveMigrationDamonMembers],
-			MigrationAdminMember:  genesisrefs.ContractMigrationAdminMember,
-			MigrationWallet:       genesisrefs.ContractMigrationWallet,
-			CostCenter:            genesisrefs.ContractCostCenter,
-			CommissionWallet:      genesisrefs.ContractCommissionWallet,
-			BurnAddressMap:        map[string]insolar.Reference{},
-			PublicKeyMap:          map[string]insolar.Reference{},
-			FreeBurnAddresses:     []string{},
-			NodeDomain:            genesisrefs.ContractNodeDomain,
+			RootMember:             genesisrefs.ContractRootMember,
+			MigrationDaemonMembers: genesisrefs.ContractMigrationDaemonMembers[:insolar.GenesisAmountActiveMigrationDaemonMembers],
+			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
+			MigrationWallet:        genesisrefs.ContractMigrationWallet,
+			CostCenter:             genesisrefs.ContractCostCenter,
+			CommissionWallet:       genesisrefs.ContractCommissionWallet,
+			BurnAddressMap:         map[string]insolar.Reference{},
+			PublicKeyMap:           map[string]insolar.Reference{},
+			FreeBurnAddresses:      []string{},
+			NodeDomain:             genesisrefs.ContractNodeDomain,
 		}),
 	}
 }

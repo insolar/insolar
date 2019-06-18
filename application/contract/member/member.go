@@ -349,20 +349,20 @@ func (m *Member) getDeposits() ([]map[string]string, error) {
 }
 
 // Migration methods
-func (migrationDamonMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
+func (migrationDaemonMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
 	rd := rootdomain.GetObject(rdRef)
 
-	// Get migraion damon members
-	migrationDamonMembers, err := rd.GetMigrationDamonMembers()
+	// Get migraion daemon members
+	migrationDaemonMembers, err := rd.GetMigrationDaemonMembers()
 	if err != nil {
-		return "", fmt.Errorf("[ migration ] Failed to get migraion damons map: %s", err.Error())
+		return "", fmt.Errorf("[ migration ] Failed to get migraion daemons map: %s", err.Error())
 	}
-	if len(migrationDamonMembers) == 0 {
-		return "", fmt.Errorf("[ migration ] There is no active migraion damon")
+	if len(migrationDaemonMembers) == 0 {
+		return "", fmt.Errorf("[ migration ] There is no active migraion daemon")
 	}
-	// Check that caller is migraion damon
-	if helper.Contains(migrationDamonMembers, migrationDamonMember.GetReference()) {
-		return "", fmt.Errorf("[ migration ] This migraion damon is not in the list")
+	// Check that caller is migraion daemon
+	if helper.Contains(migrationDaemonMembers, migrationDaemonMember.GetReference()) {
+		return "", fmt.Errorf("[ migration ] This migraion daemon is not in the list")
 	}
 
 	// Get member by burn address
@@ -380,11 +380,11 @@ func (migrationDamonMember *Member) migration(rdRef insolar.Reference, txHash st
 
 	// If deposit doesn't exist - create new deposit
 	if !found {
-		migraionDamonConfirms := map[insolar.Reference]bool{}
-		for _, ref := range migrationDamonMembers {
-			migraionDamonConfirms[ref] = false
+		migraionDaemonConfirms := map[insolar.Reference]bool{}
+		for _, ref := range migrationDaemonMembers {
+			migraionDaemonConfirms[ref] = false
 		}
-		dHolder := deposit.New(migraionDamonConfirms, txHash, amount.String(), unHoldDate)
+		dHolder := deposit.New(migraionDaemonConfirms, txHash, amount.String(), unHoldDate)
 		txDepositP, err := dHolder.AsDelegate(mRef)
 		if err != nil {
 			return "", fmt.Errorf("[ migration ] Failed to save as delegate: %s", err.Error())
@@ -392,8 +392,8 @@ func (migrationDamonMember *Member) migration(rdRef insolar.Reference, txHash st
 		txDeposit = *txDepositP
 	}
 
-	// Confirm tx by migraion damon
-	confirms, err := txDeposit.Confirm(migrationDamonMember.GetReference(), txHash, amount.String())
+	// Confirm tx by migraion daemon
+	confirms, err := txDeposit.Confirm(migrationDaemonMember.GetReference(), txHash, amount.String())
 	if err != nil {
 		return "", fmt.Errorf("[ migration ] Confirmed failed: %s", err.Error())
 	}

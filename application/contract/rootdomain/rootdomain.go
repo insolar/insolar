@@ -29,16 +29,16 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
-	RootMember            insolar.Reference
-	MigrationDamonMembers []insolar.Reference
-	MigrationAdminMember  insolar.Reference
-	MigrationWallet       insolar.Reference
-	CostCenter            insolar.Reference
-	CommissionWallet      insolar.Reference
-	BurnAddressMap        map[string]insolar.Reference
-	PublicKeyMap          map[string]insolar.Reference
-	FreeBurnAddresses     []string
-	NodeDomain            insolar.Reference
+	RootMember             insolar.Reference
+	MigrationDaemonMembers []insolar.Reference
+	MigrationAdminMember   insolar.Reference
+	MigrationWallet        insolar.Reference
+	CostCenter             insolar.Reference
+	CommissionWallet       insolar.Reference
+	BurnAddressMap         map[string]insolar.Reference
+	PublicKeyMap           map[string]insolar.Reference
+	FreeBurnAddresses      []string
+	NodeDomain             insolar.Reference
 }
 
 var INSATTR_CreateMember_API = true
@@ -56,8 +56,8 @@ func (rd RootDomain) GetMigrationWalletRef() (*insolar.Reference, error) {
 	return &rd.MigrationWallet, nil
 }
 
-func (rd RootDomain) GetMigrationDamonMembers() ([]insolar.Reference, error) {
-	return rd.MigrationDamonMembers, nil
+func (rd RootDomain) GetMigrationDaemonMembers() ([]insolar.Reference, error) {
+	return rd.MigrationDaemonMembers, nil
 }
 
 func (rd RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
@@ -73,17 +73,17 @@ var INSATTR_Info_API = true
 
 // Info returns information about basic objects
 func (rd RootDomain) Info() (interface{}, error) {
-	migrationDamonsMembersOut := []string{}
-	for _, ref := range rd.MigrationDamonMembers {
-		migrationDamonsMembersOut = append(migrationDamonsMembersOut, ref.String())
+	migrationDaemonsMembersOut := []string{}
+	for _, ref := range rd.MigrationDaemonMembers {
+		migrationDaemonsMembersOut = append(migrationDaemonsMembersOut, ref.String())
 	}
 
 	res := map[string]interface{}{
-		"rootDomain":            rd.GetReference().String(),
-		"rootMember":            rd.RootMember.String(),
-		"migrationDamonMembers": migrationDamonsMembersOut,
-		"migrationAdminMember":  rd.MigrationAdminMember.String(),
-		"nodeDomain":            rd.NodeDomain.String(),
+		"rootDomain":             rd.GetReference().String(),
+		"rootMember":             rd.RootMember.String(),
+		"migrationDaemonMembers": migrationDaemonsMembersOut,
+		"migrationAdminMember":   rd.MigrationAdminMember.String(),
+		"nodeDomain":             rd.NodeDomain.String(),
 	}
 	resJSON, err := json.Marshal(res)
 	if err != nil {

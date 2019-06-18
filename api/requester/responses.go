@@ -42,12 +42,12 @@ type rpcStatusResponse struct {
 
 // InfoResponse represents response from rpc on network.GetInfo method
 type InfoResponse struct {
-	RootDomain            string   `json:"RootDomain"`
-	RootMember            string   `json:"RootMember"`
-	MigrationAdminMember  string   `json:"MigrationAdminMember"`
-	MigrationDamonMembers []string `json:"MigrationDamonMembers"`
-	NodeDomain            string   `json:"NodeDomain"`
-	TraceID               string   `json:"TraceID"`
+	RootDomain             string   `json:"RootDomain"`
+	RootMember             string   `json:"RootMember"`
+	MigrationAdminMember   string   `json:"MigrationAdminMember"`
+	MigrationDaemonMembers []string `json:"MigrationDaemonMembers"`
+	NodeDomain             string   `json:"NodeDomain"`
+	TraceID                string   `json:"TraceID"`
 }
 
 type rpcInfoResponse struct {
