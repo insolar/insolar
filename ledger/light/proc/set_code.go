@@ -84,6 +84,7 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	virtual := record.Wrap(p.record)
 	material := record.Material{
 		Virtual: &virtual,
+		JetID: p.jetID,
 	}
 
 	err = p.dep.records.Set(ctx, p.recordID, material)
