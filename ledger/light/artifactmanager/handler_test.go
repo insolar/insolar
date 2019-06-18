@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar/flow/internal/pulse"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -524,7 +524,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	p.Dep.JetStorage = h.JetStorage
 	p.Dep.JetFetcher = h.jetTreeUpdater
 	p.Dep.JetReleaser = h.JetReleaser
-	err = p.Proceed( pulse.ContextWith()      s.ctx)
+	p.Dep.FilamentCacheManager = fcmMock
+	err = p.Proceed(flow.TestContextWithPulse(s.ctx, insolar.PulseNumber(3)))
 	require.NoError(s.T(), err)
 
 	resWrapper := <-replyTo
