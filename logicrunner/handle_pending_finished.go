@@ -49,6 +49,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 		// we are first, strange, soon ExecuteResults message should come
 		os.ExecutionState = NewExecutionState(*ref)
 		os.ExecutionState.pending = message.NotPending
+		os.ExecutionState.RegisterLogicRunner(lr)
 		os.Unlock()
 
 		h.Message.ReplyTo <- replyOk
@@ -65,15 +66,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 	}
 	es.Unlock()
 
-	s := StartQueueProcessorIfNeeded{
-		es:  es,
-		dep: h.dep,
-		ref: ref, // TODO check is it right ref or not?
-	}
-
-	if err := f.Handle(ctx, s.Present); err != nil {
-		return errors.Wrap(err, "[ HandlePendingFinished ] StartQueueProcessorIfNeeded returns error")
-	}
+	es.Broker.StartProcessorIfNeeded(ctx)
 
 	h.Message.ReplyTo <- replyOk
 	return nil
