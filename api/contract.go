@@ -21,18 +21,18 @@ package api
 import (
 	"context"
 	"net/http"
-
-	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"reflect"
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
 )
@@ -40,6 +40,7 @@ import (
 // ContractService is a service that provides ability to add custom contracts
 type ContractService struct {
 	runner *Runner
+	cb     *goplugintestutils.ContractsBuilder
 }
 
 // NewContractService creates new Contract service instance.
@@ -60,7 +61,7 @@ type UploadReply struct {
 
 // Upload builds code and return prototype ref
 func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
-	_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
 
@@ -72,22 +73,23 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 		return errors.New("params.code is missing")
 	}
 
-	insgocc, err := goplugintestutils.BuildPreprocessor()
-	if err != nil {
-		inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
-		return errors.Wrap(err, "can't build preprocessor")
+	if s.cb == nil {
+		insgocc, err := goplugintestutils.BuildPreprocessor()
+		if err != nil {
+			inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
+			return errors.Wrap(err, "can't build preprocessor")
+		}
+		s.cb = goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc)
 	}
-	cb := goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc)
 
 	contractMap := make(map[string]string)
 	contractMap[args.Name] = args.Code
 
-	err = cb.Build(contractMap)
+	err := s.cb.Build(ctx, contractMap)
 	if err != nil {
-		inslog.Infof("[ ContractService.Upload ] can't build contract %#v", err)
 		return errors.Wrap(err, "can't build contract")
 	}
-	reference := *cb.Prototypes[args.Name]
+	reference := *s.cb.Prototypes[args.Name]
 	reply.PrototypeRef = reference.String()
 	return nil
 }
@@ -164,8 +166,10 @@ type CallMethodArgs struct {
 
 // CallMethodReply is reply that Contract.CallMethod returns
 type CallMethodReply struct {
-	Reply          reply.CallMethod `json:"Reply"`
-	ExtractedReply interface{}      `json:"ExtractedReply"`
+	Reply          reply.CallMethod  `json:"Reply"`
+	ExtractedReply interface{}       `json:"ExtractedReply"`
+	Error          *foundation.Error `json:"Error"`
+	ExtractedError string            `json:"ExtractedError"`
 }
 
 // CallConstructor make an object from its prototype
@@ -200,15 +204,26 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	re.Reply = *callMethodReply.(*reply.CallMethod)
 
-	var contractErr *foundation.Error
-	re.ExtractedReply, contractErr, err = extractor.CallResponse(re.Reply.Result)
-
+	var extractedReply interface{}
+	extractedReply, _, err = extractor.CallResponse(re.Reply.Result)
 	if err != nil {
 		return errors.Wrap(err, "Can't extract response")
 	}
 
-	if contractErr != nil {
-		return errors.Wrap(errors.New(contractErr.S), "Error in called method")
+	// TODO need to understand why sometimes errors goes to reply
+	// see tests TestConstructorReturnNil, TestContractCallingContract, TestPrototypeMismatch
+	switch extractedReply.(type) {
+	case map[interface{}]interface{}:
+		replyMap := extractedReply.(map[interface{}]interface{})
+		if len(replyMap) == 1 {
+			for k, v := range replyMap {
+				if reflect.ValueOf(k).String() == "S" && len(reflect.TypeOf(v).String()) > 0 {
+					re.ExtractedError = reflect.ValueOf(v).String()
+				}
+			}
+		}
+	default:
+		re.ExtractedReply = extractedReply
 	}
 
 	return nil

@@ -167,11 +167,13 @@ prepare()
 
 build_binaries()
 {
+    echo "build binaries"
     make BUILD_TAGS="-tags functest" build
 }
 
 rebuild_binaries()
 {
+    echo "rebuild binaries"
     make clean
     build_binaries
 }
@@ -314,7 +316,6 @@ bootstrap()
     echo "bootstrap start"
     prepare
     if [[ "$SKIP_BUILD" != "1" ]]; then
-        echo "build binaries"
         build_binaries
     else
         echo "SKIP: build binaries (SKIP_BUILD=$SKIP_BUILD)"

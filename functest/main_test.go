@@ -398,6 +398,8 @@ func setup() error {
 	root.ref = info.RootMember
 	migrationAdmin.ref = info.MigrationAdminMember
 
+	contracts = make(map[string]*insolar.Reference)
+
 	return nil
 }
 

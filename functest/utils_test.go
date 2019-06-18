@@ -31,18 +31,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/rpc/v2/json2"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/pkg/errors"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 const sendRetryCount = 5
+
+var contracts map[string]*insolar.Reference
 
 type postParams map[string]interface{}
 
@@ -277,13 +280,21 @@ func newUserWithKeys() (*user, error) {
 	}, nil
 }
 
-func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
+// this is needed for running tests with count
+func uploadContractOnce(t *testing.T, name string, code string) *insolar.Reference {
+	if _, ok := contracts[name]; !ok {
+		contracts[name] = uploadContract(t, name, code)
+	}
+	return contracts[name]
+}
+
+func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.Upload",
 		"id":      "",
 		"params": map[string]string{
-			"name": "test",
+			"name": contractName,
 			"code": contractCode,
 		},
 	})
@@ -293,10 +304,12 @@ func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
 		Version string          `json:"jsonrpc"`
 		ID      string          `json:"id"`
 		Result  api.UploadReply `json:"result"`
+		Error   json2.Error     `json:"error"`
 	}{}
 
 	err := json.Unmarshal(uploadBody, &uploadRes)
 	require.NoError(t, err)
+	require.Empty(t, uploadRes.Error)
 
 	prototypeRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
 	require.NoError(t, err)
@@ -322,10 +335,12 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 		Version string                   `json:"jsonrpc"`
 		ID      string                   `json:"id"`
 		Result  api.CallConstructorReply `json:"result"`
+		Error   json2.Error              `json:"error"`
 	}{}
 
 	err := json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
+	require.Empty(t, callConstructorRes.Error)
 
 	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
 	require.NoError(t, err)
@@ -335,7 +350,10 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 	return objectRef
 }
 
-func callMethod(t *testing.T, objectRef *insolar.Reference, method string, argsSerialized []byte) interface{} {
+func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
+	argsSerialized, err := insolar.Serialize(args)
+	require.NoError(t, err)
+
 	callMethodBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.CallMethod",
@@ -352,10 +370,12 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, argsS
 		Version string              `json:"jsonrpc"`
 		ID      string              `json:"id"`
 		Result  api.CallMethodReply `json:"result"`
+		Error   json2.Error         `json:"error"`
 	}{}
 
-	err := json.Unmarshal(callMethodBody, &callRes)
+	err = json.Unmarshal(callMethodBody, &callRes)
 	require.NoError(t, err)
+	require.Empty(t, callRes.Error)
 
-	return callRes.Result.ExtractedReply
+	return callRes.Result
 }
