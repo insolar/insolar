@@ -40,7 +40,7 @@ func TestCreateMemberWithoutBurnAddresses(t *testing.T) {
 	member.ref = root.ref
 	member.pubKey = "fake"
 	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
-	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
+	require.Nil(t, err)
 }
 
 func TestCreateMemberWithBadKey(t *testing.T) {
@@ -49,5 +49,5 @@ func TestCreateMemberWithBadKey(t *testing.T) {
 	member.pubKey = "fake"
 	addBurnAddresses(t)
 	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
-	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
+	require.Nil(t, err)
 }

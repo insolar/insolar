@@ -21,6 +21,7 @@ package functest
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -59,7 +60,9 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		return nil, err
 	}
 
-	var result APIResponse
+	fmt.Println("HW", string(res))
+
+	var result requester.ContractAnswer
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
@@ -67,7 +70,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		return nil, errors.Errorf("[ NewHelloWorld ] Failed to execute: %s", *result.Error)
 	}
 
-	rv, ok := result.Result.(string)
+	rv, ok := result.Result.ContractResult.(string)
 	if !ok {
 		return nil, errors.Errorf("[ NewHelloWorld ] Failed to decode: expected string, got %T", result.Result)
 	}

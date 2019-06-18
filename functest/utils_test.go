@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net"
 	"net/http"
 	"strings"
@@ -117,22 +118,23 @@ func addBurnAddresses(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func getBalanceNoErr(t *testing.T, caller *user, reference string) int {
+func getBalanceNoErr(t *testing.T, caller *user, reference string) *big.Int {
 	balance, err := getBalance(caller, reference)
 	require.NoError(t, err)
 	return balance
 }
 
-func getBalance(caller *user, reference string) (int, error) {
+func getBalance(caller *user, reference string) (*big.Int, error) {
 	res, err := signedRequest(caller, "wallet.getMyBalance", map[string]interface{}{})
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	amount, ok := res.(float64)
+	fmt.Println(res)
+	amount, ok := new(big.Int).SetString(res.(string), 10)
 	if !ok {
-		return 0, errors.New("result is not int")
+		return nil, fmt.Errorf("[ Transfer ] can't parse input amount")
 	}
-	return int(amount), nil
+	return amount, nil
 }
 
 func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {

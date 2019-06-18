@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
@@ -39,7 +38,7 @@ func registerNodeSignedCall(params map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return res.(*requester.Result).ContractResult.(string), nil
+	return res.(string), nil
 }
 
 func TestRegisterNodeVirtual(t *testing.T) {
@@ -75,7 +74,7 @@ func TestRegisterNodeNotExistRole(t *testing.T) {
 func TestRegisterNodeByNoRoot(t *testing.T) {
 	member := createMember(t, "Member1")
 	const testRole = "virtual"
-	_, err := signedRequest(member, "RegisterNode", map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
+	_, err := signedRequest(member, "contract.registerNode", map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
 	require.Contains(t, err.Error(), "[ RegisterNode ] Only Root member can register node")
 }
 
