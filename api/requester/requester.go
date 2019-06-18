@@ -111,7 +111,7 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Cant get hash")
 	}
-	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	req.Header.Set(Digest, "SHA-256="+sha)
 	req.Header.Set(Signature, "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
 	postResp, err := httpClient.Do(req)
