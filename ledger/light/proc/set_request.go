@@ -61,6 +61,24 @@ func NewSetRequest(
 	}
 }
 
+func (p *SetRequest) Dep(
+	pcs insolar.PlatformCryptographyScheme,
+	w hot.WriteAccessor,
+	r object.RecordModifier,
+	rs recentstorage.Provider,
+	pnds object.PendingModifier,
+	pl int,
+	s bus.Sender,
+) {
+	p.dep.pcs = pcs
+	p.dep.writer = w
+	p.dep.records = r
+	p.dep.recentStorage = rs
+	p.dep.pendings = pnds
+	p.dep.pendingsLimit = pl
+	p.dep.sender = s
+}
+
 func (p *SetRequest) Proceed(ctx context.Context) error {
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {

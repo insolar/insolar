@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
-
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -151,27 +150,64 @@ func (m *client) RegisterRequest(
 		return nil, err
 	}
 
-	virtRec := record.Wrap(request)
+	// virtRec := record.Wrap(request)
+
+	buf, err := request.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "bad request record")
+	}
+
+	msg, err := payload.NewMessage(&payload.SetRequest{
+		Request: buf,
+	})
 
 	var recRef *insolar.Reference
 	switch request.CallType {
 	case record.CTMethod:
 		recRef = request.Object
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-		recID := insolar.NewID(currentPN, hash)
-		recRef = insolar.NewReference(*recID)
+		// hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
+		// recID := insolar.NewID(currentPN, hash)
+		// recRef = insolar.NewReference(*recID)
+		h := m.PCS.ReferenceHasher()
+		_, err = h.Write(buf)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to calculate hash")
+		}
+		recID := *insolar.NewID(currentPN, h.Sum(nil))
+		recRef = insolar.NewReference(recID)
 	default:
 		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
 
-	id, err := m.setRecord(
-		ctx,
-		virtRec,
-		*recRef,
-	)
+	// id, err := m.setRecord(
+	// 	ctx,
+	// 	virtRec,
+	// 	*recRef,
+	// )
+	//
+	// return id, errors.Wrap(err, "[ RegisterRequest ] ")
 
-	return id, errors.Wrap(err, "[ RegisterRequest ] ")
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply")
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return &p.ID, nil
+	case *payload.Error:
+		return nil, errors.New(p.Text)
+	default:
+		return nil, fmt.Errorf("RegisterRequest: unexpected reply: %#v", p)
+	}
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.

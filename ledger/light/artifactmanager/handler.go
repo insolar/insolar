@@ -142,6 +142,17 @@ func NewMessageHandler(
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
 			p.Dep.WriteAccessor = h.WriteAccessor
 		},
+		SetRequest: func(p *proc.SetRequest) {
+			p.Dep(
+				h.PCS,
+				h.WriteAccessor,
+				h.RecordModifier,
+				h.RecentStorageProvider,
+				h.PendingModifier,
+				h.conf.PendingRequestsLimit,
+				h.Sender,
+			)
+		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
