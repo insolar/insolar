@@ -196,7 +196,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		h := NewSetCode(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeSetRequest:
-		h := NewSetRequest(s.dep, meta, true)
+		h := NewSetRequest(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
