@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
@@ -38,7 +39,7 @@ func registerNodeSignedCall(params map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return res.(string), nil
+	return resx.(*requester.Result).ContractResult, nil
 }
 
 func TestRegisterNodeVirtual(t *testing.T) {
