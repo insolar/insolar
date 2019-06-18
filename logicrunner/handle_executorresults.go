@@ -49,6 +49,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	state.Lock()
 	if state.ExecutionState == nil {
 		state.ExecutionState = NewExecutionState(ref)
+		state.ExecutionState.RegisterLogicRunner(p.LR)
 	}
 	es := state.ExecutionState
 	p.Result.es = es
@@ -57,7 +58,6 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	p.Result.clarifyPending = false
 
 	es.Lock()
-
 	if es.pending == message.InPending {
 		if !es.CurrentList.Empty() {
 			logger.Debug("execution returned to node that is still executing pending")
@@ -78,22 +78,19 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	}
 
 	// set false to true is good, set true to false may be wrong, better make unnecessary call
-	if !es.LedgerHasMoreRequests && p.msg.LedgerHasMoreRequests {
+	if !es.LedgerHasMoreRequests {
 		es.LedgerHasMoreRequests = p.msg.LedgerHasMoreRequests
 	}
 
 	// prepare Queue
 	if p.msg.Queue != nil {
-		queueFromMessage := make([]Transcript, 0)
 		for _, qe := range p.msg.Queue {
-			queueFromMessage = append(
-				queueFromMessage,
-				*NewTranscript(qe.Parcel.Context(context.Background()), qe.Parcel, qe.Request, p.LR.pulse(ctx), es.Ref),
-			)
-		}
-		es.Queue = append(queueFromMessage, es.Queue...)
-	}
+			ctxToSent := qe.Parcel.Context(context.Background())
+			transcript := NewTranscript(ctxToSent, qe.Parcel, qe.Request, p.LR.pulse(ctx), es.Ref)
 
+			es.Broker.Prepend(ctx, false, transcript)
+		}
+	}
 	es.Unlock()
 
 	return nil
@@ -144,20 +141,8 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 		}
 	}
 
-	ref := msg.GetReference()
-	procStartQueueProcessorIfNeeded := StartQueueProcessorIfNeeded{
-		es:  procInitializeExecutionState.Result.es,
-		dep: h.dep,
-		ref: &ref,
-	}
-	if err := f.Handle(ctx, procStartQueueProcessorIfNeeded.Present); err != nil {
-		if err == flow.ErrCancelled {
-			return nil
-		}
-
-		return errors.Wrap(err, "[ HandleExecutorResults ] Failed to process queue")
-	}
-
+	es := procInitializeExecutionState.Result.es
+	es.Broker.StartProcessorIfNeeded(ctx)
 	return nil
 }
 

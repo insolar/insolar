@@ -51,6 +51,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		os.ExecutionState = NewExecutionState(*ref)
 		os.ExecutionState.pending = message.InPending
 		os.ExecutionState.PendingConfirmed = true
+		os.ExecutionState.RegisterLogicRunner(lr)
 	} else {
 		es := os.ExecutionState
 		es.Lock()
