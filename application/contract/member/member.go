@@ -102,9 +102,13 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 		return nil, fmt.Errorf(" Failed to unmarshal: %s", err.Error())
 	}
 
-	if request.Params.CallSite == "contract.createMember" {
+	switch request.Params.CallSite {
+	case "contract.createMember":
+		selfSigned = true
+	case "contract.getReferenceByPK":
 		selfSigned = true
 	}
+
 	err = m.verifySig(request, rawRequest, signature, selfSigned)
 	if err != nil {
 		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
