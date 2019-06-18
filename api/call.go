@@ -234,7 +234,7 @@ func validateRequestHeaders(digest string, richSignature string, body []byte) (s
 	if err != nil {
 		return "", errors.Wrap(err, "Cant get hash")
 	}
-	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	if sha == digest[strings.IndexByte(digest, '=')+1:] {
 		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
 		if len(sig) == 0 {
