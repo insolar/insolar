@@ -208,7 +208,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		case <-ch:
 			if err != nil {
-				processError(err, "Can't makeCall", &contractAnswer, insLog, traceID)
+				processError(err, err.Error(), &contractAnswer, insLog, traceID)
 				return
 			}
 			contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
