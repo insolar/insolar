@@ -88,9 +88,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	require.Equal(t, oldFirstBalance, newFirstBalance)
 }
 
-// TODO: bug in the wallet contract
 func TestTransferNegativeAmount(t *testing.T) {
-	t.Skip("Bug in the wallet contract")
 	firstMember := createMember(t, "Member1")
 	secondMember := createMember(t, "Member2")
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)

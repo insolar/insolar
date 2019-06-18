@@ -46,6 +46,11 @@ func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) error {
 	if !ok {
 		return fmt.Errorf("[ Transfer ] can't parse input amount")
 	}
+	zero, _ := new(big.Int).SetString("0", 10)
+	if amount.Cmp(zero) == -1 {
+		return fmt.Errorf("[ Transfer ] amount must be larger then zero")
+	}
+
 	balance, ok := new(big.Int).SetString(w.Balance, 10)
 	if !ok {
 		return fmt.Errorf("[ Transfer ] can't parse wallet balance")
