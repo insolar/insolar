@@ -537,14 +537,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	am := lr.ArtifactManager
-	if current.Deactivate {
+	if !current.LogicContext.Immutable && current.Deactivate {
 		_, err := am.DeactivateObject(
 			ctx, *current.RequestRef, current.ObjectDescriptor, result,
 		)
 		if err != nil {
 			return nil, es.WrapError(current, err, "couldn't deactivate object")
 		}
-	} else if !bytes.Equal(current.ObjectDescriptor.Memory(), newData) {
+	} else if !current.LogicContext.Immutable && !bytes.Equal(current.ObjectDescriptor.Memory(), newData) {
 		_, err := am.UpdateObject(
 			ctx, *current.RequestRef, current.ObjectDescriptor, newData, result,
 		)

@@ -1337,8 +1337,8 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	immutableRequestRef1 := gen.Reference()
 	immutableRequestRef2 := gen.Reference()
 
-	pulse := insolar.Pulse{PulseNumber: gen.PulseNumber()}
-	s.ps.LatestMock.Return(pulse, nil)
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	s.ps.LatestMock.Return(pulseObject, nil)
 
 	// prepare all three requests
 	mutableMsg := message.CallMethod{
@@ -1350,7 +1350,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		},
 	}
 	mutableParcel := prepareParcel(s.mc, &mutableMsg, true)
-	mutableTranscript := NewTranscript(s.ctx, mutableParcel, &mutableRequestRef, &pulse, parentRef)
+	mutableTranscript := NewTranscript(s.ctx, mutableParcel, &mutableRequestRef, &pulseObject, parentRef)
 
 	immutableMsg1 := message.CallMethod{
 		Request: record.Request{
@@ -1361,7 +1361,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		},
 	}
 	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, true)
-	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulse, parentRef)
+	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
 
 	immutableMsg2 := message.CallMethod{
 		Request: record.Request{
@@ -1372,7 +1372,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		},
 	}
 	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, true)
-	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulse, parentRef)
+	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulseObject, parentRef)
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1
@@ -1437,6 +1437,106 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 
 	checkFinished := func() bool { return es.Broker.finished.Len() >= 3 }
 	s.True(wait(checkFinished))
+}
+
+func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
+	// prepare default object and execution state
+	objectRef := gen.Reference()
+	os := s.lr.UpsertObjectState(objectRef)
+	es := NewExecutionState(objectRef)
+	es.RegisterLogicRunner(s.lr)
+	es.pending = message.NotPending
+	os.ExecutionState = es
+
+	// prepare prototype/code descriptors to run needed executor
+	cRef := testutils.RandomRef()
+	cDesc := artifacts.NewCodeDescriptorMock(s.mc)
+	cDesc.RefMock.Return(&cRef)
+	cDesc.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
+
+	pRef := testutils.RandomRef()
+	pDesc := artifacts.NewObjectDescriptorMock(s.mc)
+	pDesc.HeadRefMock.Return(&pRef)
+	pDesc.CodeMock.Return(&cRef, nil)
+
+	oDesc := artifacts.NewObjectDescriptorMock(s.mc)
+	oDesc.ParentMock.Return(nil)
+	oDesc.PrototypeMock.Return(&pRef, nil)
+	oDesc.MemoryMock.Return(make([]byte, 0))
+
+	s.am.GetObjectMock.Set(func(p context.Context, p1 insolar.Reference) (r artifacts.ObjectDescriptor, r1 error) {
+		if p1.Equal(objectRef) {
+			return oDesc, nil
+		} else if p1.Equal(pRef) {
+			return pDesc, nil
+		} else {
+			panic("unexpected")
+		}
+	})
+	s.am.GetCodeMock.Return(cDesc, nil)
+	s.am.UpdateObjectMock.Return(nil, nil)
+	s.am.RegisterResultMock.Return(nil, nil)
+
+	s.mb.SendMock.Return(nil, nil)
+	nodeMock := network.NewNetworkNodeMock(s.mc)
+	nodeMock.IDMock.Return(objectRef)
+	s.nn.GetOriginMock.Return(nodeMock)
+
+	// prepare request objects
+	parentRef := gen.Reference()
+
+	immutableRequestRef1 := gen.Reference()
+	immutableRequestRef2 := gen.Reference()
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	s.ps.LatestMock.Return(pulseObject, nil)
+
+	immutableMsg1 := message.CallMethod{
+		Request: record.Request{
+			ReturnMode:   record.ReturnResult,
+			Object:       &objectRef,
+			APIRequestID: utils.RandTraceID(),
+			Immutable:    true,
+		},
+	}
+	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, true)
+	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
+
+	immutableMsg2 := message.CallMethod{
+		Request: record.Request{
+			ReturnMode:   record.ReturnResult,
+			Object:       &objectRef,
+			APIRequestID: utils.RandTraceID(),
+			Immutable:    true,
+		},
+	}
+	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, true)
+	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulseObject, parentRef)
+
+	mle := testutils.NewMachineLogicExecutorMock(s.mc)
+	s.lr.Executors[insolar.MachineTypeBuiltin] = mle
+
+	mle.CallMethodMock.Set(func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 []byte,
+		p4 string, p5 insolar.Arguments) (r []byte, r1 insolar.Arguments, r2 error) {
+
+		if p1.Request.Equal(immutableRequestRef1) {
+			return make([]byte, 1), nil, nil
+		} else if p1.Request.Equal(immutableRequestRef2) {
+			es.CurrentList.Get(*p1.Request).Deactivate = true
+			return make([]byte, 0), nil, nil
+		}
+		panic("unexpected")
+	})
+
+	// do not start ledger checking for requests
+	es.Broker.processFuncArgs.(*ExecuteTranscriptArgs).ledgerChecked.Do(func() {})
+
+	es.Broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
+
+	checkFinished := func() bool { return es.Broker.finished.Len() >= 2 }
+	s.True(wait(checkFinished))
+	s.Equal(uint64(2), s.am.RegisterResultCounter)
+
 }
 
 func TestLogicRunner(t *testing.T) {
