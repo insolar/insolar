@@ -218,6 +218,7 @@ func (m *client) GetCode(
 	if !ok {
 		return nil, errors.New("no reply")
 	}
+
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal reply")
@@ -583,7 +584,8 @@ func (m *client) DeployCode(
 		Code:        code,
 		MachineType: machineType,
 	}
-	buf, err := codeRec.Marshal()
+	virtual := record.Wrap(codeRec)
+	buf, err := virtual.Marshal()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal record")
 	}
@@ -595,32 +597,54 @@ func (m *client) DeployCode(
 	}
 	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
-	msg, err := payload.NewMessage(&payload.SetCode{
+	psc := &payload.SetCode{
 		Record: buf,
 		Code:   code,
-	})
-
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID))
-	defer done()
-
-	rep, ok := <-reps
-	if !ok {
-		return nil, errors.New("no reply")
 	}
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+
+
+	pl, err := m.retryer(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal reply")
+		return nil, err
 	}
-
 	switch p := pl.(type) {
 	case *payload.ID:
 		return &p.ID, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
 	default:
-		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		return nil, fmt.Errorf("DeployCode: unexpected reply: %#v", p)
 	}
 }
+
+func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (payload.Payload, error) {
+	for tries > 0 {
+		msg, err := payload.NewMessage(ppl)
+		if err != nil {
+			return nil, err
+		}
+
+		reps, done := m.sender.SendRole(ctx, msg, role, ref)
+		rep, ok := <-reps
+		done()
+
+		if !ok {
+			return nil, errors.New("no reply")
+		}
+		pl, err := payload.UnmarshalFromMeta(rep.Payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal reply")
+		}
+
+		if p, ok := pl.(*payload.Error); !ok || p.Code != payload.CodeFlowCanceled {
+			return pl, nil
+		}
+		inslogger.FromContext(ctx).Warn("flow cancelled, retrying")
+		tries--
+	}
+	return nil, fmt.Errorf("flow cancelled, retries exceeded")
+}
+
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.

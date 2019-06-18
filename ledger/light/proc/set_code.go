@@ -19,6 +19,8 @@ package proc
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -27,12 +29,11 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 type SetCode struct {
 	message  payload.Meta
-	record   record.Code
+	record   record.Virtual
 	code     []byte
 	recordID insolar.ID
 	jetID    insolar.JetID
@@ -46,7 +47,7 @@ type SetCode struct {
 	}
 }
 
-func NewSetCode(msg payload.Meta, rec record.Code, code []byte, recID insolar.ID, jetID insolar.JetID) *SetCode {
+func NewSetCode(msg payload.Meta, rec record.Virtual, code []byte, recID insolar.ID, jetID insolar.JetID) *SetCode {
 	return &SetCode{
 		message:  msg,
 		record:   rec,
@@ -80,10 +81,11 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	virtual := record.Wrap(p.record)
 	material := record.Material{
-		Virtual: &virtual,
+		Virtual: &p.record,
+		JetID: p.jetID,
 	}
+
 	err = p.dep.records.Set(ctx, p.recordID, material)
 	if err != nil {
 		return errors.Wrap(err, "failed to store record")
