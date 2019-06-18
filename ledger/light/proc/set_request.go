@@ -92,6 +92,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	virtual := record.Wrap(p.request)
 	material := record.Material{
 		Virtual: &virtual,
+		JetID:   p.jetID,
 	}
 	err = p.dep.records.Set(ctx, p.requestID, material)
 	if err != nil {
