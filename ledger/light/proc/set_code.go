@@ -33,7 +33,7 @@ import (
 
 type SetCode struct {
 	message  payload.Meta
-	record   record.Code
+	record   record.Virtual
 	code     []byte
 	recordID insolar.ID
 	jetID    insolar.JetID
@@ -47,7 +47,7 @@ type SetCode struct {
 	}
 }
 
-func NewSetCode(msg payload.Meta, rec record.Code, code []byte, recID insolar.ID, jetID insolar.JetID) *SetCode {
+func NewSetCode(msg payload.Meta, rec record.Virtual, code []byte, recID insolar.ID, jetID insolar.JetID) *SetCode {
 	return &SetCode{
 		message:  msg,
 		record:   rec,
@@ -81,9 +81,8 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	virtual := record.Wrap(p.record)
 	material := record.Material{
-		Virtual: &virtual,
+		Virtual: &p.record,
 		JetID: p.jetID,
 	}
 

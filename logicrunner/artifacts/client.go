@@ -584,7 +584,8 @@ func (m *client) DeployCode(
 		Code:        code,
 		MachineType: machineType,
 	}
-	buf, err := codeRec.Marshal()
+	virtual := record.Wrap(codeRec)
+	buf, err := virtual.Marshal()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal record")
 	}
