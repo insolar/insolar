@@ -2,9 +2,7 @@ package main
 
 import (
 	"crypto/ecdsa"
-	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/api/requester"
@@ -79,16 +77,9 @@ func TestCreateMemberP256(t *testing.T) {
 		Params:  params,
 	}
 	response, err := execute(TestUrl, memberKeys{string(privateKeyPem), string(publicKeyPem)}, datas)
-	if err != nil {
-		fmt.Println("dd", err)
-	}
-	//require.NotNil(t, err)
-	//require.NotNil(t, response)
-	res, err := json.Marshal(response)
-	if err != nil {
-		t.Log(err)
-	}
-	t.Log(res)
+	require.NoError(t, err)
+	require.NotNil(t, response)
+	t.Log(response)
 	memRefK = response.Result.(string)
 }
 
