@@ -263,6 +263,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			Pulses,
 			Pulses,
+			filamentCache,
 			conf.LightChainLimit,
 		)
 		dataGatherer := replication.NewDataGatherer(drops, blobs, records, indexes)

@@ -62,10 +62,14 @@ type HeavyPendingAccessor interface {
 	Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.FilamentCacheManager -o ./ -s _mock.go
+
 type FilamentCacheManager interface {
 	Gather(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 	SendAbandonedNotification(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) error
 }
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.FilamentCacheCleaner -o ./ -s _mock.go
 
 type FilamentCacheCleaner interface {
 	// DeleteForPN method removes indexes from a storage for a provided

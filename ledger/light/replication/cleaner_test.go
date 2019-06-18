@@ -59,7 +59,10 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	ps := pulse.NewShifterMock(ctrl)
 	ps.ShiftMock.Expect(ctx, inputPulse.PulseNumber).Return(nil)
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, nil, 0)
+	cacheCln := object.NewFilamentCacheCleanerMock(ctrl)
+	cacheCln.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
+
+	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, nil, cacheCln, 0)
 
 	cleaner.cleanPulse(ctx, inputPulse.PulseNumber)
 
@@ -99,7 +102,10 @@ func TestCleaner_clean(t *testing.T) {
 	pc := pulse.NewCalculatorMock(ctrl)
 	pc.BackwardsMock.Expect(ctx, inputPulse.PulseNumber, limit).Return(calculatedPulse, nil)
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	cacheCln := object.NewFilamentCacheCleanerMock(ctrl)
+	cacheCln.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+
+	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, cacheCln, limit)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.clean(ctx)
@@ -141,7 +147,10 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	pc := pulse.NewCalculatorMock(ctrl)
 	pc.BackwardsMock.Expect(ctx, inputPulse.PulseNumber, limit).Return(calculatedPulse, nil)
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	cacheCln := object.NewFilamentCacheCleanerMock(ctrl)
+	cacheCln.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+
+	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, cacheCln, limit)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)
