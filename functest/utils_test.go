@@ -35,9 +35,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/require"
 )
 
 const sendRetryCount = 5
@@ -99,12 +100,21 @@ type rpcStatusResponse struct {
 func createMember(t *testing.T, name string) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	result, err := signedRequest(&root, "contract.createMember", map[string]interface{}{"publicKey": member.pubKey})
+	member.ref = root.ref
+
+	addBurnAddresses(t)
+
+	result, err := signedRequest(member, "contract.createMember", map[string]interface{}{})
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
 	member.ref = ref
 	return member
+}
+
+func addBurnAddresses(t *testing.T) {
+	_, err := signedRequest(&migrationAdmin, "wallet.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{"fake_ba"}})
+	require.NoError(t, err)
 }
 
 func getBalanceNoErr(t *testing.T, caller *user, reference string) int {
@@ -114,7 +124,7 @@ func getBalanceNoErr(t *testing.T, caller *user, reference string) int {
 }
 
 func getBalance(caller *user, reference string) (int, error) {
-	res, err := signedRequest(caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
+	res, err := signedRequest(caller, "wallet.getMyBalance", map[string]interface{}{})
 	if err != nil {
 		return 0, err
 	}
@@ -127,6 +137,8 @@ func getBalance(caller *user, reference string) (int, error) {
 
 func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
+	fmt.Println("getRPSResponseBody")
+	fmt.Println(string(jsonValue))
 	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
@@ -148,11 +160,12 @@ func getSeed(t *testing.T) string {
 }
 
 func getInfo(t *testing.T) infoResponse {
-	body := getRPSResponseBody(t, postParams{
+	pp := postParams{
 		"jsonrpc": "2.0",
 		"method":  "network.GetInfo",
 		"id":      "",
-	})
+	}
+	body := getRPSResponseBody(t, pp)
 	rpcInfoResponse := &rpcInfoResponse{}
 	unmarshalRPCResponse(t, body, rpcInfoResponse)
 	require.NotNil(t, rpcInfoResponse.Result)
@@ -215,11 +228,7 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 			return nil, err
 		}
 
-		if resp.Error == nil {
-			return resp.Result, nil
-		}
-
-		if strings.Contains(resp.Error.Message, "Messagebus timeout exceeded") {
+		if resp.Error != nil && strings.Contains(resp.Error.Message, "Messagebus timeout exceeded") {
 			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
@@ -229,19 +238,19 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 		break
 	}
 
-	if resp.Error == nil {
-		return resp.Result.ContractResult, errors.New("")
-	}
+	if resp.Error != nil {
+		if currentIterNum > sendRetryCount {
+			return nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
+		}
 
-	if currentIterNum > sendRetryCount {
-		return nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
-	}
-
-	if resp.Result == nil {
 		return nil, errors.New(resp.Error.Message)
+	} else {
+		if resp.Result == nil {
+			return nil, errors.New("Error and result are nil")
+		} else {
+			return resp.Result.ContractResult, nil
+		}
 	}
-
-	return resp.Result.ContractResult, errors.New(resp.Error.Message)
 }
 
 func newUserWithKeys() (*user, error) {

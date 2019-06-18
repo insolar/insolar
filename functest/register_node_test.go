@@ -39,7 +39,7 @@ func registerNodeSignedCall(params map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return resx.(*requester.Result).ContractResult, nil
+	return res.(*requester.Result).ContractResult.(string), nil
 }
 
 func TestRegisterNodeVirtual(t *testing.T) {
