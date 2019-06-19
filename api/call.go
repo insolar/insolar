@@ -133,7 +133,12 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		defer span.End()
 
 		contractRequest := requester.Request{}
-		contractAnswer := requester.ContractAnswer{}
+		contractAnswer := requester.ContractAnswer{JSONRPC: contractRequest.JSONRPC, ID: contractRequest.ID}
+		rawBody, err := UnmarshalRequest(req, &contractRequest)
+		if err != nil {
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
+			return
+		}
 
 		startTime := time.Now()
 		defer func() {
@@ -158,19 +163,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 
-		rawBody, err := UnmarshalRequest(req, &contractRequest)
-		if err != nil {
-			processError(err, err.Error(), &contractAnswer, insLog, traceID)
-			return
-		}
-
-		contractAnswer.JSONRPC = contractRequest.JSONRPC
-		contractAnswer.ID = contractRequest.ID
-
-		digest := req.Header.Get(requester.Digest)
-		richSignature := req.Header.Get(requester.Signature)
-
-		signature, err := validateRequestHeaders(digest, richSignature, rawBody)
+		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 		if err != nil {
 			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
@@ -185,8 +178,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed(contractRequest.Params.Seed)
-		if err != nil {
+		if err := ar.checkSeed(contractRequest.Params.Seed); err != nil {
 			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
 		}
