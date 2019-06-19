@@ -69,8 +69,8 @@ func (r *RPCResponse) getError() map[string]interface{} {
 type getSeedResponse struct {
 	RPCResponse
 	Result struct {
-		Seed    string `json:"Seed"`
-		TraceID string `json:"TraceID"`
+		Seed    string `json:"seed"`
+		TraceID string `json:"traceID"`
 	} `json:"result"`
 }
 
@@ -91,8 +91,8 @@ type rpcInfoResponse struct {
 }
 
 type statusResponse struct {
-	NetworkState    string `json:"NetworkState"`
-	WorkingListSize int    `json:"WorkingListSize"`
+	NetworkState    string `json:"networkState"`
+	WorkingListSize int    `json:"workingListSize"`
 }
 
 type rpcStatusResponse struct {

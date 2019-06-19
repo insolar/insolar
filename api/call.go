@@ -209,7 +209,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
-			errResponse := &requester.Error{Message: "Messagebus timeout exceeded", Code: TimeoutError, TraceID: traceID}
+			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, TraceID: traceID}
 			contractAnswer.Error = errResponse
 			return
 		}
