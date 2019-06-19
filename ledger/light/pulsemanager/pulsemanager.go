@@ -189,7 +189,7 @@ func (m *PulseManager) processEndPulse(
 				}
 			}
 
-			if info.SplitPerformed {
+			if !info.SplitPerformed {
 				msg, err := m.getExecutorHotData(
 					ctx, info.ID, currentPulse.PulseNumber, newPulse.PulseNumber, drop,
 				)
