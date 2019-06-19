@@ -58,11 +58,11 @@ import (
 )
 
 func newLocalCensusBuilder(chronicles *localChronicles, pn common.PulseNumber,
-	population copyOnlinePopulationTo) LocalCensusBuilder {
+	population copyOnlinePopulationTo) *LocalCensusBuilder {
 
-	r := LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn, population: NewDynamicPopulation(population)}
-	r.populationBuilder.census = &r
-	r.populationView.census = &r
+	r := &LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn, population: NewDynamicPopulation(population)}
+	r.populationBuilder.census = r
+	r.populationView.census = r
 	return r
 }
 
@@ -174,28 +174,28 @@ type LockedPopulation struct {
 
 func (c *LockedPopulation) FindProfile(nodeId common.ShortNodeId) common2.NodeProfile {
 	c.census.mutex.RLock()
-	defer c.census.mutex.RLock()
+	defer c.census.mutex.RUnlock()
 
 	return c.census.population.FindProfile(nodeId)
 }
 
 func (c *LockedPopulation) GetProfiles() []common2.NodeProfile {
 	c.census.mutex.RLock()
-	defer c.census.mutex.RLock()
+	defer c.census.mutex.RUnlock()
 
 	return c.census.population.GetProfiles()
 }
 
 func (c *LockedPopulation) GetCount() int {
 	c.census.mutex.RLock()
-	defer c.census.mutex.RLock()
+	defer c.census.mutex.RUnlock()
 
 	return c.census.population.GetCount()
 }
 
 func (c *LockedPopulation) GetLocalProfile() common2.LocalNodeProfile {
 	c.census.mutex.RLock()
-	defer c.census.mutex.RLock()
+	defer c.census.mutex.RUnlock()
 
 	return c.census.population.GetLocalProfile()
 }
@@ -208,35 +208,35 @@ type DynamicPopulationBuilder struct {
 
 func (c *DynamicPopulationBuilder) GetUnorderedProfiles() []common2.UpdatableNodeProfile {
 	c.census.mutex.RLock()
-	defer c.census.mutex.RLock()
+	defer c.census.mutex.RUnlock()
 
 	return c.census.population.GetUnorderedProfiles()
 }
 
 func (c *DynamicPopulationBuilder) GetCount() int {
 	c.census.mutex.RLock()
-	defer c.census.mutex.RLock()
+	defer c.census.mutex.RUnlock()
 
 	return c.census.population.GetCount()
 }
 
 func (c *DynamicPopulationBuilder) GetLocalProfile() common2.LocalNodeProfile {
 	c.census.mutex.RLock()
-	defer c.census.mutex.RLock()
+	defer c.census.mutex.RUnlock()
 
 	return c.census.population.GetLocalProfile()
 }
 
 func (c *DynamicPopulationBuilder) FindProfile(nodeId common.ShortNodeId) common2.UpdatableNodeProfile {
 	c.census.mutex.RLock()
-	defer c.census.mutex.RLock()
+	defer c.census.mutex.RUnlock()
 
 	return c.census.population.FindUpdatableProfile(nodeId)
 }
 
 func (c *DynamicPopulationBuilder) AddJoinerProfile(intro common2.NodeIntroProfile) common2.UpdatableNodeProfile {
 	c.census.mutex.Lock()
-	defer c.census.mutex.Lock()
+	defer c.census.mutex.Unlock()
 
 	if c.census.state.IsSealed() {
 		panic("illegal state")
@@ -246,7 +246,7 @@ func (c *DynamicPopulationBuilder) AddJoinerProfile(intro common2.NodeIntroProfi
 
 func (c *DynamicPopulationBuilder) RemoveProfile(nodeId common.ShortNodeId) {
 	c.census.mutex.Lock()
-	defer c.census.mutex.Lock()
+	defer c.census.mutex.Unlock()
 
 	if c.census.state.IsSealed() {
 		panic("illegal state")

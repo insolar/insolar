@@ -140,8 +140,7 @@ func (c *PrimingCensusTemplate) GetMandateRegistry() MandateRegistry {
 }
 
 func (c *PrimingCensusTemplate) CreateBuilder(pn common.PulseNumber) Builder {
-	b := newLocalCensusBuilder(c.chronicles, pn, c.online)
-	return &b
+	return newLocalCensusBuilder(c.chronicles, pn, c.online)
 }
 
 var _ ActiveCensus = &ActiveCensusTemplate{}
@@ -227,8 +226,7 @@ func (c *ExpectedCensusTemplate) GetMandateRegistry() MandateRegistry {
 }
 
 func (c *ExpectedCensusTemplate) CreateBuilder(pn common.PulseNumber) Builder {
-	b := newLocalCensusBuilder(c.chronicles, pn, c.online)
-	return &b
+	return newLocalCensusBuilder(c.chronicles, pn, c.online)
 }
 
 func (c *ExpectedCensusTemplate) GetPrevious() ActiveCensus {
