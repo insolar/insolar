@@ -272,6 +272,7 @@ func (b *pendingMeta) addMetaIDToFilament(pn insolar.PulseNumber, metaID insolar
 // the request will be closed
 func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error {
 	logger := inslogger.FromContext(ctx)
+
 	i.idLocker.Lock(&objID)
 	defer i.idLocker.Unlock(&objID)
 
@@ -329,6 +330,8 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 		logger.Debugf("no open requests for - %v", objID.DebugString())
 		logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), lfl.EarliestOpenRequest)
 		lfl.EarliestOpenRequest = nil
+	} else {
+		logger.Debugf("not closed reqs: %v, objID : %v", len(pb.notClosedRequestsIds), objID.DebugString())
 	}
 
 	idx.Lifeline = lfl
@@ -546,6 +549,9 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 					MetaID:   id,
 				}
 			}
+			if len(res) == 0 {
+				panic(fmt.Sprintf("what? len pendingRecords - %v, objID - %v", len(pendingRecords), objID.DebugString()))
+			}
 			inslogger.FromContext(ctx).Debugf("RefreshPendingFilament objID == %v, records - %v", objID.DebugString(), len(res))
 			pl = &payload.PendingFilament{
 				ObjectID: objID,
@@ -581,14 +587,13 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 		}
 		switch r := pl.(type) {
 		case *payload.PendingFilament:
+			if len(r.Records) == 0 {
+				panic(fmt.Sprintf("unexpected behaviour - %v", earlistOpenRequest))
+			}
 			err := i.setFilament(ctx, pm, destPN, r.Records)
 			if err != nil {
 				panic(err)
 				return err
-			}
-
-			if len(r.Records) == 0 {
-				panic(fmt.Sprintf("unexpected behaviour - %v", earlistOpenRequest))
 			}
 
 			firstRec := record.Unwrap(r.Records[0].Meta.Virtual).(*record.PendingFilament)
