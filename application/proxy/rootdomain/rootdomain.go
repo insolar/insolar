@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111128xawVPQX5V9Xhn4JB1E9oZk13FFVDBKDKMH2pH.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113RoFCRiqy7Sn6MULTEsvyoN8F8ET3ZifoBu8RQt.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -1006,8 +1006,8 @@ func (r *RootDomain) AddNewMemberToMapsAsImmutable(publicKey string, burnAddress
 	return nil
 }
 
-// GetReferenceByPK is proxy generated method
-func (r *RootDomain) GetReferenceByPK(publicKey string) (insolar.Reference, error) {
+// GetReferenceByPublicKey is proxy generated method
+func (r *RootDomain) GetReferenceByPublicKey(publicKey string) (insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -1024,7 +1024,7 @@ func (r *RootDomain) GetReferenceByPK(publicKey string) (insolar.Reference, erro
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetReferenceByPK", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetReferenceByPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -1040,8 +1040,8 @@ func (r *RootDomain) GetReferenceByPK(publicKey string) (insolar.Reference, erro
 	return ret0, nil
 }
 
-// GetReferenceByPKNoWait is proxy generated method
-func (r *RootDomain) GetReferenceByPKNoWait(publicKey string) error {
+// GetReferenceByPublicKeyNoWait is proxy generated method
+func (r *RootDomain) GetReferenceByPublicKeyNoWait(publicKey string) error {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -1052,7 +1052,7 @@ func (r *RootDomain) GetReferenceByPKNoWait(publicKey string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetReferenceByPK", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetReferenceByPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1060,8 +1060,8 @@ func (r *RootDomain) GetReferenceByPKNoWait(publicKey string) error {
 	return nil
 }
 
-// GetReferenceByPKAsImmutable is proxy generated method
-func (r *RootDomain) GetReferenceByPKAsImmutable(publicKey string) (insolar.Reference, error) {
+// GetReferenceByPublicKeyAsImmutable is proxy generated method
+func (r *RootDomain) GetReferenceByPublicKeyAsImmutable(publicKey string) (insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -1078,7 +1078,7 @@ func (r *RootDomain) GetReferenceByPKAsImmutable(publicKey string) (insolar.Refe
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetReferenceByPK", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetReferenceByPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

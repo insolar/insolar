@@ -113,17 +113,17 @@ func (rd RootDomain) GetBurnAddress() (string, error) {
 }
 
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
-	rd.PublicKeyMap[util.TrimPK(publicKey)] = memberRef
-	rd.BurnAddressMap[util.TrimBurn(burnAddress)] = memberRef
+	rd.PublicKeyMap[util.TrimPublicKey(publicKey)] = memberRef
+	rd.BurnAddressMap[util.TrimBurnAddress(burnAddress)] = memberRef
 	return nil
 }
 
-func (rd RootDomain) GetReferenceByPK(publicKey string) (insolar.Reference, error) {
-	return rd.PublicKeyMap[util.TrimPK(publicKey)], nil
+func (rd RootDomain) GetReferenceByPublicKey(publicKey string) (insolar.Reference, error) {
+	return rd.PublicKeyMap[util.TrimPublicKey(publicKey)], nil
 }
 
 func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
-	return rd.BurnAddressMap[util.TrimBurn(burnAddress)], nil
+	return rd.BurnAddressMap[util.TrimBurnAddress(burnAddress)], nil
 }
 
 func (rd RootDomain) GetCostCenter() (insolar.Reference, error) {

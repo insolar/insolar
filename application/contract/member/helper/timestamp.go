@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func ParseTimeStamp(timeStr string) (time.Time, error) {
+func ParseTimestamp(timeStr string) (time.Time, error) {
 
 	i, err := strconv.ParseInt(timeStr, 10, 64)
 	if err != nil {

@@ -4,12 +4,12 @@ import (
 	"strings"
 )
 
-func TrimPK(public string) string {
-	return TrimBurn(between(public, "KEY-----", "-----END"))
+func TrimPublicKey(publicKey string) string {
+	return TrimBurnAddress(between(publicKey, "KEY-----", "-----END"))
 }
 
-func TrimBurn(value string) string {
-	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(value), "\n"), ""))
+func TrimBurnAddress(burnAddress string) string {
+	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(burnAddress), "\n"), ""))
 }
 
 func between(value string, a string, b string) string {

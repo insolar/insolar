@@ -105,7 +105,7 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	switch request.Params.CallSite {
 	case "contract.createMember":
 		selfSigned = true
-	case "contract.getReferenceByPK":
+	case "contract.getReferenceByPublicKey":
 		selfSigned = true
 	}
 
@@ -141,8 +141,8 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 		return m.transferCall(params)
 	case "Migration":
 		return m.migrationCall(rootDomain, params)
-	case "contract.getReferenceByPK":
-		return m.getReferenceByPK(rootDomain, request.Params.PublicKey)
+	case "contract.getReferenceByPublicKey":
+		return m.getReferenceByPublicKey(rootDomain, request.Params.PublicKey)
 	}
 	return nil, &foundation.Error{S: "Unknown method: '" + request.Params.CallSite + "'"}
 }
@@ -215,7 +215,7 @@ func (mdMember *Member) migrationCall(rdRef insolar.Reference, params map[string
 		return "", fmt.Errorf("[ migrationCall ] Failed to parse amount")
 	}
 
-	unHoldDate, err := helper.ParseTimeStamp(params["currentDate"].(string))
+	unHoldDate, err := helper.ParseTimestamp(params["currentDate"].(string))
 	if err != nil {
 		return "", fmt.Errorf("[ migrationCall ] Failed to parse unHoldDate: %s", err.Error())
 	}
@@ -290,7 +290,7 @@ func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key strin
 		return nil, fmt.Errorf("[ createMember ] Failed to save as child: %s", err.Error())
 	}
 
-	wHolder := wallet.New(big.NewInt(100).String())
+	wHolder := wallet.New(big.NewInt(1000000000).String())
 	_, err = wHolder.AsDelegate(new.Reference)
 	if err != nil {
 		return nil, fmt.Errorf("[ createMember ] Failed to save as delegate: %s", err.Error())
@@ -481,11 +481,11 @@ func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 	return false, deposit.Deposit{}, nil
 }
 
-func (m *Member) getReferenceByPK(rdRef insolar.Reference, publicKey string) (interface{}, error) {
+func (m *Member) getReferenceByPublicKey(rdRef insolar.Reference, publicKey string) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(rdRef)
-	ref, err := rootDomain.GetReferenceByPK(publicKey)
+	ref, err := rootDomain.GetReferenceByPublicKey(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("[ getReferenceByPK ] Failed to get get reference by public key: %s", err.Error())
+		return nil, fmt.Errorf("[ getReferenceByPublicKey ] Failed to get get reference by public key: %s", err.Error())
 	}
 	return ref.String(), nil
 
