@@ -50,21 +50,13 @@
 
 package core
 
-import (
-	"sync"
-
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-
-	"github.com/insolar/insolar/network/consensus/common"
-)
-
 type PulseProjection struct {
-	mutex sync.Mutex
-	id    int
-
-	// countFromPulsars	high32
-	// countFromNodes	low32
-	// counters       uint64 // atomic
-	pulseData      common.PulseData
-	originalPacket common2.OriginalPulsarPacket
+	//mutex sync.Mutex
+	//id    int
+	//
+	//// countFromPulsars	high32
+	//// countFromNodes	low32
+	//// counters       uint64 // atomic
+	//pulseData      common.PulseData
+	//originalPacket common2.OriginalPulsarPacket
 }

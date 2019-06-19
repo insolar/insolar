@@ -222,15 +222,15 @@ func (r *HeadedLazySortedList) CutOffHeadByLenInto(headCutLen int, to []interfac
 	if r.sorted == UnsortedAll {
 		r.SortAll()
 		return r.data.cutOffHeadByLen(headCutLen, to)
-	} else {
-		res := r.data.cutOffHeadByLen(headCutLen, to)
-		if r.data.len <= 1 {
-			r.sorted = Sorted
-		} else if r.sorted == UnsortedTail {
-			r.sorted = UnsortedAll
-		}
-		return res
 	}
+
+	res := r.data.cutOffHeadByLen(headCutLen, to)
+	if r.data.len <= 1 {
+		r.sorted = Sorted
+	} else if r.sorted == UnsortedTail {
+		r.sorted = UnsortedAll
+	}
+	return res
 }
 
 func (r *HeadedLazySortedList) CutOffHead(headLenReduction int) []interface{} {

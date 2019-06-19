@@ -381,7 +381,7 @@ func newNeighbourReport(na *core.NodeAppearance, nodeCount int) *neighbourReport
 var _ packets.NodeStateHashReportReader = &neighbourReport{}
 
 type neighbourReport struct {
-	nodeId     common.ShortNodeId
+	nodeId     common.ShortNodeID
 	membership common2.MembershipProfile
 	trustLevel packets.NodeTrustLevel
 	nodeCount  uint16
@@ -400,7 +400,7 @@ func (c *neighbourReport) GetNodePower() common2.MemberPower {
 	return c.membership.Power
 }
 
-func (c *neighbourReport) GetShortNodeId() common.ShortNodeId {
+func (c *neighbourReport) GetShortNodeId() common.ShortNodeID {
 	return c.nodeId
 }
 

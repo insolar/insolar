@@ -77,10 +77,10 @@ type PulsePacketReader interface {
 type MemberPacketReader interface {
 	GetPacketType() PacketType
 
-	GetSourceShortNodeId() common.ShortNodeId
+	GetSourceShortNodeId() common.ShortNodeID
 
 	HasTargetShortNodeId() bool
-	GetTargetShortNodeId() common.ShortNodeId
+	GetTargetShortNodeId() common.ShortNodeID
 
 	AsPhase0Packet() Phase0PacketReader
 	AsPhase1Packet() Phase1PacketReader
@@ -96,7 +96,7 @@ type PhasePacketReader interface {
 
 type NodeStateHashReportReader interface {
 	common2.NodeStateHashReader
-	GetShortNodeId() common.ShortNodeId
+	GetShortNodeId() common.ShortNodeID
 	GetNodeTrustLevel() NodeTrustLevel
 }
 

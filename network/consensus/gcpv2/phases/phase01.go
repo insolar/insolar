@@ -90,14 +90,15 @@ func (c *Phase0Controller) HandleMemberPacket(p packets.MemberPacketReader, n *c
 }
 
 func handleEmbeddedPulsePacket(p packets.MemberPacketReader, pp packets.PulsePacketReader, n *core.NodeAppearance,
-	R *core.FullRealm, defErr error) error {
-	// pp.GetPulseDataEvidence()
-	// TODO validate pulse data
+	r *core.FullRealm, defErr error) error {
 
-	if R.GetPulseData() == pp.GetPulseData() {
+	// TODO validate pulse data
+	pp.GetPulseDataEvidence()
+
+	if r.GetPulseData() == pp.GetPulseData() {
 		return defErr
 	}
-	return R.Blames().NewMismatchedPulsePacket(n.GetProfile(), R.GetOriginalPulse(), pp.GetPulseDataEvidence())
+	return r.Blames().NewMismatchedPulsePacket(n.GetProfile(), r.GetOriginalPulse(), pp.GetPulseDataEvidence())
 }
 
 var _ core.PhaseController = &Phase1Controller{}

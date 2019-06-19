@@ -64,24 +64,23 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile) NodeAppearance {
-	r := NewNodeAppearance(np)
-
-	r.state = packets.NodeStateLocalActive
-	r.trust = packets.SelfTrust
-
-	return r
-}
-
-func NewNodeAppearance(np common2.NodeProfile) NodeAppearance {
+func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile) *NodeAppearance {
 	if np == nil {
 		panic("node profile is nil")
 	}
-	r := NodeAppearance{
+
+	return &NodeAppearance{
 		profile: np,
-		// errorFactory:errorFactory,
+		state:   packets.NodeStateLocalActive,
+		trust:   packets.SelfTrust,
 	}
-	return r
+}
+
+func (c *NodeAppearance) init(np common2.NodeProfile) {
+	if np == nil {
+		panic("node profile is nil")
+	}
+	c.profile = np
 }
 
 type NodeAppearance struct {
@@ -140,7 +139,7 @@ func (c *NodeAppearance) GetIndex() int {
 	return c.profile.GetIndex()
 }
 
-func (c *NodeAppearance) GetShortNodeId() common.ShortNodeId {
+func (c *NodeAppearance) GetShortNodeId() common.ShortNodeID {
 	return c.profile.GetShortNodeId()
 }
 

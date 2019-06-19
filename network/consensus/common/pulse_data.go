@@ -263,13 +263,13 @@ func (r *PulseData) IsValidNext(n *PulseData) bool {
 	if r.IsExpectedPulse() || r.GetNextPulseNumber() != n.PulseNumber || r.NextPulseDelta != n.PrevPulseDelta {
 		return false
 	}
-	if r.IsFromPulsar() {
+	switch {
+	case r.IsFromPulsar():
 		return n.IsValidPulsarData()
-	} else if r.IsFromEphemeral() {
+	case r.IsFromEphemeral():
 		return n.IsValidEphemeralData()
-	} else {
-		return n.IsValidPulseData()
 	}
+	return n.IsValidPulseData()
 }
 
 func (r *PulseData) IsValidPrev(p *PulseData) bool {

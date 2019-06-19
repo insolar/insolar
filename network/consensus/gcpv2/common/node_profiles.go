@@ -65,12 +65,12 @@ type HostProfile interface {
 
 type NodeIntroduction interface {
 	GetClaimEvidence() common.SignedEvidenceHolder
-	GetShortNodeId() common.ShortNodeId
+	GetShortNodeId() common.ShortNodeID
 }
 
 type NodeIntroProfile interface {
 	HostProfile
-	GetShortNodeId() common.ShortNodeId
+	GetShortNodeId() common.ShortNodeID
 	GetIntroduction() NodeIntroduction
 }
 
@@ -138,7 +138,7 @@ func (v MembershipState) TimesAsSuspect() int {
 
 func (v *MembershipState) IncrementSuspect() (becameSuspect bool) {
 	if v.IsSuspect() {
-		*v -= 1
+		*v--
 		return false
 	} else {
 		*v = SuspectedOnce

@@ -265,8 +265,8 @@ func (r *SignedDigest) VerifyWith(v SignatureVerifier) bool {
 	return v.IsValidDigestSignature(&r.digest, &r.signature)
 }
 
-func (p SignedDigest) String() string {
-	return fmt.Sprintf("%v%v", p.digest, p.signature)
+func (r SignedDigest) String() string {
+	return fmt.Sprintf("%v%v", r.digest, r.signature)
 }
 
 type hReader io.Reader
@@ -296,6 +296,6 @@ func (r *SignedData) WriteTo(w io.Writer) (int64, error) {
 	return io.Copy(w, r.hReader)
 }
 
-func (p SignedData) String() string {
-	return fmt.Sprintf("[bytes=%v]%v", p.hReader, p.hSignedDigest)
+func (r SignedData) String() string {
+	return fmt.Sprintf("[bytes=%v]%v", r.hReader, r.hSignedDigest)
 }

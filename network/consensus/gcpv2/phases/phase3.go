@@ -150,7 +150,7 @@ func (c *Phase3Controller) workerPhase3(ctx context.Context) {
 	if !c.workerPrePhase3(ctx) {
 		return
 	}
-	d := c.workerCalcGshPair(ctx)
+	d := c.calcGshPair()
 
 	go c.workerRecvPhase3(ctx, d)
 	c.workerSendPhase3(ctx, d)
@@ -235,7 +235,7 @@ outer:
 	return true
 }
 
-func (c *Phase3Controller) workerCalcGshPair(ctx context.Context) nodeset.HashedNodeVector {
+func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
 
 	/*
 		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always
@@ -245,8 +245,9 @@ func (c *Phase3Controller) workerCalcGshPair(ctx context.Context) nodeset.Hashed
 	var aggDoubted common.SequenceDigester = nil
 
 	bitset := make(nodeset.NodeBitset, c.R.GetNodeCount())
-	for i, n := range c.R.GetIndexedNodes() {
-		membership, trust := n.GetNodeMembershipAndTrust()
+	nodes := c.R.GetIndexedNodes()
+	for i := range nodes {
+		membership, trust := nodes[i].GetNodeMembershipAndTrust()
 		if membership.IsEmpty() {
 			bitset[i] = nodeset.NbsTimeout
 			continue

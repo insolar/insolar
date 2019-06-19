@@ -172,7 +172,7 @@ type LockedPopulation struct {
 	census *LocalCensusBuilder
 }
 
-func (c *LockedPopulation) FindProfile(nodeId common.ShortNodeId) common2.NodeProfile {
+func (c *LockedPopulation) FindProfile(nodeId common.ShortNodeID) common2.NodeProfile {
 	c.census.mutex.RLock()
 	defer c.census.mutex.RUnlock()
 
@@ -227,7 +227,7 @@ func (c *DynamicPopulationBuilder) GetLocalProfile() common2.LocalNodeProfile {
 	return c.census.population.GetLocalProfile()
 }
 
-func (c *DynamicPopulationBuilder) FindProfile(nodeId common.ShortNodeId) common2.UpdatableNodeProfile {
+func (c *DynamicPopulationBuilder) FindProfile(nodeId common.ShortNodeID) common2.UpdatableNodeProfile {
 	c.census.mutex.RLock()
 	defer c.census.mutex.RUnlock()
 
@@ -244,7 +244,7 @@ func (c *DynamicPopulationBuilder) AddJoinerProfile(intro common2.NodeIntroProfi
 	return c.census.population.AddJoinerProfile(intro)
 }
 
-func (c *DynamicPopulationBuilder) RemoveProfile(nodeId common.ShortNodeId) {
+func (c *DynamicPopulationBuilder) RemoveProfile(nodeId common.ShortNodeID) {
 	c.census.mutex.Lock()
 	defer c.census.mutex.Unlock()
 

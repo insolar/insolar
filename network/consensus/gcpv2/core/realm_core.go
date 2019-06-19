@@ -181,7 +181,7 @@ func (r *coreRealm) IsJoiner() bool {
 	return r.self.IsJoiner()
 }
 
-func (r *coreRealm) GetSelfNodeId() common.ShortNodeId {
+func (r *coreRealm) GetSelfNodeId() common.ShortNodeID {
 	return r.self.profile.GetShortNodeId()
 }
 

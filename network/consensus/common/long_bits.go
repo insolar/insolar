@@ -237,7 +237,7 @@ func (v Bits512) String() string {
 
 /* Array size must be aligned to 8 bytes */
 func FoldToUint64(v []byte) uint64 {
-	res := binary.LittleEndian.Uint64(v[:])
+	res := binary.LittleEndian.Uint64(v)
 	for i := 8; i < len(v); i += 8 {
 		res ^= binary.LittleEndian.Uint64(v[i:])
 	}
@@ -270,10 +270,9 @@ func readFromArray(d []byte, s []byte) (int, error) {
 	if len(s) < n {
 		copy(d, s)
 		return len(s), nil
-	} else {
-		copy(d, s[:n])
-		return n, nil
 	}
+	copy(d, s[:n])
+	return n, nil
 }
 
 func EncodeToString(s []byte, prefix string, separator string, everyN int) string {

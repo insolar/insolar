@@ -120,12 +120,12 @@ func (c *EmuVersionedRegistries) GetVersionPulseData() common.PulseData {
 const ShortNodeIdOffset = 1000
 
 func NewEmuNodeIntro(id int, s common.HostAddress) common2.NodeIntroProfile {
-	return &emuNodeIntro{id: common.ShortNodeId(ShortNodeIdOffset + id), n: s}
+	return &emuNodeIntro{id: common.ShortNodeID(ShortNodeIdOffset + id), n: s}
 }
 
 type emuNodeIntro struct {
 	n  common.HostAddress
-	id common.ShortNodeId
+	id common.ShortNodeID
 }
 
 func (c *emuNodeIntro) GetClaimEvidence() common.SignedEvidenceHolder {
@@ -144,7 +144,7 @@ func (c *emuNodeIntro) IsAcceptableHost(from common.HostIdentityHolder) bool {
 	return c.n.Equals(from.GetHostAddress())
 }
 
-func (c *emuNodeIntro) GetShortNodeId() common.ShortNodeId {
+func (c *emuNodeIntro) GetShortNodeId() common.ShortNodeID {
 	return c.id
 }
 

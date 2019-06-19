@@ -163,8 +163,8 @@ func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 		if p.IsJoiner() {
 			r.joinersCount++
 		}
-		r.nodes[i] = NewNodeAppearance(p)
 		n := &r.nodes[i]
+		n.init(p)
 		n.neighborTrustThreshold = neighborTrustThreshold
 		n.neighbourWeight = baselineWeight
 		if p.GetShortNodeId() == thisNodeId {
@@ -224,20 +224,20 @@ func (r *FullRealm) GetBftMajorityCount() int {
 	return r.bftMajorityCount
 }
 
-func (r *FullRealm) FindActiveNode(id common.ShortNodeId) common2.NodeProfile {
+func (r *FullRealm) FindActiveNode(id common.ShortNodeID) common2.NodeProfile {
 	return r.population.FindProfile(id)
 }
 
-func (r *FullRealm) GetActiveNode(id common.ShortNodeId) (common2.NodeProfile, error) {
+func (r *FullRealm) GetActiveNode(id common.ShortNodeID) (common2.NodeProfile, error) {
 	np := r.population.FindProfile(id)
 	if np == nil {
-		return nil, fmt.Errorf("unknown ShortNodeId: %v", id)
+		return nil, fmt.Errorf("unknown ShortNodeID: %v", id)
 	} else {
 		return np, nil
 	}
 }
 
-func (r *FullRealm) GetNodeApperance(id common.ShortNodeId) (*NodeAppearance, error) {
+func (r *FullRealm) GetNodeApperance(id common.ShortNodeID) (*NodeAppearance, error) {
 	np, err := r.GetActiveNode(id)
 	if err != nil {
 		return nil, err

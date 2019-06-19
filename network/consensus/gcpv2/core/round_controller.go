@@ -97,9 +97,7 @@ func NewPhasedRoundController(strategy RoundStrategy, chronicle census.Consensus
 	r.realm.coreRealm.packetBuilder = transport.GetPacketBuilder(r.realm.coreRealm.signer)
 
 	population := r.realm.coreRealm.initialCensus.GetOnlinePopulation()
-
-	sr := NewNodeAppearanceAsSelf(population.GetLocalProfile())
-	r.realm.coreRealm.self = &sr
+	r.realm.coreRealm.self = NewNodeAppearanceAsSelf(population.GetLocalProfile())
 
 	return r
 }
@@ -258,12 +256,12 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 		selfId := r.realm.coreRealm.GetSelfNodeId()
 		sid := memberPacket.GetSourceShortNodeId()
 		if sid == selfId {
-			return fmt.Errorf("loopback, source ShortNodeId(%v) == this ShortNodeId(%v)", sid, selfId)
+			return fmt.Errorf("loopback, source ShortNodeID(%v) == this ShortNodeID(%v)", sid, selfId)
 		}
 		if memberPacket.HasTargetShortNodeId() {
 			tid := memberPacket.GetTargetShortNodeId()
 			if tid != selfId {
-				return fmt.Errorf("target ShortNodeId(%v) != this ShortNodeId(%v)", tid, selfId)
+				return fmt.Errorf("target ShortNodeID(%v) != this ShortNodeID(%v)", tid, selfId)
 			}
 		}
 

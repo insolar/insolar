@@ -136,8 +136,8 @@ func (r *EmuPulsarNetPacket) String() string {
 var _ common.SignedEvidenceHolder = &basePacket{}
 
 type basePacket struct {
-	src       common.ShortNodeId
-	tgt       common.ShortNodeId
+	src       common.ShortNodeID
+	tgt       common.ShortNodeID
 	nodePower common2.MemberPower
 	nodeCount uint16
 	nodeIndex uint16
@@ -162,15 +162,15 @@ func (r *basePacket) GetNodePower() common2.MemberPower {
 	return r.nodePower
 }
 
-func (r *basePacket) GetSourceShortNodeId() common.ShortNodeId {
+func (r *basePacket) GetSourceShortNodeId() common.ShortNodeID {
 	return r.src
 }
 
 func (r *basePacket) HasTargetShortNodeId() bool {
-	return r.tgt != common.AbsentShortNodeId
+	return r.tgt != common.AbsentShortNodeID
 }
 
-func (r *basePacket) GetTargetShortNodeId() common.ShortNodeId {
+func (r *basePacket) GetTargetShortNodeId() common.ShortNodeID {
 	return r.tgt
 }
 

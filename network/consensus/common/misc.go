@@ -198,5 +198,5 @@ func CopyFixedSize(v FoldableReader) FoldableReader {
 	return &r
 }
 
-type ShortNodeId uint32 // ZERO is RESERVED
-const AbsentShortNodeId ShortNodeId = 0
+type ShortNodeID uint32 // ZERO is RESERVED
+const AbsentShortNodeID ShortNodeID = 0
