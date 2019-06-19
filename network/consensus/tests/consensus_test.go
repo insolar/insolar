@@ -81,7 +81,7 @@ type EmuHostConsensusAdapter struct {
 
 func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicles, network *EmuNetwork, config core.LocalNodeConfiguration) {
 	ctx := network.ctx
-	//&EmuConsensusStrategy{ctx: ctx}
+	// &EmuConsensusStrategy{ctx: ctx}
 	upstream := NewEmuUpstreamPulseController(ctx, defaultNshGenerationDelay)
 	var strategyFactory core.RoundStrategyFactory = &EmuRoundStrategyFactory{}
 

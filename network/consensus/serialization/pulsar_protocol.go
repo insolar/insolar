@@ -52,16 +52,18 @@ package serialization
 
 import "github.com/insolar/insolar/network/consensus/common"
 
-type PulsarPulsePacket struct { //ByteSize>=128
-	Header               UnifiedProtocolPacketHeader `insolar-transport:"proto=0x00,packet=0x0F"` //ByteSize<=16
-	PulseNumber          common.PulseNumber          //ByteSize=4
-	PulsarPulsePacketExt                             //ByteSize>=108
+type PulsarPulsePacket struct {
+	// ByteSize>=128
+	Header               UnifiedProtocolPacketHeader `insolar-transport:"proto=0x00,packet=0x0F"` // ByteSize<=16
+	PulseNumber          common.PulseNumber          // ByteSize=4
+	PulsarPulsePacketExt                             // ByteSize>=108
 }
 
-type PulsarPulsePacketExt struct { //ByteSize>=108
-	PulseDataExt          common.PulseDataExt //ByteSize=44
-	PulsarConsensusProofs []byte              //variable lengths >=0
-	PulsarSignature       common.Bits512      //ByteSize=64
+type PulsarPulsePacketExt struct {
+	// ByteSize>=108
+	PulseDataExt          common.PulseDataExt // ByteSize=44
+	PulsarConsensusProofs []byte              // variable lengths >=0
+	PulsarSignature       common.Bits512      // ByteSize=64
 }
 
 /*

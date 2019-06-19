@@ -212,17 +212,17 @@ func (c *ExpectedCensusTemplate) GetOnlinePopulation() OnlinePopulation {
 }
 
 func (c *ExpectedCensusTemplate) GetOfflinePopulation() OfflinePopulation {
-	//TODO Should be provided via relevant builder
+	// TODO Should be provided via relevant builder
 	return c.prev.GetOfflinePopulation()
 }
 
 func (c *ExpectedCensusTemplate) GetMisbehaviorRegistry() MisbehaviorRegistry {
-	//TODO Should be provided via relevant builder
+	// TODO Should be provided via relevant builder
 	return c.prev.GetMisbehaviorRegistry()
 }
 
 func (c *ExpectedCensusTemplate) GetMandateRegistry() MandateRegistry {
-	//TODO Should be provided via relevant builder
+	// TODO Should be provided via relevant builder
 	return c.prev.GetMandateRegistry()
 }
 
@@ -245,7 +245,7 @@ func (c *ExpectedCensusTemplate) MakeActive(pd common.PulseData) ActiveCensus {
 		},
 		gsh: c.gsh,
 		csh: c.csh,
-	} //make copy for thread-safe access
+	} // make copy for thread-safe access
 
 	c.chronicles.makeActive(c, &a)
 	return &a

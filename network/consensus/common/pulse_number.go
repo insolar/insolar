@@ -60,8 +60,8 @@ const (
 	MinRegularPulseNumber                       = LocalRelativeSpecialPulseNumber + 1
 	MaxRegularPulseNumber                       = 1<<30 - 1
 )
-const UnixTimeOfMinRegularPulseNumber = 1546300800                                                                      //2019-01-01 00:00:00 +0000 UTC
-const UnixTimeOfMaxRegularPulseNumber = UnixTimeOfMinRegularPulseNumber - MinRegularPulseNumber + MaxRegularPulseNumber //2053-01-08 19:24:46 +0000 UTC
+const UnixTimeOfMinRegularPulseNumber = 1546300800                                                                      // 2019-01-01 00:00:00 +0000 UTC
+const UnixTimeOfMaxRegularPulseNumber = UnixTimeOfMinRegularPulseNumber - MinRegularPulseNumber + MaxRegularPulseNumber // 2053-01-08 19:24:46 +0000 UTC
 
 var timeOfMinRegularPulseNumber = time.Unix(UnixTimeOfMinRegularPulseNumber, 0)
 

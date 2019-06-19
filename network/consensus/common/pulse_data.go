@@ -67,7 +67,8 @@ type PulseData struct {
 	PulseDataExt
 }
 
-type PulseDataExt struct { //ByteSize=44
+type PulseDataExt struct {
+	// ByteSize=44
 	PulseEpoch     uint32
 	PulseEntropy   Bits256
 	NextPulseDelta uint16
@@ -78,7 +79,7 @@ type PulseDataExt struct { //ByteSize=44
 type PulseDataReader interface {
 	GetPulseNumber() PulseNumber
 	GetStartOfEpoch() PulseNumber
-	//GetPulseEntropy()	[4]uint64
+	// GetPulseEntropy()	[4]uint64
 	GetNextPulseDelta() uint16
 	GetPrevPulseDelta() uint16
 	GetTimestamp() uint64

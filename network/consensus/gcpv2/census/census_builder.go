@@ -79,7 +79,7 @@ type LocalCensusBuilder struct {
 	gsh               common2.GlobulaStateHash
 	csh               common2.CloudStateHash
 
-	//content WorkingCensusTemplate
+	// content WorkingCensusTemplate
 }
 
 func (c *LocalCensusBuilder) GetCensusState() State {

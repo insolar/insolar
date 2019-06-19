@@ -58,7 +58,7 @@ import (
 type GlobulaNodeState struct {
 	NodeStateHash            common.Bits512
 	PulseDataHash            common.Bits256
-	FoldedLastCloudStateHash common.Bits224 //CSH is 512 and is folded down then high 32 bits are discarded
+	FoldedLastCloudStateHash common.Bits224 // CSH is 512 and is folded down then high 32 bits are discarded
 	NodeRank                 GlobulaNodeRank
 }
 
@@ -68,15 +68,15 @@ type SignedGlobulaNodeState struct {
 }
 
 type GlobulaNodeRank struct {
-	Power      uint16 //serialized to [00-07] MemberPower
-	Index      uint16 //serialized to [08-17]
-	TotalCount uint16 //serialized to [18-27]
-	//Flags uint8		  //[28-31] Reserved, [31] is used in neighbourhood claims
+	Power      uint16 // serialized to [00-07] MemberPower
+	Index      uint16 // serialized to [08-17]
+	TotalCount uint16 // serialized to [18-27]
+	// Flags uint8		  //[28-31] Reserved, [31] is used in neighbourhood claims
 }
 
 type CloudStateHash common.Bits512
 
-//type NodeStateHash Bits512
+// type NodeStateHash Bits512
 
 type SerializedGlobulaNodeRank uint32
 

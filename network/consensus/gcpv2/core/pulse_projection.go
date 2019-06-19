@@ -64,7 +64,7 @@ type PulseProjection struct {
 
 	// countFromPulsars	high32
 	// countFromNodes	low32
-	//counters       uint64 // atomic
+	// counters       uint64 // atomic
 	pulseData      common.PulseData
 	originalPacket common2.OriginalPulsarPacket
 }

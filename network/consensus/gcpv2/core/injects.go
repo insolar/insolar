@@ -67,7 +67,7 @@ type PhaseControllersBundle interface {
 
 type ConsensusController interface {
 	ProcessPacket(payload packets.PacketParser, from common.HostIdentityHolder) error
-	//LeaveConsensus()
+	// LeaveConsensus()
 }
 
 type RoundController interface {

@@ -100,7 +100,7 @@ func (ns *NodeState) UpdReceivedPacket(packetType PacketType) bool {
 	if ok {
 		return ns.UpdReceivedPhase(pn)
 	}
-	//panic("packet type cant be mapped to a phase")
+	// panic("packet type cant be mapped to a phase")
 	return false
 }
 
@@ -130,7 +130,7 @@ func (ns NodeState) UpdSentPacket(packetType PacketType) bool {
 	if ok {
 		return ns.UpdSentPhase(pn)
 	}
-	//panic("packet type cant be mapped to a phase")
+	// panic("packet type cant be mapped to a phase")
 	return false
 }
 

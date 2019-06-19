@@ -79,7 +79,7 @@ type Phase2Controller struct {
 	core.PhaseControllerPerMemberTemplate
 	packetPrepareOptions core.PacketSendOptions
 	queueNshReady        chan *core.NodeAppearance
-	queueTrustUpdated    chan<- TrustUpdateSignal //small enough to be sent as values
+	queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
 }
 
 type TrustUpdateSignal struct {
@@ -102,7 +102,7 @@ func (c *Phase2Controller) HandleMemberPacket(reader packets.MemberPacketReader,
 	p2 := reader.AsPhase2Packet()
 	err := n.SetReceivedWithDupCheck(c.GetPacketType())
 	if err != nil {
-		//allows to avoid cheating by boosting up trust with additional Phase2 packets
+		// allows to avoid cheating by boosting up trust with additional Phase2 packets
 		return err
 	}
 
@@ -113,7 +113,7 @@ func (c *Phase2Controller) HandleMemberPacket(reader packets.MemberPacketReader,
 
 	ef := c.R.GetMisbehaviorFactories()
 
-	//TODO Verify neighbourhood first (incl presence of self) before applying it
+	// TODO Verify neighbourhood first (incl presence of self) before applying it
 	var signalSent = false
 	for _, nb := range p2.GetNeighbourhood() {
 
@@ -122,21 +122,21 @@ func (c *Phase2Controller) HandleMemberPacket(reader packets.MemberPacketReader,
 		if err != nil {
 			// TODO unknown node - blame sender
 			panic(fmt.Errorf("unlisted neighbour node: %v", nid))
-			//R.GetBlameFactory().NewMultipleNshBlame()
+			// R.GetBlameFactory().NewMultipleNshBlame()
 		}
 
 		nshEvidence := nb.GetNodeStateHashEvidence()
 		mp := common2.NewMembershipProfile(nb.GetNodeIndex(), nb.GetNodePower(), nb.GetNodeStateHash())
 		// TODO validate node proof - if fails, then fraud on sender
-		//neighbourProfile.IsValidPacketSignature(nshEvidence.GetEvidence())
+		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetEvidence())
 		// TODO check NodeRank also
-		//if p1.HasSelfIntro() {
-		//	// TODO register protocol misbehavior - IntroClaim was not expected
-		//}
-		//if R.GetNodeCount() != int(p1.GetNodeCount()) {
-		//	//TODO register fraud and SEND state to others
-		//	return true, n.RegisterFraud(R.Frauds().NewMismatchedRank(n.GetProfile(), p1.GetNodeStateHashEvidence()))
-		//}
+		// if p1.HasSelfIntro() {
+		// 	// TODO register protocol misbehavior - IntroClaim was not expected
+		// }
+		// if R.GetNodeCount() != int(p1.GetNodeCount()) {
+		// 	//TODO register fraud and SEND state to others
+		// 	return true, n.RegisterFraud(R.Frauds().NewMismatchedRank(n.GetProfile(), p1.GetNodeStateHashEvidence()))
+		// }
 
 		modifiedNsh, trustBefore, trustAfter := neighbour.ApplyNeighbourEvidence(n, mp, nshEvidence, ef)
 		if modifiedNsh {
@@ -171,7 +171,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 
 	// This duration is a soft timeout - the worker will attempt to send all data in the queue before stopping.
 	timings := c.R.GetTimings()
-	//endOfPhase := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
+	// endOfPhase := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
 	weightScaler := common2.NewNeighbourWeightScalerInt64(timings.EndOfPhase1.Nanoseconds())
 
 	if timings.StartPhase1RetryAt > 0 {
@@ -232,7 +232,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 		}
 		idleLoop = true
 		if c.R.GetSelf().IsNshRequired() {
-			//we can't send anything yet - NSH wasn't provided yet
+			// we can't send anything yet - NSH wasn't provided yet
 			continue
 		}
 
@@ -336,7 +336,7 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 
 	s := c.R.GetSelf()
 	if s.IsNshRequired() {
-		//we are close to end of Phase2 have no NSH - so missing Phase1 packets is the lesser problem
+		// we are close to end of Phase2 have no NSH - so missing Phase1 packets is the lesser problem
 		return
 	}
 	nsh := s.GetNodeStateHashEvidence()
@@ -357,16 +357,16 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	}
 }
 
-//func (R *ConsensusRoundController) preparePhase1Packet(po gcpv2.PacketSendOptions) gcpv2.PreparedSendPacket {
+// func (R *ConsensusRoundController) preparePhase1Packet(po gcpv2.PacketSendOptions) gcpv2.PreparedSendPacket {
 //
-//	var selfIntro gcpv2.NodeIntroduction = nil
-//	if c.R.joinersCount > 0 {
-//		selfIntro = c.R.self.nodeProfile.GetLastPublishedIntroduction()
-//	}
+// 	var selfIntro gcpv2.NodeIntroduction = nil
+// 	if c.R.joinersCount > 0 {
+// 		selfIntro = c.R.self.nodeProfile.GetLastPublishedIntroduction()
+// 	}
 //
-//	return c.R.callback.PreparePhase1Packet(c.R.activePulse.originalPacket, selfIntro,
-//		c.R.self.membership, c.R.strategy.GetPacketOptions(gcpv2.Phase1)|po)
-//}
+// 	return c.R.callback.PreparePhase1Packet(c.R.activePulse.originalPacket, selfIntro,
+// 		c.R.self.membership, c.R.strategy.GetPacketOptions(gcpv2.Phase1)|po)
+// }
 
 func newNeighbourReport(na *core.NodeAppearance, nodeCount int) *neighbourReport {
 	r := neighbourReport{

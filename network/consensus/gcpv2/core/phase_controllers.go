@@ -72,15 +72,15 @@ type PhaseControllerHandlerType uint8
 const (
 	HandlerTypeHostPacket PhaseControllerHandlerType = iota
 	HandlerTypeMemberPacket
-	HandlerTypePerNodePacket //This mode allows to attach a custom object(state) to each NodeAppearance
+	HandlerTypePerNodePacket // This mode allows to attach a custom object(state) to each NodeAppearance
 )
 
 type PhaseController interface {
 	GetPacketType() packets.PacketType
 	IsPerNode() PhaseControllerHandlerType
-	HandleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) error //IsPerNode() == HandlerTypeHostPacket
-	HandleMemberPacket(reader packets.MemberPacketReader, src *NodeAppearance) error    //IsPerNode() == HandlerTypeMemberPacket
-	CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler          //IsPerNode() == HandlerTypePerNodePacket
+	HandleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) error // IsPerNode() == HandlerTypeHostPacket
+	HandleMemberPacket(reader packets.MemberPacketReader, src *NodeAppearance) error    // IsPerNode() == HandlerTypeMemberPacket
+	CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler          // IsPerNode() == HandlerTypePerNodePacket
 	BeforeStart(realm *FullRealm)
 	StartWorker(ctx context.Context)
 }
@@ -114,7 +114,7 @@ func (*PhaseControllerPerMemberTemplate) CreatePerNodePacketHandler(node *NodeAp
 func (*PhaseControllerPerMemberTemplate) StartWorker(ctx context.Context) {
 }
 
-//var _ PhaseController = &PhaseControllerPerNodeTemplate{}
+// var _ PhaseController = &PhaseControllerPerNodeTemplate{}
 type PhaseControllerPerNodeTemplate struct {
 	R *FullRealm
 }

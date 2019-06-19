@@ -79,7 +79,7 @@ func NewNodeAppearance(np common2.NodeProfile) NodeAppearance {
 	}
 	r := NodeAppearance{
 		profile: np,
-		//errorFactory:errorFactory,
+		// errorFactory:errorFactory,
 	}
 	return r
 }
@@ -89,7 +89,7 @@ type NodeAppearance struct {
 
 	/* Provided externally at construction. Don't need mutex */
 	profile common2.NodeProfile // set by construction
-	//errorFactory errors.MisbehaviorFactories
+	// errorFactory errors.MisbehaviorFactories
 	handlers               []PhasePerNodePacketHandler
 	neighborTrustThreshold uint8
 
@@ -109,12 +109,12 @@ func (c *NodeAppearance) String() string {
 	return fmt.Sprintf("node:{%v}", c.profile)
 }
 
-//Unsafe
+// Unsafe
 func LessByNeighbourWeightForNodeAppearance(n1, n2 interface{}) bool {
 	return n1.(*NodeAppearance).neighbourWeight < n2.(*NodeAppearance).neighbourWeight
 }
 
-//LOCK - self, target must be safe
+// LOCK - self, target must be safe
 func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -124,13 +124,13 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	target.trust = c.trust
 }
 
-//func (c *NodeAppearance) Frauds() errors.FraudFactory {
-//	return c.errorFactory.GetFraudFactory()
-//}
+// func (c *NodeAppearance) Frauds() errors.FraudFactory {
+// 	return c.errorFactory.GetFraudFactory()
+// }
 //
-//func (c *NodeAppearance) Blames() errors.BlameFactory {
-//	return c.errorFactory.GetBlameFactory()
-//}
+// func (c *NodeAppearance) Blames() errors.BlameFactory {
+// 	return c.errorFactory.GetBlameFactory()
+// }
 
 func (c *NodeAppearance) IsJoiner() bool {
 	return c.profile.IsJoiner()
@@ -231,14 +231,14 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp comm
 	trustBefore = c.trust
 	modifiedNsh, _ = c._applyNodeMembership(mp, evidence, false, errorFactory)
 
-	if witness.GetShortNodeId() != c.GetShortNodeId() { //a node can't be a witness to itself
+	if witness.GetShortNodeId() != c.GetShortNodeId() { // a node can't be a witness to itself
 		switch {
 		case c.neighborReports == 0:
 			c.trust.UpdateKeepNegative(packets.TrustBySome)
 		case c.neighborReports == uint8(math.MaxUint8):
 			panic("overflow")
 		case c.neighborReports > c.neighborTrustThreshold:
-			break //to allow the next statement to fire only once
+			break // to allow the next statement to fire only once
 		case c.neighborReports+1 > c.neighborTrustThreshold:
 			c.trust.UpdateKeepNegative(packets.TrustByNeighbors)
 		}
@@ -252,10 +252,10 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp comm
 func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile, evidence common2.NodeStateHashEvidence,
 	direct bool, errorFactory errors.MisbehaviorFactories) (bool, error) {
 
-	//TODO rank check
-	//if c.GetIndex() != int(mp.Index) || c.GetPower() != mp.Power {
-	//	return false, c.registerFraud(errorFactory.GetFraudFactory().NewMismatchedRank(c.GetProfile(), evidence))
-	//}
+	// TODO rank check
+	// if c.GetIndex() != int(mp.Index) || c.GetPower() != mp.Power {
+	// 	return false, c.registerFraud(errorFactory.GetFraudFactory().NewMismatchedRank(c.GetProfile(), evidence))
+	// }
 
 	if c.nshEvidence == nil {
 		if evidence == nil {

@@ -121,7 +121,7 @@ func (h *ConsensusMemberController) _processPacket(payload packets.PacketParser,
 			return false, err
 		}
 		pn.IsTimePulse()
-		//TODO check if this is a next round pulse
+		// TODO check if this is a next round pulse
 
 		return false, nil
 	}

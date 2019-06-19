@@ -147,11 +147,11 @@ func (r *PhasedRoundController) StopConsensusRound() {
 	defer r.rw.Unlock()
 
 	if r.fullCancel == nil || !r.isRunning {
-		return //false
+		return // false
 	}
 	r.isRunning = false
 	r.fullCancel()
-	return //true
+	return // true
 }
 
 /* LOCK: simple */
@@ -195,7 +195,7 @@ func (r *PhasedRoundController) finishPreparation(successful bool) {
 
 	r.startFullRealm()
 
-	prep.stop() //initiates handover from PrepRealm
+	prep.stop() // initiates handover from PrepRealm
 }
 
 func (r *PhasedRoundController) startFullRealm() {
@@ -225,7 +225,7 @@ func (r *PhasedRoundController) startFullRealm() {
 }
 
 func (r *PhasedRoundController) handlePostponedPacket(packet packets.PacketParser, from common.HostIdentityHolder) {
-	//NB! we may need to handle errors from delayed packets
+	// NB! we may need to handle errors from delayed packets
 	_ = r.handlePacket(packet, from, true)
 }
 
@@ -267,7 +267,7 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 			}
 		}
 
-		if prep == nil { //Full realm is active - we can use node projections
+		if prep == nil { // Full realm is active - we can use node projections
 			src, err := r.realm.GetNodeApperance(sid)
 			if err != nil {
 				return err
@@ -292,7 +292,7 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 		}
 	}
 
-	if prep != nil { //Prep realm is active
+	if prep != nil { // Prep realm is active
 		h := prep.handlers[pt]
 		var explicitPostpone = false
 		if h != nil {
@@ -301,7 +301,7 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 				return err
 			}
 		}
-		//if packet is not handled, then we may need to leave it for FullRealm
+		// if packet is not handled, then we may need to leave it for FullRealm
 		if prep.PostponePacket(packet, from) {
 			return nil
 		}

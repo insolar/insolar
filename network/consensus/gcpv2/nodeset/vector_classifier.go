@@ -76,17 +76,17 @@ func ClassifyByNodeGsh(selfData HashedNodeVector, otherData HashedNodeVector, no
 		panic("bitset length mismatch")
 	}
 
-	//var sr *stats.Row
-	//var verifyRes NodeVerificationResult
-	//for {
-	//	repeat := false
-	//	verifyRes, repeat = catcher(selfData, otherData, hasher, &sr)
-	//	if repeat {
-	//		continue
-	//	} else {
-	//		break
-	//	}
-	//}
+	// var sr *stats.Row
+	// var verifyRes NodeVerificationResult
+	// for {
+	// 	repeat := false
+	// 	verifyRes, repeat = catcher(selfData, otherData, hasher, &sr)
+	// 	if repeat {
+	// 		continue
+	// 	} else {
+	// 		break
+	// 	}
+	// }
 	sr := selfData.Bitset.CompareToStatRow(otherData.Bitset)
 	verifyRes := verifyVectorHashes(selfData, otherData, sr, hasher)
 
@@ -99,16 +99,16 @@ func ClassifyByNodeGsh(selfData HashedNodeVector, otherData HashedNodeVector, no
 	return verifyRes
 }
 
-//func catcher(selfData HashedNodeVector, otherData HashedNodeVector, hasher *filteredSequenceHasher, sr **stats.Row) (verifyRes NodeVerificationResult, repeat bool) {
-//	defer func() {
-//		repeat = recover() != nil
-//	}()
-//	*sr = selfData.Bitset.CompareToStatRow(otherData.Bitset)
-//	return verifyVectorHashes(selfData, otherData, *sr, hasher), false
-//}
+// func catcher(selfData HashedNodeVector, otherData HashedNodeVector, hasher *filteredSequenceHasher, sr **stats.Row) (verifyRes NodeVerificationResult, repeat bool) {
+// 	defer func() {
+// 		repeat = recover() != nil
+// 	}()
+// 	*sr = selfData.Bitset.CompareToStatRow(otherData.Bitset)
+// 	return verifyVectorHashes(selfData, otherData, *sr, hasher), false
+// }
 
 func verifyVectorHashes(selfData HashedNodeVector, otherData HashedNodeVector, sr *stats.Row, hasher *filteredSequenceHasher) NodeVerificationResult {
-	//TODO All GSH comparisons should be based on SIGNATURES! not on pure hashes
+	// TODO All GSH comparisons should be based on SIGNATURES! not on pure hashes
 
 	verifyRes := norNotVerified
 	valid := false
@@ -117,43 +117,43 @@ func verifyVectorHashes(selfData HashedNodeVector, otherData HashedNodeVector, s
 
 	switch {
 	case sr.HasValues(NodeBitMissingHere):
-		//we can't validate anything without requests
-		//...  check for updates and send requests
+		// we can't validate anything without requests
+		// ...  check for updates and send requests
 		return norNotVerified
 	case sr.HasAllValuesOf(NodeBitSame, NodeBitLessTrustedHere):
-		//check DoubtedGsh as is, if not then TrustedGSH with some locally-known NSH included
+		// check DoubtedGsh as is, if not then TrustedGSH with some locally-known NSH included
 		fallthrough
 	case sr.HasAllValuesOf(NodeBitSame, NodeBitLessTrustedThere):
-		//check DoubtedGsh as is, if not then TrustedGSH with some locally-known NSH excluded
+		// check DoubtedGsh as is, if not then TrustedGSH with some locally-known NSH excluded
 		valid = verifyRes.SetDoubted(selfData.DoubtedVector.Equals(otherData.DoubtedVector), false)
 		if !sr.HasAllValues(NodeBitSame) {
 			gsh = hasher.BuildHashByFilter(otherData.Bitset, sr, true)
 			altered = true
 		}
 	case sr.HasValues(NodeBitDoubtedMissingHere):
-		//check TrustedGSH only
-		//validation of DoubtedGsh needs requests
-		//...  check for updates and send requests
+		// check TrustedGSH only
+		// validation of DoubtedGsh needs requests
+		// ...  check for updates and send requests
 
-		//if HasValues(NodeBitLessTrustedThere) then ... exclude some locally-known NSH
-		//if HasValues(NodeBitMissingThere) then ... exclude some locally-known NSH
-		//if HasValues(NodeBitLessTrustedHere) then ... include some locally-known NSH
+		// if HasValues(NodeBitLessTrustedThere) then ... exclude some locally-known NSH
+		// if HasValues(NodeBitMissingThere) then ... exclude some locally-known NSH
+		// if HasValues(NodeBitLessTrustedHere) then ... include some locally-known NSH
 		gsh = hasher.BuildHashByFilter(otherData.Bitset, sr, true)
 		verifyRes.SetTrusted(gsh.Equals(otherData.TrustedVector), true)
 		return verifyRes
 	default:
 		if sr.HasValues(NodeBitMissingThere) {
-			//check DoubtedGsh with exclusions, then TrustedGSH with exclusions/inclusions
+			// check DoubtedGsh with exclusions, then TrustedGSH with exclusions/inclusions
 			gsh = hasher.BuildHashByFilter(otherData.Bitset, sr, false)
 			valid = verifyRes.SetDoubted(gsh.Equals(otherData.DoubtedVector), true)
 		} else {
-			//check DoubtedGsh, then TrustedGSH with exclusions/inclusions
+			// check DoubtedGsh, then TrustedGSH with exclusions/inclusions
 			gsh = selfData.DoubtedVector
 			valid = verifyRes.SetDoubted(gsh.Equals(otherData.DoubtedVector), false)
 		}
 
-		//if HasValues(NodeBitLessTrustedThere) then ... exclude some locally-known NSH from TrustedGSH
-		//if HasValues(NodeBitLessTrustedHere) then ... include some locally-known NSH to TrustedGSH
+		// if HasValues(NodeBitLessTrustedThere) then ... exclude some locally-known NSH from TrustedGSH
+		// if HasValues(NodeBitLessTrustedHere) then ... include some locally-known NSH to TrustedGSH
 		gsh = hasher.BuildHashByFilter(otherData.Bitset, sr, true)
 		altered = true
 	}
@@ -162,8 +162,8 @@ func verifyVectorHashes(selfData HashedNodeVector, otherData HashedNodeVector, s
 	} else if valid {
 		verifyRes.SetTrusted(false, altered)
 	} else {
-		//Dont set valid/fraud as there is an evident fraud/error by the sender
-		//TODO fraud - there must be match when a wider set is in match
+		// Dont set valid/fraud as there is an evident fraud/error by the sender
+		// TODO fraud - there must be match when a wider set is in match
 		verifyRes |= NvrSenderFault
 	}
 	return verifyRes
@@ -177,8 +177,8 @@ func summarize(otherDataBitset NodeBitset, verifyRes NodeVerificationResult, sr 
 
 		switch sr.Get(i) {
 		case NodeBitMissingHere:
-			//missing here and present there in "doubted"
-			//so we can't build GSH without it anyway
+			// missing here and present there in "doubted"
+			// so we can't build GSH without it anyway
 			if verifyRes != norNotVerified {
 				panic("unexpected")
 			}
@@ -186,7 +186,7 @@ func summarize(otherDataBitset NodeBitset, verifyRes NodeVerificationResult, sr 
 		case NodeBitMissingThere:
 			nodeResult = ConsensusStatMissingThere
 		case NodeBitDoubtedMissingHere:
-			//missed by us, so we can't build doubted GSH without it anyway
+			// missed by us, so we can't build doubted GSH without it anyway
 			if verifyRes.AnyOf(NvrDoubtedFraud | NvrDoubtedValid) {
 				panic("unexpected")
 			}
@@ -194,10 +194,10 @@ func summarize(otherDataBitset NodeBitset, verifyRes NodeVerificationResult, sr 
 		case NodeBitSame:
 			b := otherDataBitset[i]
 			if b.IsTimeout() {
-				//it was missing on both sides
+				// it was missing on both sides
 				nodeResult = ConsensusStatMissingThere
 			} else if b.IsFraud() {
-				//we don't need checks to agree on fraud mutually detected
+				// we don't need checks to agree on fraud mutually detected
 				nodeResult = ConsensusStatFraud
 			} else {
 				if b.IsTrusted() {
@@ -244,9 +244,9 @@ func summarize(otherDataBitset NodeBitset, verifyRes NodeVerificationResult, sr 
 		if nodeResult == ConsensusStatFraudSuspect {
 			switch fraudEnforcementCheck {
 			case NvrTrustedFraud:
-				//TODO check if there is the only one trusted, then set ConsensusStatFraud
+				// TODO check if there is the only one trusted, then set ConsensusStatFraud
 			case NvrDoubtedFraud:
-				//TODO check if it is the only one in doubted different from trusted, then set ConsensusStatFraud
+				// TODO check if it is the only one in doubted different from trusted, then set ConsensusStatFraud
 			}
 		}
 		nodeStats.Set(i, nodeResult)

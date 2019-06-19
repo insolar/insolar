@@ -257,13 +257,13 @@ func (r *emuTransportCryptography) GetNodeSigner(sks common.SecretKeyStore) comm
 }
 
 type gshDigester struct {
-	//TODO do test or a proper digest calc
+	// TODO do test or a proper digest calc
 	rnd      *rand.Rand
 	lastSeed int64
 }
 
 func (s *gshDigester) AddNext(digest common.DigestHolder) {
-	//it is a dirty emulation of digest
+	// it is a dirty emulation of digest
 	if s.rnd == nil {
 		s.rnd = rand.New(rand.NewSource(0))
 	}

@@ -183,7 +183,7 @@ func (c *ManyNodePopulation) makeCopyOfMap(slots map[common2.ShortNodeId]*updata
 }
 
 func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, localNode common.NodeIntroProfile, joiners bool) {
-	buf := make([]updatableSlot, len(nodes)+1) //+1 local node may not be on the list
+	buf := make([]updatableSlot, len(nodes)+1) // +1 local node may not be on the list
 	c.slotById = make(map[common2.ShortNodeId]*updatableSlot, len(nodes)+1)
 
 	c.local = &buf[0]

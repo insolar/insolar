@@ -67,7 +67,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-//hides embedded pointer from external access
+// hides embedded pointer from external access
 type hLocker interface {
 	sync.Locker
 	RLock()

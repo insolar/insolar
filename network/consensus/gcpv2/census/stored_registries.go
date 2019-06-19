@@ -57,7 +57,7 @@ import (
 )
 
 type VersionedRegistries interface {
-	//GetVersionId() int
+	// GetVersionId() int
 	CommitNextPulse(pd common.PulseData, population OnlinePopulation) VersionedRegistries
 
 	GetMisbehaviorRegistry() MisbehaviorRegistry
@@ -77,5 +77,5 @@ type MandateRegistry interface {
 
 type OfflinePopulation interface {
 	FindRegisteredProfile(identity common.HostIdentityHolder) common2.HostProfile
-	//FindPulsarProfile(pulsarId PulsarId) PulsarProfile
+	// FindPulsarProfile(pulsarId PulsarId) PulsarProfile
 }

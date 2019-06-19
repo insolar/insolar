@@ -60,7 +60,7 @@ type HostProfile interface {
 	GetDefaultEndpoint() common.HostAddress
 	GetNodePublicKeyStore() common.PublicKeyStore
 	IsAcceptableHost(from common.HostIdentityHolder) bool
-	//GetHostType()
+	// GetHostType()
 }
 
 type NodeIntroduction interface {
@@ -94,12 +94,12 @@ type UpdatableNodeProfile interface {
 	NodeProfile
 	SetRank(index int, state MembershipState, declaredPower MemberPower)
 	SetSignatureVerifier(verifier common.SignatureVerifier)
-	//Update certificate / mandate
+	// Update certificate / mandate
 }
 
 type MemberPower uint8
 
-func MemberPowerOf(linearValue uint16) MemberPower { //TODO tests are needed
+func MemberPowerOf(linearValue uint16) MemberPower { // TODO tests are needed
 	linearValue += 32
 	pwr := uint8(bits.Len16(linearValue))
 	if pwr > 6 {

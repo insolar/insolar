@@ -66,7 +66,7 @@ PrepRealm is a functionally limited and temporary realm that is used when this n
 */
 type PrepRealm struct {
 	/* Provided externally. Don't need mutex */
-	*coreRealm                              //points the core part realms, it is shared between of all Realms of a Round
+	*coreRealm                              // points the core part realms, it is shared between of all Realms of a Round
 	completeFn        func(successful bool) //
 	postponedPacketFn postponedPacketFunc
 
@@ -75,7 +75,7 @@ type PrepRealm struct {
 	queueToFull chan postponedPacket
 
 	/* Other fields - need mutex */
-	//	censusBuilder census.Builder
+	// 	censusBuilder census.Builder
 }
 
 /* LOCK - runs under RoundController lock */
@@ -146,7 +146,7 @@ func (p *PrepRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
 	p.RLock()
 	defer p.RUnlock()
 
-	//locks are only needed for PrepRealm
+	// locks are only needed for PrepRealm
 	return p.originalPulse
 }
 
@@ -160,17 +160,17 @@ func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool
 	switch {
 	case p.originalPulse != nil:
 		if pd == p.pulseData {
-			return nil //got it already
+			return nil // got it already
 		}
 	case fromPulsar || !p.strategy.IsEphemeralPulseAllowed():
-		//Pulsars are NEVER ALLOWED to send ephemeral pulses
+		// Pulsars are NEVER ALLOWED to send ephemeral pulses
 		valid = pd.IsValidPulsarData()
 	default:
 		valid = pd.IsValidPulseData()
 	}
 	if !valid {
-		//if fromPulsar
-		//TODO blame pulsar and/or node
+		// if fromPulsar
+		// TODO blame pulsar and/or node
 		return fmt.Errorf("invalid pulse data")
 	}
 	epn := p.GetExpectedPulseNumber()

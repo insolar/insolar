@@ -130,7 +130,7 @@ func BftMinority(nodeCount int) int {
 	return (nodeCount - 1) / 3
 }
 
-//TODO ?NeedFix - current implementation can only work for limited cases
+// TODO ?NeedFix - current implementation can only work for limited cases
 func EqualFixedLenWriterTo(t, o io.WriterTo) bool {
 	if t == nil || o == nil {
 		return false
@@ -152,14 +152,14 @@ func (c *writerToComparer) compare(this io.WriterTo, other io.WriterTo) bool {
 
 func (c *writerToComparer) Write(otherValue []byte) (int, error) {
 	if c.thisValue == nil {
-		c.thisValue = &otherValue //result of &var is never nil
+		c.thisValue = &otherValue // result of &var is never nil
 		_, err := c.other.WriteTo(c)
 		if err != nil {
 			return 0, err
 		}
 	} else {
 		if bytes.Equal(*c.thisValue, otherValue) {
-			c.other = nil //mark "true"
+			c.other = nil // mark "true"
 		}
 	}
 	return len(otherValue), nil

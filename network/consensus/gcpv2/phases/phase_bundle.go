@@ -92,7 +92,7 @@ func (r *RegularPhaseBundle) GetFullPhaseControllers(nodeCount int) []core.Phase
 
 	/* Ensure sufficient sizes of queues to avoid lockups */
 	qNshReady := make(chan *core.NodeAppearance, nodeCount)
-	qTrustLvlUpd := make(chan TrustUpdateSignal, nodeCount*3) //up-to ~3 updates for every node
+	qTrustLvlUpd := make(chan TrustUpdateSignal, nodeCount*3) // up-to ~3 updates for every node
 
 	consensusStrategy := NewSimpleConsensusSelectionStrategy()
 
@@ -100,7 +100,7 @@ func (r *RegularPhaseBundle) GetFullPhaseControllers(nodeCount int) []core.Phase
 	return []core.PhaseController{
 		NewPulseController(),
 		NewPhase0Controller(),
-		//NB! Phase0 sending is actually a part of Phase1 logic and is controlled there
+		// NB! Phase0 sending is actually a part of Phase1 logic and is controlled there
 		ph1,
 		NewPhase2Controller(r.packetPrepareOptions, qNshReady /*->*/, qTrustLvlUpd /*<-*/),
 		NewPhase3Controller(r.packetPrepareOptions, qTrustLvlUpd /*->*/, consensusStrategy),

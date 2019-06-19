@@ -64,7 +64,7 @@ const (
 	TrustByMandate   NodeTrustLevel = 4  // on- or off-network node with a temporary mandate, e.g. pulsar or discovery
 	TrustByCouncil   NodeTrustLevel = 5  // on- or off-network node with a permanent mandate
 
-	SelfTrust       = TrustByNeighbors //MUST be not less than TrustByNeighbors
+	SelfTrust       = TrustByNeighbors // MUST be not less than TrustByNeighbors
 	FraudByThisNode = FraudBySome      // fraud is detected by this node
 )
 

@@ -74,24 +74,24 @@ func (c *filteredSequenceHasher) BuildHashByFilter(bitset NodeBitset, row *stats
 	for i := 0; i < row.ColumnCount(); i++ {
 		switch row.Get(i) {
 		case NodeBitMissingHere:
-			continue //we don't have it anyway
+			continue // we don't have it anyway
 		case NodeBitDoubtedMissingHere:
-			continue //we don't have it anyway
+			continue // we don't have it anyway
 		case NodeBitSame:
-			//ok, but filtered
+			// ok, but filtered
 			b := bitset[i]
 			if b.IsTimeout() || trustedGsh && !b.IsTrusted() {
 				continue
 			}
 		case NodeBitLessTrustedThere:
-			//ok - exclude for trusted
+			// ok - exclude for trusted
 			if trustedGsh {
 				continue
 			}
 		case NodeBitLessTrustedHere:
-			//ok - use for both
+			// ok - use for both
 		case NodeBitMissingThere:
-			continue //skip as other's GSH doesn't have it
+			continue // skip as other's GSH doesn't have it
 		default:
 			panic("unexpected")
 		}

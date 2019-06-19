@@ -252,7 +252,7 @@ Array size must be aligned to 8 bytes.
 func FillBitsWithStaticNoise(base uint32, v []byte) {
 
 	if bits.OnesCount32(base) < 8 {
-		base ^= 0x6206cc91 //add some noise
+		base ^= 0x6206cc91 // add some noise
 	}
 
 	for i := uint32(0); i < uint32(len(v)); i += 8 {

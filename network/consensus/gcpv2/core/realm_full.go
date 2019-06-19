@@ -81,7 +81,7 @@ type FullRealm struct {
 	population census.OnlinePopulation
 
 	/* Other fields - need mutex */
-	//nshEvidence common2.NodeStateHashEvidence
+	// nshEvidence common2.NodeStateHashEvidence
 }
 
 /* LOCK - runs under RoundController lock */
@@ -158,7 +158,7 @@ func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 	r.joinersCount = 0
 	var j = 0
 	prevSelf := r.self
-	r.self = nil //resets self set on prep
+	r.self = nil // resets self set on prep
 	for i, p := range profiles {
 		if p.IsJoiner() {
 			r.joinersCount++
@@ -192,7 +192,7 @@ func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 	}
 	r.ShuffleNodeProjections(r.nodeRefs)
 
-	//Transition data from prev self
+	// Transition data from prev self
 	if prevSelf.IsJoiner() != r.self.IsJoiner() || prevSelf.GetShortNodeId() != r.self.GetShortNodeId() {
 		panic("inconsistent transition of self between realms")
 	}
@@ -254,7 +254,7 @@ func (r *FullRealm) GetPulseNumber() common.PulseNumber {
 }
 
 func (r *FullRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
-	//NB! locks for this field are only needed for PrepRealm
+	// NB! locks for this field are only needed for PrepRealm
 	return r.originalPulse
 }
 
@@ -298,7 +298,7 @@ func (r *FullRealm) GetLocalProfile() common2.LocalNodeProfile {
 }
 
 func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash) {
-	//TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
+	// TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
 	v := nsh.SignWith(r.signer)
 	r.self.SetLocalNodeStateHashEvidence(common2.NewNodeStateHashEvidence(v))
 }

@@ -59,11 +59,11 @@ type ConsensusChronicles interface {
 	GetActiveCensus() ActiveCensus
 	GetExpectedCensus() ExpectedCensus
 	GetLatestCensus() OperationalCensus
-	//FindArchivedCensus(pn common.PulseNumber) ArchivedCensus
+	// FindArchivedCensus(pn common.PulseNumber) ArchivedCensus
 }
 
 type PulseCensus interface {
-	//GetCensusType() CensusType
+	// GetCensusType() CensusType
 	GetCensusState() State
 	GetPulseNumber() common.PulseNumber
 	GetExpectedPulseNumber() common.PulseNumber
@@ -114,15 +114,15 @@ type Builder interface {
 	BuildAndMakeExpected(csh common2.CloudStateHash) ExpectedCensus
 }
 
-//type CensusType uint8
+// type CensusType uint8
 //
-//const (
-//	ConsensusCensusType = iota
-//	GenesisCensusType
-//	ProvidedCensusType
-//	DetachedCensusType
-//	SimulatedCensusType
-//)
+// const (
+// 	ConsensusCensusType = iota
+// 	GenesisCensusType
+// 	ProvidedCensusType
+// 	DetachedCensusType
+// 	SimulatedCensusType
+// )
 
 type State uint8
 

@@ -62,9 +62,9 @@ import (
 const defaultNshGenerationDelay = time.Millisecond * 0
 
 var RoundTimingsFor1s = common2.RoundTimings{
-	StartPhase0At: 100 * time.Millisecond, //Not scaled
+	StartPhase0At: 100 * time.Millisecond, // Not scaled
 
-	StartPhase1RetryAt: 200 * time.Millisecond, //0 for no retries
+	StartPhase1RetryAt: 200 * time.Millisecond, // 0 for no retries
 	EndOfPhase1:        250 * time.Millisecond,
 	EndOfPhase2:        400 * time.Millisecond,
 	EndOfPhase3:        500 * time.Millisecond,

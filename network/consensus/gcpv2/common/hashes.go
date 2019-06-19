@@ -72,8 +72,8 @@ type CloudStateHash interface {
 }
 
 type OriginalPulsarPacket interface {
-	//common.SignedEvidenceHolder
-	//GetPulsarId() PulsarId
+	// common.SignedEvidenceHolder
+	// GetPulsarId() PulsarId
 	OriginalPulsarPacket()
 }
 

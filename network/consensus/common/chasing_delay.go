@@ -89,7 +89,7 @@ func (c *ChasingTimer) RestartChase() {
 
 func (c *ChasingTimer) Channel() <-chan time.Time {
 	if c.timer == nil {
-		return nil //receiver will wait indefinitely
+		return nil // receiver will wait indefinitely
 	}
 	return c.timer.C
 }

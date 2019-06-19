@@ -128,7 +128,7 @@ const (
 func (b *NodeBitset) CompareToStatRow(otherDataBitset NodeBitset) *stats.Row {
 
 	if otherDataBitset.Len() != b.Len() {
-		//TODO handle different bitset size
+		// TODO handle different bitset size
 		panic("different bitset size")
 	}
 
@@ -140,10 +140,10 @@ func (b *NodeBitset) CompareToStatRow(otherDataBitset NodeBitset) *stats.Row {
 
 		switch {
 		case fHere == fThere:
-			//all the same, proceed as it is
+			// all the same, proceed as it is
 			bitStat = NodeBitSame
 		case fThere.IsTimeout():
-			//we can skip this NSH and recalculate
+			// we can skip this NSH and recalculate
 			bitStat = NodeBitMissingThere
 
 		case fHere.IsTimeout():
@@ -153,13 +153,13 @@ func (b *NodeBitset) CompareToStatRow(otherDataBitset NodeBitset) *stats.Row {
 				bitStat = NodeBitDoubtedMissingHere
 			}
 		case fHere.IsTrusted() == fThere.IsTrusted():
-			//fraud is considered as "doubted"
+			// fraud is considered as "doubted"
 			bitStat = NodeBitSame
 		case fThere.IsTrusted():
-			//we don't trust, other one does
+			// we don't trust, other one does
 			bitStat = NodeBitLessTrustedHere
-		default: //fHere.IsTrusted()
-			//we trust, other one doesn't
+		default: // fHere.IsTrusted()
+			// we trust, other one doesn't
 			bitStat = NodeBitLessTrustedThere
 		}
 		bitStats.Set(i, bitStat)
@@ -188,6 +188,6 @@ func (b *NodeBitset) LocalToConsensusStatRow() *stats.Row {
 	return &nodeStats
 }
 
-//func (b NodeBitset) String() string {
+// func (b NodeBitset) String() string {
 //
-//}
+// }

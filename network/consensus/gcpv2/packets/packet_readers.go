@@ -69,7 +69,7 @@ type PacketParser interface {
 }
 
 type PulsePacketReader interface {
-	//GetPulsarId() PulsarId
+	// GetPulsarId() PulsarId
 	GetPulseData() common.PulseData
 	GetPulseDataEvidence() common2.OriginalPulsarPacket
 }

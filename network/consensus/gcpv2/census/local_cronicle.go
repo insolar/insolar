@@ -115,7 +115,7 @@ func (c *localChronicles) makeActive(ce ExpectedCensus, ca localActiveCensus) {
 		pd.EnsurePulseData()
 		registries := c.active.getVersionedRegistries().CommitNextPulse(
 			pd, ca.GetOnlinePopulation())
-		c.expectedPulseNumber = pd.GetNextPulseNumber() //should go before any updates as it may panic
+		c.expectedPulseNumber = pd.GetNextPulseNumber() // should go before any updates as it may panic
 		ca.setVersionedRegistries(registries)
 	} else {
 		if ca.getVersionedRegistries() == nil {

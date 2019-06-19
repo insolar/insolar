@@ -91,8 +91,8 @@ func (c *Phase0Controller) HandleMemberPacket(p packets.MemberPacketReader, n *c
 
 func handleEmbeddedPulsePacket(p packets.MemberPacketReader, pp packets.PulsePacketReader, n *core.NodeAppearance,
 	R *core.FullRealm, defErr error) error {
-	//pp.GetPulseDataEvidence()
-	//TODO validate pulse data
+	// pp.GetPulseDataEvidence()
+	// TODO validate pulse data
 
 	if R.GetPulseData() == pp.GetPulseData() {
 		return defErr
@@ -138,10 +138,10 @@ func (c *Phase1Controller) _handleNodeData(p1 packets.Phase1PacketReader, n *cor
 	if p1.HasSelfIntro() {
 		// TODO register protocol misbehavior - IntroClaim was not expected
 	}
-	//if c.R.GetNodeCount() != int(p1.GetNodeCount()) {
-	//	//TODO SEND fraud state to others (to Phase2)
-	//	return false, n.RegisterFraud(R.Frauds().NewMismatchedRank(n.GetProfile(), p1.GetNodeStateHashEvidence()))
-	//}
+	// if c.R.GetNodeCount() != int(p1.GetNodeCount()) {
+	// 	//TODO SEND fraud state to others (to Phase2)
+	// 	return false, n.RegisterFraud(R.Frauds().NewMismatchedRank(n.GetProfile(), p1.GetNodeStateHashEvidence()))
+	// }
 
 	mp := common.NewMembershipProfile(p1.GetNodeIndex(), p1.GetNodePower(), p1.GetNodeStateHash())
 	modified, err := n.ApplyNodeMembership(mp, p1.GetNodeStateHashEvidence(), c.R.GetMisbehaviorFactories())

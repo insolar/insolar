@@ -100,7 +100,7 @@ type Phase3Controller struct {
 	queueTrustUpdated    <-chan TrustUpdateSignal
 	queuePh3Recv         chan ph3Data
 	consensusStrategy    ConsensusSelectionStrategy
-	//packetHandler to Worker channel
+	// packetHandler to Worker channel
 }
 
 type ph3Data struct {
@@ -123,7 +123,7 @@ func (c *Phase3Controller) HandleMemberPacket(reader packets.MemberPacketReader,
 	bs := p3.GetBitset()
 	gshTrusted := p3.GetTrustedGsh()
 	gshDoubted := p3.GetDoubtedGsh()
-	//TODO ClaimHashes as well
+	// TODO ClaimHashes as well
 
 	c.queuePh3Recv <- ph3Data{
 		np: n,
@@ -188,12 +188,12 @@ outer:
 			switch {
 			case sig.NewTrustLevel < 0:
 				countFraud++
-				continue //no chasing delay on fraud
+				continue // no chasing delay on fraud
 			case sig.NewTrustLevel == packets.UnknownTrust:
 				countHasNsh++
 				// if countHasNsh >= R.othersCount {
-				//	// we have answers from all
-				//	break outer
+				// 	// we have answers from all
+				// 	break outer
 				// }
 			case sig.NewTrustLevel >= packets.TrustByNeighbors:
 				countTrustByNeighbors++
@@ -201,14 +201,14 @@ outer:
 			default:
 				countTrustBySome++
 
-				//We have some-trusted from all nodes, and the majority of them are well-trusted
+				// We have some-trusted from all nodes, and the majority of them are well-trusted
 				if countTrustBySome >= c.R.GetOthersCount() && countTrustByNeighbors >= c.R.GetBftMajorityCount() {
 					inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: all, %v\n", c.R.GetSelfNodeId())
 					break outer
 				}
 
 				if chasingDelayTimer.IsEnabled() {
-					//We have answers from all nodes, and the majority of them are well-trusted
+					// We have answers from all nodes, and the majority of them are well-trusted
 					if countHasNsh >= c.R.GetOthersCount() && countTrustByNeighbors >= c.R.GetBftMajorityCount() {
 						chasingDelayTimer.RestartChase()
 						inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: chaseStartedAll, %v\n", c.R.GetSelfNodeId())
@@ -306,9 +306,9 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodese
 
 	remainingNodes := c.R.GetOthersCount()
 
-	//TODO detect nodes produced similar bitmaps, but different GSH
-	//even if we wont have all NSH, we can let to know these nodes on such collision
-	//bitsetMatcher := make(map[gcpv2.NodeBitset])
+	// TODO detect nodes produced similar bitmaps, but different GSH
+	// even if we wont have all NSH, we can let to know these nodes on such collision
+	// bitsetMatcher := make(map[gcpv2.NodeBitset])
 
 	alteredDoubtedGshCount := 0
 
@@ -367,11 +367,11 @@ outer:
 		}
 	}
 
-	//TODO do table generation only when it is needed for logging
-	//if c.R.Log().IsInfo() {
+	// TODO do table generation only when it is needed for logging
+	// if c.R.Log().IsInfo() {
 	tblHeader := fmt.Sprintf("Consensus Node View: %v", c.R.GetSelfNodeId())
 	c.R.Log().Info(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
-	//}
+	// }
 
 	if consensusSelection == nil {
 		panic("illegal state")
@@ -391,7 +391,7 @@ outer:
 		c.R.Log().Infof("Consensus is finished as same: %v", c.R.GetSelfNodeId())
 	} else {
 		c.R.Log().Infof("Consensus is finished as different: %v, %v", c.R.GetSelfNodeId(), selectionSet)
-		//TODO update population and/or start Phase 4
+		// TODO update population and/or start Phase 4
 	}
 
 	return true
