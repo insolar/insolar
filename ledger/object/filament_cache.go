@@ -290,7 +290,7 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 
 	reqsIDs, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
 	if !ok {
-		return errors.New("not known result")
+		return ErrResultWithoutRequest
 	}
 
 	lfl := idx.Lifeline

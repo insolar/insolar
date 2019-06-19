@@ -43,11 +43,11 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 
 	t.Run("set first request on the object", func(t *testing.T) {
 		ctx := inslogger.TestContext(t)
-		pn := gen.PulseNumber()
-		objID := gen.ID()
+		pn := insolar.PulseNumber(10)
+		objID := *insolar.NewID(pn, nil)
 
-		reqID := insolar.NewID(1, []byte{1})
-		prevPending := gen.ID()
+		reqID := insolar.NewID(100, []byte{1})
+		prevPending := *insolar.NewID(pn, []byte{1})
 
 		pf := record.PendingFilament{
 			RecordID:       *reqID,
@@ -102,11 +102,11 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 
 	t.Run("set two request on the object", func(t *testing.T) {
 		ctx := inslogger.TestContext(t)
-		pn := gen.PulseNumber()
-		objID := gen.ID()
+		pn := insolar.PulseNumber(10)
+		objID := *insolar.NewID(pn, nil)
 
-		reqID := insolar.NewID(1, []byte{1})
-		firstPending := gen.ID()
+		reqID := insolar.NewID(100, []byte{1})
+		firstPending := *insolar.NewID(pn, []byte{1})
 
 		pf := record.PendingFilament{
 			RecordID:       *reqID,
@@ -117,7 +117,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		hash := record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfv)
 		firstMeta := *insolar.NewID(pn, hash)
 
-		reqSID := insolar.NewID(2, []byte{2})
+		reqSID := insolar.NewID(200, []byte{2})
 		pfs := record.PendingFilament{
 			RecordID:       *reqSID,
 			PreviousRecord: &firstMeta,
@@ -162,6 +162,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 
 		filBuck := filamnetCache.buckets[pn][objID]
 
+		buck = idxStor.buckets[pn][objID]
 		require.Equal(t, 2, len(buck.PendingRecords))
 		require.Equal(t, 1, len(filBuck.fullFilament))
 		require.Equal(t, 2, len(filBuck.fullFilament[0].MetaRecordsIDs))
@@ -184,12 +185,12 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		require.Equal(t, *reqSID, filBuck.notClosedRequestsIds[1])
 	})
 
-	t.Run("test rebalanced fillaments buckets list", func(t *testing.T) {
+	t.Run("failed with older pulse", func(t *testing.T) {
 		ctx := inslogger.TestContext(t)
-		pn := insolar.PulseNumber(123)
-		objID := gen.ID()
+		pn := insolar.PulseNumber(111)
+		objID := *insolar.NewID(pn, nil)
 
-		reqID := insolar.NewID(1, []byte{1})
+		reqID := insolar.NewID(55, []byte{1})
 
 		rsm := NewRecordStorageMock(t)
 		rsm.SetMock.Return(nil)
@@ -200,16 +201,10 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		idLocker.UnlockMock.Return()
 		filamnetCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
-		filamnetCache.createPendingBucket(ctx, pn, objID)
-		fBuck := filamnetCache.buckets[pn][objID]
-		fBuck.fullFilament = append(fBuck.fullFilament, chainLink{PN: pn + 1, MetaRecordsIDs: []insolar.ID{}})
+		idxStor.buckets[pn][objID].Lifeline.PendingPointer = &objID
 
 		err := filamnetCache.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqID)
-		require.NoError(t, err)
-
-		require.Equal(t, 2, len(fBuck.fullFilament))
-		require.Equal(t, pn, fBuck.fullFilament[0].PN)
-		require.Equal(t, pn+1, fBuck.fullFilament[1].PN)
+		require.Error(t, err)
 	})
 }
 
@@ -354,7 +349,7 @@ func TestInMemoryIndex_OpenRequestsForObjID(t *testing.T) {
 
 	t.Run("works fine", func(t *testing.T) {
 		ctx := inslogger.TestContext(t)
-		pn := gen.PulseNumber()
+		pn := insolar.PulseNumber(10)
 		objID := gen.ID()
 
 		rms := NewRecordMemory()
@@ -427,25 +422,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		res := record.Result{Request: *objRef}
 		resID := insolar.NewID(999, nil)
 
-		previousPen := gen.ID()
-
-		pf := record.PendingFilament{
-			RecordID:       *resID,
-			PreviousRecord: &previousPen,
-		}
-		pfv := record.Wrap(pf)
-		hash := record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfv)
-		metaID := *insolar.NewID(pn, hash)
-
 		rsm := NewRecordStorageMock(t)
-		rsm.SetFunc = func(p context.Context, p1 insolar.ID, p2 record.Material) (r error) {
-			require.Equal(t, metaID, p1)
-			concrete, ok := record.Unwrap(p2.Virtual).(*record.PendingFilament)
-			require.Equal(t, true, ok)
-			require.Equal(t, *concrete, pf)
-			return nil
-		}
-
 		idxStor := NewIndexStorageMemory()
 		idLocker := NewIDLockerMock(t)
 		idLocker.LockMock.Return()
@@ -453,72 +430,10 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 
 		idxStor.CreateIndex(ctx, pn, objID)
-		buck := idxStor.buckets[pn][objID]
-		buck.Lifeline.PendingPointer = &previousPen
-		fBuck := filCache.buckets[pn][objID]
 
 		err := filCache.SetResult(ctx, pn, objID, insolar.JetID{}, *resID, res)
 
-		require.NoError(t, err)
-
-		require.Equal(t, 1, len(fBuck.fullFilament))
-		require.Equal(t, metaID, fBuck.fullFilament[0].MetaRecordsIDs[0])
-		require.Equal(t, pn, fBuck.fullFilament[0].PN)
-		require.Equal(t, 1, len(buck.PendingRecords))
-		require.Equal(t, metaID, buck.PendingRecords[0])
-	})
-
-	t.Run("set 2 results, when no requests", func(t *testing.T) {
-		ctx := inslogger.TestContext(t)
-		pn := gen.PulseNumber()
-		objID := gen.ID()
-
-		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, NewRecordMemory(), nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
-		idxStor.CreateIndex(ctx, pn, objID)
-
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
-		res := record.Result{Request: *objRef}
-		resID := insolar.NewID(333, nil)
-		resS := record.Result{Request: *objRef, Payload: []byte{1, 2, 3, 4, 5, 6}}
-		resSID := insolar.NewID(222, nil)
-
-		pf := record.PendingFilament{
-			RecordID: *resID,
-		}
-		pfv := record.Wrap(pf)
-		hash := record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfv)
-		firstMetaID := *insolar.NewID(pn, hash)
-
-		pfs := record.PendingFilament{
-			RecordID:       *resSID,
-			PreviousRecord: &firstMetaID,
-		}
-		pfsv := record.Wrap(pfs)
-		hash = record.HashVirtual(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), pfsv)
-		secondMetaID := *insolar.NewID(pn, hash)
-
-		err := filCache.SetResult(ctx, pn, objID, insolar.JetID{}, *resID, res)
-		require.NoError(t, err)
-		err = filCache.SetResult(ctx, pn, objID, insolar.JetID{}, *resSID, resS)
-		require.NoError(t, err)
-
-		fBuck := filCache.buckets[pn][objID]
-		buck := idxStor.buckets[pn][objID]
-
-		require.Equal(t, 1, len(fBuck.fullFilament))
-
-		require.Equal(t, 2, len(fBuck.fullFilament[0].MetaRecordsIDs))
-		require.Equal(t, pn, fBuck.fullFilament[0].PN)
-		require.Equal(t, firstMetaID, fBuck.fullFilament[0].MetaRecordsIDs[0])
-		require.Equal(t, secondMetaID, fBuck.fullFilament[0].MetaRecordsIDs[1])
-
-		require.Equal(t, 2, len(buck.PendingRecords))
-		require.Equal(t, firstMetaID, buck.PendingRecords[0])
-		require.Equal(t, secondMetaID, buck.PendingRecords[1])
+		require.Error(t, err, ErrResultWithoutRequest)
 	})
 
 	t.Run("close requests work fine", func(t *testing.T) {
@@ -611,35 +526,8 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		require.Equal(t, 0, len(open))
 
+		buck = idxStor.buckets[pn][objID]
 		require.Nil(t, buck.Lifeline.EarliestOpenRequest)
-	})
-
-	t.Run("set result, there are other fillaments", func(t *testing.T) {
-		ctx := inslogger.TestContext(t)
-		pn := gen.PulseNumber()
-		objID := gen.ID()
-
-		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, NewRecordMemory(), nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
-		idxStor.CreateIndex(ctx, pn, objID)
-		filCache.createPendingBucket(ctx, pn, objID)
-		fBuck := filCache.buckets[pn][objID]
-		fBuck.fullFilament = append(fBuck.fullFilament, chainLink{PN: pn + 1, MetaRecordsIDs: []insolar.ID{}})
-
-		objRef := insolar.NewReference(*insolar.NewID(123, nil))
-		res := record.Result{Request: *objRef}
-		resID := insolar.NewID(1, nil)
-
-		err := filCache.SetResult(ctx, pn, objID, insolar.JetID{}, *resID, res)
-
-		require.NoError(t, err)
-
-		require.Equal(t, 2, len(fBuck.fullFilament))
-		require.Equal(t, pn, fBuck.fullFilament[0].PN)
-		require.Equal(t, pn+1, fBuck.fullFilament[1].PN)
 	})
 }
 
