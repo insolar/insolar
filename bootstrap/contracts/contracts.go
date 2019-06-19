@@ -17,6 +17,7 @@
 package contracts
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/insolar/insolar/application/contract/costcenter"
@@ -88,7 +89,7 @@ func nodeDomain() insolar.GenesisContractState {
 func getMemberGenesisContractState(publicKey string, name string, parrent string) insolar.GenesisContractState {
 	m, err := member.New(name, publicKey)
 	if err != nil {
-		panic("`" + name + "` member constructor failed")
+		panic(fmt.Sprintf("'%s' member constructor failed", name))
 	}
 
 	return insolar.GenesisContractState{

@@ -83,7 +83,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 	migrationDaemonPublicKeys := []string{}
 	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
-		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetMDPath(i))
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetMigrationDaemonPath(i))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get migration daemon keys")
 		}
@@ -257,6 +257,7 @@ func dumpAsJSON(data interface{}) string {
 	return string(b)
 }
 
-func GetMDPath(i int) string {
+// Generate key file name for migration daemon
+func GetMigrationDaemonPath(i int) string {
 	return "migration_daemon_" + strconv.Itoa(i) + "_member_keys.json"
 }

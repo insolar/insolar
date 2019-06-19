@@ -127,7 +127,7 @@ func getBalanceNoErr(t *testing.T, caller *user, reference string) *big.Int {
 }
 
 func getBalance(caller *user, reference string) (*big.Int, error) {
-	res, err := signedRequest(caller, "wallet.getMyBalance", map[string]interface{}{})
+	res, err := signedRequest(caller, "wallet.getBalance", map[string]interface{}{"reference": caller.ref})
 	if err != nil {
 		return nil, err
 	}

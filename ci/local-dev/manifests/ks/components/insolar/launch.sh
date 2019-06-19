@@ -10,8 +10,6 @@ CERTS_KEYS=$CONFIG_DIR/certs
 ls -alhR /opt
 if [[ "$HOSTNAME" = "seed-0" && ! $(test -e /opt/insolar/config/finished) ]]
 then
-#    echo "generate root member keys"
-#    insolar gen-key-pair > ${CONFIG_DIR}/root_member_keys.json
 
     echo "generate members keys in dir: $CONFIG_DIR"
     insolar gen-key-pair > ${CONFIG_DIR}/root_member_keys.json

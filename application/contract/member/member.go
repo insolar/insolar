@@ -115,8 +115,6 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	}
 
 	switch request.Params.CallSite {
-	case "wallet.getMyBalance":
-		return m.GetMyBalance()
 	case "CreateHelloWorld":
 		return rootdomain.GetObject(rootDomain).CreateHelloWorld()
 	}
@@ -136,7 +134,7 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	case "wallet.addBurnAddresses":
 		return m.addBurnAddressesCall(rootDomain, params)
 	case "wallet.getBalance":
-		return m.getBalanceCall(rootDomain, params)
+		return m.getBalanceCall(params)
 	case "wallet.transfer":
 		return m.transferCall(params)
 	case "Migration":
@@ -172,15 +170,7 @@ func (migrationAdminMember *Member) addBurnAddressesCall(rdRef insolar.Reference
 
 	return nil, nil
 }
-func (caller *Member) getBalanceCall(rdRef insolar.Reference, params map[string]interface{}) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rdRef)
-	rootMember, err := rootDomain.GetRootMemberRef()
-	if err != nil {
-		return 0, fmt.Errorf("[ getBalanceCall ] Failed get root member reference: %s", err.Error())
-	}
-	if caller.GetReference() != *rootMember {
-		return 0, fmt.Errorf("[ getBalanceCall ] Only root member can call this method")
-	}
+func (caller *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {
 
 	mRef, err := insolar.NewReferenceFromBase58(params["reference"].(string))
 	if err != nil {
@@ -188,7 +178,22 @@ func (caller *Member) getBalanceCall(rdRef insolar.Reference, params map[string]
 	}
 	m := member.GetObject(*mRef)
 
-	return m.GetMyBalance()
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return nil, fmt.Errorf("[ getBalanceCall ] Failed to get implementation: %s", err.Error())
+	}
+	b, err := w.GetBalance()
+	if err != nil {
+		return nil, fmt.Errorf("[ getBalanceCall ] Failed to get balance: %s", err.Error())
+	}
+
+	//d, err := m.getDeposits()
+	//if err != nil {
+	//	return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
+	//}
+	//return map[string]interface{}{"balance" : b, "deposit": d}, nil
+
+	return b, nil
 }
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
 
@@ -297,26 +302,6 @@ func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key strin
 	}
 
 	return new, nil
-}
-
-// Get balance methods
-func (m *Member) GetMyBalance() (interface{}, error) {
-	w, err := wallet.GetImplementationFrom(m.GetReference())
-	if err != nil {
-		return nil, fmt.Errorf("[ getMyBalanceCall ] Failed to get implementation: %s", err.Error())
-	}
-	b, err := w.GetBalance()
-	if err != nil {
-		return nil, fmt.Errorf("[ getMyBalanceCall ] Failed to get balance: %s", err.Error())
-	}
-
-	//d, err := m.getDeposits()
-	//if err != nil {
-	//	return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
-	//}
-	//return map[string]interface{}{"balance" : b, "deposit": d}, nil
-
-	return b, nil
 }
 
 func (m *Member) getDeposits() ([]map[string]string, error) {

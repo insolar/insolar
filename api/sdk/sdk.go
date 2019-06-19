@@ -111,7 +111,7 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 	}
 
 	for i := 0; i < insolar.GenesisAmountActiveMigrationDaemonMembers; i++ {
-		m, err := getMember(memberKeysDirPath+bootstrap.GetMDPath(i), response.MigrationDaemonMembers[i])
+		m, err := getMember(memberKeysDirPath+bootstrap.GetMigrationDaemonPath(i), response.MigrationDaemonMembers[i])
 		if err != nil {
 			return nil, errors.Wrap(err, "[ NewSDK ] can't get migration daemon member; member's index: '"+strconv.Itoa(i)+"'")
 		}
@@ -222,8 +222,8 @@ func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error
 func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	response, err := sdk.DoRequest(m.Reference,
 		m.PrivateKey,
-		"wallet.getMyBalance",
-		map[string]interface{}{},
+		"wallet.getBalance",
+		map[string]interface{}{"reference": m.Reference},
 	)
 	if err != nil {
 		return new(big.Int), errors.Wrap(err, "[ GetBalance ] request was failed ")
