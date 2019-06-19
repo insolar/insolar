@@ -64,8 +64,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
@@ -175,8 +175,8 @@ func (nc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	err = nc.transport.SendDatagram(ctx, receiverHost.Address.String(), buf)
 	if err == nil {
 		statsErr := stats.RecordWithTags(ctx, []tag.Mutator{
-			tag.Upsert(consensus.TagPhase, packet.GetType().String()),
-		}, consensus.PacketsSent.M(1))
+			tag.Upsert(consensusv1.TagPhase, packet.GetType().String()),
+		}, consensusv1.PacketsSent.M(1))
 		if statsErr != nil {
 			log.Warn(" [ networkConsensus ] Failed to record sent packets metric: " + statsErr.Error())
 		}

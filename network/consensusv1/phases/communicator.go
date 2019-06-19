@@ -66,11 +66,11 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/phases.Communicator -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensusv1/phases.Communicator -o . -s _mock.go
 
 // Communicator interface provides methods to exchange data between nodes
 type Communicator interface {
@@ -163,7 +163,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, partici
 				logger.Errorf("Failed to send %s request: %s", packet.GetType(), err.Error())
 				return
 			}
-			err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, packet.GetType().String())}, consensus.PacketsSent.M(1))
+			err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensusv1.TagPhase, packet.GetType().String())}, consensusv1.PacketsSent.M(1))
 			if err != nil {
 				logger.Warn("Failed to record metric of sent phase1 requests")
 			}
@@ -196,7 +196,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Contex
 				logger.Error("Failed to send phase1 request with origin: " + err.Error())
 				return
 			}
-			err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, consensusPacket.GetType().String())}, consensus.PacketsSent.M(1))
+			err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensusv1.TagPhase, consensusPacket.GetType().String())}, consensusv1.PacketsSent.M(1))
 			if err != nil {
 				logger.Warn("Failed to record metric of sent phase1 requests")
 			}
@@ -444,7 +444,7 @@ func (nc *ConsensusCommunicator) sendAdditionalRequests(ctx context.Context, ori
 		if err != nil {
 			return errors.Wrapf(err, "Failed to send additional phase 2.1 request for index %d to node %s", req.RequestIndex, receiver)
 		}
-		err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, origReq.GetType().String())}, consensus.PacketsSent.M(1))
+		err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensusv1.TagPhase, origReq.GetType().String())}, consensusv1.PacketsSent.M(1))
 		if err != nil {
 			logger.Warn("Failed to record metric of sent phase2.1 additional requests")
 		}
