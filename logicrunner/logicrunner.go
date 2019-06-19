@@ -537,7 +537,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	am := lr.ArtifactManager
-	if !current.LogicContext.Immutable && current.Deactivate {
+	if !current.LogicContext.Immutable && current.Deactivate { // nolint:gocritic
 		_, err := am.DeactivateObject(
 			ctx, *current.RequestRef, current.ObjectDescriptor, result,
 		)
