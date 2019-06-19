@@ -35,12 +35,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/pkg/errors"
-
 )
 
 const sendRetryCount = 5
@@ -141,8 +140,6 @@ func getBalance(caller *user, reference string) (*big.Int, error) {
 
 func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
-	fmt.Println("getRPSResponseBody")
-	fmt.Println(string(jsonValue))
 	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
