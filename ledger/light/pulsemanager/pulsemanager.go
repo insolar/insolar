@@ -274,7 +274,7 @@ func (m *PulseManager) getExecutorHotData(
 			continue
 		}
 
-		inslogger.FromContext(ctx).Debugf("RefreshPendingFilament hotData id - %v, EarliestOpenRequest - %v", meta.ObjID.DebugString(), meta.Lifeline.EarliestOpenRequest)
+		inslogger.FromContext(ctx).Debugf("RefreshPendingFilament hotData id - %v, pr - %v, EarliestOpenRequest - %v", meta.ObjID.DebugString(), len(meta.PendingRecords), meta.Lifeline.EarliestOpenRequest)
 		hotIndexes = append(hotIndexes, message.HotIndex{
 			LifelineLastUsed: meta.LifelineLastUsed,
 			ObjID:            meta.ObjID,

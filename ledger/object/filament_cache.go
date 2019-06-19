@@ -199,8 +199,10 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 		pb = i.createPendingBucket(ctx, pn, objID)
 	}
 
+	inslogger.FromContext(ctx).Debugf("SetRequest before %v pn : %v", objID.DebugString(), pn)
 	pb.Lock()
 	defer pb.Unlock()
+	inslogger.FromContext(ctx).Debugf("SetRequest after %v pn : %v", objID.DebugString(), pn)
 
 	lfl := idx.Lifeline
 
@@ -286,8 +288,10 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 		pb = i.createPendingBucket(ctx, pn, objID)
 	}
 
+	inslogger.FromContext(ctx).Debugf("SetResult before %v pn : %v", objID.DebugString(), pn)
 	pb.Lock()
 	defer pb.Unlock()
+	inslogger.FromContext(ctx).Debugf("SetResult after %v pn : %v", objID.DebugString(), pn)
 
 	reqsIDs, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
 	if !ok {
@@ -327,11 +331,11 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 	}
 
 	if len(pb.notClosedRequestsIds) == 0 {
-		logger.Debugf("no open requests for - %v", objID.DebugString())
+		logger.Debugf("no open requests for - %v, pn: %v,", objID.DebugString(), pn)
 		logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), lfl.EarliestOpenRequest)
 		lfl.EarliestOpenRequest = nil
 	} else {
-		logger.Debugf("not closed reqs: %v, objID : %v", len(pb.notClosedRequestsIds), objID.DebugString())
+		logger.Debugf("not closed reqs: %v, pn: %v, objID : %v", len(pb.notClosedRequestsIds), pn, objID.DebugString())
 	}
 
 	idx.Lifeline = lfl
@@ -389,8 +393,10 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 		pb = i.createPendingBucket(ctx, pn, objID)
 	}
 
+	inslogger.FromContext(ctx).Debugf("Gather before %v pn : %v", objID.DebugString(), pn)
 	pb.Lock()
 	defer pb.Unlock()
+	inslogger.FromContext(ctx).Debugf("Gather after %v pn : %v", objID.DebugString(), pn)
 
 	logger := inslogger.FromContext(ctx)
 	lfl := idx.Lifeline
@@ -424,13 +430,13 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 	}
 
 	if fp == nil || fp.PreviousRecord == nil {
-		err = i.fillPendingFilament(ctx, pn, objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest, idx.PendingRecords, pb)
+		err = i.fillPendingFilament(ctx, pn, objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest, pb)
 		if err != nil {
 			panic(err)
 			return err
 		}
 	} else {
-		err = i.fillPendingFilament(ctx, pn, objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest, idx.PendingRecords, pb)
+		err = i.fillPendingFilament(ctx, pn, objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest, pb)
 		if err != nil {
 			panic(err)
 			return err
@@ -510,7 +516,6 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 	objID insolar.ID,
 	destPN insolar.PulseNumber,
 	earlistOpenRequest insolar.PulseNumber,
-	pendingRecords []insolar.ID,
 	pm *pendingMeta,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("RefreshPendingFilament.fillPendingFilament"))
@@ -529,8 +534,12 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 		// TODO: temp hack waiting for INS-2597 INS-2598 @egorikas
 		// Because a current node can be a previous LME for a object
 		if *node == i.coordinator.Me() {
-			res := make([]record.CompositeFilamentRecord, len(pendingRecords))
-			for idx, id := range pendingRecords {
+			prevIdx := i.idxAccessor.Index(destPN, objID)
+			if prevIdx == nil {
+				panic("bux")
+			}
+			res := make([]record.CompositeFilamentRecord, len(prevIdx.PendingRecords))
+			for idx, id := range prevIdx.PendingRecords {
 				metaRec, err := i.recordStorage.ForID(ctx, id)
 				if err != nil {
 					panic(err)
@@ -550,7 +559,7 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 				}
 			}
 			if len(res) == 0 {
-				panic(fmt.Sprintf("what? len pendingRecords - %v, objID - %v", len(pendingRecords), objID.DebugString()))
+				panic(fmt.Sprintf("what? len pendingRecords - %v, objID - %v, destPN - %v", len(prevIdx.PendingRecords), objID.DebugString(), destPN))
 			}
 			inslogger.FromContext(ctx).Debugf("RefreshPendingFilament objID == %v, records - %v", objID.DebugString(), len(res))
 			pl = &payload.PendingFilament{
@@ -692,8 +701,15 @@ func (i *FilamentCacheStorage) OpenRequestsForObjID(ctx context.Context, current
 		return nil, ErrLifelineNotFound
 	}
 
+	inslogger.FromContext(ctx).Debugf("OpenRequestsForObjID before %v pn : %v", objID.DebugString(), currentPN)
 	pb.RLock()
 	defer pb.RUnlock()
+
+	if !pb.isStateCalculated {
+		return []record.Request{}, nil
+	}
+
+	inslogger.FromContext(ctx).Debugf("OpenRequestsForObjID after %v pn : %v", objID.DebugString(), currentPN)
 
 	if len(pb.notClosedRequestsIds) < count {
 		count = len(pb.notClosedRequestsIds)
@@ -729,8 +745,10 @@ func (i *FilamentCacheStorage) Records(ctx context.Context, currentPN insolar.Pu
 		return nil, ErrLifelineNotFound
 	}
 
+	inslogger.FromContext(ctx).Debugf("Records before %v pn : %v", objID.DebugString(), currentPN)
 	b.RLock()
-	defer b.RLock()
+	defer b.RUnlock()
+	inslogger.FromContext(ctx).Debugf("Records before %v pn : %v", objID.DebugString(), currentPN)
 
 	res := make([]record.CompositeFilamentRecord, len(idx.PendingRecords))
 	for idx, id := range idx.PendingRecords {

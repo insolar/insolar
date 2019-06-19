@@ -18,6 +18,7 @@ package object
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -181,7 +182,9 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 	currentPN := readFrom
 	var res []record.CompositeFilamentRecord
 
-	for currentPN <= readUntil {
+	hasFilamentBehind := true
+	for hasFilamentBehind && currentPN <= readUntil {
+		println(fmt.Sprintf("currentPN <= readUntil - %v %v", currentPN, readUntil))
 		b, err := i.getBucket(currentPN, objID)
 		if err != nil {
 			return nil, err
@@ -216,9 +219,14 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 			if err != nil {
 				return nil, err
 			}
-			currentPN = record.Unwrap(metaRec.Virtual).(*record.PendingFilament).PreviousRecord.Pulse()
+			pf := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+			if pf.PreviousRecord != nil {
+				currentPN = pf.PreviousRecord.Pulse()
+			} else {
+				hasFilamentBehind = false
+			}
 		} else {
-			panic("unexpected situation")
+			panic(fmt.Sprintf("panic - unexpected situation objID - %v, from - %v, until - %v, currentPN - %v", objID.DebugString(), readFrom, readUntil, currentPN))
 		}
 	}
 

@@ -49,8 +49,6 @@ func NewGetPendingRequestID(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *
 
 func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
 	msg := p.msg
-	p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{Has: false}}
-	return nil
 
 	pends, err := p.Dep.PendingAccessor.OpenRequestsForObjID(ctx, flow.Pulse(ctx), msg.ObjectID, 1)
 	if err != nil || p == nil || len(pends) == 0 {
