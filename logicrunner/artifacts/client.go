@@ -151,11 +151,17 @@ func (m *client) RegisterRequest(
 	}
 
 	virtRec := record.Wrap(request)
-
-	buf, err := request.Marshal()
+	buf, err := virtRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "bad request record")
+		return nil, errors.Wrap(err, "failed to marshal record")
 	}
+
+	h := m.PCS.ReferenceHasher()
+	_, err = h.Write(buf)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to calculate hash")
+	}
+	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
 	msg, err := payload.NewMessage(&payload.SetRequest{
 		Request: buf,
@@ -166,27 +172,10 @@ func (m *client) RegisterRequest(
 	case record.CTMethod:
 		recRef = request.Object
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-		recID := insolar.NewID(currentPN, hash)
-		recRef = insolar.NewReference(*recID)
-		// h := m.PCS.ReferenceHasher()
-		// _, err = h.Write(buf)
-		// if err != nil {
-		// 	return nil, errors.Wrap(err, "failed to calculate hash")
-		// }
-		// recID := *insolar.NewID(currentPN, h.Sum(nil))
-		// recRef = insolar.NewReference(recID)
+		recRef = insolar.NewReference(recID)
 	default:
 		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
-
-	// id, err := m.setRecord(
-	// 	ctx,
-	// 	virtRec,
-	// 	*recRef,
-	// )
-	//
-	// return id, errors.Wrap(err, "[ RegisterRequest ] ")
 
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
 	defer done()
@@ -638,7 +627,6 @@ func (m *client) DeployCode(
 		Code:   code,
 	}
 
-
 	pl, err := m.retryer(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
 	if err != nil {
 		return nil, err
@@ -680,7 +668,6 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 	}
 	return nil, fmt.Errorf("flow cancelled, retries exceeded")
 }
-
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.

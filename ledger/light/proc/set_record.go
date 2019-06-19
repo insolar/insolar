@@ -114,23 +114,6 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, virtRec *record.Virtual) *bus.Reply {
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
-	case *record.Request:
-		// Skip object creation and genesis
-		if r.CallType == record.CTMethod {
-			if r.Object == nil {
-				return &bus.Reply{Err: errors.New("method call request without object reference")}
-			}
-			if p.Dep.RecentStorageProvider.Count() > p.Dep.PendingRequestsLimit {
-				return &bus.Reply{Reply: &reply.Error{ErrType: reply.ErrTooManyPendingRequests}}
-			}
-			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
-			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), calculatedID)
-
-			// err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID)
-			// if err != nil {
-			// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-			// }
-		}
 	case *record.Result:
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())

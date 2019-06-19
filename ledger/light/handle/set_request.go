@@ -19,7 +19,6 @@ package handle
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
@@ -78,25 +77,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal Request record")
 	}
 
-	// To ensure, that we have the index. Because index can be on a heavy node.
-	// If we don't have it and heavy does, SetRequest fails because it should update light's index state
-	err = s.ensureIndex(ctx, request, reqJetID, f)
-	if err != nil {
-		return err
-	}
-
 	setRequest := proc.NewSetRequest(s.message, request, reqID, reqJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
-}
-
-func (s *SetRequest) ensureIndex(ctx context.Context, req record.Request, jet insolar.JetID, f flow.Flow) error {
-	if req.CallType != record.CTMethod {
-		return nil
-	}
-	objID := *req.GetObject().Record()
-
-	idx := proc.NewGetIndexWM(objID, jet, s.message)
-	s.dep.GetIndexWM(idx)
-	return f.Procedure(ctx, idx, false)
 }

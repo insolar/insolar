@@ -99,38 +99,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store record")
 	}
 
-	err = p.handlePendings(ctx, p.requestID, p.request)
-	if err != nil {
-		return err
-	}
-
 	msg, err := payload.NewMessage(&payload.ID{ID: p.requestID})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
 	go p.dep.sender.Reply(ctx, p.message, msg)
-
-	return nil
-}
-
-func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, req record.Request) error {
-	// Skip object creation and genesis
-	if req.CallType == record.CTMethod {
-		if req.Object == nil {
-			return errors.New("method call request without object reference")
-		}
-		if p.dep.recentStorage.Count() > p.dep.pendingsLimit {
-			return insolar.ErrTooManyPendingRequests
-		}
-		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
-		recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
-
-		err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
-		if err != nil {
-			return errors.Wrap(err, "can't save result into filament-index")
-		}
-	}
 
 	return nil
 }
