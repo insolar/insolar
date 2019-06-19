@@ -74,9 +74,7 @@ func (es *ExecutionState) WrapError(current *Transcript, err error, message stri
 		err = errors.Wrap(err, message)
 	}
 	res := Error{Err: err}
-	if es.ObjectDescriptor != nil {
-		res.Contract = es.ObjectDescriptor.HeadRef()
-	}
+	res.Contract = &es.Ref
 	if current != nil {
 		res.Request = current.RequestRef
 	}

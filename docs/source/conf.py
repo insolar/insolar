@@ -32,7 +32,7 @@ version = 'latest'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-	'sphinxcontrib.golangdomain',
+#	'sphinxcontrib.golangdomain',
 	'sphinx_tabs.tabs',
 	'sphinxcontrib.plantuml',
 	'sphinx_copybutton'

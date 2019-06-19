@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 // TODO: probably it's better to rewrite it using linked list
@@ -124,6 +125,7 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 type Transcript struct {
 	State interface{} // Shows current execution status of task
 
+	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
 	Request          *record.Request

@@ -31,101 +31,7 @@ Below is the platform architecture diagram aimed to address the aforementioned i
 
 Components in the diagram are *clickable*, the links will lead you to respective definitions.
 
-.. uml::
-   
-   scale 750 width
-   
-   together {
-     package "[[../architecture.html#pulsar-consensus Pulsar consensus]]" as pcon {
-       card [Pulsars] [[../architecture.html#pulsars]]
-     }
-     package "[[../architecture.html#fed-of-clouds Cloud n+1]]" as cloudnext {
-       card [Cloud's network consensus\n & messaging] as nextnet [[../architecture.html#network-consensus]]
-       frame "[[../architecture.html#domains Domain b]]" as domb {
-         rectangle "Contract b" as cntrctb [[../architecture.html#contracts]]
-       }
-       frame "[[../architecture.html#domains Domain a]]" as doma {
-         rectangle "Contract a" as cntrcta [[../architecture.html#contracts]]
-       }
-       cntrctb -[hidden]d- nextnet
-       cntrcta -[hidden]d- nextnet
-       [Pulsars] -u-> nextnet : pulses
-     }
-   }
-   package "[[../architecture.html#fed-of-clouds Cloud n]]" as cloudn {
-       frame "[[../architecture.html#domains Domain n]]" as domn {
-         rectangle "Contract n+1" as cntrctnext [[../architecture.html#contracts]]
-         rectangle "Contract n" as cntrctne [[../architecture.html#contracts]]
-       }
-       rectangle "[[../architecture.html#globulas Network globulas]]" as globula {
-         node "[[../architecture.html#virtual Virtual nodes]]" as vn {
-             card vcard [
-               - Generation handling
-               - Transacting
-               - CPU scaling
-             ]
-         }
-         node "[[../architecture.html#light-material Light material nodes]]" as ln {
-             card lcard [
-               - Short-term storage
-               - Traffic scaling
-               - Block Building
-             ]
-         }
-         node "[[../architecture.html#heavy-material Heavy material nodes]]" as hn {
-             card hcard [
-               - Long-term storage
-               - Replication & recovery
-               - Storage scaling
-             ]
-         }
-      }
-      together {
-      card [Cloud's network consensus\n & messaging] as net [[../architecture.html#network-consensus]]
-      database "[[../architecture.html#ledger Ledger]]" as db {
-         frame "[[../architecture.html#storage-consensus Storage, validation & consensus]]" {
-         rectangle ldgr [
-           ....
-           - Permissions
-           ....
-           - Integrity & replication
-           ....
-           - Jets, lifelines & records
-         ]
-         }
-      }
-      node "[[../architecture.html#execution-validation Processing]]" as process {
-         frame "[[../architecture.html#logic-consensus Logic validation & consensus]]" {
-         rectangle proc [
-           ....
-           - Compilers
-           ....
-           - Artifact cache 
-           - Security context
-           ....
-           - Distributed transaction
-             management
-         ]
-         }
-      }
-      }
-      domn -[hidden]- globula
-      vcard -[hidden]d- lcard
-      lcard -[hidden]d- hcard
-      net -[hidden]d- process
-      proc <-d-> net : data & code
-      net <-d-> ldgr : data & code
-      net -[hidden]r- ln
-      db -[hidden]r- hn
-      process -[hidden]d- net
-      proc -[hidden]r- vn
-      [Pulsars] -r-> net: pulses
-      net <-> nextnet : messages
-      domb -[hidden]- net
-      domb -[hidden]r- domn
-      domb -[hidden]r- proc
-      domb -[hidden]r- net
-   }
+.. uml:: architecture.uml
 
 All components communicate via messaging to achieve respective :ref:`consensuses <consensuses>` and use :term:`pulses <pulse>` to stay in sync. Let's decompose the architecture to learn the key design concepts.
 
@@ -524,7 +430,7 @@ Pulsar Consensus
 
 :term:`Clouds <cloud>` define the pulsar selection rules and they can vary significantly. On enterprise networks, servers that complete no other operations manage the selection, whereas on public networks, it may be a random subset of 10 to 50 nodes with high uptime. Other configurations are also possible for different network types.
 
-Default :term:`pulse` generation is based on BFT-consensus among pulsars, where *each member contributes* to entropy. The pulsar protocol enables entropy generation in a way that prevents individual nodes from being able to predictably manipulate the entropy through vote withdrawals.
+Default :term:`pulse` generation is based on BFT-consensus among pulsars, where *each member contributes* to entropy and *none can predict it*. The pulsar protocol enables entropy generation in a way that prevents individual nodes from being able to predictably manipulate the entropy through vote withdrawals.
 
 This protocol does not include negotiations related to pulsar membership or pulse duration -- such parameters are considered as preconfigured or preagreed. The default pulse duration is 10 seconds.
 
