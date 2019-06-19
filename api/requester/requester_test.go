@@ -18,6 +18,11 @@ package requester
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -26,6 +31,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -269,6 +276,24 @@ func TestStatus(t *testing.T) {
 	resp, err := Status(URL)
 	require.NoError(t, err)
 	require.Equal(t, resp, &testStatusResponse)
+}
+
+func TestPointToDER(t *testing.T) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	msg := "test"
+	hash := sha256.Sum256([]byte(msg))
+
+	r1, s1, err := ecdsa.Sign(rand.Reader, privateKey, hash[:])
+	require.NoError(t, err)
+	derString := pointsToDER(r1, s1)
+
+	sig, err := base64.StdEncoding.DecodeString(derString)
+
+	r2, s2 := foundation.PointsFromDER(sig)
+
+	require.Equal(t, r1, r2, errors.Errorf("Invalid S number"))
+	require.Equal(t, s1, s2, errors.Errorf("Invalid R number"))
 }
 
 // UnmarshalRequest unmarshals request to api
