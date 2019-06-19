@@ -6,18 +6,18 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "RecordStorage" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// RecordStorageMock implements github.com/insolar/insolar/ledger/object.RecordStorage
+//RecordStorageMock implements github.com/insolar/insolar/ledger/object.RecordStorage
 type RecordStorageMock struct {
 	t minimock.Tester
 
@@ -32,7 +32,7 @@ type RecordStorageMock struct {
 	SetMock       mRecordStorageMockSet
 }
 
-// NewRecordStorageMock returns a mock for github.com/insolar/insolar/ledger/object.RecordStorage
+//NewRecordStorageMock returns a mock for github.com/insolar/insolar/ledger/object.RecordStorage
 func NewRecordStorageMock(t minimock.Tester) *RecordStorageMock {
 	m := &RecordStorageMock{t: t}
 
@@ -67,7 +67,7 @@ type RecordStorageMockForIDResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of RecordStorage.ForID is expected from 1 to Infinity times
+//Expect specifies that invocation of RecordStorage.ForID is expected from 1 to Infinity times
 func (m *mRecordStorageMockForID) Expect(p context.Context, p1 insolar.ID) *mRecordStorageMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -79,7 +79,7 @@ func (m *mRecordStorageMockForID) Expect(p context.Context, p1 insolar.ID) *mRec
 	return m
 }
 
-// Return specifies results of invocation of RecordStorage.ForID
+//Return specifies results of invocation of RecordStorage.ForID
 func (m *mRecordStorageMockForID) Return(r record.Material, r1 error) *RecordStorageMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -91,7 +91,7 @@ func (m *mRecordStorageMockForID) Return(r record.Material, r1 error) *RecordSto
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of RecordStorage.ForID is expected once
+//ExpectOnce specifies that invocation of RecordStorage.ForID is expected once
 func (m *mRecordStorageMockForID) ExpectOnce(p context.Context, p1 insolar.ID) *RecordStorageMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
@@ -106,7 +106,7 @@ func (e *RecordStorageMockForIDExpectation) Return(r record.Material, r1 error) 
 	e.result = &RecordStorageMockForIDResult{r, r1}
 }
 
-// Set uses given function f as a mock of RecordStorage.ForID method
+//Set uses given function f as a mock of RecordStorage.ForID method
 func (m *mRecordStorageMockForID) Set(f func(p context.Context, p1 insolar.ID) (r record.Material, r1 error)) *RecordStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -115,7 +115,7 @@ func (m *mRecordStorageMockForID) Set(f func(p context.Context, p1 insolar.ID) (
 	return m.mock
 }
 
-// ForID implements github.com/insolar/insolar/ledger/object.RecordStorage interface
+//ForID implements github.com/insolar/insolar/ledger/object.RecordStorage interface
 func (m *RecordStorageMock) ForID(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
@@ -167,17 +167,17 @@ func (m *RecordStorageMock) ForID(p context.Context, p1 insolar.ID) (r record.Ma
 	return m.ForIDFunc(p, p1)
 }
 
-// ForIDMinimockCounter returns a count of RecordStorageMock.ForIDFunc invocations
+//ForIDMinimockCounter returns a count of RecordStorageMock.ForIDFunc invocations
 func (m *RecordStorageMock) ForIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForIDCounter)
 }
 
-// ForIDMinimockPreCounter returns the value of RecordStorageMock.ForID invocations
+//ForIDMinimockPreCounter returns the value of RecordStorageMock.ForID invocations
 func (m *RecordStorageMock) ForIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForIDPreCounter)
 }
 
-// ForIDFinished returns true if mock invocations count is ok
+//ForIDFinished returns true if mock invocations count is ok
 func (m *RecordStorageMock) ForIDFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForIDMock.expectationSeries) > 0 {
@@ -218,7 +218,7 @@ type RecordStorageMockSetResult struct {
 	r error
 }
 
-// Expect specifies that invocation of RecordStorage.Set is expected from 1 to Infinity times
+//Expect specifies that invocation of RecordStorage.Set is expected from 1 to Infinity times
 func (m *mRecordStorageMockSet) Expect(p context.Context, p1 insolar.ID, p2 record.Material) *mRecordStorageMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
@@ -230,7 +230,7 @@ func (m *mRecordStorageMockSet) Expect(p context.Context, p1 insolar.ID, p2 reco
 	return m
 }
 
-// Return specifies results of invocation of RecordStorage.Set
+//Return specifies results of invocation of RecordStorage.Set
 func (m *mRecordStorageMockSet) Return(r error) *RecordStorageMock {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
@@ -242,7 +242,7 @@ func (m *mRecordStorageMockSet) Return(r error) *RecordStorageMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of RecordStorage.Set is expected once
+//ExpectOnce specifies that invocation of RecordStorage.Set is expected once
 func (m *mRecordStorageMockSet) ExpectOnce(p context.Context, p1 insolar.ID, p2 record.Material) *RecordStorageMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
@@ -257,7 +257,7 @@ func (e *RecordStorageMockSetExpectation) Return(r error) {
 	e.result = &RecordStorageMockSetResult{r}
 }
 
-// Set uses given function f as a mock of RecordStorage.Set method
+//Set uses given function f as a mock of RecordStorage.Set method
 func (m *mRecordStorageMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 record.Material) (r error)) *RecordStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -266,7 +266,7 @@ func (m *mRecordStorageMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 
 	return m.mock
 }
 
-// Set implements github.com/insolar/insolar/ledger/object.RecordStorage interface
+//Set implements github.com/insolar/insolar/ledger/object.RecordStorage interface
 func (m *RecordStorageMock) Set(p context.Context, p1 insolar.ID, p2 record.Material) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
@@ -316,17 +316,17 @@ func (m *RecordStorageMock) Set(p context.Context, p1 insolar.ID, p2 record.Mate
 	return m.SetFunc(p, p1, p2)
 }
 
-// SetMinimockCounter returns a count of RecordStorageMock.SetFunc invocations
+//SetMinimockCounter returns a count of RecordStorageMock.SetFunc invocations
 func (m *RecordStorageMock) SetMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetCounter)
 }
 
-// SetMinimockPreCounter returns the value of RecordStorageMock.Set invocations
+//SetMinimockPreCounter returns the value of RecordStorageMock.Set invocations
 func (m *RecordStorageMock) SetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetPreCounter)
 }
 
-// SetFinished returns true if mock invocations count is ok
+//SetFinished returns true if mock invocations count is ok
 func (m *RecordStorageMock) SetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetMock.expectationSeries) > 0 {
@@ -346,8 +346,8 @@ func (m *RecordStorageMock) SetFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordStorageMock) ValidateCallCounters() {
 
 	if !m.ForIDFinished() {
@@ -360,19 +360,19 @@ func (m *RecordStorageMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordStorageMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *RecordStorageMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *RecordStorageMock) MinimockFinish() {
 
 	if !m.ForIDFinished() {
@@ -385,14 +385,14 @@ func (m *RecordStorageMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *RecordStorageMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *RecordStorageMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -423,8 +423,8 @@ func (m *RecordStorageMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *RecordStorageMock) AllMocksCalled() bool {
 
 	if !m.ForIDFinished() {

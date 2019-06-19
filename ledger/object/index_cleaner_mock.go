@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexCleaner" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// IndexCleanerMock implements github.com/insolar/insolar/ledger/object.IndexCleaner
+//IndexCleanerMock implements github.com/insolar/insolar/ledger/object.IndexCleaner
 type IndexCleanerMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type IndexCleanerMock struct {
 	DeleteForPNMock       mIndexCleanerMockDeleteForPN
 }
 
-// NewIndexCleanerMock returns a mock for github.com/insolar/insolar/ledger/object.IndexCleaner
+//NewIndexCleanerMock returns a mock for github.com/insolar/insolar/ledger/object.IndexCleaner
 func NewIndexCleanerMock(t minimock.Tester) *IndexCleanerMock {
 	m := &IndexCleanerMock{t: t}
 
@@ -54,7 +54,7 @@ type IndexCleanerMockDeleteForPNInput struct {
 	p1 insolar.PulseNumber
 }
 
-// Expect specifies that invocation of IndexCleaner.DeleteForPN is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexCleaner.DeleteForPN is expected from 1 to Infinity times
 func (m *mIndexCleanerMockDeleteForPN) Expect(p context.Context, p1 insolar.PulseNumber) *mIndexCleanerMockDeleteForPN {
 	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
@@ -66,7 +66,7 @@ func (m *mIndexCleanerMockDeleteForPN) Expect(p context.Context, p1 insolar.Puls
 	return m
 }
 
-// Return specifies results of invocation of IndexCleaner.DeleteForPN
+//Return specifies results of invocation of IndexCleaner.DeleteForPN
 func (m *mIndexCleanerMockDeleteForPN) Return() *IndexCleanerMock {
 	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
@@ -78,7 +78,7 @@ func (m *mIndexCleanerMockDeleteForPN) Return() *IndexCleanerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexCleaner.DeleteForPN is expected once
+//ExpectOnce specifies that invocation of IndexCleaner.DeleteForPN is expected once
 func (m *mIndexCleanerMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *IndexCleanerMockDeleteForPNExpectation {
 	m.mock.DeleteForPNFunc = nil
 	m.mainExpectation = nil
@@ -89,7 +89,7 @@ func (m *mIndexCleanerMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.
 	return expectation
 }
 
-// Set uses given function f as a mock of IndexCleaner.DeleteForPN method
+//Set uses given function f as a mock of IndexCleaner.DeleteForPN method
 func (m *mIndexCleanerMockDeleteForPN) Set(f func(p context.Context, p1 insolar.PulseNumber)) *IndexCleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -98,7 +98,7 @@ func (m *mIndexCleanerMockDeleteForPN) Set(f func(p context.Context, p1 insolar.
 	return m.mock
 }
 
-// DeleteForPN implements github.com/insolar/insolar/ledger/object.IndexCleaner interface
+//DeleteForPN implements github.com/insolar/insolar/ledger/object.IndexCleaner interface
 func (m *IndexCleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeleteForPNPreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteForPNCounter, 1)
@@ -133,17 +133,17 @@ func (m *IndexCleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber
 	m.DeleteForPNFunc(p, p1)
 }
 
-// DeleteForPNMinimockCounter returns a count of IndexCleanerMock.DeleteForPNFunc invocations
+//DeleteForPNMinimockCounter returns a count of IndexCleanerMock.DeleteForPNFunc invocations
 func (m *IndexCleanerMock) DeleteForPNMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.DeleteForPNCounter)
 }
 
-// DeleteForPNMinimockPreCounter returns the value of IndexCleanerMock.DeleteForPN invocations
+//DeleteForPNMinimockPreCounter returns the value of IndexCleanerMock.DeleteForPN invocations
 func (m *IndexCleanerMock) DeleteForPNMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.DeleteForPNPreCounter)
 }
 
-// DeleteForPNFinished returns true if mock invocations count is ok
+//DeleteForPNFinished returns true if mock invocations count is ok
 func (m *IndexCleanerMock) DeleteForPNFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.DeleteForPNMock.expectationSeries) > 0 {
@@ -163,8 +163,8 @@ func (m *IndexCleanerMock) DeleteForPNFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexCleanerMock) ValidateCallCounters() {
 
 	if !m.DeleteForPNFinished() {
@@ -173,19 +173,19 @@ func (m *IndexCleanerMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexCleanerMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *IndexCleanerMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexCleanerMock) MinimockFinish() {
 
 	if !m.DeleteForPNFinished() {
@@ -194,14 +194,14 @@ func (m *IndexCleanerMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *IndexCleanerMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *IndexCleanerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -227,8 +227,8 @@ func (m *IndexCleanerMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexCleanerMock) AllMocksCalled() bool {
 
 	if !m.DeleteForPNFinished() {

@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// IndexModifierMock implements github.com/insolar/insolar/ledger/object.IndexModifier
+//IndexModifierMock implements github.com/insolar/insolar/ledger/object.IndexModifier
 type IndexModifierMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type IndexModifierMock struct {
 	SetIndexMock       mIndexModifierMockSetIndex
 }
 
-// NewIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexModifier
+//NewIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexModifier
 func NewIndexModifierMock(t minimock.Tester) *IndexModifierMock {
 	m := &IndexModifierMock{t: t}
 
@@ -66,7 +66,7 @@ type IndexModifierMockCreateIndexResult struct {
 	r *FilamentIndex
 }
 
-// Expect specifies that invocation of IndexModifier.CreateIndex is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexModifier.CreateIndex is expected from 1 to Infinity times
 func (m *mIndexModifierMockCreateIndex) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mIndexModifierMockCreateIndex {
 	m.mock.CreateIndexFunc = nil
 	m.expectationSeries = nil
@@ -78,7 +78,7 @@ func (m *mIndexModifierMockCreateIndex) Expect(p context.Context, p1 insolar.Pul
 	return m
 }
 
-// Return specifies results of invocation of IndexModifier.CreateIndex
+//Return specifies results of invocation of IndexModifier.CreateIndex
 func (m *mIndexModifierMockCreateIndex) Return(r *FilamentIndex) *IndexModifierMock {
 	m.mock.CreateIndexFunc = nil
 	m.expectationSeries = nil
@@ -90,7 +90,7 @@ func (m *mIndexModifierMockCreateIndex) Return(r *FilamentIndex) *IndexModifierM
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexModifier.CreateIndex is expected once
+//ExpectOnce specifies that invocation of IndexModifier.CreateIndex is expected once
 func (m *mIndexModifierMockCreateIndex) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *IndexModifierMockCreateIndexExpectation {
 	m.mock.CreateIndexFunc = nil
 	m.mainExpectation = nil
@@ -105,7 +105,7 @@ func (e *IndexModifierMockCreateIndexExpectation) Return(r *FilamentIndex) {
 	e.result = &IndexModifierMockCreateIndexResult{r}
 }
 
-// Set uses given function f as a mock of IndexModifier.CreateIndex method
+//Set uses given function f as a mock of IndexModifier.CreateIndex method
 func (m *mIndexModifierMockCreateIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *FilamentIndex)) *IndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -114,7 +114,7 @@ func (m *mIndexModifierMockCreateIndex) Set(f func(p context.Context, p1 insolar
 	return m.mock
 }
 
-// CreateIndex implements github.com/insolar/insolar/ledger/object.IndexModifier interface
+//CreateIndex implements github.com/insolar/insolar/ledger/object.IndexModifier interface
 func (m *IndexModifierMock) CreateIndex(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *FilamentIndex) {
 	counter := atomic.AddUint64(&m.CreateIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.CreateIndexCounter, 1)
@@ -164,17 +164,17 @@ func (m *IndexModifierMock) CreateIndex(p context.Context, p1 insolar.PulseNumbe
 	return m.CreateIndexFunc(p, p1, p2)
 }
 
-// CreateIndexMinimockCounter returns a count of IndexModifierMock.CreateIndexFunc invocations
+//CreateIndexMinimockCounter returns a count of IndexModifierMock.CreateIndexFunc invocations
 func (m *IndexModifierMock) CreateIndexMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.CreateIndexCounter)
 }
 
-// CreateIndexMinimockPreCounter returns the value of IndexModifierMock.CreateIndex invocations
+//CreateIndexMinimockPreCounter returns the value of IndexModifierMock.CreateIndex invocations
 func (m *IndexModifierMock) CreateIndexMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.CreateIndexPreCounter)
 }
 
-// CreateIndexFinished returns true if mock invocations count is ok
+//CreateIndexFinished returns true if mock invocations count is ok
 func (m *IndexModifierMock) CreateIndexFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.CreateIndexMock.expectationSeries) > 0 {
@@ -215,7 +215,7 @@ type IndexModifierMockSetIndexResult struct {
 	r error
 }
 
-// Expect specifies that invocation of IndexModifier.SetIndex is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexModifier.SetIndex is expected from 1 to Infinity times
 func (m *mIndexModifierMockSetIndex) Expect(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *mIndexModifierMockSetIndex {
 	m.mock.SetIndexFunc = nil
 	m.expectationSeries = nil
@@ -227,7 +227,7 @@ func (m *mIndexModifierMockSetIndex) Expect(p context.Context, p1 insolar.PulseN
 	return m
 }
 
-// Return specifies results of invocation of IndexModifier.SetIndex
+//Return specifies results of invocation of IndexModifier.SetIndex
 func (m *mIndexModifierMockSetIndex) Return(r error) *IndexModifierMock {
 	m.mock.SetIndexFunc = nil
 	m.expectationSeries = nil
@@ -239,7 +239,7 @@ func (m *mIndexModifierMockSetIndex) Return(r error) *IndexModifierMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexModifier.SetIndex is expected once
+//ExpectOnce specifies that invocation of IndexModifier.SetIndex is expected once
 func (m *mIndexModifierMockSetIndex) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *IndexModifierMockSetIndexExpectation {
 	m.mock.SetIndexFunc = nil
 	m.mainExpectation = nil
@@ -254,7 +254,7 @@ func (e *IndexModifierMockSetIndexExpectation) Return(r error) {
 	e.result = &IndexModifierMockSetIndexResult{r}
 }
 
-// Set uses given function f as a mock of IndexModifier.SetIndex method
+//Set uses given function f as a mock of IndexModifier.SetIndex method
 func (m *mIndexModifierMockSetIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error)) *IndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -263,7 +263,7 @@ func (m *mIndexModifierMockSetIndex) Set(f func(p context.Context, p1 insolar.Pu
 	return m.mock
 }
 
-// SetIndex implements github.com/insolar/insolar/ledger/object.IndexModifier interface
+//SetIndex implements github.com/insolar/insolar/ledger/object.IndexModifier interface
 func (m *IndexModifierMock) SetIndex(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error) {
 	counter := atomic.AddUint64(&m.SetIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.SetIndexCounter, 1)
@@ -313,17 +313,17 @@ func (m *IndexModifierMock) SetIndex(p context.Context, p1 insolar.PulseNumber, 
 	return m.SetIndexFunc(p, p1, p2)
 }
 
-// SetIndexMinimockCounter returns a count of IndexModifierMock.SetIndexFunc invocations
+//SetIndexMinimockCounter returns a count of IndexModifierMock.SetIndexFunc invocations
 func (m *IndexModifierMock) SetIndexMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetIndexCounter)
 }
 
-// SetIndexMinimockPreCounter returns the value of IndexModifierMock.SetIndex invocations
+//SetIndexMinimockPreCounter returns the value of IndexModifierMock.SetIndex invocations
 func (m *IndexModifierMock) SetIndexMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetIndexPreCounter)
 }
 
-// SetIndexFinished returns true if mock invocations count is ok
+//SetIndexFinished returns true if mock invocations count is ok
 func (m *IndexModifierMock) SetIndexFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetIndexMock.expectationSeries) > 0 {
@@ -343,8 +343,8 @@ func (m *IndexModifierMock) SetIndexFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexModifierMock) ValidateCallCounters() {
 
 	if !m.CreateIndexFinished() {
@@ -357,19 +357,19 @@ func (m *IndexModifierMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexModifierMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *IndexModifierMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexModifierMock) MinimockFinish() {
 
 	if !m.CreateIndexFinished() {
@@ -382,14 +382,14 @@ func (m *IndexModifierMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *IndexModifierMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *IndexModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -420,8 +420,8 @@ func (m *IndexModifierMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexModifierMock) AllMocksCalled() bool {
 
 	if !m.CreateIndexFinished() {

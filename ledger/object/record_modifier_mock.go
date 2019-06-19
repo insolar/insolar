@@ -6,18 +6,18 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "RecordModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// RecordModifierMock implements github.com/insolar/insolar/ledger/object.RecordModifier
+//RecordModifierMock implements github.com/insolar/insolar/ledger/object.RecordModifier
 type RecordModifierMock struct {
 	t minimock.Tester
 
@@ -27,7 +27,7 @@ type RecordModifierMock struct {
 	SetMock       mRecordModifierMockSet
 }
 
-// NewRecordModifierMock returns a mock for github.com/insolar/insolar/ledger/object.RecordModifier
+//NewRecordModifierMock returns a mock for github.com/insolar/insolar/ledger/object.RecordModifier
 func NewRecordModifierMock(t minimock.Tester) *RecordModifierMock {
 	m := &RecordModifierMock{t: t}
 
@@ -61,7 +61,7 @@ type RecordModifierMockSetResult struct {
 	r error
 }
 
-// Expect specifies that invocation of RecordModifier.Set is expected from 1 to Infinity times
+//Expect specifies that invocation of RecordModifier.Set is expected from 1 to Infinity times
 func (m *mRecordModifierMockSet) Expect(p context.Context, p1 insolar.ID, p2 record.Material) *mRecordModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
@@ -73,7 +73,7 @@ func (m *mRecordModifierMockSet) Expect(p context.Context, p1 insolar.ID, p2 rec
 	return m
 }
 
-// Return specifies results of invocation of RecordModifier.Set
+//Return specifies results of invocation of RecordModifier.Set
 func (m *mRecordModifierMockSet) Return(r error) *RecordModifierMock {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
@@ -85,7 +85,7 @@ func (m *mRecordModifierMockSet) Return(r error) *RecordModifierMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of RecordModifier.Set is expected once
+//ExpectOnce specifies that invocation of RecordModifier.Set is expected once
 func (m *mRecordModifierMockSet) ExpectOnce(p context.Context, p1 insolar.ID, p2 record.Material) *RecordModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
@@ -100,7 +100,7 @@ func (e *RecordModifierMockSetExpectation) Return(r error) {
 	e.result = &RecordModifierMockSetResult{r}
 }
 
-// Set uses given function f as a mock of RecordModifier.Set method
+//Set uses given function f as a mock of RecordModifier.Set method
 func (m *mRecordModifierMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 record.Material) (r error)) *RecordModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -109,7 +109,7 @@ func (m *mRecordModifierMockSet) Set(f func(p context.Context, p1 insolar.ID, p2
 	return m.mock
 }
 
-// Set implements github.com/insolar/insolar/ledger/object.RecordModifier interface
+//Set implements github.com/insolar/insolar/ledger/object.RecordModifier interface
 func (m *RecordModifierMock) Set(p context.Context, p1 insolar.ID, p2 record.Material) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
@@ -159,17 +159,17 @@ func (m *RecordModifierMock) Set(p context.Context, p1 insolar.ID, p2 record.Mat
 	return m.SetFunc(p, p1, p2)
 }
 
-// SetMinimockCounter returns a count of RecordModifierMock.SetFunc invocations
+//SetMinimockCounter returns a count of RecordModifierMock.SetFunc invocations
 func (m *RecordModifierMock) SetMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetCounter)
 }
 
-// SetMinimockPreCounter returns the value of RecordModifierMock.Set invocations
+//SetMinimockPreCounter returns the value of RecordModifierMock.Set invocations
 func (m *RecordModifierMock) SetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetPreCounter)
 }
 
-// SetFinished returns true if mock invocations count is ok
+//SetFinished returns true if mock invocations count is ok
 func (m *RecordModifierMock) SetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetMock.expectationSeries) > 0 {
@@ -189,8 +189,8 @@ func (m *RecordModifierMock) SetFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordModifierMock) ValidateCallCounters() {
 
 	if !m.SetFinished() {
@@ -199,19 +199,19 @@ func (m *RecordModifierMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordModifierMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *RecordModifierMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *RecordModifierMock) MinimockFinish() {
 
 	if !m.SetFinished() {
@@ -220,14 +220,14 @@ func (m *RecordModifierMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *RecordModifierMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *RecordModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -253,8 +253,8 @@ func (m *RecordModifierMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *RecordModifierMock) AllMocksCalled() bool {
 
 	if !m.SetFinished() {

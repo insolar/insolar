@@ -6,18 +6,18 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "RecordCollectionAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// RecordCollectionAccessorMock implements github.com/insolar/insolar/ledger/object.RecordCollectionAccessor
+//RecordCollectionAccessorMock implements github.com/insolar/insolar/ledger/object.RecordCollectionAccessor
 type RecordCollectionAccessorMock struct {
 	t minimock.Tester
 
@@ -27,7 +27,7 @@ type RecordCollectionAccessorMock struct {
 	ForPulseMock       mRecordCollectionAccessorMockForPulse
 }
 
-// NewRecordCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.RecordCollectionAccessor
+//NewRecordCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.RecordCollectionAccessor
 func NewRecordCollectionAccessorMock(t minimock.Tester) *RecordCollectionAccessorMock {
 	m := &RecordCollectionAccessorMock{t: t}
 
@@ -61,7 +61,7 @@ type RecordCollectionAccessorMockForPulseResult struct {
 	r []record.Material
 }
 
-// Expect specifies that invocation of RecordCollectionAccessor.ForPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of RecordCollectionAccessor.ForPulse is expected from 1 to Infinity times
 func (m *mRecordCollectionAccessorMockForPulse) Expect(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) *mRecordCollectionAccessorMockForPulse {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
@@ -73,7 +73,7 @@ func (m *mRecordCollectionAccessorMockForPulse) Expect(p context.Context, p1 ins
 	return m
 }
 
-// Return specifies results of invocation of RecordCollectionAccessor.ForPulse
+//Return specifies results of invocation of RecordCollectionAccessor.ForPulse
 func (m *mRecordCollectionAccessorMockForPulse) Return(r []record.Material) *RecordCollectionAccessorMock {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
@@ -85,7 +85,7 @@ func (m *mRecordCollectionAccessorMockForPulse) Return(r []record.Material) *Rec
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of RecordCollectionAccessor.ForPulse is expected once
+//ExpectOnce specifies that invocation of RecordCollectionAccessor.ForPulse is expected once
 func (m *mRecordCollectionAccessorMockForPulse) ExpectOnce(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) *RecordCollectionAccessorMockForPulseExpectation {
 	m.mock.ForPulseFunc = nil
 	m.mainExpectation = nil
@@ -100,7 +100,7 @@ func (e *RecordCollectionAccessorMockForPulseExpectation) Return(r []record.Mate
 	e.result = &RecordCollectionAccessorMockForPulseResult{r}
 }
 
-// Set uses given function f as a mock of RecordCollectionAccessor.ForPulse method
+//Set uses given function f as a mock of RecordCollectionAccessor.ForPulse method
 func (m *mRecordCollectionAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []record.Material)) *RecordCollectionAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -109,7 +109,7 @@ func (m *mRecordCollectionAccessorMockForPulse) Set(f func(p context.Context, p1
 	return m.mock
 }
 
-// ForPulse implements github.com/insolar/insolar/ledger/object.RecordCollectionAccessor interface
+//ForPulse implements github.com/insolar/insolar/ledger/object.RecordCollectionAccessor interface
 func (m *RecordCollectionAccessorMock) ForPulse(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []record.Material) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)
@@ -159,17 +159,17 @@ func (m *RecordCollectionAccessorMock) ForPulse(p context.Context, p1 insolar.Je
 	return m.ForPulseFunc(p, p1, p2)
 }
 
-// ForPulseMinimockCounter returns a count of RecordCollectionAccessorMock.ForPulseFunc invocations
+//ForPulseMinimockCounter returns a count of RecordCollectionAccessorMock.ForPulseFunc invocations
 func (m *RecordCollectionAccessorMock) ForPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulseCounter)
 }
 
-// ForPulseMinimockPreCounter returns the value of RecordCollectionAccessorMock.ForPulse invocations
+//ForPulseMinimockPreCounter returns the value of RecordCollectionAccessorMock.ForPulse invocations
 func (m *RecordCollectionAccessorMock) ForPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulsePreCounter)
 }
 
-// ForPulseFinished returns true if mock invocations count is ok
+//ForPulseFinished returns true if mock invocations count is ok
 func (m *RecordCollectionAccessorMock) ForPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForPulseMock.expectationSeries) > 0 {
@@ -189,8 +189,8 @@ func (m *RecordCollectionAccessorMock) ForPulseFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordCollectionAccessorMock) ValidateCallCounters() {
 
 	if !m.ForPulseFinished() {
@@ -199,19 +199,19 @@ func (m *RecordCollectionAccessorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordCollectionAccessorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *RecordCollectionAccessorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *RecordCollectionAccessorMock) MinimockFinish() {
 
 	if !m.ForPulseFinished() {
@@ -220,14 +220,14 @@ func (m *RecordCollectionAccessorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *RecordCollectionAccessorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *RecordCollectionAccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -253,8 +253,8 @@ func (m *RecordCollectionAccessorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *RecordCollectionAccessorMock) AllMocksCalled() bool {
 
 	if !m.ForPulseFinished() {

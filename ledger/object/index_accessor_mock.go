@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// IndexAccessorMock implements github.com/insolar/insolar/ledger/object.IndexAccessor
+//IndexAccessorMock implements github.com/insolar/insolar/ledger/object.IndexAccessor
 type IndexAccessorMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type IndexAccessorMock struct {
 	IndexMock       mIndexAccessorMockIndex
 }
 
-// NewIndexAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexAccessor
+//NewIndexAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexAccessor
 func NewIndexAccessorMock(t minimock.Tester) *IndexAccessorMock {
 	m := &IndexAccessorMock{t: t}
 
@@ -66,7 +66,7 @@ type IndexAccessorMockForPNAndJetResult struct {
 	r []FilamentIndex
 }
 
-// Expect specifies that invocation of IndexAccessor.ForPNAndJet is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexAccessor.ForPNAndJet is expected from 1 to Infinity times
 func (m *mIndexAccessorMockForPNAndJet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *mIndexAccessorMockForPNAndJet {
 	m.mock.ForPNAndJetFunc = nil
 	m.expectationSeries = nil
@@ -78,7 +78,7 @@ func (m *mIndexAccessorMockForPNAndJet) Expect(p context.Context, p1 insolar.Pul
 	return m
 }
 
-// Return specifies results of invocation of IndexAccessor.ForPNAndJet
+//Return specifies results of invocation of IndexAccessor.ForPNAndJet
 func (m *mIndexAccessorMockForPNAndJet) Return(r []FilamentIndex) *IndexAccessorMock {
 	m.mock.ForPNAndJetFunc = nil
 	m.expectationSeries = nil
@@ -90,7 +90,7 @@ func (m *mIndexAccessorMockForPNAndJet) Return(r []FilamentIndex) *IndexAccessor
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexAccessor.ForPNAndJet is expected once
+//ExpectOnce specifies that invocation of IndexAccessor.ForPNAndJet is expected once
 func (m *mIndexAccessorMockForPNAndJet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *IndexAccessorMockForPNAndJetExpectation {
 	m.mock.ForPNAndJetFunc = nil
 	m.mainExpectation = nil
@@ -105,7 +105,7 @@ func (e *IndexAccessorMockForPNAndJetExpectation) Return(r []FilamentIndex) {
 	e.result = &IndexAccessorMockForPNAndJetResult{r}
 }
 
-// Set uses given function f as a mock of IndexAccessor.ForPNAndJet method
+//Set uses given function f as a mock of IndexAccessor.ForPNAndJet method
 func (m *mIndexAccessorMockForPNAndJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -114,7 +114,7 @@ func (m *mIndexAccessorMockForPNAndJet) Set(f func(p context.Context, p1 insolar
 	return m.mock
 }
 
-// ForPNAndJet implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
+//ForPNAndJet implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
 func (m *IndexAccessorMock) ForPNAndJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex) {
 	counter := atomic.AddUint64(&m.ForPNAndJetPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPNAndJetCounter, 1)
@@ -164,17 +164,17 @@ func (m *IndexAccessorMock) ForPNAndJet(p context.Context, p1 insolar.PulseNumbe
 	return m.ForPNAndJetFunc(p, p1, p2)
 }
 
-// ForPNAndJetMinimockCounter returns a count of IndexAccessorMock.ForPNAndJetFunc invocations
+//ForPNAndJetMinimockCounter returns a count of IndexAccessorMock.ForPNAndJetFunc invocations
 func (m *IndexAccessorMock) ForPNAndJetMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPNAndJetCounter)
 }
 
-// ForPNAndJetMinimockPreCounter returns the value of IndexAccessorMock.ForPNAndJet invocations
+//ForPNAndJetMinimockPreCounter returns the value of IndexAccessorMock.ForPNAndJet invocations
 func (m *IndexAccessorMock) ForPNAndJetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPNAndJetPreCounter)
 }
 
-// ForPNAndJetFinished returns true if mock invocations count is ok
+//ForPNAndJetFinished returns true if mock invocations count is ok
 func (m *IndexAccessorMock) ForPNAndJetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForPNAndJetMock.expectationSeries) > 0 {
@@ -214,7 +214,7 @@ type IndexAccessorMockIndexResult struct {
 	r *FilamentIndex
 }
 
-// Expect specifies that invocation of IndexAccessor.Index is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexAccessor.Index is expected from 1 to Infinity times
 func (m *mIndexAccessorMockIndex) Expect(p insolar.PulseNumber, p1 insolar.ID) *mIndexAccessorMockIndex {
 	m.mock.IndexFunc = nil
 	m.expectationSeries = nil
@@ -226,7 +226,7 @@ func (m *mIndexAccessorMockIndex) Expect(p insolar.PulseNumber, p1 insolar.ID) *
 	return m
 }
 
-// Return specifies results of invocation of IndexAccessor.Index
+//Return specifies results of invocation of IndexAccessor.Index
 func (m *mIndexAccessorMockIndex) Return(r *FilamentIndex) *IndexAccessorMock {
 	m.mock.IndexFunc = nil
 	m.expectationSeries = nil
@@ -238,7 +238,7 @@ func (m *mIndexAccessorMockIndex) Return(r *FilamentIndex) *IndexAccessorMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexAccessor.Index is expected once
+//ExpectOnce specifies that invocation of IndexAccessor.Index is expected once
 func (m *mIndexAccessorMockIndex) ExpectOnce(p insolar.PulseNumber, p1 insolar.ID) *IndexAccessorMockIndexExpectation {
 	m.mock.IndexFunc = nil
 	m.mainExpectation = nil
@@ -253,7 +253,7 @@ func (e *IndexAccessorMockIndexExpectation) Return(r *FilamentIndex) {
 	e.result = &IndexAccessorMockIndexResult{r}
 }
 
-// Set uses given function f as a mock of IndexAccessor.Index method
+//Set uses given function f as a mock of IndexAccessor.Index method
 func (m *mIndexAccessorMockIndex) Set(f func(p insolar.PulseNumber, p1 insolar.ID) (r *FilamentIndex)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -262,7 +262,7 @@ func (m *mIndexAccessorMockIndex) Set(f func(p insolar.PulseNumber, p1 insolar.I
 	return m.mock
 }
 
-// Index implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
+//Index implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
 func (m *IndexAccessorMock) Index(p insolar.PulseNumber, p1 insolar.ID) (r *FilamentIndex) {
 	counter := atomic.AddUint64(&m.IndexPreCounter, 1)
 	defer atomic.AddUint64(&m.IndexCounter, 1)
@@ -312,17 +312,17 @@ func (m *IndexAccessorMock) Index(p insolar.PulseNumber, p1 insolar.ID) (r *Fila
 	return m.IndexFunc(p, p1)
 }
 
-// IndexMinimockCounter returns a count of IndexAccessorMock.IndexFunc invocations
+//IndexMinimockCounter returns a count of IndexAccessorMock.IndexFunc invocations
 func (m *IndexAccessorMock) IndexMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.IndexCounter)
 }
 
-// IndexMinimockPreCounter returns the value of IndexAccessorMock.Index invocations
+//IndexMinimockPreCounter returns the value of IndexAccessorMock.Index invocations
 func (m *IndexAccessorMock) IndexMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IndexPreCounter)
 }
 
-// IndexFinished returns true if mock invocations count is ok
+//IndexFinished returns true if mock invocations count is ok
 func (m *IndexAccessorMock) IndexFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.IndexMock.expectationSeries) > 0 {
@@ -342,8 +342,8 @@ func (m *IndexAccessorMock) IndexFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexAccessorMock) ValidateCallCounters() {
 
 	if !m.ForPNAndJetFinished() {
@@ -356,19 +356,19 @@ func (m *IndexAccessorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexAccessorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *IndexAccessorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexAccessorMock) MinimockFinish() {
 
 	if !m.ForPNAndJetFinished() {
@@ -381,14 +381,14 @@ func (m *IndexAccessorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *IndexAccessorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *IndexAccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -419,8 +419,8 @@ func (m *IndexAccessorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexAccessorMock) AllMocksCalled() bool {
 
 	if !m.ForPNAndJetFinished() {

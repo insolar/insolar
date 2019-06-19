@@ -6,18 +6,18 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// PendingAccessorMock implements github.com/insolar/insolar/ledger/object.PendingAccessor
+//PendingAccessorMock implements github.com/insolar/insolar/ledger/object.PendingAccessor
 type PendingAccessorMock struct {
 	t minimock.Tester
 
@@ -32,7 +32,7 @@ type PendingAccessorMock struct {
 	RecordsMock       mPendingAccessorMockRecords
 }
 
-// NewPendingAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.PendingAccessor
+//NewPendingAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.PendingAccessor
 func NewPendingAccessorMock(t minimock.Tester) *PendingAccessorMock {
 	m := &PendingAccessorMock{t: t}
 
@@ -69,7 +69,7 @@ type PendingAccessorMockOpenRequestsForObjIDResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of PendingAccessor.OpenRequestsForObjID is expected from 1 to Infinity times
+//Expect specifies that invocation of PendingAccessor.OpenRequestsForObjID is expected from 1 to Infinity times
 func (m *mPendingAccessorMockOpenRequestsForObjID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) *mPendingAccessorMockOpenRequestsForObjID {
 	m.mock.OpenRequestsForObjIDFunc = nil
 	m.expectationSeries = nil
@@ -81,7 +81,7 @@ func (m *mPendingAccessorMockOpenRequestsForObjID) Expect(p context.Context, p1 
 	return m
 }
 
-// Return specifies results of invocation of PendingAccessor.OpenRequestsForObjID
+//Return specifies results of invocation of PendingAccessor.OpenRequestsForObjID
 func (m *mPendingAccessorMockOpenRequestsForObjID) Return(r []record.Request, r1 error) *PendingAccessorMock {
 	m.mock.OpenRequestsForObjIDFunc = nil
 	m.expectationSeries = nil
@@ -93,7 +93,7 @@ func (m *mPendingAccessorMockOpenRequestsForObjID) Return(r []record.Request, r1
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PendingAccessor.OpenRequestsForObjID is expected once
+//ExpectOnce specifies that invocation of PendingAccessor.OpenRequestsForObjID is expected once
 func (m *mPendingAccessorMockOpenRequestsForObjID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) *PendingAccessorMockOpenRequestsForObjIDExpectation {
 	m.mock.OpenRequestsForObjIDFunc = nil
 	m.mainExpectation = nil
@@ -108,7 +108,7 @@ func (e *PendingAccessorMockOpenRequestsForObjIDExpectation) Return(r []record.R
 	e.result = &PendingAccessorMockOpenRequestsForObjIDResult{r, r1}
 }
 
-// Set uses given function f as a mock of PendingAccessor.OpenRequestsForObjID method
+//Set uses given function f as a mock of PendingAccessor.OpenRequestsForObjID method
 func (m *mPendingAccessorMockOpenRequestsForObjID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -117,7 +117,7 @@ func (m *mPendingAccessorMockOpenRequestsForObjID) Set(f func(p context.Context,
 	return m.mock
 }
 
-// OpenRequestsForObjID implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
+//OpenRequestsForObjID implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
 func (m *PendingAccessorMock) OpenRequestsForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error) {
 	counter := atomic.AddUint64(&m.OpenRequestsForObjIDPreCounter, 1)
 	defer atomic.AddUint64(&m.OpenRequestsForObjIDCounter, 1)
@@ -169,17 +169,17 @@ func (m *PendingAccessorMock) OpenRequestsForObjID(p context.Context, p1 insolar
 	return m.OpenRequestsForObjIDFunc(p, p1, p2, p3)
 }
 
-// OpenRequestsForObjIDMinimockCounter returns a count of PendingAccessorMock.OpenRequestsForObjIDFunc invocations
+//OpenRequestsForObjIDMinimockCounter returns a count of PendingAccessorMock.OpenRequestsForObjIDFunc invocations
 func (m *PendingAccessorMock) OpenRequestsForObjIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.OpenRequestsForObjIDCounter)
 }
 
-// OpenRequestsForObjIDMinimockPreCounter returns the value of PendingAccessorMock.OpenRequestsForObjID invocations
+//OpenRequestsForObjIDMinimockPreCounter returns the value of PendingAccessorMock.OpenRequestsForObjID invocations
 func (m *PendingAccessorMock) OpenRequestsForObjIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.OpenRequestsForObjIDPreCounter)
 }
 
-// OpenRequestsForObjIDFinished returns true if mock invocations count is ok
+//OpenRequestsForObjIDFinished returns true if mock invocations count is ok
 func (m *PendingAccessorMock) OpenRequestsForObjIDFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.OpenRequestsForObjIDMock.expectationSeries) > 0 {
@@ -221,7 +221,7 @@ type PendingAccessorMockRecordsResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of PendingAccessor.Records is expected from 1 to Infinity times
+//Expect specifies that invocation of PendingAccessor.Records is expected from 1 to Infinity times
 func (m *mPendingAccessorMockRecords) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mPendingAccessorMockRecords {
 	m.mock.RecordsFunc = nil
 	m.expectationSeries = nil
@@ -233,7 +233,7 @@ func (m *mPendingAccessorMockRecords) Expect(p context.Context, p1 insolar.Pulse
 	return m
 }
 
-// Return specifies results of invocation of PendingAccessor.Records
+//Return specifies results of invocation of PendingAccessor.Records
 func (m *mPendingAccessorMockRecords) Return(r []record.CompositeFilamentRecord, r1 error) *PendingAccessorMock {
 	m.mock.RecordsFunc = nil
 	m.expectationSeries = nil
@@ -245,7 +245,7 @@ func (m *mPendingAccessorMockRecords) Return(r []record.CompositeFilamentRecord,
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PendingAccessor.Records is expected once
+//ExpectOnce specifies that invocation of PendingAccessor.Records is expected once
 func (m *mPendingAccessorMockRecords) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *PendingAccessorMockRecordsExpectation {
 	m.mock.RecordsFunc = nil
 	m.mainExpectation = nil
@@ -260,7 +260,7 @@ func (e *PendingAccessorMockRecordsExpectation) Return(r []record.CompositeFilam
 	e.result = &PendingAccessorMockRecordsResult{r, r1}
 }
 
-// Set uses given function f as a mock of PendingAccessor.Records method
+//Set uses given function f as a mock of PendingAccessor.Records method
 func (m *mPendingAccessorMockRecords) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.CompositeFilamentRecord, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -269,7 +269,7 @@ func (m *mPendingAccessorMockRecords) Set(f func(p context.Context, p1 insolar.P
 	return m.mock
 }
 
-// Records implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
+//Records implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
 func (m *PendingAccessorMock) Records(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.CompositeFilamentRecord, r1 error) {
 	counter := atomic.AddUint64(&m.RecordsPreCounter, 1)
 	defer atomic.AddUint64(&m.RecordsCounter, 1)
@@ -321,17 +321,17 @@ func (m *PendingAccessorMock) Records(p context.Context, p1 insolar.PulseNumber,
 	return m.RecordsFunc(p, p1, p2)
 }
 
-// RecordsMinimockCounter returns a count of PendingAccessorMock.RecordsFunc invocations
+//RecordsMinimockCounter returns a count of PendingAccessorMock.RecordsFunc invocations
 func (m *PendingAccessorMock) RecordsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RecordsCounter)
 }
 
-// RecordsMinimockPreCounter returns the value of PendingAccessorMock.Records invocations
+//RecordsMinimockPreCounter returns the value of PendingAccessorMock.Records invocations
 func (m *PendingAccessorMock) RecordsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RecordsPreCounter)
 }
 
-// RecordsFinished returns true if mock invocations count is ok
+//RecordsFinished returns true if mock invocations count is ok
 func (m *PendingAccessorMock) RecordsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RecordsMock.expectationSeries) > 0 {
@@ -351,8 +351,8 @@ func (m *PendingAccessorMock) RecordsFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PendingAccessorMock) ValidateCallCounters() {
 
 	if !m.OpenRequestsForObjIDFinished() {
@@ -365,19 +365,19 @@ func (m *PendingAccessorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PendingAccessorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *PendingAccessorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PendingAccessorMock) MinimockFinish() {
 
 	if !m.OpenRequestsForObjIDFinished() {
@@ -390,14 +390,14 @@ func (m *PendingAccessorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *PendingAccessorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -428,8 +428,8 @@ func (m *PendingAccessorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PendingAccessorMock) AllMocksCalled() bool {
 
 	if !m.OpenRequestsForObjIDFinished() {

@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexHeavyModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// IndexHeavyModifierMock implements github.com/insolar/insolar/ledger/object.IndexHeavyModifier
+//IndexHeavyModifierMock implements github.com/insolar/insolar/ledger/object.IndexHeavyModifier
 type IndexHeavyModifierMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type IndexHeavyModifierMock struct {
 	SetIndexMock       mIndexHeavyModifierMockSetIndex
 }
 
-// NewIndexHeavyModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexHeavyModifier
+//NewIndexHeavyModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexHeavyModifier
 func NewIndexHeavyModifierMock(t minimock.Tester) *IndexHeavyModifierMock {
 	m := &IndexHeavyModifierMock{t: t}
 
@@ -60,7 +60,7 @@ type IndexHeavyModifierMockSetIndexResult struct {
 	r error
 }
 
-// Expect specifies that invocation of IndexHeavyModifier.SetIndex is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexHeavyModifier.SetIndex is expected from 1 to Infinity times
 func (m *mIndexHeavyModifierMockSetIndex) Expect(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *mIndexHeavyModifierMockSetIndex {
 	m.mock.SetIndexFunc = nil
 	m.expectationSeries = nil
@@ -72,7 +72,7 @@ func (m *mIndexHeavyModifierMockSetIndex) Expect(p context.Context, p1 insolar.P
 	return m
 }
 
-// Return specifies results of invocation of IndexHeavyModifier.SetIndex
+//Return specifies results of invocation of IndexHeavyModifier.SetIndex
 func (m *mIndexHeavyModifierMockSetIndex) Return(r error) *IndexHeavyModifierMock {
 	m.mock.SetIndexFunc = nil
 	m.expectationSeries = nil
@@ -84,7 +84,7 @@ func (m *mIndexHeavyModifierMockSetIndex) Return(r error) *IndexHeavyModifierMoc
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexHeavyModifier.SetIndex is expected once
+//ExpectOnce specifies that invocation of IndexHeavyModifier.SetIndex is expected once
 func (m *mIndexHeavyModifierMockSetIndex) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *IndexHeavyModifierMockSetIndexExpectation {
 	m.mock.SetIndexFunc = nil
 	m.mainExpectation = nil
@@ -99,7 +99,7 @@ func (e *IndexHeavyModifierMockSetIndexExpectation) Return(r error) {
 	e.result = &IndexHeavyModifierMockSetIndexResult{r}
 }
 
-// Set uses given function f as a mock of IndexHeavyModifier.SetIndex method
+//Set uses given function f as a mock of IndexHeavyModifier.SetIndex method
 func (m *mIndexHeavyModifierMockSetIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error)) *IndexHeavyModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -108,7 +108,7 @@ func (m *mIndexHeavyModifierMockSetIndex) Set(f func(p context.Context, p1 insol
 	return m.mock
 }
 
-// SetIndex implements github.com/insolar/insolar/ledger/object.IndexHeavyModifier interface
+//SetIndex implements github.com/insolar/insolar/ledger/object.IndexHeavyModifier interface
 func (m *IndexHeavyModifierMock) SetIndex(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error) {
 	counter := atomic.AddUint64(&m.SetIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.SetIndexCounter, 1)
@@ -158,17 +158,17 @@ func (m *IndexHeavyModifierMock) SetIndex(p context.Context, p1 insolar.PulseNum
 	return m.SetIndexFunc(p, p1, p2)
 }
 
-// SetIndexMinimockCounter returns a count of IndexHeavyModifierMock.SetIndexFunc invocations
+//SetIndexMinimockCounter returns a count of IndexHeavyModifierMock.SetIndexFunc invocations
 func (m *IndexHeavyModifierMock) SetIndexMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetIndexCounter)
 }
 
-// SetIndexMinimockPreCounter returns the value of IndexHeavyModifierMock.SetIndex invocations
+//SetIndexMinimockPreCounter returns the value of IndexHeavyModifierMock.SetIndex invocations
 func (m *IndexHeavyModifierMock) SetIndexMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetIndexPreCounter)
 }
 
-// SetIndexFinished returns true if mock invocations count is ok
+//SetIndexFinished returns true if mock invocations count is ok
 func (m *IndexHeavyModifierMock) SetIndexFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetIndexMock.expectationSeries) > 0 {
@@ -188,8 +188,8 @@ func (m *IndexHeavyModifierMock) SetIndexFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexHeavyModifierMock) ValidateCallCounters() {
 
 	if !m.SetIndexFinished() {
@@ -198,19 +198,19 @@ func (m *IndexHeavyModifierMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexHeavyModifierMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *IndexHeavyModifierMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexHeavyModifierMock) MinimockFinish() {
 
 	if !m.SetIndexFinished() {
@@ -219,14 +219,14 @@ func (m *IndexHeavyModifierMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *IndexHeavyModifierMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *IndexHeavyModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -252,8 +252,8 @@ func (m *IndexHeavyModifierMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexHeavyModifierMock) AllMocksCalled() bool {
 
 	if !m.SetIndexFinished() {

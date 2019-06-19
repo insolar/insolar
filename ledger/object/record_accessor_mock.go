@@ -6,18 +6,18 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "RecordAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// RecordAccessorMock implements github.com/insolar/insolar/ledger/object.RecordAccessor
+//RecordAccessorMock implements github.com/insolar/insolar/ledger/object.RecordAccessor
 type RecordAccessorMock struct {
 	t minimock.Tester
 
@@ -27,7 +27,7 @@ type RecordAccessorMock struct {
 	ForIDMock       mRecordAccessorMockForID
 }
 
-// NewRecordAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.RecordAccessor
+//NewRecordAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.RecordAccessor
 func NewRecordAccessorMock(t minimock.Tester) *RecordAccessorMock {
 	m := &RecordAccessorMock{t: t}
 
@@ -61,7 +61,7 @@ type RecordAccessorMockForIDResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of RecordAccessor.ForID is expected from 1 to Infinity times
+//Expect specifies that invocation of RecordAccessor.ForID is expected from 1 to Infinity times
 func (m *mRecordAccessorMockForID) Expect(p context.Context, p1 insolar.ID) *mRecordAccessorMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -73,7 +73,7 @@ func (m *mRecordAccessorMockForID) Expect(p context.Context, p1 insolar.ID) *mRe
 	return m
 }
 
-// Return specifies results of invocation of RecordAccessor.ForID
+//Return specifies results of invocation of RecordAccessor.ForID
 func (m *mRecordAccessorMockForID) Return(r record.Material, r1 error) *RecordAccessorMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -85,7 +85,7 @@ func (m *mRecordAccessorMockForID) Return(r record.Material, r1 error) *RecordAc
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of RecordAccessor.ForID is expected once
+//ExpectOnce specifies that invocation of RecordAccessor.ForID is expected once
 func (m *mRecordAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.ID) *RecordAccessorMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
@@ -100,7 +100,7 @@ func (e *RecordAccessorMockForIDExpectation) Return(r record.Material, r1 error)
 	e.result = &RecordAccessorMockForIDResult{r, r1}
 }
 
-// Set uses given function f as a mock of RecordAccessor.ForID method
+//Set uses given function f as a mock of RecordAccessor.ForID method
 func (m *mRecordAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) (r record.Material, r1 error)) *RecordAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -109,7 +109,7 @@ func (m *mRecordAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) 
 	return m.mock
 }
 
-// ForID implements github.com/insolar/insolar/ledger/object.RecordAccessor interface
+//ForID implements github.com/insolar/insolar/ledger/object.RecordAccessor interface
 func (m *RecordAccessorMock) ForID(p context.Context, p1 insolar.ID) (r record.Material, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
@@ -161,17 +161,17 @@ func (m *RecordAccessorMock) ForID(p context.Context, p1 insolar.ID) (r record.M
 	return m.ForIDFunc(p, p1)
 }
 
-// ForIDMinimockCounter returns a count of RecordAccessorMock.ForIDFunc invocations
+//ForIDMinimockCounter returns a count of RecordAccessorMock.ForIDFunc invocations
 func (m *RecordAccessorMock) ForIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForIDCounter)
 }
 
-// ForIDMinimockPreCounter returns the value of RecordAccessorMock.ForID invocations
+//ForIDMinimockPreCounter returns the value of RecordAccessorMock.ForID invocations
 func (m *RecordAccessorMock) ForIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForIDPreCounter)
 }
 
-// ForIDFinished returns true if mock invocations count is ok
+//ForIDFinished returns true if mock invocations count is ok
 func (m *RecordAccessorMock) ForIDFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForIDMock.expectationSeries) > 0 {
@@ -191,8 +191,8 @@ func (m *RecordAccessorMock) ForIDFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordAccessorMock) ValidateCallCounters() {
 
 	if !m.ForIDFinished() {
@@ -201,19 +201,19 @@ func (m *RecordAccessorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordAccessorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *RecordAccessorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *RecordAccessorMock) MinimockFinish() {
 
 	if !m.ForIDFinished() {
@@ -222,14 +222,14 @@ func (m *RecordAccessorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *RecordAccessorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *RecordAccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -255,8 +255,8 @@ func (m *RecordAccessorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *RecordAccessorMock) AllMocksCalled() bool {
 
 	if !m.ForIDFinished() {

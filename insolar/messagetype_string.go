@@ -32,15 +32,15 @@ func _() {
 	_ = x[TypeAbandonedRequestsNotification-21]
 	_ = x[TypeGetRequest-22]
 	_ = x[TypeGetPendingRequestID-23]
-	_ = x[TypeGetPendingFilament-24]
+	_ = x[TypeGetOpenRequests-24]
 	_ = x[TypeHeavyStartStop-25]
 	_ = x[TypeHeavyPayload-26]
 	_ = x[TypeGenesisRequest-27]
 }
 
-const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeGetRequestTypeGetPendingRequestIDTypeGetPendingFilamentTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
+const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeGetRequestTypeGetPendingRequestIDTypeGetOpenRequestsTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
 
-var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 177, 190, 205, 220, 236, 253, 266, 284, 295, 313, 335, 349, 359, 392, 406, 429, 451, 469, 485, 503}
+var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 177, 190, 205, 220, 236, 253, 266, 284, 295, 313, 335, 349, 359, 392, 406, 429, 448, 466, 482, 500}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {
