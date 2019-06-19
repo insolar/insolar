@@ -67,11 +67,11 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, reply *SeedReply)
 	traceID := utils.RandTraceID()
 	_, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
-	inslog.Infof("[ SeedService.Get ] Incoming request: %s", r.RequestURI)
+	inslog.Infof("[ NodeService.GetSeed ] Incoming request: %s", r.RequestURI)
 
 	seed, err := s.runner.SeedGenerator.Next()
 	if err != nil {
-		return errors.Wrap(err, "[ GetSeed ]")
+		return errors.Wrap(err, "failed to get next seed")
 	}
 	s.runner.SeedManager.Add(*seed)
 

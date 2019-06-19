@@ -67,6 +67,7 @@ func ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
 	return keyProcessor.ExtractPublicKey(privateKey)
 }
 
+// PointsFromDER is used to convert raw DER string to R S points which are representation of the signature
 func PointsFromDER(der []byte) (*big.Int, *big.Int) {
 	R, S := &big.Int{}, &big.Int{}
 
@@ -87,31 +88,33 @@ func PointsFromDER(der []byte) (*big.Int, *big.Int) {
 	return R, S
 }
 
+// VerifySignature used for checking the signature using rawpublicpem and rawRequest
+// selfSigned flag that need to compare public keys
 func VerifySignature(rawRequest []byte, signature string, key string, rawpublicpem string, selfSigned bool) error {
 	sig, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
-		return fmt.Errorf("[ verifySig ]: Cant decode signature %s", err.Error())
+		return fmt.Errorf("cant decode signature %s", err.Error())
 	}
 
 	if key != rawpublicpem && !selfSigned {
-		return fmt.Errorf("[ verifySig ] Access denied. Key - %v", rawpublicpem)
+		return fmt.Errorf("access denied. Key - %v", rawpublicpem)
 	}
 
 	blockPub, _ := pem.Decode([]byte(rawpublicpem))
 	if blockPub == nil {
-		return fmt.Errorf("[ verifySig ] Problems with decoding. Key - %v", rawpublicpem)
+		return fmt.Errorf("problems with decoding. Key - %v", rawpublicpem)
 	}
 	x509EncodedPub := blockPub.Bytes
 	publicKey, err := x509.ParsePKIXPublicKey(x509EncodedPub)
 	if err != nil {
-		return fmt.Errorf("[ verifySig ] Problems with parsing. Key - %v", rawpublicpem)
+		return fmt.Errorf("problems with parsing. Key - %v", rawpublicpem)
 	}
 
 	hash := sha256.Sum256(rawRequest)
 	R, S := PointsFromDER(sig)
 	valid := ecdsa.Verify(publicKey.(*ecdsa.PublicKey), hash[:], R, S)
 	if !valid {
-		return fmt.Errorf("[ verifySig ]: Invalid signature")
+		return fmt.Errorf("invalid signature")
 	}
 
 	return nil

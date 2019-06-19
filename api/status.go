@@ -51,7 +51,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
-	inslog.Infof("[ StatusService.Get ] Incoming request: %s", r.RequestURI)
+	inslog.Infof("[ NodeService.GetStatus ] Incoming request: %s", r.RequestURI)
 
 	reply.NetworkState = s.runner.ServiceNetwork.GetState().String()
 	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()

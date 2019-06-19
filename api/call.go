@@ -219,8 +219,10 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
 	// Digest = "SHA-256=<hashString>"
 	// Signature = "keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>"
-	if len(digest) == 0 || len(richSignature) == 0 || len(body) == 0 {
-		return "", errors.Errorf("Invalid input data length digest: %d, signature: %d, body: %d", len(digest), len(richSignature), len(body))
+	if len(digest) < 15 || strings.Count(digest, "=") < 2 || len(richSignature) == 15 ||
+		strings.Count(richSignature, "=") < 4 || len(body) == 0 {
+		return "", errors.Errorf("invalid input data length digest: %d, signature: %d, body: %d", len(digest),
+			len(richSignature), len(body))
 	}
 	h := sha256.New()
 	_, err := h.Write(body)
@@ -231,10 +233,10 @@ func validateRequestHeaders(digest string, richSignature string, body []byte) (s
 	if sha == digest[strings.IndexByte(digest, '=')+1:] {
 		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
 		if len(sig) == 0 {
-			return "", errors.New("Empty signature")
+			return "", errors.New("empty signature")
 		}
 		return sig, nil
 
 	}
-	return "", errors.New("Cant get signature from header")
+	return "", errors.New("cant get signature from header")
 }
