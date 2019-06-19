@@ -241,12 +241,16 @@ func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.Bootstrap
 		return bc.ZeroBootstrap(ctx)
 	}
 
+	minRequests := int(math.Floor(0.5*float64(discoveryCount))) + 1
+
 	var bootstrapResults []*network.BootstrapResult
 	var hosts []*host.Host
 	for {
 		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
-		if len(hosts) == discoveryCount {
+
+		// TODO: ugly hack to allow create network w/o waiting for all discovery nodes
+		if len(hosts) >= minRequests {
 			// we connected to all discovery nodes
 			break
 		} else {
@@ -259,7 +263,6 @@ func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.Bootstrap
 			reconnectRequests++
 		}
 	}
-	minRequests := int(math.Floor(0.5*float64(discoveryCount))) + 1
 	if reconnectRequests >= minRequests {
 		logger.Infof("[ BootstrapDiscovery ] Need to reconnect as joiner (requested by %d/%d discovery nodes)",
 			reconnectRequests, discoveryCount)
