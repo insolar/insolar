@@ -50,12 +50,8 @@
 
 package serialization
 
-import "github.com/insolar/insolar/network/consensus/common"
-
 /*
-	ByteSize<=16
-		4+1+1+2+4 + (optional)4 = 12 + (optional)4
-	NB! For embedded payloads or digests it MUST be treated as Bits128, padded with zeros
+	ByteSize=16
 */
 type UnifiedProtocolPacketHeader struct {
 	/*
@@ -63,17 +59,10 @@ type UnifiedProtocolPacketHeader struct {
 	*/
 	ReceiverID            uint32 // NB! MUST not be included into packet Signature, MUST NOT =0
 	ProtocolAndPacketType uint8  `insolar-transport:"[0:3]=header:Packet;[4:7]=header:Protocol"` // [00-03]PacketType [04-07]ProtocolType
-	PacketFlags           uint8  `insolar-transport:"[0:0]=flags:relay;[1:]=flags:PacketFlags"`
+	PacketFlags           uint8  `insolar-transport:"[:]=flags:PacketFlags"`
 	// bit[0] RelayFlag =1 when RelayTargetId is !=0 (otherwise that field is excluded)
 	//
 	HeaderAndPayloadLength uint16 // [00-13] ByteLength of Payload, [14-15] reserved = 0
 	SourceId               uint32 // may differ from actual sender when relay is in use, MUST NOT =0
-	RelayTargetId          uint32 `insolar-transport:"optional=relay[0]"` // indicates final destination, MUST NOT =0
-}
-type EmbeddedUnifiedProtocolPacketHeader common.Bits128
-
-type ProtocolPacketExample struct {
-	Header UnifiedProtocolPacketHeader
-	// Protocol Custom Payload - length is in the header
-	PacketSignature common.Bits512 //
+	RelayTargetId          uint32 // indicates final destination, if =0 then there is no relay allowed by sender and receiver MUST decline a packet if actual sender != source
 }

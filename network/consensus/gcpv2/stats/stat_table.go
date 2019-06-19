@@ -173,8 +173,9 @@ func (t *StatTable) AsText(header string) string {
 func (t *StatTable) TableFmt(header string, fmtFn RowValueFormatFunc) string {
 	widths := make([]int, t.ColumnCount())
 	builder := strings.Builder{}
+	builder.WriteString(header)
 	if fmtFn != nil {
-		builder.WriteString("LEGEND [")
+		builder.WriteString("\nLEGEND [")
 		for i := uint8(0); i <= t.MaxValue(); i++ {
 			if i != 0 {
 				builder.WriteRune(' ')
@@ -184,7 +185,6 @@ func (t *StatTable) TableFmt(header string, fmtFn RowValueFormatFunc) string {
 		builder.WriteRune(']')
 		builder.WriteRune(' ')
 	}
-	builder.WriteString(header)
 	builder.WriteString("\n###")
 	for i, c := range t.columns {
 		s := fmt.Sprintf("|%03d%+v", c.colIndex, c.summary)

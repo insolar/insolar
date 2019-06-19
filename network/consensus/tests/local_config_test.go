@@ -69,8 +69,8 @@ var RoundTimingsFor1s = common2.RoundTimings{
 	EndOfPhase2:        400 * time.Millisecond,
 	EndOfPhase3:        500 * time.Millisecond,
 
-	BeforeInPhase2ChasingDelay: 50 * time.Millisecond,
-	BeforeInPhase3ChasingDelay: 50 * time.Millisecond,
+	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
+	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
 func NewEmuLocalConfig(ctx context.Context) core.LocalNodeConfiguration {
@@ -101,10 +101,10 @@ func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner boo
 	if nextPulseDelta == 1 {
 		return r.timings
 	}
-	m := time.Duration(nextPulseDelta)
+	m := time.Duration(nextPulseDelta) // this is NOT a duration, but a multiplier
 	t := r.timings
-	// t.StartPhase0At - don't scale
 
+	t.StartPhase0At *= 1 // don't scale!
 	t.StartPhase1RetryAt *= m
 	t.EndOfPhase1 *= m
 	t.EndOfPhase2 *= m

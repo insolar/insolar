@@ -72,6 +72,12 @@ type EmuUpstreamPulseController struct {
 	nshDelay time.Duration
 }
 
+func (r *EmuUpstreamPulseController) MembershipSuspended() {
+}
+
+func (r *EmuUpstreamPulseController) MembershipResumed() {
+}
+
 func (r *EmuUpstreamPulseController) MembershipAcquired() {
 }
 

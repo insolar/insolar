@@ -102,14 +102,21 @@ type UpstreamPulseController interface {
 	*/
 	ConsensusFailed()
 
-	/* Node has joined a globula */
+	/* This node has joined a globula */
 	MembershipAcquired()
 
-	/* Node was expelled from a globula */
+	/* This node was expelled from a globula */
 	MembershipLost()
+
+	/* This node became suspected joined a globula */
+	MembershipSuspended()
+
+	/* This node returned from suspected into active in a globula */
+	MembershipResumed()
 
 	/* Application traffic should be stopped or throttled down severely for a limited time (1-2 secs). */
 	SuspendTraffic()
+
 	/* Application traffic can be resumed at full */
 	ResumeTraffic()
 }

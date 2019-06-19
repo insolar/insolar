@@ -56,18 +56,28 @@ import (
 
 type GlobulaConsensusProtocolV2Packet struct {
 	Header      UnifiedProtocolPacketHeader `insolar-transport:"Protocol=0x01;Packet=0-4"` // ByteSize<=16
-	PulseNumber common.PulseNumber          `insolar-transport:"[30-31]==0"`               // [30-31] MUST = 0, ByteSize=4
-
-	NodeRank SerializedGlobulaNodeRank `insolar-transport:"Packet=0,1,2,3"` // ByteSize=4, for Phase3 this is EXPECTED rank
+	PulseNumber common.PulseNumber          `insolar-transport:"[30-31]=0"`                // [30-31] MUST = 0, ByteSize=4
 
 	// Phases 0-2
-	PulsarPacket     *EmbeddedPulsarData       `insolar-transport:"optional=PacketFlags[1];Packet=0,1"` // ByteSize>=124
-	GlobulaNodeState *EmbeddedGlobulaNodeState `insolar-transport:"Packet=1,2"`                         // ByteSize=128
-	IntroForJoiner   *IntroductionForJoiner    `insolar-transport:"optional=PacketFlags[2];Packet=1,2"` // ByteSize=240
+	NodeRank          SerializedGlobulaNodeRank `insolar-transport:"Packet=0,1,2"`                       // ByteSize=4, current rank
+	GlobulaNodeState  *EmbeddedGlobulaNodeState `insolar-transport:"Packet=1,2"`                         // ByteSize=128
+	SelfIntroToJoiner *IntroductionToJoiner     `insolar-transport:"optional=PacketFlags[2];Packet=1,2"` // ByteSize=?
+	PulsarPacket      *EmbeddedPulsarData       `insolar-transport:"optional=PacketFlags[1];Packet=0,1"` // ByteSize>=124
 
 	// Phase 3
-	TrustedStateVector *GlobulaStateVector `insolar-transport:"Packet=3"`                         // ByteSize=[129..255]
-	DoubtedStateVector *GlobulaStateVector `insolar-transport:"optional=PacketFlags[3];Packet=3"` // ByteSize=[129..255]
+	/*
+		GlobulaNodeBitset is a 5-state bitset, each node has a state at the same index as was given in rank.
+		Node have following states:
+		0 - z-value (same as missing value) Trusted node
+		1 - Doubted node
+		2 -
+		3 - Fraud node
+		4 - Missing node
+	*/
+	GlobulaNodeBitset  *NodeApperanceBitset `insolar-transport:"Packet=3"`                                                          // ByteSize=1..335
+	TrustedStateVector *GlobulaStateVector  `insolar-transport:"Packet=3;TrustedStateVector.ExpectedRank[28-31]=flags:Phase3Flags"` // ByteSize=96
+	DoubtedStateVector *GlobulaStateVector  `insolar-transport:"optional=Phase3Flags[0];Packet=3"`                                  // ByteSize=96
+	// FraudStateVector *GlobulaStateVector `insolar-transport:"optional=Phase3Flags[1];Packet=3"` //ByteSize=96
 
 	// Claim Section
 	LeaveClaim *LeaveAnnouncementClaim `insolar-transport:"Packet=1"` // ByteSize=5, exclusive
@@ -78,7 +88,7 @@ type GlobulaConsensusProtocolV2Packet struct {
 	// 	ReferendumVotes []ReferendumVote `insolar-transport:"Packet=3"`
 
 	// End Of Packet
-	EndOfClaims     EmptyClaim     // ByteSize=1 - indicates end of claims, MUST NOT be included into PacketSignature
+	EndOfClaims     EmptyClaim     // ByteSize=1 - indicates end of claims
 	PacketSignature common.Bits512 // ByteSize=64
 }
 
@@ -99,7 +109,7 @@ type GlobulaConsensusProtocolV2Packet struct {
 
 type EmbeddedPulsarData struct {
 	// ByteSize>=124
-	Header EmbeddedUnifiedProtocolPacketHeader // ByteSize=16
+	Header UnifiedProtocolPacketHeader // ByteSize=16
 
 	// PulseNumber common.PulseNumber //available externally
 	PulsarPulsePacketExt // ByteSize>=108
@@ -116,25 +126,14 @@ type EmbeddedGlobulaNodeState struct {
 }
 
 type GlobulaStateVector struct {
-	// ByteSize=[129..255]
-	SignedGlobulaStateHash common.Bits512 // ByteSize=64
-	Phase1SignatureHash    common.Bits512 // ByteSize=64
+	// ByteSize=96
 	/*
-		NodeBitset depends on type of the vector:
-		1. for TrustedVector
-			- this is 1bit bitmap, where =1 indicates absence of the node in the trusted vector
-			- exact length of the bitmap may be less than node count, missing positions are considered =0
-		2. for DoubtedVector - this is tri-state bitmap,
-			- this bitmap only includes positions marked as =1 in the TrustedVector
-			- bit ordering and number of bits are related to the sequence of bits =1 in the TrustedVector, e.g.
-				if the trusted vector has bits 15 and 20 =1, then DoubtedVector bitmap has 2 slots, where
-				slot 0 is correlated with bit 15 and slot 1 with bit 20
-			- z-value means doubted node, =0 miss/timeout, =1 indicates fraud.
-			- exact length of the bitmap may be different from the node count, missing positions are considered =0
-
-		When DoubtedVector is missing, all absences indicated in the TrustedVector are considered as miss/timeouts (not as doubts).
+		GlobulaStateHash = merkle(GlobulaNodeStateSignature of all nodes of this vector)
+		SignedGlobulaStateHash = sign(GlobulaStateHash, SK(sending node))
 	*/
-	NodeBitset *NodeApperanceBitset // ByteSize=[1..127]
+	SignedGlobulaStateHash common.Bits512            // ByteSize=64
+	Phase1SignaturesHash   common.Bits224            // ByteSize=28
+	ExpectedRank           SerializedGlobulaNodeRank // ByteSize=4
 }
 
 type NodeApperanceBitset struct {
@@ -146,24 +145,48 @@ type NodeApperanceBitset struct {
 
 // type CloudIdentity common.Bits512 //ByteSize=64
 
-type IntroductionForJoiner struct {
+type IntroductionToJoiner struct {
 	// ByteSize=240
 	// CloudIdentity CloudIdentity //ByteSize=64
 	LastCloudStateHash CloudStateHash   // ByteSize=64
 	SelfIntro          NodeIntroduction // ByteSize=176
 }
 
+type NodeBriefIntro struct {
+	// ByteSize=142
+	ProtocolVersionAndFlags uint16
+	ShortNodeId             common.ShortNodeId
+	InboundRelayId          common.ShortNodeId // =0 - no relay is needed to send packets to the node
+	IssuedAt                common.PulseNumber
+	NodePK                  common.Bits512 // works as a unique node identity
+	NodeSignature           common.Bits512
+}
+
+type NodeExtIntro struct {
+	// ByteSize>=128
+	NodeIntroHash          common.Bits256
+	IssuedByPKFolded       common.Bits256 // DiscoveryNode
+	NodeReferenceWithProof []common.Bits512
+	IssuerSignature        common.Bits512
+}
+
 type NodeIntroduction struct {
 	// ByteSize=176
 	ProtocolVersionAndFlags uint16
 	Reserved0               uint8
-	ValidAsRequestFor       uint8 // how long this intro can be used for joining, but it is not validity of Intro packet itself
-	ShortNodeId             uint32
-	RelayId                 uint32 // =0 - no relay
+	ValidAsRequestFor       uint8 // for how long this intro can be used for joining, but it is not validity of Intro packet itself
+	ShortNodeId             common.ShortNodeId
+	InboundRelayId          common.ShortNodeId // =0 - no relay is needed to send packets to the node
 	IssuedAt                common.PulseNumber
-	MandateHash             common.Bits256
-	NodePK                  common.Bits512
+	NodePK                  common.Bits512 // works as a unique node identity
 	NodeSignature           common.Bits512
+}
+
+type JoinerMandate struct {
+	NodeIntroHash          common.Bits256
+	IssuedByPK             common.Bits512 // DiscoveryNode
+	NodeReferenceWithProof []common.Bits512
+	IssuerSignature        common.Bits512
 }
 
 type ClaimHeader struct {
@@ -184,19 +207,24 @@ type EmptyClaim struct {
 
 type LeaveAnnouncementClaim struct {
 	// ByteSize=5
-	ClaimHeader `insolar-transport:"exclusive;ClaimType=1;length=0-128"` // Must be the only claim per packet, identified by len<128
+	ClaimHeader `insolar-transport:"exclusive;ClaimType=1"` // Must be the only claim per packet, identified by len<128
 	LeaveReason uint32
 }
 
 type JoinRequestClaim struct {
 	// ByteSize=177
-	ClaimHeader `insolar-transport:"exclusive;ClaimType=1;length=128-"` // Must be the only per packet, identified by len>128
+	ClaimHeader `insolar-transport:"exclusive;ClaimType=2"` // Must be the only per packet, identified by len>128
 	Intro       NodeIntroduction
+}
+
+type JoinerMandateClaim struct {
+	ClaimHeader   `insolar-transport:"exclusive;ClaimType=3"` // Must be the only per packet, identified by len>128
+	JoinerMandate JoinerMandate
 }
 
 type NodeNeighbourClaim struct {
 	// ByteSize=[197,374]
-	ClaimHeader `insolar-transport:"ClaimType=2"`
+	ClaimHeader `insolar-transport:"ClaimType=4"`
 
 	NodeRank         SerializedGlobulaNodeRank `insolar-transport:"[30-31]=flags:nodeRank"` // ByteSize=4
 	GlobulaNodeState EmbeddedGlobulaNodeState  // ByteSize=128
@@ -205,8 +233,9 @@ type NodeNeighbourClaim struct {
 	Phase1PacketSignature *common.Bits512 `insolar-transport:"optional=nodeRank[31]"` // ByteSize=64
 
 	// Only claimClass=1 is allowed here
-	LeaveClaim *LeaveAnnouncementClaim // ByteSize=5
-	JoinClaim  *JoinRequestClaim       // ByteSize=177
+	LeaveClaim    *LeaveAnnouncementClaim // ByteSize=5
+	JoinClaim     *JoinRequestClaim       // ByteSize=177
+	JoinerMandate *JoinerMandateClaim
 
 	// EndOfClaims EmptyClaim - not included, end of claims identified by len of NodeNeighbourClaim
 }

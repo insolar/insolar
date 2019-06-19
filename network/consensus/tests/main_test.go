@@ -68,7 +68,7 @@ func TestConsensusMain(t *testing.T) {
 
 	strategy := NewDelayNetStrategy(DelayStrategyConf{
 		MinDelay:         300 * time.Millisecond,
-		MaxDelay:         2000 * time.Millisecond,
+		MaxDelay:         1000 * time.Millisecond,
 		Variance:         0.2,
 		SpikeProbability: 0.1,
 	})
@@ -88,7 +88,7 @@ func TestConsensusMain(t *testing.T) {
 	go CreateGenerator(1, 10, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
 
 	for {
-		fmt.Println(time.Since(startedAt))
+		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
 		if time.Since(startedAt) > time.Minute*30 {
 			return

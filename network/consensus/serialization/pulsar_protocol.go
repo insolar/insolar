@@ -54,7 +54,7 @@ import "github.com/insolar/insolar/network/consensus/common"
 
 type PulsarPulsePacket struct {
 	// ByteSize>=128
-	Header               UnifiedProtocolPacketHeader `insolar-transport:"proto=0x00,packet=0x0F"` // ByteSize<=16
+	Header               UnifiedProtocolPacketHeader `insolar-transport:"proto=0x00,packet=0x0F"` // ByteSize=16
 	PulseNumber          common.PulseNumber          // ByteSize=4
 	PulsarPulsePacketExt                             // ByteSize>=108
 }

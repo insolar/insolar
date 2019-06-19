@@ -56,12 +56,10 @@ import (
 	"math"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-
 	"github.com/insolar/insolar/network/consensus/common"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 func NewPhase2Controller(packetPrepareOptions core.PacketSendOptions, queueNshReady chan *core.NodeAppearance,
@@ -79,7 +77,7 @@ type Phase2Controller struct {
 	core.PhaseControllerPerMemberTemplate
 	packetPrepareOptions core.PacketSendOptions
 	queueNshReady        chan *core.NodeAppearance
-	queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
+	queueTrustUpdated    chan<- TrustUpdateSignal //small enough to be sent as values
 }
 
 type TrustUpdateSignal struct {
@@ -131,10 +129,10 @@ func (c *Phase2Controller) HandleMemberPacket(reader packets.MemberPacketReader,
 		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetEvidence())
 		// TODO check NodeRank also
 		// if p1.HasSelfIntro() {
-		// 	// TODO register protocol misbehavior - IntroClaim was not expected
+		//	// TODO register protocol misbehavior - IntroClaim was not expected
 		// }
 		// if R.GetNodeCount() != int(p1.GetNodeCount()) {
-		// 	//TODO register fraud and SEND state to others
+		// 	// TODO register fraud and SEND state to others
 		// 	return true, n.RegisterFraud(R.Frauds().NewMismatchedRank(n.GetProfile(), p1.GetNodeStateHashEvidence()))
 		// }
 
@@ -219,10 +217,13 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			case done:
 				return
 			case np == nil:
-				if softTimeout {
+				switch {
+				case softTimeout && idleLoop:
 					return
-				} else if joinQueue.Len() > 0 || nodeQueue.Len() > 0 {
+				case joinQueue.Len() > 0 || nodeQueue.Len() > 0:
 					break inner
+				case softTimeout:
+					idleLoop = true
 				}
 			case np.IsJoiner():
 				joinQueue.Add(np)
@@ -268,7 +269,6 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			idleLoop = false
 		}
 	}
-
 }
 
 func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core.NodeAppearance, joinerCount int) {
