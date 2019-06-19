@@ -71,6 +71,9 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 
+	pendingModMock := object.NewPendingModifierMock(t)
+	pendingModMock.SetResultMock.Return(nil)
+
 	writeManagerMock := hot.NewWriteAccessorMock(t)
 	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
 		return func() {}, nil
@@ -126,8 +129,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = lflStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
-	updateObject.Dep.RecentStorageProvider = provideMock
-	updateObject.Dep.PendingModifier = pendingModifierMock
+	updateObject.Dep.PendingModifier = pendingModMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)
@@ -155,6 +157,9 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	idLockMock := object.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
+
+	pendingModMock := object.NewPendingModifierMock(t)
+	pendingModMock.SetResultMock.Return(nil)
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
@@ -199,8 +204,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = lflStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
-	updateObject.Dep.RecentStorageProvider = provideMock
-	updateObject.Dep.PendingModifier = pendingModifierMock
+	updateObject.Dep.PendingModifier = pendingModMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)

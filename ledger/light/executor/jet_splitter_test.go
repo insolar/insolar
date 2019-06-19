@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,15 +39,13 @@ func TestJetSplitter(t *testing.T) {
 	// use real jet store
 	js := jet.NewStore()
 	da := drop.NewAccessorMock(t)
-	rsp := recentstorage.NewProviderMock(t)
-	splitter := NewJetSplitter(jc, js, js, da, rsp)
+	splitter := NewJetSplitter(jc, js, js, da)
 	require.NotNil(t, splitter, "jet splitter created")
 
 	splitter.splitCount = 0
 
 	me := gen.Reference()
 	jc.MeMock.Return(me)
-	rsp.ClonePendingStorageMock.Return()
 
 	// hasSplitIntention
 	pn := gen.PulseNumber()

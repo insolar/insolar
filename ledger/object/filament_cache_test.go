@@ -362,6 +362,9 @@ func TestInMemoryIndex_OpenRequestsForObjID(t *testing.T) {
 		err = filCache.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqSID)
 		require.NoError(t, err)
 
+		pBuck := filCache.buckets[pn][objID]
+		pBuck.isStateCalculated = true
+
 		t.Run("query all", func(t *testing.T) {
 			reqs, err := filCache.OpenRequestsForObjID(ctx, pn, objID, 10)
 			require.NoError(t, err)
@@ -444,6 +447,9 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		err := filCache.SetResult(ctx, pn, objID, insolar.JetID{}, *resID, res)
 		require.NoError(t, err)
+
+		pBuck := filCache.buckets[pn][objID]
+		pBuck.isStateCalculated = true
 
 		open, err := filCache.OpenRequestsForObjID(ctx, pn, objID, 10)
 		require.NoError(t, err)
