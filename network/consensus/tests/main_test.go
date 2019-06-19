@@ -56,6 +56,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -63,7 +64,7 @@ func TestConsensusMain(t *testing.T) {
 	startedAt := time.Now()
 
 	ctx := context.Background()
-	logger := inslogger.FromContext(ctx).WithCaller(false).WithFuncName(false)
+	logger, _ := inslogger.FromContext(ctx).WithCaller(false).WithFormat(insolar.Text)
 	ctx = inslogger.SetLogger(ctx, logger)
 
 	strategy := NewDelayNetStrategy(DelayStrategyConf{
