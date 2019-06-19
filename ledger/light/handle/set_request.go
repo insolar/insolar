@@ -18,10 +18,12 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -54,8 +56,30 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	}
 	reqID := calc.Result.ID
 
+	virtual := record.Virtual{}
+	err = virtual.Unmarshal(msg.Request)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal Request record")
+	}
+
+	rec := record.Unwrap(&virtual)
+	request, ok := rec.(*record.Request)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", rec)
+	}
+
+	// This is a workaround. VM should not register such requests.
+	if request.CallType != record.CTMethod {
+		inslogger.FromContext(ctx).Error("request is not registered")
+		return nil
+	}
+
+	if request.Object == nil {
+		return errors.New("object is nil")
+	}
+
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewCheckJet(*request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
@@ -71,13 +95,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	request := record.Request{}
-	err = request.Unmarshal(msg.Request)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal Request record")
-	}
-
-	setRequest := proc.NewSetRequest(s.message, request, reqID, reqJetID)
+	setRequest := proc.NewSetRequest(s.message, virtual, reqID, reqJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }
