@@ -254,7 +254,11 @@ func (c *ReqPhase1Controller) HandleMemberPacket(p packets.MemberPacketReader, n
 	if err != nil {
 		return err
 	}
-	c.sendReqPhase1Reply(n)
+	if !c.R.GetSelf().IsNshRequired() {
+		c.sendReqPhase1Reply(n)
+	} else {
+		c.R.Log().Warn("got Phase1 request, but NSH is still unavailable")
+	}
 	return nil
 }
 
