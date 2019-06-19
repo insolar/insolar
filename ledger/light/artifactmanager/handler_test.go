@@ -71,8 +71,6 @@ type handlerSuite struct {
 	indexStorageMemory *object.IndexStorageMemory
 }
 
-var domainID = *genRandomID(0)
-
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
 	_, err := rand.Read(buff[:])

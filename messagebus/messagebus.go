@@ -77,6 +77,17 @@ type MessageBus struct {
 	NextPulseMessagePoolLock    sync.RWMutex
 }
 
+func (mb *MessageBus) Init(ctx context.Context) error {
+	mb.Network.SetOperableFunc(func(ctx context.Context, operable bool) {
+		if operable {
+			mb.Release(ctx)
+		} else {
+			mb.Acquire(ctx)
+		}
+	})
+	return nil
+}
+
 func (mb *MessageBus) Acquire(ctx context.Context) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Acquire")
 	defer span.End()
@@ -120,7 +131,6 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 // Start initializes message bus.
 func (mb *MessageBus) Start(ctx context.Context) error {
 	mb.Network.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
-
 	return nil
 }
 
@@ -140,11 +150,6 @@ func (mb *MessageBus) Unlock(ctx context.Context) {
 // Register sets a function as a handler for particular message type,
 // only one handler per type is allowed
 func (mb *MessageBus) Register(p insolar.MessageType, handler insolar.MessageHandler) error {
-	_, ok := mb.handlers[p]
-	if ok {
-		return errors.New("handler for this type already exists")
-	}
-
 	mb.handlers[p] = handler
 	return nil
 }

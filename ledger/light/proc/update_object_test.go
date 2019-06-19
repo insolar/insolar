@@ -36,10 +36,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	domainID = *genRandomID(0)
-)
-
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
 	_, err := rand.Read(buff[:])
@@ -84,13 +80,22 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	virtAmend := record.Wrap(amendRecord)
-	data, err := virtAmend.Marshal()
+	amendVirt := record.Wrap(amendRecord)
+	amendData, err := amendVirt.Marshal()
+	require.NoError(t, err)
+
+	objectRef := genRandomRef(0)
+	resultRecord := record.Result{
+		Object: *objectRef.Record(),
+	}
+	resultVirt := record.Wrap(resultRecord)
+	resultData, err := resultVirt.Marshal()
 	require.NoError(t, err)
 
 	msg := message.UpdateObject{
-		Record: data,
-		Object: *genRandomRef(0),
+		Record: amendData,
+		ResultRecord: resultData,
+		Object: *objectRef,
 	}
 
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
@@ -121,6 +126,8 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = lflStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
+	updateObject.Dep.RecentStorageProvider = provideMock
+	updateObject.Dep.PendingModifier = pendingModifierMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)
@@ -158,13 +165,22 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	virtAmend := record.Wrap(amendRecord)
-	data, err := virtAmend.Marshal()
+	amendVirt := record.Wrap(amendRecord)
+	amendData, err := amendVirt.Marshal()
+	require.NoError(t, err)
+
+	objectRef := genRandomRef(0)
+	resultRecord := record.Result{
+		Object: *objectRef.Record(),
+	}
+	resultVirt := record.Wrap(resultRecord)
+	resultData, err := resultVirt.Marshal()
 	require.NoError(t, err)
 
 	msg := message.UpdateObject{
-		Record: data,
-		Object: *genRandomRef(0),
+		Record: amendData,
+		ResultRecord: resultData,
+		Object: *objectRef,
 	}
 	ctx := context.Background()
 	err = lflStor.Set(ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)
@@ -183,6 +199,8 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = lflStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
+	updateObject.Dep.RecentStorageProvider = provideMock
+	updateObject.Dep.PendingModifier = pendingModifierMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)

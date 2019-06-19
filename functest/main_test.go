@@ -386,6 +386,8 @@ func setup() error {
 	fmt.Println("[ setup ] root reference successfully received")
 	root.ref = info.RootMember
 
+	contracts = make(map[string]*insolar.Reference)
+
 	return nil
 }
 

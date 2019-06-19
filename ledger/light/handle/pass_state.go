@@ -19,7 +19,7 @@ package handle
 import (
 	"context"
 
-	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/payload"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/ledger/light/proc"
@@ -27,10 +27,10 @@ import (
 
 type PassState struct {
 	dep     *proc.Dependencies
-	message *message.Message
+	message payload.Meta
 }
 
-func NewPassState(dep *proc.Dependencies, msg *message.Message) *PassState {
+func NewPassState(dep *proc.Dependencies, msg payload.Meta) *PassState {
 	return &PassState{
 		dep:     dep,
 		message: msg,

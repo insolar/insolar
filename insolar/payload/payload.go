@@ -18,6 +18,7 @@ package payload
 
 import (
 	"github.com/gogo/protobuf/proto"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -46,6 +47,49 @@ const (
 // Payload represents any kind of data that can be encoded in consistent manner.
 type Payload interface {
 	Marshal() ([]byte, error)
+}
+
+const (
+	MessageHashSize = 28
+)
+
+type MessageHash [MessageHashSize]byte
+
+func (h *MessageHash) MarshalTo(data []byte) (int, error) {
+	if len(data) < len(h) {
+		return 0, errors.New("Not enough bytes to marshal PulseNumber")
+	}
+	copy(data, h[:])
+	return len(h), nil
+}
+
+func (h *MessageHash) Unmarshal(data []byte) error {
+	if len(data) < MessageHashSize {
+		return errors.New("not enough bytes")
+	}
+	copy(h[:], data)
+	return nil
+}
+
+func (h MessageHash) Equal(other MessageHash) bool {
+	return h == other
+}
+
+func (h MessageHash) Size() int {
+	return len(h)
+}
+
+func (h *MessageHash) String() string {
+	return base58.Encode(h[:])
+}
+
+func (h *MessageHash) IsZero() bool {
+	for _, b := range h {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // UnmarshalType decodes payload type from given binary.

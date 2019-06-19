@@ -51,13 +51,18 @@
 package phases
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/packets"
 )
 
 type HashStorage struct {
-	proofs map[insolar.Reference]*packets.NodePulseProof
-	ghs    map[insolar.Reference]packets.GlobuleHashSignature
+	proofLock sync.RWMutex
+	proofs    map[insolar.Reference]*packets.NodePulseProof
+
+	// ghs does not need a lock because it is not accessed concurrently
+	ghs map[insolar.Reference]packets.GlobuleHashSignature
 }
 
 func NewHashStorage() *HashStorage {
@@ -77,9 +82,15 @@ func (hs *HashStorage) SetGlobuleHashSignature(ref insolar.Reference, ghs packet
 }
 
 func (hs *HashStorage) AddProof(nodeID insolar.Reference, proof *packets.NodePulseProof) {
+	hs.proofLock.Lock()
+	defer hs.proofLock.Unlock()
+
 	hs.proofs[nodeID] = proof
 }
 
 func (hs *HashStorage) GetProof(nodeID insolar.Reference) *packets.NodePulseProof {
+	hs.proofLock.RLock()
+	defer hs.proofLock.RUnlock()
+
 	return hs.proofs[nodeID]
 }

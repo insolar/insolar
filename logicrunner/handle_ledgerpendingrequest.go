@@ -20,7 +20,9 @@ import (
 	"context"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
@@ -44,20 +46,99 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	es.getLedgerPendingMutex.Lock()
 	defer es.getLedgerPendingMutex.Unlock()
 
-	ref := lr.unsafeGetLedgerPendingRequest(ctx, es)
-	if ref == nil {
+	proc := &UnsafeGetLedgerPendingRequest{
+		es:         es,
+		dep:        p.dep,
+		hasPending: false,
+	}
+
+	err := f.Procedure(ctx, proc, true)
+	if err != nil {
+		inslogger.FromContext(ctx).Debug("GetLedgerPendingRequest.Present err: ", err)
 		return nil
 	}
 
-	insolarRef := Ref{}.FromSlice(p.Message.Payload)
-	h := StartQueueProcessorIfNeeded{
-		es:  es,
-		dep: p.dep,
-		ref: &insolarRef,
+	if !proc.hasPending {
+		return nil
 	}
-	if err := f.Handle(ctx, h.Present); err != nil {
-		inslogger.FromContext(ctx).Warn("[ GetLedgerPendingRequest.Present ] Couldn't start queue: ", err)
+
+	// insolarRef := Ref{}.FromSlice(p.Message.Payload)
+	es.Broker.StartProcessorIfNeeded(ctx)
+	return nil
+}
+
+type UnsafeGetLedgerPendingRequest struct {
+	dep        *Dependencies
+	es         *ExecutionState
+	hasPending bool
+}
+
+func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
+	es := u.es
+	lr := u.dep.lr
+
+	es.Lock()
+	if es.Broker.HasLedgerRequest(ctx) != nil || !es.LedgerHasMoreRequests {
+		es.Unlock()
+		return nil
 	}
+	es.Unlock()
+
+	id := *es.Ref.Record()
+
+	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	if err != nil {
+		if err != insolar.ErrNoPendingRequest {
+			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
+			return nil
+		}
+		es.Lock()
+		defer es.Unlock()
+
+		select {
+		case <-ctx.Done():
+			inslogger.FromContext(ctx).Debug("UnsafeGetLedgerPendingRequest: pulse changed. Do nothing")
+			return nil
+		default:
+		}
+
+		es.LedgerHasMoreRequests = false
+		return nil
+	}
+	es.Lock()
+	defer es.Unlock()
+
+	msg := parcel.Message().(*message.CallMethod)
+
+	parcel.SetSender(msg.Request.Sender)
+
+	pulse := lr.pulse(ctx).PulseNumber
+	authorized, err := lr.JetCoordinator.IsAuthorized(
+		ctx, insolar.DynamicRoleVirtualExecutor, id, pulse, lr.JetCoordinator.Me(),
+	)
+	if err != nil {
+		inslogger.FromContext(ctx).Debug("Authorization failed with error in getLedgerPendingRequest")
+		return nil
+	}
+
+	if !authorized {
+		inslogger.FromContext(ctx).Debug("pulse changed, can't process abandoned messages for this object")
+		return nil
+	}
+
+	select {
+	case <-ctx.Done():
+		inslogger.FromContext(ctx).Debug("UnsafeGetLedgerPendingRequest: pulse changed. Do nothing")
+		return nil
+	default:
+	}
+
+	u.hasPending = true
+
+	es.LedgerHasMoreRequests = true
+	t := NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
+	t.FromLedger = true
+	es.Broker.Prepend(ctx, true, t)
 
 	return nil
 }

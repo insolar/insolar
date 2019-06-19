@@ -180,6 +180,7 @@ func NewMessageHandler(
 			p.Dep.LifelineStateModifier = h.LifelineStateModifier
 			p.Dep.LifelineIndex = h.LifelineIndex
 			p.Dep.WriteAccessor = h.WriteAccessor
+			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.Coordinator = h.JetCoordinator

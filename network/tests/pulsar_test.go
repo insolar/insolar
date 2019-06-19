@@ -234,7 +234,7 @@ func getPSC(pulse insolar.Pulse) (map[string]insolar.PulseSenderConfirmation, er
 	}
 
 	psc.Signature = sign.Bytes()
-	result["test"] = psc
+	result[string(pem)] = psc
 
 	return result, nil
 }

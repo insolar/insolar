@@ -1,8 +1,8 @@
-.. _connect_to_test_net:
+.. _integration:
 
-========================================
-Connecting or Setting Up Insolar Network
-========================================
+========================
+Integrating with Insolar
+========================
 
 .. note::
 

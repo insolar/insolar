@@ -66,7 +66,6 @@ type NetworkBootstrapper interface {
 	Bootstrap(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number insolar.PulseNumber)
 	GetLastPulse() insolar.PulseNumber
-	AuthenticateToDiscoveryNode(ctx context.Context, discovery *DiscoveryNode) error
 }
 
 type networkBootstrapper struct {

@@ -80,11 +80,21 @@ func (p *HotData) process(ctx context.Context) error {
 		return errors.Wrapf(err, "[jet]: drop error (pulse: %v)", p.msg.Drop.Pulse)
 	}
 
+	p.Dep.JetStorage.Update(
+		ctx, p.msg.PulseNumber, true, jetID,
+	)
+
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
 	for _, meta := range p.msg.HotIndexes {
 		decodedIndex, err := object.DecodeLifeline(meta.Index)
 		if err != nil {
 			logger.Error(err)
+			continue
+		}
+
+		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.msg.PulseNumber, meta.ObjID)
+		if objJetID != jetID {
+			logger.Warn("received wrong id")
 			continue
 		}
 
@@ -116,10 +126,6 @@ func (p *HotData) process(ctx context.Context) error {
 			}
 		}(meta.ObjID, flow.Pulse(ctx))
 	}
-
-	p.Dep.JetStorage.Update(
-		ctx, p.msg.PulseNumber, true, jetID,
-	)
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
 

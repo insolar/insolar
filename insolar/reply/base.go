@@ -80,8 +80,6 @@ const (
 	TypeOpenRequestsOnHeavy
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
-
-	TypeNodeSign
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -138,9 +136,6 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &Jet{}, nil
 	case TypeRequest:
 		return &Request{}, nil
-
-	case TypeNodeSign:
-		return &NodeSign{}, nil
 
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
@@ -202,7 +197,6 @@ func init() {
 	gob.Register(&GetChildrenRedirectReply{})
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
-	gob.Register(&NodeSign{})
 	gob.Register(&HasPendingRequests{})
 	gob.Register(&Request{})
 }

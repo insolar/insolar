@@ -68,9 +68,9 @@ import (
 )
 
 func emtygateway(t *testing.T) network.Gateway {
-	return NewNoNetwork(testnet.NewGatewayerMock(t), testutils.NewGlobalInsolarLockMock(t),
+	return NewNoNetwork(testnet.NewGatewayerMock(t),
 		testnet.NewNodeKeeperMock(t), testutils.NewContractRequesterMock(t),
-		testutils.NewCryptographyServiceMock(t), testutils.NewMessageBusMock(t),
+		testutils.NewCryptographyServiceMock(t), testnet.NewHostNetworkMock(t),
 		testutils.NewCertificateManagerMock(t))
 }
 
@@ -79,15 +79,10 @@ func TestSWitch(t *testing.T) {
 
 	nodekeeper := testnet.NewNodeKeeperMock(t)
 	gatewayer := testnet.NewGatewayerMock(t)
-	GIL := testutils.NewGlobalInsolarLockMock(t)
-	GIL.AcquireMock.Return()
-	MB := testutils.NewMessageBusMock(t)
 
-	MB.MustRegisterFunc = func(p insolar.MessageType, p1 insolar.MessageHandler) {}
-
-	ge := NewNoNetwork(gatewayer, GIL,
+	ge := NewNoNetwork(gatewayer,
 		nodekeeper, testutils.NewContractRequesterMock(t),
-		testutils.NewCryptographyServiceMock(t), MB,
+		testutils.NewCryptographyServiceMock(t), testnet.NewHostNetworkMock(t),
 		testutils.NewCertificateManagerMock(t))
 
 	require.NotNil(t, ge)
@@ -99,12 +94,11 @@ func TestSWitch(t *testing.T) {
 	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
 	gatewayer.SetGatewayFunc = func(p network.Gateway) { ge = p }
 	gilreleased := false
-	GIL.ReleaseFunc = func(p context.Context) { gilreleased = true }
 
 	ge.OnPulse(ctx, insolar.Pulse{})
 
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
-	require.True(t, gilreleased)
+	require.False(t, gilreleased)
 	cref := testutils.RandomRef()
 
 	for _, state := range []insolar.NetworkState{insolar.NoNetworkState,
@@ -131,17 +125,13 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	nodekeeper := testnet.NewNodeKeeperMock(t)
 	gatewayer := testnet.NewGatewayerMock(t)
-	GIL := testutils.NewGlobalInsolarLockMock(t)
-	GIL.AcquireMock.Return()
-	MB := testutils.NewMessageBusMock(t)
-
-	MB.MustRegisterFunc = func(p insolar.MessageType, p1 insolar.MessageHandler) {}
 
 	CR := testutils.NewContractRequesterMock(t)
 	CM := testutils.NewCertificateManagerMock(t)
-	ge := NewNoNetwork(gatewayer, GIL,
+	ge := NewNoNetwork(gatewayer,
 		nodekeeper, CR,
-		testutils.NewCryptographyServiceMock(t), MB,
+		testutils.NewCryptographyServiceMock(t),
+		testnet.NewHostNetworkMock(t),
 		CM)
 
 	require.NotNil(t, ge)
@@ -153,12 +143,11 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
 	gatewayer.SetGatewayFunc = func(p network.Gateway) { ge = p }
 	gilreleased := false
-	GIL.ReleaseFunc = func(p context.Context) { gilreleased = true }
 
 	ge.OnPulse(ctx, insolar.Pulse{})
 
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
-	require.True(t, gilreleased)
+	require.False(t, gilreleased)
 
 	cref := testutils.RandomRef()
 

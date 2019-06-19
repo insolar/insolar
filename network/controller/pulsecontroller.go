@@ -80,7 +80,6 @@ type pulseController struct {
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
 	CryptographyService insolar.CryptographyService        `inject:""`
-	Resolver            network.RoutingTable               `inject:""`
 	Network             network.HostNetwork                `inject:""`
 	TerminationHandler  insolar.TerminationHandler         `inject:""`
 
@@ -129,22 +128,22 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Pac
 }
 
 func (pc *pulseController) verifyPulseSign(pulse insolar.Pulse) error {
-	hashProvider := pc.CryptographyScheme.IntegrityHasher()
 	if len(pulse.Signs) == 0 {
 		return errors.New("received empty pulse signs")
 	}
-	for _, psc := range pulse.Signs {
+	hashProvider := pc.CryptographyScheme.IntegrityHasher()
+	for key, psc := range pulse.Signs {
 		payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
 		hash, err := payload.Hash(hashProvider)
 		if err != nil {
 			return errors.Wrap(err, "failed to get hash from pulse payload")
 		}
-		key, err := pc.KeyProcessor.ImportPublicKeyPEM([]byte(psc.ChosenPublicKey))
+		pk, err := pc.KeyProcessor.ImportPublicKeyPEM([]byte(key))
 		if err != nil {
 			return errors.Wrap(err, "failed to import public key")
 		}
 
-		verified := pc.CryptographyService.Verify(key, insolar.SignatureFromBytes(psc.Signature), hash)
+		verified := pc.CryptographyService.Verify(pk, insolar.SignatureFromBytes(psc.Signature), hash)
 
 		if !verified {
 			return errors.New("cryptographic signature verification failed")

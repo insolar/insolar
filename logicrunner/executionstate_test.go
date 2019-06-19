@@ -17,24 +17,56 @@
 package logicrunner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 )
 
+func NewBroker(ctx context.Context, count int) *ExecutionBroker {
+	br := NewExecutionBroker(nil, nil, nil)
+	for i := 0; i < count; i++ {
+		br.Put(ctx, false, &Transcript{
+			LogicContext: &insolar.LogicCallContext{
+				Immutable: false,
+			},
+			Context: ctx,
+		})
+	}
+	return br
+}
+
+func newExecutionStateLength(ctx context.Context, count int, list *CurrentExecutionList,
+	pending *message.PendingState) *ExecutionState {
+
+	es := NewExecutionState(gen.Reference())
+	es.Broker = NewBroker(ctx, count)
+	if list != nil {
+		es.CurrentList = list
+	}
+	if pending != nil {
+		es.pending = *pending
+	}
+	return es
+}
+
 func TestExecutionState_OnPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	list := NewCurrentExecutionList()
-	list.Set(testutils.RandomRef(), &CurrentExecution{})
+	list.Set(testutils.RandomRef(), &Transcript{})
+
+	inPending := message.InPending
 
 	table := []struct {
 		name             string
-		es               ExecutionState
+		es               *ExecutionState
 		meNext           bool
 		numberOfMessages int
 		checkES          func(t *testing.T, es *ExecutionState)
@@ -44,42 +76,42 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		},
 		{
 			name:             "we have queue",
-			es:               ExecutionState{Queue: []ExecutionQueueElement{{ctx: ctx}}},
+			es:               newExecutionStateLength(ctx, 1, nil, nil),
 			numberOfMessages: 1,
 			checkES: func(t *testing.T, es *ExecutionState) {
-				require.Len(t, es.Queue, 0)
+				require.Len(t, es.Broker.mutable.queue, 0)
 			},
 		},
 		{
 			name:             "we have queue, we are next",
 			meNext:           true,
-			es:               ExecutionState{Queue: []ExecutionQueueElement{{ctx: ctx}}},
+			es:               newExecutionStateLength(ctx, 1, nil, nil),
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
-				require.Len(t, es.Queue, 1)
+				require.Len(t, es.Broker.mutable.queue, 1)
 			},
 		},
 		{
 			name:             "running something without queue, pending execution",
-			es:               ExecutionState{CurrentList: list},
+			es:               newExecutionStateLength(ctx, 0, list, nil),
 			numberOfMessages: 2,
 			checkES: func(t *testing.T, es *ExecutionState) {
-				require.Len(t, es.Queue, 0)
+				require.Len(t, es.Broker.mutable.queue, 0)
 				require.Equal(t, message.InPending, es.pending)
 			},
 		},
 		{
 			name:             "running something without queue, we're next",
-			es:               ExecutionState{CurrentList: list},
+			es:               newExecutionStateLength(ctx, 0, list, nil),
 			meNext:           true,
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
-				require.Len(t, es.Queue, 0)
+				require.Len(t, es.Broker.mutable.queue, 0)
 			},
 		},
 		{
 			name:             "in not confirmed pending and no queue, still message",
-			es:               ExecutionState{pending: message.InPending},
+			es:               newExecutionStateLength(ctx, 0, nil, &inPending),
 			numberOfMessages: 1,
 			checkES: func(t *testing.T, es *ExecutionState) {
 				require.Equal(t, message.NotPending, es.pending)
@@ -87,7 +119,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		},
 		{
 			name:             "in not confirmed pending and no queue, we're next",
-			es:               ExecutionState{pending: message.InPending},
+			es:               newExecutionStateLength(ctx, 0, nil, &inPending),
 			meNext:           true,
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
@@ -97,16 +129,11 @@ func TestExecutionState_OnPulse(t *testing.T) {
 	}
 
 	for _, test := range table {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
-			es := &test.es
-			if es.CurrentList == nil {
-				es.CurrentList = NewCurrentExecutionList()
-			}
-			messages := es.OnPulse(ctx, test.meNext)
+			messages := test.es.OnPulse(ctx, test.meNext)
 			require.Equal(t, test.numberOfMessages, len(messages))
 			if test.checkES != nil {
-				test.checkES(t, es)
+				test.checkES(t, test.es)
 			}
 		})
 	}

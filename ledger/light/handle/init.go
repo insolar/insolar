@@ -20,10 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
-	wmessage "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-
 	"github.com/insolar/insolar/insolar"
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -57,46 +53,55 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	logger := inslogger.FromContext(ctx)
 	err := s.handle(ctx, f)
-	if err != nil && s.message.WatermillMsg != nil {
-		errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
-		if err != nil {
-			logger.Error(errors.Wrap(err, "failed to reply error"))
-			return err
-		}
-		go s.sender.Reply(ctx, s.message.WatermillMsg, errMsg)
+	if err != nil {
+		logger.Error(errors.Wrap(err, "handling error"))
 	}
 	return err
 }
 
 func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	if s.message.WatermillMsg != nil {
-		payloadType, err := payload.UnmarshalTypeFromMeta(s.message.WatermillMsg.Payload)
+		var err error
+
+		meta := payload.Meta{}
+		err = meta.Unmarshal(s.message.WatermillMsg.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal meta")
+		}
+		payloadType, err := payload.UnmarshalType(meta.Payload)
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal payload type")
 		}
+
+		ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
 		switch payloadType {
 		case payload.TypeGetObject:
-			h := NewGetObject(s.dep, s.message.WatermillMsg, false)
-			return f.Handle(ctx, h.Present)
+			h := NewGetObject(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
 		case payload.TypeGetPendingFilament:
 			h := NewGetPendingFilament(s.dep, s.message.WatermillMsg)
 			return f.Handle(ctx, h.Present)
 		case payload.TypePassState:
-			h := NewPassState(s.dep, s.message.WatermillMsg)
-			return f.Handle(ctx, h.Present)
+			h := NewPassState(s.dep, meta)
+			err = f.Handle(ctx, h.Present)
 		case payload.TypeGetCode:
-			h := NewGetCode(s.dep, s.message.WatermillMsg, false)
-			return f.Handle(ctx, h.Present)
+			h := NewGetCode(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
 		case payload.TypeSetCode:
-			h := NewSetCode(s.dep, s.message.WatermillMsg, false)
-			return f.Handle(ctx, h.Present)
+			h := NewSetCode(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
 		case payload.TypePass:
-			return s.handlePass(ctx, f)
+			err = s.handlePass(ctx, f, meta)
 		case payload.TypeError:
-			return f.Handle(ctx, NewError(s.message.WatermillMsg).Present)
+			err = f.Handle(ctx, NewError(s.message.WatermillMsg).Present)
 		default:
-			return fmt.Errorf("no handler for message type %s", payloadType.String())
+			err = fmt.Errorf("no handler for message type %s", payloadType.String())
 		}
+		if err != nil {
+			s.replyError(ctx, meta, err)
+		}
+		return err
 	}
 
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", s.message.Parcel.Message().Type().String()))
@@ -152,8 +157,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	}
 }
 
-func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
-	pl, err := payload.UnmarshalFromMeta(s.message.WatermillMsg.Payload)
+func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) error {
+	var err error
+	pl, err := payload.Unmarshal(meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal pass payload")
 	}
@@ -162,25 +168,41 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 		return errors.New("wrong pass payload")
 	}
 
-	payloadType, err := payload.UnmarshalTypeFromMeta(pass.Origin)
+	originMeta := payload.Meta{}
+	err = originMeta.Unmarshal(pass.Origin)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
-	origin := wmessage.NewMessage(watermill.NewUUID(), pass.Origin)
-	middleware.SetCorrelationID(string(pass.CorrelationID), origin)
+	payloadType, err := payload.UnmarshalType(originMeta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload type")
+	}
+
+	ctx, _ = inslogger.WithField(ctx, "msg_type_original", payloadType.String())
+
+	if originMeta.Pulse != meta.Pulse {
+		s.replyError(ctx, originMeta, flow.ErrCancelled)
+		return flow.ErrCancelled
+	}
 
 	switch payloadType {
 	case payload.TypeGetObject:
-		h := NewGetObject(s.dep, origin, true)
-		return f.Handle(ctx, h.Present)
+		h := NewGetObject(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetCode:
-		h := NewGetCode(s.dep, origin, true)
-		return f.Handle(ctx, h.Present)
+		h := NewGetCode(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeSetCode:
-		h := NewSetCode(s.dep, origin, true)
-		return f.Handle(ctx, h.Present)
+		h := NewSetCode(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	default:
+		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
-	return nil
+	if err != nil {
+		s.replyError(ctx, originMeta, err)
+	}
+
+	return err
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
@@ -188,4 +210,16 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 		ReplyTo: s.message.ReplyTo,
 		Err:     errors.New("no past handler"),
 	}, false)
+}
+
+func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) {
+	errCode := payload.CodeUnknown
+	if err == flow.ErrCancelled {
+		errCode = payload.CodeFlowCanceled
+	}
+	errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error(), Code: uint32(errCode)})
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
+	}
+	go s.sender.Reply(ctx, replyTo, errMsg)
 }

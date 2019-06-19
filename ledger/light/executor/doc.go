@@ -14,26 +14,5 @@
 // limitations under the License.
 //
 
-package reply
-
-import (
-	"github.com/insolar/insolar/insolar"
-)
-
-type NodeSignInt interface {
-	insolar.Reply
-	GetSign() []byte
-}
-
-type NodeSign struct {
-	Sign []byte
-}
-
-// Type implementation of Reply interface.
-func (e *NodeSign) Type() insolar.ReplyType {
-	return TypeNodeSign
-}
-
-func (e *NodeSign) GetSign() []byte {
-	return e.Sign
-}
+// executor contains internal business logic object for light executor.
+package executor
