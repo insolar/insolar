@@ -223,9 +223,10 @@ func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 	}
 
 	meta := payload.Meta{}
+	meta.ID = []byte(watermill.NewUUID())
 	buf, err := meta.Marshal()
 	require.NoError(t, err)
-	msg := message.NewMessage(watermill.NewUUID(), buf)
+	msg := message.NewMessage(string(meta.ID), buf)
 
 	res, err := b.IncomingMessageRouter(incomingHandler)(msg)
 	require.NoError(t, err)
@@ -258,17 +259,10 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 		return nil, nil
 	}
 
-	originMeta := payload.Meta{
-		Payload: []byte{1, 2, 3, 4, 5},
-	}
-	data, err := originMeta.Marshal()
-	require.NoError(t, err)
-	h := b.pcs.IntegrityHasher()
-	_, err = h.Write(data)
-	require.NoError(t, err)
+	id := []byte(watermill.NewUUID())
 
 	originHash := payload.MessageHash{}
-	err = originHash.Unmarshal(h.Sum(nil))
+	err := originHash.Unmarshal(id)
 	require.NoError(t, err)
 
 	b.replies[originHash] = resChan
@@ -341,15 +335,13 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 	b := NewBus(&PublisherMock{pubErr: nil}, pulseMock, coordinatorMock, pcs)
 	ctx := context.Background()
 
-	msg := message.NewMessage(watermill.NewUUID(), slice())
+	id := watermill.NewUUID()
+	msg := message.NewMessage(id, slice())
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
-	h := b.pcs.IntegrityHasher()
-	_, err := h.Write(msg.Payload)
-	require.NoError(t, err)
 	hash := payload.MessageHash{}
-	err = hash.Unmarshal(h.Sum(nil))
+	err := hash.Unmarshal([]byte(id))
 	require.NoError(t, err)
 	meta := payload.Meta{
 		OriginHash: hash,
@@ -471,9 +463,10 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	// send messages
 	for i := 0; i < count; i++ {
 		go func(i int) {
-			results, _ := b.SendTarget(ctx, msgs[i], gen.Reference())
+			results, doneWait := b.SendTarget(ctx, msgs[i], gen.Reference())
 			done <- nil
 			_, ok := <-results
+			doneWait()
 			isReplyOk <- ok
 		}(i)
 	}
@@ -491,11 +484,12 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 
 	var reps []*message.Message
 	for _, msg := range msgs {
-		h := b.pcs.IntegrityHasher()
-		_, err := h.Write(msg.Payload)
+		msgMeta := payload.Meta{}
+		err := msgMeta.Unmarshal(msg.Payload)
 		require.NoError(t, err)
+
 		hash := payload.MessageHash{}
-		err = hash.Unmarshal(h.Sum(nil))
+		err = hash.Unmarshal(msgMeta.ID)
 		require.NoError(t, err)
 
 		meta := payload.Meta{

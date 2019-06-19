@@ -266,7 +266,7 @@ func (m *PulseManager) getExecutorHotData(
 		return nil, err
 	}
 
-	hotIndexes := make([]message.HotIndex, len(bucks))
+	hotIndexes := []message.HotIndex{}
 	for _, meta := range bucks {
 		encoded, err := meta.Lifeline.Marshal()
 		if err != nil {

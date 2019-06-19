@@ -505,7 +505,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
-	es.ObjectDescriptor = objDesc
+	current.ObjectDescriptor = objDesc
 
 	if es.PrototypeDescriptor == nil {
 		protoRef, err := objDesc.Prototype()
@@ -524,7 +524,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 
 	current.LogicContext.Prototype = es.PrototypeDescriptor.HeadRef()
 	current.LogicContext.Code = es.CodeDescriptor.Ref()
-	current.LogicContext.Parent = es.ObjectDescriptor.Parent()
+	current.LogicContext.Parent = current.ObjectDescriptor.Parent()
 	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
 	if request.Prototype != nil && !request.Prototype.Equal(*es.PrototypeDescriptor.HeadRef()) {
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
@@ -536,7 +536,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	newData, result, err := executor.CallMethod(
-		ctx, current.LogicContext, *es.CodeDescriptor.Ref(), es.ObjectDescriptor.Memory(), request.Method, request.Arguments,
+		ctx, current.LogicContext, *es.CodeDescriptor.Ref(), current.ObjectDescriptor.Memory(), request.Method, request.Arguments,
 	)
 	if err != nil {
 		return nil, es.WrapError(current, err, "executor error")
@@ -545,14 +545,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	am := lr.ArtifactManager
 	if current.Deactivate {
 		_, err := am.DeactivateObject(
-			ctx, *current.RequestRef, es.ObjectDescriptor, result,
+			ctx, *current.RequestRef, current.ObjectDescriptor, result,
 		)
 		if err != nil {
 			return nil, es.WrapError(current, err, "couldn't deactivate object")
 		}
-	} else if !bytes.Equal(es.ObjectDescriptor.Memory(), newData) {
+	} else if !bytes.Equal(current.ObjectDescriptor.Memory(), newData) {
 		_, err := am.UpdateObject(
-			ctx, *current.RequestRef, es.ObjectDescriptor, newData, result,
+			ctx, *current.RequestRef, current.ObjectDescriptor, newData, result,
 		)
 		if err != nil {
 			return nil, es.WrapError(current, err, "couldn't update object")
@@ -747,7 +747,7 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Messa
 	}
 }
 
-func convertQueueToMessageQueue(ctx context.Context, queue []Transcript) []message.ExecutionQueueElement {
+func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
 	var traces string
 	for _, elem := range queue {
