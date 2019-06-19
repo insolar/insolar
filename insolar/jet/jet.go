@@ -150,11 +150,16 @@ func parsePrefix(s string) []byte {
 	return prefix
 }
 
-// Info holds info about jet.
-type Info struct {
-	ID       insolar.JetID
-	MineNext bool
-	Left     *Info
-	Right    *Info
-	Split    bool
+// Siblings calculates left and right siblings for provided jet.
+func Siblings(id insolar.JetID) (insolar.JetID, insolar.JetID) {
+	depth, prefix := id.Depth(), id.Prefix()
+
+	leftPrefix := resetBits(prefix, depth)
+	left := insolar.NewJetID(depth+1, leftPrefix)
+
+	rightPrefix := resetBits(prefix, depth)
+	setBit(rightPrefix, depth)
+	right := insolar.NewJetID(depth+1, rightPrefix)
+
+	return *left, *right
 }
