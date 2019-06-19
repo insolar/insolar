@@ -189,17 +189,10 @@ generate_root_member_keys()
     echo "generate members keys in dir: $CONFIGS_DIR"
     bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_0_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_1_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_2_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_3_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_4_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_5_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_6_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_7_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_8_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_9_member_keys.json
-
+    for (( b = 0; b < 10; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
+    done
 }
 
 check_working_dir()

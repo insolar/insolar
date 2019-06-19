@@ -68,17 +68,17 @@ func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) error {
 	w.Balance = newBalance.String()
 
 	acceptErr := toWallet.Accept(amount.String())
-	if acceptErr != nil {
-		newBalance, err := safemath.Add(balance, amount)
-		if err != nil {
-			return fmt.Errorf("[ Transfer ] Couldn't add amount back to balance: %s", err.Error())
-		}
-		w.Balance = newBalance.String()
-
-		return fmt.Errorf("[ Transfer ] Cant accept balance to wallet: %s", acceptErr.Error())
-	} else {
+	if acceptErr == nil {
 		return nil
 	}
+
+	newBalance, err = safemath.Add(balance, amount)
+	if err != nil {
+		return fmt.Errorf("[ Transfer ] Couldn't add amount back to balance: %s", err.Error())
+	}
+	w.Balance = newBalance.String()
+
+	return fmt.Errorf("[ Transfer ] Cant accept balance to wallet: %s", acceptErr.Error())
 }
 
 // Accept transfer to balance

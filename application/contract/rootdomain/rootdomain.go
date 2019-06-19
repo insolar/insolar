@@ -19,8 +19,8 @@ package rootdomain
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
-	"github.com/insolar/insolar/application/contract/rootdomain/util"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -113,17 +113,17 @@ func (rd RootDomain) GetBurnAddress() (string, error) {
 }
 
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
-	rd.PublicKeyMap[util.TrimPublicKey(publicKey)] = memberRef
-	rd.BurnAddressMap[util.TrimBurnAddress(burnAddress)] = memberRef
+	rd.PublicKeyMap[TrimPublicKey(publicKey)] = memberRef
+	rd.BurnAddressMap[TrimBurnAddress(burnAddress)] = memberRef
 	return nil
 }
 
 func (rd RootDomain) GetReferenceByPublicKey(publicKey string) (insolar.Reference, error) {
-	return rd.PublicKeyMap[util.TrimPublicKey(publicKey)], nil
+	return rd.PublicKeyMap[TrimPublicKey(publicKey)], nil
 }
 
 func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
-	return rd.BurnAddressMap[util.TrimBurnAddress(burnAddress)], nil
+	return rd.BurnAddressMap[TrimBurnAddress(burnAddress)], nil
 }
 
 func (rd RootDomain) GetCostCenter() (insolar.Reference, error) {
@@ -138,4 +138,29 @@ func (rd *RootDomain) CreateHelloWorld() (string, error) {
 	}
 
 	return m.GetReference().String(), nil
+}
+
+func TrimPublicKey(publicKey string) string {
+	return TrimBurnAddress(between(publicKey, "KEY-----", "-----END"))
+}
+
+func TrimBurnAddress(burnAddress string) string {
+	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(burnAddress), "\n"), ""))
+}
+
+func between(value string, a string, b string) string {
+	// Get substring between two strings.
+	pos := strings.Index(value, a)
+	if pos == -1 {
+		return ""
+	}
+	posLast := strings.Index(value, b)
+	if posLast == -1 {
+		return ""
+	}
+	posFirst := pos + len(a)
+	if posFirst >= posLast {
+		return ""
+	}
+	return value[posFirst:posLast]
 }
