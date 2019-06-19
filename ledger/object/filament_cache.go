@@ -192,7 +192,7 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 		return ErrLifelineNotFound
 	}
 	i.idLocker.Lock(&objID)
-	defer i.idLocker.Lock(&objID)
+	defer i.idLocker.Unlock(&objID)
 
 	pb := i.pendingBucket(pn, objID)
 	if pb == nil {
@@ -273,7 +273,7 @@ func (b *pendingMeta) addMetaIDToFilament(pn insolar.PulseNumber, metaID insolar
 func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error {
 	logger := inslogger.FromContext(ctx)
 	i.idLocker.Lock(&objID)
-	defer i.idLocker.Lock(&objID)
+	defer i.idLocker.Unlock(&objID)
 
 	idx := i.idxAccessor.Index(pn, objID)
 	if idx == nil {
@@ -290,7 +290,9 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 
 	reqsIDs, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
 	if !ok {
-		return ErrResultWithoutRequest
+		// TODO: https://insolar.atlassian.net/browse/INS-2705 @egorikas
+		logger.Error(errors.Wrapf(ErrResultWithoutRequest, "no requests for %v", resID.DebugString()))
+		// return ErrResultWithoutRequest
 	}
 
 	lfl := idx.Lifeline
@@ -377,7 +379,7 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 	}
 
 	i.idLocker.Lock(&objID)
-	defer i.idLocker.Lock(&objID)
+	defer i.idLocker.Unlock(&objID)
 
 	pb := i.pendingBucket(pn, objID)
 	if pb == nil {

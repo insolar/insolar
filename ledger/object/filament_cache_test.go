@@ -69,10 +69,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		}
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filamnetCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filamnetCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
 		idxStor.buckets[pn][objID].Lifeline.PendingPointer = &prevPending
 
@@ -146,10 +143,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		}
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filamnetCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filamnetCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
 		buck := idxStor.buckets[pn][objID]
 		buck.Lifeline.PendingPointer = &firstPending
@@ -196,10 +190,7 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 		rsm.SetMock.Return(nil)
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filamnetCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filamnetCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
 		idxStor.buckets[pn][objID].Lifeline.PendingPointer = &objID
 
@@ -244,10 +235,7 @@ func TestInMemoryIndex_SetFilament(t *testing.T) {
 		}
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filamnetCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filamnetCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
 		filamnetCache.createPendingBucket(ctx, pn, objID)
 
@@ -316,10 +304,7 @@ func TestInMemoryIndex_Records(t *testing.T) {
 		}
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
 
 		_ = filCache.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqID)
@@ -369,10 +354,7 @@ func TestInMemoryIndex_OpenRequestsForObjID(t *testing.T) {
 		_ = rms.Set(ctx, *reqSID, record.Material{Virtual: &reqSV})
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rms, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rms, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
 
 		err := filCache.SetRequest(ctx, pn, objID, insolar.JetID{}, *reqID)
@@ -403,10 +385,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		pn := gen.PulseNumber()
 		objID := gen.ID()
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, nil, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), nil, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 
 		err := filCache.SetResult(ctx, pn, objID, insolar.JetID{}, insolar.ID{}, record.Result{})
 
@@ -414,6 +393,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 	})
 
 	t.Run("set result, when no requests", func(t *testing.T) {
+		t.Skip("until https://insolar.atlassian.net/browse/INS-2705")
 		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
 		objID := gen.ID()
@@ -424,10 +404,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 
 		rsm := NewRecordStorageMock(t)
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 
 		idxStor.CreateIndex(ctx, pn, objID)
 
@@ -459,10 +436,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		_ = rms.Set(ctx, *resID, record.Material{Virtual: &resV})
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rms, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rms, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
 
 		_ = filCache.SetRequest(ctx, pn, objID, insolar.JetID{}, *objRef.Record())
@@ -508,10 +482,7 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		_ = rms.Set(ctx, *resID, record.Material{Virtual: &resV})
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rms, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rms, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
 
 		buck := idxStor.buckets[pn][objID]
@@ -570,10 +541,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		}
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		filCache.createPendingBucket(ctx, pn, objID)
 		fBuck := filCache.buckets[pn][objID]
 		idxStor.CreateIndex(ctx, pn, objID)
@@ -621,10 +589,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		}
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		filCache.createPendingBucket(ctx, pn, objID)
 		fBuck := filCache.buckets[pn][objID]
 		fBuck.notClosedRequestsIdsIndex = map[insolar.PulseNumber]map[insolar.ID]struct{}{
@@ -734,10 +699,7 @@ func TestInMemoryIndex_RefreshState(t *testing.T) {
 		}
 
 		idxStor := NewIndexStorageMemory()
-		idLocker := NewIDLockerMock(t)
-		idLocker.LockMock.Return()
-		idLocker.UnlockMock.Return()
-		filCache := NewFilamentCacheStorage(idxStor, idxStor, idLocker, rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
+		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rsm, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		filCache.createPendingBucket(ctx, pn, objID)
 		fBuck := filCache.buckets[pn][objID]
 		fBuck.notClosedRequestsIdsIndex = map[insolar.PulseNumber]map[insolar.ID]struct{}{
