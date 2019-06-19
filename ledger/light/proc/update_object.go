@@ -266,10 +266,7 @@ func (p *UpdateObject) closePending(ctx context.Context, id insolar.ID, virtRec 
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
 	case *record.Result:
-		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.JetID))
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
-
-		err := p.Dep.PendingModifier.SetResult(ctx, p.PulseNumber, r.Object, id, *r)
+		err := p.Dep.PendingModifier.SetResult(ctx, p.PulseNumber, r.Object, p.JetID, id, *r)
 		if err != nil {
 			return errors.Wrap(err, "can't save result into filament-index")
 		}

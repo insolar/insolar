@@ -602,7 +602,6 @@ func (m *client) DeployCode(
 		Code:   code,
 	}
 
-
 	pl, err := m.retryer(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
 	if err != nil {
 		return nil, err
@@ -644,7 +643,6 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 	}
 	return nil, fmt.Errorf("flow cancelled, retries exceeded")
 }
-
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.
@@ -820,7 +818,6 @@ func (m *client) RegisterResult(
 		Object:  *obj.Record(),
 		Request: request,
 		Payload: payload,
-		Status:  record.Success,
 	}
 	virtRec := record.Wrap(res)
 

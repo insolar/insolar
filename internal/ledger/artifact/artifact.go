@@ -148,7 +148,6 @@ func (m *Scope) RegisterResult(
 		Object:  *obj.Record(),
 		Request: request,
 		Payload: payload,
-		Status:  record.Success,
 	}
 	virtRec := record.Wrap(res)
 

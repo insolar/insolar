@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
@@ -31,7 +30,7 @@ import (
 )
 
 type GetPendingFilament struct {
-	message   *message.Message
+	message   payload.Meta
 	objID     insolar.ID
 	startFrom insolar.PulseNumber
 	readUntil insolar.PulseNumber
@@ -42,7 +41,7 @@ type GetPendingFilament struct {
 	}
 }
 
-func NewGetPendingFilament(msg *message.Message, objID insolar.ID, startFrom insolar.PulseNumber, readUntil insolar.PulseNumber) *GetPendingFilament {
+func NewGetPendingFilament(msg payload.Meta, objID insolar.ID, startFrom insolar.PulseNumber, readUntil insolar.PulseNumber) *GetPendingFilament {
 	return &GetPendingFilament{
 		message:   msg,
 		objID:     objID,

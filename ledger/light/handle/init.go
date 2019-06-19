@@ -80,7 +80,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 			h := NewGetObject(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeGetPendingFilament:
-			h := NewGetPendingFilament(s.dep, s.message.WatermillMsg)
+			h := NewGetPendingFilament(s.dep, meta)
 			return f.Handle(ctx, h.Present)
 		case payload.TypePassState:
 			h := NewPassState(s.dep, meta)

@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
@@ -30,18 +29,18 @@ import (
 type GetPendingFilament struct {
 	dep *proc.Dependencies
 
-	message *message.Message
+	meta payload.Meta
 }
 
-func NewGetPendingFilament(dep *proc.Dependencies, msg *message.Message) *GetPendingFilament {
+func NewGetPendingFilament(dep *proc.Dependencies, meta payload.Meta) *GetPendingFilament {
 	return &GetPendingFilament{
-		dep:     dep,
-		message: msg,
+		dep:  dep,
+		meta: meta,
 	}
 }
 
 func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
-	pl, err := payload.UnmarshalFromMeta(s.message.Payload)
+	pl, err := payload.UnmarshalFromMeta(s.meta.Payload)
 	if err != nil {
 		panic("UnmarshalFromMeta")
 		return errors.Wrap(err, "failed to unmarshal payload")
@@ -52,7 +51,7 @@ func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("unexpected payload type: %T", pl)
 	}
 
-	getFilament := proc.NewGetPendingFilament(s.message, msg.ObjectID, msg.StartFrom, msg.ReadUntil)
+	getFilament := proc.NewGetPendingFilament(s.meta, msg.ObjectID, msg.StartFrom, msg.ReadUntil)
 	s.dep.GetPendingFilament(getFilament)
 	return f.Procedure(ctx, getFilament, false)
 }

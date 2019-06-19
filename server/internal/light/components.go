@@ -281,7 +281,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Jets,
 			Jets,
 			drops,
-			hots,
 		)
 
 		pm := pulsemanager.NewPulseManager(

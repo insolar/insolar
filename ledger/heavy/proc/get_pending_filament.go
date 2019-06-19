@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -31,10 +29,7 @@ import (
 )
 
 type GetPendingFilament struct {
-	message   *message.Message
-	objID     insolar.ID
-	startFrom insolar.PulseNumber
-	readUntil insolar.PulseNumber
+	meta payload.Meta
 
 	Dep struct {
 		PendingAccessor object.HeavyPendingAccessor
@@ -42,12 +37,9 @@ type GetPendingFilament struct {
 	}
 }
 
-func NewGetPendingFilament(msg *message.Message, objID insolar.ID, startFrom insolar.PulseNumber, readUntil insolar.PulseNumber) *GetPendingFilament {
+func NewGetPendingFilament(meta payload.Meta) *GetPendingFilament {
 	return &GetPendingFilament{
-		message:   msg,
-		objID:     objID,
-		startFrom: startFrom,
-		readUntil: readUntil,
+		meta: meta,
 	}
 }
 
@@ -55,22 +47,28 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("GetPendingFilament"))
 	defer span.End()
 
-	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v", p.objID.DebugString())
-	records, err := p.Dep.PendingAccessor.Records(ctx, p.startFrom, p.readUntil, p.objID)
+	getPFil := payload.GetPendingFilament{}
+	err := getPFil.Unmarshal(p.meta.Payload)
 	if err != nil {
-		panic(err)
-		return errors.Wrap(err, fmt.Sprintf("[GetPendingFilament] can't fetch pendings, pn - %v,  %v", p.objID.DebugString(), p.startFrom))
+		return errors.Wrap(err, "failed to decode PassState payload")
 	}
 
-	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, records - %v", p.objID.DebugString(), len(records))
+	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v", getPFil.ObjectID.DebugString())
+	records, err := p.Dep.PendingAccessor.Records(ctx, getPFil.StartFrom, getPFil.ReadUntil, getPFil.ObjectID)
+	if err != nil {
+		panic(err)
+		return errors.Wrap(err, fmt.Sprintf("[GetPendingFilament] can't fetch pendings, pn - %v,  %v", getPFil.ObjectID.DebugString(), getPFil.StartFrom))
+	}
+
+	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, records - %v", getPFil.ObjectID.DebugString(), len(records))
 	msg, err := payload.NewMessage(&payload.PendingFilament{
-		ObjectID: p.objID,
+		ObjectID: getPFil.ObjectID,
 		Records:  records,
 	})
 	if err != nil {
 		panic(err)
 		return errors.Wrap(err, "failed to create a PendingFilament message")
 	}
-	go p.Dep.Sender.Reply(ctx, p.message, msg)
+	go p.Dep.Sender.Reply(ctx, p.meta, msg)
 	return nil
 }
