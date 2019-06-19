@@ -47,7 +47,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "call.api",
-		Params:  requester.Params{CallSite: "CreateHelloWorld"},
+		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: map[string]interface{}{}},
 	}, seed)
 	if err != nil {
 		return nil, err

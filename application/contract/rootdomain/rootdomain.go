@@ -87,7 +87,7 @@ func (rd RootDomain) Info() (interface{}, error) {
 	}
 	resJSON, err := json.Marshal(res)
 	if err != nil {
-		return nil, fmt.Errorf("[ Info ] Can't marshal res: %s", err.Error())
+		return nil, fmt.Errorf("failed to marshal result: %s", err.Error())
 	}
 	return resJSON, nil
 }
@@ -106,7 +106,7 @@ func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 
 func (rd RootDomain) GetBurnAddress() (string, error) {
 	if len(rd.FreeBurnAddresses) == 0 {
-		return "", fmt.Errorf("[ GetBurnAddress ] No more burn address left")
+		return "", fmt.Errorf("no more burn address left")
 	}
 
 	return rd.FreeBurnAddresses[0], nil
@@ -134,7 +134,7 @@ func (rd *RootDomain) CreateHelloWorld() (string, error) {
 	helloWorldHolder := helloworld.New()
 	m, err := helloWorldHolder.AsChild(rd.GetReference())
 	if err != nil {
-		return "", fmt.Errorf("[ CreateHelloWorld ] Can't save as child: %s", err.Error())
+		return "", fmt.Errorf("failed to save as child: %s", err.Error())
 	}
 
 	return m.GetReference().String(), nil

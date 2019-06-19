@@ -27,7 +27,7 @@ type DepositStatus string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113XZbXtD5phptWze9K97MTbX191Mc3NEfVukekHb.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111adZvZxBXYqwJPbPLjVY5hL8TtiWxW4gScGv6mP.11111111111111111111111111111111")
 
 // Deposit holds proxy type
 type Deposit struct {

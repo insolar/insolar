@@ -43,7 +43,7 @@ func registerNodeSignedCall(params map[string]interface{}) (string, error) {
 
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
-	ref, err := registerNodeSignedCall(map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
+	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -51,7 +51,7 @@ func TestRegisterNodeVirtual(t *testing.T) {
 
 func TestRegisterNodeHeavyMaterial(t *testing.T) {
 	const testRole = "heavy_material"
-	ref, err := registerNodeSignedCall(map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
+	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -59,28 +59,28 @@ func TestRegisterNodeHeavyMaterial(t *testing.T) {
 
 func TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
+	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
-	_, err := registerNodeSignedCall(map[string]interface{}{"public": TESTPUBLICKEY, "role": "some_not_fancy_role"})
+	_, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
 	require.Contains(t, err.Error(),
-		"Role is not supported: some_not_fancy_role")
+		"role is not supported: some_not_fancy_role")
 }
 
 func TestRegisterNodeByNoRoot(t *testing.T) {
 	member := createMember(t, "Member1")
 	const testRole = "virtual"
-	_, err := signedRequest(member, "contract.registerNode", map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
-	require.Contains(t, err.Error(), "[ RegisterNode ] Only Root member can register node")
+	_, err := signedRequest(member, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	require.Contains(t, err.Error(), "only root member can register node")
 }
 
 func TestReceiveNodeCert(t *testing.T) {
 	const testRole = "virtual"
-	ref, err := registerNodeSignedCall(map[string]interface{}{"public": TESTPUBLICKEY, "role": testRole})
+	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	body := getRPSResponseBody(t, postParams{

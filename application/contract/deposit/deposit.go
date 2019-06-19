@@ -80,27 +80,27 @@ func (d *Deposit) MapMarshal() (map[string]string, error) {
 
 func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
 	if txHash != d.TxHash {
-		return 0, fmt.Errorf("[ Confirm ] Transaction hash is incorrect")
+		return 0, fmt.Errorf("transaction hash is incorrect")
 	}
 
 	inputAmount := new(big.Int)
 	inputAmount, ok := inputAmount.SetString(amountStr, 10)
 	if !ok {
-		return 0, fmt.Errorf("[ Confirm ] can't parse input amount")
+		return 0, fmt.Errorf("failed to parse input amount")
 	}
 	depositAmount := new(big.Int)
 	depositAmount, ok = depositAmount.SetString(d.Amount, 10)
 	if !ok {
-		return 0, fmt.Errorf("[ Confirm ] can't parse Deposit amount")
+		return 0, fmt.Errorf("failed to parse deposit amount")
 	}
 
 	if (inputAmount).Cmp(depositAmount) != 0 {
-		return 0, fmt.Errorf("[ Confirm ] Amount is incorrect")
+		return 0, fmt.Errorf("amount is incorrect")
 	}
 
 	if confirm, ok := d.MigrationDaemonConfirms[migrationDaemon]; ok {
 		if confirm {
-			return 0, fmt.Errorf("[ Confirm ] Confirm from the migration daemon " + migrationDaemon.String() + " already exists")
+			return 0, fmt.Errorf("confirm from the migration daemon '%s' already exists", migrationDaemon.String())
 		} else {
 			d.MigrationDaemonConfirms[migrationDaemon] = true
 			d.Confirms++
@@ -110,6 +110,6 @@ func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amou
 			return d.Confirms, nil
 		}
 	} else {
-		return 0, fmt.Errorf("[ Confirm ] Migration daemon name is incorrect")
+		return 0, fmt.Errorf("migration daemon name is incorrect")
 	}
 }
