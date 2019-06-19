@@ -95,12 +95,21 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 }
 
 // NewIterator returns new Iterator over the store.
-func (b *BadgerDB) NewIterator(scope Scope) Iterator {
-	bi := badgerIterator{scope: scope, fullPrefix: scope.Bytes()}
+func (b *BadgerDB) NewIterator(scope Scope, reverse bool) Iterator {
+	bi := badgerIterator{scope: scope, reverse: reverse, scopePrefix: scope.Bytes()}
 	bi.txn = b.backend.NewTransaction(false)
 	opts := badger.DefaultIteratorOptions
+	opts.Reverse = reverse
 	bi.it = bi.txn.NewIterator(opts)
-	bi.it.Seek(bi.fullPrefix)
+	if reverse {
+		nextPrefix := nextWord(bi.scopePrefix)
+		bi.it.Seek(nextPrefix)
+		for !bi.it.ValidForPrefix(bi.scopePrefix) && bi.it.Valid() {
+			bi.it.Next()
+		}
+	} else {
+		bi.it.Seek(bi.scopePrefix)
+	}
 	return &bi
 }
 
@@ -110,12 +119,13 @@ func (b *BadgerDB) Stop(ctx context.Context) error {
 }
 
 type badgerIterator struct {
-	scope      Scope
-	fullPrefix []byte
-	txn        *badger.Txn
-	it         *badger.Iterator
-	prevKey    []byte
-	prevValue  []byte
+	scope       Scope
+	reverse     bool
+	scopePrefix []byte
+	txn         *badger.Txn
+	it          *badger.Iterator
+	prevKey     []byte
+	prevValue   []byte
 }
 
 func (bi *badgerIterator) Close() {
@@ -124,18 +134,26 @@ func (bi *badgerIterator) Close() {
 }
 
 func (bi *badgerIterator) Seek(prefix []byte) {
-	bi.fullPrefix = append(bi.scope.Bytes(), prefix...)
-	bi.it.Seek(bi.fullPrefix)
+	prefix = append(bi.scopePrefix, prefix...)
+	if bi.reverse {
+		nextPrefix := nextWord(prefix)
+		bi.it.Seek(nextPrefix)
+		for !bi.it.ValidForPrefix(prefix) && bi.it.Valid() {
+			bi.it.Next()
+		}
+	} else {
+		bi.it.Seek(prefix)
+	}
 }
 
 func (bi *badgerIterator) Next() bool {
-	if !bi.it.ValidForPrefix(bi.fullPrefix) {
+	if !bi.it.ValidForPrefix(bi.scopePrefix) {
 		return false
 	}
 
-	prev := bi.it.Item().KeyCopy(bi.prevKey)
+	prev := bi.it.Item().KeyCopy(nil)
 	bi.prevKey = prev[len(bi.scope.Bytes()):]
-	prev, err := bi.it.Item().ValueCopy(bi.prevValue)
+	prev, err := bi.it.Item().ValueCopy(nil)
 	if err != nil {
 		return false
 	}
@@ -151,4 +169,24 @@ func (bi *badgerIterator) Key() []byte {
 
 func (bi *badgerIterator) Value() ([]byte, error) {
 	return bi.prevValue, nil
+}
+
+func nextWord(word []byte) []byte {
+	if len(word) == 0 {
+		return []byte{0}
+	}
+
+	i := len(word) - 1
+	for i >= 0 && word[i] == 255 {
+		i--
+	}
+
+	if i == -1 {
+		return append(word, 0)
+	}
+
+	next := make([]byte, len(word))
+	copy(next, word)
+	next[i]++
+	return next
 }

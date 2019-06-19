@@ -64,9 +64,10 @@ func (b *MockDB) Set(key Key, value []byte) error {
 }
 
 // NewIterator returns new Iterator over the memory storage.
-func (b *MockDB) NewIterator(scope Scope) Iterator {
-	mi := memoryIterator{scope: scope, fullPrefix: scope.Bytes(), db: b}
+func (b *MockDB) NewIterator(scope Scope, reverse bool) Iterator {
+	mi := memoryIterator{scope: scope, reverse: reverse, scopePrefix: scope.Bytes(), db: b}
 	b.lock.RLock()
+	mi.searchKeys(scope.Bytes())
 	return &mi
 }
 
@@ -77,12 +78,13 @@ func (k KeyItem) Less(than btree.Item) bool {
 }
 
 type memoryIterator struct {
-	scope      Scope
-	fullPrefix []byte
-	db         *MockDB
-	once       sync.Once
-	items      []KeyItem
-	current    int
+	scope       Scope
+	reverse     bool
+	scopePrefix []byte
+	db          *MockDB
+	once        sync.Once
+	items       []KeyItem
+	current     int
 }
 
 func (mi *memoryIterator) Close() {
@@ -90,15 +92,13 @@ func (mi *memoryIterator) Close() {
 }
 
 func (mi *memoryIterator) Seek(prefix []byte) {
-	mi.fullPrefix = append(mi.scope.Bytes(), prefix...)
-	mi.searchKeys()
+	prefix = append(mi.scope.Bytes(), prefix...)
+	mi.searchKeys(prefix)
 }
 
 func (mi *memoryIterator) Next() bool {
 	firstTime := false
 	mi.once.Do(func() {
-		mi.searchKeys()
-
 		firstTime = true
 	})
 	if firstTime {
@@ -129,11 +129,30 @@ func (mi *memoryIterator) Value() ([]byte, error) {
 	return append([]byte{}, value...), nil
 }
 
-func (mi *memoryIterator) searchKeys() {
+func (mi *memoryIterator) searchKeys(prefix []byte) {
 	mi.items = []KeyItem{}
-	mi.db.keys.AscendGreaterOrEqual(KeyItem(mi.fullPrefix), func(i btree.Item) bool {
-		if !bytes.HasPrefix(i.(KeyItem), mi.fullPrefix) {
+	var (
+		iterateThrowTree func(pivot btree.Item, iterator btree.ItemIterator)
+		pivot            KeyItem
+	)
+	if mi.reverse {
+		postPrefix := nextWord(prefix)
+		pivot = KeyItem(postPrefix)
+		iterateThrowTree = mi.db.keys.DescendLessOrEqual
+	} else {
+		iterateThrowTree = mi.db.keys.AscendGreaterOrEqual
+		pivot = KeyItem(prefix)
+	}
+	started := false
+	iterateThrowTree(pivot, func(i btree.Item) bool {
+		if !bytes.HasPrefix(i.(KeyItem), mi.scopePrefix) {
 			return false
+		}
+		if bytes.HasPrefix(i.(KeyItem), prefix) {
+			started = true
+		}
+		if !started {
+			return true
 		}
 		mi.items = append(mi.items, i.(KeyItem))
 		return true

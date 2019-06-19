@@ -40,32 +40,13 @@ func (k pulseKey) Scope() store.Scope {
 }
 
 func (k pulseKey) ID() []byte {
-	return append([]byte{prefixPulse}, insolar.PulseNumber(k).Bytes()...)
-}
-
-type metaKey byte
-
-func (k metaKey) Scope() store.Scope {
-	return store.ScopePulse
-}
-
-func (k metaKey) ID() []byte {
-	return []byte{prefixMeta, byte(k)}
+	return insolar.PulseNumber(k).Bytes()
 }
 
 type dbNode struct {
 	Pulse      insolar.Pulse
 	Prev, Next *insolar.PulseNumber
 }
-
-var (
-	prefixPulse byte = 1
-	prefixMeta  byte = 2
-)
-
-var (
-	keyHead metaKey = 1
-)
 
 // NewDB creates new DB storage instance.
 func NewDB(db store.DB) *DB {
@@ -119,23 +100,13 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 			return err
 		}
 		// Set old updated tail.
-		err = s.set(oldHead.Pulse.PulseNumber, oldHead)
-		if err != nil {
-			return err
-		}
-		// Set head meta record.
-		return s.setHead(pulse.PulseNumber)
+		return s.set(oldHead.Pulse.PulseNumber, oldHead)
 	}
 	var insertWithoutHead = func() error {
 		// Set new pulse.
-		err := s.set(pulse.PulseNumber, dbNode{
+		return s.set(pulse.PulseNumber, dbNode{
 			Pulse: pulse,
 		})
-		if err != nil {
-			return err
-		}
-		// Set head meta record.
-		return s.setHead(pulse.PulseNumber)
 	}
 
 	head, err := s.head()
@@ -151,54 +122,46 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
+func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	node, err := s.get(pn)
-	if err != nil {
-		return
-	}
-
-	iterator := node
-	for i := 0; i < steps; i++ {
-		if iterator.Next == nil {
-			err = ErrNotFound
-			return
-		}
-		iterator, err = s.get(*iterator.Next)
-		if err != nil {
-			return
+	it := s.db.NewIterator(store.ScopePulse, false)
+	defer it.Close()
+	it.Seek(pulseKey(pn).ID())
+	for i := 0; it.Next(); i++ {
+		if i == steps {
+			buf, err := it.Value()
+			if err != nil {
+				return *insolar.GenesisPulse, err
+			}
+			nd := deserialize(buf)
+			return nd.Pulse, nil
 		}
 	}
-
-	return iterator.Pulse, nil
+	return *insolar.GenesisPulse, ErrNotFound
 }
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
+func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	node, err := s.get(pn)
-	if err != nil {
-		return
-	}
-
-	iterator := node
-	for i := 0; i < steps; i++ {
-		if iterator.Prev == nil {
-			err = ErrNotFound
-			return
-		}
-		iterator, err = s.get(*iterator.Prev)
-		if err != nil {
-			return
+	rit := s.db.NewIterator(store.ScopePulse, true)
+	defer rit.Close()
+	rit.Seek(pulseKey(pn).ID())
+	for i := 0; rit.Next(); i++ {
+		if i == steps {
+			buf, err := rit.Value()
+			if err != nil {
+				return *insolar.GenesisPulse, err
+			}
+			nd := deserialize(buf)
+			return nd.Pulse, nil
 		}
 	}
-
-	return iterator.Pulse, nil
+	return *insolar.GenesisPulse, ErrNotFound
 }
 
 func (s *DB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
@@ -219,20 +182,13 @@ func (s *DB) set(pn insolar.PulseNumber, nd dbNode) error {
 }
 
 func (s *DB) head() (pn insolar.PulseNumber, err error) {
-	buf, err := s.db.Get(keyHead)
-	if err == store.ErrNotFound {
-		err = ErrNotFound
-		return
-	}
-	if err != nil {
-		return
-	}
-	pn = insolar.NewPulseNumber(buf)
-	return
-}
+	rit := s.db.NewIterator(store.ScopePulse, true)
+	defer rit.Close()
 
-func (s *DB) setHead(pn insolar.PulseNumber) error {
-	return s.db.Set(keyHead, pn.Bytes())
+	if !rit.Next() {
+		return insolar.GenesisPulse.PulseNumber, ErrNotFound
+	}
+	return insolar.NewPulseNumber(rit.Key()), nil
 }
 
 func serialize(nd dbNode) []byte {

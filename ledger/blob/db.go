@@ -49,7 +49,7 @@ func (k *dbKey) Scope() store.Scope {
 }
 
 func (k *dbKey) ID() []byte {
-	return k.id[:]
+	return bytes.Join([][]byte{k.id.Pulse().Bytes(), k.id.Hash()}, nil)
 }
 
 // ForID returns Blob for provided id.

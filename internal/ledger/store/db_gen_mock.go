@@ -22,7 +22,7 @@ type DBMock struct {
 	GetPreCounter uint64
 	GetMock       mDBMockGet
 
-	NewIteratorFunc       func(p Scope) (r Iterator)
+	NewIteratorFunc       func(p Scope, p1 bool) (r Iterator)
 	NewIteratorCounter    uint64
 	NewIteratorPreCounter uint64
 	NewIteratorMock       mDBMockNewIterator
@@ -210,7 +210,8 @@ type DBMockNewIteratorExpectation struct {
 }
 
 type DBMockNewIteratorInput struct {
-	p Scope
+	p  Scope
+	p1 bool
 }
 
 type DBMockNewIteratorResult struct {
@@ -218,14 +219,14 @@ type DBMockNewIteratorResult struct {
 }
 
 //Expect specifies that invocation of DB.NewIterator is expected from 1 to Infinity times
-func (m *mDBMockNewIterator) Expect(p Scope) *mDBMockNewIterator {
+func (m *mDBMockNewIterator) Expect(p Scope, p1 bool) *mDBMockNewIterator {
 	m.mock.NewIteratorFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &DBMockNewIteratorExpectation{}
 	}
-	m.mainExpectation.input = &DBMockNewIteratorInput{p}
+	m.mainExpectation.input = &DBMockNewIteratorInput{p, p1}
 	return m
 }
 
@@ -242,12 +243,12 @@ func (m *mDBMockNewIterator) Return(r Iterator) *DBMock {
 }
 
 //ExpectOnce specifies that invocation of DB.NewIterator is expected once
-func (m *mDBMockNewIterator) ExpectOnce(p Scope) *DBMockNewIteratorExpectation {
+func (m *mDBMockNewIterator) ExpectOnce(p Scope, p1 bool) *DBMockNewIteratorExpectation {
 	m.mock.NewIteratorFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &DBMockNewIteratorExpectation{}
-	expectation.input = &DBMockNewIteratorInput{p}
+	expectation.input = &DBMockNewIteratorInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -257,7 +258,7 @@ func (e *DBMockNewIteratorExpectation) Return(r Iterator) {
 }
 
 //Set uses given function f as a mock of DB.NewIterator method
-func (m *mDBMockNewIterator) Set(f func(p Scope) (r Iterator)) *DBMock {
+func (m *mDBMockNewIterator) Set(f func(p Scope, p1 bool) (r Iterator)) *DBMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -266,18 +267,18 @@ func (m *mDBMockNewIterator) Set(f func(p Scope) (r Iterator)) *DBMock {
 }
 
 //NewIterator implements github.com/insolar/insolar/internal/ledger/store.DB interface
-func (m *DBMock) NewIterator(p Scope) (r Iterator) {
+func (m *DBMock) NewIterator(p Scope, p1 bool) (r Iterator) {
 	counter := atomic.AddUint64(&m.NewIteratorPreCounter, 1)
 	defer atomic.AddUint64(&m.NewIteratorCounter, 1)
 
 	if len(m.NewIteratorMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.NewIteratorMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v", p)
+			m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v %v", p, p1)
 			return
 		}
 
 		input := m.NewIteratorMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p}, "DB.NewIterator got unexpected parameters")
+		testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p, p1}, "DB.NewIterator got unexpected parameters")
 
 		result := m.NewIteratorMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -294,7 +295,7 @@ func (m *DBMock) NewIterator(p Scope) (r Iterator) {
 
 		input := m.NewIteratorMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p}, "DB.NewIterator got unexpected parameters")
+			testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p, p1}, "DB.NewIterator got unexpected parameters")
 		}
 
 		result := m.NewIteratorMock.mainExpectation.result
@@ -308,11 +309,11 @@ func (m *DBMock) NewIterator(p Scope) (r Iterator) {
 	}
 
 	if m.NewIteratorFunc == nil {
-		m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v", p)
+		m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v %v", p, p1)
 		return
 	}
 
-	return m.NewIteratorFunc(p)
+	return m.NewIteratorFunc(p, p1)
 }
 
 //NewIteratorMinimockCounter returns a count of DBMock.NewIteratorFunc invocations

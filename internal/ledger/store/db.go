@@ -24,7 +24,7 @@ package store
 type DB interface {
 	Get(key Key) (value []byte, err error)
 	Set(key Key, value []byte) error
-	NewIterator(scope Scope) Iterator
+	NewIterator(scope Scope, reverse bool) Iterator
 }
 
 // Iterator provides an interface for walking through the storage record sequence (where records are sorted lexicographically).
