@@ -153,6 +153,14 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
+		SetActivationRequest: func(p *proc.SetActivationRequest) {
+			p.Dep(
+				h.PCS,
+				h.WriteAccessor,
+				h.RecordModifier,
+				h.Sender,
+			)
+		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier

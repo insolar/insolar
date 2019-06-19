@@ -37,6 +37,7 @@ type Dependencies struct {
 	SetBlob                func(*SetBlob)
 	SetRecord              func(*SetRecord)
 	SetRequest             func(*SetRequest)
+	SetActivationRequest   func(*SetActivationRequest)
 	RegisterChild          func(*RegisterChild)
 	GetPendingRequests     func(*GetPendingRequests)
 	GetPendingRequestID    func(*GetPendingRequestID)

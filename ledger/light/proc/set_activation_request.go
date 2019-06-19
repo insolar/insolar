@@ -25,35 +25,34 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
-type SetRequest struct {
+// This is a workaround. VM should not register requests without object.
+// But it does. This procedure simulate invalid behaviour.
+// TODO: remove it after INS-1939
+type SetActivationRequest struct {
 	message   payload.Meta
-	request   record.Virtual
+	request   record.Request
 	requestID insolar.ID
 	jetID     insolar.JetID
 
 	dep struct {
-		pcs           insolar.PlatformCryptographyScheme
-		writer        hot.WriteAccessor
-		records       object.RecordModifier
-		recentStorage recentstorage.Provider
-		pendings      object.PendingModifier
-		pendingsLimit int
-		sender        bus.Sender
+		pcs     insolar.PlatformCryptographyScheme
+		writer  hot.WriteAccessor
+		records object.RecordModifier
+		sender  bus.Sender
 	}
 }
 
-func NewSetRequest(
+func NewSetActivationRequest(
 	msg payload.Meta,
-	rec record.Virtual,
+	rec record.Request,
 	recID insolar.ID,
 	jetID insolar.JetID,
-) *SetRequest {
-	return &SetRequest{
+) *SetActivationRequest {
+	return &SetActivationRequest{
 		message:   msg,
 		request:   rec,
 		requestID: recID,
@@ -61,25 +60,19 @@ func NewSetRequest(
 	}
 }
 
-func (p *SetRequest) Dep(
+func (p *SetActivationRequest) Dep(
 	pcs insolar.PlatformCryptographyScheme,
 	w hot.WriteAccessor,
 	r object.RecordModifier,
-	rs recentstorage.Provider,
-	pnds object.PendingModifier,
-	pl int,
 	s bus.Sender,
 ) {
 	p.dep.pcs = pcs
 	p.dep.writer = w
 	p.dep.records = r
-	p.dep.recentStorage = rs
-	p.dep.pendings = pnds
-	p.dep.pendingsLimit = pl
 	p.dep.sender = s
 }
 
-func (p *SetRequest) Proceed(ctx context.Context) error {
+func (p *SetActivationRequest) Proceed(ctx context.Context) error {
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
 		if err == hot.ErrWriteClosed {
@@ -89,18 +82,14 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
+	virtual := record.Wrap(p.request)
 	material := record.Material{
-		Virtual: &p.request,
+		Virtual: &virtual,
 		JetID:   p.jetID,
 	}
 	err = p.dep.records.Set(ctx, p.requestID, material)
 	if err != nil {
 		return errors.Wrap(err, "failed to store record")
-	}
-
-	err = p.handlePendings(ctx, p.requestID, p.request)
-	if err != nil {
-		return err
 	}
 
 	msg, err := payload.NewMessage(&payload.ID{ID: p.requestID})
@@ -109,27 +98,6 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 
 	go p.dep.sender.Reply(ctx, p.message, msg)
-
-	return nil
-}
-
-func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq record.Virtual) error {
-	concrete := record.Unwrap(&virtReq)
-	req := concrete.(*record.Request)
-
-	// Skip object creation and genesis
-	if req.CallType == record.CTMethod {
-		if p.dep.recentStorage.Count() > p.dep.pendingsLimit {
-			return insolar.ErrTooManyPendingRequests
-		}
-		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
-		recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
-
-		// err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
-		// if err != nil {
-		// 	return errors.Wrap(err, "can't save result into filament-index")
-		// }
-	}
 
 	return nil
 }

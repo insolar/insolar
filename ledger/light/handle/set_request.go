@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
@@ -67,11 +68,11 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	if !ok {
 		return fmt.Errorf("wrong request type: %T", rec)
 	}
-
 	// This is a workaround. VM should not register such requests.
+	// TODO: remove after INS-1939
 	if request.CallType != record.CTMethod {
 		inslogger.FromContext(ctx).Error("request is not registered")
-		return nil
+		return s.setActivationRequest(ctx, reqID, *request, f)
 	}
 
 	if request.Object == nil {
@@ -98,4 +99,22 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	setRequest := proc.NewSetRequest(s.message, virtual, reqID, reqJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
+}
+
+func (s *SetRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Request, f flow.Flow) error {
+	passIfNotExecutor := !s.passed
+	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.CheckJet(jet)
+	if err := f.Procedure(ctx, jet, true); err != nil {
+		if err == proc.ErrNotExecutor && passIfNotExecutor {
+			return nil
+		}
+		return err
+	}
+	reqJetID := jet.Result.Jet
+
+	setEmptyRequest := proc.NewSetActivationRequest(s.message, request, reqID, reqJetID)
+
+	s.dep.SetActivationRequest(setEmptyRequest)
+	return f.Procedure(ctx, setEmptyRequest, false)
 }
