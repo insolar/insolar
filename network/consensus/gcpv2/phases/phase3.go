@@ -276,16 +276,17 @@ func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
 	nodes := c.R.GetIndexedNodes()
 	for i := range nodes {
 		membership, trust := nodes[i].GetNodeMembershipAndTrust()
-		if membership.IsEmpty() {
+		switch {
+		case membership.IsEmpty():
 			bitset[i] = nodeset.NbsTimeout
 			continue
-		} else if trust.IsNegative() {
+		case trust.IsNegative():
 			bitset[i] = nodeset.NbsFraud
-		} else if trust == packets.UnknownTrust {
+		case trust == packets.UnknownTrust:
 			bitset[i] = nodeset.NbsBaselineTrust
-		} else if trust < packets.TrustByNeighbors {
+		case trust < packets.TrustByNeighbors:
 			bitset[i] = nodeset.NbsLimitedTrust
-		} else {
+		default:
 			bitset[i] = nodeset.NbsHighTrust
 		}
 		if bitset[i].IsTrusted() {

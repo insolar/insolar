@@ -277,9 +277,8 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 			route := &r.realm.handlers[pt]
 			if route.HasMemberHandler() {
 				return route.handleMemberPacket(memberPacket, src)
-			} else {
-				return route.handleHostPacket(packet, from)
 			}
+			return route.handleHostPacket(packet, from)
 		}
 	}
 

@@ -232,9 +232,8 @@ func (r *FullRealm) GetActiveNode(id common.ShortNodeID) (common2.NodeProfile, e
 	np := r.population.FindProfile(id)
 	if np == nil {
 		return nil, fmt.Errorf("unknown ShortNodeID: %v", id)
-	} else {
-		return np, nil
 	}
+	return np, nil
 }
 
 func (r *FullRealm) GetNodeApperance(id common.ShortNodeID) (*NodeAppearance, error) {
