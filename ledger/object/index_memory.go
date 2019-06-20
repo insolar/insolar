@@ -214,39 +214,6 @@ func (i *InMemoryIndex) ForPulse(ctx context.Context, pn insolar.PulseNumber) []
 	return res
 }
 
-// ForPNAndJet returns a collection of buckets for a provided pn and jetID
-func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
-	i.bucketsLock.Lock()
-	defer i.bucketsLock.Unlock()
-
-	bucks, ok := i.buckets[pn]
-	if !ok {
-		return nil
-	}
-
-	res := []FilamentIndex{}
-
-	for _, b := range bucks {
-		if b.objectMeta.Lifeline.JetID != jetID {
-			continue
-		}
-
-		clonedLfl := CloneIndex(b.objectMeta.Lifeline)
-		var clonedRecords []insolar.ID
-
-		clonedRecords = append(clonedRecords, b.objectMeta.PendingRecords...)
-
-		res = append(res, FilamentIndex{
-			ObjID:            b.objectMeta.ObjID,
-			Lifeline:         clonedLfl,
-			LifelineLastUsed: b.objectMeta.LifelineLastUsed,
-			PendingRecords:   clonedRecords,
-		})
-	}
-
-	return res
-}
-
 // SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
 func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
 	b := i.bucket(pn, objID)
