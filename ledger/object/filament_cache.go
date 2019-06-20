@@ -54,6 +54,8 @@ type PendingModifier interface {
 type PendingAccessor interface {
 	// OpenRequestsForObjID returns a specific number of open requests for a specific object
 	OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
+	// OpenRequestsIDsForObjID returns a specific number of ids of open requests for a specific object
+	OpenRequestsIDsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]insolar.ID, error)
 	// Records returns all the records for a provided object
 	Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error)
 }
@@ -688,6 +690,29 @@ func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *FilamentIndex, 
 	}
 
 	return nil
+}
+
+func (i *FilamentCacheStorage) OpenRequestsIDsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]insolar.ID, error) {
+	pb := i.pendingBucket(currentPN, objID)
+	if pb == nil {
+		return nil, ErrLifelineNotFound
+	}
+
+	inslogger.FromContext(ctx).Debugf("OpenRequestsForObjID before %v pn : %v", objID.DebugString(), currentPN)
+	pb.RLock()
+	defer pb.RUnlock()
+
+	if !pb.isStateCalculated {
+		return []insolar.ID{}, nil
+	}
+
+	inslogger.FromContext(ctx).Debugf("OpenRequestsForObjID after %v pn : %v", objID.DebugString(), currentPN)
+
+	if len(pb.notClosedRequestsIds) < count {
+		count = len(pb.notClosedRequestsIds)
+	}
+
+	return pb.notClosedRequestsIds[:count], nil
 }
 
 // OpenRequestsForObjID returns open requests for a specific object
