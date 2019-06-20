@@ -99,7 +99,7 @@ func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*insolar.Ref
 	return gdp.nodeDomainRef, nil
 }
 
-// GetRootMember returns reference to RootMember
+// GetRootMember returns reference to root member
 func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*insolar.Reference, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()
@@ -112,7 +112,7 @@ func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*insolar.Ref
 	return gdp.rootMemberRef, nil
 }
 
-// GetRootMember returns reference to RootMember
+// GetMigrationDaemonMembers returns references to migration daemons members
 func (gdp *GenesisDataProvider) GetMigrationDaemonMembers(ctx context.Context) ([]*insolar.Reference, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()
@@ -125,7 +125,7 @@ func (gdp *GenesisDataProvider) GetMigrationDaemonMembers(ctx context.Context) (
 	return gdp.migrationDaemonMembersRefs, nil
 }
 
-// GetRootMember returns reference to RootMember
+// GetMigrationAdminMember returns reference to migration admin member
 func (gdp *GenesisDataProvider) GetMigrationAdminMember(ctx context.Context) (*insolar.Reference, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()
