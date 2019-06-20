@@ -39,6 +39,19 @@ type JetSplitter interface {
 // JetSplitterDefaultCount default value for initial jets splitting.
 const JetSplitterDefaultCount = 5
 
+// JetInfo holds info about jet.
+type JetInfo struct {
+	ID insolar.JetID
+	// SplitIntent indicates what jet has intention to do split.
+	SplitIntent bool
+	// SplitPerformed indicates what jet was split.
+	SplitPerformed bool
+
+	// deprecated
+	// MineNext  if not set pendings would be removed for this jet from recent storage.
+	MineNext bool
+}
+
 // JetSplitterDefault implements JetSplitter.
 type JetSplitterDefault struct {
 	splitCount int
