@@ -42,7 +42,6 @@ func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
 	gpf := payload.GetPendingFilament{}
 	err := gpf.Unmarshal(s.meta.Payload)
 	if err != nil {
-		panic(err)
 		return errors.Wrap(err, "failed to unmarshal payload")
 	}
 

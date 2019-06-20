@@ -511,6 +511,41 @@ func (i *FilamentCacheStorage) firstPending(ctx context.Context, pb *pendingMeta
 	return record.Unwrap(rec.Virtual).(*record.PendingFilament), nil
 }
 
+func (i *FilamentCacheStorage) readFilamentSegment(ctx context.Context, destPN insolar.PulseNumber, objID insolar.ID) (payload.Payload, error) {
+	prevIdx := i.idxAccessor.Index(destPN, objID)
+	if prevIdx == nil {
+		return nil, errors.New("can't get a previous segment of the filament")
+	}
+	res := make([]record.CompositeFilamentRecord, len(prevIdx.PendingRecords))
+	for idx, id := range prevIdx.PendingRecords {
+		metaRec, err := i.recordStorage.ForID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		concreteMeta := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+		rec, err := i.recordStorage.ForID(ctx, concreteMeta.RecordID)
+		if err != nil {
+			return nil, err
+		}
+
+		res[idx] = record.CompositeFilamentRecord{
+			Record:   rec,
+			RecordID: concreteMeta.RecordID,
+			Meta:     metaRec,
+			MetaID:   id,
+		}
+	}
+	if len(res) == 0 {
+		return nil, errors.New("part of a filamnet is empty")
+	}
+
+	return &payload.PendingFilament{
+		ObjectID: objID,
+		Records:  res,
+	}, nil
+}
+
 func (i *FilamentCacheStorage) fillPendingFilament(
 	ctx context.Context,
 	currentPN insolar.PulseNumber,
@@ -535,38 +570,11 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 		// TODO: temp hack waiting for INS-2597 INS-2598 @egorikas
 		// Because a current node can be a previous LME for a object
 		if *node == i.coordinator.Me() {
-			prevIdx := i.idxAccessor.Index(destPN, objID)
-			if prevIdx == nil {
-				panic("bux")
+			pl, err = i.readFilamentSegment(ctx, destPN, objID)
+			if err != nil {
+				return err
 			}
-			res := make([]record.CompositeFilamentRecord, len(prevIdx.PendingRecords))
-			for idx, id := range prevIdx.PendingRecords {
-				metaRec, err := i.recordStorage.ForID(ctx, id)
-				if err != nil {
-					panic(err)
-				}
-
-				concreteMeta := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
-				rec, err := i.recordStorage.ForID(ctx, concreteMeta.RecordID)
-				if err != nil {
-					panic(err)
-				}
-
-				res[idx] = record.CompositeFilamentRecord{
-					Record:   rec,
-					RecordID: concreteMeta.RecordID,
-					Meta:     metaRec,
-					MetaID:   id,
-				}
-			}
-			if len(res) == 0 {
-				panic(fmt.Sprintf("what? len pendingRecords - %v, objID - %v, destPN - %v", len(prevIdx.PendingRecords), objID.DebugString(), destPN))
-			}
-			inslogger.FromContext(ctx).Debugf("RefreshPendingFilament objID == %v, records - %v", objID.DebugString(), len(res))
-			pl = &payload.PendingFilament{
-				ObjectID: objID,
-				Records:  res,
-			}
+			inslogger.FromContext(ctx).Debugf("UNEXPECTED read from myself objID - %, pn - %v", objID.DebugString(), currentPN)
 		} else {
 			msg, err := payload.NewMessage(&payload.GetPendingFilament{
 				ObjectID:  objID,
@@ -579,7 +587,7 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 
 			rep, done := i.busWM.SendTarget(ctx, msg, *node)
 			defer done()
-
+			inslogger.FromContext(ctx).Debugf("UNEXPECTED get info from outside objID - %, pn - %v", objID.DebugString(), currentPN)
 			var ok bool
 			res, ok := <-rep
 			if !ok {
@@ -595,7 +603,7 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 		switch r := pl.(type) {
 		case *payload.PendingFilament:
 			if len(r.Records) == 0 {
-				panic(fmt.Sprintf("unexpected behaviour - %v", earlistOpenRequest))
+				panic(fmt.Sprintf("unexpected behaviour, objID - %, pn - %v", objID.DebugString(), currentPN))
 			}
 			err := i.setFilament(ctx, pm, destPN, r.Records)
 			if err != nil {
@@ -611,17 +619,15 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 
 			// If know border read to the start of the chain
 			// In other words, we read until limit
-			if firstRec.PreviousRecord.Pulse() > earlistOpenRequest {
+			if firstRec.PreviousRecord.Pulse() >= earlistOpenRequest {
 				destPN = firstRec.PreviousRecord.Pulse()
 			} else {
 				continueFilling = false
 			}
 		case *payload.Error:
-			panic(err)
 			return errors.New(r.Text)
 		default:
-			panic(fmt.Errorf("RefreshPendingFilament: unexpected reply: %#v", r))
-			return fmt.Errorf("RefreshPendingFilament: unexpected reply: %#v", r)
+			return fmt.Errorf("fillPendingFilament: unexpected reply: %#v", r)
 		}
 	}
 

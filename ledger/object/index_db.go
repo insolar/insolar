@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
 
@@ -179,7 +180,6 @@ func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) 
 
 func (i *IndexDB) filament(ct context.Context, b *FilamentIndex, pn insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
 	tempRes := make([]record.CompositeFilamentRecord, len(b.PendingRecords))
-
 	for idx, metaID := range b.PendingRecords {
 		metaRec, err := i.recordStore.get(metaID)
 		if err != nil {
@@ -203,20 +203,16 @@ func (i *IndexDB) filament(ct context.Context, b *FilamentIndex, pn insolar.Puls
 }
 
 func (i *IndexDB) nextFilament(b *FilamentIndex) (canContinue bool, nextPN insolar.PulseNumber, err error) {
-	if len(b.PendingRecords) > 0 {
-		firstRecord := b.PendingRecords[0]
-		metaRec, err := i.recordStore.get(firstRecord)
-		if err != nil {
-			return false, insolar.PulseNumber(0), err
-		}
-		pf := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
-		if pf.PreviousRecord != nil {
-			return true, pf.PreviousRecord.Pulse(), nil
-		} else {
-			return false, insolar.PulseNumber(0), nil
-		}
+	firstRecord := b.PendingRecords[0]
+	metaRec, err := i.recordStore.get(firstRecord)
+	if err != nil {
+		return false, insolar.PulseNumber(0), err
+	}
+	pf := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+	if pf.PreviousRecord != nil {
+		return true, pf.PreviousRecord.Pulse(), nil
 	} else {
-		panic("unexpected situation ")
+		return false, insolar.PulseNumber(0), nil
 	}
 }
 
@@ -230,10 +226,16 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 		if err != nil {
 			return nil, err
 		}
+		if len(b.PendingRecords) == 0 {
+			return nil, errors.New("can't fetch pednings from index")
+		}
 
 		tempRes, err := i.filament(ctx, b, currentPN, objID)
 		if err != nil {
 			return nil, err
+		}
+		if len(tempRes) == 0 {
+			return nil, errors.New("can't fetch pednings from index")
 		}
 		res = append(tempRes, res...)
 
