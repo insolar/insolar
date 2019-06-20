@@ -130,7 +130,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "wallet.addBurnAddresses":
 		return m.addBurnAddressesCall(params)
 	case "wallet.getBalance":
-		return m.getBalanceCall(params)
+		return getBalanceCall(params)
 	case "wallet.transfer":
 		return m.transferCall(params)
 	case "Migration":
@@ -166,7 +166,7 @@ func (migrationAdminMember *Member) addBurnAddressesCall(params map[string]inter
 
 	return nil, nil
 }
-func (caller *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {
+func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 
 	mRef, err := insolar.NewReferenceFromBase58(params["reference"].(string))
 	if err != nil {
