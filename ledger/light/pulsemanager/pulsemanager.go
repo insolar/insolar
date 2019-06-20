@@ -154,7 +154,7 @@ func NewPulseManager(
 
 func (m *PulseManager) processEndPulse(
 	ctx context.Context,
-	jets []executor.JetInfo,
+	jets []jet.Info,
 	currentPulse, newPulse insolar.Pulse,
 ) error {
 	var g errgroup.Group
@@ -189,7 +189,7 @@ func (m *PulseManager) processEndPulse(
 				}
 			}
 
-			if info.SplitPerformed {
+			if info.Left == nil && info.Right == nil {
 				msg, err := m.getExecutorHotData(
 					ctx, info.ID, currentPulse.PulseNumber, newPulse.PulseNumber, drop,
 				)
@@ -205,10 +205,9 @@ func (m *PulseManager) processEndPulse(
 				if err != nil {
 					return errors.Wrapf(err, "getExecutorData failed for jet ID %v", info.ID)
 				}
-				// SplitIntent happened.
-				left, right := jet.Siblings(info.ID)
-				go sender(*msg, left)
-				go sender(*msg, right)
+				// Split happened.
+				go sender(*msg, info.Left.ID)
+				go sender(*msg, info.Right.ID)
 			}
 
 			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(info.ID))
@@ -226,7 +225,7 @@ func (m *PulseManager) processEndPulse(
 
 func (m *PulseManager) createDrop(
 	ctx context.Context,
-	info executor.JetInfo,
+	info jet.Info,
 	currentPulse insolar.PulseNumber,
 ) (
 	block *drop.Drop,
@@ -235,7 +234,7 @@ func (m *PulseManager) createDrop(
 	block = &drop.Drop{
 		Pulse: currentPulse,
 		JetID: info.ID,
-		Split: info.SplitIntent,
+		Split: info.Split,
 	}
 
 	err = m.DropModifier.Set(ctx, *block)
@@ -369,7 +368,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 func (m *PulseManager) setUnderGilSection(
 	ctx context.Context, newPulse insolar.Pulse, persist bool,
 ) (
-	[]executor.JetInfo, *insolar.Pulse, *insolar.PulseNumber, error,
+	[]jet.Info, *insolar.Pulse, *insolar.PulseNumber, error,
 ) {
 	var (
 		oldPulse *insolar.Pulse
@@ -427,7 +426,7 @@ func (m *PulseManager) setUnderGilSection(
 		}
 	}
 
-	var jets []executor.JetInfo
+	var jets []jet.Info
 	if persist && prevPN != nil && oldPulse != nil {
 		jets, err = m.JetSplitter.Do(ctx, *prevPN, oldPulse.PulseNumber, newPulse.PulseNumber)
 
@@ -468,7 +467,7 @@ func (m *PulseManager) setUnderGilSection(
 	return jets, oldPulse, prevPN, nil
 }
 
-func (m *PulseManager) postProcessJets(ctx context.Context, jets []executor.JetInfo) {
+func (m *PulseManager) postProcessJets(ctx context.Context, jets []jet.Info) {
 	ctx, span := instracer.StartSpan(ctx, "jets.post_process")
 	defer span.End()
 
