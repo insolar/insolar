@@ -128,20 +128,5 @@ func (i *IndexStorageMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNu
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	bucks, ok := i.buckets[pn]
-	if !ok {
-		return
-	}
-
 	delete(i.buckets, pn)
-
-	stats.Record(ctx,
-		statBucketRemovedCount.M(int64(len(bucks))),
-	)
-
-	for _, buck := range bucks {
-		stats.Record(ctx,
-			statObjectPendingRecordsInMemoryRemovedCount.M(int64(len(buck.PendingRecords))),
-		)
-	}
 }

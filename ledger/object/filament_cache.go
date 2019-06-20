@@ -311,9 +311,11 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 	metaID := *insolar.NewID(pn, hash)
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
+	if err == ErrOverride {
+		logger.Error(errors.Wrap(err, "failed to add a result to filament"))
+	}
 	if err != nil {
-		panic(errors.Wrapf(err, "obj id - %v", metaID.DebugString()))
-		return errors.Wrap(err, "failed to create a meta-record about pending request")
+		// return errors.Wrap(err, "failed to add a result to filament")
 	}
 
 	pb.addMetaIDToFilament(pn, metaID)
@@ -431,13 +433,11 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 	if fp == nil || fp.PreviousRecord == nil {
 		err = i.fillPendingFilament(ctx, pn, objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest, pb)
 		if err != nil {
-			panic(err)
 			return err
 		}
 	} else {
 		err = i.fillPendingFilament(ctx, pn, objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest, pb)
 		if err != nil {
-			panic(err)
 			return err
 		}
 	}
@@ -451,6 +451,7 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 	err = i.idxModifier.SetIndex(ctx, pn, *idx)
 	if err != nil {
 		panic(err)
+		return err
 	}
 
 	return nil
@@ -572,7 +573,6 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 				ReadUntil: earlistOpenRequest,
 			})
 			if err != nil {
-				panic(err)
 				return errors.Wrap(err, "failed to create a GetPendingFilament message")
 			}
 
@@ -582,13 +582,11 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 			var ok bool
 			res, ok := <-rep
 			if !ok {
-				panic(err)
-				return errors.New("no reply")
+				return errors.New("failed to get a pending filament. no reply")
 			}
 
 			pl, err = payload.UnmarshalFromMeta(res.Payload)
 			if err != nil {
-				panic(err)
 				return errors.Wrap(err, "failed to unmarshal reply")
 			}
 
