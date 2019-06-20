@@ -164,8 +164,22 @@ func workerQueueFlusher(ctxRound context.Context, q0 chan ph3Data, q1 <-chan Tru
 		select {
 		case <-ctxRound.Done():
 			return
-		case <-q0:
-		case <-q1:
+		case _, ok := <-q0:
+			if ok {
+				continue
+			}
+			if q1 == nil {
+				return
+			}
+			q0 = nil
+		case _, ok := <-q1:
+			if ok {
+				continue
+			}
+			if q0 == nil {
+				return
+			}
+			q1 = nil
 		}
 	}
 }
