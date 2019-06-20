@@ -192,6 +192,9 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.Packet) {
 	response, err := handler(ctx, p)
 	if err != nil {
 		logger.Errorf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
+		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: err.Error()}).(*packet.Packet)
+		ep.RequestID = p.RequestID
+		SendPacket(ctx, hn.pool, ep)
 		return
 	}
 
