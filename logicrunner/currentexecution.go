@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 // TODO: probably it's better to rewrite it using linked list
@@ -75,12 +76,13 @@ func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
 
 func (d *TranscriptDequeue) HasFromLedger() *Transcript {
 	d.lock.Lock()
+	defer d.lock.Unlock()
+
 	for _, t := range d.queue {
 		if t.FromLedger {
 			return t
 		}
 	}
-	d.lock.Unlock()
 	return nil
 }
 
@@ -124,6 +126,7 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 type Transcript struct {
 	State interface{} // Shows current execution status of task
 
+	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
 	Request          *record.Request
@@ -216,13 +219,12 @@ func (ces *CurrentExecutionList) Delete(requestRef insolar.Reference) {
 
 func (ces *CurrentExecutionList) GetByTraceID(traceid string) *Transcript {
 	ces.lock.RLock()
+	defer ces.lock.RUnlock()
 	for _, ce := range ces.executions {
 		if ce.LogicContext.TraceID == traceid {
-			ces.lock.RUnlock()
 			return ce
 		}
 	}
-	ces.lock.RUnlock()
 	return nil
 }
 

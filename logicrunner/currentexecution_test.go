@@ -65,6 +65,9 @@ func TestTranscriptDequeue_HasFromLedger(t *testing.T) {
 
 	d.Push(&Transcript{FromLedger: true})
 	a.True(d.HasFromLedger() != nil)
+
+	d.Push(&Transcript{FromLedger: true})
+	a.True(d.HasFromLedger() != nil)
 }
 
 func TestTranscriptDequeue_PopByReference(t *testing.T) {

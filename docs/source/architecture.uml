@@ -1,0 +1,124 @@
+scale 750 width
+
+skinparam shadowing false
+skinparam backgroundColor transparent
+skinparam rectangle { 
+ backgroundColor transparent
+}
+skinparam frame {
+ backgroundColor transparent
+}
+skinparam node {
+ backgroundColor transparent
+}
+skinparam control {
+ backgroundColor transparent
+}
+
+together {
+cloud "[[../architecture.html#pulsar-consensus Pulsar consensus]]" as pcon {
+  together {
+    node "[[../architecture.html#pulsars Pulsars]]" as pulsars
+  }
+}
+cloud "[[../architecture.html#fed-of-clouds Cloud n+1]]" as cloudnext {
+  together {
+    control "[[../architecture.html#network-consensus Network consensus\n& message bus]]" as nextnet
+  }
+  together {
+    package "[[../architecture.html#domains Domain b]]" as domb {
+      frame "[[../architecture.html#contracts Contract b]]" as cntrctb {
+        card "Service b"
+      }
+    }
+    package "[[../architecture.html#domains Domain a]]" as doma {
+      frame "[[../architecture.html#contracts Contract a]]" as cntrcta {
+        card "Service a"
+      }
+    }
+    cntrctb -[hidden]d- nextnet
+    cntrcta -[hidden]d- nextnet
+  }
+  pulsars -u-> nextnet : pulses
+}
+}
+cloud "[[../architecture.html#fed-of-clouds Cloud n]]" as cloudn {
+ together {
+  package "[[../architecture.html#domains Domain n]]" as domn {
+    frame "[[../architecture.html#contracts Contract n+1]]" as cntrctnext {
+      card "Service n+1"
+    }
+    frame "[[../architecture.html#contracts Contract n]]" as cntrctn {
+      card "Service n"
+    }
+  }
+  }
+  package "[[../architecture.html#globulas Network globulas]]" as globula {
+    node "[[../architecture.html#virtual Virtual nodes]]" as vn {
+        card vcard [
+          - Generation handling
+          - Transacting
+          - CPU scaling
+        ]
+    }
+    node "[[../architecture.html#light-material Light material nodes]]" as ln {
+        card lcard [
+          - Short-term storage
+          - Traffic scaling
+          - Block Building
+        ]
+    }
+    node "[[../architecture.html#heavy-material Heavy material nodes]]" as hn {
+        card hcard [
+          - Long-term storage
+          - Replication & recovery
+          - Storage scaling
+        ]
+    }
+ }
+ together {
+ control "[[../architecture.html#network-consensus Network consensus\n& message bus]]" as net
+ database "[[../architecture.html#ledger Ledger]]" as db {
+    frame "[[../architecture.html#storage-consensus Storage consensus & validation]]" {
+    rectangle ldgr [
+      ....
+      - Permissions
+      ....
+      - Integrity & replication
+      ....
+      - Jets, lifelines & records
+    ]
+    }
+ }
+ node "[[../architecture.html#execution-validation Processing]]" as process {
+    frame "[[../architecture.html#logic-consensus Logic consensus & validation]]" {
+    rectangle proc [
+      ....
+      - Compilers
+      ....
+      - Artifact cache
+      ....
+      - Security context
+      ....
+      - Distributed tx management
+    ]
+    }
+ }
+ }
+ domn -[hidden]- globula
+ vcard -[hidden]d- lcard
+ lcard -[hidden]d- hcard
+ net -[hidden]d- process
+ proc <-d-> net : data & code
+ net <-d-> ldgr : data & code
+ net -[hidden]r- ln
+ db -[hidden]r- hn
+ process -[hidden]d- net
+ proc -[hidden]r- vn
+ pulsars -r-> net: pulses
+ net <-> nextnet : messages
+ domb -[hidden]- net
+ domb -[hidden]r- domn
+ domb -[hidden]r- proc
+ domb -[hidden]r- net
+}
