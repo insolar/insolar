@@ -149,7 +149,7 @@ func (r *PhasedRoundController) StopConsensusRound() {
 	}
 	r.isRunning = false
 	r.fullCancel()
-	return // true
+	//return true
 }
 
 /* LOCK: simple */

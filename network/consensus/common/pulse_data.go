@@ -254,9 +254,8 @@ func (r *PulseData) GetStartOfEpoch() PulseNumber {
 func (r *PulseData) CreateNextPulse() *PulseData {
 	if r.IsFromEphemeral() {
 		return r.createNextEphemeralPulse()
-	} else {
-		return r.createNextPulsarPulse(r.NextPulseDelta)
 	}
+	return r.createNextPulsarPulse(r.NextPulseDelta)
 }
 
 func (r *PulseData) IsValidNext(n *PulseData) bool {
@@ -273,14 +272,14 @@ func (r *PulseData) IsValidNext(n *PulseData) bool {
 }
 
 func (r *PulseData) IsValidPrev(p *PulseData) bool {
-	if r.IsFirstPulse() || p.IsExpectedPulse() || p.GetNextPulseNumber() != r.PulseNumber || p.NextPulseDelta != r.PrevPulseDelta {
+	switch {
+	case r.IsFirstPulse() || p.IsExpectedPulse() || p.GetNextPulseNumber() != r.PulseNumber || p.NextPulseDelta != r.PrevPulseDelta:
 		return false
-	}
-	if r.IsFromPulsar() {
+	case r.IsFromPulsar():
 		return p.IsValidPulsarData()
-	} else if r.IsFromEphemeral() {
+	case r.IsFromEphemeral():
 		return p.IsValidEphemeralData()
-	} else {
+	default:
 		return p.IsValidPulseData()
 	}
 }

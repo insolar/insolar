@@ -62,8 +62,8 @@ import (
 func NewEmuChronicles(intros []common2.NodeIntroProfile, localNodeIndex int, primingCloudStateHash common2.CloudStateHash) census.ConsensusChronicles {
 	pop := census.NewManyNodePopulation(intros[localNodeIndex], intros, false)
 	chronicles := census.NewLocalChronicles()
-	census.NewPrimingCensus(&pop, &EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash}).SetActiveTo(&chronicles)
-	return &chronicles
+	census.NewPrimingCensus(&pop, &EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash}).SetAsActiveTo(chronicles)
+	return chronicles
 }
 
 func NewEmuNodeIntros(names ...string) []common2.NodeIntroProfile {

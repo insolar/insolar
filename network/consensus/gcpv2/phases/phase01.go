@@ -136,9 +136,9 @@ func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core
 func (c *Phase1Controller) _handleNodeData(p1 packets.Phase1PacketReader, n *core.NodeAppearance) (bool, error) {
 	dupErr := n.SetReceivedWithDupCheck(c.GetPacketType())
 
-	if p1.HasSelfIntro() {
-		// TODO register protocol misbehavior - IntroClaim was not expected
-	}
+	//if p1.HasSelfIntro() {
+	// TODO register protocol misbehavior - IntroClaim was not expected
+	//}
 	// if c.R.GetNodeCount() != int(p1.GetNodeCount()) {
 	// 	//TODO SEND fraud state to others (to Phase2)
 	// 	return false, n.RegisterFraud(R.Frauds().NewMismatchedRank(n.GetProfile(), p1.GetNodeStateHashEvidence()))

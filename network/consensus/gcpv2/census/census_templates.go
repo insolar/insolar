@@ -81,12 +81,13 @@ func NewPrimingCensus(population copyOnlinePopulationTo, registries VersionedReg
 	return r
 }
 
-func (c *PrimingCensusTemplate) SetActiveTo(chronicles *localChronicles) {
+func (c *PrimingCensusTemplate) SetAsActiveTo(chronicles LocalConsensusChronicles) {
 	if c.chronicles != nil {
 		panic("illegal state")
 	}
-	c.chronicles = chronicles
-	chronicles.makeActive(nil, c)
+	lc := chronicles.(*localChronicles)
+	c.chronicles = lc
+	lc.makeActive(nil, c)
 }
 
 func (*PrimingCensusTemplate) GetCensusState() State {
@@ -94,13 +95,13 @@ func (*PrimingCensusTemplate) GetCensusState() State {
 }
 
 func (c *PrimingCensusTemplate) GetExpectedPulseNumber() common.PulseNumber {
-	if c.pd.IsEmpty() {
+	switch {
+	case c.pd.IsEmpty():
 		return common.UnknownPulseNumber
-	} else if c.pd.IsExpectedPulse() {
+	case c.pd.IsExpectedPulse():
 		return c.pd.GetPulseNumber()
-	} else {
-		return c.pd.GetNextPulseNumber()
 	}
+	return c.pd.GetNextPulseNumber()
 }
 
 func (c *PrimingCensusTemplate) GetPulseNumber() common.PulseNumber {

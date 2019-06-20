@@ -124,7 +124,7 @@ var _ copyOnlinePopulationTo = &ManyNodePopulation{}
 
 type ManyNodePopulation struct {
 	slots    []updatableSlot
-	slotById map[common2.ShortNodeID]*updatableSlot
+	slotByID map[common2.ShortNodeID]*updatableSlot
 	local    *updatableSlot
 }
 
@@ -134,15 +134,15 @@ func (c *ManyNodePopulation) copyTo(p copyOnlinePopulation) {
 
 func (c *ManyNodePopulation) makeCopyOf(slots []updatableSlot, local *updatableSlot) {
 	c.slots = append(make([]updatableSlot, 0, len(slots)), slots...)
-	c.slotById = make(map[common2.ShortNodeID]*updatableSlot, len(slots))
+	c.slotByID = make(map[common2.ShortNodeID]*updatableSlot, len(slots))
 
 	for i := range c.slots {
 		v := &c.slots[i]
 		id := v.GetShortNodeId()
-		if _, ok := c.slotById[id]; ok {
+		if _, ok := c.slotByID[id]; ok {
 			panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 		}
-		c.slotById[id] = v
+		c.slotByID[id] = v
 		if local.GetShortNodeId() == id {
 			c.local = v
 		}
@@ -151,7 +151,7 @@ func (c *ManyNodePopulation) makeCopyOf(slots []updatableSlot, local *updatableS
 
 func (c *ManyNodePopulation) makeCopyOfMap(slots map[common2.ShortNodeID]*updatableSlot, local *updatableSlot, less LessFunc) {
 	c.slots = append(make([]updatableSlot, len(slots)))
-	c.slotById = make(map[common2.ShortNodeID]*updatableSlot, len(slots))
+	c.slotByID = make(map[common2.ShortNodeID]*updatableSlot, len(slots))
 
 	if less == nil {
 		for id, vv := range slots {
@@ -161,7 +161,7 @@ func (c *ManyNodePopulation) makeCopyOfMap(slots map[common2.ShortNodeID]*updata
 			}
 			c.slots[idx] = *vv
 			v := &c.slots[idx]
-			c.slotById[id] = v
+			c.slotByID[id] = v
 		}
 	} else {
 		idx := 0
@@ -173,10 +173,10 @@ func (c *ManyNodePopulation) makeCopyOfMap(slots map[common2.ShortNodeID]*updata
 		for i := range c.slots {
 			v := &c.slots[i]
 			v.SetIndex(i)
-			c.slotById[v.GetShortNodeId()] = v
+			c.slotByID[v.GetShortNodeId()] = v
 		}
 	}
-	c.local = c.slotById[local.GetShortNodeId()]
+	c.local = c.slotByID[local.GetShortNodeId()]
 	if c.local == nil {
 		panic("illegal state")
 	}
@@ -184,13 +184,13 @@ func (c *ManyNodePopulation) makeCopyOfMap(slots map[common2.ShortNodeID]*updata
 
 func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, localNode common.NodeIntroProfile, joiners bool) {
 	buf := make([]updatableSlot, len(nodes)+1) // +1 local node may not be on the list
-	c.slotById = make(map[common2.ShortNodeID]*updatableSlot, len(nodes)+1)
+	c.slotByID = make(map[common2.ShortNodeID]*updatableSlot, len(nodes)+1)
 
 	c.local = &buf[0]
 	c.local.index = 0
 	c.local.NodeIntroProfile = localNode
 	c.local.setJoiner(joiners)
-	c.slotById[localNode.GetShortNodeId()] = c.local
+	c.slotByID[localNode.GetShortNodeId()] = c.local
 
 	slotIndex := 1
 
@@ -199,12 +199,12 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, loc
 			continue
 		}
 		id := n.GetShortNodeId()
-		if _, ok := c.slotById[id]; ok {
+		if _, ok := c.slotByID[id]; ok {
 			panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 		}
 		buf[slotIndex].nodeSlot = newNodeSlot(slotIndex, n, nil)
 		buf[slotIndex].setJoiner(joiners)
-		c.slotById[id] = &buf[slotIndex]
+		c.slotByID[id] = &buf[slotIndex]
 
 		slotIndex++
 	}
@@ -212,7 +212,7 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, loc
 }
 
 func (c *ManyNodePopulation) FindProfile(nodeId common2.ShortNodeID) common.NodeProfile {
-	return &c.slotById[nodeId].nodeSlot
+	return &c.slotByID[nodeId].nodeSlot
 }
 
 func (c *ManyNodePopulation) GetCount() int {

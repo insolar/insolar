@@ -172,11 +172,11 @@ type LockedPopulation struct {
 	census *LocalCensusBuilder
 }
 
-func (c *LockedPopulation) FindProfile(nodeId common.ShortNodeID) common2.NodeProfile {
+func (c *LockedPopulation) FindProfile(nodeID common.ShortNodeID) common2.NodeProfile {
 	c.census.mutex.RLock()
 	defer c.census.mutex.RUnlock()
 
-	return c.census.population.FindProfile(nodeId)
+	return c.census.population.FindProfile(nodeID)
 }
 
 func (c *LockedPopulation) GetProfiles() []common2.NodeProfile {
@@ -227,11 +227,11 @@ func (c *DynamicPopulationBuilder) GetLocalProfile() common2.LocalNodeProfile {
 	return c.census.population.GetLocalProfile()
 }
 
-func (c *DynamicPopulationBuilder) FindProfile(nodeId common.ShortNodeID) common2.UpdatableNodeProfile {
+func (c *DynamicPopulationBuilder) FindProfile(nodeID common.ShortNodeID) common2.UpdatableNodeProfile {
 	c.census.mutex.RLock()
 	defer c.census.mutex.RUnlock()
 
-	return c.census.population.FindUpdatableProfile(nodeId)
+	return c.census.population.FindUpdatableProfile(nodeID)
 }
 
 func (c *DynamicPopulationBuilder) AddJoinerProfile(intro common2.NodeIntroProfile) common2.UpdatableNodeProfile {
@@ -244,12 +244,12 @@ func (c *DynamicPopulationBuilder) AddJoinerProfile(intro common2.NodeIntroProfi
 	return c.census.population.AddJoinerProfile(intro)
 }
 
-func (c *DynamicPopulationBuilder) RemoveProfile(nodeId common.ShortNodeID) {
+func (c *DynamicPopulationBuilder) RemoveProfile(nodeID common.ShortNodeID) {
 	c.census.mutex.Lock()
 	defer c.census.mutex.Unlock()
 
 	if c.census.state.IsSealed() {
 		panic("illegal state")
 	}
-	c.census.population.RemoveProfile(nodeId)
+	c.census.population.RemoveProfile(nodeID)
 }

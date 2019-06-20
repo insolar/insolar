@@ -147,7 +147,7 @@ func (p *PrepRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
 	defer p.RUnlock()
 
 	// locks are only needed for PrepRealm
-	return p.originalPulse
+	return p.coreRealm.originalPulse
 }
 
 func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool) error {

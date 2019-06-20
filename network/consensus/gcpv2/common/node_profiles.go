@@ -140,10 +140,9 @@ func (v *MembershipState) IncrementSuspect() (becameSuspect bool) {
 	if v.IsSuspect() {
 		*v--
 		return false
-	} else {
-		*v = SuspectedOnce
-		return true
 	}
+	*v = SuspectedOnce
+	return true
 }
 
 func (v MembershipState) IsUndefined() bool {
@@ -173,11 +172,7 @@ func LessForNodeProfile(c NodeProfile, o NodeProfile) bool {
 
 	cI := c.GetShortNodeId()
 	oI := o.GetShortNodeId()
-	if cI < oI {
-		return true
-	} else {
-		return false
-	}
+	return cI < oI
 }
 
 type MembershipProfile struct {

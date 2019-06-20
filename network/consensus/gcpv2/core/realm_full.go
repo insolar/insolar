@@ -255,7 +255,7 @@ func (r *FullRealm) GetPulseNumber() common.PulseNumber {
 
 func (r *FullRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
 	// NB! locks for this field are only needed for PrepRealm
-	return r.originalPulse
+	return r.coreRealm.originalPulse
 }
 
 func (r *FullRealm) GetPulseData() common.PulseData {

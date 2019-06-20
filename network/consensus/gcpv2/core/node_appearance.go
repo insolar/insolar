@@ -68,6 +68,7 @@ func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile) *NodeAppearance {
 	if np == nil {
 		panic("node profile is nil")
 	}
+	np.LocalNodeProfile() //to avoid linter's paranoia
 
 	return &NodeAppearance{
 		profile: np,

@@ -56,8 +56,13 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewLocalChronicles() localChronicles {
-	return localChronicles{}
+func NewLocalChronicles() LocalConsensusChronicles {
+	return &localChronicles{}
+}
+
+type LocalConsensusChronicles interface {
+	ConsensusChronicles
+	makeActive(ce ExpectedCensus, ca localActiveCensus)
 }
 
 var _ ConsensusChronicles = &localChronicles{}
@@ -118,14 +123,14 @@ func (c *localChronicles) makeActive(ce ExpectedCensus, ca localActiveCensus) {
 		c.expectedPulseNumber = pd.GetNextPulseNumber() // should go before any updates as it may panic
 		ca.setVersionedRegistries(registries)
 	} else {
-		if ca.getVersionedRegistries() == nil {
+		switch {
+		case ca.getVersionedRegistries() == nil:
 			panic("versioned registries are nil")
-		}
-		if pd.IsExpectedPulse() {
+		case pd.IsExpectedPulse():
 			c.expectedPulseNumber = pd.GetPulseNumber()
-		} else if pd.IsValidPulseData() {
+		case pd.IsValidPulseData():
 			c.expectedPulseNumber = pd.GetNextPulseNumber()
-		} else {
+		default:
 			c.expectedPulseNumber = common.UnknownPulseNumber
 		}
 	}

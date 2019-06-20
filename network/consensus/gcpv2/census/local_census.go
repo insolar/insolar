@@ -146,7 +146,7 @@ func (v State) IsBuilt() bool {
 }
 
 type OnlinePopulation interface {
-	FindProfile(nodeId common.ShortNodeID) common2.NodeProfile
+	FindProfile(nodeID common.ShortNodeID) common2.NodeProfile
 	GetCount() int
 	GetProfiles() []common2.NodeProfile
 	GetLocalProfile() common2.LocalNodeProfile
@@ -155,8 +155,8 @@ type OnlinePopulation interface {
 type OnlinePopulationBuilder interface {
 	GetCount() int
 	AddJoinerProfile(intro common2.NodeIntroProfile) common2.UpdatableNodeProfile
-	RemoveProfile(nodeId common.ShortNodeID)
+	RemoveProfile(nodeID common.ShortNodeID)
 	GetUnorderedProfiles() []common2.UpdatableNodeProfile
-	FindProfile(nodeId common.ShortNodeID) common2.UpdatableNodeProfile
+	FindProfile(nodeID common.ShortNodeID) common2.UpdatableNodeProfile
 	GetLocalProfile() common2.LocalNodeProfile
 }
