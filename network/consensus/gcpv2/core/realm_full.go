@@ -82,6 +82,7 @@ type FullRealm struct {
 
 	/* Other fields - need mutex */
 	// nshEvidence common2.NodeStateHashEvidence
+	isFinished bool
 }
 
 /* LOCK - runs under RoundController lock */
@@ -252,6 +253,10 @@ func (r *FullRealm) GetPulseNumber() common.PulseNumber {
 	return r.pulseData.PulseNumber
 }
 
+func (r *FullRealm) GetNextPulseNumber() common.PulseNumber {
+	return r.pulseData.GetNextPulseNumber()
+}
+
 func (r *FullRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
 	// NB! locks for this field are only needed for PrepRealm
 	return r.coreRealm.originalPulse
@@ -304,4 +309,21 @@ func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStat
 
 func (r *FullRealm) GetIndexedNodes() []NodeAppearance {
 	return r.nodes
+}
+
+func (r *FullRealm) CreateNextPopulationBuilder() census.Builder {
+	return r.chronicle.GetActiveCensus().CreateBuilder(r.GetNextPulseNumber())
+}
+
+func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHash) {
+	r.Lock()
+	defer r.Unlock()
+
+	if r.isFinished {
+		panic("illegal state")
+	}
+	r.isFinished = true
+
+	r.prepareNewMembers(builder.GetOnlinePopulationBuilder())
+	builder.BuildAndMakeExpected(csh)
 }

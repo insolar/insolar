@@ -161,27 +161,27 @@ func (r *PhasedRoundController) IsRunning() bool {
 
 /* Checks if Controller can handle a new packet, and which Realm should do it. If result = nil, then FullRealm is used */
 /* LOCK: simple */
-func (r *PhasedRoundController) beforeHandlePacket() (*PrepRealm, common.PulseNumber, error) {
+func (r *PhasedRoundController) beforeHandlePacket() (prep *PrepRealm, current common.PulseNumber, possibleNext common.PulseNumber, err error) {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
 	if r.fullCancel == nil {
-		return nil, 0, errors2.NewRoundStateError("not started")
+		return nil, 0, 0, errors2.NewRoundStateError("not started")
 	}
 	if !r.isRunning {
-		return nil, 0, errors2.NewRoundStateError("stopped")
+		return nil, 0, 0, errors2.NewRoundStateError("stopped")
 	}
 
 	if r.prepR != nil {
-		return r.prepR, r.realm.initialCensus.GetExpectedPulseNumber(), nil
+		return r.prepR, r.realm.initialCensus.GetExpectedPulseNumber(), 0, nil
 	}
-	return nil, r.realm.GetPulseNumber(), nil
+	return nil, r.realm.GetPulseNumber(), r.realm.GetNextPulseNumber(), nil
 }
 
 /*
-LOCK - must be called under LOCK
-Removes PrepRealm and starts FullRealm. Should only be used from PrepRealm.
-Nodes and PulseData(?) must be available.
+	LOCK - must be called under LOCK
+	Removes PrepRealm and starts FullRealm. Should only be used from PrepRealm.
+	Nodes and PulseData(?) must be available.
 */
 func (r *PhasedRoundController) finishPreparation(successful bool) {
 	if r.prepR == nil {
@@ -204,12 +204,15 @@ func (r *PhasedRoundController) startFullRealm() {
 	if lastCensus.IsActive() && lastCensus.GetPulseNumber().IsUnknown() {
 		/* This is the priming lastCensus */
 		b := chronicle.GetActiveCensus().CreateBuilder(pd.PulseNumber)
-		r.prepareNewMembers(b.GetOnlinePopulationBuilder())
-		b.BuildAndMakeExpected(lastCensus.GetMandateRegistry().GetPrimingCloudHash())
+		r.realm.prepareNewMembers(b.GetOnlinePopulationBuilder())
+		priming := lastCensus.GetMandateRegistry().GetPrimingCloudHash()
+		b.SetGlobulaStateHash(priming)
+		b.SealCensus()
+		b.BuildAndMakeExpected(priming)
 		chronicle.GetExpectedCensus().MakeActive(*pd)
 	} else {
 		if lastCensus.GetPulseNumber() != pd.PulseNumber {
-			panic("illegal state - pulse number of expected census and of the realm are mismatched")
+			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v", lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID()))
 		}
 		if !lastCensus.IsActive() {
 			/* Auto-activation of the prepared lastCensus */
@@ -233,7 +236,7 @@ func (r *PhasedRoundController) HandlePacket(packet packets.PacketParser, from c
 func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from common.HostIdentityHolder, preVerified bool) error {
 
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
-	prep, filterPN, err := r.beforeHandlePacket()
+	prep, filterPN, nextPN, err := r.beforeHandlePacket()
 	if err != nil {
 		return err
 	}
@@ -241,8 +244,11 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 	if !filterPN.IsUnknown() {
 		pn := packet.GetPulseNumber()
 		if !pn.IsUnknown() && filterPN != pn {
-			return errors2.NewPulseRoundMismatchError(pn,
-				fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v", filterPN, pn))
+			if nextPN.IsUnknown() || nextPN != pn {
+				return errors2.NewPulseRoundMismatchError(pn,
+					fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v", filterPN, pn))
+			}
+			return errors2.NewNextPulseArrivedError(pn)
 		}
 	}
 
@@ -318,14 +324,3 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 //func (r *PhasedRoundController) finishRound() {
 //	panic("not implemented")
 //}
-
-func (r *PhasedRoundController) prepareNewMembers(pop census.OnlinePopulationBuilder) {
-
-	for _, p := range pop.GetUnorderedProfiles() {
-		if p.GetSignatureVerifier() != nil {
-			continue
-		}
-		v := r.realm.GetSignatureVerifier(p.GetNodePublicKeyStore())
-		p.SetSignatureVerifier(v)
-	}
-}

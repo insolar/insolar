@@ -92,27 +92,17 @@ type UpstreamPulseController interface {
 	CancelPulseChange()
 
 	/* Consensus is finished and population for the next pulse is finalized
-	Application traffic can be resumed at full
+	Application traffic can be resumed at full.
+
+	This method is also invoked on resuming of this member from suspended state.
 	*/
-	ConsensusCompleted(report MembershipUpstreamReport, expectedCensus census.OperationalCensus)
+	MembershipConfirmed(report MembershipUpstreamReport, expectedCensus census.OperationalCensus)
 
-	/*
-		This node was unable to prove its identity, but it may not yet be excluded (is suspected).
-		All new Operations should be suspended.
-	*/
-	ConsensusFailed()
+	/* This node has left gracefully (by node's request) or it was expelled by globula */
+	MembershipLost(graceful bool)
 
-	/* This node has joined a globula */
-	MembershipAcquired()
-
-	/* This node was expelled from a globula */
-	MembershipLost()
-
-	/* This node became suspected joined a globula */
+	/* This node became suspected in the globula */
 	MembershipSuspended()
-
-	/* This node returned from suspected into active in a globula */
-	MembershipResumed()
 
 	/* Application traffic should be stopped or throttled down severely for a limited time (1-2 secs). */
 	SuspendTraffic()

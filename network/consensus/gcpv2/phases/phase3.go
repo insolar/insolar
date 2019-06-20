@@ -154,7 +154,12 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	d := c.calcGshPair()
 
 	go c.workerSendPhase3(ctx, d)
-	c.workerRecvPhase3(ctx, d)
+
+	if !c.workerRecvPhase3(ctx, d) {
+		//context was stopped in a hard way, we are dead in terms of consensus
+		//TODO should wait for further packets to decide if we need to turn ourself into suspended state
+		//c.R.StopRoundByTimeout()
+	}
 
 	go workerQueueFlusher(ctxRound, c.queuePh3Recv, c.queueTrustUpdated)
 }
@@ -349,6 +354,7 @@ outer:
 	for {
 		select {
 		case <-ctx.Done():
+			c.R.Log().Infof("Phase3 cancelled: %v", c.R.GetSelfNodeID())
 			return false
 		case <-softDeadline:
 			c.R.Log().Infof("Phase3 deadline: %v", c.R.GetSelfNodeID())
@@ -423,6 +429,13 @@ outer:
 		c.R.Log().Infof("Consensus is finished as different: %v, %v", c.R.GetSelfNodeID(), selectionSet)
 		// TODO update population and/or start Phase 4
 	}
+
+	b := c.R.CreateNextPopulationBuilder()
+	priming := c.R.GetPrimingCloudHash()
+	//population is to be updated somewhere here
+	b.SetGlobulaStateHash(priming)
+	b.SealCensus()
+	c.R.FinishRound(b, priming)
 
 	return true
 }

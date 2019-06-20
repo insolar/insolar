@@ -93,6 +93,12 @@ func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicle
 }
 
 func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
+	defer func() {
+		r := recover()
+		inslogger.FromContext(ctx).Errorf("host has died: %v, %v", h.hostAddr, r)
+		close(h.outbound)
+	}()
+
 	for {
 		var err error
 		payload, from, err := h.receive(ctx)
@@ -109,7 +115,6 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 		}
-
 	}
 }
 

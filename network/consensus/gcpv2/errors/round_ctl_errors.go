@@ -52,6 +52,7 @@ package errors
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/insolar/insolar/network/consensus/common"
 )
@@ -60,22 +61,27 @@ func NewPulseRoundMismatchError(pn common.PulseNumber, msg string) error {
 	return &nextPulseRoundError{pn: pn, s: msg}
 }
 
+func NewNextPulseArrivedError(pn common.PulseNumber) error {
+	return &nextPulseRoundError{pn: pn, nextPulse: true, s: fmt.Sprintf("possible next pulse: %v", pn)}
+}
+
 func NewRoundStateError(msg string) error {
 	return &nextPulseRoundError{s: msg}
 }
 
-func IsPulseRoundMismatchError(err error) (bool, common.PulseNumber) {
+func IsNextPulseArrivedError(err error) (bool, common.PulseNumber) {
 	pr, ok := err.(*nextPulseRoundError)
 	if !ok {
 		return false, common.UnknownPulseNumber
 	}
-	return ok, pr.pn
+	return pr.nextPulse, pr.pn
 }
 
 // errorString is a trivial implementation of error.
 type nextPulseRoundError struct {
-	pn common.PulseNumber
-	s  string
+	pn        common.PulseNumber
+	s         string
+	nextPulse bool
 }
 
 func (e *nextPulseRoundError) Error() string {

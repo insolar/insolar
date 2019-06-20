@@ -118,6 +118,9 @@ func (c *LocalCensusBuilder) SealCensus() {
 	if c.state.IsSealed() {
 		return
 	}
+	if c.gsh == nil {
+		panic("illegal state: GSH is nil")
+	}
 	c.state = SealedCensus
 }
 
@@ -140,8 +143,16 @@ func (c *LocalCensusBuilder) build(csh common2.CloudStateHash) copyOnlinePopulat
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	if csh == nil {
+		panic("illegal state: CSH is nil")
+	}
+
+	if !c.state.IsSealed() {
+		panic("illegal state: not sealed")
+	}
+
 	if c.state.IsBuilt() {
-		panic("illegal state")
+		panic("illegal state: was built")
 	}
 	c.state = BuiltCensus
 	c.csh = csh

@@ -78,21 +78,36 @@ type ConsensusMemberController struct {
 	chronicle    census.ConsensusChronicles
 	roundFactory core.RoundControllerFactory
 
-	mutex sync.Mutex
+	mutex sync.RWMutex
 	/* mutex needed */
 	currentRound core.RoundController
 }
 
-func (h *ConsensusMemberController) prepareRound() (core.RoundController, bool) {
+func (h *ConsensusMemberController) getCurrentRound() core.RoundController {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h.currentRound
+}
+
+func (h *ConsensusMemberController) ensureRound() (core.RoundController, bool) {
+	r := h.getCurrentRound()
+	if r != nil {
+		return r, false
+	}
+	return h._getOrCreateRound()
+}
+
+func (h *ConsensusMemberController) _getOrCreateRound() (core.RoundController, bool) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
-	if h.currentRound == nil {
-		h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle)
-		h.currentRound.StartConsensusRound(h)
-		return h.currentRound, true
+	if h.currentRound != nil {
+		return h.currentRound, false
 	}
-	return h.currentRound, false
+
+	h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle)
+	h.currentRound.StartConsensusRound(h)
+	return h.currentRound, true
 }
 
 func (h *ConsensusMemberController) _discardRound() core.RoundController {
@@ -113,16 +128,13 @@ func (h *ConsensusMemberController) discardRound() {
 }
 
 func (h *ConsensusMemberController) _processPacket(payload packets.PacketParser, from common.HostIdentityHolder, repeated bool) (bool, error) {
-	round, created := h.prepareRound()
+	round, created := h.ensureRound()
 	err := round.HandlePacket(payload, from)
 
-	if ok, _ := errors.IsPulseRoundMismatchError(err); ok {
+	if ok, _ := errors.IsNextPulseArrivedError(err); ok {
 		if repeated || created {
 			return false, err
 		}
-		//pn.IsTimePulse()
-		// TODO check if this is a next round pulse
-
 		return false, nil
 	}
 	return err == nil, err
@@ -134,19 +146,18 @@ func (h *ConsensusMemberController) ProcessPacket(payload packets.PacketParser, 
 	if ok || err != nil {
 		return err
 	}
-
 	h.discardRound()
 
 	_, err = h._processPacket(payload, from, true)
 	return err
 }
 
-func (h *ConsensusMemberController) ConsensusCompleted(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	h.discardRound()
-	h.upstreamPulseController.ConsensusCompleted(report, expectedCensus)
+func (h *ConsensusMemberController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+	//h.discardRound()
+	h.upstreamPulseController.MembershipConfirmed(report, expectedCensus)
 }
 
-func (h *ConsensusMemberController) ConsensusFailed() {
+func (h *ConsensusMemberController) MembershipLost(graceful bool) {
 	h.discardRound()
-	h.upstreamPulseController.ConsensusFailed()
+	h.upstreamPulseController.MembershipLost(graceful)
 }

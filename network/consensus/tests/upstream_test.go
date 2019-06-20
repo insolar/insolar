@@ -81,7 +81,7 @@ func (r *EmuUpstreamPulseController) MembershipResumed() {
 func (r *EmuUpstreamPulseController) MembershipAcquired() {
 }
 
-func (r *EmuUpstreamPulseController) MembershipLost() {
+func (r *EmuUpstreamPulseController) MembershipLost(graceful bool) {
 }
 
 func (*EmuUpstreamPulseController) PulseIsComing(anticipatedStart time.Time) {
@@ -111,7 +111,7 @@ func (*EmuUpstreamPulseController) CommitPulseChange(report core.MembershipUpstr
 func (*EmuUpstreamPulseController) CancelPulseChange() {
 }
 
-func (*EmuUpstreamPulseController) ConsensusCompleted(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+func (*EmuUpstreamPulseController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
 }
 
 func (*EmuUpstreamPulseController) ConsensusFailed() {

@@ -198,6 +198,10 @@ func (r *coreRealm) ReportMisbehavior(report errors.MisbehaviorReport) {
 	r.chronicle.GetLatestCensus().GetMisbehaviorRegistry().AddReport(report)
 }
 
+func (r *coreRealm) GetPrimingCloudHash() common2.CloudStateHash {
+	return r.initialCensus.GetMandateRegistry().GetPrimingCloudHash()
+}
+
 func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from common.HostIdentityHolder) error {
 	nr := r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
 	if nr == nil {
@@ -224,4 +228,15 @@ func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr common2.HostProf
 		return fmt.Errorf("packet signature doesn't match for sender: %v", from)
 	}
 	return nil
+}
+
+func (r *coreRealm) prepareNewMembers(pop census.OnlinePopulationBuilder) {
+
+	for _, p := range pop.GetUnorderedProfiles() {
+		if p.GetSignatureVerifier() != nil {
+			continue
+		}
+		v := r.GetSignatureVerifier(p.GetNodePublicKeyStore())
+		p.SetSignatureVerifier(v)
+	}
 }
