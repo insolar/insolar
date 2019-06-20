@@ -311,10 +311,10 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 	metaID := *insolar.NewID(pn, hash)
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
-	if err == ErrOverride {
-		logger.Error(errors.Wrap(err, "failed to add a result to filament"))
-	}
 	if err != nil {
+		if err == ErrOverride {
+			logger.Error(errors.Wrap(err, "failed to add a result to filament"))
+		}
 		// return errors.Wrap(err, "failed to add a result to filament")
 	}
 
@@ -425,7 +425,6 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 
 	fp, err := i.firstPending(ctx, pb)
 	if err != nil {
-		panic(err)
 		return err
 	}
 
@@ -443,13 +442,11 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 
 	err = i.refresh(ctx, idx, pb)
 	if err != nil {
-		panic(err)
 		return err
 	}
 
 	err = i.idxModifier.SetIndex(ctx, pn, *idx)
 	if err != nil {
-		panic(err)
 		return err
 	}
 

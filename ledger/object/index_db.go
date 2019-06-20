@@ -211,9 +211,9 @@ func (i *IndexDB) nextFilament(b *FilamentIndex) (canContinue bool, nextPN insol
 	pf := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
 	if pf.PreviousRecord != nil {
 		return true, pf.PreviousRecord.Pulse(), nil
-	} else {
-		return false, insolar.PulseNumber(0), nil
 	}
+
+	return false, insolar.PulseNumber(0), nil
 }
 
 func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
