@@ -87,7 +87,7 @@ type Params struct {
 }
 
 // Call method for authorized calls
-func (m *Member) Call(signedRequest []byte) (interface{}, error) {
+func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
 	var signature string
 	var pulseTimeStamp int64
 	var rawRequest []byte

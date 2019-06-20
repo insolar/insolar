@@ -40,7 +40,7 @@ type Request struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111119wjqvPQJfEH9WtA94W3LKen19FdB6sHJEfsae.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111277MhekB5d7pGxkLcaTinz379XohBDVtJfcezCa.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -343,9 +343,10 @@ func (r *Member) GetPublicKeyAsImmutable() (string, error) {
 }
 
 // Call is proxy generated method
-func (r *Member) Call(signedRequest []byte) (interface{}, error) {
-	var args [1]interface{}
-	args[0] = signedRequest
+func (r *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = rootDomain
+	args[1] = signedRequest
 
 	var argsSerialized []byte
 
@@ -377,9 +378,10 @@ func (r *Member) Call(signedRequest []byte) (interface{}, error) {
 }
 
 // CallNoWait is proxy generated method
-func (r *Member) CallNoWait(signedRequest []byte) error {
-	var args [1]interface{}
-	args[0] = signedRequest
+func (r *Member) CallNoWait(rootDomain insolar.Reference, signedRequest []byte) error {
+	var args [2]interface{}
+	args[0] = rootDomain
+	args[1] = signedRequest
 
 	var argsSerialized []byte
 
@@ -397,9 +399,10 @@ func (r *Member) CallNoWait(signedRequest []byte) error {
 }
 
 // CallAsImmutable is proxy generated method
-func (r *Member) CallAsImmutable(signedRequest []byte) (interface{}, error) {
-	var args [1]interface{}
-	args[0] = signedRequest
+func (r *Member) CallAsImmutable(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = rootDomain
+	args[1] = signedRequest
 
 	var argsSerialized []byte
 
