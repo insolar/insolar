@@ -284,6 +284,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			drops,
 			indexes,
 			Pulses,
+			Jets,
 			conf.LightChainLimit,
 		)
 

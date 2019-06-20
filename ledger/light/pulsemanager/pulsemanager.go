@@ -124,7 +124,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		if err != nil {
 			return err
 		}
-		m.postProcessJets(ctx, jets)
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
@@ -242,17 +241,6 @@ func (m *PulseManager) setUnderGilSection(
 	}
 
 	return jets, oldPulse, prevPN, nil
-}
-
-func (m *PulseManager) postProcessJets(ctx context.Context, jets []executor.JetInfo) {
-	ctx, span := instracer.StartSpan(ctx, "jets.post_process")
-	defer span.End()
-
-	for _, jetInfo := range jets {
-		if !jetInfo.MineNext {
-			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(jetInfo.ID))
-		}
-	}
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse insolar.Pulse) {
