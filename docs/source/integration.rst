@@ -101,7 +101,7 @@ To connect to the Insolar test network, do the following:
 
 Enjoy being a part of the Insolar Network!
 
-.. note:: The Insolar's API is under development and not yet finalized but you can try to run some `test scenarios <https://github.com/insolar/insolar/wiki/Test-scenarios>`_ that use the current API version.
+.. note:: The Insolar's API is under development and not yet finalized. Please, await its first release.
 
 In addition to the Insolar node, the Docker Compose starts Kibana and Grafana services to take care of :ref:`logging and monitoring <logs_and_monitor>`.
 
