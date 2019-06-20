@@ -241,7 +241,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	mb.MustRegisterMock.Return()
 
 	pam := object.NewPendingAccessorMock(s.T())
-	pam.OpenRequestsForObjIDMock.Return([]record.Request{{Object: genRandomRef(123)}}, nil)
+	pam.OpenRequestsIDsForObjIDMock.Return([]insolar.ID{gen.ID()}, nil)
 
 	lifelineIndex := object.NewLifelineIndexMock(s.T())
 	lifelineIndex.ForIDMock.Return(object.Lifeline{}, nil)
@@ -285,7 +285,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
 	mb.MustRegisterMock.Return()
 
 	pam := object.NewPendingAccessorMock(s.T())
-	pam.OpenRequestsForObjIDMock.Return([]record.Request{{Object: insolar.NewReference(firstID)}, {Object: insolar.NewReference(secondID)}}, nil)
+	pam.OpenRequestsIDsForObjIDMock.Return([]insolar.ID{firstID, secondID}, nil)
 
 	lflStor := object.NewLifelineStorage(s.indexStorageMemory, s.indexStorageMemory)
 	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, nil, pam, &configuration.Ledger{})
@@ -306,7 +306,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
 	assert.Equal(s.T(), firstID, result.ID)
 
 	// call to object that hasn't pending requests
-	pam.OpenRequestsForObjIDMock.Return([]record.Request{}, nil)
+	pam.OpenRequestsIDsForObjIDMock.Return([]insolar.ID{}, nil)
 	rep, err = h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
 	require.NoError(s.T(), err)
 	replyError, ok := rep.(*reply.Error)
