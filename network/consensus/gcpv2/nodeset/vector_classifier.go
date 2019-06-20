@@ -63,7 +63,7 @@ type HashedNodeVector struct {
 	DoubtedVector common.DigestHolder
 }
 
-func ClassifyByNodeGsh(selfData HashedNodeVector, otherData HashedNodeVector, nodeStats *stats.Row, hasher *filteredSequenceHasher) NodeVerificationResult {
+func ClassifyByNodeGsh(selfData HashedNodeVector, otherData HashedNodeVector, nodeStats *stats.Row, hasher FilteredSequenceHasher) NodeVerificationResult {
 
 	if selfData.DoubtedVector == nil {
 		selfData.DoubtedVector = selfData.TrustedVector
@@ -99,7 +99,7 @@ func ClassifyByNodeGsh(selfData HashedNodeVector, otherData HashedNodeVector, no
 	return verifyRes
 }
 
-// func catcher(selfData HashedNodeVector, otherData HashedNodeVector, hasher *filteredSequenceHasher, sr **stats.Row) (verifyRes NodeVerificationResult, repeat bool) {
+// func catcher(selfData HashedNodeVector, otherData HashedNodeVector, hasher *FilteredSequenceHasher, sr **stats.Row) (verifyRes NodeVerificationResult, repeat bool) {
 // 	defer func() {
 // 		repeat = recover() != nil
 // 	}()
@@ -107,7 +107,7 @@ func ClassifyByNodeGsh(selfData HashedNodeVector, otherData HashedNodeVector, no
 // 	return verifyVectorHashes(selfData, otherData, *sr, hasher), false
 // }
 
-func verifyVectorHashes(selfData HashedNodeVector, otherData HashedNodeVector, sr *stats.Row, hasher *filteredSequenceHasher) NodeVerificationResult {
+func verifyVectorHashes(selfData HashedNodeVector, otherData HashedNodeVector, sr *stats.Row, hasher FilteredSequenceHasher) NodeVerificationResult {
 	// TODO All GSH comparisons should be based on SIGNATURES! not on pure hashes
 
 	verifyRes := norNotVerified

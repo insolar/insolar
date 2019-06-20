@@ -56,11 +56,15 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
-func NewFilteredSequenceHasher(digestFactory common2.DigestFactory, sequenceHasherFunc SequenceHasherFunc) *filteredSequenceHasher {
+func NewFilteredSequenceHasher(digestFactory common2.DigestFactory, sequenceHasherFunc SequenceHasherFunc) FilteredSequenceHasher {
 	return &filteredSequenceHasher{digestFactory: digestFactory, sequenceHasherFunc: sequenceHasherFunc}
 }
 
 type SequenceHasherFunc func(index int, digester common2.SequenceDigester)
+
+type FilteredSequenceHasher interface {
+	BuildHashByFilter(bitset NodeBitset, row *stats.Row, trustedGsh bool) common.GlobulaStateHash
+}
 
 type filteredSequenceHasher struct {
 	digestFactory      common2.DigestFactory
