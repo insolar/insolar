@@ -105,12 +105,16 @@ func (v *HostIdentity) GetTransportCert() CertificateHolder {
 
 type Foldable interface {
 	FoldToUint64() uint64
+}
+
+type FixedReader interface {
+	io.WriterTo
+	io.Reader
 	FixedByteSize() int
 }
 
 type FoldableReader interface {
-	io.WriterTo
-	io.Reader
+	FixedReader
 	Foldable
 }
 
@@ -131,7 +135,7 @@ func BftMinority(nodeCount int) int {
 }
 
 // TODO ?NeedFix - current implementation can only work for limited cases
-func EqualFixedLenWriterTo(t, o io.WriterTo) bool {
+func EqualFixedLenWriterTo(t, o FixedReader) bool {
 	if t == nil || o == nil {
 		return false
 	}
@@ -141,16 +145,23 @@ func EqualFixedLenWriterTo(t, o io.WriterTo) bool {
 type writerToComparer struct {
 	thisValue *[]byte
 	other     io.WriterTo
+	result    bool
 }
 
-func (c *writerToComparer) compare(this io.WriterTo, other io.WriterTo) bool {
+func (c *writerToComparer) compare(this, other FixedReader) bool {
 	c.thisValue = nil
+	if this == nil || other == nil || this.FixedByteSize() != other.FixedByteSize() {
+		return false
+	}
 	c.other = other
 	_, _ = this.WriteTo(c)
-	return c.other == nil
+	return c.other == nil && c.result
 }
 
 func (c *writerToComparer) Write(otherValue []byte) (int, error) {
+	if c.other == nil {
+		panic("content of FixedReader must be read/written all at once")
+	}
 	if c.thisValue == nil {
 		c.thisValue = &otherValue // result of &var is never nil
 		_, err := c.other.WriteTo(c)
@@ -158,9 +169,8 @@ func (c *writerToComparer) Write(otherValue []byte) (int, error) {
 			return 0, err
 		}
 	} else {
-		if bytes.Equal(*c.thisValue, otherValue) {
-			c.other = nil // mark "true"
-		}
+		c.other = nil // mark "done"
+		c.result = bytes.Equal(*c.thisValue, otherValue)
 	}
 	return len(otherValue), nil
 }
