@@ -253,15 +253,15 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 		if memberPacket == nil {
 			panic("missing parser for phased packet")
 		}
-		selfId := r.realm.coreRealm.GetSelfNodeId()
+		selfID := r.realm.coreRealm.GetSelfNodeID()
 		sid := memberPacket.GetSourceShortNodeId()
-		if sid == selfId {
-			return fmt.Errorf("loopback, source ShortNodeID(%v) == this ShortNodeID(%v)", sid, selfId)
+		if sid == selfID {
+			return fmt.Errorf("loopback, source ShortNodeID(%v) == this ShortNodeID(%v)", sid, selfID)
 		}
 		if memberPacket.HasTargetShortNodeId() {
 			tid := memberPacket.GetTargetShortNodeId()
-			if tid != selfId {
-				return fmt.Errorf("target ShortNodeID(%v) != this ShortNodeID(%v)", tid, selfId)
+			if tid != selfID {
+				return fmt.Errorf("target ShortNodeID(%v) != this ShortNodeID(%v)", tid, selfID)
 			}
 		}
 

@@ -144,7 +144,7 @@ func (c *emuNodeIntro) IsAcceptableHost(from common.HostIdentityHolder) bool {
 	return c.n.Equals(from.GetHostAddress())
 }
 
-func (c *emuNodeIntro) GetShortNodeId() common.ShortNodeID {
+func (c *emuNodeIntro) GetShortNodeID() common.ShortNodeID {
 	return c.id
 }
 

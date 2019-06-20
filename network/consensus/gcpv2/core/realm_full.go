@@ -149,7 +149,7 @@ func (r *FullRealm) initHandlers() (allControllers []PhaseController, perNodeCon
 
 func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 
-	thisNodeId := r.population.GetLocalProfile().GetShortNodeId()
+	thisNodeID := r.population.GetLocalProfile().GetShortNodeID()
 	profiles := r.population.GetProfiles()
 	baselineWeight := r.strategy.RandUint32()
 
@@ -167,7 +167,7 @@ func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 		n.init(p)
 		n.neighborTrustThreshold = neighborTrustThreshold
 		n.neighbourWeight = baselineWeight
-		if p.GetShortNodeId() == thisNodeId {
+		if p.GetShortNodeID() == thisNodeID {
 			if r.self != nil {
 				panic("schizophrenia")
 			}
@@ -193,7 +193,7 @@ func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 	r.ShuffleNodeProjections(r.nodeRefs)
 
 	// Transition data from prev self
-	if prevSelf.IsJoiner() != r.self.IsJoiner() || prevSelf.GetShortNodeId() != r.self.GetShortNodeId() {
+	if prevSelf.IsJoiner() != r.self.IsJoiner() || prevSelf.GetShortNodeID() != r.self.GetShortNodeID() {
 		panic("inconsistent transition of self between realms")
 	}
 	prevSelf.copySelfTo(r.self)

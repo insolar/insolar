@@ -65,12 +65,12 @@ type HostProfile interface {
 
 type NodeIntroduction interface {
 	GetClaimEvidence() common.SignedEvidenceHolder
-	GetShortNodeId() common.ShortNodeID
+	GetShortNodeID() common.ShortNodeID
 }
 
 type NodeIntroProfile interface {
 	HostProfile
-	GetShortNodeId() common.ShortNodeID
+	GetShortNodeID() common.ShortNodeID
 	GetIntroduction() NodeIntroduction
 }
 
@@ -170,8 +170,8 @@ func LessForNodeProfile(c NodeProfile, o NodeProfile) bool {
 		return false
 	}
 
-	cI := c.GetShortNodeId()
-	oI := o.GetShortNodeId()
+	cI := c.GetShortNodeID()
+	oI := o.GetShortNodeID()
 	return cI < oI
 }
 

@@ -290,6 +290,11 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 	for _, np := range neighbourhood[1:] { // start from 1 to skip sending to self
 		p2.SendTo(np.GetProfile(), 0, c.R.GetPacketSender())
 		np.SetSentByPacketType(c.GetPacketType())
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 	}
 }
 
@@ -332,7 +337,7 @@ func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
 
 func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 
-	c.R.Log().Infof("Phase2 has started re-requesting Phase1: %v", c.R.GetSelfNodeId())
+	c.R.Log().Infof("Phase2 has started re-requesting Phase1: %v", c.R.GetSelfNodeID())
 
 	s := c.R.GetSelf()
 	if s.IsNshRequired() {
@@ -370,7 +375,7 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 
 func newNeighbourReport(na *core.NodeAppearance, nodeCount int) *neighbourReport {
 	r := neighbourReport{
-		nodeId:     na.GetShortNodeId(),
+		nodeID:     na.GetShortNodeID(),
 		trustLevel: na.GetTrustLevel(),
 		nodeCount:  uint16(nodeCount),
 	}
@@ -381,7 +386,7 @@ func newNeighbourReport(na *core.NodeAppearance, nodeCount int) *neighbourReport
 var _ packets.NodeStateHashReportReader = &neighbourReport{}
 
 type neighbourReport struct {
-	nodeId     common.ShortNodeID
+	nodeID     common.ShortNodeID
 	membership common2.MembershipProfile
 	trustLevel packets.NodeTrustLevel
 	nodeCount  uint16
@@ -401,7 +406,7 @@ func (c *neighbourReport) GetNodePower() common2.MemberPower {
 }
 
 func (c *neighbourReport) GetShortNodeId() common.ShortNodeID {
-	return c.nodeId
+	return c.nodeID
 }
 
 func (c *neighbourReport) GetNodeTrustLevel() packets.NodeTrustLevel {
@@ -417,5 +422,5 @@ func (c *neighbourReport) GetNodeStateHashEvidence() common2.NodeStateHashEviden
 }
 
 func (c neighbourReport) String() string {
-	return fmt.Sprintf("{sid:%d, %d/%d, T%d, nsh:%v}", c.nodeId, c.membership.Index, c.nodeCount, c.trustLevel, c.evidence)
+	return fmt.Sprintf("{sid:%d, %d/%d, T%d, nsh:%v}", c.nodeID, c.membership.Index, c.nodeCount, c.trustLevel, c.evidence)
 }

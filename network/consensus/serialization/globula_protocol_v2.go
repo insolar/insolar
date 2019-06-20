@@ -140,7 +140,7 @@ type NodeApperanceBitset struct {
 	// ByteSize=[1..252]
 	FlagsAndLoLength uint8 // [00-05] LoByteLength, [06] Compressed, [07] HasHiLength (to be compatible with Protobuf VarInt)
 	HiLength         uint8 // [00-06] HiByteLength, [07] MUST = 0 (to be compatible with Protobuf VarInt)
-	bytes            []byte
+	Bytes            []byte
 }
 
 // type CloudIdentity common.Bits512 //ByteSize=64
@@ -155,8 +155,8 @@ type IntroductionToJoiner struct {
 type NodeBriefIntro struct {
 	// ByteSize=142
 	ProtocolVersionAndFlags uint16
-	ShortNodeId             common.ShortNodeID
-	InboundRelayId          common.ShortNodeID // =0 - no relay is needed to send packets to the node
+	ShortNodeID             common.ShortNodeID
+	InboundRelayID          common.ShortNodeID // =0 - no relay is needed to send packets to the node
 	IssuedAt                common.PulseNumber
 	NodePK                  common.Bits512 // works as a unique node identity
 	NodeSignature           common.Bits512
@@ -175,8 +175,8 @@ type NodeIntroduction struct {
 	ProtocolVersionAndFlags uint16
 	Reserved0               uint8
 	ValidAsRequestFor       uint8 // for how long this intro can be used for joining, but it is not validity of Intro packet itself
-	ShortNodeId             common.ShortNodeID
-	InboundRelayId          common.ShortNodeID // =0 - no relay is needed to send packets to the node
+	ShortNodeID             common.ShortNodeID
+	InboundRelayID          common.ShortNodeID // =0 - no relay is needed to send packets to the node
 	IssuedAt                common.PulseNumber
 	NodePK                  common.Bits512 // works as a unique node identity
 	NodeSignature           common.Bits512

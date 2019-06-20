@@ -77,9 +77,9 @@ const (
 	CbsFraud     = ConsensusBitsetEntry(NbsFraud)
 )
 
-func (v NodeBitsetEntry) IsTrusted() bool { return v < NbsBaselineTrust }
-func (v NodeBitsetEntry) IsTimeout() bool { return v == NbsTimeout }
-func (v NodeBitsetEntry) IsFraud() bool   { return v == NbsFraud }
+func (s NodeBitsetEntry) IsTrusted() bool { return s < NbsBaselineTrust }
+func (s NodeBitsetEntry) IsTimeout() bool { return s == NbsTimeout }
+func (s NodeBitsetEntry) IsFraud() bool   { return s == NbsFraud }
 
 func (s NodeBitsetEntry) String() string {
 	return FmtNodeBitsetEntry(uint8(s))

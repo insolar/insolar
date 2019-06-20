@@ -140,8 +140,8 @@ func (c *NodeAppearance) GetIndex() int {
 	return c.profile.GetIndex()
 }
 
-func (c *NodeAppearance) GetShortNodeId() common.ShortNodeID {
-	return c.profile.GetShortNodeId()
+func (c *NodeAppearance) GetShortNodeID() common.ShortNodeID {
+	return c.profile.GetShortNodeID()
 }
 
 func (c *NodeAppearance) GetTrustLevel() packets.NodeTrustLevel {
@@ -218,7 +218,7 @@ func (c *NodeAppearance) ApplyNodeMembership(mp common2.MembershipProfile, evide
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	return c._applyNodeMembership(mp, evidence, true, errorFactory)
+	return c._applyNodeMembership(mp, evidence, errorFactory)
 }
 
 /* Evidence MUST be verified before this call */
@@ -229,9 +229,9 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp comm
 	defer c.mutex.Unlock()
 
 	trustBefore = c.trust
-	modifiedNsh, _ = c._applyNodeMembership(mp, evidence, false, errorFactory)
+	modifiedNsh, _ = c._applyNodeMembership(mp, evidence, errorFactory)
 
-	if witness.GetShortNodeId() != c.GetShortNodeId() { // a node can't be a witness to itself
+	if witness.GetShortNodeID() != c.GetShortNodeID() { // a node can't be a witness to itself
 		switch {
 		case c.neighborReports == 0:
 			c.trust.UpdateKeepNegative(packets.TrustBySome)
@@ -250,7 +250,7 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp comm
 
 /* Evidence MUST be verified before this call */
 func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile, evidence common2.NodeStateHashEvidence,
-	direct bool, errorFactory errors.MisbehaviorFactories) (bool, error) {
+	errorFactory errors.MisbehaviorFactories) (bool, error) {
 
 	// TODO rank check
 	// if c.GetIndex() != int(mp.Index) || c.GetPower() != mp.Power {
@@ -259,7 +259,7 @@ func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile, evid
 
 	if c.nshEvidence == nil {
 		if evidence == nil {
-			panic(fmt.Sprintf("evidence is nil: for=%v", c.GetShortNodeId()))
+			panic(fmt.Sprintf("evidence is nil: for=%v", c.GetShortNodeID()))
 		}
 		c.neighbourWeight ^= common.FoldUint64(mp.Nsh.FoldToUint64())
 		c.nshEvidence = evidence
@@ -278,7 +278,7 @@ func (c *NodeAppearance) GetNodeStateHashEvidence() common2.NodeStateHashEvidenc
 	defer c.mutex.Unlock()
 
 	if c.nshEvidence == nil {
-		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeId()))
+		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
 	}
 	return c.nshEvidence
 }
@@ -288,7 +288,7 @@ func (c *NodeAppearance) GetNodeMembershipAndEvidence() (common2.MembershipProfi
 	defer c.mutex.Unlock()
 
 	if c.nshEvidence == nil {
-		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeId()))
+		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
 	}
 	return c.getMembership(), c.nshEvidence
 }
@@ -298,7 +298,7 @@ func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence common2.NodeStat
 	defer c.mutex.Unlock()
 
 	if c.nshEvidence != nil {
-		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeId()))
+		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
 	}
 	c.neighbourWeight ^= common.FoldUint64(evidence.GetNodeStateHash().FoldToUint64())
 	c.nshEvidence = evidence
@@ -317,7 +317,7 @@ func (c *NodeAppearance) GetNodeMembership() common2.MembershipProfile {
 }
 
 func (c *NodeAppearance) getMembership() common2.MembershipProfile {
-	var nsh common2.NodeStateHash = nil
+	var nsh common2.NodeStateHash
 	if c.nshEvidence != nil {
 		nsh = c.nshEvidence.GetNodeStateHash()
 	}

@@ -116,11 +116,11 @@ func (h *ConsensusMemberController) _processPacket(payload packets.PacketParser,
 	round, created := h.prepareRound()
 	err := round.HandlePacket(payload, from)
 
-	if ok, pn := errors.IsPulseRoundMismatchError(err); ok {
+	if ok, _ := errors.IsPulseRoundMismatchError(err); ok {
 		if repeated || created {
 			return false, err
 		}
-		pn.IsTimePulse()
+		//pn.IsTimePulse()
 		// TODO check if this is a next round pulse
 
 		return false, nil

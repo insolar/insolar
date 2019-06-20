@@ -94,6 +94,7 @@ func handleEmbeddedPulsePacket(p packets.MemberPacketReader, pp packets.PulsePac
 
 	// TODO validate pulse data
 	pp.GetPulseDataEvidence()
+	p.GetPacketSignature()
 
 	if r.GetPulseData() == pp.GetPulseData() {
 		return defErr
@@ -220,7 +221,7 @@ func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int)
 	for i := range otherNodes {
 		index := (startIndex + i) % len(otherNodes)
 		target := otherNodes[index]
-		var sendOptions core.PacketSendOptions = 0
+		var sendOptions core.PacketSendOptions
 
 		if target.HasReceivedAnyPhase() {
 			// if something was received from this node, then we don't need to send a copy of pulse data to it

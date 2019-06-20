@@ -86,8 +86,8 @@ func (r *packetRoute) handleHostPacket(reader packets.PacketParser, from common.
 	return r.handlerHost(reader, from)
 }
 
-func (r *packetRoute) setRedirectHandler(redirectId int) {
-	r.redirectPerNode = redirectId
+func (r *packetRoute) setRedirectHandler(redirectID int) {
+	r.redirectPerNode = redirectID
 	r.handlerMember = r.redirectMemberPacket
 }
 

@@ -166,7 +166,7 @@ func (r *coreRealm) GetStartedAt() time.Time {
 }
 
 func (r *coreRealm) AdjustedAfter(d time.Duration) time.Duration {
-	return r.roundStartedAt.Add(d).Sub(time.Now())
+	return time.Until(r.roundStartedAt.Add(d))
 }
 
 func (r *coreRealm) GetRoundContext() context.Context {
@@ -181,8 +181,8 @@ func (r *coreRealm) IsJoiner() bool {
 	return r.self.IsJoiner()
 }
 
-func (r *coreRealm) GetSelfNodeId() common.ShortNodeID {
-	return r.self.profile.GetShortNodeId()
+func (r *coreRealm) GetSelfNodeID() common.ShortNodeID {
+	return r.self.profile.GetShortNodeID()
 }
 
 func (r *coreRealm) GetSelf() *NodeAppearance {

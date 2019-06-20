@@ -107,14 +107,14 @@ func (r *emuPacketBuilder) GetNeighbourhoodSize(populationCount int) common2.Nei
 func (r *emuPacketBuilder) PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
-		basePacket: basePacket{src: sender.GetShortNodeId()},
+		basePacket: basePacket{src: sender.GetShortNodeID()},
 		packet:     pulsarPacket.(*EmuPulsarNetPacket)}
 	return &emuPacketSender{&v}
 }
 
 func (r *EmuPhase0NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeId()
+	c.tgt = t.GetShortNodeID()
 	return &c
 }
 
@@ -128,7 +128,7 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsa
 
 	v := EmuPhase1NetPacket{
 		EmuPhase0NetPacket: EmuPhase0NetPacket{
-			basePacket: basePacket{src: sender.GetShortNodeId()},
+			basePacket: basePacket{src: sender.GetShortNodeID()},
 			packet:     pp},
 		selfIntro: sender.GetIntroduction(),
 		nsh:       nsh}
@@ -143,7 +143,7 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsa
 
 func (r *EmuPhase1NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeId()
+	c.tgt = t.GetShortNodeID()
 
 	if !t.IsJoiner() {
 		c.selfIntro = nil
@@ -160,7 +160,7 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender common2.NodeProfile, pd co
 
 	v := EmuPhase2NetPacket{
 		basePacket: basePacket{
-			src: sender.GetShortNodeId()},
+			src: sender.GetShortNodeID()},
 		pulseNumber:   pd.PulseNumber,
 		neighbourhood: neighbourhood,
 		intros:        intros}
@@ -169,14 +169,14 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender common2.NodeProfile, pd co
 
 func (r *EmuPhase2NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeId()
+	c.tgt = t.GetShortNodeID()
 
 	if !t.IsJoiner() || len(c.intros) == 1 /* the only joiner */ {
 		c.intros = nil
 	} else {
 		c.intros = make([]common2.NodeIntroduction, 0, len(r.intros)-1)
 		for _, ni := range r.intros {
-			if ni.GetShortNodeId() == t.GetShortNodeId() {
+			if ni.GetShortNodeID() == t.GetShortNodeID() {
 				continue
 			}
 			c.intros = append(c.intros, ni)
@@ -191,7 +191,7 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender common2.NodeProfile, pd co
 
 	v := EmuPhase3NetPacket{
 		basePacket: basePacket{
-			src: sender.GetShortNodeId()},
+			src: sender.GetShortNodeID()},
 		bitset:      bitset,
 		pulseNumber: pd.PulseNumber,
 		gshTrusted:  gshTrusted,
@@ -201,7 +201,7 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender common2.NodeProfile, pd co
 
 func (r *EmuPhase3NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeId()
+	c.tgt = t.GetShortNodeID()
 	return &c
 }
 
