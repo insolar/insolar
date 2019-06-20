@@ -80,11 +80,12 @@ func (*simpleSimpleConsensusSelectionStrategy) SelectOnStopped(globulaStats *sta
 	for i := 0; i < resultSet.ColumnCount(); i++ {
 		tc := globulaStats.GetColumn(i)
 		decision := nodeset.CbsSuspected
-		if tc.GetSummaryByValue(nodeset.ConsensusStatFraud)+tc.GetSummaryByValue(nodeset.ConsensusStatFraudSuspect) >= bftMajority {
+		switch {
+		case tc.GetSummaryByValue(nodeset.ConsensusStatFraud)+tc.GetSummaryByValue(nodeset.ConsensusStatFraudSuspect) >= bftMajority:
 			decision = nodeset.CbsFraud
-		} else if tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority {
+		case tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority:
 			decision = nodeset.CbsIncluded
-		} else if realm.GetNodeApperanceByIndex(i).GetProfile().GetState().IsSuspect() {
+		case realm.GetNodeApperanceByIndex(i).GetProfile().GetState().IsSuspect():
 			decision = nodeset.CbsExcluded
 		}
 		resultSet.Set(i, decision)

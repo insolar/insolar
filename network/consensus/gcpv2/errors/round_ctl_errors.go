@@ -68,9 +68,8 @@ func IsPulseRoundMismatchError(err error) (bool, common.PulseNumber) {
 	pr, ok := err.(*nextPulseRoundError)
 	if !ok {
 		return false, common.UnknownPulseNumber
-	} else {
-		return ok, pr.pn
 	}
+	return ok, pr.pn
 }
 
 // errorString is a trivial implementation of error.

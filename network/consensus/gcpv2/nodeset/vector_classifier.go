@@ -157,11 +157,13 @@ func verifyVectorHashes(selfData HashedNodeVector, otherData HashedNodeVector, s
 		gsh = hasher.BuildHashByFilter(otherData.Bitset, sr, true)
 		altered = true
 	}
-	if valid == gsh.Equals(otherData.TrustedVector) {
+
+	switch {
+	case valid == gsh.Equals(otherData.TrustedVector):
 		verifyRes.SetTrusted(valid, altered)
-	} else if valid {
+	case valid:
 		verifyRes.SetTrusted(false, altered)
-	} else {
+	default:
 		// Dont set valid/fraud as there is an evident fraud/error by the sender
 		// TODO fraud - there must be match when a wider set is in match
 		verifyRes |= NvrSenderFault
@@ -193,29 +195,23 @@ func summarize(otherDataBitset NodeBitset, verifyRes NodeVerificationResult, sr 
 			nodeResult = ConsensusStatMissingHere
 		case NodeBitSame:
 			b := otherDataBitset[i]
-			if b.IsTimeout() {
+			switch {
+			case b.IsTimeout():
 				// it was missing on both sides
 				nodeResult = ConsensusStatMissingThere
-			} else if b.IsFraud() {
+			case b.IsFraud():
 				// we don't need checks to agree on fraud mutually detected
 				nodeResult = ConsensusStatFraud
-			} else {
-				if b.IsTrusted() {
-					if verifyRes.AnyOf(NvrTrustedFraud) {
-						nodeResult = ConsensusStatFraudSuspect
-						fraudEnforcementCheck = NvrTrustedFraud
-						break
-					} else if verifyRes.AnyOf(NvrTrustedValid) {
-						nodeResult = ConsensusStatTrusted
-						break
-					}
-				}
-				if verifyRes.AnyOf(NvrDoubtedValid) {
-					nodeResult = ConsensusStatDoubted
-				} else if verifyRes.AnyOf(NvrDoubtedFraud) {
-					fraudEnforcementCheck = NvrDoubtedFraud
-					nodeResult = ConsensusStatFraudSuspect
-				}
+			case b.IsTrusted() && verifyRes.AnyOf(NvrTrustedFraud):
+				nodeResult = ConsensusStatFraudSuspect
+				fraudEnforcementCheck = NvrTrustedFraud
+			case b.IsTrusted() && verifyRes.AnyOf(NvrTrustedValid):
+				nodeResult = ConsensusStatTrusted
+			case verifyRes.AnyOf(NvrDoubtedValid):
+				nodeResult = ConsensusStatDoubted
+			case verifyRes.AnyOf(NvrDoubtedFraud):
+				fraudEnforcementCheck = NvrDoubtedFraud
+				nodeResult = ConsensusStatFraudSuspect
 			}
 		case NodeBitLessTrustedThere:
 			switch {

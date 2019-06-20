@@ -211,8 +211,8 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, loc
 	c.slots = buf[:slotIndex]
 }
 
-func (c *ManyNodePopulation) FindProfile(nodeId common2.ShortNodeID) common.NodeProfile {
-	return &c.slotByID[nodeId].nodeSlot
+func (c *ManyNodePopulation) FindProfile(nodeID common2.ShortNodeID) common.NodeProfile {
+	return &c.slotByID[nodeID].nodeSlot
 }
 
 func (c *ManyNodePopulation) GetCount() int {
@@ -267,12 +267,12 @@ func (c *DynamicPopulation) makeCopyOf(slots []updatableSlot, local *updatableSl
 	}
 }
 
-func (c *DynamicPopulation) FindProfile(nodeId common2.ShortNodeID) common.NodeProfile {
-	return &c.slotById[nodeId].nodeSlot
+func (c *DynamicPopulation) FindProfile(nodeID common2.ShortNodeID) common.NodeProfile {
+	return &c.slotById[nodeID].nodeSlot
 }
 
-func (c *DynamicPopulation) FindUpdatableProfile(nodeId common2.ShortNodeID) common.UpdatableNodeProfile {
-	return c.slotById[nodeId]
+func (c *DynamicPopulation) FindUpdatableProfile(nodeID common2.ShortNodeID) common.UpdatableNodeProfile {
+	return c.slotById[nodeID]
 }
 
 func (c *DynamicPopulation) GetCount() int {

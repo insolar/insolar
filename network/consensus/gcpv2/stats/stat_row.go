@@ -128,17 +128,15 @@ func (r *Row) HasValues(value uint8) bool {
 func (r *Row) HasAllValues(value uint8) bool {
 	if value != 0 {
 		return r.summary[value] == uint16(len(r.values))
-	} else {
-		return r.summary[0] == 0 // zero is reverse-counted
 	}
+	return r.summary[0] == 0 // zero is reverse-counted
 }
 
 func (r *Row) HasAllValuesOf(value0, value1 uint8) bool {
 	if value0 == 0 || value1 == 0 {
 		return r.summary[value0]+r.summary[value1] == 0 // zero is reverse-counted
-	} else {
-		return r.summary[value0]+r.summary[value1] == uint16(len(r.values))
 	}
+	return r.summary[value0]+r.summary[value1] == uint16(len(r.values))
 }
 
 func (r *Row) GetSummaryByValue(value uint8) uint16 {
