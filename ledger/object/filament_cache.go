@@ -602,7 +602,6 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 			}
 			err := i.setFilament(ctx, pm, destPN, r.Records)
 			if err != nil {
-				panic(err)
 				return err
 			}
 
@@ -639,14 +638,12 @@ func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *FilamentIndex, 
 		for _, metaID := range chainLink.MetaRecordsIDs {
 			metaRec, err := i.recordStorage.ForID(ctx, metaID)
 			if err != nil {
-				panic(errors.Wrapf(err, "obj id - %v", metaID.DebugString()))
 				return errors.Wrap(err, "failed to refresh an index state")
 			}
 
 			concreteMeta := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
 			rec, err := i.recordStorage.ForID(ctx, concreteMeta.RecordID)
 			if err != nil {
-				panic(errors.Wrapf(err, "obj id - %v", concreteMeta.RecordID.DebugString()))
 				return errors.Wrap(err, "failed to refresh an index state")
 			}
 
