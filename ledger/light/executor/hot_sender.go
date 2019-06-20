@@ -70,34 +70,58 @@ func NewHotSender(
 	}
 }
 
-func (m *HotSenderDefault) getFilamentIndexes(
-	ctx context.Context, pn insolar.PulseNumber,
-) ([]object.FilamentIndex, error) {
-	bucks := m.indexBucketAccessor.ForPulse(ctx, pn)
+func (m *HotSenderDefault) filterAndGroupIndexes(
+	ctx context.Context, oldPulse, newPulse insolar.PulseNumber,
+) (map[insolar.JetID][]object.FilamentIndex, error) {
+	indexes := m.indexBucketAccessor.ForPulse(ctx, oldPulse)
 
-	limitPN, err := m.pulseCalculator.Backwards(ctx, pn, m.lightChainLimit)
+	limitPN, err := m.pulseCalculator.Backwards(ctx, oldPulse, m.lightChainLimit)
 	if err == pulse.ErrNotFound {
 		limitPN = *insolar.GenesisPulse
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch starting pulse for getting filaments")
 	}
 
-	out := bucks[:0]
-	for _, elem := range bucks {
-		if elem.LifelineLastUsed < limitPN.PulseNumber {
+	// filter out inactive indexes
+	filtered := indexes[:0]
+	for _, idx := range indexes {
+		if idx.LifelineLastUsed < limitPN.PulseNumber {
 			continue
 		}
-		out = append(out, elem)
+		filtered = append(filtered, idx)
 	}
-	return out, nil
+
+	// group by net
+	byJet := map[insolar.JetID][]object.FilamentIndex{}
+	for _, idx := range filtered {
+		jetID, _ := m.jetAccessor.ForID(ctx, newPulse, idx.ObjID)
+		byJet[jetID] = append(byJet[jetID], idx)
+	}
+	return byJet, nil
 }
 
-func groupFilamentsByJet(filaments []object.FilamentIndex) map[insolar.JetID][]object.FilamentIndex {
-	m := map[insolar.JetID][]object.FilamentIndex{}
-	for _, f := range filaments {
-		m[f.Lifeline.JetID] = append(m[f.Lifeline.JetID], f)
+// SendHot send hot records from oldPulse to all jets in newPulse.
+func (m *HotSenderDefault) SendHot(
+	ctx context.Context, jets []JetInfo, oldPulse, newPulse insolar.PulseNumber,
+) error {
+	ctx, span := instracer.StartSpan(ctx, "hot_sender.start")
+	defer span.End()
+
+	// get indexes grouped by actual jet ID
+	byJet, err := m.filterAndGroupIndexes(ctx, oldPulse, newPulse)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get filament indexes for %v pulse", newPulse)
 	}
-	return m
+
+	// process every jet asynchronously
+	var eg errgroup.Group
+	for _, info := range jets {
+		info := info
+		eg.Go(func() error {
+			return m.sendForJet(ctx, info, byJet, oldPulse, newPulse)
+		})
+	}
+	return errors.Wrap(eg.Wait(), "got error on jets sync")
 }
 
 func logErrorStr(ctx context.Context, jetID insolar.JetID, s string) {
@@ -111,7 +135,7 @@ func logErrorStr(ctx context.Context, jetID insolar.JetID, s string) {
 func (m *HotSenderDefault) sendForJet(
 	ctx context.Context,
 	info JetInfo,
-	filaments []object.FilamentIndex,
+	indexesPerJet map[insolar.JetID][]object.FilamentIndex,
 	oldPulse, newPulse insolar.PulseNumber,
 ) error {
 	block, err := m.createDrop(ctx, info, oldPulse)
@@ -141,46 +165,21 @@ func (m *HotSenderDefault) sendForJet(
 			return
 		}
 
-		logErrorStr(ctx, jetID, "test logErrorStr")
 		stats.Record(ctx, statHotObjectsSend.M(int64(len(hotIndexes))))
 	}
 
 	if !info.SplitPerformed {
-		hots := m.hotDataForJet(ctx, filaments, newPulse, nil)
+		hots := m.hotDataForJet(ctx, indexesPerJet[info.ID])
 		go sender(hots, info.ID)
 		return nil
 	}
 
 	left, right := jet.Siblings(info.ID)
-	hotsLeft := m.hotDataForJet(ctx, filaments, newPulse, &left)
-	hotsRight := m.hotDataForJet(ctx, filaments, newPulse, &right)
+	hotsLeft := m.hotDataForJet(ctx, indexesPerJet[left])
+	hotsRight := m.hotDataForJet(ctx, indexesPerJet[right])
 	go sender(hotsLeft, left)
 	go sender(hotsRight, right)
 	return nil
-}
-
-func (m *HotSenderDefault) SendHot(
-	ctx context.Context, jets []JetInfo, oldPulse, newPulse insolar.PulseNumber,
-) error {
-	ctx, span := instracer.StartSpan(ctx, "hot_sender.start")
-	defer span.End()
-
-	// get all indexes for old (current) pulse
-	filaments, err := m.getFilamentIndexes(ctx, oldPulse)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get filament indexes for %v pulse", newPulse)
-	}
-	filamentsByJet := groupFilamentsByJet(filaments)
-
-	// process every jet asynchronously
-	var eg errgroup.Group
-	for _, info := range jets {
-		info := info
-		eg.Go(func() error {
-			return m.sendForJet(ctx, info, filamentsByJet[info.ID], oldPulse, newPulse)
-		})
-	}
-	return errors.Wrap(eg.Wait(), "got error on jets sync")
 }
 
 func (m *HotSenderDefault) createDrop(ctx context.Context, info JetInfo, p insolar.PulseNumber) (
@@ -205,26 +204,14 @@ func (m *HotSenderDefault) createDrop(ctx context.Context, info JetInfo, p insol
 // if jetID provided, filters output records what only match this jet.
 func (m *HotSenderDefault) hotDataForJet(
 	ctx context.Context,
-	filaments []object.FilamentIndex,
-	pn insolar.PulseNumber,
-	jetID *insolar.JetID,
+	indexes []object.FilamentIndex,
 ) []message.HotIndex {
-	filtered := 0
-	hotIndexes := make([]message.HotIndex, 0, len(filaments))
-	for _, meta := range filaments {
+	hotIndexes := make([]message.HotIndex, 0, len(indexes))
+	for _, meta := range indexes {
 		encoded, err := meta.Lifeline.Marshal()
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("failed to marshal lifeline: %v", err)
 			continue
-		}
-
-		// skip checks if not needed
-		if jetID != nil {
-			objJetID, _ := m.jetAccessor.ForID(ctx, pn, meta.ObjID)
-			if objJetID != *jetID {
-				filtered++
-				continue
-			}
 		}
 
 		hotIndexes = append(hotIndexes, message.HotIndex{
@@ -233,6 +220,5 @@ func (m *HotSenderDefault) hotDataForJet(
 			Index:            encoded,
 		})
 	}
-	// inslogger.FromContext(ctx).Debugf("hot indexes filtered %v/%v", filtered, len(filaments))
 	return hotIndexes
 }
