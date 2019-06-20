@@ -275,9 +275,6 @@ func (b *pendingMeta) addMetaIDToFilament(pn insolar.PulseNumber, metaID insolar
 func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error {
 	logger := inslogger.FromContext(ctx)
 
-	i.idLocker.Lock(&objID)
-	defer i.idLocker.Unlock(&objID)
-
 	idx := i.idxAccessor.Index(pn, objID)
 	if idx == nil {
 		return ErrLifelineNotFound
@@ -657,9 +654,8 @@ func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *FilamentIndex, 
 				if !ok {
 					pb.notClosedRequestsIdsIndex[chainLink.PN] = map[insolar.ID]struct{}{}
 				}
-				pb.notClosedRequestsIdsIndex[chainLink.PN][*r.Object.Record()] = struct{}{}
+				pb.notClosedRequestsIdsIndex[chainLink.PN][concreteMeta.RecordID] = struct{}{}
 			case *record.Result:
-				println(r.Request.Record().Pulse())
 				openReqs, ok := pb.notClosedRequestsIdsIndex[r.Request.Record().Pulse()]
 				if ok {
 					delete(openReqs, *r.Request.Record())
@@ -725,6 +721,9 @@ func (i *FilamentCacheStorage) OpenRequestsForObjID(ctx context.Context, current
 
 		switch r := record.Unwrap(rec.Virtual).(type) {
 		case *record.Request:
+			if r.Object == nil {
+				panic(fmt.Sprintf("nothing wrong here %v", pb.notClosedRequestsIds[idx].DebugString()))
+			}
 			res[idx] = *r
 		default:
 			panic("filament is totally broken")

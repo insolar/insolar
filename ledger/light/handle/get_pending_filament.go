@@ -18,7 +18,6 @@ package handle
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
@@ -40,18 +39,14 @@ func NewGetPendingFilament(dep *proc.Dependencies, meta payload.Meta) *GetPendin
 }
 
 func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
-	pl, err := payload.UnmarshalFromMeta(s.meta.Payload)
+	gpf := payload.GetPendingFilament{}
+	err := gpf.Unmarshal(s.meta.Payload)
 	if err != nil {
-		panic("UnmarshalFromMeta")
+		panic(err)
 		return errors.Wrap(err, "failed to unmarshal payload")
 	}
-	msg, ok := pl.(*payload.GetPendingFilament)
-	if !ok {
-		panic("pl.(*payload.GetPendingFilament)")
-		return fmt.Errorf("unexpected payload type: %T", pl)
-	}
 
-	getFilament := proc.NewGetPendingFilament(s.meta, msg.ObjectID, msg.StartFrom, msg.ReadUntil)
+	getFilament := proc.NewGetPendingFilament(s.meta, gpf.ObjectID, gpf.StartFrom, gpf.ReadUntil)
 	s.dep.GetPendingFilament(getFilament)
 	return f.Procedure(ctx, getFilament, false)
 }
