@@ -42,8 +42,8 @@ import (
 )
 
 const (
-	TimeoutError = -215
-	ResultError  = -217
+	TimeoutError = 215
+	ResultError  = 217
 )
 
 // UnmarshalRequest unmarshals request to api

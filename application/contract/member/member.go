@@ -202,7 +202,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	return nil, w.Transfer(params["amount"].(string), toMember)
 }
-func (mdMember *Member) migrationCall(params map[string]interface{}) (string, error) {
+func (m *Member) migrationCall(params map[string]interface{}) (string, error) {
 
 	amount := new(big.Int)
 	amount, ok := amount.SetString(params["inAmount"].(string), 10)
@@ -215,7 +215,7 @@ func (mdMember *Member) migrationCall(params map[string]interface{}) (string, er
 		return "", fmt.Errorf("failed to parse unHoldDate: %s", err.Error())
 	}
 
-	return mdMember.migration(mdMember.RootDomain, params["txHash"].(string), params["burnAddress"].(string), *amount, unHoldDate)
+	return m.migration(m.RootDomain, params["txHash"].(string), params["burnAddress"].(string), *amount, unHoldDate)
 }
 
 // Platform methods
@@ -232,7 +232,7 @@ func (m *Member) registerNode(public string, role string) (interface{}, error) {
 		return nil, fmt.Errorf("failed to register node: %s", err.Error())
 	}
 
-	return string(cert), nil
+	return cert, nil
 }
 
 func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
@@ -375,6 +375,7 @@ func (migrationDaemonMember *Member) migration(rdRef insolar.Reference, txHash s
 
 	return strconv.Itoa(int(confirms)), nil
 }
+
 func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 
 	inputAmount := new(big.Int)
