@@ -244,7 +244,9 @@ func TestBadgerDB_NewReverseIterator(t *testing.T) {
 
 	f := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
 		func(key *testBadgerKey, c fuzz.Continue) {
-			c.Fuzz(&key.id)
+			var id []byte
+			c.Fuzz(&id)
+			key.id = append(commonPrefix, id...)
 			key.id[0] = commonPrefix[0] + 1
 			key.scope = commonScope
 		},
@@ -322,11 +324,17 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 
 	count := 100
 	length := 10
+	prefixes := make([][]byte, count)
 	keys := make([][]byte, count)
 	for i := 0; i < count; i++ {
+		prefixes[i] = make([]byte, length)
 		keys[i] = make([]byte, length)
-		_, err := rand.Read(keys[i])
+		_, err = rand.Read(prefixes[i])
 		require.NoError(t, err)
+		_, err = rand.Read(keys[i])
+		require.NoError(t, err)
+		keys[i][0] = 0xFF
+		keys[i] = append(prefixes[i], keys[i]...)
 		err = db.Set(testBadgerKey{keys[i], ScopeRecord}, nil)
 		require.NoError(t, err)
 	}
@@ -337,11 +345,14 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 		sort.Slice(keys, func(i, j int) bool {
 			return bytes.Compare(keys[i], keys[j]) == -1
 		})
+		sort.Slice(prefixes, func(i, j int) bool {
+			return bytes.Compare(prefixes[i], prefixes[j]) == -1
+		})
 		it := db.NewIterator(ScopeRecord, false)
 		defer it.Close()
 
 		seek := rand2.Intn(count)
-		it.Seek(keys[seek])
+		it.Seek(prefixes[seek])
 		var actual [][]byte
 		for it.Next() {
 			actual = append(actual, it.Key())
@@ -356,11 +367,14 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 		sort.Slice(keys, func(i, j int) bool {
 			return bytes.Compare(keys[i], keys[j]) >= 0
 		})
+		sort.Slice(prefixes, func(i, j int) bool {
+			return bytes.Compare(prefixes[i], prefixes[j]) >= 0
+		})
 		it := db.NewIterator(ScopeRecord, true)
 		defer it.Close()
 
 		seek := rand2.Intn(count)
-		it.Seek(keys[seek])
+		it.Seek(prefixes[seek])
 		var actual [][]byte
 		for it.Next() {
 			actual = append(actual, it.Key())

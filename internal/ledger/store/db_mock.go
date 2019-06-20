@@ -163,3 +163,23 @@ func (mi *memoryIterator) searchKeys(prefix []byte) {
 	}
 	mi.current = 0
 }
+
+func nextWord(word []byte) []byte {
+	if len(word) == 0 {
+		return []byte{0}
+	}
+
+	i := len(word) - 1
+	for i >= 0 && word[i] == 255 {
+		i--
+	}
+
+	if i == -1 {
+		return append(word, 0)
+	}
+
+	next := make([]byte, len(word))
+	copy(next, word)
+	next[i]++
+	return next
+}

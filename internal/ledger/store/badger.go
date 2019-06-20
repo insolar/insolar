@@ -101,7 +101,7 @@ func (b *BadgerDB) NewIterator(scope Scope, reverse bool) Iterator {
 	opts := badger.DefaultIteratorOptions
 	opts.Reverse = reverse
 	bi.it = bi.txn.NewIterator(opts)
-	bi.it.Seek(bi.scopePrefix)
+	bi.Seek([]byte{})
 	return &bi
 }
 
@@ -128,7 +128,15 @@ func (bi *badgerIterator) Close() {
 func (bi *badgerIterator) Seek(prefix []byte) {
 	prefix = append(bi.scopePrefix, prefix...)
 	if bi.reverse {
-		bi.it.Seek(append(prefix, 0xFF))
+		bi.it.Rewind()
+		if bi.it.Valid() {
+			rest := len(bi.it.Item().Key()) - len(prefix)
+			filler := make([]byte, rest)
+			for i := range filler {
+				filler[i] = 0xFF
+			}
+			bi.it.Seek(append(prefix, filler...))
+		}
 	} else {
 		bi.it.Seek(prefix)
 	}
