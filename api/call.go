@@ -66,7 +66,7 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 func (ar *Runner) checkSeed(paramsSeed string) error {
 	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
 	if err != nil {
-		return errors.New("[ checkSeed ] Decode error")
+		return errors.New("[ checkSeed ] Failed to decode seed from string")
 	}
 	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {

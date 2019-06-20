@@ -129,7 +129,7 @@ func getBalance(caller *user, reference string) (*big.Int, error) {
 	}
 	amount, ok := new(big.Int).SetString(res.(string), 10)
 	if !ok {
-		return nil, fmt.Errorf("[ Transfer ] can't parse input amount")
+		return nil, fmt.Errorf("can't parse input amount")
 	}
 	return amount, nil
 }

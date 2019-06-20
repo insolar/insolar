@@ -55,9 +55,9 @@ func TestBadSeed(t *testing.T) {
 		ID:      1,
 		Method:  "call.api",
 		Params:  requester.Params{CallSite: "contract.createMember"},
-	}, "111")
+	}, "MTExMQ==")
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ checkSeed ] Decode error")
+	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
 
 func TestIncorrectSeed(t *testing.T) {
@@ -108,6 +108,7 @@ func TestCrazyJSON(t *testing.T) {
 }
 
 func TestIncorrectSign(t *testing.T) {
+	testMember := createMember(t, "Member1")
 	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
@@ -115,10 +116,10 @@ func TestIncorrectSign(t *testing.T) {
 		requester.Request{
 			JSONRPC: "2.0",
 			ID:      1,
-			Method:  "SomeMethod",
-			Params:  requester.Params{Seed: seed},
+			Method:  "api.call",
+			Params:  requester.Params{Seed: seed, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
 		},
-		"1234567890",
+		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
 	)
 	require.NoError(t, err)
 	var res requester.ContractAnswer
