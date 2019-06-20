@@ -132,8 +132,6 @@ type pendingMeta struct {
 
 	notClosedRequestsIds      []insolar.ID
 	notClosedRequestsIdsIndex map[insolar.PulseNumber]map[insolar.ID]struct{}
-
-	resultsForOutOfLimitRequests map[insolar.ID]struct{}
 }
 
 type chainLink struct {

@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type HotData struct {
@@ -44,7 +43,6 @@ func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
 	hdProc := proc.NewHotData(s.message, s.replyTo)
 	s.dep.HotData(hdProc)
 	if err := f.Procedure(ctx, hdProc, false); err != nil {
-		panic(errors.Wrap(err, "something broken"))
 		return err
 	}
 	return nil
