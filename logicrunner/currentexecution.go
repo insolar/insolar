@@ -76,12 +76,13 @@ func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
 
 func (d *TranscriptDequeue) HasFromLedger() *Transcript {
 	d.lock.Lock()
+	defer d.lock.Unlock()
+
 	for _, t := range d.queue {
 		if t.FromLedger {
 			return t
 		}
 	}
-	d.lock.Unlock()
 	return nil
 }
 
@@ -218,13 +219,12 @@ func (ces *CurrentExecutionList) Delete(requestRef insolar.Reference) {
 
 func (ces *CurrentExecutionList) GetByTraceID(traceid string) *Transcript {
 	ces.lock.RLock()
+	defer ces.lock.RUnlock()
 	for _, ce := range ces.executions {
 		if ce.LogicContext.TraceID == traceid {
-			ces.lock.RUnlock()
 			return ce
 		}
 	}
-	ces.lock.RUnlock()
 	return nil
 }
 
