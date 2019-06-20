@@ -220,7 +220,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 				switch {
 				case softTimeout && idleLoop:
 					return
-				case joinQueue.Len() > 0 || nodeQueue.Len() > 0:
+				case joinQueue.Len() > 0 || nodeQueue.Len() > 0 || !softTimeout:
 					break inner
 				case softTimeout:
 					idleLoop = true
