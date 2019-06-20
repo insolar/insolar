@@ -89,7 +89,7 @@ func NewCleaner(
 // all the data for it will be cleaned
 func (c *LightCleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	c.once.Do(func() {
-		go c.clean(ctx)
+		go c.clean(context.Background())
 	})
 	inslogger.FromContext(ctx).Debugf("[Cleaner][NotifyAboutPulse] received pulse - %v", pn)
 	c.pulseForClean <- pn

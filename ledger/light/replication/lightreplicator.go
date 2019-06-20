@@ -75,7 +75,7 @@ func NewReplicatorDefault(
 // with help of Cleaner
 func (t *LightReplicatorDefault) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	t.once.Do(func() {
-		go t.sync(ctx)
+		go t.sync(context.Background())
 	})
 
 	logger := inslogger.FromContext(ctx)
