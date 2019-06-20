@@ -199,9 +199,11 @@ func NewMessageHandler(
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.FilamentCacheManager = h.FilamentCacheManager
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
 			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.FilamentCacheManager = h.FilamentCacheManager
 		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep.Jets = h.JetStorage

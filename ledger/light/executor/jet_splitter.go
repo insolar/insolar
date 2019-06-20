@@ -32,24 +32,11 @@ import (
 // JetSplitter provides method for processing and splitting jets.
 type JetSplitter interface {
 	// Do performs jets processing, it decides which jets to split and returns list of resulting jets).
-	Do(ctx context.Context, previous, current, new insolar.PulseNumber) ([]JetInfo, error)
+	Do(ctx context.Context, previous, current, new insolar.PulseNumber) ([]jet.Info, error)
 }
 
 // JetSplitterDefaultCount default value for initial jets splitting.
 const JetSplitterDefaultCount = 5
-
-// JetInfo holds info about jet.
-type JetInfo struct {
-	ID insolar.JetID
-	// SplitIntent indicates what jet has intention to do split.
-	SplitIntent bool
-	// SplitPerformed indicates what jet was split.
-	SplitPerformed bool
-
-	// deprecated
-	// MineNext  if not set pendings would be removed for this jet from recent storage.
-	MineNext bool
-}
 
 // JetSplitterDefault implements JetSplitter.
 type JetSplitterDefault struct {
@@ -83,7 +70,7 @@ func NewJetSplitter(
 // Do performs jets processing, it decides which jets to split and returns list of resulting jets.
 func (js *JetSplitterDefault) Do(
 	ctx context.Context, previous, current, newpulse insolar.PulseNumber,
-) ([]JetInfo, error) {
+) ([]jet.Info, error) {
 	jets, err := js.processJets(ctx, previous, current, newpulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process jets")
@@ -98,9 +85,9 @@ func (js *JetSplitterDefault) Do(
 
 func (js *JetSplitterDefault) splitJets(
 	ctx context.Context,
-	jets []JetInfo,
+	jets []jet.Info,
 	previous, current, newpulse insolar.PulseNumber,
-) ([]JetInfo, error) {
+) ([]jet.Info, error) {
 	me := js.jetCoordinator.Me()
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"current_pulse": current,
@@ -108,7 +95,7 @@ func (js *JetSplitterDefault) splitJets(
 	})
 
 	for i, jetInfo := range jets {
-		newInfo := JetInfo{ID: jetInfo.ID}
+		newInfo := jet.Info{ID: jetInfo.ID}
 		if js.hasSplitIntention(ctx, previous, jetInfo.ID) {
 			leftJetID, rightJetID, err := js.jetModifier.Split(
 				ctx,
@@ -121,7 +108,26 @@ func (js *JetSplitterDefault) splitJets(
 
 			// Set actual because we are the last executor for jet.
 			js.jetModifier.Update(ctx, newpulse, true, leftJetID, rightJetID)
-			newInfo.SplitPerformed = true
+			newInfo.Left = &jet.Info{ID: leftJetID}
+			newInfo.Right = &jet.Info{ID: rightJetID}
+
+			nextLeftExecutor, err := js.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(leftJetID), newpulse)
+			if err != nil {
+				return nil, err
+			}
+
+			if *nextLeftExecutor == me {
+				newInfo.Left.MineNext = true
+			}
+
+			nextRightExecutor, err := js.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), newpulse)
+			if err != nil {
+				return nil, err
+			}
+
+			if *nextRightExecutor == me {
+				newInfo.Right.MineNext = true
+			}
 
 			logger.WithFields(map[string]interface{}{
 				"left_child":  leftJetID.DebugString(),
@@ -144,7 +150,7 @@ func (js *JetSplitterDefault) splitJets(
 	return jets, nil
 }
 
-func (js *JetSplitterDefault) processJets(ctx context.Context, previous, current, new insolar.PulseNumber) ([]JetInfo, error) {
+func (js *JetSplitterDefault) processJets(ctx context.Context, previous, current, new insolar.PulseNumber) ([]jet.Info, error) {
 	ctx, span := instracer.StartSpan(ctx, "jets.process")
 	defer span.End()
 
@@ -156,11 +162,11 @@ func (js *JetSplitterDefault) processJets(ctx context.Context, previous, current
 		return nil, err
 	}
 
-	var results []JetInfo                     // nolint: prealloc
+	var results []jet.Info                    // nolint: prealloc
 	var withoutSplitIntention []insolar.JetID // nolint: prealloc
 	for _, id := range ids {
 		if js.hasSplitIntention(ctx, previous, id) {
-			results = append(results, JetInfo{ID: id})
+			results = append(results, jet.Info{ID: id})
 		} else {
 			withoutSplitIntention = append(withoutSplitIntention, id)
 		}
@@ -172,10 +178,10 @@ func (js *JetSplitterDefault) processJets(ctx context.Context, previous, current
 
 	indexToSplit := rand.Intn(len(withoutSplitIntention))
 	for i, jetID := range withoutSplitIntention {
-		info := JetInfo{ID: jetID}
+		info := jet.Info{ID: jetID}
 		if indexToSplit == i && js.splitCount > 0 {
 			js.splitCount--
-			info.SplitIntent = true
+			info.Split = true
 		}
 		results = append(results, info)
 	}

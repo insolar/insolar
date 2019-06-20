@@ -18,7 +18,6 @@ package object
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -178,55 +177,69 @@ func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) 
 	return insolar.NewPulseNumber(buff), err
 }
 
+func (i *IndexDB) filament(ct context.Context, b *FilamentIndex, pn insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
+	tempRes := make([]record.CompositeFilamentRecord, len(b.PendingRecords))
+
+	for idx, metaID := range b.PendingRecords {
+		metaRec, err := i.recordStore.get(metaID)
+		if err != nil {
+			return nil, err
+		}
+		pend := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+		rec, err := i.recordStore.get(pend.RecordID)
+		if err != nil {
+			return nil, err
+		}
+
+		tempRes[idx] = record.CompositeFilamentRecord{
+			Meta:     metaRec,
+			MetaID:   metaID,
+			Record:   rec,
+			RecordID: pend.RecordID,
+		}
+	}
+
+	return tempRes, nil
+}
+
+func (i *IndexDB) nextFilament(b *FilamentIndex) (canContinue bool, nextPN insolar.PulseNumber, err error) {
+	if len(b.PendingRecords) > 0 {
+		firstRecord := b.PendingRecords[0]
+		metaRec, err := i.recordStore.get(firstRecord)
+		if err != nil {
+			return false, insolar.PulseNumber(0), err
+		}
+		pf := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+		if pf.PreviousRecord != nil {
+			return true, pf.PreviousRecord.Pulse(), nil
+		} else {
+			return false, insolar.PulseNumber(0), nil
+		}
+	} else {
+		panic("unexpected situation ")
+	}
+}
+
 func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
 	currentPN := readFrom
 	var res []record.CompositeFilamentRecord
 
 	hasFilamentBehind := true
 	for hasFilamentBehind && currentPN <= readUntil {
-		println(fmt.Sprintf("currentPN <= readUntil - %v %v", currentPN, readUntil))
 		b, err := i.getBucket(currentPN, objID)
 		if err != nil {
 			return nil, err
 		}
 
-		tempRes := make([]record.CompositeFilamentRecord, len(b.PendingRecords))
-
-		for idx, metaID := range b.PendingRecords {
-			metaRec, err := i.recordStore.get(metaID)
-			if err != nil {
-				return nil, err
-			}
-			pend := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
-			rec, err := i.recordStore.get(pend.RecordID)
-			if err != nil {
-				return nil, err
-			}
-
-			tempRes[idx] = record.CompositeFilamentRecord{
-				Meta:     metaRec,
-				MetaID:   metaID,
-				Record:   rec,
-				RecordID: pend.RecordID,
-			}
+		tempRes, err := i.filament(ctx, b, currentPN, objID)
+		if err != nil {
+			return nil, err
 		}
-
 		res = append(tempRes, res...)
 
-		if len(b.PendingRecords) > 0 {
-			firstRecord := b.PendingRecords[0]
-			metaRec, err := i.recordStore.get(firstRecord)
-			if err != nil {
-				return nil, err
-			}
-			pf := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
-			if pf.PreviousRecord != nil {
-				currentPN = pf.PreviousRecord.Pulse()
-			} else {
-				hasFilamentBehind = false
-			}
-		} else {
-			panic(fmt.Sprintf("panic - unexpected situation objID - %v, from - %v, until - %v, currentPN - %v", objID.DebugString(), readFrom, readUntil, currentPN))
+		hasFilamentBehind, currentPN, err = i.nextFilament(b)
+		if err != nil {
+			return nil, err
 		}
 	}
 

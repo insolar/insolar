@@ -34,7 +34,8 @@ type GetPendingRequestID struct {
 	reqPulse insolar.PulseNumber
 
 	Dep struct {
-		PendingAccessor object.PendingAccessor
+		PendingAccessor      object.PendingAccessor
+		FilamentCacheManager object.FilamentCacheManager
 	}
 }
 
@@ -49,6 +50,11 @@ func NewGetPendingRequestID(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *
 
 func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
 	msg := p.msg
+
+	err := p.Dep.FilamentCacheManager.Gather(ctx, flow.Pulse(ctx), msg.ObjectID)
+	if err != nil {
+		return err
+	}
 
 	pends, err := p.Dep.PendingAccessor.OpenRequestsIDsForObjID(ctx, flow.Pulse(ctx), msg.ObjectID, 1)
 	if err != nil || p == nil || len(pends) == 0 {

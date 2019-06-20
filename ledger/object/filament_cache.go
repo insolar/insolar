@@ -331,7 +331,8 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 		}
 	}
 
-	if len(pb.notClosedRequestsIds) == 0 {
+	// If no open requests and we know about a full filament
+	if len(pb.notClosedRequestsIds) == 0 && pb.isStateCalculated {
 		logger.Debugf("no open requests for - %v, pn: %v,", objID.DebugString(), pn)
 		logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), lfl.EarliestOpenRequest)
 		lfl.EarliestOpenRequest = nil

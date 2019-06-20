@@ -116,13 +116,9 @@ func (p *HotData) process(ctx context.Context) error {
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 
 		go func(objID insolar.ID, pn insolar.PulseNumber) {
-			err := p.Dep.FilamentCacheManager.Gather(ctx, pn, objID)
-			if err != nil {
-				panic(err)
-			}
 			err = p.Dep.FilamentCacheManager.SendAbandonedNotification(ctx, pn, objID)
 			if err != nil {
-				panic(err)
+				logger.Errorf("failed to notify about abandoned notification %v", err)
 			}
 		}(meta.ObjID, flow.Pulse(ctx))
 	}

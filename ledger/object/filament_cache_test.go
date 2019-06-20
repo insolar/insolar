@@ -490,6 +490,8 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		idxStor := NewIndexStorageMemory()
 		filCache := NewFilamentCacheStorage(idxStor, idxStor, NewIDLocker(), rms, nil, platformpolicy.NewPlatformCryptographyScheme(), nil, nil, nil)
 		idxStor.CreateIndex(ctx, pn, objID)
+		fBuck := filCache.createPendingBucket(ctx, pn, objID)
+		fBuck.isStateCalculated = true
 
 		buck := idxStor.buckets[pn][objID]
 		buck.Lifeline.EarliestOpenRequest = &insolar.GenesisPulse.PulseNumber

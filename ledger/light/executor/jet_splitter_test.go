@@ -90,7 +90,8 @@ func TestJetSplitter(t *testing.T) {
 		var gotJets []insolar.JetID
 		for _, info := range res {
 			gotJets = append(gotJets, info.ID)
-			assert.False(t, info.SplitPerformed, "split is not performed")
+			assert.Nil(t, info.Left, "no new left leaf")
+			assert.Nil(t, info.Right, "no new right leaf")
 		}
 		require.Equal(t, jsort(jets), jsort(gotJets), "compare results")
 	})
@@ -104,12 +105,14 @@ func TestJetSplitter(t *testing.T) {
 		var gotJets []insolar.JetID
 		for _, info := range res {
 			gotJets = append(gotJets, info.ID)
-			assert.False(t, info.SplitIntent, "no split")
+			assert.False(t, info.Split, "no split")
 
 			if info.ID != splitID {
-				assert.False(t, info.SplitPerformed, "split is not performed")
+				assert.Nil(t, info.Left, "no new left leaf")
+				assert.Nil(t, info.Right, "no new right leaf")
 			} else {
-				assert.True(t, info.SplitPerformed, "split is performed")
+				assert.NotNil(t, info.Left, "new left leaf")
+				assert.NotNil(t, info.Right, "new right leaf")
 			}
 
 		}
