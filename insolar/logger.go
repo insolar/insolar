@@ -74,15 +74,44 @@ func ParseLevel(levelStr string) (LogLevel, error) {
 	case PanicLevel.String():
 		return PanicLevel, nil
 	}
-	return NoLevel, fmt.Errorf("Unknown Level String: '%s', defaulting to NoLevel", levelStr)
+	return NoLevel, fmt.Errorf("unknown Level String: '%s', defaulting to NoLevel", levelStr)
+}
+
+type LogFormat uint8
+
+const (
+	Text LogFormat = iota
+	JSON
+)
+
+func ParseFormat(formatStr string) (LogFormat, error) {
+	switch strings.ToLower(formatStr) {
+	case Text.String():
+		return Text, nil
+	case JSON.String():
+		return JSON, nil
+	}
+	return Text, fmt.Errorf("unknown Format String: '%s', defaulting to Text", formatStr)
+}
+
+func (l LogFormat) String() string {
+	switch l {
+	case Text:
+		return "text"
+	case JSON:
+		return "json"
+	}
+	return string(l)
 }
 
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
-	// SetLevel sets log level.
+	// WithLevel sets log level.
 	WithLevel(string) (Logger, error)
-	// SetLevelNumber set log level with number
+	// WithLevelNumber sets log level with number
 	WithLevelNumber(level LogLevel) (Logger, error)
+	// WithFormat sets logger output format
+	WithFormat(format LogFormat) (Logger, error)
 
 	// WithCaller switch on/off 'caller' field computation.
 	WithCaller(flag bool) Logger
