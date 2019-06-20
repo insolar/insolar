@@ -115,7 +115,7 @@ func (c *Phase2Controller) HandleMemberPacket(reader packets.MemberPacketReader,
 	var signalSent = false
 	for _, nb := range p2.GetNeighbourhood() {
 
-		nid := nb.GetShortNodeId()
+		nid := nb.GetShortNodeID()
 		neighbour, err := c.R.GetNodeApperance(nid)
 		if err != nil {
 			// TODO unknown node - blame sender
@@ -405,7 +405,7 @@ func (c *neighbourReport) GetNodePower() common2.MemberPower {
 	return c.membership.Power
 }
 
-func (c *neighbourReport) GetShortNodeId() common.ShortNodeID {
+func (c *neighbourReport) GetShortNodeID() common.ShortNodeID {
 	return c.nodeID
 }
 

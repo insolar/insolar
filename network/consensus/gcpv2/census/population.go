@@ -101,8 +101,8 @@ func (c *OneNodePopulation) copyTo(p copyOnlinePopulation) {
 	p.makeCopyOf([]updatableSlot{c.localNode}, &c.localNode)
 }
 
-func (c *OneNodePopulation) FindProfile(nodeId common2.ShortNodeID) common.NodeProfile {
-	if c.localNode.GetShortNodeID() != nodeId {
+func (c *OneNodePopulation) FindProfile(nodeID common2.ShortNodeID) common.NodeProfile {
+	if c.localNode.GetShortNodeID() != nodeID {
 		return nil
 	}
 	return &c.localNode
@@ -240,7 +240,7 @@ func (c *ManyNodePopulation) Copy() ManyNodePopulation {
 var _ OnlinePopulation = &DynamicPopulation{}
 
 type DynamicPopulation struct {
-	slotById map[common2.ShortNodeID]*updatableSlot
+	slotByID map[common2.ShortNodeID]*updatableSlot
 	local    *updatableSlot
 }
 
@@ -251,32 +251,32 @@ func NewDynamicPopulation(src copyOnlinePopulationTo) DynamicPopulation {
 }
 
 func (c *DynamicPopulation) makeCopyOf(slots []updatableSlot, local *updatableSlot) {
-	c.slotById = make(map[common2.ShortNodeID]*updatableSlot, len(slots))
+	c.slotByID = make(map[common2.ShortNodeID]*updatableSlot, len(slots))
 
 	for i := range slots {
 		v := slots[i]
 		id := v.GetShortNodeID()
-		if _, ok := c.slotById[id]; ok {
+		if _, ok := c.slotByID[id]; ok {
 			panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 		}
-		c.slotById[id] = &v
+		c.slotByID[id] = &v
 	}
-	c.local = c.slotById[local.GetShortNodeID()]
+	c.local = c.slotByID[local.GetShortNodeID()]
 	if c.local == nil {
 		panic("illegal state")
 	}
 }
 
 func (c *DynamicPopulation) FindProfile(nodeID common2.ShortNodeID) common.NodeProfile {
-	return &c.slotById[nodeID].nodeSlot
+	return &c.slotByID[nodeID].nodeSlot
 }
 
 func (c *DynamicPopulation) FindUpdatableProfile(nodeID common2.ShortNodeID) common.UpdatableNodeProfile {
-	return c.slotById[nodeID]
+	return c.slotByID[nodeID]
 }
 
 func (c *DynamicPopulation) GetCount() int {
-	return len(c.slotById)
+	return len(c.slotByID)
 }
 
 func (c *DynamicPopulation) SortDefault() {
@@ -294,8 +294,8 @@ func (c *DynamicPopulation) Sort(lessFn LessFunc) {
 }
 
 func (c *DynamicPopulation) GetProfiles() []common.NodeProfile {
-	r := make([]common.NodeProfile, len(c.slotById))
-	for _, v := range c.slotById {
+	r := make([]common.NodeProfile, len(c.slotByID))
+	for _, v := range c.slotByID {
 		idx := v.GetIndex()
 		if r[idx] != nil {
 			panic(fmt.Sprintf("duplicate index: %v", idx))
@@ -306,9 +306,9 @@ func (c *DynamicPopulation) GetProfiles() []common.NodeProfile {
 }
 
 func (c *DynamicPopulation) GetUnorderedProfiles() []common.UpdatableNodeProfile {
-	r := make([]common.UpdatableNodeProfile, len(c.slotById))
+	r := make([]common.UpdatableNodeProfile, len(c.slotByID))
 	idx := 0
-	for _, v := range c.slotById {
+	for _, v := range c.slotByID {
 		r[idx] = v
 		idx++
 	}
@@ -316,9 +316,9 @@ func (c *DynamicPopulation) GetUnorderedProfiles() []common.UpdatableNodeProfile
 }
 
 func (c *DynamicPopulation) getUnorderedSlots() []*updatableSlot {
-	r := make([]*updatableSlot, len(c.slotById))
+	r := make([]*updatableSlot, len(c.slotByID))
 	idx := 0
-	for _, v := range c.slotById {
+	for _, v := range c.slotByID {
 		r[idx] = v
 		idx++
 	}
@@ -334,34 +334,34 @@ func (c *DynamicPopulation) CopyAndSort(less LessFunc) ManyNodePopulation {
 		panic("lessFunc is nil")
 	}
 	r := ManyNodePopulation{}
-	r.makeCopyOfMap(c.slotById, c.local, less)
+	r.makeCopyOfMap(c.slotByID, c.local, less)
 	return r
 }
 
 func (c *DynamicPopulation) CopyAndSortDefault() ManyNodePopulation {
 	r := ManyNodePopulation{}
-	r.makeCopyOfMap(c.slotById, c.local, common.LessForNodeProfile)
+	r.makeCopyOfMap(c.slotByID, c.local, common.LessForNodeProfile)
 	return r
 }
 
 func (c *DynamicPopulation) CopyUnsorted() ManyNodePopulation {
 	r := ManyNodePopulation{}
-	r.makeCopyOfMap(c.slotById, c.local, nil)
+	r.makeCopyOfMap(c.slotByID, c.local, nil)
 	return r
 }
 
 func (c *DynamicPopulation) AddJoinerProfile(n common.NodeIntroProfile) common.UpdatableNodeProfile {
 	id := n.GetShortNodeID()
-	if _, ok := c.slotById[id]; ok {
+	if _, ok := c.slotByID[id]; ok {
 		panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 	}
 	v := updatableSlot{newNodeSlot(0 /* force later collision without sorting */, n, nil)}
-	c.slotById[id] = &v
+	c.slotByID[id] = &v
 	return &v
 }
 
 func (c *DynamicPopulation) RemoveProfile(id common2.ShortNodeID) {
-	delete(c.slotById, id)
+	delete(c.slotByID, id)
 }
 
 var _ sort.Interface = &slotSorter{}

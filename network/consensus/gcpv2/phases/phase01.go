@@ -153,9 +153,8 @@ func (c *Phase1Controller) _handleNodeData(p1 packets.Phase1PacketReader, n *cor
 
 	if err != nil {
 		return modified, err
-	} else {
-		return modified, dupErr
 	}
+	return modified, dupErr
 }
 
 func (c *Phase1Controller) StartWorker(ctx context.Context) {

@@ -96,7 +96,7 @@ type PhasePacketReader interface {
 
 type NodeStateHashReportReader interface {
 	common2.NodeStateHashReader
-	GetShortNodeId() common.ShortNodeID
+	GetShortNodeID() common.ShortNodeID
 	GetNodeTrustLevel() NodeTrustLevel
 }
 

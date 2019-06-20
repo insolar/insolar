@@ -172,11 +172,10 @@ func (r *PhasedRoundController) beforeHandlePacket() (*PrepRealm, common.PulseNu
 		return nil, 0, errors2.NewRoundStateError("stopped")
 	}
 
-	if r.prepR == nil {
-		return nil, r.realm.GetPulseNumber(), nil
-	} else {
+	if r.prepR != nil {
 		return r.prepR, r.realm.initialCensus.GetExpectedPulseNumber(), nil
 	}
+	return nil, r.realm.GetPulseNumber(), nil
 }
 
 /*
@@ -304,12 +303,10 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 		}
 		if explicitPostpone {
 			return fmt.Errorf("unable to postpone packet explicitly: type=%v", pt)
-		} else {
-			return errPacketIsNotAllowed
 		}
-	} else {
-		return r.realm.handlers[pt].handleHostPacket(packet, from)
+		return errPacketIsNotAllowed
 	}
+	return r.realm.handlers[pt].handleHostPacket(packet, from)
 }
 
 /* Initiates cancellation of this round */
