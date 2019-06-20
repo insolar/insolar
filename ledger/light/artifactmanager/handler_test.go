@@ -256,6 +256,10 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.HotDataWaiter = &waiterMock{}
 	h.LifelineIndex = lifelineIndex
 
+	cmm := object.NewFilamentCacheManagerMock(s.T())
+	cmm.GatherMock.Return(nil)
+	h.FilamentCacheManager = cmm
+
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
@@ -294,6 +298,10 @@ func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.HotDataWaiter = &waiterMock{}
+
+	cmm := object.NewFilamentCacheManagerMock(s.T())
+	cmm.GatherMock.Return(nil)
+	h.FilamentCacheManager = cmm
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)

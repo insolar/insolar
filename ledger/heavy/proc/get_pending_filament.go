@@ -53,20 +53,18 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode PassState payload")
 	}
 
-	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v", getPFil.ObjectID.DebugString())
+	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, startFrom %v, ReadUntil %v", getPFil.ObjectID.DebugString(), getPFil.StartFrom, getPFil.ReadUntil)
 	records, err := p.Dep.PendingAccessor.Records(ctx, getPFil.StartFrom, getPFil.ReadUntil, getPFil.ObjectID)
 	if err != nil {
-		panic(err)
 		return errors.Wrap(err, fmt.Sprintf("[GetPendingFilament] can't fetch pendings, pn - %v,  %v", getPFil.ObjectID.DebugString(), getPFil.StartFrom))
 	}
 
-	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, records - %v", getPFil.ObjectID.DebugString(), len(records))
+	inslogger.FromContext(ctx).Debugf("GetPendingFilament objID == %v, records - %v, records == nil - %v, , startFrom %v, ReadUntil %v", getPFil.ObjectID.DebugString(), len(records), records == nil, getPFil.StartFrom, getPFil.ReadUntil)
 	msg, err := payload.NewMessage(&payload.PendingFilament{
 		ObjectID: getPFil.ObjectID,
 		Records:  records,
 	})
 	if err != nil {
-		panic(err)
 		return errors.Wrap(err, "failed to create a PendingFilament message")
 	}
 	go p.Dep.Sender.Reply(ctx, p.meta, msg)

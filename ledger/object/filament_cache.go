@@ -236,7 +236,7 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 
 	err = i.idxModifier.SetIndex(ctx, pn, *idx)
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 
 	pb.addMetaIDToFilament(pn, metaID)
@@ -344,7 +344,7 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 
 	err = i.idxModifier.SetIndex(ctx, pn, *idx)
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 
 	stats.Record(ctx,
@@ -363,12 +363,10 @@ func (i *FilamentCacheStorage) setFilament(ctx context.Context, pm *pendingMeta,
 
 		err := i.recordStorage.Set(ctx, rec.MetaID, rec.Meta)
 		if err != nil && err != ErrOverride {
-			panic(errors.Wrapf(err, "obj id - %v", rec.MetaID.DebugString()))
 			return errors.Wrap(err, "filament update failed")
 		}
 		err = i.recordStorage.Set(ctx, rec.RecordID, rec.Record)
 		if err != nil && err != ErrOverride {
-			panic(errors.Wrapf(err, "obj id - %v", rec.MetaID.DebugString()))
 			return errors.Wrap(err, "filament update failed")
 		}
 	}
@@ -562,7 +560,6 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 	for continueFilling {
 		node, err := i.coordinator.NodeForObject(ctx, objID, currentPN, destPN)
 		if err != nil {
-			panic(err)
 			return err
 		}
 
@@ -574,7 +571,7 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 			if err != nil {
 				return err
 			}
-			inslogger.FromContext(ctx).Debugf("UNEXPECTED read from myself objID - %, pn - %v", objID.DebugString(), currentPN)
+			inslogger.FromContext(ctx).Debugf("UNEXPECTED read from myself objID - %v, pn - %v", objID.DebugString(), currentPN)
 		} else {
 			msg, err := payload.NewMessage(&payload.GetPendingFilament{
 				ObjectID:  objID,
@@ -587,7 +584,8 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 
 			rep, done := i.busWM.SendTarget(ctx, msg, *node)
 			defer done()
-			inslogger.FromContext(ctx).Debugf("UNEXPECTED get info from outside objID - %, pn - %v", objID.DebugString(), currentPN)
+			inslogger.FromContext(ctx).Debugf(""+
+				"objID - %v, pn - %v", objID.DebugString(), currentPN)
 			var ok bool
 			res, ok := <-rep
 			if !ok {
@@ -603,7 +601,7 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 		switch r := pl.(type) {
 		case *payload.PendingFilament:
 			if len(r.Records) == 0 {
-				panic(fmt.Sprintf("unexpected behaviour, objID - %, pn - %v", objID.DebugString(), currentPN))
+				panic(fmt.Sprintf("unexpected behaviour, objID - %v, pn - %v, node - %v, startFrom %v  readUntil %v", objID.DebugString(), currentPN, node, destPN, earlistOpenRequest))
 			}
 			err := i.setFilament(ctx, pm, destPN, r.Records)
 			if err != nil {

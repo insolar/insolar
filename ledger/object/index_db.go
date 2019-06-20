@@ -178,7 +178,7 @@ func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) 
 	return insolar.NewPulseNumber(buff), err
 }
 
-func (i *IndexDB) filament(ct context.Context, b *FilamentIndex, pn insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
+func (i *IndexDB) filament(b *FilamentIndex) ([]record.CompositeFilamentRecord, error) {
 	tempRes := make([]record.CompositeFilamentRecord, len(b.PendingRecords))
 	for idx, metaID := range b.PendingRecords {
 		metaRec, err := i.recordStore.get(metaID)
@@ -220,8 +220,12 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 	currentPN := readFrom
 	var res []record.CompositeFilamentRecord
 
+	if readUntil > readFrom {
+		return nil, errors.New("readUntil can't be more then readFrom")
+	}
+
 	hasFilamentBehind := true
-	for hasFilamentBehind && currentPN <= readUntil {
+	for hasFilamentBehind && currentPN >= readUntil {
 		b, err := i.getBucket(currentPN, objID)
 		if err != nil {
 			return nil, err
@@ -230,7 +234,7 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 			return nil, errors.New("can't fetch pednings from index")
 		}
 
-		tempRes, err := i.filament(ctx, b, currentPN, objID)
+		tempRes, err := i.filament(b)
 		if err != nil {
 			return nil, err
 		}
