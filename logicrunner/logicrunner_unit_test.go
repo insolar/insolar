@@ -93,8 +93,8 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	// suite.mc.Wait(time.Second * 5)
-	// suite.mc.Finish()
+	suite.mc.Wait(2 * time.Minute)
+	suite.mc.Finish()
 
 	for _, e := range suite.lr.Executors {
 		if e == nil {
@@ -366,9 +366,6 @@ func prepareWatermill(suite *LogicRunnerTestSuite) (flow.Flow, message2.PubSub) 
 	flowMock.ProcedureMock.Set(func(p context.Context, p1 flow.Procedure, p2 bool) (r error) {
 		return p1.Proceed(p)
 	})
-	flowMock.HandleMock.Set(func(p context.Context, p1 flow.Handle) (r error) {
-		return p1(p, flowMock)
-	})
 
 	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(suite.ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
@@ -396,6 +393,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 		object         obj
 		message        msgt
 		expected       exp
+		initPulse      bool
 	}{
 		{
 			name:     "first call, NotPending in message",
@@ -437,6 +435,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				pending:  message.InPending,
 				queueLen: 1,
 			},
+			initPulse: true,
 		},
 		{
 			name:           "message has queue and object has queue",
@@ -453,6 +452,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				pending:  message.InPending,
 				queueLen: 2,
 			},
+			initPulse: true,
 		},
 		{
 			name: "message has queue, but unknown pending state",
@@ -473,7 +473,9 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 		suite.T().Run(test.name, func(t *testing.T) {
 			pulseObj := insolar.Pulse{}
 			pulseObj.PulseNumber = insolar.FirstPulseNumber
-			suite.ps.LatestMock.Return(pulseObj, nil)
+			if test.initPulse {
+				suite.ps.LatestMock.Return(pulseObj, nil)
+			}
 
 			object := testutils.RandomRef()
 			defer delete(suite.lr.state, object)
@@ -522,7 +524,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
 			}
 			err := h.realHandleExecutorState(suite.ctx, flowMock)
-			// 		suite.mc.Wait(time.Minute)
+			suite.mc.Wait(time.Minute)
 
 			suite.Require().NoError(err)
 			suite.Require().Equal(test.expected.pending, suite.lr.state[object].ExecutionState.pending)
