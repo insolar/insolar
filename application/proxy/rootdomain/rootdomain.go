@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113DgC3wLzkACNR2pQKQoLjyy3AtXSjcH885NhNJz.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111xZeXbDmj6gMPi9oBY6XfdwoVxW3Fyu6sG7ySXQ.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -74,19 +74,6 @@ func GetImplementationFrom(object insolar.Reference) (*RootDomain, error) {
 		return nil, err
 	}
 	return GetObject(ref), nil
-}
-
-// NewRootDomain is constructor
-func NewRootDomain() *ContractConstructorHolder {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	return &ContractConstructorHolder{constructorName: "NewRootDomain", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object

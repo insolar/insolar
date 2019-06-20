@@ -41,13 +41,6 @@ type RootDomain struct {
 	NodeDomain             insolar.Reference
 }
 
-var INSATTR_CreateMember_API = true
-
-// NewRootDomain creates new RootDomain
-func NewRootDomain() (*RootDomain, error) {
-	return &RootDomain{}, nil
-}
-
 func (rd RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
 	return &rd.MigrationAdminMember, nil
 }

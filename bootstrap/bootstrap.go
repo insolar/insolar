@@ -257,7 +257,7 @@ func dumpAsJSON(data interface{}) string {
 	return string(b)
 }
 
-// Generate key file name for migration daemon
+// GetMigrationDaemonPath generate key file name for migration daemon
 func GetMigrationDaemonPath(i int) string {
 	return "migration_daemon_" + strconv.Itoa(i) + "_member_keys.json"
 }
