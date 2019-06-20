@@ -34,7 +34,7 @@ import (
 // TODO: remove it after INS-1939
 type SetActivationRequest struct {
 	message   payload.Meta
-	request   record.Request
+	request   record.Virtual
 	requestID insolar.ID
 	jetID     insolar.JetID
 
@@ -48,7 +48,7 @@ type SetActivationRequest struct {
 
 func NewSetActivationRequest(
 	msg payload.Meta,
-	rec record.Request,
+	rec record.Virtual,
 	recID insolar.ID,
 	jetID insolar.JetID,
 ) *SetActivationRequest {
@@ -82,9 +82,8 @@ func (p *SetActivationRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	virtual := record.Wrap(p.request)
 	material := record.Material{
-		Virtual: &virtual,
+		Virtual: &p.request,
 		JetID:   p.jetID,
 	}
 	err = p.dep.records.Set(ctx, p.requestID, material)

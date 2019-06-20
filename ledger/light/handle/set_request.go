@@ -72,7 +72,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	// TODO: remove after INS-1939
 	if request.CallType != record.CTMethod {
 		inslogger.FromContext(ctx).Error("request is not registered")
-		return s.setActivationRequest(ctx, reqID, *request, f)
+		return s.setActivationRequest(ctx, reqID, virtual, f)
 	}
 
 	if request.Object == nil {
@@ -88,20 +88,20 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 		}
 		return err
 	}
-	reqJetID := jet.Result.Jet
+	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(reqJetID, flow.Pulse(ctx), s.message)
+	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
 	s.dep.WaitHotWM(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
-	setRequest := proc.NewSetRequest(s.message, virtual, reqID, reqJetID)
+	setRequest := proc.NewSetRequest(s.message, virtual, reqID, objJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }
 
-func (s *SetRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Request, f flow.Flow) error {
+func (s *SetRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Virtual, f flow.Flow) error {
 	passIfNotExecutor := !s.passed
 	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)
@@ -113,8 +113,8 @@ func (s *SetRequest) setActivationRequest(ctx context.Context, reqID insolar.ID,
 	}
 	reqJetID := jet.Result.Jet
 
-	setEmptyRequest := proc.NewSetActivationRequest(s.message, request, reqID, reqJetID)
+	setActivationRequest := proc.NewSetActivationRequest(s.message, request, reqID, reqJetID)
 
-	s.dep.SetActivationRequest(setEmptyRequest)
-	return f.Procedure(ctx, setEmptyRequest, false)
+	s.dep.SetActivationRequest(setActivationRequest)
+	return f.Procedure(ctx, setActivationRequest, false)
 }
