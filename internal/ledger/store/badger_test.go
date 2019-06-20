@@ -18,7 +18,9 @@ package store
 
 import (
 	"bytes"
+	"crypto/rand"
 	"io/ioutil"
+	rand2 "math/rand"
 	"os"
 	"sort"
 	"testing"
@@ -318,40 +320,52 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 
-	db.Set(testBadgerKey{[]byte{1}, ScopeRecord}, []byte{4})
-	db.Set(testBadgerKey{[]byte{2, 0xFF, 0}, ScopeRecord}, []byte{5})
-	db.Set(testBadgerKey{[]byte{3, 0xFF}, ScopeRecord}, []byte{6})
+	count := 100
+	length := 10
+	keys := make([][]byte, count)
+	for i := 0; i < count; i++ {
+		keys[i] = make([]byte, length)
+		_, err := rand.Read(keys[i])
+		require.NoError(t, err)
+		err = db.Set(testBadgerKey{keys[i], ScopeRecord}, nil)
+		require.NoError(t, err)
+	}
 
-	t.Run("from first", func(t *testing.T) {
-		it := db.NewIterator(ScopeRecord, true)
+	t.Run("ASC iteration", func(t *testing.T) {
+		asc := make([][]byte, count)
+		copy(asc, keys)
+		sort.Slice(keys, func(i, j int) bool {
+			return bytes.Compare(keys[i], keys[j]) == -1
+		})
+		it := db.NewIterator(ScopeRecord, false)
 		defer it.Close()
-		it.Seek([]byte{1})
+
+		seek := rand2.Intn(count)
+		it.Seek(keys[seek])
 		var actual [][]byte
 		for it.Next() {
 			actual = append(actual, it.Key())
 		}
-		require.Equal(t, [][]byte{{1}}, actual)
+		require.Equal(t, count-seek, len(actual))
+		require.Equal(t, keys[seek:], actual)
 	})
 
-	t.Run("from second", func(t *testing.T) {
+	t.Run("DESC iteration", func(t *testing.T) {
+		desc := make([][]byte, count)
+		copy(desc, keys)
+		sort.Slice(keys, func(i, j int) bool {
+			return bytes.Compare(keys[i], keys[j]) >= 0
+		})
 		it := db.NewIterator(ScopeRecord, true)
 		defer it.Close()
-		it.Seek([]byte{2})
-		var actual [][]byte
-		for it.Next() {
-			actual = append(actual, it.Key())
-		}
-		require.Equal(t, [][]byte{{2, 0xFF, 0}, {1}}, actual)
-	})
 
-	t.Run("from third", func(t *testing.T) {
-		it := db.NewIterator(ScopeRecord, true)
-		defer it.Close()
-		it.Seek([]byte{3})
+		seek := rand2.Intn(count)
+		it.Seek(keys[seek])
 		var actual [][]byte
 		for it.Next() {
 			actual = append(actual, it.Key())
 		}
-		require.Equal(t, [][]byte{{3, 0xFF}, {2, 0xFF, 0}, {1}}, actual)
+		require.Equal(t, count-seek, len(actual))
+		require.Equal(t, keys[seek:], actual)
 	})
 }

@@ -101,15 +101,7 @@ func (b *BadgerDB) NewIterator(scope Scope, reverse bool) Iterator {
 	opts := badger.DefaultIteratorOptions
 	opts.Reverse = reverse
 	bi.it = bi.txn.NewIterator(opts)
-	if reverse {
-		nextPrefix := nextWord(bi.scopePrefix)
-		bi.it.Seek(nextPrefix)
-		for !bi.it.ValidForPrefix(bi.scopePrefix) && bi.it.Valid() {
-			bi.it.Next()
-		}
-	} else {
-		bi.it.Seek(bi.scopePrefix)
-	}
+	bi.it.Seek(bi.scopePrefix)
 	return &bi
 }
 
@@ -136,11 +128,7 @@ func (bi *badgerIterator) Close() {
 func (bi *badgerIterator) Seek(prefix []byte) {
 	prefix = append(bi.scopePrefix, prefix...)
 	if bi.reverse {
-		nextPrefix := nextWord(prefix)
-		bi.it.Seek(nextPrefix)
-		for !bi.it.ValidForPrefix(prefix) && bi.it.Valid() {
-			bi.it.Next()
-		}
+		bi.it.Seek(append(prefix, 0xFF))
 	} else {
 		bi.it.Seek(prefix)
 	}
@@ -169,24 +157,4 @@ func (bi *badgerIterator) Key() []byte {
 
 func (bi *badgerIterator) Value() ([]byte, error) {
 	return bi.prevValue, nil
-}
-
-func nextWord(word []byte) []byte {
-	if len(word) == 0 {
-		return []byte{0}
-	}
-
-	i := len(word) - 1
-	for i >= 0 && word[i] == 255 {
-		i--
-	}
-
-	if i == -1 {
-		return append(word, 0)
-	}
-
-	next := make([]byte, len(word))
-	copy(next, word)
-	next[i]++
-	return next
 }
