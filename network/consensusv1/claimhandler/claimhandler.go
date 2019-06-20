@@ -53,7 +53,7 @@ package claimhandler
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
 // NodesToJoinPercent how many nodes from active list can connect to the network.

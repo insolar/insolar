@@ -48,69 +48,48 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packets
+package phases
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensusv1"
+	"github.com/insolar/insolar/network/merkle"
+	"go.opencensus.io/stats"
 )
 
-// BitSetState is state of the communicating node
-type BitSetState uint8
+func validateProofs(
+	calculator merkle.Calculator,
+	accessor network.Accessor,
+	pulseHash merkle.OriginHash,
+	proofs map[insolar.Reference]*merkle.PulseProof,
+) (valid map[insolar.NetworkNode]*merkle.PulseProof, fault map[insolar.Reference]*merkle.PulseProof) {
 
-const (
-	// TimedOut is state indicating that timeout occurred when communicating with node
-	TimedOut BitSetState = iota
-	// Legit is state indicating OK data from node
-	Legit
-	// Fraud is state indicating that the node is malicious (fraud)
-	Fraud
-	// Inconsistent is state indicating that node validation is inconsistent on different nodes
-	Inconsistent
-)
-
-// BitSetCell is structure that contains the state of the node
-type BitSetCell struct {
-	NodeID insolar.Reference
-	State  BitSetState
+	validProofs := make(map[insolar.NetworkNode]*merkle.PulseProof)
+	faultProofs := make(map[insolar.Reference]*merkle.PulseProof)
+	for nodeID, proof := range proofs {
+		valid := validateProof(calculator, accessor, pulseHash, nodeID, proof)
+		if valid {
+			validProofs[accessor.GetActiveNode(nodeID)] = proof
+		} else {
+			stats.Record(context.Background(), consensusv1.FailedCheckProof.M(1))
+			faultProofs[nodeID] = proof
+		}
+	}
+	return validProofs, faultProofs
 }
+func validateProof(
+	calculator merkle.Calculator,
+	accessor network.Accessor,
+	pulseHash merkle.OriginHash,
+	nodeID insolar.Reference,
+	proof *merkle.PulseProof) bool {
 
-// Possible errors in BitSetMapper
-var (
-	// ErrBitSetOutOfRange is returned when index passed to IndexToRef function is out of range (ERROR)
-	ErrBitSetOutOfRange = errors.New("index out of range")
-	// ErrBitSetNodeIsMissing is returned in IndexToRef when we have no information about the node on specified index (SPECIAL CASE)
-	ErrBitSetNodeIsMissing = errors.New("no information about node on specified index")
-	// ErrBitSetIncorrectNode is returned when an incorrect node is passed to RefToIndex (ERROR)
-	ErrBitSetIncorrectNode = errors.New("incorrect node ID")
-)
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/packets.BitSetMapper -o . -s _mock.go
-
-// BitSetMapper contains the mapping from bitset index to node ID (and vice versa)
-type BitSetMapper interface {
-	// IndexToRef get ID of the node that is stored on the specified internal index
-	IndexToRef(index int) (insolar.Reference, error)
-	// RefToIndex get bitset internal index where the specified node state is stored
-	RefToIndex(nodeID insolar.Reference) (int, error)
-	// Length returns required length of the bitset
-	Length() int
-}
-
-// BitSet is interface
-type BitSet interface {
-	Serialize() ([]byte, error)
-	// GetCells get buckets of bitset
-	GetCells(mapper BitSetMapper) ([]BitSetCell, error)
-	// GetTristateArray get underlying tristate
-	GetTristateArray() ([]BitSetState, error)
-	// ApplyChanges returns copy of the current bitset with changes applied
-	ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error
-	// Clone makes deep copy of bitset
-	Clone() BitSet
-}
-
-// NewBitSet creates bitset from a set of buckets and the mapper. Size == cells count.
-func NewBitSet(size int) (BitSet, error) {
-	return NewBitSetImpl(size, false)
+	node := accessor.GetActiveNode(nodeID)
+	if node == nil {
+		return false
+	}
+	return calculator.IsValid(proof, pulseHash, node.PublicKey())
 }
