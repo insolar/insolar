@@ -182,12 +182,6 @@ func (caller *Member) getBalanceCall(params map[string]interface{}) (interface{}
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
 
-	//d, err := m.getDeposits()
-	//if err != nil {
-	//	return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
-	//}
-	//return map[string]interface{}{"balance" : b, "deposit": d}, nil
-
 	return b, nil
 }
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
@@ -378,38 +372,6 @@ func (migrationDaemonMember *Member) migration(rdRef insolar.Reference, txHash s
 		return "", fmt.Errorf("confirmed failed: %s", err.Error())
 	}
 
-	//if allConfirmed {
-	//	w, err := wallet.GetImplementationFrom(insAddr)
-	//	if err != nil {
-	//		wHolder := wallet.New(0)
-	//		w, err = wHolder.AsDelegate(insAddr)
-	//		if err != nil {
-	//			return "", fmt.Errorf("failed to save as delegate: %s", err.Error())
-	//		}
-	//	}
-	//
-	//	getMdWallet := func() (*wallet.Wallet, error) {
-	//		mdWalletRef, err := rd.GetMigrationWalletRef()
-	//		if err != nil {
-	//			return nil, fmt.Errorf("failed to get md wallet ref: %s", err.Error())
-	//		}
-	//		mdWallet := wallet.GetObject(*mdWalletRef)
-	//
-	//		return mdWallet, nil
-	//	}
-	//	mdWallet, err := getMdWallet()
-	//	if err != nil {
-	//		return "", fmt.Errorf("failed to get mdWallet: %s", err.Error())
-	//	}
-	//
-	//	err = mdWallet.Transfer(amount, &w.Reference)
-	//	if err != nil {
-	//		return "", fmt.Errorf("failed to transfer: %s", err.Error())
-	//	}
-	//
-	//}
-	//
-	//return insAddr.String(), nil
 	return strconv.Itoa(int(confirms)), nil
 }
 func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {

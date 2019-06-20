@@ -69,8 +69,8 @@ func (r *RPCResponse) getError() map[string]interface{} {
 type getSeedResponse struct {
 	RPCResponse
 	Result struct {
-		Seed    string `json:"Seed"`
-		TraceID string `json:"TraceID"`
+		Seed    string `json:"seed"`
+		TraceID string `json:"traceID"`
 	} `json:"result"`
 }
 
@@ -91,8 +91,8 @@ type rpcInfoResponse struct {
 }
 
 type statusResponse struct {
-	NetworkState    string `json:"NetworkState"`
-	WorkingListSize int    `json:"WorkingListSize"`
+	NetworkState    string `json:"networkState"`
+	WorkingListSize int    `json:"workingListSize"`
 }
 
 type rpcStatusResponse struct {
@@ -229,8 +229,8 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 			return nil, err
 		}
 
-		if resp.Error != nil && strings.Contains(resp.Error.Message, "Messagebus timeout exceeded") {
-			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
+		if resp.Error != nil && strings.Contains(resp.Error.Message, "API timeout exceeded") {
+			fmt.Printf("API timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
 			continue

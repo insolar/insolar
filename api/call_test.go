@@ -103,7 +103,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("Messagebus timeout exceeded", result.Error.Message)
+	suite.Equal("API timeout exceeded", result.Error.Message)
 	suite.Nil(result.Result)
 }
 
