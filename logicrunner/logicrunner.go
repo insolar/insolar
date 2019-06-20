@@ -142,6 +142,7 @@ type LogicRunner struct {
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
+	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 
 	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
@@ -508,12 +509,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	current.ObjectDescriptor = objDesc
 
 	if es.PrototypeDescriptor == nil {
-		protoRef, err := objDesc.Prototype()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get prototype")
-		}
-
-		protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *protoRef)
+		protoDesc, codeDesc, err := lr.DescriptorsCache.ByObjectDescriptor(ctx, objDesc)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get descriptors by prototype reference")
 		}
@@ -567,29 +563,6 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	return &reply.CallMethod{Result: result}, nil
 }
 
-func (lr *LogicRunner) getDescriptorsByPrototypeRef(
-	ctx context.Context, protoRef Ref,
-) (
-	artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
-) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByPrototypeRef")
-	defer span.End()
-	protoDesc, err := lr.ArtifactManager.GetObject(ctx, protoRef)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get prototype descriptor")
-	}
-	codeRef, err := protoDesc.Code()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get code reference")
-	}
-	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get code descriptor")
-	}
-
-	return protoDesc, codeDesc, nil
-}
-
 func (lr *LogicRunner) executeConstructorCall(
 	ctx context.Context, es *ExecutionState, current *Transcript,
 ) (
@@ -608,7 +581,7 @@ func (lr *LogicRunner) executeConstructorCall(
 		return nil, es.WrapError(current, nil, "prototype reference is required")
 	}
 
-	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *request.Prototype)
+	protoDesc, codeDesc, err := lr.DescriptorsCache.ByPrototypeRef(ctx, *request.Prototype)
 	if err != nil {
 		return nil, es.WrapError(current, err, "couldn't descriptors")
 	}

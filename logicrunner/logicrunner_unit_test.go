@@ -59,6 +59,7 @@ type LogicRunnerCommonTestSuite struct {
 	mc  *minimock.Controller
 	ctx context.Context
 	am  *artifacts.ClientMock
+	dc  *artifacts.DescriptorsCacheMock
 	mb  *testutils.MessageBusMock
 	jc  *jet.CoordinatorMock
 	lr  *LogicRunner
@@ -75,6 +76,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	// initialize minimock and mocks
 	suite.mc = minimock.NewController(suite.T())
 	suite.am = artifacts.NewClientMock(suite.mc)
+	suite.dc = artifacts.NewDescriptorsCacheMock(suite.mc)
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
@@ -86,6 +88,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
 	suite.lr.ArtifactManager = suite.am
+	suite.lr.DescriptorsCache = suite.dc
 	suite.lr.MessageBus = suite.mb
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
@@ -955,7 +958,6 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	cd := artifacts.NewCodeDescriptorMock(suite.T())
 	cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
 	cd.RefMock.Return(&codeRef)
-	suite.am.GetCodeMock.Return(cd, nil)
 
 	suite.am.GetObjectFunc = func(
 		ctx context.Context, obj insolar.Reference,
@@ -969,7 +971,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		return nil, errors.New("unexpected call")
 	}
 
-	suite.am.GetCodeMock.Return(cd, nil)
+	suite.dc.ByObjectDescriptorMock.Return(pd, cd, nil)
 
 	suite.am.HasPendingRequestsMock.Return(false, nil)
 
@@ -1210,7 +1212,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					return nil, errors.New("unexpected call")
 				}
 
-				suite.am.GetCodeMock.Return(cd, nil)
+				suite.dc.ByObjectDescriptorMock.Return(pd, cd, nil)
 
 				resId := testutils.RandomID()
 				suite.am.RegisterResultMock.Return(&resId, nil)
