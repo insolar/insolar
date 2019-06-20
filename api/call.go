@@ -98,7 +98,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 		ctx,
 		reference,
 		"Call",
-		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), requestArgs},
+		[]interface{}{requestArgs},
 	)
 
 	if err != nil {
