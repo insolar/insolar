@@ -50,7 +50,7 @@ func TestTransferMoney(t *testing.T) {
 
 	amount := "10"
 
-	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
+	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
 	require.NoError(t, err)
 
 	// Skip validation of balance before/after transfer
@@ -68,7 +68,7 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 
 	amount := "10"
 
-	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
+	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
 	require.NotNil(t, err)
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
@@ -81,7 +81,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 
 	amount := "10"
 
-	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "to": testutils.RandomRef().String()})
+	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": testutils.RandomRef().String()})
 	require.NotNil(t, err)
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
@@ -96,7 +96,7 @@ func TestTransferNegativeAmount(t *testing.T) {
 
 	amount := "-111"
 
-	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
+	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
 	require.Error(t, err)
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
@@ -118,7 +118,7 @@ func TestTransferAllAmount(t *testing.T) {
 	summ := new(big.Int)
 	summ.Add(oldSecondBalance, oldFirstBalance)
 
-	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
+	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
 	require.NoError(t, err)
 
 	checkBalanceFewTimes(t, secondMember, secondMember.ref, *summ)
@@ -135,7 +135,7 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 	amount := new(big.Int)
 	amount.Add(oldFirstBalance, big.NewInt(10))
 
-	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount.String(), "to": secondMember.ref})
+	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount.String(), "toMemberReference": secondMember.ref})
 	require.NotNil(t, err)
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
@@ -149,7 +149,7 @@ func TestTransferToMyself(t *testing.T) {
 
 	amount := "20"
 
-	_, err := signedRequest(member, "wallet.transfer", map[string]interface{}{"amount": amount, "to": member.ref})
+	_, err := signedRequest(member, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": member.ref})
 	require.NotNil(t, err)
 	newMemberBalance := getBalanceNoErr(t, member, member.ref)
 	require.Equal(t, oldMemberBalance, newMemberBalance)
@@ -168,9 +168,9 @@ func TestTransferTwoTimes(t *testing.T) {
 
 	amount := "10"
 
-	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
+	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
 	require.NoError(t, err)
-	_, err = signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "to": secondMember.ref})
+	_, err = signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
 	require.NoError(t, err)
 
 	// Skip validation of balance before/after transfer

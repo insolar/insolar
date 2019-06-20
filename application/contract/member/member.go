@@ -116,6 +116,7 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 		return nil, fmt.Errorf("error while verify signature: %s", err.Error())
 	}
 
+	m.RootDomain = rootDomain
 	params := request.Params.CallParams.(map[string]interface{})
 
 	switch request.Params.CallSite {
@@ -143,6 +144,11 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 
 func (migrationAdminMember *Member) addBurnAddressesCall(params map[string]interface{}) (interface{}, error) {
 
+	burnAddressesI, ok := params["burnAddresses"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'burnAddresses' param")
+	}
+
 	rootDomain := rootdomain.GetObject(migrationAdminMember.RootDomain)
 	migrationAdminRef, err := rootDomain.GetMigrationAdminMemberRef()
 	if err != nil {
@@ -153,9 +159,8 @@ func (migrationAdminMember *Member) addBurnAddressesCall(params map[string]inter
 		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
 
-	burnAddressesInterfaces := params["burnAddresses"].([]interface{})
-	burnAddressesStrs := make([]string, len(burnAddressesInterfaces))
-	for i, ba := range burnAddressesInterfaces {
+	burnAddressesStrs := make([]string, len(burnAddressesI))
+	for i, ba := range burnAddressesI {
 		burnAddressesStrs[i] = ba.(string)
 	}
 
@@ -168,7 +173,12 @@ func (migrationAdminMember *Member) addBurnAddressesCall(params map[string]inter
 }
 func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 
-	mRef, err := insolar.NewReferenceFromBase58(params["reference"].(string))
+	mReferenceStr, ok := params["reference"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
+	}
+
+	mRef, err := insolar.NewReferenceFromBase58(mReferenceStr)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse reference: %s", err.Error())
 	}
@@ -187,11 +197,20 @@ func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 }
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
 
-	toMember, err := insolar.NewReferenceFromBase58(params["to"].(string))
+	toMemberReferenceI, ok := params["toMemberReference"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'toMemberReference' param")
+	}
+	amount, ok := params["amount"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+	}
+
+	toMemberReference, err := insolar.NewReferenceFromBase58(toMemberReferenceI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse 'to' param: %s", err.Error())
 	}
-	if m.GetReference() == *toMember {
+	if m.GetReference() == *toMemberReference {
 		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
 
@@ -200,19 +219,24 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("failed to get wallet implementation of sender: %s", err.Error())
 	}
 
-	return nil, w.Transfer(params["amount"].(string), toMember)
+	return w.Transfer(amount, toMemberReference)
 }
-func (m *Member) migrationCall(params map[string]interface{}) (string, error) {
+func (m *Member) migrationCall(params map[string]interface{}) (interface{}, error) {
+
+	inAmount, ok := params["inAmount"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'inAmount' param")
+	}
 
 	amount := new(big.Int)
-	amount, ok := amount.SetString(params["inAmount"].(string), 10)
+	amount, ok = amount.SetString(inAmount, 10)
 	if !ok {
-		return "", fmt.Errorf("failed to parse amount")
+		return nil, fmt.Errorf("failed to parse amount")
 	}
 
 	unHoldDate, err := helper.ParseTimestamp(params["currentDate"].(string))
 	if err != nil {
-		return "", fmt.Errorf("failed to parse unHoldDate: %s", err.Error())
+		return nil, fmt.Errorf("failed to parse unHoldDate: %s", err.Error())
 	}
 
 	return m.migration(m.RootDomain, params["txHash"].(string), params["burnAddress"].(string), *amount, unHoldDate)

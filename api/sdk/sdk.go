@@ -209,7 +209,7 @@ func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error
 		from.Reference,
 		from.PrivateKey,
 		"wallet.transfer",
-		map[string]interface{}{"amount": amount, "to": to.Reference},
+		map[string]interface{}{"amount": amount, "toMemberReference": to.Reference},
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "request was failed ")

@@ -40,7 +40,7 @@ type Request struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111277MhekB5d7pGxkLcaTinz379XohBDVtJfcezCa.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112fprrUed7gxwEqBww9fdWU5HmsvWXe9JAC713fr.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
