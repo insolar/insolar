@@ -31,8 +31,8 @@ type Params struct {
 	PublicKey  string      `json:"memberPubKey"`
 }
 type Request struct {
-	JsonRpc  string `json:"jsonrpc"`
-	Id       int    `json:"id"`
+	JSONRPC  string `json:"jsonrpc"`
+	ID       int    `json:"id"`
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
@@ -40,7 +40,7 @@ type Request struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111136nqHyJoMD8MWP1Dk7246FTvf1LedFJaRRAk3rn.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112BbNWwsumyte1y2uAhdKm4XJ5m3Zy4P4R1yNhGT.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {

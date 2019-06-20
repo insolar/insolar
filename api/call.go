@@ -133,12 +133,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		defer span.End()
 
 		contractRequest := requester.Request{}
-		contractAnswer := requester.ContractAnswer{JSONRPC: contractRequest.JSONRPC, ID: contractRequest.ID}
-		rawBody, err := UnmarshalRequest(req, &contractRequest)
-		if err != nil {
-			processError(err, err.Error(), &contractAnswer, insLog, traceID)
-			return
-		}
+		contractAnswer := requester.ContractAnswer{}
 
 		startTime := time.Now()
 		defer func() {
@@ -162,6 +157,15 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				insLog.Errorf("Can't write response\n")
 			}
 		}()
+
+		rawBody, err := UnmarshalRequest(req, &contractRequest)
+		if err != nil {
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
+			return
+		}
+
+		contractAnswer.JSONRPC = contractRequest.JSONRPC
+		contractAnswer.ID = contractRequest.ID
 
 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 		if err != nil {

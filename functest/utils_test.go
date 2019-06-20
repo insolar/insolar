@@ -74,10 +74,6 @@ type getSeedResponse struct {
 	} `json:"result"`
 }
 
-type bootstrapNode struct {
-	PublicKey string `json:"public_key"`
-}
-
 type infoResponse struct {
 	RootDomain string `json:"RootDomain"`
 	RootMember string `json:"RootMember"`

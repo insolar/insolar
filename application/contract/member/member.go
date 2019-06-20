@@ -71,8 +71,8 @@ func (m *Member) verifySig(request Request, rawRequest []byte, signature string,
 var INSATTR_Call_API = true
 
 type Request struct {
-	JsonRpc  string `json:"jsonrpc"`
-	Id       int    `json:"id"`
+	JSONRPC  string `json:"jsonrpc"`
+	ID       int    `json:"id"`
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
@@ -146,11 +146,11 @@ func (migrationAdminMember *Member) addBurnAddressesCall(params map[string]inter
 	rootDomain := rootdomain.GetObject(migrationAdminMember.RootDomain)
 	migrationAdminRef, err := rootDomain.GetMigrationAdminMemberRef()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get migration deamon admin reference from root domain: %s", err.Error())
+		return nil, fmt.Errorf("failed to get migration daemon admin reference from root domain: %s", err.Error())
 	}
 
 	if migrationAdminMember.GetReference() != *migrationAdminRef {
-		return nil, fmt.Errorf("only migration deamon admin can call this method")
+		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
 
 	burnAddressesInterfaces := params["burnAddresses"].([]interface{})
