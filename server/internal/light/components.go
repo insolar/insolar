@@ -262,13 +262,17 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 			conf.LightChainLimit,
 		)
-		dataGatherer := replication.NewDataGatherer(drops, blobs, records, indexes)
+
 		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
-			dataGatherer,
 			lightCleaner,
 			Bus,
 			Pulses,
+			drops,
+			blobs,
+			records,
+			indexes,
+			Jets,
 		)
 
 		jetSplitter := executor.NewJetSplitter(

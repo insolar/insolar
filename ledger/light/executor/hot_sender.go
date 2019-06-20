@@ -91,7 +91,6 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 		filtered = append(filtered, idx)
 	}
 
-	// group by net
 	byJet := map[insolar.JetID][]object.FilamentIndex{}
 	for _, idx := range filtered {
 		jetID, _ := m.jetAccessor.ForID(ctx, newPulse, idx.ObjID)

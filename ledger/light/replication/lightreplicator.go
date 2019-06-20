@@ -22,10 +22,14 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/insolar/insolar/ledger/object"
 	"go.opencensus.io/stats"
 )
 
@@ -39,29 +43,44 @@ type LightReplicator interface {
 type LightReplicatorDefault struct {
 	once sync.Once
 
-	syncWaitingPulses chan insolar.PulseNumber
-
 	jetCalculator   executor.JetCalculator
-	dataGatherer    DataGatherer
 	cleaner         Cleaner
 	msgBus          insolar.MessageBus
 	pulseCalculator pulse.Calculator
+
+	dropAccessor        drop.Accessor
+	blobsAccessor       blob.CollectionAccessor
+	recsAccessor        object.RecordCollectionAccessor
+	indexBucketAccessor object.IndexBucketAccessor
+	jetAccessor         jet.Accessor
+
+	syncWaitingPulses chan insolar.PulseNumber
 }
 
 // NewReplicatorDefault creates new instance of LightReplicator
 func NewReplicatorDefault(
 	jetCalculator executor.JetCalculator,
-	dataGatherer DataGatherer,
 	cleaner Cleaner,
 	msgBus insolar.MessageBus,
 	calculator pulse.Calculator,
+	dropAccessor drop.Accessor,
+	blobsAccessor blob.CollectionAccessor,
+	recsAccessor object.RecordCollectionAccessor,
+	indexBucketAccessor object.IndexBucketAccessor,
+	jetAccessor jet.Accessor,
 ) *LightReplicatorDefault {
 	return &LightReplicatorDefault{
-		jetCalculator:     jetCalculator,
-		dataGatherer:      dataGatherer,
-		cleaner:           cleaner,
-		msgBus:            msgBus,
-		pulseCalculator:   calculator,
+		jetCalculator:   jetCalculator,
+		cleaner:         cleaner,
+		msgBus:          msgBus,
+		pulseCalculator: calculator,
+
+		dropAccessor:        dropAccessor,
+		blobsAccessor:       blobsAccessor,
+		recsAccessor:        recsAccessor,
+		indexBucketAccessor: indexBucketAccessor,
+		jetAccessor:         jetAccessor,
+
 		syncWaitingPulses: make(chan insolar.PulseNumber),
 	}
 }
@@ -95,16 +114,18 @@ func (t *LightReplicatorDefault) sync(ctx context.Context) {
 	for pn := range t.syncWaitingPulses {
 		logger.Debugf("[Replicator][sync] pn received - %v", pn)
 
+		allIndexes := t.filterAndGroupIndexes(ctx, pn)
 		jets := t.jetCalculator.MineForPulse(ctx, pn)
 		logger.Debugf("[Replicator][sync] founds %v jets", len(jets))
-		for _, jID := range jets {
-			msg, err := t.dataGatherer.ForPulseAndJet(ctx, pn, jID)
+
+		for _, jetID := range jets {
+			msg, err := t.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
 			if err != nil {
 				panic(
 					fmt.Sprintf(
 						"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
 						pn,
-						jID.DebugString(),
+						jetID.DebugString(),
 						err,
 					),
 				)

@@ -29,42 +29,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/replication.DataGatherer -o ./ -s _mock.go
-
-// DataGatherer is an inteface, that provides methods for gathering a heavy payload for a provided pulse
-type DataGatherer interface {
-	// ForPulseAndJet returns HeavyPayload message for a provided pulse and a jetID
-	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) (*message.HeavyPayload, error)
-}
-
-// LightDataGatherer is a realisation of DataGatherer
-type LightDataGatherer struct {
-	dropAccessor         drop.Accessor
-	blobsAccessor        blob.CollectionAccessor
-	recsAccessor         object.RecordCollectionAccessor
-	indexReplicaAccessor object.IndexBucketAccessor
-}
-
-// NewDataGatherer creates a new instance of LightDataGatherer
-func NewDataGatherer(
-	dropAccessor drop.Accessor,
-	blobsAccessor blob.CollectionAccessor,
-	recsAccessor object.RecordCollectionAccessor,
-	indexReplicaAccessor object.IndexBucketAccessor,
-) *LightDataGatherer {
-	return &LightDataGatherer{
-		dropAccessor:         dropAccessor,
-		blobsAccessor:        blobsAccessor,
-		recsAccessor:         recsAccessor,
-		indexReplicaAccessor: indexReplicaAccessor,
-	}
-}
-
 // ForPulseAndJet returns HeavyPayload message for a provided pulse and a jetID
-func (d *LightDataGatherer) ForPulseAndJet(
+func (d *LightReplicatorDefault) heavyPayload(
 	ctx context.Context,
 	pn insolar.PulseNumber,
 	jetID insolar.JetID,
+	indexes []object.FilamentIndex,
 ) (*message.HeavyPayload, error) {
 	dr, err := d.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
@@ -74,8 +44,6 @@ func (d *LightDataGatherer) ForPulseAndJet(
 
 	bls := d.blobsAccessor.ForPulse(ctx, jetID, pn)
 	records := d.recsAccessor.ForPulse(ctx, jetID, pn)
-
-	indexes := d.indexReplicaAccessor.ForPNAndJet(ctx, pn, jetID)
 
 	return &message.HeavyPayload{
 		JetID:        jetID,
@@ -120,4 +88,16 @@ func convertRecords(ctx context.Context, records []record.Material) [][]byte {
 		res[i] = data
 	}
 	return res
+}
+
+func (d *LightReplicatorDefault) filterAndGroupIndexes(
+	ctx context.Context, pn insolar.PulseNumber,
+) map[insolar.JetID][]object.FilamentIndex {
+	byJet := map[insolar.JetID][]object.FilamentIndex{}
+	indexes := d.indexBucketAccessor.ForPulse(ctx, pn)
+	for _, idx := range indexes {
+		jetID, _ := d.jetAccessor.ForID(ctx, pn, idx.ObjID)
+		byJet[jetID] = append(byJet[jetID], idx)
+	}
+	return byJet
 }
