@@ -143,17 +143,31 @@ func (c *Phase3Controller) StartWorker(ctx context.Context) {
 	go c.workerPhase3(ctx)
 }
 
-func (c *Phase3Controller) workerPhase3(ctx context.Context) {
+func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 
-	ctx, _ = context.WithDeadline(ctx, time.Now().Add(c.R.AdjustedAfter(c.R.GetTimings().EndOfPhase3)))
+	ctx, cancel := context.WithDeadline(ctxRound, time.Now().Add(c.R.AdjustedAfter(c.R.GetTimings().EndOfPhase3)))
+	defer cancel()
 
 	if !c.workerPrePhase3(ctx) {
 		return
 	}
 	d := c.calcGshPair()
 
-	go c.workerRecvPhase3(ctx, d)
-	c.workerSendPhase3(ctx, d)
+	go c.workerSendPhase3(ctx, d)
+	c.workerRecvPhase3(ctx, d)
+
+	go workerQueueFlusher(ctxRound, c.queuePh3Recv, c.queueTrustUpdated)
+}
+
+func workerQueueFlusher(ctxRound context.Context, q0 chan ph3Data, q1 <-chan TrustUpdateSignal) {
+	for {
+		select {
+		case <-ctxRound.Done():
+			return
+		case <-q0:
+		case <-q1:
+		}
+	}
 }
 
 func (c *Phase3Controller) workerPrePhase3(ctx context.Context) bool {
