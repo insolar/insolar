@@ -51,10 +51,17 @@
 package tests
 
 import (
+	"math/rand"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/common"
 )
+
+func randBits256() common.Bits256 {
+	v := common.Bits256{}
+	_, _ = rand.Read(v[:])
+	return v
+}
 
 func CreateGenerator(pulseCount int, pulseDelta uint16, output chan<- interface{}) {
 	var pulseNum common.PulseNumber = 100000
@@ -64,7 +71,7 @@ func CreateGenerator(pulseCount int, pulseDelta uint16, output chan<- interface{
 			prevDelta = 0
 		}
 		output <- WrapPacketParser(&EmuPulsarNetPacket{
-			pulseData: *common.NewPulsarData(pulseNum, pulseDelta, prevDelta),
+			pulseData: *common.NewPulsarData(pulseNum, pulseDelta, prevDelta, randBits256()),
 		})
 
 		pulseNum += common.PulseNumber(pulseDelta)

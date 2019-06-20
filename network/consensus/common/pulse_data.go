@@ -52,7 +52,6 @@ package common
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 )
@@ -87,12 +86,12 @@ type PulseDataReader interface {
 	IsFromEphemeral() bool
 }
 
-func NewFirstPulsarData(delta uint16) *PulseData {
-	return newPulsarData(PulseNumberOfNow(), delta)
+func NewFirstPulsarData(delta uint16, entropy Bits256) *PulseData {
+	return newPulsarData(PulseNumberOfNow(), delta, entropy)
 }
 
-func NewPulsarData(pn PulseNumber, deltaNext uint16, deltaPrev uint16) *PulseData {
-	r := newPulsarData(pn, deltaNext)
+func NewPulsarData(pn PulseNumber, deltaNext uint16, deltaPrev uint16, entropy Bits256) *PulseData {
+	r := newPulsarData(pn, deltaNext, entropy)
 	r.PrevPulseDelta = deltaPrev
 	return r
 }
@@ -100,6 +99,8 @@ func NewPulsarData(pn PulseNumber, deltaNext uint16, deltaPrev uint16) *PulseDat
 func NewFirstEphemeralData() *PulseData {
 	return newEphemeralData(MinRegularPulseNumber)
 }
+
+type EntropyFunc func() Bits256
 
 func (r PulseData) String() string {
 	buf := strings.Builder{}
@@ -122,20 +123,14 @@ func (r PulseData) String() string {
 	return buf.String()
 }
 
-func randBits256() Bits256 {
-	v := Bits256{}
-	_, _ = rand.Read(v[:])
-	return v
-}
-
-func newPulsarData(pn PulseNumber, delta uint16) *PulseData {
+func newPulsarData(pn PulseNumber, delta uint16, entropy Bits256) *PulseData {
 	if delta == 0 {
 		panic("delta cant be zero")
 	}
 	s := PulseData{
 		PulseNumber: pn,
 		PulseDataExt: PulseDataExt{
-			PulseEntropy:   randBits256(),
+			PulseEntropy:   entropy,
 			Timestamp:      uint32(time.Now().Unix()),
 			NextPulseDelta: delta,
 			PrevPulseDelta: 0,
@@ -251,11 +246,11 @@ func (r *PulseData) GetStartOfEpoch() PulseNumber {
 	return r.PulseNumber
 }
 
-func (r *PulseData) CreateNextPulse() *PulseData {
+func (r *PulseData) CreateNextPulse(entropyGen EntropyFunc) *PulseData {
 	if r.IsFromEphemeral() {
 		return r.createNextEphemeralPulse()
 	}
-	return r.createNextPulsarPulse(r.NextPulseDelta)
+	return r.createNextPulsarPulse(r.NextPulseDelta, entropyGen)
 }
 
 func (r *PulseData) IsValidNext(n *PulseData) bool {
@@ -318,15 +313,15 @@ func (r *PulseData) createNextEphemeralPulse() *PulseData {
 	return s
 }
 
-func (r *PulseData) CreateNextPulsarPulse(delta uint16) *PulseData {
+func (r *PulseData) CreateNextPulsarPulse(delta uint16, entropyGen EntropyFunc) *PulseData {
 	if r.IsFromEphemeral() {
 		panic("prev is ephemeral")
 	}
-	return r.createNextPulsarPulse(delta)
+	return r.createNextPulsarPulse(delta, entropyGen)
 }
 
-func (r *PulseData) createNextPulsarPulse(delta uint16) *PulseData {
-	s := newPulsarData(r.GetNextPulseNumber(), delta)
+func (r *PulseData) createNextPulsarPulse(delta uint16, entropyGen EntropyFunc) *PulseData {
+	s := newPulsarData(r.GetNextPulseNumber(), delta, entropyGen())
 	s.PrevPulseDelta = r.NextPulseDelta
 	return s
 }
