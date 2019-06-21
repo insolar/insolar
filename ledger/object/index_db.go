@@ -231,7 +231,7 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 			return nil, err
 		}
 		if len(b.PendingRecords) == 0 {
-			return nil, errors.New("can't fetch pednings from index")
+			return nil, errors.New("can't fetch pendings from index")
 		}
 
 		tempRes, err := i.filament(b)
@@ -239,7 +239,7 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 			return nil, err
 		}
 		if len(tempRes) == 0 {
-			return nil, errors.New("can't fetch pednings from index")
+			return nil, errors.New("can't fetch pendings from index")
 		}
 		res = append(tempRes, res...)
 

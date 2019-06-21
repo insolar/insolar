@@ -65,21 +65,6 @@ func (p *GetPendingFilament) Proceed(ctx context.Context) error {
 		inslogger.FromContext(ctx).Debugf("GetPendingFilament records - %v", r.RecordID.DebugString())
 	}
 
-	// we want to skip closed segments of the filament
-	if len(records) > 0 {
-		idx := 0
-		traverse := true
-
-		for traverse && idx < len(records) {
-			if records[idx].RecordID.Pulse() >= p.readUntil {
-				traverse = false
-			} else {
-				idx++
-			}
-		}
-		records = records[idx:]
-	}
-
 	if len(records) == 0 {
 		panic("why this happened?")
 	}

@@ -378,13 +378,13 @@ func (i *FilamentCacheStorage) setFilament(ctx context.Context, pm *pendingMeta,
 }
 
 func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
+	i.idLocker.Lock(&objID)
+	defer i.idLocker.Unlock(&objID)
+
 	idx := i.idxAccessor.Index(pn, objID)
 	if idx == nil {
 		return ErrLifelineNotFound
 	}
-
-	i.idLocker.Lock(&objID)
-	defer i.idLocker.Unlock(&objID)
 
 	pb := i.pendingBucket(pn, objID)
 	if pb == nil {
@@ -504,41 +504,6 @@ func (i *FilamentCacheStorage) firstPending(ctx context.Context, pb *pendingMeta
 	return record.Unwrap(rec.Virtual).(*record.PendingFilament), nil
 }
 
-func (i *FilamentCacheStorage) readFilamentSegment(ctx context.Context, destPN insolar.PulseNumber, objID insolar.ID) (payload.Payload, error) {
-	prevIdx := i.idxAccessor.Index(destPN, objID)
-	if prevIdx == nil {
-		return nil, errors.New("can't get a previous segment of the filament")
-	}
-	res := make([]record.CompositeFilamentRecord, len(prevIdx.PendingRecords))
-	for idx, id := range prevIdx.PendingRecords {
-		metaRec, err := i.recordStorage.ForID(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-
-		concreteMeta := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
-		rec, err := i.recordStorage.ForID(ctx, concreteMeta.RecordID)
-		if err != nil {
-			return nil, err
-		}
-
-		res[idx] = record.CompositeFilamentRecord{
-			Record:   rec,
-			RecordID: concreteMeta.RecordID,
-			Meta:     metaRec,
-			MetaID:   id,
-		}
-	}
-	if len(res) == 0 {
-		return nil, errors.New("part of a filamnet is empty")
-	}
-
-	return &payload.PendingFilament{
-		ObjectID: objID,
-		Records:  res,
-	}, nil
-}
-
 func (i *FilamentCacheStorage) fillPendingFilament(
 	ctx context.Context,
 	currentPN insolar.PulseNumber,
@@ -550,6 +515,8 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("RefreshPendingFilament.fillPendingFilament"))
 	defer span.End()
 
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("objID:%v fillPendingFilament start, pn:%v, destPN: %v, earliestOpenRequest: %v", objID.DebugString(), currentPN, destPN, earlistOpenRequest)
 	continueFilling := true
 
 	for continueFilling {
@@ -558,16 +525,22 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 			return err
 		}
 
+		logger.Debugf("objID:%v fillPendingFilament goes to destPN:%v, pn:%v node: %v", objID.DebugString(), destPN, currentPN, node)
 		var pl payload.Payload
 		// TODO: temp hack waiting for INS-2597 INS-2598 @egorikas
 		// Because a current node can be a previous LME for a object
 		if *node == i.coordinator.Me() {
-			pl, err = i.readFilamentSegment(ctx, destPN, objID)
+			res, err := i.Records(ctx, destPN, objID)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "can't get a previous segment of the filament")
 			}
-			inslogger.FromContext(ctx).Debugf("UNEXPECTED read from myself objID - %v, pn - %v", objID.DebugString(), currentPN)
+
+			pl = &payload.PendingFilament{
+				ObjectID: objID,
+				Records:  res,
+			}
 		} else {
+			logger.Debugf("objID:%v fillPendingFilament &payload.GetPendingFilament, pn:%v", objID.DebugString(), currentPN)
 			msg, err := payload.NewMessage(&payload.GetPendingFilament{
 				ObjectID:  objID,
 				StartFrom: destPN,
@@ -577,16 +550,16 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 				return errors.Wrap(err, "failed to create a GetPendingFilament message")
 			}
 
+			logger.Debugf("objID:%v fillPendingFilament i.busWM.SendTarget, pn:%v", objID.DebugString(), currentPN)
 			rep, done := i.busWM.SendTarget(ctx, msg, *node)
 			defer done()
-			inslogger.FromContext(ctx).Debugf(""+
-				"objID - %v, pn - %v", objID.DebugString(), currentPN)
 			var ok bool
 			res, ok := <-rep
+			logger.Debugf("objID:%v fillPendingFilament after res, ok := <-rep, pn:%v", objID.DebugString(), currentPN)
 			if !ok {
 				return errors.New("failed to get a pending filament. no reply")
 			}
-
+			logger.Debugf("objID:%v fillPendingFilament payload.UnmarshalFromMeta, pn:%v", objID.DebugString(), currentPN)
 			pl, err = payload.UnmarshalFromMeta(res.Payload)
 			if err != nil {
 				return errors.Wrap(err, "failed to unmarshal reply")
@@ -598,13 +571,17 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 			if len(r.Records) == 0 {
 				panic(fmt.Sprintf("unexpected behaviour, objID - %v, pn - %v, node - %v, startFrom %v  readUntil %v", objID.DebugString(), currentPN, node, destPN, earlistOpenRequest))
 			}
+			logger.Debugf("objID:%v fillPendingFilament setFilament, pn:%v", objID.DebugString(), currentPN)
 			err := i.setFilament(ctx, pm, destPN, r.Records)
 			if err != nil {
 				return err
 			}
 
+			logger.Debugf("objID:%v fillPendingFilament record.Unwrap(r.Records[0].Meta.Virtual), pn:%v", objID.DebugString(), currentPN)
 			firstRec := record.Unwrap(r.Records[0].Meta.Virtual).(*record.PendingFilament)
+			logger.Debugf("objID:%v fillPendingFilament firstRec.PreviousRecord==%v, pn:%v", objID.DebugString(), firstRec.PreviousRecord.DebugString(), currentPN)
 			if firstRec.PreviousRecord == nil {
+				logger.Debugf("objID:%v fillPendingFilament finish, pn:%v", objID.DebugString(), currentPN)
 				return nil
 			}
 
@@ -615,13 +592,16 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 			} else {
 				continueFilling = false
 			}
+			logger.Debugf("objID:%v fillPendingFilament continueFilling destPN:%v, continueFilling:%v, pn:%v", objID.DebugString(), destPN, continueFilling, currentPN)
 		case *payload.Error:
+			logger.Debugf("objID:%v fillPendingFilament *payload.Error, pn:%v", objID.DebugString(), r.Text, currentPN)
 			return errors.New(r.Text)
 		default:
 			return fmt.Errorf("fillPendingFilament: unexpected reply: %#v", r)
 		}
 	}
 
+	logger.Debugf("objID:%v fillPendingFilament finish, pn:%v", objID.DebugString(), currentPN)
 	return nil
 }
 
@@ -754,10 +734,6 @@ func (i *FilamentCacheStorage) OpenRequestsForObjID(ctx context.Context, current
 
 // Records returns all the records for a provided object
 func (i *FilamentCacheStorage) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
-	idx := i.idxAccessor.Index(currentPN, objID)
-	if idx == nil {
-		return nil, ErrLifelineNotFound
-	}
 	b := i.pendingBucket(currentPN, objID)
 	if b == nil {
 		return nil, ErrLifelineNotFound
@@ -768,25 +744,32 @@ func (i *FilamentCacheStorage) Records(ctx context.Context, currentPN insolar.Pu
 	defer b.RUnlock()
 	inslogger.FromContext(ctx).Debugf("Records before %v pn : %v", objID.DebugString(), currentPN)
 
-	res := make([]record.CompositeFilamentRecord, len(idx.PendingRecords))
-	for idx, id := range idx.PendingRecords {
-		metaRec, err := i.recordStorage.ForID(ctx, id)
-		if err != nil {
-			return nil, err
+	var res []record.CompositeFilamentRecord
+
+	for _, pm := range b.fullFilament {
+		var tempRes []record.CompositeFilamentRecord
+
+		for _, recID := range pm.MetaRecordsIDs {
+			metaRec, err := i.recordStorage.ForID(ctx, recID)
+			if err != nil {
+				return nil, err
+			}
+
+			concreteMeta := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+			rec, err := i.recordStorage.ForID(ctx, concreteMeta.RecordID)
+			if err != nil {
+				return nil, err
+			}
+
+			tempRes = append(tempRes, record.CompositeFilamentRecord{
+				Record:   rec,
+				RecordID: concreteMeta.RecordID,
+				Meta:     metaRec,
+				MetaID:   recID,
+			})
 		}
 
-		concreteMeta := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
-		rec, err := i.recordStorage.ForID(ctx, concreteMeta.RecordID)
-		if err != nil {
-			return nil, err
-		}
-
-		res[idx] = record.CompositeFilamentRecord{
-			Record:   rec,
-			RecordID: concreteMeta.RecordID,
-			Meta:     metaRec,
-			MetaID:   id,
-		}
+		res = append(tempRes, res...)
 	}
 
 	return res, nil
