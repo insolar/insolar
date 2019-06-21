@@ -63,12 +63,13 @@ import (
 	"github.com/insolar/insolar/network/node"
 )
 
-type BootstrapResult struct {
-	Host *host.Host
-	// FirstPulseTime    time.Time
-	ReconnectRequired bool
-	NetworkSize       int
-}
+// todo: remove
+// type BootstrapResult struct {
+// 	Host *host.Host
+// 	// FirstPulseTime    time.Time
+// 	ReconnectRequired bool
+// 	NetworkSize       int
+// }
 
 // RequestHandler handler function to process incoming requests from network and return responses to these requests.
 type RequestHandler func(ctx context.Context, request Packet) (response Packet, err error)
@@ -145,12 +146,6 @@ type PulseHandler interface {
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
 	insolar.NodeNetwork
-
-	// TODO: remove
-	// IsBootstrapped method shows that all DiscoveryNodes finds each other
-	// IsBootstrapped() bool
-	// // SetIsBootstrapped method set is bootstrap completed
-	// SetIsBootstrapped(isBootstrap bool)
 
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte
@@ -262,7 +257,8 @@ type Mutator interface {
 // Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
 	Gateway() Gateway
-	SetGateway(Gateway)
+	// SetGateway(Gateway)
+	SwitchState(state insolar.NetworkState)
 }
 
 // Gateway responds for whole network state

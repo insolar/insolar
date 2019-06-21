@@ -138,23 +138,31 @@ func (n *ServiceNetwork) Gateway() network.Gateway {
 	return n.gateway
 }
 
-func (n *ServiceNetwork) SetGateway(g network.Gateway) {
+func (n *ServiceNetwork) SwitchState(state insolar.NetworkState) {
 	n.gatewayMu.Lock()
 
-	if n.gateway != nil && n.gateway.GetState() == g.GetState() {
+	if n.gateway != nil && n.gateway.GetState() == state {
 		log.Warn("Trying to set gateway to the same state")
 		n.gatewayMu.Unlock()
 		return
 	}
-	n.gateway = g
+
+	// old gateway stop
+	n.setGateway(n.gateway.NewGateway(insolar.NoNetworkState))
 	n.gatewayMu.Unlock()
+
+	go n.gateway.Run(context.Background())
+}
+
+func (n *ServiceNetwork) setGateway(g network.Gateway) {
+
+	n.gateway = g
 	ctx := context.Background()
 	if n.gateway.NeedLockMessageBus() {
 		n.OperableFunc(ctx, false)
 	} else {
 		n.OperableFunc(ctx, true)
 	}
-	n.gateway.Run(ctx)
 }
 
 func (n *ServiceNetwork) GetState() insolar.NetworkState {
@@ -215,7 +223,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewPhaseManager(n.cfg.Service.Consensus),
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
-		bootstrap.NewAuthorizer(options),
+		bootstrap.NewRequester(options),
 		baseGateway,
 	)
 	err = n.cm.Init(ctx)
@@ -223,28 +231,24 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	// todo ??
-	n.SetGateway(baseGateway.NewGateway(insolar.NoNetworkState))
-
+	n.setGateway(baseGateway.NewGateway(insolar.NoNetworkState))
 	return nil
 }
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-
-	log.Info("Starting network component manager...")
+	logger.Info("Starting network component manager...")
 	err := n.cm.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
 
-	n.SetGateway(n.Gateway().NewGateway(insolar.NoNetworkState))
-	go n.Gateway().Run(ctx)
+	n.Gateway().Run(ctx)
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
-	logger.Info("Service network started")
+	// logger.Info("Service network started")
 	return nil
 }
 
@@ -365,7 +369,7 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
 		errMsg := "Failed to pass consensus: " + err.Error()
 		logger.Error(errMsg)
-		n.SetGateway(n.Gateway().NewGateway(insolar.NoNetworkState))
+		n.SwitchState(insolar.NoNetworkState)
 	}
 }
 

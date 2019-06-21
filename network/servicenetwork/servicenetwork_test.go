@@ -67,7 +67,6 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
@@ -339,41 +338,41 @@ func TestServiceNetwork_processIncoming(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestServiceNetwork_SetGateway(t *testing.T) {
-	t.Skip("fix me")
-	sn, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{}, false)
-	require.NoError(t, err)
-
-	op := false
-	tick := 0
-	sn.SetOperableFunc(func(ctx context.Context, operable bool) {
-		op = operable
-		tick++
-	})
-
-	hn := networkUtils.NewHostNetworkMock(t)
-	hn.RegisterRequestHandlerMock.Return()
-	sn.HostNetwork = hn
-
-	// initial set
-	baseGateway := &gateway.Base{}
-	sn.SetGateway(baseGateway.NewGateway(insolar.NoNetworkState))
-	assert.Equal(t, 1, tick)
-	assert.False(t, op)
-
-	type Test struct {
-		state insolar.NetworkState
-		lock  bool
-	}
-
-	for i, T := range []Test{
-		{insolar.NoNetworkState, false},
-		{insolar.CompleteNetworkState, true},
-		{insolar.NoNetworkState, false},
-	} {
-		sn.SetGateway(sn.Gateway().NewGateway(T.state))
-		assert.Equal(t, i+1, tick)
-		assert.Equal(t, T.lock, op)
-
-	}
-}
+// func TestServiceNetwork_SetGateway(t *testing.T) {
+// 	t.Skip("fix me")
+// 	sn, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{}, false)
+// 	require.NoError(t, err)
+//
+// 	op := false
+// 	tick := 0
+// 	sn.SetOperableFunc(func(ctx context.Context, operable bool) {
+// 		op = operable
+// 		tick++
+// 	})
+//
+// 	hn := networkUtils.NewHostNetworkMock(t)
+// 	hn.RegisterRequestHandlerMock.Return()
+// 	sn.HostNetwork = hn
+//
+// 	// initial set
+// 	baseGateway := &gateway.Base{}
+// 	sn.SwitchState(insolar.NoNetworkState)
+// 	assert.Equal(t, 1, tick)
+// 	assert.False(t, op)
+//
+// 	type Test struct {
+// 		state insolar.NetworkState
+// 		lock  bool
+// 	}
+//
+// 	for i, T := range []Test{
+// 		{insolar.NoNetworkState, false},
+// 		{insolar.CompleteNetworkState, true},
+// 		{insolar.NoNetworkState, false},
+// 	} {
+// 		sn.SetGateway(sn.Gateway().NewGateway(T.state))
+// 		assert.Equal(t, i+1, tick)
+// 		assert.Equal(t, T.lock, op)
+//
+// 	}
+// }
