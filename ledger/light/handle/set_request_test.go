@@ -53,7 +53,15 @@ func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
-	f := mockProcedures(t, nil, nil, nil, nil)
+	f := flow.NewFlowMock(t)
+	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+		switch p.(type) {
+		case *proc.CalculateID:
+			return nil
+		default:
+			panic("unknown procedure")
+		}
+	})
 
 	request := payload.SetRequest{
 		Request: []byte{1, 2, 3, 4, 5},
@@ -79,7 +87,15 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
-	f := mockProcedures(t, nil, nil, nil, nil)
+	f := flow.NewFlowMock(t)
+	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+		switch p.(type) {
+		case *proc.CalculateID:
+			return nil
+		default:
+			panic("unknown procedure")
+		}
+	})
 
 	// Incorrect record in virtual.
 	virtual := record.Virtual{
@@ -115,7 +131,15 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
-	f := mockProcedures(t, nil, nil, nil, nil)
+	f := flow.NewFlowMock(t)
+	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+		switch p.(type) {
+		case *proc.CalculateID:
+			return nil
+		default:
+			panic("unknown procedure")
+		}
+	})
 
 	// Request object is nil
 	virtual := record.Virtual{
@@ -155,7 +179,17 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 
 	t.Run("checkjet procedure returns unknown err", func(t *testing.T) {
 		t.Parallel()
-		f := mockProcedures(t, nil, errors.New("something strange from checkjet"), nil, nil)
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.CalculateID:
+				return nil
+			case *proc.CheckJet:
+				return errors.New("something strange from checkjet")
+			default:
+				panic("unknown procedure")
+			}
+		})
 
 		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
@@ -164,7 +198,17 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 
 	t.Run("passed flag is false and checkjet returns ErrNotExecutor", func(t *testing.T) {
 		t.Parallel()
-		f := mockProcedures(t, nil, proc.ErrNotExecutor, nil, nil)
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.CalculateID:
+				return nil
+			case *proc.CheckJet:
+				return proc.ErrNotExecutor
+			default:
+				panic("unknown procedure")
+			}
+		})
 
 		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
@@ -173,7 +217,17 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 
 	t.Run("passed flag is true and checkjet returns ErrNotExecutor", func(t *testing.T) {
 		t.Parallel()
-		f := mockProcedures(t, nil, proc.ErrNotExecutor, nil, nil)
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.CalculateID:
+				return nil
+			case *proc.CheckJet:
+				return proc.ErrNotExecutor
+			default:
+				panic("unknown procedure")
+			}
+		})
 
 		handler := NewSetRequest(proc.NewDependenciesMock(), msg, true)
 		err := handler.Present(ctx, f)
@@ -193,7 +247,19 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 
 	t.Run("waithot procedure returns err", func(t *testing.T) {
 		t.Parallel()
-		f := mockProcedures(t, nil, nil, errors.New("error from waithot"), nil)
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.CalculateID:
+				return nil
+			case *proc.CheckJet:
+				return nil
+			case *proc.WaitHotWM:
+				return errors.New("error from waithot")
+			default:
+				panic("unknown procedure")
+			}
+		})
 
 		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
@@ -202,7 +268,21 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 
 	t.Run("waithot procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
-		f := mockProcedures(t, nil, nil, nil, nil)
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.CalculateID:
+				return nil
+			case *proc.CheckJet:
+				return nil
+			case *proc.WaitHotWM:
+				return nil
+			case *proc.SetRequest:
+				return nil
+			default:
+				panic("unknown procedure")
+			}
+		})
 
 		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
@@ -221,7 +301,21 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 
 	t.Run("setrequest procedure returns err", func(t *testing.T) {
 		t.Parallel()
-		f := mockProcedures(t, nil, nil, nil, errors.New("error from setrequest"))
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.CalculateID:
+				return nil
+			case *proc.CheckJet:
+				return nil
+			case *proc.WaitHotWM:
+				return nil
+			case *proc.SetRequest:
+				return errors.New("error from setrequest")
+			default:
+				panic("unknown procedure")
+			}
+		})
 
 		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
@@ -230,7 +324,21 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 
 	t.Run("setrequest procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
-		f := mockProcedures(t, nil, nil, nil, nil)
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.CalculateID:
+				return nil
+			case *proc.CheckJet:
+				return nil
+			case *proc.WaitHotWM:
+				return nil
+			case *proc.SetRequest:
+				return nil
+			default:
+				panic("unknown procedure")
+			}
+		})
 
 		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
@@ -262,29 +370,4 @@ func metaRequestMsg(t *testing.T) payload.Meta {
 	}
 
 	return msg
-}
-
-func mockProcedures(
-	t *testing.T,
-	calcErr error,
-	jetErr error,
-	hotErr error,
-	reqErr error,
-) *flow.FlowMock {
-	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return calcErr
-		case *proc.CheckJet:
-			return jetErr
-		case *proc.WaitHotWM:
-			return hotErr
-		case *proc.SetRequest:
-			return reqErr
-		default:
-			panic("unknown procedure")
-		}
-	})
-	return f
 }
