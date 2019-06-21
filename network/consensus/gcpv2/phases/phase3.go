@@ -299,14 +299,14 @@ func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
 			bitset[i] = nodeset.NbsHighTrust
 		}
 		if bitset[i].IsTrusted() {
-			aggTrusted.AddNext(membership.Nsh)
+			aggTrusted.AddNext(membership.StateEvidence.GetNodeStateHash())
 			if aggDoubted == nil {
 				continue
 			}
 		} else if aggDoubted == nil {
 			aggDoubted = aggTrusted.ForkSequence()
 		}
-		aggDoubted.AddNext(membership.Nsh)
+		aggDoubted.AddNext(membership.StateEvidence.GetNodeStateHash())
 	}
 
 	res := nodeset.HashedNodeVector{Bitset: bitset}
@@ -455,6 +455,6 @@ outer:
 }
 
 func (c *Phase3Controller) handleNodeHashing(index int, digester common.SequenceDigester) {
-	nsh := c.R.GetNodeAppearanceByIndex(index).GetNodeStateHashEvidence().GetNodeStateHash()
+	nsh := c.R.GetNodeAppearanceByIndex(index).GetNodeMembershipProfile().StateEvidence.GetNodeStateHash()
 	digester.AddNext(nsh)
 }

@@ -119,15 +119,20 @@ type PreparedPacketSender interface {
 type PacketBuilder interface {
 	GetNeighbourhoodSize(populationCount int) common2.NeighbourhoodSizes
 
-	PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket, options PacketSendOptions) PreparedPacketSender
-	PreparePhase1Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket, nsh common2.NodeStateHashEvidence,
+	PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
+		mp common2.MembershipProfile, nodeCount int,
+		options PacketSendOptions) PreparedPacketSender
+	PreparePhase1Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
+		mp common2.MembershipProfile, nodeCount int,
 		options PacketSendOptions) PreparedPacketSender
 
 	/* Prepare receives all introductions at once, but PreparedSendPacket.SendTo MUST:
 	1. exclude all intros when target is not joiner
 	2. exclude the intro of the target
 	*/
-	PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData, neighbourhood []packets.NodeStateHashReportReader,
+	PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData,
+		mp common2.MembershipProfile, nodeCount int,
+		neighbourhood []packets.NodeStateHashReportReader,
 		intros []common2.NodeIntroduction, options PacketSendOptions) PreparedPacketSender
 
 	PreparePhase3Packet(sender common2.NodeProfile, pd common.PulseData, bitset nodeset.NodeBitset,

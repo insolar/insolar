@@ -84,7 +84,7 @@ type UpstreamPulseController interface {
 	/* Called on a confirmed Pulse and indicates final change of Pulse for the application.
 	Application traffic can be resumed, but should remain throttled.
 	*/
-	CommitPulseChange(report MembershipUpstreamReport, activeCensus census.OperationalCensus)
+	CommitPulseChange(report MembershipUpstreamReport, pd common.PulseData, activeCensus census.OperationalCensus)
 
 	/* Called on a rollback of Pulse and indicates continuation of the previous Pulse for the application.
 	Application traffic can be resumed at full.

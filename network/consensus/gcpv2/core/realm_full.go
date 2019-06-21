@@ -82,7 +82,6 @@ type FullRealm struct {
 	population census.OnlinePopulation
 
 	/* Other fields - need mutex */
-	// nshEvidence common2.NodeStateHashEvidence
 	isFinished bool
 }
 
@@ -307,10 +306,10 @@ func (r *FullRealm) GetLocalProfile() common2.LocalNodeProfile {
 	return r.population.GetLocalProfile()
 }
 
-func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash) {
+func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash, nch common2.NodeClaimSignature) {
 	// TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
 	v := nsh.SignWith(r.signer)
-	r.self.SetLocalNodeStateHashEvidence(common2.NewNodeStateHashEvidence(v))
+	r.self.SetLocalNodeStateHashEvidence(common2.NewNodeStateHashEvidence(v), nch)
 }
 
 func (r *FullRealm) GetIndexedNodes() []NodeAppearance {

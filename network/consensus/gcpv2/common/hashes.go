@@ -58,6 +58,10 @@ type NodeStateHash interface {
 	common.DigestHolder
 }
 
+type NodeClaimSignature interface {
+	common.DigestHolder
+}
+
 type NodeStateHashEvidence interface {
 	GetNodeStateHash() NodeStateHash
 	GetGlobulaNodeStateSignature() common.SignatureHolder
@@ -85,8 +89,8 @@ type NodeRankReader interface {
 
 type NodeStateHashReader interface {
 	NodeRankReader
-	GetNodeStateHash() NodeStateHash
 	GetNodeStateHashEvidence() NodeStateHashEvidence
+	GetNodeClaimsSignature() NodeClaimSignature
 }
 
 func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {

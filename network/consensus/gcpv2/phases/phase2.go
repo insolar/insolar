@@ -123,20 +123,25 @@ func (c *Phase2Controller) HandleMemberPacket(reader packets.MemberPacketReader,
 			// R.GetBlameFactory().NewMultipleNshBlame()
 		}
 
-		nshEvidence := nb.GetNodeStateHashEvidence()
-		mp := common2.NewMembershipProfile(nb.GetNodeIndex(), nb.GetNodePower(), nb.GetNodeStateHash())
+		mp := common2.NewMembershipProfile(nb.GetNodeIndex(), nb.GetNodePower(), nb.GetNodeStateHashEvidence(), nb.GetNodeClaimsSignature())
 		// TODO validate node proof - if fails, then fraud on sender
 		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetEvidence())
 		// TODO check NodeRank also
 		// if p1.HasSelfIntro() {
 		//	// TODO register protocol misbehavior - IntroClaim was not expected
 		// }
-		// if R.GetNodeCount() != int(p1.GetNodeCount()) {
-		// 	// TODO register fraud and SEND state to others
-		// 	return true, n.RegisterFraud(R.Frauds().NewMismatchedRank(n.GetProfile(), p1.GetNodeStateHashEvidence()))
-		// }
 
-		modifiedNsh, trustBefore, trustAfter := neighbour.ApplyNeighbourEvidence(n, mp, nshEvidence, ef)
+		var trustBefore, trustAfter packets.NodeTrustLevel
+		var modifiedNsh bool
+
+		nc := c.R.GetNodeCount()
+		if nc != int(nb.GetNodeCount()) {
+			trustBefore, trustAfter, _ = n.RegisterFraudWithTrust(c.R.Frauds().NewMismatchedMembershipNodeCount(n.GetProfile(), mp, nc))
+			modifiedNsh = false
+		} else {
+			modifiedNsh, trustBefore, trustAfter = neighbour.ApplyNeighbourEvidence(n, mp, ef)
+		}
+
 		if modifiedNsh {
 			c.queueNshReady <- neighbour
 			c.queueTrustUpdated <- TrustUpdateSignal{NewTrustLevel: packets.UnknownTrust, UpdatedNode: neighbour}
@@ -284,8 +289,9 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 		}
 	}
 
-	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.GetLocalProfile(), c.R.GetPulseData(), neighbourhoodBags,
-		introductions, c.packetPrepareOptions)
+	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.GetLocalProfile(), c.R.GetPulseData(),
+		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
+		neighbourhoodBags, introductions, c.packetPrepareOptions)
 
 	for _, np := range neighbourhood[1:] { // start from 1 to skip sending to self
 		p2.SendTo(np.GetProfile(), 0, c.R.GetPacketSender())
@@ -345,9 +351,9 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 		// we are close to end of Phase2 have no NSH - so missing Phase1 packets is the lesser problem
 		return
 	}
-	nsh := s.GetNodeStateHashEvidence()
 
-	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(s.GetProfile(), c.R.GetOriginalPulse(), nsh,
+	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(s.GetProfile(), c.R.GetOriginalPulse(),
+		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
 		core.RequestForPhase1|c.packetPrepareOptions)
 
 	for _, v := range c.R.GetShuffledOtherNodes() {
@@ -376,11 +382,10 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 
 func newNeighbourReport(na *core.NodeAppearance, nodeCount int) *neighbourReport {
 	r := neighbourReport{
-		nodeID:     na.GetShortNodeID(),
-		trustLevel: na.GetTrustLevel(),
-		nodeCount:  uint16(nodeCount),
+		nodeID:    na.GetShortNodeID(),
+		nodeCount: uint16(nodeCount),
 	}
-	r.membership, r.evidence = na.GetNodeMembershipAndEvidence()
+	r.membership, r.trustLevel = na.GetNodeMembershipAndTrust()
 	return &r
 }
 
@@ -388,10 +393,13 @@ var _ packets.NodeStateHashReportReader = &neighbourReport{}
 
 type neighbourReport struct {
 	nodeID     common.ShortNodeID
-	membership common2.MembershipProfile
 	trustLevel packets.NodeTrustLevel
 	nodeCount  uint16
-	evidence   common2.NodeStateHashEvidence
+	membership common2.MembershipProfile
+}
+
+func (c *neighbourReport) GetNodeClaimsSignature() common2.NodeClaimSignature {
+	return c.membership.ClaimSignature
 }
 
 func (c *neighbourReport) GetNodeIndex() uint16 {
@@ -415,13 +423,13 @@ func (c *neighbourReport) GetNodeTrustLevel() packets.NodeTrustLevel {
 }
 
 func (c *neighbourReport) GetNodeStateHash() common2.NodeStateHash {
-	return c.membership.Nsh
+	return c.membership.StateEvidence.GetNodeStateHash()
 }
 
 func (c *neighbourReport) GetNodeStateHashEvidence() common2.NodeStateHashEvidence {
-	return c.evidence
+	return c.membership.StateEvidence
 }
 
 func (c neighbourReport) String() string {
-	return fmt.Sprintf("{sid:%d, %d/%d, T%d, nsh:%v}", c.nodeID, c.membership.Index, c.nodeCount, c.trustLevel, c.evidence)
+	return fmt.Sprintf("{sid:%d, %d/%d, T%d, mp:%v, cs:%v}", c.nodeID, c.membership.Index, c.nodeCount, c.trustLevel, c.membership.StateEvidence, c.membership.ClaimSignature)
 }
