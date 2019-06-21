@@ -28,7 +28,7 @@ func TestCreateMember(t *testing.T) {
 	member, err := newUserWithKeys()
 	member.ref = root.ref
 	addBurnAddresses(t)
-	result, err := signedRequest(&root, "contract.createMember", map[string]interface{}{})
+	result, err := signedRequest(member, "contract.createMember", map[string]interface{}{})
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
