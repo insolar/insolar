@@ -44,7 +44,7 @@ type IndexHeavyModifier interface {
 
 // IndexAccessor provides an interface for fetching buckets from an index.
 type IndexAccessor interface {
-	Index(pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error)
+	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error)
 	// ForPNAndJet returns a collection of buckets for a provided pn and jetID
 	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex
 }

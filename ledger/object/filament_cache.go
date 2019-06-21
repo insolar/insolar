@@ -25,16 +25,12 @@ import (
 	"github.com/insolar/insolar/insolar"
 	buswm "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network/storage"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingModifier -o ./ -s _mock.go
@@ -187,79 +183,80 @@ func (i *FilamentCacheStorage) DeleteForPN(ctx context.Context, pn insolar.Pulse
 
 // SetRequest sets a request for a specific object
 func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, reqID insolar.ID) error {
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("SetRequest started. objID: %v, pn: %V", objID.DebugString(), pn)
-
-	idx := i.idxAccessor.Index(pn, objID)
-	if idx == nil {
-		return ErrLifelineNotFound
-	}
-	i.idLocker.Lock(&objID)
-	defer i.idLocker.Unlock(&objID)
-
-	pb := i.pendingBucket(pn, objID)
-	if pb == nil {
-		pb = i.createPendingBucket(ctx, pn, objID)
-	}
-
-	inslogger.FromContext(ctx).Debugf("SetRequest before %v pn : %v", objID.DebugString(), pn)
-	pb.Lock()
-	defer pb.Unlock()
-	inslogger.FromContext(ctx).Debugf("SetRequest after %v pn : %v", objID.DebugString(), pn)
-
-	lfl := idx.Lifeline
-
-	if lfl.PendingPointer != nil && reqID.Pulse() < lfl.PendingPointer.Pulse() {
-		return errors.New("request from the past")
-	}
-
-	pf := record.PendingFilament{
-		RecordID:       reqID,
-		PreviousRecord: idx.Lifeline.PendingPointer,
-	}
-
-	if lfl.EarliestOpenRequest == nil {
-		lfl.EarliestOpenRequest = &pn
-	}
-
-	pfv := record.Wrap(pf)
-	hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
-	metaID := *insolar.NewID(pn, hash)
-
-	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
-	if err != nil {
-		if err == ErrOverride {
-			logger.Warn(errors.Wrap(err, "failed to create a meta-record about pending request"))
-		}
-		// return errors.Wrap(err, "failed to create a meta-record about pending request")
-	}
-
-	idx.PendingRecords = append(idx.PendingRecords, metaID)
-	lfl.PendingPointer = &metaID
-	idx.Lifeline = lfl
-
-	err = i.idxModifier.SetIndex(ctx, pn, *idx)
-	if err != nil {
-		return errors.Wrap(err, "failed to create a meta-record about pending request")
-	}
-
-	pb.addMetaIDToFilament(pn, metaID)
-
-	_, ok := pb.notClosedRequestsIdsIndex[pn]
-	if !ok {
-		pb.notClosedRequestsIdsIndex[pn] = map[insolar.ID]struct{}{}
-	}
-	pb.notClosedRequestsIdsIndex[pn][reqID] = struct{}{}
-	pb.notClosedRequestsIds = append(pb.notClosedRequestsIds, reqID)
-
-	stats.Record(ctx,
-		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
-	)
-
-	inslogger.FromContext(ctx).Debugf("open requests - %v for - %v", len(pb.notClosedRequestsIds), objID.DebugString())
-
-	logger.Debugf("SetRequest finished. objID: %v, pn: %V", objID.DebugString(), pn)
-	return nil
+	panic("implement me")
+	// logger := inslogger.FromContext(ctx)
+	// logger.Debugf("SetRequest started. objID: %v, pn: %V", objID.DebugString(), pn)
+	//
+	// idx := i.idxAccessor.Index(pn, objID)
+	// if idx == nil {
+	// 	return ErrLifelineNotFound
+	// }
+	// i.idLocker.Lock(&objID)
+	// defer i.idLocker.Unlock(&objID)
+	//
+	// pb := i.pendingBucket(pn, objID)
+	// if pb == nil {
+	// 	pb = i.createPendingBucket(ctx, pn, objID)
+	// }
+	//
+	// inslogger.FromContext(ctx).Debugf("SetRequest before %v pn : %v", objID.DebugString(), pn)
+	// pb.Lock()
+	// defer pb.Unlock()
+	// inslogger.FromContext(ctx).Debugf("SetRequest after %v pn : %v", objID.DebugString(), pn)
+	//
+	// lfl := idx.Lifeline
+	//
+	// if lfl.PendingPointer != nil && reqID.Pulse() < lfl.PendingPointer.Pulse() {
+	// 	return errors.New("request from the past")
+	// }
+	//
+	// pf := record.PendingFilament{
+	// 	RecordID:       reqID,
+	// 	PreviousRecord: idx.Lifeline.PendingPointer,
+	// }
+	//
+	// if lfl.EarliestOpenRequest == nil {
+	// 	lfl.EarliestOpenRequest = &pn
+	// }
+	//
+	// pfv := record.Wrap(pf)
+	// hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
+	// metaID := *insolar.NewID(pn, hash)
+	//
+	// err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
+	// if err != nil {
+	// 	if err == ErrOverride {
+	// 		logger.Warn(errors.Wrap(err, "failed to create a meta-record about pending request"))
+	// 	}
+	// 	// return errors.Wrap(err, "failed to create a meta-record about pending request")
+	// }
+	//
+	// idx.PendingRecords = append(idx.PendingRecords, metaID)
+	// lfl.PendingPointer = &metaID
+	// idx.Lifeline = lfl
+	//
+	// err = i.idxModifier.SetIndex(ctx, pn, *idx)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to create a meta-record about pending request")
+	// }
+	//
+	// pb.addMetaIDToFilament(pn, metaID)
+	//
+	// _, ok := pb.notClosedRequestsIdsIndex[pn]
+	// if !ok {
+	// 	pb.notClosedRequestsIdsIndex[pn] = map[insolar.ID]struct{}{}
+	// }
+	// pb.notClosedRequestsIdsIndex[pn][reqID] = struct{}{}
+	// pb.notClosedRequestsIds = append(pb.notClosedRequestsIds, reqID)
+	//
+	// stats.Record(ctx,
+	// 	statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
+	// )
+	//
+	// inslogger.FromContext(ctx).Debugf("open requests - %v for - %v", len(pb.notClosedRequestsIds), objID.DebugString())
+	//
+	// logger.Debugf("SetRequest finished. objID: %v, pn: %V", objID.DebugString(), pn)
+	// return nil
 
 }
 
@@ -282,83 +279,83 @@ func (b *pendingMeta) addMetaIDToFilament(pn insolar.PulseNumber, metaID insolar
 func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("SetResult started. objID: %v, pn: %V", objID.DebugString(), pn)
-
-	idx := i.idxAccessor.Index(pn, objID)
-	if idx == nil {
-		return ErrLifelineNotFound
-	}
-
-	pb := i.pendingBucket(pn, objID)
-	if pb == nil {
-		pb = i.createPendingBucket(ctx, pn, objID)
-	}
-
-	inslogger.FromContext(ctx).Debugf("SetResult before %v pn : %v", objID.DebugString(), pn)
-	pb.Lock()
-	defer pb.Unlock()
-	inslogger.FromContext(ctx).Debugf("SetResult after %v pn : %v", objID.DebugString(), pn)
-
-	_, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
-	if !ok {
-		// TODO: https://insolar.atlassian.net/browse/INS-2705 @egorikas
-		logger.Error(errors.Wrapf(ErrResultWithoutRequest, "no requests for %v", resID.DebugString()))
-		// return ErrResultWithoutRequest
-	}
-
-	lfl := idx.Lifeline
-
-	pf := record.PendingFilament{
-		RecordID:       resID,
-		PreviousRecord: lfl.PendingPointer,
-	}
-
-	pfv := record.Wrap(pf)
-	hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
-	metaID := *insolar.NewID(pn, hash)
-
-	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
-	if err != nil {
-		if err == ErrOverride {
-			logger.Warn(errors.Wrap(err, "failed to add a result to filament"))
-		}
-		// return errors.Wrap(err, "failed to add a result to filament")
-	}
-
-	pb.addMetaIDToFilament(pn, metaID)
-
-	reqsIDs, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
-	if ok {
-		delete(reqsIDs, *res.Request.Record())
-		for i := 0; i < len(pb.notClosedRequestsIds); i++ {
-			if pb.notClosedRequestsIds[i] == *res.Request.Record() {
-				pb.notClosedRequestsIds = append(pb.notClosedRequestsIds[:i], pb.notClosedRequestsIds[i+1:]...)
-				break
-			}
-		}
-	}
-
-	// If no open requests and we know about a full filament
-	if len(pb.notClosedRequestsIds) == 0 && pb.isStateCalculated {
-		logger.Debugf("no open requests for - %v, pn: %v,", objID.DebugString(), pn)
-		logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), lfl.EarliestOpenRequest)
-		lfl.EarliestOpenRequest = nil
-	} else {
-		logger.Debugf("not closed reqs: %v, pn: %v, objID : %v", len(pb.notClosedRequestsIds), pn, objID.DebugString())
-	}
-
-	idx.Lifeline = lfl
-
-	err = i.idxModifier.SetIndex(ctx, pn, *idx)
-	if err != nil {
-		return errors.Wrap(err, "failed to create a meta-record about pending request")
-	}
-
-	stats.Record(ctx,
-		statObjectPendingResultsInMemoryAddedCount.M(int64(1)),
-	)
-
-	logger.Debugf("SetResult finished. objID: %v, pn: %V", objID.DebugString(), pn)
-	return nil
+	panic("implement me")
+	// idx := i.idxAccessor.Index(pn, objID)
+	// if idx == nil {
+	// 	return ErrLifelineNotFound
+	// }
+	//
+	// pb := i.pendingBucket(pn, objID)
+	// if pb == nil {
+	// 	pb = i.createPendingBucket(ctx, pn, objID)
+	// }
+	//
+	// inslogger.FromContext(ctx).Debugf("SetResult before %v pn : %v", objID.DebugString(), pn)
+	// pb.Lock()
+	// defer pb.Unlock()
+	// inslogger.FromContext(ctx).Debugf("SetResult after %v pn : %v", objID.DebugString(), pn)
+	//
+	// _, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
+	// if !ok {
+	// 	// TODO: https://insolar.atlassian.net/browse/INS-2705 @egorikas
+	// 	logger.Error(errors.Wrapf(ErrResultWithoutRequest, "no requests for %v", resID.DebugString()))
+	// 	// return ErrResultWithoutRequest
+	// }
+	//
+	// lfl := idx.Lifeline
+	//
+	// pf := record.PendingFilament{
+	// 	RecordID:       resID,
+	// 	PreviousRecord: lfl.PendingPointer,
+	// }
+	//
+	// pfv := record.Wrap(pf)
+	// hash := record.HashVirtual(i.pcs.ReferenceHasher(), pfv)
+	// metaID := *insolar.NewID(pn, hash)
+	//
+	// err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
+	// if err != nil {
+	// 	if err == ErrOverride {
+	// 		logger.Warn(errors.Wrap(err, "failed to add a result to filament"))
+	// 	}
+	// 	// return errors.Wrap(err, "failed to add a result to filament")
+	// }
+	//
+	// pb.addMetaIDToFilament(pn, metaID)
+	//
+	// reqsIDs, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
+	// if ok {
+	// 	delete(reqsIDs, *res.Request.Record())
+	// 	for i := 0; i < len(pb.notClosedRequestsIds); i++ {
+	// 		if pb.notClosedRequestsIds[i] == *res.Request.Record() {
+	// 			pb.notClosedRequestsIds = append(pb.notClosedRequestsIds[:i], pb.notClosedRequestsIds[i+1:]...)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // If no open requests and we know about a full filament
+	// if len(pb.notClosedRequestsIds) == 0 && pb.isStateCalculated {
+	// 	logger.Debugf("no open requests for - %v, pn: %v,", objID.DebugString(), pn)
+	// 	logger.Debugf("RefreshPendingFilament set EarliestOpenRequest - %v, val - %v", objID.DebugString(), lfl.EarliestOpenRequest)
+	// 	lfl.EarliestOpenRequest = nil
+	// } else {
+	// 	logger.Debugf("not closed reqs: %v, pn: %v, objID : %v", len(pb.notClosedRequestsIds), pn, objID.DebugString())
+	// }
+	//
+	// idx.Lifeline = lfl
+	//
+	// err = i.idxModifier.SetIndex(ctx, pn, *idx)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to create a meta-record about pending request")
+	// }
+	//
+	// stats.Record(ctx,
+	// 	statObjectPendingResultsInMemoryAddedCount.M(int64(1)),
+	// )
+	//
+	// logger.Debugf("SetResult finished. objID: %v, pn: %V", objID.DebugString(), pn)
+	// return nil
 }
 
 // SetFilament adds a slice of records to an object with provided id and pulse. It's assumed, that the method is
@@ -387,113 +384,115 @@ func (i *FilamentCacheStorage) setFilament(ctx context.Context, pm *pendingMeta,
 }
 
 func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
-	i.idLocker.Lock(&objID)
-	defer i.idLocker.Unlock(&objID)
-
-	idx := i.idxAccessor.Index(pn, objID)
-	if idx == nil {
-		return ErrLifelineNotFound
-	}
-
-	pb := i.pendingBucket(pn, objID)
-	if pb == nil {
-		pb = i.createPendingBucket(ctx, pn, objID)
-	}
-
-	inslogger.FromContext(ctx).Debugf("Gather before %v pn : %v", objID.DebugString(), pn)
-	pb.Lock()
-	defer pb.Unlock()
-	inslogger.FromContext(ctx).Debugf("Gather after %v pn : %v", objID.DebugString(), pn)
-
-	logger := inslogger.FromContext(ctx)
-	lfl := idx.Lifeline
-
-	// state already calculated
-	if pb.isStateCalculated {
-		logger.Debugf("Gather filament. objID - %v, pn - %v. State is already calculated", objID, pn)
-		return nil
-	}
-
-	// No pendings
-	if lfl.PendingPointer == nil {
-		logger.Debugf("Gather filament. objID - %v, pn - %v. No pendings", objID, pn)
-		return nil
-	}
-	// No open pendings
-	if lfl.EarliestOpenRequest == nil {
-		logger.Debugf("Gather filament. objID - %v, pn - %v. No open pendings", objID, pn)
-		return nil
-	}
-	// If an earliest pending created during a current pulse
-	if lfl.EarliestOpenRequest != nil && *lfl.EarliestOpenRequest == pn {
-		logger.Debugf("Gather filament. objID - %v, pn - %v. If an earliest pending created during a current pulse", objID, pn)
-		return nil
-	}
-
-	fp, err := i.firstPending(ctx, pb)
-	if err != nil {
-		return err
-	}
-
-	if fp == nil || fp.PreviousRecord == nil {
-		err = i.fillPendingFilament(ctx, pn, objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest, pb)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = i.fillPendingFilament(ctx, pn, objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest, pb)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = i.refresh(ctx, idx, pb)
-	if err != nil {
-		return err
-	}
-
-	err = i.idxModifier.SetIndex(ctx, pn, *idx)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	panic("implement me")
+	// i.idLocker.Lock(&objID)
+	// defer i.idLocker.Unlock(&objID)
+	//
+	// idx := i.idxAccessor.Index(pn, objID)
+	// if idx == nil {
+	// 	return ErrLifelineNotFound
+	// }
+	//
+	// pb := i.pendingBucket(pn, objID)
+	// if pb == nil {
+	// 	pb = i.createPendingBucket(ctx, pn, objID)
+	// }
+	//
+	// inslogger.FromContext(ctx).Debugf("Gather before %v pn : %v", objID.DebugString(), pn)
+	// pb.Lock()
+	// defer pb.Unlock()
+	// inslogger.FromContext(ctx).Debugf("Gather after %v pn : %v", objID.DebugString(), pn)
+	//
+	// logger := inslogger.FromContext(ctx)
+	// lfl := idx.Lifeline
+	//
+	// // state already calculated
+	// if pb.isStateCalculated {
+	// 	logger.Debugf("Gather filament. objID - %v, pn - %v. State is already calculated", objID, pn)
+	// 	return nil
+	// }
+	//
+	// // No pendings
+	// if lfl.PendingPointer == nil {
+	// 	logger.Debugf("Gather filament. objID - %v, pn - %v. No pendings", objID, pn)
+	// 	return nil
+	// }
+	// // No open pendings
+	// if lfl.EarliestOpenRequest == nil {
+	// 	logger.Debugf("Gather filament. objID - %v, pn - %v. No open pendings", objID, pn)
+	// 	return nil
+	// }
+	// // If an earliest pending created during a current pulse
+	// if lfl.EarliestOpenRequest != nil && *lfl.EarliestOpenRequest == pn {
+	// 	logger.Debugf("Gather filament. objID - %v, pn - %v. If an earliest pending created during a current pulse", objID, pn)
+	// 	return nil
+	// }
+	//
+	// fp, err := i.firstPending(ctx, pb)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// if fp == nil || fp.PreviousRecord == nil {
+	// 	err = i.fillPendingFilament(ctx, pn, objID, lfl.PendingPointer.Pulse(), *lfl.EarliestOpenRequest, pb)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// } else {
+	// 	err = i.fillPendingFilament(ctx, pn, objID, fp.PreviousRecord.Pulse(), *lfl.EarliestOpenRequest, pb)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	//
+	// err = i.refresh(ctx, idx, pb)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// err = i.idxModifier.SetIndex(ctx, pn, *idx)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// return nil
 }
 
 func (i *FilamentCacheStorage) SendAbandonedNotification(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) error {
-	logger := inslogger.FromContext(ctx)
-	idx := i.idxAccessor.Index(currentPN, objID)
-	if idx == nil {
-		return ErrLifelineNotFound
-	}
-
-	if idx.Lifeline.EarliestOpenRequest == nil {
-		return nil
-	}
-
-	notifyPoint, err := i.pulseCalculator.Backwards(ctx, currentPN, 2)
-	if err == pulse.ErrNotFound {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if notifyPoint.PulseNumber < *idx.Lifeline.EarliestOpenRequest {
-		return nil
-	}
-
-	rep, err := i.bus.Send(ctx, &message.AbandonedRequestsNotification{
-		Object: objID,
-	}, nil)
-	if err != nil {
-		logger.Error("failed to notify about pending requests")
-		return err
-	}
-	if _, ok := rep.(*reply.OK); !ok {
-		logger.Error("received unexpected reply on pending notification")
-		return errors.New("received unexpected reply on pending notification")
-	}
-	return nil
+	panic("implement me")
+	// logger := inslogger.FromContext(ctx)
+	// idx := i.idxAccessor.Index(currentPN, objID)
+	// if idx == nil {
+	// 	return ErrLifelineNotFound
+	// }
+	//
+	// if idx.Lifeline.EarliestOpenRequest == nil {
+	// 	return nil
+	// }
+	//
+	// notifyPoint, err := i.pulseCalculator.Backwards(ctx, currentPN, 2)
+	// if err == pulse.ErrNotFound {
+	// 	return nil
+	// }
+	// if err != nil {
+	// 	return err
+	// }
+	// if notifyPoint.PulseNumber < *idx.Lifeline.EarliestOpenRequest {
+	// 	return nil
+	// }
+	//
+	// rep, err := i.bus.Send(ctx, &message.AbandonedRequestsNotification{
+	// 	Object: objID,
+	// }, nil)
+	// if err != nil {
+	// 	logger.Error("failed to notify about pending requests")
+	// 	return err
+	// }
+	// if _, ok := rep.(*reply.OK); !ok {
+	// 	logger.Error("received unexpected reply on pending notification")
+	// 	return errors.New("received unexpected reply on pending notification")
+	// }
+	// return nil
 }
 
 func (i *FilamentCacheStorage) firstPending(ctx context.Context, pb *pendingMeta) (*record.PendingFilament, error) {

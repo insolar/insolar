@@ -34,7 +34,7 @@ func NewIndexStorageMemory() *IndexStorageMemory {
 	return &IndexStorageMemory{buckets: map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{}}
 }
 
-func (i *IndexStorageMemory) Index(pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error) {
+func (i *IndexStorageMemory) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error) {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 

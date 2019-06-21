@@ -89,6 +89,9 @@ type Scope struct {
 	RecordModifier object.RecordModifier
 	RecordAccessor object.RecordAccessor
 
+	IndexAccessor object.IndexAccessor
+	IndexModifier object.IndexModifier
+
 	LifelineModifier object.LifelineModifier
 	LifelineAccessor object.LifelineAccessor
 }
@@ -100,12 +103,13 @@ func (m *Scope) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
 ) (ObjectDescriptor, error) {
-	idx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *head.Record())
+
+	idx, err := m.IndexAccessor.ForID(nil, m.PulseNumber, *head.Record())
 	if err != nil {
 		return nil, err
 	}
 
-	rec, err := m.RecordAccessor.ForID(ctx, *idx.LatestState)
+	rec, err := m.RecordAccessor.ForID(ctx, *idx.Lifeline.LatestState)
 	if err != nil {
 		return nil, err
 	}
@@ -118,11 +122,11 @@ func (m *Scope) GetObject(
 
 	desc := &objectDescriptor{
 		head:         head,
-		state:        *idx.LatestState,
+		state:        *idx.Lifeline.LatestState,
 		prototype:    state.GetImage(),
 		isPrototype:  state.GetIsPrototype(),
-		childPointer: idx.ChildPointer,
-		parent:       idx.Parent,
+		childPointer: idx.Lifeline.ChildPointer,
+		parent:       idx.Lifeline.Parent,
 	}
 	if state.GetMemory() != nil {
 		b, err := m.BlobStorage.ForID(ctx, *state.GetMemory())
@@ -187,7 +191,7 @@ func (m *Scope) activateObject(
 	asDelegate bool,
 	memory []byte,
 ) (ObjectDescriptor, error) {
-	parentIdx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
+	parentIdx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "not found parent index for activated object: %v", parent.String())
 	}
@@ -213,7 +217,7 @@ func (m *Scope) activateObject(
 		ctx,
 		obj,
 		parent,
-		parentIdx.ChildPointer,
+		parentIdx.Lifeline.ChildPointer,
 		asType,
 	)
 	if err != nil {
@@ -318,10 +322,14 @@ func (m *Scope) registerChild(
 	asType *insolar.Reference,
 ) error {
 	var jetID = insolar.ID(insolar.ZeroJetID)
-	idx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
+	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return err
 	}
+
+	m.IndexModifier.UpdateIndex(ctx, m.PulseNumber, *parent.Record(), func(updIndex object.FilamentIndex) (index object.FilamentIndex, e error) {
+
+	})
 
 	childRec := record.Child{Ref: obj}
 	if prevChild != nil && prevChild.NotEmpty() {
@@ -333,7 +341,7 @@ func (m *Scope) registerChild(
 
 	// Children exist and pointer does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.ChildPointer != nil && !childRec.PrevChild.Equal(*idx.ChildPointer) && idx.ChildPointer != recID {
+	if idx.Lifeline.ChildPointer != nil && !childRec.PrevChild.Equal(*idx.Lifeline.ChildPointer) && idx.Lifeline.ChildPointer != recID {
 		return errors.New("invalid child record")
 	}
 
@@ -342,11 +350,11 @@ func (m *Scope) registerChild(
 		return err
 	}
 
-	idx.ChildPointer = child
+	idx.Lifeline.ChildPointer = child
 	if asType != nil {
-		idx.SetDelegate(*asType, obj)
+		idx.Lifeline.SetDelegate(*asType, obj)
 	}
-	idx.LatestUpdate = m.PulseNumber
+	idx.Lifeline.LatestUpdate = m.PulseNumber
 	idx.JetID = insolar.JetID(jetID)
 	return m.LifelineModifier.Set(ctx, m.PulseNumber, *parent.Record(), idx)
 }
