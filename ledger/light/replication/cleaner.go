@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
@@ -88,15 +89,15 @@ func NewCleaner(
 // all the data for it will be cleaned
 func (c *LightCleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	c.once.Do(func() {
-		go c.clean(ctx)
+		go c.clean(context.Background())
 	})
 	inslogger.FromContext(ctx).Debugf("[Cleaner][NotifyAboutPulse] received pulse - %v", pn)
 	c.pulseForClean <- pn
 }
 
 func (c *LightCleaner) clean(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
 	for pn := range c.pulseForClean {
+		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Cleaner][NotifyAboutPulse] start cleaning pulse - %v", pn)
 
 		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, c.lightChainLimit)

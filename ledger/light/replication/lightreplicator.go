@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"go.opencensus.io/stats"
@@ -74,7 +75,7 @@ func NewReplicatorDefault(
 // with help of Cleaner
 func (t *LightReplicatorDefault) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	t.once.Do(func() {
-		go t.sync(ctx)
+		go t.sync(context.Background())
 	})
 
 	logger := inslogger.FromContext(ctx)
@@ -91,8 +92,8 @@ func (t *LightReplicatorDefault) NotifyAboutPulse(ctx context.Context, pn insola
 }
 
 func (t *LightReplicatorDefault) sync(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
 	for pn := range t.syncWaitingPulses {
+		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Replicator][sync] pn received - %v", pn)
 
 		jets := t.jetCalculator.MineForPulse(ctx, pn)
