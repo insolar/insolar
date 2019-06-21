@@ -40,10 +40,7 @@ func NewHotData(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.HotDa
 }
 
 func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
-	hdProc := proc.NewHotData(s.message, s.replyTo)
-	s.dep.HotData(hdProc)
-	if err := f.Procedure(ctx, hdProc, false); err != nil {
-		return err
-	}
-	return nil
+	proc := proc.NewHotData(s.message, s.replyTo)
+	s.dep.HotData(proc)
+	return f.Procedure(ctx, proc, false)
 }

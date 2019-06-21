@@ -17,98 +17,11 @@
 package object
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"go.opencensus.io/stats"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineIndex -o ./ -s _mock.go
-
-// LifelineIndex is a base storage for lifelines.
-type LifelineIndex interface {
-	// LifelineAccessor provides methods for fetching lifelines.
-	LifelineAccessor
-	// LifelineModifier provides methods for modifying lifelines.
-	LifelineModifier
-}
-
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./ -s _mock.go
-
-// LifelineAccessor provides methods for fetching lifelines.
-type LifelineAccessor interface {
-	// ForID returns a lifeline from a bucket with provided PN and ObjID
-	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineModifier -o ./ -s _mock.go
-
-// LifelineModifier provides methods for modifying lifelines.
-type LifelineModifier interface {
-	// Set set a lifeline to a bucket with provided pulseNumber and ID
-	Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
-}
-
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineStateModifier -o ./ -s _mock.go
-
-// LifelineStateModifier provides an interface for changing a state of lifeline.
-type LifelineStateModifier interface {
-	// SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
-	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
-}
-
-type LifelineStorage struct {
-	idxAccessor IndexAccessor
-	idxModifier IndexModifier
-}
-
-func NewLifelineStorage(idxAccessor IndexAccessor, idxModifier IndexModifier) *LifelineStorage {
-	return &LifelineStorage{idxAccessor: idxAccessor, idxModifier: idxModifier}
-}
-
-// ForID returns a lifeline from a bucket with provided PN and ObjID
-func (i *LifelineStorage) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
-	b := i.idxAccessor.Index(pn, objID)
-	if b == nil {
-		return Lifeline{}, ErrLifelineNotFound
-	}
-
-	return CloneLifeline(b.Lifeline), nil
-}
-
-// Set sets a lifeline to a bucket with provided pulseNumber and ID
-func (i *LifelineStorage) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
-	b := i.idxAccessor.Index(pn, objID)
-	if b == nil {
-		b = i.idxModifier.CreateIndex(ctx, pn, objID)
-	}
-
-	b.Lifeline = lifeline
-	b.LifelineLastUsed = pn
-
-	stats.Record(ctx,
-		statBucketAddedCount.M(1),
-	)
-
-	inslogger.FromContext(ctx).Debugf("[Set] lifeline for obj - %v was set successfully", objID.DebugString())
-	return nil
-}
-
-// SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
-func (i *LifelineStorage) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
-	b := i.idxAccessor.Index(pn, objID)
-	if b == nil {
-		return ErrLifelineNotFound
-	}
-
-	b.LifelineLastUsed = pn
-
-	return nil
-}
-
-// EncodeLifeline converts lifeline index into binary format.
-func EncodeLifeline(index Lifeline) []byte {
+// EncodeIndex converts lifeline index into binary format.
+func EncodeIndex(index Lifeline) []byte {
 	res, err := index.Marshal()
 	if err != nil {
 		panic(err)
@@ -117,9 +30,9 @@ func EncodeLifeline(index Lifeline) []byte {
 	return res
 }
 
-// MustDecodeLifeline converts byte array into lifeline index struct.
-func MustDecodeLifeline(buff []byte) (index Lifeline) {
-	idx, err := DecodeLifeline(buff)
+// MustDecodeIndex converts byte array into lifeline index struct.
+func MustDecodeIndex(buff []byte) (index Lifeline) {
+	idx, err := DecodeIndex(buff)
 	if err != nil {
 		panic(err)
 	}
@@ -127,15 +40,15 @@ func MustDecodeLifeline(buff []byte) (index Lifeline) {
 	return idx
 }
 
-// DecodeLifeline converts byte array into lifeline index struct.
-func DecodeLifeline(buff []byte) (Lifeline, error) {
+// DecodeIndex converts byte array into lifeline index struct.
+func DecodeIndex(buff []byte) (Lifeline, error) {
 	lfl := Lifeline{}
 	err := lfl.Unmarshal(buff)
 	return lfl, err
 }
 
-// CloneLifeline returns copy of argument idx value.
-func CloneLifeline(idx Lifeline) Lifeline {
+// CloneIndex returns copy of argument idx value.
+func CloneIndex(idx Lifeline) Lifeline {
 	if idx.LatestState != nil {
 		tmp := *idx.LatestState
 		idx.LatestState = &tmp
@@ -159,32 +72,22 @@ func CloneLifeline(idx Lifeline) Lifeline {
 		idx.Delegates = []LifelineDelegate{}
 	}
 
-	if idx.EarliestOpenRequest != nil {
-		tmp := *idx.EarliestOpenRequest
-		idx.EarliestOpenRequest = &tmp
-	}
-
-	if idx.PendingPointer != nil {
-		tmp := *idx.PendingPointer
-		idx.PendingPointer = &tmp
-	}
-
 	return idx
 }
 
-func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
-	for _, d := range m.Delegates {
+func (l *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
+	for _, d := range l.Delegates {
 		if d.Key == key {
 			d.Value = value
 			return
 		}
 	}
 
-	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
+	l.Delegates = append(l.Delegates, LifelineDelegate{Key: key, Value: value})
 }
 
-func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
-	for _, d := range m.Delegates {
+func (l *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
+	for _, d := range l.Delegates {
 		if d.Key == key {
 			return d.Value, true
 		}

@@ -170,13 +170,3 @@ message Material {
 
     bytes Signature = 200;
 }
-
-message CompositeFilamentRecord {
-    int32 polymorph = 16;
-
-    bytes RecordID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    Material Record = 21 [(gogoproto.nullable) = false];
-
-    bytes MetaID = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    Material Meta = 23 [(gogoproto.nullable) = false];
-}

@@ -224,8 +224,6 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return proc.ErrNotExecutor
-			case *proc.GetIndexWM:
-				return nil
 			default:
 				panic("unknown procedure")
 			}
@@ -281,8 +279,6 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.SetRequest:
 				return nil
-			case *proc.GetIndexWM:
-				return nil
 			default:
 				panic("unknown procedure")
 			}
@@ -316,8 +312,6 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 				return nil
 			case *proc.SetRequest:
 				return errors.New("error from setrequest")
-			case *proc.GetIndexWM:
-				return nil
 			default:
 				panic("unknown procedure")
 			}
@@ -340,8 +334,6 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 			case *proc.WaitHotWM:
 				return nil
 			case *proc.SetRequest:
-				return nil
-			case *proc.GetIndexWM:
 				return nil
 			default:
 				panic("unknown procedure")

@@ -34,7 +34,6 @@ import (
 	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -73,12 +72,23 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	inslog := inslogger.FromContext(ctx)
 
-	inslog.Info("[ bootstrap ] read keys file")
-	pair, err := secrets.ReadKeysFile(g.config.RootKeysFile)
+	inslog.Info("[ bootstrap ] read keys files")
+	rootPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "root_member_keys.json")
 	if err != nil {
 		return errors.Wrap(err, "couldn't get root keys")
 	}
-	publicKey := platformpolicy.MustPublicKeyToString(pair.Public)
+	migrationAdminPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_admin_member_keys.json")
+	if err != nil {
+		return errors.Wrap(err, "couldn't get migration admin keys")
+	}
+	migrationDaemonPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetMigrationDaemonPath(i))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get migration daemon keys")
+		}
+		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
+	}
 
 	inslog.Info("[ bootstrap ] generate plugins")
 	err = g.generatePlugins()
@@ -106,8 +116,11 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
-		RootBalance:   g.config.RootBalance,
-		RootPublicKey: publicKey,
+		RootBalance:               g.config.RootBalance,
+		MDBalance:                 g.config.MDBalance,
+		RootPublicKey:             rootPublicKey,
+		MigrationAdminPublicKey:   migrationAdminPublicKey,
+		MigrationDaemonPublicKeys: migrationDaemonPublicKeys,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {
@@ -242,4 +255,9 @@ func dumpAsJSON(data interface{}) string {
 		panic(err)
 	}
 	return string(b)
+}
+
+// GetMigrationDaemonPath generate key file name for migration daemon
+func GetMigrationDaemonPath(i int) string {
+	return "migration_daemon_" + strconv.Itoa(i) + "_member_keys.json"
 }

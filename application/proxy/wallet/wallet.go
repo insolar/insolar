@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111KNes6JwRyqX7HTNnX56VdGzD3UttLTDMYmDrx6.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113V1JD6iofG3wfpYQbBGi9TGMX35oKmAVEAZ5CDP.11111111111111111111111111111111")
 
 // Wallet holds proxy type
 type Wallet struct {
@@ -77,7 +77,7 @@ func GetImplementationFrom(object insolar.Reference) (*Wallet, error) {
 }
 
 // New is constructor
-func New(balance uint) *ContractConstructorHolder {
+func New(balance string) *ContractConstructorHolder {
 	var args [1]interface{}
 	args[0] = balance
 
@@ -155,43 +155,45 @@ func (r *Wallet) GetCode() (insolar.Reference, error) {
 }
 
 // Transfer is proxy generated method
-func (r *Wallet) Transfer(amount uint, to *insolar.Reference) error {
+func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interface{}, error) {
 	var args [2]interface{}
-	args[0] = amount
-	args[1] = to
+	args[0] = amountStr
+	args[1] = toMember
 
 	var argsSerialized []byte
 
-	ret := [1]interface{}{}
-	var ret0 *foundation.Error
+	ret := [2]interface{}{}
+	var ret0 interface{}
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
-	if ret0 != nil {
-		return ret0
+	if ret1 != nil {
+		return ret0, ret1
 	}
-	return nil
+	return ret0, nil
 }
 
 // TransferNoWait is proxy generated method
-func (r *Wallet) TransferNoWait(amount uint, to *insolar.Reference) error {
+func (r *Wallet) TransferNoWait(amountStr string, toMember *insolar.Reference) error {
 	var args [2]interface{}
-	args[0] = amount
-	args[1] = to
+	args[0] = amountStr
+	args[1] = toMember
 
 	var argsSerialized []byte
 
@@ -209,42 +211,44 @@ func (r *Wallet) TransferNoWait(amount uint, to *insolar.Reference) error {
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Wallet) TransferAsImmutable(amount uint, to *insolar.Reference) error {
+func (r *Wallet) TransferAsImmutable(amountStr string, toMember *insolar.Reference) (interface{}, error) {
 	var args [2]interface{}
-	args[0] = amount
-	args[1] = to
+	args[0] = amountStr
+	args[1] = toMember
 
 	var argsSerialized []byte
 
-	ret := [1]interface{}{}
-	var ret0 *foundation.Error
+	ret := [2]interface{}{}
+	var ret0 interface{}
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
-	if ret0 != nil {
-		return ret0
+	if ret1 != nil {
+		return ret0, ret1
 	}
-	return nil
+	return ret0, nil
 }
 
 // Accept is proxy generated method
-func (r *Wallet) Accept(aRef *insolar.Reference) error {
+func (r *Wallet) Accept(amountStr string) error {
 	var args [1]interface{}
-	args[0] = aRef
+	args[0] = amountStr
 
 	var argsSerialized []byte
 
@@ -274,9 +278,9 @@ func (r *Wallet) Accept(aRef *insolar.Reference) error {
 }
 
 // AcceptNoWait is proxy generated method
-func (r *Wallet) AcceptNoWait(aRef *insolar.Reference) error {
+func (r *Wallet) AcceptNoWait(amountStr string) error {
 	var args [1]interface{}
-	args[0] = aRef
+	args[0] = amountStr
 
 	var argsSerialized []byte
 
@@ -294,9 +298,9 @@ func (r *Wallet) AcceptNoWait(aRef *insolar.Reference) error {
 }
 
 // AcceptAsImmutable is proxy generated method
-func (r *Wallet) AcceptAsImmutable(aRef *insolar.Reference) error {
+func (r *Wallet) AcceptAsImmutable(amountStr string) error {
 	var args [1]interface{}
-	args[0] = aRef
+	args[0] = amountStr
 
 	var argsSerialized []byte
 
@@ -326,13 +330,13 @@ func (r *Wallet) AcceptAsImmutable(aRef *insolar.Reference) error {
 }
 
 // GetBalance is proxy generated method
-func (r *Wallet) GetBalance() (uint, error) {
+func (r *Wallet) GetBalance() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 uint
+	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -378,13 +382,13 @@ func (r *Wallet) GetBalanceNoWait() error {
 }
 
 // GetBalanceAsImmutable is proxy generated method
-func (r *Wallet) GetBalanceAsImmutable() (uint, error) {
+func (r *Wallet) GetBalanceAsImmutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 uint
+	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

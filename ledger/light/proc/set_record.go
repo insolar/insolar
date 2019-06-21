@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/hot"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -39,7 +40,8 @@ type SetRecord struct {
 	jet     insolar.JetID
 
 	Dep struct {
-		Bus insolar.MessageBus
+		Bus                   insolar.MessageBus
+		RecentStorageProvider recentstorage.Provider
 
 		Coordinator jet.Coordinator
 
@@ -101,7 +103,7 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.Wrap(err, "can't save record into storage")}
 	}
 
-	penReply := p.handlePendings(ctx, *calculatedID, p.jet, &virtRec)
+	penReply := p.handlePendings(ctx, *calculatedID, &virtRec)
 	if penReply != nil {
 		return *penReply
 	}
@@ -109,14 +111,17 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 	return bus.Reply{Reply: &reply.ID{ID: *id}}
 }
 
-func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, jetID insolar.JetID, virtRec *record.Virtual) *bus.Reply {
+func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, virtRec *record.Virtual) *bus.Reply {
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
 	case *record.Result:
-		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, jetID, calculatedID, *r)
-		if err != nil {
-			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-		}
+		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
+		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
+
+		// err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
+		// if err != nil {
+		// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+		// }
 	}
 
 	return nil
