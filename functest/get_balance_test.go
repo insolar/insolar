@@ -37,5 +37,5 @@ func TestGetBalance(t *testing.T) {
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "lifeline not found", "reference does not exist")
+	require.Contains(t, err.Error(), "lifeline not found")
 }

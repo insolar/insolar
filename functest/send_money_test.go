@@ -69,7 +69,8 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 	amount := "10"
 
 	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
-	require.Contains(t, err.Error(), "lifeline not found", "failed to find member with provided reference")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "lifeline not found")
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldSecondBalance, newSecondBalance)
@@ -82,7 +83,8 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	amount := "10"
 
 	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": testutils.RandomRef().String()})
-	require.Contains(t, err.Error(), "lifeline not found", "failed transfer money to non-existent reference")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "lifeline not found")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)
@@ -137,7 +139,7 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 
 	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount.String(), "toMemberReference": secondMember.ref})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "subtrahend must be smaller than minuend", "not enough to transfer")
+	require.Contains(t, err.Error(), "subtrahend must be smaller than minuend")
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)
@@ -152,7 +154,7 @@ func TestTransferToMyself(t *testing.T) {
 
 	_, err := signedRequest(member, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": member.ref})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "recipient must be different from the sender", "recipient must be different from the sender")
+	require.Contains(t, err.Error(), "recipient must be different from the sender")
 	newMemberBalance := getBalanceNoErr(t, member, member.ref)
 	require.Equal(t, oldMemberBalance, newMemberBalance)
 }

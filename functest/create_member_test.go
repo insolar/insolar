@@ -26,6 +26,7 @@ import (
 
 func TestCreateMember(t *testing.T) {
 	member, err := newUserWithKeys()
+	require.NoError(t, err)
 	member.ref = root.ref
 	addBurnAddresses(t)
 	result, err := signedRequest(member, "contract.createMember", map[string]interface{}{})
@@ -37,6 +38,7 @@ func TestCreateMember(t *testing.T) {
 
 func TestCreateMemberWithoutBurnAddresses(t *testing.T) {
 	member, err := newUserWithKeys()
+	require.NoError(t, err)
 	member.ref = root.ref
 	member.pubKey = "fake"
 	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
@@ -45,6 +47,7 @@ func TestCreateMemberWithoutBurnAddresses(t *testing.T) {
 
 func TestCreateMemberWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
+	require.NoError(t, err)
 	member.ref = root.ref
 	member.pubKey = "fake"
 	addBurnAddresses(t)
