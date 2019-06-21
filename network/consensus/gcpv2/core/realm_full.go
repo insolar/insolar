@@ -53,6 +53,7 @@ package core
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -87,6 +88,11 @@ type FullRealm struct {
 
 /* LOCK - runs under RoundController lock */
 func (r *FullRealm) start() {
+	r.roundContext, _ = inslogger.WithFields(r.roundContext, map[string]interface{}{
+		"node_id":   r.GetSelfNodeID(),
+		"pulse":     r.GetPulseNumber(),
+		"is_joiner": r.IsJoiner(),
+	})
 
 	r.census = r.chronicle.GetActiveCensus()
 	r.population = r.census.GetOnlinePopulation()

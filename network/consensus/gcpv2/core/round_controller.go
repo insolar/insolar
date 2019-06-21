@@ -56,7 +56,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	errors2 "github.com/insolar/insolar/network/consensus/gcpv2/errors"
@@ -118,7 +117,6 @@ func (r *PhasedRoundController) StartConsensusRound(upstream UpstreamPulseContro
 	ctx, r.fullCancel = context.WithCancel(ctx)
 
 	r.realm.roundContext = r.realm.strategy.CreateRoundContext(ctx)
-	r.realm.logger = inslogger.FromContext(r.realm.roundContext)
 	ctx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
 
 	preps := r.realm.strategy.GetPrepPhaseControllers()

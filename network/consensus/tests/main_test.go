@@ -66,7 +66,10 @@ func TestConsensusMain(t *testing.T) {
 	startedAt := time.Now()
 
 	ctx := context.Background()
-	logger, _ := inslogger.FromContext(ctx).WithCaller(false).WithFormat(insolar.Text)
+	logger := inslogger.FromContext(ctx).WithCaller(false)
+	logger, _ = logger.WithLevelNumber(insolar.DebugLevel)
+	logger, _ = logger.WithFormat(insolar.Text)
+
 	ctx = inslogger.SetLogger(ctx, logger)
 
 	strategy := NewDelayNetStrategy(DelayStrategyConf{

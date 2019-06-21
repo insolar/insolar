@@ -336,8 +336,9 @@ func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
 }
 
 func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
+	logger := c.R.Log()
 
-	c.R.Log().Infof("Phase2 has started re-requesting Phase1: %v", c.R.GetSelfNodeID())
+	logger.Infof("Phase2 has started re-requesting Phase1")
 
 	s := c.R.GetSelf()
 	if s.IsNshRequired() {

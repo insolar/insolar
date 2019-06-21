@@ -55,7 +55,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
@@ -190,8 +189,9 @@ func workerQueueFlusher(ctxRound context.Context, q0 chan ph3Data, q1 <-chan Tru
 }
 
 func (c *Phase3Controller) workerPrePhase3(ctx context.Context) bool {
+	logger := c.R.Log()
 
-	inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: begin, %v\n", c.R.GetSelfNodeID())
+	logger.Debug(">>>>workerPrePhase3: begin")
 
 	timings := c.R.GetTimings()
 	startOfPhase3 := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
@@ -206,13 +206,13 @@ outer:
 	for {
 		select {
 		case <-ctx.Done():
-			inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: ctx.Done, %v, %v\n", c.R.GetSelfNodeID(), ctx.Err())
+			logger.Debug(">>>>workerPrePhase3: ctx.Done")
 			return false // ctx.Err() ?
 		case <-chasingDelayTimer.Channel():
-			inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: chaseExpired, %v\n", c.R.GetSelfNodeID())
+			logger.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
 		case <-startOfPhase3:
-			inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: startOfPhase3, %v\n", c.R.GetSelfNodeID())
+			logger.Debug(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case sig := <-c.queueTrustUpdated:
 			if sig.IsPingSignal() { // ping indicates arrival of Phase2 packet, to support chasing
@@ -236,7 +236,7 @@ outer:
 
 				// We have some-trusted from all nodes, and the majority of them are well-trusted
 				if countTrustBySome >= c.R.GetOthersCount() && countTrustByNeighbors >= c.R.GetBftMajorityCount() {
-					inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: all, %v\n", c.R.GetSelfNodeID())
+					logger.Debug(">>>>workerPrePhase3: all")
 					break outer
 				}
 
@@ -244,11 +244,11 @@ outer:
 					// We have answers from all nodes, and the majority of them are well-trusted
 					if countHasNsh >= c.R.GetOthersCount() && countTrustByNeighbors >= c.R.GetBftMajorityCount() {
 						chasingDelayTimer.RestartChase()
-						inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: chaseStartedAll, %v\n", c.R.GetSelfNodeID())
+						logger.Debug(">>>>workerPrePhase3: chaseStartedAll")
 					} else if countTrustBySome-countFraud >= c.R.GetBftMajorityCount() {
 						// We can start chasing-timeout after getting answers from majority of some-trusted nodes
 						chasingDelayTimer.RestartChase()
-						inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: chaseStartedSome, %v\n", c.R.GetSelfNodeID())
+						logger.Debug(">>>>workerPrePhase3: chaseStartedSome")
 					}
 				}
 			}
@@ -259,7 +259,7 @@ outer:
 	for c.R.GetSelf().IsNshRequired() {
 		select {
 		case <-ctx.Done():
-			inslogger.FromContext(ctx).Infof(">>>>workerPrePhase3: ctx.Done, %v, %v\n", c.R.GetSelfNodeID(), ctx.Err())
+			logger.Debug(">>>>workerPrePhase3: ctx.Done")
 			return false // ctx.Err() ?
 		case <-c.queueTrustUpdated:
 		case <-time.After(loopingMinimalDelay):
@@ -331,6 +331,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodese
 }
 
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodeset.HashedNodeVector) bool {
+	logger := c.R.Log()
 
 	timings := c.R.GetTimings()
 	softDeadline := time.After(c.R.AdjustedAfter(timings.EndOfPhase3))
@@ -354,14 +355,14 @@ outer:
 	for {
 		select {
 		case <-ctx.Done():
-			c.R.Log().Infof("Phase3 cancelled: %v", c.R.GetSelfNodeID())
+			logger.Debug("Phase3 cancelled")
 			return false
 		case <-softDeadline:
-			c.R.Log().Infof("Phase3 deadline: %v", c.R.GetSelfNodeID())
+			logger.Debug("Phase3 deadline")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, true, c.R)
 			break outer
 		case <-chasingDelayTimer.Channel():
-			c.R.Log().Infof("Phase3 chasing expired: %v", c.R.GetSelfNodeID())
+			logger.Debug("Phase3 chasing expired")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, true, c.R)
 			break outer
 		case d := <-c.queuePh3Recv:
@@ -373,8 +374,17 @@ outer:
 			if nodeStats.HasAllValues(0) {
 				logMsg = "missed"
 			}
-			c.R.Log().Infof("Phase3 %s: s:%v, t:%v, %d, %d, %d: %v\n", logMsg,
-				d.np.GetShortNodeID(), c.R.GetSelf().GetShortNodeID(), d.np.GetIndex(), remainingNodes, vr, nodeStats)
+
+			logger.Debugf(
+				"%s: s:%v, t:%v, %d, %d, %d: %v",
+				logMsg,
+				d.np.GetShortNodeID(),
+				c.R.GetSelf().GetShortNodeID(),
+				d.np.GetIndex(),
+				remainingNodes,
+				vr,
+				nodeStats,
+			)
 
 			statTbl.PutRow(d.np.GetIndex(), nodeStats)
 			remainingNodes--
@@ -385,7 +395,7 @@ outer:
 
 			if remainingNodes <= 0 {
 				consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, false, c.R)
-				c.R.Log().Infof("Phase3 done all: %v", c.R.GetSelfNodeID())
+				logger.Debug("Phase3 done all")
 				break outer
 			} else {
 				consensusSelection = c.consensusStrategy.TrySelectOnAdded(&statTbl, d.np.GetProfile(), nodeStats, c.R)
@@ -393,10 +403,10 @@ outer:
 					continue
 				}
 				if chasingDelayTimer.IsEnabled() && consensusSelection.CanBeImproved() {
-					c.R.Log().Infof("Phase3 (re)start chasing: %v", c.R.GetSelfNodeID())
+					logger.Debug("Phase3 (re)start chasing")
 					chasingDelayTimer.RestartChase()
 				} else {
-					c.R.Log().Infof("Phase3 done strategy: %v", c.R.GetSelfNodeID())
+					logger.Debug("Phase3 done strategy")
 					break outer
 				}
 			}
@@ -406,7 +416,7 @@ outer:
 	// TODO do table generation only when it is needed for logging
 	// if c.R.Log().IsInfo() {
 	tblHeader := fmt.Sprintf("Consensus Node View: %v", c.R.GetSelfNodeID())
-	c.R.Log().Info(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
+	logger.Debug(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
 	// }
 
 	if consensusSelection == nil {
@@ -424,9 +434,9 @@ outer:
 	}
 
 	if sameWithActive {
-		c.R.Log().Infof("Consensus is finished as same: %v", c.R.GetSelfNodeID())
+		logger.Infof("Consensus is finished as same")
 	} else {
-		c.R.Log().Infof("Consensus is finished as different: %v, %v", c.R.GetSelfNodeID(), selectionSet)
+		logger.Infof("Consensus is finished as different, %v", selectionSet)
 		// TODO update population and/or start Phase 4
 	}
 
