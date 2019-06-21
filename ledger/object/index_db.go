@@ -17,6 +17,7 @@
 package object
 
 import (
+	"bytes"
 	"context"
 	"sync"
 
@@ -54,7 +55,8 @@ func (k lastKnownIndexPNKey) Scope() store.Scope {
 }
 
 func (k lastKnownIndexPNKey) ID() []byte {
-	return k.objID.Bytes()
+	id := k.objID
+	return bytes.Join([][]byte{id.Pulse().Bytes(), id.Hash()}, nil)
 }
 
 // NewIndexDB creates a new instance of IndexDB

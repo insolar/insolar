@@ -48,48 +48,60 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phases
+package claimhandler
 
 import (
-	"context"
+	"bytes"
+	"container/heap"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/merkle"
-	"go.opencensus.io/stats"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
-func validateProofs(
-	calculator merkle.Calculator,
-	accessor network.Accessor,
-	pulseHash merkle.OriginHash,
-	proofs map[insolar.Reference]*merkle.PulseProof,
-) (valid map[insolar.NetworkNode]*merkle.PulseProof, fault map[insolar.Reference]*merkle.PulseProof) {
+// Queue implements heap.Interface.
+type Queue []*Claim
 
-	validProofs := make(map[insolar.NetworkNode]*merkle.PulseProof)
-	faultProofs := make(map[insolar.Reference]*merkle.PulseProof)
-	for nodeID, proof := range proofs {
-		valid := validateProof(calculator, accessor, pulseHash, nodeID, proof)
-		if valid {
-			validProofs[accessor.GetActiveNode(nodeID)] = proof
-		} else {
-			stats.Record(context.Background(), consensus.FailedCheckProof.M(1))
-			faultProofs[nodeID] = proof
-		}
-	}
-	return validProofs, faultProofs
+type Claim struct {
+	value    packets.ReferendumClaim
+	priority []byte
+	index    int
 }
-func validateProof(
-	calculator merkle.Calculator,
-	accessor network.Accessor,
-	pulseHash merkle.OriginHash,
-	nodeID insolar.Reference,
-	proof *merkle.PulseProof) bool {
 
-	node := accessor.GetActiveNode(nodeID)
-	if node == nil {
-		return false
+func (q *Queue) PushClaim(claim packets.ReferendumClaim, priority []byte) {
+	item := &Claim{
+		value:    claim,
+		index:    q.Len(),
+		priority: priority,
 	}
-	return calculator.IsValid(proof, pulseHash, node.PublicKey())
+	heap.Push(q, item)
+}
+
+func (q *Queue) Push(x interface{}) {
+	item := x.(*Claim)
+	*q = append(*q, item)
+}
+
+func (q *Queue) PopClaim() packets.ReferendumClaim {
+	return heap.Pop(q).(packets.ReferendumClaim)
+}
+
+func (q *Queue) Pop() interface{} {
+	l := q.Len()
+	item := (*q)[l-1]
+	*q = (*q)[0 : l-1]
+	return item.value
+}
+
+func (q Queue) Swap(i, j int) {
+	q[i], q[j] = q[j], q[i]
+	q[i].index = i
+	q[j].index = j
+}
+
+func (q Queue) Len() int {
+	return len(q)
+}
+
+// Less returns true if i > j cuz we need a greater to pop. Otherwise returns false.
+func (q Queue) Less(i, j int) bool {
+	return bytes.Compare(q[i].priority, q[j].priority) > 0
 }
