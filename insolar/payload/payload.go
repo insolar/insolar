@@ -18,7 +18,7 @@ package payload
 
 import (
 	"github.com/gogo/protobuf/proto"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -40,6 +40,7 @@ const (
 	TypeGetCode   Type = 11
 	TypeCode      Type = 12
 	TypeSetCode   Type = 13
+	TypeSetResult Type = 15
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -136,6 +137,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *SetCode:
 		pl.Polymorph = uint32(TypeSetCode)
 		return pl.Marshal()
+	case *SetResult:
+		pl.Polymorph = uint32(TypeSetResult)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -187,6 +191,11 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := SetCode{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeSetResult:
+		pl := SetResult{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+
 	}
 
 	return nil, errors.New("unknown payload type")
