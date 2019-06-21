@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/pkg/errors"
 )
 
@@ -47,8 +46,7 @@ type JetSplitterDefault struct {
 	jetAccessor    jet.Accessor
 	jetModifier    jet.Modifier
 
-	dropAccessor          drop.Accessor
-	recentStorageProvider recentstorage.Provider
+	dropAccessor drop.Accessor
 }
 
 // NewJetSplitter returns a new instance of a default jet splitter implementation.
@@ -57,7 +55,6 @@ func NewJetSplitter(
 	jetAccessor jet.Accessor,
 	jetModifier jet.Modifier,
 	dropAccessor drop.Accessor,
-	recentStorageProvider recentstorage.Provider,
 ) *JetSplitterDefault {
 	return &JetSplitterDefault{
 		splitCount: JetSplitterDefaultCount,
@@ -66,8 +63,7 @@ func NewJetSplitter(
 		jetAccessor:    jetAccessor,
 		jetModifier:    jetModifier,
 
-		dropAccessor:          dropAccessor,
-		recentStorageProvider: recentStorageProvider,
+		dropAccessor: dropAccessor,
 	}
 }
 
@@ -122,7 +118,6 @@ func (js *JetSplitterDefault) splitJets(
 
 			if *nextLeftExecutor == me {
 				newInfo.Left.MineNext = true
-				js.recentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(leftJetID))
 			}
 
 			nextRightExecutor, err := js.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), newpulse)
@@ -132,7 +127,6 @@ func (js *JetSplitterDefault) splitJets(
 
 			if *nextRightExecutor == me {
 				newInfo.Right.MineNext = true
-				js.recentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetInfo.ID), insolar.ID(rightJetID))
 			}
 
 			logger.WithFields(map[string]interface{}{

@@ -90,13 +90,15 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	rsm := object.NewRecordStorageMock(t)
 	rsm.ForIDFunc = ra.ForIDFunc
 
-	indexMemoryStor := object.NewInMemoryIndex(rsm, nil)
+	idxStor := object.NewIndexStorageMemory()
+	lflStor := object.NewLifelineStorage(idxStor, idxStor)
+
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
 		JetID:        insolar.JetID(jetID),
 	}
-	err := indexMemoryStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), idx)
+	err := lflStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), idx)
 	require.NoError(t, err)
 
 	gc := GetChildren{
@@ -147,13 +149,15 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	rsm := object.NewRecordStorageMock(t)
 	rsm.ForIDFunc = ra.ForIDFunc
 
-	indexMemoryStor := object.NewInMemoryIndex(rsm, nil)
+	idxStor := object.NewIndexStorageMemory()
+	lflStor := object.NewLifelineStorage(idxStor, idxStor)
+
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
 		JetID:        insolar.JetID(jetID),
 	}
-	err := indexMemoryStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), idx)
+	err := lflStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), idx)
 	require.NoError(t, err)
 
 	gc := GetChildren{

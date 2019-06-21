@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -47,7 +46,6 @@ type UpdateObject struct {
 		Bus                   insolar.MessageBus
 		Coordinator           jet.Coordinator
 		BlobModifier          blob.Modifier
-		RecentStorageProvider recentstorage.Provider
 		PCS                   insolar.PlatformCryptographyScheme
 		IDLocker              object.IDLocker
 		LifelineIndex         object.LifelineIndex
@@ -222,7 +220,7 @@ func (p *UpdateObject) saveIndexFromHeavy(
 	if !ok {
 		return object.Lifeline{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx, err := object.DecodeIndex(rep.Index)
+	idx, err := object.DecodeLifeline(rep.Index)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to decode")
 	}
@@ -268,10 +266,7 @@ func (p *UpdateObject) closePending(ctx context.Context, id insolar.ID, virtRec 
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
 	case *record.Result:
-		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.JetID))
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
-
-		err := p.Dep.PendingModifier.SetResult(ctx, p.PulseNumber, r.Object, id, *r)
+		err := p.Dep.PendingModifier.SetResult(ctx, p.PulseNumber, r.Object, p.JetID, id, *r)
 		if err != nil {
 			return errors.Wrap(err, "can't save result into filament-index")
 		}

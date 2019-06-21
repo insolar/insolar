@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -37,11 +36,10 @@ type SetRequest struct {
 	jetID     insolar.JetID
 
 	dep struct {
-		writer        hot.WriteAccessor
-		records       object.RecordModifier
-		recentStorage recentstorage.Provider
-		pendings      object.PendingModifier
-		sender        bus.Sender
+		writer   hot.WriteAccessor
+		records  object.RecordModifier
+		pendings object.PendingModifier
+		sender   bus.Sender
 	}
 }
 
@@ -62,13 +60,11 @@ func NewSetRequest(
 func (p *SetRequest) Dep(
 	w hot.WriteAccessor,
 	r object.RecordModifier,
-	rs recentstorage.Provider,
 	pnds object.PendingModifier,
 	s bus.Sender,
 ) {
 	p.dep.writer = w
 	p.dep.records = r
-	p.dep.recentStorage = rs
 	p.dep.pendings = pnds
 	p.dep.sender = s
 }
@@ -113,16 +109,10 @@ func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq 
 
 	// Skip object creation and genesis
 	if req.CallType == record.CTMethod {
-		if p.dep.recentStorage.Count() > recentstorage.PendingRequestsLimit {
-			return insolar.ErrTooManyPendingRequests
+		err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), p.jetID, id)
+		if err != nil {
+			return errors.Wrap(err, "can't save result into filament-index")
 		}
-		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
-		recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
-
-		// err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
-		// if err != nil {
-		// 	return errors.Wrap(err, "can't save result into filament-index")
-		// }
 	}
 
 	return nil

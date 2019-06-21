@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -58,7 +57,6 @@ type PulseManager struct {
 	GIL                        insolar.GlobalInsolarLock          `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	RecentStorageProvider      recentstorage.Provider             `inject:""`
 	ActiveListSwapper          ActiveListSwapper                  `inject:""`
 	MessageHandler             *artifactmanager.MessageHandler
 
@@ -68,8 +66,7 @@ type PulseManager struct {
 	JetModifier jet.Modifier `inject:""`
 	JetSplitter executor.JetSplitter
 
-	IndexBucketAccessor object.IndexBucketAccessor
-	PendingAccessor     object.PendingAccessor
+	IndexBucketAccessor object.IndexAccessor
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -123,10 +120,9 @@ func NewPulseManager(
 	recCleaner object.RecordCleaner,
 	recSyncAccessor object.RecordCollectionAccessor,
 	jetSplitter executor.JetSplitter,
-	idxReplicaAccessor object.IndexBucketAccessor,
+	idxReplicaAccessor object.IndexAccessor,
 	lightToHeavySyncer replication.LightReplicator,
 	writeManager hot.WriteManager,
-	pendingAccessor object.PendingAccessor,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 
@@ -147,7 +143,6 @@ func NewPulseManager(
 		IndexBucketAccessor: idxReplicaAccessor,
 		LightReplicator:     lightToHeavySyncer,
 		WriteManager:        writeManager,
-		PendingAccessor:     pendingAccessor,
 	}
 	return pm
 }
@@ -210,8 +205,6 @@ func (m *PulseManager) processEndPulse(
 				go sender(*msg, info.Right.ID)
 			}
 
-			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(info.ID))
-
 			return nil
 		})
 	}
@@ -255,8 +248,6 @@ func (m *PulseManager) getExecutorHotData(
 	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
 	defer span.End()
 
-	pendingRequests := map[insolar.ID]recentstorage.PendingObjectContext{}
-
 	bucks := m.IndexBucketAccessor.ForPNAndJet(ctx, currentPN, jetID)
 	limitPN, err := m.PulseCalculator.Backwards(ctx, currentPN, m.options.lightChainLimit)
 	if err == pulse.ErrNotFound {
@@ -266,7 +257,7 @@ func (m *PulseManager) getExecutorHotData(
 		return nil, err
 	}
 
-	hotIndexes := []message.HotIndex{}
+	var hotIndexes []message.HotIndex
 	for _, meta := range bucks {
 		encoded, err := meta.Lifeline.Marshal()
 		if err != nil {
@@ -277,6 +268,7 @@ func (m *PulseManager) getExecutorHotData(
 			continue
 		}
 
+		inslogger.FromContext(ctx).Debugf("RefreshPendingFilament hotData id - %v, pr - %v, EarliestOpenRequest - %v", meta.ObjID.DebugString(), len(meta.PendingRecords), meta.Lifeline.EarliestOpenRequest)
 		hotIndexes = append(hotIndexes, message.HotIndex{
 			LifelineLastUsed: meta.LifelineLastUsed,
 			ObjID:            meta.ObjID,
@@ -284,26 +276,15 @@ func (m *PulseManager) getExecutorHotData(
 		})
 	}
 
-	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
-	requestCount := 0
-	for objID, objContext := range pendingStorage.GetRequests() {
-		if len(objContext.Requests) > 0 {
-			pendingRequests[objID] = objContext
-			requestCount += len(objContext.Requests)
-		}
-	}
-
 	stats.Record(
 		ctx,
 		statHotObjectsSent.M(int64(len(hotIndexes))),
-		statPendingSent.M(int64(requestCount)),
 	)
 
 	msg := &message.HotData{
-		Drop:            *drop,
-		PulseNumber:     newPulsePN,
-		HotIndexes:      hotIndexes,
-		PendingRequests: pendingRequests,
+		Drop:        *drop,
+		PulseNumber: newPulsePN,
+		HotIndexes:  hotIndexes,
 	}
 	return msg, nil
 }
@@ -344,7 +325,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		if err != nil {
 			return err
 		}
-		m.postProcessJets(ctx, jets)
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
@@ -465,17 +445,6 @@ func (m *PulseManager) setUnderGilSection(
 	}
 
 	return jets, oldPulse, prevPN, nil
-}
-
-func (m *PulseManager) postProcessJets(ctx context.Context, jets []jet.Info) {
-	ctx, span := instracer.StartSpan(ctx, "jets.post_process")
-	defer span.End()
-
-	for _, jetInfo := range jets {
-		if !jetInfo.MineNext {
-			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(jetInfo.ID))
-		}
-	}
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse insolar.Pulse) {
