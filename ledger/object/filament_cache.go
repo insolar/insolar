@@ -318,7 +318,7 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 
 	pb.addMetaIDToFilament(pn, metaID)
 
-	reqsIDs, ok = pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
+	reqsIDs, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
 	if ok {
 		delete(reqsIDs, *res.Request.Record())
 		for i := 0; i < len(pb.notClosedRequestsIds); i++ {
