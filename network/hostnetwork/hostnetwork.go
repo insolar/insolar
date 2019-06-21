@@ -180,6 +180,11 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.Packet) {
 	handler, exist := hn.handlers[p.GetType()]
 	if !exist {
 		logger.Errorf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
+		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: "UNKNOWN RPC ENDPOINT"}).(*packet.Packet)
+		ep.RequestID = p.RequestID
+		if err := SendPacket(ctx, hn.pool, ep); err != nil {
+			logger.Errorf("Error while returning error response for request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
+		}
 		return
 	}
 	ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
@@ -192,6 +197,11 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.Packet) {
 	response, err := handler(ctx, p)
 	if err != nil {
 		logger.Errorf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
+		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: err.Error()}).(*packet.Packet)
+		ep.RequestID = p.RequestID
+		if err = SendPacket(ctx, hn.pool, ep); err != nil {
+			logger.Errorf("Error while returning error response for request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
+		}
 		return
 	}
 
