@@ -40,7 +40,7 @@ const (
 	TypeGetCode   Type = 11
 	TypeCode      Type = 12
 	TypeSetCode   Type = 13
-	TypeSetResult Type = 15
+	TypeSetResult Type = 14
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
