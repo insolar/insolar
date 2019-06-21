@@ -25,10 +25,10 @@ import (
 type Expiration = int64
 
 // DefaultTTL is default time period for deleting expired seeds
-const DefaultTTL = 1 * time.Second
+const DefaultTTL = 5 * time.Second
 
 // DefaultCleanPeriod default time period for launching cleaning goroutine
-const DefaultCleanPeriod = 1 * time.Second
+const DefaultCleanPeriod = 5 * time.Second
 
 // SeedManager manages working with seed pool
 // It's thread safe

@@ -17,6 +17,7 @@
 package replication
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -117,10 +118,16 @@ func TestLightReplicatorDefault_sync(t *testing.T) {
 	}
 
 	jetID := gen.JetID()
-	jc.MineForPulseMock.Expect(ctx, pn).Return([]insolar.JetID{jetID})
+	jc.MineForPulseFunc = func(ctx context.Context, actualPulseNumber insolar.PulseNumber) (r []insolar.JetID) {
+		require.Equal(t, pn, actualPulseNumber)
+		return []insolar.JetID{jetID}
+	}
+
 	dg.ForPulseAndJetMock.Return(&msg, nil)
 	mb.SendMock.Return(&reply.OK{}, nil)
-	c.NotifyAboutPulseMock.Expect(ctx, pn)
+	c.NotifyAboutPulseFunc = func(p context.Context, actualPulseNumber insolar.PulseNumber) {
+		require.Equal(t, pn, actualPulseNumber)
+	}
 
 	go r.sync(ctx)
 	r.syncWaitingPulses <- pn
@@ -158,10 +165,15 @@ func TestLightReplicatorDefault_NotifyAboutPulse(t *testing.T) {
 	}
 
 	jetID := gen.JetID()
-	jc.MineForPulseMock.Expect(ctx, expectedPN).Return([]insolar.JetID{jetID})
+	jc.MineForPulseFunc = func(ctx context.Context, actualPulseNumber insolar.PulseNumber) (r []insolar.JetID) {
+		require.Equal(t, expectedPN, actualPulseNumber)
+		return []insolar.JetID{jetID}
+	}
 	dg.ForPulseAndJetMock.Return(&msg, nil)
 	mb.SendMock.Return(&reply.OK{}, nil)
-	c.NotifyAboutPulseMock.Expect(ctx, expectedPN)
+	c.NotifyAboutPulseFunc = func(ctx context.Context, actualPulseNumber insolar.PulseNumber) {
+		require.Equal(t, expectedPN, actualPulseNumber)
+	}
 
 	go r.NotifyAboutPulse(ctx, inputPN)
 
