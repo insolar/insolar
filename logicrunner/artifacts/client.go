@@ -60,7 +60,7 @@ func (s *localStorage) Initialized() {
 
 func (s *localStorage) StoreObject(reference insolar.Reference, descriptor interface{}) {
 	if s.initialized {
-		panic("Trying to initialize cache after initialization was finished")
+		panic("Trying to initialize singleFlightCache after initialization was finished")
 	}
 	s.storage[reference] = descriptor
 }
@@ -108,8 +108,6 @@ type client struct {
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
 	localStorage         *localStorage
-
-	codeCache map[insolar.ID]CodeDescriptor
 }
 
 // State returns hash state for artifact manager.
@@ -125,7 +123,6 @@ func NewClient(sender bus.Sender) *client { // nolint
 		senders:              messagebus.NewSenders(),
 		sender:               sender,
 		localStorage:         newLocalStorage(),
-		codeCache:            map[insolar.ID]CodeDescriptor{},
 	}
 }
 
@@ -225,10 +222,6 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	if cd, ok := m.codeCache[*code.Record()]; ok {
-		return cd, nil
-	}
-
 	msg, err := payload.NewMessage(&payload.GetCode{
 		CodeID: *code.Record(),
 	})
@@ -266,7 +259,6 @@ func (m *client) GetCode(
 			machineType: codeRecord.MachineType,
 			code:        p.Code,
 		}
-		m.codeCache[*code.Record()] = desc
 		return desc, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
