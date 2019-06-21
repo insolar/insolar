@@ -43,7 +43,7 @@ type SetRequest struct {
 	}
 }
 
-func NewSetRequest(
+func çcNewSetRequest(
 	msg payload.Meta,
 	rec record.Virtual,
 	recID insolar.ID,

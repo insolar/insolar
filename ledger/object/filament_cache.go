@@ -187,6 +187,9 @@ func (i *FilamentCacheStorage) DeleteForPN(ctx context.Context, pn insolar.Pulse
 
 // SetRequest sets a request for a specific object
 func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, reqID insolar.ID) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("SetRequest started. objID: %v, pn: %V", objID.DebugString(), pn)
+
 	idx := i.idxAccessor.Index(pn, objID)
 	if idx == nil {
 		return ErrLifelineNotFound
@@ -252,6 +255,7 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 
 	inslogger.FromContext(ctx).Debugf("open requests - %v for - %v", len(pb.notClosedRequestsIds), objID.DebugString())
 
+	logger.Debugf("SetRequest finished. objID: %v, pn: %V", objID.DebugString(), pn)
 	return nil
 
 }
@@ -274,6 +278,7 @@ func (b *pendingMeta) addMetaIDToFilament(pn insolar.PulseNumber, metaID insolar
 // the request will be closed
 func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error {
 	logger := inslogger.FromContext(ctx)
+	logger.Debugf("SetResult started. objID: %v, pn: %V", objID.DebugString(), pn)
 
 	idx := i.idxAccessor.Index(pn, objID)
 	if idx == nil {
@@ -349,6 +354,7 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 		statObjectPendingResultsInMemoryAddedCount.M(int64(1)),
 	)
 
+	logger.Debugf("SetResult finished. objID: %v, pn: %V", objID.DebugString(), pn)
 	return nil
 }
 
