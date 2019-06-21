@@ -60,7 +60,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeCode, pl: &payload.Code{}},
 		{tp: payload.TypeGetCode, pl: &payload.GetCode{}},
 		{tp: payload.TypeSetCode, pl: &payload.SetCode{}},
-		{tp: payload.TypeSetCode, pl: &payload.SetRequest{}},
+		{tp: payload.TypeSetRequest, pl: &payload.SetRequest{}},
 	}
 
 	for _, d := range table {
