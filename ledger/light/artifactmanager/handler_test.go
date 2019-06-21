@@ -17,13 +17,13 @@
 package artifactmanager
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"testing"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -43,6 +43,7 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
 )
@@ -65,10 +66,8 @@ type handlerSuite struct {
 
 	recordModifier object.RecordModifier
 	recordAccessor object.RecordAccessor
-	recordStorage  object.RecordStorage
 
-	// indexMemoryStor *object.FilamentCacheStorage
-	indexStorageMemory *object.IndexStorageMemory
+	indexMemoryStor *object.InMemoryIndex
 }
 
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
@@ -119,13 +118,12 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	recordStorage := object.NewRecordMemory()
 	s.recordModifier = recordStorage
 	s.recordAccessor = recordStorage
-	s.recordStorage = recordStorage
 
-	s.indexStorageMemory = object.NewIndexStorageMemory()
+	s.indexMemoryStor = object.NewInMemoryIndex(recordStorage, nil)
 
 	s.cm.Inject(
 		s.scheme,
-		s.indexStorageMemory,
+		s.indexMemoryStor,
 		store.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
@@ -163,24 +161,30 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetPendingStorageMock.Return(pendingMock)
+
 	waiterMock := waiterMock{}
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := jet.NewCoordinatorMock(mc)
 
-	idLock := object.NewIDLockerMock(s.T())
-	idLock.LockMock.Return()
-	idLock.UnlockMock.Return()
-
-	filamentCache := object.NewFilamentCacheStorage(s.indexStorageMemory, s.indexStorageMemory, idLock, s.recordStorage, jc, nil, nil, nil, nil)
-	lflStor := object.NewLifelineStorage(s.indexStorageMemory, s.indexStorageMemory)
-
-	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, filamentCache, filamentCache, &configuration.Ledger{
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
+
+	h.RecentStorageProvider = provideMock
+	idLock := object.NewIDLockerMock(s.T())
+	idLock.LockMock.Return()
+	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
 
 	delegateType := *genRandomRef(0)
@@ -198,7 +202,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Head, m.Object)
-			buf := object.EncodeLifeline(objIndex)
+			buf := object.EncodeIndex(objIndex)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
 
@@ -220,7 +224,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), delegate, delegateRep.Head)
 
-	idx, err := lflStor.ForID(s.ctx, insolar.FirstPulseNumber, *msg.Head.Record())
+	idx, err := s.indexMemoryStor.ForID(s.ctx, insolar.FirstPulseNumber, *msg.Head.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), objIndex.Delegates, idx.Delegates)
 }
@@ -236,32 +240,34 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	fakeParcel.MessageMock.Return(&msg)
 	fakeParcel.PulseMock.Return(insolar.FirstPulseNumber - 1)
 
+	pendingRequests := []insolar.ID{
+		*genRandomID(insolar.FirstPulseNumber - 2),
+		*genRandomID(insolar.FirstPulseNumber - 2),
+	}
+
+	recentStorageMock := recentstorage.NewPendingStorageMock(s.T())
+	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
+
 	jc := jet.NewCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
 	pam := object.NewPendingAccessorMock(s.T())
-	pam.OpenRequestsIDsForObjIDMock.Return([]insolar.ID{gen.ID()}, nil)
 
-	lifelineIndex := object.NewLifelineIndexMock(s.T())
-	lifelineIndex.ForIDMock.Return(object.Lifeline{}, nil)
-
-	lflStor := object.NewLifelineStorage(s.indexStorageMemory, s.indexStorageMemory)
-
-	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, nil, pam, &configuration.Ledger{})
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, pam, &configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.HotDataWaiter = &waiterMock{}
-	h.LifelineIndex = lifelineIndex
-
-	cmm := object.NewFilamentCacheManagerMock(s.T())
-	cmm.GatherMock.Return(nil)
-	h.FilamentCacheManager = cmm
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetPendingStorageMock.Return(recentStorageMock)
+
+	h.RecentStorageProvider = provideMock
 
 	rep, err := h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
 	require.NoError(s.T(), err)
@@ -283,28 +289,32 @@ func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
 
 	firstID := *genRandomID(insolar.FirstPulseNumber - 2)
 	secondID := *genRandomID(insolar.FirstPulseNumber - 2)
+	pendingRequests := []insolar.ID{
+		firstID,
+		secondID,
+	}
+
+	recentStorageMock := recentstorage.NewPendingStorageMock(s.T())
+	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
 
 	jc := jet.NewCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	pam := object.NewPendingAccessorMock(s.T())
-	pam.OpenRequestsIDsForObjIDMock.Return([]insolar.ID{firstID, secondID}, nil)
-
-	lflStor := object.NewLifelineStorage(s.indexStorageMemory, s.indexStorageMemory)
-	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, nil, pam, &configuration.Ledger{})
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.HotDataWaiter = &waiterMock{}
 
-	cmm := object.NewFilamentCacheManagerMock(s.T())
-	cmm.GatherMock.Return(nil)
-	h.FilamentCacheManager = cmm
-
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetPendingStorageMock.Return(recentStorageMock)
+
+	h.RecentStorageProvider = provideMock
 
 	// call to object that has pending requests
 	rep, err := h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
@@ -314,7 +324,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
 	assert.Equal(s.T(), firstID, result.ID)
 
 	// call to object that hasn't pending requests
-	pam.OpenRequestsIDsForObjIDMock.Return([]insolar.ID{}, nil)
+	noPendingRequests := make([]insolar.ID, 0)
+	recentStorageMock.GetRequestsForObjectMock.Return(noPendingRequests)
 	rep, err = h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
 	require.NoError(s.T(), err)
 	replyError, ok := rep.(*reply.Error)
@@ -327,16 +338,24 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	defer mc.Finish()
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetPendingStorageMock.Return(pendingMock)
+
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := jet.NewCoordinatorMock(mc)
-
-	lflStor := object.NewLifelineStorage(s.indexStorageMemory, s.indexStorageMemory)
-	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, nil, nil, &configuration.Ledger{
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
 		LightChainLimit: 2,
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
+	h.RecentStorageProvider = provideMock
 	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
@@ -369,10 +388,10 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	replyTo := make(chan bus.Reply, 1)
 	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, childID.Pulse(), objIndex, replyTo)
 	registerChild.Dep.IDLocker = idLockMock
-	registerChild.Dep.LifelineIndex = lflStor
+	registerChild.Dep.LifelineIndex = s.indexMemoryStor
 	registerChild.Dep.JetCoordinator = jc
 	registerChild.Dep.RecordModifier = s.recordModifier
-	registerChild.Dep.LifelineStateModifier = lflStor
+	registerChild.Dep.LifelineStateModifier = s.indexMemoryStor
 	registerChild.Dep.PCS = s.scheme
 
 	err = registerChild.Proceed(s.ctx)
@@ -384,7 +403,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), *childID, objRep.ID)
 
-	idx, err := lflStor.ForID(s.ctx, 0, *msg.Parent.Record())
+	idx, err := s.indexMemoryStor.ForID(s.ctx, 0, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
@@ -394,14 +413,23 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	defer mc.Finish()
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	lflStor := object.NewLifelineStorage(s.indexStorageMemory, s.indexStorageMemory)
-	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, nil, nil, &configuration.Ledger{
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetPendingStorageMock.Return(pendingMock)
+
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
 		LightChainLimit: 2,
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.LifelineIndex = lflStor
-	h.LifelineStateModifier = lflStor
+	h.LifelineIndex = s.indexMemoryStor
+	h.LifelineStateModifier = s.indexMemoryStor
+	h.RecentStorageProvider = provideMock
 	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
@@ -430,23 +458,23 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	}
 
 	pulse := gen.PulseNumber()
-	err = lflStor.Set(s.ctx, pulse, *msg.Parent.Record(), objIndex)
+	err = s.indexMemoryStor.Set(s.ctx, pulse, *msg.Parent.Record(), objIndex)
 	require.NoError(s.T(), err)
 
 	replyTo := make(chan bus.Reply, 1)
 
 	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, pulse, objIndex, replyTo)
 	registerChild.Dep.IDLocker = idLockMock
-	registerChild.Dep.LifelineIndex = lflStor
+	registerChild.Dep.LifelineIndex = s.indexMemoryStor
 	registerChild.Dep.JetCoordinator = jet.NewCoordinatorMock(mc)
 	registerChild.Dep.RecordModifier = s.recordModifier
-	registerChild.Dep.LifelineStateModifier = lflStor
+	registerChild.Dep.LifelineStateModifier = s.indexMemoryStor
 	registerChild.Dep.PCS = s.scheme
 
 	err = registerChild.Proceed(s.ctx)
 	require.NoError(s.T(), err)
 
-	idx, err := lflStor.ForID(s.ctx, pulse, *msg.Parent.Record())
+	idx, err := s.indexMemoryStor.ForID(s.ctx, pulse, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), idx.LatestUpdate, pulse)
 }
@@ -459,14 +487,31 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	firstID := insolar.NewID(insolar.FirstPulseNumber, []byte{1, 2, 3})
 
+	codeRec := record.Code{}
+	virtCodeRec := record.Wrap(codeRec)
+	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtCodeRec)
+
+	secondID := insolar.NewID(insolar.FirstPulseNumber, hash)
+
+	codeRec = record.Code{}
+	virtCodeRec = record.Wrap(codeRec)
+	hash = record.HashVirtual(s.scheme.ReferenceHasher(), virtCodeRec)
+
+	thirdID := insolar.NewID(insolar.FirstPulseNumber-1, hash)
+
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
+	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
+		parsedMsg, ok := p1.(*message.AbandonedRequestsNotification)
+		require.Equal(s.T(), true, ok)
+		require.Equal(s.T(), *secondID, parsedMsg.Object)
+		return &reply.OK{}, nil
+	}
 
-	firstIndex := object.EncodeLifeline(object.Lifeline{
+	firstIndex := object.EncodeIndex(object.Lifeline{
 		LatestState: firstID,
 	})
-	lflStor := object.NewLifelineStorage(s.indexStorageMemory, s.indexStorageMemory)
-	err := lflStor.Set(s.ctx, insolar.FirstPulseNumber, *firstID, object.Lifeline{
+	err := s.indexMemoryStor.Set(s.ctx, insolar.FirstPulseNumber, *firstID, object.Lifeline{
 		LatestState: firstID,
 		JetID:       insolar.JetID(jetID),
 	})
@@ -480,14 +525,33 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 				ObjID:            *firstID,
 			},
 		},
+		PendingRequests: map[insolar.ID]recentstorage.PendingObjectContext{
+			*secondID: {},
+			*thirdID:  {Active: true},
+		},
 		Drop: drop.Drop{Pulse: insolar.FirstPulseNumber, Hash: []byte{88}, JetID: jetID},
 	}
 
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	pendingMock.SetContextToObjectFunc = func(p context.Context, p1 insolar.ID, p2 recentstorage.PendingObjectContext) {
+
+		if bytes.Equal(p1.Bytes(), secondID.Bytes()) {
+			require.Equal(s.T(), false, p2.Active)
+			return
+		}
+		if bytes.Equal(p1.Bytes(), thirdID.Bytes()) {
+			require.Equal(s.T(), false, p2.Active)
+			return
+		}
+		s.T().Fail()
+	}
+
 	idxStateModifierMock := object.NewLifelineStateModifierMock(s.T())
-	bucketMock := object.NewIndexModifierMock(s.T())
+	bucketMock := object.NewIndexBucketModifierMock(s.T())
 	idxMock := object.NewLifelineIndexMock(s.T())
 
-	bucketMock.SetIndexFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.FilamentIndex) (r error) {
+	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.FilamentIndex) (r error) {
 		require.Equal(s.T(), *firstID, ib.ObjID)
 		require.Equal(s.T(), insolar.FirstPulseNumber, int(pn))
 		require.Equal(s.T(), *firstID, *ib.Lifeline.LatestState)
@@ -503,17 +567,16 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		return nil
 	}
 
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetPendingStorageMock.Return(pendingMock)
+
 	h := NewMessageHandler(idxMock, bucketMock, idxStateModifierMock, nil, nil, &configuration.Ledger{})
 	h.JetCoordinator = jc
+	h.RecentStorageProvider = provideMock
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DropModifier = s.dropModifier
-
-	fcmMock := object.NewFilamentCacheManagerMock(s.T())
-	fcmMock.GatherMock.Return(nil)
-	fcmMock.SendAbandonedNotificationMock.Return(nil)
-	h.FilamentCacheManager = fcmMock
 
 	jr := testutils.NewJetReleaserMock(s.T())
 	jr.UnlockMock.Return(nil)
@@ -525,13 +588,14 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	replyTo := make(chan bus.Reply, 1)
 	p := proc.NewHotData(hotIndexes, replyTo)
 	p.Dep.DropModifier = h.DropModifier
+	p.Dep.RecentStorageProvider = h.RecentStorageProvider
 	p.Dep.MessageBus = h.Bus
 	p.Dep.IndexBucketModifier = h.IndexBucketModifier
+	p.Dep.PendingModifier = h.PendingModifier
 	p.Dep.JetStorage = h.JetStorage
 	p.Dep.JetFetcher = h.jetTreeUpdater
 	p.Dep.JetReleaser = h.JetReleaser
-	p.Dep.FilamentCacheManager = fcmMock
-	err = p.Proceed(flow.TestContextWithPulse(s.ctx, insolar.PulseNumber(3)))
+	err = p.Proceed(s.ctx)
 	require.NoError(s.T(), err)
 
 	resWrapper := <-replyTo
@@ -542,7 +606,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), drop.Drop{Pulse: insolar.FirstPulseNumber, Hash: []byte{88}, JetID: jetID}, savedDrop)
 
-	mc.Wait(1 * time.Second)
+	mc.Wait(1 * time.Minute)
+	pendingMock.MinimockFinish()
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
@@ -566,8 +631,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	err := s.recordModifier.Set(s.ctx, *reqID, rec)
 	require.NoError(s.T(), err)
 
-	lflStor := object.NewLifelineStorage(s.indexStorageMemory, s.indexStorageMemory)
-	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, nil, nil, &configuration.Ledger{})
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
 	h.RecordAccessor = s.recordAccessor
 
 	replyTo := make(chan bus.Reply, 1)

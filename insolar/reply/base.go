@@ -76,8 +76,7 @@ const (
 	TypeJet
 	// TypeRequest contains request.
 	TypeRequest
-	// TypeOpenRequestsOnHeavy returns open requests from a heavy
-	TypeOpenRequestsOnHeavy
+	TypePendingFilament
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
 )

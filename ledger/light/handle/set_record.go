@@ -68,6 +68,7 @@ func (s *SetRecord) Present(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *SetRecord) ensureIndex(ctx context.Context, jet *proc.FetchJet, f flow.Flow) error {
+
 	virtRec := record.Virtual{}
 	err := virtRec.Unmarshal(s.msg.Record)
 	if err != nil {

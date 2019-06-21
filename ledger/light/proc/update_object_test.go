@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -56,6 +57,18 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
+	pendingMock := recentstorage.NewPendingStorageMock(t)
+
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
+
+	pendingModifierMock := object.NewPendingModifierMock(t)
+	pendingModifierMock.SetResultMock.Return(nil)
+
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterMock.Return()
 	jc := jet.NewCoordinatorMock(t)
@@ -63,16 +76,11 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	recordStorage := object.NewRecordMemory()
 
 	scheme := testutils.NewPlatformCryptographyScheme()
-	idxStor := object.NewIndexStorageMemory()
-	lflStor := object.NewLifelineStorage(idxStor, idxStor)
-	// indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
+	indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
 
 	idLockMock := object.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
-
-	pendingModMock := object.NewPendingModifierMock(t)
-	pendingModMock.SetResultMock.Return(nil)
 
 	writeManagerMock := hot.NewWriteAccessorMock(t)
 	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
@@ -104,7 +112,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Object, m.Object)
-			buf := object.EncodeLifeline(objIndex)
+			buf := object.EncodeIndex(objIndex)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
 
@@ -124,25 +132,38 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
 	updateObject.Dep.IDLocker = idLockMock
 	updateObject.Dep.Coordinator = jc
-	updateObject.Dep.LifelineIndex = lflStor
+	updateObject.Dep.LifelineIndex = indexMemoryStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.LifelineStateModifier = lflStor
+	updateObject.Dep.LifelineStateModifier = indexMemoryStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
-	updateObject.Dep.PendingModifier = pendingModMock
+	updateObject.Dep.RecentStorageProvider = provideMock
+	updateObject.Dep.PendingModifier = pendingModifierMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)
 	objRep, ok := rep.Reply.(*reply.Object)
 	require.True(t, ok)
 
-	idx, err := lflStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
+	idx, err := indexMemoryStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
 	require.NoError(t, err)
 	assert.Equal(t, objRep.State, *idx.LatestState)
 }
 
 func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
+
+	pendingMock := recentstorage.NewPendingStorageMock(t)
+
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
+
+	pendingModifierMock := object.NewPendingModifierMock(t)
+	pendingModifierMock.SetResultMock.Return(nil)
 
 	writeManagerMock := hot.NewWriteAccessorMock(t)
 	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
@@ -151,15 +172,11 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 
 	scheme := testutils.NewPlatformCryptographyScheme()
 	recordStorage := object.NewRecordMemory()
-	idxStor := object.NewIndexStorageMemory()
-	lflStor := object.NewLifelineStorage(idxStor, idxStor)
+	indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
 
 	idLockMock := object.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
-
-	pendingModMock := object.NewPendingModifierMock(t)
-	pendingModMock.SetResultMock.Return(nil)
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
@@ -188,7 +205,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 		Object:       *objectRef,
 	}
 	ctx := context.Background()
-	err = lflStor.Set(ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)
+	err = indexMemoryStor.Set(ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)
 	require.NoError(t, err)
 
 	// Act
@@ -199,12 +216,13 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	}
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
 	updateObject.Dep.IDLocker = idLockMock
-	updateObject.Dep.LifelineIndex = lflStor
+	updateObject.Dep.LifelineIndex = indexMemoryStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.LifelineStateModifier = lflStor
+	updateObject.Dep.LifelineStateModifier = indexMemoryStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
-	updateObject.Dep.PendingModifier = pendingModMock
+	updateObject.Dep.RecentStorageProvider = provideMock
+	updateObject.Dep.PendingModifier = pendingModifierMock
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)
@@ -212,7 +230,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	require.True(t, ok)
 
 	// Arrange
-	idx, err := lflStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
+	idx, err := indexMemoryStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
 	require.NoError(t, err)
 	require.Equal(t, insolar.FirstPulseNumber, int(idx.LatestUpdate))
 }

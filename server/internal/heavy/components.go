@@ -242,14 +242,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.RecordModifier = records
 		h.JetCoordinator = Coordinator
 		h.IndexLifelineAccessor = indexes
-		h.IndexModifier = indexes
+		h.IndexBucketModifier = indexes
 		h.Bus = Bus
 		h.BlobAccessor = blobs
 		h.BlobModifier = blobs
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.Sender = WmBus
-		h.HeavyPendingAccessor = indexes
 
 		PulseManager = pm
 		Handler = h

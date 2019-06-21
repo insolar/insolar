@@ -22,10 +22,8 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
 
@@ -33,8 +31,6 @@ import (
 type IndexDB struct {
 	lock sync.RWMutex
 	db   store.DB
-
-	recordStore *RecordDB
 }
 
 type indexKey struct {
@@ -65,7 +61,7 @@ func (k lastKnownIndexPNKey) ID() []byte {
 
 // NewIndexDB creates a new instance of IndexDB
 func NewIndexDB(db store.DB) *IndexDB {
-	return &IndexDB{db: db, recordStore: NewRecordDB(db)}
+	return &IndexDB{db: db}
 }
 
 // Set sets a lifeline to a bucket with provided pulseNumber and ID
@@ -104,8 +100,8 @@ func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar
 	return nil
 }
 
-// SetIndex adds a bucket with provided pulseNumber and ID
-func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
+// SetBucket adds a bucket with provided pulseNumber and ID
+func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -118,7 +114,7 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket F
 		statBucketAddedCount.M(1),
 	)
 
-	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
+	inslogger.FromContext(ctx).Debugf("[SetBucket] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
 	return i.setLastKnownPN(pn, bucket.ObjID)
 }
 
@@ -158,6 +154,7 @@ func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*Filament
 	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
 	if err == store.ErrNotFound {
 		return nil, ErrIndexBucketNotFound
+
 	}
 	if err != nil {
 		return nil, err
@@ -178,78 +175,4 @@ func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) 
 		return insolar.FirstPulseNumber, err
 	}
 	return insolar.NewPulseNumber(buff), err
-}
-
-func (i *IndexDB) filament(b *FilamentIndex) ([]record.CompositeFilamentRecord, error) {
-	tempRes := make([]record.CompositeFilamentRecord, len(b.PendingRecords))
-	for idx, metaID := range b.PendingRecords {
-		metaRec, err := i.recordStore.get(metaID)
-		if err != nil {
-			return nil, err
-		}
-		pend := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
-		rec, err := i.recordStore.get(pend.RecordID)
-		if err != nil {
-			return nil, err
-		}
-
-		tempRes[idx] = record.CompositeFilamentRecord{
-			Meta:     metaRec,
-			MetaID:   metaID,
-			Record:   rec,
-			RecordID: pend.RecordID,
-		}
-	}
-
-	return tempRes, nil
-}
-
-func (i *IndexDB) nextFilament(b *FilamentIndex) (canContinue bool, nextPN insolar.PulseNumber, err error) {
-	firstRecord := b.PendingRecords[0]
-	metaRec, err := i.recordStore.get(firstRecord)
-	if err != nil {
-		return false, insolar.PulseNumber(0), err
-	}
-	pf := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
-	if pf.PreviousRecord != nil {
-		return true, pf.PreviousRecord.Pulse(), nil
-	}
-
-	return false, insolar.PulseNumber(0), nil
-}
-
-func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
-	currentPN := readFrom
-	var res []record.CompositeFilamentRecord
-
-	if readUntil > readFrom {
-		return nil, errors.New("readUntil can't be more then readFrom")
-	}
-
-	hasFilamentBehind := true
-	for hasFilamentBehind && currentPN >= readUntil {
-		b, err := i.getBucket(currentPN, objID)
-		if err != nil {
-			return nil, err
-		}
-		if len(b.PendingRecords) == 0 {
-			return nil, errors.New("can't fetch pendings from index")
-		}
-
-		tempRes, err := i.filament(b)
-		if err != nil {
-			return nil, err
-		}
-		if len(tempRes) == 0 {
-			return nil, errors.New("can't fetch pendings from index")
-		}
-		res = append(tempRes, res...)
-
-		hasFilamentBehind, currentPN, err = i.nextFilament(b)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return res, nil
 }

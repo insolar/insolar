@@ -40,6 +40,7 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
+	WmBus                 bus.Bus
 	Bus                   insolar.MessageBus
 	JetCoordinator        jet.Coordinator
 	PCS                   insolar.PlatformCryptographyScheme
@@ -48,10 +49,9 @@ type Handler struct {
 	RecordAccessor        object.RecordAccessor
 	RecordModifier        object.RecordModifier
 	IndexLifelineAccessor object.LifelineAccessor
-	IndexModifier         object.IndexHeavyModifier
+	IndexBucketModifier   object.IndexBucketModifier
 	DropModifier          drop.Modifier
 	Sender                bus.Sender
-	HeavyPendingAccessor  object.HeavyPendingAccessor
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -72,10 +72,6 @@ func New() *Handler {
 			p.Dep.Sender = h.Sender
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.BlobAccessor = h.BlobAccessor
-		},
-		GetPendingFilament: func(p *proc.GetPendingFilament) {
-			p.Dep.Sender = h.Sender
-			p.Dep.PendingAccessor = h.HeavyPendingAccessor
 		},
 	}
 	h.dep = &dep
@@ -120,10 +116,6 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	switch payloadType {
-	case payload.TypeGetPendingFilament:
-		p := proc.NewGetPendingFilament(meta)
-		h.dep.GetPendingFilament(p)
-		return p.Proceed(ctx)
 	case payload.TypePassState:
 		p := proc.NewPassState(meta)
 		h.dep.PassState(p)
@@ -338,7 +330,7 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 		return nil, errors.Wrapf(err, "failed to fetch object index for %v", msg.Object.Record().String())
 	}
 
-	buf := object.EncodeLifeline(idx)
+	buf := object.EncodeIndex(idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
 }
@@ -347,7 +339,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
 	storeRecords(ctx, h.RecordModifier, h.PCS, msg.PulseNum, msg.Records)
-	if err := storeIndexBuckets(ctx, h.IndexModifier, msg.IndexBuckets, msg.PulseNum); err != nil {
+	if err := storeIndexBuckets(ctx, h.IndexBucketModifier, msg.IndexBuckets, msg.PulseNum); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 	if err := storeDrop(ctx, h.DropModifier, msg.Drop); err != nil {
