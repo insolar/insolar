@@ -78,7 +78,7 @@ func TestConsensusMain(t *testing.T) {
 	network := NewEmuNetwork(strategy, ctx)
 	config := NewEmuLocalConfig(ctx)
 	primingCloudStateHash := NewEmuNodeStateHash(1234567890)
-	nodes := NewEmuNodeIntros(generateNameList("test%03d", 9)...)
+	nodes := NewEmuNodeIntros(generateNameList(0, 1, 3, 5)...)
 
 	for i, n := range nodes {
 		chronicles := NewEmuChronicles(nodes, i, &primingCloudStateHash)
@@ -99,10 +99,20 @@ func TestConsensusMain(t *testing.T) {
 	}
 }
 
-func generateNameList(f string, count int) []string {
-	r := make([]string, count)
+func generateNameList(countNeutral, countHeavy, countLight, countVirtual int) []string {
+	r := make([]string, 0, countNeutral+countHeavy+countLight+countVirtual)
+
+	r = _generateNameList(r, "n%03d", countNeutral)
+	r = _generateNameList(r, "h%03d", countHeavy)
+	r = _generateNameList(r, "l%03d", countLight)
+	r = _generateNameList(r, "v%03d", countVirtual)
+
+	return r
+}
+
+func _generateNameList(r []string, f string, count int) []string {
 	for i := 0; i < count; i++ {
-		r[i] = fmt.Sprintf(f, i)
+		r = append(r, fmt.Sprintf(f, len(r)))
 	}
 	return r
 }

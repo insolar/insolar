@@ -205,7 +205,7 @@ func (r *coreRealm) GetPrimingCloudHash() common2.CloudStateHash {
 func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from common.HostIdentityHolder) error {
 	nr := r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
 	if nr == nil {
-		nr = r.initialCensus.GetMandateRegistry().FindHostProfile(from)
+		nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
 		if nr == nil {
 			return fmt.Errorf("unable to identify sender: %v", from)
 		}

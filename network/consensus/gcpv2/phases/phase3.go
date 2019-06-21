@@ -149,6 +149,9 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	defer cancel()
 
 	if !c.workerPrePhase3(ctx) {
+		//context was stopped in a hard way, we are dead in terms of consensus
+		//TODO should wait for further packets to decide if we need to turn ourselves into suspended state
+		//c.R.StopRoundByTimeout()
 		return
 	}
 	d := c.calcGshPair()
@@ -157,8 +160,9 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 
 	if !c.workerRecvPhase3(ctx, d) {
 		//context was stopped in a hard way, we are dead in terms of consensus
-		//TODO should wait for further packets to decide if we need to turn ourself into suspended state
+		//TODO should wait for further packets to decide if we need to turn ourselves into suspended state
 		//c.R.StopRoundByTimeout()
+		return
 	}
 
 	go workerQueueFlusher(ctxRound, c.queuePh3Recv, c.queueTrustUpdated)

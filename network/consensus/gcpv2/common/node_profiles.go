@@ -72,6 +72,9 @@ type NodeIntroProfile interface {
 	HostProfile
 	GetShortNodeID() common.ShortNodeID
 	GetIntroduction() NodeIntroduction
+	GetNodePrimaryRole() NodePrimaryRole
+	GetNodeSpecialRole() NodeSpecialRole
+	IsAllowedPower(p MemberPower) bool
 }
 
 type NodeProfile interface {

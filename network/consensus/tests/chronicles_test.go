@@ -52,6 +52,7 @@ package tests
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
@@ -69,7 +70,21 @@ func NewEmuChronicles(intros []common2.NodeIntroProfile, localNodeIndex int, pri
 func NewEmuNodeIntros(names ...string) []common2.NodeIntroProfile {
 	r := make([]common2.NodeIntroProfile, len(names))
 	for i, n := range names {
-		r[i] = NewEmuNodeIntro(i, common.HostAddress(n))
+		var sr common2.NodeSpecialRole
+		var pr common2.NodePrimaryRole
+		switch n[0] {
+		case 'h':
+			pr = common2.PrimaryRoleHeavyMaterial
+			sr = common2.SpecialRoleDiscovery
+		case 'l':
+			pr = common2.PrimaryRoleLightMaterial
+		case 'v':
+			pr = common2.PrimaryRoleVirtual
+		default:
+			pr = common2.PrimaryRoleNeutral
+			sr = common2.SpecialRoleDiscovery
+		}
+		r[i] = NewEmuNodeIntro(i, common.HostAddress(n), pr, sr)
 	}
 	return r
 }
@@ -84,11 +99,8 @@ func (c *EmuVersionedRegistries) GetPrimingCloudHash() common2.CloudStateHash {
 }
 
 func (c *EmuVersionedRegistries) FindRegisteredProfile(identity common.HostIdentityHolder) common2.HostProfile {
-	return NewEmuNodeIntro(-1, identity.GetHostAddress())
-}
-
-func (c *EmuVersionedRegistries) FindHostProfile(identity common.HostIdentityHolder) common2.HostProfile {
-	return NewEmuNodeIntro(-1, identity.GetHostAddress())
+	return NewEmuNodeIntro(-1, identity.GetHostAddress(),
+		/* unused by HostProfile */ common2.NodePrimaryRole(math.MaxUint8), 0)
 }
 
 func (c *EmuVersionedRegistries) AddReport(report errors.MisbehaviorReport) {
@@ -119,13 +131,27 @@ func (c *EmuVersionedRegistries) GetVersionPulseData() common.PulseData {
 
 const ShortNodeIdOffset = 1000
 
-func NewEmuNodeIntro(id int, s common.HostAddress) common2.NodeIntroProfile {
-	return &emuNodeIntro{id: common.ShortNodeID(ShortNodeIdOffset + id), n: s}
+func NewEmuNodeIntro(id int, s common.HostAddress, pr common2.NodePrimaryRole, sr common2.NodeSpecialRole) common2.NodeIntroProfile {
+	return &emuNodeIntro{id: common.ShortNodeID(ShortNodeIdOffset + id), n: s, pr: pr, sr: sr}
 }
 
 type emuNodeIntro struct {
 	n  common.HostAddress
 	id common.ShortNodeID
+	pr common2.NodePrimaryRole
+	sr common2.NodeSpecialRole
+}
+
+func (c *emuNodeIntro) GetNodePrimaryRole() common2.NodePrimaryRole {
+	return c.pr
+}
+
+func (c *emuNodeIntro) GetNodeSpecialRole() common2.NodeSpecialRole {
+	return c.sr
+}
+
+func (*emuNodeIntro) IsAllowedPower(p common2.MemberPower) bool {
+	return true
 }
 
 func (c *emuNodeIntro) GetClaimEvidence() common.SignedEvidenceHolder {

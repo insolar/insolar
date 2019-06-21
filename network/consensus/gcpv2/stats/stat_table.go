@@ -182,8 +182,7 @@ func (t *StatTable) TableFmt(header string, fmtFn RowValueFormatFunc) string {
 			}
 			builder.WriteString(fmtFn(i))
 		}
-		builder.WriteRune(']')
-		builder.WriteRune(' ')
+		builder.WriteString(fmt.Sprintf("] RowCount=%d", t.rowCount))
 	}
 	builder.WriteString("\n###")
 	for i, c := range t.columns {

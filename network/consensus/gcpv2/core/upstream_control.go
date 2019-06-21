@@ -109,6 +109,8 @@ type UpstreamPulseController interface {
 
 	/* Application traffic can be resumed at full */
 	ResumeTraffic()
+
+	//JoinCandidatePromoted()
 }
 
 type MembershipUpstreamReport struct {

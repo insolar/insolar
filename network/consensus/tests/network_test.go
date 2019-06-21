@@ -324,6 +324,18 @@ func (emuRt *EmuRoute) _sendPacket(originPacket *Packet) {
 }
 
 func (emuRt *EmuRoute) _recvPacket(originPacket *Packet) {
+	defer func() {
+		if recover() == nil {
+			return
+		}
+		outRoute := emuRt.network.getHostRoute(originPacket.Host)
+		if outRoute == nil {
+			//the sender receiver is not available anymore
+			return
+		}
+		targetPacket := Packet{Payload: ErrUnknownEmuHost(emuRt.host), Host: outRoute.host}
+		outRoute.toHost <- targetPacket
+	}()
 	emuRt.toHost <- *originPacket
 }
 

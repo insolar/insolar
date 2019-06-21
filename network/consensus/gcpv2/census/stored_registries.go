@@ -71,7 +71,7 @@ type MisbehaviorRegistry interface {
 }
 
 type MandateRegistry interface {
-	FindHostProfile(host common.HostIdentityHolder) common2.HostProfile
+	FindRegisteredProfile(host common.HostIdentityHolder) common2.HostProfile
 	GetPrimingCloudHash() common2.CloudStateHash
 }
 
