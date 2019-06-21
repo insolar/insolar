@@ -151,7 +151,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := correctMetaMsg(t)
+	msg := metaRequestMsg(t)
 
 	t.Run("checkjet procedure returns unknown err", func(t *testing.T) {
 		t.Parallel()
@@ -189,7 +189,7 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := correctMetaMsg(t)
+	msg := metaRequestMsg(t)
 
 	t.Run("waithot procedure returns err", func(t *testing.T) {
 		t.Parallel()
@@ -217,7 +217,7 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := correctMetaMsg(t)
+	msg := metaRequestMsg(t)
 
 	t.Run("setrequest procedure returns err", func(t *testing.T) {
 		t.Parallel()
@@ -238,7 +238,7 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 	})
 }
 
-func correctMetaMsg(t *testing.T) payload.Meta {
+func metaRequestMsg(t *testing.T) payload.Meta {
 	ref := gen.Reference()
 
 	virtual := record.Virtual{
