@@ -144,7 +144,6 @@ func NewMessageHandler(
 		},
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
-				h.PCS,
 				h.WriteAccessor,
 				h.RecordModifier,
 				h.RecentStorageProvider,
