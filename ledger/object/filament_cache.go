@@ -290,7 +290,7 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 	defer pb.Unlock()
 	inslogger.FromContext(ctx).Debugf("SetResult after %v pn : %v", objID.DebugString(), pn)
 
-	reqsIDs, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
+	_, ok := pb.notClosedRequestsIdsIndex[res.Request.Record().Pulse()]
 	if !ok {
 		// TODO: https://insolar.atlassian.net/browse/INS-2705 @egorikas
 		logger.Error(errors.Wrapf(ErrResultWithoutRequest, "no requests for %v", resID.DebugString()))
@@ -605,7 +605,6 @@ func (i *FilamentCacheStorage) fillPendingFilament(
 
 			firstRec := record.Unwrap(r.Records[0].Meta.Virtual).(*record.PendingFilament)
 			if firstRec.PreviousRecord == nil {
-				continueFilling = false
 				return nil
 			}
 
