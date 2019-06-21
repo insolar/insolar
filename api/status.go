@@ -103,7 +103,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 
 func (s *StatusService) LogOff(r *http.Request, args *interface{}, reply *StatusReply) error {
 	g := s.runner.Gatewayer
-	g.SetGateway(g.Gateway().NewGateway(insolar.NoNetworkState))
+	g.SwitchState(insolar.NoNetworkState)
 
 	err := s.Get(r, args, reply)
 	if err != nil {

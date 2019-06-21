@@ -4,13 +4,9 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/gateway/bootstrap"
-	"github.com/insolar/insolar/network/node"
 )
 
-func NewDiscoveryBootstrap(b *Base) *DiscoveryBootstrap {
+func newDiscoveryBootstrap(b *Base) *DiscoveryBootstrap {
 	return &DiscoveryBootstrap{b}
 }
 
@@ -20,9 +16,9 @@ type DiscoveryBootstrap struct {
 }
 
 func (g *DiscoveryBootstrap) Run(ctx context.Context) {
-	var err error
+	// var err error
 
-	cert := g.CertificateManager.GetCertificate()
+	// cert := g.CertificateManager.GetCertificate()
 
 	// TODO: shaffle discovery nodes
 
@@ -33,17 +29,17 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 	// handle reconect to other network
 	// fake pulse
 
-	if network.OriginIsDiscovery(cert) {
-		_, err = g.Bootstrapper.BootstrapDiscovery(ctx)
-		// if the network is up and complete, we return discovery nodes via consensus
-		if err == bootstrap.ErrReconnectRequired {
-			log.Debugf("[ Bootstrap ] Connecting discovery node %s as joiner", g.NodeKeeper.GetOrigin().ID())
-			g.NodeKeeper.GetOrigin().(node.MutableNode).SetState(insolar.NodePending)
-			g.bootstrapJoiner(ctx)
-			return
-		}
-
-	}
+	// if network.OriginIsDiscovery(cert) {
+	// 	_, err = g.Bootstrapper.BootstrapDiscovery(ctx)
+	// 	// if the network is up and complete, we return discovery nodes via consensus
+	// 	if err == bootstrap.ErrReconnectRequired {
+	// 		log.Debugf("[ Bootstrap ] Connecting discovery node %s as joiner", g.NodeKeeper.GetOrigin().ID())
+	// 		g.NodeKeeper.GetOrigin().(node.MutableNode).SetState(insolar.NodePending)
+	// 		g.bootstrapJoiner(ctx)
+	// 		return
+	// 	}
+	//
+	// }
 }
 
 func (g *DiscoveryBootstrap) GetState() insolar.NetworkState {
@@ -59,7 +55,5 @@ func (g *DiscoveryBootstrap) ShoudIgnorePulse(context.Context, insolar.Pulse) bo
 }
 
 func (g *DiscoveryBootstrap) bootstrapJoiner(ctx context.Context) {
-
-	g.Gatewayer.SetGateway(g.NewGateway(insolar.JoinerBootstrap))
-	g.Gatewayer.Gateway().Run(ctx)
+	g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
 }

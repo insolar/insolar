@@ -2,27 +2,15 @@ package gateway
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/gateway/bootstrap"
-	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-const (
-	registrationRetries = 20
-)
-
-func NewJoinerBootstrap(b *Base) *JoinerBootstrap {
+func newJoinerBootstrap(b *Base) *JoinerBootstrap {
 	return &JoinerBootstrap{b}
 }
 
@@ -36,28 +24,27 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 	defer span.End()
 	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(true)
 
-	cert := g.CertificateManager.GetCertificate()
-	discoveryNodes := cert.GetDiscoveryNodes()
-	// TODO: shuffle nodes
-
-	if network.OriginIsDiscovery(cert) {
-		discoveryNodes = network.ExcludeOrigin(discoveryNodes, g.NodeKeeper.GetOrigin().ID())
-	}
-	if len(discoveryNodes) == 0 {
-		panic("ZeroBootstrap. There are 0 discovery nodes to connect to")
+	if g.permit == nil {
+		// log warn
+		g.Gatewayer.SwitchState(insolar.NoNetworkState)
 	}
 
-	d := discoveryNodes[0]
-	host, _ := host.NewHostN(d.GetHost(), *d.GetNodeRef())
-	discovery := &bootstrap.DiscoveryNode{host, d}
+	claim, _ := g.NodeKeeper.GetOriginJoinClaim()
+	pulse, _ := g.PulseAccessor.Latest(ctx)
 
-	data, err := g.Authorize(ctx, discovery, g.CertificateManager.GetCertificate())
-	if err != nil {
-		panic("Error authorizing on discovery node")
+	resp, _ := g.BootstrapRequester.Bootstrap(ctx, g.permit, claim, pulse.PulseNumber)
+
+	if resp.Code == packet.Reject {
+		g.Gatewayer.SwitchState(insolar.NoNetworkState)
+		return
+	}
+
+	if resp.Code == packet.Accepted {
+		//  ConsensusWaiting, ETA
 	}
 
 	// todo bootstrap request
-	g.startBootstrap()
+	// g.startBootstrap()
 	// wait for consensus
 
 	// ch := g.GetDiscoveryNodesChannel(ctx, discoveryNodes, 1)
@@ -87,9 +74,7 @@ func (g *JoinerBootstrap) ShoudIgnorePulse(context.Context, insolar.Pulse) bool 
 	return false
 }
 
-func (bc *JoinerBootstrap) startBootstrap(ctx context.Context, perm *packet.Permission) (*network.BootstrapResult, error) {
-
-	h, _ := host.NewHostN(perm.Payload.ReconnectTo, perm.Payload.DiscoveryRef)
+func (bc *JoinerBootstrap) startBootstrap(ctx context.Context, perm *packet.Permit) (*packet.BootstrapResponse, error) {
 
 	claim, err := bc.NodeKeeper.GetOriginJoinClaim()
 	if err != nil {
@@ -100,74 +85,13 @@ func (bc *JoinerBootstrap) startBootstrap(ctx context.Context, perm *packet.Perm
 		lastPulse = *insolar.GenesisPulse
 	}
 
-	request := &packet.BootstrapRequest{
-		JoinClaim:     claim,
-		LastNodePulse: lastPulse.PulseNumber,
-		Permission:    perm,
-	}
-
 	// BOOTSTRAP request --------
-	future, err := bc.HostNetwork.SendRequestToHost(ctx, types.Bootstrap, request, h)
+	resp, err := bc.BootstrapRequester.Bootstrap(ctx, perm, claim, lastPulse.PulseNumber)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to send bootstrap request to %s", h.String())
+		return nil, errors.Wrapf(err, "Failed to Bootstrap: %s", err.Error())
 	}
 
-	response, err := future.WaitResponse(bc.options.BootstrapTimeout)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from %s", h.String())
-	}
-	if response.GetResponse() == nil || response.GetResponse().GetBootstrap() == nil {
-		return nil, errors.Errorf("Failed to get response to bootstrap request from address %s: "+
-			"got incorrect response: %s", h.String(), response)
-	}
+	// TODO:
+
+	return resp, nil
 }
-
-// func (ac *JoinerBootstrap) register(ctx context.Context, discoveryNode *bootstrap.DiscoveryNode,
-// 	sessionID bootstrap.SessionID, attempt int) error {
-//
-// 	if attempt == 0 {
-// 		inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode.Host)
-// 	} else {
-// 		inslogger.FromContext(ctx).Infof("Registering on host: %s; attempt: %d", discoveryNode.Host, attempt+1)
-// 	}
-//
-// 	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Register")
-// 	span.AddAttributes(
-// 		trace.StringAttribute("node", discoveryNode.Node.GetNodeRef().String()),
-// 	)
-// 	defer span.End()
-// 	originClaim, err := ac.NodeKeeper.GetOriginJoinClaim()
-// 	if err != nil {
-// 		return errors.Wrap(err, "Failed to get origin claim")
-// 	}
-// 	request := &packet.RegisterRequest{
-// 		Version:   ac.NodeKeeper.GetOrigin().Version(),
-// 		SessionID: uint64(sessionID),
-// 		JoinClaim: originClaim,
-// 	}
-// 	future, err := ac.HostNetwork.SendRequestToHost(ctx, types.Register, request, discoveryNode.Host)
-// 	if err != nil {
-// 		return errors.Wrapf(err, "Error sending register request")
-// 	}
-// 	response, err := future.WaitResponse(ac.options.PacketTimeout)
-// 	if err != nil {
-// 		return errors.Wrapf(err, "Error getting response for register request")
-// 	}
-// 	if response.GetResponse() == nil || response.GetResponse().GetRegister() == nil {
-// 		return errors.Errorf("Register failed: got incorrect response: %s", response)
-// 	}
-// 	data := response.GetResponse().GetRegister()
-// 	if data.Code == packet.Denied {
-// 		return errors.New("Register rejected: " + data.Error)
-// 	}
-// 	if data.Code == packet.Retry {
-// 		if attempt >= registrationRetries {
-// 			return errors.Errorf("Exceeded maximum number of registration retries (%d)", registrationRetries)
-// 		}
-// 		log.Warnf("Failed to register on discovery node %s. Reason: node %s is already in network active list. "+
-// 			"Retrying registration in %v", discoveryNode.Host, ac.NodeKeeper.GetOrigin().ID(), data.RetryIn)
-// 		time.Sleep(time.Duration(data.RetryIn))
-// 		return ac.register(ctx, discoveryNode, sessionID, attempt+1)
-// 	}
-// 	return nil
-// }

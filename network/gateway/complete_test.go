@@ -55,18 +55,19 @@ import (
 	"errors"
 	"testing"
 
-	inet "github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 
-	"github.com/insolar/insolar/testutils/network"
+	mock "github.com/insolar/insolar/testutils/network"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func mockCryptographyService(t *testing.T, ok bool) insolar.CryptographyService {
@@ -162,15 +163,23 @@ func TestComplete_GetCert(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 	certNodeRef := testutils.RandomRef()
 
-	gatewayer := network.NewGatewayerMock(t)
-	nodekeeper := network.NewNodeKeeperMock(t)
-	hn := network.NewHostNetworkMock(t)
+	gatewayer := mock.NewGatewayerMock(t)
+	nodekeeper := mock.NewNodeKeeperMock(t)
+	hn := mock.NewHostNetworkMock(t)
 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
 
-	ge := NewNoNetwork(gatewayer, nodekeeper, cr, cs, hn, cm)
+	var ge network.Gateway
+	ge = NewNoNetwork(&Base{
+		Gatewayer:           gatewayer,
+		NodeKeeper:          nodekeeper,
+		HostNetwork:         hn,
+		ContractRequester:   cr,
+		CertificateManager:  cm,
+		CryptographyService: cs,
+	})
 	ge = ge.NewGateway(insolar.CompleteNetworkState)
 	ctx := context.Background()
 	result, err := ge.Auther().GetCert(ctx, &nodeRef)
@@ -198,23 +207,31 @@ func TestComplete_handler(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 	certNodeRef := testutils.RandomRef()
 
-	gatewayer := network.NewGatewayerMock(t)
-	nodekeeper := network.NewNodeKeeperMock(t)
+	gatewayer := mock.NewGatewayerMock(t)
+	nodekeeper := mock.NewNodeKeeperMock(t)
 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
 
-	hn := network.NewHostNetworkMock(t)
+	hn := mock.NewHostNetworkMock(t)
 
-	ge := NewNoNetwork(gatewayer, nodekeeper, cr, cs, hn, cm)
+	var ge network.Gateway
+	ge = NewNoNetwork(&Base{
+		Gatewayer:           gatewayer,
+		NodeKeeper:          nodekeeper,
+		HostNetwork:         hn,
+		ContractRequester:   cr,
+		CertificateManager:  cm,
+		CryptographyService: cs,
+	})
 	ge = ge.NewGateway(insolar.CompleteNetworkState)
 	ctx := context.Background()
 
 	p := packet.NewPacket(nil, nil, types.SignCert, 1)
 	p.SetRequest(&packet.SignCertRequest{NodeRef: nodeRef})
 
-	hn.BuildResponseFunc = func(p context.Context, p1 inet.Packet, p2 interface{}) inet.Packet {
+	hn.BuildResponseFunc = func(p context.Context, p1 network.Packet, p2 interface{}) network.Packet {
 		r := packet.NewPacket(nil, nil, types.SignCert, 1)
 		r.SetResponse(&packet.SignCertResponse{Sign: []byte("test_sig")})
 		return r

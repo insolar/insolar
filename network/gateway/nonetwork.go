@@ -59,12 +59,14 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-func NewNoNetwork(b *Base) *NoNetwork {
-	return &NoNetwork{b}
+func newNoNetwork(b *Base) *NoNetwork {
+	return &NoNetwork{Base: b}
 }
 
 // NoNetwork initial state
@@ -81,13 +83,51 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	if len(cert.GetDiscoveryNodes()) == 0 {
 		g.zeroBootstrap(ctx)
 		// create complete network
+		g.Gatewayer.SwitchState(insolar.CompleteNetworkState)
 		return
 	}
 
 	// run bootstrap
 	isDiscovery := network.OriginIsDiscovery(cert)
+	log.Info(isDiscovery)
+	//getAuth
 
-	getAuth
+	nodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
+	// TODO: isDiscovery shaffle or sort
+
+	for _, n := range nodes {
+		h, _ := host.NewHostN(n.GetHost(), *n.GetNodeRef())
+
+		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
+		if err != nil {
+			inslogger.FromContext(ctx).Errorf("Error authorizing to host %s: %s", h.String(), err.Error())
+			continue
+		}
+
+		// TODO: check majority rule
+		// if res.DiscoveryCount
+
+		whichState := func() insolar.NetworkState {
+			// TODO:or insolar.DiscoveryBootstrap
+			return insolar.JoinerBootstrap
+		}
+		switch res.Code {
+		case packet.Success:
+			g.permit = res.Permit
+			g.Gatewayer.SwitchState(whichState())
+		case packet.WrongMandate:
+			panic("wrong mandate " + res.Error)
+		case packet.WrongVersion:
+			panic("wrong mandate " + res.Error)
+		}
+
+	}
+
+	// run again ?
+	g.Gatewayer.SwitchState(insolar.NoNetworkState)
+
+	// wait result from channel
+	// save permits and change state
 
 }
 
@@ -111,21 +151,22 @@ func (g *NoNetwork) ShoudIgnorePulse(ctx context.Context, newPulse insolar.Pulse
 	return true
 }
 
-func (g *NoNetwork) connectToNewNetwork(ctx context.Context, address string) {
-	g.NodeKeeper.GetClaimQueue().Push(&packets.ChangeNetworkClaim{Address: address})
-	logger := inslogger.FromContext(ctx)
+// func (g *NoNetwork) connectToNewNetwork(ctx context.Context, address string) {
+// 	g.NodeKeeper.GetClaimQueue().Push(&packets.ChangeNetworkClaim{Address: address})
+// 	logger := inslogger.FromContext(ctx)
+//
+// 	// node, err := findNodeByAddress(address, g.CertificateManager.GetCertificate().GetDiscoveryNodes())
+// 	// if err != nil {
+// 	// 	logger.Warnf("Failed to find a discovery node: ", err)
+// 	// }
+//
+// 	err := g.Bootstrapper.AuthenticateToDiscoveryNode(ctx, nil /*node*/)
+// 	if err != nil {
+// 		logger.Errorf("Failed to authenticate a node: " + err.Error())
+// 	}
+// }
 
-	// node, err := findNodeByAddress(address, g.CertificateManager.GetCertificate().GetDiscoveryNodes())
-	// if err != nil {
-	// 	logger.Warnf("Failed to find a discovery node: ", err)
-	// }
-
-	err := g.Bootstrapper.AuthenticateToDiscoveryNode(ctx, nil /*node*/)
-	if err != nil {
-		logger.Errorf("Failed to authenticate a node: " + err.Error())
-	}
-}
-
+// todo: remove this workaround
 func (g *NoNetwork) zeroBootstrap(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
 	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{g.NodeKeeper.GetOrigin()})
