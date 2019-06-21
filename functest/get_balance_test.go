@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/insolar/insolar/testutils"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,4 +32,10 @@ func TestGetBalance(t *testing.T) {
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	r := big.NewInt(1000000000)
 	require.Equal(t, r, firstBalance)
+}
+
+func TestGetBalanceWrongRef(t *testing.T) {
+	_, err := getBalance(&root, testutils.RandomRef().String())
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "lifeline not found", "reference does not exist")
 }
