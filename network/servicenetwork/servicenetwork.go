@@ -75,7 +75,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/consensus/phases"
@@ -110,67 +109,20 @@ type ServiceNetwork struct {
 	PhaseManager phases.PhaseManager      `inject:"subcomponent"`
 	RPC          controller.RPCController `inject:"subcomponent"`
 
-	HostNetwork  network.HostNetwork
-	OperableFunc func(ctx context.Context, operable bool)
+	HostNetwork network.HostNetwork
+
+	gatewayer
 
 	isGenesis bool
 	// isDiscovery bool
 
 	lock sync.Mutex
-
-	gateway   network.Gateway
-	gatewayMu sync.RWMutex
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis}
 	return serviceNetwork, nil
-}
-
-func (n *ServiceNetwork) SetOperableFunc(f func(ctx context.Context, operable bool)) {
-	n.OperableFunc = f
-}
-
-func (n *ServiceNetwork) Gateway() network.Gateway {
-	n.gatewayMu.RLock()
-	defer n.gatewayMu.RUnlock()
-	return n.gateway
-}
-
-func (n *ServiceNetwork) SwitchState(state insolar.NetworkState) {
-	n.gatewayMu.Lock()
-
-	if n.gateway != nil && n.gateway.GetState() == state {
-		log.Warn("Trying to set gateway to the same state")
-		n.gatewayMu.Unlock()
-		return
-	}
-
-	// old gateway stop
-	n.setGateway(n.gateway.NewGateway(insolar.NoNetworkState))
-	n.gatewayMu.Unlock()
-
-	go n.gateway.Run(context.Background())
-}
-
-func (n *ServiceNetwork) setGateway(g network.Gateway) {
-
-	n.gateway = g
-	ctx := context.Background()
-	if n.gateway.NeedLockMessageBus() {
-		n.OperableFunc(ctx, false)
-	} else {
-		n.OperableFunc(ctx, true)
-	}
-}
-
-func (n *ServiceNetwork) GetState() insolar.NetworkState {
-	g := n.Gateway()
-	if g == nil {
-		return insolar.NoNetworkState
-	}
-	return g.GetState()
 }
 
 // SendMessage sends a message from MessageBus.
