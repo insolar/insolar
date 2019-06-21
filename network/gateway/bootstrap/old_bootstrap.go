@@ -1,12 +1,5 @@
 package bootstrap
 
-import (
-	"context"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-)
-
 // const bootstrapTimeout time.Duration = 2 // seconds
 // const updateScheduleETA time.Duration = 60 // seconds
 
@@ -26,11 +19,11 @@ import (
 // 	Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error)
 // }
 
-type DiscoveryBootstrapper interface {
-	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
-	SetLastPulse(number insolar.PulseNumber)
-	GetLastPulse() insolar.PulseNumber
-}
+// type DiscoveryBootstrapper interface {
+// 	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
+// 	SetLastPulse(number insolar.PulseNumber)
+// 	GetLastPulse() insolar.PulseNumber
+// }
 
 // type Bootstrap struct {
 // 	Certificate   insolar.Certificate         `inject:""`
