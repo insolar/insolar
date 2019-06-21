@@ -36,12 +36,6 @@ type HelloWorldInstance struct {
 	Ref *insolar.Reference
 }
 
-type APIResponse struct {
-	Error   *string     `json:"error,omitempty"`
-	Result  interface{} `json:"result,omitempty"`
-	TraceID string      `json:"traceID,omitempty"`
-}
-
 func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 	seed, err := requester.GetSeed(TestAPIURL)
 	if err != nil {
@@ -49,23 +43,25 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
-		Method: "CreateHelloWorld",
-		Params: nil,
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "call.api",
+		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: map[string]interface{}{}},
 	}, seed)
 	if err != nil {
 		return nil, err
 	}
 
-	var result APIResponse
+	var result requester.ContractAnswer
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
 	} else if result.Error != nil {
-		return nil, errors.Errorf("[ NewHelloWorld ] Failed to execute: %s", *result.Error)
+		return nil, errors.Errorf("[ NewHelloWorld ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.(string)
+	rv, ok := result.Result.ContractResult.(string)
 	if !ok {
 		return nil, errors.Errorf("[ NewHelloWorld ] Failed to decode: expected string, got %T", result.Result)
 	}
@@ -86,23 +82,25 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
-		Method: "Greet",
-		Params: []interface{}{name},
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "call.api",
+		Params:  requester.Params{CallSite: "Greet", CallParams: map[string]interface{}{"name": name}},
 	}, seed)
 	if err != nil {
 		return "", err
 	}
 
-	var result APIResponse
+	var result requester.ContractAnswer
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return "", err
 	} else if result.Error != nil {
-		return "", errors.Errorf("[ Greet ] Failed to execute: %s", *result.Error)
+		return "", errors.Errorf("[ Greet ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.(string)
+	rv, ok := result.Result.ContractResult.(string)
 	if !ok {
 		return "", errors.Errorf("[ Greet ] Failed to decode: expected string, got %T", result.Result)
 	}
@@ -116,23 +114,25 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
-		Method: "Count",
-		Params: []interface{}{},
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "call.api",
+		Params:  requester.Params{CallSite: "Count", CallParams: map[string]interface{}{}},
 	}, seed)
 	if err != nil {
 		return 0, err
 	}
 
-	var result APIResponse
+	var result requester.ContractAnswer
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return 0, err
 	} else if result.Error != nil {
-		return 0, errors.Errorf("[ Count ] Failed to execute: %s", *result.Error)
+		return 0, errors.Errorf("[ Count ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.(float64)
+	rv, ok := result.Result.ContractResult.(float64)
 	if !ok {
 		return 0, errors.Errorf("[ Count ] Failed to decode: expected float64, got %T", result.Result)
 	}
@@ -146,23 +146,25 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
-		Method: "CreateChild",
-		Params: []interface{}{},
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "call.api",
+		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}},
 	}, seed)
 	if err != nil {
 		return nil, err
 	}
 
-	var result APIResponse
+	var result requester.ContractAnswer
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
 	} else if result.Error != nil {
-		return nil, errors.Errorf("[ CreateChild ] Failed to execute: %s", *result.Error)
+		return nil, errors.Errorf("[ CreateChild ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.(string)
+	rv, ok := result.Result.ContractResult.(string)
 	if !ok {
 		return nil, errors.Errorf("[ CreateChild ] Failed to decode: expected string, got %T", result.Result)
 	}
@@ -183,23 +185,25 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
-		Method: "CountChild",
-		Params: []interface{}{},
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "call.api",
+		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}},
 	}, seed)
 	if err != nil {
 		return 0, err
 	}
 
-	var result APIResponse
+	var result requester.ContractAnswer
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return 0, err
 	} else if result.Error != nil {
-		return 0, errors.Errorf("[ CountChild ] Failed to execute: %s", *result.Error)
+		return 0, errors.Errorf("[ CountChild ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.(float64)
+	rv, ok := result.Result.ContractResult.(float64)
 	if !ok {
 		return 0, errors.Errorf("[ CountChild ] Failed to decode result: expected float64, got %T", result.Result)
 	}

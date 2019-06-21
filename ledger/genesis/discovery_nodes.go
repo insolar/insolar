@@ -59,9 +59,9 @@ func (nm *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discove
 
 	var ndObj nodedomain.NodeDomain
 	insolar.MustDeserialize(nodeDomainDesc.Memory(), &ndObj)
-	inslogger.FromContext(ctx).Debugf("get index on the node domain contract: %v", ndObj.NodeIndexPK)
+	inslogger.FromContext(ctx).Debugf("get index on the node domain contract: %v", ndObj.NodeIndexPublicKey)
 
-	if len(ndObj.NodeIndexPK) != 0 {
+	if len(ndObj.NodeIndexPublicKey) != 0 {
 		inslogger.FromContext(ctx).Info("discovery nodes already saved in the node domain index.")
 		return nil
 	}
@@ -171,7 +171,7 @@ func (nm *DiscoveryNodeManager) updateNodeDomainIndex(
 
 	updateData, err := insolar.Serialize(
 		&nodedomain.NodeDomain{
-			NodeIndexPK: indexMap,
+			NodeIndexPublicKey: indexMap,
 		},
 	)
 	if err != nil {

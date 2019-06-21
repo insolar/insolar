@@ -29,7 +29,7 @@ type RecordInfo struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113CuM1amoErZ2KUDB56FGz6B5aQK92pUZy2RGLxm.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112dGzD2enGsiyhtYsjGtSmnCnJbQqNQvhn3Pj3w3.11111111111111111111111111111111")
 
 // NodeRecord holds proxy type
 type NodeRecord struct {
