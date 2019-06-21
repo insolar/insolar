@@ -51,9 +51,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	records.SetMock.Return(nil)
 
 	pending := recentstorage.NewPendingStorageMock(t)
-	pending.GetRequestsForObjectMock.Return(nil)
 	pending.AddPendingRequestMock.Return()
-	pending.RemovePendingRequestMock.Return()
 	provider := recentstorage.NewProviderMock(t)
 	provider.GetPendingStorageMock.Return(pending)
 	provider.CountMock.Return(100)
@@ -83,32 +81,26 @@ func TestSetRequest_Proceed(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	t.Run("pendings limit reached", func(t *testing.T) {
-		t.Parallel()
+	// Pendings limit reached.
+	setRequestProc := NewSetRequest(msg, virtual, id, jetID)
+	setRequestProc.dep.writer = writeAccessor
+	setRequestProc.dep.pendingsLimit = 10
+	setRequestProc.dep.sender = sender
+	setRequestProc.dep.recentStorage = provider
+	setRequestProc.dep.records = records
 
-		setRequestProc := NewSetRequest(msg, virtual, id, jetID)
-		setRequestProc.dep.writer = writeAccessor
-		setRequestProc.dep.pendingsLimit = 10
-		setRequestProc.dep.sender = sender
-		setRequestProc.dep.recentStorage = provider
-		setRequestProc.dep.records = records
+	err = setRequestProc.Proceed(ctx)
+	require.Error(t, err)
+	assert.Equal(t, insolar.ErrTooManyPendingRequests, err)
 
-		err = setRequestProc.Proceed(ctx)
-		require.Error(t, err)
-		assert.Equal(t, insolar.ErrTooManyPendingRequests, err)
-	})
+	// Pendings limit not reached.
+	setRequestProc = NewSetRequest(msg, virtual, id, jetID)
+	setRequestProc.dep.writer = writeAccessor
+	setRequestProc.dep.pendingsLimit = 1000
+	setRequestProc.dep.sender = sender
+	setRequestProc.dep.recentStorage = provider
+	setRequestProc.dep.records = records
 
-	t.Run("pendings limit not reached", func(t *testing.T) {
-		t.Parallel()
-
-		setRequestProc := NewSetRequest(msg, virtual, id, jetID)
-		setRequestProc.dep.writer = writeAccessor
-		setRequestProc.dep.pendingsLimit = 1000
-		setRequestProc.dep.sender = sender
-		setRequestProc.dep.recentStorage = provider
-		setRequestProc.dep.records = records
-
-		err = setRequestProc.Proceed(ctx)
-		require.NoError(t, err)
-	})
+	err = setRequestProc.Proceed(ctx)
+	require.NoError(t, err)
 }
