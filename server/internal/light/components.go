@@ -46,7 +46,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
@@ -220,17 +219,22 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewInMemoryIndex(records, CryptoScheme)
+		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
+
+		filamentCache := object.NewFilamentCacheStorage(indexes, indexes, idLocker, records, Coordinator, CryptoScheme, Pulses, Bus, WmBus)
+
+		lifelines := object.NewLifelineStorage(indexes, indexes)
 
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
-		hots := recentstorage.NewProvider()
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, indexes, indexes, &conf)
-		handler.RecentStorageProvider = hots
+		handler := artifactmanager.NewMessageHandler(lifelines, indexes, lifelines, filamentCache, filamentCache, &conf)
+		handler.PulseCalculator = Pulses
+		handler.FilamentCacheManager = filamentCache
+
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
 		handler.JetCoordinator = Coordinator
@@ -260,6 +264,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			Pulses,
 			Pulses,
+			filamentCache,
 			conf.LightChainLimit,
 		)
 		dataGatherer := replication.NewDataGatherer(drops, blobs, records, indexes)
@@ -276,7 +281,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Jets,
 			Jets,
 			drops,
-			hots,
 		)
 
 		pm := pulsemanager.NewPulseManager(
@@ -291,7 +295,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			lthSyncer,
 			writeController,
-			indexes,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus
@@ -299,7 +302,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.JetCoordinator = Coordinator
 		pm.CryptographyService = CryptoService
 		pm.PlatformCryptographyScheme = CryptoScheme
-		pm.RecentStorageProvider = hots
 		pm.JetReleaser = waiter
 		pm.JetAccessor = Jets
 		pm.JetModifier = Jets

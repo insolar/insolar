@@ -19,6 +19,7 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -29,7 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -38,14 +38,14 @@ type HotData struct {
 	msg     *message.HotData
 
 	Dep struct {
-		DropModifier          drop.Modifier
-		RecentStorageProvider recentstorage.Provider
-		MessageBus            insolar.MessageBus
-		IndexBucketModifier   object.IndexBucketModifier
-		PendingModifier       object.PendingModifier
-		JetStorage            jet.Storage
-		JetFetcher            jet.Fetcher
-		JetReleaser           hot.JetReleaser
+		DropModifier         drop.Modifier
+		MessageBus           insolar.MessageBus
+		IndexBucketModifier  object.IndexModifier
+		JetStorage           jet.Storage
+		JetFetcher           jet.Fetcher
+		JetReleaser          hot.JetReleaser
+		Coordinator          jet.Coordinator
+		FilamentCacheManager object.FilamentCacheManager
 	}
 }
 
@@ -80,44 +80,13 @@ func (p *HotData) process(ctx context.Context) error {
 		return errors.Wrapf(err, "[jet]: drop error (pulse: %v)", p.msg.Drop.Pulse)
 	}
 
-	pendingStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
-	logger.Debugf("received %d pending requests", len(p.msg.PendingRequests))
-
-	var notificationList []insolar.ID
-	for objID, objContext := range p.msg.PendingRequests {
-		if !objContext.Active {
-			notificationList = append(notificationList, objID)
-		}
-
-		objContext.Active = false
-		pendingStorage.SetContextToObject(ctx, objID, objContext)
-	}
-
-	go func() {
-		for _, objID := range notificationList {
-			go func(objID insolar.ID) {
-				rep, err := p.Dep.MessageBus.Send(ctx, &message.AbandonedRequestsNotification{
-					Object: objID,
-				}, nil)
-
-				if err != nil {
-					logger.Error("failed to notify about pending requests")
-					return
-				}
-				if _, ok := rep.(*reply.OK); !ok {
-					logger.Error("received unexpected reply on pending notification")
-				}
-			}(objID)
-		}
-	}()
-
 	p.Dep.JetStorage.Update(
 		ctx, p.msg.PulseNumber, true, jetID,
 	)
 
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
 	for _, meta := range p.msg.HotIndexes {
-		decodedIndex, err := object.DecodeIndex(meta.Index)
+		decodedIndex, err := object.DecodeLifeline(meta.Index)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -130,7 +99,7 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 
 		decodedIndex.JetID = jetID
-		err = p.Dep.IndexBucketModifier.SetBucket(
+		err = p.Dep.IndexBucketModifier.SetIndex(
 			ctx,
 			p.msg.PulseNumber,
 			object.FilamentIndex{
@@ -145,6 +114,13 @@ func (p *HotData) process(ctx context.Context) error {
 			continue
 		}
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
+
+		go func(objID insolar.ID, pn insolar.PulseNumber) {
+			err = p.Dep.FilamentCacheManager.SendAbandonedNotification(ctx, pn, objID)
+			if err != nil {
+				logger.Errorf("failed to notify about abandoned notification %v", err)
+			}
+		}(meta.ObjID, flow.Pulse(ctx))
 	}
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)

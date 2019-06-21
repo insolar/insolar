@@ -58,7 +58,7 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 		rec,
 	})
 
-	ia := object.NewIndexBucketAccessorMock(t)
+	ia := object.NewIndexAccessorMock(t)
 	idx := object.Lifeline{
 		JetID:        gen.JetID(),
 		ChildPointer: insolar.NewID(gen.PulseNumber(), nil),
