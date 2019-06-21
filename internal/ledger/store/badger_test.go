@@ -145,7 +145,9 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 
 	f := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
 		func(key *testBadgerKey, c fuzz.Continue) {
-			c.Fuzz(&key.id)
+			var id []byte
+			c.Fuzz(&id)
+			key.id = append(commonPrefix, id...)
 			key.id[0] = commonPrefix[0] + 1
 			key.scope = commonScope
 		},
@@ -194,9 +196,9 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 	require.NoError(t, err)
 
 	// test logic
-	it := db.NewIterator(commonScope, false)
+	pivot := testBadgerKey{id: commonPrefix, scope: commonScope}
+	it := db.NewIterator(pivot, false)
 	defer it.Close()
-	it.Seek(commonPrefix)
 	i := 0
 	for it.Next() && i < len(expected) {
 		require.Equal(t, expected[i].k.ID(), it.Key())
@@ -295,9 +297,10 @@ func TestBadgerDB_NewReverseIterator(t *testing.T) {
 	require.NoError(t, err)
 
 	// test logic
-	it := db.NewIterator(commonScope, ReverseOrder)
+	prefix := fillPrefix(commonPrefix, ArrayLength*2)
+	pivot := testBadgerKey{id: prefix, scope: commonScope}
+	it := db.NewIterator(pivot, ReverseOrder)
 	defer it.Close()
-	it.Seek(commonPrefix)
 	i := 0
 	for it.Next() && i < len(expected) {
 		require.Equal(t, expected[len(expected)-i-1].k.ID(), it.Key())
@@ -348,11 +351,11 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 		sort.Slice(prefixes, func(i, j int) bool {
 			return bytes.Compare(prefixes[i], prefixes[j]) == -1
 		})
-		it := db.NewIterator(ScopeRecord, false)
-		defer it.Close()
 
 		seek := rand2.Intn(count)
-		it.Seek(prefixes[seek])
+		pivot := testBadgerKey{id: prefixes[seek], scope: ScopeRecord}
+		it := db.NewIterator(pivot, false)
+		defer it.Close()
 		var actual [][]byte
 		for it.Next() {
 			actual = append(actual, it.Key())
@@ -370,11 +373,12 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 		sort.Slice(prefixes, func(i, j int) bool {
 			return bytes.Compare(prefixes[i], prefixes[j]) >= 0
 		})
-		it := db.NewIterator(ScopeRecord, true)
-		defer it.Close()
 
 		seek := rand2.Intn(count)
-		it.Seek(prefixes[seek])
+		prefix := fillPrefix(prefixes[seek], length*2)
+		pivot := testBadgerKey{id: prefix, scope: ScopeRecord}
+		it := db.NewIterator(pivot, true)
+		defer it.Close()
 		var actual [][]byte
 		for it.Next() {
 			actual = append(actual, it.Key())
@@ -382,4 +386,13 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 		require.Equal(t, count-seek, len(actual))
 		require.Equal(t, keys[seek:], actual)
 	})
+}
+
+func fillPrefix(prefix []byte, keyLen int) []byte {
+	rest := keyLen - len(prefix)
+	filler := make([]byte, rest)
+	for i := range filler {
+		filler[i] = 0xFF
+	}
+	return bytes.Join([][]byte{prefix, filler}, nil)
 }

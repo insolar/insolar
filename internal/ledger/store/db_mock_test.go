@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -123,13 +122,10 @@ func TestMockDB_NewIterator(t *testing.T) {
 
 	f := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
 		func(key *testBadgerKey, c fuzz.Continue) {
-			for {
-				c.Fuzz(&key.id)
-				// To ensure that unexpected keys will be started with prefix that less than expected keys
-				if bytes.Compare(key.id, commonPrefix) == -1 {
-					break
-				}
-			}
+			var id []byte
+			c.Fuzz(&id)
+			key.id = append(commonPrefix, id...)
+			key.id[0] = commonPrefix[0] + 1
 			key.scope = commonScope
 		},
 		func(pair *kv, c fuzz.Continue) {
@@ -174,9 +170,9 @@ func TestMockDB_NewIterator(t *testing.T) {
 	require.NoError(t, err)
 
 	// test logic
-	it := db.NewIterator(commonScope, false)
+	pivot := testBadgerKey{id: commonPrefix, scope: commonScope}
+	it := db.NewIterator(pivot, false)
 	defer it.Close()
-	it.Seek(commonPrefix)
 	i := 0
 	for it.Next() && i < len(expected) {
 		require.Equal(t, expected[i].k.ID(), it.Key())
@@ -223,14 +219,13 @@ func TestMockDB_CMP_Badger(t *testing.T) {
 	fuzz.New().NilChance(0).Fuzz(&commonScope)
 	fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Fuzz(&commonPrefix)
 
-	var counter = 0
 	f := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
 		func(key *testBadgerKey, c fuzz.Continue) {
-			var hash []byte
-			fuzz.New().NumElements(insolar.RecordHashSize, insolar.RecordHashSize).Fuzz(&hash)
-			key.id = insolar.NewID(insolar.PulseNumber(counter), hash).Bytes()
+			var id []byte
+			c.Fuzz(&id)
+			key.id = append(commonPrefix, id...)
+			key.id[0] = commonPrefix[0] + 1
 			key.scope = commonScope
-			counter++
 		},
 		func(pair *kv, c fuzz.Continue) {
 			c.Fuzz(&pair.k)
@@ -282,13 +277,13 @@ func TestMockDB_CMP_Badger(t *testing.T) {
 	require.NoError(t, err)
 
 	// test logic
-	memIt := mockDB.NewIterator(commonScope, ReverseOrder)
+	prefix := fillPrefix(commonPrefix, ArrayLength*2)
+	pivot := testBadgerKey{id: prefix, scope: commonScope}
+	memIt := mockDB.NewIterator(pivot, ReverseOrder)
 	defer memIt.Close()
-	dbIt := db.NewIterator(commonScope, ReverseOrder)
+	dbIt := db.NewIterator(pivot, ReverseOrder)
 	defer dbIt.Close()
 
-	memIt.Seek(commonPrefix)
-	dbIt.Seek(commonPrefix)
 	i := 0
 	for memIt.Next() && dbIt.Next() && i < len(expected) {
 		assert.Equal(t, expected[len(expected)-i-1].k.ID(), memIt.Key())

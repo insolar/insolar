@@ -126,9 +126,8 @@ func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (i
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	it := s.db.NewIterator(store.ScopePulse, false)
+	it := s.db.NewIterator(pulseKey(pn), false)
 	defer it.Close()
-	it.Seek(pulseKey(pn).ID())
 	for i := 0; it.Next(); i++ {
 		if i == steps {
 			buf, err := it.Value()
@@ -148,9 +147,8 @@ func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	rit := s.db.NewIterator(store.ScopePulse, true)
+	rit := s.db.NewIterator(pulseKey(pn), true)
 	defer rit.Close()
-	rit.Seek(pulseKey(pn).ID())
 	for i := 0; rit.Next(); i++ {
 		if i == steps {
 			buf, err := rit.Value()
@@ -182,7 +180,8 @@ func (s *DB) set(pn insolar.PulseNumber, nd dbNode) error {
 }
 
 func (s *DB) head() (pn insolar.PulseNumber, err error) {
-	rit := s.db.NewIterator(store.ScopePulse, true)
+
+	rit := s.db.NewIterator(pulseKey(insolar.PulseNumber(0xFFFFFFFF)), true)
 	defer rit.Close()
 
 	if !rit.Next() {

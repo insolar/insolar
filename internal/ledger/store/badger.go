@@ -19,6 +19,7 @@ package store
 import (
 	"context"
 	"path/filepath"
+	"sync"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
@@ -95,13 +96,12 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 }
 
 // NewIterator returns new Iterator over the store.
-func (b *BadgerDB) NewIterator(scope Scope, reverse bool) Iterator {
-	bi := badgerIterator{scope: scope, reverse: reverse, scopePrefix: scope.Bytes()}
+func (b *BadgerDB) NewIterator(pivot Key, reverse bool) Iterator {
+	bi := badgerIterator{pivot: pivot, reverse: reverse}
 	bi.txn = b.backend.NewTransaction(false)
 	opts := badger.DefaultIteratorOptions
 	opts.Reverse = reverse
 	bi.it = bi.txn.NewIterator(opts)
-	bi.Seek([]byte{})
 	return &bi
 }
 
@@ -111,13 +111,13 @@ func (b *BadgerDB) Stop(ctx context.Context) error {
 }
 
 type badgerIterator struct {
-	scope       Scope
-	reverse     bool
-	scopePrefix []byte
-	txn         *badger.Txn
-	it          *badger.Iterator
-	prevKey     []byte
-	prevValue   []byte
+	once      sync.Once
+	pivot     Key
+	reverse   bool
+	txn       *badger.Txn
+	it        *badger.Iterator
+	prevKey   []byte
+	prevValue []byte
 }
 
 func (bi *badgerIterator) Close() {
@@ -125,30 +125,17 @@ func (bi *badgerIterator) Close() {
 	bi.txn.Discard()
 }
 
-func (bi *badgerIterator) Seek(prefix []byte) {
-	prefix = append(bi.scopePrefix, prefix...)
-	if bi.reverse {
-		bi.it.Rewind()
-		if bi.it.Valid() {
-			rest := len(bi.it.Item().Key()) - len(prefix)
-			filler := make([]byte, rest)
-			for i := range filler {
-				filler[i] = 0xFF
-			}
-			bi.it.Seek(append(prefix, filler...))
-		}
-	} else {
-		bi.it.Seek(prefix)
-	}
-}
-
 func (bi *badgerIterator) Next() bool {
-	if !bi.it.ValidForPrefix(bi.scopePrefix) {
+	scope := bi.pivot.Scope().Bytes()
+	bi.once.Do(func() {
+		bi.it.Seek(append(bi.pivot.Scope().Bytes(), bi.pivot.ID()...))
+	})
+	if !bi.it.ValidForPrefix(scope) {
 		return false
 	}
 
 	prev := bi.it.Item().KeyCopy(nil)
-	bi.prevKey = prev[len(bi.scope.Bytes()):]
+	bi.prevKey = prev[len(scope):]
 	prev, err := bi.it.Item().ValueCopy(nil)
 	if err != nil {
 		return false

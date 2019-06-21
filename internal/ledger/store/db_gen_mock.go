@@ -22,7 +22,7 @@ type DBMock struct {
 	GetPreCounter uint64
 	GetMock       mDBMockGet
 
-	NewIteratorFunc       func(p Scope, p1 bool) (r Iterator)
+	NewIteratorFunc       func(p Key, p1 bool) (r Iterator)
 	NewIteratorCounter    uint64
 	NewIteratorPreCounter uint64
 	NewIteratorMock       mDBMockNewIterator
@@ -210,7 +210,7 @@ type DBMockNewIteratorExpectation struct {
 }
 
 type DBMockNewIteratorInput struct {
-	p  Scope
+	p  Key
 	p1 bool
 }
 
@@ -219,7 +219,7 @@ type DBMockNewIteratorResult struct {
 }
 
 //Expect specifies that invocation of DB.NewIterator is expected from 1 to Infinity times
-func (m *mDBMockNewIterator) Expect(p Scope, p1 bool) *mDBMockNewIterator {
+func (m *mDBMockNewIterator) Expect(p Key, p1 bool) *mDBMockNewIterator {
 	m.mock.NewIteratorFunc = nil
 	m.expectationSeries = nil
 
@@ -243,7 +243,7 @@ func (m *mDBMockNewIterator) Return(r Iterator) *DBMock {
 }
 
 //ExpectOnce specifies that invocation of DB.NewIterator is expected once
-func (m *mDBMockNewIterator) ExpectOnce(p Scope, p1 bool) *DBMockNewIteratorExpectation {
+func (m *mDBMockNewIterator) ExpectOnce(p Key, p1 bool) *DBMockNewIteratorExpectation {
 	m.mock.NewIteratorFunc = nil
 	m.mainExpectation = nil
 
@@ -258,7 +258,7 @@ func (e *DBMockNewIteratorExpectation) Return(r Iterator) {
 }
 
 //Set uses given function f as a mock of DB.NewIterator method
-func (m *mDBMockNewIterator) Set(f func(p Scope, p1 bool) (r Iterator)) *DBMock {
+func (m *mDBMockNewIterator) Set(f func(p Key, p1 bool) (r Iterator)) *DBMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -267,7 +267,7 @@ func (m *mDBMockNewIterator) Set(f func(p Scope, p1 bool) (r Iterator)) *DBMock 
 }
 
 //NewIterator implements github.com/insolar/insolar/internal/ledger/store.DB interface
-func (m *DBMock) NewIterator(p Scope, p1 bool) (r Iterator) {
+func (m *DBMock) NewIterator(p Key, p1 bool) (r Iterator) {
 	counter := atomic.AddUint64(&m.NewIteratorPreCounter, 1)
 	defer atomic.AddUint64(&m.NewIteratorCounter, 1)
 
