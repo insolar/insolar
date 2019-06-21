@@ -146,7 +146,6 @@ func NewMessageHandler(
 			p.Dep(
 				h.WriteAccessor,
 				h.RecordModifier,
-				h.RecentStorageProvider,
 				h.PendingModifier,
 				h.Sender,
 			)
