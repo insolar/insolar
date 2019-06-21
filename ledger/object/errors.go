@@ -30,7 +30,4 @@ var (
 	ErrLifelineNotFound = errors.New("lifeline not found")
 	// ErrIndexBucketNotFound is returned when an index not found.
 	ErrIndexBucketNotFound = errors.New("index bucket not found")
-
-	// ErrResultWithoutRequest is returned when there is no a request for a result
-	ErrResultWithoutRequest = errors.New("no request for result")
 )

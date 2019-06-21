@@ -53,8 +53,6 @@ type LightCleaner struct {
 	indexCleaner object.IndexCleaner
 	pulseShifter pulse.Shifter
 
-	filamentCleaner object.FilamentCacheCleaner
-
 	pulseCalculator pulse.Calculator
 
 	lightChainLimit int
@@ -70,7 +68,6 @@ func NewCleaner(
 	indexCleaner object.IndexCleaner,
 	pulseShifter pulse.Shifter,
 	pulseCalculator pulse.Calculator,
-	filamentCleaner object.FilamentCacheCleaner,
 	lightChainLimit int,
 ) *LightCleaner {
 	return &LightCleaner{
@@ -82,7 +79,6 @@ func NewCleaner(
 		indexCleaner:    indexCleaner,
 		pulseShifter:    pulseShifter,
 		pulseCalculator: pulseCalculator,
-		filamentCleaner: filamentCleaner,
 		lightChainLimit: lightChainLimit,
 		pulseForClean:   make(chan insolar.PulseNumber),
 	}
@@ -126,7 +122,6 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 
 	c.jetStorage.DeleteForPN(ctx, pn)
 	c.indexCleaner.DeleteForPN(ctx, pn)
-	c.filamentCleaner.DeleteForPN(ctx, pn)
 
 	err := c.pulseShifter.Shift(ctx, pn)
 	if err != nil {
