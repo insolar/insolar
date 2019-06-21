@@ -117,7 +117,7 @@ func TestIncorrectSign(t *testing.T) {
 			JSONRPC: "2.0",
 			ID:      1,
 			Method:  "api.call",
-			Params:  requester.Params{Seed: seed, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
+			Params:  requester.Params{Seed: seed, Reference: testMember.ref, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
 		},
 		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
 	)
@@ -125,5 +125,5 @@ func TestIncorrectSign(t *testing.T) {
 	var res requester.ContractAnswer
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "bad reference format")
+	require.Contains(t, res.Error.Message, "invalid signature")
 }
