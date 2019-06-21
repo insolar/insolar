@@ -100,7 +100,7 @@ func getMemberGenesisContractState(publicKey string, name string, parent string)
 	}
 }
 
-func getWalletGenesisContractState(balance string, name string, parrent string) insolar.GenesisContractState {
+func getWalletGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
 	w, err := wallet.New(balance)
 	if err != nil {
 		panic("failed to create ` " + name + "` wallet instance")
@@ -109,7 +109,7 @@ func getWalletGenesisContractState(balance string, name string, parrent string) 
 	return insolar.GenesisContractState{
 		Name:       name,
 		Prototype:  insolar.GenesisNameWallet,
-		ParentName: parrent,
+		ParentName: parent,
 		Delegate:   true,
 		Memory:     mustGenMemory(w),
 	}
