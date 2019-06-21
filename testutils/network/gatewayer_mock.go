@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	insolar "github.com/insolar/insolar/insolar"
 	network "github.com/insolar/insolar/network"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -24,10 +25,10 @@ type GatewayerMock struct {
 	GatewayPreCounter uint64
 	GatewayMock       mGatewayerMockGateway
 
-	SetGatewayFunc       func(p network.Gateway)
-	SetGatewayCounter    uint64
-	SetGatewayPreCounter uint64
-	SetGatewayMock       mGatewayerMockSetGateway
+	SwitchStateFunc       func(p insolar.NetworkState)
+	SwitchStateCounter    uint64
+	SwitchStatePreCounter uint64
+	SwitchStateMock       mGatewayerMockSwitchState
 }
 
 //NewGatewayerMock returns a mock for github.com/insolar/insolar/network.Gatewayer
@@ -39,7 +40,7 @@ func NewGatewayerMock(t minimock.Tester) *GatewayerMock {
 	}
 
 	m.GatewayMock = mGatewayerMockGateway{mock: m}
-	m.SetGatewayMock = mGatewayerMockSetGateway{mock: m}
+	m.SwitchStateMock = mGatewayerMockSwitchState{mock: m}
 
 	return m
 }
@@ -178,124 +179,124 @@ func (m *GatewayerMock) GatewayFinished() bool {
 	return true
 }
 
-type mGatewayerMockSetGateway struct {
+type mGatewayerMockSwitchState struct {
 	mock              *GatewayerMock
-	mainExpectation   *GatewayerMockSetGatewayExpectation
-	expectationSeries []*GatewayerMockSetGatewayExpectation
+	mainExpectation   *GatewayerMockSwitchStateExpectation
+	expectationSeries []*GatewayerMockSwitchStateExpectation
 }
 
-type GatewayerMockSetGatewayExpectation struct {
-	input *GatewayerMockSetGatewayInput
+type GatewayerMockSwitchStateExpectation struct {
+	input *GatewayerMockSwitchStateInput
 }
 
-type GatewayerMockSetGatewayInput struct {
-	p network.Gateway
+type GatewayerMockSwitchStateInput struct {
+	p insolar.NetworkState
 }
 
-//Expect specifies that invocation of Gatewayer.SetGateway is expected from 1 to Infinity times
-func (m *mGatewayerMockSetGateway) Expect(p network.Gateway) *mGatewayerMockSetGateway {
-	m.mock.SetGatewayFunc = nil
+//Expect specifies that invocation of Gatewayer.SwitchState is expected from 1 to Infinity times
+func (m *mGatewayerMockSwitchState) Expect(p insolar.NetworkState) *mGatewayerMockSwitchState {
+	m.mock.SwitchStateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &GatewayerMockSetGatewayExpectation{}
+		m.mainExpectation = &GatewayerMockSwitchStateExpectation{}
 	}
-	m.mainExpectation.input = &GatewayerMockSetGatewayInput{p}
+	m.mainExpectation.input = &GatewayerMockSwitchStateInput{p}
 	return m
 }
 
-//Return specifies results of invocation of Gatewayer.SetGateway
-func (m *mGatewayerMockSetGateway) Return() *GatewayerMock {
-	m.mock.SetGatewayFunc = nil
+//Return specifies results of invocation of Gatewayer.SwitchState
+func (m *mGatewayerMockSwitchState) Return() *GatewayerMock {
+	m.mock.SwitchStateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &GatewayerMockSetGatewayExpectation{}
+		m.mainExpectation = &GatewayerMockSwitchStateExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Gatewayer.SetGateway is expected once
-func (m *mGatewayerMockSetGateway) ExpectOnce(p network.Gateway) *GatewayerMockSetGatewayExpectation {
-	m.mock.SetGatewayFunc = nil
+//ExpectOnce specifies that invocation of Gatewayer.SwitchState is expected once
+func (m *mGatewayerMockSwitchState) ExpectOnce(p insolar.NetworkState) *GatewayerMockSwitchStateExpectation {
+	m.mock.SwitchStateFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &GatewayerMockSetGatewayExpectation{}
-	expectation.input = &GatewayerMockSetGatewayInput{p}
+	expectation := &GatewayerMockSwitchStateExpectation{}
+	expectation.input = &GatewayerMockSwitchStateInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of Gatewayer.SetGateway method
-func (m *mGatewayerMockSetGateway) Set(f func(p network.Gateway)) *GatewayerMock {
+//Set uses given function f as a mock of Gatewayer.SwitchState method
+func (m *mGatewayerMockSwitchState) Set(f func(p insolar.NetworkState)) *GatewayerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.SetGatewayFunc = f
+	m.mock.SwitchStateFunc = f
 	return m.mock
 }
 
-//SetGateway implements github.com/insolar/insolar/network.Gatewayer interface
-func (m *GatewayerMock) SetGateway(p network.Gateway) {
-	counter := atomic.AddUint64(&m.SetGatewayPreCounter, 1)
-	defer atomic.AddUint64(&m.SetGatewayCounter, 1)
+//SwitchState implements github.com/insolar/insolar/network.Gatewayer interface
+func (m *GatewayerMock) SwitchState(p insolar.NetworkState) {
+	counter := atomic.AddUint64(&m.SwitchStatePreCounter, 1)
+	defer atomic.AddUint64(&m.SwitchStateCounter, 1)
 
-	if len(m.SetGatewayMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetGatewayMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to GatewayerMock.SetGateway. %v", p)
+	if len(m.SwitchStateMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SwitchStateMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to GatewayerMock.SwitchState. %v", p)
 			return
 		}
 
-		input := m.SetGatewayMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, GatewayerMockSetGatewayInput{p}, "Gatewayer.SetGateway got unexpected parameters")
+		input := m.SwitchStateMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, GatewayerMockSwitchStateInput{p}, "Gatewayer.SwitchState got unexpected parameters")
 
 		return
 	}
 
-	if m.SetGatewayMock.mainExpectation != nil {
+	if m.SwitchStateMock.mainExpectation != nil {
 
-		input := m.SetGatewayMock.mainExpectation.input
+		input := m.SwitchStateMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, GatewayerMockSetGatewayInput{p}, "Gatewayer.SetGateway got unexpected parameters")
+			testify_assert.Equal(m.t, *input, GatewayerMockSwitchStateInput{p}, "Gatewayer.SwitchState got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.SetGatewayFunc == nil {
-		m.t.Fatalf("Unexpected call to GatewayerMock.SetGateway. %v", p)
+	if m.SwitchStateFunc == nil {
+		m.t.Fatalf("Unexpected call to GatewayerMock.SwitchState. %v", p)
 		return
 	}
 
-	m.SetGatewayFunc(p)
+	m.SwitchStateFunc(p)
 }
 
-//SetGatewayMinimockCounter returns a count of GatewayerMock.SetGatewayFunc invocations
-func (m *GatewayerMock) SetGatewayMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetGatewayCounter)
+//SwitchStateMinimockCounter returns a count of GatewayerMock.SwitchStateFunc invocations
+func (m *GatewayerMock) SwitchStateMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SwitchStateCounter)
 }
 
-//SetGatewayMinimockPreCounter returns the value of GatewayerMock.SetGateway invocations
-func (m *GatewayerMock) SetGatewayMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetGatewayPreCounter)
+//SwitchStateMinimockPreCounter returns the value of GatewayerMock.SwitchState invocations
+func (m *GatewayerMock) SwitchStateMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SwitchStatePreCounter)
 }
 
-//SetGatewayFinished returns true if mock invocations count is ok
-func (m *GatewayerMock) SetGatewayFinished() bool {
+//SwitchStateFinished returns true if mock invocations count is ok
+func (m *GatewayerMock) SwitchStateFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetGatewayMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetGatewayCounter) == uint64(len(m.SetGatewayMock.expectationSeries))
+	if len(m.SwitchStateMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SwitchStateCounter) == uint64(len(m.SwitchStateMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.SetGatewayMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetGatewayCounter) > 0
+	if m.SwitchStateMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SwitchStateCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.SetGatewayFunc != nil {
-		return atomic.LoadUint64(&m.SetGatewayCounter) > 0
+	if m.SwitchStateFunc != nil {
+		return atomic.LoadUint64(&m.SwitchStateCounter) > 0
 	}
 
 	return true
@@ -309,8 +310,8 @@ func (m *GatewayerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to GatewayerMock.Gateway")
 	}
 
-	if !m.SetGatewayFinished() {
-		m.t.Fatal("Expected call to GatewayerMock.SetGateway")
+	if !m.SwitchStateFinished() {
+		m.t.Fatal("Expected call to GatewayerMock.SwitchState")
 	}
 
 }
@@ -334,8 +335,8 @@ func (m *GatewayerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to GatewayerMock.Gateway")
 	}
 
-	if !m.SetGatewayFinished() {
-		m.t.Fatal("Expected call to GatewayerMock.SetGateway")
+	if !m.SwitchStateFinished() {
+		m.t.Fatal("Expected call to GatewayerMock.SwitchState")
 	}
 
 }
@@ -353,7 +354,7 @@ func (m *GatewayerMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GatewayFinished()
-		ok = ok && m.SetGatewayFinished()
+		ok = ok && m.SwitchStateFinished()
 
 		if ok {
 			return
@@ -366,8 +367,8 @@ func (m *GatewayerMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to GatewayerMock.Gateway")
 			}
 
-			if !m.SetGatewayFinished() {
-				m.t.Error("Expected call to GatewayerMock.SetGateway")
+			if !m.SwitchStateFinished() {
+				m.t.Error("Expected call to GatewayerMock.SwitchState")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -386,7 +387,7 @@ func (m *GatewayerMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.SetGatewayFinished() {
+	if !m.SwitchStateFinished() {
 		return false
 	}
 
