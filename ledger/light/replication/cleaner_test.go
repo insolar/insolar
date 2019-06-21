@@ -120,7 +120,9 @@ func TestCleaner_clean(t *testing.T) {
 	}
 
 	cacheCln := object.NewFilamentCacheCleanerMock(ctrl)
-	cacheCln.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	cacheCln.DeleteForPNFunc = func(p context.Context, p1 insolar.PulseNumber) {
+		require.Equal(t, calculatedPulse.PulseNumber, p1)
+	}
 
 	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, cacheCln, limit)
 	defer close(cleaner.pulseForClean)
@@ -172,7 +174,9 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	}
 
 	cacheCln := object.NewFilamentCacheCleanerMock(ctrl)
-	cacheCln.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	cacheCln.DeleteForPNFunc = func(p context.Context, p1 insolar.PulseNumber) {
+		require.Equal(t, calculatedPulse.PulseNumber, p1)
+	}
 
 	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, cacheCln, limit)
 	defer close(cleaner.pulseForClean)
