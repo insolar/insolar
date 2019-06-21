@@ -100,12 +100,11 @@ message RPCResponse {
     string Error = 2;
 }
 
-enum ResponseCode {
+enum BootstrapResponseCode {
     Accepted = 0;
-    Rejected = 1;
-    Redirected = 2;
-    ReconnectRequired = 3;
-    UpdateSchedule = 4;
+    UpdateSchedule = 1;
+    UpdateShortID = 2;
+    Reject = 3;
 }
 
 message Permit {
@@ -121,13 +120,10 @@ message PermitPayload {
 }
 
 message BootstrapResponse {
-    ResponseCode Code = 1;
-    string RejectReason = 2;
-    uint32 ETA = 3;
-    uint32 AssignShortID = 4;
-    uint32 UpdateSincePulse = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    string RedirectHost = 6;
-    uint32 NetworkSize = 7;
+    BootstrapResponseCode Code = 1;
+    uint32 ETA = 2;
+//    uint32 AssignShortID = 3;
+    uint32 PulseNumber = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }
 
 message BasicResponse {
@@ -137,18 +133,19 @@ message BasicResponse {
 
 enum AuthorizeResponseCode {
     Success = 0;
-    WrongTimestamp = 1;
-    WrongMandate = 2;
-    WrongVersion = 3;
+    WrongTimestamp = 2;
+    WrongMandate = 3;
+    WrongVersion = 4;
 }
 
 message AuthorizeResponse {
     AuthorizeResponseCode Code = 1;
-    string Error = 2;
-    Permit Permit = 3;
-    uint32 DiscoveryCount = 4;
-    uint32 PulseNumber = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    uint32 NetworkState = 6;
+    int64 Timestamp = 2;
+    string Error = 3;
+    Permit Permit = 4;
+    uint32 DiscoveryCount = 5;
+    uint32 PulseNumber = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    uint32 NetworkState = 7;
 }
 
 message SignCertResponse {
