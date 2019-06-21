@@ -18,7 +18,7 @@ package payload
 
 import (
 	"github.com/gogo/protobuf/proto"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -27,20 +27,21 @@ type Type uint32
 //go:generate stringer -type=Type
 
 const (
-	TypeUnknown   Type = 0
-	TypeError     Type = 1
-	TypeID        Type = 2
-	TypeState     Type = 4
-	TypeGetObject Type = 5
-	TypePassState Type = 6
-	TypeObjIndex  Type = 7
-	TypeObjState  Type = 8
-	TypeIndex     Type = 9
-	TypePass      Type = 10
-	TypeGetCode   Type = 11
-	TypeCode      Type = 12
-	TypeSetCode   Type = 13
-	TypeSetResult Type = 14
+	TypeUnknown    Type = 0
+	TypeError      Type = 1
+	TypeID         Type = 2
+	TypeState      Type = 4
+	TypeGetObject  Type = 5
+	TypePassState  Type = 6
+	TypeObjIndex   Type = 7
+	TypeObjState   Type = 8
+	TypeIndex      Type = 9
+	TypePass       Type = 10
+	TypeGetCode    Type = 11
+	TypeCode       Type = 12
+	TypeSetCode    Type = 13
+	TypeSetRequest Type = 14
+	TypeSetResult  Type = 15
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -137,6 +138,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *SetCode:
 		pl.Polymorph = uint32(TypeSetCode)
 		return pl.Marshal()
+	case *SetRequest:
+		pl.Polymorph = uint32(TypeSetRequest)
+		return pl.Marshal()
 	case *SetResult:
 		pl.Polymorph = uint32(TypeSetResult)
 		return pl.Marshal()
@@ -191,11 +195,14 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := SetCode{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeSetRequest:
+		pl := SetRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeSetResult:
 		pl := SetResult{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-
 	}
 
 	return nil, errors.New("unknown payload type")

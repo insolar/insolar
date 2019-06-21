@@ -89,6 +89,12 @@ message Jet {
     bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }
 
+message SetRequest {
+    uint32 Polymorph = 16;
+
+    bytes Request = 20;
+}
+
 message SetResult {
     uint32 Polymorph = 16;
 
