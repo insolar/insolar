@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package servicenetwork
+package gateway
 
 import (
 	"context"
@@ -59,14 +59,15 @@ import (
 	"github.com/insolar/insolar/network"
 )
 
-type gatewayer struct {
-	OperableFunc func(ctx context.Context, operable bool)
-	gateway      network.Gateway
-	gatewayMu    sync.RWMutex
+func NewGatewayer(g network.Gateway, f insolar.NetworkOperableCallback) network.Gatewayer {
+	result := &gatewayer{operableFunc: f, gateway: g}
+	return result
 }
 
-func (n *gatewayer) SetOperableFunc(f func(ctx context.Context, operable bool)) {
-	n.OperableFunc = f
+type gatewayer struct {
+	operableFunc insolar.NetworkOperableCallback
+	gateway      network.Gateway
+	gatewayMu    sync.RWMutex
 }
 
 func (n *gatewayer) Gateway() network.Gateway {
@@ -78,14 +79,15 @@ func (n *gatewayer) Gateway() network.Gateway {
 func (n *gatewayer) SwitchState(state insolar.NetworkState) {
 	n.gatewayMu.Lock()
 
-	if n.gateway != nil && n.gateway.GetState() == state {
+	if n.gateway.GetState() == state {
 		log.Warn("Trying to set gateway to the same state")
 		n.gatewayMu.Unlock()
 		return
 	}
 
 	// old gateway stop
-	n.setGateway(n.gateway.NewGateway(insolar.NoNetworkState))
+	n.gateway = n.gateway.NewGateway(state)
+	n.operableFunc(context.Background(), !n.gateway.NeedLockMessageBus())
 	n.gatewayMu.Unlock()
 
 	go n.gateway.Run(context.Background())
@@ -93,13 +95,6 @@ func (n *gatewayer) SwitchState(state insolar.NetworkState) {
 
 func (n *gatewayer) setGateway(g network.Gateway) {
 
-	n.gateway = g
-	ctx := context.Background()
-	if n.gateway.NeedLockMessageBus() {
-		n.OperableFunc(ctx, false)
-	} else {
-		n.OperableFunc(ctx, true)
-	}
 }
 
 func (n *gatewayer) GetState() insolar.NetworkState {

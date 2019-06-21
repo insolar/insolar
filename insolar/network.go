@@ -33,6 +33,9 @@ type Cascade struct {
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
 
+// NetworkOperableCallback is callback for notifying is network is operable or not
+type NetworkOperableCallback func(ctx context.Context, isNetworkOperable bool)
+
 //go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go
 
 // Network is interface for network modules facade.
@@ -48,7 +51,7 @@ type Network interface {
 	// GetState returns our current thoughs about whole network
 	GetState() NetworkState
 	// SetOperableFunc registers callback for notifying of network state
-	SetOperableFunc(f func(ctx context.Context, isNetworkOperable bool))
+	SetOperableFunc(NetworkOperableCallback)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go

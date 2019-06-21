@@ -172,7 +172,7 @@ func TestComplete_GetCert(t *testing.T) {
 	cs := mockCryptographyService(t, true)
 
 	var ge network.Gateway
-	ge = NewNoNetwork(&Base{
+	ge = newNoNetwork(&Base{
 		Gatewayer:           gatewayer,
 		NodeKeeper:          nodekeeper,
 		HostNetwork:         hn,
@@ -217,7 +217,7 @@ func TestComplete_handler(t *testing.T) {
 	hn := mock.NewHostNetworkMock(t)
 
 	var ge network.Gateway
-	ge = NewNoNetwork(&Base{
+	ge = newNoNetwork(&Base{
 		Gatewayer:           gatewayer,
 		NodeKeeper:          nodekeeper,
 		HostNetwork:         hn,

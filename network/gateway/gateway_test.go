@@ -69,7 +69,7 @@ import (
 
 func emtygateway(t *testing.T) network.Gateway {
 
-	return NewNoNetwork(&Base{})
+	return newNoNetwork(&Base{})
 }
 
 func TestSWitch(t *testing.T) {
@@ -85,7 +85,7 @@ func TestSWitch(t *testing.T) {
 	ge.Run(ctx)
 
 	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
-	gatewayer.SetGatewayFunc = func(p network.Gateway) { ge = p }
+	gatewayer.SwitchStateFunc = func(s insolar.NetworkState) { ge = ge.NewGateway(s) }
 	gilreleased := false
 
 	ge.OnPulse(ctx, insolar.Pulse{})
@@ -129,7 +129,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	ge.Run(ctx)
 
 	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
-	gatewayer.SetGatewayFunc = func(p network.Gateway) { ge = p }
+	gatewayer.SwitchStateFunc = func(s insolar.NetworkState) { ge = ge.NewGateway(s) }
 	gilreleased := false
 
 	ge.OnPulse(ctx, insolar.Pulse{})

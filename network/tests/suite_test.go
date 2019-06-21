@@ -538,7 +538,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
 	})
-	serviceNetwork.SetGateway(NewFakeGateway())
 
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler

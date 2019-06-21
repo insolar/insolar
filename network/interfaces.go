@@ -257,7 +257,6 @@ type Mutator interface {
 // Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
 	Gateway() Gateway
-	// SetGateway(Gateway)
 	SwitchState(state insolar.NetworkState)
 }
 

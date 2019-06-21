@@ -45,7 +45,7 @@ type NetworkMock struct {
 	SendMessagePreCounter uint64
 	SendMessageMock       mNetworkMockSendMessage
 
-	SetOperableFuncFunc       func(p func(p context.Context, p1 bool))
+	SetOperableFuncFunc       func(p insolar.NetworkOperableCallback)
 	SetOperableFuncCounter    uint64
 	SetOperableFuncPreCounter uint64
 	SetOperableFuncMock       mNetworkMockSetOperableFunc
@@ -763,11 +763,11 @@ type NetworkMockSetOperableFuncExpectation struct {
 }
 
 type NetworkMockSetOperableFuncInput struct {
-	p func(p context.Context, p1 bool)
+	p insolar.NetworkOperableCallback
 }
 
 //Expect specifies that invocation of Network.SetOperableFunc is expected from 1 to Infinity times
-func (m *mNetworkMockSetOperableFunc) Expect(p func(p context.Context, p1 bool)) *mNetworkMockSetOperableFunc {
+func (m *mNetworkMockSetOperableFunc) Expect(p insolar.NetworkOperableCallback) *mNetworkMockSetOperableFunc {
 	m.mock.SetOperableFuncFunc = nil
 	m.expectationSeries = nil
 
@@ -791,7 +791,7 @@ func (m *mNetworkMockSetOperableFunc) Return() *NetworkMock {
 }
 
 //ExpectOnce specifies that invocation of Network.SetOperableFunc is expected once
-func (m *mNetworkMockSetOperableFunc) ExpectOnce(p func(p context.Context, p1 bool)) *NetworkMockSetOperableFuncExpectation {
+func (m *mNetworkMockSetOperableFunc) ExpectOnce(p insolar.NetworkOperableCallback) *NetworkMockSetOperableFuncExpectation {
 	m.mock.SetOperableFuncFunc = nil
 	m.mainExpectation = nil
 
@@ -802,7 +802,7 @@ func (m *mNetworkMockSetOperableFunc) ExpectOnce(p func(p context.Context, p1 bo
 }
 
 //Set uses given function f as a mock of Network.SetOperableFunc method
-func (m *mNetworkMockSetOperableFunc) Set(f func(p func(p context.Context, p1 bool))) *NetworkMock {
+func (m *mNetworkMockSetOperableFunc) Set(f func(p insolar.NetworkOperableCallback)) *NetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -811,7 +811,7 @@ func (m *mNetworkMockSetOperableFunc) Set(f func(p func(p context.Context, p1 bo
 }
 
 //SetOperableFunc implements github.com/insolar/insolar/insolar.Network interface
-func (m *NetworkMock) SetOperableFunc(p func(p context.Context, p1 bool)) {
+func (m *NetworkMock) SetOperableFunc(p insolar.NetworkOperableCallback) {
 	counter := atomic.AddUint64(&m.SetOperableFuncPreCounter, 1)
 	defer atomic.AddUint64(&m.SetOperableFuncCounter, 1)
 
