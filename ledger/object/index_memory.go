@@ -21,29 +21,34 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"go.opencensus.io/stats"
 )
 
 type IndexStorageMemory struct {
 	bucketsLock sync.RWMutex
 	buckets     map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex
+	indexLock   map[insolar.PulseNumber]map[insolar.ID]sync.RWMutex
 }
 
 func NewIndexStorageMemory() *IndexStorageMemory {
 	return &IndexStorageMemory{buckets: map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{}}
 }
 
-func (i *IndexStorageMemory) Index(pn insolar.PulseNumber, objID insolar.ID) *FilamentIndex {
+func (i *IndexStorageMemory) Index(pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error) {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
-		return nil
+		return FilamentIndex{}, ErrIndexBucketNotFound
 	}
 
-	return objsByPn[objID]
+	idx, ok := objsByPn[objID]
+	if !ok {
+		return FilamentIndex{}, ErrIndexBucketNotFound
+	}
+
+	return clone(idx), nil
 }
 
 // ForPNAndJet returns a collection of buckets for a provided pn and jetID
@@ -58,49 +63,20 @@ func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNu
 
 	var res []FilamentIndex
 
-	for _, b := range bucks {
+	for id, b := range bucks {
+		idxLock := i.indexLock[pn][id]
+		idxLock.Lock()
+
 		if b.Lifeline.JetID != jetID {
+			idxLock.Unlock()
 			continue
 		}
 
-		clonedLfl := CloneLifeline(b.Lifeline)
-		var clonedRecords []insolar.ID
-
-		clonedRecords = append(clonedRecords, b.PendingRecords...)
-
-		res = append(res, FilamentIndex{
-			ObjID:            b.ObjID,
-			Lifeline:         clonedLfl,
-			LifelineLastUsed: b.LifelineLastUsed,
-			PendingRecords:   clonedRecords,
-		})
+		res = append(res, clone(b))
+		idxLock.Unlock()
 	}
 
 	return res
-}
-
-func (i *IndexStorageMemory) CreateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *FilamentIndex {
-	i.bucketsLock.Lock()
-	defer i.bucketsLock.Unlock()
-
-	bucket := &FilamentIndex{
-		ObjID:          objID,
-		PendingRecords: []insolar.ID{},
-	}
-
-	objsByPn, ok := i.buckets[pn]
-	if !ok {
-		objsByPn = map[insolar.ID]*FilamentIndex{}
-		i.buckets[pn] = objsByPn
-	}
-
-	_, ok = objsByPn[objID]
-	if !ok {
-		objsByPn[objID] = bucket
-	}
-
-	inslogger.FromContext(ctx).Debugf("[createPendingBucket] create bucket for obj - %v was created successfully", objID.DebugString())
-	return bucket
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
@@ -108,18 +84,44 @@ func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumbe
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	bucks, ok := i.buckets[pn]
+	_, ok := i.buckets[pn]
 	if !ok {
-		bucks = map[insolar.ID]*FilamentIndex{}
-		i.buckets[pn] = bucks
+		i.buckets[pn] = map[insolar.ID]*FilamentIndex{}
+		i.indexLock[pn] = map[insolar.ID]sync.RWMutex{}
 	}
 
-	bucks[bucket.ObjID] = &bucket
+	i.buckets[pn][bucket.ObjID] = &bucket
 
 	stats.Record(ctx,
 		statBucketAddedCount.M(1),
 	)
 
+	return nil
+}
+
+func (i *IndexStorageMemory) UpdateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, updateFN func(FilamentIndex) (FilamentIndex, error)) error {
+	i.bucketsLock.RUnlock()
+	defer i.bucketsLock.RUnlock()
+
+	objsByPn, ok := i.buckets[pn]
+	if !ok {
+		return ErrIndexBucketNotFound
+	}
+
+	idx, ok := objsByPn[objID]
+	if !ok {
+		return ErrIndexBucketNotFound
+	}
+
+	idxLock := i.indexLock[pn][objID]
+	idxLock.Lock()
+	defer idxLock.Unlock()
+
+	newIdx, err := updateFN(*idx)
+	if err != nil {
+		return err
+	}
+	objsByPn[objID] = &newIdx
 	return nil
 }
 
@@ -129,4 +131,17 @@ func (i *IndexStorageMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNu
 	defer i.bucketsLock.Unlock()
 
 	delete(i.buckets, pn)
+}
+
+func clone(index *FilamentIndex) FilamentIndex {
+	var clonedRecords []insolar.ID
+
+	clonedRecords = append(clonedRecords, index.PendingRecords...)
+	return FilamentIndex{
+		XPolymorph:       index.XPolymorph,
+		ObjID:            index.ObjID,
+		Lifeline:         CloneLifeline(index.Lifeline),
+		LifelineLastUsed: index.LifelineLastUsed,
+		PendingRecords:   clonedRecords,
+	}
 }
