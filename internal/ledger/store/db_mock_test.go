@@ -18,12 +18,16 @@ package store
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"sort"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type testMockKey struct {
@@ -118,13 +122,10 @@ func TestMockDB_NewIterator(t *testing.T) {
 
 	f := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
 		func(key *testBadgerKey, c fuzz.Continue) {
-			for {
-				c.Fuzz(&key.id)
-				// To ensure that unexpected keys will be started with prefix that less than expected keys
-				if bytes.Compare(key.id, commonPrefix) == -1 {
-					break
-				}
-			}
+			var id []byte
+			c.Fuzz(&id)
+			key.id = append(commonPrefix, id...)
+			key.id[0] = commonPrefix[0] + 1
 			key.scope = commonScope
 		},
 		func(pair *kv, c fuzz.Continue) {
@@ -169,15 +170,129 @@ func TestMockDB_NewIterator(t *testing.T) {
 	require.NoError(t, err)
 
 	// test logic
-	it := db.NewIterator(commonScope)
+	pivot := testBadgerKey{id: commonPrefix, scope: commonScope}
+	it := db.NewIterator(pivot, false)
 	defer it.Close()
-	it.Seek(commonPrefix)
 	i := 0
 	for it.Next() && i < len(expected) {
 		require.Equal(t, expected[i].k.ID(), it.Key())
 		val, err := it.Value()
 		require.NoError(t, err)
 		require.Equal(t, expected[i].v, val)
+		i++
+	}
+	require.Equal(t, len(expected), i)
+}
+
+func TestMockDB_CMP_Badger(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	db, err := NewBadgerDB(tmpdir)
+	defer db.Stop(ctx)
+
+	mockDB := NewMemoryMockDB()
+
+	type kv struct {
+		k testBadgerKey
+		v []byte
+	}
+
+	var (
+		commonScope  Scope
+		commonPrefix []byte
+
+		expected   []kv
+		unexpected []kv
+	)
+
+	const (
+		ArrayLength  = 100
+		ReverseOrder = true
+	)
+
+	fuzz.New().NilChance(0).Fuzz(&commonScope)
+	fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Fuzz(&commonPrefix)
+
+	f := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
+		func(key *testBadgerKey, c fuzz.Continue) {
+			var id []byte
+			c.Fuzz(&id)
+			key.id = append(commonPrefix, id...)
+			key.id[0] = commonPrefix[0] + 1
+			key.scope = commonScope
+		},
+		func(pair *kv, c fuzz.Continue) {
+			c.Fuzz(&pair.k)
+			c.Fuzz(&pair.v)
+		},
+	)
+	f.Fuzz(&unexpected)
+
+	f = fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
+		func(key *testBadgerKey, c fuzz.Continue) {
+			var id []byte
+			c.Fuzz(&id)
+			key.id = append(commonPrefix, id...)
+			key.scope = commonScope
+		},
+		func(pair *kv, c fuzz.Continue) {
+			c.Fuzz(&pair.k)
+			c.Fuzz(&pair.v)
+		},
+	)
+	f.Fuzz(&expected)
+
+	sort.Slice(expected, func(i, j int) bool {
+		return bytes.Compare(expected[i].k.ID(), expected[j].k.ID()) == -1
+	})
+
+	err = error(nil)
+	for i := 0; i < ArrayLength; i++ {
+		err = mockDB.Set(unexpected[i].k, unexpected[i].v)
+		if err != nil {
+			break
+		}
+		err = db.Set(unexpected[i].k, unexpected[i].v)
+		if err != nil {
+			break
+		}
+	}
+	for i := 0; i < ArrayLength; i++ {
+		err = mockDB.Set(expected[i].k, expected[i].v)
+		if err != nil {
+			break
+		}
+		err = db.Set(expected[i].k, expected[i].v)
+		if err != nil {
+			break
+		}
+	}
+
+	require.NoError(t, err)
+
+	// test logic
+	prefix := fillPrefix(commonPrefix, ArrayLength*2)
+	pivot := testBadgerKey{id: prefix, scope: commonScope}
+	memIt := mockDB.NewIterator(pivot, ReverseOrder)
+	defer memIt.Close()
+	dbIt := db.NewIterator(pivot, ReverseOrder)
+	defer dbIt.Close()
+
+	i := 0
+	for memIt.Next() && dbIt.Next() && i < len(expected) {
+		assert.Equal(t, expected[len(expected)-i-1].k.ID(), memIt.Key())
+		memVal, err := memIt.Value()
+		require.NoError(t, err)
+		assert.Equal(t, expected[len(expected)-i-1].v, memVal)
+		dbVal, err := dbIt.Value()
+		require.Equal(t, memIt.Key(), dbIt.Key())
+		require.Equal(t, memVal, dbVal)
 		i++
 	}
 	require.Equal(t, len(expected), i)
