@@ -85,7 +85,7 @@ func (*simpleSimpleConsensusSelectionStrategy) SelectOnStopped(globulaStats *sta
 			decision = nodeset.CbsFraud
 		case tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority:
 			decision = nodeset.CbsIncluded
-		case realm.GetNodeApperanceByIndex(i).GetProfile().GetState().IsSuspect():
+		case realm.GetNodeAppearanceByIndex(i).GetProfile().GetState().IsSuspect():
 			decision = nodeset.CbsExcluded
 		}
 		resultSet.Set(i, decision)

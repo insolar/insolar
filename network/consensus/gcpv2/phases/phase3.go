@@ -451,6 +451,6 @@ outer:
 }
 
 func (c *Phase3Controller) handleNodeHashing(index int, digester common.SequenceDigester) {
-	nsh := c.R.GetNodeApperanceByIndex(index).GetNodeStateHashEvidence().GetNodeStateHash()
+	nsh := c.R.GetNodeAppearanceByIndex(index).GetNodeStateHashEvidence().GetNodeStateHash()
 	digester.AddNext(nsh)
 }

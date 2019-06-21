@@ -116,7 +116,7 @@ func (c *Phase2Controller) HandleMemberPacket(reader packets.MemberPacketReader,
 	for _, nb := range p2.GetNeighbourhood() {
 
 		nid := nb.GetShortNodeID()
-		neighbour, err := c.R.GetNodeApperance(nid)
+		neighbour, err := c.R.GetNodeAppearance(nid)
 		if err != nil {
 			// TODO unknown node - blame sender
 			panic(fmt.Errorf("unlisted neighbour node: %v", nid))

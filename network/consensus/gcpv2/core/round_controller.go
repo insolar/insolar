@@ -269,7 +269,7 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 		}
 
 		if prep == nil { // Full realm is active - we can use node projections
-			src, err := r.realm.GetNodeApperance(sid)
+			src, err := r.realm.GetNodeAppearance(sid)
 			if err != nil {
 				return err
 			}

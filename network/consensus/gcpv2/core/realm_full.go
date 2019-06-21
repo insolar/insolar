@@ -243,15 +243,15 @@ func (r *FullRealm) GetActiveNode(id common.ShortNodeID) (common2.NodeProfile, e
 	return np, nil
 }
 
-func (r *FullRealm) GetNodeApperance(id common.ShortNodeID) (*NodeAppearance, error) {
+func (r *FullRealm) GetNodeAppearance(id common.ShortNodeID) (*NodeAppearance, error) {
 	np, err := r.GetActiveNode(id)
 	if err != nil {
 		return nil, err
 	}
-	return r.GetNodeApperanceByIndex(np.GetIndex()), nil
+	return r.GetNodeAppearanceByIndex(np.GetIndex()), nil
 }
 
-func (r *FullRealm) GetNodeApperanceByIndex(idx int) *NodeAppearance {
+func (r *FullRealm) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
 	return &r.nodes[idx]
 }
 
