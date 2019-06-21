@@ -37,7 +37,6 @@ type SetRequest struct {
 	jetID     insolar.JetID
 
 	dep struct {
-		pcs           insolar.PlatformCryptographyScheme
 		writer        hot.WriteAccessor
 		records       object.RecordModifier
 		recentStorage recentstorage.Provider
@@ -62,7 +61,6 @@ func NewSetRequest(
 }
 
 func (p *SetRequest) Dep(
-	pcs insolar.PlatformCryptographyScheme,
 	w hot.WriteAccessor,
 	r object.RecordModifier,
 	rs recentstorage.Provider,
@@ -70,7 +68,6 @@ func (p *SetRequest) Dep(
 	pl int,
 	s bus.Sender,
 ) {
-	p.dep.pcs = pcs
 	p.dep.writer = w
 	p.dep.records = r
 	p.dep.recentStorage = rs
