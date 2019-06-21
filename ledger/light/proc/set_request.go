@@ -41,7 +41,6 @@ type SetRequest struct {
 		records       object.RecordModifier
 		recentStorage recentstorage.Provider
 		pendings      object.PendingModifier
-		pendingsLimit int
 		sender        bus.Sender
 	}
 }
@@ -65,14 +64,12 @@ func (p *SetRequest) Dep(
 	r object.RecordModifier,
 	rs recentstorage.Provider,
 	pnds object.PendingModifier,
-	pl int,
 	s bus.Sender,
 ) {
 	p.dep.writer = w
 	p.dep.records = r
 	p.dep.recentStorage = rs
 	p.dep.pendings = pnds
-	p.dep.pendingsLimit = pl
 	p.dep.sender = s
 }
 
@@ -116,7 +113,7 @@ func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq 
 
 	// Skip object creation and genesis
 	if req.CallType == record.CTMethod {
-		if p.dep.recentStorage.Count() > p.dep.pendingsLimit {
+		if p.dep.recentStorage.Count() > recentstorage.PendingRequestsLimit {
 			return insolar.ErrTooManyPendingRequests
 		}
 		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
