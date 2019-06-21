@@ -106,8 +106,16 @@ func (rd RootDomain) GetBurnAddress() (string, error) {
 }
 
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
+	if _, ok := rd.PublicKeyMap[TrimPublicKey(publicKey)]; ok {
+		return fmt.Errorf("member for this publicKey already exist")
+	}
 	rd.PublicKeyMap[TrimPublicKey(publicKey)] = memberRef
+
+	if _, ok := rd.PublicKeyMap[TrimPublicKey(burnAddress)]; ok {
+		return fmt.Errorf("member for this burnAddress already exist")
+	}
 	rd.BurnAddressMap[TrimBurnAddress(burnAddress)] = memberRef
+
 	return nil
 }
 
