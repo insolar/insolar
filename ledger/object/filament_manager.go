@@ -236,7 +236,14 @@ func (m *FilamentManager) calculatePending(
 		iter = filament.PreviousRecord
 	}
 
-	return pending, nil
+	// We need to reverse pending because we iterated from the end when selected them.
+	ordered := make([]insolar.ID, len(pending))
+	count := len(pending)
+	for i, id := range pending {
+		ordered[count-i] = id
+	}
+
+	return ordered, nil
 }
 
 func (m *FilamentManager) fetchFilament(
