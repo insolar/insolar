@@ -66,7 +66,7 @@ func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
 		Payload: buf,
 	}
 
-	handler := NewSetRequest(emptyDeps(), msg, false)
+	handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
@@ -102,7 +102,7 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	handler := NewSetRequest(emptyDeps(), msg, false)
+	handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
@@ -138,7 +138,7 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	handler := NewSetRequest(emptyDeps(), msg, false)
+	handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	assert.EqualError(t, err, "object is nil")
@@ -157,7 +157,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 		t.Parallel()
 		f := mockProcedures(t, nil, errors.New("something strange from checkjet"), nil, nil)
 
-		handler := NewSetRequest(emptyDeps(), msg, false)
+		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "something strange from checkjet")
 	})
@@ -166,7 +166,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 		t.Parallel()
 		f := mockProcedures(t, nil, proc.ErrNotExecutor, nil, nil)
 
-		handler := NewSetRequest(emptyDeps(), msg, false)
+		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -175,7 +175,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 		t.Parallel()
 		f := mockProcedures(t, nil, proc.ErrNotExecutor, nil, nil)
 
-		handler := NewSetRequest(emptyDeps(), msg, true)
+		handler := NewSetRequest(proc.NewDependenciesMock(), msg, true)
 		err := handler.Present(ctx, f)
 		require.Error(t, err)
 		assert.Equal(t, proc.ErrNotExecutor, err)
@@ -195,7 +195,7 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 		t.Parallel()
 		f := mockProcedures(t, nil, nil, errors.New("error from waithot"), nil)
 
-		handler := NewSetRequest(emptyDeps(), msg, false)
+		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from waithot")
 	})
@@ -204,7 +204,7 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 		t.Parallel()
 		f := mockProcedures(t, nil, nil, nil, nil)
 
-		handler := NewSetRequest(emptyDeps(), msg, false)
+		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -223,7 +223,7 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 		t.Parallel()
 		f := mockProcedures(t, nil, nil, nil, errors.New("error from setrequest"))
 
-		handler := NewSetRequest(emptyDeps(), msg, false)
+		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from setrequest")
 	})
@@ -232,7 +232,7 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 		t.Parallel()
 		f := mockProcedures(t, nil, nil, nil, nil)
 
-		handler := NewSetRequest(emptyDeps(), msg, false)
+		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -262,15 +262,6 @@ func correctMetaMsg(t *testing.T) payload.Meta {
 	}
 
 	return msg
-}
-
-func emptyDeps() *proc.Dependencies {
-	return &proc.Dependencies{
-		CalculateID: func(p *proc.CalculateID) {},
-		CheckJet:    func(p *proc.CheckJet) {},
-		WaitHotWM:   func(p *proc.WaitHotWM) {},
-		SetRequest:  func(p *proc.SetRequest) {},
-	}
 }
 
 func mockProcedures(
