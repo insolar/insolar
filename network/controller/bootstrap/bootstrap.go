@@ -54,7 +54,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"math"
 	"math/rand"
 	"strings"
 	"sync"
@@ -241,7 +240,7 @@ func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.Bootstrap
 		return bc.ZeroBootstrap(ctx)
 	}
 
-	minRequests := int(math.Floor(0.5*float64(discoveryCount))) + 1
+	discoveryMajority := discoveryCount - (discoveryCount-1)/2
 
 	var bootstrapResults []*network.BootstrapResult
 	var hosts []*host.Host
@@ -249,12 +248,13 @@ func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.Bootstrap
 		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 
-		// TODO: ugly hack to allow create network w/o waiting for all discovery nodes
-		if len(hosts) >= minRequests {
-			// we connected to all discovery nodes
+		connectedTo := len(hosts) // Include origin
+
+		if connectedTo >= discoveryMajority {
+			// we connected to majority discovery nodes
 			break
 		} else {
-			logger.Infof("[ BootstrapDiscovery ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
+			logger.Infof("[ BootstrapDiscovery ] Connected to %d/%d(%d) discovery nodes", len(hosts), discoveryMajority, discoveryCount)
 		}
 	}
 	reconnectRequests := 0
@@ -263,7 +263,7 @@ func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.Bootstrap
 			reconnectRequests++
 		}
 	}
-	if reconnectRequests >= minRequests {
+	if reconnectRequests >= discoveryMajority {
 		logger.Infof("[ BootstrapDiscovery ] Need to reconnect as joiner (requested by %d/%d discovery nodes)",
 			reconnectRequests, discoveryCount)
 		return nil, ErrReconnectRequired
