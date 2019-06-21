@@ -19,21 +19,21 @@ package handle
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetChildren struct {
 	dep *proc.Dependencies
 
-	message *watermillMsg.Message
+	message payload.Meta
 	parcel  insolar.Parcel
 }
 
-func NewGetChildren(dep *proc.Dependencies, msg *watermillMsg.Message, parcel insolar.Parcel) *GetChildren {
+func NewGetChildren(dep *proc.Dependencies, msg payload.Meta, parcel insolar.Parcel) *GetChildren {
 	return &GetChildren{
 		dep:     dep,
 		message: msg,

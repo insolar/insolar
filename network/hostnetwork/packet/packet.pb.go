@@ -4,19 +4,20 @@
 package packet
 
 import (
-	bytes "bytes"
-	fmt "fmt"
+	"bytes"
+	"fmt"
+	"io"
+	"math"
+	"reflect"
+	"strconv"
+	"strings"
+
 	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
-	pulse "github.com/insolar/insolar/insolar/pulse"
-	github_com_insolar_insolar_network_consensus_packets "github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/insolar/pulse"
+	github_com_insolar_insolar_network_consensusv1_packets "github.com/insolar/insolar/network/consensusv1/packets"
 	github_com_insolar_insolar_network_hostnetwork_host "github.com/insolar/insolar/network/hostnetwork/host"
-	io "io"
-	math "math"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1163,9 +1164,9 @@ func (m *PulseRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_PulseRequest proto.InternalMessageInfo
 
 type BootstrapRequest struct {
-	JoinClaim     *github_com_insolar_insolar_network_consensus_packets.NodeJoinClaim `protobuf:"bytes,1,opt,name=JoinClaim,proto3,customtype=github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim" json:"JoinClaim,omitempty"`
-	LastNodePulse github_com_insolar_insolar_insolar.PulseNumber                      `protobuf:"varint,2,opt,name=LastNodePulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LastNodePulse"`
-	Permission    *Permission                                                         `protobuf:"bytes,3,opt,name=Permission,proto3" json:"Permission,omitempty"`
+	JoinClaim     *github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim `protobuf:"bytes,1,opt,name=JoinClaim,proto3,customtype=github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim" json:"JoinClaim,omitempty"`
+	LastNodePulse github_com_insolar_insolar_insolar.PulseNumber                        `protobuf:"varint,2,opt,name=LastNodePulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LastNodePulse"`
+	Permission    *Permission                                                           `protobuf:"bytes,3,opt,name=Permission,proto3" json:"Permission,omitempty"`
 }
 
 func (m *BootstrapRequest) Reset()      { *m = BootstrapRequest{} }
@@ -1237,9 +1238,9 @@ func (m *AuthorizeRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_AuthorizeRequest proto.InternalMessageInfo
 
 type RegisterRequest struct {
-	SessionID uint64                                                              `protobuf:"varint,1,opt,name=SessionID,proto3" json:"SessionID,omitempty"`
-	Version   string                                                              `protobuf:"bytes,2,opt,name=Version,proto3" json:"Version,omitempty"`
-	JoinClaim *github_com_insolar_insolar_network_consensus_packets.NodeJoinClaim `protobuf:"bytes,3,opt,name=JoinClaim,proto3,customtype=github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim" json:"JoinClaim,omitempty"`
+	SessionID uint64                                                                `protobuf:"varint,1,opt,name=SessionID,proto3" json:"SessionID,omitempty"`
+	Version   string                                                                `protobuf:"bytes,2,opt,name=Version,proto3" json:"Version,omitempty"`
+	JoinClaim *github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim `protobuf:"bytes,3,opt,name=JoinClaim,proto3,customtype=github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim" json:"JoinClaim,omitempty"`
 }
 
 func (m *RegisterRequest) Reset()      { *m = RegisterRequest{} }
@@ -1275,8 +1276,8 @@ func (m *RegisterRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_RegisterRequest proto.InternalMessageInfo
 
 type GenesisRequest struct {
-	LastPulse github_com_insolar_insolar_insolar.PulseNumber                      `protobuf:"varint,1,opt,name=LastPulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LastPulse"`
-	Discovery *github_com_insolar_insolar_network_consensus_packets.NodeJoinClaim `protobuf:"bytes,2,opt,name=Discovery,proto3,customtype=github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim" json:"Discovery,omitempty"`
+	LastPulse github_com_insolar_insolar_insolar.PulseNumber                        `protobuf:"varint,1,opt,name=LastPulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LastPulse"`
+	Discovery *github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim `protobuf:"bytes,2,opt,name=Discovery,proto3,customtype=github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim" json:"Discovery,omitempty"`
 }
 
 func (m *GenesisRequest) Reset()      { *m = GenesisRequest{} }
@@ -7548,7 +7549,7 @@ func (m *BootstrapRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_insolar_insolar_network_consensus_packets.NodeJoinClaim
+			var v github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim
 			m.JoinClaim = &v
 			if err := m.JoinClaim.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -7829,7 +7830,7 @@ func (m *RegisterRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_insolar_insolar_network_consensus_packets.NodeJoinClaim
+			var v github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim
 			m.JoinClaim = &v
 			if err := m.JoinClaim.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -7936,7 +7937,7 @@ func (m *GenesisRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_insolar_insolar_network_consensus_packets.NodeJoinClaim
+			var v github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim
 			m.Discovery = &v
 			if err := m.Discovery.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err

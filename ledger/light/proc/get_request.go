@@ -19,9 +19,9 @@ package proc
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
@@ -29,7 +29,7 @@ import (
 )
 
 type GetRequest struct {
-	message *watermillMsg.Message
+	message payload.Meta
 	request insolar.ID
 
 	Dep struct {
@@ -38,7 +38,7 @@ type GetRequest struct {
 	}
 }
 
-func NewGetRequest(request insolar.ID, message *watermillMsg.Message) *GetRequest {
+func NewGetRequest(request insolar.ID, message payload.Meta) *GetRequest {
 	return &GetRequest{
 		request: request,
 		message: message,

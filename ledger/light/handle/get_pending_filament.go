@@ -19,19 +19,19 @@ package handle
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetPendingFilament struct {
 	dep       *proc.Dependencies
 	msg       *message.GetPendingFilament
-	wmmessage *watermillMsg.Message
+	wmmessage payload.Meta
 }
 
-func NewGetPendingFilament(dep *proc.Dependencies, wmmessage *watermillMsg.Message, msg *message.GetPendingFilament) *GetPendingFilament {
+func NewGetPendingFilament(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.GetPendingFilament) *GetPendingFilament {
 	return &GetPendingFilament{
 		dep:       dep,
 		msg:       msg,

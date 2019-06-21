@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/api/seedmanager"
 )
 
 const CallUrl = "http://localhost:19192/api/call"
@@ -162,6 +163,7 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.ContractRequester = cr
 	timeoutSuite.api.CertificateManager = cm
 	timeoutSuite.api.Start(timeoutSuite.ctx)
+	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(time.Minute, time.Minute)
 
 	requester.SetTimeout(25)
 	suite.Run(t, timeoutSuite)

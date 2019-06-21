@@ -111,7 +111,7 @@ func initComponents(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	cryptographyService insolar.CryptographyService,
-	platformCryptographyScheme insolar.PlatformCryptographyScheme,
+	pcs insolar.PlatformCryptographyScheme,
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
@@ -154,7 +154,7 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(pubsub, pulses, jc)
+	b := bus.NewBus(pubsub, pulses, jc, pcs)
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
@@ -170,7 +170,7 @@ func initComponents(
 
 	cm.Register(
 		terminationHandler,
-		platformCryptographyScheme,
+		pcs,
 		keyStore,
 		cryptographyService,
 		keyProcessor,
@@ -187,6 +187,7 @@ func initComponents(
 		messageBus,
 		contractRequester,
 		artifacts.NewClient(b),
+		artifacts.NewDescriptorsCache(),
 		jc,
 		pulses,
 		jet.NewStore(),

@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	wmessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 
@@ -37,7 +36,7 @@ import (
 type GetIndex struct {
 	object  insolar.Reference
 	jet     insolar.JetID
-	message *wmessage.Message
+	message payload.Meta
 	pn      insolar.PulseNumber
 
 	Result struct {
@@ -54,7 +53,7 @@ type GetIndex struct {
 	}
 }
 
-func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, msg *wmessage.Message, pn insolar.PulseNumber) *GetIndex {
+func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, msg payload.Meta, pn insolar.PulseNumber) *GetIndex {
 	return &GetIndex{
 		object:  obj,
 		jet:     jetID,
@@ -137,7 +136,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 type GetIndexWM struct {
 	object  insolar.ID
 	jet     insolar.JetID
-	message *wmessage.Message
+	message payload.Meta
 
 	Result struct {
 		Index object.Lifeline
@@ -153,7 +152,7 @@ type GetIndexWM struct {
 	}
 }
 
-func NewGetIndexWM(obj insolar.ID, jetID insolar.JetID, msg *wmessage.Message) *GetIndexWM {
+func NewGetIndexWM(obj insolar.ID, jetID insolar.JetID, msg payload.Meta) *GetIndexWM {
 	return &GetIndexWM{
 		object:  obj,
 		jet:     jetID,

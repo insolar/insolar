@@ -19,19 +19,19 @@ package handle
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type UpdateObject struct {
 	dep       *proc.Dependencies
 	msg       *message.UpdateObject
-	wmmessage *watermillMsg.Message
+	wmmessage payload.Meta
 }
 
-func NewUpdateObject(dep *proc.Dependencies, wmmessage *watermillMsg.Message, msg *message.UpdateObject) *UpdateObject {
+func NewUpdateObject(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.UpdateObject) *UpdateObject {
 	return &UpdateObject{
 		dep:       dep,
 		msg:       msg,

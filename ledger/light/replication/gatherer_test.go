@@ -17,7 +17,6 @@
 package replication
 
 import (
-	"math/rand"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -187,17 +186,4 @@ func getMaterialRecord() record.Material {
 	}
 
 	return materialRecord
-}
-
-// sizedSlice generates random byte slice fixed size.
-func sizedSlice(size int32) (blob []byte) {
-	blob = make([]byte, size)
-	rand.Read(blob)
-	return
-}
-
-// slice generates random byte slice with random size between 0 and 1024.
-func slice() []byte {
-	size := rand.Int31n(1024)
-	return sizedSlice(size)
 }

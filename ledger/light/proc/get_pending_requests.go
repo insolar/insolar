@@ -19,16 +19,16 @@ package proc
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 )
 
 type GetPendingRequests struct {
-	message  *watermillMsg.Message
+	message  payload.Meta
 	msg      *message.GetPendingRequests
 	jet      insolar.JetID
 	reqPulse insolar.PulseNumber
@@ -39,7 +39,7 @@ type GetPendingRequests struct {
 	}
 }
 
-func NewGetPendingRequests(jetID insolar.JetID, message *watermillMsg.Message, msg *message.GetPendingRequests, reqPulse insolar.PulseNumber) *GetPendingRequests {
+func NewGetPendingRequests(jetID insolar.JetID, message payload.Meta, msg *message.GetPendingRequests, reqPulse insolar.PulseNumber) *GetPendingRequests {
 	return &GetPendingRequests{
 		msg:      msg,
 		message:  message,

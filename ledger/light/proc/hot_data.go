@@ -19,7 +19,7 @@ package proc
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -35,7 +35,7 @@ import (
 )
 
 type HotData struct {
-	message *watermillMsg.Message
+	message payload.Meta
 	msg     *message.HotData
 
 	Dep struct {
@@ -51,7 +51,7 @@ type HotData struct {
 	}
 }
 
-func NewHotData(msg *message.HotData, message *watermillMsg.Message) *HotData {
+func NewHotData(msg *message.HotData, message payload.Meta) *HotData {
 	return &HotData{
 		msg:     msg,
 		message: message,
@@ -114,11 +114,21 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 	}()
 
+	p.Dep.JetStorage.Update(
+		ctx, p.msg.PulseNumber, true, jetID,
+	)
+
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
 	for _, meta := range p.msg.HotIndexes {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
 		if err != nil {
 			logger.Error(err)
+			continue
+		}
+
+		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.msg.PulseNumber, meta.ObjID)
+		if objJetID != jetID {
+			logger.Warn("received wrong id")
 			continue
 		}
 
@@ -139,10 +149,6 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 	}
-
-	p.Dep.JetStorage.Update(
-		ctx, p.msg.PulseNumber, true, jetID,
-	)
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
 

@@ -25,14 +25,16 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/pkg/errors"
 )
 
 type SetBlob struct {
-	message *watermillMsg.Message
+	message payload.Meta
 	msg     *message.SetBlob
 	jet     insolar.JetID
 
@@ -45,7 +47,7 @@ type SetBlob struct {
 	}
 }
 
-func NewSetBlob(jetID insolar.JetID, message *watermillMsg.Message, msg *message.SetBlob) *SetBlob {
+func NewSetBlob(jetID insolar.JetID, message payload.Meta, msg *message.SetBlob) *SetBlob {
 	return &SetBlob{
 		msg:     msg,
 		message: message,
@@ -69,6 +71,9 @@ func (p *SetBlob) reply(ctx context.Context) bus.Reply {
 	done, err := p.Dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err == hot.ErrWriteClosed {
 		return bus.Reply{Err: flow.ErrCancelled}
+	}
+	if err != nil {
+		return bus.Reply{Err: errors.Wrap(err, "failed to start write")}
 	}
 	defer done()
 	msg := p.msg

@@ -48,60 +48,49 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package claimhandler
+package phases
 
 import (
-	"bytes"
-	"container/heap"
+	"sync"
 
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
-// Queue implements heap.Interface.
-type Queue []*Claim
+type HashStorage struct {
+	proofLock sync.RWMutex
+	proofs    map[insolar.Reference]*packets.NodePulseProof
 
-type Claim struct {
-	value    packets.ReferendumClaim
-	priority []byte
-	index    int
+	// ghs does not need a lock because it is not accessed concurrently
+	ghs map[insolar.Reference]packets.GlobuleHashSignature
 }
 
-func (q *Queue) PushClaim(claim packets.ReferendumClaim, priority []byte) {
-	item := &Claim{
-		value:    claim,
-		index:    q.Len(),
-		priority: priority,
+func NewHashStorage() *HashStorage {
+	return &HashStorage{
+		proofs: make(map[insolar.Reference]*packets.NodePulseProof),
+		ghs:    make(map[insolar.Reference]packets.GlobuleHashSignature),
 	}
-	heap.Push(q, item)
 }
 
-func (q *Queue) Push(x interface{}) {
-	item := x.(*Claim)
-	*q = append(*q, item)
+func (hs *HashStorage) GetGlobuleHashSignature(ref insolar.Reference) (packets.GlobuleHashSignature, bool) {
+	ghs, ok := hs.ghs[ref]
+	return ghs, ok
 }
 
-func (q *Queue) PopClaim() packets.ReferendumClaim {
-	return heap.Pop(q).(packets.ReferendumClaim)
+func (hs *HashStorage) SetGlobuleHashSignature(ref insolar.Reference, ghs packets.GlobuleHashSignature) {
+	hs.ghs[ref] = ghs
 }
 
-func (q *Queue) Pop() interface{} {
-	l := q.Len()
-	item := (*q)[l-1]
-	*q = (*q)[0 : l-1]
-	return item.value
+func (hs *HashStorage) AddProof(nodeID insolar.Reference, proof *packets.NodePulseProof) {
+	hs.proofLock.Lock()
+	defer hs.proofLock.Unlock()
+
+	hs.proofs[nodeID] = proof
 }
 
-func (q Queue) Swap(i, j int) {
-	q[i], q[j] = q[j], q[i]
-	q[i].index = i
-	q[j].index = j
-}
+func (hs *HashStorage) GetProof(nodeID insolar.Reference) *packets.NodePulseProof {
+	hs.proofLock.RLock()
+	defer hs.proofLock.RUnlock()
 
-func (q Queue) Len() int {
-	return len(q)
-}
-
-// Less returns true if i > j cuz we need a greater to pop. Otherwise returns false.
-func (q Queue) Less(i, j int) bool {
-	return bytes.Compare(q[i].priority, q[j].priority) > 0
+	return hs.proofs[nodeID]
 }

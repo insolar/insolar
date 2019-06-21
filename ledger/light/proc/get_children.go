@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -36,7 +37,7 @@ type GetChildren struct {
 	index   object.Lifeline
 	msg     *message.GetChildren
 	parcel  insolar.Parcel
-	message *watermillMsg.Message
+	message payload.Meta
 
 	Dep struct {
 		Coordinator            jet.Coordinator
@@ -48,7 +49,7 @@ type GetChildren struct {
 	}
 }
 
-func NewGetChildren(index object.Lifeline, msg *message.GetChildren, parcel insolar.Parcel, message *watermillMsg.Message) *GetChildren {
+func NewGetChildren(index object.Lifeline, msg *message.GetChildren, parcel insolar.Parcel, message payload.Meta) *GetChildren {
 	return &GetChildren{
 		index:   index,
 		msg:     msg,

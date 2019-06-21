@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -41,7 +42,7 @@ import (
 type UpdateObject struct {
 	JetID        insolar.JetID
 	Message      *message.UpdateObject
-	watermillMsg *watermillMsg.Message
+	watermillMsg payload.Meta
 	PulseNumber  insolar.PulseNumber
 
 	Dep struct {
@@ -60,7 +61,7 @@ type UpdateObject struct {
 	}
 }
 
-func NewUpdateObject(jetID insolar.JetID, message *message.UpdateObject, pulseNumber insolar.PulseNumber, watermillMsg *watermillMsg.Message) *UpdateObject {
+func NewUpdateObject(jetID insolar.JetID, message *message.UpdateObject, pulseNumber insolar.PulseNumber, watermillMsg payload.Meta) *UpdateObject {
 	return &UpdateObject{
 		JetID:        jetID,
 		Message:      message,
@@ -85,6 +86,9 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	done, err := p.Dep.WriteAccessor.Begin(ctx, p.PulseNumber)
 	if err == hot.ErrWriteClosed {
 		return bus.Reply{Err: flow.ErrCancelled}
+	}
+	if err != nil {
+		return bus.Reply{Err: errors.Wrap(err, "failed to start write")}
 	}
 	defer done()
 

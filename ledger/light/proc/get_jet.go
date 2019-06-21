@@ -19,17 +19,17 @@ package proc
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 )
 
 type GetJet struct {
 	msg     *message.GetJet
-	message *watermillMsg.Message
+	message payload.Meta
 
 	Dep struct {
 		Jets   jet.Storage
@@ -37,7 +37,7 @@ type GetJet struct {
 	}
 }
 
-func NewGetJet(msg *message.GetJet, message *watermillMsg.Message) *GetJet {
+func NewGetJet(msg *message.GetJet, message payload.Meta) *GetJet {
 	return &GetJet{
 		msg:     msg,
 		message: message,

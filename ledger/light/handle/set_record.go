@@ -19,8 +19,8 @@ package handle
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -32,10 +32,10 @@ import (
 type SetRecord struct {
 	dep       *proc.Dependencies
 	msg       *message.SetRecord
-	wmmessage *watermillMsg.Message
+	wmmessage payload.Meta
 }
 
-func NewSetRecord(dep *proc.Dependencies, wmmessage *watermillMsg.Message, msg *message.SetRecord) *SetRecord {
+func NewSetRecord(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.SetRecord) *SetRecord {
 	return &SetRecord{
 		dep:       dep,
 		msg:       msg,

@@ -61,7 +61,6 @@ import (
 	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/network/controller/common"
@@ -76,8 +75,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/consensus/phases"
+	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
@@ -105,7 +104,6 @@ type ServiceNetwork struct {
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	Pub                 message.Publisher           `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
-	Sender              bus.Sender                  `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager           `inject:"subcomponent"`
@@ -373,31 +371,25 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-	logger := inslogger.FromContext(ctx)
-	msgType, err := payload.UnmarshalType(msg.Payload)
+
+	err := n.sendMessage(ctx, msg)
 	if err != nil {
-		logger.Error("failed to extract message type")
+		return nil, errors.Wrap(err, "failed to send message")
 	}
-
-	err = n.sendMessage(ctx, msg)
-	if err != nil {
-		n.replyError(ctx, msg, err)
-		return nil, nil
-	}
-
-	logger.WithFields(map[string]interface{}{
-		"msg_type":       msgType.String(),
-		"correlation_id": middleware.MessageCorrelationID(msg),
-	}).Info("Network sent message")
-
 	return nil, nil
 }
 
 func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) error {
-	node, err := n.wrapMeta(msg)
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to send message")
+		return errors.Wrap(err, "failed to unwrap message")
 	}
+	if meta.Receiver.IsEmpty() {
+		return errors.New("failed to send message: Receiver in meta message not set")
+	}
+
+	node := meta.Receiver
 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
@@ -426,57 +418,6 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	return nil
 }
 
-func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) {
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"correlation_id": middleware.MessageCorrelationID(msg),
-	})
-	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error()))
-		return
-	}
-	wrapper := payload.Meta{
-		Payload: msg.Payload,
-		Sender:  n.NodeKeeper.GetOrigin().ID(),
-	}
-	buf, err := wrapper.Marshal()
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to wrap error message (%s)", repErr.Error()))
-		return
-	}
-	msg.Payload = buf
-	n.Sender.Reply(ctx, msg, errMsg)
-}
-
-func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
-	receiver := msg.Metadata.Get(bus.MetaReceiver)
-	if receiver == "" {
-		return insolar.Reference{}, errors.New("Receiver in msg.Metadata not set")
-	}
-	receiverRef, err := insolar.NewReferenceFromBase58(receiver)
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
-	}
-
-	latestPulse, err := n.PulseAccessor.Latest(context.Background())
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to fetch pulse")
-	}
-	wrapper := payload.Meta{
-		Payload:  msg.Payload,
-		Receiver: *receiverRef,
-		Sender:   n.NodeKeeper.GetOrigin().ID(),
-		Pulse:    latestPulse.PulseNumber,
-	}
-	buf, err := wrapper.Marshal()
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to wrap message")
-	}
-	msg.Payload = buf
-
-	return *receiverRef, nil
-}
-
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }
@@ -497,15 +438,6 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 	if msg == nil {
 		fmt.Println("processIncoming, get nil msg")
 	}
-
-	msgType, err := payload.UnmarshalTypeFromMeta(msg.Payload)
-	if err != nil {
-		logger.Error("failed to extract message type")
-	}
-	logger.WithFields(map[string]interface{}{
-		"msg_type":       msgType.String(),
-		"correlation_id": middleware.MessageCorrelationID(msg),
-	}).Info("Network received message")
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {

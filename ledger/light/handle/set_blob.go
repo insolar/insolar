@@ -19,19 +19,19 @@ package handle
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type SetBlob struct {
 	dep       *proc.Dependencies
 	msg       *message.SetBlob
-	wmmessage *watermillMsg.Message
+	wmmessage payload.Meta
 }
 
-func NewSetBlob(dep *proc.Dependencies, wmmessage *watermillMsg.Message, msg *message.SetBlob) *SetBlob {
+func NewSetBlob(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.SetBlob) *SetBlob {
 	return &SetBlob{
 		dep:       dep,
 		msg:       msg,

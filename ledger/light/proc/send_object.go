@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -36,7 +34,7 @@ import (
 )
 
 type SendObject struct {
-	message  *message.Message
+	message  payload.Meta
 	objectID insolar.ID
 	index    object.Lifeline
 
@@ -54,7 +52,9 @@ type SendObject struct {
 }
 
 func NewSendObject(
-	msg *message.Message, id insolar.ID, idx object.Lifeline,
+	msg payload.Meta,
+	id insolar.ID,
+	idx object.Lifeline,
 ) *SendObject {
 	return &SendObject{
 		message:  msg,
@@ -106,10 +106,13 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 	}
 
 	sendPassState := func(stateID insolar.ID) error {
+		buf, err := p.message.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal origin meta message")
+		}
 		msg, err := payload.NewMessage(&payload.PassState{
-			Origin:        p.message.Payload,
-			StateID:       stateID,
-			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+			Origin:  buf,
+			StateID: stateID,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
@@ -157,6 +160,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
+
 		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		logger.Info("sending index")
 	}

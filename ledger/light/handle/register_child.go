@@ -19,21 +19,21 @@ package handle
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type RegisterChild struct {
 	dep       *proc.Dependencies
-	wmmessage *watermillMsg.Message
+	wmmessage payload.Meta
 	message   *message.RegisterChild
 	pulse     insolar.PulseNumber
 }
 
-func NewRegisterChild(dep *proc.Dependencies, wmmessage *watermillMsg.Message, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
+func NewRegisterChild(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
 	return &RegisterChild{
 		dep:       dep,
 		wmmessage: wmmessage,

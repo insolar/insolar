@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 
@@ -38,7 +38,7 @@ type RegisterChild struct {
 	msg     *message.RegisterChild
 	pulse   insolar.PulseNumber
 	idx     object.Lifeline
-	message *watermillMsg.Message
+	message payload.Meta
 
 	Dep struct {
 		IDLocker              object.IDLocker
@@ -51,7 +51,7 @@ type RegisterChild struct {
 	}
 }
 
-func NewRegisterChild(jet insolar.JetID, msg *message.RegisterChild, pulse insolar.PulseNumber, index object.Lifeline, message *watermillMsg.Message) *RegisterChild {
+func NewRegisterChild(jet insolar.JetID, msg *message.RegisterChild, pulse insolar.PulseNumber, index object.Lifeline, message payload.Meta) *RegisterChild {
 	return &RegisterChild{
 		jet:     jet,
 		msg:     msg,

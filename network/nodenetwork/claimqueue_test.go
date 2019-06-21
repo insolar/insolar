@@ -53,7 +53,7 @@ package nodenetwork
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/stretchr/testify/assert"
 )
 

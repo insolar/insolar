@@ -19,20 +19,20 @@ package handle
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetDelegate struct {
 	dep    *proc.Dependencies
-	msg    *watermillMsg.Message
+	msg    payload.Meta
 	parcel insolar.Parcel
 }
 
-func NewGetDelegate(dep *proc.Dependencies, msg *watermillMsg.Message, parcel insolar.Parcel) *GetDelegate {
+func NewGetDelegate(dep *proc.Dependencies, msg payload.Meta, parcel insolar.Parcel) *GetDelegate {
 	return &GetDelegate{
 		dep:    dep,
 		parcel: parcel,

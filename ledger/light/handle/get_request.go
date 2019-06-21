@@ -19,19 +19,19 @@ package handle
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetRequest struct {
 	dep     *proc.Dependencies
-	message *watermillMsg.Message
+	message payload.Meta
 	request insolar.ID
 }
 
-func NewGetRequest(dep *proc.Dependencies, message *watermillMsg.Message, request insolar.ID) *GetRequest {
+func NewGetRequest(dep *proc.Dependencies, message payload.Meta, request insolar.ID) *GetRequest {
 	return &GetRequest{
 		dep:     dep,
 		request: request,

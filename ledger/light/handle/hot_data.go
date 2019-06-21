@@ -20,19 +20,19 @@ import (
 	"context"
 	"fmt"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type HotData struct {
 	dep       *proc.Dependencies
-	wmmessage *watermillMsg.Message
+	wmmessage payload.Meta
 	message   *message.HotData
 }
 
-func NewHotData(dep *proc.Dependencies, wmmessage *watermillMsg.Message, msg *message.HotData) *HotData {
+func NewHotData(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.HotData) *HotData {
 	return &HotData{
 		dep:       dep,
 		wmmessage: wmmessage,

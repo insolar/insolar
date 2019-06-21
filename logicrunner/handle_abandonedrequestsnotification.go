@@ -50,6 +50,7 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 		state.ExecutionState.pending = message.InPending
 		state.ExecutionState.PendingConfirmed = false
 		state.ExecutionState.LedgerHasMoreRequests = true
+		state.ExecutionState.RegisterLogicRunner(p.LR)
 	} else {
 		executionState := state.ExecutionState
 		executionState.Lock()

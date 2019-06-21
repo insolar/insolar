@@ -48,77 +48,71 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phases
+package claimhandler
 
 import (
-	"crypto"
+	"bytes"
+	"crypto/rand"
 	"testing"
 
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/node"
-
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/merkle"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestFirstPhase_HandlePulse(t *testing.T) {
-	firstPhase := &FirstPhaseImpl{}
-
-	n := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
-	nodeKeeper := nodenetwork.NewNodeKeeper(n)
-	nodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{n})
-
-	pulseCalculatorMock := merkle.NewCalculatorMock(t)
-	communicatorMock := NewCommunicatorMock(t)
-	consensusNetworkMock := network.NewConsensusNetworkMock(t)
-	terminationHandler := testutils.NewTerminationHandlerMock(t)
-	CertificateManager := testutils.NewCertificateManagerMock(t)
-	Gatewayer := network.NewGatewayerMock(t)
-	cryptoServ := testutils.NewCryptographyServiceMock(t)
-	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		signature := insolar.SignatureFromBytes(nil)
-		return &signature, nil
+func TestQueue_PushClaim(t *testing.T) {
+	queue := Queue{}
+	elemCount := 20
+	entr := insolar.Entropy{}
+	_, err := rand.Read(entr[:])
+	assert.NoError(t, err)
+	for i := 0; i < elemCount; i++ {
+		claim := getJoinClaim(t, testutils.RandomRef())
+		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
 	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
-		return true
-	}
-
-	cm := component.Manager{}
-	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock,
-		consensusNetworkMock, terminationHandler, CertificateManager, Gatewayer)
-
-	require.NotNil(t, firstPhase.Calculator)
-	require.NotNil(t, firstPhase.NodeKeeper)
-	activeNodes := firstPhase.NodeKeeper.GetAccessor().GetActiveNodes()
-	assert.Equal(t, 1, len(activeNodes))
+	assert.Equal(t, queue.Len(), elemCount)
 }
 
-func Test_consensusReached(t *testing.T) {
-	assert.True(t, consensusReachedBFT(5, 6))
-	assert.False(t, consensusReachedBFT(4, 6))
+func TestQueue_Pop(t *testing.T) {
+	queue := Queue{}
+	elemCount := 20
+	entr := insolar.Entropy{}
+	_, err := rand.Read(entr[:])
+	assert.NoError(t, err)
+	for i := 0; i < elemCount; i++ {
+		claim := getJoinClaim(t, testutils.RandomRef())
+		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
+	}
+	assert.Equal(t, queue.Len(), elemCount)
 
-	assert.True(t, consensusReachedBFT(201, 300))
-	assert.False(t, consensusReachedBFT(200, 300))
-
-	assert.True(t, consensusReachedMajority(4, 6))
-	assert.False(t, consensusReachedMajority(3, 6))
-
-	assert.True(t, consensusReachedMajority(151, 300))
-	assert.False(t, consensusReachedMajority(150, 300))
+	claim := queue.PopClaim().(*packets.NodeJoinClaim)
+	refLen := len(claim.NodeRef.Bytes())
+	prevPriority := make([]byte, refLen)
+	priority := make([]byte, refLen)
+	copy(prevPriority, getPriority(claim.NodeRef, entr))
+	for i := 1; i < elemCount; i++ {
+		claim := queue.PopClaim().(*packets.NodeJoinClaim)
+		copy(priority, getPriority(claim.NodeRef, entr))
+		assert.True(t, bytes.Compare(prevPriority, priority) > 0)
+		copy(prevPriority, priority)
+	}
 }
 
-func Test_getNodeState(t *testing.T) {
-	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	assert.Equal(t, packets.Legit, getNodeState(n, insolar.FirstPulseNumber))
-	n.(node.MutableNode).SetState(insolar.NodeLeaving)
-	n.(node.MutableNode).SetLeavingETA(insolar.FirstPulseNumber + 10)
-	assert.Equal(t, packets.Legit, getNodeState(n, insolar.FirstPulseNumber))
-	n.(node.MutableNode).SetLeavingETA(insolar.FirstPulseNumber - 10)
-	assert.Equal(t, packets.TimedOut, getNodeState(n, insolar.FirstPulseNumber))
+func getJoinClaim(t *testing.T, ref insolar.Reference) *packets.NodeJoinClaim {
+	nodeJoinClaim := &packets.NodeJoinClaim{}
+	nodeJoinClaim.ShortNodeID = insolar.ShortNodeID(77)
+	nodeJoinClaim.RelayNodeID = insolar.ShortNodeID(26)
+	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
+	nodeJoinClaim.JoinsAfter = uint32(67)
+	nodeJoinClaim.NodeRoleRecID = 32
+	nodeJoinClaim.NodeRef = ref
+	_, err := rand.Read(nodeJoinClaim.NodePK[:])
+	require.NoError(t, err)
+	addr, err := packets.NewNodeAddress("127.0.0.1:5566")
+	require.NoError(t, err)
+	nodeJoinClaim.NodeAddress = addr
+
+	return nodeJoinClaim
 }

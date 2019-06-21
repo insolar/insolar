@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"go.opencensus.io/trace"
@@ -32,11 +32,11 @@ import (
 type GetPendingRequests struct {
 	dep       *proc.Dependencies
 	msg       *message.GetPendingRequests
-	wmmessage *watermillMsg.Message
+	wmmessage payload.Meta
 	reqPulse  insolar.PulseNumber
 }
 
-func NewGetPendingRequests(dep *proc.Dependencies, wmmessage *watermillMsg.Message, parcel insolar.Parcel) *GetPendingRequests {
+func NewGetPendingRequests(dep *proc.Dependencies, wmmessage payload.Meta, parcel insolar.Parcel) *GetPendingRequests {
 	return &GetPendingRequests{
 		dep:       dep,
 		msg:       parcel.Message().(*message.GetPendingRequests),

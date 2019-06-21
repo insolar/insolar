@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/payload"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/message"
@@ -32,7 +32,7 @@ import (
 
 type GetPendingFilament struct {
 	msg     *message.GetPendingFilament
-	message *watermillMsg.Message
+	message payload.Meta
 	Dep     struct {
 		PendingAccessor  object.PendingAccessor
 		LifelineAccessor object.LifelineAccessor
@@ -40,7 +40,7 @@ type GetPendingFilament struct {
 	}
 }
 
-func NewGetPendingFilament(msg *message.GetPendingFilament, wmmessage *watermillMsg.Message) *GetPendingFilament {
+func NewGetPendingFilament(msg *message.GetPendingFilament, wmmessage payload.Meta) *GetPendingFilament {
 	return &GetPendingFilament{
 		msg:     msg,
 		message: wmmessage,

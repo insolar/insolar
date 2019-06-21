@@ -19,8 +19,6 @@ package proc
 import (
 	"context"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -33,7 +31,7 @@ import (
 type FetchJet struct {
 	target  insolar.ID
 	pulse   insolar.PulseNumber
-	message *message.Message
+	message payload.Meta
 
 	Result struct {
 		Jet insolar.JetID
@@ -48,7 +46,7 @@ type FetchJet struct {
 	}
 }
 
-func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, message *message.Message) *FetchJet {
+func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, message payload.Meta) *FetchJet {
 	return &FetchJet{
 		target:  target,
 		pulse:   pn,
@@ -94,7 +92,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 type WaitHot struct {
 	jetID   insolar.JetID
 	pulse   insolar.PulseNumber
-	message *message.Message
+	message payload.Meta
 
 	Dep struct {
 		Waiter hot.JetWaiter
@@ -102,7 +100,7 @@ type WaitHot struct {
 	}
 }
 
-func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, message *message.Message) *WaitHot {
+func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, message payload.Meta) *WaitHot {
 	return &WaitHot{
 		jetID:   j,
 		pulse:   pn,
@@ -124,7 +122,7 @@ func (p *WaitHot) Proceed(ctx context.Context) error {
 type CheckJet struct {
 	target  insolar.ID
 	pulse   insolar.PulseNumber
-	message *message.Message
+	message payload.Meta
 	pass    bool
 
 	Result struct {
@@ -139,7 +137,7 @@ type CheckJet struct {
 	}
 }
 
-func NewCheckJet(target insolar.ID, pn insolar.PulseNumber, msg *message.Message, pass bool) *CheckJet {
+func NewCheckJet(target insolar.ID, pn insolar.PulseNumber, msg payload.Meta, pass bool) *CheckJet {
 	return &CheckJet{
 		target:  target,
 		pulse:   pn,
@@ -163,9 +161,12 @@ func (p *CheckJet) Proceed(ctx context.Context) error {
 			return ErrNotExecutor
 		}
 
+		buf, err := p.message.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal origin meta message")
+		}
 		msg, err := payload.NewMessage(&payload.Pass{
-			Origin:        p.message.Payload,
-			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+			Origin: buf,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
@@ -184,7 +185,7 @@ func (p *CheckJet) Proceed(ctx context.Context) error {
 type WaitHotWM struct {
 	jetID   insolar.JetID
 	pulse   insolar.PulseNumber
-	message *message.Message
+	message payload.Meta
 
 	Dep struct {
 		Waiter hot.JetWaiter
@@ -192,7 +193,7 @@ type WaitHotWM struct {
 	}
 }
 
-func NewWaitHotWM(j insolar.JetID, pn insolar.PulseNumber, msg *message.Message) *WaitHotWM {
+func NewWaitHotWM(j insolar.JetID, pn insolar.PulseNumber, msg payload.Meta) *WaitHotWM {
 	return &WaitHotWM{
 		jetID:   j,
 		pulse:   pn,

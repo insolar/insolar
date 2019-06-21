@@ -428,9 +428,7 @@ func (cb *ContractsBuilder) Clean() {
 }
 
 // Build ...
-func (cb *ContractsBuilder) Build(contracts map[string]string) error {
-	ctx := context.TODO()
-
+func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		protoID, err := cb.ArtifactManager.RegisterRequest(

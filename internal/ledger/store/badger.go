@@ -19,14 +19,21 @@ package store
 import (
 	"context"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
 // BadgerDB is a badger DB implementation.
 type BadgerDB struct {
 	backend *badger.DB
+
+	stopGC  chan struct{}
+	forceGC chan chan struct{}
+	doneGC  chan struct{}
 }
 
 // NewBadgerDB creates new BadgerDB instance.
@@ -45,7 +52,103 @@ func NewBadgerDB(dir string) (*BadgerDB, error) {
 		return nil, errors.Wrap(err, "failed to open badger")
 	}
 
-	return &BadgerDB{backend: bdb}, nil
+	b := &BadgerDB{backend: bdb}
+	b.runGC(context.Background())
+	return b, nil
+}
+
+type state struct {
+	mu    sync.RWMutex
+	state bool
+}
+
+func (s *state) set(val bool) {
+	s.mu.Lock()
+	s.state = val
+	s.mu.Unlock()
+}
+
+func (s *state) check() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.state
+}
+
+func (b *BadgerDB) runGC(ctx context.Context) {
+	db := b.backend
+	logger := inslogger.FromContext(ctx)
+	ticker := time.NewTicker(5 * time.Minute)
+
+	b.forceGC = make(chan chan struct{})
+	b.stopGC = make(chan struct{})
+	b.doneGC = make(chan struct{})
+
+	do := func() {
+		logger.Info("BadgerDB: values GC start")
+		defer logger.Info("BadgerDB: values GC end")
+
+		err := db.RunValueLogGC(0.7)
+		if err != nil && err != badger.ErrNoRewrite {
+			logger.Errorf("BadgerDB: GC failed with error: %v", err.Error())
+		}
+	}
+
+	var gcWait sync.WaitGroup
+	gcAsync := &state{}
+
+	go func() {
+		for {
+			select {
+			case done := <-b.forceGC:
+				func() {
+					defer close(done)
+					if gcAsync.check() {
+						// blocks ForceValueGC call (on done channel) until end of GC
+						gcWait.Wait()
+						return
+					}
+					do()
+				}()
+			case <-ticker.C:
+				func() {
+					if gcAsync.check() {
+						return
+					}
+					gcAsync.set(true)
+					gcWait.Add(1)
+					go func() {
+						do()
+						gcAsync.set(false)
+						gcWait.Done()
+					}()
+				}()
+			case <-b.stopGC:
+				gcWait.Wait()
+				close(b.doneGC)
+				return
+			}
+		}
+	}()
+}
+
+// ForceValueGC forces badger values garbage collection.
+func (b *BadgerDB) ForceValueGC(ctx context.Context) {
+	fin := make(chan struct{})
+	b.forceGC <- fin
+	<-fin
+}
+
+// Stop gracefully stops all disk writes. After calling this, it's safe to kill the process without losing data.
+func (b *BadgerDB) Stop(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+	defer logger.Info("BadgerDB: database closed")
+
+	logger.Info("BadgerDB: wait values GC")
+	close(b.stopGC)
+	<-b.doneGC
+
+	logger.Info("BadgerDB: closing database...")
+	return b.backend.Close()
 }
 
 // Get returns value for specified key or an error. A copy of a value will be returned (i.e. getting large value can be
@@ -95,27 +198,23 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 }
 
 // NewIterator returns new Iterator over the store.
-func (b *BadgerDB) NewIterator(scope Scope) Iterator {
-	bi := badgerIterator{scope: scope, fullPrefix: scope.Bytes()}
+func (b *BadgerDB) NewIterator(pivot Key, reverse bool) Iterator {
+	bi := badgerIterator{pivot: pivot, reverse: reverse}
 	bi.txn = b.backend.NewTransaction(false)
 	opts := badger.DefaultIteratorOptions
+	opts.Reverse = reverse
 	bi.it = bi.txn.NewIterator(opts)
-	bi.it.Seek(bi.fullPrefix)
 	return &bi
 }
 
-// Stop gracefully stops all disk writes. After calling this, it's safe to kill the process without losing data.
-func (b *BadgerDB) Stop(ctx context.Context) error {
-	return b.backend.Close()
-}
-
 type badgerIterator struct {
-	scope      Scope
-	fullPrefix []byte
-	txn        *badger.Txn
-	it         *badger.Iterator
-	prevKey    []byte
-	prevValue  []byte
+	once      sync.Once
+	pivot     Key
+	reverse   bool
+	txn       *badger.Txn
+	it        *badger.Iterator
+	prevKey   []byte
+	prevValue []byte
 }
 
 func (bi *badgerIterator) Close() {
@@ -123,19 +222,18 @@ func (bi *badgerIterator) Close() {
 	bi.txn.Discard()
 }
 
-func (bi *badgerIterator) Seek(prefix []byte) {
-	bi.fullPrefix = append(bi.scope.Bytes(), prefix...)
-	bi.it.Seek(bi.fullPrefix)
-}
-
 func (bi *badgerIterator) Next() bool {
-	if !bi.it.ValidForPrefix(bi.fullPrefix) {
+	scope := bi.pivot.Scope().Bytes()
+	bi.once.Do(func() {
+		bi.it.Seek(append(bi.pivot.Scope().Bytes(), bi.pivot.ID()...))
+	})
+	if !bi.it.ValidForPrefix(scope) {
 		return false
 	}
 
-	prev := bi.it.Item().KeyCopy(bi.prevKey)
-	bi.prevKey = prev[len(bi.scope.Bytes()):]
-	prev, err := bi.it.Item().ValueCopy(bi.prevValue)
+	prev := bi.it.Item().KeyCopy(nil)
+	bi.prevKey = prev[len(scope):]
+	prev, err := bi.it.Item().ValueCopy(nil)
 	if err != nil {
 		return false
 	}
