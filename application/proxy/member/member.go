@@ -40,7 +40,7 @@ type Request struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112fprrUed7gxwEqBww9fdWU5HmsvWXe9JAC713fr.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111DcbiAzi7uDu6x2huWKrQ6Gw4EUjqKun7XLeeLj.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -93,11 +93,10 @@ func GetImplementationFrom(object insolar.Reference) (*Member, error) {
 }
 
 // New is constructor
-func New(rootDomain insolar.Reference, name string, key string) *ContractConstructorHolder {
-	var args [3]interface{}
-	args[0] = rootDomain
-	args[1] = name
-	args[2] = key
+func New(name string, key string) *ContractConstructorHolder {
+	var args [2]interface{}
+	args[0] = name
+	args[1] = key
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
