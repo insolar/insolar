@@ -112,6 +112,8 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			es.pending = message.NotPending
 			sendExecResults = true
 			es.LedgerHasMoreRequests = true
+		} else if es.Broker.finished.Len() > 0 {
+			sendExecResults = true
 		}
 
 		// rotation results also contain finished requests
