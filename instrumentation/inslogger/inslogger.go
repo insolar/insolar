@@ -62,6 +62,12 @@ func WithField(ctx context.Context, key string, value string) (context.Context, 
 	return SetLogger(ctx, l), l
 }
 
+// WithFields returns context with logger initialized with provided fields map.
+func WithFields(ctx context.Context, fields map[string]interface{}) (context.Context, insolar.Logger) {
+	l := getLogger(ctx).WithFields(fields)
+	return SetLogger(ctx, l), l
+}
+
 // WithTraceField returns context with logger initialized with provided traceid value and logger itself.
 func WithTraceField(ctx context.Context, traceid string) (context.Context, insolar.Logger) {
 	ctx, err := utils.SetInsTraceID(ctx, traceid)
