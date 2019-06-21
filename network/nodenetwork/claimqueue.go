@@ -53,7 +53,7 @@ package nodenetwork
 import (
 	"sync"
 
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
 type claimQueue struct {

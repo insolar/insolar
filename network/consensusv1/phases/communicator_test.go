@@ -51,87 +51,87 @@
 package phases
 
 import (
-	"sort"
+	"context"
+	"crypto"
+	"testing"
 
+	"github.com/stretchr/testify/suite"
+
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/testutils"
+	networkUtils "github.com/insolar/insolar/testutils/network"
 )
 
-type BitsetMapper struct {
-	length     int
-	refToIndex map[insolar.Reference]int
-	indexToRef map[int]insolar.Reference
+type communicatorSuite struct {
+	suite.Suite
+	componentManager component.Manager
+	communicator     Communicator
+	originNode       insolar.NetworkNode
+	participants     []insolar.NetworkNode
+	hostNetworkMock  *networkUtils.HostNetworkMock
+
+	consensusNetworkMock *networkUtils.ConsensusNetworkMock
+	pulseHandlerMock     *networkUtils.PulseHandlerMock
 }
 
-func NewBitsetMapper(activeNodes []insolar.NetworkNode) *BitsetMapper {
-	bm := NewSparseBitsetMapper(len(activeNodes))
-	sort.Slice(activeNodes, func(i, j int) bool {
-		return activeNodes[i].ID().Compare(activeNodes[j].ID()) < 0
+func NewSuite() *communicatorSuite {
+	return &communicatorSuite{
+		Suite:        suite.Suite{},
+		communicator: NewCommunicator(),
+		participants: nil,
+	}
+}
+
+func (s *communicatorSuite) SetupTest() {
+	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
+	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
+	s.originNode = makeRandomNode()
+
+	nodeN := networkUtils.NewNodeKeeperMock(s.T())
+	nodeN.GetOriginMock.Return(s.originNode)
+
+	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
+	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
+		return true
+	}
+
+	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
+
 	})
-	for i, node := range activeNodes {
-		bm.AddNode(node, uint16(i))
-	}
-	return bm
+
+	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
+
+	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 insolar.Pulse) {
+
+	})
+
+	s.componentManager.Inject(nodeN, cryptoServ, s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
+	err := s.componentManager.Start(context.TODO())
+	s.NoError(err)
 }
 
-func NewSparseBitsetMapper(length int) *BitsetMapper {
-	return &BitsetMapper{
-		length:     length,
-		refToIndex: make(map[insolar.Reference]int),
-		indexToRef: make(map[int]insolar.Reference),
-	}
+func makeRandomNode() insolar.NetworkNode {
+	return node.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
-func (bm *BitsetMapper) AddNode(node insolar.NetworkNode, bitsetIndex uint16) {
-	index := int(bitsetIndex)
-	bm.indexToRef[index] = node.ID()
-	bm.refToIndex[node.ID()] = index
+func (s *communicatorSuite) TestExchangeData() {
+	s.Assert().NotNil(s.communicator)
+	ctx, cancel := context.WithTimeout(context.Background(), 0)
+	defer cancel()
+
+	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
+	s.Assert().NoError(err)
+	s.NotEqual(0, len(result))
 }
 
-func (bm *BitsetMapper) IndexToRef(index int) (insolar.Reference, error) {
-	if index < 0 || index >= bm.length {
-		return insolar.Reference{}, packets.ErrBitSetOutOfRange
-	}
-	result, ok := bm.indexToRef[index]
-	if !ok {
-		return insolar.Reference{}, packets.ErrBitSetNodeIsMissing
-	}
-	return result, nil
-}
-
-func (bm *BitsetMapper) RefToIndex(nodeID insolar.Reference) (int, error) {
-	index, ok := bm.refToIndex[nodeID]
-	if !ok {
-		return 0, packets.ErrBitSetIncorrectNode
-	}
-	return index, nil
-}
-
-func (bm *BitsetMapper) Length() int {
-	return bm.length
-}
-
-func ApplyClaims(state *ConsensusState, origin insolar.NetworkNode, claims []packets.ReferendumClaim) error {
-	var NodeJoinerIndex uint16
-	for _, claim := range claims {
-		c, ok := claim.(*packets.NodeAnnounceClaim)
-		if !ok {
-			continue
-		}
-
-		// TODO: fix version
-		node, err := node.ClaimToNode("", &c.NodeJoinClaim)
-		if err != nil {
-			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
-		}
-		// TODO: check bitset indexes from every announce claim for fraud
-		NodeJoinerIndex = c.NodeJoinerIndex
-		state.BitsetMapper.AddNode(node, c.NodeAnnouncerIndex)
-		state.NodesMutator.AddWorkingNode(node)
-	}
-	state.BitsetMapper.AddNode(origin, NodeJoinerIndex)
-	state.NodesMutator.AddWorkingNode(origin)
-	return nil
+func TestNaiveCommunicator(t *testing.T) {
+	suite.Run(t, NewSuite())
 }

@@ -90,7 +90,7 @@ func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCod
 	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
 	defer span.End()
 
-	codeDescriptor, err := m.lr.ArtifactManager.GetCode(ctx, req.Code)
+	codeDescriptor, err := m.lr.DescriptorsCache.GetCode(ctx, req.Code)
 	if err != nil {
 		return err
 	}

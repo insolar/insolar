@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
-
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -61,7 +60,7 @@ func (s *localStorage) Initialized() {
 
 func (s *localStorage) StoreObject(reference insolar.Reference, descriptor interface{}) {
 	if s.initialized {
-		panic("Trying to initialize cache after initialization was finished")
+		panic("Trying to initialize singleFlightCache after initialization was finished")
 	}
 	s.storage[reference] = descriptor
 }
@@ -109,8 +108,6 @@ type client struct {
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
 	localStorage         *localStorage
-
-	codeCache map[insolar.ID]CodeDescriptor
 }
 
 // State returns hash state for artifact manager.
@@ -126,7 +123,6 @@ func NewClient(sender bus.Sender) *client { // nolint
 		senders:              messagebus.NewSenders(),
 		sender:               sender,
 		localStorage:         newLocalStorage(),
-		codeCache:            map[insolar.ID]CodeDescriptor{},
 	}
 }
 
@@ -152,26 +148,52 @@ func (m *client) RegisterRequest(
 	}
 
 	virtRec := record.Wrap(request)
+	buf, err := virtRec.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal record")
+	}
+
+	h := m.PCS.ReferenceHasher()
+	_, err = h.Write(buf)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to calculate hash")
+	}
+	recID := *insolar.NewID(currentPN, h.Sum(nil))
+
+	msg, err := payload.NewMessage(&payload.SetRequest{
+		Request: buf,
+	})
 
 	var recRef *insolar.Reference
 	switch request.CallType {
 	case record.CTMethod:
 		recRef = request.Object
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-		recID := insolar.NewID(currentPN, hash)
-		recRef = insolar.NewReference(*recID)
+		recRef = insolar.NewReference(recID)
 	default:
 		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
 
-	id, err := m.setRecord(
-		ctx,
-		virtRec,
-		*recRef,
-	)
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
+	defer done()
 
-	return id, errors.Wrap(err, "[ RegisterRequest ] ")
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply")
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return &p.ID, nil
+	case *payload.Error:
+		return nil, errors.New(p.Text)
+	default:
+		return nil, fmt.Errorf("RegisterRequest: unexpected reply: %#v", p)
+	}
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -199,10 +221,6 @@ func (m *client) GetCode(
 		span.End()
 		instrumenter.end()
 	}()
-
-	if cd, ok := m.codeCache[*code.Record()]; ok {
-		return cd, nil
-	}
 
 	msg, err := payload.NewMessage(&payload.GetCode{
 		CodeID: *code.Record(),
@@ -241,7 +259,6 @@ func (m *client) GetCode(
 			machineType: codeRecord.MachineType,
 			code:        p.Code,
 		}
-		m.codeCache[*code.Record()] = desc
 		return desc, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
