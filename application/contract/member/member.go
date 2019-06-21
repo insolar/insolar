@@ -139,6 +139,29 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
 
+func (m *Member) getNodeRefCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
+
+	publicKey, ok := params["publicKey"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
+	}
+
+	return m.getNodeRef(rd, publicKey)
+}
+func (m *Member) registerNodeCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
+
+	publicKey, ok := params["publicKey"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
+	}
+
+	role, ok := params["role"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
+	}
+
+	return m.registerNode(rd, publicKey, role)
+}
 func (migrationAdminMember *Member) addBurnAddressesCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
 
 	burnAddressesI, ok := params["burnAddresses"].([]interface{})
