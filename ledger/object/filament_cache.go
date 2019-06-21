@@ -228,7 +228,10 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
 	if err != nil {
-		return errors.Wrap(err, "failed to create a meta-record about pending request")
+		if err == ErrOverride {
+			logger.Warn(errors.Wrap(err, "failed to create a meta-record about pending request"))
+		}
+		// return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 
 	idx.PendingRecords = append(idx.PendingRecords, metaID)
@@ -316,7 +319,7 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv, JetID: jetID})
 	if err != nil {
 		if err == ErrOverride {
-			logger.Error(errors.Wrap(err, "failed to add a result to filament"))
+			logger.Warn(errors.Wrap(err, "failed to add a result to filament"))
 		}
 		// return errors.Wrap(err, "failed to add a result to filament")
 	}
