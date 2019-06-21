@@ -54,6 +54,7 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"publicKey": NOTEXISTINGPUBLICKEY})
 	require.Equal(t, "", nodeRef)
 	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "not existed pk", "not existed pk")
 }
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
@@ -65,4 +66,5 @@ func TestGetNodeRefInvalidParams(t *testing.T) {
 	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"publicKey": 123})
 	require.Equal(t, "", nodeRef)
 	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "not existed pk", "not existed pk")
 }

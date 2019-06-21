@@ -19,7 +19,6 @@
 package functest
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -153,7 +152,7 @@ func TestTransferToMyself(t *testing.T) {
 
 	_, err := signedRequest(member, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": member.ref})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "lifeline not found", "recipient must be different from the sender")
+	require.Contains(t, err.Error(), "recipient must be different from the sender", "recipient must be different from the sender")
 	newMemberBalance := getBalanceNoErr(t, member, member.ref)
 	require.Equal(t, oldMemberBalance, newMemberBalance)
 }
