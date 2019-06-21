@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 )
@@ -66,15 +65,10 @@ func (jk *dbJetKeeper) TopSyncPulse() insolar.PulseNumber {
 	jk.RLock()
 	defer jk.RUnlock()
 
-	it := jk.db.NewIterator(store.ScopeJetKeeper)
+	it := jk.db.NewIterator(syncPulseKey(0xFFFFFFFF), true)
 	defer it.Close()
-	it.Seek([]byte{syncPulse})
 	if it.Next() {
-		value, err := it.Value()
-		if err != nil {
-			return insolar.GenesisPulse.PulseNumber
-		}
-		return insolar.NewPulseNumber(value)
+		return insolar.NewPulseNumber(it.Key())
 	}
 	return insolar.GenesisPulse.PulseNumber
 }
@@ -126,32 +120,28 @@ func (jk *dbJetKeeper) all(pulse insolar.PulseNumber) []insolar.JetID {
 	return jets
 }
 
-type subScope byte
+type jetKeeperKey insolar.PulseNumber
 
-const (
-	syncPulse = 1
-	jetSlice  = 2
-)
-
-type pulseKey struct {
-	scope subScope
-	pulse insolar.PulseNumber
-}
-
-func (k pulseKey) Scope() store.Scope {
+func (k jetKeeperKey) Scope() store.Scope {
 	return store.ScopeJetKeeper
 }
 
-func (k pulseKey) ID() []byte {
-	if k.scope == syncPulse {
-		return []byte{byte(k.scope)}
-	}
+func (k jetKeeperKey) ID() []byte {
+	return insolar.PulseNumber(k).Bytes()
+}
 
-	return append([]byte{byte(k.scope)}, utils.UInt32ToBytes(uint32(k.pulse))...)
+type syncPulseKey insolar.PulseNumber
+
+func (k syncPulseKey) Scope() store.Scope {
+	return store.ScopeSyncPulseSequence
+}
+
+func (k syncPulseKey) ID() []byte {
+	return insolar.PulseNumber(k).Bytes()
 }
 
 func (jk *dbJetKeeper) get(pn insolar.PulseNumber) ([]insolar.JetID, error) {
-	serializedJets, err := jk.db.Get(pulseKey{jetSlice, pn})
+	serializedJets, err := jk.db.Get(jetKeeperKey(pn))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get jets by pulse=%v", pn)
 	}
@@ -165,7 +155,7 @@ func (jk *dbJetKeeper) get(pn insolar.PulseNumber) ([]insolar.JetID, error) {
 }
 
 func (jk *dbJetKeeper) set(pn insolar.PulseNumber, jets []insolar.JetID) error {
-	key := pulseKey{jetSlice, pn}
+	key := jetKeeperKey(pn)
 
 	serialized, err := insolar.Serialize(jets)
 	if err != nil {
@@ -176,6 +166,6 @@ func (jk *dbJetKeeper) set(pn insolar.PulseNumber, jets []insolar.JetID) error {
 }
 
 func (jk *dbJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
-	err := jk.db.Set(pulseKey{syncPulse, pn}, pn.Bytes())
+	err := jk.db.Set(syncPulseKey(pn), []byte{})
 	return errors.Wrapf(err, "failed to set up new sync pulse")
 }

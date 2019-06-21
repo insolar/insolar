@@ -198,22 +198,23 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 }
 
 // NewIterator returns new Iterator over the store.
-func (b *BadgerDB) NewIterator(scope Scope) Iterator {
-	bi := badgerIterator{scope: scope, fullPrefix: scope.Bytes()}
+func (b *BadgerDB) NewIterator(pivot Key, reverse bool) Iterator {
+	bi := badgerIterator{pivot: pivot, reverse: reverse}
 	bi.txn = b.backend.NewTransaction(false)
 	opts := badger.DefaultIteratorOptions
+	opts.Reverse = reverse
 	bi.it = bi.txn.NewIterator(opts)
-	bi.it.Seek(bi.fullPrefix)
 	return &bi
 }
 
 type badgerIterator struct {
-	scope      Scope
-	fullPrefix []byte
-	txn        *badger.Txn
-	it         *badger.Iterator
-	prevKey    []byte
-	prevValue  []byte
+	once      sync.Once
+	pivot     Key
+	reverse   bool
+	txn       *badger.Txn
+	it        *badger.Iterator
+	prevKey   []byte
+	prevValue []byte
 }
 
 func (bi *badgerIterator) Close() {
@@ -221,18 +222,17 @@ func (bi *badgerIterator) Close() {
 	bi.txn.Discard()
 }
 
-func (bi *badgerIterator) Seek(prefix []byte) {
-	bi.fullPrefix = append(bi.scope.Bytes(), prefix...)
-	bi.it.Seek(bi.fullPrefix)
-}
-
 func (bi *badgerIterator) Next() bool {
-	if !bi.it.ValidForPrefix(bi.fullPrefix) {
+	scope := bi.pivot.Scope().Bytes()
+	bi.once.Do(func() {
+		bi.it.Seek(append(bi.pivot.Scope().Bytes(), bi.pivot.ID()...))
+	})
+	if !bi.it.ValidForPrefix(scope) {
 		return false
 	}
 
 	prev := bi.it.Item().KeyCopy(nil)
-	bi.prevKey = prev[len(bi.scope.Bytes()):]
+	bi.prevKey = prev[len(scope):]
 	prev, err := bi.it.Item().ValueCopy(nil)
 	if err != nil {
 		return false

@@ -48,90 +48,69 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phases
+package packets
 
 import (
-	"context"
-	"crypto"
-	"testing"
-
-	"github.com/stretchr/testify/suite"
-
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/testutils"
-	networkUtils "github.com/insolar/insolar/testutils/network"
+	"github.com/pkg/errors"
 )
 
-type communicatorSuite struct {
-	suite.Suite
-	componentManager component.Manager
-	communicator     Communicator
-	originNode       insolar.NetworkNode
-	participants     []insolar.NetworkNode
-	hostNetworkMock  *networkUtils.HostNetworkMock
+// BitSetState is state of the communicating node
+type BitSetState uint8
 
-	consensusNetworkMock *networkUtils.ConsensusNetworkMock
-	pulseHandlerMock     *networkUtils.PulseHandlerMock
+const (
+	// TimedOut is state indicating that timeout occurred when communicating with node
+	TimedOut BitSetState = iota
+	// Legit is state indicating OK data from node
+	Legit
+	// Fraud is state indicating that the node is malicious (fraud)
+	Fraud
+	// Inconsistent is state indicating that node validation is inconsistent on different nodes
+	Inconsistent
+)
+
+// BitSetCell is structure that contains the state of the node
+type BitSetCell struct {
+	NodeID insolar.Reference
+	State  BitSetState
 }
 
-func NewSuite() *communicatorSuite {
-	return &communicatorSuite{
-		Suite:        suite.Suite{},
-		communicator: NewCommunicator(),
-		participants: nil,
-	}
+// Possible errors in BitSetMapper
+var (
+	// ErrBitSetOutOfRange is returned when index passed to IndexToRef function is out of range (ERROR)
+	ErrBitSetOutOfRange = errors.New("index out of range")
+	// ErrBitSetNodeIsMissing is returned in IndexToRef when we have no information about the node on specified index (SPECIAL CASE)
+	ErrBitSetNodeIsMissing = errors.New("no information about node on specified index")
+	// ErrBitSetIncorrectNode is returned when an incorrect node is passed to RefToIndex (ERROR)
+	ErrBitSetIncorrectNode = errors.New("incorrect node ID")
+)
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensusv1/packets.BitSetMapper -o . -s _mock.go
+
+// BitSetMapper contains the mapping from bitset index to node ID (and vice versa)
+type BitSetMapper interface {
+	// IndexToRef get ID of the node that is stored on the specified internal index
+	IndexToRef(index int) (insolar.Reference, error)
+	// RefToIndex get bitset internal index where the specified node state is stored
+	RefToIndex(nodeID insolar.Reference) (int, error)
+	// Length returns required length of the bitset
+	Length() int
 }
 
-func (s *communicatorSuite) SetupTest() {
-	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
-	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
-	s.originNode = makeRandomNode()
-
-	nodeN := networkUtils.NewNodeKeeperMock(s.T())
-	nodeN.GetOriginMock.Return(s.originNode)
-
-	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		signature := insolar.SignatureFromBytes(nil)
-		return &signature, nil
-	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
-		return true
-	}
-
-	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
-
-	})
-
-	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
-
-	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 insolar.Pulse) {
-
-	})
-
-	s.componentManager.Inject(nodeN, cryptoServ, s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
-	err := s.componentManager.Start(context.TODO())
-	s.NoError(err)
+// BitSet is interface
+type BitSet interface {
+	Serialize() ([]byte, error)
+	// GetCells get buckets of bitset
+	GetCells(mapper BitSetMapper) ([]BitSetCell, error)
+	// GetTristateArray get underlying tristate
+	GetTristateArray() ([]BitSetState, error)
+	// ApplyChanges returns copy of the current bitset with changes applied
+	ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error
+	// Clone makes deep copy of bitset
+	Clone() BitSet
 }
 
-func makeRandomNode() insolar.NetworkNode {
-	return node.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
-}
-
-func (s *communicatorSuite) TestExchangeData() {
-	s.Assert().NotNil(s.communicator)
-	ctx, cancel := context.WithTimeout(context.Background(), 0)
-	defer cancel()
-
-	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
-	s.Assert().NoError(err)
-	s.NotEqual(0, len(result))
-}
-
-func TestNaiveCommunicator(t *testing.T) {
-	suite.Run(t, NewSuite())
+// NewBitSet creates bitset from a set of buckets and the mapper. Size == cells count.
+func NewBitSet(size int) (BitSet, error) {
+	return NewBitSetImpl(size, false)
 }

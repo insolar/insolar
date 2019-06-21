@@ -171,3 +171,14 @@ type RefIterator interface {
 	Next() (*insolar.Reference, error)
 	HasNext() bool
 }
+
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.DescriptorsCache -o ./ -s _mock.go
+
+// DescriptorsCache provides convenient way to get prototype and code descriptors
+// of objects without fetching them twice
+type DescriptorsCache interface {
+	ByPrototypeRef(ctx context.Context, protoRef insolar.Reference) (ObjectDescriptor, CodeDescriptor, error)
+	ByObjectDescriptor(ctx context.Context, obj ObjectDescriptor) (ObjectDescriptor, CodeDescriptor, error)
+	GetPrototype(ctx context.Context, ref insolar.Reference) (ObjectDescriptor, error)
+	GetCode(ctx context.Context, ref insolar.Reference) (CodeDescriptor, error)
+}

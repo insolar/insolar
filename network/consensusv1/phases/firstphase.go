@@ -59,9 +59,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/consensus/claimhandler"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1"
+	"github.com/insolar/insolar/network/consensusv1/claimhandler"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/platformpolicy"
 	base58 "github.com/jbenet/go-base58"
@@ -176,7 +176,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	} else {
 		logger.Infof("[ NET Consensus phase-1 ] received packets: %d/%d", len(resultPackets), len(activeNodes))
 	}
-	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 1")}, consensus.PacketsRecv.M(int64(len(resultPackets))))
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensusv1.TagPhase, "phase 1")}, consensusv1.PacketsRecv.M(int64(len(resultPackets))))
 	if err != nil {
 		logger.Warn("[ NET Consensus phase-1 ] Failed to record received packets metric: " + err.Error())
 	}
@@ -331,7 +331,7 @@ func (fp *FirstPhaseImpl) filterClaims(nodeID insolar.Reference, claims []packet
 		if ok && !nodeID.Equal(fp.NodeKeeper.GetOrigin().ID()) {
 			err := fp.checkClaimSignature(signedClaim)
 			if err != nil {
-				stats.Record(context.Background(), consensus.DeclinedClaims.M(1))
+				stats.Record(context.Background(), consensusv1.DeclinedClaims.M(1))
 				log.Error("failed to check claim signature: " + err.Error())
 				continue
 			}

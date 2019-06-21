@@ -24,13 +24,11 @@ package store
 type DB interface {
 	Get(key Key) (value []byte, err error)
 	Set(key Key, value []byte) error
-	NewIterator(scope Scope) Iterator
+	NewIterator(pivot Key, reverse bool) Iterator
 }
 
 // Iterator provides an interface for walking through the storage record sequence (where records are sorted lexicographically).
 type Iterator interface {
-	// Seek moves the iterator to storage record that starts with prefix bytes.
-	Seek(prefix []byte)
 	// Next moves the iterator to the next key-value pair.
 	Next() bool
 	// Close frees resources within the iterator and invalidates it.
@@ -86,6 +84,6 @@ const (
 	// ScopeJetKeeper is the scope for a jet id storage.
 	ScopeJetKeeper Scope = 10
 
-	// ScopePulseSequence is the scope for a pulse sequence.
-	ScopePulseSequence Scope = 11
+	// ScopeSyncPulseSequence is the scope for a pulse sequence.
+	ScopeSyncPulseSequence Scope = 11
 )
