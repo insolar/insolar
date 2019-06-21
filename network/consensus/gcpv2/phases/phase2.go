@@ -116,7 +116,7 @@ func (c *Phase2Controller) HandleMemberPacket(reader packets.MemberPacketReader,
 	for _, nb := range p2.GetNeighbourhood() {
 
 		nid := nb.GetShortNodeID()
-		neighbour, err := c.R.GetNodeApperance(nid)
+		neighbour, err := c.R.GetNodeAppearance(nid)
 		if err != nil {
 			// TODO unknown node - blame sender
 			panic(fmt.Errorf("unlisted neighbour node: %v", nid))
@@ -336,8 +336,9 @@ func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
 }
 
 func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
+	logger := c.R.Log()
 
-	c.R.Log().Infof("Phase2 has started re-requesting Phase1: %v", c.R.GetSelfNodeID())
+	logger.Infof("Phase2 has started re-requesting Phase1")
 
 	s := c.R.GetSelf()
 	if s.IsNshRequired() {

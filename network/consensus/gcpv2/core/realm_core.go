@@ -57,6 +57,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -78,7 +79,6 @@ type coreRealm struct {
 	/* Provided externally at construction. Don't need mutex */
 	hLocker
 	roundContext  context.Context
-	logger        insolar.Logger
 	strategy      RoundStrategy
 	config        LocalNodeConfiguration
 	chronicle     census.ConsensusChronicles
@@ -109,7 +109,7 @@ func newCoreRealm(hLocker hLocker) coreRealm {
 }
 
 func (r *coreRealm) Log() insolar.Logger {
-	return r.logger
+	return inslogger.FromContext(r.roundContext)
 }
 
 func (r *coreRealm) GetVerifierFactory() common.SignatureVerifierFactory {

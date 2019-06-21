@@ -127,7 +127,7 @@ func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interfac
 	if !ok {
 		panic(errors.New("connection closed"))
 	}
-	inslogger.FromContext(ctx).Infof("receivedBy: %s - %+v\n", h.hostAddr, packet)
+	inslogger.FromContext(ctx).Infof("receivedBy: %s - %+v", h.hostAddr, packet)
 	if packet.Payload == nil {
 		return nil, &packet.Host, errors.New("missing payload")
 	}

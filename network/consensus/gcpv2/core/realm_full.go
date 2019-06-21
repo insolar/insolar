@@ -53,6 +53,7 @@ package core
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -87,6 +88,11 @@ type FullRealm struct {
 
 /* LOCK - runs under RoundController lock */
 func (r *FullRealm) start() {
+	r.roundContext, _ = inslogger.WithFields(r.roundContext, map[string]interface{}{
+		"node_id":   r.GetSelfNodeID(),
+		"pulse":     r.GetPulseNumber(),
+		"is_joiner": r.IsJoiner(),
+	})
 
 	r.census = r.chronicle.GetActiveCensus()
 	r.population = r.census.GetOnlinePopulation()
@@ -237,15 +243,15 @@ func (r *FullRealm) GetActiveNode(id common.ShortNodeID) (common2.NodeProfile, e
 	return np, nil
 }
 
-func (r *FullRealm) GetNodeApperance(id common.ShortNodeID) (*NodeAppearance, error) {
+func (r *FullRealm) GetNodeAppearance(id common.ShortNodeID) (*NodeAppearance, error) {
 	np, err := r.GetActiveNode(id)
 	if err != nil {
 		return nil, err
 	}
-	return r.GetNodeApperanceByIndex(np.GetIndex()), nil
+	return r.GetNodeAppearanceByIndex(np.GetIndex()), nil
 }
 
-func (r *FullRealm) GetNodeApperanceByIndex(idx int) *NodeAppearance {
+func (r *FullRealm) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
 	return &r.nodes[idx]
 }
 

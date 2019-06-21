@@ -56,7 +56,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	errors2 "github.com/insolar/insolar/network/consensus/gcpv2/errors"
@@ -118,7 +117,6 @@ func (r *PhasedRoundController) StartConsensusRound(upstream UpstreamPulseContro
 	ctx, r.fullCancel = context.WithCancel(ctx)
 
 	r.realm.roundContext = r.realm.strategy.CreateRoundContext(ctx)
-	r.realm.logger = inslogger.FromContext(r.realm.roundContext)
 	ctx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
 
 	preps := r.realm.strategy.GetPrepPhaseControllers()
@@ -271,7 +269,7 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 		}
 
 		if prep == nil { // Full realm is active - we can use node projections
-			src, err := r.realm.GetNodeApperance(sid)
+			src, err := r.realm.GetNodeAppearance(sid)
 			if err != nil {
 				return err
 			}

@@ -74,9 +74,9 @@ type GlobulaConsensusProtocolV2Packet struct {
 		3 - Fraud node
 		4 - Missing node
 	*/
-	GlobulaNodeBitset  *NodeApperanceBitset `insolar-transport:"Packet=3"`                                                          // ByteSize=1..335
-	TrustedStateVector *GlobulaStateVector  `insolar-transport:"Packet=3;TrustedStateVector.ExpectedRank[28-31]=flags:Phase3Flags"` // ByteSize=96
-	DoubtedStateVector *GlobulaStateVector  `insolar-transport:"optional=Phase3Flags[0];Packet=3"`                                  // ByteSize=96
+	GlobulaNodeBitset  *NodeAppearanceBitset `insolar-transport:"Packet=3"`                                                          // ByteSize=1..335
+	TrustedStateVector *GlobulaStateVector   `insolar-transport:"Packet=3;TrustedStateVector.ExpectedRank[28-31]=flags:Phase3Flags"` // ByteSize=96
+	DoubtedStateVector *GlobulaStateVector   `insolar-transport:"optional=Phase3Flags[0];Packet=3"`                                  // ByteSize=96
 	// FraudStateVector *GlobulaStateVector `insolar-transport:"optional=Phase3Flags[1];Packet=3"` //ByteSize=96
 
 	// Claim Section
@@ -136,7 +136,7 @@ type GlobulaStateVector struct {
 	ExpectedRank           SerializedGlobulaNodeRank // ByteSize=4
 }
 
-type NodeApperanceBitset struct {
+type NodeAppearanceBitset struct {
 	// ByteSize=[1..252]
 	FlagsAndLoLength uint8 // [00-05] LoByteLength, [06] Compressed, [07] HasHiLength (to be compatible with Protobuf VarInt)
 	HiLength         uint8 // [00-06] HiByteLength, [07] MUST = 0 (to be compatible with Protobuf VarInt)
