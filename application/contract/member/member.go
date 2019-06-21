@@ -120,9 +120,9 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	case "CreateHelloWorld":
 		return rootdomain.GetObject(rootDomain).CreateHelloWorld()
 	case "contract.registerNode":
-		return m.registerNode(rootDomain, params["publicKey"].(string), params["role"].(string))
+		return m.registerNodeCall(rootDomain, params)
 	case "contract.getNodeRef":
-		return m.getNodeRef(rootDomain, params["publicKey"].(string))
+		return m.getNodeRefCall(rootDomain, params)
 	case "contract.createMember":
 		return m.createMemberByKey(rootDomain, request.Params.PublicKey)
 	case "wallet.addBurnAddresses":
