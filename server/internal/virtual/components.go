@@ -22,7 +22,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -111,7 +110,7 @@ func initComponents(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	cryptographyService insolar.CryptographyService,
-	platformCryptographyScheme insolar.PlatformCryptographyScheme,
+	pcs insolar.PlatformCryptographyScheme,
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
@@ -161,7 +160,7 @@ func initComponents(
 
 	cm.Register(
 		terminationHandler,
-		platformCryptographyScheme,
+		pcs,
 		keyStore,
 		cryptographyService,
 		keyProcessor,
@@ -174,7 +173,7 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(pubsub, pulses, jc)
+	b := bus.NewBus(pubsub, pulses, jc, pcs)
 
 	components := []interface{}{
 		b,
@@ -182,6 +181,7 @@ func initComponents(
 		messageBus,
 		contractRequester,
 		artifacts.NewClient(b),
+		artifacts.NewDescriptorsCache(),
 		jc,
 		pulses,
 		jet.NewStore(),
@@ -204,11 +204,8 @@ func initComponents(
 	return &cm, terminationHandler
 }
 
-func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
-	inslogger.FromContext(context.Background()).WithField(
-		"correlation_id",
-		middleware.MessageCorrelationID(msg),
-	).Error("no reply channel")
+func notFound(_ *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+	inslogger.FromContext(context.Background()).Error("no reply channel")
 	return nil, nil
 }
 

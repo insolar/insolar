@@ -3,7 +3,7 @@ package packets
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "BitSetMapper" can be found in github.com/insolar/insolar/network/consensus/packets
+The original interface "BitSetMapper" can be found in github.com/insolar/insolar/network/consensusv1/packets
 */
 import (
 	"sync/atomic"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//BitSetMapperMock implements github.com/insolar/insolar/network/consensus/packets.BitSetMapper
+//BitSetMapperMock implements github.com/insolar/insolar/network/consensusv1/packets.BitSetMapper
 type BitSetMapperMock struct {
 	t minimock.Tester
 
@@ -35,7 +35,7 @@ type BitSetMapperMock struct {
 	RefToIndexMock       mBitSetMapperMockRefToIndex
 }
 
-//NewBitSetMapperMock returns a mock for github.com/insolar/insolar/network/consensus/packets.BitSetMapper
+//NewBitSetMapperMock returns a mock for github.com/insolar/insolar/network/consensusv1/packets.BitSetMapper
 func NewBitSetMapperMock(t minimock.Tester) *BitSetMapperMock {
 	m := &BitSetMapperMock{t: t}
 
@@ -118,7 +118,7 @@ func (m *mBitSetMapperMockIndexToRef) Set(f func(p int) (r insolar.Reference, r1
 	return m.mock
 }
 
-//IndexToRef implements github.com/insolar/insolar/network/consensus/packets.BitSetMapper interface
+//IndexToRef implements github.com/insolar/insolar/network/consensusv1/packets.BitSetMapper interface
 func (m *BitSetMapperMock) IndexToRef(p int) (r insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.IndexToRefPreCounter, 1)
 	defer atomic.AddUint64(&m.IndexToRefCounter, 1)
@@ -262,7 +262,7 @@ func (m *mBitSetMapperMockLength) Set(f func() (r int)) *BitSetMapperMock {
 	return m.mock
 }
 
-//Length implements github.com/insolar/insolar/network/consensus/packets.BitSetMapper interface
+//Length implements github.com/insolar/insolar/network/consensusv1/packets.BitSetMapper interface
 func (m *BitSetMapperMock) Length() (r int) {
 	counter := atomic.AddUint64(&m.LengthPreCounter, 1)
 	defer atomic.AddUint64(&m.LengthCounter, 1)
@@ -402,7 +402,7 @@ func (m *mBitSetMapperMockRefToIndex) Set(f func(p insolar.Reference) (r int, r1
 	return m.mock
 }
 
-//RefToIndex implements github.com/insolar/insolar/network/consensus/packets.BitSetMapper interface
+//RefToIndex implements github.com/insolar/insolar/network/consensusv1/packets.BitSetMapper interface
 func (m *BitSetMapperMock) RefToIndex(p insolar.Reference) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.RefToIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.RefToIndexCounter, 1)

@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package consensus
+package consensusv1
 
 import (
 	"github.com/insolar/insolar/instrumentation/insmetrics"

@@ -18,9 +18,7 @@ package handle
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
@@ -32,11 +30,11 @@ import (
 type GetObject struct {
 	dep *proc.Dependencies
 
-	message *message.Message
+	message payload.Meta
 	passed  bool
 }
 
-func NewGetObject(dep *proc.Dependencies, msg *message.Message, passed bool) *GetObject {
+func NewGetObject(dep *proc.Dependencies, msg payload.Meta, passed bool) *GetObject {
 	return &GetObject{
 		dep:     dep,
 		message: msg,
@@ -45,13 +43,10 @@ func NewGetObject(dep *proc.Dependencies, msg *message.Message, passed bool) *Ge
 }
 
 func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
-	pl, err := payload.UnmarshalFromMeta(s.message.Payload)
+	msg := payload.GetObject{}
+	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
-	}
-	msg, ok := pl.(*payload.GetObject)
-	if !ok {
-		return fmt.Errorf("unexpected payload type: %T", pl)
+		return errors.Wrap(err, "failed to unmarshal GetObject message")
 	}
 
 	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())

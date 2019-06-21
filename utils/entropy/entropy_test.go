@@ -188,4 +188,6 @@ func benchSelectByEntropy(b *testing.B, valuescount int, count int) {
 			resultsB = append(resultsB, v.([]byte))
 		}
 	}
+	// avoid possible optimization for unused variables and linter warning.
+	fmt.Println("resultsB size is", len(resultsB))
 }
