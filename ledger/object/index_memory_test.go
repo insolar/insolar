@@ -145,7 +145,9 @@ func TestIndexStorage_ForID(t *testing.T) {
 	})
 }
 
-func TestInMemoryIndex_ForPNAndJet(t *testing.T) {
+func TestInMemoryIndex_ForPulse(t *testing.T) {
+	t.Skip() // waiting filaments by @egorikas (INS-1939)
+
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
