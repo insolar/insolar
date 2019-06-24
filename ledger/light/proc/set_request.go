@@ -119,6 +119,7 @@ func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq 
 		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
 		recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
 
+		// TODO: check it after INS-1939
 		// err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
 		// if err != nil {
 		// 	return errors.Wrap(err, "can't save result into filament-index")
