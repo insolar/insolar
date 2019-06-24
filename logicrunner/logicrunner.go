@@ -142,6 +142,7 @@ type LogicRunner struct {
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
+	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 
 	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
@@ -310,8 +311,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
-	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeAdditionalCallFromPreviousExecutor, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowDispatcher.WrapBusHandle)
@@ -507,50 +506,40 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 	current.ObjectDescriptor = objDesc
 
-	if es.PrototypeDescriptor == nil {
-		protoRef, err := objDesc.Prototype()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get prototype")
-		}
-
-		protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *protoRef)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get descriptors by prototype reference")
-		}
-
-		es.PrototypeDescriptor = protoDesc
-		es.CodeDescriptor = codeDesc
+	protoDesc, codeDesc, err := lr.DescriptorsCache.ByObjectDescriptor(ctx, objDesc)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get descriptors by prototype reference")
 	}
 
-	current.LogicContext.Prototype = es.PrototypeDescriptor.HeadRef()
-	current.LogicContext.Code = es.CodeDescriptor.Ref()
+	current.LogicContext.Prototype = protoDesc.HeadRef()
+	current.LogicContext.Code = codeDesc.Ref()
 	current.LogicContext.Parent = current.ObjectDescriptor.Parent()
 	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
-	if request.Prototype != nil && !request.Prototype.Equal(*es.PrototypeDescriptor.HeadRef()) {
+	if request.Prototype != nil && !request.Prototype.Equal(*protoDesc.HeadRef()) {
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
 	}
 
-	executor, err := lr.GetExecutor(es.CodeDescriptor.MachineType())
+	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, es.WrapError(current, err, "no executor registered")
 	}
 
 	newData, result, err := executor.CallMethod(
-		ctx, current.LogicContext, *es.CodeDescriptor.Ref(), current.ObjectDescriptor.Memory(), request.Method, request.Arguments,
+		ctx, current.LogicContext, *codeDesc.Ref(), current.ObjectDescriptor.Memory(), request.Method, request.Arguments,
 	)
 	if err != nil {
 		return nil, es.WrapError(current, err, "executor error")
 	}
 
 	am := lr.ArtifactManager
-	if current.Deactivate {
+	if !current.LogicContext.Immutable && current.Deactivate { // nolint:gocritic
 		_, err := am.DeactivateObject(
 			ctx, *current.RequestRef, current.ObjectDescriptor, result,
 		)
 		if err != nil {
 			return nil, es.WrapError(current, err, "couldn't deactivate object")
 		}
-	} else if !bytes.Equal(current.ObjectDescriptor.Memory(), newData) {
+	} else if !current.LogicContext.Immutable && !bytes.Equal(current.ObjectDescriptor.Memory(), newData) {
 		_, err := am.UpdateObject(
 			ctx, *current.RequestRef, current.ObjectDescriptor, newData, result,
 		)
@@ -565,29 +554,6 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	return &reply.CallMethod{Result: result}, nil
-}
-
-func (lr *LogicRunner) getDescriptorsByPrototypeRef(
-	ctx context.Context, protoRef Ref,
-) (
-	artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
-) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByPrototypeRef")
-	defer span.End()
-	protoDesc, err := lr.ArtifactManager.GetObject(ctx, protoRef)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get prototype descriptor")
-	}
-	codeRef, err := protoDesc.Code()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get code reference")
-	}
-	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get code descriptor")
-	}
-
-	return protoDesc, codeDesc, nil
 }
 
 func (lr *LogicRunner) executeConstructorCall(
@@ -608,7 +574,7 @@ func (lr *LogicRunner) executeConstructorCall(
 		return nil, es.WrapError(current, nil, "prototype reference is required")
 	}
 
-	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *request.Prototype)
+	protoDesc, codeDesc, err := lr.DescriptorsCache.ByPrototypeRef(ctx, *request.Prototype)
 	if err != nil {
 		return nil, es.WrapError(current, err, "couldn't descriptors")
 	}

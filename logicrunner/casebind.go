@@ -20,13 +20,8 @@ import (
 	"context"
 	"encoding/gob"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/insolar/flow"
 )
 
 type CaseRequest struct {
@@ -182,61 +177,6 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, c
 	//	}
 	//}
 	return 1, nil
-}
-
-func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
-	ctx = loggerWithTargetID(ctx, inmsg)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidateCaseBindMessage starts ...")
-	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
-	if !ok {
-		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
-	}
-
-	procCheckRole := CheckOurRole{
-		msg:  msg,
-		role: insolar.DynamicRoleVirtualValidator,
-		lr:   lr,
-		pulseNumber: lr.pulse(ctx).PulseNumber,
-	}
-	if err := procCheckRole.Proceed(ctx); err != nil {
-		// rewrite "can't execute this object" to "flow cancelled" for force retry message
-		// just temporary fix till mb moved to watermill
-		if err == flow.ErrCancelled || err == ErrCantExecute {
-			return nil, flow.ErrCancelled
-		}
-		return nil, errors.Wrap(err, "[ HandleValidateCaseBindMessage ] can't play role")
-	}
-
-	passedStepsCount, validationError := lr.Validate(
-		ctx, msg.GetReference(), msg.GetPulse(), *NewCaseBindFromValidateMessage(ctx, lr.MessageBus, msg),
-	)
-	errstr := ""
-	if validationError != nil {
-		errstr = validationError.Error()
-	}
-
-	_, err := lr.MessageBus.Send(ctx, &message.ValidationResults{
-		RecordRef:        msg.GetReference(),
-		PassedStepsCount: passedStepsCount,
-		Error:            errstr,
-	}, nil)
-
-	return &reply.OK{}, err
-}
-
-func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
-	ctx = loggerWithTargetID(ctx, inmsg)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidationResultsMessage starts ...")
-	_, ok := inmsg.Message().(*message.ValidationResults)
-	if !ok {
-		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
-	}
-
-	return &reply.OK{}, nil
-}
-
-func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
-	return lr.FlowDispatcher.WrapBusHandle(ctx, inmsg)
 }
 
 func init() {

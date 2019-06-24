@@ -33,9 +33,7 @@ type ExecutionState struct {
 
 	Ref Ref // Object reference
 
-	ObjectDescriptor    artifacts.ObjectDescriptor
-	PrototypeDescriptor artifacts.ObjectDescriptor
-	CodeDescriptor      artifacts.CodeDescriptor
+	ObjectDescriptor artifacts.ObjectDescriptor
 
 	Broker                *ExecutionBroker
 	CurrentList           *CurrentExecutionList

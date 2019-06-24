@@ -51,7 +51,7 @@ type BaseRecord struct {
 type Key struct{}
 
 func (Key) ID() []byte {
-	return []byte{0x01}
+	return insolar.GenesisPulse.PulseNumber.Bytes()
 }
 
 func (Key) Scope() store.Scope {

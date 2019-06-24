@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
@@ -94,35 +95,35 @@ func NewReplicatorDefault(
 // the routine starts to gather data (with using of LightDataGatherer). After gathering all the data,
 // it attempts to send it to the heavy. After sending a heavy payload to a heavy, data is deleted
 // with help of Cleaner
-func (t *LightReplicatorDefault) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
-	t.once.Do(func() {
-		go t.sync(ctx)
+func (lr *LightReplicatorDefault) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
+	lr.once.Do(func() {
+		go lr.sync(context.Background())
 	})
 
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[Replicator][NotifyAboutPulse] received pulse - %v", pn)
 
-	prevPN, err := t.pulseCalculator.Backwards(ctx, pn, 1)
+	prevPN, err := lr.pulseCalculator.Backwards(ctx, pn, 1)
 	if err != nil {
 		logger.Error("[Replicator][NotifyAboutPulse]", err)
 		return
 	}
 
 	logger.Debugf("[Replicator][NotifyAboutPulse] start replication, pulse - %v", prevPN.PulseNumber)
-	t.syncWaitingPulses <- prevPN.PulseNumber
+	lr.syncWaitingPulses <- prevPN.PulseNumber
 }
 
-func (t *LightReplicatorDefault) sync(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-	for pn := range t.syncWaitingPulses {
+func (lr *LightReplicatorDefault) sync(ctx context.Context) {
+	for pn := range lr.syncWaitingPulses {
+		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Replicator][sync] pn received - %v", pn)
 
-		allIndexes := t.filterAndGroupIndexes(ctx, pn)
-		jets := t.jetCalculator.MineForPulse(ctx, pn)
+		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
+		jets := lr.jetCalculator.MineForPulse(ctx, pn)
 		logger.Debugf("[Replicator][sync] founds %v jets", len(jets))
 
 		for _, jetID := range jets {
-			msg, err := t.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
+			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
 			if err != nil {
 				panic(
 					fmt.Sprintf(
@@ -133,7 +134,7 @@ func (t *LightReplicatorDefault) sync(ctx context.Context) {
 					),
 				)
 			}
-			err = t.sendToHeavy(ctx, msg)
+			err = lr.sendToHeavy(ctx, msg)
 			if err != nil {
 				logger.Errorf("[Replicator][sync]  Problems with sending msg to a heavy node", err)
 			} else {
@@ -141,12 +142,12 @@ func (t *LightReplicatorDefault) sync(ctx context.Context) {
 			}
 		}
 
-		t.cleaner.NotifyAboutPulse(ctx, pn)
+		lr.cleaner.NotifyAboutPulse(ctx, pn)
 	}
 }
 
-func (t *LightReplicatorDefault) sendToHeavy(ctx context.Context, data insolar.Message) error {
-	rep, err := t.msgBus.Send(ctx, data, nil)
+func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, data insolar.Message) error {
+	rep, err := lr.msgBus.Send(ctx, data, nil)
 	if err != nil {
 		stats.Record(ctx,
 			statErrHeavyPayloadCount.M(1),
@@ -168,32 +169,32 @@ func (t *LightReplicatorDefault) sendToHeavy(ctx context.Context, data insolar.M
 	return nil
 }
 
-func (d *LightReplicatorDefault) filterAndGroupIndexes(
+func (lr *LightReplicatorDefault) filterAndGroupIndexes(
 	ctx context.Context, pn insolar.PulseNumber,
 ) map[insolar.JetID][]object.FilamentIndex {
 	byJet := map[insolar.JetID][]object.FilamentIndex{}
-	indexes := d.indexBucketAccessor.ForPulse(ctx, pn)
+	indexes := lr.indexBucketAccessor.ForPulse(ctx, pn)
 	for _, idx := range indexes {
-		jetID, _ := d.jetAccessor.ForID(ctx, pn, idx.ObjID)
+		jetID, _ := lr.jetAccessor.ForID(ctx, pn, idx.ObjID)
 		byJet[jetID] = append(byJet[jetID], idx)
 	}
 	return byJet
 }
 
 // ForPulseAndJet returns HeavyPayload message for a provided pulse and a jetID
-func (d *LightReplicatorDefault) heavyPayload(
+func (lr *LightReplicatorDefault) heavyPayload(
 	ctx context.Context,
 	pn insolar.PulseNumber,
 	jetID insolar.JetID,
 	indexes []object.FilamentIndex,
 ) (*message.HeavyPayload, error) {
-	dr, err := d.dropAccessor.ForPulse(ctx, jetID, pn)
+	dr, err := lr.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch drop")
 	}
 
-	bls := d.blobsAccessor.ForPulse(ctx, jetID, pn)
-	records := d.recsAccessor.ForPulse(ctx, jetID, pn)
+	bls := lr.blobsAccessor.ForPulse(ctx, jetID, pn)
+	records := lr.recsAccessor.ForPulse(ctx, jetID, pn)
 
 	return &message.HeavyPayload{
 		JetID:        jetID,

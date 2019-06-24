@@ -81,7 +81,8 @@ func TestLightReplicator_sendToHeavy_HeavyErr(t *testing.T) {
 func Test_NotifyAboutPulse(t *testing.T) {
 	t.Parallel()
 	ctrl := minimock.NewController(t)
-	ctx := inslogger.TestContext(t)
+	ctx := context.Background()
+	// inslogger.TestContext(t)
 
 	jetID := jet.NewIDFromString("1010")
 	expectPN := insolar.PulseNumber(2835341939)
@@ -126,20 +127,26 @@ func Test_NotifyAboutPulse(t *testing.T) {
 	}
 
 	cleaner := NewCleanerMock(ctrl)
-	cleaner.NotifyAboutPulseMock.Expect(ctx, expectPN)
+	cleaner.NotifyAboutPulseFunc = func(_ context.Context, _ insolar.PulseNumber) {}
 
 	pulseCalc := pulse.NewCalculatorMock(ctrl)
 	pulseCalc.BackwardsMock.Expect(ctx, expectPN+1, 1).Return(
 		insolar.Pulse{PulseNumber: expectPN}, nil)
 
 	dropAccessor := drop.NewAccessorMock(ctrl)
-	dropAccessor.ForPulseMock.Expect(ctx, jetID, expectPN).Return(expectDrop, nil)
+	dropAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r drop.Drop, r1 error) {
+		return expectDrop, nil
+	}
 
 	blobAccessor := blob.NewCollectionAccessorMock(ctrl)
-	blobAccessor.ForPulseMock.Expect(ctx, jetID, expectPN).Return([]blob.Blob{expectBlob})
+	blobAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []blob.Blob) {
+		return []blob.Blob{expectBlob}
+	}
 
 	recordAccessor := object.NewRecordCollectionAccessorMock(ctrl)
-	recordAccessor.ForPulseMock.Expect(ctx, jetID, expectPN).Return(expectRecords)
+	recordAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []record.Material) {
+		return expectRecords
+	}
 
 	indexAccessor := object.NewIndexBucketAccessorMock(ctrl)
 	indexAccessor.ForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []object.FilamentIndex {
