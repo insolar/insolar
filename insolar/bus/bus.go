@@ -57,8 +57,8 @@ const (
 )
 
 const (
-	// TypeErrorReply is Type for messages with error in reply's Payload
-	TypeErrorReply = "error"
+	// TypeError is Type for messages with error in Payload
+	TypeError = "error"
 	// TypeReply is Type for messages with Reply in reply's Payload
 	TypeReply = "reply"
 )
@@ -90,7 +90,7 @@ type lockedReply struct {
 	done chan struct{}
 }
 
-// Sender is component that sends messages and gives access to replies for them.
+// Bus is component that sends messages and gives access to replies for them.
 type Bus struct {
 	pub         message.Publisher
 	timeout     time.Duration
@@ -128,14 +128,6 @@ func (b *Bus) removeReplyChannel(ctx context.Context, h payload.MessageHash, rep
 	})
 }
 
-func (b *Bus) SendAsync(ctx context.Context, msg *message.Message) error {
-	err := b.pub.Publish(TopicOutgoing, msg)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("can't publish message to %s topic", TopicOutgoing))
-	}
-	return nil
-}
-
 func ErrorAsMessage(ctx context.Context, e error) *message.Message {
 	if e == nil {
 		inslogger.FromContext(ctx).Errorf("provided error is nil")
@@ -147,7 +139,7 @@ func ErrorAsMessage(ctx context.Context, e error) *message.Message {
 		return nil
 	}
 	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(MetaType, TypeErrorReply)
+	resAsMsg.Metadata.Set(MetaType, TypeError)
 	return resAsMsg
 }
 
@@ -190,6 +182,7 @@ func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
 	logger := inslogger.FromContext(ctx)
+
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 	msg.SetContext(ctx)
 	wrapped, err := b.wrapMeta(msg, target, payload.MessageHash{})
@@ -289,15 +282,15 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		msg.Metadata.Set("msg_hash", meta.OriginHash.String())
 		logger = logger.WithField("msg_hash", meta.OriginHash.String())
 
-		fmt.Println("pulse in IncomingMessageRouter is - ", meta.Pulse.String())
 		msg.Metadata.Set("pulse", meta.Pulse.String())
 
 		if meta.OriginHash.IsZero() {
 			logger.Debug("not a reply")
-			msgType := msg.Metadata.Get(MetaType)
-			if msgType != TypeReply && msgType != TypeErrorReply {
-				return handle(msg)
-			}
+			// msgType := msg.Metadata.Get(MetaType)
+			// if msgType != TypeReply && msgType != TypeError {
+			// 	return handle(msg)
+			// }
+			return handle(msg)
 		}
 
 		msg.Metadata.Set("msg_hash_origin", meta.OriginHash.String())

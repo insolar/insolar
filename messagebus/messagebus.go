@@ -263,7 +263,7 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize meta payload")
 	}
-	if msg.Metadata.Get(bus.MetaType) == bus.TypeErrorReply {
+	if msg.Metadata.Get(bus.MetaType) == bus.TypeError {
 		errReply, err := bus.DeserializeError(bytes.NewBuffer(meta.Payload))
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload to error")
