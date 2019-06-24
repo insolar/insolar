@@ -75,12 +75,16 @@ func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar
 
 	buc, err := i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {
-		buc = &FilamentIndex{}
+		buc = &FilamentIndex{
+			ObjID:            objID,
+			Lifeline:         lifeline,
+			LifelineLastUsed: pn,
+			PendingRecords:   []insolar.ID{},
+		}
 	} else if err != nil {
 		return err
 	}
 
-	buc.Lifeline = lifeline
 	err = i.setBucket(pn, objID, buc)
 	if err != nil {
 		return err
