@@ -724,8 +724,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 
 	es := NewExecutionState(randRef)
 	es.Broker = NewBroker(suite.ctx, 1)
-	es.PrototypeDescriptor = pDesc
-	es.CodeDescriptor = cDesc
+	suite.dc.ByObjectDescriptorMock.Return(pDesc, cDesc, nil)
 	data := []byte(testutils.RandomString())
 	oDesc.MemoryMock.Return(data)
 
