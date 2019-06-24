@@ -27,13 +27,11 @@ import (
 type IndexStorageMemory struct {
 	bucketsLock sync.RWMutex
 	buckets     map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex
-	indexLock   map[insolar.PulseNumber]map[insolar.ID]sync.RWMutex
 }
 
 func NewIndexStorageMemory() *IndexStorageMemory {
 	return &IndexStorageMemory{
-		buckets:   map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{},
-		indexLock: map[insolar.PulseNumber]map[insolar.ID]sync.RWMutex{},
+		buckets: map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{},
 	}
 }
 
@@ -66,16 +64,12 @@ func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNu
 
 	var res []FilamentIndex
 
-	for id, b := range bucks {
-		i.indexLock[pn][id].Lock()
-
+	for _, b := range bucks {
 		if b.Lifeline.JetID != jetID {
-			i.indexLock[pn][id].Unlock()
 			continue
 		}
 
 		res = append(res, clone(b))
-		i.indexLock[pn][id].Unlock()
 	}
 
 	return res
@@ -89,7 +83,6 @@ func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumbe
 	_, ok := i.buckets[pn]
 	if !ok {
 		i.buckets[pn] = map[insolar.ID]*FilamentIndex{}
-		i.indexLock[pn] = map[insolar.ID]sync.RWMutex{}
 	}
 
 	i.buckets[pn][bucket.ObjID] = &bucket
