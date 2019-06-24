@@ -119,7 +119,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.PulseNumber, *p.Message.Object.Record())
 	// No index on our node.
-	if err == object.ErrIndexBucketNotFound {
+	if err == object.ErrIndexNotFound {
 		if state.ID() == record.StateActivation {
 			// We are activating the object. There is no index for it anywhere.
 			idx = object.FilamentIndex{

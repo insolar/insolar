@@ -183,7 +183,7 @@ func (i *FilamentCacheStorage) DeleteForPN(ctx context.Context, pn insolar.Pulse
 
 // SetRequest sets a request for a specific object
 func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, reqID insolar.ID) error {
-	panic("implement me")
+	return nil
 	// logger := inslogger.FromContext(ctx)
 	// logger.Debugf("SetRequest started. objID: %v, pn: %V", objID.DebugString(), pn)
 	//
@@ -277,6 +277,7 @@ func (b *pendingMeta) addMetaIDToFilament(pn insolar.PulseNumber, metaID insolar
 // SetResult sets a result for a specific object. Also, if there is a not closed request for a provided result,
 // the request will be closed
 func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error {
+	return nil
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("SetResult started. objID: %v, pn: %V", objID.DebugString(), pn)
 	panic("implement me")
@@ -384,6 +385,7 @@ func (i *FilamentCacheStorage) setFilament(ctx context.Context, pm *pendingMeta,
 }
 
 func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
+	return nil
 	panic("implement me")
 	// i.idLocker.Lock(&objID)
 	// defer i.idLocker.Unlock(&objID)
@@ -459,6 +461,7 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 }
 
 func (i *FilamentCacheStorage) SendAbandonedNotification(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) error {
+	return nil
 	panic("implement me")
 	// logger := inslogger.FromContext(ctx)
 	// idx := i.idxAccessor.Lifeline(currentPN, objID)
@@ -677,7 +680,7 @@ func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *FilamentIndex, 
 func (i *FilamentCacheStorage) OpenRequestsIDsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]insolar.ID, error) {
 	pb := i.pendingBucket(currentPN, objID)
 	if pb == nil {
-		return nil, ErrIndexBucketNotFound
+		return nil, ErrIndexNotFound
 	}
 
 	inslogger.FromContext(ctx).Debugf("OpenRequestsForObjID before %v pn : %v", objID.DebugString(), currentPN)
@@ -701,7 +704,7 @@ func (i *FilamentCacheStorage) OpenRequestsIDsForObjID(ctx context.Context, curr
 func (i *FilamentCacheStorage) OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error) {
 	pb := i.pendingBucket(currentPN, objID)
 	if pb == nil {
-		return nil, ErrIndexBucketNotFound
+		return nil, ErrIndexNotFound
 	}
 
 	inslogger.FromContext(ctx).Debugf("OpenRequestsForObjID before %v pn : %v", objID.DebugString(), currentPN)
@@ -744,7 +747,7 @@ func (i *FilamentCacheStorage) OpenRequestsForObjID(ctx context.Context, current
 func (i *FilamentCacheStorage) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
 	b := i.pendingBucket(currentPN, objID)
 	if b == nil {
-		return nil, ErrIndexBucketNotFound
+		return nil, ErrIndexNotFound
 	}
 
 	inslogger.FromContext(ctx).Debugf("Records before %v pn : %v", objID.DebugString(), currentPN)

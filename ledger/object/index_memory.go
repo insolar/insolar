@@ -43,12 +43,12 @@ func (i *IndexStorageMemory) ForID(ctx context.Context, pn insolar.PulseNumber, 
 
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
-		return FilamentIndex{}, ErrIndexBucketNotFound
+		return FilamentIndex{}, ErrIndexNotFound
 	}
 
 	idx, ok := objsByPn[objID]
 	if !ok {
-		return FilamentIndex{}, ErrIndexBucketNotFound
+		return FilamentIndex{}, ErrIndexNotFound
 	}
 
 	return clone(idx), nil

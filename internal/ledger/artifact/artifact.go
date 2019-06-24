@@ -91,8 +91,6 @@ type Scope struct {
 
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
-
-	IndexLocker object.IndexLocker
 }
 
 // GetObject returns descriptor for provided state.
@@ -321,9 +319,6 @@ func (m *Scope) registerChild(
 	asType *insolar.Reference,
 ) error {
 
-	m.IndexLocker.Lock(parent.Record())
-	defer m.IndexLocker.Unlock(parent.Record())
-
 	var jetID = insolar.ID(insolar.ZeroJetID)
 	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
@@ -382,13 +377,10 @@ func (m *Scope) updateStateObject(
 		panic("unknown state object type")
 	}
 
-	m.IndexLocker.Lock(objRef.Record())
-	defer m.IndexLocker.Unlock(objRef.Record())
-
 	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *objRef.Record())
 	// No index on our node.
 	if err != nil {
-		if err != object.ErrIndexBucketNotFound {
+		if err != object.ErrIndexNotFound {
 			return nil, errors.Wrap(err, "failed get index for updating state object")
 		}
 		if stateObject.ID() != record.StateActivation {

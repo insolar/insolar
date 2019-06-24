@@ -43,7 +43,7 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 
 		_, err := storage.ForID(ctx, pn, id)
 
-		assert.Equal(t, ErrIndexBucketNotFound, err)
+		assert.Equal(t, ErrIndexNotFound, err)
 	})
 }
 

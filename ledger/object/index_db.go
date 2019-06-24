@@ -90,10 +90,10 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket F
 func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error) {
 	var buck *FilamentIndex
 	buck, err := i.getBucket(pn, objID)
-	if err == ErrIndexBucketNotFound {
+	if err == ErrIndexNotFound {
 		lastPN, err := i.getLastKnownPN(objID)
 		if err != nil {
-			return FilamentIndex{}, ErrIndexBucketNotFound
+			return FilamentIndex{}, ErrIndexNotFound
 		}
 
 		buck, err = i.getBucket(lastPN, objID)
@@ -125,7 +125,7 @@ func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *Fi
 func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*FilamentIndex, error) {
 	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
 	if err == store.ErrNotFound {
-		return nil, ErrIndexBucketNotFound
+		return nil, ErrIndexNotFound
 	}
 	if err != nil {
 		return nil, err
