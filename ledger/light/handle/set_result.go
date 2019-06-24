@@ -62,17 +62,17 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	rec := record.Unwrap(&virtual)
-	request, ok := rec.(*record.Result)
+	result, ok := rec.(*record.Result)
 	if !ok {
 		return fmt.Errorf("wrong result type: %T", rec)
 	}
 
-	if request.Object.IsEmpty() {
+	if result.Object.IsEmpty() {
 		return errors.New("object is nil")
 	}
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(request.Object, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewCheckJet(result.Object, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
@@ -85,6 +85,14 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
 	s.dep.WaitHotWM(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
+	// To ensure, that we have the index. Because index can be on a heavy node.
+	// If we don't have it and heavy does, SetResult fails because it should update light's index state
+	idx := proc.NewGetIndexWM(result.Object, objJetID, s.message)
+	s.dep.GetIndexWM(idx)
+	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 

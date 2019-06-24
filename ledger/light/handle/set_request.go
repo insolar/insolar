@@ -71,7 +71,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	// This is a workaround. VM should not register such requests.
 	// TODO: remove after INS-1939
 	if request.CallType != record.CTMethod {
-		inslogger.FromContext(ctx).Error("request is not registered")
+		inslogger.FromContext(ctx).Warn("request is not registered")
 		return s.setActivationRequest(ctx, reqID, virtual, f)
 	}
 
@@ -93,6 +93,14 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
 	s.dep.WaitHotWM(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
+	// To ensure, that we have the index. Because index can be on a heavy node.
+	// If we don't have it and heavy does, SetResult fails because it should update light's index state
+	idx := proc.NewGetIndexWM(*request.Object.Record(), objJetID, s.message)
+	s.dep.GetIndexWM(idx)
+	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 
