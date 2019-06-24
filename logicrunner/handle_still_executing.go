@@ -20,11 +20,11 @@ import (
 	"context"
 	"fmt"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
@@ -32,7 +32,7 @@ import (
 type HandleStillExecuting struct {
 	dep *Dependencies
 
-	Message *watermillMsg.Message
+	Message payload.Meta
 	Parcel  insolar.Parcel
 }
 

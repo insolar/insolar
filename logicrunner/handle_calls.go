@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -35,7 +36,7 @@ import (
 type HandleCall struct {
 	dep *Dependencies
 
-	Message *watermillMsg.Message
+	Message payload.Meta
 	Parcel  insolar.Parcel
 }
 
@@ -199,7 +200,7 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 type HandleAdditionalCallFromPreviousExecutor struct {
 	dep *Dependencies
 
-	Message *watermillMsg.Message
+	Message payload.Meta
 	Parcel  insolar.Parcel
 }
 

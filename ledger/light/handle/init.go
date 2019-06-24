@@ -37,6 +37,7 @@ import (
 type Init struct {
 	dep     *proc.Dependencies
 	message *wmessage.Message
+	meta    payload.Meta
 	sender  wbus.Sender
 }
 
@@ -75,6 +76,8 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	}
 
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
+	s.meta = meta
 
 	if err == nil {
 		switch payloadType {
@@ -212,7 +215,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	return f.Procedure(ctx, &proc.ReturnReply{
-		Message: s.message,
+		Message: s.meta,
 		Err:     errors.New("no past handler"),
 		Sender:  s.dep.Sender,
 	}, false)

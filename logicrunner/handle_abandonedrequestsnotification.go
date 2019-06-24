@@ -23,9 +23,9 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/payload"
 
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
@@ -66,7 +66,7 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 type HandleAbandonedRequestsNotification struct {
 	dep *Dependencies
 
-	Message *watermillMsg.Message
+	Message payload.Meta
 	Parcel  insolar.Parcel
 }
 

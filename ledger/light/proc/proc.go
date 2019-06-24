@@ -22,6 +22,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 )
 
 type Dependencies struct {
@@ -52,7 +53,7 @@ type Dependencies struct {
 }
 
 type ReturnReply struct {
-	Message *message.Message
+	Message payload.Meta
 	Err     error
 	Reply   insolar.Reply
 	Sender  bus.Sender

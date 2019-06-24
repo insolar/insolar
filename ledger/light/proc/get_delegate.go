@@ -19,9 +19,9 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
@@ -29,7 +29,7 @@ import (
 )
 
 type GetDelegate struct {
-	message *watermillMsg.Message
+	message payload.Meta
 	idx     *object.Lifeline
 	msg     *message.GetDelegate
 	Dep     struct {
@@ -37,7 +37,7 @@ type GetDelegate struct {
 	}
 }
 
-func NewGetDelegate(msg *message.GetDelegate, idx *object.Lifeline, message *watermillMsg.Message) *GetDelegate {
+func NewGetDelegate(msg *message.GetDelegate, idx *object.Lifeline, message payload.Meta) *GetDelegate {
 	return &GetDelegate{
 		msg:     msg,
 		message: message,

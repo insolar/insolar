@@ -19,11 +19,11 @@ package logicrunner
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -32,7 +32,7 @@ import (
 type HandlePendingFinished struct {
 	dep *Dependencies
 
-	Message *watermillMsg.Message
+	Message payload.Meta
 	Parcel  insolar.Parcel
 }
 

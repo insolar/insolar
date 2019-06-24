@@ -21,6 +21,7 @@ import (
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -101,7 +102,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 type HandleExecutorResults struct {
 	dep *Dependencies
 
-	Message *watermillMsg.Message
+	Message payload.Meta
 	Parcel  insolar.Parcel
 }
 

@@ -18,6 +18,7 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync/atomic"
 
@@ -115,6 +116,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 
 	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get("pulse"))
 	if err != nil {
+		fmt.Println("msg: ", msg.Metadata, msg.UUID)
 		logger.Error("failed to handle message", err)
 		return nil, nil
 	}

@@ -23,6 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -54,11 +55,20 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
+	var err error
+
 	meta := payload.Meta{}
-	err := meta.Unmarshal(s.Message.Payload)
+	err = meta.Unmarshal(s.Message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "can't deserialize meta payload")
+		return errors.Wrap(err, "failed to unmarshal meta")
 	}
+	payloadType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload type")
+	}
+
+	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
 	parcel, err := insolarMsg.DeserializeParcel(bytes.NewBuffer(meta.Payload))
 	if err != nil {
 		return errors.Wrap(err, "can't deserialize payload")
@@ -70,42 +80,42 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeCallMethod.String():
 		h := &HandleCall{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeAdditionalCallFromPreviousExecutor.String():
 		h := &HandleAdditionalCallFromPreviousExecutor{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypePendingFinished.String():
 		h := &HandlePendingFinished{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeStillExecuting.String():
 		h := &HandleStillExecuting{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeAbandonedRequestsNotification.String():
 		h := &HandleAbandonedRequestsNotification{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeExecutorResults.String():
 		h := &HandleExecutorResults{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
@@ -121,11 +131,25 @@ type InnerInit struct {
 }
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
+	var err error
+
+	meta := payload.Meta{}
+	err = meta.Unmarshal(s.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+	payloadType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload type")
+	}
+
+	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
 	switch s.Message.Metadata.Get(bus.MetaType) {
 	case getLedgerPendingRequestMsg:
 		h := GetLedgerPendingRequest{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: meta,
 		}
 		return f.Handle(ctx, h.Present)
 	default:

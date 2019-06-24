@@ -184,6 +184,7 @@ func (mb *MessageBus) createWatermillMessage(_ context.Context, parcel insolar.P
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
 
+	wmMsg.Metadata.Set(bus.MetaPulse, fmt.Sprintf("%d", currentPulse.PulseNumber))
 	wmMsg.Metadata.Set(bus.MetaType, parcel.Message().Type().String())
 	wmMsg.Metadata.Set(bus.MetaSender, mb.NodeNetwork.GetOrigin().ID().String())
 	return wmMsg
