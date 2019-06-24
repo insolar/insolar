@@ -59,6 +59,7 @@ type LogicRunnerCommonTestSuite struct {
 	mc  *minimock.Controller
 	ctx context.Context
 	am  *artifacts.ClientMock
+	dc  *artifacts.DescriptorsCacheMock
 	mb  *testutils.MessageBusMock
 	jc  *jet.CoordinatorMock
 	lr  *LogicRunner
@@ -75,6 +76,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	// initialize minimock and mocks
 	suite.mc = minimock.NewController(suite.T())
 	suite.am = artifacts.NewClientMock(suite.mc)
+	suite.dc = artifacts.NewDescriptorsCacheMock(suite.mc)
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
@@ -86,6 +88,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
 	suite.lr.ArtifactManager = suite.am
+	suite.lr.DescriptorsCache = suite.dc
 	suite.lr.MessageBus = suite.mb
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
@@ -93,8 +96,8 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	// suite.mc.Wait(time.Second * 5)
-	// suite.mc.Finish()
+	suite.mc.Wait(2 * time.Minute)
+	suite.mc.Finish()
 
 	for _, e := range suite.lr.Executors {
 		if e == nil {
@@ -366,9 +369,6 @@ func prepareWatermill(suite *LogicRunnerTestSuite) (flow.Flow, message2.PubSub) 
 	flowMock.ProcedureMock.Set(func(p context.Context, p1 flow.Procedure, p2 bool) (r error) {
 		return p1.Proceed(p)
 	})
-	flowMock.HandleMock.Set(func(p context.Context, p1 flow.Handle) (r error) {
-		return p1(p, flowMock)
-	})
 
 	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(suite.ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
@@ -396,6 +396,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 		object         obj
 		message        msgt
 		expected       exp
+		initPulse      bool
 	}{
 		{
 			name:     "first call, NotPending in message",
@@ -437,6 +438,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				pending:  message.InPending,
 				queueLen: 1,
 			},
+			initPulse: true,
 		},
 		{
 			name:           "message has queue and object has queue",
@@ -453,6 +455,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				pending:  message.InPending,
 				queueLen: 2,
 			},
+			initPulse: true,
 		},
 		{
 			name: "message has queue, but unknown pending state",
@@ -473,7 +476,9 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 		suite.T().Run(test.name, func(t *testing.T) {
 			pulseObj := insolar.Pulse{}
 			pulseObj.PulseNumber = insolar.FirstPulseNumber
-			suite.ps.LatestMock.Return(pulseObj, nil)
+			if test.initPulse {
+				suite.ps.LatestMock.Return(pulseObj, nil)
+			}
 
 			object := testutils.RandomRef()
 			defer delete(suite.lr.state, object)
@@ -522,7 +527,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
 			}
 			err := h.realHandleExecutorState(suite.ctx, flowMock)
-			// 		suite.mc.Wait(time.Minute)
+			suite.mc.Wait(time.Minute)
 
 			suite.Require().NoError(err)
 			suite.Require().Equal(test.expected.pending, suite.lr.state[object].ExecutionState.pending)
@@ -953,7 +958,6 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	cd := artifacts.NewCodeDescriptorMock(suite.T())
 	cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
 	cd.RefMock.Return(&codeRef)
-	suite.am.GetCodeMock.Return(cd, nil)
 
 	suite.am.GetObjectFunc = func(
 		ctx context.Context, obj insolar.Reference,
@@ -967,7 +971,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		return nil, errors.New("unexpected call")
 	}
 
-	suite.am.GetCodeMock.Return(cd, nil)
+	suite.dc.ByObjectDescriptorMock.Return(pd, cd, nil)
 
 	suite.am.HasPendingRequestsMock.Return(false, nil)
 
@@ -1208,7 +1212,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					return nil, errors.New("unexpected call")
 				}
 
-				suite.am.GetCodeMock.Return(cd, nil)
+				suite.dc.ByObjectDescriptorMock.Return(pd, cd, nil)
 
 				resId := testutils.RandomID()
 				suite.am.RegisterResultMock.Return(&resId, nil)

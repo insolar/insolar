@@ -101,7 +101,7 @@ func (g *certGen) registerNode() insolar.Reference {
 		Method:  "api.call",
 		Params: requester.Params{
 			CallSite:   "contract.registerNode",
-			CallParams: map[string]string{"public": string(keySerialized), "role": g.staticRole.String()},
+			CallParams: map[string]string{"publicKey": string(keySerialized), "role": g.staticRole.String()},
 		},
 	}
 
@@ -205,7 +205,7 @@ func (g *certGen) getUserConfig() *requester.UserConfigJSON {
 	return userCfg
 }
 
-func (g *certGen) getNodeRefByPk() insolar.Reference {
+func (g *certGen) getNodeRefByPublicKey() insolar.Reference {
 	userCfg := g.getUserConfig()
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.privKey)
@@ -222,10 +222,10 @@ func (g *certGen) getNodeRefByPk() insolar.Reference {
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
 	response, err := requester.Send(ctx, g.API, userCfg, &request)
-	checkError("Failed to execute GetNodeRefByPK node request", err)
+	checkError("Failed to execute GetNodeRefByPublicKey node request", err)
 
-	fmt.Println("Extract node by PK")
-	return extractReference(response, "getNodeRefByPk")
+	fmt.Println("Extract node by public key")
+	return extractReference(response, "getNodeRefByPublicKey")
 }
 
 type certGen struct {
@@ -268,7 +268,7 @@ func genCertificate(
 	var ref insolar.Reference
 	if reuseKeys {
 		g.loadKeys()
-		ref = g.getNodeRefByPk()
+		ref = g.getNodeRefByPublicKey()
 	} else {
 		g.generateKeys()
 		ref = g.registerNode()

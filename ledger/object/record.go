@@ -17,6 +17,7 @@
 package object
 
 import (
+	"bytes"
 	"context"
 	"sync"
 
@@ -177,8 +178,8 @@ func (k recordKey) Scope() store.Scope {
 }
 
 func (k recordKey) ID() []byte {
-	res := insolar.ID(k)
-	return (&res).Bytes()
+	id := insolar.ID(k)
+	return bytes.Join([][]byte{id.Pulse().Bytes(), id.Hash()}, nil)
 }
 
 // NewRecordDB creates new DB storage instance.

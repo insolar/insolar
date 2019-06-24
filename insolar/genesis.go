@@ -44,13 +44,13 @@ const (
 
 	GenesisNameStandardTariff = "standard" + GenesisNameTariff
 
-	GenesisAmountMigrationDamonMembers       = 10
-	GenesisAmountActiveMigrationDamonMembers = 3
+	GenesisAmountMigrationDaemonMembers       = 10
+	GenesisAmountActiveMigrationDaemonMembers = 3
 )
 
-var GenesisNameMigrationDamonMembers = func() (result []string) {
-	for i := 0; i < GenesisAmountMigrationDamonMembers; i++ {
-		result = append(result, "migration_damon_"+strconv.Itoa(i)+GenesisNameMember)
+var GenesisNameMigrationDaemonMembers = func() (result []string) {
+	for i := 0; i < GenesisAmountMigrationDaemonMembers; i++ {
+		result = append(result, "migration_daemon_"+strconv.Itoa(i)+GenesisNameMember)
 	}
 	return
 }()
@@ -87,11 +87,11 @@ type GenesisContractState struct {
 
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
-	RootBalance              string
-	MDBalance                string
-	RootPublicKey            string
-	MigrationAdminPublicKey  string
-	MigrationDamonPublicKeys []string
+	RootBalance               string
+	MDBalance                 string
+	RootPublicKey             string
+	MigrationAdminPublicKey   string
+	MigrationDaemonPublicKeys []string
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.

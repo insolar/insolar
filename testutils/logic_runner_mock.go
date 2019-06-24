@@ -20,25 +20,20 @@ import (
 type LogicRunnerMock struct {
 	t minimock.Tester
 
-	HandleExecutorResultsMessageFunc       func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)
-	HandleExecutorResultsMessageCounter    uint64
-	HandleExecutorResultsMessagePreCounter uint64
-	HandleExecutorResultsMessageMock       mLogicRunnerMockHandleExecutorResultsMessage
-
-	HandleValidateCaseBindMessageFunc       func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)
-	HandleValidateCaseBindMessageCounter    uint64
-	HandleValidateCaseBindMessagePreCounter uint64
-	HandleValidateCaseBindMessageMock       mLogicRunnerMockHandleValidateCaseBindMessage
-
-	HandleValidationResultsMessageFunc       func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)
-	HandleValidationResultsMessageCounter    uint64
-	HandleValidationResultsMessagePreCounter uint64
-	HandleValidationResultsMessageMock       mLogicRunnerMockHandleValidationResultsMessage
+	GetExecutorFunc       func(p insolar.MachineType) (r insolar.MachineLogicExecutor, r1 error)
+	GetExecutorCounter    uint64
+	GetExecutorPreCounter uint64
+	GetExecutorMock       mLogicRunnerMockGetExecutor
 
 	OnPulseFunc       func(p context.Context, p1 insolar.Pulse) (r error)
 	OnPulseCounter    uint64
 	OnPulsePreCounter uint64
 	OnPulseMock       mLogicRunnerMockOnPulse
+
+	RegisterExecutorFunc       func(p insolar.MachineType, p1 insolar.MachineLogicExecutor) (r error)
+	RegisterExecutorCounter    uint64
+	RegisterExecutorPreCounter uint64
+	RegisterExecutorMock       mLogicRunnerMockRegisterExecutor
 }
 
 //NewLogicRunnerMock returns a mock for github.com/insolar/insolar/insolar.LogicRunner
@@ -49,100 +44,98 @@ func NewLogicRunnerMock(t minimock.Tester) *LogicRunnerMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.HandleExecutorResultsMessageMock = mLogicRunnerMockHandleExecutorResultsMessage{mock: m}
-	m.HandleValidateCaseBindMessageMock = mLogicRunnerMockHandleValidateCaseBindMessage{mock: m}
-	m.HandleValidationResultsMessageMock = mLogicRunnerMockHandleValidationResultsMessage{mock: m}
+	m.GetExecutorMock = mLogicRunnerMockGetExecutor{mock: m}
 	m.OnPulseMock = mLogicRunnerMockOnPulse{mock: m}
+	m.RegisterExecutorMock = mLogicRunnerMockRegisterExecutor{mock: m}
 
 	return m
 }
 
-type mLogicRunnerMockHandleExecutorResultsMessage struct {
+type mLogicRunnerMockGetExecutor struct {
 	mock              *LogicRunnerMock
-	mainExpectation   *LogicRunnerMockHandleExecutorResultsMessageExpectation
-	expectationSeries []*LogicRunnerMockHandleExecutorResultsMessageExpectation
+	mainExpectation   *LogicRunnerMockGetExecutorExpectation
+	expectationSeries []*LogicRunnerMockGetExecutorExpectation
 }
 
-type LogicRunnerMockHandleExecutorResultsMessageExpectation struct {
-	input  *LogicRunnerMockHandleExecutorResultsMessageInput
-	result *LogicRunnerMockHandleExecutorResultsMessageResult
+type LogicRunnerMockGetExecutorExpectation struct {
+	input  *LogicRunnerMockGetExecutorInput
+	result *LogicRunnerMockGetExecutorResult
 }
 
-type LogicRunnerMockHandleExecutorResultsMessageInput struct {
-	p  context.Context
-	p1 insolar.Parcel
+type LogicRunnerMockGetExecutorInput struct {
+	p insolar.MachineType
 }
 
-type LogicRunnerMockHandleExecutorResultsMessageResult struct {
-	r  insolar.Reply
+type LogicRunnerMockGetExecutorResult struct {
+	r  insolar.MachineLogicExecutor
 	r1 error
 }
 
-//Expect specifies that invocation of LogicRunner.HandleExecutorResultsMessage is expected from 1 to Infinity times
-func (m *mLogicRunnerMockHandleExecutorResultsMessage) Expect(p context.Context, p1 insolar.Parcel) *mLogicRunnerMockHandleExecutorResultsMessage {
-	m.mock.HandleExecutorResultsMessageFunc = nil
+//Expect specifies that invocation of LogicRunner.GetExecutor is expected from 1 to Infinity times
+func (m *mLogicRunnerMockGetExecutor) Expect(p insolar.MachineType) *mLogicRunnerMockGetExecutor {
+	m.mock.GetExecutorFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockHandleExecutorResultsMessageExpectation{}
+		m.mainExpectation = &LogicRunnerMockGetExecutorExpectation{}
 	}
-	m.mainExpectation.input = &LogicRunnerMockHandleExecutorResultsMessageInput{p, p1}
+	m.mainExpectation.input = &LogicRunnerMockGetExecutorInput{p}
 	return m
 }
 
-//Return specifies results of invocation of LogicRunner.HandleExecutorResultsMessage
-func (m *mLogicRunnerMockHandleExecutorResultsMessage) Return(r insolar.Reply, r1 error) *LogicRunnerMock {
-	m.mock.HandleExecutorResultsMessageFunc = nil
+//Return specifies results of invocation of LogicRunner.GetExecutor
+func (m *mLogicRunnerMockGetExecutor) Return(r insolar.MachineLogicExecutor, r1 error) *LogicRunnerMock {
+	m.mock.GetExecutorFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockHandleExecutorResultsMessageExpectation{}
+		m.mainExpectation = &LogicRunnerMockGetExecutorExpectation{}
 	}
-	m.mainExpectation.result = &LogicRunnerMockHandleExecutorResultsMessageResult{r, r1}
+	m.mainExpectation.result = &LogicRunnerMockGetExecutorResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of LogicRunner.HandleExecutorResultsMessage is expected once
-func (m *mLogicRunnerMockHandleExecutorResultsMessage) ExpectOnce(p context.Context, p1 insolar.Parcel) *LogicRunnerMockHandleExecutorResultsMessageExpectation {
-	m.mock.HandleExecutorResultsMessageFunc = nil
+//ExpectOnce specifies that invocation of LogicRunner.GetExecutor is expected once
+func (m *mLogicRunnerMockGetExecutor) ExpectOnce(p insolar.MachineType) *LogicRunnerMockGetExecutorExpectation {
+	m.mock.GetExecutorFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &LogicRunnerMockHandleExecutorResultsMessageExpectation{}
-	expectation.input = &LogicRunnerMockHandleExecutorResultsMessageInput{p, p1}
+	expectation := &LogicRunnerMockGetExecutorExpectation{}
+	expectation.input = &LogicRunnerMockGetExecutorInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *LogicRunnerMockHandleExecutorResultsMessageExpectation) Return(r insolar.Reply, r1 error) {
-	e.result = &LogicRunnerMockHandleExecutorResultsMessageResult{r, r1}
+func (e *LogicRunnerMockGetExecutorExpectation) Return(r insolar.MachineLogicExecutor, r1 error) {
+	e.result = &LogicRunnerMockGetExecutorResult{r, r1}
 }
 
-//Set uses given function f as a mock of LogicRunner.HandleExecutorResultsMessage method
-func (m *mLogicRunnerMockHandleExecutorResultsMessage) Set(f func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)) *LogicRunnerMock {
+//Set uses given function f as a mock of LogicRunner.GetExecutor method
+func (m *mLogicRunnerMockGetExecutor) Set(f func(p insolar.MachineType) (r insolar.MachineLogicExecutor, r1 error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.HandleExecutorResultsMessageFunc = f
+	m.mock.GetExecutorFunc = f
 	return m.mock
 }
 
-//HandleExecutorResultsMessage implements github.com/insolar/insolar/insolar.LogicRunner interface
-func (m *LogicRunnerMock) HandleExecutorResultsMessage(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
-	counter := atomic.AddUint64(&m.HandleExecutorResultsMessagePreCounter, 1)
-	defer atomic.AddUint64(&m.HandleExecutorResultsMessageCounter, 1)
+//GetExecutor implements github.com/insolar/insolar/insolar.LogicRunner interface
+func (m *LogicRunnerMock) GetExecutor(p insolar.MachineType) (r insolar.MachineLogicExecutor, r1 error) {
+	counter := atomic.AddUint64(&m.GetExecutorPreCounter, 1)
+	defer atomic.AddUint64(&m.GetExecutorCounter, 1)
 
-	if len(m.HandleExecutorResultsMessageMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.HandleExecutorResultsMessageMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleExecutorResultsMessage. %v %v", p, p1)
+	if len(m.GetExecutorMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetExecutorMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to LogicRunnerMock.GetExecutor. %v", p)
 			return
 		}
 
-		input := m.HandleExecutorResultsMessageMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, LogicRunnerMockHandleExecutorResultsMessageInput{p, p1}, "LogicRunner.HandleExecutorResultsMessage got unexpected parameters")
+		input := m.GetExecutorMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, LogicRunnerMockGetExecutorInput{p}, "LogicRunner.GetExecutor got unexpected parameters")
 
-		result := m.HandleExecutorResultsMessageMock.expectationSeries[counter-1].result
+		result := m.GetExecutorMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.HandleExecutorResultsMessage")
+			m.t.Fatal("No results are set for the LogicRunnerMock.GetExecutor")
 			return
 		}
 
@@ -152,16 +145,16 @@ func (m *LogicRunnerMock) HandleExecutorResultsMessage(p context.Context, p1 ins
 		return
 	}
 
-	if m.HandleExecutorResultsMessageMock.mainExpectation != nil {
+	if m.GetExecutorMock.mainExpectation != nil {
 
-		input := m.HandleExecutorResultsMessageMock.mainExpectation.input
+		input := m.GetExecutorMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, LogicRunnerMockHandleExecutorResultsMessageInput{p, p1}, "LogicRunner.HandleExecutorResultsMessage got unexpected parameters")
+			testify_assert.Equal(m.t, *input, LogicRunnerMockGetExecutorInput{p}, "LogicRunner.GetExecutor got unexpected parameters")
 		}
 
-		result := m.HandleExecutorResultsMessageMock.mainExpectation.result
+		result := m.GetExecutorMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.HandleExecutorResultsMessage")
+			m.t.Fatal("No results are set for the LogicRunnerMock.GetExecutor")
 		}
 
 		r = result.r
@@ -170,341 +163,39 @@ func (m *LogicRunnerMock) HandleExecutorResultsMessage(p context.Context, p1 ins
 		return
 	}
 
-	if m.HandleExecutorResultsMessageFunc == nil {
-		m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleExecutorResultsMessage. %v %v", p, p1)
+	if m.GetExecutorFunc == nil {
+		m.t.Fatalf("Unexpected call to LogicRunnerMock.GetExecutor. %v", p)
 		return
 	}
 
-	return m.HandleExecutorResultsMessageFunc(p, p1)
+	return m.GetExecutorFunc(p)
 }
 
-//HandleExecutorResultsMessageMinimockCounter returns a count of LogicRunnerMock.HandleExecutorResultsMessageFunc invocations
-func (m *LogicRunnerMock) HandleExecutorResultsMessageMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.HandleExecutorResultsMessageCounter)
+//GetExecutorMinimockCounter returns a count of LogicRunnerMock.GetExecutorFunc invocations
+func (m *LogicRunnerMock) GetExecutorMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetExecutorCounter)
 }
 
-//HandleExecutorResultsMessageMinimockPreCounter returns the value of LogicRunnerMock.HandleExecutorResultsMessage invocations
-func (m *LogicRunnerMock) HandleExecutorResultsMessageMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.HandleExecutorResultsMessagePreCounter)
+//GetExecutorMinimockPreCounter returns the value of LogicRunnerMock.GetExecutor invocations
+func (m *LogicRunnerMock) GetExecutorMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetExecutorPreCounter)
 }
 
-//HandleExecutorResultsMessageFinished returns true if mock invocations count is ok
-func (m *LogicRunnerMock) HandleExecutorResultsMessageFinished() bool {
+//GetExecutorFinished returns true if mock invocations count is ok
+func (m *LogicRunnerMock) GetExecutorFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.HandleExecutorResultsMessageMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.HandleExecutorResultsMessageCounter) == uint64(len(m.HandleExecutorResultsMessageMock.expectationSeries))
+	if len(m.GetExecutorMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetExecutorCounter) == uint64(len(m.GetExecutorMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.HandleExecutorResultsMessageMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.HandleExecutorResultsMessageCounter) > 0
+	if m.GetExecutorMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetExecutorCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.HandleExecutorResultsMessageFunc != nil {
-		return atomic.LoadUint64(&m.HandleExecutorResultsMessageCounter) > 0
-	}
-
-	return true
-}
-
-type mLogicRunnerMockHandleValidateCaseBindMessage struct {
-	mock              *LogicRunnerMock
-	mainExpectation   *LogicRunnerMockHandleValidateCaseBindMessageExpectation
-	expectationSeries []*LogicRunnerMockHandleValidateCaseBindMessageExpectation
-}
-
-type LogicRunnerMockHandleValidateCaseBindMessageExpectation struct {
-	input  *LogicRunnerMockHandleValidateCaseBindMessageInput
-	result *LogicRunnerMockHandleValidateCaseBindMessageResult
-}
-
-type LogicRunnerMockHandleValidateCaseBindMessageInput struct {
-	p  context.Context
-	p1 insolar.Parcel
-}
-
-type LogicRunnerMockHandleValidateCaseBindMessageResult struct {
-	r  insolar.Reply
-	r1 error
-}
-
-//Expect specifies that invocation of LogicRunner.HandleValidateCaseBindMessage is expected from 1 to Infinity times
-func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Expect(p context.Context, p1 insolar.Parcel) *mLogicRunnerMockHandleValidateCaseBindMessage {
-	m.mock.HandleValidateCaseBindMessageFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockHandleValidateCaseBindMessageExpectation{}
-	}
-	m.mainExpectation.input = &LogicRunnerMockHandleValidateCaseBindMessageInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of LogicRunner.HandleValidateCaseBindMessage
-func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Return(r insolar.Reply, r1 error) *LogicRunnerMock {
-	m.mock.HandleValidateCaseBindMessageFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockHandleValidateCaseBindMessageExpectation{}
-	}
-	m.mainExpectation.result = &LogicRunnerMockHandleValidateCaseBindMessageResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of LogicRunner.HandleValidateCaseBindMessage is expected once
-func (m *mLogicRunnerMockHandleValidateCaseBindMessage) ExpectOnce(p context.Context, p1 insolar.Parcel) *LogicRunnerMockHandleValidateCaseBindMessageExpectation {
-	m.mock.HandleValidateCaseBindMessageFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &LogicRunnerMockHandleValidateCaseBindMessageExpectation{}
-	expectation.input = &LogicRunnerMockHandleValidateCaseBindMessageInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *LogicRunnerMockHandleValidateCaseBindMessageExpectation) Return(r insolar.Reply, r1 error) {
-	e.result = &LogicRunnerMockHandleValidateCaseBindMessageResult{r, r1}
-}
-
-//Set uses given function f as a mock of LogicRunner.HandleValidateCaseBindMessage method
-func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Set(f func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)) *LogicRunnerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.HandleValidateCaseBindMessageFunc = f
-	return m.mock
-}
-
-//HandleValidateCaseBindMessage implements github.com/insolar/insolar/insolar.LogicRunner interface
-func (m *LogicRunnerMock) HandleValidateCaseBindMessage(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
-	counter := atomic.AddUint64(&m.HandleValidateCaseBindMessagePreCounter, 1)
-	defer atomic.AddUint64(&m.HandleValidateCaseBindMessageCounter, 1)
-
-	if len(m.HandleValidateCaseBindMessageMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.HandleValidateCaseBindMessageMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleValidateCaseBindMessage. %v %v", p, p1)
-			return
-		}
-
-		input := m.HandleValidateCaseBindMessageMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, LogicRunnerMockHandleValidateCaseBindMessageInput{p, p1}, "LogicRunner.HandleValidateCaseBindMessage got unexpected parameters")
-
-		result := m.HandleValidateCaseBindMessageMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.HandleValidateCaseBindMessage")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.HandleValidateCaseBindMessageMock.mainExpectation != nil {
-
-		input := m.HandleValidateCaseBindMessageMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, LogicRunnerMockHandleValidateCaseBindMessageInput{p, p1}, "LogicRunner.HandleValidateCaseBindMessage got unexpected parameters")
-		}
-
-		result := m.HandleValidateCaseBindMessageMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.HandleValidateCaseBindMessage")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.HandleValidateCaseBindMessageFunc == nil {
-		m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleValidateCaseBindMessage. %v %v", p, p1)
-		return
-	}
-
-	return m.HandleValidateCaseBindMessageFunc(p, p1)
-}
-
-//HandleValidateCaseBindMessageMinimockCounter returns a count of LogicRunnerMock.HandleValidateCaseBindMessageFunc invocations
-func (m *LogicRunnerMock) HandleValidateCaseBindMessageMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.HandleValidateCaseBindMessageCounter)
-}
-
-//HandleValidateCaseBindMessageMinimockPreCounter returns the value of LogicRunnerMock.HandleValidateCaseBindMessage invocations
-func (m *LogicRunnerMock) HandleValidateCaseBindMessageMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.HandleValidateCaseBindMessagePreCounter)
-}
-
-//HandleValidateCaseBindMessageFinished returns true if mock invocations count is ok
-func (m *LogicRunnerMock) HandleValidateCaseBindMessageFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.HandleValidateCaseBindMessageMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.HandleValidateCaseBindMessageCounter) == uint64(len(m.HandleValidateCaseBindMessageMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.HandleValidateCaseBindMessageMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.HandleValidateCaseBindMessageCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.HandleValidateCaseBindMessageFunc != nil {
-		return atomic.LoadUint64(&m.HandleValidateCaseBindMessageCounter) > 0
-	}
-
-	return true
-}
-
-type mLogicRunnerMockHandleValidationResultsMessage struct {
-	mock              *LogicRunnerMock
-	mainExpectation   *LogicRunnerMockHandleValidationResultsMessageExpectation
-	expectationSeries []*LogicRunnerMockHandleValidationResultsMessageExpectation
-}
-
-type LogicRunnerMockHandleValidationResultsMessageExpectation struct {
-	input  *LogicRunnerMockHandleValidationResultsMessageInput
-	result *LogicRunnerMockHandleValidationResultsMessageResult
-}
-
-type LogicRunnerMockHandleValidationResultsMessageInput struct {
-	p  context.Context
-	p1 insolar.Parcel
-}
-
-type LogicRunnerMockHandleValidationResultsMessageResult struct {
-	r  insolar.Reply
-	r1 error
-}
-
-//Expect specifies that invocation of LogicRunner.HandleValidationResultsMessage is expected from 1 to Infinity times
-func (m *mLogicRunnerMockHandleValidationResultsMessage) Expect(p context.Context, p1 insolar.Parcel) *mLogicRunnerMockHandleValidationResultsMessage {
-	m.mock.HandleValidationResultsMessageFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockHandleValidationResultsMessageExpectation{}
-	}
-	m.mainExpectation.input = &LogicRunnerMockHandleValidationResultsMessageInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of LogicRunner.HandleValidationResultsMessage
-func (m *mLogicRunnerMockHandleValidationResultsMessage) Return(r insolar.Reply, r1 error) *LogicRunnerMock {
-	m.mock.HandleValidationResultsMessageFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockHandleValidationResultsMessageExpectation{}
-	}
-	m.mainExpectation.result = &LogicRunnerMockHandleValidationResultsMessageResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of LogicRunner.HandleValidationResultsMessage is expected once
-func (m *mLogicRunnerMockHandleValidationResultsMessage) ExpectOnce(p context.Context, p1 insolar.Parcel) *LogicRunnerMockHandleValidationResultsMessageExpectation {
-	m.mock.HandleValidationResultsMessageFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &LogicRunnerMockHandleValidationResultsMessageExpectation{}
-	expectation.input = &LogicRunnerMockHandleValidationResultsMessageInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *LogicRunnerMockHandleValidationResultsMessageExpectation) Return(r insolar.Reply, r1 error) {
-	e.result = &LogicRunnerMockHandleValidationResultsMessageResult{r, r1}
-}
-
-//Set uses given function f as a mock of LogicRunner.HandleValidationResultsMessage method
-func (m *mLogicRunnerMockHandleValidationResultsMessage) Set(f func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)) *LogicRunnerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.HandleValidationResultsMessageFunc = f
-	return m.mock
-}
-
-//HandleValidationResultsMessage implements github.com/insolar/insolar/insolar.LogicRunner interface
-func (m *LogicRunnerMock) HandleValidationResultsMessage(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
-	counter := atomic.AddUint64(&m.HandleValidationResultsMessagePreCounter, 1)
-	defer atomic.AddUint64(&m.HandleValidationResultsMessageCounter, 1)
-
-	if len(m.HandleValidationResultsMessageMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.HandleValidationResultsMessageMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleValidationResultsMessage. %v %v", p, p1)
-			return
-		}
-
-		input := m.HandleValidationResultsMessageMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, LogicRunnerMockHandleValidationResultsMessageInput{p, p1}, "LogicRunner.HandleValidationResultsMessage got unexpected parameters")
-
-		result := m.HandleValidationResultsMessageMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.HandleValidationResultsMessage")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.HandleValidationResultsMessageMock.mainExpectation != nil {
-
-		input := m.HandleValidationResultsMessageMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, LogicRunnerMockHandleValidationResultsMessageInput{p, p1}, "LogicRunner.HandleValidationResultsMessage got unexpected parameters")
-		}
-
-		result := m.HandleValidationResultsMessageMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.HandleValidationResultsMessage")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.HandleValidationResultsMessageFunc == nil {
-		m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleValidationResultsMessage. %v %v", p, p1)
-		return
-	}
-
-	return m.HandleValidationResultsMessageFunc(p, p1)
-}
-
-//HandleValidationResultsMessageMinimockCounter returns a count of LogicRunnerMock.HandleValidationResultsMessageFunc invocations
-func (m *LogicRunnerMock) HandleValidationResultsMessageMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.HandleValidationResultsMessageCounter)
-}
-
-//HandleValidationResultsMessageMinimockPreCounter returns the value of LogicRunnerMock.HandleValidationResultsMessage invocations
-func (m *LogicRunnerMock) HandleValidationResultsMessageMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.HandleValidationResultsMessagePreCounter)
-}
-
-//HandleValidationResultsMessageFinished returns true if mock invocations count is ok
-func (m *LogicRunnerMock) HandleValidationResultsMessageFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.HandleValidationResultsMessageMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.HandleValidationResultsMessageCounter) == uint64(len(m.HandleValidationResultsMessageMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.HandleValidationResultsMessageMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.HandleValidationResultsMessageCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.HandleValidationResultsMessageFunc != nil {
-		return atomic.LoadUint64(&m.HandleValidationResultsMessageCounter) > 0
+	if m.GetExecutorFunc != nil {
+		return atomic.LoadUint64(&m.GetExecutorCounter) > 0
 	}
 
 	return true
@@ -658,24 +349,168 @@ func (m *LogicRunnerMock) OnPulseFinished() bool {
 	return true
 }
 
+type mLogicRunnerMockRegisterExecutor struct {
+	mock              *LogicRunnerMock
+	mainExpectation   *LogicRunnerMockRegisterExecutorExpectation
+	expectationSeries []*LogicRunnerMockRegisterExecutorExpectation
+}
+
+type LogicRunnerMockRegisterExecutorExpectation struct {
+	input  *LogicRunnerMockRegisterExecutorInput
+	result *LogicRunnerMockRegisterExecutorResult
+}
+
+type LogicRunnerMockRegisterExecutorInput struct {
+	p  insolar.MachineType
+	p1 insolar.MachineLogicExecutor
+}
+
+type LogicRunnerMockRegisterExecutorResult struct {
+	r error
+}
+
+//Expect specifies that invocation of LogicRunner.RegisterExecutor is expected from 1 to Infinity times
+func (m *mLogicRunnerMockRegisterExecutor) Expect(p insolar.MachineType, p1 insolar.MachineLogicExecutor) *mLogicRunnerMockRegisterExecutor {
+	m.mock.RegisterExecutorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LogicRunnerMockRegisterExecutorExpectation{}
+	}
+	m.mainExpectation.input = &LogicRunnerMockRegisterExecutorInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of LogicRunner.RegisterExecutor
+func (m *mLogicRunnerMockRegisterExecutor) Return(r error) *LogicRunnerMock {
+	m.mock.RegisterExecutorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LogicRunnerMockRegisterExecutorExpectation{}
+	}
+	m.mainExpectation.result = &LogicRunnerMockRegisterExecutorResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of LogicRunner.RegisterExecutor is expected once
+func (m *mLogicRunnerMockRegisterExecutor) ExpectOnce(p insolar.MachineType, p1 insolar.MachineLogicExecutor) *LogicRunnerMockRegisterExecutorExpectation {
+	m.mock.RegisterExecutorFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &LogicRunnerMockRegisterExecutorExpectation{}
+	expectation.input = &LogicRunnerMockRegisterExecutorInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *LogicRunnerMockRegisterExecutorExpectation) Return(r error) {
+	e.result = &LogicRunnerMockRegisterExecutorResult{r}
+}
+
+//Set uses given function f as a mock of LogicRunner.RegisterExecutor method
+func (m *mLogicRunnerMockRegisterExecutor) Set(f func(p insolar.MachineType, p1 insolar.MachineLogicExecutor) (r error)) *LogicRunnerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.RegisterExecutorFunc = f
+	return m.mock
+}
+
+//RegisterExecutor implements github.com/insolar/insolar/insolar.LogicRunner interface
+func (m *LogicRunnerMock) RegisterExecutor(p insolar.MachineType, p1 insolar.MachineLogicExecutor) (r error) {
+	counter := atomic.AddUint64(&m.RegisterExecutorPreCounter, 1)
+	defer atomic.AddUint64(&m.RegisterExecutorCounter, 1)
+
+	if len(m.RegisterExecutorMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RegisterExecutorMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to LogicRunnerMock.RegisterExecutor. %v %v", p, p1)
+			return
+		}
+
+		input := m.RegisterExecutorMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, LogicRunnerMockRegisterExecutorInput{p, p1}, "LogicRunner.RegisterExecutor got unexpected parameters")
+
+		result := m.RegisterExecutorMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the LogicRunnerMock.RegisterExecutor")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.RegisterExecutorMock.mainExpectation != nil {
+
+		input := m.RegisterExecutorMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, LogicRunnerMockRegisterExecutorInput{p, p1}, "LogicRunner.RegisterExecutor got unexpected parameters")
+		}
+
+		result := m.RegisterExecutorMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the LogicRunnerMock.RegisterExecutor")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.RegisterExecutorFunc == nil {
+		m.t.Fatalf("Unexpected call to LogicRunnerMock.RegisterExecutor. %v %v", p, p1)
+		return
+	}
+
+	return m.RegisterExecutorFunc(p, p1)
+}
+
+//RegisterExecutorMinimockCounter returns a count of LogicRunnerMock.RegisterExecutorFunc invocations
+func (m *LogicRunnerMock) RegisterExecutorMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RegisterExecutorCounter)
+}
+
+//RegisterExecutorMinimockPreCounter returns the value of LogicRunnerMock.RegisterExecutor invocations
+func (m *LogicRunnerMock) RegisterExecutorMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RegisterExecutorPreCounter)
+}
+
+//RegisterExecutorFinished returns true if mock invocations count is ok
+func (m *LogicRunnerMock) RegisterExecutorFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.RegisterExecutorMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RegisterExecutorCounter) == uint64(len(m.RegisterExecutorMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.RegisterExecutorMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RegisterExecutorCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.RegisterExecutorFunc != nil {
+		return atomic.LoadUint64(&m.RegisterExecutorCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *LogicRunnerMock) ValidateCallCounters() {
 
-	if !m.HandleExecutorResultsMessageFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.HandleExecutorResultsMessage")
-	}
-
-	if !m.HandleValidateCaseBindMessageFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.HandleValidateCaseBindMessage")
-	}
-
-	if !m.HandleValidationResultsMessageFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.HandleValidationResultsMessage")
+	if !m.GetExecutorFinished() {
+		m.t.Fatal("Expected call to LogicRunnerMock.GetExecutor")
 	}
 
 	if !m.OnPulseFinished() {
 		m.t.Fatal("Expected call to LogicRunnerMock.OnPulse")
+	}
+
+	if !m.RegisterExecutorFinished() {
+		m.t.Fatal("Expected call to LogicRunnerMock.RegisterExecutor")
 	}
 
 }
@@ -695,20 +530,16 @@ func (m *LogicRunnerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *LogicRunnerMock) MinimockFinish() {
 
-	if !m.HandleExecutorResultsMessageFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.HandleExecutorResultsMessage")
-	}
-
-	if !m.HandleValidateCaseBindMessageFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.HandleValidateCaseBindMessage")
-	}
-
-	if !m.HandleValidationResultsMessageFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.HandleValidationResultsMessage")
+	if !m.GetExecutorFinished() {
+		m.t.Fatal("Expected call to LogicRunnerMock.GetExecutor")
 	}
 
 	if !m.OnPulseFinished() {
 		m.t.Fatal("Expected call to LogicRunnerMock.OnPulse")
+	}
+
+	if !m.RegisterExecutorFinished() {
+		m.t.Fatal("Expected call to LogicRunnerMock.RegisterExecutor")
 	}
 
 }
@@ -725,10 +556,9 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.HandleExecutorResultsMessageFinished()
-		ok = ok && m.HandleValidateCaseBindMessageFinished()
-		ok = ok && m.HandleValidationResultsMessageFinished()
+		ok = ok && m.GetExecutorFinished()
 		ok = ok && m.OnPulseFinished()
+		ok = ok && m.RegisterExecutorFinished()
 
 		if ok {
 			return
@@ -737,20 +567,16 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.HandleExecutorResultsMessageFinished() {
-				m.t.Error("Expected call to LogicRunnerMock.HandleExecutorResultsMessage")
-			}
-
-			if !m.HandleValidateCaseBindMessageFinished() {
-				m.t.Error("Expected call to LogicRunnerMock.HandleValidateCaseBindMessage")
-			}
-
-			if !m.HandleValidationResultsMessageFinished() {
-				m.t.Error("Expected call to LogicRunnerMock.HandleValidationResultsMessage")
+			if !m.GetExecutorFinished() {
+				m.t.Error("Expected call to LogicRunnerMock.GetExecutor")
 			}
 
 			if !m.OnPulseFinished() {
 				m.t.Error("Expected call to LogicRunnerMock.OnPulse")
+			}
+
+			if !m.RegisterExecutorFinished() {
+				m.t.Error("Expected call to LogicRunnerMock.RegisterExecutor")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -765,19 +591,15 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *LogicRunnerMock) AllMocksCalled() bool {
 
-	if !m.HandleExecutorResultsMessageFinished() {
-		return false
-	}
-
-	if !m.HandleValidateCaseBindMessageFinished() {
-		return false
-	}
-
-	if !m.HandleValidationResultsMessageFinished() {
+	if !m.GetExecutorFinished() {
 		return false
 	}
 
 	if !m.OnPulseFinished() {
+		return false
+	}
+
+	if !m.RegisterExecutorFinished() {
 		return false
 	}
 

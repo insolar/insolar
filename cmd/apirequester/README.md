@@ -14,12 +14,12 @@ Usage
    
 #### Start apirequester
 
-    ./bin/apirequester -k=scripts/insolard/configs/root_member_keys.json
+    ./bin/apirequester -k=scripts/insolard/configs/
 
 ### Options
 
-        -k rootmemberkeys
-                Path to file with RootMember keys.
+        -k path to members keys
+                Path to dir with members keys.
 
         -u url
                 API url for requests (default - http://localhost:19101/api).

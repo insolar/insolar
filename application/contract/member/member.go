@@ -17,10 +17,7 @@
 package member
 
 import (
-	"encoding/asn1"
-	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -35,9 +32,6 @@ import (
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/x-crypto/ecdsa"
-	"github.com/insolar/x-crypto/sha256"
-	"github.com/insolar/x-crypto/x509"
 )
 
 type Member struct {
@@ -63,69 +57,20 @@ func New(name string, key string) (*Member, error) {
 	}, nil
 }
 
-func PointsFromDER(der []byte) (R, S *big.Int) {
-	R, S = &big.Int{}, &big.Int{}
-
-	data := asn1.RawValue{}
-	if _, err := asn1.Unmarshal(der, &data); err != nil {
-		panic(err.Error())
-	}
-
-	// The format of our DER string is 0x02 + rlen + r + 0x02 + slen + s
-	rLen := data.Bytes[1] // The entire length of R + offset of 2 for 0x02 and rlen
-	r := data.Bytes[2 : rLen+2]
-	// Ignore the next 0x02 and slen bytes and just take the start of S to the end of the byte array
-	s := data.Bytes[rLen+4:]
-
-	R.SetBytes(r)
-	S.SetBytes(s)
-
-	return
-}
-
-func (m *Member) verifySig(request Request, rawRequest []byte, signature string) error {
-	sig, err := base64.StdEncoding.DecodeString(signature)
-	if err != nil {
-		return fmt.Errorf("[ verifySig ]: Cant decode signature %s", err.Error())
-	}
-
-	R, S := PointsFromDER(sig)
-
-	rawpublicpem := request.Params.PublicKey
-
+func (m *Member) verifySig(request Request, rawRequest []byte, signature string, selfSigned bool) error {
 	key, err := m.GetPublicKey()
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
 
-	if key != rawpublicpem {
-		return fmt.Errorf("[ verifySig ] Access denied. Key - %v", rawpublicpem)
-	}
-
-	blockPub, _ := pem.Decode([]byte(rawpublicpem))
-	if blockPub == nil {
-		return fmt.Errorf("[ verifySig ] Problems with decoding. Key - %v", rawpublicpem)
-	}
-	x509EncodedPub := blockPub.Bytes
-	publicKey, err := x509.ParsePKIXPublicKey(x509EncodedPub)
-	if err != nil {
-		return fmt.Errorf("[ verifySig ] Problems with parsing. Key - %v", rawpublicpem)
-	}
-
-	hash := sha256.Sum256(rawRequest)
-	valid := ecdsa.Verify(publicKey.(*ecdsa.PublicKey), hash[:], R, S)
-	if !valid {
-		return fmt.Errorf("[ verifySig ]: Invalid signature")
-	}
-
-	return nil
+	return foundation.VerifySignature(rawRequest, signature, key, request.Params.PublicKey, selfSigned)
 }
 
 var INSATTR_Call_API = true
 
 type Request struct {
-	JsonRpc  string `json:"jsonrpc"`
-	Id       int    `json:"id"`
+	JSONRPC  string `json:"jsonrpc"`
+	ID       int    `json:"id"`
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
@@ -144,241 +89,267 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 	var signature string
 	var pulseTimeStamp int64
 	var rawRequest []byte
+	selfSigned := false
 
 	err := signer.UnmarshalParams(signedRequest, &rawRequest, &signature, &pulseTimeStamp)
 	if err != nil {
-		return nil, fmt.Errorf(" Failed to decode: %s", err.Error())
+		return nil, fmt.Errorf("failed to decode: %s", err.Error())
 	}
 
 	request := Request{}
 	err = json.Unmarshal(rawRequest, &request)
 	if err != nil {
-		return nil, fmt.Errorf(" Failed to unmarshal: %s", err.Error())
-	}
-
-	err = m.verifySig(request, rawRequest, signature)
-	if err != nil {
-		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
+		return nil, fmt.Errorf("failed to unmarshal: %s", err.Error())
 	}
 
 	switch request.Params.CallSite {
-	case "wallet.getMyBalance":
-		return m.GetMyBalance()
+	case "contract.createMember":
+		selfSigned = true
+	case "contract.referenceByPublicKey":
+		selfSigned = true
+	}
+
+	err = m.verifySig(request, rawRequest, signature, selfSigned)
+	if err != nil {
+		return nil, fmt.Errorf("error while verify signature: %s", err.Error())
 	}
 
 	params := request.Params.CallParams.(map[string]interface{})
 
 	switch request.Params.CallSite {
+	case "CreateHelloWorld":
+		return rootdomain.GetObject(rootDomain).CreateHelloWorld()
 	case "contract.registerNode":
-		return m.registerNode(rootDomain, params["public"].(string), params["role"].(string))
-	case "GetNodeRef":
-		return m.getNodeRef(rootDomain, params["public"].(string))
-	}
-
-	switch request.Params.CallSite {
+		return m.registerNodeCall(rootDomain, params)
+	case "contract.getNodeRef":
+		return m.getNodeRefCall(rootDomain, params)
 	case "contract.createMember":
-		return m.createMemberByKey(rootDomain, params["publicKey"].(string))
+		return m.createMemberByKey(rootDomain, request.Params.PublicKey)
 	case "wallet.addBurnAddresses":
 		return m.addBurnAddressesCall(rootDomain, params)
 	case "wallet.getBalance":
-		return m.getBalanceCall(rootDomain, params)
+		return getBalanceCall(params)
 	case "wallet.transfer":
 		return m.transferCall(params)
 	case "Migration":
 		return m.migrationCall(rootDomain, params)
-	case "contract.getReferenceByPK":
-		return m.getReferenceByPK(rootDomain, request.Params.PublicKey)
+	case "contract.getReferenceByPublicKey":
+		return m.getReferenceByPublicKey(rootDomain, request.Params.PublicKey)
 	}
-	return nil, &foundation.Error{S: "Unknown method: '" + request.Params.CallSite + "'"}
+	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
 
-func (migrationAdminMember *Member) addBurnAddressesCall(rdRef insolar.Reference, params map[string]interface{}) (interface{}, error) {
+func (m *Member) getNodeRefCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
 
-	rootDomain := rootdomain.GetObject(rdRef)
+	publicKey, ok := params["publicKey"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
+	}
+
+	return m.getNodeRef(rd, publicKey)
+}
+func (m *Member) registerNodeCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
+
+	publicKey, ok := params["publicKey"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
+	}
+
+	role, ok := params["role"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
+	}
+
+	return m.registerNode(rd, publicKey, role)
+}
+func (migrationAdminMember *Member) addBurnAddressesCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
+
+	burnAddressesI, ok := params["burnAddresses"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'burnAddresses' param")
+	}
+
+	rootDomain := rootdomain.GetObject(rd)
 	migrationAdminRef, err := rootDomain.GetMigrationAdminMemberRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ addBurnAddressesCall ] Failed to get migration deamon admin reference from root domain: %s", err.Error())
+		return nil, fmt.Errorf("failed to get migration daemon admin reference from root domain: %s", err.Error())
 	}
 
 	if migrationAdminMember.GetReference() != *migrationAdminRef {
-		return nil, fmt.Errorf("[ addBurnAddressesCall ] Only migration deamon admin can call this method")
+		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
 
-	burnAddressesInterfaces := params["burnAddresses"].([]interface{})
-	burnAddressesStrs := make([]string, len(burnAddressesInterfaces))
-	for i, ba := range burnAddressesInterfaces {
+	burnAddressesStrs := make([]string, len(burnAddressesI))
+	for i, ba := range burnAddressesI {
 		burnAddressesStrs[i] = ba.(string)
 	}
 
 	err = rootDomain.AddBurnAddresses(burnAddressesStrs)
 	if err != nil {
-		return nil, fmt.Errorf("[ addBurnAddressesCall ] Failed to add burn address: %s", err.Error())
+		return nil, fmt.Errorf("failed to add burn address: %s", err.Error())
 	}
 
 	return nil, nil
 }
-func (caller *Member) getBalanceCall(rdRef insolar.Reference, params map[string]interface{}) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rdRef)
-	rootMember, err := rootDomain.GetRootMemberRef()
-	if err != nil {
-		return 0, fmt.Errorf("[ getBalanceCall ] Failed get root member reference: %s", err.Error())
-	}
-	if caller.GetReference() != *rootMember {
-		return 0, fmt.Errorf("[ getBalanceCall ] Only root member can call this method")
+func getBalanceCall(params map[string]interface{}) (interface{}, error) {
+
+	mReferenceStr, ok := params["reference"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
 	}
 
-	mRef, err := insolar.NewReferenceFromBase58(params["reference"].(string))
+	mRef, err := insolar.NewReferenceFromBase58(mReferenceStr)
 	if err != nil {
-		return 0, fmt.Errorf("[ getBalanceCall ] Failed to parse reference: %s", err.Error())
+		return 0, fmt.Errorf("failed to parse reference: %s", err.Error())
 	}
 	m := member.GetObject(*mRef)
 
-	return m.GetMyBalance()
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
+	}
+	b, err := w.GetBalance()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
+	}
+
+	return b, nil
 }
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
 
-	toMember, err := insolar.NewReferenceFromBase58(params["to"].(string))
-	if err != nil {
-		return nil, fmt.Errorf("[ transferCall ] Failed to parse 'to' param: %s", err.Error())
+	toMemberReferenceI, ok := params["toMemberReference"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'toMemberReference' param")
 	}
-	if m.GetReference() == *toMember {
-		return nil, fmt.Errorf("[ transferCall ] Recipient must be different from the sender")
+	amount, ok := params["amount"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+	}
+
+	toMemberReference, err := insolar.NewReferenceFromBase58(toMemberReferenceI)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse 'to' param: %s", err.Error())
+	}
+	if m.GetReference() == *toMemberReference {
+		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
 
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
-		return nil, fmt.Errorf("[ transfer ] Failed to get wallet implementation of sender: %s", err.Error())
+		return nil, fmt.Errorf("failed to get wallet implementation of sender: %s", err.Error())
 	}
 
-	return nil, w.Transfer(params["amount"].(string), toMember)
+	return w.Transfer(amount, toMemberReference)
 }
-func (mdMember *Member) migrationCall(rdRef insolar.Reference, params map[string]interface{}) (string, error) {
-	if mdMember.Name == "" {
-		return "", fmt.Errorf("[ migrationCall ] Only migraion damons can call migrationCall")
+func (m *Member) migrationCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
+
+	inAmount, ok := params["inAmount"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'inAmount' param")
 	}
 
 	amount := new(big.Int)
-	amount, ok := amount.SetString(params["inAmount"].(string), 10)
+	amount, ok = amount.SetString(inAmount, 10)
 	if !ok {
-		return "", fmt.Errorf("[ migrationCall ] Failed to parse amount")
+		return nil, fmt.Errorf("failed to parse amount")
 	}
 
-	unHoldDate, err := helper.ParseTimeStamp(params["currentDate"].(string))
+	unHoldDate, err := helper.ParseTimestamp(params["currentDate"].(string))
 	if err != nil {
-		return "", fmt.Errorf("[ migrationCall ] Failed to parse unHoldDate: %s", err.Error())
+		return nil, fmt.Errorf("failed to parse unHoldDate: %s", err.Error())
 	}
 
-	return mdMember.migration(rdRef, params["txHash"].(string), params["burnAddress"].(string), *amount, unHoldDate)
+	return m.migration(rd, params["txHash"].(string), params["burnAddress"].(string), *amount, unHoldDate)
 }
 
 // Platform methods
-func (m *Member) registerNode(rdRef insolar.Reference, public string, role string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rdRef)
+func (m *Member) registerNode(rd insolar.Reference, public string, role string) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(rd)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ registerNode ] Failed to get node domain ref: %s", err.Error())
+		return nil, fmt.Errorf("failed to get node domain ref: %s", err.Error())
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
 	cert, err := nd.RegisterNode(public, role)
 	if err != nil {
-		return nil, fmt.Errorf("[ registerNode ] Failed to register node: %s", err.Error())
+		return nil, fmt.Errorf("failed to register node: %s", err.Error())
 	}
 
-	return string(cert), nil
+	return cert, nil
 }
 
-func (m *Member) getNodeRef(rdRef insolar.Reference, publicKey string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rdRef)
+func (m *Member) getNodeRef(rd insolar.Reference, publicKey string) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(rd)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ getNodeRef ] Failed to get nodeDmainRef: %s", err.Error())
+		return nil, fmt.Errorf("failed to get nodeDmainRef: %s", err.Error())
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
-	nodeRef, err := nd.GetNodeRefByPK(publicKey)
+	nodeRef, err := nd.GetNodeRefByPublicKey(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("[ getNodeRef ] NetworkNode not found: %s", err.Error())
+		return nil, fmt.Errorf("network node was not found by public key: %s", err.Error())
 	}
 
 	return nodeRef, nil
 }
 
 // Create member methods
-func (m *Member) createMemberByKey(rdRef insolar.Reference, key string) (interface{}, error) {
+func (m *Member) createMemberByKey(rd insolar.Reference, key string) (interface{}, error) {
 
-	rootDomain := rootdomain.GetObject(rdRef)
+	rootDomain := rootdomain.GetObject(rd)
 	burnAddresses, err := rootDomain.GetBurnAddress()
 	if err != nil {
-		return nil, fmt.Errorf("[ createMemberByKey ] Failed to get burn address: %s", err.Error())
+		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
 	}
 
-	new, err := m.createMember(rdRef, burnAddresses, key)
+	new, err := m.createMember(rd, burnAddresses, key)
 	if err != nil {
 		if e := rootDomain.AddBurnAddress(burnAddresses); e != nil {
-			return nil, fmt.Errorf("[ createMemberByKey ] Failed to add burn address back: %s; after error: %s", e.Error(), err.Error())
+			return nil, fmt.Errorf("failed to add burn address back: %s; after error: %s", e.Error(), err.Error())
 		}
-		return nil, fmt.Errorf("[ createMemberByKey ] Failed to create member: %s", err.Error())
+		return nil, fmt.Errorf("failed to create member: %s", err.Error())
 	}
 
 	if err = rootDomain.AddNewMemberToMaps(key, burnAddresses, new.Reference); err != nil {
-		return nil, fmt.Errorf("[ createMemberByKey ] Failed to add new member to maps: %s", err.Error())
+		return nil, fmt.Errorf("failed to add new member to maps: %s", err.Error())
 	}
 
 	return new.Reference.String(), nil
 }
 func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key string) (*member.Member, error) {
 	if key == "" {
-		return nil, fmt.Errorf("[ createMember ] Key is not valid")
+		return nil, fmt.Errorf("key is not valid")
 	}
 
 	memberHolder := member.New(ethAddr, key)
 	new, err := memberHolder.AsChild(rdRef)
 	if err != nil {
-		return nil, fmt.Errorf("[ createMember ] Failed to save as child: %s", err.Error())
+		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
 	}
 
-	wHolder := wallet.New(big.NewInt(100).String())
+	wHolder := wallet.New(big.NewInt(1000000000).String())
 	_, err = wHolder.AsDelegate(new.Reference)
 	if err != nil {
-		return nil, fmt.Errorf("[ createMember ] Failed to save as delegate: %s", err.Error())
+		return nil, fmt.Errorf("failed to save as delegate: %s", err.Error())
 	}
 
 	return new, nil
-}
-
-// Get balance methods
-func (m *Member) GetMyBalance() (interface{}, error) {
-	w, err := wallet.GetImplementationFrom(m.GetReference())
-	if err != nil {
-		return nil, fmt.Errorf("[ getMyBalanceCall ] Failed to get implementation: %s", err.Error())
-	}
-	b, err := w.GetBalance()
-	if err != nil {
-		return nil, fmt.Errorf("[ getMyBalanceCall ] Failed to get balance: %s", err.Error())
-	}
-
-	//d, err := m.getDeposits()
-	//if err != nil {
-	//	return nil, fmt.Errorf("[ getBalanceCall ] Failed to get deposits: %s", err.Error())
-	//}
-	//return map[string]interface{}{"balance" : b, "deposit": d}, nil
-
-	return b, nil
 }
 
 func (m *Member) getDeposits() ([]map[string]string, error) {
 
 	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
 	if err != nil {
-		return nil, fmt.Errorf("[ getDeposits ] Failed to get children: %s", err.Error())
+		return nil, fmt.Errorf("failed to get children: %s", err.Error())
 	}
 
 	result := []map[string]string{}
 	for iterator.HasNext() {
 		cref, err := iterator.Next()
 		if err != nil {
-			return nil, fmt.Errorf("[ getDeposits ] Failed to get next child: %s", err.Error())
+			return nil, fmt.Errorf("failed to get next child: %s", err.Error())
 		}
 
 		if !cref.IsEmpty() {
@@ -386,7 +357,7 @@ func (m *Member) getDeposits() ([]map[string]string, error) {
 
 			m, err := d.MapMarshal()
 			if err != nil {
-				return nil, fmt.Errorf("[ getDeposits ] Failed to marshal deposit to map: %s", err.Error())
+				return nil, fmt.Errorf("failed to marshal deposit to map: %s", err.Error())
 			}
 
 			result = append(result, m)
@@ -397,130 +368,99 @@ func (m *Member) getDeposits() ([]map[string]string, error) {
 }
 
 // Migration methods
-func (migrationDamonMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
+func (migrationDaemonMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
 	rd := rootdomain.GetObject(rdRef)
 
-	// Get migraion damon members
-	migrationDamonMembers, err := rd.GetMigrationDamonMembers()
+	// Get migraion daemon members
+	migrationDaemonMembers, err := rd.GetMigrationDaemonMembers()
 	if err != nil {
-		return "", fmt.Errorf("[ migration ] Failed to get migraion damons map: %s", err.Error())
+		return "", fmt.Errorf("failed to get migraion daemons map: %s", err.Error())
 	}
-	if len(migrationDamonMembers) == 0 {
-		return "", fmt.Errorf("[ migration ] There is no active migraion damon")
+	if len(migrationDaemonMembers) == 0 {
+		return "", fmt.Errorf("there is no active migraion daemon")
 	}
-	// Check that caller is migraion damon
-	if helper.Contains(migrationDamonMembers, migrationDamonMember.GetReference()) {
-		return "", fmt.Errorf("[ migration ] This migraion damon is not in the list")
+	// Check that caller is migraion daemon
+	if helper.Contains(migrationDaemonMembers, migrationDaemonMember.GetReference()) {
+		return "", fmt.Errorf("this migraion daemon is not in the list")
 	}
 
 	// Get member by burn address
 	mRef, err := rd.GetMemberByBurnAddress(burnAddress)
 	if err != nil {
-		return "", fmt.Errorf("[ migration ] Failed to get member by burn address")
+		return "", fmt.Errorf("failed to get member by burn address")
 	}
 	m := member.GetObject(mRef)
 
 	// Find deposit for txHash
 	found, txDeposit, err := m.FindDeposit(txHash, amount.String())
 	if err != nil {
-		return "", fmt.Errorf("[ migration ] Failed to get deposit: %s", err.Error())
+		return "", fmt.Errorf("failed to get deposit: %s", err.Error())
 	}
 
 	// If deposit doesn't exist - create new deposit
 	if !found {
-		migraionDamonConfirms := map[insolar.Reference]bool{}
-		for _, ref := range migrationDamonMembers {
-			migraionDamonConfirms[ref] = false
+		migraionDaemonConfirms := map[insolar.Reference]bool{}
+		for _, ref := range migrationDaemonMembers {
+			migraionDaemonConfirms[ref] = false
 		}
-		dHolder := deposit.New(migraionDamonConfirms, txHash, amount.String(), unHoldDate)
+		dHolder := deposit.New(migraionDaemonConfirms, txHash, amount.String(), unHoldDate)
 		txDepositP, err := dHolder.AsDelegate(mRef)
 		if err != nil {
-			return "", fmt.Errorf("[ migration ] Failed to save as delegate: %s", err.Error())
+			return "", fmt.Errorf("failed to save as delegate: %s", err.Error())
 		}
 		txDeposit = *txDepositP
 	}
 
-	// Confirm tx by migraion damon
-	confirms, err := txDeposit.Confirm(migrationDamonMember.GetReference(), txHash, amount.String())
+	// Confirm tx by migraion daemon
+	confirms, err := txDeposit.Confirm(migrationDaemonMember.GetReference(), txHash, amount.String())
 	if err != nil {
-		return "", fmt.Errorf("[ migration ] Confirmed failed: %s", err.Error())
+		return "", fmt.Errorf("confirmed failed: %s", err.Error())
 	}
 
-	//if allConfirmed {
-	//	w, err := wallet.GetImplementationFrom(insAddr)
-	//	if err != nil {
-	//		wHolder := wallet.New(0)
-	//		w, err = wHolder.AsDelegate(insAddr)
-	//		if err != nil {
-	//			return "", fmt.Errorf("[ migration ] Failed to save as delegate: %s", err.Error())
-	//		}
-	//	}
-	//
-	//	getMdWallet := func() (*wallet.Wallet, error) {
-	//		mdWalletRef, err := rd.GetMigrationWalletRef()
-	//		if err != nil {
-	//			return nil, fmt.Errorf("[ migration ] Failed to get md wallet ref: %s", err.Error())
-	//		}
-	//		mdWallet := wallet.GetObject(*mdWalletRef)
-	//
-	//		return mdWallet, nil
-	//	}
-	//	mdWallet, err := getMdWallet()
-	//	if err != nil {
-	//		return "", fmt.Errorf("[ migration ] Failed to get mdWallet: %s", err.Error())
-	//	}
-	//
-	//	err = mdWallet.Transfer(amount, &w.Reference)
-	//	if err != nil {
-	//		return "", fmt.Errorf("[ migration ] Failed to transfer: %s", err.Error())
-	//	}
-	//
-	//}
-	//
-	//return insAddr.String(), nil
 	return strconv.Itoa(int(confirms)), nil
 }
+
 func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 
 	inputAmount := new(big.Int)
 	inputAmount, ok := inputAmount.SetString(inputAmountStr, 10)
 	if !ok {
-		return false, deposit.Deposit{}, fmt.Errorf("[ Confirm ] can't parse input amount")
+		return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
 	}
 
 	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
 	if err != nil {
-		return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] Failed to get children: %s", err.Error())
+		return false, deposit.Deposit{}, fmt.Errorf("failed to get children: %s", err.Error())
 	}
 
 	for iterator.HasNext() {
 		cref, err := iterator.Next()
 		if err != nil {
-			return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] Failed to get next child: %s", err.Error())
+			return false, deposit.Deposit{}, fmt.Errorf("failed to get next child: %s", err.Error())
 		}
 
 		if !cref.IsEmpty() {
 			d := deposit.GetObject(cref)
 			th, err := d.GetTxHash()
 			if err != nil {
-				return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] Failed to get tx hash: %s", err.Error())
+				return false, deposit.Deposit{}, fmt.Errorf("failed to get tx hash: %s", err.Error())
 			}
 			depositAmountStr, err := d.GetAmount()
 			if err != nil {
-				return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] Failed to get amount: %s", err.Error())
+				return false, deposit.Deposit{}, fmt.Errorf("failed to get amount: %s", err.Error())
 			}
 
 			depositAmountInt := new(big.Int)
 			depositAmountInt, ok := depositAmountInt.SetString(depositAmountStr, 10)
 			if !ok {
-				return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] can't parse input amount")
+				return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
 			}
 
 			if txHash == th {
 				if (inputAmount).Cmp(depositAmountInt) == 0 {
 					return true, *d, nil
 				} else {
-					return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] deposit with this tx hash has different amount")
+					return false, deposit.Deposit{}, fmt.Errorf("deposit with this tx hash has different amount")
 				}
 			}
 		}
@@ -529,11 +469,11 @@ func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 	return false, deposit.Deposit{}, nil
 }
 
-func (m *Member) getReferenceByPK(rdRef insolar.Reference, publicKey string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rdRef)
-	ref, err := rootDomain.GetReferenceByPK(publicKey)
+func (m *Member) getReferenceByPublicKey(rd insolar.Reference, publicKey string) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(rd)
+	ref, err := rootDomain.GetReferenceByPublicKey(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("[ getReferenceByPK ] Failed to get get reference by public key: %s", err.Error())
+		return nil, fmt.Errorf("failed to get get reference by public key: %s", err.Error())
 	}
 	return ref.String(), nil
 

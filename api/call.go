@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/metrics"
+
 	"github.com/insolar/insolar/api/requester"
 
 	"github.com/pkg/errors"
@@ -37,12 +39,11 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/metrics"
 )
 
 const (
-	TimeoutError = -215
-	ResultError  = -217
+	TimeoutError = 215
+	ResultError  = 217
 )
 
 // UnmarshalRequest unmarshals request to api
@@ -65,7 +66,7 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 func (ar *Runner) checkSeed(paramsSeed string) error {
 	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
 	if err != nil {
-		return errors.New("[ checkSeed ] Decode error")
+		return errors.New("[ checkSeed ] Failed to decode seed from string")
 	}
 	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {
@@ -118,9 +119,8 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 }
 
 func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
-	resp.Error.Message = err.Error()
-	resp.Error.Code = ResultError
-	resp.Error.TraceID = traceID
+	errResponse := &requester.Error{Message: extraMsg, Code: ResultError, TraceID: traceID}
+	resp.Error = errResponse
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
@@ -132,22 +132,22 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		ctx, span := instracer.StartSpan(ctx, "callHandler")
 		defer span.End()
 
-		request := requester.Request{}
-		resp := requester.ContractAnswer{}
+		contractRequest := requester.Request{}
+		contractAnswer := requester.ContractAnswer{}
 
 		startTime := time.Now()
 		defer func() {
 			success := "success"
-			if resp.Error.Message != "" {
+			if contractAnswer.Error != nil {
 				success = "fail"
 			}
-			metrics.APIContractExecutionTime.WithLabelValues(request.Method, success).Observe(time.Since(startTime).Seconds())
+			metrics.APIContractExecutionTime.WithLabelValues(contractRequest.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
 
-		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
+		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
 
 		defer func() {
-			res, err := json.MarshalIndent(resp, "", "    ")
+			res, err := json.MarshalIndent(contractAnswer, "", "    ")
 			if err != nil {
 				res = []byte(`{"error": "can't marshal ContractAnswer to json'"}`)
 			}
@@ -158,89 +158,81 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 
-		rawBody, err := UnmarshalRequest(req, &request)
+		rawBody, err := UnmarshalRequest(req, &contractRequest)
 		if err != nil {
-			processError(err, "Can't unmarshal request", &resp, insLog, traceID)
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
 		}
 
-		resp.JSONRPC = request.JSONRPC
-		resp.ID = request.ID
+		contractAnswer.JSONRPC = contractRequest.JSONRPC
+		contractAnswer.ID = contractRequest.ID
 
-		digest := req.Header.Get(requester.Digest)
-		richSignature := req.Header.Get(requester.Signature)
-
-		signature, err := validateRequestHeaders(digest, richSignature, rawBody)
+		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 		if err != nil {
-			processError(err, "Can't validate request", &resp, insLog, traceID)
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
 		}
 
-		if len(request.LogLevel) > 0 {
-			logLevelNumber, err := insolar.ParseLevel(request.LogLevel)
+		if len(contractRequest.LogLevel) > 0 {
+			logLevelNumber, err := insolar.ParseLevel(contractRequest.LogLevel)
 			if err != nil {
-				processError(err, "Can't parse logLevel", &resp, insLog, traceID)
+				processError(err, "Can't parse logLevel", &contractAnswer, insLog, traceID)
 				return
 			}
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed(request.Params.Seed)
-		if err != nil {
-			processError(err, "Can't checkSeed", &resp, insLog, traceID)
-			return
-		}
-
-		pulse, err := ar.PulseAccessor.Latest(ctx)
-		if err != nil {
-			processError(err, "Can't get last pulse", &resp, insLog, traceID)
+		if err := ar.checkSeed(contractRequest.Params.Seed); err != nil {
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
 		}
 
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, request, rawBody, signature, pulse.PulseTimestamp)
+			result, err = ar.makeCall(ctx, contractRequest, rawBody, signature, 0)
 			ch <- nil
 		}()
 		select {
 
 		case <-ch:
 			if err != nil {
-				processError(err, "Can't makeCall", &resp, insLog, traceID)
+				processError(err, err.Error(), &contractAnswer, insLog, traceID)
 				return
 			}
-			resp.Result.ContractResult = result
+			contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
+			contractAnswer.Result = contractResult
+			return
 
 		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
-			resp.Error.Message = "Messagebus timeout exceeded"
-			resp.Error.Code = TimeoutError
-			resp.Error.TraceID = traceID
+			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, TraceID: traceID}
+			contractAnswer.Error = errResponse
 			return
 		}
-
-		resp.Result.ContractResult = result
-		resp.Result.TraceID = traceID
 	}
 }
 
 func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
-	if len(digest) == 0 || len(richSignature) == 0 || len(body) == 0 {
-		return "", errors.New("Invalid input data")
+	// Digest = "SHA-256=<hashString>"
+	// Signature = "keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>"
+	if len(digest) < 15 || strings.Count(digest, "=") < 2 || len(richSignature) == 15 ||
+		strings.Count(richSignature, "=") < 4 || len(body) == 0 {
+		return "", errors.Errorf("invalid input data length digest: %d, signature: %d, body: %d", len(digest),
+			len(richSignature), len(body))
 	}
 	h := sha256.New()
 	_, err := h.Write(body)
 	if err != nil {
 		return "", errors.Wrap(err, "Cant get hash")
 	}
-	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	if sha == digest[strings.IndexByte(digest, '=')+1:] {
 		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
 		if len(sig) == 0 {
-			return "", errors.New("Empty signature")
+			return "", errors.New("empty signature")
 		}
 		return sig, nil
 
 	}
-	return "", errors.New("Cant get signature from header")
+	return "", errors.New("cant get signature from header")
 }

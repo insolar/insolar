@@ -31,12 +31,12 @@ type InfoArgs struct{}
 
 // InfoReply is reply for Info service requests.
 type InfoReply struct {
-	RootDomain            string   `json:"RootDomain"`
-	RootMember            string   `json:"RootMember"`
-	MigrationAdminMember  string   `json:"MigrationAdminMember"`
-	MigrationDamonMembers []string `json:"MigrationDamonMembers"`
-	NodeDomain            string   `json:"NodeDomain"`
-	TraceID               string   `json:"TraceID"`
+	RootDomain             string   `json:"RootDomain"`
+	RootMember             string   `json:"RootMember"`
+	MigrationAdminMember   string   `json:"MigrationAdminMember"`
+	MigrationDaemonMembers []string `json:"MigrationDaemonMembers"`
+	NodeDomain             string   `json:"NodeDomain"`
+	TraceID                string   `json:"TraceID"`
 }
 
 // InfoService is a service that provides API for getting info about genesis objects.
@@ -54,7 +54,7 @@ func NewInfoService(runner *Runner) *InfoService {
 //   Request structure:
 //   {
 //     "jsonrpc": "2.0",
-//     "method": "node.GetInfo",
+//     "method": "network.getInfo",
 //     "id": str|int|null
 //   }
 //
@@ -77,54 +77,63 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, reply *InfoReply)
 
 	rootDomain := s.runner.GenesisDataProvider.GetRootDomain(ctx)
 	if rootDomain == nil {
-		inslog.Error("[ INFO ] rootDomain ref is nil")
-		return errors.New("[ INFO ] rootDomain ref is nil")
+		msg := "[ INFO ] rootDomain ref is nil"
+		inslog.Error(msg)
+		return errors.New(msg)
 	}
 	rootMember, err := s.runner.GenesisDataProvider.GetRootMember(ctx)
 	if err != nil {
-		inslog.Error(errors.Wrap(err, "[ INFO ] Can't get rootMember ref"))
-		return errors.Wrap(err, "[ INFO ] Can't get rootMember ref")
+		msg := "[ INFO ] Can't get rootMember ref"
+		inslog.Error(errors.Wrap(err, msg))
+		return errors.Wrap(err, msg)
 	}
 	if rootMember == nil {
-		inslog.Error("[ INFO ] rootMember ref is nil")
-		return errors.New("[ INFO ] rootMember ref is nil")
+		msg := "[ INFO ] rootMember ref is nil"
+		inslog.Error(msg)
+		return errors.New(msg)
 	}
-	migrationDamonMembers, err := s.runner.GenesisDataProvider.GetMigrationDamonMembers(ctx)
+	migrationDaemonMembers, err := s.runner.GenesisDataProvider.GetMigrationDaemonMembers(ctx)
 	if err != nil {
-		inslog.Error(errors.Wrap(err, "[ INFO ] Can't get migration damon members refs"))
-		return errors.Wrap(err, "[ INFO ] Can't get migration damon members refs")
+		msg := "[ INFO ] Can't get migration daemon members refs"
+		inslog.Error(errors.Wrap(err, msg))
+		return errors.Wrap(err, msg)
 	}
-	migrationDamonMembersStrs := []string{}
-	for _, r := range migrationDamonMembers {
+	migrationDaemonMembersStrs := []string{}
+	for _, r := range migrationDaemonMembers {
 		if r == nil {
-			inslog.Error("[ INFO ] migration damon members refs are nil")
-			return errors.New("[ INFO ] migration damon members refs are nil")
+			msg := "[ INFO ] migration daemon members refs are nil"
+			inslog.Error(msg)
+			return errors.New(msg)
 		}
-		migrationDamonMembersStrs = append(migrationDamonMembersStrs, r.String())
+		migrationDaemonMembersStrs = append(migrationDaemonMembersStrs, r.String())
 	}
 	migrationAdminMember, err := s.runner.GenesisDataProvider.GetMigrationAdminMember(ctx)
 	if err != nil {
-		inslog.Error(errors.Wrap(err, "[ INFO ] Can't get migration admin member ref"))
-		return errors.Wrap(err, "[ INFO ] Can't get migration admin member ref")
+		msg := "[ INFO ] Can't get migration admin member ref"
+		inslog.Error(errors.Wrap(err, msg))
+		return errors.Wrap(err, msg)
 	}
 	if migrationAdminMember == nil {
-		inslog.Error("[ INFO ] migration admin member ref is nil")
-		return errors.New("[ INFO ] migration admin member ref is nil")
+		msg := "[ INFO ] migration admin member ref is nil"
+		inslog.Error(msg)
+		return errors.New(msg)
 	}
 	nodeDomain, err := s.runner.GenesisDataProvider.GetNodeDomain(ctx)
 	if err != nil {
-		inslog.Error(errors.Wrap(err, "[ INFO ] Can't get nodeDomain ref"))
-		return errors.Wrap(err, "[ INFO ] Can't get nodeDomain ref")
+		msg := "[ INFO ] Can't get nodeDomain ref"
+		inslog.Error(errors.Wrap(err, msg))
+		return errors.Wrap(err, msg)
 	}
 	if nodeDomain == nil {
-		inslog.Error("[ INFO ] nodeDomain ref is nil")
-		return errors.New("[ INFO ] nodeDomain ref is nil")
+		msg := "[ INFO ] nodeDomain ref is nil"
+		inslog.Error(msg)
+		return errors.New(msg)
 	}
 
 	reply.RootDomain = rootDomain.String()
 	reply.RootMember = rootMember.String()
 	reply.MigrationAdminMember = migrationAdminMember.String()
-	reply.MigrationDamonMembers = migrationDamonMembersStrs
+	reply.MigrationDaemonMembers = migrationDaemonMembersStrs
 	reply.NodeDomain = nodeDomain.String()
 	reply.TraceID = utils.RandTraceID()
 

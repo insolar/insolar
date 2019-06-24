@@ -21,18 +21,20 @@ import (
 	rand2 "math/rand"
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPulse_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
+
 	memStorage := pulse.NewStorageMem()
 	dbStorage := pulse.NewDB(store.NewMemoryMockDB())
 

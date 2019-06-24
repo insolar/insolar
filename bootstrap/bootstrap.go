@@ -81,13 +81,13 @@ func (g *Generator) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't get migration admin keys")
 	}
-	migrationDamonPublicKeys := []string{}
-	for i := 0; i < insolar.GenesisAmountMigrationDamonMembers; i++ {
-		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_damon_" + strconv.Itoa(i) + "_member_keys.json")
+	migrationDaemonPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetMigrationDaemonPath(i))
 		if err != nil {
-			return errors.Wrap(err, "couldn't get migration damon keys")
+			return errors.Wrap(err, "couldn't get migration daemon keys")
 		}
-		migrationDamonPublicKeys = append(migrationDamonPublicKeys, k)
+		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
 	}
 
 	inslog.Info("[ bootstrap ] generate plugins")
@@ -116,11 +116,11 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
-		RootBalance:              g.config.RootBalance,
-		MDBalance:                g.config.MDBalance,
-		RootPublicKey:            rootPublicKey,
-		MigrationAdminPublicKey:  migrationAdminPublicKey,
-		MigrationDamonPublicKeys: migrationDamonPublicKeys,
+		RootBalance:               g.config.RootBalance,
+		MDBalance:                 g.config.MDBalance,
+		RootPublicKey:             rootPublicKey,
+		MigrationAdminPublicKey:   migrationAdminPublicKey,
+		MigrationDaemonPublicKeys: migrationDaemonPublicKeys,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {
@@ -255,4 +255,9 @@ func dumpAsJSON(data interface{}) string {
 		panic(err)
 	}
 	return string(b)
+}
+
+// GetMigrationDaemonPath generate key file name for migration daemon
+func GetMigrationDaemonPath(i int) string {
+	return "migration_daemon_" + strconv.Itoa(i) + "_member_keys.json"
 }

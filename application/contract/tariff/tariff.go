@@ -18,8 +18,9 @@ package tariff
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"math/big"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 type Tariff struct {
@@ -36,12 +37,12 @@ func New(commissionRate string) (*Tariff, error) {
 func (t Tariff) GetCommission(amountStr string) (string, error) {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
-		return "", fmt.Errorf("[ GetCommission ] can't parse amount")
+		return "", fmt.Errorf("can't parse amount")
 	}
 
 	commissionRate, ok := new(big.Int).SetString(t.CommissionRate, 10)
 	if !ok {
-		return "", fmt.Errorf("[ GetCommission ] can't parse commission rate")
+		return "", fmt.Errorf("can't parse commission rate")
 	}
 
 	preResult := new(big.Int).Mul(amount, commissionRate)

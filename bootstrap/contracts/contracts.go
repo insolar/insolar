@@ -17,6 +17,7 @@
 package contracts
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/insolar/insolar/application/contract/costcenter"
@@ -44,16 +45,16 @@ func GenesisContractsStates(cfg insolar.GenesisContractsConfig) []insolar.Genesi
 		getTariffGenesisContractState(),
 	}
 
-	for i, key := range cfg.MigrationDamonPublicKeys {
-		result = append(result, getMemberGenesisContractState(key, insolar.GenesisNameMigrationDamonMembers[i], insolar.GenesisNameRootDomain))
+	for i, key := range cfg.MigrationDaemonPublicKeys {
+		result = append(result, getMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain))
 	}
 
 	return result
 }
 
 func rootDomain() insolar.GenesisContractState {
-	if len(genesisrefs.ContractMigrationDamonMembers) < insolar.GenesisAmountActiveMigrationDamonMembers {
-		panic("need at least '" + strconv.Itoa(insolar.GenesisAmountActiveMigrationDamonMembers) + "' migration damons")
+	if len(genesisrefs.ContractMigrationDaemonMembers) < insolar.GenesisAmountActiveMigrationDaemonMembers {
+		panic("need at least '" + strconv.Itoa(insolar.GenesisAmountActiveMigrationDaemonMembers) + "' migration daemons")
 	}
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameRootDomain,
@@ -61,16 +62,16 @@ func rootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			RootMember:            genesisrefs.ContractRootMember,
-			MigrationDamonMembers: genesisrefs.ContractMigrationDamonMembers[:insolar.GenesisAmountActiveMigrationDamonMembers],
-			MigrationAdminMember:  genesisrefs.ContractMigrationAdminMember,
-			MigrationWallet:       genesisrefs.ContractMigrationWallet,
-			CostCenter:            genesisrefs.ContractCostCenter,
-			CommissionWallet:      genesisrefs.ContractCommissionWallet,
-			BurnAddressMap:        map[string]insolar.Reference{},
-			PublicKeyMap:          map[string]insolar.Reference{},
-			FreeBurnAddresses:     []string{},
-			NodeDomain:            genesisrefs.ContractNodeDomain,
+			RootMember:             genesisrefs.ContractRootMember,
+			MigrationDaemonMembers: genesisrefs.ContractMigrationDaemonMembers[:insolar.GenesisAmountActiveMigrationDaemonMembers],
+			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
+			MigrationWallet:        genesisrefs.ContractMigrationWallet,
+			CostCenter:             genesisrefs.ContractCostCenter,
+			CommissionWallet:       genesisrefs.ContractCommissionWallet,
+			BurnAddressMap:         map[string]insolar.Reference{},
+			PublicKeyMap:           map[string]insolar.Reference{},
+			FreeBurnAddresses:      []string{},
+			NodeDomain:             genesisrefs.ContractNodeDomain,
 		}),
 	}
 }
@@ -85,21 +86,21 @@ func nodeDomain() insolar.GenesisContractState {
 	}
 }
 
-func getMemberGenesisContractState(publicKey string, name string, parrent string) insolar.GenesisContractState {
+func getMemberGenesisContractState(publicKey string, name string, parent string) insolar.GenesisContractState {
 	m, err := member.New(name, publicKey)
 	if err != nil {
-		panic("`" + name + "` member constructor failed")
+		panic(fmt.Sprintf("'%s' member constructor failed", name))
 	}
 
 	return insolar.GenesisContractState{
 		Name:       name,
 		Prototype:  insolar.GenesisNameMember,
-		ParentName: parrent,
+		ParentName: parent,
 		Memory:     mustGenMemory(m),
 	}
 }
 
-func getWalletGenesisContractState(balance string, name string, parrent string) insolar.GenesisContractState {
+func getWalletGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
 	w, err := wallet.New(balance)
 	if err != nil {
 		panic("failed to create ` " + name + "` wallet instance")
@@ -108,7 +109,7 @@ func getWalletGenesisContractState(balance string, name string, parrent string) 
 	return insolar.GenesisContractState{
 		Name:       name,
 		Prototype:  insolar.GenesisNameWallet,
-		ParentName: parrent,
+		ParentName: parent,
 		Delegate:   true,
 		Memory:     mustGenMemory(w),
 	}

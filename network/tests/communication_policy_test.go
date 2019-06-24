@@ -57,8 +57,8 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/consensus/phases"
+	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/consensusv1/phases"
 )
 
 type CommunicationPolicy int

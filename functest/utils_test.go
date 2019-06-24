@@ -23,23 +23,28 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar"
 	"io/ioutil"
+	"math/big"
 	"net"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/gorilla/rpc/v2/json2"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy"
+
+	"github.com/pkg/errors"
 )
 
 const sendRetryCount = 5
+
+var contracts map[string]*insolar.Reference
 
 type postParams map[string]interface{}
 
@@ -64,13 +69,9 @@ func (r *RPCResponse) getError() map[string]interface{} {
 type getSeedResponse struct {
 	RPCResponse
 	Result struct {
-		Seed    string `json:"Seed"`
-		TraceID string `json:"TraceID"`
+		Seed    string `json:"seed"`
+		TraceID string `json:"traceID"`
 	} `json:"result"`
-}
-
-type bootstrapNode struct {
-	PublicKey string `json:"public_key"`
 }
 
 type infoResponse struct {
@@ -86,8 +87,8 @@ type rpcInfoResponse struct {
 }
 
 type statusResponse struct {
-	NetworkState    string `json:"NetworkState"`
-	WorkingListSize int    `json:"WorkingListSize"`
+	NetworkState    string `json:"networkState"`
+	WorkingListSize int    `json:"workingListSize"`
 }
 
 type rpcStatusResponse struct {
@@ -98,7 +99,11 @@ type rpcStatusResponse struct {
 func createMember(t *testing.T, name string) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	result, err := signedRequest(&root, "CreateMember", name, member.pubKey)
+	member.ref = root.ref
+
+	addBurnAddresses(t)
+
+	result, err := signedRequest(member, "contract.createMember", map[string]interface{}{})
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
@@ -106,22 +111,27 @@ func createMember(t *testing.T, name string) *user {
 	return member
 }
 
-func getBalanceNoErr(t *testing.T, caller *user, reference string) int {
+func addBurnAddresses(t *testing.T) {
+	_, err := signedRequest(&migrationAdmin, "wallet.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{"fake_ba"}})
+	require.NoError(t, err)
+}
+
+func getBalanceNoErr(t *testing.T, caller *user, reference string) *big.Int {
 	balance, err := getBalance(caller, reference)
 	require.NoError(t, err)
 	return balance
 }
 
-func getBalance(caller *user, reference string) (int, error) {
-	res, err := signedRequest(caller, "GetBalance", reference)
+func getBalance(caller *user, reference string) (*big.Int, error) {
+	res, err := signedRequest(caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	amount, ok := res.(float64)
+	amount, ok := new(big.Int).SetString(res.(string), 10)
 	if !ok {
-		return 0, errors.New("result is not int")
+		return nil, fmt.Errorf("can't parse input amount")
 	}
-	return int(amount), nil
+	return amount, nil
 }
 
 func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
@@ -147,11 +157,12 @@ func getSeed(t *testing.T) string {
 }
 
 func getInfo(t *testing.T) infoResponse {
-	body := getRPSResponseBody(t, postParams{
+	pp := postParams{
 		"jsonrpc": "2.0",
 		"method":  "network.GetInfo",
 		"id":      "",
-	})
+	}
+	body := getRPSResponseBody(t, pp)
 	rpcInfoResponse := &rpcInfoResponse{}
 	unmarshalRPCResponse(t, body, rpcInfoResponse)
 	require.NotNil(t, rpcInfoResponse.Result)
@@ -177,52 +188,45 @@ func unmarshalRPCResponse(t *testing.T, body []byte, response RPCResponseInterfa
 	require.Nil(t, response.getError())
 }
 
-func unmarshalCallResponse(t *testing.T, body []byte, response *response) {
+func unmarshalCallResponse(t *testing.T, body []byte, response *requester.ContractAnswer) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 }
 
-type response struct {
-	Result interface{}
-	Error  string
-}
-
-func signedRequest(user *user, method string, params ...interface{}) (interface{}, error) {
+func signedRequest(user *user, method string, params map[string]interface{}) (interface{}, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
 	if err != nil {
 		return nil, err
 	}
-	var resp response
+	var resp requester.ContractAnswer
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
-			Method: method,
-			Params: params,
+		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
+			JSONRPC: "2.0",
+			ID:      1,
+			Method:  "call.api",
+			Params:  requester.Params{CallSite: method, CallParams: params},
 		})
 
 		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
 			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
-			resp.Error = netErr.Error()
+			resp.Error = &requester.Error{Message: netErr.Error()}
 			continue
 		} else if err != nil {
 			return nil, err
 		}
 
-		resp = response{}
+		resp = requester.ContractAnswer{}
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
 			return nil, err
 		}
 
-		if resp.Error == "" {
-			return resp.Result, nil
-		}
-
-		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
-			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
+		if resp.Error != nil && strings.Contains(resp.Error.Message, "API timeout exceeded") {
+			fmt.Printf("API timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
 			continue
@@ -231,11 +235,19 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		break
 	}
 
-	if currentIterNum > sendRetryCount {
-		return nil, errors.New("Number of retries exceeded. " + resp.Error)
-	}
+	if resp.Error != nil {
+		if currentIterNum > sendRetryCount {
+			return nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
+		}
 
-	return resp.Result, errors.New(resp.Error)
+		return nil, errors.New(resp.Error.Message)
+	} else {
+		if resp.Result == nil {
+			return nil, errors.New("Error and result are nil")
+		} else {
+			return resp.Result.ContractResult, nil
+		}
+	}
 }
 
 func newUserWithKeys() (*user, error) {
@@ -261,13 +273,21 @@ func newUserWithKeys() (*user, error) {
 	}, nil
 }
 
-func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
+// this is needed for running tests with count
+func uploadContractOnce(t *testing.T, name string, code string) *insolar.Reference {
+	if _, ok := contracts[name]; !ok {
+		contracts[name] = uploadContract(t, name, code)
+	}
+	return contracts[name]
+}
+
+func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.Upload",
 		"id":      "",
 		"params": map[string]string{
-			"name": "test",
+			"name": contractName,
 			"code": contractCode,
 		},
 	})
@@ -277,10 +297,12 @@ func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
 		Version string          `json:"jsonrpc"`
 		ID      string          `json:"id"`
 		Result  api.UploadReply `json:"result"`
+		Error   json2.Error     `json:"error"`
 	}{}
 
 	err := json.Unmarshal(uploadBody, &uploadRes)
 	require.NoError(t, err)
+	require.Empty(t, uploadRes.Error)
 
 	prototypeRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
 	require.NoError(t, err)
@@ -306,10 +328,12 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 		Version string                   `json:"jsonrpc"`
 		ID      string                   `json:"id"`
 		Result  api.CallConstructorReply `json:"result"`
+		Error   json2.Error              `json:"error"`
 	}{}
 
 	err := json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
+	require.Empty(t, callConstructorRes.Error)
 
 	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
 	require.NoError(t, err)
@@ -319,7 +343,10 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 	return objectRef
 }
 
-func callMethod(t *testing.T, objectRef *insolar.Reference, method string, argsSerialized []byte) interface{} {
+func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
+	argsSerialized, err := insolar.Serialize(args)
+	require.NoError(t, err)
+
 	callMethodBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.CallMethod",
@@ -336,10 +363,12 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, argsS
 		Version string              `json:"jsonrpc"`
 		ID      string              `json:"id"`
 		Result  api.CallMethodReply `json:"result"`
+		Error   json2.Error         `json:"error"`
 	}{}
 
-	err := json.Unmarshal(callMethodBody, &callRes)
+	err = json.Unmarshal(callMethodBody, &callRes)
 	require.NoError(t, err)
+	require.Empty(t, callRes.Error)
 
-	return callRes.Result.ExtractedReply
+	return callRes.Result
 }

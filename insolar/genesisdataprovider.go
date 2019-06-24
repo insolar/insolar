@@ -23,6 +23,6 @@ type GenesisDataProvider interface {
 	GetRootDomain(ctx context.Context) *Reference
 	GetNodeDomain(ctx context.Context) (*Reference, error)
 	GetRootMember(ctx context.Context) (*Reference, error)
-	GetMigrationDamonMembers(ctx context.Context) ([]*Reference, error)
+	GetMigrationDaemonMembers(ctx context.Context) ([]*Reference, error)
 	GetMigrationAdminMember(ctx context.Context) (*Reference, error)
 }

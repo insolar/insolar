@@ -31,11 +31,11 @@ type GenesisDataProvider struct {
 	CertificateManager insolar.CertificateManager `inject:""`
 	ContractRequester  insolar.ContractRequester  `inject:""`
 
-	rootMemberRef             *insolar.Reference
-	migrationAdminMemberRef   *insolar.Reference
-	migrationDamonMembersRefs []*insolar.Reference
-	nodeDomainRef             *insolar.Reference
-	lock                      sync.RWMutex
+	rootMemberRef              *insolar.Reference
+	migrationAdminMemberRef    *insolar.Reference
+	migrationDaemonMembersRefs []*insolar.Reference
+	nodeDomainRef              *insolar.Reference
+	lock                       sync.RWMutex
 }
 
 // New creates new GenesisDataProvider
@@ -63,15 +63,15 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.MigrationAdminMember")
 	}
 	gdp.migrationAdminMemberRef = migrationAdminMemberRef
-	migrationDamonsMembers := []*insolar.Reference{}
-	for _, refStr := range info.MigrationDamonsMembers {
+	migrationDaemonsMembers := []*insolar.Reference{}
+	for _, refStr := range info.MigrationDaemonsMembers {
 		ref, err := insolar.NewReferenceFromBase58(refStr)
 		if err != nil {
-			return errors.Wrap(err, "[ setInfo ] Failed to parse info.MigrationDamonsMembers ref: '"+refStr+"'")
+			return errors.Wrap(err, "[ setInfo ] Failed to parse info.MigrationDaemonsMembers ref: '"+refStr+"'")
 		}
-		migrationDamonsMembers = append(migrationDamonsMembers, ref)
+		migrationDaemonsMembers = append(migrationDaemonsMembers, ref)
 	}
-	gdp.migrationDamonMembersRefs = migrationDamonsMembers
+	gdp.migrationDaemonMembersRefs = migrationDaemonsMembers
 	nodeDomainRef, err := insolar.NewReferenceFromBase58(info.NodeDomain)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.NodeDomain")
@@ -99,7 +99,7 @@ func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*insolar.Ref
 	return gdp.nodeDomainRef, nil
 }
 
-// GetRootMember returns reference to RootMember
+// GetRootMember returns reference to root member
 func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*insolar.Reference, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()
@@ -112,20 +112,20 @@ func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*insolar.Ref
 	return gdp.rootMemberRef, nil
 }
 
-// GetRootMember returns reference to RootMember
-func (gdp *GenesisDataProvider) GetMigrationDamonMembers(ctx context.Context) ([]*insolar.Reference, error) {
+// GetMigrationDaemonMembers returns references to migration daemons members
+func (gdp *GenesisDataProvider) GetMigrationDaemonMembers(ctx context.Context) ([]*insolar.Reference, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()
-	if gdp.migrationDamonMembersRefs == nil {
+	if gdp.migrationDaemonMembersRefs == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetMigrationDamonMembers ] Can't get info")
+			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetMigrationDaemonMembers ] Can't get info")
 		}
 	}
-	return gdp.migrationDamonMembersRefs, nil
+	return gdp.migrationDaemonMembersRefs, nil
 }
 
-// GetRootMember returns reference to RootMember
+// GetMigrationAdminMember returns reference to migration admin member
 func (gdp *GenesisDataProvider) GetMigrationAdminMember(ctx context.Context) (*insolar.Reference, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()

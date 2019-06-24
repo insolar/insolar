@@ -19,11 +19,11 @@ package handle
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
@@ -42,16 +42,6 @@ func NewSetCode(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetCode 
 }
 
 func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
-	// pl, err := payload.UnmarshalFromMeta(s.message.Payload)
-	// if err != nil {
-	// 	panic("1")
-	// 	return errors.Wrap(err, "failed to unmarshal payload")
-	// }
-	// msg, ok := pl.(*payload.SetCode)
-	// if !ok {
-	// 	return fmt.Errorf("unexpected payload type: %T", pl)
-	// }
-
 	msg := payload.SetCode{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
@@ -75,7 +65,7 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	rec := record.Code{}
+	rec := record.Virtual{}
 	err = rec.Unmarshal(msg.Record)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal record")

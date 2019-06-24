@@ -167,11 +167,13 @@ prepare()
 
 build_binaries()
 {
+    echo "build binaries"
     make BUILD_TAGS="-tags functest" build
 }
 
 rebuild_binaries()
 {
+    echo "rebuild binaries"
     make clean
     build_binaries
 }
@@ -187,17 +189,10 @@ generate_root_member_keys()
     echo "generate members keys in dir: $CONFIGS_DIR"
     bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_0_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_1_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_2_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_3_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_4_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_5_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_6_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_7_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_8_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_damon_9_member_keys.json
-
+    for (( b = 0; b < 10; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
+    done
 }
 
 check_working_dir()
@@ -314,7 +309,6 @@ bootstrap()
     echo "bootstrap start"
     prepare
     if [[ "$SKIP_BUILD" != "1" ]]; then
-        echo "build binaries"
         build_binaries
     else
         echo "SKIP: build binaries (SKIP_BUILD=$SKIP_BUILD)"

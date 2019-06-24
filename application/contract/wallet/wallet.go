@@ -40,40 +40,45 @@ func New(balance string) (*Wallet, error) {
 }
 
 // Transfer transfers money to given wallet
-func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) error {
+func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
-		return fmt.Errorf("[ Transfer ] can't parse returned balance")
+		return nil, fmt.Errorf("can't parse input amount")
 	}
+	zero, _ := new(big.Int).SetString("0", 10)
+	if amount.Cmp(zero) == -1 {
+		return nil, fmt.Errorf("amount must be larger then zero")
+	}
+
 	balance, ok := new(big.Int).SetString(w.Balance, 10)
 	if !ok {
-		return fmt.Errorf("[ Transfer ] can't parse returned balance")
+		return nil, fmt.Errorf("can't parse wallet balance")
 	}
 
 	toWallet, err := wallet.GetImplementationFrom(*toMember)
 	if err != nil {
-		return fmt.Errorf("[ Transfer ] Can't get implementation: %s", err.Error())
+		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
 	}
 
 	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
-		return fmt.Errorf("[ Transfer ] Not enough balance for transfer: %s", err.Error())
+		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
 	w.Balance = newBalance.String()
 
 	acceptErr := toWallet.Accept(amount.String())
-	if acceptErr != nil {
-		newBalance, err := safemath.Add(balance, amount)
-		if err != nil {
-			return fmt.Errorf("[ Transfer ] Couldn't add amount back to balance: %s", err.Error())
-		}
-		w.Balance = newBalance.String()
-
-		return fmt.Errorf("[ Transfer ] Cant accept balance to wallet: %s", acceptErr.Error())
-	} else {
-		return nil
+	if acceptErr == nil {
+		return "", nil
 	}
+
+	newBalance, err = safemath.Add(balance, amount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
+	}
+	w.Balance = newBalance.String()
+
+	return nil, fmt.Errorf("failed to accept balance to wallet: %s", acceptErr.Error())
 }
 
 // Accept transfer to balance
@@ -82,18 +87,18 @@ func (w *Wallet) Accept(amountStr string) (err error) {
 	amount := new(big.Int)
 	amount, ok := amount.SetString(amountStr, 10)
 	if !ok {
-		return fmt.Errorf("[ Accept ] can't parse returned balance")
+		return fmt.Errorf("can't parse input amount")
 	}
 
 	balance := new(big.Int)
 	balance, ok = balance.SetString(w.Balance, 10)
 	if !ok {
-		return fmt.Errorf("[ Accept ] can't parse returned balance")
+		return fmt.Errorf("can't parse wallet balance")
 	}
 
 	b, err := safemath.Add(balance, amount)
 	if err != nil {
-		return fmt.Errorf("[ Accept ] Couldn't add amount to balance: %s", err.Error())
+		return fmt.Errorf("failed to add amount to balance: %s", err.Error())
 	}
 	w.Balance = b.String()
 

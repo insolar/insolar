@@ -44,6 +44,7 @@ const (
 	Digest         = "Digest"
 	Signature      = "Signature"
 	ContentType    = "Content-Type"
+	JSONRPCVersion = "2.0"
 )
 
 func init() {
@@ -110,7 +111,7 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Cant get hash")
 	}
-	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	req.Header.Set(Digest, "SHA-256="+sha)
 	req.Header.Set(Signature, "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
 	postResp, err := httpClient.Do(req)
@@ -146,7 +147,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with creating request")
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(ContentType, "application/json")
 	postResp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with sending request")
@@ -172,7 +173,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 // GetSeed makes rpc request to node.GetSeed method and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		Method:  "node.GetSeed",
 		ID:      1,
 	})
@@ -218,7 +219,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Config request marshaling failed")
 	}
-	signature, err := sign(userCfg.privateKeyObject, dataToSign)
+	signature, err := Sign(userCfg.privateKeyObject, dataToSign)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with signing request")
 	}
@@ -232,7 +233,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	return body, nil
 }
 
-func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
+func Sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 	hash := sha256.Sum256(data)
 
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey.(*ecdsa.PrivateKey), hash[:])
@@ -240,11 +241,11 @@ func sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 		return "", errors.Wrap(err, "[ sign ] Cant sign data")
 	}
 
-	return PointsToDER(r, s), nil
+	return pointsToDER(r, s), nil
 }
 
 // Convert signature points do DER format
-func PointsToDER(r, s *big.Int) string {
+func pointsToDER(r, s *big.Int) string {
 	prefixPoint := func(b []byte) []byte {
 		if len(b) == 0 {
 			b = []byte{0x00}
@@ -261,6 +262,14 @@ func PointsToDER(r, s *big.Int) string {
 	sb := prefixPoint(s.Bytes())
 
 	// DER encoding:
+	// der prefix - 30
+	// length of the res of signature - 45
+	// marker for r value - 02
+	// length of r value - 21
+	// r value
+	// marker for s value - 02
+	// length of s value - 21
+	// s value
 	// 0x30 + z + 0x02 + len(rb) + rb + 0x02 + len(sb) + sb
 	length := 2 + len(rb) + 2 + len(sb)
 
@@ -290,7 +299,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 
 func getDefaultRPCParams(method string) PlatformRequest {
 	return PlatformRequest{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		ID:      1,
 		Method:  method,
 	}

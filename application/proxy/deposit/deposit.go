@@ -27,7 +27,7 @@ type DepositStatus string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112XcaFd9CuH1pLiF16CzTL7yRAr5PGMwqTVUBXEY.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111adZvZxBXYqwJPbPLjVY5hL8TtiWxW4gScGv6mP.11111111111111111111111111111111")
 
 // Deposit holds proxy type
 type Deposit struct {
@@ -80,9 +80,9 @@ func GetImplementationFrom(object insolar.Reference) (*Deposit, error) {
 }
 
 // New is constructor
-func New(oracleConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) *ContractConstructorHolder {
+func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) *ContractConstructorHolder {
 	var args [4]interface{}
-	args[0] = oracleConfirms
+	args[0] = migrationDaemonConfirms
 	args[1] = txHash
 	args[2] = amount
 	args[3] = holdReleaseDate
@@ -416,9 +416,9 @@ func (r *Deposit) MapMarshalAsImmutable() (map[string]string, error) {
 }
 
 // Confirm is proxy generated method
-func (r *Deposit) Confirm(migrationDamon insolar.Reference, txHash string, amountStr string) (uint, error) {
+func (r *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
 	var args [3]interface{}
-	args[0] = migrationDamon
+	args[0] = migrationDaemon
 	args[1] = txHash
 	args[2] = amountStr
 
@@ -452,9 +452,9 @@ func (r *Deposit) Confirm(migrationDamon insolar.Reference, txHash string, amoun
 }
 
 // ConfirmNoWait is proxy generated method
-func (r *Deposit) ConfirmNoWait(migrationDamon insolar.Reference, txHash string, amountStr string) error {
+func (r *Deposit) ConfirmNoWait(migrationDaemon insolar.Reference, txHash string, amountStr string) error {
 	var args [3]interface{}
-	args[0] = migrationDamon
+	args[0] = migrationDaemon
 	args[1] = txHash
 	args[2] = amountStr
 
@@ -474,9 +474,9 @@ func (r *Deposit) ConfirmNoWait(migrationDamon insolar.Reference, txHash string,
 }
 
 // ConfirmAsImmutable is proxy generated method
-func (r *Deposit) ConfirmAsImmutable(migrationDamon insolar.Reference, txHash string, amountStr string) (uint, error) {
+func (r *Deposit) ConfirmAsImmutable(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
 	var args [3]interface{}
-	args[0] = migrationDamon
+	args[0] = migrationDaemon
 	args[1] = txHash
 	args[2] = amountStr
 

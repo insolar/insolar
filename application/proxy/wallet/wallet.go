@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111QcD4F1cgU2Luzxt2dsvYNojHvRvtrZpjri6RZh.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113V1JD6iofG3wfpYQbBGi9TGMX35oKmAVEAZ5CDP.11111111111111111111111111111111")
 
 // Wallet holds proxy type
 type Wallet struct {
@@ -155,36 +155,38 @@ func (r *Wallet) GetCode() (insolar.Reference, error) {
 }
 
 // Transfer is proxy generated method
-func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) error {
+func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interface{}, error) {
 	var args [2]interface{}
 	args[0] = amountStr
 	args[1] = toMember
 
 	var argsSerialized []byte
 
-	ret := [1]interface{}{}
-	var ret0 *foundation.Error
+	ret := [2]interface{}{}
+	var ret0 interface{}
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
-	if ret0 != nil {
-		return ret0
+	if ret1 != nil {
+		return ret0, ret1
 	}
-	return nil
+	return ret0, nil
 }
 
 // TransferNoWait is proxy generated method
@@ -209,36 +211,38 @@ func (r *Wallet) TransferNoWait(amountStr string, toMember *insolar.Reference) e
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Wallet) TransferAsImmutable(amountStr string, toMember *insolar.Reference) error {
+func (r *Wallet) TransferAsImmutable(amountStr string, toMember *insolar.Reference) (interface{}, error) {
 	var args [2]interface{}
 	args[0] = amountStr
 	args[1] = toMember
 
 	var argsSerialized []byte
 
-	ret := [1]interface{}{}
-	var ret0 *foundation.Error
+	ret := [2]interface{}{}
+	var ret0 interface{}
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return err
+		return ret0, err
 	}
 
-	if ret0 != nil {
-		return ret0
+	if ret1 != nil {
+		return ret0, ret1
 	}
-	return nil
+	return ret0, nil
 }
 
 // Accept is proxy generated method

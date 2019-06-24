@@ -91,14 +91,3 @@ func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 	}
 	return &pulse
 }
-
-func (st *ObjectState) StartValidation(ref Ref) *ExecutionState {
-	st.Lock()
-	defer st.Unlock()
-
-	if st.Validation != nil {
-		panic("Unexpected. Validation already in progress")
-	}
-	st.Validation = NewExecutionState(ref)
-	return st.Validation
-}

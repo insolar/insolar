@@ -181,6 +181,7 @@ func initComponents(
 		messageBus,
 		contractRequester,
 		artifacts.NewClient(b),
+		artifacts.NewDescriptorsCache(),
 		jc,
 		pulses,
 		jet.NewStore(),

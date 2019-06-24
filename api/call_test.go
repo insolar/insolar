@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/api/seedmanager"
 )
 
 const CallUrl = "http://localhost:19192/api/call"
@@ -57,6 +58,35 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 
 	close(suite.delay)
 	suite.api.cfg.Timeout = 60
+	seedString := base64.StdEncoding.EncodeToString(seed[:])
+
+	resp, err := requester.SendWithSeed(
+		suite.ctx,
+		CallUrl,
+		suite.user,
+		&requester.Request{
+			JSONRPC: "2.0",
+			ID:      1,
+			Method:  "api.call",
+			Params:  requester.Params{CallSite: "contract.createMember"},
+		},
+		seedString,
+	)
+	suite.NoError(err)
+
+	var result requester.ContractAnswer
+	err = json.Unmarshal(resp, &result)
+	suite.NoError(err)
+	suite.Nil(result.Error)
+	suite.Equal("OK", result.Result.ContractResult)
+}
+
+func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
+	seed, err := suite.api.SeedGenerator.Next()
+	suite.NoError(err)
+	suite.api.SeedManager.Add(*seed)
+
+	suite.api.cfg.Timeout = 1
 
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
@@ -69,36 +99,13 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	)
 	suite.NoError(err)
 
-	var result requester.ContractAnswer
-	err = json.Unmarshal(resp, &result)
-	suite.NoError(err)
-	suite.Equal("", result.Error.Message)
-	suite.Equal("OK", result.Result.ContractResult)
-}
-
-func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
-	seed, err := suite.api.SeedGenerator.Next()
-	suite.NoError(err)
-	suite.api.SeedManager.Add(*seed)
-
-	suite.api.cfg.Timeout = 1
-
-	resp, err := requester.SendWithSeed(
-		suite.ctx,
-		CallUrl,
-		suite.user,
-		&requester.Request{},
-		string(seed[:]),
-	)
-	suite.NoError(err)
-
 	close(suite.delay)
 
 	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("Messagebus timeout exceeded", result.Error.Message)
-	suite.Equal("", result.Result.ContractResult)
+	suite.Equal("API timeout exceeded", result.Error.Message)
+	suite.Nil(result.Result)
 }
 
 func TestTimeoutSuite(t *testing.T) {
@@ -136,7 +143,6 @@ func TestTimeoutSuite(t *testing.T) {
 		return cert
 	}
 
-	// TODO: refactor this mock
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
 	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
 		switch method {
@@ -161,6 +167,7 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.ContractRequester = cr
 	timeoutSuite.api.CertificateManager = cm
 	timeoutSuite.api.Start(timeoutSuite.ctx)
+	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(time.Minute, time.Minute)
 
 	requester.SetTimeout(25)
 	suite.Run(t, timeoutSuite)
