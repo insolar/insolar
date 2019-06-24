@@ -54,3 +54,17 @@ func TestCreateMemberWithBadKey(t *testing.T) {
 	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
 	require.Nil(t, err)
 }
+
+func TestCreateMembersWithSameName(t *testing.T) {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+
+	addBurnAddresses(t)
+
+	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
+	require.NoError(t, err)
+
+	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
+	require.Contains(t, err.Error(), "member for this publicKey already exist")
+}
