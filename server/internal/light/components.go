@@ -119,7 +119,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	{
 		var err error
 		// External communication.
-		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &c.cmp, false)
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &c.cmp)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}

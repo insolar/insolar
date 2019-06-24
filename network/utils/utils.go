@@ -51,16 +51,18 @@
 package utils
 
 import (
+	"context"
 	"hash/crc32"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
 func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
@@ -115,4 +117,10 @@ func IsConnectionClosed(err error) bool {
 	}
 	err = errors.Cause(err)
 	return strings.Contains(err.Error(), "use of closed network connection")
+}
+
+func NewPulseContext(ctx context.Context, pulseNumber uint64) context.Context {
+	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
+	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
+	return ctx
 }

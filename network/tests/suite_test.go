@@ -497,7 +497,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
-	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager, false)
+	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	s.Require().NoError(err)
 
 	amMock := staterMock{
