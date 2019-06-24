@@ -1,4 +1,20 @@
-package object
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package executor
 
 import (
 	"context"
@@ -8,17 +24,18 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
 type cacheStore struct {
-	records RecordAccessor
+	records object.RecordAccessor
 
 	lock   sync.Mutex
 	caches map[insolar.ID]*filamentCache
 }
 
-func newCacheStore(r RecordAccessor) *cacheStore {
+func newCacheStore(r object.RecordAccessor) *cacheStore {
 	return &cacheStore{
 		caches:  map[insolar.ID]*filamentCache{},
 		records: r,
@@ -47,13 +64,13 @@ func (c *cacheStore) Delete(id insolar.ID) {
 type filamentCache struct {
 	cache map[insolar.ID]record.CompositeFilamentRecord
 
-	records     RecordAccessor
+	records     object.RecordAccessor
 	jetFetcher  jet.Fetcher
 	coordinator jet.Coordinator
 	sender      bus.Sender
 }
 
-func newFilamentCache(r RecordAccessor) *filamentCache {
+func newFilamentCache(r object.RecordAccessor) *filamentCache {
 	return &filamentCache{
 		cache:   map[insolar.ID]record.CompositeFilamentRecord{},
 		records: r,
@@ -92,7 +109,7 @@ func (i *filamentIterator) HasPrev() bool {
 
 func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRecord, error) {
 	if i.currentID == nil {
-		return record.CompositeFilamentRecord{}, ErrNotFound
+		return record.CompositeFilamentRecord{}, object.ErrNotFound
 	}
 
 	composite, ok := i.cache.cache[*i.currentID]

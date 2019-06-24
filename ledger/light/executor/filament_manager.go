@@ -1,17 +1,33 @@
-package object
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package executor
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
-	buswm "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/network/storage"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 type FilamentModifier interface {
@@ -19,7 +35,7 @@ type FilamentModifier interface {
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) error
 }
 
-func NewFilamentManager(r RecordAccessor) *FilamentManager {
+func NewFilamentManager(r object.RecordAccessor) *FilamentManager {
 	return &FilamentManager{
 		cache: newCacheStore(r),
 	}
@@ -28,15 +44,14 @@ func NewFilamentManager(r RecordAccessor) *FilamentManager {
 type FilamentManager struct {
 	cache *cacheStore
 
-	idxAccessor     IndexAccessor
-	idxModifier     IndexModifier
-	idLocker        IDLocker
-	recordStorage   RecordStorage
+	idxAccessor     object.IndexAccessor
+	idxModifier     object.IndexModifier
+	idLocker        object.IDLocker
+	recordStorage   object.RecordStorage
 	coordinator     jet.Coordinator
 	pcs             insolar.PlatformCryptographyScheme
 	pulseCalculator storage.PulseCalculator
-	bus             insolar.MessageBus
-	busWM           buswm.Sender
+	busWM           bus.Sender
 	jetFetcher      jet.Fetcher
 }
 
@@ -52,7 +67,7 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 
 	idx := m.idxAccessor.Index(requestID.Pulse(), objectID)
 	if idx == nil {
-		return ErrLifelineNotFound
+		return object.ErrLifelineNotFound
 	}
 
 	if idx.Lifeline.PendingPointer != nil && requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
@@ -104,10 +119,6 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 		return errors.Wrap(err, "failed to update index")
 	}
 
-	stats.Record(ctx,
-		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
-	)
-
 	return nil
 }
 
@@ -123,7 +134,7 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 
 	idx := m.idxAccessor.Index(resultID.Pulse(), objectID)
 	if idx == nil {
-		return ErrLifelineNotFound
+		return object.ErrLifelineNotFound
 	}
 
 	var filamentRecord record.CompositeFilamentRecord
@@ -174,10 +185,6 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 
 	}
 
-	stats.Record(ctx,
-		statObjectPendingResultsInMemoryAddedCount.M(int64(1)),
-	)
-
 	return nil
 }
 
@@ -185,7 +192,7 @@ func (m *FilamentManager) calculatePending(
 	ctx context.Context,
 	pulse insolar.PulseNumber,
 	objectID insolar.ID,
-	idx FilamentIndex,
+	idx object.FilamentIndex,
 ) ([]insolar.ID, error) {
 	cache := m.cache.Get(objectID)
 	iter := m.newFetchingIterator(
@@ -233,10 +240,10 @@ type fetchingIterator struct {
 	objectID             insolar.ID
 	readUntil, calcPulse insolar.PulseNumber
 
-	records     RecordAccessor
+	records     object.RecordAccessor
 	jetFetcher  jet.Fetcher
 	coordinator jet.Coordinator
-	sender      buswm.Sender
+	sender      bus.Sender
 }
 
 func (m *FilamentManager) newFetchingIterator(
@@ -272,7 +279,7 @@ func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	case nil:
 		return rec, nil
 
-	case ErrNotFound:
+	case object.ErrNotFound:
 		// Update cache from network.
 		recs, err := i.fetchFromNetwork(ctx, *i.PrevID())
 		if err != nil {
