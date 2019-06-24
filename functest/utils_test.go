@@ -253,6 +253,14 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 			continue
 		}
 
+		// TODO: delete this after deduplication (INS-2778)
+		if resp.Error != nil && strings.Contains(resp.Error.Message, "member for this publicKey already exist") {
+			fmt.Printf("CreateMember request was duplicated, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
+			fmt.Printf("Method: %s\n", method)
+			time.Sleep(time.Second)
+			continue
+		}
+
 		break
 	}
 
