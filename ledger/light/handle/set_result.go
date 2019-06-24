@@ -93,7 +93,7 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 	idx := proc.NewGetIndexWM(result.Object, objJetID, s.message)
 	s.dep.GetIndexWM(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
-		return err
+		return errors.Wrap(err, "can't get index")
 	}
 
 	setResult := proc.NewSetResult(s.message, virtual, reqID, objJetID)
