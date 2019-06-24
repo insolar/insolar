@@ -86,7 +86,8 @@ type Base struct {
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 
 	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
-	permit *packet.Permit
+	permit       *packet.Permit
+	bootstrapETA insolar.PulseNumber
 }
 
 // NewGateway creates new gateway on top of existing

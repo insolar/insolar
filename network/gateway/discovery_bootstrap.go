@@ -16,6 +16,13 @@ type DiscoveryBootstrap struct {
 }
 
 func (g *DiscoveryBootstrap) Run(ctx context.Context) {
+	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(false)
+
+	if g.permit == nil {
+		// log warn
+		g.Gatewayer.SwitchState(insolar.NoNetworkState)
+	}
+
 	// var err error
 
 	// cert := g.CertificateManager.GetCertificate()

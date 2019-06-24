@@ -23,7 +23,7 @@ import (
 type Requester interface {
 	Authorize(ctx context.Context, host *host.Host, cert insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error)
 	Bootstrap(ctx context.Context, permit *packet.Permit, joinClaim *packets.NodeJoinClaim, pulse insolar.PulseNumber) (*packet.BootstrapResponse, error)
-	// UpdateScedule()
+	UpdateSchedule(ctx context.Context, permit *packet.Permit, pulse insolar.PulseNumber) (*packet.UpdateScheduleResponse, error)
 }
 
 func NewRequester(options *common.Options) Requester {
@@ -127,7 +127,8 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinC
 	// make claim with new  shortID
 	// bootstrap again
 	case packet.UpdateSchedule:
-		panic("implement me")
+		ac.UpdateSchedule(ctx, permit, pulse)
+		panic("call bootstrap again")
 	case packet.Reject:
 		//swith to no network
 		return respData, errors.New("Bootstrap request rejected")
@@ -136,4 +137,24 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinC
 	// case Accepted
 	return respData, nil
 
+}
+
+func (ac *requester) UpdateSchedule(ctx context.Context, permit *packet.Permit, pulse insolar.PulseNumber) (*packet.UpdateScheduleResponse, error) {
+
+	req := packet.BootstrapRequest{
+		LastNodePulse: pulse,
+		Permit:        permit,
+	}
+
+	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.Bootstrap, req, permit.Payload.ReconnectTo)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error sending bootstrap request")
+	}
+
+	resp, err := f.WaitResponse(ac.options.PacketTimeout)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error getting response for bootstrap request")
+	}
+
+	return resp.GetResponse().GetUpdateSchedule(), nil
 }

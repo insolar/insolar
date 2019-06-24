@@ -79,12 +79,13 @@ func (n *gatewayer) Gateway() network.Gateway {
 func (n *gatewayer) SwitchState(state insolar.NetworkState) {
 	n.gatewayMu.Lock()
 
+	// todo: check transition rules here
 	if n.gateway.GetState() == state {
 		log.Warn("Trying to set gateway to the same state")
 		n.gatewayMu.Unlock()
 		return
 	}
-	// todo: check transition rules
+
 	// todo: old gateway stop if needed
 
 	n.gateway = n.gateway.NewGateway(state)
@@ -92,10 +93,6 @@ func (n *gatewayer) SwitchState(state insolar.NetworkState) {
 	n.gatewayMu.Unlock()
 
 	go n.gateway.Run(context.Background())
-}
-
-func (n *gatewayer) setGateway(g network.Gateway) {
-
 }
 
 func (n *gatewayer) GetState() insolar.NetworkState {

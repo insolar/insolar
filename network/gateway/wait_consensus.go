@@ -78,8 +78,10 @@ func (g *WaitConsensus) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 		g.Gatewayer.SwitchState(insolar.WaitMinRoles)
 	}
 
-	// TODO: check ETA
-	g.Gatewayer.SwitchState(insolar.NoNetworkState)
+	// check ETA
+	if pu.PulseNumber > g.bootstrapETA {
+		g.Gatewayer.SwitchState(insolar.NoNetworkState)
+	}
 
-	return g.Base.OnPulse(ctx, pu)
+	return nil
 }

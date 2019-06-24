@@ -32,6 +32,7 @@ message Request {
         BootstrapRequest Bootstrap = 5;
         AuthorizeRequest Authorize = 6;
         SignCertRequest SignCert = 7;
+        UpdateScheduleRequest UpdateSchedule = 8;
     }
 }
 
@@ -44,6 +45,7 @@ message Response {
         AuthorizeResponse Authorize = 5;
         SignCertResponse SignCert = 6;
         ErrorResponse Error = 7;
+        UpdateScheduleResponse UpdateSchedule = 8;
     }
 }
 
@@ -71,6 +73,11 @@ message CascadeRequest {
 message PulseRequest {
     pulse.PulseProto Pulse = 1;
     bytes TraceSpanData = 2;
+}
+
+message UpdateScheduleRequest {
+    uint32 LastNodePulse = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    Permit Permit = 2;
 }
 
 message BootstrapRequest {
@@ -154,4 +161,8 @@ message SignCertResponse {
 
 message ErrorResponse {
     string Error = 1;
+}
+
+message UpdateScheduleResponse {
+    // nuff said
 }
