@@ -23,10 +23,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -47,12 +49,16 @@ func TestGetChildren_RedirectsToHeavyWhenNoIndex(t *testing.T) {
 	tf := testutils.NewDelegationTokenFactoryMock(t)
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 
-	idx := object.Lifeline{
-		ChildPointer: genRandomID(insolar.FirstPulseNumber),
-	}
+	idxStor := object.NewIndexStorageMemory()
+	_ = idxStor.SetIndex(inslogger.TestContext(t), insolar.FirstPulseNumber+1, object.FilamentIndex{
+		Lifeline: object.Lifeline{
+			ChildPointer: genRandomID(insolar.FirstPulseNumber),
+		},
+		ObjID: *msg.Parent.Record(),
+	})
+
 	gc := GetChildren{
-		index: idx,
-		msg:   &msg,
+		msg: &msg,
 		parcel: &message.Parcel{
 			Msg:         &msg,
 			Sender:      *genRandomRef(insolar.FirstPulseNumber),
@@ -61,8 +67,10 @@ func TestGetChildren_RedirectsToHeavyWhenNoIndex(t *testing.T) {
 	}
 	gc.Dep.Coordinator = jc
 	gc.Dep.DelegationTokenFactory = tf
+	gc.Dep.IndexAccessor = idxStor
+	gc.Dep.IndexLocker = object.NewIndexLocker()
 
-	rep := gc.reply(context.TODO())
+	rep := gc.reply(flow.TestContextWithPulse(context.TODO(), insolar.FirstPulseNumber+1))
 	require.NoError(t, rep.Err)
 	redirect, ok := rep.Reply.(*reply.GetChildrenRedirectReply)
 	require.True(t, ok)
@@ -91,19 +99,20 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	rsm.ForIDFunc = ra.ForIDFunc
 
 	idxStor := object.NewIndexStorageMemory()
-	lflStor := object.NewLifelineStorage(idxStor, idxStor)
 
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
 		JetID:        insolar.JetID(jetID),
 	}
-	err := lflStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), idx)
+	err := idxStor.SetIndex(ctx, insolar.FirstPulseNumber+1, object.FilamentIndex{
+		Lifeline: idx,
+		ObjID:    *msg.Parent.Record(),
+	})
 	require.NoError(t, err)
 
 	gc := GetChildren{
-		index: idx,
-		msg:   &msg,
+		msg: &msg,
 		parcel: &message.Parcel{
 			Msg:         &msg,
 			Sender:      *genRandomRef(insolar.FirstPulseNumber),
@@ -113,6 +122,8 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	gc.Dep.Coordinator = jc
 	gc.Dep.JetStorage = jet.NewStore()
 	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
+	gc.Dep.IndexLocker = object.NewIndexLocker()
+	gc.Dep.IndexAccessor = idxStor
 
 	gc.Dep.RecordAccessor = ra
 
@@ -150,19 +161,20 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	rsm.ForIDFunc = ra.ForIDFunc
 
 	idxStor := object.NewIndexStorageMemory()
-	lflStor := object.NewLifelineStorage(idxStor, idxStor)
 
 	ctx := context.TODO()
 	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
 		JetID:        insolar.JetID(jetID),
 	}
-	err := lflStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), idx)
+	err := idxStor.SetIndex(ctx, insolar.FirstPulseNumber+1, object.FilamentIndex{
+		Lifeline: idx,
+		ObjID:    *msg.Parent.Record(),
+	})
 	require.NoError(t, err)
 
 	gc := GetChildren{
-		index: idx,
-		msg:   &msg,
+		msg: &msg,
 		parcel: &message.Parcel{
 			Msg:         &msg,
 			Sender:      *genRandomRef(insolar.FirstPulseNumber),
@@ -173,6 +185,8 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	gc.Dep.JetStorage = jet.NewStore()
 	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
 	gc.Dep.RecordAccessor = ra
+	gc.Dep.IndexLocker = object.NewIndexLocker()
+	gc.Dep.IndexAccessor = idxStor
 
 	tf := testutils.NewDelegationTokenFactoryMock(t)
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}}, nil)

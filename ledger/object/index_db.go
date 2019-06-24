@@ -68,42 +68,6 @@ func NewIndexDB(db store.DB) *IndexDB {
 	return &IndexDB{db: db, recordStore: NewRecordDB(db)}
 }
 
-// Set sets a lifeline to a bucket with provided pulseNumber and ID
-func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-
-	if lifeline.Delegates == nil {
-		lifeline.Delegates = []LifelineDelegate{}
-	}
-
-	buc, err := i.getBucket(pn, objID)
-	if err == ErrIndexBucketNotFound {
-		buc = &FilamentIndex{}
-	} else if err != nil {
-		return err
-	}
-
-	buc.Lifeline = lifeline
-	err = i.setBucket(pn, objID, buc)
-	if err != nil {
-		return err
-	}
-
-	err = i.setLastKnownPN(pn, objID)
-	if err != nil {
-		return err
-	}
-
-	stats.Record(ctx,
-		statBucketAddedCount.M(1),
-	)
-
-	inslogger.FromContext(ctx).Debugf("[Set] lifeline for obj - %v was set successfully", objID.DebugString())
-
-	return nil
-}
-
 // SetIndex adds a bucket with provided pulseNumber and ID
 func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
 	i.lock.Lock()
@@ -129,7 +93,7 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 	if err == ErrIndexBucketNotFound {
 		lastPN, err := i.getLastKnownPN(objID)
 		if err != nil {
-			return FilamentIndex{}, ErrLifelineNotFound
+			return FilamentIndex{}, ErrIndexBucketNotFound
 		}
 
 		buck, err = i.getBucket(lastPN, objID)

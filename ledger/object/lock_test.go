@@ -95,7 +95,7 @@ type testlock struct {
 
 func newtestlocker() *testlock {
 	return &testlock{
-		lock:     NewIDLocker(),
+		lock:     NewIndexLocker(),
 		synclist: &synclist{list: []string{}},
 	}
 }

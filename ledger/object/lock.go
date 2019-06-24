@@ -42,8 +42,8 @@ type idLocker struct {
 	muxs map[insolar.ID]*mucount
 }
 
-// NewIDLocker creates new initialized IndexLocker.
-func NewIDLocker() IndexLocker {
+// NewIndexLocker creates new initialized IndexLocker.
+func NewIndexLocker() IndexLocker {
 	return &idLocker{
 		muxs: make(map[insolar.ID]*mucount),
 	}

@@ -83,7 +83,7 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 		}
 		return nil
 	}
-	if err != object.ErrLifelineNotFound {
+	if err != object.ErrIndexBucketNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
 
@@ -185,7 +185,7 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 		}
 		return nil
 	}
-	if err != object.ErrLifelineNotFound {
+	if err != object.ErrIndexBucketNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
 

@@ -215,7 +215,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		conf := cfg.Ledger
-		idLocker := object.NewIDLocker()
+		idLocker := object.NewIndexLocker()
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()

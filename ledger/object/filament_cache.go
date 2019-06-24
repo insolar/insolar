@@ -677,7 +677,7 @@ func (i *FilamentCacheStorage) refresh(ctx context.Context, idx *FilamentIndex, 
 func (i *FilamentCacheStorage) OpenRequestsIDsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]insolar.ID, error) {
 	pb := i.pendingBucket(currentPN, objID)
 	if pb == nil {
-		return nil, ErrLifelineNotFound
+		return nil, ErrIndexBucketNotFound
 	}
 
 	inslogger.FromContext(ctx).Debugf("OpenRequestsForObjID before %v pn : %v", objID.DebugString(), currentPN)
@@ -701,7 +701,7 @@ func (i *FilamentCacheStorage) OpenRequestsIDsForObjID(ctx context.Context, curr
 func (i *FilamentCacheStorage) OpenRequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error) {
 	pb := i.pendingBucket(currentPN, objID)
 	if pb == nil {
-		return nil, ErrLifelineNotFound
+		return nil, ErrIndexBucketNotFound
 	}
 
 	inslogger.FromContext(ctx).Debugf("OpenRequestsForObjID before %v pn : %v", objID.DebugString(), currentPN)
@@ -744,7 +744,7 @@ func (i *FilamentCacheStorage) OpenRequestsForObjID(ctx context.Context, current
 func (i *FilamentCacheStorage) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
 	b := i.pendingBucket(currentPN, objID)
 	if b == nil {
-		return nil, ErrLifelineNotFound
+		return nil, ErrIndexBucketNotFound
 	}
 
 	inslogger.FromContext(ctx).Debugf("Records before %v pn : %v", objID.DebugString(), currentPN)

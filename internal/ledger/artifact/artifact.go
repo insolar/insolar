@@ -388,7 +388,7 @@ func (m *Scope) updateStateObject(
 	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *objRef.Record())
 	// No index on our node.
 	if err != nil {
-		if err != object.ErrLifelineNotFound {
+		if err != object.ErrIndexBucketNotFound {
 			return nil, errors.Wrap(err, "failed get index for updating state object")
 		}
 		if stateObject.ID() != record.StateActivation {

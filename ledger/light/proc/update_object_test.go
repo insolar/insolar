@@ -64,10 +64,8 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 
 	scheme := testutils.NewPlatformCryptographyScheme()
 	idxStor := object.NewIndexStorageMemory()
-	lflStor := object.NewLifelineStorage(idxStor, idxStor)
-	// indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
 
-	idLockMock := object.NewIDLockerMock(t)
+	idLockMock := object.NewIndexLockerMock(t)
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 
@@ -124,10 +122,10 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
 	updateObject.Dep.IndexLocker = idLockMock
 	updateObject.Dep.Coordinator = jc
-	updateObject.Dep.LifelineIndex = lflStor
+	updateObject.Dep.IndexModifier = idxStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.LifelineStateModifier = lflStor
+	updateObject.Dep.IndexAccessor = idxStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
 	updateObject.Dep.PendingModifier = pendingModMock
 
@@ -136,9 +134,9 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	objRep, ok := rep.Reply.(*reply.Object)
 	require.True(t, ok)
 
-	idx, err := lflStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
+	idx, err := idxStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
 	require.NoError(t, err)
-	assert.Equal(t, objRep.State, *idx.LatestState)
+	assert.Equal(t, objRep.State, *idx.Lifeline.LatestState)
 }
 
 func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
@@ -152,9 +150,8 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	scheme := testutils.NewPlatformCryptographyScheme()
 	recordStorage := object.NewRecordMemory()
 	idxStor := object.NewIndexStorageMemory()
-	lflStor := object.NewLifelineStorage(idxStor, idxStor)
 
-	idLockMock := object.NewIDLockerMock(t)
+	idLockMock := object.NewIndexLockerMock(t)
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 
@@ -188,7 +185,10 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 		Object:       *objectRef,
 	}
 	ctx := context.Background()
-	err = lflStor.Set(ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)
+	err = idxStor.SetIndex(ctx, insolar.FirstPulseNumber, object.FilamentIndex{
+		ObjID:    *msg.Object.Record(),
+		Lifeline: objIndex,
+	})
 	require.NoError(t, err)
 
 	// Act
@@ -199,10 +199,10 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	}
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
 	updateObject.Dep.IndexLocker = idLockMock
-	updateObject.Dep.LifelineIndex = lflStor
+	updateObject.Dep.IndexAccessor = idxStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.LifelineStateModifier = lflStor
+	updateObject.Dep.IndexModifier = idxStor
 	updateObject.Dep.WriteAccessor = writeManagerMock
 	updateObject.Dep.PendingModifier = pendingModMock
 
@@ -212,7 +212,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	require.True(t, ok)
 
 	// Arrange
-	idx, err := lflStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
+	idx, err := idxStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
 	require.NoError(t, err)
-	require.Equal(t, insolar.FirstPulseNumber, int(idx.LatestUpdate))
+	require.Equal(t, insolar.FirstPulseNumber, int(idx.Lifeline.LatestUpdate))
 }

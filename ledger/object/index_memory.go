@@ -31,7 +31,10 @@ type IndexStorageMemory struct {
 }
 
 func NewIndexStorageMemory() *IndexStorageMemory {
-	return &IndexStorageMemory{buckets: map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{}}
+	return &IndexStorageMemory{
+		buckets:   map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{},
+		indexLock: map[insolar.PulseNumber]map[insolar.ID]sync.RWMutex{},
+	}
 }
 
 func (i *IndexStorageMemory) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error) {

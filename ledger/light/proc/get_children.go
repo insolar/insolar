@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -64,7 +63,7 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	p.Dep.IndexLocker.Lock(p.msg.Parent.Record())
 	defer p.Dep.IndexLocker.Unlock(p.msg.Parent.Record())
 
-	idx, err := p.Dep.IndexAccessor.ForID(ctx, flow.Pulse(ctx), *p.msg.Parent.Record())
+	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.parcel.Pulse(), *p.msg.Parent.Record())
 	if err != nil {
 		return bus.Reply{Err: err}
 	}
