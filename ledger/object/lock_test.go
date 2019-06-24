@@ -89,7 +89,7 @@ type synclist struct {
 }
 
 type testlock struct {
-	lock     IDLocker
+	lock     IndexLocker
 	synclist *synclist
 }
 

@@ -42,16 +42,16 @@ type UpdateObject struct {
 	PulseNumber insolar.PulseNumber
 
 	Dep struct {
-		RecordModifier        object.RecordModifier
-		Bus                   insolar.MessageBus
-		Coordinator           jet.Coordinator
-		BlobModifier          blob.Modifier
-		PCS                   insolar.PlatformCryptographyScheme
-		IDLocker              object.IDLocker
-		LifelineIndex         object.LifelineIndex
-		LifelineStateModifier object.LifelineStateModifier
-		WriteAccessor         hot.WriteAccessor
-		PendingModifier       object.PendingModifier
+		RecordModifier object.RecordModifier
+		Bus            insolar.MessageBus
+		Coordinator    jet.Coordinator
+		BlobModifier   blob.Modifier
+		PCS            insolar.PlatformCryptographyScheme
+
+		IDLocker object.IndexLocker
+
+		WriteAccessor   hot.WriteAccessor
+		PendingModifier object.PendingModifier
 	}
 }
 

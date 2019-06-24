@@ -25,12 +25,11 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock.go
 
 // IndexModifier provides methods for modifying buckets of index.
-// Index contains buckets with pn->objID->Bucket hierarchy.
+// Lifeline contains buckets with pn->objID->Bucket hierarchy.
 // With using of IndexModifier there is a possibility to set buckets from outside of an index.
 type IndexModifier interface {
 	// SetIndex adds a bucket with provided pulseNumber and ID
 	SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error
-	UpdateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, updateFN func(FilamentIndex) (FilamentIndex, error)) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexHeavyModifier -o ./ -s _mock.go

@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -214,7 +214,7 @@ type IndexAccessorMockIndexResult struct {
 	r *FilamentIndex
 }
 
-//Expect specifies that invocation of IndexAccessor.Index is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexAccessor.Lifeline is expected from 1 to Infinity times
 func (m *mIndexAccessorMockIndex) Expect(p insolar.PulseNumber, p1 insolar.ID) *mIndexAccessorMockIndex {
 	m.mock.IndexFunc = nil
 	m.expectationSeries = nil
@@ -226,7 +226,7 @@ func (m *mIndexAccessorMockIndex) Expect(p insolar.PulseNumber, p1 insolar.ID) *
 	return m
 }
 
-//Return specifies results of invocation of IndexAccessor.Index
+//Return specifies results of invocation of IndexAccessor.Lifeline
 func (m *mIndexAccessorMockIndex) Return(r *FilamentIndex) *IndexAccessorMock {
 	m.mock.IndexFunc = nil
 	m.expectationSeries = nil
@@ -238,7 +238,7 @@ func (m *mIndexAccessorMockIndex) Return(r *FilamentIndex) *IndexAccessorMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexAccessor.Index is expected once
+//ExpectOnce specifies that invocation of IndexAccessor.Lifeline is expected once
 func (m *mIndexAccessorMockIndex) ExpectOnce(p insolar.PulseNumber, p1 insolar.ID) *IndexAccessorMockIndexExpectation {
 	m.mock.IndexFunc = nil
 	m.mainExpectation = nil
@@ -253,7 +253,7 @@ func (e *IndexAccessorMockIndexExpectation) Return(r *FilamentIndex) {
 	e.result = &IndexAccessorMockIndexResult{r}
 }
 
-//Set uses given function f as a mock of IndexAccessor.Index method
+//Set uses given function f as a mock of IndexAccessor.Lifeline method
 func (m *mIndexAccessorMockIndex) Set(f func(p insolar.PulseNumber, p1 insolar.ID) (r *FilamentIndex)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -262,23 +262,23 @@ func (m *mIndexAccessorMockIndex) Set(f func(p insolar.PulseNumber, p1 insolar.I
 	return m.mock
 }
 
-//Index implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
+//Lifeline implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
 func (m *IndexAccessorMock) Index(p insolar.PulseNumber, p1 insolar.ID) (r *FilamentIndex) {
 	counter := atomic.AddUint64(&m.IndexPreCounter, 1)
 	defer atomic.AddUint64(&m.IndexCounter, 1)
 
 	if len(m.IndexMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.IndexMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to IndexAccessorMock.Index. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to IndexAccessorMock.Lifeline. %v %v", p, p1)
 			return
 		}
 
 		input := m.IndexMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexAccessorMockIndexInput{p, p1}, "IndexAccessor.Index got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexAccessorMockIndexInput{p, p1}, "IndexAccessor.Lifeline got unexpected parameters")
 
 		result := m.IndexMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the IndexAccessorMock.Index")
+			m.t.Fatal("No results are set for the IndexAccessorMock.Lifeline")
 			return
 		}
 
@@ -291,12 +291,12 @@ func (m *IndexAccessorMock) Index(p insolar.PulseNumber, p1 insolar.ID) (r *Fila
 
 		input := m.IndexMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexAccessorMockIndexInput{p, p1}, "IndexAccessor.Index got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexAccessorMockIndexInput{p, p1}, "IndexAccessor.Lifeline got unexpected parameters")
 		}
 
 		result := m.IndexMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the IndexAccessorMock.Index")
+			m.t.Fatal("No results are set for the IndexAccessorMock.Lifeline")
 		}
 
 		r = result.r
@@ -305,7 +305,7 @@ func (m *IndexAccessorMock) Index(p insolar.PulseNumber, p1 insolar.ID) (r *Fila
 	}
 
 	if m.IndexFunc == nil {
-		m.t.Fatalf("Unexpected call to IndexAccessorMock.Index. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to IndexAccessorMock.Lifeline. %v %v", p, p1)
 		return
 	}
 
@@ -317,7 +317,7 @@ func (m *IndexAccessorMock) IndexMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.IndexCounter)
 }
 
-//IndexMinimockPreCounter returns the value of IndexAccessorMock.Index invocations
+//IndexMinimockPreCounter returns the value of IndexAccessorMock.Lifeline invocations
 func (m *IndexAccessorMock) IndexMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IndexPreCounter)
 }
@@ -351,7 +351,7 @@ func (m *IndexAccessorMock) ValidateCallCounters() {
 	}
 
 	if !m.IndexFinished() {
-		m.t.Fatal("Expected call to IndexAccessorMock.Index")
+		m.t.Fatal("Expected call to IndexAccessorMock.Lifeline")
 	}
 
 }
@@ -376,7 +376,7 @@ func (m *IndexAccessorMock) MinimockFinish() {
 	}
 
 	if !m.IndexFinished() {
-		m.t.Fatal("Expected call to IndexAccessorMock.Index")
+		m.t.Fatal("Expected call to IndexAccessorMock.Lifeline")
 	}
 
 }
@@ -408,7 +408,7 @@ func (m *IndexAccessorMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.IndexFinished() {
-				m.t.Error("Expected call to IndexAccessorMock.Index")
+				m.t.Error("Expected call to IndexAccessorMock.Lifeline")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)

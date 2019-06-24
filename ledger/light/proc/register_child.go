@@ -40,7 +40,7 @@ type RegisterChild struct {
 	replyTo chan<- bus.Reply
 
 	Dep struct {
-		IDLocker              object.IDLocker
+		IDLocker              object.IndexLocker
 		LifelineIndex         object.LifelineIndex
 		JetCoordinator        jet.Coordinator
 		RecordModifier        object.RecordModifier

@@ -61,7 +61,7 @@ func (s *GetDelegate) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	getDelegate := proc.NewGetDelegate(msg, &idx.Result.Index, s.replyTo)
+	getDelegate := proc.NewGetDelegate(msg, &idx.Result.Lifeline, s.replyTo)
 	if err := f.Procedure(ctx, getDelegate, false); err != nil {
 		return err
 	}

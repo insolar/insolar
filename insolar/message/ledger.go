@@ -345,7 +345,7 @@ type HotIndex struct {
 	// ObjID is needed for identifying lifeline
 	ObjID insolar.ID
 
-	// Index is decoded because of the circle-loops in the project
+	// Lifeline is decoded because of the circle-loops in the project
 	// We can't store it here as a Lifeline, because a project won't build
 	Index []byte
 	// LifelineLastUsed is a mark of pulse, when the lifeline was used for the last time

@@ -74,7 +74,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	send := proc.NewSendObject(s.message, msg.ObjectID, idx.Result.Index)
+	send := proc.NewSendObject(s.message, msg.ObjectID, idx.Result.Lifeline)
 	s.dep.SendObject(send)
 	return f.Procedure(ctx, send, false)
 }

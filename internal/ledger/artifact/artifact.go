@@ -92,8 +92,7 @@ type Scope struct {
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
 
-	LifelineModifier object.LifelineModifier
-	LifelineAccessor object.LifelineAccessor
+	IndexLocker object.IndexLocker
 }
 
 // GetObject returns descriptor for provided state.
@@ -321,15 +320,15 @@ func (m *Scope) registerChild(
 	prevChild *insolar.ID,
 	asType *insolar.Reference,
 ) error {
+
+	m.IndexLocker.Lock(parent.Record())
+	defer m.IndexLocker.Unlock(parent.Record())
+
 	var jetID = insolar.ID(insolar.ZeroJetID)
 	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return err
 	}
-
-	m.IndexModifier.UpdateIndex(ctx, m.PulseNumber, *parent.Record(), func(updIndex object.FilamentIndex) (index object.FilamentIndex, e error) {
-
-	})
 
 	childRec := record.Child{Ref: obj}
 	if prevChild != nil && prevChild.NotEmpty() {
@@ -355,8 +354,8 @@ func (m *Scope) registerChild(
 		idx.Lifeline.SetDelegate(*asType, obj)
 	}
 	idx.Lifeline.LatestUpdate = m.PulseNumber
-	idx.JetID = insolar.JetID(jetID)
-	return m.LifelineModifier.Set(ctx, m.PulseNumber, *parent.Record(), idx)
+	idx.Lifeline.JetID = insolar.JetID(jetID)
+	return m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 }
 
 func (m *Scope) updateStateObject(
@@ -383,7 +382,10 @@ func (m *Scope) updateStateObject(
 		panic("unknown state object type")
 	}
 
-	idx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *objRef.Record())
+	m.IndexLocker.Lock(objRef.Record())
+	defer m.IndexLocker.Unlock(objRef.Record())
+
+	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *objRef.Record())
 	// No index on our node.
 	if err != nil {
 		if err != object.ErrLifelineNotFound {
@@ -393,7 +395,11 @@ func (m *Scope) updateStateObject(
 			return nil, errors.Wrap(err, "index not found for updating non Activation state object")
 		}
 		// We are activating the object. There is no index for it yet.
-		idx = object.Lifeline{StateID: record.StateUndefined}
+		idx = object.FilamentIndex{
+			Lifeline:       object.Lifeline{StateID: record.StateUndefined},
+			PendingRecords: []insolar.ID{},
+			ObjID:          *objRef.Record(),
+		}
 	}
 
 	id, err := m.setRecord(ctx, virtRecord)
@@ -402,24 +408,24 @@ func (m *Scope) updateStateObject(
 	}
 
 	// update index
-	idx.StateID = stateObject.ID()
-	idx.LatestState = id
-	idx.LatestUpdate = m.PulseNumber
+	idx.Lifeline.StateID = stateObject.ID()
+	idx.Lifeline.LatestState = id
+	idx.Lifeline.LatestUpdate = m.PulseNumber
 	if stateObject.ID() == record.StateActivation {
-		idx.Parent = stateObject.(record.Activate).Parent
+		idx.Lifeline.Parent = stateObject.(record.Activate).Parent
 	}
-	idx.JetID = insolar.JetID(jetID)
-	err = m.LifelineModifier.Set(ctx, m.PulseNumber, *objRef.Record(), idx)
+	idx.Lifeline.JetID = insolar.JetID(jetID)
+	err = m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail set index for state object")
 	}
 
 	return &objectDescriptor{
 		head:         objRef,
-		state:        *idx.LatestState,
+		state:        *idx.Lifeline.LatestState,
 		prototype:    stateObject.GetImage(),
 		isPrototype:  stateObject.GetIsPrototype(),
-		childPointer: idx.ChildPointer,
-		parent:       idx.Parent,
+		childPointer: idx.Lifeline.ChildPointer,
+		parent:       idx.Lifeline.Parent,
 	}, nil
 }

@@ -3,19 +3,19 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IDLocker" can be found in github.com/insolar/insolar/ledger/object
+The original interface "IndexLocker" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IDLockerMock implements github.com/insolar/insolar/ledger/object.IDLocker
+// IDLockerMock implements github.com/insolar/insolar/ledger/object.IndexLocker
 type IDLockerMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type IDLockerMock struct {
 	UnlockMock       mIDLockerMockUnlock
 }
 
-//NewIDLockerMock returns a mock for github.com/insolar/insolar/ledger/object.IDLocker
+// NewIDLockerMock returns a mock for github.com/insolar/insolar/ledger/object.IndexLocker
 func NewIDLockerMock(t minimock.Tester) *IDLockerMock {
 	m := &IDLockerMock{t: t}
 
@@ -58,7 +58,7 @@ type IDLockerMockLockInput struct {
 	p *insolar.ID
 }
 
-//Expect specifies that invocation of IDLocker.Lock is expected from 1 to Infinity times
+// Expect specifies that invocation of IndexLocker.Lock is expected from 1 to Infinity times
 func (m *mIDLockerMockLock) Expect(p *insolar.ID) *mIDLockerMockLock {
 	m.mock.LockFunc = nil
 	m.expectationSeries = nil
@@ -70,7 +70,7 @@ func (m *mIDLockerMockLock) Expect(p *insolar.ID) *mIDLockerMockLock {
 	return m
 }
 
-//Return specifies results of invocation of IDLocker.Lock
+// Return specifies results of invocation of IndexLocker.Lock
 func (m *mIDLockerMockLock) Return() *IDLockerMock {
 	m.mock.LockFunc = nil
 	m.expectationSeries = nil
@@ -82,7 +82,7 @@ func (m *mIDLockerMockLock) Return() *IDLockerMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IDLocker.Lock is expected once
+// ExpectOnce specifies that invocation of IndexLocker.Lock is expected once
 func (m *mIDLockerMockLock) ExpectOnce(p *insolar.ID) *IDLockerMockLockExpectation {
 	m.mock.LockFunc = nil
 	m.mainExpectation = nil
@@ -93,7 +93,7 @@ func (m *mIDLockerMockLock) ExpectOnce(p *insolar.ID) *IDLockerMockLockExpectati
 	return expectation
 }
 
-//Set uses given function f as a mock of IDLocker.Lock method
+// Set uses given function f as a mock of IndexLocker.Lock method
 func (m *mIDLockerMockLock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -102,7 +102,7 @@ func (m *mIDLockerMockLock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	return m.mock
 }
 
-//Lock implements github.com/insolar/insolar/ledger/object.IDLocker interface
+// Lock implements github.com/insolar/insolar/ledger/object.IndexLocker interface
 func (m *IDLockerMock) Lock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.LockPreCounter, 1)
 	defer atomic.AddUint64(&m.LockCounter, 1)
@@ -114,7 +114,7 @@ func (m *IDLockerMock) Lock(p *insolar.ID) {
 		}
 
 		input := m.LockMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IDLockerMockLockInput{p}, "IDLocker.Lock got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IDLockerMockLockInput{p}, "IndexLocker.Lock got unexpected parameters")
 
 		return
 	}
@@ -123,7 +123,7 @@ func (m *IDLockerMock) Lock(p *insolar.ID) {
 
 		input := m.LockMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IDLockerMockLockInput{p}, "IDLocker.Lock got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IDLockerMockLockInput{p}, "IndexLocker.Lock got unexpected parameters")
 		}
 
 		return
@@ -181,7 +181,7 @@ type IDLockerMockUnlockInput struct {
 	p *insolar.ID
 }
 
-//Expect specifies that invocation of IDLocker.Unlock is expected from 1 to Infinity times
+// Expect specifies that invocation of IndexLocker.Unlock is expected from 1 to Infinity times
 func (m *mIDLockerMockUnlock) Expect(p *insolar.ID) *mIDLockerMockUnlock {
 	m.mock.UnlockFunc = nil
 	m.expectationSeries = nil
@@ -193,7 +193,7 @@ func (m *mIDLockerMockUnlock) Expect(p *insolar.ID) *mIDLockerMockUnlock {
 	return m
 }
 
-//Return specifies results of invocation of IDLocker.Unlock
+// Return specifies results of invocation of IndexLocker.Unlock
 func (m *mIDLockerMockUnlock) Return() *IDLockerMock {
 	m.mock.UnlockFunc = nil
 	m.expectationSeries = nil
@@ -205,7 +205,7 @@ func (m *mIDLockerMockUnlock) Return() *IDLockerMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IDLocker.Unlock is expected once
+// ExpectOnce specifies that invocation of IndexLocker.Unlock is expected once
 func (m *mIDLockerMockUnlock) ExpectOnce(p *insolar.ID) *IDLockerMockUnlockExpectation {
 	m.mock.UnlockFunc = nil
 	m.mainExpectation = nil
@@ -216,7 +216,7 @@ func (m *mIDLockerMockUnlock) ExpectOnce(p *insolar.ID) *IDLockerMockUnlockExpec
 	return expectation
 }
 
-//Set uses given function f as a mock of IDLocker.Unlock method
+// Set uses given function f as a mock of IndexLocker.Unlock method
 func (m *mIDLockerMockUnlock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -225,7 +225,7 @@ func (m *mIDLockerMockUnlock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	return m.mock
 }
 
-//Unlock implements github.com/insolar/insolar/ledger/object.IDLocker interface
+// Unlock implements github.com/insolar/insolar/ledger/object.IndexLocker interface
 func (m *IDLockerMock) Unlock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.UnlockPreCounter, 1)
 	defer atomic.AddUint64(&m.UnlockCounter, 1)
@@ -237,7 +237,7 @@ func (m *IDLockerMock) Unlock(p *insolar.ID) {
 		}
 
 		input := m.UnlockMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IDLockerMockUnlockInput{p}, "IDLocker.Unlock got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IDLockerMockUnlockInput{p}, "IndexLocker.Unlock got unexpected parameters")
 
 		return
 	}
@@ -246,7 +246,7 @@ func (m *IDLockerMock) Unlock(p *insolar.ID) {
 
 		input := m.UnlockMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IDLockerMockUnlockInput{p}, "IDLocker.Unlock got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IDLockerMockUnlockInput{p}, "IndexLocker.Unlock got unexpected parameters")
 		}
 
 		return

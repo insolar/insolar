@@ -74,7 +74,7 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	getChildren := proc.NewGetChildren(getIndex.Result.Index, msg, s.message.Parcel, s.replyTo)
+	getChildren := proc.NewGetChildren(getIndex.Result.Lifeline, msg, s.message.Parcel, s.replyTo)
 	s.dep.GetChildren(getChildren)
 	return f.Procedure(ctx, getChildren, false)
 }

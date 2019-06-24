@@ -52,7 +52,7 @@ type MessageHandler struct {
 	BlobAccessor blob.Accessor `inject:""`
 	Blobs        blob.Storage  `inject:""`
 
-	IDLocker object.IDLocker `inject:""`
+	IDLocker object.IndexLocker `inject:""`
 
 	RecordModifier object.RecordModifier `inject:""`
 	RecordAccessor object.RecordAccessor `inject:""`
@@ -112,7 +112,7 @@ func NewMessageHandler(
 		},
 		GetIndex: func(p *proc.GetIndex) {
 			p.Dep.IndexState = h.LifelineStateModifier
-			p.Dep.Locker = h.IDLocker
+			p.Dep.IndexLocker = h.IDLocker
 			p.Dep.Index = h.LifelineIndex
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
@@ -129,7 +129,7 @@ func NewMessageHandler(
 		},
 		GetIndexWM: func(p *proc.GetIndexWM) {
 			p.Dep.IndexState = h.LifelineStateModifier
-			p.Dep.Locker = h.IDLocker
+			p.Dep.IndexLocker = h.IDLocker
 			p.Dep.Index = h.LifelineIndex
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus

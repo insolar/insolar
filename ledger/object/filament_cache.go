@@ -78,7 +78,7 @@ type FilamentCacheCleaner interface {
 type FilamentCacheStorage struct {
 	idxAccessor     IndexAccessor
 	idxModifier     IndexModifier
-	idLocker        IDLocker
+	idLocker        IndexLocker
 	recordStorage   RecordStorage
 	coordinator     jet.Coordinator
 	pcs             insolar.PlatformCryptographyScheme
@@ -93,7 +93,7 @@ type FilamentCacheStorage struct {
 func NewFilamentCacheStorage(
 	idxAccessor IndexAccessor,
 	idxModifier IndexModifier,
-	idLocker IDLocker,
+	idLocker IndexLocker,
 	recordStorage RecordStorage,
 	coordinator jet.Coordinator,
 	pcs insolar.PlatformCryptographyScheme,
@@ -187,7 +187,7 @@ func (i *FilamentCacheStorage) SetRequest(ctx context.Context, pn insolar.PulseN
 	// logger := inslogger.FromContext(ctx)
 	// logger.Debugf("SetRequest started. objID: %v, pn: %V", objID.DebugString(), pn)
 	//
-	// idx := i.idxAccessor.Index(pn, objID)
+	// idx := i.idxAccessor.Lifeline(pn, objID)
 	// if idx == nil {
 	// 	return ErrLifelineNotFound
 	// }
@@ -280,7 +280,7 @@ func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNu
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("SetResult started. objID: %v, pn: %V", objID.DebugString(), pn)
 	panic("implement me")
-	// idx := i.idxAccessor.Index(pn, objID)
+	// idx := i.idxAccessor.Lifeline(pn, objID)
 	// if idx == nil {
 	// 	return ErrLifelineNotFound
 	// }
@@ -388,7 +388,7 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 	// i.idLocker.Lock(&objID)
 	// defer i.idLocker.Unlock(&objID)
 	//
-	// idx := i.idxAccessor.Index(pn, objID)
+	// idx := i.idxAccessor.Lifeline(pn, objID)
 	// if idx == nil {
 	// 	return ErrLifelineNotFound
 	// }
@@ -461,7 +461,7 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 func (i *FilamentCacheStorage) SendAbandonedNotification(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) error {
 	panic("implement me")
 	// logger := inslogger.FromContext(ctx)
-	// idx := i.idxAccessor.Index(currentPN, objID)
+	// idx := i.idxAccessor.Lifeline(currentPN, objID)
 	// if idx == nil {
 	// 	return ErrLifelineNotFound
 	// }

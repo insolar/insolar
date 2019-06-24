@@ -28,22 +28,22 @@ type mucount struct {
 	count int32
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IDLocker -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLocker -o ./ -s _mock.go
 
-// IDLocker provides Lock/Unlock methods per record ID.
-type IDLocker interface {
+// IndexLocker provides Lock/Unlock methods per record ID.
+type IndexLocker interface {
 	Lock(id *insolar.ID)
 	Unlock(id *insolar.ID)
 }
 
-// IDLocker provides Lock/Unlock methods per record ID.
+// IndexLocker provides Lock/Unlock methods per record ID.
 type idLocker struct {
 	mu   sync.Mutex
 	muxs map[insolar.ID]*mucount
 }
 
-// NewIDLocker creates new initialized IDLocker.
-func NewIDLocker() IDLocker {
+// NewIDLocker creates new initialized IndexLocker.
+func NewIDLocker() IndexLocker {
 	return &idLocker{
 		muxs: make(map[insolar.ID]*mucount),
 	}

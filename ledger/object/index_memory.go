@@ -99,32 +99,6 @@ func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumbe
 	return nil
 }
 
-func (i *IndexStorageMemory) UpdateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, updateFN func(FilamentIndex) (FilamentIndex, error)) error {
-	i.bucketsLock.RUnlock()
-	defer i.bucketsLock.RUnlock()
-
-	objsByPn, ok := i.buckets[pn]
-	if !ok {
-		return ErrIndexBucketNotFound
-	}
-
-	idx, ok := objsByPn[objID]
-	if !ok {
-		return ErrIndexBucketNotFound
-	}
-
-	idxLock := i.indexLock[pn][objID]
-	idxLock.Lock()
-	defer idxLock.Unlock()
-
-	newIdx, err := updateFN(*idx)
-	if err != nil {
-		return err
-	}
-	objsByPn[objID] = &newIdx
-	return nil
-}
-
 // DeleteForPN deletes all buckets for a provided pulse number
 func (i *IndexStorageMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNumber) {
 	i.bucketsLock.Lock()

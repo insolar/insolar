@@ -62,7 +62,7 @@ func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, getIndex.Result.Index, s.replyTo)
+	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, getIndex.Result.Lifeline, s.replyTo)
 	s.dep.RegisterChild(registerChild)
 	return f.Procedure(ctx, registerChild, false)
 }
