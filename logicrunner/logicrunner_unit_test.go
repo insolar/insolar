@@ -355,11 +355,14 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	})
 }
 
-func prepareParcel(t minimock.Tester, msg insolar.Message, needType bool) insolar.Parcel {
+func prepareParcel(t minimock.Tester, msg insolar.Message, needType bool, needSender bool) insolar.Parcel {
 	parcel := testutils.NewParcelMock(t)
 	parcel.MessageMock.Return(msg)
 	if needType {
 		parcel.TypeMock.Return(msg.Type())
+	}
+	if needSender {
+		parcel.GetSenderMock.Return(gen.Reference())
 	}
 	return parcel
 }
@@ -520,7 +523,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			}
 
 			flowMock, pubSub := prepareWatermill(suite)
-			fakeParcel := prepareParcel(suite.mc, msg, false)
+			fakeParcel := prepareParcel(suite.mc, msg, false, false)
 
 			h := HandleExecutorResults{
 				dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
@@ -721,8 +724,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 
 	es := NewExecutionState(randRef)
 	es.Broker = NewBroker(suite.ctx, 1)
-	es.PrototypeDescriptor = pDesc
-	es.CodeDescriptor = cDesc
+	suite.dc.ByObjectDescriptorMock.Return(pDesc, cDesc, nil)
 	data := []byte(testutils.RandomString())
 	oDesc.MemoryMock.Return(data)
 
@@ -801,7 +803,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 	var err error
 
 	msg := &message.ExecutorResults{RecordRef: ref}
-	fakeParcel = prepareParcel(suite.mc, msg, false)
+	fakeParcel = prepareParcel(suite.mc, msg, false, false)
 	h = HandleExecutorResults{
 		dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
 		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
@@ -820,7 +822,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 
 	// previous executor decline pending, trust him
 	msg = &message.ExecutorResults{RecordRef: ref, Pending: message.NotPending}
-	fakeParcel = prepareParcel(suite.mc, msg, false)
+	fakeParcel = prepareParcel(suite.mc, msg, false, false)
 	h = HandleExecutorResults{
 		dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
 		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
@@ -859,7 +861,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 		}
 
 		flowMock, pubSub := prepareWatermill(suite)
-		fakeParcel := prepareParcel(suite.mc, msg, false)
+		fakeParcel := prepareParcel(suite.mc, msg, false, false)
 
 		h := HandleExecutorResults{
 			dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
@@ -1284,6 +1286,251 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			wg.Wait()
 		})
 	}
+}
+
+func (s *LogicRunnerTestSuite) TestImmutableOrder() {
+	// prepare default object and execution state
+	objectRef := gen.Reference()
+	os := s.lr.UpsertObjectState(objectRef)
+	es := NewExecutionState(objectRef)
+	es.RegisterLogicRunner(s.lr)
+	es.pending = message.NotPending
+	os.ExecutionState = es
+
+	// prepare prototype/code descriptors to run needed executor
+	cRef := testutils.RandomRef()
+	cDesc := artifacts.NewCodeDescriptorMock(s.mc)
+	cDesc.RefMock.Return(&cRef)
+	cDesc.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
+
+	pRef := testutils.RandomRef()
+	pDesc := artifacts.NewObjectDescriptorMock(s.mc)
+	pDesc.HeadRefMock.Return(&pRef)
+
+	oDesc := artifacts.NewObjectDescriptorMock(s.mc)
+	oDesc.ParentMock.Return(nil)
+	oDesc.MemoryMock.Return(make([]byte, 0))
+
+	s.dc.ByObjectDescriptorMock.Return(pDesc, cDesc, nil)
+	s.am.GetObjectMock.Set(func(p context.Context, p1 insolar.Reference) (r artifacts.ObjectDescriptor, r1 error) {
+		if p1.Equal(objectRef) {
+			return oDesc, nil
+		} else if p1.Equal(pRef) {
+			return pDesc, nil
+		} else {
+			panic("unexpected")
+		}
+	})
+
+	s.am.RegisterResultMock.Return(nil, nil)
+
+	s.mb.SendMock.Return(nil, nil)
+	nodeMock := network.NewNetworkNodeMock(s.mc)
+	nodeMock.IDMock.Return(objectRef)
+	s.nn.GetOriginMock.Return(nodeMock)
+
+	// prepare request objects
+	parentRef := gen.Reference()
+
+	mutableRequestRef := gen.Reference()
+	immutableRequestRef1 := gen.Reference()
+	immutableRequestRef2 := gen.Reference()
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+
+	// prepare all three requests
+	mutableMsg := message.CallMethod{
+		Request: record.Request{
+			ReturnMode:   record.ReturnResult,
+			Object:       &objectRef,
+			APIRequestID: utils.RandTraceID(),
+			Immutable:    false,
+		},
+	}
+	mutableParcel := prepareParcel(s.mc, &mutableMsg, false, true)
+	mutableTranscript := NewTranscript(s.ctx, mutableParcel, &mutableRequestRef, &pulseObject, parentRef)
+
+	immutableMsg1 := message.CallMethod{
+		Request: record.Request{
+			ReturnMode:   record.ReturnResult,
+			Object:       &objectRef,
+			APIRequestID: utils.RandTraceID(),
+			Immutable:    true,
+		},
+	}
+	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, false, true)
+	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
+
+	immutableMsg2 := message.CallMethod{
+		Request: record.Request{
+			ReturnMode:   record.ReturnResult,
+			Object:       &objectRef,
+			APIRequestID: utils.RandTraceID(),
+			Immutable:    true,
+		},
+	}
+	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, false, true)
+	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulseObject, parentRef)
+
+	// Set custom executor, that'll:
+	// 1) mutable will start execution and wait until something will ping it on channel 1
+	// 2) immutable 1 will start execution and will wait on channel 2 until something will ping it
+	// 3) immutable 2 will start execution and will ping on channel 2 and exit
+	// 4) immutable 1 will ping on channel 1 and exit
+	// 5) mutable request will continue execution and exit
+	mle := testutils.NewMachineLogicExecutorMock(s.mc)
+	s.lr.Executors[insolar.MachineTypeBuiltin] = mle
+
+	var mutableChan = make(chan interface{}, 1)
+	var immutableChan chan interface{} = nil
+	var immutableLock = sync.Mutex{}
+	mle.CallMethodMock.Set(func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 []byte,
+		p4 string, p5 insolar.Arguments) (r []byte, r1 insolar.Arguments, r2 error) {
+
+		if p1.Request.Equal(mutableRequestRef) {
+			log.Debug("mutableChan 1")
+			select {
+			case _ = <-mutableChan:
+				log.Info("mutable got notifications")
+				return make([]byte, 0), nil, nil
+			case <-time.After(2 * time.Minute):
+				panic("timeout on waiting for immutable request 1 pinged us")
+				return make([]byte, 0), nil, nil
+			}
+		} else if p1.Request.Equal(immutableRequestRef1) || p1.Request.Equal(immutableRequestRef2) {
+			newChan := false
+			immutableLock.Lock()
+			if immutableChan == nil {
+				immutableChan = make(chan interface{}, 1)
+				newChan = true
+			}
+			immutableLock.Unlock()
+			if newChan {
+				log.Debug("immutableChan 1")
+				select {
+				case _ = <-immutableChan:
+					mutableChan <- struct{}{}
+					log.Info("notify mutable chan and exit")
+					return make([]byte, 0), nil, nil
+				case <-time.After(2 * time.Minute):
+					panic("timeout on waiting for immutable request 2 pinged us")
+					return make([]byte, 0), nil, nil
+				}
+			} else {
+				log.Info("notify immutable chan and exit")
+				immutableChan <- struct{}{}
+			}
+		} else {
+			panic("unreachable")
+		}
+		return make([]byte, 0), nil, nil
+	})
+
+	// do not start ledger checking for requests
+	es.Broker.processFuncArgs.(*ExecuteTranscriptArgs).ledgerChecked.Do(func() {})
+
+	es.Broker.Put(s.ctx, true, mutableTranscript)
+	s.True(es.Broker.processActive)
+	es.Broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
+
+	checkFinished := func() bool { return es.Broker.finished.Len() >= 3 }
+	s.True(wait(checkFinished))
+}
+
+func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
+	// prepare default object and execution state
+	objectRef := gen.Reference()
+	os := s.lr.UpsertObjectState(objectRef)
+	es := NewExecutionState(objectRef)
+	es.RegisterLogicRunner(s.lr)
+	es.pending = message.NotPending
+	os.ExecutionState = es
+
+	// prepare prototype/code descriptors to run needed executor
+	cRef := testutils.RandomRef()
+	cDesc := artifacts.NewCodeDescriptorMock(s.mc)
+	cDesc.RefMock.Return(&cRef)
+	cDesc.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
+
+	pRef := testutils.RandomRef()
+	pDesc := artifacts.NewObjectDescriptorMock(s.mc)
+	pDesc.HeadRefMock.Return(&pRef)
+
+	oDesc := artifacts.NewObjectDescriptorMock(s.mc)
+	oDesc.ParentMock.Return(nil)
+	oDesc.MemoryMock.Return(make([]byte, 0))
+
+	s.dc.ByObjectDescriptorMock.Return(pDesc, cDesc, nil)
+	s.am.GetObjectMock.Set(func(p context.Context, p1 insolar.Reference) (r artifacts.ObjectDescriptor, r1 error) {
+		if p1.Equal(objectRef) {
+			return oDesc, nil
+		} else if p1.Equal(pRef) {
+			return pDesc, nil
+		} else {
+			panic("unexpected")
+		}
+	})
+
+	s.am.RegisterResultMock.Return(nil, nil)
+
+	s.mb.SendMock.Return(nil, nil)
+	nodeMock := network.NewNetworkNodeMock(s.mc)
+	nodeMock.IDMock.Return(objectRef)
+	s.nn.GetOriginMock.Return(nodeMock)
+
+	// prepare request objects
+	parentRef := gen.Reference()
+
+	immutableRequestRef1 := gen.Reference()
+	immutableRequestRef2 := gen.Reference()
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+
+	immutableMsg1 := message.CallMethod{
+		Request: record.Request{
+			ReturnMode:   record.ReturnResult,
+			Object:       &objectRef,
+			APIRequestID: utils.RandTraceID(),
+			Immutable:    true,
+		},
+	}
+	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, false, true)
+	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
+
+	immutableMsg2 := message.CallMethod{
+		Request: record.Request{
+			ReturnMode:   record.ReturnResult,
+			Object:       &objectRef,
+			APIRequestID: utils.RandTraceID(),
+			Immutable:    true,
+		},
+	}
+	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, false, true)
+	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulseObject, parentRef)
+
+	mle := testutils.NewMachineLogicExecutorMock(s.mc)
+	s.lr.Executors[insolar.MachineTypeBuiltin] = mle
+
+	mle.CallMethodMock.Set(func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 []byte,
+		p4 string, p5 insolar.Arguments) (r []byte, r1 insolar.Arguments, r2 error) {
+
+		if p1.Request.Equal(immutableRequestRef1) {
+			return make([]byte, 1), nil, nil
+		} else if p1.Request.Equal(immutableRequestRef2) {
+			es.CurrentList.Get(*p1.Request).Deactivate = true
+			return make([]byte, 0), nil, nil
+		}
+		panic("unexpected")
+	})
+
+	// do not start ledger checking for requests
+	es.Broker.processFuncArgs.(*ExecuteTranscriptArgs).ledgerChecked.Do(func() {})
+
+	es.Broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
+
+	checkFinished := func() bool { return es.Broker.finished.Len() >= 2 }
+	s.True(wait(checkFinished))
+	s.Equal(uint64(2), s.am.RegisterResultCounter)
 }
 
 func TestLogicRunner(t *testing.T) {
