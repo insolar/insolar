@@ -61,7 +61,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	suite.api.SeedManager.Add(*seed)
 
 	close(suite.delay)
-	suite.api.timeout = 60
+	suite.api.timeout = 60 * time.Second
 
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
@@ -84,7 +84,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
 
-	suite.api.timeout = 1
+	suite.api.timeout = 1 * time.Second
 
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
@@ -126,7 +126,7 @@ func TestTimeoutSuite(t *testing.T) {
 	cfg.Address = "localhost:19192"
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)
-	timeoutSuite.api.timeout = 1
+	timeoutSuite.api.timeout = 1 * time.Second
 
 	cert := testutils.NewCertificateMock(timeoutSuite.mc)
 	cert.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
