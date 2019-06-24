@@ -27,9 +27,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/insolar"
+	"github.com/stretchr/testify/require"
 )
 
 func contractError(body []byte) error {
@@ -39,7 +39,7 @@ func contractError(body []byte) error {
 		return err
 	}
 	if e, ok := t["error"]; ok {
-		if ee, ok := e.(map[string]interface{})["message"].(string); ok && ee != "" {
+		if ee, ok := e.(string); ok && ee != "" {
 			return errors.New(ee)
 		}
 	}
@@ -50,12 +50,10 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "call.api",
-		Params:  requester.Params{CallSite: "contract.createMember"},
-	}, "MTExMQ==")
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
+		Method: "CreateMember",
+		Params: nil,
+	}, []byte("111"))
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
@@ -64,12 +62,10 @@ func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "call.api",
-		Params:  requester.Params{CallSite: "contract.createMember"},
-	}, "z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.RequestConfigJSON{
+		Method: "CreateMember",
+		Params: nil,
+	}, []byte("12345678901234567890123456789012"))
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
 }
@@ -98,32 +94,30 @@ func customSend(data string) (map[string]interface{}, error) {
 func TestEmptyBody(t *testing.T) {
 	res, err := customSend("")
 	require.NoError(t, err)
-	require.Equal(t, "[ UnmarshalRequest ] Empty body", res["error"].(map[string]interface{})["message"].(string))
+	require.Equal(t, "[ UnmarshalRequest ] Empty body", res["error"])
 }
 
 func TestCrazyJSON(t *testing.T) {
 	res, err := customSend("[dh")
 	require.NoError(t, err)
-	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
+	require.Contains(t, res["error"], "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
 }
 
 func TestIncorrectSign(t *testing.T) {
-	testMember := createMember(t, "Member1")
+	args, err := insolar.MarshalArgs(nil)
+	require.NoError(t, err)
 	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
-	body, err := requester.GetResponseBodyContract(
-		TestCallUrl,
-		requester.Request{
-			JSONRPC: "2.0",
-			ID:      1,
-			Method:  "api.call",
-			Params:  requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
-		},
-		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
-	)
+	body, err := requester.GetResponseBody(TestCallUrl, requester.PostParams{
+		"params":    args,
+		"method":    "SomeMethod",
+		"reference": root.ref,
+		"seed":      seed,
+		"signature": []byte("1234567890"),
+	})
 	require.NoError(t, err)
-	var res requester.ContractAnswer
+	var res map[string]interface{}
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "invalid signature")
+	require.Contains(t, res["error"], "Incorrect signature")
 }

@@ -25,32 +25,45 @@ import (
 )
 
 func TestCreateMember(t *testing.T) {
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	member.ref = root.ref
-	addBurnAddresses(t)
-	result, err := signedRequest(member, "contract.createMember", map[string]interface{}{})
+	result, err := signedRequest(&root, "CreateMember", "Member", "000")
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
 	require.NotEqual(t, "", ref)
 }
 
-func TestCreateMemberWithoutBurnAddresses(t *testing.T) {
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	member.ref = root.ref
-	member.pubKey = "fake"
-	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
-	require.Nil(t, err)
+func TestCreateMemberWrongNameType(t *testing.T) {
+	_, err := signedRequest(&root, "CreateMember", 111, "000")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
-func TestCreateMemberWithBadKey(t *testing.T) {
-	member, err := newUserWithKeys()
+func TestCreateMemberWrongKeyType(t *testing.T) {
+	_, err := signedRequest(&root, "CreateMember", "Member", 111)
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
+}
+
+// no error
+func _TestCreateMemberOneParameter(t *testing.T) {
+	_, err := signedRequest(&root, "CreateMember", "text")
 	require.NoError(t, err)
-	member.ref = root.ref
-	member.pubKey = "fake"
-	addBurnAddresses(t)
-	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
-	require.Nil(t, err)
+}
+
+func TestCreateMemberOneParameterOtherType(t *testing.T) {
+	_, err := signedRequest(&root, "CreateMember", 111)
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
+}
+
+func TestCreateMembersWithSameName(t *testing.T) {
+	firstMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
+	require.NoError(t, err)
+	secondMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
+	require.NoError(t, err)
+
+	require.NotEqual(t, firstMemberRef, secondMemberRef)
+}
+
+func TestCreateMemberByNoRoot(t *testing.T) {
+	member := createMember(t, "Member1")
+	_, err := signedRequest(member, "CreateMember", "Member2", "000")
+	require.NoError(t, err)
 }

@@ -16,8 +16,6 @@
 
 package insolar
 
-import "strconv"
-
 const (
 	// GenesisNameRootDomain is the name of root domain contract for genesis record.
 	GenesisNameRootDomain = "rootdomain"
@@ -25,35 +23,13 @@ const (
 	GenesisNameNodeDomain = "nodedomain"
 	// GenesisNameNodeRecord is the name of node contract for genesis record.
 	GenesisNameNodeRecord = "noderecord"
-	// GenesisNameMember is the name of member contract for genesis record.
-	GenesisNameMember = "member"
-	// GenesisNameWallet is the name of wallet contract for genesis record.
-	GenesisNameWallet = "wallet"
-	// GenesisNameDeposit is the name of deposit contract for genesis record.
-	GenesisNameDeposit = "deposit"
-	// GenesisNameTariff is the name of tariff contract for genesis record.
-	GenesisNameTariff = "tariff"
-	// GenesisNameCostCenter is the name of cost center contract for genesis record.
-	GenesisNameCostCenter = "costcenter"
-
-	GenesisNameRootMember           = "root" + GenesisNameMember
-	GenesisNameRootWallet           = "root" + GenesisNameWallet
-	GenesisNameMigrationAdminMember = "migrationadmin" + GenesisNameMember
-	GenesisNameMigrationWallet      = "migration" + GenesisNameWallet
-	GenesisNameCommissionWallet     = "commission" + GenesisNameWallet
-
-	GenesisNameStandardTariff = "standard" + GenesisNameTariff
-
-	GenesisAmountMigrationDaemonMembers       = 10
-	GenesisAmountActiveMigrationDaemonMembers = 3
+	// GenesisNameRootMember is the name of root member contract for genesis record.
+	GenesisNameRootMember = "member"
+	// GenesisNameRootWallet is the name of wallet contract for genesis record.
+	GenesisNameRootWallet = "wallet"
+	// GenesisNameAllowance is the name of allowance contract for genesis record.
+	GenesisNameAllowance = "allowance"
 )
-
-var GenesisNameMigrationDaemonMembers = func() (result []string) {
-	for i := 0; i < GenesisAmountMigrationDaemonMembers; i++ {
-		result = append(result, "migration_daemon_"+strconv.Itoa(i)+GenesisNameMember)
-	}
-	return
-}()
 
 type genesisBinary []byte
 
@@ -79,7 +55,6 @@ type DiscoveryNodeRegister struct {
 // GenesisContractState carries data required for contract object creation via genesis.
 type GenesisContractState struct {
 	Name       string
-	Prototype  string
 	ParentName string
 	Delegate   bool
 	Memory     []byte
@@ -87,11 +62,8 @@ type GenesisContractState struct {
 
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
-	RootBalance               string
-	MDBalance                 string
-	RootPublicKey             string
-	MigrationAdminPublicKey   string
-	MigrationDaemonPublicKeys []string
+	RootBalance   uint
+	RootPublicKey string
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
