@@ -179,7 +179,7 @@ func (m *client) RegisterRequest(
 
 	rep, ok := <-reps
 	if !ok {
-		return nil, errors.New("no reply")
+		return nil, ErrNoReply
 	}
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
@@ -234,7 +234,7 @@ func (m *client) GetCode(
 
 	rep, ok := <-reps
 	if !ok {
-		return nil, errors.New("no reply")
+		return nil, ErrNoReply
 	}
 
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
@@ -350,8 +350,8 @@ func (m *client) GetObject(
 		}
 	}
 	if !success() {
-		logger.Error("no reply")
-		return nil, errors.New("no reply")
+		logger.Error(ErrNoReply)
+		return nil, ErrNoReply
 	}
 
 	rec := record.Material{}
@@ -645,7 +645,7 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 		done()
 
 		if !ok {
-			return nil, errors.New("no reply")
+			return nil, ErrNoReply
 		}
 		pl, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
