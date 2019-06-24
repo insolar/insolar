@@ -747,7 +747,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	// In this case Update isn't send to ledger (objects data/newData are the same)
 	suite.am.RegisterResultMock.Return(nil, nil)
 
-	_, err := suite.lr.executeMethodCall(suite.ctx, es, current)
+	_, err := suite.lr.executeMethodCall(suite.ctx, current)
 	suite.Require().NoError(err)
 	suite.Require().Equal(uint64(0), suite.am.UpdateObjectCounter)
 
@@ -755,7 +755,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	newData := make([]byte, 5, 5)
 	mle.CallMethodMock.Return(newData, nil, nil)
 
-	_, err = suite.lr.executeMethodCall(suite.ctx, es, current)
+	_, err = suite.lr.executeMethodCall(suite.ctx, current)
 	suite.Require().NoError(err)
 	suite.Require().Equal(uint64(1), suite.am.UpdateObjectCounter)
 }
