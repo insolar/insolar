@@ -65,13 +65,13 @@ type Sender interface {
 	// SendRole sends message to specified role. Node will be calculated automatically for the latest pulse. Use this
 	// method unless you need to send a message to a pre-calculated node.
 	// Replies will be written to the returned channel. Always read from the channel using multiple assignment
-	// (rep, ok := <-ch) because the channel will be closed on Timeout.
+	// (rep, ok := <-ch) because the channel will be closed on timeout.
 	SendRole(
 		ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference,
 	) (<-chan *message.Message, func())
 	// SendTarget sends message to a specific node. If you don't know the exact node, use SendRole.
 	// Replies will be written to the returned channel. Always read from the channel using multiple assignment
-	// (rep, ok := <-ch) because the channel will be closed on Timeout.
+	// (rep, ok := <-ch) because the channel will be closed on timeout.
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	// Reply sends message in response to another message.
 	Reply(ctx context.Context, origin payload.Meta, reply *message.Message)
@@ -126,7 +126,7 @@ func (b *Bus) removeReplyChannel(ctx context.Context, h payload.MessageHash, rep
 // SendRole sends message to specified role. Node will be calculated automatically for the latest pulse. Use this
 // method unless you need to send a message to a pre-calculated node.
 // Replies will be written to the returned channel. Always read from the channel using multiple assignment
-// (rep, ok := <-ch) because the channel will be closed on Timeout.
+// (rep, ok := <-ch) because the channel will be closed on timeout.
 func (b *Bus) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference,
 ) (<-chan *message.Message, func()) {
@@ -150,7 +150,7 @@ func (b *Bus) SendRole(
 
 // SendTarget sends message to a specific node. If you don't know the exact node, use SendRole.
 // Replies will be written to the returned channel. Always read from the channel using multiple assignment
-// (rep, ok := <-ch) because the channel will be closed on Timeout.
+// (rep, ok := <-ch) because the channel will be closed on timeout.
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
@@ -199,7 +199,7 @@ func (b *Bus) SendTarget(
 		case <-time.After(b.timeout):
 			logger.Error(
 				errors.Errorf(
-					"can't return result for message with hash %s: Timeout for reading (%s) was exceeded",
+					"can't return result for message with hash %s: timeout for reading (%s) was exceeded",
 					msgHash.String(),
 					b.timeout,
 				),
