@@ -55,14 +55,14 @@ func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
+	getIndex := proc.NewEnsureIndex(s.message.Parent, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(getIndex)
 	err := f.Procedure(ctx, getIndex, true)
 	if err != nil {
 		return err
 	}
 
-	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, getIndex.Result.Lifeline, s.replyTo)
+	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, s.replyTo)
 	s.dep.RegisterChild(registerChild)
 	return f.Procedure(ctx, registerChild, false)
 }

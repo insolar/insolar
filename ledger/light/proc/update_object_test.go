@@ -122,7 +122,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	}
 	updateObject.Dep.Bus = mb
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
-	updateObject.Dep.IDLocker = idLockMock
+	updateObject.Dep.IndexLocker = idLockMock
 	updateObject.Dep.Coordinator = jc
 	updateObject.Dep.LifelineIndex = lflStor
 	updateObject.Dep.PCS = scheme
@@ -198,7 +198,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 		PulseNumber: insolar.FirstPulseNumber,
 	}
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
-	updateObject.Dep.IDLocker = idLockMock
+	updateObject.Dep.IndexLocker = idLockMock
 	updateObject.Dep.LifelineIndex = lflStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage

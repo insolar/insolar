@@ -97,7 +97,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	if request.CallType == record.CTMethod {
-		getIndex := proc.NewGetIndexWM(*request.Object.Record(), objJetID, s.message)
+		getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
 		s.dep.GetIndexWM(getIndex)
 		if err := f.Procedure(ctx, getIndex, false); err != nil {
 			return err

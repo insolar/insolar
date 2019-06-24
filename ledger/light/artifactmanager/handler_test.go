@@ -181,7 +181,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.IDLocker = idLock
+	h.IndexLocker = idLock
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
@@ -343,7 +343,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
-	h.IDLocker = idLockMock
+	h.IndexLocker = idLockMock
 
 	objIndex := object.Lifeline{LatestState: genRandomID(0), StateID: record.StateActivation}
 	childRecord := record.Child{
@@ -368,7 +368,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 
 	replyTo := make(chan bus.Reply, 1)
 	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, childID.Pulse(), objIndex, replyTo)
-	registerChild.Dep.IDLocker = idLockMock
+	registerChild.Dep.IndexLocker = idLockMock
 	registerChild.Dep.LifelineIndex = lflStor
 	registerChild.Dep.JetCoordinator = jc
 	registerChild.Dep.RecordModifier = s.recordModifier
@@ -408,7 +408,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
-	h.IDLocker = idLockMock
+	h.IndexLocker = idLockMock
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
@@ -436,7 +436,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	replyTo := make(chan bus.Reply, 1)
 
 	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, pulse, objIndex, replyTo)
-	registerChild.Dep.IDLocker = idLockMock
+	registerChild.Dep.IndexLocker = idLockMock
 	registerChild.Dep.LifelineIndex = lflStor
 	registerChild.Dep.JetCoordinator = jet.NewCoordinatorMock(mc)
 	registerChild.Dep.RecordModifier = s.recordModifier
@@ -526,7 +526,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	p := proc.NewHotData(hotIndexes, replyTo)
 	p.Dep.DropModifier = h.DropModifier
 	p.Dep.MessageBus = h.Bus
-	p.Dep.IndexBucketModifier = h.IndexBucketModifier
+	p.Dep.IndexModifier = h.IndexBucketModifier
 	p.Dep.JetStorage = h.JetStorage
 	p.Dep.JetFetcher = h.jetTreeUpdater
 	p.Dep.JetReleaser = h.JetReleaser

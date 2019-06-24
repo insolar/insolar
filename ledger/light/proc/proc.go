@@ -28,8 +28,8 @@ type Dependencies struct {
 	CheckJet             func(*CheckJet)
 	WaitHot              func(*WaitHot)
 	WaitHotWM            func(*WaitHotWM)
-	GetIndex             func(*GetIndex)
-	GetIndexWM           func(*GetIndexWM)
+	GetIndex             func(*EnsureIndex)
+	GetIndexWM           func(*EnsureIndexWM)
 	SendObject           func(*SendObject)
 	GetCode              func(*GetCode)
 	GetRequest           func(*GetRequest)
@@ -48,6 +48,7 @@ type Dependencies struct {
 	CalculateID          func(*CalculateID)
 	SetCode              func(*SetCode)
 	GetPendingFilament   func(*GetPendingFilament)
+	GetDelegate          func(*GetDelegate)
 }
 
 type ReturnReply struct {
@@ -73,8 +74,8 @@ func NewDependenciesMock() *Dependencies {
 		CheckJet:             func(*CheckJet) {},
 		WaitHot:              func(*WaitHot) {},
 		WaitHotWM:            func(*WaitHotWM) {},
-		GetIndex:             func(*GetIndex) {},
-		GetIndexWM:           func(*GetIndexWM) {},
+		GetIndex:             func(*EnsureIndex) {},
+		GetIndexWM:           func(*EnsureIndexWM) {},
 		SendObject:           func(*SendObject) {},
 		GetCode:              func(*GetCode) {},
 		GetRequest:           func(*GetRequest) {},
@@ -93,5 +94,8 @@ func NewDependenciesMock() *Dependencies {
 		CalculateID:          func(*CalculateID) {},
 		SetCode:              func(*SetCode) {},
 		GetPendingFilament:   func(*GetPendingFilament) {},
+		GetDelegate: func(*GetDelegate) {
+
+		},
 	}
 }

@@ -33,15 +33,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GetIndex struct {
+type EnsureIndex struct {
 	object  insolar.Reference
 	jet     insolar.JetID
 	replyTo chan<- bus.Reply
 	pn      insolar.PulseNumber
-
-	Result struct {
-		Lifeline object.Lifeline
-	}
 
 	Dep struct {
 		IndexLocker   object.IndexLocker
@@ -52,8 +48,8 @@ type GetIndex struct {
 	}
 }
 
-func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Reply, pn insolar.PulseNumber) *GetIndex {
-	return &GetIndex{
+func NewEnsureIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Reply, pn insolar.PulseNumber) *EnsureIndex {
+	return &EnsureIndex{
 		object:  obj,
 		jet:     jetID,
 		replyTo: rep,
@@ -61,7 +57,7 @@ func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Repl
 	}
 }
 
-func (p *GetIndex) Proceed(ctx context.Context) error {
+func (p *EnsureIndex) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
 		p.replyTo <- bus.Reply{Err: err}
@@ -69,7 +65,7 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 	return err
 }
 
-func (p *GetIndex) process(ctx context.Context) error {
+func (p *EnsureIndex) process(ctx context.Context) error {
 	objectID := *p.object.Record()
 	logger := inslogger.FromContext(ctx)
 
@@ -78,7 +74,6 @@ func (p *GetIndex) process(ctx context.Context) error {
 
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.pn, objectID)
 	if err == nil {
-		p.Result.Lifeline = idx.Lifeline
 		if flow.Pulse(ctx) == p.pn {
 			idx.LifelineLastUsed = p.pn
 			err = p.Dep.IndexModifier.SetIndex(ctx, p.pn, idx)
@@ -114,15 +109,15 @@ func (p *GetIndex) process(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch index from heavy: unexpected reply type %T", genericReply)
 	}
 
-	p.Result.Lifeline, err = object.DecodeLifeline(rep.Index)
+	lfl, err := object.DecodeLifeline(rep.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	p.Result.Lifeline.JetID = p.jet
+	lfl.JetID = p.jet
 	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
 		LifelineLastUsed: p.pn,
-		Lifeline:         p.Result.Lifeline,
+		Lifeline:         lfl,
 		PendingRecords:   []insolar.ID{},
 		ObjID:            *p.object.Record(),
 	})
@@ -133,7 +128,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 	return nil
 }
 
-type GetIndexWM struct {
+type EnsureIndexWM struct {
 	object  insolar.ID
 	jet     insolar.JetID
 	message payload.Meta
@@ -153,15 +148,15 @@ type GetIndexWM struct {
 	}
 }
 
-func NewGetIndexWM(obj insolar.ID, jetID insolar.JetID, msg payload.Meta) *GetIndexWM {
-	return &GetIndexWM{
+func NewEnsureIndexWM(obj insolar.ID, jetID insolar.JetID, msg payload.Meta) *EnsureIndexWM {
+	return &EnsureIndexWM{
 		object:  obj,
 		jet:     jetID,
 		message: msg,
 	}
 }
 
-func (p *GetIndexWM) Proceed(ctx context.Context) error {
+func (p *EnsureIndexWM) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
 		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
@@ -173,7 +168,7 @@ func (p *GetIndexWM) Proceed(ctx context.Context) error {
 	return err
 }
 
-func (p *GetIndexWM) process(ctx context.Context) error {
+func (p *EnsureIndexWM) process(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
 	p.Dep.IndexLocker.Lock(&p.object)

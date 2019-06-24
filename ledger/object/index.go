@@ -32,13 +32,6 @@ type IndexModifier interface {
 	SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexHeavyModifier -o ./ -s _mock.go
-
-type IndexHeavyModifier interface {
-	// SetIndex adds a bucket with provided pulseNumber and ID
-	SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error
-}
-
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go
 
 // IndexAccessor provides an interface for fetching buckets from an index.

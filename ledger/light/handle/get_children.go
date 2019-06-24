@@ -68,13 +68,13 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 		jetID = jet.Result.Jet
 	}
 
-	getIndex := proc.NewGetIndex(msg.Parent, jetID, s.replyTo, flow.Pulse(ctx))
+	getIndex := proc.NewEnsureIndex(msg.Parent, jetID, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err
 	}
 
-	getChildren := proc.NewGetChildren(getIndex.Result.Lifeline, msg, s.message.Parcel, s.replyTo)
+	getChildren := proc.NewGetChildren(msg, s.message.Parcel, s.replyTo)
 	s.dep.GetChildren(getChildren)
 	return f.Procedure(ctx, getChildren, false)
 }

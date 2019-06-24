@@ -85,7 +85,7 @@ func (s *SetRecord) ensureIndex(ctx context.Context, jet *proc.FetchJet, f flow.
 
 	objRef := *insolar.NewReference(objID)
 
-	idx := proc.NewGetIndex(objRef, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
+	idx := proc.NewEnsureIndex(objRef, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(idx)
 	return f.Procedure(ctx, idx, false)
 }

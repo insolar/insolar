@@ -40,18 +40,20 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
-	Bus                   insolar.MessageBus
-	JetCoordinator        jet.Coordinator
-	PCS                   insolar.PlatformCryptographyScheme
-	BlobAccessor          blob.Accessor
-	BlobModifier          blob.Modifier
-	RecordAccessor        object.RecordAccessor
-	RecordModifier        object.RecordModifier
-	IndexLifelineAccessor object.LifelineAccessor
-	IndexModifier         object.IndexHeavyModifier
-	DropModifier          drop.Modifier
-	Sender                bus.Sender
-	HeavyPendingAccessor  object.HeavyPendingAccessor
+	Bus            insolar.MessageBus
+	JetCoordinator jet.Coordinator
+	PCS            insolar.PlatformCryptographyScheme
+	BlobAccessor   blob.Accessor
+	BlobModifier   blob.Modifier
+	RecordAccessor object.RecordAccessor
+	RecordModifier object.RecordModifier
+
+	IndexAccessor object.IndexAccessor
+	IndexModifier object.IndexModifier
+
+	DropModifier         drop.Modifier
+	Sender               bus.Sender
+	HeavyPendingAccessor object.HeavyPendingAccessor
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -210,12 +212,12 @@ func (h *Handler) Init(ctx context.Context) error {
 func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetDelegate)
 
-	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Head.Record()))
 	}
 
-	delegateRef, ok := idx.DelegateByKey(msg.AsType)
+	delegateRef, ok := idx.Lifeline.DelegateByKey(msg.AsType)
 	if !ok {
 		return nil, errors.New("the object has no delegate for this type")
 	}
@@ -231,7 +233,7 @@ func (h *Handler) handleGetChildren(
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
 
-	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Parent.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Parent.Record()))
 	}
@@ -245,7 +247,7 @@ func (h *Handler) handleGetChildren(
 	if msg.FromChild != nil {
 		currentChild = msg.FromChild
 	} else {
-		currentChild = idx.ChildPointer
+		currentChild = idx.Lifeline.ChildPointer
 	}
 
 	// The object has no children.
@@ -333,12 +335,12 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetObjectIndex)
 
-	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Object.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index for %v", msg.Object.Record().String())
 	}
 
-	buf := object.EncodeLifeline(idx)
+	buf := object.EncodeLifeline(idx.Lifeline)
 
 	return &reply.ObjectIndex{Index: buf}, nil
 }

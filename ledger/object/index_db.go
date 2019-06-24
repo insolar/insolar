@@ -123,24 +123,28 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket F
 }
 
 // ForID returns a lifeline from a bucket with provided PN and ObjID
-func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
+func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error) {
 	var buck *FilamentIndex
 	buck, err := i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {
 		lastPN, err := i.getLastKnownPN(objID)
 		if err != nil {
-			return Lifeline{}, ErrLifelineNotFound
+			return FilamentIndex{}, ErrLifelineNotFound
 		}
 
 		buck, err = i.getBucket(lastPN, objID)
 		if err != nil {
-			return Lifeline{}, err
+			return FilamentIndex{}, err
 		}
 	} else if err != nil {
-		return Lifeline{}, err
+		return FilamentIndex{}, err
 	}
 
-	return buck.Lifeline, nil
+	return *buck, nil
+}
+
+func (i *IndexDB) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
+	panic("implement me")
 }
 
 func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *FilamentIndex) error {

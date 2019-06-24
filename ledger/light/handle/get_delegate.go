@@ -55,13 +55,14 @@ func (s *GetDelegate) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	idx := proc.NewGetIndex(msg.Head, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
+	idx := proc.NewEnsureIndex(msg.Head, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 
-	getDelegate := proc.NewGetDelegate(msg, &idx.Result.Lifeline, s.replyTo)
+	getDelegate := proc.NewGetDelegate(msg, s.replyTo)
+	s.dep.GetDelegate(getDelegate)
 	if err := f.Procedure(ctx, getDelegate, false); err != nil {
 		return err
 	}
