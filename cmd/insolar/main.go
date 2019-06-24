@@ -199,11 +199,17 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	check("Problems with creating user config:", err)
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	req := requester.RequestConfigJSON{
-		Params:   []interface{}{userName, cfg.PublicKey},
-		Method:   "CreateMember",
-		LogLevel: logLevelInsolar,
+	req := requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "api.call",
+		Params: requester.Params{
+			CallSite:   "contract.createMember",
+			CallParams: []interface{}{userName, cfg.PublicKey},
+		},
+		LogLevel: logLevelInsolar.String(),
 	}
+
 	r, err := requester.Send(ctx, sendURL, ucfg, &req)
 	check("Problems with sending request", err)
 

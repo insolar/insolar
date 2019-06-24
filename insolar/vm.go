@@ -61,9 +61,8 @@ type MachineLogicExecutor interface {
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	HandleValidateCaseBindMessage(context.Context, Parcel) (res Reply, err error)
-	HandleValidationResultsMessage(context.Context, Parcel) (res Reply, err error)
-	HandleExecutorResultsMessage(context.Context, Parcel) (res Reply, err error)
+	RegisterExecutor(MachineType, MachineLogicExecutor) error
+	GetExecutor(t MachineType) (MachineLogicExecutor, error)
 	OnPulse(context.Context, Pulse) error
 }
 

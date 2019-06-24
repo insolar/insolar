@@ -167,7 +167,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 	for i, url := range conf.Nodes {
 		go func(url string, i int) {
 			res, err := client.Post("http://"+url+"/api/rpc", "application/json",
-				strings.NewReader(`{"jsonrpc": "2.0", "method": "status.Get", "id": 0}`))
+				strings.NewReader(`{"jsonrpc": "2.0", "method": "node.GetStatus", "id": 0}`))
 			if err != nil {
 				lock.Lock()
 				results[i] = []string{url, "", "", "", "", "", "", err.Error()}

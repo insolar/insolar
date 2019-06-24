@@ -112,18 +112,6 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, jetID insolar.JetID, virtRec *record.Virtual) *bus.Reply {
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
-	case *record.Request:
-		// Skip object creation and genesis
-		if r.CallType == record.CTMethod {
-			if r.Object == nil {
-				return &bus.Reply{Err: errors.New("method call request without object reference")}
-			}
-
-			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), jetID, calculatedID)
-			if err != nil {
-				return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-			}
-		}
 	case *record.Result:
 		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, jetID, calculatedID, *r)
 		if err != nil {

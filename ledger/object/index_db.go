@@ -17,6 +17,7 @@
 package object
 
 import (
+	"bytes"
 	"context"
 	"sync"
 
@@ -58,7 +59,8 @@ func (k lastKnownIndexPNKey) Scope() store.Scope {
 }
 
 func (k lastKnownIndexPNKey) ID() []byte {
-	return k.objID.Bytes()
+	id := k.objID
+	return bytes.Join([][]byte{id.Pulse().Bytes(), id.Hash()}, nil)
 }
 
 // NewIndexDB creates a new instance of IndexDB
@@ -231,7 +233,7 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 			return nil, err
 		}
 		if len(b.PendingRecords) == 0 {
-			return nil, errors.New("can't fetch pednings from index")
+			return nil, errors.New("can't fetch pendings from index")
 		}
 
 		tempRes, err := i.filament(b)
@@ -239,7 +241,7 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 			return nil, err
 		}
 		if len(tempRes) == 0 {
-			return nil, errors.New("can't fetch pednings from index")
+			return nil, errors.New("can't fetch pendings from index")
 		}
 		res = append(tempRes, res...)
 

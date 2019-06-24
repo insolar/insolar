@@ -64,7 +64,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/claimhandler"
+	"github.com/insolar/insolar/network/consensusv1/claimhandler"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 )

@@ -51,7 +51,7 @@ type BaseRecord struct {
 type Key struct{}
 
 func (Key) ID() []byte {
-	return []byte{0x01}
+	return insolar.GenesisPulse.PulseNumber.Bytes()
 }
 
 func (Key) Scope() store.Scope {
@@ -249,7 +249,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		insolar.Reference{},
 		objRef,
 		parentRef,
-		rootdomain.GenesisRef(name+"_proto"),
+		rootdomain.GenesisRef(state.Prototype+"_proto"),
 		state.Delegate,
 		state.Memory,
 	)

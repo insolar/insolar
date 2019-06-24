@@ -56,7 +56,7 @@ import (
 	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"

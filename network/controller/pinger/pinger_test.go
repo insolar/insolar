@@ -128,12 +128,12 @@ func TestPing_HappyPath(t *testing.T) {
 
 	pinger := NewPinger(n)
 
-	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Second*10)
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Second*1)
 	assert.NoError(t, err)
-	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Millisecond*500)
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Nanosecond*1)
 	assert.Error(t, err)
-	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Second*10)
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Second*1)
 	assert.NoError(t, err)
-	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Millisecond*500)
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Nanosecond*1)
 	assert.Error(t, err)
 }

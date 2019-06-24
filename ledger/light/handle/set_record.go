@@ -68,7 +68,6 @@ func (s *SetRecord) Present(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *SetRecord) ensureIndex(ctx context.Context, jet *proc.FetchJet, f flow.Flow) error {
-
 	virtRec := record.Virtual{}
 	err := virtRec.Unmarshal(s.msg.Record)
 	if err != nil {
@@ -78,12 +77,6 @@ func (s *SetRecord) ensureIndex(ctx context.Context, jet *proc.FetchJet, f flow.
 	concrete := record.Unwrap(&virtRec)
 	var objID insolar.ID
 	switch r := concrete.(type) {
-	case *record.Request:
-		// Skip object creation and genesis
-		if r.CallType != record.CTMethod {
-			return nil
-		}
-		objID = *r.GetObject().Record()
 	case *record.Result:
 		objID = r.Object
 	default:
