@@ -294,7 +294,7 @@ func (m *FilamentManager) calculatePending(
 	ordered := make([]insolar.ID, len(pending))
 	count := len(pending)
 	for i, id := range pending {
-		ordered[count-i] = id
+		ordered[count-i-1] = id
 	}
 
 	return ordered, nil

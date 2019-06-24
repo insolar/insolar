@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
@@ -35,7 +35,7 @@ type GetPendingRequests struct {
 	reqPulse insolar.PulseNumber
 
 	dep struct {
-		filaments executor.FilamentAccessor
+		index object.IndexAccessor
 	}
 }
 
@@ -48,16 +48,18 @@ func NewGetPendingRequests(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *m
 	}
 }
 
-func (p *GetPendingRequests) Dep(filaments executor.FilamentAccessor) {
-	p.dep.filaments = filaments
+func (p *GetPendingRequests) Dep(index object.IndexAccessor) {
+	p.dep.index = index
 }
 
 func (p *GetPendingRequests) Proceed(ctx context.Context) error {
-	ids, err := p.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), *p.msg.Object.Record())
-	if err != nil {
-		return errors.Wrap(err, "failed to calculate pending")
+	idx := p.dep.index.Index(flow.Pulse(ctx), *p.msg.Object.Record())
+	if idx == nil {
+		return errors.New("object not found")
 	}
 
-	p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{Has: len(ids) > 0}}
+	p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{
+		Has: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
+	}}
 	return nil
 }

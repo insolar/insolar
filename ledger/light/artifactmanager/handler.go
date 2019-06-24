@@ -134,6 +134,7 @@ func NewMessageHandler(
 			p.Dep.RecordModifier = h.Records
 			p.Dep.PCS = h.PCS
 			p.Dep.WriteAccessor = h.WriteAccessor
+			p.Dep.Filaments = h.filaments
 		},
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
@@ -204,7 +205,7 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep(h.filaments)
+			p.Dep(h.IndexBucketModifier)
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
 			p.Dep(h.filaments)

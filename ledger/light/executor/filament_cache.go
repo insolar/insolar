@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -25,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 type cacheStore struct {
@@ -118,7 +118,7 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 		virtual := record.Unwrap(composite.Meta.Virtual)
 		filament, ok := virtual.(*record.PendingFilament)
 		if !ok {
-			return record.CompositeFilamentRecord{}, errors.New("failed to convert filament record")
+			return record.CompositeFilamentRecord{}, fmt.Errorf("unexpected filament record %T", virtual)
 		}
 		i.currentID = filament.PreviousRecord
 		return composite, nil
@@ -136,7 +136,7 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	virtual := record.Unwrap(filamentRecord.Virtual)
 	filament, ok := virtual.(*record.PendingFilament)
 	if !ok {
-		return record.CompositeFilamentRecord{}, errors.New("failed to convert filament record")
+		return record.CompositeFilamentRecord{}, fmt.Errorf("unexpected filament record %T", virtual)
 	}
 	rec, err := i.cache.records.ForID(ctx, filament.RecordID)
 	if err != nil {
