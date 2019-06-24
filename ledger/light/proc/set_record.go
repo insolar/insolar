@@ -103,27 +103,5 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.Wrap(err, "can't save record into storage")}
 	}
 
-	penReply := p.handlePendings(ctx, *calculatedID, &virtRec)
-	if penReply != nil {
-		return *penReply
-	}
-
 	return bus.Reply{Reply: &reply.ID{ID: *id}}
-}
-
-func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, virtRec *record.Virtual) *bus.Reply {
-	concrete := record.Unwrap(virtRec)
-	switch r := concrete.(type) {
-	case *record.Result:
-		panic("UNREACHABLE 2") // TODO remove it
-		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
-
-		// err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
-		// if err != nil {
-		// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-		// }
-	}
-
-	return nil
 }
