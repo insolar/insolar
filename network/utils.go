@@ -178,3 +178,20 @@ func IsConnectionClosed(err error) bool {
 	err = errors.Cause(err)
 	return strings.Contains(err.Error(), "use of closed network connection")
 }
+
+// FindDiscoveriesInNodeList returns only discovery nodes from active node list
+func FindDiscoveriesInNodeList(nodes []insolar.NetworkNode, cert insolar.Certificate) []insolar.NetworkNode {
+	discovery := cert.GetDiscoveryNodes()
+	result := make([]insolar.NetworkNode, 0)
+
+	for _, d := range discovery {
+		for _, n := range nodes {
+			if d.GetNodeRef().Equal(n.ID()) {
+				result = append(result, n)
+				break
+			}
+		}
+	}
+
+	return result
+}

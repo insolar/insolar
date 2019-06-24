@@ -288,3 +288,12 @@ type Bootstrapper interface {
 	HandleNodeAuthorizeRequest(context.Context, Packet) (Packet, error)
 	HandleNodeBootstrapRequest(context.Context, Packet) (Packet, error)
 }
+
+// Rules are responsible for a majority and minimum roles checking
+//go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go
+type Rules interface {
+	// CheckMajorityRule returns true if MajorityRule check passed, also returns active discovery nodes count
+	CheckMajorityRule() (bool, int)
+	// CheckMinRole returns true if MinRole check passed
+	CheckMinRole() bool
+}

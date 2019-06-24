@@ -38,7 +38,7 @@ func (r *rules) CheckMajorityRule() (bool, int) {
 	// activeNodes []core.Node
 	cert := r.CertificateManager.GetCertificate()
 	majorityRule := cert.GetMajorityRule()
-	activeDiscoveryNodesLen := len(network.FindDiscoveriesInNodeList(r.NodeKeeper.GetActiveNodes(), cert))
+	activeDiscoveryNodesLen := len(network.FindDiscoveriesInNodeList(r.NodeKeeper.GetAccessor().GetActiveNodes(), cert))
 	return activeDiscoveryNodesLen >= majorityRule, activeDiscoveryNodesLen
 }
 
