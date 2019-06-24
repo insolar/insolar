@@ -77,8 +77,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/consensus/phases"
+	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -514,7 +514,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
-	mblocker := testutils.NewMessageBusLockerMock(t)
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
 	senderMock := bus.NewSenderMock(t)
@@ -533,7 +532,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	mb.MustRegisterMock.Return()
 
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
-		&amMock, certManager, cryptographyService, mblocker, serviceNetwork, keyProc, terminationHandler,
+		&amMock, certManager, cryptographyService, serviceNetwork, keyProc, terminationHandler,
 		mb, testutils.NewContractRequesterMock(t), senderMock)
 
 	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {

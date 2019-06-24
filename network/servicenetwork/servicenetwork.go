@@ -74,8 +74,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/consensus/phases"
+	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
@@ -111,7 +111,6 @@ type ServiceNetwork struct {
 	operableFunc insolar.NetworkOperableCallback
 
 	isGenesis bool
-	// isDiscovery bool
 
 	lock sync.Mutex
 }

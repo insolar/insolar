@@ -22,6 +22,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+// PendingRequestsLimit holds a number of pending requests, what can be stored in the system
+// before they are declined
+const PendingRequestsLimit = 1000
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/recentstorage.Provider -o ./ -s _mock.go
 
 // Provider provides different types of storages for a specific jet

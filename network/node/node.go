@@ -59,7 +59,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -187,11 +187,6 @@ func (n *node) SetLeavingETA(number insolar.PulseNumber) {
 	n.SetState(insolar.NodeLeaving)
 	atomic.StoreUint32(&n.NodeLeavingETA, uint32(number))
 }
-
-//
-// func init() {
-// 	gob.Register(&node{})
-// }
 
 func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkNode, error) {
 	keyProc := platformpolicy.NewKeyProcessor()

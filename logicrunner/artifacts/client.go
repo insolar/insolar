@@ -20,15 +20,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
-
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -63,7 +60,7 @@ func (s *localStorage) Initialized() {
 
 func (s *localStorage) StoreObject(reference insolar.Reference, descriptor interface{}) {
 	if s.initialized {
-		panic("Trying to initialize cache after initialization was finished")
+		panic("Trying to initialize singleFlightCache after initialization was finished")
 	}
 	s.storage[reference] = descriptor
 }
@@ -111,8 +108,6 @@ type client struct {
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
 	localStorage         *localStorage
-
-	codeCache map[insolar.ID]CodeDescriptor
 }
 
 // State returns hash state for artifact manager.
@@ -128,7 +123,6 @@ func NewClient(sender bus.Sender) *client { // nolint
 		senders:              messagebus.NewSenders(),
 		sender:               sender,
 		localStorage:         newLocalStorage(),
-		codeCache:            map[insolar.ID]CodeDescriptor{},
 	}
 }
 
@@ -154,26 +148,52 @@ func (m *client) RegisterRequest(
 	}
 
 	virtRec := record.Wrap(request)
+	buf, err := virtRec.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal record")
+	}
+
+	h := m.PCS.ReferenceHasher()
+	_, err = h.Write(buf)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to calculate hash")
+	}
+	recID := *insolar.NewID(currentPN, h.Sum(nil))
+
+	msg, err := payload.NewMessage(&payload.SetRequest{
+		Request: buf,
+	})
 
 	var recRef *insolar.Reference
 	switch request.CallType {
 	case record.CTMethod:
 		recRef = request.Object
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-		recID := insolar.NewID(currentPN, hash)
-		recRef = insolar.NewReference(*recID)
+		recRef = insolar.NewReference(recID)
 	default:
 		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
 
-	id, err := m.setRecord(
-		ctx,
-		virtRec,
-		*recRef,
-	)
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
+	defer done()
 
-	return id, errors.Wrap(err, "[ RegisterRequest ] ")
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply")
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return &p.ID, nil
+	case *payload.Error:
+		return nil, errors.New(p.Text)
+	default:
+		return nil, fmt.Errorf("RegisterRequest: unexpected reply: %#v", p)
+	}
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -202,10 +222,6 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	if cd, ok := m.codeCache[*code.Record()]; ok {
-		return cd, nil
-	}
-
 	msg, err := payload.NewMessage(&payload.GetCode{
 		CodeID: *code.Record(),
 	})
@@ -220,6 +236,7 @@ func (m *client) GetCode(
 	if !ok {
 		return nil, errors.New("no reply")
 	}
+
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal reply")
@@ -242,7 +259,6 @@ func (m *client) GetCode(
 			machineType: codeRecord.MachineType,
 			code:        p.Code,
 		}
-		m.codeCache[*code.Record()] = desc
 		return desc, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
@@ -280,12 +296,15 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
+	logger := inslogger.FromContext(ctx).WithField("object", head.Record().DebugString())
+
 	msg, err := payload.NewMessage(&payload.GetObject{
 		ObjectID: *head.Record(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
+
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
@@ -297,7 +316,6 @@ func (m *client) GetObject(
 		return index != nil && statePayload != nil
 	}
 
-	logger := inslogger.FromContext(ctx)
 	for rep := range reps {
 		replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
@@ -306,17 +324,17 @@ func (m *client) GetObject(
 
 		switch p := replyPayload.(type) {
 		case *payload.Index:
-			logger.Info("rep index")
+			logger.Debug("reply index")
 			index = &object.Lifeline{}
 			err := index.Unmarshal(p.Index)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal index")
 			}
 		case *payload.State:
-			logger.Info("rep state")
+			logger.Debug("reply state")
 			statePayload = p
 		case *payload.Error:
-			logger.Info("rep error: ", p.Text)
+			logger.Debug("reply error: ", p.Text)
 			switch p.Code {
 			case payload.CodeDeactivated:
 				return nil, insolar.ErrDeactivated
@@ -332,7 +350,7 @@ func (m *client) GetObject(
 		}
 	}
 	if !success() {
-		logger.WithField("correlation_id", middleware.MessageCorrelationID(msg)).Error("no reply")
+		logger.Error("no reply")
 		return nil, errors.New("no reply")
 	}
 
@@ -583,7 +601,8 @@ func (m *client) DeployCode(
 		Code:        code,
 		MachineType: machineType,
 	}
-	buf, err := codeRec.Marshal()
+	virtual := record.Wrap(codeRec)
+	buf, err := virtual.Marshal()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal record")
 	}
@@ -595,31 +614,51 @@ func (m *client) DeployCode(
 	}
 	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
-	msg, err := payload.NewMessage(&payload.SetCode{
+	psc := &payload.SetCode{
 		Record: buf,
 		Code:   code,
-	})
-
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID))
-	defer done()
-
-	rep, ok := <-reps
-	if !ok {
-		return nil, errors.New("no reply")
 	}
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+
+	pl, err := m.retryer(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal reply")
+		return nil, err
 	}
-
 	switch p := pl.(type) {
 	case *payload.ID:
 		return &p.ID, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
 	default:
-		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		return nil, fmt.Errorf("DeployCode: unexpected reply: %#v", p)
 	}
+}
+
+func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (payload.Payload, error) {
+	for tries > 0 {
+		msg, err := payload.NewMessage(ppl)
+		if err != nil {
+			return nil, err
+		}
+
+		reps, done := m.sender.SendRole(ctx, msg, role, ref)
+		rep, ok := <-reps
+		done()
+
+		if !ok {
+			return nil, errors.New("no reply")
+		}
+		pl, err := payload.UnmarshalFromMeta(rep.Payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal reply")
+		}
+
+		if p, ok := pl.(*payload.Error); !ok || p.Code != payload.CodeFlowCanceled {
+			return pl, nil
+		}
+		inslogger.FromContext(ctx).Warn("flow cancelled, retrying")
+		tries--
+	}
+	return nil, fmt.Errorf("flow cancelled, retries exceeded")
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype

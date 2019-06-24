@@ -74,7 +74,7 @@ message PulseRequest {
 }
 
 message BootstrapRequest {
-    bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
+    bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim"];
     uint32 LastNodePulse = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     Permit Permit = 3;
 }

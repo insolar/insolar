@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/pkg/errors"
 )
 
 type SetBlob struct {
@@ -59,6 +60,9 @@ func (p *SetBlob) reply(ctx context.Context) bus.Reply {
 	done, err := p.Dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err == hot.ErrWriteClosed {
 		return bus.Reply{Err: flow.ErrCancelled}
+	}
+	if err != nil {
+		return bus.Reply{Err: errors.Wrap(err, "failed to start write")}
 	}
 	defer done()
 	msg := p.msg

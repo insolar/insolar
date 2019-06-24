@@ -62,7 +62,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensusv1"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 )
 
@@ -110,7 +110,7 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 		// TODO: may be try to send second time if error
 		return errors.Wrap(err, "failed to write data")
 	}
-	stats.Record(ctx, consensus.SentSize.M(int64(n)))
+	stats.Record(ctx, consensusv1.SentSize.M(int64(n)))
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (t *udpTransport) loop(ctx context.Context) {
 			continue
 		}
 
-		stats.Record(ctx, consensus.RecvSize.M(int64(n)))
+		stats.Record(ctx, consensusv1.RecvSize.M(int64(n)))
 		go t.handler.HandleDatagram(addr.String(), buf[:n])
 	}
 }

@@ -20,16 +20,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -73,6 +73,9 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 	if err == hot.ErrWriteClosed {
 		return bus.Reply{Err: flow.ErrCancelled}
 	}
+	if err != nil {
+		return bus.Reply{Err: errors.Wrap(err, "failed to start write")}
+	}
 	defer done()
 
 	virtRec := record.Virtual{}
@@ -111,31 +114,14 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, virtRec *record.Virtual) *bus.Reply {
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
-	case *record.Request:
-		// Skip object creation and genesis
-		if r.CallType == record.CTMethod {
-			if r.Object == nil {
-				return &bus.Reply{Err: errors.New("method call request without object reference")}
-			}
-			if p.Dep.RecentStorageProvider.Count() > p.Dep.PendingRequestsLimit {
-				return &bus.Reply{Reply: &reply.Error{ErrType: reply.ErrTooManyPendingRequests}}
-			}
-			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
-			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), calculatedID)
-
-			err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), calculatedID)
-			if err != nil {
-				return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-			}
-		}
 	case *record.Result:
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
-		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
-		if err != nil {
-			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-		}
+		// err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
+		// if err != nil {
+		// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+		// }
 	}
 
 	return nil

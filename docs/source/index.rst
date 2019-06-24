@@ -29,4 +29,4 @@ To connect to TestNet 1.1, go through :ref:`step-by-step instructions <connectin
    :maxdepth: 2
    :caption: Integration
 
-   connect-or-setup
+   integration

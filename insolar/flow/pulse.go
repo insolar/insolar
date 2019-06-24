@@ -26,3 +26,7 @@ import (
 func Pulse(ctx context.Context) insolar.PulseNumber {
 	return pulse.FromContext(ctx)
 }
+
+func TestContextWithPulse(ctx context.Context, pn insolar.PulseNumber) context.Context {
+	return pulse.ContextWith(ctx, pn)
+}

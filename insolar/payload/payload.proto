@@ -8,11 +8,12 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 message Meta {
     uint32 Polymorph = 16;
 
-    bytes Payload  = 20;
-    bytes Sender   = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Receiver = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Pulse    = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes Origin   = 42;
+    bytes Payload    = 20;
+    bytes Sender     = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Receiver   = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Pulse      = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes ID         = 24;
+    bytes OriginHash = 25 [(gogoproto.customtype) = "MessageHash", (gogoproto.nullable) = false];
 }
 
 message Error {
@@ -21,7 +22,6 @@ message Error {
     uint32 Code = 20;
     string Text = 21;
 }
-
 
 message GetObject {
     uint32 Polymorph = 16;
@@ -41,14 +41,12 @@ message PassState {
 
     bytes Origin   = 20;
     bytes StateID  = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    bytes CorrelationID = 22;
 }
 
 message Pass {
     uint32 Polymorph = 16;
 
     bytes Origin   = 20;
-    bytes CorrelationID = 22;
 }
 
 message SetCode {
@@ -89,4 +87,10 @@ message Jet {
 
     bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
     bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
+
+message SetRequest {
+    uint32 Polymorph = 16;
+
+    bytes Request = 20;
 }

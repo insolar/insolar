@@ -18,6 +18,7 @@ package payload
 
 import (
 	"github.com/gogo/protobuf/proto"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -26,24 +27,68 @@ type Type uint32
 //go:generate stringer -type=Type
 
 const (
-	TypeUnknown   Type = 0
-	TypeError     Type = 1
-	TypeID        Type = 2
-	TypeState     Type = 4
-	TypeGetObject Type = 5
-	TypePassState Type = 6
-	TypeObjIndex  Type = 7
-	TypeObjState  Type = 8
-	TypeIndex     Type = 9
-	TypePass      Type = 10
-	TypeGetCode   Type = 11
-	TypeCode      Type = 12
-	TypeSetCode   Type = 13
+	TypeUnknown    Type = 0
+	TypeError      Type = 1
+	TypeID         Type = 2
+	TypeState      Type = 4
+	TypeGetObject  Type = 5
+	TypePassState  Type = 6
+	TypeObjIndex   Type = 7
+	TypeObjState   Type = 8
+	TypeIndex      Type = 9
+	TypePass       Type = 10
+	TypeGetCode    Type = 11
+	TypeCode       Type = 12
+	TypeSetCode    Type = 13
+	TypeSetRequest Type = 14
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
 type Payload interface {
 	Marshal() ([]byte, error)
+}
+
+const (
+	MessageHashSize = 28
+)
+
+type MessageHash [MessageHashSize]byte
+
+func (h *MessageHash) MarshalTo(data []byte) (int, error) {
+	if len(data) < len(h) {
+		return 0, errors.New("Not enough bytes to marshal PulseNumber")
+	}
+	copy(data, h[:])
+	return len(h), nil
+}
+
+func (h *MessageHash) Unmarshal(data []byte) error {
+	if len(data) < MessageHashSize {
+		return errors.New("not enough bytes")
+	}
+	copy(h[:], data)
+	return nil
+}
+
+func (h MessageHash) Equal(other MessageHash) bool {
+	return h == other
+}
+
+func (h MessageHash) Size() int {
+	return len(h)
+}
+
+func (h *MessageHash) String() string {
+	return base58.Encode(h[:])
+}
+
+func (h *MessageHash) IsZero() bool {
+	for _, b := range h {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // UnmarshalType decodes payload type from given binary.
@@ -91,6 +136,9 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *SetCode:
 		pl.Polymorph = uint32(TypeSetCode)
+		return pl.Marshal()
+	case *SetRequest:
+		pl.Polymorph = uint32(TypeSetRequest)
 		return pl.Marshal()
 	}
 
@@ -141,6 +189,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeSetCode:
 		pl := SetCode{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSetRequest:
+		pl := SetRequest{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

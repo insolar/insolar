@@ -13,6 +13,7 @@ import (
 	message "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	payload "github.com/insolar/insolar/insolar/payload"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,7 +22,7 @@ import (
 type SenderMock struct {
 	t minimock.Tester
 
-	ReplyFunc       func(p context.Context, p1 *message.Message, p2 *message.Message)
+	ReplyFunc       func(p context.Context, p1 payload.Meta, p2 *message.Message)
 	ReplyCounter    uint64
 	ReplyPreCounter uint64
 	ReplyMock       mSenderMockReply
@@ -64,12 +65,12 @@ type SenderMockReplyExpectation struct {
 
 type SenderMockReplyInput struct {
 	p  context.Context
-	p1 *message.Message
+	p1 payload.Meta
 	p2 *message.Message
 }
 
 //Expect specifies that invocation of Sender.Reply is expected from 1 to Infinity times
-func (m *mSenderMockReply) Expect(p context.Context, p1 *message.Message, p2 *message.Message) *mSenderMockReply {
+func (m *mSenderMockReply) Expect(p context.Context, p1 payload.Meta, p2 *message.Message) *mSenderMockReply {
 	m.mock.ReplyFunc = nil
 	m.expectationSeries = nil
 
@@ -93,7 +94,7 @@ func (m *mSenderMockReply) Return() *SenderMock {
 }
 
 //ExpectOnce specifies that invocation of Sender.Reply is expected once
-func (m *mSenderMockReply) ExpectOnce(p context.Context, p1 *message.Message, p2 *message.Message) *SenderMockReplyExpectation {
+func (m *mSenderMockReply) ExpectOnce(p context.Context, p1 payload.Meta, p2 *message.Message) *SenderMockReplyExpectation {
 	m.mock.ReplyFunc = nil
 	m.mainExpectation = nil
 
@@ -104,7 +105,7 @@ func (m *mSenderMockReply) ExpectOnce(p context.Context, p1 *message.Message, p2
 }
 
 //Set uses given function f as a mock of Sender.Reply method
-func (m *mSenderMockReply) Set(f func(p context.Context, p1 *message.Message, p2 *message.Message)) *SenderMock {
+func (m *mSenderMockReply) Set(f func(p context.Context, p1 payload.Meta, p2 *message.Message)) *SenderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -113,7 +114,7 @@ func (m *mSenderMockReply) Set(f func(p context.Context, p1 *message.Message, p2
 }
 
 //Reply implements github.com/insolar/insolar/insolar/bus.Sender interface
-func (m *SenderMock) Reply(p context.Context, p1 *message.Message, p2 *message.Message) {
+func (m *SenderMock) Reply(p context.Context, p1 payload.Meta, p2 *message.Message) {
 	counter := atomic.AddUint64(&m.ReplyPreCounter, 1)
 	defer atomic.AddUint64(&m.ReplyCounter, 1)
 

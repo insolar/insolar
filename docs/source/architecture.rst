@@ -24,113 +24,21 @@ Let's take a closer look at the *three bottom layers* since they are the Insolar
 
 .. _key_design_concepts:
 
-Key Design Concepts
--------------------
+Architecture Diagram
+--------------------
 
 Below is the platform architecture diagram aimed to address the aforementioned interconnected layers. The architecture has multiple components and consensuses to address the complexity and variety of requirements.
 
 Components in the diagram are *clickable*, the links will lead you to respective definitions.
 
-.. uml::
-   
-   scale 750 width
-   
-   together {
-     package "[[../architecture.html#pulsar-consensus Pulsar consensus]]" as pcon {
-       card [Pulsars] [[../architecture.html#pulsars]]
-     }
-     package "[[../architecture.html#fed-of-clouds Cloud n+1]]" as cloudnext {
-       card [Cloud's network consensus\n & messaging] as nextnet [[../architecture.html#network-consensus]]
-       frame "[[../architecture.html#domains Domain b]]" as domb {
-         rectangle "Contract b" as cntrctb [[../architecture.html#contracts]]
-       }
-       frame "[[../architecture.html#domains Domain a]]" as doma {
-         rectangle "Contract a" as cntrcta [[../architecture.html#contracts]]
-       }
-       cntrctb -[hidden]d- nextnet
-       cntrcta -[hidden]d- nextnet
-       [Pulsars] -u-> nextnet : pulses
-     }
-   }
-   package "[[../architecture.html#fed-of-clouds Cloud n]]" as cloudn {
-       frame "[[../architecture.html#domains Domain n]]" as domn {
-         rectangle "Contract n+1" as cntrctnext [[../architecture.html#contracts]]
-         rectangle "Contract n" as cntrctne [[../architecture.html#contracts]]
-       }
-       rectangle "[[../architecture.html#globulas Network globulas]]" as globula {
-         node "[[../architecture.html#virtual Virtual nodes]]" as vn {
-             card vcard [
-               - Generation handling
-               - Transacting
-               - CPU scaling
-             ]
-         }
-         node "[[../architecture.html#light-material Light material nodes]]" as ln {
-             card lcard [
-               - Short-term storage
-               - Traffic scaling
-               - Block Building
-             ]
-         }
-         node "[[../architecture.html#heavy-material Heavy material nodes]]" as hn {
-             card hcard [
-               - Long-term storage
-               - Replication & recovery
-               - Storage scaling
-             ]
-         }
-      }
-      together {
-      card [Cloud's network consensus\n & messaging] as net [[../architecture.html#network-consensus]]
-      database "[[../architecture.html#ledger Ledger]]" as db {
-         frame "[[../architecture.html#storage-consensus Storage, validation & consensus]]" {
-         rectangle ldgr [
-           - Permissions
-           ....
-           - Integrity & replication
-           ....
-           - Jets, lifelines & records
-         ]
-         }
-      }
-      node "[[../architecture.html#execution-validation Processing]]" as process {
-         frame "[[../architecture.html#logic-consensus Logic validation & consensus]]" {
-         rectangle proc [
-           - Compilers
-           ....
-           - Artifact cache 
-           - Security context
-           ....
-           - Distributed transaction
-             management
-         ]
-         }
-      }
-      }
-      domn -[hidden]- globula
-      vcard -[hidden]d- lcard
-      lcard -[hidden]d- hcard
-      net -[hidden]d- process
-      proc <-d-> net : data & code
-      net <-d-> ldgr : data & code
-      net -[hidden]r- ln
-      db -[hidden]r- hn
-      process -[hidden]d- net
-      proc -[hidden]r- vn
-      [Pulsars] -r-> net: pulses
-      net <-> nextnet : messages
-      domb -[hidden]- net
-      domb -[hidden]r- domn
-      domb -[hidden]r- proc
-      domb -[hidden]r- net
-   }
+.. uml:: architecture.uml
 
 All components communicate via messaging to achieve respective :ref:`consensuses <consensuses>` and use :term:`pulses <pulse>` to stay in sync. Let's decompose the architecture to learn the key design concepts.
 
 .. _fed_of_clouds:
 
 Clouds and Their Federations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
 :term:`Clouds <cloud>` organize and unify software capabilities, hardware capacities, and the financial and legal liability of :term:`nodes <node>` to ensure seamless operation of business services. The Insolar Platform transparently connects multiple clouds and each cloud is governed independently, e.g., by a community, company, industry consortia, or national agency. Thus, multiple clouds can unite into a federation on the Insolar network. 
 
@@ -153,7 +61,7 @@ The cloud itself establishes governance of both network operations and business 
 .. _domains:
 
 Domains
-~~~~~~~
+-------
 
 Domains establish governance of contracts and nodes, thus, acting as *super contracts* that can contain :term:`objects <object>` and their history (:term:`lifelines <lifeline>`) and can apply varying policies to the lifelines contained within. Policies can differ with regards to particular rules:
 
@@ -167,7 +75,7 @@ Domains establish governance of contracts and nodes, thus, acting as *super cont
 .. _globulas:
 
 Globulas
-~~~~~~~~
+--------
 
 Globula is a network of up to 1,000 :term:`nodes <node>`. It can run as a truly decentralized network with consistency established by a leaderless, pure BFT-based consensus mechanism, a :ref:`globula network protocol <network_consensus>`.
 
@@ -176,14 +84,14 @@ Insolar also supports larger node networks of up to 100 globulas (a total of 100
 .. _multi_role_nodes:
 
 Multi-Role Nodes
-~~~~~~~~~~~~~~~~
+----------------
 
 Insolar utilizes a multi-role model for :term:`nodes <node>`: each node has a single :ref:`static role <static_roles>` that defines its primary purpose and a set of :ref:`dynamically assigned roles <dynamic_roles>`. Dynamic role allocation functions enable the :ref:`omni-scaling <omniscaling>` feature of the Insolar Platform.
 
 .. _static_roles:
 
 Static Roles
-^^^^^^^^^^^^
+~~~~~~~~~~~~
 
 The node’s static role defines what kind of resource and functionality are delivered by that node to the network, and how the network uses such nodes. The network recognizes four static role categories:
 
@@ -197,7 +105,7 @@ Static role correlates with the type of resource the node can provide to the clo
 .. _neutral:
 
 Neutral nodes
-+++++++++++++
+^^^^^^^^^^^^^
 
 Neutral nodes participate in the :ref:`network consensus <network_consensus>` but do not receive any workload automatically distributed by the Insolar network. Neutral nodes serve particular functions:
 
@@ -209,7 +117,7 @@ Neutral nodes participate in the :ref:`network consensus <network_consensus>` bu
 .. _virtual:
 
 Virtual nodes
-+++++++++++++
+^^^^^^^^^^^^^
 
 Virtual nodes are stateless, fast, easy to join and leave, and do not need data recovery. On the Insolar network, virtual nodes do the following:
 
@@ -222,7 +130,7 @@ Virtual nodes are stateless, fast, easy to join and leave, and do not need data 
 .. _light_material:
 
 Light material nodes
-++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^
 
 Light material nodes are stateful and they automatically collect hot data and indices upon restart. On the Insolar network, light material nodes do the following:
 
@@ -243,7 +151,7 @@ Although light nodes can add dust, in case of :term:`lifelines <lifeline>`, they
 .. _heavy_material:
 
 Heavy material nodes
-++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^
 
 Heavy material nodes are stateful and require recovery and content revalidation (proof-of-storage), both periodically and upon rejoining the network. On the Insolar network, heavy material nodes do the following:
 
@@ -264,7 +172,7 @@ Moreover, additional network protocol is implemented to maintain backups and arc
 .. _dynamic_roles:
 
 Dynamic Roles
-^^^^^^^^^^^^^
+~~~~~~~~~~~~~
 
 In addition to the node's static role, it can be equipped with dynamic ones -- roles able to change.
 
@@ -292,13 +200,14 @@ Dynamic roles are designed to:
 .. _utulity_roles:
 
 Delegated and Utility Roles
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 In addition to static and dynamic roles, nodes can take on delegated and utility roles that serve additional functions: caching, inter-globula coordination, and node joining.
 
 .. _contracts:
 
 Contracts
-~~~~~~~~~
+---------
 
 The Insolar's main principle is that everything is a :term:`contract <object>` on the Insolar Platform. Contracts are stored as :term:`lifelines <lifeline>` in the :ref:`ledger <ledger>` and are based on general-purpose programming languages such as Golang or Java. They allow existing practices, libraries, and development environments to be used straightforwardly.
 
@@ -325,7 +234,7 @@ For practical enterprise use, Insolar contracts can store and transfer large dat
 .. _contract_determinism:
 
 Contract Determinism
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~
 
 As the platform already reduces determinism via network messaging, Insolar applies relatively relaxed requirements regarding the determinism of :ref:`contracts <contracts>`. As such, a method invocation:
 
@@ -349,7 +258,7 @@ To provide contract execution determinism, Insolar utilizes its :ref:`network co
 .. _network_consistency:
 
 Network Consistency
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 Insolar uses the :ref:`network layer <network_consensus>` to ensure view consistency across the whole network. The next step is to facilitate the efficient and secure execution of contracts across all :ref:`virtual nodes <virtual>`.
 
@@ -360,16 +269,16 @@ To this end, Insolar:
 
 As a result, all nodes have:
 
-* the same :ref:`entropy <pulsars>` value.
+* the same :ref:`entropy <pulsars>` value,
 * a list of active :ref:`nodes <multi_role_nodes>`.
 
 Insolar does not use node workload statistics to provide network consistency, instead, it implements pseudo-random workload distribution.
 
-The reason is simple: a trustful workload factor in distributed systems requires full visibility and operations aggregation but they still do not guarantee smooth workload distribution when workloads fluctuate faster than the average duration of a workload control cycle (aggregate stats – balance – execute). 
+The reason is simple: a trustful workload factor in distributed systems requires full visibility and operations aggregation but they still do not guarantee smooth workload distribution when workloads fluctuate faster than the average duration of a workload control cycle (aggregate statistics – balance – execute). 
 
 Pseudo-random workload distribution can cause distribution anomalies within a workload control cycle but it provides a relatively smooth distribution on longer timescales, without the need for full visibility and operations aggregation.
 
-Such a workload distribution and the allocation functions for :ref:`dynamic roles <dynamic_roles>` are the core instruments that enable the :ref:`omni-scaling <omniscaling>` feature of the Insolar Platform. This feature provides a balance in accordance with client's needs.
+Such a workload distribution and the entorpy-based allocation functions for :ref:`dynamic roles <dynamic_roles>` are the core instruments that enable the :ref:`omni-scaling <omniscaling>` feature of the Insolar Platform. This feature provides a balance in accordance with client's needs.
 
 Processing costs can be traded off against:
 
@@ -382,20 +291,20 @@ Processing costs can be traded off against:
 .. _execution_validation:
 
 Execution & Validation
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 The Insolar Platform works on the principle of actions executed by one node, validated by many.
 
-The number of elected validators can be determined in accordance with the :ref:`business process <domains>` at hand and, since validators in shared enterprise networks will have liability and legal guarantees, this works as transaction insurance.
+The number of selected validators can be determined in accordance with the :ref:`business process <domains>` at hand and, since validators in shared enterprise networks will have liability and legal guarantees, this works as transaction insurance.
 
-As described in the :ref:`network consistency section <network_consistency>`, validator elections are *not* based on voting; instead, they are part of the :ref:`omni-scaling <omniscaling>` feature. Insolar uses the active node list and :ref:`entropy <pulsars>` generated by consensus of the :ref:`globula network protocol <network_consensus>`, and then applies deterministic allocation functions for :ref:`node roles <dynamic_roles>`. This avoids wasting efforts on numerous per-transaction and network-wide consensuses.
+As described in the :ref:`network consistency section <network_consistency>`, validator selections are *not* based on voting; instead, they are part of the :ref:`omni-scaling <omniscaling>` feature. Insolar uses the active node list and :ref:`entropy <pulsars>` generated by consensus of the :ref:`globula network protocol <network_consensus>`, and then applies deterministic allocation functions for :ref:`node roles <dynamic_roles>`. This avoids wasting efforts on numerous per-transaction and network-wide consensuses.
 
 Since Insolar sets apart functionality using :ref:`node roles <multi_role_nodes>`, it has two sets of execution & validation procedures: **virtual** and **material**.
 
 .. _virtual_execution_validation:
 
 Virtual Execution & Validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Nodes with :ref:`virtual static roles <virtual>` carry out **virtual** execution & validation:
 
@@ -409,7 +318,7 @@ Nodes with :ref:`virtual static roles <virtual>` carry out **virtual** execution
    #. Collects the results of outbound calls.
    #. Provides :term:`lifeline <lifeline>` and :term:`sideline <sideline>` updates for validation by other nodes.
 
-#. Once the executor’s status expires, the network selects :ref:`virtual validators <dynamic_roles>` from the list of active :ref:`virtual nodes <virtual>` on a new :term:`pulse <pulse>`, meaning executors cannot predict which nodes will validate transactions, thereby avoiding a collusion scenario. 
+#. Once the executor’s status expires, the network selects :ref:`virtual validators <dynamic_roles>` from the list of active :ref:`virtual nodes <virtual>` on a new :term:`pulse <pulse>` (new entropy), meaning executors cannot predict which nodes will validate transactions, thereby avoiding a collusion scenario. 
 
 #. Each virtual validator:
 
@@ -425,18 +334,18 @@ A single virtual executor can execute long requests that span several pulses. To
 .. _material_execution_validation:
 
 Material Execution & Validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Nodes with :ref:`light material static roles <virtual>` carry out **material** execution & validation:
 
 #. The network selects (determines based on :term:`entropy <pulse>`) a specific light material node to become a :ref:`light material executor <dynamic_roles>`. Upon receiving data requests from the virtual executor in the current :term:`pulse <pulse>`, the light material executor:
 
    #. Manages data access for :term:`contracts <object>`.
-   #. Performs data retrieval and storage operations for :ref:`virtual executors <dynamic_roles>`;
+   #. Performs data retrieval and storage operations for :ref:`virtual executors <dynamic_roles>`.
    #. Builds a new :term:`block <jet drop>` from the :term:`lifeline <lifeline>` & :term:`sideline <sideline>` updates sent by the virtual executor.
    #. Splits (or merges) :term:`jets <jet>` if required.
 
-#. Once the executor’s status expires, the network selects :ref:`material validators <dynamic_roles>` from the list of active :ref:`light material nodes <light_material>` on a new :term:`pulse <pulse>`, meaning executors cannot predict which nodes will validate transactions, thereby avoiding a collusion scenario. 
+#. Once the executor’s status expires, the network selects :ref:`material validators <dynamic_roles>` from the list of active :ref:`light material nodes <light_material>` on a new :term:`pulse <pulse>` (new entropy), meaning executors cannot predict which nodes will validate transactions, thereby avoiding a collusion scenario. 
 
 #. Each material validator checks that the light material executor has formed the last :term:`block <jet drop>` correctly. The block must have:
 
@@ -453,7 +362,7 @@ Light material stash nodes are nodes which have been :ref:`light material execut
 .. _consensuses:
 
 Consensuses
-~~~~~~~~~~~
+-----------
 
 Consensus procedures vary in their degree of control by business logic, with two consensus procedures available:
 
@@ -465,7 +374,7 @@ Different sets of consensus procedures affect every action applied to :term:`lif
 .. _logic_consensus:
 
 Logic Consensus
-^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~
 
 Ensures that actions applied to an :term:`object` were performed correctly considering the object’s state, input parameters, and external dependencies (calls).
 
@@ -474,7 +383,7 @@ For more information on logic consensus, see the :ref:`virtual execution & valid
 .. _storage_consensus:
 
 Storage Consensus
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 
 Ensures that:
 
@@ -486,7 +395,7 @@ For more information on storage consensus, see the :ref:`material execution & va
 .. _network_consensus:
 
 Network Consensus
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 
 Ensures :term:`node` availability and synchronization of time and state among nodes and provides consistent allocation of :ref:`dynamic roles <dynamic_roles>` to nodes. There are two consensus protocols behind the network consensus:
 
@@ -495,14 +404,14 @@ Ensures :term:`node` availability and synchronization of time and state among no
 
 The network layer of Insolar deals with the consistency of network node's view and :term:`pulse` distribution. Pulse is a signal carrying entropy (randomness) that triggers the production of a new :term:`block <jet drop>`.
 
-The entropy's consistency and the set of active nodes on the network are vital for the methodology of executed by one node, validated by many. Nodes are selected from the active node list to perform :ref:`different functions <dynamic_roles>`, while entropy and consistency ensure behavioral consensus across all nodes. :ref:`Validator <dynamic_roles>` nodes are elected only on a new pulse to ensure that :ref:`executor <dynamic_roles>` nodes cannot collude with validators.
+The entropy's consistency and the set of active nodes on the network are vital for the methodology of executed by one node, validated by many. Nodes are selected from the active node list to perform :ref:`different functions <dynamic_roles>`, while entropy and consistency ensure behavioral consensus across all nodes. :ref:`Validator <dynamic_roles>` nodes are selected only on a new pulse to ensure that :ref:`executor <dynamic_roles>` nodes cannot collude with validators.
 
 In addition to the aforementioned consensuses, :ref:`pulsars <pulsars>` can have their :ref:`own <pulsar_consensus>`.
 
 .. _pulsars:
 
 Pulsars
-~~~~~~~
+-------
 
 Pulsars running on a pulsar protocol represent a separate logical layer that is responsible for network synchronization and provides a source of randomness (:term:`pulses <pulse>`). Interoperability of :term:`nodes <node>` within a single :term:`cloud` depends on pulses and all nodes must be on the same pulse to process new requests or operations.
 
@@ -517,11 +426,11 @@ In case of multiple pulsars on the network, their consensus generates the :term:
 .. _pulsar_consensus:
 
 Pulsar Consensus
-^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~
 
 :term:`Clouds <cloud>` define the pulsar selection rules and they can vary significantly. On enterprise networks, servers that complete no other operations manage the selection, whereas on public networks, it may be a random subset of 10 to 50 nodes with high uptime. Other configurations are also possible for different network types.
 
-Default :term:`pulse` generation is based on BFT-consensus among pulsars, where *each member contributes* to entropy. The pulsar protocol enables entropy generation in a way that prevents individual nodes from being able to predictably manipulate the entropy through vote withdrawals.
+Default :term:`pulse` generation is based on BFT-consensus among pulsars, where *each member contributes* to entropy and *none can predict it*. The pulsar protocol enables entropy generation in a way that prevents individual nodes from being able to predictably manipulate the entropy through vote withdrawals.
 
 This protocol does not include negotiations related to pulsar membership or pulse duration -- such parameters are considered as preconfigured or preagreed. The default pulse duration is 10 seconds.
 
@@ -530,7 +439,7 @@ As a consensus result, pulsars distribute the collaboratively-generated entropy 
 .. _ledger:
 
 Ledger
-~~~~~~
+------
 
 Ledger is a common term for distributed storage, a network of nodes that store data.
 
@@ -539,6 +448,11 @@ As described in the :ref:`static roles section <static_roles>`, material nodes a
 A typical :term:`object <object>` workflow is as follows:
 
 .. uml::
+
+   skinparam backgroundColor transparent
+   skinparam entity { 
+     backgroundColor transparent
+   }
 
    entity "Virtual node" as v [[../architecture.html#virtual]]
    entity "Material node" as m [[../architecture.html#light-material]]
@@ -551,7 +465,7 @@ A typical :term:`object <object>` workflow is as follows:
 .. _records:
 
 Records
-^^^^^^^
+~~~~~~~
 
 Data is stored in the ledger as a series of immutable :term:`records <record>`. All records are created and signed by :ref:`virtual nodes <virtual>`. Each record is addressed by its hash and a :term:`pulse <pulse>` number. Records can contain a reference to another record, thus, creating a chain. An example of a chain is the :term:`object's <object>` :term:`lifeline <lifeline>`. Each :ref:`material node <static_roles>` is responsible for its own lifelines determined by their hashes.
 
@@ -564,21 +478,21 @@ In the Insolar's key-value storage, the key is a fixed structure -- a combinatio
 .. _requests:
 
 Requests
-^^^^^^^^
+~~~~~~~~
 
 Each operation performed by :ref:`virtual nodes <virtual>` is registered as a request on the ledger. Request is a single :ref:`record <records>` that contains information necessary to perform an operation. Each request belongs to an :term:`object <object>` and is affined to it.
 
 .. _results:
 
 Results
-^^^^^^^
+~~~~~~~
 
 Each operation performed by :ref:`virtual nodes <virtual>` has exactly one result. Although an operation can have many side effects (:term:`records <record>` stored on the ledger), result represents a summary of that operation. So, each finished request has its own result, i.e., result references its request. A request without an associated result stored on the ledger is a *pending* one.
 
 .. _objects:
 
 Objects
-^^^^^^^
+~~~~~~~
 
 :term:`Objects <object>` (contracts) are fundamental application building blocks. Borrowing OOP terminology, an object is a class instance. In other words, an object is a series of :ref:`records <records>` that can be accessed via an index.
 
@@ -591,6 +505,11 @@ Each record represents an object's state at a certain point. In the blockchain, 
 A succession of object records (states) is called a :term:`lifeline <lifeline>`. The index points to the object's latest state but the state does not matter since it is predetermined for each operation, i.e., two concurrent operations on the same object can work with different states of that object.
 
 .. uml::
+
+   skinparam backgroundColor transparent
+   skinparam object { 
+     backgroundColor transparent
+   }
 
    package "[[../glossary.html#term-lifeline Lifeline]]" as Lifeline {
       object Request
@@ -623,6 +542,14 @@ A succession of object records (states) is called a :term:`lifeline <lifeline>`.
 Object's lifeline is not the only chain, though. The ledger stores any requests that belong to an object or :ref:`object's children <relations>` in a :term:`sideline <sideline>`. The general term for all the chains (lines) is a :term:`filament <filament>`. So, a more complex object structure including all filaments is as follows:
 
 .. uml::
+
+   skinparam backgroundColor transparent
+   skinparam package { 
+     backgroundColor transparent
+   }
+   skinparam object { 
+     backgroundColor transparent
+   }
 
    package "[[../glossary.html#term-lifeline Lifeline]]" as Lifeline {
       object Request
@@ -689,7 +616,7 @@ Object's lifeline is not the only chain, though. The ledger stores any requests 
 .. _object_address:
 
 Object's Address
-++++++++++++++++
+^^^^^^^^^^^^^^^^
 
 Object's address is more complicated than that of a simple :ref:`record <records>`. An :term:`object <object>` consists of many :ref:`records <records>` but should have only one address. So, the ledger considers a request for a "create object" operation to be the object's address.
 
@@ -698,7 +625,7 @@ In other words, the object's address is its index since the index has all the in
 .. _relations:
 
 Relations
-^^^^^^^^^
+~~~~~~~~~
 
 Objects have relations to other entities and to each other. Most of those relations are references in the object's :ref:`activation record <objects>`.
 
@@ -712,6 +639,11 @@ Key figures in those relations are:
 Relations between entities are as follows:
 
 .. uml::
+
+   skinparam backgroundColor transparent
+   skinparam object { 
+     backgroundColor transparent
+   }
 
    object "Code 1" as Code1
    object "Prototype 1 (Object)" as Proto1
