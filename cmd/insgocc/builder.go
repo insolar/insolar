@@ -40,11 +40,9 @@ var (
 		insolar.GenesisNameRootDomain,
 		insolar.GenesisNameNodeDomain,
 		insolar.GenesisNameNodeRecord,
-		insolar.GenesisNameMember,
-		insolar.GenesisNameWallet,
-		insolar.GenesisNameDeposit,
-		insolar.GenesisNameTariff,
-		insolar.GenesisNameCostCenter,
+		insolar.GenesisNameRootMember,
+		insolar.GenesisNameRootWallet,
+		insolar.GenesisNameAllowance,
 	}
 )
 

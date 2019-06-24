@@ -49,7 +49,6 @@ const TestRPCUrl = TestAPIURL + "/rpc"
 const TestCallUrl = TestAPIURL + "/call"
 
 const insolarRootMemberKeys = "root_member_keys.json"
-const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
 
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
@@ -58,9 +57,8 @@ var stdout io.ReadCloser
 var stderr io.ReadCloser
 
 var (
-	insolarRootMemberKeysPath           = launchnetPath("configs", insolarRootMemberKeys)
-	insolarMigrationAdminMemberKeysPath = launchnetPath("configs", insolarMigrationAdminMemberKeys)
-	insolarBootstrapConfigPath          = launchnetPath("bootstrap.yaml")
+	insolarRootMemberKeysPath  = launchnetPath("configs", insolarRootMemberKeys)
+	insolarBootstrapConfigPath = launchnetPath("bootstrap.yaml")
 )
 
 func launchnetPath(a ...string) string {
@@ -75,7 +73,6 @@ func launchnetPath(a ...string) string {
 
 var info *requester.InfoResponse
 var root user
-var migrationAdmin user
 
 type user struct {
 	ref     string
@@ -119,31 +116,23 @@ func envVarWithDefault(name string, defaultValue string) string {
 	return defaultValue
 }
 
-func loadMemberKeys(keysPath string, member *user) error {
-	text, err := ioutil.ReadFile(keysPath)
+func loadRootKeys() error {
+	text, err := ioutil.ReadFile(insolarRootMemberKeysPath)
 	if err != nil {
-		return errors.Wrapf(err, "[ loadMemberKeys ] could't load member keys")
+		return errors.Wrapf(err, "[ loadRootKeys ] could't load root keys")
 	}
 	var data map[string]string
 	err = json.Unmarshal(text, &data)
 	if err != nil {
-		return errors.Wrapf(err, "[ loadMemberKeys ] could't unmarshal member keys")
+		return errors.Wrapf(err, "[ loadRootKeys ] could't unmarshal root keys")
 	}
 	if data["private_key"] == "" || data["public_key"] == "" {
-		return errors.New("[ loadMemberKeys ] could't find any keys")
+		return errors.New("[ loadRootKeys ] could't find any keys")
 	}
-	member.privKey = data["private_key"]
-	member.pubKey = data["public_key"]
+	root.privKey = data["private_key"]
+	root.pubKey = data["public_key"]
 
 	return nil
-}
-
-func loadAllMembersKeys() error {
-	err := loadMemberKeys(insolarRootMemberKeysPath, &root)
-	if err != nil {
-		return err
-	}
-	return loadMemberKeys(insolarMigrationAdminMemberKeysPath, &migrationAdmin)
 }
 
 func setInfo() error {
@@ -374,11 +363,11 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't startNet")
 	}
 
-	err = loadAllMembersKeys()
+	err = loadRootKeys()
 	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't load keys: ")
+		return errors.Wrap(err, "[ setup ] could't load root keys: ")
 	}
-	fmt.Println("[ setup ] all keys successfully loaded")
+	fmt.Println("[ setup ] root keys successfully loaded")
 
 	numAttempts := 60
 	for i := 0; i < numAttempts; i++ {
@@ -394,9 +383,8 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't receive root reference ")
 	}
 
-	fmt.Println("[ setup ] references successfully received")
+	fmt.Println("[ setup ] root reference successfully received")
 	root.ref = info.RootMember
-	migrationAdmin.ref = info.MigrationAdminMember
 
 	contracts = make(map[string]*insolar.Reference)
 

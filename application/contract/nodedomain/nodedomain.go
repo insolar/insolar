@@ -29,13 +29,13 @@ import (
 type NodeDomain struct {
 	foundation.BaseContract
 
-	NodeIndexPublicKey map[string]string
+	NodeIndexPK map[string]string
 }
 
 // NewNodeDomain create new NodeDomain
 func NewNodeDomain() (*NodeDomain, error) {
 	return &NodeDomain{
-		NodeIndexPublicKey: make(map[string]string),
+		NodeIndexPK: make(map[string]string),
 	}, nil
 }
 
@@ -48,29 +48,29 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 
 	root, err := rootdomain.GetObject(*nd.GetContext().Parent).GetRootMemberRef()
 	if err != nil {
-		return "", fmt.Errorf("failed to get root member reference: %s", err.Error())
+		return "", fmt.Errorf("[ RegisterNode ] Couldn't get root member reference: %s", err.Error())
 	}
 	if *nd.GetContext().Caller != *root {
-		return "", fmt.Errorf("only root member can register node")
+		return "", fmt.Errorf("[ RegisterNode ] Only Root member can register node")
 	}
 
 	newNode := noderecord.NewNodeRecord(publicKey, role)
 	node, err := newNode.AsChild(nd.GetReference())
 	if err != nil {
-		return "", fmt.Errorf("failed to save as child: %s", err.Error())
+		return "", fmt.Errorf("[ RegisterNode ] Can't save as child: %s", err.Error())
 	}
 
 	newNodeRef := node.GetReference().String()
-	nd.NodeIndexPublicKey[publicKey] = newNodeRef
+	nd.NodeIndexPK[publicKey] = newNodeRef
 
 	return newNodeRef, err
 }
 
-// GetNodeRefByPublicKey returns node ref
-func (nd *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
-	nodeRef, ok := nd.NodeIndexPublicKey[publicKey]
+// GetNodeRefByPK returns node ref
+func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
+	nodeRef, ok := nd.NodeIndexPK[publicKey]
 	if !ok {
-		return nodeRef, fmt.Errorf("network node not found by public key: %s", publicKey)
+		return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] NetworkNode not found by PK: %s", publicKey)
 	}
 	return nodeRef, nil
 }
@@ -80,9 +80,9 @@ func (nd *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 	node := nd.getNodeRecord(nodeRef)
 	nodePK, err := node.GetPublicKey()
 	if err != nil {
-		return fmt.Errorf("failed to find network node by public key: %s", nodePK)
+		return fmt.Errorf("[ RemoveNode ] NetworkNode not found by PK: %s", nodePK)
 	}
 
-	delete(nd.NodeIndexPublicKey, nodePK)
+	delete(nd.NodeIndexPK, nodePK)
 	return node.Destroy()
 }

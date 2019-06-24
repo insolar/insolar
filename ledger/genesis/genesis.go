@@ -249,7 +249,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		insolar.Reference{},
 		objRef,
 		parentRef,
-		rootdomain.GenesisRef(state.Prototype+"_proto"),
+		rootdomain.GenesisRef(name+"_proto"),
 		state.Delegate,
 		state.Memory,
 	)

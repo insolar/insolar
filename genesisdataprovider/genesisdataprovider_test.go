@@ -21,14 +21,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 )
 
 func mockContractRequesterWithError(t *testing.T) *testutils.ContractRequesterMock {
@@ -60,21 +59,10 @@ func mockCertificateManager(t *testing.T, rootDomainRef *insolar.Reference) *tes
 	return certificateManagerMock
 }
 
-func mockInfoResult(
-	rootMemberRef insolar.Reference,
-	migrationAdminMemberRef insolar.Reference,
-	migrationDaemonMembersRefs []insolar.Reference,
-	nodeDomainRef insolar.Reference,
-) insolar.Reply {
-	migrationDaemonMembersStrs := []string{}
-	for _, r := range migrationDaemonMembersRefs {
-		migrationDaemonMembersStrs = append(migrationDaemonMembersStrs, r.String())
-	}
+func mockInfoResult(rootMemberRef insolar.Reference, nodeDomainRef insolar.Reference) insolar.Reply {
 	result := map[string]interface{}{
-		"rootMember":             rootMemberRef.String(),
-		"migrationAdminMember":   migrationAdminMemberRef.String(),
-		"migrationDaemonMembers": migrationDaemonMembersStrs,
-		"nodeDomain":             nodeDomainRef.String(),
+		"root_member": rootMemberRef.String(),
+		"node_domain": nodeDomainRef.String(),
 	}
 	resJSON, _ := json.Marshal(result)
 	resSer, _ := insolar.MarshalArgs(resJSON, nil)
@@ -98,11 +86,9 @@ func TestNew(t *testing.T) {
 func TestGenesisDataProvider_setInfo(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
 	nodeDomainRef := testutils.RandomRef()
 
-	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
+	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),
@@ -113,13 +99,6 @@ func TestGenesisDataProvider_setInfo(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, &rootMemberRef, gdp.rootMemberRef)
-	require.Equal(t, &migrationAdminMemberRef, gdp.migrationAdminMemberRef)
-
-	require.Equal(t, len(migrationDaemonMembersRefs), len(gdp.migrationDaemonMembersRefs))
-	for i, _ := range migrationDaemonMembersRefs {
-		require.Equal(t, &migrationDaemonMembersRefs[i], gdp.migrationDaemonMembersRefs[i])
-	}
-
 	require.Equal(t, &nodeDomainRef, gdp.nodeDomainRef)
 }
 
@@ -152,11 +131,9 @@ func TestGenesisDataProvider_GetRootDomain(t *testing.T) {
 func TestGenesisDataProvider_GetRootMember(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
 	nodeDomainRef := testutils.RandomRef()
 
-	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
+	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),
@@ -169,15 +146,13 @@ func TestGenesisDataProvider_GetRootMember(t *testing.T) {
 	require.Equal(t, &rootMemberRef, res)
 }
 
-func TestGenesisDataProvider_GetMembers_AlreadySet(t *testing.T) {
+func TestGenesisDataProvider_GetRootMember_AlreadySet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
 	nodeDomainRef := testutils.RandomRef()
 
 	newRootMemberRef := testutils.RandomRef()
-	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
+	infoRes := mockInfoResult(newRootMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),
@@ -185,20 +160,11 @@ func TestGenesisDataProvider_GetMembers_AlreadySet(t *testing.T) {
 	}
 	gdp.rootMemberRef = &rootMemberRef
 
-	resRootMember, err := gdp.GetRootMember(ctx)
-	resMigrationAdminMember, err := gdp.GetMigrationAdminMember(ctx)
-	resMigrationDaemonMembers, err := gdp.GetMigrationDaemonMembers(ctx)
+	res, err := gdp.GetRootMember(ctx)
 
 	require.NoError(t, err)
-	require.Equal(t, &rootMemberRef, resRootMember)
-	require.Equal(t, &migrationAdminMemberRef, resMigrationAdminMember)
-
-	require.Equal(t, len(migrationDaemonMembersRefs), len(gdp.migrationDaemonMembersRefs))
-	for i, _ := range migrationDaemonMembersRefs {
-		require.Equal(t, &migrationDaemonMembersRefs[i], resMigrationDaemonMembers[i])
-	}
-
-	require.NotEqual(t, &newRootMemberRef, resRootMember)
+	require.Equal(t, &rootMemberRef, res)
+	require.NotEqual(t, &newRootMemberRef, res)
 }
 
 func TestGenesisDataProvider_GetRootMember_Error(t *testing.T) {
@@ -218,11 +184,9 @@ func TestGenesisDataProvider_GetRootMember_Error(t *testing.T) {
 func TestGenesisDataProvider_GetNodeDomain(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
 	nodeDomainRef := testutils.RandomRef()
 
-	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
+	infoRes := mockInfoResult(rootMemberRef, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),
@@ -238,12 +202,10 @@ func TestGenesisDataProvider_GetNodeDomain(t *testing.T) {
 func TestGenesisDataProvider_GetNodeDomain_AlreadySet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
 	nodeDomainRef := testutils.RandomRef()
 
 	newNodeDomainRef := testutils.RandomRef()
-	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
+	infoRes := mockInfoResult(rootMemberRef, newNodeDomainRef)
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, nil),

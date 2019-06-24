@@ -18,22 +18,16 @@ package requester
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -43,7 +37,7 @@ import (
 const TESTREFERENCE = "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"
 const TESTSEED = "VGVzdA=="
 
-var testSeedResponse = seedResponse{Seed: "Test", TraceID: "testTraceID"}
+var testSeedResponse = seedResponse{Seed: []byte("Test"), TraceID: "testTraceID"}
 var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
 var testStatusResponse = StatusResponse{NetworkState: "OK"}
 
@@ -52,7 +46,7 @@ type rpcRequest struct {
 	Method     string `json:"method"`
 }
 
-func writeReponse(response http.ResponseWriter, answer interface{}) {
+func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 	serJSON, err := json.MarshalIndent(answer, "", "    ")
 	if err != nil {
 		log.Errorf("Can't serialize response\n")
@@ -67,22 +61,21 @@ func writeReponse(response http.ResponseWriter, answer interface{}) {
 func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 
-	params := Request{}
-	_, err := unmarshalRequest(req, &params)
+	params := api.Request{}
+	_, err := api.UnmarshalRequest(req, &params)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
 	}
 
-	var respData = Result{}
-
-	if params.Method == "contract.createMember" {
-		respData.ContractResult = TESTREFERENCE
+	answer := map[string]interface{}{}
+	if params.Method == "CreateMember" {
+		answer["reference"] = TESTREFERENCE
 	} else {
-		respData.ContractResult = TESTSEED
+		answer["random_data"] = TESTSEED
 	}
 
-	writeReponse(response, respData)
+	writeReponse(response, answer)
 }
 
 func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
@@ -92,18 +85,18 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 		"id":      "",
 	}
 	rpcReq := rpcRequest{}
-	_, err := unmarshalRequest(req, &rpcReq)
+	_, err := api.UnmarshalRequest(req, &rpcReq)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
 	}
 
 	switch rpcReq.Method {
-	case "node.GetStatus":
+	case "status.Get":
 		answer["result"] = testStatusResponse
-	case "network.GetInfo":
+	case "info.Get":
 		answer["result"] = testInfoResponse
-	case "node.GetSeed":
+	case "seed.Get":
 		answer["result"] = testSeedResponse
 	}
 	writeReponse(response, answer)
@@ -197,25 +190,25 @@ func TestMain(m *testing.M) {
 func TestGetSeed(t *testing.T) {
 	seed, err := GetSeed(URL)
 	require.NoError(t, err)
-	require.Equal(t, "Test", seed)
+	decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
+	require.NoError(t, err)
+	require.Equal(t, decodedSeed, seed)
 }
 
 func TestGetResponseBodyEmpty(t *testing.T) {
-	_, err := GetResponseBodyPlatform("test", PlatformRequest{})
-	require.EqualError(t, err, "[ GetResponseBodyPlatform ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
+	_, err := GetResponseBody("test", PostParams{})
+	require.EqualError(t, err, "[ getResponseBody ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
 }
 
 func TestGetResponseBodyBadHttpStatus(t *testing.T) {
-	_, err := GetResponseBodyPlatform(URL+"TEST", PlatformRequest{})
-	require.EqualError(t, err, "[ GetResponseBodyPlatform ] Bad http response code: 404")
+	_, err := GetResponseBody(URL+"TEST", PostParams{})
+	require.EqualError(t, err, "[ getResponseBody ] Bad http response code: 404")
 }
 
 func TestGetResponseBody(t *testing.T) {
-	data, err := GetResponseBodyContract(URL+"/call", Request{}, "")
-	result := Result{}
-	_ = json.Unmarshal(data, &result)
+	data, err := GetResponseBody(URL+"/call", PostParams{})
 	require.NoError(t, err)
-	require.Contains(t, result.ContractResult, "VGVzdA==")
+	require.Contains(t, string(data), `"random_data": "VGVzdA=="`)
 }
 
 func TestSetVerbose(t *testing.T) {
@@ -226,7 +219,7 @@ func TestSetVerbose(t *testing.T) {
 	SetVerbose(false)
 }
 
-func readConfigs(t *testing.T) (*UserConfigJSON, *Request) {
+func readConfigs(t *testing.T) (*UserConfigJSON, *RequestConfigJSON) {
 	userConf, err := ReadUserConfigFromFile("testdata/userConfig.json")
 	require.NoError(t, err)
 	reqConf, err := ReadRequestConfigFromFile("testdata/requestConfig.json")
@@ -238,7 +231,6 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *Request) {
 func TestSend(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "contract.createMember"
 	resp, err := Send(ctx, URL, userConf, reqConf)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
@@ -247,8 +239,7 @@ func TestSend(t *testing.T) {
 func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "contract.createMember"
-	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, TESTSEED)
+	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, []byte(TESTSEED))
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
@@ -256,14 +247,14 @@ func TestSendWithSeed(t *testing.T) {
 func TestSendWithSeed_WithBadUrl(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
-	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, TESTSEED)
-	require.EqualError(t, err, "[ SendWithSeed ] Problem with sending target request: [ getResponseBodyContract ] Bad http response code: 404")
+	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, []byte(TESTSEED))
+	require.EqualError(t, err, "[ Send ] Problem with sending target request: [ getResponseBody ] Bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
-	_, err := SendWithSeed(ctx, URL, nil, nil, TESTSEED)
-	require.EqualError(t, err, "[ SendWithSeed ] Configs must be initialized")
+	_, err := SendWithSeed(ctx, URL, nil, nil, []byte(TESTSEED))
+	require.EqualError(t, err, "[ Send ] Configs must be initialized")
 }
 
 func TestInfo(t *testing.T) {
@@ -276,39 +267,4 @@ func TestStatus(t *testing.T) {
 	resp, err := Status(URL)
 	require.NoError(t, err)
 	require.Equal(t, resp, &testStatusResponse)
-}
-
-func TestPointToDER(t *testing.T) {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	msg := "test"
-	hash := sha256.Sum256([]byte(msg))
-
-	r1, s1, err := ecdsa.Sign(rand.Reader, privateKey, hash[:])
-	require.NoError(t, err)
-	derString := pointsToDER(r1, s1)
-
-	sig, err := base64.StdEncoding.DecodeString(derString)
-
-	r2, s2 := foundation.PointsFromDER(sig)
-
-	require.Equal(t, r1, r2, errors.Errorf("Invalid S number"))
-	require.Equal(t, s1, s2, errors.Errorf("Invalid R number"))
-}
-
-// UnmarshalRequest unmarshals request to api
-func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ UnmarshalRequest ] Can't read body. So strange")
-	}
-	if len(body) == 0 {
-		return nil, errors.New("[ UnmarshalRequest ] Empty body")
-	}
-
-	err = json.Unmarshal(body, &params)
-	if err != nil {
-		return body, errors.Wrap(err, "[ UnmarshalRequest ] Can't unmarshal input params")
-	}
-	return body, nil
 }
