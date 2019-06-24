@@ -67,5 +67,6 @@ func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
 	member2.ref = root.ref
 
 	_, err = signedRequest(member2, "contract.createMember", map[string]interface{}{})
+	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "no more burn address left")
 }
