@@ -71,5 +71,7 @@ const (
 	NoNetworkState NetworkState = iota
 	JoinerBootstrap
 	DiscoveryBootstrap
+	WaitConsensus
+	WaitMinRoles
 	CompleteNetworkState
 )

@@ -41,6 +41,8 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 
 	if resp.Code == packet.Accepted {
 		//  ConsensusWaiting, ETA
+		g.Gatewayer.SwitchState(insolar.WaitConsensus)
+		return
 	}
 
 	// todo bootstrap request

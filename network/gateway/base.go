@@ -101,6 +101,10 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 		g.Self = newJoinerBootstrap(g)
 	case insolar.DiscoveryBootstrap:
 		g.Self = newDiscoveryBootstrap(g)
+	case insolar.WaitConsensus:
+		g.Self = newWaitConsensus(g)
+	case insolar.WaitMinRoles:
+		g.Self = newWaitMinRoles(g)
 	default:
 		panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 	}

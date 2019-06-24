@@ -52,56 +52,34 @@ package gateway
 
 import (
 	"context"
-	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
 )
 
-func NewGatewayer(g network.Gateway, f insolar.NetworkOperableCallback) network.Gatewayer {
-	result := &gatewayer{operableFunc: f, gateway: g}
-	return result
+func newWaitConsensus(b *Base) *WaitConsensus {
+	return &WaitConsensus{b}
 }
 
-type gatewayer struct {
-	operableFunc insolar.NetworkOperableCallback
-	gateway      network.Gateway
-	gatewayMu    sync.RWMutex
+type WaitConsensus struct {
+	*Base
 }
 
-func (n *gatewayer) Gateway() network.Gateway {
-	n.gatewayMu.RLock()
-	defer n.gatewayMu.RUnlock()
-	return n.gateway
+func (g *WaitConsensus) Run(ctx context.Context) {
 }
 
-func (n *gatewayer) SwitchState(state insolar.NetworkState) {
-	n.gatewayMu.Lock()
+func (g *WaitConsensus) GetState() insolar.NetworkState {
+	return insolar.WaitConsensus
+}
 
-	if n.gateway.GetState() == state {
-		log.Warn("Trying to set gateway to the same state")
-		n.gatewayMu.Unlock()
-		return
+func (g *WaitConsensus) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+	n := g.NodeKeeper.GetAccessor().GetActiveNode(g.NodeKeeper.GetOrigin().ID())
+	if n != nil {
+		// todo: check majority
+		g.Gatewayer.SwitchState(insolar.WaitMinRoles)
 	}
-	// todo: check transition rules
-	// todo: old gateway stop if needed
 
-	n.gateway = n.gateway.NewGateway(state)
-	n.operableFunc(context.Background(), !n.gateway.NeedLockMessageBus())
-	n.gatewayMu.Unlock()
+	// TODO: check ETA
+	g.Gatewayer.SwitchState(insolar.NoNetworkState)
 
-	go n.gateway.Run(context.Background())
-}
-
-func (n *gatewayer) setGateway(g network.Gateway) {
-
-}
-
-func (n *gatewayer) GetState() insolar.NetworkState {
-	g := n.Gateway()
-	if g == nil {
-		return insolar.NoNetworkState
-	}
-	return g.GetState()
+	return g.Base.OnPulse(ctx, pu)
 }
