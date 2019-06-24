@@ -193,6 +193,20 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
+func updateUser(user *user) (*requester.UserConfigJSON, error) {
+	newUser, err := newUserWithKeys()
+	if err != nil {
+		return nil, err
+	}
+	user.privKey = newUser.privKey
+	user.pubKey = newUser.pubKey
+	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
+	if err != nil {
+		return nil, err
+	}
+	return rootCfg, nil
+}
+
 func signedRequest(user *user, method string, params map[string]interface{}) (interface{}, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
@@ -202,6 +216,13 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 	var resp requester.ContractAnswer
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
+		// member must have unique public key, so we recreate user with every retry
+		if method == "contract.createMember" {
+			rootCfg, err = updateUser(user)
+			if err != nil {
+				return nil, err
+			}
+		}
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
 			JSONRPC: "2.0",
 			ID:      1,
