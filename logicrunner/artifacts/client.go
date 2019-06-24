@@ -669,7 +669,7 @@ func (m *client) ActivatePrototype(
 	ctx context.Context,
 	object, parent, code insolar.Reference,
 	memory []byte,
-) (ObjectDescriptor, error) {
+) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivatePrototype")
 	instrumenter := instrument(ctx, "ActivatePrototype").err(&err)
@@ -680,8 +680,8 @@ func (m *client) ActivatePrototype(
 		span.End()
 		instrumenter.end()
 	}()
-	desc, err := m.activateObject(ctx, object, code, true, parent, false, memory)
-	return desc, err
+	err = m.activateObject(ctx, object, code, true, parent, false, memory)
+	return err
 }
 
 // ActivateObject creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -693,7 +693,7 @@ func (m *client) ActivateObject(
 	object, parent, prototype insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (ObjectDescriptor, error) {
+) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivateObject")
 	instrumenter := instrument(ctx, "ActivateObject").err(&err)
@@ -704,8 +704,8 @@ func (m *client) ActivateObject(
 		span.End()
 		instrumenter.end()
 	}()
-	desc, err := m.activateObject(ctx, object, prototype, false, parent, asDelegate, memory)
-	return desc, err
+	err = m.activateObject(ctx, object, prototype, false, parent, asDelegate, memory)
+	return err
 }
 
 // DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
@@ -714,7 +714,7 @@ func (m *client) ActivateObject(
 // Deactivated object cannot be changed.
 func (m *client) DeactivateObject(
 	ctx context.Context, request insolar.Reference, obj ObjectDescriptor, result []byte,
-) (*insolar.ID, error) {
+) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
 	instrumenter := instrument(ctx, "DeactivateObject").err(&err)
@@ -736,7 +736,7 @@ func (m *client) DeactivateObject(
 		Payload: result,
 	}
 
-	desc, err := m.sendUpdateObject(
+	err = m.sendUpdateObject(
 		ctx,
 		record.Wrap(deactivate),
 		record.Wrap(resultRecord),
@@ -744,9 +744,9 @@ func (m *client) DeactivateObject(
 		nil,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to deactivate object")
+		return errors.Wrap(err, "failed to deactivate object")
 	}
-	return &desc.State, nil
+	return nil
 }
 
 // UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -759,7 +759,7 @@ func (m *client) UpdateObject(
 	object ObjectDescriptor,
 	memory []byte,
 	result []byte,
-) (ObjectDescriptor, error) {
+) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdateObject")
 	instrumenter := instrument(ctx, "UpdateObject").err(&err)
@@ -773,10 +773,10 @@ func (m *client) UpdateObject(
 
 	if object.IsPrototype() {
 		err = errors.New("object is not an instance")
-		return nil, err
+		return err
 	}
-	desc, err := m.updateObject(ctx, request, object, memory, result)
-	return desc, err
+	err = m.updateObject(ctx, request, object, memory, result)
+	return err
 }
 
 // RegisterValidation marks provided object state as approved or disapproved.
@@ -865,14 +865,14 @@ func (m *client) activateObject(
 	parent insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (ObjectDescriptor, error) {
+) error {
 	parentDesc, err := m.GetObject(ctx, parent)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	currentPN, err := m.pulse(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	activate := record.Activate{
@@ -889,7 +889,7 @@ func (m *client) activateObject(
 		Request: obj,
 	}
 
-	o, err := m.sendUpdateObject(
+	err = m.sendUpdateObject(
 		ctx,
 		record.Wrap(activate),
 		record.Wrap(result),
@@ -897,7 +897,7 @@ func (m *client) activateObject(
 		memory,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to activate")
+		return errors.Wrap(err, "failed to activate")
 	}
 
 	var (
@@ -920,17 +920,10 @@ func (m *client) activateObject(
 		asType,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to register as child while activating")
+		return errors.Wrap(err, "failed to register as child while activating")
 	}
 
-	return &objectDescriptor{
-		head:         o.Head,
-		state:        o.State,
-		prototype:    o.Prototype,
-		childPointer: o.ChildPointer,
-		memory:       memory,
-		parent:       o.Parent,
-	}, nil
+	return nil
 }
 
 func (m *client) updateObject(
@@ -939,7 +932,7 @@ func (m *client) updateObject(
 	obj ObjectDescriptor,
 	memory []byte,
 	result []byte,
-) (ObjectDescriptor, error) {
+) error {
 	var (
 		image *insolar.Reference
 		err   error
@@ -950,7 +943,7 @@ func (m *client) updateObject(
 		image, err = obj.Prototype()
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update object")
+		return errors.Wrap(err, "failed to update object")
 	}
 
 	amend := record.Amend{
@@ -966,7 +959,7 @@ func (m *client) updateObject(
 		Payload: result,
 	}
 
-	o, err := m.sendUpdateObject(
+	err = m.sendUpdateObject(
 		ctx,
 		record.Wrap(amend),
 		record.Wrap(resultRecord),
@@ -974,17 +967,10 @@ func (m *client) updateObject(
 		memory,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update object")
+		return errors.Wrap(err, "failed to update object")
 	}
 
-	return &objectDescriptor{
-		head:         o.Head,
-		state:        o.State,
-		prototype:    o.Prototype,
-		childPointer: o.ChildPointer,
-		memory:       memory,
-		parent:       o.Parent,
-	}, nil
+	return nil
 }
 
 func (m *client) setRecord(
@@ -1057,14 +1043,14 @@ func (m *client) sendUpdateObject(
 	resRec record.Virtual,
 	obj insolar.Reference,
 	memory []byte,
-) (*reply.Object, error) {
+) error {
 	objRecData, err := objRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "setRecord: can't serialize record")
+		return errors.Wrap(err, "setRecord: can't serialize record")
 	}
 	resRecData, err := resRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "setRecord: can't serialize record")
+		return errors.Wrap(err, "setRecord: can't serialize record")
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
@@ -1082,16 +1068,16 @@ func (m *client) sendUpdateObject(
 		}, nil)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "UpdateObject message failed")
+		return errors.Wrap(err, "UpdateObject message failed")
 	}
 
 	switch rep := genericReply.(type) {
-	case *reply.Object:
-		return rep, nil
+	case *reply.OK:
+		return nil
 	case *reply.Error:
-		return nil, rep.Error()
+		return rep.Error()
 	default:
-		return nil, fmt.Errorf("sendUpdateObject: unexpected reply: %#v", rep)
+		return fmt.Errorf("sendUpdateObject: unexpected reply: %#v", rep)
 	}
 }
 

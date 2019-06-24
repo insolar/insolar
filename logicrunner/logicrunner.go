@@ -538,14 +538,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 
 	am := lr.ArtifactManager
 	if current.Deactivate {
-		_, err := am.DeactivateObject(
+		err := am.DeactivateObject(
 			ctx, *current.RequestRef, current.ObjectDescriptor, result,
 		)
 		if err != nil {
 			return nil, es.WrapError(current, err, "couldn't deactivate object")
 		}
 	} else if !bytes.Equal(current.ObjectDescriptor.Memory(), newData) {
-		_, err := am.UpdateObject(
+		err := am.UpdateObject(
 			ctx, *current.RequestRef, current.ObjectDescriptor, newData, result,
 		)
 		if err != nil {
@@ -599,7 +599,7 @@ func (lr *LogicRunner) executeConstructorCall(
 
 	switch request.CallType {
 	case record.CTSaveAsChild, record.CTSaveAsDelegate:
-		_, err = lr.ArtifactManager.ActivateObject(
+		err = lr.ArtifactManager.ActivateObject(
 			ctx,
 			*current.RequestRef, *request.Base, *request.Prototype, request.CallType == record.CTSaveAsDelegate, newData,
 		)
