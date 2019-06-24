@@ -67,16 +67,15 @@ func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNu
 	var res []FilamentIndex
 
 	for id, b := range bucks {
-		idxLock := i.indexLock[pn][id]
-		idxLock.Lock()
+		i.indexLock[pn][id].Lock()
 
 		if b.Lifeline.JetID != jetID {
-			idxLock.Unlock()
+			i.indexLock[pn][id].Unlock()
 			continue
 		}
 
 		res = append(res, clone(b))
-		idxLock.Unlock()
+		i.indexLock[pn][id].Unlock()
 	}
 
 	return res
