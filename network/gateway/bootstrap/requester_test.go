@@ -10,7 +10,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"

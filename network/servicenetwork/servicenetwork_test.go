@@ -98,28 +98,6 @@ func prepareNetwork(t *testing.T, cfg configuration.Configuration) *ServiceNetwo
 
 func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	var expectedMsg *message.Message
-
-	serviceNetwork := prepareNetwork(t, cfg)
-	sender := bus.NewSenderMock(t)
-	serviceNetwork.Sender = sender
-	sender.ReplyFunc = func(p context.Context, p1 *message.Message, p2 *message.Message) {
-		expectedMsg = p2
-	}
-
-	p := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), p)
-
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
-	require.NoError(t, err)
-	checkRepliedMsg(t, expectedMsg, "failed to send message: Receiver in msg.Metadata not set")
-	require.Nil(t, outMsgs)
-}
-
-func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-
-	var expectedMsg *message.Message
 
 	serviceNetwork := prepareNetwork(t, cfg)
 

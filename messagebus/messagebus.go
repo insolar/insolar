@@ -27,14 +27,16 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
+
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"

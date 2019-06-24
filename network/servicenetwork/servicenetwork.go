@@ -64,7 +64,6 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/network/controller/common"
 
 	"github.com/insolar/insolar/component"
@@ -98,8 +97,6 @@ type ServiceNetwork struct {
 
 	// watermill support interfaces
 	Pub message.Publisher `inject:""`
-	// ContractRequester   insolar.ContractRequester   `inject:""` // todo: remove
-	Sender bus.Sender `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager      `inject:"subcomponent"`
