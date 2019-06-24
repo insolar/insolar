@@ -82,7 +82,6 @@ func Test_NotifyAboutPulse(t *testing.T) {
 	t.Parallel()
 	ctrl := minimock.NewController(t)
 	ctx := context.Background()
-	// inslogger.TestContext(t)
 
 	jetID := jet.NewIDFromString("1010")
 	expectPN := insolar.PulseNumber(2835341939)

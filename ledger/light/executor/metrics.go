@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	statHotObjectsTotal = stats.Int64("hotdata/objects/total", "Amount of pending requests for next executors", stats.UnitDimensionless)
-	statHotObjectsSend  = stats.Int64("hotdata/objects/send", "Amount of pending requests actually sent to next executors", stats.UnitDimensionless)
+	statHotObjectsTotal = stats.Int64("hotdata/objects/total", "Amount of hot records for next executors", stats.UnitDimensionless)
+	statHotObjectsSend  = stats.Int64("hotdata/objects/send", "Amount of hot records actually sent to next executors", stats.UnitDimensionless)
 )
 
 func init() {

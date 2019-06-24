@@ -189,6 +189,7 @@ func (i *InMemoryIndex) ForID(ctx context.Context, pn insolar.PulseNumber, objID
 	return b.lifeline()
 }
 
+// ForPulse returns a collection of buckets for a provided pulse number.
 func (i *InMemoryIndex) ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
