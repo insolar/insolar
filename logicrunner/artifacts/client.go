@@ -46,14 +46,6 @@ type localStorage struct {
 	storage     map[insolar.Reference]interface{}
 }
 
-/*
-	objectStorageLock sync.RWMutex
-	objectStorage     map[insolar.Reference]ObjectDescriptor
-
-	codeStorageLock sync.RWMutex
-	codeStorage     map[insolar.Reference]CodeDescriptor
-}*/
-
 func (s *localStorage) Initialized() {
 	s.initialized = true
 }
