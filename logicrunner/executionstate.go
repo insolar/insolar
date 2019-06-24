@@ -20,8 +20,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -63,20 +61,6 @@ func (es *ExecutionState) RegisterLogicRunner(lr *LogicRunner) {
 		ledgerChecked: sync.Once{},
 		lr:            lr,
 	}
-}
-
-func (es *ExecutionState) WrapError(current *Transcript, err error, message string) error {
-	if err == nil {
-		err = errors.New(message)
-	} else {
-		err = errors.Wrap(err, message)
-	}
-	res := Error{Err: err}
-	res.Contract = &es.Ref
-	if current != nil {
-		res.Request = current.RequestRef
-	}
-	return res
 }
 
 func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Message {
