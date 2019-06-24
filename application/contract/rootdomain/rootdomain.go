@@ -102,7 +102,10 @@ func (rd RootDomain) GetBurnAddress() (string, error) {
 		return "", fmt.Errorf("no more burn address left")
 	}
 
-	return rd.FreeBurnAddresses[0], nil
+	result := rd.FreeBurnAddresses[0]
+	rd.FreeBurnAddresses = rd.FreeBurnAddresses[0:]
+
+	return result, nil
 }
 
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {

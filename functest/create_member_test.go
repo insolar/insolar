@@ -54,3 +54,18 @@ func TestCreateMemberWithBadKey(t *testing.T) {
 	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
 	require.Nil(t, err)
 }
+
+func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
+	member1, err := newUserWithKeys()
+	require.NoError(t, err)
+	member1.ref = root.ref
+	addBurnAddresses(t)
+	_, err = signedRequest(member1, "contract.createMember", map[string]interface{}{})
+
+	member2, err := newUserWithKeys()
+	require.NoError(t, err)
+	member2.ref = root.ref
+
+	_, err = signedRequest(member2, "contract.createMember", map[string]interface{}{})
+	require.Contains(t, err.Error(), "no more burn address left")
+}
