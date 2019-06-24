@@ -311,8 +311,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
-	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeAdditionalCallFromPreviousExecutor, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowDispatcher.WrapBusHandle)
