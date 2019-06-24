@@ -62,6 +62,7 @@ func (c *cacheStore) Delete(id insolar.ID) {
 }
 
 type filamentCache struct {
+	sync.RWMutex
 	cache map[insolar.ID]record.CompositeFilamentRecord
 
 	records     object.RecordAccessor

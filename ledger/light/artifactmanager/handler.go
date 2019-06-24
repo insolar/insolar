@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/proc"
@@ -54,9 +55,8 @@ type MessageHandler struct {
 
 	IDLocker object.IDLocker `inject:""`
 
-	RecordModifier object.RecordModifier `inject:""`
-	RecordAccessor object.RecordAccessor `inject:""`
-	Nodes          node.Accessor         `inject:""`
+	Records object.RecordStorage `inject:""`
+	Nodes   node.Accessor        `inject:""`
 
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
@@ -64,7 +64,7 @@ type MessageHandler struct {
 	WriteAccessor hot.WriteAccessor
 
 	LifelineIndex         object.LifelineIndex
-	IndexBucketModifier   object.IndexModifier
+	IndexBucketModifier   *object.IndexStorageMemory
 	LifelineStateModifier object.LifelineStateModifier
 	PendingModifier       object.PendingModifier
 	PendingAccessor       object.PendingAccessor
@@ -78,12 +78,14 @@ type MessageHandler struct {
 	Sender         wbus.Sender
 	FlowDispatcher *dispatcher.Dispatcher
 	handlers       map[insolar.MessageType]insolar.MessageHandler
+
+	filaments *executor.FilamentManager
 }
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
 	index object.LifelineIndex,
-	indexBucketModifier object.IndexModifier,
+	indexBucketModifier *object.IndexStorageMemory,
 	indexStateModifier object.LifelineStateModifier,
 	pendingModifier object.PendingModifier,
 	pendingAccessor object.PendingAccessor,
@@ -138,7 +140,7 @@ func NewMessageHandler(
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.Bus = h.Bus
 			p.Dep.PendingModifier = h.PendingModifier
-			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.RecordModifier = h.Records
 			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
 			p.Dep.WriteAccessor = h.WriteAccessor
@@ -155,23 +157,23 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Bus = h.Bus
-			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.RecordAccessor = h.Records
 			p.Dep.Sender = h.Sender
 			p.Dep.PendingAccessor = h.PendingAccessor
 			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetCode: func(p *proc.GetCode) {
-			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.RecordAccessor = h.Records
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
 		GetRequest: func(p *proc.GetRequest) {
-			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.RecordAccessor = h.Records
 		},
 		UpdateObject: func(p *proc.UpdateObject) {
-			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.RecordModifier = h.Records
 			p.Dep.Bus = h.Bus
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobModifier = h.BlobModifier
@@ -185,7 +187,7 @@ func NewMessageHandler(
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
-			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.RecordAccessor = h.Records
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetTreeUpdater = h.jetTreeUpdater
 		},
@@ -193,7 +195,7 @@ func NewMessageHandler(
 			p.Dep.IDLocker = h.IDLocker
 			p.Dep.LifelineIndex = h.LifelineIndex
 			p.Dep.JetCoordinator = h.JetCoordinator
-			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.RecordModifier = h.Records
 			p.Dep.LifelineStateModifier = h.LifelineStateModifier
 			p.Dep.PCS = h.PCS
 		},
@@ -217,20 +219,19 @@ func NewMessageHandler(
 			p.Dep.JetReleaser = h.JetReleaser
 			p.Dep.FilamentCacheManager = h.FilamentCacheManager
 		},
-		GetPendingFilament: func(p *proc.GetPendingFilament) {
-			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.Sender = h.Sender
+		SendRequests: func(p *proc.SendRequests) {
+			p.Dep(h.Sender, h.filaments)
 		},
 		PassState: func(p *proc.PassState) {
 			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Sender = h.Sender
-			p.Dep.Records = h.RecordAccessor
+			p.Dep.Records = h.Records
 		},
 		CalculateID: func(p *proc.CalculateID) {
 			p.Dep(h.PCS)
 		},
 		SetCode: func(p *proc.SetCode) {
-			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender)
+			p.Dep(h.WriteAccessor, h.Records, h.BlobModifier, h.PCS, h.Sender)
 		},
 	}
 
@@ -249,6 +250,16 @@ func NewMessageHandler(
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
 	h.jetTreeUpdater = jet.NewFetcher(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
+	h.filaments = executor.NewFilamentManager(
+		h.IndexBucketModifier,
+		h.IndexBucketModifier,
+		h.IDLocker,
+		h.Records,
+		h.JetCoordinator,
+		h.PCS,
+		h.Sender,
+		h.jetTreeUpdater,
+	)
 	h.setHandlersForLight()
 
 	return nil

@@ -45,7 +45,7 @@ type Dependencies struct {
 	PassState           func(*PassState)
 	CalculateID         func(*CalculateID)
 	SetCode             func(*SetCode)
-	GetPendingFilament  func(*GetPendingFilament)
+	SendRequests        func(*SendRequests)
 }
 
 type ReturnReply struct {

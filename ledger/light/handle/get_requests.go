@@ -25,27 +25,27 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GetPendingFilament struct {
+type GetRequests struct {
 	dep *proc.Dependencies
 
 	meta payload.Meta
 }
 
-func NewGetPendingFilament(dep *proc.Dependencies, meta payload.Meta) *GetPendingFilament {
-	return &GetPendingFilament{
+func NewGetRequests(dep *proc.Dependencies, meta payload.Meta) *GetRequests {
+	return &GetRequests{
 		dep:  dep,
 		meta: meta,
 	}
 }
 
-func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
-	gpf := payload.GetPendingFilament{}
-	err := gpf.Unmarshal(s.meta.Payload)
+func (s *GetRequests) Present(ctx context.Context, f flow.Flow) error {
+	msg := payload.GetFilament{}
+	err := msg.Unmarshal(s.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload")
 	}
 
-	getFilament := proc.NewGetPendingFilament(s.meta, gpf.ObjectID, gpf.StartFrom, gpf.ReadUntil)
-	s.dep.GetPendingFilament(getFilament)
+	getFilament := proc.NewSendRequests(s.meta, msg.ObjectID, msg.StartFrom, msg.ReadUntil)
+	s.dep.SendRequests(getFilament)
 	return f.Procedure(ctx, getFilament, false)
 }

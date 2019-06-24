@@ -27,21 +27,21 @@ type Type uint32
 //go:generate stringer -type=Type
 
 const (
-	TypeUnknown            Type = 0
-	TypeError              Type = 1
-	TypeID                 Type = 2
-	TypeState              Type = 4
-	TypeGetObject          Type = 5
-	TypePassState          Type = 6
-	TypeObjIndex           Type = 7
-	TypeObjState           Type = 8
-	TypeIndex              Type = 9
-	TypePass               Type = 10
-	TypeGetCode            Type = 11
-	TypeCode               Type = 12
-	TypeSetCode            Type = 13
-	TypeGetPendingFilament Type = 14
-	TypePendingFilament    Type = 15
+	TypeUnknown         Type = 0
+	TypeError           Type = 1
+	TypeID              Type = 2
+	TypeState           Type = 4
+	TypeGetObject       Type = 5
+	TypePassState       Type = 6
+	TypeObjIndex        Type = 7
+	TypeObjState        Type = 8
+	TypeIndex           Type = 9
+	TypePass            Type = 10
+	TypeGetCode         Type = 11
+	TypeCode            Type = 12
+	TypeSetCode         Type = 13
+	TypeGetFilament     Type = 14
+	TypeFilamentSegment Type = 15
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -138,11 +138,11 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *SetCode:
 		pl.Polymorph = uint32(TypeSetCode)
 		return pl.Marshal()
-	case *GetPendingFilament:
-		pl.Polymorph = uint32(TypeGetPendingFilament)
+	case *GetFilament:
+		pl.Polymorph = uint32(TypeGetFilament)
 		return pl.Marshal()
-	case *PendingFilament:
-		pl.Polymorph = uint32(TypePendingFilament)
+	case *FilamentSegment:
+		pl.Polymorph = uint32(TypeFilamentSegment)
 		return pl.Marshal()
 	}
 
@@ -195,12 +195,12 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := SetCode{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypeGetPendingFilament:
-		pl := GetPendingFilament{}
+	case TypeGetFilament:
+		pl := GetFilament{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypePendingFilament:
-		pl := PendingFilament{}
+	case TypeFilamentSegment:
+		pl := FilamentSegment{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
@@ -223,16 +223,4 @@ func UnmarshalFromMeta(meta []byte) (Payload, error) {
 	}
 
 	return pl, nil
-}
-
-// UnmarshalTypeFromMeta decodes payload type from given meta binary.
-func UnmarshalTypeFromMeta(data []byte) (Type, error) {
-	m := Meta{}
-	// Can be optimized by using proto.NewBuffer.
-	err := m.Unmarshal(data)
-	if err != nil {
-		return TypeUnknown, err
-	}
-
-	return UnmarshalType(m.Payload)
 }
