@@ -278,9 +278,6 @@ func (b *pendingMeta) addMetaIDToFilament(pn insolar.PulseNumber, metaID insolar
 // the request will be closed
 func (i *FilamentCacheStorage) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, jetID insolar.JetID, resID insolar.ID, res record.Result) error {
 	return nil
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("SetResult started. objID: %v, pn: %V", objID.DebugString(), pn)
-	panic("implement me")
 	// idx := i.idxAccessor.Lifeline(pn, objID)
 	// if idx == nil {
 	// 	return ErrLifelineNotFound
@@ -386,7 +383,6 @@ func (i *FilamentCacheStorage) setFilament(ctx context.Context, pm *pendingMeta,
 
 func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
 	return nil
-	panic("implement me")
 	// i.idLocker.Lock(&objID)
 	// defer i.idLocker.Unlock(&objID)
 	//
@@ -462,7 +458,6 @@ func (i *FilamentCacheStorage) Gather(ctx context.Context, pn insolar.PulseNumbe
 
 func (i *FilamentCacheStorage) SendAbandonedNotification(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) error {
 	return nil
-	panic("implement me")
 	// logger := inslogger.FromContext(ctx)
 	// idx := i.idxAccessor.Lifeline(currentPN, objID)
 	// if idx == nil {

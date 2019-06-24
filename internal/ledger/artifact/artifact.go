@@ -101,7 +101,7 @@ func (m *Scope) GetObject(
 	head insolar.Reference,
 ) (ObjectDescriptor, error) {
 
-	idx, err := m.IndexAccessor.ForID(nil, m.PulseNumber, *head.Record())
+	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *head.Record())
 	if err != nil {
 		return nil, err
 	}
