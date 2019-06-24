@@ -5,127 +5,33 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 )
-
-type filamentCache struct {
-	// lock  sync.RWMutex
-	records RecordAccessor
-	cache   map[insolar.PulseNumber][]record.CompositeFilamentRecord
-}
-
-func newFilamentCache(r RecordAccessor) *filamentCache {
-	return &filamentCache{
-		cache:   map[insolar.PulseNumber][]record.CompositeFilamentRecord{},
-		records: r,
-	}
-}
-
-func (c *filamentCache) Append(rec record.CompositeFilamentRecord) error {
-	// c.lock.RLock()
-	// defer c.lock.RUnlock()
-	// if rec.MetaID.Pulse() < c.last {
-	// 	return errors.New("wrong pulse")
-	// }
-
-	recs, ok := c.cache[rec.MetaID.Pulse()]
-	if !ok {
-		c.cache[rec.MetaID.Pulse()] = []record.CompositeFilamentRecord{rec}
-		return nil
-	}
-
-	c.cache[rec.MetaID.Pulse()] = append(recs, rec)
-	return nil
-}
-
-func (c *filamentCache) Set(pn insolar.PulseNumber, recs []record.CompositeFilamentRecord) {
-	c.cache[pn] = recs
-}
-
-func (c *filamentCache) Get(ctx context.Context, from insolar.ID) ([]record.CompositeFilamentRecord, error) {
-	// c.lock.RLock()
-	// defer c.lock.RUnlock()
-
-	forPulse := from.Pulse()
-	recs, ok := c.cache[forPulse]
-	if ok {
-		return recs, nil
-	}
-
-	// Not found in cache. Trying to fetch from primary storage.
-	iter := &from
-	for iter != nil && iter.Pulse() == forPulse {
-		var composite record.CompositeFilamentRecord
-		// Fetching filament record.
-		filamentRecord, err := c.records.ForID(ctx, *iter)
-		if err != nil {
-			return nil, err
-		}
-		composite.RecordID = *iter
-		composite.Record = filamentRecord
-
-		// Fetching primary.
-		virtual := record.Unwrap(filamentRecord.Virtual)
-		filament, ok := virtual.(*record.PendingFilament)
-		if !ok {
-			return nil, errors.New("failed to convert filament record")
-		}
-		rec, err := c.records.ForID(ctx, filament.RecordID)
-		if err != nil {
-			return nil, err
-		}
-		composite.RecordID = filament.RecordID
-		composite.Record = rec
-
-		// Adding to cache.
-		recs = append(recs, composite)
-		iter = filament.PreviousRecord
-	}
-
-	c.cache[forPulse] = recs
-
-	return recs, nil
-}
-
-func (c *filamentCache) Delete(pn insolar.PulseNumber) {
-	// c.lock.Lock()
-	// defer c.lock.Unlock()
-
-	delete(c.cache, pn)
-}
-
-type objectCache struct {
-	Incoming *filamentCache
-}
-
-func newObjectCache(recs RecordAccessor) *objectCache {
-	return &objectCache{
-		Incoming: newFilamentCache(recs),
-	}
-}
 
 type cacheStore struct {
 	records RecordAccessor
 
 	lock   sync.Mutex
-	caches map[insolar.ID]*objectCache
+	caches map[insolar.ID]*filamentCache
 }
 
-func newCacheStore(recs RecordAccessor) *cacheStore {
+func newCacheStore(r RecordAccessor) *cacheStore {
 	return &cacheStore{
-		caches:  map[insolar.ID]*objectCache{},
-		records: recs,
+		caches:  map[insolar.ID]*filamentCache{},
+		records: r,
 	}
 }
 
-func (c *cacheStore) Get(id insolar.ID) *objectCache {
+func (c *cacheStore) Get(id insolar.ID) *filamentCache {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	obj, ok := c.caches[id]
 	if !ok {
-		obj = newObjectCache(c.records)
+		obj = newFilamentCache(c.records)
 		c.caches[id] = obj
 	}
 
@@ -136,4 +42,94 @@ func (c *cacheStore) Delete(id insolar.ID) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	delete(c.caches, id)
+}
+
+type filamentCache struct {
+	cache map[insolar.ID]record.CompositeFilamentRecord
+
+	records     RecordAccessor
+	jetFetcher  jet.Fetcher
+	coordinator jet.Coordinator
+	sender      bus.Sender
+}
+
+func newFilamentCache(r RecordAccessor) *filamentCache {
+	return &filamentCache{
+		cache:   map[insolar.ID]record.CompositeFilamentRecord{},
+		records: r,
+	}
+}
+
+func (c *filamentCache) Update(recs []record.CompositeFilamentRecord) {
+	for _, rec := range recs {
+		c.cache[rec.MetaID] = rec
+	}
+}
+
+func (c *filamentCache) NewIterator(ctx context.Context, from insolar.ID) filamentIterator {
+	return filamentIterator{
+		currentID: &from,
+		cache:     c,
+	}
+}
+
+func (c *filamentCache) Clear() {
+	c.cache = map[insolar.ID]record.CompositeFilamentRecord{}
+}
+
+type filamentIterator struct {
+	currentID *insolar.ID
+	cache     *filamentCache
+}
+
+func (i *filamentIterator) PrevID() *insolar.ID {
+	return i.currentID
+}
+
+func (i *filamentIterator) HasPrev() bool {
+	return i.currentID != nil
+}
+
+func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRecord, error) {
+	if i.currentID == nil {
+		return record.CompositeFilamentRecord{}, ErrNotFound
+	}
+
+	composite, ok := i.cache.cache[*i.currentID]
+	if ok {
+		virtual := record.Unwrap(composite.Meta.Virtual)
+		filament, ok := virtual.(*record.PendingFilament)
+		if !ok {
+			return record.CompositeFilamentRecord{}, errors.New("failed to convert filament record")
+		}
+		i.currentID = filament.PreviousRecord
+		return composite, nil
+	}
+
+	// Fetching filament record.
+	filamentRecord, err := i.cache.records.ForID(ctx, *i.currentID)
+	if err != nil {
+		return record.CompositeFilamentRecord{}, err
+	}
+	composite.RecordID = *i.currentID
+	composite.Record = filamentRecord
+
+	// Fetching primary record.
+	virtual := record.Unwrap(filamentRecord.Virtual)
+	filament, ok := virtual.(*record.PendingFilament)
+	if !ok {
+		return record.CompositeFilamentRecord{}, errors.New("failed to convert filament record")
+	}
+	rec, err := i.cache.records.ForID(ctx, filament.RecordID)
+	if err != nil {
+		return record.CompositeFilamentRecord{}, err
+	}
+	composite.RecordID = filament.RecordID
+	composite.Record = rec
+
+	// Adding to cache.
+	i.cache.cache[*i.currentID] = composite
+	i.currentID = filament.PreviousRecord
+
+	return composite, nil
 }

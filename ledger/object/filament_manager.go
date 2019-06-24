@@ -19,9 +19,9 @@ type FilamentModifier interface {
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) error
 }
 
-func NewFilamentManager() *FilamentManager {
+func NewFilamentManager(r RecordAccessor) *FilamentManager {
 	return &FilamentManager{
-		cache: newCacheStore(),
+		cache: newCacheStore(r),
 	}
 }
 
@@ -187,56 +187,36 @@ func (m *FilamentManager) calculatePending(
 	objectID insolar.ID,
 	idx FilamentIndex,
 ) ([]insolar.ID, error) {
-	incoming := m.cache.Get(objectID).Incoming
-	err := m.fetchFilament(
+	cache := m.cache.Get(objectID)
+	iter := m.newFetchingIterator(
 		ctx,
-		incoming,
-		pulse,
+		cache,
 		objectID,
 		*idx.Lifeline.PendingPointer,
 		*idx.Lifeline.EarliestOpenRequest,
+		pulse,
 	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch pending")
-	}
 
 	var pending []insolar.ID
 	hasResult := map[insolar.ID]struct{}{}
-	iter := idx.Lifeline.PendingPointer
-	for iter != nil && iter.Pulse() >= *idx.Lifeline.EarliestOpenRequest {
-		recs, err := incoming.Get(ctx, *idx.Lifeline.PendingPointer)
+	for iter.HasPrev() {
+		rec, err := iter.Prev(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch pending")
+			break
 		}
 
-		if len(recs) == 0 {
-			return nil, nil
-		}
-
-		// Going in reverse to find result for request before the request. This way we preserve pending order.
-		for i := len(recs) - 1; i >= 0; i-- {
-			virtual := record.Unwrap(recs[i].Record.Virtual)
-			switch r := virtual.(type) {
-			case *record.Request:
-				if _, ok := hasResult[recs[i].RecordID]; !ok {
-					pending = append(pending, recs[i].RecordID)
-				}
-			case *record.Result:
-				hasResult[*r.Request.Record()] = struct{}{}
+		virtual := record.Unwrap(rec.Record.Virtual)
+		switch r := virtual.(type) {
+		case *record.Request:
+			if _, ok := hasResult[rec.RecordID]; !ok {
+				pending = append(pending, rec.RecordID)
 			}
+		case *record.Result:
+			hasResult[*r.Request.Record()] = struct{}{}
 		}
-
-		virtual := record.Unwrap(recs[len(recs)-1].Meta.Virtual)
-		filament, ok := virtual.(*record.PendingFilament)
-		if !ok {
-			return nil, errors.New("failed to convert filament")
-		}
-
-		// Jumping to the next pulse.
-		iter = filament.PreviousRecord
 	}
 
-	// We need to reverse pending because we iterated from the end when selected them.
+	// We need to reverse pending because we iterated from the end when selecting them.
 	ordered := make([]insolar.ID, len(pending))
 	count := len(pending)
 	for i, id := range pending {
@@ -246,93 +226,107 @@ func (m *FilamentManager) calculatePending(
 	return ordered, nil
 }
 
-func (m *FilamentManager) fetchFilament(
-	ctx context.Context,
-	cache *filamentCache,
-	pulse insolar.PulseNumber,
-	objectID, from insolar.ID,
-	until insolar.PulseNumber,
-) error {
-	fetchFromNetwork := func(forID insolar.ID) ([]record.CompositeFilamentRecord, error) {
-		jetID, err := m.jetFetcher.Fetch(ctx, objectID, forID.Pulse())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch jet")
-		}
-		node, err := m.coordinator.NodeForJet(ctx, *jetID, pulse, forID.Pulse())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to calculate node")
-		}
-		if *node == m.coordinator.Me() {
-			return nil, errors.New("tried to send message to self")
-		}
+type fetchingIterator struct {
+	iter  filamentIterator
+	cache *filamentCache
 
-		msg, err := payload.NewMessage(&payload.GetFilament{
-			ObjectID:  objectID,
-			StartFrom: forID,
-			ReadUntil: until,
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create fetching message")
-		}
-		reps, done := m.busWM.SendTarget(ctx, msg, *node)
-		defer done()
-		res, ok := <-reps
-		if !ok {
-			return nil, errors.New("no reply for filament fetch")
-		}
+	objectID             insolar.ID
+	readUntil, calcPulse insolar.PulseNumber
 
-		pl, err := payload.UnmarshalFromMeta(res.Payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal reply")
-		}
-		filaments, ok := pl.(*payload.FilamentSegment)
-		if !ok {
-			return nil, fmt.Errorf("unexpected reply %T", pl)
-		}
-		return filaments.Records, nil
-	}
-
-	iter := &from
-	for iter != nil && iter.Pulse() <= until {
-		recs, err := cache.Get(ctx, from)
-		if err != nil {
-			if err == ErrNotFound {
-				recs, err := fetchFromNetwork(from)
-				if err != nil {
-					return errors.Wrap(err, "failed to fetch filament")
-				}
-				saveToCache(cache, recs)
-			}
-			return errors.Wrap(err, "failed to fetch filament")
-		}
-		if len(recs) == 0 {
-			return nil
-		}
-
-		virtual := record.Unwrap(recs[len(recs)-1].Meta.Virtual)
-		filament, ok := virtual.(*record.PendingFilament)
-		if !ok {
-			return errors.New("failed to convert filament record")
-		}
-
-		iter = filament.PreviousRecord
-	}
-
-	return nil
+	records     RecordAccessor
+	jetFetcher  jet.Fetcher
+	coordinator jet.Coordinator
+	sender      buswm.Sender
 }
 
-func saveToCache(cache *filamentCache, recs []record.CompositeFilamentRecord) {
-	if len(recs) == 0 {
-		return
+func (m *FilamentManager) newFetchingIterator(
+	ctx context.Context,
+	cache *filamentCache,
+	objectID, from insolar.ID,
+	readUntil, calcPulse insolar.PulseNumber,
+) *fetchingIterator {
+	return &fetchingIterator{
+		iter:        cache.NewIterator(ctx, from),
+		cache:       cache,
+		objectID:    objectID,
+		readUntil:   readUntil,
+		calcPulse:   calcPulse,
+		records:     m.recordStorage,
+		jetFetcher:  m.jetFetcher,
+		coordinator: m.coordinator,
+		sender:      m.busWM,
+	}
+}
+
+func (i *fetchingIterator) PrevID() *insolar.ID {
+	return i.iter.PrevID()
+}
+
+func (i *fetchingIterator) HasPrev() bool {
+	return i.iter.HasPrev()
+}
+
+func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRecord, error) {
+	rec, err := i.iter.Prev(ctx)
+	switch err {
+	case nil:
+		return rec, nil
+
+	case ErrNotFound:
+		// Update cache from network.
+		recs, err := i.fetchFromNetwork(ctx, *i.PrevID())
+		if err != nil {
+			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
+		}
+		i.cache.Update(recs)
+
+		// Try to iterate again.
+		rec, err = i.iter.Prev(ctx)
+		if err != nil {
+			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to update filament")
+		}
+		return rec, nil
+
+	default:
+		return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
+	}
+}
+
+func (i *fetchingIterator) fetchFromNetwork(ctx context.Context, forID insolar.ID) ([]record.CompositeFilamentRecord, error) {
+	jetID, err := i.jetFetcher.Fetch(ctx, i.objectID, forID.Pulse())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch jet")
+	}
+	node, err := i.coordinator.NodeForJet(ctx, *jetID, i.calcPulse, forID.Pulse())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to calculate node")
+	}
+	if *node == i.coordinator.Me() {
+		return nil, errors.New("tried to send message to self")
 	}
 
-	tail := 0
-	iterPN := recs[0].MetaID.Pulse()
-	for i, rec := range recs {
-		if rec.MetaID.Pulse() != iterPN {
-			cache.Set(iterPN, recs[tail:i-tail])
-			tail = i
-			iterPN = rec.MetaID.Pulse()
-		}
+	msg, err := payload.NewMessage(&payload.GetFilament{
+		ObjectID:  i.objectID,
+		StartFrom: forID,
+		ReadUntil: i.readUntil,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create fetching message")
 	}
+	reps, done := i.sender.SendTarget(ctx, msg, *node)
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply for filament fetch")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+	filaments, ok := pl.(*payload.FilamentSegment)
+	if !ok {
+		return nil, fmt.Errorf("unexpected reply %T", pl)
+	}
+	return filaments.Records, nil
 }
