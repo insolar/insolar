@@ -355,13 +355,15 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	})
 }
 
-func prepareParcel(t minimock.Tester, msg insolar.Message, needType bool) insolar.Parcel {
+func prepareParcel(t minimock.Tester, msg insolar.Message, needType bool, needSender bool) insolar.Parcel {
 	parcel := testutils.NewParcelMock(t)
 	parcel.MessageMock.Return(msg)
 	if needType {
 		parcel.TypeMock.Return(msg.Type())
 	}
-	parcel.GetSenderMock.Return(gen.Reference())
+	if needSender {
+		parcel.GetSenderMock.Return(gen.Reference())
+	}
 	return parcel
 }
 
@@ -521,7 +523,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			}
 
 			flowMock, pubSub := prepareWatermill(suite)
-			fakeParcel := prepareParcel(suite.mc, msg, false)
+			fakeParcel := prepareParcel(suite.mc, msg, false, false)
 
 			h := HandleExecutorResults{
 				dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
@@ -802,7 +804,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 	var err error
 
 	msg := &message.ExecutorResults{RecordRef: ref}
-	fakeParcel = prepareParcel(suite.mc, msg, false)
+	fakeParcel = prepareParcel(suite.mc, msg, false, false)
 	h = HandleExecutorResults{
 		dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
 		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
@@ -821,7 +823,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 
 	// previous executor decline pending, trust him
 	msg = &message.ExecutorResults{RecordRef: ref, Pending: message.NotPending}
-	fakeParcel = prepareParcel(suite.mc, msg, false)
+	fakeParcel = prepareParcel(suite.mc, msg, false, false)
 	h = HandleExecutorResults{
 		dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
 		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
@@ -860,7 +862,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 		}
 
 		flowMock, pubSub := prepareWatermill(suite)
-		fakeParcel := prepareParcel(suite.mc, msg, false)
+		fakeParcel := prepareParcel(suite.mc, msg, false, false)
 
 		h := HandleExecutorResults{
 			dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
@@ -1305,13 +1307,12 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	pRef := testutils.RandomRef()
 	pDesc := artifacts.NewObjectDescriptorMock(s.mc)
 	pDesc.HeadRefMock.Return(&pRef)
-	pDesc.CodeMock.Return(&cRef, nil)
 
 	oDesc := artifacts.NewObjectDescriptorMock(s.mc)
 	oDesc.ParentMock.Return(nil)
-	oDesc.PrototypeMock.Return(&pRef, nil)
 	oDesc.MemoryMock.Return(make([]byte, 0))
 
+	s.dc.ByObjectDescriptorMock.Return(pDesc, cDesc, nil)
 	s.am.GetObjectMock.Set(func(p context.Context, p1 insolar.Reference) (r artifacts.ObjectDescriptor, r1 error) {
 		if p1.Equal(objectRef) {
 			return oDesc, nil
@@ -1321,8 +1322,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 			panic("unexpected")
 		}
 	})
-	s.am.GetCodeMock.Return(cDesc, nil)
-	s.am.UpdateObjectMock.Return(nil, nil)
+
 	s.am.RegisterResultMock.Return(nil, nil)
 
 	s.mb.SendMock.Return(nil, nil)
@@ -1338,7 +1338,6 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	immutableRequestRef2 := gen.Reference()
 
 	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
-	s.ps.LatestMock.Return(pulseObject, nil)
 
 	// prepare all three requests
 	mutableMsg := message.CallMethod{
@@ -1349,7 +1348,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 			Immutable:    false,
 		},
 	}
-	mutableParcel := prepareParcel(s.mc, &mutableMsg, true)
+	mutableParcel := prepareParcel(s.mc, &mutableMsg, false, true)
 	mutableTranscript := NewTranscript(s.ctx, mutableParcel, &mutableRequestRef, &pulseObject, parentRef)
 
 	immutableMsg1 := message.CallMethod{
@@ -1360,7 +1359,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 			Immutable:    true,
 		},
 	}
-	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, true)
+	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, false, true)
 	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
 
 	immutableMsg2 := message.CallMethod{
@@ -1371,7 +1370,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 			Immutable:    true,
 		},
 	}
-	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, true)
+	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, false, true)
 	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulseObject, parentRef)
 
 	// Set custom executor, that'll:
@@ -1457,13 +1456,12 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 	pRef := testutils.RandomRef()
 	pDesc := artifacts.NewObjectDescriptorMock(s.mc)
 	pDesc.HeadRefMock.Return(&pRef)
-	pDesc.CodeMock.Return(&cRef, nil)
 
 	oDesc := artifacts.NewObjectDescriptorMock(s.mc)
 	oDesc.ParentMock.Return(nil)
-	oDesc.PrototypeMock.Return(&pRef, nil)
 	oDesc.MemoryMock.Return(make([]byte, 0))
 
+	s.dc.ByObjectDescriptorMock.Return(pDesc, cDesc, nil)
 	s.am.GetObjectMock.Set(func(p context.Context, p1 insolar.Reference) (r artifacts.ObjectDescriptor, r1 error) {
 		if p1.Equal(objectRef) {
 			return oDesc, nil
@@ -1473,8 +1471,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 			panic("unexpected")
 		}
 	})
-	s.am.GetCodeMock.Return(cDesc, nil)
-	s.am.UpdateObjectMock.Return(nil, nil)
+
 	s.am.RegisterResultMock.Return(nil, nil)
 
 	s.mb.SendMock.Return(nil, nil)
@@ -1489,7 +1486,6 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 	immutableRequestRef2 := gen.Reference()
 
 	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
-	s.ps.LatestMock.Return(pulseObject, nil)
 
 	immutableMsg1 := message.CallMethod{
 		Request: record.Request{
@@ -1499,7 +1495,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 			Immutable:    true,
 		},
 	}
-	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, true)
+	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, false, true)
 	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
 
 	immutableMsg2 := message.CallMethod{
@@ -1510,7 +1506,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 			Immutable:    true,
 		},
 	}
-	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, true)
+	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, false, true)
 	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulseObject, parentRef)
 
 	mle := testutils.NewMachineLogicExecutorMock(s.mc)
@@ -1536,7 +1532,6 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 	checkFinished := func() bool { return es.Broker.finished.Len() >= 2 }
 	s.True(wait(checkFinished))
 	s.Equal(uint64(2), s.am.RegisterResultCounter)
-
 }
 
 func TestLogicRunner(t *testing.T) {
