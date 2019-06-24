@@ -20,10 +20,10 @@ package api
 Package api provides http/json APIto interact with our system
 
 	// Create api configuration
-	cfg := configuration.NewAPIRunner()
+	Cfg := configuration.NewAPIRunner()
 
 	// Create api runner
-	api, _ := NewRunner(&cfg)
+	api, _ := NewRunner(&Cfg)
 
 	// Create empty component map
 	cs := insolar.Components{}
