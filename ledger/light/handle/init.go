@@ -111,10 +111,6 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	defer span.End()
 
 	switch s.message.Parcel.Message().Type() {
-	case insolar.TypeSetRecord:
-		msg := s.message.Parcel.Message().(*message.SetRecord)
-		h := NewSetRecord(s.dep, s.message.ReplyTo, msg)
-		return f.Handle(ctx, h.Present)
 	case insolar.TypeSetBlob:
 		msg := s.message.Parcel.Message().(*message.SetBlob)
 		h := NewSetBlob(s.dep, s.message.ReplyTo, msg)
