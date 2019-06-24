@@ -13,7 +13,7 @@ Usage
    
 #### Start benchmark
 
-    ./bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/root_member_keys.json
+    ./bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/
 
 or you can run benchmark with
 

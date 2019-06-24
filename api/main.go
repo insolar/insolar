@@ -85,19 +85,14 @@ func checkConfig(cfg *configuration.APIRunner) error {
 }
 
 func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
-	err := rpcServer.RegisterService(NewSeedService(ar), "seed")
+	err := rpcServer.RegisterService(NewNodeService(ar), "node")
 	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: seed")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
 	}
 
-	err = rpcServer.RegisterService(NewInfoService(ar), "info")
+	err = rpcServer.RegisterService(NewInfoService(ar), "network")
 	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: info")
-	}
-
-	err = rpcServer.RegisterService(NewStatusService(ar), "status")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: status")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: network")
 	}
 
 	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
