@@ -29,6 +29,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentModifier -o ./ -s _mock.go
+
 type FilamentModifier interface {
 	SetRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.Request) error
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) error

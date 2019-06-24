@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
@@ -48,25 +49,29 @@ func TestSetRequest_Proceed(t *testing.T) {
 	records := object.NewRecordModifierMock(t)
 	records.SetMock.Return(nil)
 
+	filaments := executor.NewFilamentModifierMock(t)
+	filaments.SetRequestMock.Return(nil)
+
 	ref := gen.Reference()
 	jetID := gen.JetID()
 	id := gen.ID()
 
+	request := record.Request{
+		Object:   &ref,
+		CallType: record.CTMethod,
+	}
 	virtual := record.Virtual{
 		Union: &record.Virtual_Request{
-			Request: &record.Request{
-				Object:   &ref,
-				CallType: record.CTMethod,
-			},
+			Request: &request,
 		},
 	}
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
+	pl := payload.SetRequest{
 		Request: virtualBuf,
 	}
-	requestBuf, err := request.Marshal()
+	requestBuf, err := pl.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
@@ -77,12 +82,9 @@ func TestSetRequest_Proceed(t *testing.T) {
 	pmm.SetRequestMock.Return(nil)
 
 	// Pendings limit not reached.
-	setRequestProc := NewSetRequest(msg, virtual, id, jetID)
-	setRequestProc.dep.writer = writeAccessor
-	setRequestProc.dep.sender = sender
-	setRequestProc.dep.records = records
-	setRequestProc.dep.pendings = pmm
+	p := NewSetRequest(msg, request, id, jetID)
+	p.Dep(writeAccessor, records, filaments, sender)
 
-	err = setRequestProc.Proceed(ctx)
+	err = p.Proceed(ctx)
 	require.NoError(t, err)
 }
