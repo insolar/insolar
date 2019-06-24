@@ -91,7 +91,7 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 		assert.Equal(t, n.role, nodeRec.Record.Role, "role is the same")
 	}
 
-	assert.Equal(t, ndMemory.NodeIndexPublicKey, expectIndexMap, "NodeDomain memory contains expected map")
+	assert.Equal(t, ndMemory.NodeIndexPK, expectIndexMap, "NodeDomain memory contains expected map")
 }
 
 func initArtifactManager(t *testing.T) artifact.Manager {
@@ -106,7 +106,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 		if ref == genesisrefs.ContractNodeDomain {
 			descMock.MemoryFunc = func() []byte {
 				return insolar.MustSerialize(&nodedomain.NodeDomain{
-					NodeIndexPublicKey: indexMap,
+					NodeIndexPK: indexMap,
 				})
 			}
 		} else {
@@ -142,7 +142,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 		}
 		var rec nodedomain.NodeDomain
 		insolar.MustDeserialize(memory, &rec)
-		indexMap = rec.NodeIndexPublicKey
+		indexMap = rec.NodeIndexPK
 		return nil, nil
 	}
 	amMock.ActivateObjectFunc = func(

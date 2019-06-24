@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113R7BG7SmsAwvRsgk2pnMmXGYroKoz13W5N4PXsM.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111qZFVP3dgzBKX7VfLTre2RpsU1DLSns1DwSghkA.11111111111111111111111111111111")
 
 // NodeDomain holds proxy type
 type NodeDomain struct {
@@ -244,8 +244,8 @@ func (r *NodeDomain) RegisterNodeAsImmutable(publicKey string, role string) (str
 	return ret0, nil
 }
 
-// GetNodeRefByPublicKey is proxy generated method
-func (r *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
+// GetNodeRefByPK is proxy generated method
+func (r *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -262,7 +262,7 @@ func (r *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetNodeRefByPublicKey", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetNodeRefByPK", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -278,8 +278,8 @@ func (r *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 	return ret0, nil
 }
 
-// GetNodeRefByPublicKeyNoWait is proxy generated method
-func (r *NodeDomain) GetNodeRefByPublicKeyNoWait(publicKey string) error {
+// GetNodeRefByPKNoWait is proxy generated method
+func (r *NodeDomain) GetNodeRefByPKNoWait(publicKey string) error {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -290,7 +290,7 @@ func (r *NodeDomain) GetNodeRefByPublicKeyNoWait(publicKey string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetNodeRefByPublicKey", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetNodeRefByPK", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -298,8 +298,8 @@ func (r *NodeDomain) GetNodeRefByPublicKeyNoWait(publicKey string) error {
 	return nil
 }
 
-// GetNodeRefByPublicKeyAsImmutable is proxy generated method
-func (r *NodeDomain) GetNodeRefByPublicKeyAsImmutable(publicKey string) (string, error) {
+// GetNodeRefByPKAsImmutable is proxy generated method
+func (r *NodeDomain) GetNodeRefByPKAsImmutable(publicKey string) (string, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -316,7 +316,7 @@ func (r *NodeDomain) GetNodeRefByPublicKeyAsImmutable(publicKey string) (string,
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetNodeRefByPublicKey", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetNodeRefByPK", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
