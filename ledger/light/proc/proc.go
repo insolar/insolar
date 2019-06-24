@@ -92,6 +92,5 @@ func NewDependenciesMock() *Dependencies {
 		PassState:            func(*PassState) {},
 		CalculateID:          func(*CalculateID) {},
 		SetCode:              func(*SetCode) {},
-		GetPendingFilament:   func(*GetPendingFilament) {},
 	}
 }

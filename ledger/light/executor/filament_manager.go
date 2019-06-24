@@ -38,6 +38,8 @@ type FilamentAccessor interface {
 	Requests(
 		ctx context.Context, objectID, from insolar.ID, readUntil, calcPulse insolar.PulseNumber,
 	) ([]record.CompositeFilamentRecord, error)
+
+	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]insolar.ID, error)
 }
 
 func NewFilamentManager(
@@ -104,7 +106,7 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 		id := *insolar.NewID(requestID.Pulse(), hash)
 		material := record.Material{Virtual: &virtual, JetID: jetID}
 		err := m.recordStorage.Set(ctx, id, material)
-		if err != nil {
+		if err != nil && err != object.ErrOverride {
 			return errors.Wrap(err, "failed to save request record")
 		}
 		composite.RecordID = id
@@ -235,6 +237,17 @@ func (m *FilamentManager) Requests(
 	}
 
 	return segment, nil
+}
+
+func (m *FilamentManager) PendingRequests(
+	ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID,
+) ([]insolar.ID, error) {
+	idx := m.idxAccessor.Index(pulse, objectID)
+	if idx == nil {
+		return nil, object.ErrLifelineNotFound
+	}
+
+	return m.calculatePending(ctx, pulse, objectID, *idx)
 }
 
 func (m *FilamentManager) calculatePending(

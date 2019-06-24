@@ -19,7 +19,6 @@ package proc
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -38,14 +37,13 @@ type HotData struct {
 	msg     *message.HotData
 
 	Dep struct {
-		DropModifier         drop.Modifier
-		MessageBus           insolar.MessageBus
-		IndexBucketModifier  object.IndexModifier
-		JetStorage           jet.Storage
-		JetFetcher           jet.Fetcher
-		JetReleaser          hot.JetReleaser
-		Coordinator          jet.Coordinator
-		FilamentCacheManager object.FilamentCacheManager
+		DropModifier        drop.Modifier
+		MessageBus          insolar.MessageBus
+		IndexBucketModifier object.IndexModifier
+		JetStorage          jet.Storage
+		JetFetcher          jet.Fetcher
+		JetReleaser         hot.JetReleaser
+		Coordinator         jet.Coordinator
 	}
 }
 
@@ -115,12 +113,12 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 
-		go func(objID insolar.ID, pn insolar.PulseNumber) {
-			err = p.Dep.FilamentCacheManager.SendAbandonedNotification(ctx, pn, objID)
-			if err != nil {
-				logger.Errorf("failed to notify about abandoned notification %v", err)
-			}
-		}(meta.ObjID, flow.Pulse(ctx))
+		// go func(objID insolar.ID, pn insolar.PulseNumber) {
+		// 	err = p.Dep.FilamentCacheManager.SendAbandonedNotification(ctx, pn, objID)
+		// 	if err != nil {
+		// 		logger.Errorf("failed to notify about abandoned notification %v", err)
+		// 	}
+		// }(meta.ObjID, flow.Pulse(ctx))
 	}
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)

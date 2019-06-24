@@ -66,11 +66,7 @@ type MessageHandler struct {
 	LifelineIndex         object.LifelineIndex
 	IndexBucketModifier   *object.IndexStorageMemory
 	LifelineStateModifier object.LifelineStateModifier
-	PendingModifier       object.PendingModifier
-	PendingAccessor       object.PendingAccessor
 	PulseCalculator       storage.PulseCalculator
-
-	FilamentCacheManager object.FilamentCacheManager
 
 	conf           *configuration.Ledger
 	jetTreeUpdater jet.Fetcher
@@ -87,8 +83,6 @@ func NewMessageHandler(
 	index object.LifelineIndex,
 	indexBucketModifier *object.IndexStorageMemory,
 	indexStateModifier object.LifelineStateModifier,
-	pendingModifier object.PendingModifier,
-	pendingAccessor object.PendingAccessor,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
@@ -98,8 +92,6 @@ func NewMessageHandler(
 		LifelineIndex:         index,
 		IndexBucketModifier:   indexBucketModifier,
 		LifelineStateModifier: indexStateModifier,
-		PendingModifier:       pendingModifier,
-		PendingAccessor:       pendingAccessor,
 	}
 
 	dep := &proc.Dependencies{
@@ -139,7 +131,6 @@ func NewMessageHandler(
 		},
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.Bus = h.Bus
-			p.Dep.PendingModifier = h.PendingModifier
 			p.Dep.RecordModifier = h.Records
 			p.Dep.PCS = h.PCS
 			p.Dep.WriteAccessor = h.WriteAccessor
@@ -147,8 +138,8 @@ func NewMessageHandler(
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
 				h.WriteAccessor,
-				h.RecordModifier,
-				h.PendingModifier,
+				h.Records,
+				h.filaments,
 				h.Sender,
 			)
 		},
@@ -156,7 +147,7 @@ func NewMessageHandler(
 			p.Dep(
 				h.PCS,
 				h.WriteAccessor,
-				h.RecordModifier,
+				h.Records,
 				h.Sender,
 			)
 		},
@@ -174,8 +165,6 @@ func NewMessageHandler(
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.Records
 			p.Dep.Sender = h.Sender
-			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.RecordAccessor = h.Records
@@ -197,7 +186,7 @@ func NewMessageHandler(
 			p.Dep.LifelineStateModifier = h.LifelineStateModifier
 			p.Dep.LifelineIndex = h.LifelineIndex
 			p.Dep.WriteAccessor = h.WriteAccessor
-			p.Dep.PendingModifier = h.PendingModifier
+			p.Dep.Filaments = h.filaments
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.Coordinator = h.JetCoordinator
@@ -215,12 +204,10 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.FilamentCacheManager = h.FilamentCacheManager
+			p.Dep(h.filaments)
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.FilamentCacheManager = h.FilamentCacheManager
+			p.Dep(h.filaments)
 		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep.Jets = h.JetStorage
@@ -232,7 +219,6 @@ func NewMessageHandler(
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
-			p.Dep.FilamentCacheManager = h.FilamentCacheManager
 		},
 		SendRequests: func(p *proc.SendRequests) {
 			p.Dep(h.Sender, h.filaments)

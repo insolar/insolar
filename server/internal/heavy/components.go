@@ -249,7 +249,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.Sender = WmBus
-		h.HeavyPendingAccessor = indexes
 
 		PulseManager = pm
 		Handler = h

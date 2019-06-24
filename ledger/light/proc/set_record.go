@@ -18,8 +18,8 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -43,13 +42,11 @@ type SetRecord struct {
 
 		Coordinator jet.Coordinator
 
-		PendingModifier object.PendingModifier
-		PendingAccessor object.PendingAccessor
-
 		PCS                  insolar.PlatformCryptographyScheme
 		RecordModifier       object.RecordModifier
 		WriteAccessor        hot.WriteAccessor
 		PendingRequestsLimit int
+		Filaments            executor.FilamentModifier
 	}
 }
 
@@ -76,48 +73,27 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 	}
 	defer done()
 
-	virtRec := record.Virtual{}
-	err = virtRec.Unmarshal(p.record)
+	virtual := record.Virtual{}
+	err = virtual.Unmarshal(p.record)
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "can't deserialize record")}
 	}
 
-	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
-	calculatedID := insolar.NewID(flow.Pulse(ctx), hash)
-
-	hash = record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
+	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtual)
 	id := insolar.NewID(flow.Pulse(ctx), hash)
-	rec := record.Material{
-		Virtual: &virtRec,
-		JetID:   p.jet,
-	}
 
-	err = p.Dep.RecordModifier.Set(ctx, *id, rec)
-
-	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
-		id = calculatedID
-	} else if err != nil {
-		return bus.Reply{Err: errors.Wrap(err, "can't save record into storage")}
-	}
-
-	penReply := p.handlePendings(ctx, *calculatedID, p.jet, &virtRec)
-	if penReply != nil {
-		return *penReply
-	}
-
-	return bus.Reply{Reply: &reply.ID{ID: *id}}
-}
-
-func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID, jetID insolar.JetID, virtRec *record.Virtual) *bus.Reply {
-	concrete := record.Unwrap(virtRec)
-	switch r := concrete.(type) {
-	case *record.Result:
-		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, jetID, calculatedID, *r)
+	result, ok := record.Unwrap(&virtual).(*record.Result)
+	if ok {
+		err := p.Dep.Filaments.SetResult(ctx, *id, p.jet, *result)
 		if err != nil {
-			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+			return bus.Reply{Err: errors.Wrap(err, "failed to save result")}
+		}
+	} else {
+		err := p.Dep.RecordModifier.Set(ctx, *id, record.Material{Virtual: &virtual, JetID: p.jet})
+		if err != nil {
+			return bus.Reply{Err: errors.Wrap(err, "failed to save record")}
 		}
 	}
 
-	return nil
+	return bus.Reply{Reply: &reply.ID{ID: *id}}
 }

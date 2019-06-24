@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -31,21 +32,21 @@ import (
 
 type SetRequest struct {
 	message   payload.Meta
-	request   record.Virtual
+	request   record.Request
 	requestID insolar.ID
 	jetID     insolar.JetID
 
 	dep struct {
 		writer   hot.WriteAccessor
 		records  object.RecordModifier
-		pendings object.PendingModifier
+		filament executor.FilamentModifier
 		sender   bus.Sender
 	}
 }
 
 func NewSetRequest(
 	msg payload.Meta,
-	rec record.Virtual,
+	rec record.Request,
 	recID insolar.ID,
 	jetID insolar.JetID,
 ) *SetRequest {
@@ -60,12 +61,12 @@ func NewSetRequest(
 func (p *SetRequest) Dep(
 	w hot.WriteAccessor,
 	r object.RecordModifier,
-	pnds object.PendingModifier,
+	f executor.FilamentModifier,
 	s bus.Sender,
 ) {
 	p.dep.writer = w
 	p.dep.records = r
-	p.dep.pendings = pnds
+	p.dep.filament = f
 	p.dep.sender = s
 }
 
@@ -79,18 +80,11 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	material := record.Material{
-		Virtual: &p.request,
-		JetID:   p.jetID,
-	}
-	err = p.dep.records.Set(ctx, p.requestID, material)
-	if err != nil {
-		return errors.Wrap(err, "failed to store record")
-	}
-
-	err = p.handlePendings(ctx, p.requestID, p.request)
-	if err != nil {
-		return err
+	if p.request.CallType == record.CTMethod {
+		err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
+		if err != nil {
+			return errors.Wrap(err, "can't save result into filament-index")
+		}
 	}
 
 	msg, err := payload.NewMessage(&payload.ID{ID: p.requestID})
@@ -99,21 +93,5 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 
 	go p.dep.sender.Reply(ctx, p.message, msg)
-
-	return nil
-}
-
-func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq record.Virtual) error {
-	concrete := record.Unwrap(&virtReq)
-	req := concrete.(*record.Request)
-
-	// Skip object creation and genesis
-	if req.CallType == record.CTMethod {
-		err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), p.jetID, id)
-		if err != nil {
-			return errors.Wrap(err, "can't save result into filament-index")
-		}
-	}
-
 	return nil
 }

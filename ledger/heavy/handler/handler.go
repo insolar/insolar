@@ -51,7 +51,6 @@ type Handler struct {
 	IndexModifier         object.IndexHeavyModifier
 	DropModifier          drop.Modifier
 	Sender                bus.Sender
-	HeavyPendingAccessor  object.HeavyPendingAccessor
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -73,8 +72,8 @@ func New() *Handler {
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.BlobAccessor = h.BlobAccessor
 		},
-		GetRequests: func(p *proc.SendRequests) {
-			p.Dep(h.Sender)
+		SendRequests: func(p *proc.SendRequests) {
+			p.Dep(h.Sender, h.RecordAccessor)
 		},
 	}
 	h.dep = &dep
@@ -120,7 +119,7 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	switch payloadType {
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
-		h.dep.GetRequests(p)
+		h.dep.SendRequests(p)
 		return p.Proceed(ctx)
 	case payload.TypePassState:
 		p := proc.NewPassState(meta)
