@@ -79,6 +79,7 @@ func (s *SetRecord) ensureIndex(ctx context.Context, jet *proc.FetchJet, f flow.
 	var objID insolar.ID
 	switch r := concrete.(type) {
 	case *record.Result:
+		panic("UNREACHABLE 1") // TODO remove it
 		objID = r.Object
 	default:
 		return nil

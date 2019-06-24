@@ -150,13 +150,13 @@ func (m *client) RegisterRequest(
 	virtRec := record.Wrap(request)
 	buf, err := virtRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal record")
+		return nil, errors.Wrap(err, "RegisterRequest: failed to marshal record")
 	}
 
 	h := m.PCS.ReferenceHasher()
 	_, err = h.Write(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to calculate hash")
+		return nil, errors.Wrap(err, "RegisterRequest: failed to calculate hash")
 	}
 	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
@@ -171,7 +171,7 @@ func (m *client) RegisterRequest(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
 		recRef = insolar.NewReference(recID)
 	default:
-		return nil, errors.New("not supported call type " + request.CallType.String())
+		return nil, errors.New("RegisterRequest: not supported call type " + request.CallType.String())
 	}
 
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
@@ -179,11 +179,11 @@ func (m *client) RegisterRequest(
 
 	rep, ok := <-reps
 	if !ok {
-		return nil, errors.New("no reply")
+		return nil, errors.New("RegisterRequest: no reply")
 	}
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal reply")
+		return nil, errors.Wrap(err, "RegisterRequest: failed to unmarshal reply")
 	}
 
 	switch p := pl.(type) {
@@ -818,7 +818,10 @@ func (m *client) RegisterValidation(
 
 // RegisterResult saves VM method call result.
 func (m *client) RegisterResult(
-	ctx context.Context, obj, request insolar.Reference, payload []byte,
+	ctx context.Context,
+	obj insolar.Reference,
+	request insolar.Reference,
+	data []byte,
 ) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
@@ -834,16 +837,37 @@ func (m *client) RegisterResult(
 	res := record.Result{
 		Object:  *obj.Record(),
 		Request: request,
-		Payload: payload,
+		Payload: data,
 	}
 	virtRec := record.Wrap(res)
 
-	recid, err := m.setRecord(
-		ctx,
-		virtRec,
-		obj,
-	)
-	return recid, err
+	buf, err := virtRec.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "RegisterResult: failed to marshal record")
+	}
+	msg, err := payload.NewMessage(&payload.SetResult{
+		Result: buf,
+	})
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("RegisterResult: no reply")
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "RegisterResult: failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return &p.ID, nil
+	case *payload.Error:
+		return nil, errors.New(p.Text)
+	default:
+		return nil, fmt.Errorf("RegisterResult: unexpected reply: %#v", p)
+	}
 }
 
 // pulse returns current PulseNumber for artifact manager

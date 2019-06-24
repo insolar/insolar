@@ -115,6 +115,7 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
 	case *record.Result:
+		panic("UNREACHABLE 2") // TODO remove it
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
