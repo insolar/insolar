@@ -92,7 +92,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store record")
 	}
 
-	err = p.handlePendings(ctx, p.requestID, p.request)
+	err = p.handlePendings(ctx, p.request)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	return nil
 }
 
-func (p *SetResult) handlePendings(ctx context.Context, id insolar.ID, virtRec record.Virtual) error {
+func (p *SetResult) handlePendings(ctx context.Context, virtRec record.Virtual) error {
 	concrete := record.Unwrap(&virtRec)
 
 	rec := concrete.(*record.Result)
