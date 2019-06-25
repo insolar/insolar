@@ -105,7 +105,7 @@ func (ac *requester) authorizeWithTimestamp(ctx context.Context, host *host.Host
 
 func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinClaim *packets.NodeJoinClaim, pulse insolar.PulseNumber) (*packet.BootstrapResponse, error) {
 
-	req := packet.BootstrapRequest{
+	req := &packet.BootstrapRequest{
 		JoinClaim:     joinClaim,
 		LastNodePulse: pulse,
 		Permit:        permit,
@@ -141,7 +141,7 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinC
 
 func (ac *requester) UpdateSchedule(ctx context.Context, permit *packet.Permit, pulse insolar.PulseNumber) (*packet.UpdateScheduleResponse, error) {
 
-	req := packet.BootstrapRequest{
+	req := &packet.BootstrapRequest{
 		LastNodePulse: pulse,
 		Permit:        permit,
 	}

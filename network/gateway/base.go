@@ -62,8 +62,10 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log" // TODO remove before merge
 	"github.com/insolar/insolar/network/gateway/bootstrap"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/storage"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/insolar"
@@ -231,28 +233,33 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongTimestamp, Error: ""}), nil
 	}
 
-	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
+	_, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
-	valid, err := g.Gatewayer.Gateway().Auther().ValidateCert(ctx, cert)
-	if !valid {
-		if err == nil {
-			err = errors.New("Certificate validation failed")
-		}
-		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
-	}
+	// valid, err := g.Gatewayer.Gateway().Auther().ValidateCert(ctx, cert)
+	// if !valid {
+	// 	if err == nil {
+	// 		err = errors.New("Certificate validation failed")
+	// 	}
+	// 	return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
+	// }
 
 	p, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	// nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
+	o := g.NodeKeeper.GetOrigin()
+
+	reconnectHost, _ := host.NewHostNS(o.Address(), o.ID(), o.ShortID())
+
 	// TODO: public key to bytes
 	permit, err := bootstrap.CreatePermit(g.NodeKeeper.GetOrigin().ID(),
-		nil, /* bc.getRandActiveDiscoveryAddress() */
-		nil, /*cert.GetPublicKey()*/
+		reconnectHost,
+		[]byte("public key"), /*cert.GetPublicKey()*/
 		g.CryptographyService,
 	)
 	if err != nil {
