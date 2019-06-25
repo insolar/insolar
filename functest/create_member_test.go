@@ -19,6 +19,7 @@
 package functest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,20 +30,11 @@ func TestCreateMember(t *testing.T) {
 	require.NoError(t, err)
 	member.ref = root.ref
 	addBurnAddresses(t)
-	result, err := signedRequest(member, "contract.createMember", map[string]interface{}{})
+	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
 	require.NotEqual(t, "", ref)
-}
-
-func TestCreateMemberWithoutBurnAddresses(t *testing.T) {
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	member.ref = root.ref
-	member.pubKey = "fake"
-	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
-	require.Nil(t, err)
 }
 
 func TestCreateMemberWithBadKey(t *testing.T) {
@@ -51,8 +43,9 @@ func TestCreateMemberWithBadKey(t *testing.T) {
 	member.ref = root.ref
 	member.pubKey = "fake"
 	addBurnAddresses(t)
-	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
-	require.Nil(t, err)
+	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
 }
 
 func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {

@@ -203,15 +203,16 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
 	}
 
-	ks := platformpolicy.NewKeyProcessor()
-
-	pem, err := ks.ExportPublicKeyPEM(userCfg.privateKeyObject.(*ecdsa.PrivateKey).Public())
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SendWithSeed ] Cant export public key to PEM")
+	if reqCfg.Params.PublicKey == "" {
+		ks := platformpolicy.NewKeyProcessor()
+		pem, err := ks.ExportPublicKeyPEM(userCfg.privateKeyObject.(*ecdsa.PrivateKey).Public())
+		if err != nil {
+			return nil, errors.Wrap(err, "[ SendWithSeed ] Cant export public key to PEM")
+		}
+		reqCfg.Params.PublicKey = string(pem)
 	}
 
 	reqCfg.Params.Reference = userCfg.Caller
-	reqCfg.Params.PublicKey = string(pem)
 	reqCfg.Params.Seed = seed
 
 	verboseInfo(ctx, "Signing request ...")
