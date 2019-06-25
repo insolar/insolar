@@ -130,10 +130,7 @@ func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (i
 	defer it.Close()
 	for i := 0; it.Next(); i++ {
 		if i == steps {
-			buf, err := it.Value()
-			if err != nil {
-				return *insolar.GenesisPulse, err
-			}
+			buf := it.Value()
 			nd := deserialize(buf)
 			return nd.Pulse, nil
 		}
@@ -151,10 +148,7 @@ func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (
 	defer rit.Close()
 	for i := 0; rit.Next(); i++ {
 		if i == steps {
-			buf, err := rit.Value()
-			if err != nil {
-				return *insolar.GenesisPulse, err
-			}
+			buf := rit.Value()
 			nd := deserialize(buf)
 			return nd.Pulse, nil
 		}

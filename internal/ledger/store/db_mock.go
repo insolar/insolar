@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/google/btree"
-	"github.com/pkg/errors"
 )
 
 // MockDB is a mock DB implementation. It can be used as a stub for other implementations in component tests.
@@ -111,16 +110,16 @@ func (mi *memoryIterator) Key() []byte {
 	return val
 }
 
-func (mi *memoryIterator) Value() ([]byte, error) {
+func (mi *memoryIterator) Value() []byte {
 	if mi.current < 0 || mi.current >= len(mi.items) {
-		return nil, errors.New("invalid iterator")
+		return nil
 	}
 	key := mi.items[mi.current]
 	value, ok := mi.db.backend[string(key)]
 	if !ok {
-		return nil, ErrNotFound
+		return nil
 	}
-	return append([]byte{}, value...), nil
+	return append([]byte{}, value...)
 }
 
 func (mi *memoryIterator) searchKeys() {

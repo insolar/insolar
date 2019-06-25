@@ -247,6 +247,6 @@ func (bi *badgerIterator) Key() []byte {
 	return bi.prevKey
 }
 
-func (bi *badgerIterator) Value() ([]byte, error) {
-	return bi.prevValue, nil
+func (bi *badgerIterator) Value() []byte {
+	return bi.prevValue
 }

@@ -40,7 +40,7 @@ type Iterator interface {
 	// Value returns value itself (ex: record, drop, blob, etc).
 	// Warning: Value is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.
 	// If you need to use it outside its validity, please copy the value.
-	Value() ([]byte, error)
+	Value() []byte
 }
 
 // Key represents a key for the key-value store. Scope is required to separate different DB clients and should be
