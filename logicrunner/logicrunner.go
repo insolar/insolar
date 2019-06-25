@@ -111,7 +111,6 @@ type LogicRunner struct {
 	JetCoordinator             jet.Coordinator                    `inject:""`
 
 	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
-	machinePrefs []insolar.MachineType
 	Cfg          *configuration.LogicRunner
 
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
@@ -215,7 +214,6 @@ func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 	if err := lr.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err
 	}
-	lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeBuiltin)
 
 	// TODO: insert all necessary descriptors here
 	codeDescriptors := builtin.InitializeCodeDescriptors()
@@ -247,7 +245,6 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 	if err := lr.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
 		return err
 	}
-	lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeGoPlugin)
 	return nil
 }
 
