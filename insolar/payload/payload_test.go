@@ -61,6 +61,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeGetCode, pl: &payload.GetCode{}},
 		{tp: payload.TypeSetCode, pl: &payload.SetCode{}},
 		{tp: payload.TypeSetRequest, pl: &payload.SetRequest{}},
+		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
 		{tp: payload.TypeActivate, pl: &payload.Activate{}},
 	}
 

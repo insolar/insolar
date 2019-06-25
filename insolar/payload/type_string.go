@@ -22,17 +22,17 @@ func _() {
 	_ = x[TypeCode-12]
 	_ = x[TypeSetCode-13]
 	_ = x[TypeSetRequest-14]
-	_ = x[TypeActivate-15]
+	_ = x[TypeSetResult-15]
 }
 
 const (
 	_Type_name_0 = "TypeUnknownTypeErrorTypeID"
-	_Type_name_1 = "TypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetRequestTypeActivate"
+	_Type_name_1 = "TypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetRequestTypeSetResult"
 )
 
 var (
 	_Type_index_0 = [...]uint8{0, 11, 20, 26}
-	_Type_index_1 = [...]uint8{0, 9, 22, 35, 47, 59, 68, 76, 87, 95, 106, 120, 132}
+	_Type_index_1 = [...]uint8{0, 9, 22, 35, 47, 59, 68, 76, 87, 95, 106, 120, 133}
 )
 
 func (i Type) String() string {

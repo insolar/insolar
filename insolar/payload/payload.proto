@@ -95,6 +95,12 @@ message SetRequest {
     bytes Request = 20;
 }
 
+message SetResult {
+    uint32 Polymorph = 16;
+
+    bytes Result = 20;
+}
+
 message Activate {
     uint32 Polymorph = 16;
 

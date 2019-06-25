@@ -761,6 +761,8 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 }
 
 func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessage() {
+	suite.T().Skip("we disabled handling of this notification for now")
+
 	objectId := testutils.RandomID()
 	objectRef := *insolar.NewReference(objectId)
 	msg := &message.AbandonedRequestsNotification{Object: objectId}

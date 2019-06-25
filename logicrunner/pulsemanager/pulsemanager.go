@@ -145,7 +145,10 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
-	m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber)
+	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
+	}
 	return nil
 }
 

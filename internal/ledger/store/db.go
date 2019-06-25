@@ -77,4 +77,10 @@ const (
 
 	// ScopeGenesis is the scope for a genesis records.
 	ScopeGenesis Scope = 8
+
+	// ScopeJetTree is the scope for a jet tree storage.
+	ScopeJetTree Scope = 9
+
+	// ScopeJetKeeper is the scope for a jet id storage.
+	ScopeJetKeeper Scope = 10
 )
