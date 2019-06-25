@@ -285,7 +285,10 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 		}
 	}
 
-	if !preVerified {
+	// TODO: It's a hack! Network knows nothing about pulsar's now.
+	isPulsePacket := packet.GetPacketType() == packets.PacketPulse
+
+	if !preVerified && !isPulsePacket {
 		err = r.realm.coreRealm.VerifyPacketAuthenticity(packet, from)
 		if err != nil {
 			return err
