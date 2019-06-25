@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -53,7 +54,7 @@ type UpdateObject struct {
 		IndexModifier object.IndexModifier
 
 		WriteAccessor   hot.WriteAccessor
-		PendingModifier object.PendingModifier
+		Filaments             executor.FilamentModifier
 	}
 }
 
@@ -192,7 +193,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	}
 	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
 
-	_, err = p.recordResult(ctx)
+	err = p.recordResult(ctx)
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "failed to record result")}
 	}
@@ -242,46 +243,26 @@ func (p *UpdateObject) saveIndexFromHeavy(
 	return idx, nil
 }
 
-func (p *UpdateObject) recordResult(ctx context.Context) (*insolar.ID, error) {
-	virtRec := record.Virtual{}
-	err := virtRec.Unmarshal(p.Message.ResultRecord)
+func (p *UpdateObject) recordResult(ctx context.Context) error {
+	virtual := record.Virtual{}
+	err := virtual.Unmarshal(p.Message.ResultRecord)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize record")
+		return errors.Wrap(err, "can't deserialize record")
 	}
 
-	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
+	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtual)
 	id := insolar.NewID(p.PulseNumber, hash)
-	rec := record.Material{
-		Virtual: &virtRec,
-		JetID:   p.JetID,
+
+	result, ok := record.Unwrap(&virtual).(*record.Result)
+	if !ok {
+		return errors.New("unexpected record type")
 	}
 
-	err = p.Dep.RecordModifier.Set(ctx, *id, rec)
-
-	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
-	} else if err != nil {
-		return nil, errors.Wrap(err, "can't save record into storage")
-	}
-	err = p.closePending(ctx, *id, &virtRec)
+	err = p.Dep.Filaments.SetResult(ctx, *id, p.JetID, *result)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't close Pending")
+		return errors.Wrap(err, "failed to save result")
 	}
 
-	return id, nil
-}
-
-func (p *UpdateObject) closePending(ctx context.Context, id insolar.ID, virtRec *record.Virtual) error {
-	concrete := record.Unwrap(virtRec)
-	switch r := concrete.(type) {
-	case *record.Result:
-		err := p.Dep.PendingModifier.SetResult(ctx, p.PulseNumber, r.Object, p.JetID, id, *r)
-		if err != nil {
-			return errors.Wrap(err, "can't save result into filament-index")
-		}
-	default:
-		return errors.New(fmt.Sprintf("unexpected virtual record of type %T", r))
-	}
 	return nil
 }
 

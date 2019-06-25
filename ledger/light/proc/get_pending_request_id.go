@@ -24,7 +24,8 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/pkg/errors"
 )
 
 type GetPendingRequestID struct {
@@ -33,9 +34,8 @@ type GetPendingRequestID struct {
 	jet      insolar.JetID
 	reqPulse insolar.PulseNumber
 
-	Dep struct {
-		PendingAccessor      object.PendingAccessor
-		FilamentCacheManager object.FilamentCacheManager
+	dep struct {
+		filaments executor.FilamentAccessor
 	}
 }
 
@@ -48,20 +48,20 @@ func NewGetPendingRequestID(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *
 	}
 }
 
+func (p *GetPendingRequestID) Dep(filaments executor.FilamentAccessor) {
+	p.dep.filaments = filaments
+}
+
 func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
-	msg := p.msg
-
-	err := p.Dep.FilamentCacheManager.Gather(ctx, flow.Pulse(ctx), msg.ObjectID)
+	ids, err := p.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), p.msg.ObjectID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to calculate pending")
 	}
-
-	pends, err := p.Dep.PendingAccessor.OpenRequestsIDsForObjID(ctx, flow.Pulse(ctx), msg.ObjectID, 1)
-	if err != nil || p == nil || len(pends) == 0 {
+	if len(ids) == 0 {
 		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrNoPendingRequests}}
 		return nil
 	}
-	p.replyTo <- bus.Reply{Reply: &reply.ID{ID: pends[0]}}
 
+	p.replyTo <- bus.Reply{Reply: &reply.ID{ID: ids[0]}}
 	return nil
 }

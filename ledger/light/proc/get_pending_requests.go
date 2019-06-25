@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/pkg/errors"
 )
 
 type GetPendingRequests struct {
@@ -33,9 +34,8 @@ type GetPendingRequests struct {
 	jet      insolar.JetID
 	reqPulse insolar.PulseNumber
 
-	Dep struct {
-		PendingAccessor      object.PendingAccessor
-		FilamentCacheManager object.FilamentCacheManager
+	dep struct {
+		index object.IndexAccessor
 	}
 }
 
@@ -48,19 +48,18 @@ func NewGetPendingRequests(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *m
 	}
 }
 
+func (p *GetPendingRequests) Dep(index object.IndexAccessor) {
+	p.dep.index = index
+}
+
 func (p *GetPendingRequests) Proceed(ctx context.Context) error {
-	msg := p.msg
-
-	err := p.Dep.FilamentCacheManager.Gather(ctx, flow.Pulse(ctx), *msg.Object.Record())
-	if err != nil {
-		return err
+	idx := p.dep.index.Index(flow.Pulse(ctx), *p.msg.Object.Record())
+	if idx == nil {
+		return errors.New("object not found")
 	}
 
-	pends, err := p.Dep.PendingAccessor.OpenRequestsIDsForObjID(ctx, flow.Pulse(ctx), *msg.Object.Record(), 1)
-	if err != nil || p == nil || len(pends) == 0 {
-		p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{Has: false}}
-		return nil
-	}
-	p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{Has: true}}
+	p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{
+		Has: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
+	}}
 	return nil
 }

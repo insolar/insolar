@@ -53,7 +53,7 @@ type Handler struct {
 
 	DropModifier         drop.Modifier
 	Sender               bus.Sender
-	HeavyPendingAccessor object.HeavyPendingAccessor
+
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -75,14 +75,12 @@ func New() *Handler {
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.BlobAccessor = h.BlobAccessor
 		},
-		GetPendingFilament: func(p *proc.GetPendingFilament) {
-			p.Dep.Sender = h.Sender
-			p.Dep.PendingAccessor = h.HeavyPendingAccessor
+		SendRequests: func(p *proc.SendRequests) {
+			p.Dep(h.Sender, h.RecordAccessor)
 		},
 	}
 	h.dep = &dep
 	return h
-
 }
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
@@ -122,9 +120,9 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	switch payloadType {
-	case payload.TypeGetPendingFilament:
-		p := proc.NewGetPendingFilament(meta)
-		h.dep.GetPendingFilament(p)
+	case payload.TypeGetFilament:
+		p := proc.NewSendRequests(meta)
+		h.dep.SendRequests(p)
 		return p.Proceed(ctx)
 	case payload.TypePassState:
 		p := proc.NewPassState(meta)

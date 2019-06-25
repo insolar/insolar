@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/proc"
@@ -54,9 +55,8 @@ type MessageHandler struct {
 
 	IndexLocker object.IndexLocker `inject:""`
 
-	RecordModifier object.RecordModifier `inject:""`
-	RecordAccessor object.RecordAccessor `inject:""`
-	Nodes          node.Accessor         `inject:""`
+	Records object.RecordStorage `inject:""`
+	Nodes   node.Accessor        `inject:""`
 
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
@@ -70,28 +70,24 @@ type MessageHandler struct {
 	PendingAccessor object.PendingAccessor
 	PulseCalculator storage.PulseCalculator
 
-	FilamentCacheManager object.FilamentCacheManager
-
 	conf           *configuration.Ledger
 	jetTreeUpdater jet.Fetcher
 
 	Sender         wbus.Sender
 	FlowDispatcher *dispatcher.Dispatcher
 	handlers       map[insolar.MessageType]insolar.MessageHandler
+
+	filaments *executor.FilamentManager
 }
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	pendingModifier object.PendingModifier,
-	pendingAccessor object.PendingAccessor,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
 	h := &MessageHandler{
-		handlers:        map[insolar.MessageType]insolar.MessageHandler{},
-		conf:            conf,
-		PendingModifier: pendingModifier,
-		PendingAccessor: pendingAccessor,
+		handlers:              map[insolar.MessageType]insolar.MessageHandler{},
+		conf:                  conf,
 	}
 
 	dep := &proc.Dependencies{
@@ -131,24 +127,26 @@ func NewMessageHandler(
 		},
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.Bus = h.Bus
-			p.Dep.PendingModifier = h.PendingModifier
-			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.RecordModifier = h.Records
 			p.Dep.PCS = h.PCS
 			p.Dep.WriteAccessor = h.WriteAccessor
+			p.Dep.Filaments = h.filaments
+			p.Dep.IDLocker = h.IDLocker
 		},
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
 				h.WriteAccessor,
-				h.RecordModifier,
-				h.PendingModifier,
+				h.Records,
+				h.filaments,
 				h.Sender,
+				h.IDLocker,
 			)
 		},
 		SetActivationRequest: func(p *proc.SetActivationRequest) {
 			p.Dep(
 				h.PCS,
 				h.WriteAccessor,
-				h.RecordModifier,
+				h.Records,
 				h.Sender,
 			)
 		},
@@ -164,23 +162,21 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Bus = h.Bus
-			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.RecordAccessor = h.Records
 			p.Dep.Sender = h.Sender
-			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetCode: func(p *proc.GetCode) {
-			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.RecordAccessor = h.Records
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
 		GetRequest: func(p *proc.GetRequest) {
-			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.RecordAccessor = h.Records
 		},
 		UpdateObject: func(p *proc.UpdateObject) {
-			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.RecordModifier = h.Records
 			p.Dep.Bus = h.Bus
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobModifier = h.BlobModifier
@@ -189,14 +185,14 @@ func NewMessageHandler(
 			p.Dep.IndexAccessor = h.IndexAccessor
 			p.Dep.IndexModifier = h.IndexModifier
 			p.Dep.WriteAccessor = h.WriteAccessor
-			p.Dep.PendingModifier = h.PendingModifier
+			p.Dep.Filaments = h.filaments
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.IndexLocker = h.IndexLocker
 			p.Dep.IndexAccessor = h.IndexAccessor
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
-			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.RecordAccessor = h.Records
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetTreeUpdater = h.jetTreeUpdater
 		},
@@ -209,12 +205,10 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.FilamentCacheManager = h.FilamentCacheManager
+			p.Dep(h.IndexBucketModifier)
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.FilamentCacheManager = h.FilamentCacheManager
+			p.Dep(h.filaments)
 		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep.Jets = h.JetStorage
@@ -226,22 +220,20 @@ func NewMessageHandler(
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
-			p.Dep.FilamentCacheManager = h.FilamentCacheManager
 		},
-		GetPendingFilament: func(p *proc.GetPendingFilament) {
-			p.Dep.PendingAccessor = h.PendingAccessor
-			p.Dep.Sender = h.Sender
+		SendRequests: func(p *proc.SendRequests) {
+			p.Dep(h.Sender, h.filaments)
 		},
 		PassState: func(p *proc.PassState) {
 			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Sender = h.Sender
-			p.Dep.Records = h.RecordAccessor
+			p.Dep.Records = h.Records
 		},
 		CalculateID: func(p *proc.CalculateID) {
 			p.Dep(h.PCS)
 		},
 		SetCode: func(p *proc.SetCode) {
-			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender)
+			p.Dep(h.WriteAccessor, h.Records, h.BlobModifier, h.PCS, h.Sender)
 		},
 		GetDelegate: func(p *proc.GetDelegate) {
 			p.Dep.IndexAccessor = h.IndexAccessor
@@ -263,6 +255,15 @@ func NewMessageHandler(
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
 	h.jetTreeUpdater = jet.NewFetcher(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
+	h.filaments = executor.NewFilamentManager(
+		h.IndexBucketModifier,
+		h.IndexBucketModifier,
+		h.Records,
+		h.JetCoordinator,
+		h.PCS,
+		h.Sender,
+		h.jetTreeUpdater,
+	)
 	h.setHandlersForLight()
 
 	return nil

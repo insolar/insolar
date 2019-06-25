@@ -79,8 +79,8 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		case payload.TypeGetObject:
 			h := NewGetObject(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
-		case payload.TypeGetPendingFilament:
-			h := NewGetPendingFilament(s.dep, meta)
+		case payload.TypeGetFilament:
+			h := NewGetRequests(s.dep, meta)
 			return f.Handle(ctx, h.Present)
 		case payload.TypePassState:
 			h := NewPassState(s.dep, meta)
@@ -151,10 +151,6 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		msg := s.message.Parcel.Message().(*message.HotData)
 		h := NewHotData(s.dep, s.message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
-	// case insolar.TypeGetPendingFilament:
-	// 	msg := s.message.Parcel.Message().(*message.GetPendingFilament)
-	// 	h := NewGetPendingFilament(s.dep, msg, s.message.ReplyTo)
-	// 	return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.message.Parcel.Message().Type().String())
 	}

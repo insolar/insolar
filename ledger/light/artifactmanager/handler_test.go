@@ -20,10 +20,8 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
-	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -173,9 +171,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	idLock.LockMock.Return()
 	idLock.UnlockMock.Return()
 
-	filamentCache := object.NewFilamentCacheStorage(s.indexStorageMemory, s.indexStorageMemory, idLock, s.recordStorage, jc, nil, nil, nil, nil)
 
-	h := NewMessageHandler(filamentCache, filamentCache, &configuration.Ledger{
+	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
 	h.JetStorage = s.jetStorage
@@ -226,98 +223,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	assert.Equal(s.T(), objIndex.Delegates, idx.Lifeline.Delegates)
 }
 
-func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-
-	msg := message.GetPendingRequests{
-		Object: *genRandomRef(0),
-	}
-	fakeParcel := testutils.NewParcelMock(mc)
-	fakeParcel.MessageMock.Return(&msg)
-	fakeParcel.PulseMock.Return(insolar.FirstPulseNumber - 1)
-
-	jc := jet.NewCoordinatorMock(mc)
-	mb := testutils.NewMessageBusMock(mc)
-	mb.MustRegisterMock.Return()
-
-	pam := object.NewPendingAccessorMock(s.T())
-	pam.OpenRequestsIDsForObjIDMock.Return([]insolar.ID{gen.ID()}, nil)
-
-	h := NewMessageHandler(nil, pam, &configuration.Ledger{})
-	h.JetCoordinator = jc
-	h.Bus = mb
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.HotDataWaiter = &waiterMock{}
-	h.IndexAccessor = s.indexStorageMemory
-	h.IndexModifier = s.indexStorageMemory
-
-	cmm := object.NewFilamentCacheManagerMock(s.T())
-	cmm.GatherMock.Return(nil)
-	h.FilamentCacheManager = cmm
-
-	err := h.Init(s.ctx)
-	require.NoError(s.T(), err)
-
-	rep, err := h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
-	require.NoError(s.T(), err)
-	has, ok := rep.(*reply.HasPendingRequests)
-	require.True(s.T(), ok)
-	assert.True(s.T(), has.Has)
-}
-
-func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-
-	msg := message.GetPendingRequestID{
-		ObjectID: *genRandomID(0),
-	}
-	fakeParcel := testutils.NewParcelMock(mc)
-	fakeParcel.MessageMock.Return(&msg)
-	fakeParcel.PulseMock.Return(insolar.FirstPulseNumber - 1)
-
-	firstID := *genRandomID(insolar.FirstPulseNumber - 2)
-	secondID := *genRandomID(insolar.FirstPulseNumber - 2)
-
-	jc := jet.NewCoordinatorMock(mc)
-	mb := testutils.NewMessageBusMock(mc)
-	mb.MustRegisterMock.Return()
-
-	pam := object.NewPendingAccessorMock(s.T())
-	pam.OpenRequestsIDsForObjIDMock.Return([]insolar.ID{firstID, secondID}, nil)
-
-	h := NewMessageHandler(nil, pam, &configuration.Ledger{})
-	h.JetCoordinator = jc
-	h.Bus = mb
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.HotDataWaiter = &waiterMock{}
-
-	cmm := object.NewFilamentCacheManagerMock(s.T())
-	cmm.GatherMock.Return(nil)
-	h.FilamentCacheManager = cmm
-
-	err := h.Init(s.ctx)
-	require.NoError(s.T(), err)
-
-	// call to object that has pending requests
-	rep, err := h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
-	require.NoError(s.T(), err)
-	result, ok := rep.(*reply.ID)
-	require.True(s.T(), ok)
-	assert.Equal(s.T(), firstID, result.ID)
-
-	// call to object that hasn't pending requests
-	pam.OpenRequestsIDsForObjIDMock.Return([]insolar.ID{}, nil)
-	rep, err = h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
-	require.NoError(s.T(), err)
-	replyError, ok := rep.(*reply.Error)
-	require.True(s.T(), ok)
-	assert.Equal(s.T(), &reply.Error{ErrType: reply.ErrNoPendingRequests}, replyError)
-}
-
 func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
@@ -333,7 +238,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.PCS = s.scheme
-	h.RecordModifier = s.recordModifier
 
 	idLockMock := object.NewIndexLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -405,7 +309,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.IndexModifier = s.indexStorageMemory
 	h.IndexAccessor = s.indexStorageMemory
 	h.PCS = s.scheme
-	h.RecordModifier = s.recordModifier
 
 	idLockMock := object.NewIndexLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -451,91 +354,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	idx, err := s.indexStorageMemory.ForID(s.ctx, pulse, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), idx.Lifeline.LatestUpdate, pulse)
-}
-
-func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
-	mc := minimock.NewController(s.T())
-	jetID := gen.JetID()
-
-	jc := jet.NewCoordinatorMock(mc)
-
-	firstID := insolar.NewID(insolar.FirstPulseNumber, []byte{1, 2, 3})
-
-	mb := testutils.NewMessageBusMock(mc)
-	mb.MustRegisterMock.Return()
-
-	firstIndex := object.EncodeLifeline(object.Lifeline{
-		LatestState: firstID,
-	})
-	err := s.indexStorageMemory.SetIndex(s.ctx, insolar.FirstPulseNumber, object.FilamentIndex{
-		ObjID: *firstID,
-		Lifeline: object.Lifeline{
-			LatestState: firstID,
-			JetID:       insolar.JetID(jetID),
-		},
-	})
-	hotIndexes := &message.HotData{
-		Jet:         *insolar.NewReference(insolar.ID(jetID)),
-		PulseNumber: insolar.FirstPulseNumber,
-		HotIndexes: []message.HotIndex{
-			{
-				Index:            firstIndex,
-				LifelineLastUsed: insolar.PulseNumber(234),
-				ObjID:            *firstID,
-			},
-		},
-		Drop: drop.Drop{Pulse: insolar.FirstPulseNumber, Hash: []byte{88}, JetID: jetID},
-	}
-
-	bucketMock := object.NewIndexModifierMock(s.T())
-	bucketMock.SetIndexFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.FilamentIndex) (r error) {
-		require.Equal(s.T(), *firstID, ib.ObjID)
-		require.Equal(s.T(), insolar.FirstPulseNumber, int(pn))
-		require.Equal(s.T(), *firstID, *ib.Lifeline.LatestState)
-
-		return nil
-	}
-
-	h := NewMessageHandler(nil, nil, &configuration.Ledger{})
-	h.JetCoordinator = jc
-	h.Bus = mb
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.DropModifier = s.dropModifier
-
-	fcmMock := object.NewFilamentCacheManagerMock(s.T())
-	fcmMock.GatherMock.Return(nil)
-	fcmMock.SendAbandonedNotificationMock.Return(nil)
-	h.FilamentCacheManager = fcmMock
-
-	jr := testutils.NewJetReleaserMock(s.T())
-	jr.UnlockMock.Return(nil)
-	h.JetReleaser = jr
-
-	err = h.Init(s.ctx)
-	require.NoError(s.T(), err)
-
-	replyTo := make(chan bus.Reply, 1)
-	p := proc.NewHotData(hotIndexes, replyTo)
-	p.Dep.DropModifier = h.DropModifier
-	p.Dep.MessageBus = h.Bus
-	p.Dep.IndexModifier = h.IndexModifier
-	p.Dep.JetStorage = h.JetStorage
-	p.Dep.JetFetcher = h.jetTreeUpdater
-	p.Dep.JetReleaser = h.JetReleaser
-	p.Dep.FilamentCacheManager = fcmMock
-	err = p.Proceed(flow.TestContextWithPulse(s.ctx, insolar.PulseNumber(3)))
-	require.NoError(s.T(), err)
-
-	resWrapper := <-replyTo
-	res := resWrapper.Reply
-	require.Equal(s.T(), res, &reply.OK{})
-
-	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, jetID, insolar.FirstPulseNumber)
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), drop.Drop{Pulse: insolar.FirstPulseNumber, Hash: []byte{88}, JetID: jetID}, savedDrop)
-
-	mc.Wait(1 * time.Second)
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {

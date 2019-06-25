@@ -265,6 +265,7 @@ func (m *PulseManager) getExecutorHotData(
 			continue
 		}
 		if meta.LifelineLastUsed < limitPN.PulseNumber {
+			// FIXME: remove object from filament cache.
 			continue
 		}
 

@@ -47,7 +47,7 @@ type Dependencies struct {
 	PassState            func(*PassState)
 	CalculateID          func(*CalculateID)
 	SetCode              func(*SetCode)
-	GetPendingFilament   func(*GetPendingFilament)
+	SendRequests         func(*SendRequests)
 	GetDelegate          func(*GetDelegate)
 }
 
@@ -93,9 +93,6 @@ func NewDependenciesMock() *Dependencies {
 		PassState:            func(*PassState) {},
 		CalculateID:          func(*CalculateID) {},
 		SetCode:              func(*SetCode) {},
-		GetPendingFilament:   func(*GetPendingFilament) {},
-		GetDelegate: func(*GetDelegate) {
-
-		},
+		GetDelegate: func(*GetDelegate){},
 	}
 }

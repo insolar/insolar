@@ -60,6 +60,8 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeCode, pl: &payload.Code{}},
 		{tp: payload.TypeGetCode, pl: &payload.GetCode{}},
 		{tp: payload.TypeSetCode, pl: &payload.SetCode{}},
+		{tp: payload.TypeGetFilament, pl: &payload.GetFilament{}},
+		// {tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
 		{tp: payload.TypeSetRequest, pl: &payload.SetRequest{}},
 	}
 

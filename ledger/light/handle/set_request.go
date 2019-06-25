@@ -104,7 +104,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 		}
 	}
 
-	setRequest := proc.NewSetRequest(s.message, virtual, reqID, objJetID)
+	setRequest := proc.NewSetRequest(s.message, *request, reqID, objJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }

@@ -222,8 +222,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
 
-		filamentCache := object.NewFilamentCacheStorage(indexes, indexes, idLocker, records, Coordinator, CryptoScheme, Pulses, Bus, WmBus)
-
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
@@ -231,7 +229,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		handler := artifactmanager.NewMessageHandler(filamentCache, filamentCache, &conf)
 		handler.PulseCalculator = Pulses
-		handler.FilamentCacheManager = filamentCache
 
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
@@ -244,8 +241,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.BlobAccessor = blobs
 		handler.Blobs = blobs
 		handler.IndexLocker = idLocker
-		handler.RecordModifier = records
-		handler.RecordAccessor = records
+		handler.Records = records
 		handler.Nodes = Nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
@@ -264,7 +260,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			Pulses,
 			Pulses,
-			filamentCache,
 			conf.LightChainLimit,
 		)
 		dataGatherer := replication.NewDataGatherer(drops, blobs, records, indexes)

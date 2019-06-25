@@ -97,15 +97,15 @@ message SetRequest {
 }
 
 
-message GetPendingFilament {
+message GetFilament {
     uint32 Polymorph = 16;
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    bytes StartFrom = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes StartFrom = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes ReadUntil = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }
 
-message PendingFilament {
+message FilamentSegment {
     uint32 Polymorph = 16;
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
