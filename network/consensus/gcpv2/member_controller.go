@@ -153,7 +153,7 @@ func (h *ConsensusMemberController) ProcessPacket(payload packets.PacketParser, 
 }
 
 func (h *ConsensusMemberController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	//h.discardRound()
+	// h.discardRound()
 	h.upstreamPulseController.MembershipConfirmed(report, expectedCensus)
 }
 

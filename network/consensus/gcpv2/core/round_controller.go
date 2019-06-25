@@ -147,7 +147,7 @@ func (r *PhasedRoundController) StopConsensusRound() {
 	}
 	r.isRunning = false
 	r.fullCancel()
-	//return true
+	// return true
 }
 
 /* LOCK: simple */
@@ -313,12 +313,12 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 	return r.realm.handlers[pt].handleHostPacket(packet, from)
 }
 
-///* Initiates cancellation of this round */
-//func (r *PhasedRoundController) cancelRound() {
+// /* Initiates cancellation of this round */
+// func (r *PhasedRoundController) cancelRound() {
 //	panic("not implemented")
-//}
+// }
 //
-///* Initiates cancellation of this round */
-//func (r *PhasedRoundController) finishRound() {
+// /* Initiates cancellation of this round */
+// func (r *PhasedRoundController) finishRound() {
 //	panic("not implemented")
-//}
+// }

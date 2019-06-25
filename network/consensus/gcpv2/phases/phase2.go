@@ -77,7 +77,7 @@ type Phase2Controller struct {
 	core.PhaseControllerPerMemberTemplate
 	packetPrepareOptions core.PacketSendOptions
 	queueNshReady        chan *core.NodeAppearance
-	queueTrustUpdated    chan<- TrustUpdateSignal //small enough to be sent as values
+	queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
 }
 
 type TrustUpdateSignal struct {
