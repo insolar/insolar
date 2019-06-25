@@ -193,18 +193,27 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func updateUser(user *user) (*requester.UserConfigJSON, error) {
-	newUser, err := newUserWithKeys()
-	if err != nil {
-		return nil, err
+func retryableCreateMember(user *user, method string, params map[string]interface{}, updatePublicKey bool) (interface{}, error) {
+	// TODO: delete this after deduplication (INS-2778)
+	var result interface{}
+	var err error
+	currentIterNum := 1
+	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
+		result, err = signedRequest(user, method, params)
+		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
+			return result, err
+		}
+		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
+		newUser, nErr := newUserWithKeys()
+		if nErr != nil {
+			return nil, nErr
+		}
+		user.privKey = newUser.privKey
+		if updatePublicKey {
+			user.pubKey = newUser.pubKey
+		}
 	}
-	user.privKey = newUser.privKey
-	user.pubKey = newUser.pubKey
-	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
-	if err != nil {
-		return nil, err
-	}
-	return rootCfg, nil
+	return result, err
 }
 
 func signedRequest(user *user, method string, params map[string]interface{}) (interface{}, error) {
@@ -216,18 +225,11 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 	var resp requester.ContractAnswer
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		// member must have unique public key, so we recreate user with every retry
-		if method == "contract.createMember" {
-			rootCfg, err = updateUser(user)
-			if err != nil {
-				return nil, err
-			}
-		}
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
 			JSONRPC: "2.0",
 			ID:      1,
 			Method:  "call.api",
-			Params:  requester.Params{CallSite: method, CallParams: params},
+			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
 		})
 
 		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
@@ -248,14 +250,6 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 
 		if resp.Error != nil && strings.Contains(resp.Error.Message, "API timeout exceeded") {
 			fmt.Printf("API timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
-
-		// TODO: delete this after deduplication (INS-2778)
-		if resp.Error != nil && strings.Contains(resp.Error.Message, "member for this publicKey already exist") {
-			fmt.Printf("CreateMember request was duplicated, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
 			continue
