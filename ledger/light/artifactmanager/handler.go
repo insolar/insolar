@@ -257,7 +257,6 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.filaments = executor.NewFilamentManager(
 		h.IndexBucketModifier,
 		h.IndexBucketModifier,
-		h.IDLocker,
 		h.Records,
 		h.JetCoordinator,
 		h.PCS,

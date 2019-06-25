@@ -84,6 +84,9 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	defer done()
 
 	if p.request.CallType == record.CTMethod {
+		p.dep.locker.Lock(p.request.Object.Record())
+		defer p.dep.locker.Unlock(p.request.Object.Record())
+
 		err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
 		if err != nil {
 			return errors.Wrap(err, "can't save result into filament-index")
