@@ -57,6 +57,10 @@ func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending")
 	}
+	if len(ids) == 0 {
+		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrNoPendingRequests}}
+		return nil
+	}
 
 	p.replyTo <- bus.Reply{Reply: &reply.ID{ID: ids[0]}}
 	return nil

@@ -135,6 +135,7 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 			p.Dep.WriteAccessor = h.WriteAccessor
 			p.Dep.Filaments = h.filaments
+			p.Dep.IDLocker = h.IDLocker
 		},
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
@@ -142,6 +143,7 @@ func NewMessageHandler(
 				h.Records,
 				h.filaments,
 				h.Sender,
+				h.IDLocker,
 			)
 		},
 		SetActivationRequest: func(p *proc.SetActivationRequest) {

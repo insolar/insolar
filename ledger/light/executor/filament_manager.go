@@ -47,7 +47,6 @@ type FilamentAccessor interface {
 func NewFilamentManager(
 	idxAccessor object.IndexAccessor,
 	idxModifier object.IndexModifier,
-	idLocker object.IDLocker,
 	recordStorage object.RecordStorage,
 	coordinator jet.Coordinator,
 	pcs insolar.PlatformCryptographyScheme,
@@ -58,7 +57,6 @@ func NewFilamentManager(
 		cache:         newCacheStore(recordStorage),
 		idxAccessor:   idxAccessor,
 		idxModifier:   idxModifier,
-		idLocker:      idLocker,
 		recordStorage: recordStorage,
 		coordinator:   coordinator,
 		pcs:           pcs,
@@ -72,7 +70,6 @@ type FilamentManager struct {
 
 	idxAccessor   object.IndexAccessor
 	idxModifier   object.IndexModifier
-	idLocker      object.IDLocker
 	recordStorage object.RecordStorage
 	coordinator   jet.Coordinator
 	pcs           insolar.PlatformCryptographyScheme
@@ -86,9 +83,6 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 	}
 
 	objectID := *request.Object.Record()
-
-	m.idLocker.Lock(&objectID)
-	defer m.idLocker.Unlock(&objectID)
 
 	idx := m.idxAccessor.Index(requestID.Pulse(), objectID)
 	if idx == nil {
@@ -154,9 +148,6 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 
 	objectID := result.Object
 
-	m.idLocker.Lock(&objectID)
-	defer m.idLocker.Unlock(&objectID)
-
 	idx := m.idxAccessor.Index(resultID.Pulse(), objectID)
 	if idx == nil {
 		return object.ErrLifelineNotFound
@@ -195,6 +186,8 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 		filamentRecord.MetaID = id
 		filamentRecord.Meta = material
 	}
+
+	idx.Lifeline.PendingPointer = &filamentRecord.MetaID
 
 	pending, err := m.calculatePending(ctx, resultID.Pulse(), objectID, *idx)
 	if err != nil {
@@ -261,6 +254,10 @@ func (m *FilamentManager) calculatePending(
 	cache := m.cache.Get(objectID)
 	cache.Lock()
 	defer cache.Unlock()
+
+	if idx.Lifeline.EarliestOpenRequest == nil {
+		return []insolar.ID{}, nil
+	}
 
 	iter := m.newFetchingIterator(
 		ctx,

@@ -41,6 +41,7 @@ type SetRequest struct {
 		records  object.RecordModifier
 		filament executor.FilamentModifier
 		sender   bus.Sender
+		locker   object.IDLocker
 	}
 }
 
@@ -63,11 +64,13 @@ func (p *SetRequest) Dep(
 	r object.RecordModifier,
 	f executor.FilamentModifier,
 	s bus.Sender,
+	l object.IDLocker,
 ) {
 	p.dep.writer = w
 	p.dep.records = r
 	p.dep.filament = f
 	p.dep.sender = s
+	p.dep.locker = l
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
