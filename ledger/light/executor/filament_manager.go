@@ -103,7 +103,7 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 		material := record.Material{Virtual: &virtual, JetID: jetID}
 		err := m.recordStorage.Set(ctx, id, material)
 		if err != nil && err != object.ErrOverride {
-			return errors.Wrap(err, "failed to save request record")
+			return errors.Wrap(err, "failed to save a request record")
 		}
 		composite.RecordID = id
 		composite.Record = material
@@ -162,8 +162,8 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 		id := *insolar.NewID(resultID.Pulse(), hash)
 		material := record.Material{Virtual: &virtual, JetID: jetID}
 		err := m.recordStorage.Set(ctx, id, material)
-		if err != nil {
-			return errors.Wrap(err, "failed to save request record")
+		if err != nil && err != object.ErrOverride {
+			return errors.Wrap(err, "failed to save a result record")
 		}
 		filamentRecord.RecordID = id
 		filamentRecord.Record = material
