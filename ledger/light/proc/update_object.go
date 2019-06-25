@@ -53,8 +53,8 @@ type UpdateObject struct {
 		IndexAccessor object.IndexAccessor
 		IndexModifier object.IndexModifier
 
-		WriteAccessor   hot.WriteAccessor
-		Filaments             executor.FilamentModifier
+		WriteAccessor hot.WriteAccessor
+		Filaments     executor.FilamentModifier
 	}
 }
 

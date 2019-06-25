@@ -51,9 +51,8 @@ type Handler struct {
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
 
-	DropModifier         drop.Modifier
-	Sender               bus.Sender
-
+	DropModifier drop.Modifier
+	Sender       bus.Sender
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies

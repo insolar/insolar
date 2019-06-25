@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// IndexLockerMock implements github.com/insolar/insolar/ledger/object.IndexLocker
+//IndexLockerMock implements github.com/insolar/insolar/ledger/object.IndexLocker
 type IndexLockerMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type IndexLockerMock struct {
 	UnlockMock       mIndexLockerMockUnlock
 }
 
-// NewIndexLockerMock returns a mock for github.com/insolar/insolar/ledger/object.IndexLocker
+//NewIndexLockerMock returns a mock for github.com/insolar/insolar/ledger/object.IndexLocker
 func NewIndexLockerMock(t minimock.Tester) *IndexLockerMock {
 	m := &IndexLockerMock{t: t}
 
@@ -58,7 +58,7 @@ type IndexLockerMockLockInput struct {
 	p *insolar.ID
 }
 
-// Expect specifies that invocation of IndexLocker.Lock is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexLocker.Lock is expected from 1 to Infinity times
 func (m *mIndexLockerMockLock) Expect(p *insolar.ID) *mIndexLockerMockLock {
 	m.mock.LockFunc = nil
 	m.expectationSeries = nil
@@ -70,7 +70,7 @@ func (m *mIndexLockerMockLock) Expect(p *insolar.ID) *mIndexLockerMockLock {
 	return m
 }
 
-// Return specifies results of invocation of IndexLocker.Lock
+//Return specifies results of invocation of IndexLocker.Lock
 func (m *mIndexLockerMockLock) Return() *IndexLockerMock {
 	m.mock.LockFunc = nil
 	m.expectationSeries = nil
@@ -82,7 +82,7 @@ func (m *mIndexLockerMockLock) Return() *IndexLockerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexLocker.Lock is expected once
+//ExpectOnce specifies that invocation of IndexLocker.Lock is expected once
 func (m *mIndexLockerMockLock) ExpectOnce(p *insolar.ID) *IndexLockerMockLockExpectation {
 	m.mock.LockFunc = nil
 	m.mainExpectation = nil
@@ -93,7 +93,7 @@ func (m *mIndexLockerMockLock) ExpectOnce(p *insolar.ID) *IndexLockerMockLockExp
 	return expectation
 }
 
-// Set uses given function f as a mock of IndexLocker.Lock method
+//Set uses given function f as a mock of IndexLocker.Lock method
 func (m *mIndexLockerMockLock) Set(f func(p *insolar.ID)) *IndexLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -102,7 +102,7 @@ func (m *mIndexLockerMockLock) Set(f func(p *insolar.ID)) *IndexLockerMock {
 	return m.mock
 }
 
-// Lock implements github.com/insolar/insolar/ledger/object.IndexLocker interface
+//Lock implements github.com/insolar/insolar/ledger/object.IndexLocker interface
 func (m *IndexLockerMock) Lock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.LockPreCounter, 1)
 	defer atomic.AddUint64(&m.LockCounter, 1)
@@ -137,12 +137,12 @@ func (m *IndexLockerMock) Lock(p *insolar.ID) {
 	m.LockFunc(p)
 }
 
-// LockMinimockCounter returns a count of IndexLockerMock.LockFunc invocations
+//LockMinimockCounter returns a count of IndexLockerMock.LockFunc invocations
 func (m *IndexLockerMock) LockMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.LockCounter)
 }
 
-// LockMinimockPreCounter returns the value of IndexLockerMock.Lock invocations
+//LockMinimockPreCounter returns the value of IndexLockerMock.Lock invocations
 func (m *IndexLockerMock) LockMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.LockPreCounter)
 }
@@ -181,7 +181,7 @@ type IndexLockerMockUnlockInput struct {
 	p *insolar.ID
 }
 
-// Expect specifies that invocation of IndexLocker.Unlock is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexLocker.Unlock is expected from 1 to Infinity times
 func (m *mIndexLockerMockUnlock) Expect(p *insolar.ID) *mIndexLockerMockUnlock {
 	m.mock.UnlockFunc = nil
 	m.expectationSeries = nil
@@ -193,7 +193,7 @@ func (m *mIndexLockerMockUnlock) Expect(p *insolar.ID) *mIndexLockerMockUnlock {
 	return m
 }
 
-// Return specifies results of invocation of IndexLocker.Unlock
+//Return specifies results of invocation of IndexLocker.Unlock
 func (m *mIndexLockerMockUnlock) Return() *IndexLockerMock {
 	m.mock.UnlockFunc = nil
 	m.expectationSeries = nil
@@ -205,7 +205,7 @@ func (m *mIndexLockerMockUnlock) Return() *IndexLockerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexLocker.Unlock is expected once
+//ExpectOnce specifies that invocation of IndexLocker.Unlock is expected once
 func (m *mIndexLockerMockUnlock) ExpectOnce(p *insolar.ID) *IndexLockerMockUnlockExpectation {
 	m.mock.UnlockFunc = nil
 	m.mainExpectation = nil
@@ -216,7 +216,7 @@ func (m *mIndexLockerMockUnlock) ExpectOnce(p *insolar.ID) *IndexLockerMockUnloc
 	return expectation
 }
 
-// Set uses given function f as a mock of IndexLocker.Unlock method
+//Set uses given function f as a mock of IndexLocker.Unlock method
 func (m *mIndexLockerMockUnlock) Set(f func(p *insolar.ID)) *IndexLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -225,7 +225,7 @@ func (m *mIndexLockerMockUnlock) Set(f func(p *insolar.ID)) *IndexLockerMock {
 	return m.mock
 }
 
-// Unlock implements github.com/insolar/insolar/ledger/object.IndexLocker interface
+//Unlock implements github.com/insolar/insolar/ledger/object.IndexLocker interface
 func (m *IndexLockerMock) Unlock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.UnlockPreCounter, 1)
 	defer atomic.AddUint64(&m.UnlockCounter, 1)
@@ -260,12 +260,12 @@ func (m *IndexLockerMock) Unlock(p *insolar.ID) {
 	m.UnlockFunc(p)
 }
 
-// UnlockMinimockCounter returns a count of IndexLockerMock.UnlockFunc invocations
+//UnlockMinimockCounter returns a count of IndexLockerMock.UnlockFunc invocations
 func (m *IndexLockerMock) UnlockMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.UnlockCounter)
 }
 
-// UnlockMinimockPreCounter returns the value of IndexLockerMock.Unlock invocations
+//UnlockMinimockPreCounter returns the value of IndexLockerMock.Unlock invocations
 func (m *IndexLockerMock) UnlockMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.UnlockPreCounter)
 }

@@ -48,7 +48,7 @@ type SetRecord struct {
 		PendingRequestsLimit int
 		Filaments            executor.FilamentModifier
 
-		IDLocker object.IDLocker
+		IndexLocker object.IndexLocker
 	}
 }
 
@@ -86,8 +86,8 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 
 	result, ok := record.Unwrap(&virtual).(*record.Result)
 	if ok {
-		p.Dep.IDLocker.Lock(&result.Object)
-		defer p.Dep.IDLocker.Unlock(&result.Object)
+		p.Dep.IndexLocker.Lock(&result.Object)
+		defer p.Dep.IndexLocker.Unlock(&result.Object)
 		err := p.Dep.Filaments.SetResult(ctx, *id, p.jet, *result)
 		if err != nil {
 			return bus.Reply{Err: errors.Wrap(err, "failed to save result")}

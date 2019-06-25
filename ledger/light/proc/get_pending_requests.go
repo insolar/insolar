@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 type GetPendingRequests struct {
@@ -53,9 +52,9 @@ func (p *GetPendingRequests) Dep(index object.IndexAccessor) {
 }
 
 func (p *GetPendingRequests) Proceed(ctx context.Context) error {
-	idx := p.dep.index.Index(flow.Pulse(ctx), *p.msg.Object.Record())
-	if idx == nil {
-		return errors.New("object not found")
+	idx, err := p.dep.index.ForID(ctx, flow.Pulse(ctx), *p.msg.Object.Record())
+	if err != nil {
+		return err
 	}
 
 	p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{

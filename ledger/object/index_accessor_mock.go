@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -67,7 +67,7 @@ type IndexAccessorMockForIDResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of IndexAccessor.ForID is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexAccessor.ForID is expected from 1 to Infinity times
 func (m *mIndexAccessorMockForID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mIndexAccessorMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -79,7 +79,7 @@ func (m *mIndexAccessorMockForID) Expect(p context.Context, p1 insolar.PulseNumb
 	return m
 }
 
-// Return specifies results of invocation of IndexAccessor.ForID
+//Return specifies results of invocation of IndexAccessor.ForID
 func (m *mIndexAccessorMockForID) Return(r FilamentIndex, r1 error) *IndexAccessorMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -91,7 +91,7 @@ func (m *mIndexAccessorMockForID) Return(r FilamentIndex, r1 error) *IndexAccess
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexAccessor.ForID is expected once
+//ExpectOnce specifies that invocation of IndexAccessor.ForID is expected once
 func (m *mIndexAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *IndexAccessorMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
@@ -106,7 +106,7 @@ func (e *IndexAccessorMockForIDExpectation) Return(r FilamentIndex, r1 error) {
 	e.result = &IndexAccessorMockForIDResult{r, r1}
 }
 
-// Set uses given function f as a mock of IndexAccessor.ForID method
+//Set uses given function f as a mock of IndexAccessor.ForID method
 func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r FilamentIndex, r1 error)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -115,7 +115,7 @@ func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 insolar.Pulse
 	return m.mock
 }
 
-// ForID implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
+//ForID implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
 func (m *IndexAccessorMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r FilamentIndex, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
@@ -167,17 +167,17 @@ func (m *IndexAccessorMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 
 	return m.ForIDFunc(p, p1, p2)
 }
 
-// ForIDMinimockCounter returns a count of IndexAccessorMock.ForIDFunc invocations
+//ForIDMinimockCounter returns a count of IndexAccessorMock.ForIDFunc invocations
 func (m *IndexAccessorMock) ForIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForIDCounter)
 }
 
-// ForIDMinimockPreCounter returns the value of IndexAccessorMock.ForID invocations
+//ForIDMinimockPreCounter returns the value of IndexAccessorMock.ForID invocations
 func (m *IndexAccessorMock) ForIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForIDPreCounter)
 }
 
-// ForIDFinished returns true if mock invocations count is ok
+//ForIDFinished returns true if mock invocations count is ok
 func (m *IndexAccessorMock) ForIDFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForIDMock.expectationSeries) > 0 {

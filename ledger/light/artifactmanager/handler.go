@@ -66,8 +66,6 @@ type MessageHandler struct {
 	IndexModifier object.IndexModifier
 	IndexAccessor object.IndexAccessor
 
-	PendingModifier object.PendingModifier
-	PendingAccessor object.PendingAccessor
 	PulseCalculator storage.PulseCalculator
 
 	conf           *configuration.Ledger
@@ -86,8 +84,8 @@ func NewMessageHandler(
 ) *MessageHandler {
 
 	h := &MessageHandler{
-		handlers:              map[insolar.MessageType]insolar.MessageHandler{},
-		conf:                  conf,
+		handlers: map[insolar.MessageType]insolar.MessageHandler{},
+		conf:     conf,
 	}
 
 	dep := &proc.Dependencies{
@@ -131,7 +129,7 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 			p.Dep.WriteAccessor = h.WriteAccessor
 			p.Dep.Filaments = h.filaments
-			p.Dep.IDLocker = h.IDLocker
+			p.Dep.IndexLocker = h.IndexLocker
 		},
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
@@ -139,7 +137,7 @@ func NewMessageHandler(
 				h.Records,
 				h.filaments,
 				h.Sender,
-				h.IDLocker,
+				h.IndexLocker,
 			)
 		},
 		SetActivationRequest: func(p *proc.SetActivationRequest) {
@@ -201,11 +199,11 @@ func NewMessageHandler(
 			p.Dep.IndexAccessor = h.IndexAccessor
 			p.Dep.IndexModifier = h.IndexModifier
 			p.Dep.JetCoordinator = h.JetCoordinator
-			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.RecordModifier = h.Records
 			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep(h.IndexBucketModifier)
+			p.Dep(h.IndexAccessor)
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
 			p.Dep(h.filaments)
@@ -256,8 +254,8 @@ func NewMessageHandler(
 func (h *MessageHandler) Init(ctx context.Context) error {
 	h.jetTreeUpdater = jet.NewFetcher(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 	h.filaments = executor.NewFilamentManager(
-		h.IndexBucketModifier,
-		h.IndexBucketModifier,
+		h.IndexAccessor,
+		h.IndexModifier,
 		h.Records,
 		h.JetCoordinator,
 		h.PCS,

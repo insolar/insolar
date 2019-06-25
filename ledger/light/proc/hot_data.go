@@ -37,14 +37,13 @@ type HotData struct {
 	msg     *message.HotData
 
 	Dep struct {
-		DropModifier        drop.Modifier
-		MessageBus          insolar.MessageBus
-		IndexModifier        object.IndexModifier
-		JetStorage           jet.Storage
-		JetFetcher           jet.Fetcher
-		JetReleaser          hot.JetReleaser
-		Coordinator          jet.Coordinator
-
+		DropModifier  drop.Modifier
+		MessageBus    insolar.MessageBus
+		IndexModifier object.IndexModifier
+		JetStorage    jet.Storage
+		JetFetcher    jet.Fetcher
+		JetReleaser   hot.JetReleaser
+		Coordinator   jet.Coordinator
 	}
 }
 

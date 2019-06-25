@@ -171,7 +171,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	idLock.LockMock.Return()
 	idLock.UnlockMock.Return()
 
-
 	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, &configuration.Ledger{
 		LightChainLimit: 3,
 	})

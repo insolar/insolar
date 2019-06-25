@@ -227,7 +227,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(filamentCache, filamentCache, &conf)
+		handler := artifactmanager.NewMessageHandler(&conf)
 		handler.PulseCalculator = Pulses
 
 		handler.Bus = Bus

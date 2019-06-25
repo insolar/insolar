@@ -93,6 +93,6 @@ func NewDependenciesMock() *Dependencies {
 		PassState:            func(*PassState) {},
 		CalculateID:          func(*CalculateID) {},
 		SetCode:              func(*SetCode) {},
-		GetDelegate: func(*GetDelegate){},
+		GetDelegate:          func(*GetDelegate) {},
 	}
 }

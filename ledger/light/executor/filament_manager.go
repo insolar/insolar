@@ -84,9 +84,9 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 
 	objectID := *request.Object.Record()
 
-	idx := m.idxAccessor.Index(requestID.Pulse(), objectID)
-	if idx == nil {
-		return object.ErrLifelineNotFound
+	idx, err := m.idxAccessor.ForID(ctx, requestID.Pulse(), objectID)
+	if err != nil {
+		return errors.Wrap(err, "failed to update a request's filament")
 	}
 
 	if idx.Lifeline.PendingPointer != nil && requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
@@ -133,7 +133,7 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 		idx.Lifeline.EarliestOpenRequest = &pn
 	}
 
-	err := m.idxModifier.SetIndex(ctx, requestID.Pulse(), *idx)
+	err = m.idxModifier.SetIndex(ctx, requestID.Pulse(), idx)
 	if err != nil {
 		return errors.Wrap(err, "failed to update index")
 	}
@@ -148,9 +148,9 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 
 	objectID := result.Object
 
-	idx := m.idxAccessor.Index(resultID.Pulse(), objectID)
-	if idx == nil {
-		return object.ErrLifelineNotFound
+	idx, err := m.idxAccessor.ForID(ctx, resultID.Pulse(), objectID)
+	if err != nil {
+		return errors.Wrap(err, "failed to update a result's filament")
 	}
 
 	var filamentRecord record.CompositeFilamentRecord
@@ -189,14 +189,14 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 
 	idx.Lifeline.PendingPointer = &filamentRecord.MetaID
 
-	pending, err := m.calculatePending(ctx, resultID.Pulse(), objectID, *idx)
+	pending, err := m.calculatePending(ctx, resultID.Pulse(), objectID, idx)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
 	if len(pending) > 0 {
 		calculatedEarliest := pending[0].Pulse()
 		idx.Lifeline.EarliestOpenRequest = &calculatedEarliest
-		err = m.idxModifier.SetIndex(ctx, resultID.Pulse(), *idx)
+		err = m.idxModifier.SetIndex(ctx, resultID.Pulse(), idx)
 		if err != nil {
 			return errors.Wrap(err, "failed to create a meta-record about pending request")
 		}
@@ -237,12 +237,12 @@ func (m *FilamentManager) Requests(
 func (m *FilamentManager) PendingRequests(
 	ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID,
 ) ([]insolar.ID, error) {
-	idx := m.idxAccessor.Index(pulse, objectID)
-	if idx == nil {
-		return nil, object.ErrLifelineNotFound
+	idx, err := m.idxAccessor.ForID(ctx, pulse, objectID)
+	if err != nil {
+		return nil, err
 	}
 
-	return m.calculatePending(ctx, pulse, objectID, *idx)
+	return m.calculatePending(ctx, pulse, objectID, idx)
 }
 
 func (m *FilamentManager) calculatePending(
