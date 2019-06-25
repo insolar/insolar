@@ -53,6 +53,7 @@ package common
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 type DigestMethod string
@@ -151,6 +152,22 @@ type SignedEvidenceHolder interface {
 
 func (d DigestMethod) SignedBy(s SignMethod) SignatureMethod {
 	return SignatureMethod(string(d) + "/" + string(s))
+}
+
+func (s SignatureMethod) DigestMethod() DigestMethod {
+	parts := strings.Split(string(s), "/")
+	if len(parts) != 2 {
+		return ""
+	}
+	return DigestMethod(parts[0])
+}
+
+func (s SignatureMethod) SignMethod() SignMethod {
+	parts := strings.Split(string(s), "/")
+	if len(parts) != 2 {
+		return ""
+	}
+	return SignMethod(parts[1])
 }
 
 type hFoldReader FoldableReader
