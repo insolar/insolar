@@ -120,7 +120,7 @@ func IsConnectionClosed(err error) bool {
 }
 
 func NewPulseContext(ctx context.Context, pulseNumber uint64) context.Context {
-	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
+	insTraceID := "pulse_" + strconv.FormatUint(pulseNumber, 10)
 	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
 	return ctx
 }

@@ -57,7 +57,6 @@ import (
 
 type ECDSASignatureVerifierFactory struct {
 	digester *Sha3512Digester
-	service  insolar.CryptographyService
 	scheme   insolar.PlatformCryptographyScheme
 }
 

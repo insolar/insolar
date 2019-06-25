@@ -28,14 +28,8 @@ const (
 )
 
 func SerializeTwoBigInt(one, two *big.Int) []byte {
-	var err error
-
-	oneBytes, err := canonicalizeInt(one)
-	twoBytes, err := canonicalizeInt(two)
-
-	if err != nil {
-		panic(err)
-	}
+	oneBytes := mustCanonicalizeInt(one)
+	twoBytes := mustCanonicalizeInt(two)
 
 	var serialized [TwoBigIntBytesLength]byte
 
@@ -54,6 +48,7 @@ func DeserializeTwoBigInt(data []byte) (*big.Int, *big.Int, error) {
 
 	one.SetBytes(data[:expectedBigIntBytesLength])
 	two.SetBytes(data[expectedBigIntBytesLength:TwoBigIntBytesLength])
+
 	return &one, &two, nil
 }
 
@@ -74,4 +69,14 @@ func canonicalizeInt(val *big.Int) ([]byte, error) {
 	}
 
 	return bytes, nil
+}
+
+func mustCanonicalizeInt(val *big.Int) []byte {
+	bytes, err := canonicalizeInt(val)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return bytes
 }
