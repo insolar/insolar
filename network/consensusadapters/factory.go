@@ -53,6 +53,9 @@ package consensusadapters
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phases"
 )
 
 type ECDSASignatureVerifierFactory struct {
@@ -127,4 +130,48 @@ func (cf *TransportCryptographyFactory) GetNodeSigner(sks common.SecretKeyStore)
 	isks := sks.(*ECDSASecretKeyStore)
 
 	return NewECDSADigestSigner(isks.privateKey, cf.scheme)
+}
+
+type RoundStrategyFactory struct{}
+
+func NewRoundStrategyFactory() *RoundStrategyFactory {
+	return &RoundStrategyFactory{}
+}
+
+func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle census.ConsensusChronicles, config core.LocalNodeConfiguration) core.RoundStrategy {
+	return NewRoundStrategy(
+		phases.NewRegularPhaseBundleByDefault(),
+		chronicle,
+		config,
+	)
+}
+
+type TransportFactory struct {
+	cryptographyFactory core.TransportCryptographyFactory
+	packetBuilder       core.PacketBuilder
+	packetSender        core.PacketSender
+}
+
+func NewTransportFactory(
+	cryptographyFactory core.TransportCryptographyFactory,
+	packetBuilder core.PacketBuilder,
+	packetSender core.PacketSender,
+) *TransportFactory {
+	return &TransportFactory{
+		cryptographyFactory: cryptographyFactory,
+		packetBuilder:       packetBuilder,
+		packetSender:        packetSender,
+	}
+}
+
+func (tf *TransportFactory) GetPacketSender() core.PacketSender {
+	return tf.packetSender
+}
+
+func (tf *TransportFactory) GetPacketBuilder(signer common.DigestSigner) core.PacketBuilder {
+	return tf.packetBuilder
+}
+
+func (tf *TransportFactory) GetCryptographyFactory() core.TransportCryptographyFactory {
+	return tf.cryptographyFactory
 }
