@@ -103,7 +103,7 @@ func createMember(t *testing.T, name string) *user {
 
 	addBurnAddresses(t)
 
-	result, err := signedRequest(member, "contract.createMember", map[string]interface{}{})
+	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
@@ -193,6 +193,29 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
+func retryableCreateMember(user *user, method string, params map[string]interface{}, updatePublicKey bool) (interface{}, error) {
+	// TODO: delete this after deduplication (INS-2778)
+	var result interface{}
+	var err error
+	currentIterNum := 1
+	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
+		result, err = signedRequest(user, method, params)
+		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
+			return result, err
+		}
+		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
+		newUser, nErr := newUserWithKeys()
+		if nErr != nil {
+			return nil, nErr
+		}
+		user.privKey = newUser.privKey
+		if updatePublicKey {
+			user.pubKey = newUser.pubKey
+		}
+	}
+	return result, err
+}
+
 func signedRequest(user *user, method string, params map[string]interface{}) (interface{}, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
@@ -206,7 +229,7 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 			JSONRPC: "2.0",
 			ID:      1,
 			Method:  "call.api",
-			Params:  requester.Params{CallSite: method, CallParams: params},
+			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
 		})
 
 		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
