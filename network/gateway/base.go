@@ -269,3 +269,9 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		NetworkState: uint32(g.Gatewayer.Gateway().GetState()),
 	}), nil
 }
+
+func (g *Base) HandleUpdateSchedule(ctx context.Context, request network.Packet) (network.Packet, error) {
+	storage.NewSnapshotStorage()
+	// TODO:
+	return g.HostNetwork.BuildResponse(ctx, request, &packet.UpdateScheduleResponse{}), nil
+}

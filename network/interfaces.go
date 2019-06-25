@@ -287,6 +287,7 @@ type Auther interface {
 type Bootstrapper interface {
 	HandleNodeAuthorizeRequest(context.Context, Packet) (Packet, error)
 	HandleNodeBootstrapRequest(context.Context, Packet) (Packet, error)
+	HandleUpdateSchedule(context.Context, Packet) (Packet, error)
 }
 
 // Rules are responsible for a majority and minimum roles checking
