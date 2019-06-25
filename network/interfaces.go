@@ -247,6 +247,8 @@ type Accessor interface {
 	GetActiveNodes() []insolar.NetworkNode
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
+	// GetActiveNodeByAddr get active node by addr. Returns nil if node is not found.
+	GetActiveNodeByAddr(address string) insolar.NetworkNode
 }
 
 // Mutator is interface that provides read and write access to a snapshot

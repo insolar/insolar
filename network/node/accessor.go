@@ -60,6 +60,7 @@ type Accessor struct {
 	snapshot  *Snapshot
 	refIndex  map[insolar.Reference]insolar.NetworkNode
 	sidIndex  map[insolar.ShortNodeID]insolar.NetworkNode
+	addrIndex map[string]insolar.NetworkNode
 	roleIndex map[insolar.StaticRole]*refSet
 	// should be removed in future
 	active []insolar.NetworkNode
@@ -67,6 +68,10 @@ type Accessor struct {
 
 func (a *Accessor) GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode {
 	return a.sidIndex[shortID]
+}
+
+func (a *Accessor) GetActiveNodeByAddr(address string) insolar.NetworkNode {
+	return a.addrIndex[address]
 }
 
 func (a *Accessor) GetActiveNodes() []insolar.NetworkNode {
@@ -122,6 +127,7 @@ func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 func (a *Accessor) addToIndex(node insolar.NetworkNode) {
 	a.refIndex[node.ID()] = node
 	a.sidIndex[node.ShortID()] = node
+	a.addrIndex[node.Address()] = node
 
 	if node.GetState() != insolar.NodeReady {
 		return
@@ -142,6 +148,7 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 		refIndex:  make(map[insolar.Reference]insolar.NetworkNode),
 		sidIndex:  make(map[insolar.ShortNodeID]insolar.NetworkNode),
 		roleIndex: make(map[insolar.StaticRole]*refSet),
+		addrIndex: make(map[string]insolar.NetworkNode),
 	}
 	result.active = GetSnapshotActiveNodes(snapshot)
 	for _, node := range result.active {
