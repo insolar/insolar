@@ -193,7 +193,15 @@ func (m *cryptographySchemeMock) PublicKeySize() int {
 	panic("not implemented")
 }
 
-func (m *cryptographySchemeMock) SignatureSIze() int {
+func (m *cryptographySchemeMock) SignatureSize() int {
+	panic("not implemented")
+}
+
+func (m *cryptographySchemeMock) ReferenceHashSize() int {
+	panic("not implemented")
+}
+
+func (m *cryptographySchemeMock) IntegrityHashSize() int {
 	panic("not implemented")
 }
 
