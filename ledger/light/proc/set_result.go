@@ -30,7 +30,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SetRequest struct {
+type SetResult struct {
 	message   payload.Meta
 	request   record.Virtual
 	requestID insolar.ID
@@ -45,13 +45,13 @@ type SetRequest struct {
 	}
 }
 
-func NewSetRequest(
+func NewSetResult(
 	msg payload.Meta,
 	rec record.Virtual,
 	recID insolar.ID,
 	jetID insolar.JetID,
-) *SetRequest {
-	return &SetRequest{
+) *SetResult {
+	return &SetResult{
 		message:   msg,
 		request:   rec,
 		requestID: recID,
@@ -59,7 +59,7 @@ func NewSetRequest(
 	}
 }
 
-func (p *SetRequest) Dep(
+func (p *SetResult) Dep(
 	w hot.WriteAccessor,
 	r object.RecordModifier,
 	rs recentstorage.Provider,
@@ -73,7 +73,7 @@ func (p *SetRequest) Dep(
 	p.dep.sender = s
 }
 
-func (p *SetRequest) Proceed(ctx context.Context) error {
+func (p *SetResult) Proceed(ctx context.Context) error {
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
 		if err == hot.ErrWriteClosed {
@@ -92,7 +92,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store record")
 	}
 
-	err = p.handlePendings(ctx, p.requestID, p.request)
+	err = p.handlePendings(ctx, p.request)
 	if err != nil {
 		return err
 	}
@@ -107,24 +107,18 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	return nil
 }
 
-func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq record.Virtual) error {
-	concrete := record.Unwrap(&virtReq)
-	req := concrete.(*record.Request)
+func (p *SetResult) handlePendings(ctx context.Context, virtRec record.Virtual) error {
+	concrete := record.Unwrap(&virtRec)
 
-	// Skip object creation and genesis
-	if req.CallType == record.CTMethod {
-		if p.dep.recentStorage.Count() > recentstorage.PendingRequestsLimit {
-			return insolar.ErrTooManyPendingRequests
-		}
-		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
-		recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
+	rec := concrete.(*record.Result)
+	recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
+	recentStorage.RemovePendingRequest(ctx, rec.Object, *rec.Request.Record())
 
-		// TODO: check it after INS-1939
-		// err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
-		// if err != nil {
-		// 	return errors.Wrap(err, "can't save result into filament-index")
-		// }
-	}
+	// TODO: check it after INS-1939
+	// err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
+	// if err != nil {
+	// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+	// }
 
 	return nil
 }
