@@ -51,23 +51,26 @@ func TestExportImportPublicKey(t *testing.T) {
 }
 
 func TestExportImportPublicKeyBinary(t *testing.T) {
+	count := 1000000
 	ks := NewKeyProcessor()
 
-	privateKey, _ := ks.GeneratePrivateKey()
-	publicKey := ks.ExtractPublicKey(privateKey)
+	for i := 0; i < count; i++ {
+		privateKey, _ := ks.GeneratePrivateKey()
+		publicKey := ks.ExtractPublicKey(privateKey)
 
-	encoded, err := ks.ExportPublicKeyPEM(publicKey)
-	require.NoError(t, err)
+		encoded, err := ks.ExportPublicKeyPEM(publicKey)
+		require.NoError(t, err)
 
-	bin, err := ks.ExportPublicKeyBinary(publicKey)
-	require.NoError(t, err)
-	assert.Len(t, bin, 66)
+		bin, err := ks.ExportPublicKeyBinary(publicKey)
+		require.NoError(t, err)
+		assert.Len(t, bin, 64)
 
-	binPK, err := ks.ImportPublicKeyBinary(bin)
-	require.NoError(t, err)
+		binPK, err := ks.ImportPublicKeyBinary(bin)
+		require.NoError(t, err)
 
-	encodedBinPK, err := ks.ExportPublicKeyPEM(binPK)
-	require.NoError(t, err)
+		encodedBinPK, err := ks.ExportPublicKeyPEM(binPK)
+		require.NoError(t, err)
 
-	assert.Equal(t, encoded, encodedBinPK)
+		assert.Equal(t, encoded, encodedBinPK)
+	}
 }
