@@ -103,7 +103,9 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 		var err error
 		payload, from, err := h.receive(ctx)
 		if err == nil {
-			packet, err := h.parsePayload(payload)
+			var packet packets.PacketParser
+
+			packet, err = h.parsePayload(payload)
 			if err == nil {
 				if packet != nil {
 					hostFrom := common.HostIdentity{Addr: *from}
