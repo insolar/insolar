@@ -238,6 +238,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
+	// TODO: ValidateCert in incomplete states
 	// valid, err := g.Gatewayer.Gateway().Auther().ValidateCert(ctx, cert)
 	// if !valid {
 	// 	if err == nil {
@@ -251,21 +252,23 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		return nil, err
 	}
 
+	// TODO: get random reconnectHost
 	// nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
 	o := g.NodeKeeper.GetOrigin()
-
+	// workaround bootstrap to the origin node
 	reconnectHost, _ := host.NewHostNS(o.Address(), o.ID(), o.ShortID())
 
 	// TODO: public key to bytes
 	permit, err := bootstrap.CreatePermit(g.NodeKeeper.GetOrigin().ID(),
 		reconnectHost,
-		[]byte("public key"), /*cert.GetPublicKey()*/
+		[]byte("public key"), /*TODO: cert.GetPublicKey() to string */
 		g.CryptographyService,
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO: return correct discoveryCount
 	//discoveryCount := FindDiscoveryInActiveList(g.NodeKeeper.GetAccessor().GetActiveNodes())
 	var discoveryCount uint32
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{
