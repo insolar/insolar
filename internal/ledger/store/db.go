@@ -83,7 +83,4 @@ const (
 
 	// ScopeJetKeeper is the scope for a jet id storage.
 	ScopeJetKeeper Scope = 10
-
-	// ScopeSyncPulseSequence is the scope for a pulse sequence.
-	ScopeSyncPulseSequence Scope = 11
 )

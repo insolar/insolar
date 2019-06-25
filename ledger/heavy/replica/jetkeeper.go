@@ -68,7 +68,7 @@ func (jk *dbJetKeeper) TopSyncPulse() insolar.PulseNumber {
 	it := jk.db.NewIterator(syncPulseKey(0xFFFFFFFF), true)
 	defer it.Close()
 	if it.Next() {
-		return insolar.NewPulseNumber(it.Key())
+		return insolar.NewPulseNumber(it.Key()[1:])
 	}
 	return insolar.GenesisPulse.PulseNumber
 }
@@ -127,17 +127,17 @@ func (k jetKeeperKey) Scope() store.Scope {
 }
 
 func (k jetKeeperKey) ID() []byte {
-	return insolar.PulseNumber(k).Bytes()
+	return append([]byte{0x01}, insolar.PulseNumber(k).Bytes()...)
 }
 
 type syncPulseKey insolar.PulseNumber
 
 func (k syncPulseKey) Scope() store.Scope {
-	return store.ScopeSyncPulseSequence
+	return store.ScopeJetKeeper
 }
 
 func (k syncPulseKey) ID() []byte {
-	return insolar.PulseNumber(k).Bytes()
+	return append([]byte{0x02}, insolar.PulseNumber(k).Bytes()...)
 }
 
 func (jk *dbJetKeeper) get(pn insolar.PulseNumber) ([]insolar.JetID, error) {

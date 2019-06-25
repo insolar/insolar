@@ -19,6 +19,7 @@ package jet
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -60,10 +61,15 @@ func TestDBStorage_UpdateJetTree(t *testing.T) {
 	db := store.NewMemoryMockDB()
 	s := NewDBStore(db)
 
-	s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
+	var (
+		expected = []insolar.JetID{insolar.ZeroJetID}
+	)
+
+	err := s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
+	require.NoError(t, err)
 
 	tree := dbTreeForPulse(s, 100)
-	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
+	require.Equal(t, expected, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 }
 
 func TestDBStorage_SplitJetTree(t *testing.T) {
@@ -72,15 +78,25 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 	db := store.NewMemoryMockDB()
 	s := NewDBStore(db)
 
+	var (
+		expectedLeft  = insolar.JetID{0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		expectedRight = insolar.JetID{0, 0, 0, 1, 1, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		expectedLeafs = Tree{Head: &jet{
+			Actual: false,
+			Left:   &jet{Actual: false},
+			Right:  &jet{Actual: false},
+		}}
+	)
+
 	root := insolar.NewJetID(0, nil)
 	left, right, err := s.Split(ctx, 100, *root)
 	require.NoError(t, err)
-	require.Equal(t, "[JET 0 -]", root.DebugString())
-	require.Equal(t, "[JET 1 0]", left.DebugString())
-	require.Equal(t, "[JET 1 1]", right.DebugString())
+	assert.Equal(t, insolar.ZeroJetID, *root, "actual tree node in string form: %v", root.DebugString())
+	assert.Equal(t, expectedLeft, left, "actual tree node in string form: %v", left.DebugString())
+	assert.Equal(t, expectedRight, right, "actual tree node in string form: %v", right.DebugString())
 
 	tree := dbTreeForPulse(s, 100)
-	require.Equal(t, "root (level=0 actual=false)\n 0 (level=1 actual=false)\n 1 (level=1 actual=false)\n", tree.String())
+	require.Equal(t, expectedLeafs, *tree, "actual tree in string form: %v", tree.String())
 }
 
 func TestDBStorage_CloneJetTree(t *testing.T) {
@@ -89,18 +105,25 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 	db := store.NewMemoryMockDB()
 	s := NewDBStore(db)
 
-	s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
+	var (
+		expectedZero = []insolar.JetID{insolar.ZeroJetID}
+		expectedNil  []insolar.JetID
+	)
+
+	err := s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
+	require.NoError(t, err)
 
 	tree := dbTreeForPulse(s, 100)
-	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
+	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 
-	s.Clone(ctx, 100, 101)
+	err = s.Clone(ctx, 100, 101)
+	require.NoError(t, err)
 
 	tree = dbTreeForPulse(s, 101)
-	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
+	assert.Equal(t, expectedNil, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 
 	tree = dbTreeForPulse(s, 100)
-	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
+	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 }
 
 func TestDBStorage_ForID_Basic(t *testing.T) {
