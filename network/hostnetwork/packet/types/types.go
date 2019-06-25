@@ -79,6 +79,8 @@ const (
 	Disconnect
 	// SignCert used to request signature of certificate from another node
 	SignCert
+	// Replication is a packet type to exchange data between replicas.
+	Replication
 )
 
 // RequestID is 64 bit unsigned int request id.
