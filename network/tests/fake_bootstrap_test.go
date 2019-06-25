@@ -52,69 +52,58 @@
 
 package tests
 
-import (
-	"context"
-	"sync/atomic"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
-	bootstrap2 "github.com/insolar/insolar/network/gateway/bootstrap"
-	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/version"
-)
-
-type fakeBootstrap struct {
-	NodeKeeper network.NodeKeeper `inject:""`
-
-	suite *fixture
-}
-
-func (b *fakeBootstrap) Init(ctx context.Context) error {
-	inslogger.FromContext(ctx).Info("Using fakeBootstrap")
-	return nil
-}
-
-func (b *fakeBootstrap) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
-	if atomic.LoadUint32(&b.suite.discoveriesAreBootstrapped) == 1 {
-		return nil, bootstrap2.ErrReconnectRequired
-	}
-	nodes := make([]insolar.NetworkNode, 0)
-	for _, bNode := range b.suite.bootstrapNodes {
-		if bNode.id.Equal(b.NodeKeeper.GetOrigin().ID()) {
-			continue
-		}
-		n := convertNode(bNode)
-		n.(node.MutableNode).SetState(insolar.NodeUndefined)
-		nodes = append(nodes, n)
-	}
-	b.NodeKeeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeUndefined)
-	nodes = append(nodes, b.NodeKeeper.GetOrigin())
-	b.NodeKeeper.SetInitialSnapshot(nodes)
-	// this result is currently not used in discovery bootstrap scenario, so do not fill the Host
-	return &network.BootstrapResult{
-		Host:              nil,
-		ReconnectRequired: false,
-		NetworkSize:       len(b.suite.bootstrapNodes),
-	}, nil
-}
-
-func (b *fakeBootstrap) SetLastPulse(number insolar.PulseNumber) {}
-
-func (b *fakeBootstrap) GetLastPulse() insolar.PulseNumber {
-	return 0
-}
-
-func convertNode(n *networkNode) insolar.NetworkNode {
-	pk, err := n.cryptographyService.GetPublicKey()
-	if err != nil {
-		panic(err)
-	}
-	return node.NewNode(n.id, n.role, pk, n.host, version.Version)
-}
-
-func newFakeBootstrap(suite *fixture) *fakeBootstrap {
-	return &fakeBootstrap{
-		suite: suite,
-	}
-}
+//
+// type fakeBootstrap struct {
+// 	NodeKeeper network.NodeKeeper `inject:""`
+//
+// 	suite *fixture
+// }
+//
+// func (b *fakeBootstrap) Init(ctx context.Context) error {
+// 	inslogger.FromContext(ctx).Info("Using fakeBootstrap")
+// 	return nil
+// }
+//
+// func (b *fakeBootstrap) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
+// 	if atomic.LoadUint32(&b.suite.discoveriesAreBootstrapped) == 1 {
+// 		return nil, bootstrap2.ErrReconnectRequired
+// 	}
+// 	nodes := make([]insolar.NetworkNode, 0)
+// 	for _, bNode := range b.suite.bootstrapNodes {
+// 		if bNode.id.Equal(b.NodeKeeper.GetOrigin().ID()) {
+// 			continue
+// 		}
+// 		n := convertNode(bNode)
+// 		n.(node.MutableNode).SetState(insolar.NodeUndefined)
+// 		nodes = append(nodes, n)
+// 	}
+// 	b.NodeKeeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeUndefined)
+// 	nodes = append(nodes, b.NodeKeeper.GetOrigin())
+// 	b.NodeKeeper.SetInitialSnapshot(nodes)
+// 	// this result is currently not used in discovery bootstrap scenario, so do not fill the Host
+// 	return &network.BootstrapResult{
+// 		Host:              nil,
+// 		ReconnectRequired: false,
+// 		NetworkSize:       len(b.suite.bootstrapNodes),
+// 	}, nil
+// }
+//
+// func (b *fakeBootstrap) SetLastPulse(number insolar.PulseNumber) {}
+//
+// func (b *fakeBootstrap) GetLastPulse() insolar.PulseNumber {
+// 	return 0
+// }
+//
+// func convertNode(n *networkNode) insolar.NetworkNode {
+// 	pk, err := n.cryptographyService.GetPublicKey()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return node.NewNode(n.id, n.role, pk, n.host, version.Version)
+// }
+//
+// func newFakeBootstrap(suite *fixture) *fakeBootstrap {
+// 	return &fakeBootstrap{
+// 		suite: suite,
+// 	}
+// }

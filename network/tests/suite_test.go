@@ -525,7 +525,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	if UseFakeBootstrap {
 		// little hack: this Register will override DiscoveryBootstrapper
 		// in servicenetwork internal component manager with fakeBootstrap
-		node.componentManager.Register(newFakeBootstrap(s.fixture()))
+		// TODO: node.componentManager.Register(newFakeBootstrap(s.fixture()))
 	}
 
 	mb := testutils.NewMessageBusMock(t)
