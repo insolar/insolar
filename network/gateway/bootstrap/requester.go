@@ -9,6 +9,7 @@ import (
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
@@ -21,9 +22,9 @@ import (
 )
 
 type Requester interface {
-	Authorize(ctx context.Context, host *host.Host, cert insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error)
-	Bootstrap(ctx context.Context, permit *packet.Permit, joinClaim *packets.NodeJoinClaim, pulse insolar.PulseNumber) (*packet.BootstrapResponse, error)
-	UpdateSchedule(ctx context.Context, permit *packet.Permit, pulse insolar.PulseNumber) (*packet.UpdateScheduleResponse, error)
+	Authorize(context.Context, *host.Host, insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error)
+	Bootstrap(context.Context, *packet.Permit, *packets.NodeJoinClaim, *insolar.Pulse) (*packet.BootstrapResponse, error)
+	UpdateSchedule(context.Context, *packet.Permit, insolar.PulseNumber) (*packet.UpdateScheduleResponse, error)
 }
 
 func NewRequester(options *common.Options) Requester {
@@ -103,12 +104,12 @@ func (ac *requester) authorizeWithTimestamp(ctx context.Context, host *host.Host
 	return response.GetResponse().GetAuthorize(), nil
 }
 
-func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinClaim *packets.NodeJoinClaim, pulse insolar.PulseNumber) (*packet.BootstrapResponse, error) {
+func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinClaim *packets.NodeJoinClaim, p *insolar.Pulse) (*packet.BootstrapResponse, error) {
 
 	req := &packet.BootstrapRequest{
-		JoinClaim:     joinClaim,
-		LastNodePulse: pulse,
-		Permit:        permit,
+		JoinClaim: joinClaim,
+		Pulse:     pulse.ToProto(p),
+		Permit:    permit,
 	}
 
 	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.Bootstrap, req, permit.Payload.ReconnectTo)
@@ -127,7 +128,7 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinC
 	// make claim with new  shortID
 	// bootstrap again
 	case packet.UpdateSchedule:
-		ac.UpdateSchedule(ctx, permit, pulse)
+		ac.UpdateSchedule(ctx, permit, p.PulseNumber)
 		panic("call bootstrap again")
 	case packet.Reject:
 		//swith to no network
@@ -141,7 +142,7 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinC
 
 func (ac *requester) UpdateSchedule(ctx context.Context, permit *packet.Permit, pulse insolar.PulseNumber) (*packet.UpdateScheduleResponse, error) {
 
-	req := &packet.BootstrapRequest{
+	req := &packet.UpdateScheduleRequest{
 		LastNodePulse: pulse,
 		Permit:        permit,
 	}

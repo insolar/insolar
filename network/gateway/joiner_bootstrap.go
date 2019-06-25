@@ -32,7 +32,7 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 	claim, _ := g.NodeKeeper.GetOriginJoinClaim()
 	pulse, _ := g.PulseAccessor.Latest(ctx)
 
-	resp, _ := g.BootstrapRequester.Bootstrap(ctx, g.permit, claim, pulse.PulseNumber)
+	resp, _ := g.BootstrapRequester.Bootstrap(ctx, g.permit, claim, &pulse)
 
 	if resp.Code == packet.Reject {
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)
@@ -89,7 +89,7 @@ func (bc *JoinerBootstrap) startBootstrap(ctx context.Context, perm *packet.Perm
 	}
 
 	// BOOTSTRAP request --------
-	resp, err := bc.BootstrapRequester.Bootstrap(ctx, perm, claim, lastPulse.PulseNumber)
+	resp, err := bc.BootstrapRequester.Bootstrap(ctx, perm, claim, &lastPulse)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to Bootstrap: %s", err.Error())
 	}
