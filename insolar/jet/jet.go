@@ -40,11 +40,15 @@ type Accessor interface {
 // Modifier provides an interface for modifying jet IDs.
 type Modifier interface {
 	// Update updates jet tree for specified pulse.
-	Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID)
+	Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error
 	// Split performs jet split and returns resulting jet ids.
 	Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error)
 	// Clone copies tree from one pulse to another. Use it to copy the past tree into new pulse.
-	Clone(ctx context.Context, from, to insolar.PulseNumber)
+	Clone(ctx context.Context, from, to insolar.PulseNumber) error
+}
+
+// Cleaner provides an interface for removing jet.Tree from a storage.
+type Cleaner interface {
 	// Delete jets for pulse (concurrent safe).
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }

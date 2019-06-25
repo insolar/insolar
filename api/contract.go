@@ -139,7 +139,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 
 	memory, _ := insolar.Serialize(nil)
 
-	_, err = s.runner.ArtifactManager.ActivateObject(
+	err = s.runner.ArtifactManager.ActivateObject(
 		ctx,
 		objectRef,
 		insolar.GenesisRecord.Ref(),

@@ -25,44 +25,29 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
-
-func TestNewReplicatorDefault(t *testing.T) {
-	t.Parallel()
-	r := NewReplicatorDefault(
-		executor.NewJetCalculatorMock(t),
-		NewDataGathererMock(t),
-		NewCleanerMock(t),
-		testutils.NewMessageBusMock(t),
-		pulse.NewCalculatorMock(t),
-	)
-	defer close(r.syncWaitingPulses)
-
-	require.NotNil(t, r.jetCalculator)
-	require.NotNil(t, r.dataGatherer)
-	require.NotNil(t, r.cleaner)
-	require.NotNil(t, r.msgBus)
-	require.NotNil(t, r.pulseCalculator)
-	require.NotNil(t, r.syncWaitingPulses)
-}
 
 func TestLightReplicator_sendToHeavy(t *testing.T) {
 	t.Parallel()
 	mb := testutils.NewMessageBusMock(t)
 	mb.SendMock.Return(&reply.OK{}, nil)
-	r := LightReplicatorDefault{
+	r := &LightReplicatorDefault{
 		msgBus: mb,
 	}
 
 	res := r.sendToHeavy(inslogger.TestContext(t), nil)
-
 	require.Nil(t, res)
 }
 
@@ -93,90 +78,99 @@ func TestLightReplicator_sendToHeavy_HeavyErr(t *testing.T) {
 	require.Equal(t, &heavyErr, res)
 }
 
-func TestLightReplicatorDefault_sync(t *testing.T) {
+func Test_NotifyAboutPulse(t *testing.T) {
 	t.Parallel()
 	ctrl := minimock.NewController(t)
-	ctx := inslogger.TestContext(t)
-	jc := executor.NewJetCalculatorMock(ctrl)
-	c := NewCleanerMock(ctrl)
-	mb := testutils.NewMessageBusMock(ctrl)
-	pc := pulse.NewCalculatorMock(ctrl)
-	dg := NewDataGathererMock(ctrl)
-	r := NewReplicatorDefault(
-		jc,
-		dg,
-		c,
-		mb,
-		pc,
-	)
-	defer close(r.syncWaitingPulses)
+	ctx := context.Background()
 
-	pn := gen.PulseNumber()
-	msg := message.HeavyPayload{
-		JetID:    gen.JetID(),
-		PulseNum: gen.PulseNumber(),
+	jetID := jet.NewIDFromString("1010")
+	expectPN := insolar.PulseNumber(2835341939)
+	expectDrop := drop.Drop{
+		JetID: jetID,
+		Pulse: expectPN,
+		Hash:  []byte{4, 2, 3},
+	}
+	expectBlob := blob.Blob{
+		JetID: gen.JetID(),
+		Value: []byte{1, 2, 3, 4, 5, 6, 7},
+	}
+	expectIndexes := []object.FilamentIndex{
+		{ObjID: gen.ID()},
+		{ObjID: gen.ID()},
+	}
+	expectRecords := []record.Material{
+		{Signature: gen.Signature(256)},
+		{Signature: gen.Signature(256)},
 	}
 
-	jetID := gen.JetID()
-	jc.MineForPulseFunc = func(ctx context.Context, actualPulseNumber insolar.PulseNumber) (r []insolar.JetID) {
-		require.Equal(t, pn, actualPulseNumber)
+	expectMsg := &message.HeavyPayload{
+		JetID:        jetID,
+		PulseNum:     expectPN,
+		IndexBuckets: convertIndexBuckets(ctx, expectIndexes),
+		Drop:         drop.MustEncode(&expectDrop),
+		Blobs:        convertBlobs([]blob.Blob{expectBlob}),
+		Records:      convertRecords(ctx, expectRecords),
+	}
+
+	mb := testutils.NewMessageBusMock(ctrl)
+	mb.SendFunc = func(_ context.Context, msg insolar.Message, opts *insolar.MessageSendOptions) (insolar.Reply, error) {
+		require.IsType(t, &message.HeavyPayload{}, msg, "got heavy payload message")
+		hMsg := msg.(*message.HeavyPayload)
+		require.Equal(t, expectMsg, hMsg, "heavy message payload")
+		return &reply.OK{}, nil
+	}
+
+	jetCalc := executor.NewJetCalculatorMock(ctrl)
+	jetCalc.MineForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []insolar.JetID {
 		return []insolar.JetID{jetID}
 	}
 
-	dg.ForPulseAndJetMock.Return(&msg, nil)
-	mb.SendMock.Return(&reply.OK{}, nil)
-	c.NotifyAboutPulseFunc = func(p context.Context, actualPulseNumber insolar.PulseNumber) {
-		require.Equal(t, pn, actualPulseNumber)
+	cleaner := NewCleanerMock(ctrl)
+	cleaner.NotifyAboutPulseFunc = func(_ context.Context, _ insolar.PulseNumber) {}
+
+	pulseCalc := pulse.NewCalculatorMock(ctrl)
+	pulseCalc.BackwardsMock.Expect(ctx, expectPN+1, 1).Return(
+		insolar.Pulse{PulseNumber: expectPN}, nil)
+
+	dropAccessor := drop.NewAccessorMock(ctrl)
+	dropAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r drop.Drop, r1 error) {
+		return expectDrop, nil
 	}
 
-	go r.sync(ctx)
-	r.syncWaitingPulses <- pn
+	blobAccessor := blob.NewCollectionAccessorMock(ctrl)
+	blobAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []blob.Blob) {
+		return []blob.Blob{expectBlob}
+	}
 
-	ctrl.Wait(time.Minute)
-	ctrl.Finish()
-}
+	recordAccessor := object.NewRecordCollectionAccessorMock(ctrl)
+	recordAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []record.Material) {
+		return expectRecords
+	}
 
-func TestLightReplicatorDefault_NotifyAboutPulse(t *testing.T) {
-	t.Parallel()
-	ctrl := minimock.NewController(t)
-	ctx := inslogger.TestContext(t)
-	jc := executor.NewJetCalculatorMock(ctrl)
-	c := NewCleanerMock(ctrl)
-	mb := testutils.NewMessageBusMock(ctrl)
+	indexAccessor := object.NewIndexBucketAccessorMock(ctrl)
+	indexAccessor.ForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []object.FilamentIndex {
+		return expectIndexes
+	}
 
-	inputPN := gen.PulseNumber()
-	expectedPN := gen.PulseNumber()
+	jetAccessor := jet.NewAccessorMock(ctrl)
+	jetAccessor.ForIDFunc = func(_ context.Context, _ insolar.PulseNumber, _ insolar.ID) (insolar.JetID, bool) {
+		return jetID, false
+	}
 
-	pc := pulse.NewCalculatorMock(ctrl)
-	pc.BackwardsMock.Expect(ctx, inputPN, 1).Return(insolar.Pulse{PulseNumber: expectedPN}, nil)
-	dg := NewDataGathererMock(ctrl)
 	r := NewReplicatorDefault(
-		jc,
-		dg,
-		c,
+		jetCalc,
+		cleaner,
 		mb,
-		pc,
+		pulseCalc,
+		dropAccessor,
+		blobAccessor,
+		recordAccessor,
+		indexAccessor,
+		jetAccessor,
 	)
 	defer close(r.syncWaitingPulses)
 
-	msg := message.HeavyPayload{
-		JetID:    gen.JetID(),
-		PulseNum: gen.PulseNumber(),
-	}
-
-	jetID := gen.JetID()
-	jc.MineForPulseFunc = func(ctx context.Context, actualPulseNumber insolar.PulseNumber) (r []insolar.JetID) {
-		require.Equal(t, expectedPN, actualPulseNumber)
-		return []insolar.JetID{jetID}
-	}
-	dg.ForPulseAndJetMock.Return(&msg, nil)
-	mb.SendMock.Return(&reply.OK{}, nil)
-	c.NotifyAboutPulseFunc = func(ctx context.Context, actualPulseNumber insolar.PulseNumber) {
-		require.Equal(t, expectedPN, actualPulseNumber)
-	}
-
-	go r.NotifyAboutPulse(ctx, inputPN)
-
+	r.NotifyAboutPulse(ctx, expectPN+1)
 	ctrl.Wait(time.Minute)
 	ctrl.Finish()
 }
