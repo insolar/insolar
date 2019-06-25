@@ -279,66 +279,6 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
-				return nil
-			case *proc.SetRequest:
-				return nil
-			default:
-				panic("unknown procedure")
-			}
-		})
-
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
-		err := handler.Present(ctx, f)
-		require.NoError(t, err)
-	})
-}
-
-func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
-	t.Parallel()
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-
-	msg := metaRequestMsg(t)
-
-	t.Run("getindex procedure returns err", func(t *testing.T) {
-		t.Parallel()
-		f := flow.NewFlowMock(t)
-		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
-			case *proc.CheckJet:
-				return nil
-			case *proc.WaitHotWM:
-				return nil
-			case *proc.EnsureIndexWM:
-				return errors.New("can't get index: error from getindex")
-			default:
-				panic("unknown procedure")
-			}
-		})
-
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
-		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "can't get index: error from getindex")
-	})
-
-	t.Run("getindex procedure returns nil err", func(t *testing.T) {
-		t.Parallel()
-		f := flow.NewFlowMock(t)
-		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
-			case *proc.CheckJet:
-				return nil
-			case *proc.WaitHotWM:
-				return nil
-			case *proc.EnsureIndexWM:
-				return nil
 			case *proc.SetRequest:
 				return nil
 			default:
@@ -372,8 +312,6 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
-				return nil
 			case *proc.SetRequest:
 				return errors.New("error from setrequest")
 			default:
@@ -396,8 +334,6 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 			case *proc.CheckJet:
 				return nil
 			case *proc.WaitHotWM:
-				return nil
-			case *proc.EnsureIndexWM:
 				return nil
 			case *proc.SetRequest:
 				return nil
