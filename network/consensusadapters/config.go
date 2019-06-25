@@ -52,105 +52,69 @@ package consensusadapters
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/utils"
-	"go.opencensus.io/trace"
+	"github.com/insolar/insolar/network/consensus/common"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-type stater interface {
-	State() ([]byte, error)
+var defaultRoundTimings = common2.RoundTimings{
+	StartPhase0At: 100 * time.Millisecond, // Not scaled
+
+	StartPhase1RetryAt: 200 * time.Millisecond, // 0 for no retries
+	EndOfPhase1:        250 * time.Millisecond,
+	EndOfPhase2:        400 * time.Millisecond,
+	EndOfPhase3:        500 * time.Millisecond,
+
+	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
+	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
-type pulseChanger interface {
-	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
-}
-
-type ConsensusUpstream struct {
-	stater       stater
-	pulseChanger pulseChanger
-}
-
-// ServiceNetwork and AM needed
-func NewConsensusUpstream(stater stater, pulseChanger pulseChanger) *ConsensusUpstream {
-	return &ConsensusUpstream{
-		stater:       stater,
-		pulseChanger: pulseChanger,
-	}
-}
-
-func (*ConsensusUpstream) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) PulseDetected() {
-	panic("implement me")
-}
-
-func (cu *ConsensusUpstream) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	nshChan := make(chan common.NodeStateHash)
-
-	go awaitState(nshChan, cu.stater)
-
-	return nshChan
-}
-
-func (cu *ConsensusUpstream) CommitPulseChange(report core.MembershipUpstreamReport, activeCensus census.OperationalCensus) {
-	ctx := context.Background()
-
-	pulseNumber := report.PulseNumber
-
-	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
-
-	ctx, span := instracer.StartSpan(ctx, "ConsensusUpstream.CommitPulseChange")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
-	)
-	defer span.End()
-
-	// TODO: mocking pulse
-	pulse := insolar.Pulse{
-		PulseNumber: insolar.PulseNumber(pulseNumber),
-	}
-
-	cu.pulseChanger.ChangePulse(ctx, pulse)
-}
-
-func (*ConsensusUpstream) CancelPulseChange() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) MembershipLost(graceful bool) {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) MembershipSuspended() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) SuspendTraffic() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) ResumeTraffic() {
-	panic("implement me")
-}
-
-func awaitState(c chan<- common.NodeStateHash, stater stater) {
-	state, err := stater.State()
+func NewLocalConfiguration(ctx context.Context, keyStore insolar.KeyStore) (*LocalConfiguration, error) {
+	privateKey, err := keyStore.GetPrivateKey("")
 	if err != nil {
-		panic("Failed to retrieve node state hash")
+		return nil, err
 	}
 
-	c <- common2.NewDigest(Slice64ToBits512(state), SHA3512Digest).AsDigestHolder()
+	ecdsaPrivateKey := privateKey.(*ecdsa.PrivateKey)
+
+	return &LocalConfiguration{
+		ctx:            ctx,
+		timings:        defaultRoundTimings,
+		secretKeyStore: NewECDSASecretKeyStore(ecdsaPrivateKey),
+	}, nil
+}
+
+type LocalConfiguration struct {
+	ctx            context.Context
+	timings        common2.RoundTimings
+	secretKeyStore common.SecretKeyStore
+}
+
+func (lc *LocalConfiguration) GetParentContext() context.Context {
+	return lc.ctx
+}
+
+func (lc *LocalConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) common2.RoundTimings {
+	if nextPulseDelta == 1 {
+		return lc.timings
+	}
+	m := time.Duration(nextPulseDelta) // this is NOT a duration, but a multiplier
+	t := lc.timings
+
+	t.StartPhase0At *= 1 // don't scale!
+	t.StartPhase1RetryAt *= m
+	t.EndOfPhase1 *= m
+	t.EndOfPhase2 *= m
+	t.EndOfPhase3 *= m
+	t.BeforeInPhase2ChasingDelay *= m
+	t.BeforeInPhase3ChasingDelay *= m
+
+	return t
+}
+
+func (lc *LocalConfiguration) GetSecretKeyStore() common.SecretKeyStore {
+	return lc.secretKeyStore
 }

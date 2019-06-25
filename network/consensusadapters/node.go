@@ -51,106 +51,95 @@
 package consensusadapters
 
 import (
-	"context"
-	"time"
+	"crypto/ecdsa"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/utils"
-	"go.opencensus.io/trace"
+	"github.com/insolar/insolar/network/consensus/common"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-type stater interface {
-	State() ([]byte, error)
+type NodeIntroduction struct {
+	node insolar.NetworkNode
 }
 
-type pulseChanger interface {
-	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
-}
-
-type ConsensusUpstream struct {
-	stater       stater
-	pulseChanger pulseChanger
-}
-
-// ServiceNetwork and AM needed
-func NewConsensusUpstream(stater stater, pulseChanger pulseChanger) *ConsensusUpstream {
-	return &ConsensusUpstream{
-		stater:       stater,
-		pulseChanger: pulseChanger,
+func NewNodeIntroduction(node insolar.NetworkNode) *NodeIntroduction {
+	return &NodeIntroduction{
+		node: node,
 	}
 }
 
-func (*ConsensusUpstream) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
+func (ni *NodeIntroduction) GetShortNodeID() common.ShortNodeID {
+	return common.ShortNodeID(ni.node.ShortID())
 }
 
-func (*ConsensusUpstream) PulseDetected() {
-	panic("implement me")
+func (ni *NodeIntroduction) GetClaimEvidence() common.SignedEvidenceHolder {
+	// TODO: do something with sign
+	return nil
 }
 
-func (cu *ConsensusUpstream) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	nshChan := make(chan common.NodeStateHash)
-
-	go awaitState(nshChan, cu.stater)
-
-	return nshChan
+type NodeIntroProfile struct {
+	node        insolar.NetworkNode
+	isDiscovery bool
 }
 
-func (cu *ConsensusUpstream) CommitPulseChange(report core.MembershipUpstreamReport, activeCensus census.OperationalCensus) {
-	ctx := context.Background()
+func NewNodeIntroProfile(node insolar.NetworkNode, isDiscovery bool) *NodeIntroProfile {
+	return &NodeIntroProfile{
+		node:        node,
+		isDiscovery: isDiscovery,
+	}
+}
 
-	pulseNumber := report.PulseNumber
+func (nip *NodeIntroProfile) GetNodePrimaryRole() common2.NodePrimaryRole {
+	switch nip.node.Role() {
+	case insolar.StaticRoleVirtual:
+		return common2.PrimaryRoleVirtual
+	case insolar.StaticRoleLightMaterial:
+		return common2.PrimaryRoleLightMaterial
+	case insolar.StaticRoleHeavyMaterial:
+		return common2.PrimaryRoleHeavyMaterial
+	case insolar.StaticRoleUnknown:
+		fallthrough
+	default:
+		return common2.PrimaryRoleNeutral
+	}
+}
 
-	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
-
-	ctx, span := instracer.StartSpan(ctx, "ConsensusUpstream.CommitPulseChange")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
-	)
-	defer span.End()
-
-	// TODO: mocking pulse
-	pulse := insolar.Pulse{
-		PulseNumber: insolar.PulseNumber(pulseNumber),
+func (nip *NodeIntroProfile) GetNodeSpecialRole() common2.NodeSpecialRole {
+	if nip.isDiscovery {
+		return common2.SpecialRoleDiscovery
 	}
 
-	cu.pulseChanger.ChangePulse(ctx, pulse)
+	return common2.SpecialRoleNoRole
 }
 
-func (*ConsensusUpstream) CancelPulseChange() {
-	panic("implement me")
+func (nip *NodeIntroProfile) IsAllowedPower(p common2.MemberPower) bool {
+	// TODO: do something with power
+	return true
 }
 
-func (*ConsensusUpstream) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	panic("implement me")
+func (nip *NodeIntroProfile) GetIntroduction() common2.NodeIntroduction {
+	return NewNodeIntroduction(nip.node)
 }
 
-func (*ConsensusUpstream) MembershipLost(graceful bool) {
-	panic("implement me")
+func (nip *NodeIntroProfile) GetDefaultEndpoint() common.HostAddress {
+	return common.HostAddress(nip.node.Address())
 }
 
-func (*ConsensusUpstream) MembershipSuspended() {
-	panic("implement me")
+func (nip *NodeIntroProfile) GetNodePublicKeyStore() common.PublicKeyStore {
+	ecdsaPublicKey := nip.node.PublicKey().(*ecdsa.PublicKey)
+	return NewECDSAPublicKeyStore(ecdsaPublicKey)
 }
 
-func (*ConsensusUpstream) SuspendTraffic() {
-	panic("implement me")
+func (nip *NodeIntroProfile) IsAcceptableHost(from common.HostIdentityHolder) bool {
+	endpoint := nip.GetDefaultEndpoint()
+	return endpoint.Equals(from.GetHostAddress())
 }
 
-func (*ConsensusUpstream) ResumeTraffic() {
-	panic("implement me")
+func (nip *NodeIntroProfile) GetShortNodeID() common.ShortNodeID {
+	return common.ShortNodeID(nip.node.ShortID())
 }
 
-func awaitState(c chan<- common.NodeStateHash, stater stater) {
-	state, err := stater.State()
-	if err != nil {
-		panic("Failed to retrieve node state hash")
-	}
-
-	c <- common2.NewDigest(Slice64ToBits512(state), SHA3512Digest).AsDigestHolder()
+func (nip *NodeIntroProfile) String() string {
+	return fmt.Sprintf("{sid:%d, node:%s}", nip.node.ShortID(), nip.node.ID().String())
 }

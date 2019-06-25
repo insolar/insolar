@@ -51,106 +51,43 @@
 package consensusadapters
 
 import (
-	"context"
-	"time"
+	"math/rand"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/utils"
-	"go.opencensus.io/trace"
+	"github.com/insolar/insolar/network/consensus/common"
 )
 
-type stater interface {
-	State() ([]byte, error)
+type gshDigester struct {
+	// TODO do test or a proper digest calc
+	rnd      *rand.Rand
+	lastSeed int64
 }
 
-type pulseChanger interface {
-	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
-}
-
-type ConsensusUpstream struct {
-	stater       stater
-	pulseChanger pulseChanger
-}
-
-// ServiceNetwork and AM needed
-func NewConsensusUpstream(stater stater, pulseChanger pulseChanger) *ConsensusUpstream {
-	return &ConsensusUpstream{
-		stater:       stater,
-		pulseChanger: pulseChanger,
+func (s *gshDigester) AddNext(digest common.DigestHolder) {
+	// it is a dirty emulation of digest
+	if s.rnd == nil {
+		s.rnd = rand.New(rand.NewSource(0))
 	}
+	s.lastSeed = int64(s.rnd.Uint64() ^ digest.FoldToUint64())
+	s.rnd.Seed(s.lastSeed)
 }
 
-func (*ConsensusUpstream) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
+func (s *gshDigester) GetDigestMethod() common.DigestMethod {
+	return "emuDigest64"
 }
 
-func (*ConsensusUpstream) PulseDetected() {
-	panic("implement me")
-}
-
-func (cu *ConsensusUpstream) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	nshChan := make(chan common.NodeStateHash)
-
-	go awaitState(nshChan, cu.stater)
-
-	return nshChan
-}
-
-func (cu *ConsensusUpstream) CommitPulseChange(report core.MembershipUpstreamReport, activeCensus census.OperationalCensus) {
-	ctx := context.Background()
-
-	pulseNumber := report.PulseNumber
-
-	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
-
-	ctx, span := instracer.StartSpan(ctx, "ConsensusUpstream.CommitPulseChange")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
-	)
-	defer span.End()
-
-	// TODO: mocking pulse
-	pulse := insolar.Pulse{
-		PulseNumber: insolar.PulseNumber(pulseNumber),
+func (s *gshDigester) ForkSequence() common.SequenceDigester {
+	cp := gshDigester{}
+	if s.rnd != nil {
+		cp.rnd = rand.New(rand.NewSource(s.lastSeed))
 	}
-
-	cu.pulseChanger.ChangePulse(ctx, pulse)
+	return &cp
 }
 
-func (*ConsensusUpstream) CancelPulseChange() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) MembershipLost(graceful bool) {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) MembershipSuspended() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) SuspendTraffic() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) ResumeTraffic() {
-	panic("implement me")
-}
-
-func awaitState(c chan<- common.NodeStateHash, stater stater) {
-	state, err := stater.State()
-	if err != nil {
-		panic("Failed to retrieve node state hash")
+func (s *gshDigester) FinishSequence() common.Digest {
+	if s.rnd == nil {
+		panic("nothing")
 	}
-
-	c <- common2.NewDigest(Slice64ToBits512(state), SHA3512Digest).AsDigestHolder()
+	bits := common.NewBits64(s.rnd.Uint64())
+	s.rnd = nil
+	return common.NewDigest(&bits, s.GetDigestMethod())
 }

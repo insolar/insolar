@@ -51,13 +51,37 @@
 package consensusadapters
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func slice64ToDigestHolder(bytes []byte) common.DigestHolder {
-	bits := &common.Bits512{}
-	copy(bits[:], bytes[:64])
+func Slice64ToBits512(bytes []byte) *common.Bits512 {
+	size := len(bytes)
+	expectedSize := 64
+	if size != expectedSize {
+		panic(fmt.Sprintf("Length missmatch, expected: %d, actual: %d", expectedSize, size))
+	}
 
-	digest := common.NewDigest(bits, "sha3-512")
-	return digest.AsDigestHolder()
+	bits := &common.Bits512{}
+	copy(bits[:], bytes[:expectedSize])
+
+	return bits
+}
+
+func FoldableReaderToBytes(reader common.FoldableReader, expectedSize int) []byte {
+	size := reader.FixedByteSize()
+
+	if size != expectedSize {
+		panic(fmt.Sprintf("Length missmatch, expected: %d, actual: %d", expectedSize, size))
+	}
+
+	bytes := make([]byte, size)
+	n, err := io.ReadFull(reader, bytes)
+	if n != size || err != nil {
+		panic("Failed to read foldable reader")
+	}
+
+	return bytes
 }

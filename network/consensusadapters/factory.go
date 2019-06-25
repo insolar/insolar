@@ -51,106 +51,81 @@
 package consensusadapters
 
 import (
-	"context"
-	"time"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/utils"
-	"go.opencensus.io/trace"
+	"github.com/insolar/insolar/network/consensus/common"
 )
 
-type stater interface {
-	State() ([]byte, error)
+type ECDSASignatureVerifierFactory struct {
+	digester *Sha3512Digester
+	service  insolar.CryptographyService
+	scheme   insolar.PlatformCryptographyScheme
 }
 
-type pulseChanger interface {
-	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
-}
-
-type ConsensusUpstream struct {
-	stater       stater
-	pulseChanger pulseChanger
-}
-
-// ServiceNetwork and AM needed
-func NewConsensusUpstream(stater stater, pulseChanger pulseChanger) *ConsensusUpstream {
-	return &ConsensusUpstream{
-		stater:       stater,
-		pulseChanger: pulseChanger,
+func NewECDSASignatureVerifierFactory(
+	digester *Sha3512Digester,
+	scheme insolar.PlatformCryptographyScheme,
+) *ECDSASignatureVerifierFactory {
+	return &ECDSASignatureVerifierFactory{
+		digester: digester,
+		scheme:   scheme,
 	}
 }
 
-func (*ConsensusUpstream) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
-}
+func (vf *ECDSASignatureVerifierFactory) GetSignatureVerifierWithPKS(pks common.PublicKeyStore) common.SignatureVerifier {
+	keyStore := pks.(*ECDSAPublicKeyStore)
 
-func (*ConsensusUpstream) PulseDetected() {
-	panic("implement me")
-}
-
-func (cu *ConsensusUpstream) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	nshChan := make(chan common.NodeStateHash)
-
-	go awaitState(nshChan, cu.stater)
-
-	return nshChan
-}
-
-func (cu *ConsensusUpstream) CommitPulseChange(report core.MembershipUpstreamReport, activeCensus census.OperationalCensus) {
-	ctx := context.Background()
-
-	pulseNumber := report.PulseNumber
-
-	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
-
-	ctx, span := instracer.StartSpan(ctx, "ConsensusUpstream.CommitPulseChange")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
+	return NewECDSASignatureVerifier(
+		vf.digester,
+		vf.scheme,
+		keyStore.publicKey,
 	)
-	defer span.End()
+}
 
-	// TODO: mocking pulse
-	pulse := insolar.Pulse{
-		PulseNumber: insolar.PulseNumber(pulseNumber),
+type DigestFactory struct {
+	pcs insolar.PlatformCryptographyScheme
+}
+
+func NewDigestFactory(pcs insolar.PlatformCryptographyScheme) *DigestFactory {
+	return &DigestFactory{
+		pcs: pcs,
 	}
-
-	cu.pulseChanger.ChangePulse(ctx, pulse)
 }
 
-func (*ConsensusUpstream) CancelPulseChange() {
-	panic("implement me")
+func (df *DigestFactory) GetPacketDigester() common.DataDigester {
+	return NewSha3512Digester(df.pcs)
 }
 
-func (*ConsensusUpstream) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	panic("implement me")
+func (df *DigestFactory) GetGshDigester() common.SequenceDigester {
+	return &gshDigester{}
 }
 
-func (*ConsensusUpstream) MembershipLost(graceful bool) {
-	panic("implement me")
+type TransportCryptographyFactory struct {
+	verifierFactory *ECDSASignatureVerifierFactory
+	digestFactory   *DigestFactory
+	scheme          insolar.PlatformCryptographyScheme
 }
 
-func (*ConsensusUpstream) MembershipSuspended() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) SuspendTraffic() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) ResumeTraffic() {
-	panic("implement me")
-}
-
-func awaitState(c chan<- common.NodeStateHash, stater stater) {
-	state, err := stater.State()
-	if err != nil {
-		panic("Failed to retrieve node state hash")
+func NewTransportCryptographyFactory(scheme insolar.PlatformCryptographyScheme) *TransportCryptographyFactory {
+	return &TransportCryptographyFactory{
+		verifierFactory: NewECDSASignatureVerifierFactory(
+			NewSha3512Digester(scheme),
+			scheme,
+		),
+		digestFactory: NewDigestFactory(scheme),
+		scheme:        scheme,
 	}
+}
 
-	c <- common2.NewDigest(Slice64ToBits512(state), SHA3512Digest).AsDigestHolder()
+func (cf *TransportCryptographyFactory) GetSignatureVerifierWithPKS(pks common.PublicKeyStore) common.SignatureVerifier {
+	return cf.verifierFactory.GetSignatureVerifierWithPKS(pks)
+}
+
+func (cf *TransportCryptographyFactory) GetDigestFactory() common.DigestFactory {
+	return cf.digestFactory
+}
+
+func (cf *TransportCryptographyFactory) GetNodeSigner(sks common.SecretKeyStore) common.DigestSigner {
+	isks := sks.(*ECDSASecretKeyStore)
+
+	return NewECDSADigestSigner(isks.privateKey, cf.scheme)
 }

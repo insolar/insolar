@@ -51,106 +51,52 @@
 package consensusadapters
 
 import (
-	"context"
-	"time"
+	"crypto/rand"
+	"testing"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/utils"
-	"go.opencensus.io/trace"
+	"github.com/stretchr/testify/require"
 )
 
-type stater interface {
-	State() ([]byte, error)
+func TestSlice64ToBits512(t *testing.T) {
+	slice := make([]byte, 64)
+	rand.Read(slice)
+
+	bits := Slice64ToBits512(slice)
+	require.Equal(t, bits.FixedByteSize(), 64)
+
+	val := make([]byte, 64)
+	bits.Read(val)
+
+	require.Equal(t, slice, val)
 }
 
-type pulseChanger interface {
-	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
+func TestSlice64ToBits512_PanicLengthMissmatch(t *testing.T) {
+	slice := make([]byte, 65)
+	rand.Read(slice)
+
+	require.PanicsWithValue(t, "Length missmatch, expected: 64, actual: 65", func() {
+		Slice64ToBits512(slice)
+	})
 }
 
-type ConsensusUpstream struct {
-	stater       stater
-	pulseChanger pulseChanger
+func TestFoldableReaderToBytes(t *testing.T) {
+	slice := make([]byte, 64)
+	rand.Read(slice)
+
+	bits := Slice64ToBits512(slice)
+	require.Equal(t, bits.FixedByteSize(), 64)
+
+	val := FoldableReaderToBytes(bits, 64)
+
+	require.Equal(t, slice, val)
 }
 
-// ServiceNetwork and AM needed
-func NewConsensusUpstream(stater stater, pulseChanger pulseChanger) *ConsensusUpstream {
-	return &ConsensusUpstream{
-		stater:       stater,
-		pulseChanger: pulseChanger,
-	}
-}
+func TestFoldableReaderToBytes_PanicLengthMissmatch(t *testing.T) {
+	slice := make([]byte, 64)
+	rand.Read(slice)
+	bits := Slice64ToBits512(slice)
 
-func (*ConsensusUpstream) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) PulseDetected() {
-	panic("implement me")
-}
-
-func (cu *ConsensusUpstream) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	nshChan := make(chan common.NodeStateHash)
-
-	go awaitState(nshChan, cu.stater)
-
-	return nshChan
-}
-
-func (cu *ConsensusUpstream) CommitPulseChange(report core.MembershipUpstreamReport, activeCensus census.OperationalCensus) {
-	ctx := context.Background()
-
-	pulseNumber := report.PulseNumber
-
-	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
-
-	ctx, span := instracer.StartSpan(ctx, "ConsensusUpstream.CommitPulseChange")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
-	)
-	defer span.End()
-
-	// TODO: mocking pulse
-	pulse := insolar.Pulse{
-		PulseNumber: insolar.PulseNumber(pulseNumber),
-	}
-
-	cu.pulseChanger.ChangePulse(ctx, pulse)
-}
-
-func (*ConsensusUpstream) CancelPulseChange() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) MembershipLost(graceful bool) {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) MembershipSuspended() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) SuspendTraffic() {
-	panic("implement me")
-}
-
-func (*ConsensusUpstream) ResumeTraffic() {
-	panic("implement me")
-}
-
-func awaitState(c chan<- common.NodeStateHash, stater stater) {
-	state, err := stater.State()
-	if err != nil {
-		panic("Failed to retrieve node state hash")
-	}
-
-	c <- common2.NewDigest(Slice64ToBits512(state), SHA3512Digest).AsDigestHolder()
+	require.PanicsWithValue(t, "Length missmatch, expected: 60, actual: 64", func() {
+		FoldableReaderToBytes(bits, 60)
+	})
 }
