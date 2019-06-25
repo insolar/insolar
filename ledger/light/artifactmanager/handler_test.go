@@ -171,7 +171,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	idLock.LockMock.Return()
 	idLock.UnlockMock.Return()
 
-	h := NewMessageHandler(lflStor, s.indexStorageMemory, lflStor, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
 	})
 	h.JetStorage = s.jetStorage
@@ -231,7 +231,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	mb.MustRegisterMock.Return()
 	jc := jet.NewCoordinatorMock(mc)
 
-	h := NewMessageHandler(nil, nil, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
 	})
 	h.JetStorage = s.jetStorage
@@ -300,7 +300,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	defer mc.Finish()
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	h := NewMessageHandler(nil, nil, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
 	})
 	h.JetStorage = s.jetStorage
@@ -376,8 +376,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	err := s.recordModifier.Set(s.ctx, *reqID, rec)
 	require.NoError(s.T(), err)
 
-	h := NewMessageHandler(nil, nil, &configuration.Ledger{})
-	h.RecordAccessor = s.recordAccessor
+	h := NewMessageHandler(&configuration.Ledger{})
+	h.Records = s.recordStorage
 
 	replyTo := make(chan bus.Reply, 1)
 	procGetRequest := proc.NewGetRequest(*reqID, replyTo)

@@ -83,7 +83,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	// Pendings limit not reached.
 	p := NewSetRequest(msg, request, id, jetID)
-	p.Dep(writeAccessor, records, filaments, sender, object.NewIDLocker())
+	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker())
 
 	err = p.Proceed(ctx)
 	require.NoError(t, err)
