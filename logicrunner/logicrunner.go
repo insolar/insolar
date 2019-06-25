@@ -498,14 +498,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, current *Transcrip
 
 	am := lr.ArtifactManager
 	if !current.LogicContext.Immutable && current.Deactivate { // nolint:gocritic
-		_, err := am.DeactivateObject(
+		err := am.DeactivateObject(
 			ctx, *current.RequestRef, current.ObjectDescriptor, result,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't deactivate object")
 		}
 	} else if !current.LogicContext.Immutable && !bytes.Equal(current.ObjectDescriptor.Memory(), newData) {
-		_, err := am.UpdateObject(
+		err := am.UpdateObject(
 			ctx, *current.RequestRef, current.ObjectDescriptor, newData, result,
 		)
 		if err != nil {
@@ -559,7 +559,7 @@ func (lr *LogicRunner) executeConstructorCall(
 
 	switch request.CallType {
 	case record.CTSaveAsChild, record.CTSaveAsDelegate:
-		_, err = lr.ArtifactManager.ActivateObject(
+		err = lr.ArtifactManager.ActivateObject(
 			ctx,
 			*current.RequestRef, *request.Base, *request.Prototype, request.CallType == record.CTSaveAsDelegate, newData,
 		)

@@ -718,7 +718,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	oDesc.ParentMock.Return(nil)
 
 	suite.am.GetObjectMock.Return(oDesc, nil)
-	suite.am.UpdateObjectMock.Return(nil, nil)
+	suite.am.UpdateObjectMock.Return(nil)
 
 	randRef := testutils.RandomRef()
 
