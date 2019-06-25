@@ -219,6 +219,7 @@ func NewMessageHandler(
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
+			p.Dep.Calculator = h.PulseCalculator
 		},
 		SendRequests: func(p *proc.SendRequests) {
 			p.Dep(h.Sender, h.filaments)

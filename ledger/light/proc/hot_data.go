@@ -19,6 +19,8 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -30,6 +32,10 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
+)
+
+const (
+	pendingNotifyThreshold = 2
 )
 
 type HotData struct {
@@ -44,6 +50,7 @@ type HotData struct {
 		JetFetcher    jet.Fetcher
 		JetReleaser   hot.JetReleaser
 		Coordinator   jet.Coordinator
+		Calculator    pulse.Calculator
 	}
 }
 
@@ -78,9 +85,21 @@ func (p *HotData) process(ctx context.Context) error {
 		return errors.Wrapf(err, "[jet]: drop error (pulse: %v)", p.msg.Drop.Pulse)
 	}
 
-	p.Dep.JetStorage.Update(
+	err = p.Dep.JetStorage.Update(
 		ctx, p.msg.PulseNumber, true, jetID,
 	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update jet tree")
+	}
+
+	pendingNotifyPulse, err := p.Dep.Calculator.Backwards(ctx, flow.Pulse(ctx), pendingNotifyThreshold)
+	if err != nil {
+		if err == pulse.ErrNotFound {
+			pendingNotifyPulse = *insolar.GenesisPulse
+		} else {
+			return errors.Wrap(err, "failed to calculate pending notify pulse")
+		}
+	}
 
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
 	for _, meta := range p.msg.HotIndexes {
@@ -113,12 +132,7 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 
-		// go func(objID insolar.ID, pn insolar.PulseNumber) {
-		// 	err = p.Dep.FilamentCacheManager.SendAbandonedNotification(ctx, pn, objID)
-		// 	if err != nil {
-		// 		logger.Errorf("failed to notify about abandoned notification %v", err)
-		// 	}
-		// }(meta.ObjID, flow.Pulse(ctx))
+		go p.notifyPending(ctx, meta.ObjID, decodedIndex, pendingNotifyPulse.PulseNumber)
 	}
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
@@ -134,5 +148,29 @@ func (p *HotData) releaseHotDataWaiters(ctx context.Context) {
 	err := p.Dep.JetReleaser.Unlock(ctx, *jetID)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
+	}
+}
+
+func (p *HotData) notifyPending(
+	ctx context.Context,
+	objectID insolar.ID,
+	lifeline object.Lifeline,
+	notifyLimit insolar.PulseNumber,
+) {
+	// No pending requests.
+	if lifeline.EarliestOpenRequest == nil {
+		return
+	}
+
+	// Too early to notify.
+	if *lifeline.EarliestOpenRequest >= notifyLimit {
+		return
+	}
+
+	_, err := p.Dep.MessageBus.Send(ctx, &message.AbandonedRequestsNotification{
+		Object: objectID,
+	}, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("failed to notify about pending requests")
 	}
 }
