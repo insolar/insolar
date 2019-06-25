@@ -57,6 +57,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/utils"
 )
 
 type NodeIntroduction struct {
@@ -83,10 +84,10 @@ type NodeIntroProfile struct {
 	isDiscovery bool
 }
 
-func NewNodeIntroProfile(node insolar.NetworkNode, isDiscovery bool) *NodeIntroProfile {
+func NewNodeIntroProfile(node insolar.NetworkNode, certificate insolar.Certificate) *NodeIntroProfile {
 	return &NodeIntroProfile{
 		node:        node,
-		isDiscovery: isDiscovery,
+		isDiscovery: utils.IsDiscovery(node.ID(), certificate),
 	}
 }
 
@@ -142,4 +143,13 @@ func (nip *NodeIntroProfile) GetShortNodeID() common.ShortNodeID {
 
 func (nip *NodeIntroProfile) String() string {
 	return fmt.Sprintf("{sid:%d, node:%s}", nip.node.ShortID(), nip.node.ID().String())
+}
+
+func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate) []common2.NodeIntroProfile {
+	intros := make([]common2.NodeIntroProfile, len(nodes))
+	for i, n := range nodes {
+		intros[i] = NewNodeIntroProfile(n, certificate)
+	}
+
+	return intros
 }

@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type MisbehaviorRegistry struct{}
@@ -110,7 +109,7 @@ func (op *OfflinePopulation) FindRegisteredProfile(identity common.HostIdentityH
 	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(string(identity.GetHostAddress()))
 	cert := op.manager.GetCertificate()
 
-	return NewNodeIntroProfile(node, utils.IsDiscovery(node.ID(), cert))
+	return NewNodeIntroProfile(node, cert)
 }
 
 type VersionedRegistries struct {

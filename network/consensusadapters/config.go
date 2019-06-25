@@ -72,37 +72,37 @@ var defaultRoundTimings = common2.RoundTimings{
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
-func NewLocalConfiguration(ctx context.Context, keyStore insolar.KeyStore) (*LocalConfiguration, error) {
+func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *LocalNodeConfiguration {
 	privateKey, err := keyStore.GetPrivateKey("")
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	ecdsaPrivateKey := privateKey.(*ecdsa.PrivateKey)
 
-	return &LocalConfiguration{
+	return &LocalNodeConfiguration{
 		ctx:            ctx,
 		timings:        defaultRoundTimings,
 		secretKeyStore: NewECDSASecretKeyStore(ecdsaPrivateKey),
-	}, nil
+	}
 }
 
-type LocalConfiguration struct {
+type LocalNodeConfiguration struct {
 	ctx            context.Context
 	timings        common2.RoundTimings
 	secretKeyStore common.SecretKeyStore
 }
 
-func (lc *LocalConfiguration) GetParentContext() context.Context {
-	return lc.ctx
+func (c *LocalNodeConfiguration) GetParentContext() context.Context {
+	return c.ctx
 }
 
-func (lc *LocalConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) common2.RoundTimings {
+func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) common2.RoundTimings {
 	if nextPulseDelta == 1 {
-		return lc.timings
+		return c.timings
 	}
 	m := time.Duration(nextPulseDelta) // this is NOT a duration, but a multiplier
-	t := lc.timings
+	t := c.timings
 
 	t.StartPhase0At *= 1 // don't scale!
 	t.StartPhase1RetryAt *= m
@@ -115,6 +115,6 @@ func (lc *LocalConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoine
 	return t
 }
 
-func (lc *LocalConfiguration) GetSecretKeyStore() common.SecretKeyStore {
-	return lc.secretKeyStore
+func (c *LocalNodeConfiguration) GetSecretKeyStore() common.SecretKeyStore {
+	return c.secretKeyStore
 }

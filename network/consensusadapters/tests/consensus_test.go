@@ -53,51 +53,15 @@ package tests
 import (
 	"context"
 	"errors"
-	"math/rand"
 	"runtime/debug"
-	"time"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-	"github.com/insolar/insolar/network/consensusadapters"
-	"github.com/insolar/insolar/platformpolicy"
-
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/common"
 )
-
-const defaultNshGenerationDelay = time.Millisecond * 0
-
-type nshGen struct {
-	nshDelay time.Duration
-}
-
-func (ng *nshGen) State() ([]byte, error) {
-	delay := ng.nshDelay
-	if delay != 0 {
-		time.Sleep(delay)
-	}
-
-	nshBytes := make([]byte, 64)
-	rand.Read(nshBytes)
-
-	return nshBytes, nil
-}
-
-type pulseChanger struct{}
-
-func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
-	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
-}
-
-func NewConsensusNode(hostAddr common.HostAddress) *EmuHostConsensusAdapter {
-	return &EmuHostConsensusAdapter{hostAddr: hostAddr}
-}
 
 type EmuHostConsensusAdapter struct {
 	controller core.ConsensusController
@@ -107,22 +71,16 @@ type EmuHostConsensusAdapter struct {
 	outbound chan<- Packet
 }
 
-func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicles, network *EmuNetwork, config core.LocalNodeConfiguration) {
+func NewEmuHostConsensusAdapter(hostAddr string) *EmuHostConsensusAdapter {
+	return &EmuHostConsensusAdapter{hostAddr: common.HostAddress(hostAddr)}
+}
+
+func (h *EmuHostConsensusAdapter) SetController(controller core.ConsensusController) {
+	h.controller = controller
+}
+
+func (h *EmuHostConsensusAdapter) ConnectTo(network *EmuNetwork) {
 	ctx := network.ctx
-	// &EmuConsensusStrategy{ctx: ctx}
-	upstream := consensusadapters.NewConsensusUpstream(&nshGen{defaultNshGenerationDelay}, &pulseChanger{})
-	var strategyFactory core.RoundStrategyFactory = consensusadapters.NewRoundStrategyFactory()
-
-	cryptoFactory := consensusadapters.NewTransportCryptographyFactory(platformpolicy.NewPlatformCryptographyScheme())
-	packetBuilder := NewEmuPacketBuilder(cryptoFactory, config)
-	transportFactory := consensusadapters.NewTransportFactory(cryptoFactory, packetBuilder, h)
-
-	h.controller = gcpv2.NewConsensusMemberController(
-		chronicles,
-		upstream,
-		core.NewPhasedRoundControllerFactory(config, transportFactory, strategyFactory),
-	)
-
 	h.inbound, h.outbound = network.AddHost(ctx, h.hostAddr)
 	go h.run(ctx)
 }

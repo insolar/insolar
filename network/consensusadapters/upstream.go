@@ -72,43 +72,42 @@ type pulseChanger interface {
 	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
 }
 
-type ConsensusUpstream struct {
+type UpstreamPulseController struct {
 	stater       stater
 	pulseChanger pulseChanger
 }
 
-// ServiceNetwork and AM needed
-func NewConsensusUpstream(stater stater, pulseChanger pulseChanger) *ConsensusUpstream {
-	return &ConsensusUpstream{
+func NewUpstreamPulseController(stater stater, pulseChanger pulseChanger) *UpstreamPulseController {
+	return &UpstreamPulseController{
 		stater:       stater,
 		pulseChanger: pulseChanger,
 	}
 }
 
-func (*ConsensusUpstream) PulseIsComing(anticipatedStart time.Time) {
+func (u *UpstreamPulseController) PulseIsComing(anticipatedStart time.Time) {
 	panic("implement me")
 }
 
-func (*ConsensusUpstream) PulseDetected() {
+func (u *UpstreamPulseController) PulseDetected() {
 	panic("implement me")
 }
 
-func (cu *ConsensusUpstream) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
+func (u *UpstreamPulseController) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
 	nshChan := make(chan common.NodeStateHash)
 
-	go awaitState(nshChan, cu.stater)
+	go awaitState(nshChan, u.stater)
 
 	return nshChan
 }
 
-func (cu *ConsensusUpstream) CommitPulseChange(report core.MembershipUpstreamReport, activeCensus census.OperationalCensus) {
+func (u *UpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, activeCensus census.OperationalCensus) {
 	ctx := context.Background()
 
 	pulseNumber := report.PulseNumber
 
 	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
 
-	ctx, span := instracer.StartSpan(ctx, "ConsensusUpstream.CommitPulseChange")
+	ctx, span := instracer.StartSpan(ctx, "UpstreamPulseController.CommitPulseChange")
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
 	)
@@ -119,30 +118,30 @@ func (cu *ConsensusUpstream) CommitPulseChange(report core.MembershipUpstreamRep
 		PulseNumber: insolar.PulseNumber(pulseNumber),
 	}
 
-	cu.pulseChanger.ChangePulse(ctx, pulse)
+	u.pulseChanger.ChangePulse(ctx, pulse)
 }
 
-func (*ConsensusUpstream) CancelPulseChange() {
+func (u *UpstreamPulseController) CancelPulseChange() {
 	panic("implement me")
 }
 
-func (*ConsensusUpstream) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+func (u *UpstreamPulseController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
 	panic("implement me")
 }
 
-func (*ConsensusUpstream) MembershipLost(graceful bool) {
+func (u *UpstreamPulseController) MembershipLost(graceful bool) {
 	panic("implement me")
 }
 
-func (*ConsensusUpstream) MembershipSuspended() {
+func (u *UpstreamPulseController) MembershipSuspended() {
 	panic("implement me")
 }
 
-func (*ConsensusUpstream) SuspendTraffic() {
+func (u *UpstreamPulseController) SuspendTraffic() {
 	panic("implement me")
 }
 
-func (*ConsensusUpstream) ResumeTraffic() {
+func (u *UpstreamPulseController) ResumeTraffic() {
 	panic("implement me")
 }
 

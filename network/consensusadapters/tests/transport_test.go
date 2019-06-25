@@ -78,7 +78,7 @@ type emuPacketBuilder struct {
 	localConfig core.LocalNodeConfiguration
 }
 
-func NewEmuPacketBuilder(crypto core.TransportCryptographyFactory, localConfig core.LocalNodeConfiguration) *emuPacketBuilder {
+func NewEmuPacketBuilder(crypto core.TransportCryptographyFactory, localConfig core.LocalNodeConfiguration) core.PacketBuilder {
 	return &emuPacketBuilder{
 		crypto:      crypto,
 		localConfig: localConfig,
