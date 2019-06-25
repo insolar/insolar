@@ -53,13 +53,14 @@ func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
 	require.NoError(t, err)
 	member1.ref = root.ref
 	addBurnAddresses(t)
-	_, err = signedRequest(member1, "contract.createMember", map[string]interface{}{})
+	_, err = retryableCreateMember(member1, "contract.createMember", map[string]interface{}{}, true)
+	require.Nil(t, err)
 
 	member2, err := newUserWithKeys()
 	require.NoError(t, err)
 	member2.ref = root.ref
 
-	_, err = signedRequest(member2, "contract.createMember", map[string]interface{}{})
+	_, err = retryableCreateMember(member2, "contract.createMember", map[string]interface{}{}, true)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "no more burn address left")
+	require.Contains(t, err.Error(), "no more burn addresses left")
 }
