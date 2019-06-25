@@ -22,8 +22,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -65,10 +63,7 @@ type filamentCache struct {
 	sync.RWMutex
 	cache map[insolar.ID]record.CompositeFilamentRecord
 
-	records     object.RecordAccessor
-	jetFetcher  jet.Fetcher
-	coordinator jet.Coordinator
-	sender      bus.Sender
+	records object.RecordAccessor
 }
 
 func newFilamentCache(r object.RecordAccessor) *filamentCache {
