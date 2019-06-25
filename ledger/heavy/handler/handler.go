@@ -54,11 +54,11 @@ type Handler struct {
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
 
-	DropModifier drop.Modifier
-	PulseAccessor         pulse.Accessor
-	JetModifier           jet.Modifier
-	JetKeeper             replica.JetKeeper
-	Sender       bus.Sender
+	DropModifier  drop.Modifier
+	PulseAccessor pulse.Accessor
+	JetModifier   jet.Modifier
+	JetKeeper     replica.JetKeeper
+	Sender        bus.Sender
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies

@@ -123,14 +123,6 @@ func NewMessageHandler(
 			p.Dep.Bus = h.Bus
 			p.Dep.Sender = h.Sender
 		},
-		SetRecord: func(p *proc.SetRecord) {
-			p.Dep.Bus = h.Bus
-			p.Dep.RecordModifier = h.Records
-			p.Dep.PCS = h.PCS
-			p.Dep.WriteAccessor = h.WriteAccessor
-			p.Dep.Filaments = h.filaments
-			p.Dep.IndexLocker = h.IndexLocker
-		},
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
 				h.WriteAccessor,
@@ -143,10 +135,10 @@ func NewMessageHandler(
 		SetResult: func(p *proc.SetResult) {
 			p.Dep(
 				h.WriteAccessor,
-				h.RecordModifier,
-				h.RecentStorageProvider,
-				h.PendingModifier,
+				h.Records,
+				h.filaments,
 				h.Sender,
+				h.IndexLocker,
 			)
 		},
 		SetActivationRequest: func(p *proc.SetActivationRequest) {

@@ -40,11 +40,11 @@ type HotSender interface {
 
 // HotSenderDefault implements HotSender.
 type HotSenderDefault struct {
-	bus                 insolar.MessageBus
-	dropModifier        drop.Modifier
-	indexBucketAccessor object.IndexBucketAccessor
-	pulseCalculator     pulse.Calculator
-	jetAccessor         jet.Accessor
+	bus             insolar.MessageBus
+	dropModifier    drop.Modifier
+	indexAccessor   object.IndexAccessor
+	pulseCalculator pulse.Calculator
+	jetAccessor     jet.Accessor
 
 	// light limit configuration
 	lightChainLimit int
@@ -54,17 +54,17 @@ type HotSenderDefault struct {
 func NewHotSender(
 	bus insolar.MessageBus,
 	dropModifier drop.Modifier,
-	indexBucketAccessor object.IndexBucketAccessor,
+	indexAccessor object.IndexAccessor,
 	pulseCalculator pulse.Calculator,
 	jetAccessor jet.Accessor,
 	lightChainLimit int,
 ) *HotSenderDefault {
 	return &HotSenderDefault{
-		bus:                 bus,
-		dropModifier:        dropModifier,
-		indexBucketAccessor: indexBucketAccessor,
-		pulseCalculator:     pulseCalculator,
-		jetAccessor:         jetAccessor,
+		bus:             bus,
+		dropModifier:    dropModifier,
+		indexAccessor:   indexAccessor,
+		pulseCalculator: pulseCalculator,
+		jetAccessor:     jetAccessor,
 
 		lightChainLimit: lightChainLimit,
 	}
@@ -73,7 +73,7 @@ func NewHotSender(
 func (m *HotSenderDefault) filterAndGroupIndexes(
 	ctx context.Context, oldPulse, newPulse insolar.PulseNumber,
 ) (map[insolar.JetID][]object.FilamentIndex, error) {
-	indexes := m.indexBucketAccessor.ForPulse(ctx, oldPulse)
+	indexes := m.indexAccessor.ForPulse(ctx, oldPulse)
 
 	limitPN, err := m.pulseCalculator.Backwards(ctx, oldPulse, m.lightChainLimit)
 	if err == pulse.ErrNotFound {

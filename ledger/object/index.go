@@ -37,8 +37,8 @@ type IndexModifier interface {
 // IndexAccessor provides an interface for fetching buckets from an index.
 type IndexAccessor interface {
 	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error)
-	// ForPNAndJet returns a collection of buckets for a provided pn and jetID
-	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex
+	// ForPulse returns a collection of buckets for a provided pn and jetID
+	ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go

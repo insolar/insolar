@@ -64,16 +64,7 @@ func (i *IndexStorageMemory) ForPulse(ctx context.Context, pn insolar.PulseNumbe
 
 	res := make([]FilamentIndex, 0, len(bucks))
 	for _, b := range bucks {
-		clonedLfl := CloneIndex(b.objectMeta.Lifeline)
-		var clonedRecords []insolar.ID
-		clonedRecords = append(clonedRecords, b.objectMeta.PendingRecords...)
-
-		res = append(res, FilamentIndex{
-			ObjID:            b.objectMeta.ObjID,
-			Lifeline:         clonedLfl,
-			LifelineLastUsed: b.objectMeta.LifelineLastUsed,
-			PendingRecords:   clonedRecords,
-		})
+		res = append(res, clone(b))
 	}
 	return res
 }

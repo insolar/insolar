@@ -89,7 +89,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 
 		err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
 		if err != nil {
-			return errors.Wrap(err, "can't save result into filament-index")
+			return errors.Wrap(err, "can't save request into filament-index")
 		}
 	}
 

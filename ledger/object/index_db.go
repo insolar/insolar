@@ -107,7 +107,7 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 	return *buck, nil
 }
 
-func (i *IndexDB) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
+func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex {
 	panic("implement me")
 }
 

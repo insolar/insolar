@@ -24,19 +24,20 @@ import (
 )
 
 type Dependencies struct {
-	FetchJet             func(*FetchJet)
-	CheckJet             func(*CheckJet)
-	WaitHot              func(*WaitHot)
-	WaitHotWM            func(*WaitHotWM)
-	GetIndex             func(*EnsureIndex)
-	GetIndexWM           func(*EnsureIndexWM)
-	SendObject           func(*SendObject)
-	GetCode              func(*GetCode)
-	GetRequest           func(*GetRequest)
-	UpdateObject         func(*UpdateObject)
-	SetBlob              func(*SetBlob)
+	FetchJet     func(*FetchJet)
+	CheckJet     func(*CheckJet)
+	WaitHot      func(*WaitHot)
+	WaitHotWM    func(*WaitHotWM)
+	GetIndex     func(*EnsureIndex)
+	GetIndexWM   func(*EnsureIndexWM)
+	SendObject   func(*SendObject)
+	GetCode      func(*GetCode)
+	GetRequest   func(*GetRequest)
+	UpdateObject func(*UpdateObject)
+	SetBlob      func(*SetBlob)
 
-	SetRequest           func(*SetRequest)SetResult              func(*SetResult)
+	SetRequest           func(*SetRequest)
+	SetResult            func(*SetResult)
 	SetActivationRequest func(*SetActivationRequest)
 	RegisterChild        func(*RegisterChild)
 	GetPendingRequests   func(*GetPendingRequests)
@@ -70,19 +71,20 @@ func (p *ReturnReply) Proceed(ctx context.Context) error {
 // Use it ONLY for tests.
 func NewDependenciesMock() *Dependencies {
 	return &Dependencies{
-		FetchJet:             func(*FetchJet) {},
-		CheckJet:             func(*CheckJet) {},
-		WaitHot:              func(*WaitHot) {},
-		WaitHotWM:            func(*WaitHotWM) {},
-		GetIndex:             func(*EnsureIndex) {},
-		GetIndexWM:           func(*EnsureIndexWM) {},
-		SendObject:           func(*SendObject) {},
-		GetCode:              func(*GetCode) {},
-		GetRequest:           func(*GetRequest) {},
-		UpdateObject:         func(*UpdateObject) {},
-		SetBlob:              func(*SetBlob) {},
+		FetchJet:     func(*FetchJet) {},
+		CheckJet:     func(*CheckJet) {},
+		WaitHot:      func(*WaitHot) {},
+		WaitHotWM:    func(*WaitHotWM) {},
+		GetIndex:     func(*EnsureIndex) {},
+		GetIndexWM:   func(*EnsureIndexWM) {},
+		SendObject:   func(*SendObject) {},
+		GetCode:      func(*GetCode) {},
+		GetRequest:   func(*GetRequest) {},
+		UpdateObject: func(*UpdateObject) {},
+		SetBlob:      func(*SetBlob) {},
 
-		SetRequest:           func(*SetRequest) {},SetResult:              func(*SetResult) {},
+		SetRequest:           func(*SetRequest) {},
+		SetResult:            func(*SetResult) {},
 		SetActivationRequest: func(*SetActivationRequest) {},
 		RegisterChild:        func(*RegisterChild) {},
 		GetPendingRequests:   func(*GetPendingRequests) {},
