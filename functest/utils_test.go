@@ -103,7 +103,7 @@ func createMember(t *testing.T, name string) *user {
 
 	addBurnAddresses(t)
 
-	result, err := signedRequest(member, "contract.createMember", map[string]interface{}{})
+	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
