@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -217,7 +217,7 @@ type IndexAccessorMockForPulseResult struct {
 	r []FilamentIndex
 }
 
-// Expect specifies that invocation of IndexAccessor.ForPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexAccessor.ForPulse is expected from 1 to Infinity times
 func (m *mIndexAccessorMockForPulse) Expect(p context.Context, p1 insolar.PulseNumber) *mIndexAccessorMockForPulse {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
@@ -229,7 +229,7 @@ func (m *mIndexAccessorMockForPulse) Expect(p context.Context, p1 insolar.PulseN
 	return m
 }
 
-// Return specifies results of invocation of IndexAccessor.ForPulse
+//Return specifies results of invocation of IndexAccessor.ForPulse
 func (m *mIndexAccessorMockForPulse) Return(r []FilamentIndex) *IndexAccessorMock {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
@@ -241,7 +241,7 @@ func (m *mIndexAccessorMockForPulse) Return(r []FilamentIndex) *IndexAccessorMoc
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexAccessor.ForPulse is expected once
+//ExpectOnce specifies that invocation of IndexAccessor.ForPulse is expected once
 func (m *mIndexAccessorMockForPulse) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *IndexAccessorMockForPulseExpectation {
 	m.mock.ForPulseFunc = nil
 	m.mainExpectation = nil
@@ -256,7 +256,7 @@ func (e *IndexAccessorMockForPulseExpectation) Return(r []FilamentIndex) {
 	e.result = &IndexAccessorMockForPulseResult{r}
 }
 
-// Set uses given function f as a mock of IndexAccessor.ForPulse method
+//Set uses given function f as a mock of IndexAccessor.ForPulse method
 func (m *mIndexAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -265,7 +265,7 @@ func (m *mIndexAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.Pu
 	return m.mock
 }
 
-// ForPulse implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
+//ForPulse implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
 func (m *IndexAccessorMock) ForPulse(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)
@@ -315,17 +315,17 @@ func (m *IndexAccessorMock) ForPulse(p context.Context, p1 insolar.PulseNumber) 
 	return m.ForPulseFunc(p, p1)
 }
 
-// ForPulseMinimockCounter returns a count of IndexAccessorMock.ForPulseFunc invocations
+//ForPulseMinimockCounter returns a count of IndexAccessorMock.ForPulseFunc invocations
 func (m *IndexAccessorMock) ForPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulseCounter)
 }
 
-// ForPulseMinimockPreCounter returns the value of IndexAccessorMock.ForPulse invocations
+//ForPulseMinimockPreCounter returns the value of IndexAccessorMock.ForPulse invocations
 func (m *IndexAccessorMock) ForPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulsePreCounter)
 }
 
-// ForPulseFinished returns true if mock invocations count is ok
+//ForPulseFinished returns true if mock invocations count is ok
 func (m *IndexAccessorMock) ForPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForPulseMock.expectationSeries) > 0 {
