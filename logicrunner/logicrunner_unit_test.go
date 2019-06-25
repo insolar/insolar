@@ -1760,15 +1760,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestSendTaskToNextExecutor() {
 	s.Equal(false, ok)
 }
 
-func makeQueue(ctx context.Context, size int) []Transcript {
-	q := make([]Transcript, size)
-	for i := range q {
-		q[i].Context = ctx
-	}
-
-	return q
-}
-
 func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
