@@ -142,19 +142,19 @@ func (m *client) RegisterRequest(
 	virtRec := record.Wrap(request)
 	buf, err := virtRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterRequest: failed to marshal record")
+		return nil, errors.Wrap(err, "failed to marshal record")
 	}
 
 	h := m.PCS.ReferenceHasher()
 	_, err = h.Write(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterRequest: failed to calculate hash")
+		return nil, errors.Wrap(err, "failed to calculate hash")
 	}
 	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
-	msg := &payload.SetRequest{
+	msg, err := payload.NewMessage(&payload.SetRequest{
 		Request: buf,
-	}
+	})
 
 	var recRef *insolar.Reference
 	switch request.CallType {
@@ -163,13 +163,21 @@ func (m *client) RegisterRequest(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
 		recRef = insolar.NewReference(recID)
 	default:
-		return nil, errors.New("RegisterRequest: not supported call type " + request.CallType.String())
+		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
 
-	pl, err := m.retryer(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef, 3)
-	if err != nil {
-		return nil, err
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply")
 	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
 	switch p := pl.(type) {
 	case *payload.ID:
 		return &p.ID, nil
@@ -218,7 +226,7 @@ func (m *client) GetCode(
 
 	rep, ok := <-reps
 	if !ok {
-		return nil, errors.New("no reply")
+		return nil, ErrNoReply
 	}
 
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
@@ -334,8 +342,8 @@ func (m *client) GetObject(
 		}
 	}
 	if !success() {
-		logger.Error("no reply")
-		return nil, errors.New("no reply")
+		logger.Error(ErrNoReply)
+		return nil, ErrNoReply
 	}
 
 	rec := record.Material{}
@@ -629,7 +637,7 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 		done()
 
 		if !ok {
-			return nil, errors.New("no reply")
+			return nil, ErrNoReply
 		}
 		pl, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
@@ -802,10 +810,7 @@ func (m *client) RegisterValidation(
 
 // RegisterResult saves VM method call result.
 func (m *client) RegisterResult(
-	ctx context.Context,
-	obj insolar.Reference,
-	request insolar.Reference,
-	data []byte,
+	ctx context.Context, obj, request insolar.Reference, payload []byte,
 ) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
@@ -821,29 +826,16 @@ func (m *client) RegisterResult(
 	res := record.Result{
 		Object:  *obj.Record(),
 		Request: request,
-		Payload: data,
+		Payload: payload,
 	}
 	virtRec := record.Wrap(res)
 
-	buf, err := virtRec.Marshal()
-	if err != nil {
-		return nil, errors.Wrap(err, "RegisterResult: failed to marshal record")
-	}
-	msg := &payload.SetResult{
-		Result: buf,
-	}
-	pl, err := m.retryer(ctx, msg, insolar.DynamicRoleLightExecutor, obj, 3)
-	if err != nil {
-		return nil, err
-	}
-	switch p := pl.(type) {
-	case *payload.ID:
-		return &p.ID, nil
-	case *payload.Error:
-		return nil, errors.New(p.Text)
-	default:
-		return nil, fmt.Errorf("RegisterResult: unexpected reply: %#v", p)
-	}
+	recid, err := m.setRecord(
+		ctx,
+		virtRec,
+		obj,
+	)
+	return recid, err
 }
 
 // pulse returns current PulseNumber for artifact manager
@@ -971,6 +963,40 @@ func (m *client) updateObject(
 	}
 
 	return nil
+}
+
+func (m *client) setRecord(
+	ctx context.Context,
+	rec record.Virtual,
+	target insolar.Reference,
+) (*insolar.ID, error) {
+	data, err := rec.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "setRecord: can't serialize record")
+	}
+	sender := messagebus.BuildSender(
+		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
+		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
+	)
+	genericReply, err := sender(ctx, &message.SetRecord{
+		Record:    data,
+		TargetRef: target,
+	}, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	switch rep := genericReply.(type) {
+	case *reply.ID:
+		return &rep.ID, nil
+	case *reply.Error:
+		return nil, rep.Error()
+	default:
+		return nil, fmt.Errorf("setRecord: unexpected reply: %#v", rep)
+	}
 }
 
 func (m *client) setBlob(

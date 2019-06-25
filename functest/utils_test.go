@@ -23,20 +23,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"net"
-	"net/http"
 	"strings"
+
+	"io/ioutil"
+	"net/http"
 	"testing"
-	"time"
 
 	"github.com/gorilla/rpc/v2/json2"
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/pkg/errors"
@@ -232,13 +232,7 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
 		})
 
-		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
-			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			resp.Error = &requester.Error{Message: netErr.Error()}
-			continue
-		} else if err != nil {
+		if err != nil {
 			return nil, err
 		}
 
@@ -246,13 +240,6 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
 			return nil, err
-		}
-
-		if resp.Error != nil && strings.Contains(resp.Error.Message, "API timeout exceeded") {
-			fmt.Printf("API timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
 		}
 
 		break

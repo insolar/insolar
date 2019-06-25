@@ -25,7 +25,6 @@ type APIRunner struct {
 	Address string
 	Call    string
 	RPC     string
-	Timeout uint32
 }
 
 // NewAPIRunner creates new api config
@@ -34,7 +33,6 @@ func NewAPIRunner() APIRunner {
 		Address: "localhost:19101",
 		Call:    "/api/call",
 		RPC:     "/api/rpc",
-		Timeout: 15,
 	}
 }
 
