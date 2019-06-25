@@ -252,7 +252,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
-			Jets,
+			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
 			blobs,
@@ -262,13 +262,17 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 			conf.LightChainLimit,
 		)
-		dataGatherer := replication.NewDataGatherer(drops, blobs, records, indexes)
+
 		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
-			dataGatherer,
 			lightCleaner,
 			Bus,
 			Pulses,
+			drops,
+			blobs,
+			records,
+			indexes,
+			Jets,
 		)
 
 		jetSplitter := executor.NewJetSplitter(
@@ -279,35 +283,28 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			hots,
 		)
 
-		pm := pulsemanager.NewPulseManager(
-			conf,
+		hotSender := executor.NewHotSender(
+			Bus,
 			drops,
-			blobs,
-			blobs,
-			Pulses,
-			records,
-			records,
-			jetSplitter,
 			indexes,
+			Pulses,
+			Jets,
+			conf.LightChainLimit,
+		)
+
+		pm := pulsemanager.NewPulseManager(
+			jetSplitter,
 			lthSyncer,
 			writeController,
-			indexes,
+			hotSender,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
-		pm.JetCoordinator = Coordinator
-		pm.CryptographyService = CryptoService
-		pm.PlatformCryptographyScheme = CryptoScheme
-		pm.RecentStorageProvider = hots
 		pm.JetReleaser = waiter
-		pm.JetAccessor = Jets
 		pm.JetModifier = Jets
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
-		pm.DropModifier = drops
-		pm.DropAccessor = drops
-		pm.DropCleaner = drops
 		pm.PulseAccessor = Pulses
 		pm.PulseCalculator = Pulses
 		pm.PulseAppender = Pulses

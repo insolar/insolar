@@ -89,10 +89,6 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 
 	cfg.RPC = "test"
 	_, err = NewRunner(&cfg)
-	suite.Contains(err.Error(), "Timeout must not be null")
-
-	cfg.Timeout = 2
-	_, err = NewRunner(&cfg)
 	suite.NoError(err)
 }
 

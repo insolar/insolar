@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/messagebus"
@@ -56,7 +55,7 @@ type ContractRequester struct {
 func New() (*ContractRequester, error) {
 	return &ContractRequester{
 		ResultMap:   make(map[uint64]chan *message.ReturnResults),
-		callTimeout: time.Duration(configuration.NewAPIRunner().Timeout) * time.Second,
+		callTimeout: 25 * time.Second,
 	}, nil
 }
 
@@ -169,7 +168,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		cr.ResultMutex.Lock()
 		delete(cr.ResultMap, seq)
 		cr.ResultMutex.Unlock()
-		return nil, errors.New("canceled")
+		return nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}
 }
 
