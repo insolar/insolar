@@ -129,8 +129,8 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	if err != nil {
 		return record.CompositeFilamentRecord{}, err
 	}
-	composite.RecordID = *i.currentID
-	composite.Record = filamentRecord
+	composite.MetaID = *i.currentID
+	composite.Meta = filamentRecord
 
 	// Fetching primary record.
 	virtual := record.Unwrap(filamentRecord.Virtual)
