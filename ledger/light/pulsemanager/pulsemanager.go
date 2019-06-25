@@ -227,9 +227,11 @@ func (m *PulseManager) setUnderGilSection(
 		// No active nodes for pulse. It means there was no processing (network start).
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree and unlock jet waiter.
-			zeroJet := insolar.NewJetID(0, nil)
-			m.JetModifier.Update(ctx, newPulse.PulseNumber, true, *zeroJet)
-			err := m.JetReleaser.Unlock(ctx, insolar.ID(*zeroJet))
+			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
+			if err != nil {
+				return nil, nil, nil, errors.Wrapf(err, "failed to upfate zeroJet")
+			}
+			err = m.JetReleaser.Unlock(ctx, insolar.ID(insolar.ZeroJetID))
 			if err != nil {
 				if err == artifactmanager.ErrWaiterNotLocked {
 					inslogger.FromContext(ctx).Error(err)

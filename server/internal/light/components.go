@@ -252,7 +252,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
-			Jets,
+			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
 			blobs,
