@@ -18,10 +18,17 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/insolar/insolar/metrics"
+
+	"github.com/insolar/insolar/api/requester"
 
 	"github.com/pkg/errors"
 
@@ -32,24 +39,12 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/metrics"
 )
 
-// Request is a representation of request struct to api
-type Request struct {
-	Reference string  `json:"reference"`
-	Method    string  `json:"method"`
-	Params    []byte  `json:"params"`
-	Seed      []byte  `json:"seed"`
-	Signature []byte  `json:"signature"`
-	LogLevel  *string `json:"logLevel,omitempty"`
-}
-
-type answer struct {
-	Error   string      `json:"error,omitempty"`
-	Result  interface{} `json:"result,omitempty"`
-	TraceID string      `json:"traceID,omitempty"`
-}
+const (
+	TimeoutError = 215
+	ResultError  = 217
+)
 
 // UnmarshalRequest unmarshals request to api
 func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
@@ -68,8 +63,12 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	return body, nil
 }
 
-func (ar *Runner) checkSeed(paramsSeed []byte) error {
-	seed := seedmanager.SeedFromBytes(paramsSeed)
+func (ar *Runner) checkSeed(paramsSeed string) error {
+	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
+	if err != nil {
+		return errors.New("[ checkSeed ] Failed to decode seed from string")
+	}
+	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {
 		return errors.New("[ checkSeed ] Bad seed param")
 	}
@@ -81,20 +80,26 @@ func (ar *Runner) checkSeed(paramsSeed []byte) error {
 	return nil
 }
 
-func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, error) {
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+params.Method)
+func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64) (interface{}, error) {
+	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
 	defer span.End()
 
-	reference, err := insolar.NewReferenceFromBase58(params.Reference)
+	reference, err := insolar.NewReferenceFromBase58(request.Params.Reference)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
-	requestArgs := []interface{}{
-		*ar.CertificateManager.GetCertificate().GetRootDomainReference(),
-		params.Method, params.Params, params.Seed, params.Signature,
+	requestArgs, err := insolar.MarshalArgs(rawBody, signature, pulseTimeStamp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}
-	res, err := ar.ContractRequester.SendRequest(ctx, reference, "Call", requestArgs)
+
+	res, err := ar.ContractRequester.SendRequest(
+		ctx,
+		reference,
+		"Call",
+		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), requestArgs},
+	)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
@@ -113,8 +118,9 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *answer, insLog insolar.Logger) {
-	resp.Error = err.Error()
+func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
+	errResponse := &requester.Error{Message: extraMsg, Code: ResultError, TraceID: traceID}
+	resp.Error = errResponse
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
@@ -126,26 +132,24 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		ctx, span := instracer.StartSpan(ctx, "callHandler")
 		defer span.End()
 
-		params := Request{}
-		resp := answer{}
+		contractRequest := requester.Request{}
+		contractAnswer := requester.ContractAnswer{}
 
 		startTime := time.Now()
 		defer func() {
 			success := "success"
-			if resp.Error != "" {
+			if contractAnswer.Error != nil {
 				success = "fail"
 			}
-			metrics.APIContractExecutionTime.WithLabelValues(params.Method, success).Observe(time.Since(startTime).Seconds())
+			metrics.APIContractExecutionTime.WithLabelValues(contractRequest.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
 
-		resp.TraceID = traceID
-
-		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
+		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
 
 		defer func() {
-			res, err := json.MarshalIndent(resp, "", "    ")
+			res, err := json.MarshalIndent(contractAnswer, "", "    ")
 			if err != nil {
-				res = []byte(`{"error": "can't marshal answer to json'"}`)
+				res = []byte(`{"error": "can't marshal ContractAnswer to json'"}`)
 			}
 			response.Header().Add("Content-Type", "application/json")
 			_, err = response.Write(res)
@@ -154,48 +158,81 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 
-		_, err := UnmarshalRequest(req, &params)
+		rawBody, err := UnmarshalRequest(req, &contractRequest)
 		if err != nil {
-			processError(err, "Can't unmarshal request", &resp, insLog)
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
 		}
 
-		if params.LogLevel != nil {
-			logLevelNumber, err := insolar.ParseLevel(*params.LogLevel)
+		contractAnswer.JSONRPC = contractRequest.JSONRPC
+		contractAnswer.ID = contractRequest.ID
+
+		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
+		if err != nil {
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
+			return
+		}
+
+		if len(contractRequest.LogLevel) > 0 {
+			logLevelNumber, err := insolar.ParseLevel(contractRequest.LogLevel)
 			if err != nil {
-				processError(err, "Can't parse logLevel", &resp, insLog)
+				processError(err, "Can't parse logLevel", &contractAnswer, insLog, traceID)
 				return
 			}
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed(params.Seed)
-		if err != nil {
-			processError(err, "Can't checkSeed", &resp, insLog)
+		if err := ar.checkSeed(contractRequest.Params.Seed); err != nil {
+			processError(err, err.Error(), &contractAnswer, insLog, traceID)
 			return
 		}
 
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, params)
+			result, err = ar.makeCall(ctx, contractRequest, rawBody, signature, 0)
 			ch <- nil
 		}()
 		select {
 
 		case <-ch:
 			if err != nil {
-				processError(err, "Can't makeCall", &resp, insLog)
+				processError(err, err.Error(), &contractAnswer, insLog, traceID)
 				return
 			}
-			resp.Result = result
-
-		case <-time.After(ar.timeout):
-			resp.Error = "Messagebus timeout exceeded"
+			contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
+			contractAnswer.Result = contractResult
 			return
 
+		case <-time.After(ar.timeout):
+			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, TraceID: traceID}
+			contractAnswer.Error = errResponse
+			return
 		}
-
-		resp.Result = result
 	}
+}
+
+func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
+	// Digest = "SHA-256=<hashString>"
+	// Signature = "keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>"
+	if len(digest) < 15 || strings.Count(digest, "=") < 2 || len(richSignature) == 15 ||
+		strings.Count(richSignature, "=") < 4 || len(body) == 0 {
+		return "", errors.Errorf("invalid input data length digest: %d, signature: %d, body: %d", len(digest),
+			len(richSignature), len(body))
+	}
+	h := sha256.New()
+	_, err := h.Write(body)
+	if err != nil {
+		return "", errors.Wrap(err, "Cant get hash")
+	}
+	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
+	if sha == digest[strings.IndexByte(digest, '=')+1:] {
+		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
+		if len(sig) == 0 {
+			return "", errors.New("empty signature")
+		}
+		return sig, nil
+
+	}
+	return "", errors.New("cant get signature from header")
 }
