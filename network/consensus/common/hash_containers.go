@@ -120,11 +120,12 @@ type SecretKeyStore interface {
 
 type SignatureVerifier interface {
 	IsDigestMethodSupported(m DigestMethod) bool
-	IsValidDataSignature(data io.Reader, signature SignatureHolder) bool
-
-	IsSignOfSignatureMethodSupported(m SignatureMethod) bool
 	IsSignMethodSupported(m SignMethod) bool
+	IsDigestOfSignatureMethodSupported(m SignatureMethod) bool
+	IsSignOfSignatureMethodSupported(m SignatureMethod) bool
+
 	IsValidDigestSignature(digest DigestHolder, signature SignatureHolder) bool
+	IsValidDataSignature(data io.Reader, signature SignatureHolder) bool
 }
 
 type SignatureVerifierFactory interface {
