@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -19,11 +19,6 @@ import (
 //IndexModifierMock implements github.com/insolar/insolar/ledger/object.IndexModifier
 type IndexModifierMock struct {
 	t minimock.Tester
-
-	CreateIndexFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *FilamentIndex)
-	CreateIndexCounter    uint64
-	CreateIndexPreCounter uint64
-	CreateIndexMock       mIndexModifierMockCreateIndex
 
 	SetIndexFunc       func(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error)
 	SetIndexCounter    uint64
@@ -39,159 +34,9 @@ func NewIndexModifierMock(t minimock.Tester) *IndexModifierMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.CreateIndexMock = mIndexModifierMockCreateIndex{mock: m}
 	m.SetIndexMock = mIndexModifierMockSetIndex{mock: m}
 
 	return m
-}
-
-type mIndexModifierMockCreateIndex struct {
-	mock              *IndexModifierMock
-	mainExpectation   *IndexModifierMockCreateIndexExpectation
-	expectationSeries []*IndexModifierMockCreateIndexExpectation
-}
-
-type IndexModifierMockCreateIndexExpectation struct {
-	input  *IndexModifierMockCreateIndexInput
-	result *IndexModifierMockCreateIndexResult
-}
-
-type IndexModifierMockCreateIndexInput struct {
-	p  context.Context
-	p1 insolar.PulseNumber
-	p2 insolar.ID
-}
-
-type IndexModifierMockCreateIndexResult struct {
-	r *FilamentIndex
-}
-
-//Expect specifies that invocation of IndexModifier.CreateIndex is expected from 1 to Infinity times
-func (m *mIndexModifierMockCreateIndex) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mIndexModifierMockCreateIndex {
-	m.mock.CreateIndexFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexModifierMockCreateIndexExpectation{}
-	}
-	m.mainExpectation.input = &IndexModifierMockCreateIndexInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of IndexModifier.CreateIndex
-func (m *mIndexModifierMockCreateIndex) Return(r *FilamentIndex) *IndexModifierMock {
-	m.mock.CreateIndexFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexModifierMockCreateIndexExpectation{}
-	}
-	m.mainExpectation.result = &IndexModifierMockCreateIndexResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of IndexModifier.CreateIndex is expected once
-func (m *mIndexModifierMockCreateIndex) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *IndexModifierMockCreateIndexExpectation {
-	m.mock.CreateIndexFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &IndexModifierMockCreateIndexExpectation{}
-	expectation.input = &IndexModifierMockCreateIndexInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *IndexModifierMockCreateIndexExpectation) Return(r *FilamentIndex) {
-	e.result = &IndexModifierMockCreateIndexResult{r}
-}
-
-//Set uses given function f as a mock of IndexModifier.CreateIndex method
-func (m *mIndexModifierMockCreateIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *FilamentIndex)) *IndexModifierMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.CreateIndexFunc = f
-	return m.mock
-}
-
-//CreateIndex implements github.com/insolar/insolar/ledger/object.IndexModifier interface
-func (m *IndexModifierMock) CreateIndex(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r *FilamentIndex) {
-	counter := atomic.AddUint64(&m.CreateIndexPreCounter, 1)
-	defer atomic.AddUint64(&m.CreateIndexCounter, 1)
-
-	if len(m.CreateIndexMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.CreateIndexMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to IndexModifierMock.CreateIndex. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.CreateIndexMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexModifierMockCreateIndexInput{p, p1, p2}, "IndexModifier.CreateIndex got unexpected parameters")
-
-		result := m.CreateIndexMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the IndexModifierMock.CreateIndex")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.CreateIndexMock.mainExpectation != nil {
-
-		input := m.CreateIndexMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexModifierMockCreateIndexInput{p, p1, p2}, "IndexModifier.CreateIndex got unexpected parameters")
-		}
-
-		result := m.CreateIndexMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the IndexModifierMock.CreateIndex")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.CreateIndexFunc == nil {
-		m.t.Fatalf("Unexpected call to IndexModifierMock.CreateIndex. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.CreateIndexFunc(p, p1, p2)
-}
-
-//CreateIndexMinimockCounter returns a count of IndexModifierMock.CreateIndexFunc invocations
-func (m *IndexModifierMock) CreateIndexMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.CreateIndexCounter)
-}
-
-//CreateIndexMinimockPreCounter returns the value of IndexModifierMock.CreateIndex invocations
-func (m *IndexModifierMock) CreateIndexMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.CreateIndexPreCounter)
-}
-
-//CreateIndexFinished returns true if mock invocations count is ok
-func (m *IndexModifierMock) CreateIndexFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.CreateIndexMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.CreateIndexCounter) == uint64(len(m.CreateIndexMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.CreateIndexMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.CreateIndexCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.CreateIndexFunc != nil {
-		return atomic.LoadUint64(&m.CreateIndexCounter) > 0
-	}
-
-	return true
 }
 
 type mIndexModifierMockSetIndex struct {
@@ -347,10 +192,6 @@ func (m *IndexModifierMock) SetIndexFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexModifierMock) ValidateCallCounters() {
 
-	if !m.CreateIndexFinished() {
-		m.t.Fatal("Expected call to IndexModifierMock.CreateIndex")
-	}
-
 	if !m.SetIndexFinished() {
 		m.t.Fatal("Expected call to IndexModifierMock.SetIndex")
 	}
@@ -372,10 +213,6 @@ func (m *IndexModifierMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexModifierMock) MinimockFinish() {
 
-	if !m.CreateIndexFinished() {
-		m.t.Fatal("Expected call to IndexModifierMock.CreateIndex")
-	}
-
 	if !m.SetIndexFinished() {
 		m.t.Fatal("Expected call to IndexModifierMock.SetIndex")
 	}
@@ -394,7 +231,6 @@ func (m *IndexModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.CreateIndexFinished()
 		ok = ok && m.SetIndexFinished()
 
 		if ok {
@@ -403,10 +239,6 @@ func (m *IndexModifierMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
-
-			if !m.CreateIndexFinished() {
-				m.t.Error("Expected call to IndexModifierMock.CreateIndex")
-			}
 
 			if !m.SetIndexFinished() {
 				m.t.Error("Expected call to IndexModifierMock.SetIndex")
@@ -423,10 +255,6 @@ func (m *IndexModifierMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexModifierMock) AllMocksCalled() bool {
-
-	if !m.CreateIndexFinished() {
-		return false
-	}
 
 	if !m.SetIndexFinished() {
 		return false

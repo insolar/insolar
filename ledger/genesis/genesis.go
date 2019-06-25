@@ -39,12 +39,12 @@ import (
 
 // BaseRecord provides methods for genesis base record manipulation.
 type BaseRecord struct {
-	DB                    store.DB
-	DropModifier          drop.Modifier
-	PulseAppender         pulse.Appender
-	PulseAccessor         pulse.Accessor
-	RecordModifier        object.RecordModifier
-	IndexLifelineModifier object.LifelineModifier
+	DB             store.DB
+	DropModifier   drop.Modifier
+	PulseAppender  pulse.Appender
+	PulseAccessor  pulse.Accessor
+	RecordModifier object.RecordModifier
+	IndexModifier  object.IndexModifier
 }
 
 // Key is genesis key.
@@ -119,14 +119,17 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 		return errors.Wrap(err, "can't save genesis record into storage")
 	}
 
-	err = br.IndexLifelineModifier.Set(
+	err = br.IndexModifier.SetIndex(
 		ctx,
 		insolar.FirstPulseNumber,
-		genesisID,
-		object.Lifeline{
-			LatestState:         &genesisID,
-			LatestStateApproved: &genesisID,
-			JetID:               insolar.ZeroJetID,
+		object.FilamentIndex{
+			ObjID: genesisID,
+			Lifeline: object.Lifeline{
+				LatestState:         &genesisID,
+				LatestStateApproved: &genesisID,
+				JetID:               insolar.ZeroJetID,
+			},
+			PendingRecords: []insolar.ID{},
 		},
 	)
 	if err != nil {

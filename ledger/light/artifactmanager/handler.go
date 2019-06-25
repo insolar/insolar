@@ -52,7 +52,7 @@ type MessageHandler struct {
 	BlobAccessor blob.Accessor `inject:""`
 	Blobs        blob.Storage  `inject:""`
 
-	IDLocker object.IDLocker `inject:""`
+	IndexLocker object.IndexLocker `inject:""`
 
 	RecordModifier object.RecordModifier `inject:""`
 	RecordAccessor object.RecordAccessor `inject:""`
@@ -63,12 +63,12 @@ type MessageHandler struct {
 
 	WriteAccessor hot.WriteAccessor
 
-	LifelineIndex         object.LifelineIndex
-	IndexBucketModifier   object.IndexModifier
-	LifelineStateModifier object.LifelineStateModifier
-	PendingModifier       object.PendingModifier
-	PendingAccessor       object.PendingAccessor
-	PulseCalculator       storage.PulseCalculator
+	IndexModifier object.IndexModifier
+	IndexAccessor object.IndexAccessor
+
+	PendingModifier object.PendingModifier
+	PendingAccessor object.PendingAccessor
+	PulseCalculator storage.PulseCalculator
 
 	FilamentCacheManager object.FilamentCacheManager
 
@@ -82,22 +82,16 @@ type MessageHandler struct {
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	index object.LifelineIndex,
-	indexBucketModifier object.IndexModifier,
-	indexStateModifier object.LifelineStateModifier,
 	pendingModifier object.PendingModifier,
 	pendingAccessor object.PendingAccessor,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
 	h := &MessageHandler{
-		handlers:              map[insolar.MessageType]insolar.MessageHandler{},
-		conf:                  conf,
-		LifelineIndex:         index,
-		IndexBucketModifier:   indexBucketModifier,
-		LifelineStateModifier: indexStateModifier,
-		PendingModifier:       pendingModifier,
-		PendingAccessor:       pendingAccessor,
+		handlers:        map[insolar.MessageType]insolar.MessageHandler{},
+		conf:            conf,
+		PendingModifier: pendingModifier,
+		PendingAccessor: pendingAccessor,
 	}
 
 	dep := &proc.Dependencies{
@@ -110,10 +104,10 @@ func NewMessageHandler(
 		WaitHot: func(p *proc.WaitHot) {
 			p.Dep.Waiter = h.HotDataWaiter
 		},
-		GetIndex: func(p *proc.GetIndex) {
-			p.Dep.IndexState = h.LifelineStateModifier
-			p.Dep.Locker = h.IDLocker
-			p.Dep.Index = h.LifelineIndex
+		GetIndex: func(p *proc.EnsureIndex) {
+			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.IndexLocker = h.IndexLocker
+			p.Dep.IndexModifier = h.IndexModifier
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
@@ -127,10 +121,10 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 			p.Dep.Sender = h.Sender
 		},
-		GetIndexWM: func(p *proc.GetIndexWM) {
-			p.Dep.IndexState = h.LifelineStateModifier
-			p.Dep.Locker = h.IDLocker
-			p.Dep.Index = h.LifelineIndex
+		GetIndexWM: func(p *proc.EnsureIndexWM) {
+			p.Dep.IndexModifier = h.IndexModifier
+			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.IndexLocker = h.IndexLocker
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 			p.Dep.Sender = h.Sender
@@ -191,13 +185,15 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobModifier = h.BlobModifier
 			p.Dep.PCS = h.PCS
-			p.Dep.IDLocker = h.IDLocker
-			p.Dep.LifelineStateModifier = h.LifelineStateModifier
-			p.Dep.LifelineIndex = h.LifelineIndex
+			p.Dep.IndexLocker = h.IndexLocker
+			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.IndexModifier = h.IndexModifier
 			p.Dep.WriteAccessor = h.WriteAccessor
 			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetChildren: func(p *proc.GetChildren) {
+			p.Dep.IndexLocker = h.IndexLocker
+			p.Dep.IndexAccessor = h.IndexAccessor
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.RecordAccessor
@@ -205,11 +201,11 @@ func NewMessageHandler(
 			p.Dep.JetTreeUpdater = h.jetTreeUpdater
 		},
 		RegisterChild: func(p *proc.RegisterChild) {
-			p.Dep.IDLocker = h.IDLocker
-			p.Dep.LifelineIndex = h.LifelineIndex
+			p.Dep.IndexLocker = h.IndexLocker
+			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.IndexModifier = h.IndexModifier
 			p.Dep.JetCoordinator = h.JetCoordinator
 			p.Dep.RecordModifier = h.RecordModifier
-			p.Dep.LifelineStateModifier = h.LifelineStateModifier
 			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
@@ -226,7 +222,7 @@ func NewMessageHandler(
 		HotData: func(p *proc.HotData) {
 			p.Dep.DropModifier = h.DropModifier
 			p.Dep.MessageBus = h.Bus
-			p.Dep.IndexBucketModifier = h.IndexBucketModifier
+			p.Dep.IndexModifier = h.IndexModifier
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
@@ -246,6 +242,9 @@ func NewMessageHandler(
 		},
 		SetCode: func(p *proc.SetCode) {
 			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender)
+		},
+		GetDelegate: func(p *proc.GetDelegate) {
+			p.Dep.IndexAccessor = h.IndexAccessor
 		},
 	}
 

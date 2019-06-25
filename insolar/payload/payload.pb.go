@@ -6,14 +6,15 @@ package payload
 import (
 	bytes "bytes"
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
-	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
 	io "io"
 	math "math"
 	reflect "reflect"
 	strings "strings"
+
+	_ "github.com/gogo/protobuf/gogoproto"
+	proto "github.com/gogo/protobuf/proto"
+	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -402,7 +403,7 @@ func (m *SetCode) GetCode() []byte {
 
 type Index struct {
 	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	Index     []byte `protobuf:"bytes,20,opt,name=Index,proto3" json:"Index,omitempty"`
+	Index     []byte `protobuf:"bytes,20,opt,name=Lifeline,proto3" json:"Lifeline,omitempty"`
 }
 
 func (m *Index) Reset()      { *m = Index{} }
@@ -815,7 +816,7 @@ func init() {
 	proto.RegisterType((*PassState)(nil), "payload.PassState")
 	proto.RegisterType((*Pass)(nil), "payload.Pass")
 	proto.RegisterType((*SetCode)(nil), "payload.SetCode")
-	proto.RegisterType((*Index)(nil), "payload.Index")
+	proto.RegisterType((*Index)(nil), "payload.Lifeline")
 	proto.RegisterType((*Code)(nil), "payload.Code")
 	proto.RegisterType((*State)(nil), "payload.State")
 	proto.RegisterType((*ID)(nil), "payload.ID")
@@ -1422,9 +1423,9 @@ func (this *Index) GoString() string {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&payload.Index{")
+	s = append(s, "&payload.Lifeline{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
-	s = append(s, "Index: "+fmt.Sprintf("%#v", this.Index)+",\n")
+	s = append(s, "Lifeline: "+fmt.Sprintf("%#v", this.Index)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2558,9 +2559,9 @@ func (this *Index) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Index{`,
+	s := strings.Join([]string{`&Lifeline{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
-		`Index:` + fmt.Sprintf("%v", this.Index) + `,`,
+		`Lifeline:` + fmt.Sprintf("%v", this.Index) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -3702,10 +3703,10 @@ func (m *Index) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Index: wiretype end group for non-group")
+			return fmt.Errorf("proto: Lifeline: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Index: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Lifeline: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 16:
@@ -3729,7 +3730,7 @@ func (m *Index) Unmarshal(dAtA []byte) error {
 			}
 		case 20:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Index", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Lifeline", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {

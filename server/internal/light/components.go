@@ -215,7 +215,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		conf := cfg.Ledger
-		idLocker := object.NewIDLocker()
+		idLocker := object.NewIndexLocker()
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
@@ -224,14 +224,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		filamentCache := object.NewFilamentCacheStorage(indexes, indexes, idLocker, records, Coordinator, CryptoScheme, Pulses, Bus, WmBus)
 
-		lifelines := object.NewLifelineStorage(indexes, indexes)
-
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(lifelines, indexes, lifelines, filamentCache, filamentCache, &conf)
+		handler := artifactmanager.NewMessageHandler(filamentCache, filamentCache, &conf)
 		handler.PulseCalculator = Pulses
 		handler.FilamentCacheManager = filamentCache
 
@@ -245,7 +243,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.BlobModifier = blobs
 		handler.BlobAccessor = blobs
 		handler.Blobs = blobs
-		handler.IDLocker = idLocker
+		handler.IndexLocker = idLocker
 		handler.RecordModifier = records
 		handler.RecordAccessor = records
 		handler.Nodes = Nodes
@@ -253,6 +251,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.JetReleaser = waiter
 		handler.WriteAccessor = writeController
 		handler.Sender = WmBus
+		handler.IndexModifier = indexes
+		handler.IndexAccessor = indexes
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(

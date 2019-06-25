@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"go.opencensus.io/stats"
 )
 
@@ -31,19 +30,26 @@ type IndexStorageMemory struct {
 }
 
 func NewIndexStorageMemory() *IndexStorageMemory {
-	return &IndexStorageMemory{buckets: map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{}}
+	return &IndexStorageMemory{
+		buckets: map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{},
+	}
 }
 
-func (i *IndexStorageMemory) Index(pn insolar.PulseNumber, objID insolar.ID) *FilamentIndex {
+func (i *IndexStorageMemory) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error) {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
-		return nil
+		return FilamentIndex{}, ErrIndexNotFound
 	}
 
-	return objsByPn[objID]
+	idx, ok := objsByPn[objID]
+	if !ok {
+		return FilamentIndex{}, ErrIndexNotFound
+	}
+
+	return clone(idx), nil
 }
 
 // ForPNAndJet returns a collection of buckets for a provided pn and jetID
@@ -63,44 +69,10 @@ func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNu
 			continue
 		}
 
-		clonedLfl := CloneLifeline(b.Lifeline)
-		var clonedRecords []insolar.ID
-
-		clonedRecords = append(clonedRecords, b.PendingRecords...)
-
-		res = append(res, FilamentIndex{
-			ObjID:            b.ObjID,
-			Lifeline:         clonedLfl,
-			LifelineLastUsed: b.LifelineLastUsed,
-			PendingRecords:   clonedRecords,
-		})
+		res = append(res, clone(b))
 	}
 
 	return res
-}
-
-func (i *IndexStorageMemory) CreateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *FilamentIndex {
-	i.bucketsLock.Lock()
-	defer i.bucketsLock.Unlock()
-
-	bucket := &FilamentIndex{
-		ObjID:          objID,
-		PendingRecords: []insolar.ID{},
-	}
-
-	objsByPn, ok := i.buckets[pn]
-	if !ok {
-		objsByPn = map[insolar.ID]*FilamentIndex{}
-		i.buckets[pn] = objsByPn
-	}
-
-	_, ok = objsByPn[objID]
-	if !ok {
-		objsByPn[objID] = bucket
-	}
-
-	inslogger.FromContext(ctx).Debugf("[createPendingBucket] create bucket for obj - %v was created successfully", objID.DebugString())
-	return bucket
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
@@ -108,13 +80,12 @@ func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumbe
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	bucks, ok := i.buckets[pn]
+	_, ok := i.buckets[pn]
 	if !ok {
-		bucks = map[insolar.ID]*FilamentIndex{}
-		i.buckets[pn] = bucks
+		i.buckets[pn] = map[insolar.ID]*FilamentIndex{}
 	}
 
-	bucks[bucket.ObjID] = &bucket
+	i.buckets[pn][bucket.ObjID] = &bucket
 
 	stats.Record(ctx,
 		statBucketAddedCount.M(1),
@@ -129,4 +100,17 @@ func (i *IndexStorageMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNu
 	defer i.bucketsLock.Unlock()
 
 	delete(i.buckets, pn)
+}
+
+func clone(index *FilamentIndex) FilamentIndex {
+	var clonedRecords []insolar.ID
+
+	clonedRecords = append(clonedRecords, index.PendingRecords...)
+	return FilamentIndex{
+		XPolymorph:       index.XPolymorph,
+		ObjID:            index.ObjID,
+		Lifeline:         CloneLifeline(index.Lifeline),
+		LifelineLastUsed: index.LifelineLastUsed,
+		PendingRecords:   clonedRecords,
+	}
 }

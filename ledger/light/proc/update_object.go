@@ -42,16 +42,18 @@ type UpdateObject struct {
 	PulseNumber insolar.PulseNumber
 
 	Dep struct {
-		RecordModifier        object.RecordModifier
-		Bus                   insolar.MessageBus
-		Coordinator           jet.Coordinator
-		BlobModifier          blob.Modifier
-		PCS                   insolar.PlatformCryptographyScheme
-		IDLocker              object.IDLocker
-		LifelineIndex         object.LifelineIndex
-		LifelineStateModifier object.LifelineStateModifier
-		WriteAccessor         hot.WriteAccessor
-		PendingModifier       object.PendingModifier
+		RecordModifier object.RecordModifier
+		Bus            insolar.MessageBus
+		Coordinator    jet.Coordinator
+		BlobModifier   blob.Modifier
+		PCS            insolar.PlatformCryptographyScheme
+
+		IndexLocker   object.IndexLocker
+		IndexAccessor object.IndexAccessor
+		IndexModifier object.IndexModifier
+
+		WriteAccessor   hot.WriteAccessor
+		PendingModifier object.PendingModifier
 	}
 }
 
@@ -112,15 +114,20 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		s.Memory = *calculatedID
 	}
 
-	p.Dep.IDLocker.Lock(p.Message.Object.Record())
-	defer p.Dep.IDLocker.Unlock(p.Message.Object.Record())
+	p.Dep.IndexLocker.Lock(p.Message.Object.Record())
+	defer p.Dep.IndexLocker.Unlock(p.Message.Object.Record())
 
-	idx, err := p.Dep.LifelineIndex.ForID(ctx, p.PulseNumber, *p.Message.Object.Record())
+	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.PulseNumber, *p.Message.Object.Record())
 	// No index on our node.
-	if err == object.ErrLifelineNotFound {
+	if err == object.ErrIndexNotFound {
 		if state.ID() == record.StateActivation {
 			// We are activating the object. There is no index for it anywhere.
-			idx = object.Lifeline{StateID: record.StateUndefined}
+			idx = object.FilamentIndex{
+				Lifeline:         object.Lifeline{StateID: record.StateUndefined},
+				LifelineLastUsed: p.PulseNumber,
+				PendingRecords:   []insolar.ID{},
+				ObjID:            *p.Message.Object.Record(),
+			}
 			logger.Debugf("new lifeline created")
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
@@ -142,7 +149,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: err}
 	}
 
-	if err = validateState(idx.StateID, state.ID()); err != nil {
+	if err = validateState(idx.Lifeline.StateID, state.ID()); err != nil {
 		return bus.Reply{Reply: &reply.Error{ErrType: reply.ErrDeactivated}}
 	}
 
@@ -151,7 +158,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 	// LifelineIndex exists and latest record id does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.LatestState != nil && !state.PrevStateID().Equal(*idx.LatestState) && idx.LatestState != recID {
+	if idx.Lifeline.LatestState != nil && !state.PrevStateID().Equal(*idx.Lifeline.LatestState) && idx.Lifeline.LatestState != recID {
 		return bus.Reply{Err: errors.New("invalid state record")}
 	}
 
@@ -170,24 +177,20 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	} else if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "can't save record into storage")}
 	}
-	idx.LatestState = id
-	idx.StateID = state.ID()
+	idx.Lifeline.LatestState = id
+	idx.Lifeline.StateID = state.ID()
 	if state.ID() == record.StateActivation {
-		idx.Parent = state.(*record.Activate).Parent
+		idx.Lifeline.Parent = state.(*record.Activate).Parent
 	}
 
-	idx.LatestUpdate = p.PulseNumber
-	idx.JetID = p.JetID
-	err = p.Dep.LifelineIndex.Set(ctx, p.PulseNumber, *p.Message.Object.Record(), idx)
+	idx.Lifeline.LatestUpdate = p.PulseNumber
+	idx.Lifeline.JetID = p.JetID
+	idx.LifelineLastUsed = p.PulseNumber
+	err = p.Dep.IndexModifier.SetIndex(ctx, p.PulseNumber, idx)
 	if err != nil {
 		return bus.Reply{Err: err}
 	}
-	err = p.Dep.LifelineStateModifier.SetLifelineUsage(ctx, p.PulseNumber, *p.Message.Object.Record())
-	if err != nil {
-		return bus.Reply{Err: errors.Wrap(err, "failed to update lifeline usage state")}
-	}
-
-	logger.WithField("state", idx.LatestState.DebugString()).Debug("saved object")
+	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
 
 	_, err = p.recordResult(ctx)
 	if err != nil {
@@ -196,39 +199,45 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 	rep := reply.Object{
 		Head:         p.Message.Object,
-		State:        *idx.LatestState,
+		State:        *idx.Lifeline.LatestState,
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: idx.ChildPointer,
-		Parent:       idx.Parent,
+		ChildPointer: idx.Lifeline.ChildPointer,
+		Parent:       idx.Lifeline.Parent,
 	}
 	return bus.Reply{Reply: &rep}
 }
 
 func (p *UpdateObject) saveIndexFromHeavy(
 	ctx context.Context, jetID insolar.JetID, obj insolar.Reference, heavy *insolar.Reference,
-) (object.Lifeline, error) {
+) (object.FilamentIndex, error) {
 	genericReply, err := p.Dep.Bus.Send(ctx, &message.GetObjectIndex{
 		Object: obj,
 	}, &insolar.MessageSendOptions{
 		Receiver: heavy,
 	})
 	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to send")
+		return object.FilamentIndex{}, errors.Wrap(err, "failed to send")
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
 	if !ok {
-		return object.Lifeline{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
+		return object.FilamentIndex{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx, err := object.DecodeLifeline(rep.Index)
+	lfl, err := object.DecodeLifeline(rep.Index)
 	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to decode")
+		return object.FilamentIndex{}, errors.Wrap(err, "failed to decode")
 	}
 
-	idx.JetID = jetID
-	err = p.Dep.LifelineIndex.Set(ctx, p.PulseNumber, *obj.Record(), idx)
+	lfl.JetID = jetID
+	idx := object.FilamentIndex{
+		ObjID:            *obj.Record(),
+		Lifeline:         lfl,
+		PendingRecords:   []insolar.ID{},
+		LifelineLastUsed: p.PulseNumber,
+	}
+	err = p.Dep.IndexModifier.SetIndex(ctx, p.PulseNumber, idx)
 	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to save")
+		return object.FilamentIndex{}, errors.Wrap(err, "failed to save")
 	}
 	return idx, nil
 }

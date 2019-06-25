@@ -30,7 +30,7 @@ import (
 
 func storeIndexBuckets(
 	ctx context.Context,
-	indexes object.IndexHeavyModifier,
+	indexes object.IndexModifier,
 	rawBuckets [][]byte,
 	pn insolar.PulseNumber,
 ) error {

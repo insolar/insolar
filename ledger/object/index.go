@@ -25,17 +25,9 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock.go
 
 // IndexModifier provides methods for modifying buckets of index.
-// Index contains buckets with pn->objID->Bucket hierarchy.
+// Lifeline contains buckets with pn->objID->Bucket hierarchy.
 // With using of IndexModifier there is a possibility to set buckets from outside of an index.
 type IndexModifier interface {
-	CreateIndex(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *FilamentIndex
-	// SetIndex adds a bucket with provided pulseNumber and ID
-	SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error
-}
-
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexHeavyModifier -o ./ -s _mock.go
-
-type IndexHeavyModifier interface {
 	// SetIndex adds a bucket with provided pulseNumber and ID
 	SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error
 }
@@ -44,7 +36,7 @@ type IndexHeavyModifier interface {
 
 // IndexAccessor provides an interface for fetching buckets from an index.
 type IndexAccessor interface {
-	Index(pn insolar.PulseNumber, objID insolar.ID) *FilamentIndex
+	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error)
 	// ForPNAndJet returns a collection of buckets for a provided pn and jetID
 	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex
 }

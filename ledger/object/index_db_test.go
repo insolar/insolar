@@ -28,74 +28,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDBIndex_SetLifeline(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
-
-	jetID := gen.JetID()
-	id := gen.ID()
-	idx := Lifeline{
-		LatestState: &id,
-		JetID:       jetID,
-		Delegates:   []LifelineDelegate{},
-	}
-
-	t.Run("saves correct index-value", func(t *testing.T) {
-		t.Parallel()
-
-		storage := NewIndexDB(store.NewMemoryMockDB())
-		pn := gen.PulseNumber()
-
-		err := storage.Set(ctx, pn, id, idx)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("override indices is ok", func(t *testing.T) {
-		t.Parallel()
-
-		storage := NewIndexDB(store.NewMemoryMockDB())
-		pn := gen.PulseNumber()
-
-		err := storage.Set(ctx, pn, id, idx)
-		require.NoError(t, err)
-
-		err = storage.Set(ctx, pn, id, idx)
-		require.NoError(t, err)
-	})
-}
-
 func TestDBIndexStorage_ForID(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 
-	jetID := gen.JetID()
 	id := gen.ID()
-	idx := Lifeline{
-		LatestState: &id,
-		JetID:       jetID,
-		Delegates:   []LifelineDelegate{},
-	}
-
-	t.Run("returns correct index-value", func(t *testing.T) {
-		t.Parallel()
-
-		storage := NewIndexDB(store.NewMemoryMockDB())
-		pn := gen.PulseNumber()
-
-		err := storage.Set(ctx, pn, id, idx)
-		require.NoError(t, err)
-
-		res, err := storage.ForID(ctx, pn, id)
-		require.NoError(t, err)
-
-		idxBuf, _ := idx.Marshal()
-		resBuf, _ := res.Marshal()
-
-		assert.Equal(t, idxBuf, resBuf)
-	})
 
 	t.Run("returns error when no index-value for id", func(t *testing.T) {
 		t.Parallel()
@@ -105,7 +43,7 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 
 		_, err := storage.ForID(ctx, pn, id)
 
-		assert.Equal(t, ErrLifelineNotFound, err)
+		assert.Equal(t, ErrIndexNotFound, err)
 	})
 }
 
@@ -135,7 +73,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		res, err := index.ForID(ctx, pn, objID)
 		require.NoError(t, err)
 
-		idxBuf, _ := buck.Lifeline.Marshal()
+		idxBuf, _ := buck.Marshal()
 		resBuf, _ := res.Marshal()
 
 		assert.Equal(t, idxBuf, resBuf)
@@ -165,7 +103,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		res, err := index.ForID(ctx, pn, objID)
 		require.NoError(t, err)
 
-		idxBuf, _ := sBuck.Lifeline.Marshal()
+		idxBuf, _ := sBuck.Marshal()
 		resBuf, _ := res.Marshal()
 
 		assert.Equal(t, idxBuf, resBuf)
