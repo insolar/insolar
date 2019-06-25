@@ -18,28 +18,54 @@ package safemath
 
 import (
 	"errors"
-	"math/big"
 )
 
-// Sub subtracts two uints, reverts on overflow (i.e. if subtrahend is greater than minuend).
-func Sub(a *big.Int, b *big.Int) (*big.Int, error) {
-	result := new(big.Int)
-
-	if a.Cmp(b) == -1 {
-		return result, errors.New("subtrahend must be smaller than minuend")
+// Mul multiplies two uints, error on overflow.
+func Mul(a uint, b uint) (uint, error) {
+	if a == 0 {
+		return 0, nil
 	}
 
-	return result.Sub(a, b), nil
+	c := a * b
+	if c/a != b {
+		return 0, errors.New("multiplication overflow")
+	}
+	return c, nil
+}
+
+// Div is integer division of two uints truncating the quotient, reverts on division by zero.
+func Div(a uint, b uint) (uint, error) {
+	if b == 0 {
+		return 0, errors.New("divisor cannot be zero")
+	}
+
+	return a / b, nil
+}
+
+// Sub subtracts two uints, reverts on overflow (i.e. if subtrahend is greater than minuend).
+func Sub(a uint, b uint) (uint, error) {
+	if a < b {
+		return 0, errors.New("subtrahend must be smaller than minuend")
+	}
+	return a - b, nil
 }
 
 // Add adds two uints, reverts on overflow.
-func Add(a *big.Int, b *big.Int) (*big.Int, error) {
-	result := new(big.Int)
-	result.Add(a, b)
+func Add(a uint, b uint) (uint, error) {
+	c := a + b
 
-	if a.Cmp(result) == 1 {
-		return result, errors.New("overflow at addition")
+	if c < a {
+		return 0, errors.New("overflow at addition")
 	}
 
-	return result, nil
+	return c, nil
+}
+
+// Mod divides two uints and returns the remainder (unsigned integer modulo), reverts when dividing by zero.
+func Mod(a uint, b uint) (uint, error) {
+	if b == 0 {
+		return 0, errors.New("divisor cannot be zero")
+	}
+
+	return a % b, nil
 }

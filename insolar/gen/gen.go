@@ -14,27 +14,18 @@
 // limitations under the License.
 //
 
-package pulsemanager
+package gen
 
 import (
-	"go.opencensus.io/stats"
-	"go.opencensus.io/stats/view"
+	fuzz "github.com/google/gofuzz"
 )
 
-var (
-	statHotObjectsSent = stats.Int64("hotdata/objects/total", "Amount of hot objects sent to the next executor", stats.UnitDimensionless)
-)
-
-func init() {
-	err := view.Register(
-		&view.View{
-			Name:        statHotObjectsSent.Name(),
-			Description: statHotObjectsSent.Description(),
-			Measure:     statHotObjectsSent,
-			Aggregation: view.Sum(),
-		},
-	)
-	if err != nil {
-		panic(err)
+// Signature generates random non nil bytes sequence of provided size.
+func Signature(size int) []byte {
+	if size < 0 {
+		return nil
 	}
+	b := make([]byte, size)
+	fuzz.New().NilChance(0).NumElements(size, size).Fuzz(&b)
+	return b
 }

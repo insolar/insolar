@@ -303,8 +303,14 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	args := [5]interface{}{}
 	var args0 insolar.Reference
 	args[0] = &args0
-	var args1 []byte
+	var args1 string
 	args[1] = &args1
+	var args2 []byte
+	args[2] = &args2
+	var args3 []byte
+	args[3] = &args3
+	var args4 []byte
+	args[4] = &args4
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -312,7 +318,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Call(args0, args1)
+	ret0, ret1 := self.Call(args0, args1, args2, args3, args4)
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)

@@ -140,6 +140,15 @@ func NewMessageHandler(
 				h.IndexLocker,
 			)
 		},
+		SetResult: func(p *proc.SetResult) {
+			p.Dep(
+				h.WriteAccessor,
+				h.RecordModifier,
+				h.RecentStorageProvider,
+				h.PendingModifier,
+				h.Sender,
+			)
+		},
 		SetActivationRequest: func(p *proc.SetActivationRequest) {
 			p.Dep(
 				h.PCS,

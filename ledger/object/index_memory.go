@@ -52,8 +52,8 @@ func (i *IndexStorageMemory) ForID(ctx context.Context, pn insolar.PulseNumber, 
 	return clone(idx), nil
 }
 
-// ForPNAndJet returns a collection of buckets for a provided pn and jetID
-func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
+// ForPulse returns a collection of buckets for a provided pulse number.
+func (i *IndexStorageMemory) ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
@@ -62,16 +62,19 @@ func (i *IndexStorageMemory) ForPNAndJet(ctx context.Context, pn insolar.PulseNu
 		return nil
 	}
 
-	var res []FilamentIndex
-
+	res := make([]FilamentIndex, 0, len(bucks))
 	for _, b := range bucks {
-		if b.Lifeline.JetID != jetID {
-			continue
-		}
+		clonedLfl := CloneIndex(b.objectMeta.Lifeline)
+		var clonedRecords []insolar.ID
+		clonedRecords = append(clonedRecords, b.objectMeta.PendingRecords...)
 
-		res = append(res, clone(b))
+		res = append(res, FilamentIndex{
+			ObjID:            b.objectMeta.ObjID,
+			Lifeline:         clonedLfl,
+			LifelineLastUsed: b.objectMeta.LifelineLastUsed,
+			PendingRecords:   clonedRecords,
+		})
 	}
-
 	return res
 }
 

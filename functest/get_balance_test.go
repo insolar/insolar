@@ -19,23 +19,19 @@
 package functest
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/insolar/insolar/testutils"
-
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetBalance(t *testing.T) {
 	firstMember := createMember(t, "Member1")
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	r := big.NewInt(1000000000)
-	require.Equal(t, r, firstBalance)
+	require.Equal(t, 1000*1000*1000, firstBalance)
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "index not found")
+	require.Contains(t, err.Error(), "[ getBalanceCall ] : [ GetDelegate ] on calling main API")
 }

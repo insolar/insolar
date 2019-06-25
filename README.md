@@ -78,7 +78,7 @@ It will generate bootstrap data and launch a number of nodes. Default number is 
 After node processes are started you will see messages like “NODE 3 STARTED in background” in log and a PulseWatcher will be started.
 When you see `Ready` in Insolar State you can run test scripts and benchmarks:
 
-    bin/apirequester -k=.artifacts/launchnet/configs/ -u=http://127.0.0.1:19101/api
+    bin/apirequester -k=.artifacts/launchnet/configs/root_member_keys.json -u=http://127.0.0.1:19101/api
 
 This tool runs a scenario: creates a number of users with wallets and transfers some money between them. For the first time, the script does it sequentially, upon subsequent runs — concurrently.
 
@@ -88,7 +88,7 @@ Options:
 
 Run benchmark:
 
-    bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/
+    bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/root_member_keys.json
 
 Options:
 * `-k`: Same as above, path to root user keypair.

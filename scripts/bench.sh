@@ -20,7 +20,7 @@ echo "Start bench"
 sleep 1
 while :; do
     set -x
-    ./bin/benchmark -k=${LAUNCHNET_BASE_DIR}configs/ $@
+    ./bin/benchmark -k=${LAUNCHNET_BASE_DIR}configs/root_member_keys.json $@
     { set +x; } 2>/dev/null
     sleep 5
 done

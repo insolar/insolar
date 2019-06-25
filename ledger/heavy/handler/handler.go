@@ -24,10 +24,13 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/heavy/replica"
+
 	"github.com/insolar/insolar/ledger/heavy/proc"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -52,6 +55,9 @@ type Handler struct {
 	IndexModifier object.IndexModifier
 
 	DropModifier drop.Modifier
+	PulseAccessor         pulse.Accessor
+	JetModifier           jet.Modifier
+	JetKeeper             replica.JetKeeper
 	Sender       bus.Sender
 
 	jetID insolar.JetID
@@ -61,7 +67,7 @@ type Handler struct {
 // New creates a new handler.
 func New() *Handler {
 	h := &Handler{
-		jetID: *insolar.NewJetID(0, nil),
+		jetID: insolar.ZeroJetID,
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
@@ -343,15 +349,40 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 }
 
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
+	logger := inslogger.FromContext(ctx)
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
 	storeRecords(ctx, h.RecordModifier, h.PCS, msg.PulseNum, msg.Records)
 	if err := storeIndexBuckets(ctx, h.IndexModifier, msg.IndexBuckets, msg.PulseNum); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-	if err := storeDrop(ctx, h.DropModifier, msg.Drop); err != nil {
+
+	pulse, err := h.PulseAccessor.Latest(ctx)
+	if err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
+	futurePulse := pulse.NextPulseNumber
+	drop, err := storeDrop(ctx, h.DropModifier, msg.Drop)
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to store drop"))
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
+	}
+	if drop.Split {
+		_, _, err = h.JetModifier.Split(ctx, futurePulse, drop.JetID)
+
+	} else {
+		err = h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
+	}
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", drop.JetID.DebugString(), futurePulse))
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
+	}
+
+	if err := h.JetKeeper.Add(ctx, drop.Pulse, drop.JetID); err != nil {
+		logger.Error(errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", msg.JetID.DebugString()))
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
+	}
+
 	storeBlobs(ctx, h.BlobModifier, h.PCS, msg.PulseNum, msg.Blobs)
 
 	stats.Record(ctx,

@@ -119,7 +119,7 @@ func (h *HandleCall) handleActual(
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
 		es.Unlock()
-		return nil, os.WrapError(nil, "loop detected")
+		return nil, errors.New("loop detected")
 	}
 	es.Unlock()
 
@@ -133,7 +133,7 @@ func (h *HandleCall) handleActual(
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
-		return nil, os.WrapError(err, "[ HandleCall.handleActual ] can't create request")
+		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
 	request := procRegisterRequest.getResult()
 

@@ -198,15 +198,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.Wrap(err, "failed to record result")}
 	}
 
-	rep := reply.Object{
-		Head:         p.Message.Object,
-		State:        *idx.Lifeline.LatestState,
-		Prototype:    state.GetImage(),
-		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: idx.Lifeline.ChildPointer,
-		Parent:       idx.Lifeline.Parent,
-	}
-	return bus.Reply{Reply: &rep}
+	return bus.Reply{Reply: &reply.OK{}}
 }
 
 func (p *UpdateObject) saveIndexFromHeavy(

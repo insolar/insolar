@@ -40,7 +40,7 @@ func TestCleaner_cleanPulse(t *testing.T) {
 
 	ctrl := minimock.NewController(t)
 
-	jm := jet.NewStorageMock(ctrl)
+	jm := jet.NewCleanerMock(ctrl)
 	jm.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
 	nm := node.NewModifierMock(ctrl)
@@ -83,7 +83,7 @@ func TestCleaner_clean(t *testing.T) {
 
 	ctrl := minimock.NewController(t)
 
-	jm := jet.NewStorageMock(ctrl)
+	jm := jet.NewCleanerMock(ctrl)
 	jm.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	nm := node.NewModifierMock(ctrl)
@@ -134,7 +134,7 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 
 	ctrl := minimock.NewController(t)
 
-	jm := jet.NewStorageMock(ctrl)
+	jm := jet.NewCleanerMock(ctrl)
 	jm.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	nm := node.NewModifierMock(ctrl)

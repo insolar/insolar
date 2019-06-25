@@ -10,7 +10,7 @@ Check that all nodes are in the complete network state:
 
 Start benchmark:
 
-    ./bin/benchmark -c=10 -r=1000 -k=.artifacts/launchnet/configs/
+    ./bin/benchmark -c=10 -r=1000 -k=.artifacts/launchnet/configs/root_member_keys.json
 
 Start profiler:
 
