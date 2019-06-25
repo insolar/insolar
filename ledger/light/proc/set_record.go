@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -40,18 +40,16 @@ type SetRecord struct {
 	jet     insolar.JetID
 
 	Dep struct {
-		Bus                   insolar.MessageBus
-		RecentStorageProvider recentstorage.Provider
+		Bus insolar.MessageBus
 
 		Coordinator jet.Coordinator
-
-		PendingModifier object.PendingModifier
-		PendingAccessor object.PendingAccessor
 
 		PCS                  insolar.PlatformCryptographyScheme
 		RecordModifier       object.RecordModifier
 		WriteAccessor        hot.WriteAccessor
 		PendingRequestsLimit int
+
+		FilamentModifier executor.FilamentModifier
 	}
 }
 
@@ -115,13 +113,11 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
 	case *record.Result:
-		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
-		// err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
-		// if err != nil {
-		// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-		// }
+		err := p.Dep.FilamentModifier.SetResult(ctx, calculatedID, p.jet, *r)
+		if err != nil {
+			return &bus.Reply{Err: errors.Wrap(err, "can't save result into a filament")}
+		}
 	}
 
 	return nil
