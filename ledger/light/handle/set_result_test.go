@@ -18,7 +18,6 @@ package handle
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -28,11 +27,12 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetRequest_BadMsgPayload(t *testing.T) {
+func TestSetResult_BadMsgPayload(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -40,13 +40,13 @@ func TestSetRequest_BadMsgPayload(t *testing.T) {
 		Payload: []byte{1, 2, 3, 4, 5},
 	}
 
-	handler := NewSetRequest(nil, msg, false)
+	handler := NewSetResult(nil, msg, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
 	require.Error(t, err)
 }
 
-func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
+func TestSetResult_BadWrappedVirtualRecord(t *testing.T) {
 	t.Parallel()
 
 	ctx := flow.TestContextWithPulse(
@@ -63,10 +63,10 @@ func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
 		}
 	})
 
-	request := payload.SetRequest{
-		Request: []byte{1, 2, 3, 4, 5},
+	result := payload.SetResult{
+		Result: []byte{1, 2, 3, 4, 5},
 	}
-	buf, err := request.Marshal()
+	buf, err := result.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
@@ -74,13 +74,13 @@ func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
 		Payload: buf,
 	}
 
-	handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
-func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
+func TestSetResult_IncorrectRecordInVirtual(t *testing.T) {
 	t.Parallel()
 
 	ctx := flow.TestContextWithPulse(
@@ -108,23 +108,23 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	result := payload.SetResult{
+		Result: virtualBuf,
 	}
-	requestBuf, err := request.Marshal()
+	resultBuf, err := result.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: requestBuf,
+		Payload: resultBuf,
 	}
 
-	handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
-func TestSetRequest_EmptyRequestObject(t *testing.T) {
+func TestSetResult_EmptyResultObject(t *testing.T) {
 	t.Parallel()
 
 	ctx := flow.TestContextWithPulse(
@@ -141,41 +141,41 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 		}
 	})
 
-	// Request object is nil
+	// Result object is empty
 	virtual := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &record.Request{
-				Object: nil,
+		Union: &record.Virtual_Result{
+			Result: &record.Result{
+				Object: insolar.ID{},
 			},
 		},
 	}
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	result := payload.SetResult{
+		Result: virtualBuf,
 	}
-	requestBuf, err := request.Marshal()
+	resultBuf, err := result.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: requestBuf,
+		Payload: resultBuf,
 	}
 
-	handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	assert.EqualError(t, err, "object is nil")
 }
 
-func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
+func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaResultMsg(t)
 
 	t.Run("checkjet procedure returns unknown err", func(t *testing.T) {
 		t.Parallel()
@@ -191,7 +191,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "something strange from checkjet")
 	})
@@ -210,7 +210,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -229,21 +229,21 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, true)
+		handler := NewSetResult(proc.NewDependenciesMock(), msg, true)
 		err := handler.Present(ctx, f)
 		require.Error(t, err)
 		assert.Equal(t, proc.ErrNotExecutor, err)
 	})
 }
 
-func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
+func TestSetResult_ErrorFromWaitHot(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaResultMsg(t)
 
 	t.Run("waithot procedure returns err", func(t *testing.T) {
 		t.Parallel()
@@ -261,7 +261,7 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from waithot")
 	})
@@ -279,27 +279,27 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.GetIndexWM:
 				return nil
-			case *proc.SetRequest:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
+func TestSetResult_ErrorFromGetIndex(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaResultMsg(t)
 
 	t.Run("getindex procedure returns err", func(t *testing.T) {
 		t.Parallel()
@@ -319,7 +319,7 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "can't get index: error from getindex")
 	})
@@ -337,29 +337,29 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 				return nil
 			case *proc.GetIndexWM:
 				return nil
-			case *proc.SetRequest:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
+func TestSetResult_ErrorFromSetResult(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaResultMsg(t)
 
-	t.Run("setrequest procedure returns err", func(t *testing.T) {
+	t.Run("setresult procedure returns err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -372,19 +372,19 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 				return nil
 			case *proc.GetIndexWM:
 				return nil
-			case *proc.SetRequest:
-				return errors.New("error from setrequest")
+			case *proc.SetResult:
+				return errors.New("error from setresult")
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "error from setrequest")
+		assert.EqualError(t, err, "error from setresult")
 	})
 
-	t.Run("setrequest procedure returns nil err", func(t *testing.T) {
+	t.Run("setresult procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -397,40 +397,40 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 				return nil
 			case *proc.GetIndexWM:
 				return nil
-			case *proc.SetRequest:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func metaRequestMsg(t *testing.T) payload.Meta {
-	ref := gen.Reference()
+func metaResultMsg(t *testing.T) payload.Meta {
+	obj := gen.ID()
 
 	virtual := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &record.Request{
-				Object: &ref,
+		Union: &record.Virtual_Result{
+			Result: &record.Result{
+				Object: obj,
 			},
 		},
 	}
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	result := payload.SetResult{
+		Result: virtualBuf,
 	}
-	requestBuf, err := request.Marshal()
+	resultBuf, err := result.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: requestBuf,
+		Payload: resultBuf,
 	}
 
 	return msg

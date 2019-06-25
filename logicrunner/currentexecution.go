@@ -302,14 +302,18 @@ var ErrRetryLater = errors.New("Failed to start task, retry next time")
 func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Transcript) {
 	logger := inslogger.FromContext(ctx).WithField("RequestReference", transcript.RequestRef)
 
-	if q.processFunc != nil {
-		err := q.processFunc(ctx, transcript, q.processFuncArgs)
-		if err == nil {
-			// In case when we're in pending - we should store it to execute later
-			q.finished.Push(transcript)
-			return
+	if q.checkFunc != nil && q.processFunc != nil {
+		if err := q.checkFunc(ctx); err == nil {
+			if err := q.processFunc(ctx, transcript, q.processFuncArgs); err == nil {
+				// In case when we're in pending - we should store it to execute later
+				q.finished.Push(transcript)
+				return
+			} else if err != ErrRetryLater {
+				logger.Error("[ processImmutable ] Failed to process immutable Transcript:", err)
+				return
+			}
 		} else if err != ErrRetryLater {
-			logger.Error("Failed to process immutable Transcript:", err)
+			logger.Error("[ processImmutable ] check function returned error:", err)
 			return
 		}
 	}
@@ -390,14 +394,13 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	// unneeded optimisation
 	if !q.processActive {
 		q.StartProcessorIfNeededCount++
-		logger.Info("Starting a new queue processor")
+		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
 
 		go func() {
 			var err error
 
-			// сhecking we're eligable to execute contracts
-			err = q.checkFunc(ctx)
-			if err != ErrRetryLater {
+			// сhecking we're eligible to execute contracts
+			if err = q.checkFunc(ctx); err == nil {
 				// processing immutable queue (it can appear if we were in pending state)
 				// run simultaneously all immutable transcripts and forget about them
 				for elem := q.immutable.Pop(); elem != nil; elem = q.immutable.Pop() {
@@ -413,11 +416,13 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 						q.Prepend(ctx, false, transcript)
 						break
 					} else if err != nil {
-						logger.Error("Failed to process transcript:", err)
+						logger.Error("[ StartProcessorIfNeeded ] Failed to process transcript:", err)
 					}
 
 					q.finished.Push(transcript)
 				}
+			} else if err != ErrRetryLater {
+				logger.Error("[ StartProcessorIfNeeded ] check function returned error:", err)
 			}
 
 			q.processLock.Lock()
@@ -436,7 +441,8 @@ type ExecutionBrokerRotationResult struct {
 	LedgerHasMoreRequests bool
 }
 
-// TODO: Probably should be rewritten (all rotation in one place)
+// TODO: locking system (mutableLock) should be reconsidered
+// TODO: probably rotation should wait till processActive == false (??)
 func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 	// take mutables, then, if we can, take immutables, if something was left -
 	q.mutableLock.Lock()
@@ -456,17 +462,9 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 
 	_ = q.mutable.Rotate()
 	_ = q.immutable.Rotate()
-
 	q.mutableLock.Unlock()
+
 	return rv
-}
-
-func (q *ExecutionBroker) RotateImmutable() []*Transcript {
-	return q.immutable.Rotate()
-}
-
-func (q *ExecutionBroker) RotateFinished() []*Transcript {
-	return q.finished.Rotate()
 }
 
 func NewExecutionBroker(checkFunc CheckCallback, execFunc ExecuteTranscriptCallback, args interface{}) *ExecutionBroker {
