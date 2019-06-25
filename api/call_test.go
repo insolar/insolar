@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
@@ -35,7 +36,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/api/seedmanager"
 )
 
 const CallUrl = "http://localhost:19192/api/call"
@@ -61,7 +61,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	suite.api.SeedManager.Add(*seed)
 
 	close(suite.delay)
-	suite.api.cfg.Timeout = 60
+	suite.api.timeout = 60 * time.Second
 
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
@@ -84,7 +84,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
 
-	suite.api.cfg.Timeout = 1
+	suite.api.timeout = 1 * time.Second
 
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
@@ -124,9 +124,9 @@ func TestTimeoutSuite(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner()
 	cfg.Address = "localhost:19192"
-	cfg.Timeout = 1
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)
+	timeoutSuite.api.timeout = 1 * time.Second
 
 	cert := testutils.NewCertificateMock(timeoutSuite.mc)
 	cert.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
@@ -176,6 +176,6 @@ func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *TimeoutSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(1*time.Minute)
+	suite.mc.Wait(1 * time.Minute)
 	suite.mc.Finish()
 }

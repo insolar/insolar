@@ -22,16 +22,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
+	"net/http"
+	"testing"
+
 	"github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
-	"io/ioutil"
-	"net"
-	"net/http"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -204,13 +201,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 			Params: params,
 		})
 
-		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
-			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			resp.Error = netErr.Error()
-			continue
-		} else if err != nil {
+		if err != nil {
 			return nil, err
 		}
 
@@ -222,13 +213,6 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 
 		if resp.Error == "" {
 			return resp.Result, nil
-		}
-
-		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
-			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
 		}
 
 		break
