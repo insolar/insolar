@@ -80,7 +80,9 @@ type NoNetwork struct {
 func (g *NoNetwork) Run(ctx context.Context) {
 
 	cert := g.CertificateManager.GetCertificate()
-	if len(cert.GetDiscoveryNodes()) == 0 {
+	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
+
+	if len(discoveryNodes) == 0 {
 		g.zeroBootstrap(ctx)
 		// create complete network
 		g.Gatewayer.SwitchState(insolar.CompleteNetworkState)
@@ -92,10 +94,9 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	log.Info(isDiscovery)
 	//getAuth
 
-	nodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
 	// TODO: isDiscovery shaffle or sort
 
-	for _, n := range nodes {
+	for _, n := range discoveryNodes {
 		h, _ := host.NewHostN(n.GetHost(), *n.GetNodeRef())
 
 		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
@@ -108,13 +109,18 @@ func (g *NoNetwork) Run(ctx context.Context) {
 		// if res.DiscoveryCount
 
 		whichState := func() insolar.NetworkState {
-			// TODO:or insolar.DiscoveryBootstrap
+			if network.OriginIsDiscovery(cert) {
+				// TODO check ephemeral pulse res.PulseNumber
+				return insolar.DiscoveryBootstrap
+			}
 			return insolar.JoinerBootstrap
 		}
+
 		switch res.Code {
 		case packet.Success:
 			g.permit = res.Permit
 			g.Gatewayer.SwitchState(whichState())
+			return
 		case packet.WrongMandate:
 			panic("wrong mandate " + res.Error)
 		case packet.WrongVersion:
