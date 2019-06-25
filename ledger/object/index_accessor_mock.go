@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -25,10 +25,10 @@ type IndexAccessorMock struct {
 	ForIDPreCounter uint64
 	ForIDMock       mIndexAccessorMockForID
 
-	ForPNAndJetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex)
-	ForPNAndJetCounter    uint64
-	ForPNAndJetPreCounter uint64
-	ForPNAndJetMock       mIndexAccessorMockForPNAndJet
+	ForPulseFunc       func(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex)
+	ForPulseCounter    uint64
+	ForPulsePreCounter uint64
+	ForPulseMock       mIndexAccessorMockForPulse
 }
 
 //NewIndexAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexAccessor
@@ -40,7 +40,7 @@ func NewIndexAccessorMock(t minimock.Tester) *IndexAccessorMock {
 	}
 
 	m.ForIDMock = mIndexAccessorMockForID{mock: m}
-	m.ForPNAndJetMock = mIndexAccessorMockForPNAndJet{mock: m}
+	m.ForPulseMock = mIndexAccessorMockForPulse{mock: m}
 
 	return m
 }
@@ -197,92 +197,91 @@ func (m *IndexAccessorMock) ForIDFinished() bool {
 	return true
 }
 
-type mIndexAccessorMockForPNAndJet struct {
+type mIndexAccessorMockForPulse struct {
 	mock              *IndexAccessorMock
-	mainExpectation   *IndexAccessorMockForPNAndJetExpectation
-	expectationSeries []*IndexAccessorMockForPNAndJetExpectation
+	mainExpectation   *IndexAccessorMockForPulseExpectation
+	expectationSeries []*IndexAccessorMockForPulseExpectation
 }
 
-type IndexAccessorMockForPNAndJetExpectation struct {
-	input  *IndexAccessorMockForPNAndJetInput
-	result *IndexAccessorMockForPNAndJetResult
+type IndexAccessorMockForPulseExpectation struct {
+	input  *IndexAccessorMockForPulseInput
+	result *IndexAccessorMockForPulseResult
 }
 
-type IndexAccessorMockForPNAndJetInput struct {
+type IndexAccessorMockForPulseInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-	p2 insolar.JetID
 }
 
-type IndexAccessorMockForPNAndJetResult struct {
+type IndexAccessorMockForPulseResult struct {
 	r []FilamentIndex
 }
 
-//Expect specifies that invocation of IndexAccessor.ForPNAndJet is expected from 1 to Infinity times
-func (m *mIndexAccessorMockForPNAndJet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *mIndexAccessorMockForPNAndJet {
-	m.mock.ForPNAndJetFunc = nil
+// Expect specifies that invocation of IndexAccessor.ForPulse is expected from 1 to Infinity times
+func (m *mIndexAccessorMockForPulse) Expect(p context.Context, p1 insolar.PulseNumber) *mIndexAccessorMockForPulse {
+	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexAccessorMockForPNAndJetExpectation{}
+		m.mainExpectation = &IndexAccessorMockForPulseExpectation{}
 	}
-	m.mainExpectation.input = &IndexAccessorMockForPNAndJetInput{p, p1, p2}
+	m.mainExpectation.input = &IndexAccessorMockForPulseInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of IndexAccessor.ForPNAndJet
-func (m *mIndexAccessorMockForPNAndJet) Return(r []FilamentIndex) *IndexAccessorMock {
-	m.mock.ForPNAndJetFunc = nil
+// Return specifies results of invocation of IndexAccessor.ForPulse
+func (m *mIndexAccessorMockForPulse) Return(r []FilamentIndex) *IndexAccessorMock {
+	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexAccessorMockForPNAndJetExpectation{}
+		m.mainExpectation = &IndexAccessorMockForPulseExpectation{}
 	}
-	m.mainExpectation.result = &IndexAccessorMockForPNAndJetResult{r}
+	m.mainExpectation.result = &IndexAccessorMockForPulseResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexAccessor.ForPNAndJet is expected once
-func (m *mIndexAccessorMockForPNAndJet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *IndexAccessorMockForPNAndJetExpectation {
-	m.mock.ForPNAndJetFunc = nil
+// ExpectOnce specifies that invocation of IndexAccessor.ForPulse is expected once
+func (m *mIndexAccessorMockForPulse) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *IndexAccessorMockForPulseExpectation {
+	m.mock.ForPulseFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &IndexAccessorMockForPNAndJetExpectation{}
-	expectation.input = &IndexAccessorMockForPNAndJetInput{p, p1, p2}
+	expectation := &IndexAccessorMockForPulseExpectation{}
+	expectation.input = &IndexAccessorMockForPulseInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *IndexAccessorMockForPNAndJetExpectation) Return(r []FilamentIndex) {
-	e.result = &IndexAccessorMockForPNAndJetResult{r}
+func (e *IndexAccessorMockForPulseExpectation) Return(r []FilamentIndex) {
+	e.result = &IndexAccessorMockForPulseResult{r}
 }
 
-//Set uses given function f as a mock of IndexAccessor.ForPNAndJet method
-func (m *mIndexAccessorMockForPNAndJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex)) *IndexAccessorMock {
+// Set uses given function f as a mock of IndexAccessor.ForPulse method
+func (m *mIndexAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.ForPNAndJetFunc = f
+	m.mock.ForPulseFunc = f
 	return m.mock
 }
 
-//ForPNAndJet implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
-func (m *IndexAccessorMock) ForPNAndJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex) {
-	counter := atomic.AddUint64(&m.ForPNAndJetPreCounter, 1)
-	defer atomic.AddUint64(&m.ForPNAndJetCounter, 1)
+// ForPulse implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
+func (m *IndexAccessorMock) ForPulse(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex) {
+	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.ForPulseCounter, 1)
 
-	if len(m.ForPNAndJetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ForPNAndJetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to IndexAccessorMock.ForPNAndJet. %v %v %v", p, p1, p2)
+	if len(m.ForPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ForPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to IndexAccessorMock.ForPulse. %v %v", p, p1)
 			return
 		}
 
-		input := m.ForPNAndJetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexAccessorMockForPNAndJetInput{p, p1, p2}, "IndexAccessor.ForPNAndJet got unexpected parameters")
+		input := m.ForPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, IndexAccessorMockForPulseInput{p, p1}, "IndexAccessor.ForPulse got unexpected parameters")
 
-		result := m.ForPNAndJetMock.expectationSeries[counter-1].result
+		result := m.ForPulseMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the IndexAccessorMock.ForPNAndJet")
+			m.t.Fatal("No results are set for the IndexAccessorMock.ForPulse")
 			return
 		}
 
@@ -291,16 +290,16 @@ func (m *IndexAccessorMock) ForPNAndJet(p context.Context, p1 insolar.PulseNumbe
 		return
 	}
 
-	if m.ForPNAndJetMock.mainExpectation != nil {
+	if m.ForPulseMock.mainExpectation != nil {
 
-		input := m.ForPNAndJetMock.mainExpectation.input
+		input := m.ForPulseMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexAccessorMockForPNAndJetInput{p, p1, p2}, "IndexAccessor.ForPNAndJet got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexAccessorMockForPulseInput{p, p1}, "IndexAccessor.ForPulse got unexpected parameters")
 		}
 
-		result := m.ForPNAndJetMock.mainExpectation.result
+		result := m.ForPulseMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the IndexAccessorMock.ForPNAndJet")
+			m.t.Fatal("No results are set for the IndexAccessorMock.ForPulse")
 		}
 
 		r = result.r
@@ -308,39 +307,39 @@ func (m *IndexAccessorMock) ForPNAndJet(p context.Context, p1 insolar.PulseNumbe
 		return
 	}
 
-	if m.ForPNAndJetFunc == nil {
-		m.t.Fatalf("Unexpected call to IndexAccessorMock.ForPNAndJet. %v %v %v", p, p1, p2)
+	if m.ForPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to IndexAccessorMock.ForPulse. %v %v", p, p1)
 		return
 	}
 
-	return m.ForPNAndJetFunc(p, p1, p2)
+	return m.ForPulseFunc(p, p1)
 }
 
-//ForPNAndJetMinimockCounter returns a count of IndexAccessorMock.ForPNAndJetFunc invocations
-func (m *IndexAccessorMock) ForPNAndJetMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ForPNAndJetCounter)
+// ForPulseMinimockCounter returns a count of IndexAccessorMock.ForPulseFunc invocations
+func (m *IndexAccessorMock) ForPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ForPulseCounter)
 }
 
-//ForPNAndJetMinimockPreCounter returns the value of IndexAccessorMock.ForPNAndJet invocations
-func (m *IndexAccessorMock) ForPNAndJetMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ForPNAndJetPreCounter)
+// ForPulseMinimockPreCounter returns the value of IndexAccessorMock.ForPulse invocations
+func (m *IndexAccessorMock) ForPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ForPulsePreCounter)
 }
 
-//ForPNAndJetFinished returns true if mock invocations count is ok
-func (m *IndexAccessorMock) ForPNAndJetFinished() bool {
+// ForPulseFinished returns true if mock invocations count is ok
+func (m *IndexAccessorMock) ForPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ForPNAndJetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ForPNAndJetCounter) == uint64(len(m.ForPNAndJetMock.expectationSeries))
+	if len(m.ForPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ForPulseCounter) == uint64(len(m.ForPulseMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.ForPNAndJetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ForPNAndJetCounter) > 0
+	if m.ForPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ForPulseCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.ForPNAndJetFunc != nil {
-		return atomic.LoadUint64(&m.ForPNAndJetCounter) > 0
+	if m.ForPulseFunc != nil {
+		return atomic.LoadUint64(&m.ForPulseCounter) > 0
 	}
 
 	return true
@@ -354,8 +353,8 @@ func (m *IndexAccessorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to IndexAccessorMock.ForID")
 	}
 
-	if !m.ForPNAndJetFinished() {
-		m.t.Fatal("Expected call to IndexAccessorMock.ForPNAndJet")
+	if !m.ForPulseFinished() {
+		m.t.Fatal("Expected call to IndexAccessorMock.ForPulse")
 	}
 
 }
@@ -379,8 +378,8 @@ func (m *IndexAccessorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to IndexAccessorMock.ForID")
 	}
 
-	if !m.ForPNAndJetFinished() {
-		m.t.Fatal("Expected call to IndexAccessorMock.ForPNAndJet")
+	if !m.ForPulseFinished() {
+		m.t.Fatal("Expected call to IndexAccessorMock.ForPulse")
 	}
 
 }
@@ -398,7 +397,7 @@ func (m *IndexAccessorMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.ForIDFinished()
-		ok = ok && m.ForPNAndJetFinished()
+		ok = ok && m.ForPulseFinished()
 
 		if ok {
 			return
@@ -411,8 +410,8 @@ func (m *IndexAccessorMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to IndexAccessorMock.ForID")
 			}
 
-			if !m.ForPNAndJetFinished() {
-				m.t.Error("Expected call to IndexAccessorMock.ForPNAndJet")
+			if !m.ForPulseFinished() {
+				m.t.Error("Expected call to IndexAccessorMock.ForPulse")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -431,7 +430,7 @@ func (m *IndexAccessorMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.ForPNAndJetFinished() {
+	if !m.ForPulseFinished() {
 		return false
 	}
 
