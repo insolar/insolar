@@ -305,7 +305,7 @@ func (m *Member) createMemberByKey(rd insolar.Reference, key string) (interface{
 	}
 
 	rollBack := func(e error) (interface{}, error) {
-		if err := rootDomain.AddBurnAddress(burnAddresses); e != nil {
+		if err := rootDomain.AddBurnAddress(burnAddresses); err != nil {
 			return nil, fmt.Errorf("failed to add burn address back: %s; after error: %s", err.Error(), e.Error())
 		}
 		return nil, fmt.Errorf("failed to create member: %s", e.Error())
