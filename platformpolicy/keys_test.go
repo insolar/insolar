@@ -51,7 +51,7 @@ func TestExportImportPublicKey(t *testing.T) {
 }
 
 func TestExportImportPublicKeyBinary(t *testing.T) {
-	count := 1000000
+	count := 10000
 	ks := NewKeyProcessor()
 
 	for i := 0; i < count; i++ {
