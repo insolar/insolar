@@ -30,8 +30,26 @@ var (
 	ContractNodeRecord = rootdomain.GenesisRef(insolar.GenesisNameNodeRecord)
 	// ContractRootMember is the root member contract reference.
 	ContractRootMember = rootdomain.GenesisRef(insolar.GenesisNameRootMember)
-	// ContractWallet is the wallet contract reference.
-	ContractWallet = rootdomain.GenesisRef(insolar.GenesisNameRootWallet)
-	// ContractAllowance is the allowance contract reference.
-	ContractAllowance = rootdomain.GenesisRef(insolar.GenesisNameAllowance)
+	// ContractRootWallet is the root wallet contract reference.
+	ContractRootWallet = rootdomain.GenesisRef(insolar.GenesisNameRootWallet)
+	// ContractMigrationAdminMember is the migration admin member contract reference.
+	ContractMigrationAdminMember = rootdomain.GenesisRef(insolar.GenesisNameMigrationAdminMember)
+	// ContractMigrationWallet is the migration wallet contract reference.
+	ContractMigrationWallet = rootdomain.GenesisRef(insolar.GenesisNameMigrationWallet)
+	// ContractDeposit is the deposit contract reference.
+	ContractDeposit = rootdomain.GenesisRef(insolar.GenesisNameDeposit)
+	// ContractTariff is the tariff contract reference.
+	ContractTariff = rootdomain.GenesisRef(insolar.GenesisNameTariff)
+	// ContractCostCenter is the cost center contract reference.
+	ContractCostCenter = rootdomain.GenesisRef(insolar.GenesisNameCostCenter)
+	// ContractCommissionWallet is the commission wallet contract reference.
+	ContractCommissionWallet = rootdomain.GenesisRef(insolar.GenesisNameCommissionWallet)
+
+	// ContractMigrationDaemonMembers is the migration daemon members contracts references.
+	ContractMigrationDaemonMembers = func() (result []insolar.Reference) {
+		for _, name := range insolar.GenesisNameMigrationDaemonMembers {
+			result = append(result, rootdomain.GenesisRef(name))
+		}
+		return
+	}()
 )

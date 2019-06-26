@@ -64,6 +64,9 @@ type Options struct {
 	// The maximum time to wait for a response to any packet.
 	PacketTimeout time.Duration
 
+	// The maximum time to wait for a response to ack packet.
+	AckPacketTimeout time.Duration
+
 	// Bootstrap reconnect timeout
 	BootstrapTimeout time.Duration
 
@@ -92,7 +95,8 @@ func ConfigureOptions(conf configuration.Configuration) *Options {
 		MinTimeout:          time.Duration(config.MinTimeout) * time.Second,
 		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Second,
 		PingTimeout:         1 * time.Second,
-		PacketTimeout:       10 * time.Second,
+		PacketTimeout:       15 * time.Second,
+		AckPacketTimeout:    5 * time.Second,
 		BootstrapTimeout:    10 * time.Second,
 		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
 	}

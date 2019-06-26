@@ -24,4 +24,5 @@ import (
 var (
 	ErrObjectDeactivated = errors.New("object is deactivated")
 	ErrNotFound          = errors.New("object not found")
+	ErrNoReply           = errors.New("timeout while awaiting reply from watermill")
 )
