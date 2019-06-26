@@ -40,7 +40,7 @@ import (
 var httpClient *http.Client
 
 const (
-	RequestTimeout = 15 * time.Second
+	RequestTimeout = 32 * time.Second
 	Digest         = "Digest"
 	Signature      = "Signature"
 	ContentType    = "Content-Type"

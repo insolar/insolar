@@ -142,12 +142,8 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)
-	objRep, ok := rep.Reply.(*reply.Object)
+	_, ok := rep.Reply.(*reply.OK)
 	require.True(t, ok)
-
-	idx, err := indexMemoryStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
-	require.NoError(t, err)
-	assert.Equal(t, objRep.State, *idx.LatestState)
 }
 
 func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
@@ -226,7 +222,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)
-	_, ok := rep.Reply.(*reply.Object)
+	_, ok := rep.Reply.(*reply.OK)
 	require.True(t, ok)
 
 	// Arrange

@@ -57,7 +57,7 @@ func Test_descriptorsCache(t *testing.T) {
 	}{
 		{
 			name: "success",
-			obj: NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
+			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
 				protoCache: NewcacheMock(mc).getMock.Return(
 					NewObjectDescriptorMock(mc).
@@ -75,12 +75,12 @@ func Test_descriptorsCache(t *testing.T) {
 		{
 			name: "objDesc.Prototype fails -> error",
 			err:  true,
-			obj: NewObjectDescriptorMock(mc).PrototypeMock.Return(nil, errors.New("has no prototype")),
+			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(nil, errors.New("has no prototype")),
 		},
 		{
 			name: "no such prototype -> error",
 			err:  true,
-			obj: NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
+			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
 				protoCache: NewcacheMock(mc).getMock.Return(
 					nil, errors.New("no proto"),
@@ -90,7 +90,7 @@ func Test_descriptorsCache(t *testing.T) {
 		{
 			name: "is not prototype -> error",
 			err:  true,
-			obj: NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
+			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
 				protoCache: NewcacheMock(mc).getMock.Return(
 					NewObjectDescriptorMock(mc).
@@ -102,7 +102,7 @@ func Test_descriptorsCache(t *testing.T) {
 		{
 			name: "protoDesc.Code fails -> error",
 			err:  true,
-			obj: NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
+			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
 				protoCache: NewcacheMock(mc).getMock.Return(
 					NewObjectDescriptorMock(mc).
@@ -115,7 +115,7 @@ func Test_descriptorsCache(t *testing.T) {
 		{
 			name: "bad code reference -> error",
 			err:  true,
-			obj: NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
+			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
 				protoCache: NewcacheMock(mc).getMock.Return(
 					NewObjectDescriptorMock(mc).

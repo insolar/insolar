@@ -110,8 +110,8 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	}
 	gc.Dep.Coordinator = jc
 	gc.Dep.JetStorage = jet.NewStore()
-	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
-
+	err = gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
+	require.NoError(t, err)
 	gc.Dep.RecordAccessor = ra
 
 	tf := testutils.NewDelegationTokenFactoryMock(t)
@@ -167,7 +167,8 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	}
 	gc.Dep.Coordinator = jc
 	gc.Dep.JetStorage = jet.NewStore()
-	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
+	err = gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
+	require.NoError(t, err)
 	gc.Dep.RecordAccessor = ra
 
 	tf := testutils.NewDelegationTokenFactoryMock(t)

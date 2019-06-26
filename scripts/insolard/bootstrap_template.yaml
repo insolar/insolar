@@ -1,12 +1,12 @@
 members_keys_dir: "{{ .BaseDir }}/configs/"
-discovery_keys_dir: "{{ .BaseDir }}/reusekeys/discovery"
+discovery_keys_dir: "{{ .BaseDir }}/reusekeys/discovery/"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false
 heavy_genesis_config_file: "{{ .BaseDir }}/configs/heavy_genesis.json"
-heavy_genesis_plugins_dir: "{{ .BaseDir }}/plugins"
+heavy_genesis_plugins_dir: "{{ .BaseDir }}/plugins/"
 contracts:
   insgocc: "bin/insgocc"
-  outdir: "{{ .BaseDir }}/plugins"
+  outdir: "{{ .BaseDir }}/plugins/"
 root_balance: "100000000000000000000"
 md_balance: "100000000000000000000"
 majority_rule: 0
