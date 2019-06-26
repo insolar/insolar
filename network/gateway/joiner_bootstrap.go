@@ -82,13 +82,6 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 
 	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(true)
 
-	claim, err := g.NodeKeeper.GetOriginJoinClaim()
-	if err != nil {
-		logger.Error(err.Error())
-		g.Gatewayer.SwitchState(insolar.NoNetworkState)
-		return
-	}
-
 	pulse, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
 		logger.Error(err.Error())
@@ -96,7 +89,7 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 		return
 	}
 
-	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, claim, &pulse)
+	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, g.joinClaim, &pulse)
 	if err != nil {
 		logger.Error(err.Error())
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)

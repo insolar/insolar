@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"time"
 
 	"github.com/pkg/errors"
@@ -92,6 +93,7 @@ type Base struct {
 
 	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
 	bootstrapETA insolar.PulseNumber
+	joinClaim    *packets.NodeJoinClaim
 }
 
 // NewGateway creates new gateway on top of existing
@@ -122,7 +124,10 @@ func (g *Base) Init(ctx context.Context) error {
 	g.HostNetwork.RegisterRequestHandler(types.Bootstrap, g.HandleNodeBootstrapRequest) // provide joiner claim
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
-	return nil
+
+	var err error
+	g.joinClaim, err = g.NodeKeeper.GetOriginJoinClaim()
+	return err
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {

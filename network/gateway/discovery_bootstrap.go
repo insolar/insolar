@@ -32,13 +32,12 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 
 	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(false)
 
-	claim, _ := g.NodeKeeper.GetOriginJoinClaim()
 	pulse, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
 		pulse = insolar.Pulse{PulseNumber: 1}
 	}
 
-	resp, _ := g.BootstrapRequester.Bootstrap(ctx, permit, claim, &pulse)
+	resp, _ := g.BootstrapRequester.Bootstrap(ctx, permit, g.joinClaim, &pulse)
 
 	if resp.Code == packet.Reject {
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)
@@ -62,10 +61,6 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 
 func (g *DiscoveryBootstrap) GetState() insolar.NetworkState {
 	return insolar.DiscoveryBootstrap
-}
-
-func (g *DiscoveryBootstrap) OnPulse(ctx context.Context, pu insolar.Pulse) error {
-	return g.Base.OnPulse(ctx, pu)
 }
 
 func (g *DiscoveryBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
