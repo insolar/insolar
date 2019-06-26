@@ -37,6 +37,8 @@ type FilamentModifier interface {
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock.go
+
 type FilamentCalculator interface {
 	// Requests goes to network.
 	Requests(
@@ -152,22 +154,17 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 		return errors.Wrap(err, "failed to update a result's filament")
 	}
 
-	var filamentRecord record.CompositeFilamentRecord
-
 	// Save request record to storage.
 	{
 		virtual := record.Wrap(result)
-		hash := record.HashVirtual(m.pcs.ReferenceHasher(), virtual)
-		id := *insolar.NewID(resultID.Pulse(), hash)
 		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.records.Set(ctx, id, material)
+		err := m.records.Set(ctx, resultID, material)
 		if err != nil && err != object.ErrOverride {
 			return errors.Wrap(err, "failed to save a result record")
 		}
-		filamentRecord.RecordID = id
-		filamentRecord.Record = material
 	}
 
+	var filamentID insolar.ID
 	// Save filament record to storage.
 	{
 		rec := record.PendingFilament{
@@ -182,11 +179,8 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 		if err != nil {
 			return errors.Wrap(err, "failed to save filament record")
 		}
-		filamentRecord.MetaID = id
-		filamentRecord.Meta = material
+		filamentID = id
 	}
-
-	idx.Lifeline.PendingPointer = &filamentRecord.MetaID
 
 	pending, err := m.calculator.PendingRequests(ctx, resultID.Pulse(), objectID)
 	if err != nil {
@@ -195,10 +189,14 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 	if len(pending) > 0 {
 		calculatedEarliest := pending[0].Pulse()
 		idx.Lifeline.EarliestOpenRequest = &calculatedEarliest
-		err = m.indexes.SetIndex(ctx, resultID.Pulse(), idx)
-		if err != nil {
-			return errors.Wrap(err, "failed to create a meta-record about pending request")
-		}
+	} else {
+		idx.Lifeline.EarliestOpenRequest = nil
+	}
+
+	idx.Lifeline.PendingPointer = &filamentID
+	err = m.indexes.SetIndex(ctx, resultID.Pulse(), idx)
+	if err != nil {
+		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 
 	return nil
