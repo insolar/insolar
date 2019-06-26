@@ -957,7 +957,7 @@ func (c *First) GetName() (string, error) {
 	require.Contains(
 		t,
 		string(resp.Reply.Result),
-		"[ RouteCall ] on calling main API: CallMethod returns error: proxy call error: try to call method of prototype as method of another prototype",
+		"try to call method of prototype as method of another prototype",
 	)
 }
 

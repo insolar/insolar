@@ -192,7 +192,7 @@ func (es *ExecutionState) executeTranscript(ctx context.Context, t *Transcript, 
 	es.CurrentList.Set(*t.RequestRef, t)
 	es.Unlock()
 
-	args.lr.executeOrValidate(t.Context, es, t)
+	args.lr.executeAndReply(t.Context, es, t)
 
 	es.Lock()
 	es.CurrentList.Delete(*t.RequestRef)
