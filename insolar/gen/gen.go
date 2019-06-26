@@ -14,29 +14,18 @@
 // limitations under the License.
 //
 
-package configuration
+package gen
 
 import (
-	"fmt"
+	fuzz "github.com/google/gofuzz"
 )
 
-// APIRunner holds configuration for api
-type APIRunner struct {
-	Address string
-	Call    string
-	RPC     string
-}
-
-// NewAPIRunner creates new api config
-func NewAPIRunner() APIRunner {
-	return APIRunner{
-		Address: "localhost:19101",
-		Call:    "/api/call",
-		RPC:     "/api/rpc",
+// Signature generates random non nil bytes sequence of provided size.
+func Signature(size int) []byte {
+	if size < 0 {
+		return nil
 	}
-}
-
-func (ar *APIRunner) String() string {
-	res := fmt.Sprintln("Addr ->", ar.Address, ", Call ->", ar.Call, ", RPC ->", ar.RPC)
-	return res
+	b := make([]byte, size)
+	fuzz.New().NilChance(0).NumElements(size, size).Fuzz(&b)
+	return b
 }

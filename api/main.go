@@ -60,6 +60,7 @@ type Runner struct {
 	cfg                 *configuration.APIRunner
 	keyCache            map[string]crypto.PublicKey
 	cacheLock           *sync.RWMutex
+	timeout             time.Duration
 	SeedManager         *seedmanager.SeedManager
 	SeedGenerator       seedmanager.SeedGenerator
 }
@@ -76,9 +77,6 @@ func checkConfig(cfg *configuration.APIRunner) error {
 	}
 	if len(cfg.RPC) == 0 {
 		return errors.New("[ checkConfig ] RPC must exist")
-	}
-	if cfg.Timeout == 0 {
-		return errors.New("[ checkConfig ] Timeout must not be null")
 	}
 
 	return nil
@@ -121,6 +119,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 		server:    &http.Server{Addr: addrStr},
 		rpcServer: rpcServer,
 		cfg:       cfg,
+		timeout:   30 * time.Second,
 		keyCache:  make(map[string]crypto.PublicKey),
 		cacheLock: &sync.RWMutex{},
 	}

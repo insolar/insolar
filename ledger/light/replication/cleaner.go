@@ -45,7 +45,7 @@ type LightCleaner struct {
 	once          sync.Once
 	pulseForClean chan insolar.PulseNumber
 
-	jetStorage   jet.Storage
+	jetCleaner   jet.Cleaner
 	nodeModifier node.Modifier
 	dropCleaner  drop.Cleaner
 	blobCleaner  blob.Cleaner
@@ -60,7 +60,7 @@ type LightCleaner struct {
 
 // NewCleaner creates a new instance of LightCleaner
 func NewCleaner(
-	jetStorage jet.Storage,
+	jetCleaner jet.Cleaner,
 	nodeModifier node.Modifier,
 	dropCleaner drop.Cleaner,
 	blobCleaner blob.Cleaner,
@@ -71,7 +71,7 @@ func NewCleaner(
 	lightChainLimit int,
 ) *LightCleaner {
 	return &LightCleaner{
-		jetStorage:      jetStorage,
+		jetCleaner:      jetCleaner,
 		nodeModifier:    nodeModifier,
 		dropCleaner:     dropCleaner,
 		blobCleaner:     blobCleaner,
@@ -120,7 +120,7 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	c.blobCleaner.DeleteForPN(ctx, pn)
 	c.recCleaner.DeleteForPN(ctx, pn)
 
-	c.jetStorage.DeleteForPN(ctx, pn)
+	c.jetCleaner.DeleteForPN(ctx, pn)
 	c.indexCleaner.DeleteForPN(ctx, pn)
 
 	err := c.pulseShifter.Shift(ctx, pn)
