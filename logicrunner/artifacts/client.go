@@ -142,19 +142,19 @@ func (m *client) RegisterRequest(
 	virtRec := record.Wrap(request)
 	buf, err := virtRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal record")
+		return nil, errors.Wrap(err, "RegisterRequest: failed to marshal record")
 	}
 
 	h := m.PCS.ReferenceHasher()
 	_, err = h.Write(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to calculate hash")
+		return nil, errors.Wrap(err, "RegisterRequest: failed to calculate hash")
 	}
 	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
-	msg, err := payload.NewMessage(&payload.SetRequest{
+	msg := &payload.SetRequest{
 		Request: buf,
-	})
+	}
 
 	var recRef *insolar.Reference
 	switch request.CallType {
@@ -163,21 +163,13 @@ func (m *client) RegisterRequest(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
 		recRef = insolar.NewReference(recID)
 	default:
-		return nil, errors.New("not supported call type " + request.CallType.String())
+		return nil, errors.New("RegisterRequest: not supported call type " + request.CallType.String())
 	}
 
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
-	defer done()
-
-	rep, ok := <-reps
-	if !ok {
-		return nil, ErrNoReply
-	}
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	pl, err := m.retryer(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef, 3)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal reply")
+		return nil, err
 	}
-
 	switch p := pl.(type) {
 	case *payload.ID:
 		return &p.ID, nil
