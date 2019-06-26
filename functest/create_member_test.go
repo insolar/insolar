@@ -55,10 +55,10 @@ func TestCreateMembersWithSameName(t *testing.T) {
 
 	addBurnAddresses(t)
 
-	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
+	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 
-	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
+	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "member for this publicKey already exist")
 }
