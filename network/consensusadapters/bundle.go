@@ -61,6 +61,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/transport"
 )
 
 type ConsensusDep struct {
@@ -70,6 +71,7 @@ type ConsensusDep struct {
 	CertificateManager insolar.CertificateManager
 	KeyStore           insolar.KeyStore
 	NodeKeeper         network.NodeKeeper
+	DatagramTransport  transport.DatagramTransport
 
 	Stater       stater
 	PulseChanger pulseChanger
@@ -100,14 +102,6 @@ type ConsensusBundle struct {
 	consensusController          core.ConsensusController
 }
 
-func (cb *ConsensusBundle) Controller() core.ConsensusController {
-	return cb.consensusController
-}
-
-func (cb *ConsensusBundle) Chronicles() census.ConsensusChronicles {
-	return cb.consensusChronicles
-}
-
 func NewConsensusBundle(ctx context.Context, dep ConsensusDep) ConsensusBundle {
 	dep.verify()
 
@@ -120,9 +114,10 @@ func NewConsensusBundle(ctx context.Context, dep ConsensusDep) ConsensusBundle {
 	bundle.population = NewPopulation(NewNodeIntroProfile(origin, certificate), NewNodeIntroProfileList(knownNodes, certificate))
 	bundle.mandateRegistry = NewMandateRegistry(
 		common2.NewDigest(
-			Slice64ToBits512(dep.PrimingCloudStateHash[:]), SHA3512Digest,
+			common2.NewBits512FromBytes(dep.PrimingCloudStateHash[:]), SHA3512Digest,
 		).AsDigestHolder(),
 	)
+	bundle.misbehaviorRegistry = NewMisbehaviorRegistry()
 	bundle.offlinePopulation = NewOfflinePopulation(dep.NodeKeeper, dep.CertificateManager)
 	bundle.versionedRegistries = NewVersionedRegistries(
 		bundle.mandateRegistry,
@@ -135,6 +130,8 @@ func NewConsensusBundle(ctx context.Context, dep ConsensusDep) ConsensusBundle {
 	bundle.roundStrategyFactory = NewRoundStrategyFactory()
 	bundle.transportCryptographyFactory = NewTransportCryptographyFactory(dep.Scheme)
 	bundle.packetBuilder = dep.PacketBuilder(bundle.transportCryptographyFactory, bundle.localNodeConfiguration)
+	// TODO: comment until serialization ready
+	// bundle.packetSender = NewPacketSender(dep.DatagramTransport)
 	bundle.packetSender = dep.PacketSender
 	bundle.transportFactory = NewTransportFactory(
 		bundle.transportCryptographyFactory,
@@ -153,6 +150,10 @@ func NewConsensusBundle(ctx context.Context, dep ConsensusDep) ConsensusBundle {
 
 	bundle.verify()
 	return bundle
+}
+
+func (cb *ConsensusBundle) Controller() core.ConsensusController {
+	return cb.consensusController
 }
 
 func (cb *ConsensusBundle) verify() {

@@ -75,7 +75,7 @@ func NewEmuHostConsensusAdapter(hostAddr string) *EmuHostConsensusAdapter {
 	return &EmuHostConsensusAdapter{hostAddr: common.HostAddress(hostAddr)}
 }
 
-func (h *EmuHostConsensusAdapter) SetController(controller core.ConsensusController) {
+func (h *EmuHostConsensusAdapter) SetConsensusController(controller core.ConsensusController) {
 	h.controller = controller
 }
 

@@ -62,12 +62,14 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/network/consensusadapters"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
+	transport2 "github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -86,6 +88,9 @@ func TestConsensusMain(t *testing.T) {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
 		nodeKeeper.SetInitialSnapshot(nodes)
 		certificateManager := initCrypto(n, discoveryNodes)
+		handler := consensusadapters.NewDatagramHandler()
+		transportFactory := transport2.NewFactory(configuration.NewHostNetwork().Transport)
+		transport, _ := transportFactory.CreateDatagramTransport(handler)
 
 		consensusAdapter := NewEmuHostConsensusAdapter(n.Address())
 
@@ -98,10 +103,16 @@ func TestConsensusMain(t *testing.T) {
 			Stater:                &nshGen{nshDelay: defaultNshGenerationDelay},
 			PulseChanger:          &pulseChanger{},
 			PacketBuilder:         NewEmuPacketBuilder,
-			PacketSender:          consensusAdapter,
+			DatagramTransport:     transport,
+			// TODO: remove
+			PacketSender: consensusAdapter,
 		})
 
-		consensusAdapter.SetController(bundle.Controller())
+		controller := bundle.Controller()
+		handler.SetConsensusController(controller)
+		consensusAdapter.SetConsensusController(controller)
+
+		_ = transport.Start(ctx)
 		consensusAdapter.ConnectTo(network)
 	}
 
@@ -214,7 +225,7 @@ func nodesFromInfo(nodeInfos []*nodeInfo) ([]insolar.NetworkNode, []insolar.Netw
 
 const shortNodeIdOffset = 1000
 
-func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.PublicKey) insolar.NetworkNode {
+func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.PublicKey) node.MutableNode {
 	n := node.NewNode(
 		testutils.RandomRef(),
 		role,
@@ -224,7 +235,7 @@ func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.Publ
 	)
 	mn := n.(node.MutableNode)
 	mn.SetShortID(insolar.ShortNodeID(shortNodeIdOffset + id))
-	return n
+	return mn
 }
 
 func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) *certificate.CertificateManager {

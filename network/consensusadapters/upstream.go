@@ -151,5 +151,5 @@ func awaitState(c chan<- common.NodeStateHash, stater stater) {
 		panic("Failed to retrieve node state hash")
 	}
 
-	c <- common2.NewDigest(Slice64ToBits512(state), SHA3512Digest).AsDigestHolder()
+	c <- common2.NewDigest(common2.NewBits512FromBytes(state), SHA3512Digest).AsDigestHolder()
 }

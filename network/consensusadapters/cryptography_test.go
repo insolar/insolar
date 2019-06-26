@@ -91,7 +91,7 @@ func TestSha3512Digester_GetDigestOf(t *testing.T) {
 
 	expected := scheme.IntegrityHasher().Hash(b)
 
-	require.Equal(t, expected, FoldableReaderToBytes(digest, scheme.IntegrityHashSize()))
+	require.Equal(t, expected, digest.Bytes())
 }
 
 func TestSha3512Digester_GetDigestMethod(t *testing.T) {
@@ -156,13 +156,13 @@ func TestECDSADigestSigner_SignDigest(t *testing.T) {
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := FoldableReaderToBytes(digest, scheme.IntegrityHashSize())
+	digestBytes := digest.Bytes()
 
 	signature := ds.SignDigest(digest)
 	require.Equal(t, scheme.SignatureSize(), signature.FixedByteSize())
 	require.Equal(t, signature.GetSignatureMethod(), SHA3512Digest.SignedBy(SECP256r1Sign))
 
-	signatureBytes := FoldableReaderToBytes(signature, scheme.SignatureSize())
+	signatureBytes := signature.Bytes()
 
 	require.True(t, verifier.Verify(insolar.SignatureFromBytes(signatureBytes), digestBytes))
 }
@@ -231,11 +231,11 @@ func TestECDSASignatureVerifier_IsValidDigestSignature(t *testing.T) {
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := FoldableReaderToBytes(digest, scheme.IntegrityHashSize())
+	digestBytes := digest.Bytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
-	sig := common.NewSignature(Slice64ToBits512(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign))
+	sig := common.NewSignature(common.NewBits512FromBytes(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign))
 
 	require.True(t, dv.IsValidDigestSignature(digest.AsDigestHolder(), sig.AsSignatureHolder()))
 }
@@ -251,10 +251,10 @@ func TestECDSASignatureVerifier_IsValidDigestSignature_InvalidMethod(t *testing.
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := FoldableReaderToBytes(digest, scheme.IntegrityHashSize())
+	digestBytes := digest.Bytes()
 
 	signature, _ := signer.Sign(digestBytes)
-	bits := Slice64ToBits512(signature.Bytes())
+	bits := common.NewBits512FromBytes(signature.Bytes())
 
 	sig1 := common.NewSignature(bits, SHA3512Digest.SignedBy(SECP256r1Sign))
 	require.True(t, dv.IsValidDigestSignature(digest.AsDigestHolder(), sig1.AsSignatureHolder()))
@@ -280,11 +280,11 @@ func TestECDSASignatureVerifier_IsValidDataSignature(t *testing.T) {
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := FoldableReaderToBytes(digest, scheme.IntegrityHashSize())
+	digestBytes := digest.Bytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
-	sig := common.NewSignature(Slice64ToBits512(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign))
+	sig := common.NewSignature(common.NewBits512FromBytes(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign))
 
 	reader.Seek(0, io.SeekStart)
 	require.True(t, dv.IsValidDataSignature(reader, sig.AsSignatureHolder()))
@@ -301,11 +301,11 @@ func TestECDSASignatureVerifier_IsValidDataSignature_InvalidMethod(t *testing.T)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := FoldableReaderToBytes(digest, scheme.IntegrityHashSize())
+	digestBytes := digest.Bytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
-	bits := Slice64ToBits512(signature.Bytes())
+	bits := common.NewBits512FromBytes(signature.Bytes())
 
 	reader.Seek(0, io.SeekStart)
 	sig1 := common.NewSignature(bits, SHA3512Digest.SignedBy(SECP256r1Sign))

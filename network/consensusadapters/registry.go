@@ -106,7 +106,7 @@ func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.Certifi
 }
 
 func (op *OfflinePopulation) FindRegisteredProfile(identity common.HostIdentityHolder) common2.HostProfile {
-	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(string(identity.GetHostAddress()))
+	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetHostAddress().String())
 	cert := op.manager.GetCertificate()
 
 	return NewNodeIntroProfile(node, cert)

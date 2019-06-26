@@ -82,7 +82,8 @@ func (pd *Sha3512Digester) GetDigestOf(reader io.Reader) common.Digest {
 	}
 
 	bytes := hasher.Sum(nil)
-	bits := Slice64ToBits512(bytes)
+	bits := common.NewBits512FromBytes(bytes)
+
 	return common.NewDigest(bits, pd.GetDigestMethod())
 }
 
@@ -131,7 +132,7 @@ func NewECDSADigestSigner(privateKey *ecdsa.PrivateKey, scheme insolar.PlatformC
 }
 
 func (ds *ECDSADigestSigner) SignDigest(digest common.Digest) common.Signature {
-	digestBytes := FoldableReaderToBytes(digest, ds.scheme.IntegrityHashSize())
+	digestBytes := digest.Bytes()
 
 	signer := ds.scheme.Signer(ds.privateKey)
 
@@ -141,7 +142,7 @@ func (ds *ECDSADigestSigner) SignDigest(digest common.Digest) common.Signature {
 	}
 
 	sigBytes := sig.Bytes()
-	bits := Slice64ToBits512(sigBytes)
+	bits := common.NewBits512FromBytes(sigBytes)
 
 	return common.NewSignature(bits, digest.GetDigestMethod().SignedBy(ds.GetSignMethod()))
 }
@@ -190,8 +191,8 @@ func (sv *ECDSASignatureVerifier) IsValidDigestSignature(digest common.DigestHol
 		return false
 	}
 
-	digestBytes := FoldableReaderToBytes(digest, sv.scheme.IntegrityHashSize())
-	signatureBytes := FoldableReaderToBytes(signature, sv.scheme.SignatureSize())
+	digestBytes := digest.Bytes()
+	signatureBytes := signature.Bytes()
 
 	verifier := sv.scheme.Verifier(sv.publicKey)
 	return verifier.Verify(insolar.SignatureFromBytes(signatureBytes), digestBytes)

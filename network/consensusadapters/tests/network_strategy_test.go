@@ -160,7 +160,6 @@ func (dls *delayLinkStrategy) calculateDelay() time.Duration {
 
 func (dls *delayLinkStrategy) delay(tp string, packet *Packet, out PacketFunc) {
 	if delay := dls.calculateDelay(); delay > 0 {
-		// fmt.Printf(">>>> %s packet delay %v: %v\addr", tp, delay, packet)
 		time.AfterFunc(delay, func() {
 			out(packet)
 		})
@@ -174,6 +173,5 @@ func (dls *delayLinkStrategy) BeforeSend(packet *Packet, out PacketFunc) {
 }
 
 func (dls *delayLinkStrategy) BeforeReceive(packet *Packet, out PacketFunc) {
-	// dls.delay(" IN", packet, out)
 	out(packet)
 }

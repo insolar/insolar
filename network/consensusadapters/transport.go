@@ -51,11 +51,15 @@
 package consensusadapters
 
 import (
+	"context"
+
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/transport"
 )
 
 type PacketBuilder struct{}
@@ -88,12 +92,63 @@ func (pb *PacketBuilder) PreparePhase3Packet(sender common2.NodeProfile, pd comm
 	panic("implement me")
 }
 
-type PacketSender struct{}
-
-func NewPacketSender() *PacketSender {
-	return &PacketSender{}
+type PacketSender struct {
+	datagramTransport transport.DatagramTransport
 }
 
+func NewPacketSender(datagramTransport transport.DatagramTransport) *PacketSender {
+	return &PacketSender{
+		datagramTransport: datagramTransport,
+	}
+}
+
+type payloadWrapper struct {
+	Payload interface{}
+}
+
+// TODO: signature seems to be wrong :( context and error missed
 func (ps *PacketSender) SendPacketToTransport(t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
-	panic("implement me")
+	ctx := context.TODO()
+	addr := t.GetDefaultEndpoint()
+
+	bs := insolar.MustSerialize(payload)
+
+	err := ps.datagramTransport.SendDatagram(ctx, addr.String(), bs)
+	if err != nil {
+		panic(err)
+	}
+}
+
+type DatagramHandler struct {
+	consensusController core.ConsensusController
+}
+
+func NewDatagramHandler() *DatagramHandler {
+	return &DatagramHandler{}
+}
+
+func (dh *DatagramHandler) SetConsensusController(consensusController core.ConsensusController) {
+	dh.consensusController = consensusController
+}
+
+func (dh *DatagramHandler) HandleDatagram(address string, buf []byte) {
+	packet := payloadWrapper{}
+	insolar.MustDeserialize(buf, packet)
+
+	packetParser, ok := packet.Payload.(packets.PacketParser)
+	if !ok {
+		panic("Failed to cast PacketParser")
+	}
+
+	if packetParser == packetParser {
+		panic("PacketParser is nil")
+	}
+
+	hostIdentity := common.HostIdentity{
+		Addr: common.HostAddress(address),
+	}
+	err := dh.consensusController.ProcessPacket(packetParser, &hostIdentity)
+	if err != nil {
+		panic(err)
+	}
 }

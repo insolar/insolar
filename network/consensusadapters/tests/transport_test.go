@@ -98,17 +98,21 @@ func (r *emuPacketBuilder) defaultSign() common.SignedDigest {
 	return sd
 }
 
+func (r *emuPacketBuilder) defaultBasePacket(sender common2.NodeProfile) basePacket {
+	sd := r.defaultSign()
+
+	return basePacket{
+		src: sender.GetShortNodeID(),
+		sd:  sd,
+	}
+}
+
 func (r *emuPacketBuilder) PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
-	sd := r.defaultSign()
-
 	v := EmuPhase0NetPacket{
-		basePacket: basePacket{
-			src: sender.GetShortNodeID(),
-			sd:  sd,
-		},
-		packet: pulsarPacket.(*EmuPulsarNetPacket)}
+		basePacket: r.defaultBasePacket(sender),
+		packet:     pulsarPacket.(*EmuPulsarNetPacket)}
 	return &emuPacketSender{&v}
 }
 
@@ -126,15 +130,11 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsa
 		panic("pulse data is missing or invalid")
 	}
 
-	sd := r.defaultSign()
-
 	v := EmuPhase1NetPacket{
 		EmuPhase0NetPacket: EmuPhase0NetPacket{
-			basePacket: basePacket{
-				src: sender.GetShortNodeID(),
-				sd:  sd,
-			},
-			packet: pp},
+			basePacket: r.defaultBasePacket(sender),
+			packet:     pp,
+		},
 		selfIntro: sender.GetIntroduction(),
 		nsh:       nsh}
 	v.pn = pp.pulseData.PulseNumber
@@ -163,16 +163,12 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 func (r *emuPacketBuilder) PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData, neighbourhood []packets.NodeStateHashReportReader,
 	intros []common2.NodeIntroduction, options core.PacketSendOptions) core.PreparedPacketSender {
 
-	sd := r.defaultSign()
-
 	v := EmuPhase2NetPacket{
-		basePacket: basePacket{
-			src: sender.GetShortNodeID(),
-			sd:  sd,
-		},
+		basePacket:    r.defaultBasePacket(sender),
 		pulseNumber:   pd.PulseNumber,
 		neighbourhood: neighbourhood,
-		intros:        intros}
+		intros:        intros,
+	}
 	return &emuPacketSender{&v}
 }
 
@@ -198,17 +194,13 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender common2.NodeProfile, pd co
 	gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
-	sd := r.defaultSign()
-
 	v := EmuPhase3NetPacket{
-		basePacket: basePacket{
-			src: sender.GetShortNodeID(),
-			sd:  sd,
-		},
+		basePacket:  r.defaultBasePacket(sender),
 		bitset:      bitset,
 		pulseNumber: pd.PulseNumber,
 		gshTrusted:  gshTrusted,
-		gshDoubted:  gshDoubted}
+		gshDoubted:  gshDoubted,
+	}
 	return &emuPacketSender{&v}
 }
 
