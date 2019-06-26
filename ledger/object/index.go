@@ -41,6 +41,13 @@ type IndexAccessor interface {
 	ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStorage -o ./ -s _mock.go
+
+type IndexStorage interface {
+	IndexAccessor
+	IndexModifier
+}
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go
 
 // IndexCleaner provides an interface for removing backets from a storage.

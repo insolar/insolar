@@ -247,8 +247,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.JetReleaser = waiter
 		handler.WriteAccessor = writeController
 		handler.Sender = WmBus
-		handler.IndexModifier = indexes
-		handler.IndexAccessor = indexes
+		handler.IndexStorage = indexes
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(

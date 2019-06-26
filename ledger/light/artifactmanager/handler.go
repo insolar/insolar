@@ -63,8 +63,7 @@ type MessageHandler struct {
 
 	WriteAccessor hot.WriteAccessor
 
-	IndexModifier object.IndexModifier
-	IndexAccessor object.IndexAccessor
+	IndexStorage object.IndexStorage
 
 	PulseCalculator storage.PulseCalculator
 
@@ -99,9 +98,9 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 		},
 		GetIndex: func(p *proc.EnsureIndex) {
-			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.IndexAccessor = h.IndexStorage
 			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexModifier = h.IndexModifier
+			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
@@ -116,8 +115,8 @@ func NewMessageHandler(
 			p.Dep.Sender = h.Sender
 		},
 		GetIndexWM: func(p *proc.EnsureIndexWM) {
-			p.Dep.IndexModifier = h.IndexModifier
-			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.IndexModifier = h.IndexStorage
+			p.Dep.IndexAccessor = h.IndexStorage
 			p.Dep.IndexLocker = h.IndexLocker
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
@@ -179,14 +178,14 @@ func NewMessageHandler(
 			p.Dep.BlobModifier = h.BlobModifier
 			p.Dep.PCS = h.PCS
 			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexAccessor
-			p.Dep.IndexModifier = h.IndexModifier
+			p.Dep.IndexAccessor = h.IndexStorage
+			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.WriteAccessor = h.WriteAccessor
 			p.Dep.Filaments = h.filaments
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.IndexAccessor = h.IndexStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.Records
@@ -195,14 +194,14 @@ func NewMessageHandler(
 		},
 		RegisterChild: func(p *proc.RegisterChild) {
 			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexAccessor
-			p.Dep.IndexModifier = h.IndexModifier
+			p.Dep.IndexAccessor = h.IndexStorage
+			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.JetCoordinator = h.JetCoordinator
 			p.Dep.RecordModifier = h.Records
 			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep(h.IndexAccessor)
+			p.Dep(h.IndexStorage)
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
 			p.Dep(h.filaments)
@@ -213,7 +212,7 @@ func NewMessageHandler(
 		HotData: func(p *proc.HotData) {
 			p.Dep.DropModifier = h.DropModifier
 			p.Dep.MessageBus = h.Bus
-			p.Dep.IndexModifier = h.IndexModifier
+			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
@@ -234,7 +233,7 @@ func NewMessageHandler(
 			p.Dep(h.WriteAccessor, h.Records, h.BlobModifier, h.PCS, h.Sender)
 		},
 		GetDelegate: func(p *proc.GetDelegate) {
-			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.IndexAccessor = h.IndexStorage
 		},
 	}
 
@@ -254,8 +253,7 @@ func NewMessageHandler(
 func (h *MessageHandler) Init(ctx context.Context) error {
 	h.jetTreeUpdater = jet.NewFetcher(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 	h.filaments = executor.NewFilamentManager(
-		h.IndexAccessor,
-		h.IndexModifier,
+		h.IndexStorage,
 		h.Records,
 		h.JetCoordinator,
 		h.PCS,

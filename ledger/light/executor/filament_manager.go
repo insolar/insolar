@@ -45,8 +45,7 @@ type FilamentAccessor interface {
 }
 
 func NewFilamentManager(
-	idxAccessor object.IndexAccessor,
-	idxModifier object.IndexModifier,
+	indexes object.IndexStorage,
 	recordStorage object.RecordStorage,
 	coordinator jet.Coordinator,
 	pcs insolar.PlatformCryptographyScheme,
@@ -55,8 +54,7 @@ func NewFilamentManager(
 ) *FilamentManager {
 	return &FilamentManager{
 		cache:         newCacheStore(recordStorage),
-		idxAccessor:   idxAccessor,
-		idxModifier:   idxModifier,
+		indexes:       indexes,
 		recordStorage: recordStorage,
 		coordinator:   coordinator,
 		pcs:           pcs,
@@ -68,8 +66,7 @@ func NewFilamentManager(
 type FilamentManager struct {
 	cache *cacheStore
 
-	idxAccessor   object.IndexAccessor
-	idxModifier   object.IndexModifier
+	indexes       object.IndexStorage
 	recordStorage object.RecordStorage
 	coordinator   jet.Coordinator
 	pcs           insolar.PlatformCryptographyScheme
@@ -84,7 +81,7 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 
 	objectID := *request.Object.Record()
 
-	idx, err := m.idxAccessor.ForID(ctx, requestID.Pulse(), objectID)
+	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {
 		return errors.Wrap(err, "failed to update a request's filament")
 	}
@@ -133,7 +130,7 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 		idx.Lifeline.EarliestOpenRequest = &pn
 	}
 
-	err = m.idxModifier.SetIndex(ctx, requestID.Pulse(), idx)
+	err = m.indexes.SetIndex(ctx, requestID.Pulse(), idx)
 	if err != nil {
 		return errors.Wrap(err, "failed to update index")
 	}
@@ -148,7 +145,7 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 
 	objectID := result.Object
 
-	idx, err := m.idxAccessor.ForID(ctx, resultID.Pulse(), objectID)
+	idx, err := m.indexes.ForID(ctx, resultID.Pulse(), objectID)
 	if err != nil {
 		return errors.Wrap(err, "failed to update a result's filament")
 	}
@@ -196,11 +193,10 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 	if len(pending) > 0 {
 		calculatedEarliest := pending[0].Pulse()
 		idx.Lifeline.EarliestOpenRequest = &calculatedEarliest
-		err = m.idxModifier.SetIndex(ctx, resultID.Pulse(), idx)
+		err = m.indexes.SetIndex(ctx, resultID.Pulse(), idx)
 		if err != nil {
 			return errors.Wrap(err, "failed to create a meta-record about pending request")
 		}
-
 	}
 
 	return nil
@@ -237,7 +233,7 @@ func (m *FilamentManager) Requests(
 func (m *FilamentManager) PendingRequests(
 	ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID,
 ) ([]insolar.ID, error) {
-	idx, err := m.idxAccessor.ForID(ctx, pulse, objectID)
+	idx, err := m.indexes.ForID(ctx, pulse, objectID)
 	if err != nil {
 		return nil, err
 	}
