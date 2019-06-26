@@ -90,7 +90,6 @@ type Base struct {
 	PhaseManager        phases.PhaseManager         `inject:""`
 
 	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
-	permit       *packet.Permit
 	bootstrapETA insolar.PulseNumber
 }
 
@@ -120,7 +119,8 @@ func (g *Base) Init(ctx context.Context) error {
 	// TODO check in states
 	g.HostNetwork.RegisterRequestHandler(types.Authorize, g.HandleNodeAuthorizeRequest) // validate cert
 	g.HostNetwork.RegisterRequestHandler(types.Bootstrap, g.HandleNodeBootstrapRequest) // provide joiner claim
-
+	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
+	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
 	return nil
 }
 
@@ -174,8 +174,9 @@ func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insola
 
 // ============= Bootstrap =======
 
+// ShoudIgnorePulse returns true if network should skip pulse from real pulsar
 func (g *Base) ShoudIgnorePulse(context.Context, insolar.Pulse) bool {
-	return false
+	return true
 }
 
 func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.Packet) (network.Packet, error) {
@@ -298,4 +299,10 @@ func (g *Base) HandleUpdateSchedule(ctx context.Context, request network.Packet)
 	storage.NewSnapshotStorage()
 	// TODO:
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.UpdateScheduleResponse{}), nil
+}
+
+func (g *Base) HandleReconnect(ctx context.Context, request network.Packet) (network.Packet, error) {
+
+	// TODO:
+	return g.HostNetwork.BuildResponse(ctx, request, &packet.ReconnectResponse{}), nil
 }

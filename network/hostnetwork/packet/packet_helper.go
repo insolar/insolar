@@ -81,6 +81,8 @@ func (p *Packet) SetRequest(request interface{}) {
 		r = &Request_SignCert{t}
 	case *UpdateScheduleRequest:
 		r = &Request_UpdateSchedule{t}
+	case *ReconnectRequest:
+		r = &Request_Reconnect{t}
 	default:
 		panic("Request payload is not a valid protobuf struct!")
 	}
@@ -106,6 +108,8 @@ func (p *Packet) SetResponse(response interface{}) {
 		r = &Response_Error{t}
 	case *UpdateScheduleResponse:
 		r = &Response_UpdateSchedule{t}
+	case *ReconnectResponse:
+		r = &Response_Reconnect{t}
 	default:
 		panic("Response payload is not a valid protobuf struct!")
 	}

@@ -267,48 +267,6 @@ package bootstrap
 // 	}, nil
 // }
 
-// func (bc *Bootstrap) startCyclicBootstrap(ctx context.Context) {
-// 	for atomic.LoadInt32(&bc.cyclicBootstrapStop) == 0 {
-// 		results := make([]*network.BootstrapResult, 0)
-// 		nodes := bc.getInactivenodes()
-// 		for _, node := range nodes {
-// 			res, err := bc.startBootstrap(ctx, node.GetHost(), nil)
-// 			if err != nil {
-// 				logger := inslogger.FromContext(ctx)
-// 				logger.Errorf("[ StartCyclicBootstrap ] ", err)
-// 				continue
-// 			}
-// 			results = append(results, res)
-// 		}
-// 		if len(results) != 0 {
-// 			index := bc.getLargerNetworkIndex(results)
-// 			if index >= 0 {
-// 				bc.reconnectToNewNetwork(ctx, nodes[index].GetHost())
-// 			}
-// 		}
-// 		time.Sleep(time.Second * bootstrapTimeout)
-// 	}
-// }
-
-// func (bc *Bootstrap) getLargerNetworkIndex(results []*network.BootstrapResult) int {
-// 	networkSize := results[0].NetworkSize
-// 	index := 0
-// 	for i := 1; i < len(results); i++ {
-// 		if results[i].NetworkSize > networkSize {
-// 			networkSize = results[i].NetworkSize
-// 			index = i
-// 		}
-// 	}
-// 	if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
-// 		return index
-// 	}
-// 	return -1
-// }
-
-// func (bc *Bootstrap) StopCyclicBootstrap() {
-// 	atomic.StoreInt32(&bc.cyclicBootstrapStop, 1)
-// }
-
 // func parseBootstrapResults(results []*network.BootstrapResult) *network.BootstrapResult {
 // 	minIDIndex := 0
 // 	minID := results[0].Host.NodeID

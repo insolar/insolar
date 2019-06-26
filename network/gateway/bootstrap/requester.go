@@ -152,7 +152,7 @@ func (ac *requester) UpdateSchedule(ctx context.Context, permit *packet.Permit, 
 		Permit:        permit,
 	}
 
-	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.Bootstrap, req, permit.Payload.ReconnectTo)
+	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.UpdateSchedule, req, permit.Payload.ReconnectTo)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending bootstrap request")
 	}

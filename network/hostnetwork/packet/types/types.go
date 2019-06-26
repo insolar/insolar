@@ -71,6 +71,10 @@ const (
 	Disconnect
 	// SignCert used to request signature of certificate from another node
 	SignCert
+	// UpdateSchedule used for fetching pulse history
+	UpdateSchedule
+	// Reconnect used to notify nodes to reconnect to the bigger network
+	Reconnect
 )
 
 // RequestID is 64 bit unsigned int request id.

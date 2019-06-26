@@ -33,6 +33,7 @@ message Request {
         AuthorizeRequest Authorize = 6;
         SignCertRequest SignCert = 7;
         UpdateScheduleRequest UpdateSchedule = 8;
+        ReconnectRequest Reconnect = 9;
     }
 }
 
@@ -46,6 +47,7 @@ message Response {
         SignCertResponse SignCert = 6;
         ErrorResponse Error = 7;
         UpdateScheduleResponse UpdateSchedule = 8;
+        ReconnectResponse Reconnect = 9;
     }
 }
 
@@ -77,6 +79,11 @@ message PulseRequest {
 
 message UpdateScheduleRequest {
     uint32 LastNodePulse = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    Permit Permit = 2;
+}
+
+message ReconnectRequest {
+    bytes ReconnectTo = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host", (gogoproto.nullable) = false];
     Permit Permit = 2;
 }
 
@@ -165,4 +172,8 @@ message ErrorResponse {
 
 message UpdateScheduleResponse {
     // nuff said
+}
+
+message ReconnectResponse {
+// nuff said
 }
