@@ -161,7 +161,7 @@ func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Cer
 
 // ValidateCert validates node certificate
 func (g *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
-	return false, errors.New("ValidateCert() in non active mode")
+	return g.CertificateManager.VerifyAuthorizationCertificate(certificate)
 }
 
 func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
@@ -230,12 +230,6 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.P
 		}), nil
 }
 
-// func (bc *Base) nodeShouldReconnectAsJoiner(nodeID insolar.Reference) bool {
-// 	// TODO:
-// 	return bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState &&
-// 		network.IsDiscovery(nodeID, bc.CertificateManager.GetCertificate())
-// }
-
 // validateTimestamp returns true if difference between timestamp ant current UTC < delta
 func validateTimestamp(timestamp int64, delta time.Duration) bool {
 	return time.Now().UTC().Sub(time.Unix(timestamp, 0)) < delta
@@ -255,19 +249,18 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		}), nil
 	}
 
-	_, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
+	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
-	// TODO: ValidateCert in incomplete states
-	// valid, err := g.Gatewayer.Gateway().Auther().ValidateCert(ctx, cert)
-	// if !valid {
-	// 	if err == nil {
-	// 		err = errors.New("Certificate validation failed")
-	// 	}
-	// 	return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
-	// }
+	valid, err := g.Gatewayer.Gateway().Auther().ValidateCert(ctx, cert)
+	if !valid {
+		if err == nil {
+			err = errors.New("Certificate validation failed")
+		}
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
+	}
 
 	p, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
