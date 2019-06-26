@@ -97,15 +97,15 @@ func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 	return nil
 }
 
-func (rd *RootDomain) GetBurnAddress() (result string, err error) {
+func (rd *RootDomain) GetBurnAddress() (string, error) {
 	if len(rd.FreeBurnAddresses) == 0 {
 		return "", fmt.Errorf("no more burn addresses left")
 	}
 
-	result = rd.FreeBurnAddresses[0]
+	result := rd.FreeBurnAddresses[0]
 	rd.FreeBurnAddresses = rd.FreeBurnAddresses[1:]
 
-	return
+	return result, nil
 }
 
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
