@@ -29,7 +29,7 @@ func TestCreateMember(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
-	addBurnAddresses(t)
+	addBurnAddress(t)
 	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 	ref, ok := result.(string)
@@ -42,7 +42,6 @@ func TestCreateMemberWithBadKey(t *testing.T) {
 	require.NoError(t, err)
 	member.ref = root.ref
 	member.pubKey = "fake"
-	addBurnAddresses(t)
 	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
@@ -52,7 +51,7 @@ func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 	member1.ref = root.ref
-	addBurnAddresses(t)
+	addBurnAddress(t)
 	_, err = retryableCreateMember(member1, "contract.createMember", map[string]interface{}{}, true)
 	require.Nil(t, err)
 
