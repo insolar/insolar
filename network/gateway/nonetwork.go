@@ -54,6 +54,8 @@ package gateway
 
 import (
 	"context"
+	"math/rand"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -85,6 +87,8 @@ func (g *NoNetwork) Run(ctx context.Context) {
 		return
 	}
 
+	<-time.After(time.Second * time.Duration(rand.Intn(5)))
+
 	// run bootstrap
 	if !network.OriginIsDiscovery(cert) {
 		g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
@@ -92,12 +96,7 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	}
 
 	pulse, err := g.PulseAccessor.Latest(ctx)
-	if err != nil {
-		g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
-		return
-	}
-
-	if pulse.PulseNumber > insolar.FirstPulseNumber {
+	if err == nil && pulse.PulseNumber > insolar.FirstPulseNumber {
 		g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
 		return
 	}
