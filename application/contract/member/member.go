@@ -148,7 +148,7 @@ func (m *Member) getNodeRefCall(params map[string]interface{}) (interface{}, err
 		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
 	}
 
-	return m.getNodeRef(m.RootDomain, publicKey)
+	return m.getNodeRef(publicKey)
 }
 func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, error) {
 
@@ -281,8 +281,8 @@ func (m *Member) registerNode(public string, role string) (interface{}, error) {
 	return cert, nil
 }
 
-func (m *Member) getNodeRef(rd insolar.Reference, publicKey string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rd)
+func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(m.RootDomain)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get nodeDmainRef: %s", err.Error())
