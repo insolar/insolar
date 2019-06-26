@@ -38,7 +38,7 @@ type CheckOurRole struct {
 	lr *LogicRunner
 }
 
-var ErrCantExecute = errors.New("can't execute this object")
+var ErrCantExecute = errors.New("can't executeAndReply this object")
 
 func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "CheckOurRole")
