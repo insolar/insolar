@@ -97,7 +97,7 @@ func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 	return nil
 }
 
-func (rd RootDomain) GetBurnAddress() (result string, err error) {
+func (rd *RootDomain) GetBurnAddress() (result string, err error) {
 	if len(rd.FreeBurnAddresses) == 0 {
 		return "", fmt.Errorf("no more burn addresses left")
 	}
