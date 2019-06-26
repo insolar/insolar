@@ -193,7 +193,7 @@ func TestCallMethodCanceled(t *testing.T) {
 	}
 	_, err = cr.CallMethod(ctx, msg)
 	require.Error(t, err)
-	assert.Contains(t, "canceled", err.Error())
+	assert.Contains(t, err.Error(), "canceled")
 
 	_, ok := cr.ResultMap[msg.Sequence]
 	assert.Equal(t, false, ok)

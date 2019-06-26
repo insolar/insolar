@@ -204,7 +204,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			contractAnswer.Result = contractResult
 			return
 
-		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
+		case <-time.After(ar.timeout):
 			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, TraceID: traceID}
 			contractAnswer.Error = errResponse
 			return

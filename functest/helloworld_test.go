@@ -226,10 +226,9 @@ func TestCallHelloWorld(t *testing.T) {
 
 	count, err := hw.Count(ctx)
 	r.NoError(err)
-	// tip: right now deduplication is not presented in our system, so count should be
-	//      more or equal to our number of requests
-	a.GreaterOrEqual(100, count)
-
+	// tip: right now deduplication is not presented in our system, so number of created
+	//      requests should be less or equal to result count of registered requests
+	a.LessOrEqual(100, count)
 }
 
 func TestCallHelloWorldChild(t *testing.T) {

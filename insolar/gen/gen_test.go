@@ -14,29 +14,27 @@
 // limitations under the License.
 //
 
-package configuration
+package gen
 
 import (
-	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// APIRunner holds configuration for api
-type APIRunner struct {
-	Address string
-	Call    string
-	RPC     string
-}
+func TestGen_Signature(t *testing.T) {
+	zero := Signature(0)
+	assert.NotNil(t, zero)
+	assert.Equal(t, 0, len(zero))
 
-// NewAPIRunner creates new api config
-func NewAPIRunner() APIRunner {
-	return APIRunner{
-		Address: "localhost:19101",
-		Call:    "/api/call",
-		RPC:     "/api/rpc",
-	}
-}
+	one := Signature(1)
+	assert.NotNil(t, one)
+	assert.Equal(t, 1, len(one))
 
-func (ar *APIRunner) String() string {
-	res := fmt.Sprintln("Addr ->", ar.Address, ", Call ->", ar.Call, ", RPC ->", ar.RPC)
-	return res
+	case256 := Signature(256)
+	assert.NotNil(t, case256)
+	assert.Equal(t, 256, len(case256))
+
+	negative := Signature(-1)
+	assert.Nil(t, negative)
 }
