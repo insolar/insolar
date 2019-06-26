@@ -272,6 +272,10 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
 	if err == ErrOverride {
 		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK (nil error). When deduplication will be implemented
+		// we should change `nil` to `ErrOverride` here.
 		return nil
 	} else if err != nil {
 		return errors.Wrap(err, "failed to create a meta-record about pending request")
@@ -333,6 +337,10 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
 	if err == ErrOverride {
 		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK (nil error). When deduplication will be implemented
+		// we should change `nil` to `ErrOverride` here.
 		return nil
 	} else if err != nil {
 		return errors.Wrap(err, "failed to create a meta-record about pending request")

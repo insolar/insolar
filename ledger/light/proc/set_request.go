@@ -91,6 +91,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	err = p.dep.records.Set(ctx, p.requestID, material)
 	if err == object.ErrOverride {
 		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK (nil error). When deduplication will be implemented
+		// we should change `nil` to `ErrOverride` here.
 		return nil
 	} else if err != nil {
 		return errors.Wrap(err, "failed to store record")
