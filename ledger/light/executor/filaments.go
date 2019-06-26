@@ -143,6 +143,12 @@ func (m *FilamentModifierDefault) SetRequest(ctx context.Context, requestID inso
 }
 
 func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insolar.ID, jetID insolar.JetID, result record.Result) error {
+	if resultID.IsEmpty() {
+		return errors.New("request id is empty")
+	}
+	if !jetID.IsValid() {
+		return errors.New("jet is not valid")
+	}
 	if result.Object.IsEmpty() {
 		return errors.New("object is empty")
 	}
@@ -229,6 +235,11 @@ func NewFilamentCalculator(
 func (c *FilamentCalculatorDefault) Requests(
 	ctx context.Context, objectID insolar.ID, from insolar.ID, readUntil, calcPulse insolar.PulseNumber,
 ) ([]record.CompositeFilamentRecord, error) {
+	_, err := c.indexes.ForID(ctx, from.Pulse(), objectID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch index")
+	}
+
 	cache := c.cache.Get(objectID)
 	cache.RLock()
 	defer cache.RUnlock()
@@ -427,15 +438,15 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	if err != nil {
 		return record.CompositeFilamentRecord{}, err
 	}
-	composite.MetaID = *i.currentID
-	composite.Meta = filamentRecord
-
-	// Fetching primary record.
 	virtual := record.Unwrap(filamentRecord.Virtual)
 	filament, ok := virtual.(*record.PendingFilament)
 	if !ok {
 		return record.CompositeFilamentRecord{}, fmt.Errorf("unexpected filament record %T", virtual)
 	}
+	composite.MetaID = *i.currentID
+	composite.Meta = filamentRecord
+
+	// Fetching primary record.
 	rec, err := i.cache.records.ForID(ctx, filament.RecordID)
 	if err != nil {
 		return record.CompositeFilamentRecord{}, err

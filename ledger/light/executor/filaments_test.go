@@ -2,11 +2,14 @@ package executor_test
 
 import (
 	"context"
+	"math/rand"
 	"testing"
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
@@ -16,11 +19,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFilamentModifier_SetRequest(t *testing.T) {
+func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 	t.Parallel()
 	mc := minimock.NewController(t)
-	defer mc.Finish()
-
 	ctx := inslogger.TestContext(t)
 
 	var (
@@ -130,11 +131,9 @@ func TestFilamentModifier_SetRequest(t *testing.T) {
 	})
 }
 
-func TestFilamentModifier_SetResult(t *testing.T) {
+func TestFilamentModifierDefault_SetResult(t *testing.T) {
 	t.Parallel()
 	mc := minimock.NewController(t)
-	defer mc.Finish()
-
 	ctx := inslogger.TestContext(t)
 
 	var (
@@ -268,4 +267,139 @@ func TestFilamentModifier_SetResult(t *testing.T) {
 
 		mc.Finish()
 	})
+}
+
+func TestFilamentCalculatorDefault_Requests(t *testing.T) {
+	t.Parallel()
+	mc := minimock.NewController(t)
+	ctx := inslogger.TestContext(t)
+
+	var (
+		indexes     object.IndexStorage
+		records     object.RecordStorage
+		coordinator *jet.CoordinatorMock
+		fetcher     *jet.FetcherMock
+		sender      *bus.SenderMock
+		pcs         insolar.PlatformCryptographyScheme
+		calculator  *executor.FilamentCalculatorDefault
+	)
+	resetComponents := func() {
+		indexes = object.NewIndexStorageMemory()
+		records = object.NewRecordMemory()
+		coordinator = jet.NewCoordinatorMock(mc)
+		fetcher = jet.NewFetcherMock(mc)
+		sender = bus.NewSenderMock(mc)
+		pcs = testutils.NewPlatformCryptographyScheme()
+		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, fetcher, sender)
+	}
+
+	resetComponents()
+	t.Run("returns error if object does not exist", func(t *testing.T) {
+		_, err := calculator.Requests(ctx, gen.ID(), gen.ID(), gen.PulseNumber(), gen.PulseNumber())
+		assert.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("empty response", func(t *testing.T) {
+		objectID := gen.ID()
+		fromID := gen.ID()
+		err := indexes.SetIndex(ctx, fromID.Pulse(), object.FilamentIndex{
+			ObjID: objectID,
+		})
+		require.NoError(t, err)
+
+		recs, err := calculator.Requests(ctx, objectID, fromID, gen.PulseNumber(), gen.PulseNumber())
+		assert.NoError(t, err)
+		assert.Equal(t, 0, len(recs))
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("happy basic", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		rec1 := b.AppendRequest(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
+		rec2 := b.AppendRequest(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		rec3 := b.AppendRequest(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		rec4 := b.AppendRequest(insolar.FirstPulseNumber+3, record.Request{Nonce: rand.Uint64()})
+		b.AppendRequest(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
+
+		objectID := gen.ID()
+		fromID := rec4.MetaID
+		earliestPending := rec1.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromID.Pulse(), object.FilamentIndex{
+			ObjID: objectID,
+			Lifeline: object.Lifeline{
+				PendingPointer:      &rec4.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		})
+		require.NoError(t, err)
+
+		recs, err := calculator.Requests(ctx, objectID, fromID, rec2.MetaID.Pulse(), rec4.MetaID.Pulse())
+		assert.NoError(t, err)
+		require.Equal(t, 3, len(recs))
+		assert.Equal(t, []record.CompositeFilamentRecord{rec4, rec3, rec2}, recs)
+
+		mc.Finish()
+	})
+}
+
+type filamentBuilder struct {
+	records   object.RecordModifier
+	currentID insolar.ID
+	ctx       context.Context
+	pcs       insolar.PlatformCryptographyScheme
+}
+
+func newFilamentBuilder(
+	ctx context.Context,
+	pcs insolar.PlatformCryptographyScheme,
+	records object.RecordModifier,
+) *filamentBuilder {
+	return &filamentBuilder{
+		ctx:     ctx,
+		records: records,
+		pcs:     pcs,
+	}
+}
+
+func (b *filamentBuilder) AppendRequest(pn insolar.PulseNumber, request record.Request) record.CompositeFilamentRecord {
+	var composite record.CompositeFilamentRecord
+	{
+		virtual := record.Wrap(request)
+		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
+		id := *insolar.NewID(pn, hash)
+		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		err := b.records.Set(b.ctx, id, material)
+		if err != nil {
+			panic(err)
+		}
+		composite.RecordID = id
+		composite.Record = material
+	}
+
+	{
+		rec := record.PendingFilament{RecordID: composite.RecordID}
+		if !b.currentID.IsEmpty() {
+			curr := b.currentID
+			rec.PreviousRecord = &curr
+		}
+		virtual := record.Wrap(rec)
+		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
+		id := *insolar.NewID(pn, hash)
+		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		err := b.records.Set(b.ctx, id, material)
+		if err != nil {
+			panic(err)
+		}
+		composite.MetaID = id
+		composite.Meta = material
+	}
+
+	b.currentID = composite.MetaID
+
+	return composite
 }

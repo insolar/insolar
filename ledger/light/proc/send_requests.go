@@ -57,6 +57,9 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch filament")
 	}
+	if len(records) == 0 {
+		return errors.New("requests not found")
+	}
 
 	msg, err := payload.NewMessage(&payload.FilamentSegment{
 		ObjectID: p.objID,
