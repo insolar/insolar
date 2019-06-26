@@ -275,22 +275,16 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	var (
-		indexes     object.IndexStorage
-		records     object.RecordStorage
-		coordinator *jet.CoordinatorMock
-		fetcher     *jet.FetcherMock
-		sender      *bus.SenderMock
-		pcs         insolar.PlatformCryptographyScheme
-		calculator  *executor.FilamentCalculatorDefault
+		indexes    object.IndexStorage
+		records    object.RecordStorage
+		pcs        insolar.PlatformCryptographyScheme
+		calculator *executor.FilamentCalculatorDefault
 	)
 	resetComponents := func() {
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
-		coordinator = jet.NewCoordinatorMock(mc)
-		fetcher = jet.NewFetcherMock(mc)
-		sender = bus.NewSenderMock(mc)
 		pcs = testutils.NewPlatformCryptographyScheme()
-		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, fetcher, sender)
+		calculator = executor.NewFilamentCalculator(indexes, records, nil, nil, nil)
 	}
 
 	resetComponents()
@@ -342,6 +336,55 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 		assert.NoError(t, err)
 		require.Equal(t, 3, len(recs))
 		assert.Equal(t, []record.CompositeFilamentRecord{rec4, rec3, rec2}, recs)
+
+		mc.Finish()
+	})
+}
+
+func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
+	t.Parallel()
+	mc := minimock.NewController(t)
+	ctx := inslogger.TestContext(t)
+
+	var (
+		indexes     object.IndexStorage
+		records     object.RecordStorage
+		coordinator *jet.CoordinatorMock
+		fetcher     *jet.FetcherMock
+		sender      *bus.SenderMock
+		pcs         insolar.PlatformCryptographyScheme
+		calculator  *executor.FilamentCalculatorDefault
+	)
+	resetComponents := func() {
+		indexes = object.NewIndexStorageMemory()
+		records = object.NewRecordMemory()
+		coordinator = jet.NewCoordinatorMock(mc)
+		fetcher = jet.NewFetcherMock(mc)
+		sender = bus.NewSenderMock(mc)
+		pcs = testutils.NewPlatformCryptographyScheme()
+		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, fetcher, sender)
+	}
+
+	resetComponents()
+	t.Run("returns error if object does not exist", func(t *testing.T) {
+		_, err := calculator.PendingRequests(ctx, gen.PulseNumber(), gen.ID())
+		assert.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("empty response", func(t *testing.T) {
+		objectID := gen.ID()
+		fromPulse := gen.PulseNumber()
+		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+			ObjID: objectID,
+		})
+		require.NoError(t, err)
+
+		recs, err := calculator.PendingRequests(ctx, fromPulse, objectID)
+		assert.NoError(t, err)
+		assert.Equal(t, 0, len(recs))
 
 		mc.Finish()
 	})
