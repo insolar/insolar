@@ -162,7 +162,7 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
 	}
 
-	return m.registerNode(m.RootDomain, publicKey, role)
+	return m.registerNode(publicKey, role)
 }
 func (migrationAdminMember *Member) addBurnAddressesCall(params map[string]interface{}) (interface{}, error) {
 
@@ -265,8 +265,8 @@ func (m *Member) migrationCall(params map[string]interface{}) (interface{}, erro
 }
 
 // Platform methods
-func (m *Member) registerNode(rd insolar.Reference, public string, role string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rd)
+func (m *Member) registerNode(public string, role string) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(m.RootDomain)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node domain ref: %s", err.Error())
