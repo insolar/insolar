@@ -70,10 +70,6 @@ func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
 	}
 }
 
-func (b *BuiltIn) Stop() error {
-	return nil
-}
-
 func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
 	name string, args insolar.Arguments) ([]byte, error) {
 

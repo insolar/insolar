@@ -109,9 +109,9 @@ type LogicRunner struct {
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	LogicExecutor              LogicExecutor                      `inject:""`
+	MachinesManager            MachinesManager                    `inject:""`
 
-	Executors [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
-	Cfg       *configuration.LogicRunner
+	Cfg *configuration.LogicRunner
 
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
@@ -148,6 +148,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 
 	return &res, nil
 }
+
+func (lr *LogicRunner) LRI() {}
 
 func initHandlers(lr *LogicRunner) error {
 	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
@@ -211,7 +213,7 @@ func initHandlers(lr *LogicRunner) error {
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 	bi := builtin.NewBuiltIn(lr.ArtifactManager, NewRPCMethods(lr))
-	if err := lr.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
+	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err
 	}
 
@@ -229,7 +231,7 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 		return err
 	}
 
-	if err := lr.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
+	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
 		return err
 	}
 
@@ -272,16 +274,6 @@ func (lr *LogicRunner) RegisterHandlers() {
 // Stop stops logic runner component and its executors
 func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
-	for _, e := range lr.Executors {
-		if e == nil {
-			continue
-		}
-		err := e.Stop()
-		if err != nil {
-			reterr = errors.Wrap(reterr, err.Error())
-		}
-	}
-
 	if err := lr.rpc.Stop(ctx); err != nil {
 		return err
 	}

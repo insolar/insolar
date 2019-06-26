@@ -54,15 +54,13 @@ type MachineLogicExecutor interface {
 	) (
 		objectState []byte, err error,
 	)
-	Stop() error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.LogicRunner -o ../testutils -s _mock.go
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	RegisterExecutor(MachineType, MachineLogicExecutor) error
-	GetExecutor(t MachineType) (MachineLogicExecutor, error)
+	LRI()
 	OnPulse(context.Context, Pulse) error
 }
 
