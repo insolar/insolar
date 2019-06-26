@@ -105,6 +105,7 @@ func (m *HotSenderDefault) SendHot(
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "hot_sender.start")
 	defer span.End()
+	logger := inslogger.FromContext(ctx)
 
 	// get indexes grouped by actual jet ID
 	byJet, err := m.filterAndGroupIndexes(ctx, oldPulse, newPulse)
@@ -117,78 +118,69 @@ func (m *HotSenderDefault) SendHot(
 	for _, info := range jets {
 		info := info
 		eg.Go(func() error {
-			return m.sendForJet(ctx, info, byJet, oldPulse, newPulse)
+			err := m.sendForJet(ctx, info.ID, byJet[info.ID], oldPulse, newPulse, info.SplitIntent)
+			if err != nil {
+				logger.WithSkipFrameCount(1).WithFields(map[string]interface{}{
+					"jetID": info.ID.DebugString(),
+					"error": err.Error(),
+				}).Error("hot sender: sendForJet failed")
+			}
+			return err
 		})
 	}
 	return errors.Wrap(eg.Wait(), "got error on jets sync")
 }
 
-func logErrorStr(ctx context.Context, jetID insolar.JetID, s string) {
-	logger := inslogger.FromContext(ctx)
-	logger.WithSkipFrameCount(1).WithFields(map[string]interface{}{
-		"err":   s,
-		"jetID": jetID.DebugString(),
-	}).Error("failed to send hot data")
-}
-
 func (m *HotSenderDefault) sendForJet(
 	ctx context.Context,
-	info JetInfo,
-	indexesPerJet map[insolar.JetID][]object.FilamentIndex,
+	jetID insolar.JetID,
+	indexes []object.FilamentIndex,
 	oldPulse, newPulse insolar.PulseNumber,
+	splitIntent bool,
 ) error {
-	block, err := m.createDrop(ctx, info, oldPulse)
+	ctx, span := instracer.StartSpan(ctx, "hot_sender.send_hot")
+	defer span.End()
+
+	block, err := m.createDrop(ctx, oldPulse, jetID, splitIntent)
 	if err != nil {
-		return errors.Wrapf(err, "create drop on pulse %v failed", oldPulse)
+		return errors.Wrapf(err, "create drop for pulse %v failed", oldPulse)
 	}
 
-	sender := func(hotIndexes []message.HotIndex, jetID insolar.JetID) {
-		ctx, span := instracer.StartSpan(ctx, "hot_sender.send_hot")
-		defer span.End()
-		stats.Record(ctx, statHotObjectsTotal.M(int64(len(hotIndexes))))
+	hots := m.hotDataForJet(ctx, indexes)
+	stats.Record(ctx, statHotObjectsTotal.M(int64(len(hots))))
 
-		msg := &message.HotData{
-			Jet:         *insolar.NewReference(insolar.ID(jetID)),
-			Drop:        *block,
-			HotIndexes:  hotIndexes,
-			PulseNumber: newPulse,
-		}
-
-		genericRep, err := m.bus.Send(ctx, msg, nil)
-		if err != nil {
-			logErrorStr(ctx, jetID, err.Error())
-			return
-		}
-		if _, ok := genericRep.(*reply.OK); !ok {
-			logErrorStr(ctx, jetID, "failed to send hot data")
-			return
-		}
-
-		stats.Record(ctx, statHotObjectsSend.M(int64(len(hotIndexes))))
+	msg := &message.HotData{
+		Jet:         *insolar.NewReference(insolar.ID(jetID)),
+		Drop:        *block,
+		HotIndexes:  hots,
+		PulseNumber: newPulse,
 	}
 
-	if !info.MustSplit {
-		hots := m.hotDataForJet(ctx, indexesPerJet[info.ID])
-		go sender(hots, info.ID)
-		return nil
+	genericRep, err := m.bus.Send(ctx, msg, nil)
+	if err != nil {
+		return errors.Wrapf(err, "failed to send hot data, method Send failed")
+	}
+	if _, ok := genericRep.(*reply.OK); !ok {
+		return errors.Wrapf(err, "failed to send hot data, not OK reply")
 	}
 
-	left, right := jet.Siblings(info.ID)
-	hotsLeft := m.hotDataForJet(ctx, indexesPerJet[left])
-	hotsRight := m.hotDataForJet(ctx, indexesPerJet[right])
-	go sender(hotsLeft, left)
-	go sender(hotsRight, right)
+	stats.Record(ctx, statHotObjectsSend.M(int64(len(hots))))
 	return nil
 }
 
-func (m *HotSenderDefault) createDrop(ctx context.Context, info JetInfo, p insolar.PulseNumber) (
+func (m *HotSenderDefault) createDrop(
+	ctx context.Context,
+	pn insolar.PulseNumber,
+	jetID insolar.JetID,
+	splitIntent bool,
+) (
 	block *drop.Drop,
 	err error,
 ) {
 	block = &drop.Drop{
-		Pulse: p,
-		JetID: info.ID,
-		Split: info.SplitIntent,
+		Pulse: pn,
+		JetID: jetID,
+		Split: splitIntent,
 	}
 
 	err = m.dropModifier.Set(ctx, *block)

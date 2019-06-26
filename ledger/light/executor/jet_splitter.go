@@ -105,13 +105,12 @@ func (js *JetSplitterDefault) splitJets(
 
 	result := make([]JetInfo, 0, len(jets))
 	for _, jetInfo := range jets {
-		newInfo := JetInfo{ID: jetInfo.ID}
 		if !jetInfo.MustSplit {
 			err := js.jetModifier.Update(ctx, pn, true, jetInfo.ID)
 			if err != nil {
 				panic("failed to update jets on LM-node: " + err.Error())
 			}
-			result = append(result, newInfo)
+			result = append(result, jetInfo)
 			continue
 		}
 
