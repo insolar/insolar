@@ -26,6 +26,7 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 	if err != nil {
 		// log warn
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)
+		return
 	}
 
 	// TODO: check authorize result and switch to JoinerBootstrap if other network is complete
@@ -37,19 +38,15 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 		pulse = insolar.Pulse{PulseNumber: 1}
 	}
 
-	resp, _ := g.BootstrapRequester.Bootstrap(ctx, permit, g.joinClaim, &pulse)
+	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, g.joinClaim, &pulse)
+	if err != nil {
 
-	if resp.Code == packet.Reject {
-		g.Gatewayer.SwitchState(insolar.NoNetworkState)
-		return
 	}
 
-	if resp.Code == packet.Accepted {
-		//  ConsensusWaiting, ETA
-		g.bootstrapETA = insolar.PulseNumber(resp.ETA)
-		g.Gatewayer.SwitchState(insolar.WaitConsensus)
-		return
-	}
+	//  ConsensusWaiting, ETA
+	g.bootstrapETA = insolar.PulseNumber(resp.ETA)
+	g.Gatewayer.SwitchState(insolar.WaitConsensus)
+	return
 
 	// Authorize(utc) permit, check version
 	// process response: trueAccept, redirect with permit, posibleAccept(regen shortId, updateScedule, update time utc)
@@ -68,17 +65,27 @@ func (g *DiscoveryBootstrap) authorize(ctx context.Context) (*packet.Permit, err
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
 	// todo: sort discoveryNodes
 
+	logger := inslogger.FromContext(ctx)
 	for _, n := range discoveryNodes {
 		if g.NodeKeeper.GetAccessor().GetActiveNode(*n.GetNodeRef()) != nil {
-			inslogger.FromContext(ctx).Info("Skip discovery already in active list: ", n.GetNodeRef().String())
+			logger.Info("Skip discovery already in active list: ", n.GetNodeRef().String())
 			continue
 		}
 
-		h, _ := host.NewHostN(n.GetHost(), *n.GetNodeRef())
+		h, err := host.NewHostN(n.GetHost(), *n.GetNodeRef())
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err.Error())
+			continue
+		}
 
 		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
 		if err != nil {
-			inslogger.FromContext(ctx).Errorf("Error authorizing to discovery node %s: %s", h.String(), err.Error())
+			logger.Errorf("Error authorizing to discovery node %s: %s", h.String(), err.Error())
+			continue
+		}
+
+		if res.Permit == nil {
+			logger.Errorf("Error authorizing, got nil permit.")
 			continue
 		}
 

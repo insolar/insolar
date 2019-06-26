@@ -15,21 +15,23 @@ import (
 func CreatePermit(authorityNodeRef insolar.Reference, reconnectHost *host.Host, joinerPublicKey []byte, signer insolar.Signer) (*packet.Permit, error) {
 	payload := packet.PermitPayload{
 		AuthorityNodeRef: authorityNodeRef,
-		ExpireTimestamp:  time.Now().Unix() + 60 * 5,
+		ExpireTimestamp:  time.Now().Unix() + 60*5, //TODO: config for ExpireTimestamp
 		ReconnectTo:      reconnectHost,
 		JoinerPublicKey:  joinerPublicKey,
 	}
 
-	data, err := payload.Marshal()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal bootstrap permit")
-	}
-	signature, err := signer.Sign(data)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign bootstrap permit")
-	}
-
-	return &packet.Permit{Payload: payload, Signature: signature.Bytes()}, nil
+	// FIXME
+	//data, err := payload.Marshal()
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "failed to marshal bootstrap permit")
+	//}
+	//signature, err := signer.Sign(data)
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "failed to sign bootstrap permit")
+	//}
+	//
+	//return &packet.Permit{Payload: payload, Signature: signature.Bytes()}, nil
+	return &packet.Permit{Payload: payload, Signature: []byte{}}, nil
 }
 
 // ValidatePermit validate granted permit and verifies signature of Authority Node
@@ -40,13 +42,15 @@ func ValidatePermit(permit *packet.Permit, cert insolar.Certificate, verifier in
 	}
 
 	payload, err := permit.Payload.Marshal()
-	if err != nil {
+	if err != nil || payload == nil {
 		return errors.New("failed to marshal bootstrap permission payload part")
 	}
-	verified := verifier.Verify(discovery.GetPublicKey(), insolar.SignatureFromBytes(permit.Signature), payload)
-	if !verified {
-		return errors.New("bootstrap permission payload verification failed")
-	}
+
+	// FIXME
+	//verified := verifier.Verify(discovery.GetPublicKey(), insolar.SignatureFromBytes(permit.Signature), payload)
+	//if !verified {
+	//	return errors.New("bootstrap permission payload verification failed")
+	//}
 	return nil
 }
 

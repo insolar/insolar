@@ -212,11 +212,15 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.P
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
 	}
 
+	//TODO: how to ignore claim if node already bootstrap to other??
+
 	// TODO: check JoinClaim is from Discovery node
 	g.NodeKeeper.GetClaimQueue().Push(data.JoinClaim)
-	// g.Gatewayer.Gateway().OnPulse(ctx, request.)
 	go func() {
-		if err := g.PhaseManager.OnPulse(ctx, &lastPulse, time.Unix(0, lastPulse.PulseTimestamp)); err != nil {
+		// TODO:
+		//pulseStartTime := time.Unix(0, data.Pulse.PulseTimestamp)
+		pulseStartTime := time.Now()
+		if err := g.PhaseManager.OnPulse(ctx, &lastPulse, pulseStartTime); err != nil {
 			inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
 		}
 	}()
@@ -242,7 +246,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 	data := request.GetRequest().GetAuthorize().AuthorizeData
 
 	// TODO: move time.Minute to config
-	if validateTimestamp(data.Timestamp, time.Minute) {
+	if !validateTimestamp(data.Timestamp, time.Minute) {
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{
 			Code:      packet.WrongTimestamp,
 			Timestamp: time.Now().UTC().Unix(),
@@ -259,7 +263,9 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
-		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
+
+		// FIXME
+		//return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
 	p, err := g.PulseAccessor.Latest(ctx)
@@ -272,7 +278,12 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 	// nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
 	o := g.NodeKeeper.GetOrigin()
 	// workaround bootstrap to the origin node
-	reconnectHost, _ := host.NewHostNS(o.Address(), o.ID(), o.ShortID())
+	reconnectHost, err := host.NewHostNS(o.Address(), o.ID(), o.ShortID())
+	if err != nil {
+		err = errors.Wrap(err, "Failed to get reconnectHost")
+		inslogger.FromContext(ctx).Error(err.Error())
+		return nil, err
+	}
 
 	// TODO: public key to bytes
 	permit, err := bootstrap.CreatePermit(g.NodeKeeper.GetOrigin().ID(),
