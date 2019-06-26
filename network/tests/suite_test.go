@@ -188,7 +188,7 @@ func (s *consensusSuite) SetupTest() {
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
 
 	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
-	retries := 100
+	retries := 10
 	for {
 		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 		if expectedBootstrapsCount == len(activeNodes) {
@@ -200,7 +200,7 @@ func (s *consensusSuite) SetupTest() {
 			break
 		}
 
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(2 * time.Second)
 	}
 
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()

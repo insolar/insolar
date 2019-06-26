@@ -160,10 +160,11 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	}
 	log.Infof("[ NET Consensus phase-1 ] Phase1Packet claims count: %d", len(packet.GetClaims()))
 
-	activeNodes := fp.Gatewayer.Gateway().Auther().FilterJoinerNodes(
-		fp.CertificateManager.GetCertificate(),
-		fp.NodeKeeper.GetAccessor().GetActiveNodes(),
-	)
+	activeNodes := fp.NodeKeeper.GetAccessor().GetActiveNodes()
+	//activeNodes := fp.Gatewayer.Gateway().Auther().FilterJoinerNodes(
+	//	fp.CertificateManager.GetCertificate(),
+	//	fp.NodeKeeper.GetAccessor().GetActiveNodes(),
+	//)
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to exchange results")

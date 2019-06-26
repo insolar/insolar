@@ -165,17 +165,18 @@ func (g *Base) ValidateCert(ctx context.Context, certificate insolar.Authorizati
 }
 
 func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
-	dNodes := make(map[insolar.Reference]struct{}, len(certificate.GetDiscoveryNodes()))
-	for _, dn := range certificate.GetDiscoveryNodes() {
-		dNodes[*dn.GetNodeRef()] = struct{}{}
-	}
-	ret := []insolar.NetworkNode{}
-	for _, n := range nodes {
-		if _, ok := dNodes[n.ID()]; ok {
-			ret = append(ret, n)
-		}
-	}
-	return ret
+	//dNodes := make(map[insolar.Reference]struct{}, len(certificate.GetDiscoveryNodes()))
+	//for _, dn := range certificate.GetDiscoveryNodes() {
+	//	dNodes[*dn.GetNodeRef()] = struct{}{}
+	//}
+	//ret := []insolar.NetworkNode{}
+	//for _, n := range nodes {
+	//	if _, ok := dNodes[n.ID()]; ok {
+	//		ret = append(ret, n)
+	//	}
+	//}
+	//return ret
+	return nodes
 }
 
 // ============= Bootstrap =======
