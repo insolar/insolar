@@ -252,8 +252,14 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 			return nil, nil
 		}
 
-		msg.Metadata.Set("msg_hash", meta.OriginHash.String())
-		logger = logger.WithField("msg_hash", meta.OriginHash.String())
+		msgHash := payload.MessageHash{}
+		err = msgHash.Unmarshal(meta.ID)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "failed to unmarshal message id"))
+			return nil, nil
+		}
+		msg.Metadata.Set("msg_hash", msgHash.String())
+		logger = logger.WithField("msg_hash", msgHash.String())
 
 		msg.Metadata.Set("pulse", meta.Pulse.String())
 

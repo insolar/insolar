@@ -63,6 +63,7 @@ type LogicRunnerCommonTestSuite struct {
 	mb  *testutils.MessageBusMock
 	jc  *jet.CoordinatorMock
 	lr  *LogicRunner
+	le  *logicExecutor
 	es  ExecutionState
 	ps  *pulse.AccessorMock
 	mle *testutils.MachineLogicExecutorMock
@@ -77,12 +78,14 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.mc = minimock.NewController(suite.T())
 	suite.am = artifacts.NewClientMock(suite.mc)
 	suite.dc = artifacts.NewDescriptorsCacheMock(suite.mc)
+	suite.le = &logicExecutor{DescriptorsCache: suite.dc}
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)
 
 	suite.SetupLogicRunner()
+	suite.le.LogicRunner = suite.lr
 }
 
 func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
@@ -93,6 +96,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
 	suite.lr.NodeNetwork = suite.nn
+	suite.lr.LogicExecutor = suite.le
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
@@ -103,7 +107,7 @@ func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 		if e == nil {
 			continue
 		}
-		// e.Stop() is about to be called in lr.Stop() method
+		// e.Stop() is about to be called in LogicRunner.Stop() method
 		e.(*testutils.MachineLogicExecutorMock).StopMock.Expect().Return(nil)
 	}
 
@@ -747,7 +751,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	// In this case Update isn't send to ledger (objects data/newData are the same)
 	suite.am.RegisterResultMock.Return(nil, nil)
 
-	_, err := suite.lr.executeMethodCall(suite.ctx, current)
+	_, err := suite.lr.executeLogic(suite.ctx, current)
 	suite.Require().NoError(err)
 	suite.Require().Equal(uint64(0), suite.am.UpdateObjectCounter)
 
@@ -755,7 +759,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	newData := make([]byte, 5, 5)
 	mle.CallMethodMock.Return(newData, nil, nil)
 
-	_, err = suite.lr.executeMethodCall(suite.ctx, current)
+	_, err = suite.lr.executeLogic(suite.ctx, current)
 	suite.Require().NoError(err)
 	suite.Require().Equal(uint64(1), suite.am.UpdateObjectCounter)
 }
@@ -1132,7 +1136,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				}
 
 				if test.when == whenIsAuthorized {
-					// Please note that changePulse calls lr.ChangePulse which calls IsAuthorized.
+					// Please note that changePulse calls LogicRunner.ChangePulse which calls IsAuthorized.
 					// In other words this procedure is not called sequentially!
 					changePulse()
 				}

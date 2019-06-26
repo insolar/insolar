@@ -18,7 +18,6 @@
 package logicrunner
 
 import (
-	"bytes"
 	"context"
 	"strconv"
 	"sync"
@@ -109,6 +108,7 @@ type LogicRunner struct {
 	ArtifactManager            artifacts.Client                   `inject:""`
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
+	LogicExecutor              LogicExecutor                      `inject:""`
 
 	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
 	Cfg          *configuration.LogicRunner
@@ -251,12 +251,12 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
 	if lr.Cfg.BuiltIn != nil {
-		log.Error("Initializing builtin")
+		log.Debug("Initializing builtin")
 		if err := lr.initializeBuiltin(ctx); err != nil {
-			log.Errorf("Initializing builtin not done: %s", err.Error())
+			log.Errorf("Initialization of builtin contracts failed: %s", err.Error())
 			return err
 		}
-		log.Error("Initializing builtin done")
+		log.Debug("Initializing builtin done")
 	}
 
 	if lr.Cfg.GoPlugin != nil {
@@ -328,7 +328,7 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg insolar.Message, ro
 		return errors.Wrap(err, "authorization failed with error")
 	}
 	if !isAuthorized {
-		return errors.New("can't execute this object")
+		return errors.New("can't executeAndReply this object")
 	}
 	return nil
 }
@@ -397,25 +397,14 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 	}
 }
 
-func (lr *LogicRunner) executeOrValidate(ctx context.Context, es *ExecutionState, current *Transcript) {
+func (lr *LogicRunner) executeAndReply(ctx context.Context, es *ExecutionState, current *Transcript) {
 
-	inslogger.FromContext(ctx).Debug("executeOrValidate")
+	inslogger.FromContext(ctx).Debug("executeAndReply")
 
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.ExecuteOrValidate")
 	defer span.End()
 
-	var re insolar.Reply
-	var err error
-	switch current.Request.CallType {
-	case record.CTMethod:
-		re, err = lr.executeMethodCall(ctx, current)
-
-	case record.CTSaveAsChild, record.CTSaveAsDelegate:
-		re, err = lr.executeConstructorCall(ctx, current)
-
-	default:
-		panic("Unknown e type")
-	}
+	re, err := lr.executeLogic(ctx, current)
 	errstr := ""
 	if err != nil {
 		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
@@ -456,117 +445,57 @@ func (lr *LogicRunner) executeOrValidate(ctx context.Context, es *ExecutionState
 	}()
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx context.Context, current *Transcript) (insolar.Reply, error) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeMethodCall")
-	defer span.End()
+func (lr *LogicRunner) executeLogic(ctx context.Context, current *Transcript) (insolar.Reply, error) {
 
-	request := current.Request
-
-	objDesc, err := lr.ArtifactManager.GetObject(ctx, *request.Object)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object")
-	}
-	current.ObjectDescriptor = objDesc
-
-	protoDesc, codeDesc, err := lr.DescriptorsCache.ByObjectDescriptor(ctx, objDesc)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get descriptors by prototype reference")
+	if current.Request.CallType == record.CTMethod {
+		objDesc, err := lr.ArtifactManager.GetObject(ctx, *current.Request.Object)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get object")
+		}
+		current.ObjectDescriptor = objDesc
 	}
 
-	current.LogicContext.Prototype = protoDesc.HeadRef()
-	current.LogicContext.Code = codeDesc.Ref()
-	current.LogicContext.Parent = current.ObjectDescriptor.Parent()
-	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
-	if request.Prototype != nil && !request.Prototype.Equal(*protoDesc.HeadRef()) {
-		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
-	}
-
-	executor, err := lr.GetExecutor(codeDesc.MachineType())
+	res, err := lr.LogicExecutor.Execute(ctx, current)
 	if err != nil {
-		return nil, errors.Wrap(err, "no executor registered")
-	}
-
-	newData, result, err := executor.CallMethod(
-		ctx, current.LogicContext, *codeDesc.Ref(), current.ObjectDescriptor.Memory(), request.Method, request.Arguments,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "executor error")
+		return nil, errors.Wrap(err, "couldn't executeAndReply request")
 	}
 
 	am := lr.ArtifactManager
-	if !current.LogicContext.Immutable && current.Deactivate { // nolint:gocritic
-		err := am.DeactivateObject(
-			ctx, *current.RequestRef, current.ObjectDescriptor, result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't deactivate object")
-		}
-	} else if !current.LogicContext.Immutable && !bytes.Equal(current.ObjectDescriptor.Memory(), newData) {
-		err := am.UpdateObject(
-			ctx, *current.RequestRef, current.ObjectDescriptor, newData, result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't update object")
-		}
-	} else {
-		_, err = am.RegisterResult(ctx, *request.Object, *current.RequestRef, result)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't save results")
-		}
-	}
-
-	return &reply.CallMethod{Result: result}, nil
-}
-
-func (lr *LogicRunner) executeConstructorCall(
-	ctx context.Context, current *Transcript,
-) (
-	insolar.Reply, error,
-) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeConstructorCall")
-	defer span.End()
-
 	request := current.Request
 
-	if current.LogicContext.Caller.IsEmpty() {
-		return nil, errors.New("Call constructor from nowhere")
-	}
-
-	if request.Prototype == nil {
-		return nil, errors.New("prototype reference is required")
-	}
-
-	protoDesc, codeDesc, err := lr.DescriptorsCache.ByPrototypeRef(ctx, *request.Prototype)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't descriptors")
-	}
-
-	current.LogicContext.Prototype = protoDesc.HeadRef()
-	current.LogicContext.Code = codeDesc.Ref()
-
-	executor, err := lr.GetExecutor(codeDesc.MachineType())
-	if err != nil {
-		return nil, errors.Wrap(err, "no executor registered")
-	}
-
-	newData, err := executor.CallConstructor(ctx, current.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
-	if err != nil {
-		return nil, errors.Wrap(err, "executor error")
-	}
-
-	switch request.CallType {
-	case record.CTSaveAsChild, record.CTSaveAsDelegate:
+	switch {
+	case res.Activation:
 		err = lr.ArtifactManager.ActivateObject(
-			ctx,
-			*current.RequestRef, *request.Base, *request.Prototype, request.CallType == record.CTSaveAsDelegate, newData,
+			ctx, *current.RequestRef, *request.Base, *request.Prototype,
+			request.CallType == record.CTSaveAsDelegate,
+			res.NewMemory,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't activate object")
 		}
 		return &reply.CallConstructor{Object: current.RequestRef}, err
-
+	case res.Deactivation:
+		err := am.DeactivateObject(
+			ctx, *current.RequestRef, current.ObjectDescriptor, res.Result,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't deactivate object")
+		}
+		return &reply.CallMethod{Result: res.Result}, nil
+	case res.NewMemory != nil:
+		err := am.UpdateObject(
+			ctx, *current.RequestRef, current.ObjectDescriptor, res.NewMemory, res.Result,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't update object")
+		}
+		return &reply.CallMethod{Result: res.Result}, nil
 	default:
-		return nil, errors.New("unsupported type of save object")
+		_, err = am.RegisterResult(ctx, *request.Object, *current.RequestRef, res.Result)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't save results")
+		}
+		return &reply.CallMethod{Result: res.Result}, nil
 	}
 }
 
@@ -630,7 +559,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 }
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
-	// lock is required to access lr.state
+	// lock is required to access LogicRunner.state
 	lr.stateMutex.Lock()
 	defer lr.stateMutex.Unlock()
 
