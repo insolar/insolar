@@ -269,6 +269,7 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 
 	replyMeta := payload.Meta{
 		OriginHash: originHash,
+		ID:         []byte(watermill.NewUUID()),
 	}
 	replyBuf, err := replyMeta.Marshal()
 	require.NoError(t, err)
