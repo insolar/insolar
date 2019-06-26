@@ -65,9 +65,11 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/network/servicenetwork"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -221,8 +223,10 @@ func (s *consensusSuite) SetupTest() {
 	}
 	fmt.Println("=================== SetupTest() Done")
 	log.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	s.Require().NoError(err)
+
+	// TODO: enable pulsar
+	// err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	// s.Require().NoError(err)
 
 }
 
@@ -453,6 +457,11 @@ func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) 
 func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	if p.pulse.PulseNumber == insolar.FirstPulseNumber {
+		return p.pulse, pulse.ErrNotFound
+	}
+
 	return p.pulse, nil
 }
 

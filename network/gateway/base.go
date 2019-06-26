@@ -61,6 +61,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log" // TODO remove before merge
+	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -86,6 +87,7 @@ type Base struct {
 	HostNetwork         network.HostNetwork         `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
+	PhaseManager        phases.PhaseManager         `inject:""`
 
 	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
 	permit       *packet.Permit
@@ -191,6 +193,8 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.P
 	// 	shortID = data.JoinClaim.ShortNodeID
 	// }
 
+	// data.LastNodePulse
+
 	lastPulse, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
@@ -202,12 +206,21 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.P
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
 	}
 
+	// TODO: check JoinClaim is from Discovery node
+	g.NodeKeeper.GetClaimQueue().Push(data.JoinClaim)
+	// g.Gatewayer.Gateway().OnPulse(ctx, request.)
+	go func() {
+		if err := g.PhaseManager.OnPulse(ctx, &lastPulse, time.Unix(0, lastPulse.PulseTimestamp)); err != nil {
+			inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
+		}
+	}()
+
 	// networkSize := uint32(len(g.NodeKeeper.GetAccessor().GetActiveNodes()))
 	return g.HostNetwork.BuildResponse(ctx, request,
 		&packet.BootstrapResponse{
 			Code:        packet.Accepted,
 			PulseNumber: lastPulse.PulseNumber,
-			ETA:         5, // TODO: calculate ETA
+			ETA:         uint32(lastPulse.PulseNumber) + 50, // TODO: calculate ETA
 		}), nil
 }
 
@@ -249,7 +262,8 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 
 	p, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
-		return nil, err
+		inslogger.FromContext(ctx).Warn("Genesis pulse")
+		// return nil, err
 	}
 
 	// TODO: get random reconnectHost

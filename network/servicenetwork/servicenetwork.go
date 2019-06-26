@@ -236,10 +236,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	if n.isGenesis {
-		return
-	}
-
 	// Because we want to set InsTraceID (it's our custom traceID)
 	// Because @egorikas didn't have enough time for sending `insTraceID` from pulsar
 	// We calculate it 2 times, first time on a pulsar's side. Second time on a network's side
@@ -253,9 +249,9 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	)
 	defer span.End()
 
-	if n.gatewayer.Gateway().ShoudIgnorePulse(ctx, newPulse) {
-		return
-	}
+	// if n.gatewayer.Gateway().ShoudIgnorePulse(ctx, newPulse) {
+	// 	return
+	// }
 	//todo call gatewayer
 	/*
 		if !n.NodeKeeper.IsBootstrapped() {

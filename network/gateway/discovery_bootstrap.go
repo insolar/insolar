@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
 func newDiscoveryBootstrap(b *Base) *DiscoveryBootstrap {
@@ -21,6 +22,26 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 	if g.permit == nil {
 		// log warn
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)
+	}
+
+	claim, _ := g.NodeKeeper.GetOriginJoinClaim()
+	pulse, err := g.PulseAccessor.Latest(ctx)
+	if err != nil {
+		pulse = insolar.Pulse{PulseNumber: 1}
+	}
+
+	resp, _ := g.BootstrapRequester.Bootstrap(ctx, g.permit, claim, &pulse)
+
+	if resp.Code == packet.Reject {
+		g.Gatewayer.SwitchState(insolar.NoNetworkState)
+		return
+	}
+
+	if resp.Code == packet.Accepted {
+		//  ConsensusWaiting, ETA
+		g.bootstrapETA = insolar.PulseNumber(resp.ETA)
+		g.Gatewayer.SwitchState(insolar.WaitConsensus)
+		return
 	}
 
 	// var err error

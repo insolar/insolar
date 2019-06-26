@@ -75,7 +75,7 @@ var (
 )
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := newConsensusSuite(12, 0)
+	s := newConsensusSuite(2, 0)
 	suite.Run(t, s)
 }
 
