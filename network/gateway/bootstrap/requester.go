@@ -25,6 +25,7 @@ type Requester interface {
 	Authorize(context.Context, *host.Host, insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error)
 	Bootstrap(context.Context, *packet.Permit, *packets.NodeJoinClaim, *insolar.Pulse) (*packet.BootstrapResponse, error)
 	UpdateSchedule(context.Context, *packet.Permit, insolar.PulseNumber) (*packet.UpdateScheduleResponse, error)
+	Reconnect(context.Context, *host.Host, *packet.Permit) (*packet.ReconnectResponse, error)
 }
 
 func NewRequester(options *common.Options) Requester {
@@ -73,7 +74,7 @@ func (ac *requester) Authorize(ctx context.Context, host *host.Host, cert insola
 	return response, err
 }
 
-func (ac *requester) authorizeWithTimestamp(ctx context.Context, host *host.Host, authData *packet.AuthorizeData, timestamp int64) (*packet.AuthorizeResponse, error) {
+func (ac *requester) authorizeWithTimestamp(ctx context.Context, h *host.Host, authData *packet.AuthorizeData, timestamp int64) (*packet.AuthorizeResponse, error) {
 
 	authData.Timestamp = timestamp
 
@@ -89,13 +90,13 @@ func (ac *requester) authorizeWithTimestamp(ctx context.Context, host *host.Host
 
 	req := &packet.AuthorizeRequest{AuthorizeData: authData, Signature: signature.Bytes()}
 
-	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.Authorize, req, host)
+	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.Authorize, req, h)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error sending authorize request")
+		return nil, errors.Wrapf(err, "Error sending Authorize request")
 	}
 	response, err := f.WaitResponse(ac.options.PacketTimeout)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error getting response for authorize request")
+		return nil, errors.Wrapf(err, "Error getting response for Authorize request")
 	}
 
 	if response.GetResponse().GetError() != nil {
@@ -119,12 +120,12 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinC
 
 	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.Bootstrap, req, permit.Payload.ReconnectTo)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error sending bootstrap request")
+		return nil, errors.Wrapf(err, "Error sending Bootstrap request")
 	}
 
 	resp, err := f.WaitResponse(ac.options.PacketTimeout)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error getting response for bootstrap request")
+		return nil, errors.Wrapf(err, "Error getting response for Bootstrap request")
 	}
 
 	respData := resp.GetResponse().GetBootstrap()
@@ -154,13 +155,32 @@ func (ac *requester) UpdateSchedule(ctx context.Context, permit *packet.Permit, 
 
 	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.UpdateSchedule, req, permit.Payload.ReconnectTo)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error sending bootstrap request")
+		return nil, errors.Wrapf(err, "Error sending UpdateSchedule request")
 	}
 
 	resp, err := f.WaitResponse(ac.options.PacketTimeout)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error getting response for bootstrap request")
+		return nil, errors.Wrapf(err, "Error getting response for UpdateSchedule request")
 	}
 
 	return resp.GetResponse().GetUpdateSchedule(), nil
+}
+
+func (ac *requester) Reconnect(ctx context.Context, h *host.Host, permit *packet.Permit) (*packet.ReconnectResponse, error) {
+	req := &packet.ReconnectRequest{
+		ReconnectTo: *permit.Payload.ReconnectTo,
+		Permit:      permit,
+	}
+
+	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.Reconnect, req, h)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error sending Reconnect request")
+	}
+
+	resp, err := f.WaitResponse(ac.options.PacketTimeout)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error getting response for Reconnect request")
+	}
+
+	return resp.GetResponse().GetReconnect(), nil
 }

@@ -67,7 +67,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network/servicenetwork"
 
@@ -525,7 +524,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
-	senderMock := bus.NewSenderMock(t)
 	if UseFakeTransport {
 		// little hack: this Register will override transport.Factory
 		// in servicenetwork internal component manager with fake factory
@@ -542,7 +540,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
 		&amMock, certManager, cryptographyService, serviceNetwork, keyProc, terminationHandler,
-		mb, testutils.NewContractRequesterMock(t), senderMock)
+		mb, testutils.NewContractRequesterMock(t))
 
 	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
 	})

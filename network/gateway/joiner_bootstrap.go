@@ -114,7 +114,7 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 			inslogger.FromContext(ctx).Errorf("Error authorizing to host %s: %s", h.String(), err.Error())
 			continue
 		}
-		// TODO: check majority
+		// TODO: check majority and res.NetworkState
 
 		return res.Permit, nil
 	}

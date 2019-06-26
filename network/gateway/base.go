@@ -302,6 +302,12 @@ func (g *Base) HandleUpdateSchedule(ctx context.Context, request network.Packet)
 }
 
 func (g *Base) HandleReconnect(ctx context.Context, request network.Packet) (network.Packet, error) {
+	if request.GetRequest() == nil || request.GetRequest().GetReconnect() == nil {
+		return nil, errors.Errorf("process reconnect: got invalid protobuf request message: %s", request)
+	}
+
+	// check permit, if permit from Discovery node
+	// request.GetRequest().GetReconnect().Permit
 
 	// TODO:
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.ReconnectResponse{}), nil
