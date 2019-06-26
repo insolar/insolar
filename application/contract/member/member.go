@@ -304,19 +304,23 @@ func (m *Member) createMemberByKey(rd insolar.Reference, key string) (interface{
 		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
 	}
 
-	new, err := m.createMember(rd, burnAddresses, key)
-	if err != nil {
-		if e := rootDomain.AddBurnAddress(burnAddresses); e != nil {
-			return nil, fmt.Errorf("failed to add burn address back: %s; after error: %s", e.Error(), err.Error())
+	rollBack := func(e error) (interface{}, error) {
+		if err := rootDomain.AddBurnAddress(burnAddresses); e != nil {
+			return nil, fmt.Errorf("failed to add burn address back: %s; after error: %s", err.Error(), e.Error())
 		}
-		return nil, fmt.Errorf("failed to create member: %s", err.Error())
+		return nil, fmt.Errorf("failed to create member: %s", e.Error())
 	}
 
-	if err = rootDomain.AddNewMemberToMaps(key, burnAddresses, new.Reference); err != nil {
-		return nil, fmt.Errorf("failed to add new member to maps: %s", err.Error())
+	created, err := m.createMember(rd, burnAddresses, key)
+	if err != nil {
+		return rollBack(err)
 	}
 
-	return new.Reference.String(), nil
+	if err = rootDomain.AddNewMemberToMaps(key, burnAddresses, created.Reference); err != nil {
+		return rollBack(err)
+	}
+
+	return created.Reference.String(), nil
 }
 func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key string) (*member.Member, error) {
 	if key == "" {
@@ -324,18 +328,18 @@ func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key strin
 	}
 
 	memberHolder := member.New(ethAddr, key)
-	new, err := memberHolder.AsChild(rdRef)
+	created, err := memberHolder.AsChild(rdRef)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
 	}
 
 	wHolder := wallet.New(big.NewInt(1000000000).String())
-	_, err = wHolder.AsDelegate(new.Reference)
+	_, err = wHolder.AsDelegate(created.Reference)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as delegate: %s", err.Error())
 	}
 
-	return new, nil
+	return created, nil
 }
 
 func (m *Member) getDeposits() ([]map[string]string, error) {
