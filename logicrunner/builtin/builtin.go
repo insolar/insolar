@@ -26,7 +26,19 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	lrCommon "github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
+
+type LogicRunnerRPCStub interface {
+	GetCode(rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
+	RouteCall(rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
+	SaveAsChild(rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
+	SaveAsDelegate(rpctypes.UpSaveAsDelegateReq, *rpctypes.UpSaveAsDelegateResp) error
+	GetObjChildrenIterator(rpctypes.UpGetObjChildrenIteratorReq, *rpctypes.UpGetObjChildrenIteratorResp) error
+	GetDelegate(rpctypes.UpGetDelegateReq, *rpctypes.UpGetDelegateResp) error
+	DeactivateObject(rpctypes.UpDeactivateObjectReq, *rpctypes.UpDeactivateObjectResp) error
+}
 
 // BuiltIn is a contract runner engine
 type BuiltIn struct {
@@ -39,7 +51,19 @@ type BuiltIn struct {
 }
 
 // NewBuiltIn is an constructor
-func NewBuiltIn(_ insolar.MessageBus, _ artifacts.Client) *BuiltIn {
+func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
+	codeDescriptors := InitializeCodeDescriptors()
+	for _, codeDescriptor := range codeDescriptors {
+		am.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
+	}
+
+	prototypeDescriptors := InitializePrototypeDescriptors()
+	for _, prototypeDescriptor := range prototypeDescriptors {
+		am.InjectObjectDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
+	}
+
+	lrCommon.CurrentProxyCtx = NewProxyHelper(stub)
+
 	return &BuiltIn{
 		CodeRefRegistry: InitializeCodeRefs(),
 		CodeRegistry:    InitializeContractMethods(),

@@ -110,8 +110,8 @@ type LogicRunner struct {
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	LogicExecutor              LogicExecutor                      `inject:""`
 
-	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
-	Cfg          *configuration.LogicRunner
+	Executors [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
+	Cfg       *configuration.LogicRunner
 
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
@@ -210,61 +210,51 @@ func initHandlers(lr *LogicRunner) error {
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
-	bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
+	bi := builtin.NewBuiltIn(lr.ArtifactManager, NewRPCMethods(lr))
 	if err := lr.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err
 	}
-
-	// TODO: insert all necessary descriptors here
-	codeDescriptors := builtin.InitializeCodeDescriptors()
-	for _, codeDescriptor := range codeDescriptors {
-		lr.ArtifactManager.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
-	}
-
-	prototypeDescriptors := builtin.InitializePrototypeDescriptors()
-	for _, prototypeDescriptor := range prototypeDescriptors {
-		lr.ArtifactManager.InjectObjectDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
-	}
-
-	lr.ArtifactManager.InjectFinish()
-
-	lrCommon.CurrentProxyCtx = builtin.NewProxyHelper(NewRPCMethods(lr))
 
 	return nil
 }
 
 func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
-	if lr.Cfg.RPCListen != "" {
-		lr.rpc.Start(ctx)
+	logger := inslogger.FromContext(ctx)
+	if lr.Cfg.RPCListen == "" {
+		logger.Error("Starting goplugin VM with RPC turned off")
 	}
 
 	gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
 	if err != nil {
 		return err
 	}
+
 	if err := lr.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
 		return err
 	}
+
 	return nil
 }
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
 	if lr.Cfg.BuiltIn != nil {
-		log.Debug("Initializing builtin")
 		if err := lr.initializeBuiltin(ctx); err != nil {
-			log.Errorf("Initialization of builtin contracts failed: %s", err.Error())
-			return err
+			return errors.Wrap(err, "Failed to initialize builtin VM")
 		}
-		log.Debug("Initializing builtin done")
 	}
 
 	if lr.Cfg.GoPlugin != nil {
 		if err := lr.initializeGoPlugin(ctx); err != nil {
-			return err
+			return errors.Wrap(err, "Failed to initialize goplugin VM")
 		}
 	}
 
+	if lr.Cfg.RPCListen != "" {
+		lr.rpc.Start(ctx)
+	}
+
+	lr.ArtifactManager.InjectFinish()
 	lr.RegisterHandlers()
 
 	return nil
