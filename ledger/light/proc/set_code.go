@@ -19,6 +19,7 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -83,11 +84,14 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 
 	material := record.Material{
 		Virtual: &p.record,
-		JetID: p.jetID,
+		JetID:   p.jetID,
 	}
 
 	err = p.dep.records.Set(ctx, p.recordID, material)
-	if err != nil {
+	if err == object.ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		return nil
+	} else if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 

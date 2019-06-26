@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -87,7 +88,10 @@ func (p *SetActivationRequest) Proceed(ctx context.Context) error {
 		JetID:   p.jetID,
 	}
 	err = p.dep.records.Set(ctx, p.requestID, material)
-	if err != nil {
+	if err == object.ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		return nil
+	} else if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 

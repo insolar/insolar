@@ -270,7 +270,10 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	metaID := *insolar.NewID(pn, hash)
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
-	if err != nil {
+	if err == ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		return nil
+	} else if err != nil {
 		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 
@@ -328,7 +331,10 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	metaID := *insolar.NewID(pn, hash)
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
-	if err != nil {
+	if err == ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		return nil
+	} else if err != nil {
 		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 
