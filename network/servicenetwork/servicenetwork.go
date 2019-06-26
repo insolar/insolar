@@ -337,14 +337,17 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
 
-	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
-	if err != nil {
-		logger.Fatalf("Failed to set new pulse: %s", err.Error())
-	}
-	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
+	// for handlers release
+	go func() {
+		logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
+		err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
+		if err != nil {
+			logger.Fatalf("Failed to set new pulse: %s", err.Error())
+		}
+		logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 
-	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
+		n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
+	}()
 }
 
 func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
