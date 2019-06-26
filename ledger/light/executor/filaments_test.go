@@ -241,14 +241,6 @@ func TestFilamentModifier_SetResult(t *testing.T) {
 		latestPendingID.SetPulse(insolar.FirstPulseNumber + 1)
 		jetID := gen.JetID()
 
-		expectedFilamentRecord := record.PendingFilament{
-			RecordID:       resultID,
-			PreviousRecord: &latestPendingID,
-		}
-		virtual := record.Wrap(expectedFilamentRecord)
-		hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
-		expectedFilamentRecordID := *insolar.NewID(resultID.Pulse(), hash)
-
 		calculator.PendingRequestsFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) ([]insolar.ID, error) {
 			require.Equal(t, resultID.Pulse(), pn)
 			require.Equal(t, validResult.Object, id)
@@ -272,7 +264,6 @@ func TestFilamentModifier_SetResult(t *testing.T) {
 		idx, err := indexes.ForID(ctx, resultID.Pulse(), validResult.Object)
 		require.NoError(t, err)
 
-		assert.Equal(t, expectedFilamentRecordID, *idx.Lifeline.PendingPointer)
 		assert.Nil(t, idx.Lifeline.EarliestOpenRequest)
 
 		mc.Finish()
