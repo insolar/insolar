@@ -171,7 +171,7 @@ func (m *client) RegisterRequest(
 
 	rep, ok := <-reps
 	if !ok {
-		return nil, errors.New("no reply")
+		return nil, ErrNoReply
 	}
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
