@@ -88,6 +88,7 @@ type Base struct {
 	PulseAccessor       pulse.Accessor              `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 	PhaseManager        phases.PhaseManager         `inject:""`
+	Rules               network.Rules               `inject:""`
 
 	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
 	bootstrapETA insolar.PulseNumber

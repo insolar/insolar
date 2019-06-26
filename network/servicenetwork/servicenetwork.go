@@ -101,6 +101,7 @@ type ServiceNetwork struct {
 	// subcomponents
 	PhaseManager phases.PhaseManager      `inject:"subcomponent"`
 	RPC          controller.RPCController `inject:"subcomponent"`
+	Rules        network.Rules            `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
 
@@ -175,6 +176,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
+		network.NewRules(),
 		baseGateway,
 		n.gatewayer,
 	)

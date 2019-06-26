@@ -15,22 +15,21 @@
  *
  */
 
-package rules
+package network
 
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
 )
 
 // NewRules creates network Rules component
-func NewRules() network.Rules {
+func NewRules() Rules {
 	return &rules{}
 }
 
 type rules struct {
 	CertificateManager insolar.CertificateManager `inject:""`
-	NodeKeeper         network.NodeKeeper         `inject:""`
+	NodeKeeper         NodeKeeper                 `inject:""`
 }
 
 // CheckMajorityRule returns true id MajorityRule check passed, also returns active discovery nodes count
@@ -38,7 +37,7 @@ func (r *rules) CheckMajorityRule() (bool, int) {
 	// activeNodes []core.Node
 	cert := r.CertificateManager.GetCertificate()
 	majorityRule := cert.GetMajorityRule()
-	activeDiscoveryNodesLen := len(network.FindDiscoveriesInNodeList(r.NodeKeeper.GetAccessor().GetActiveNodes(), cert))
+	activeDiscoveryNodesLen := len(FindDiscoveriesInNodeList(r.NodeKeeper.GetAccessor().GetActiveNodes(), cert))
 	return activeDiscoveryNodesLen >= majorityRule, activeDiscoveryNodesLen
 }
 
