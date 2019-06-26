@@ -177,8 +177,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.IndexLocker = idLock
-	h.IndexAccessor = s.indexStorageMemory
-	h.IndexModifier = s.indexStorageMemory
+	h.IndexStorage = s.indexStorageMemory
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
@@ -242,8 +241,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IndexLocker = idLockMock
-	h.IndexModifier = s.indexStorageMemory
-	h.IndexAccessor = s.indexStorageMemory
+	h.IndexStorage = s.indexStorageMemory
 
 	// objIndex := object.Lifeline{LatestState: genRandomID(0), StateID: record.StateActivation}
 	childRecord := record.Child{
@@ -261,7 +259,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 		Parent: *genRandomRef(0),
 	}
 
-	_ = h.IndexModifier.SetIndex(context.TODO(), childID.Pulse(), object.FilamentIndex{
+	_ = h.IndexStorage.SetIndex(context.TODO(), childID.Pulse(), object.FilamentIndex{
 		ObjID:    *msg.Parent.Record(),
 		Lifeline: object.Lifeline{LatestState: genRandomID(0), StateID: record.StateActivation},
 	})
@@ -305,8 +303,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.IndexModifier = s.indexStorageMemory
-	h.IndexAccessor = s.indexStorageMemory
+	h.IndexStorage = s.indexStorageMemory
 	h.PCS = s.scheme
 
 	idLockMock := object.NewIndexLockerMock(s.T())
