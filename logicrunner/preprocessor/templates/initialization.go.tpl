@@ -50,7 +50,7 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 
     {{ range $contract := .Contracts -}}
     rv[shouldLoadRef("{{ $contract.CodeReference }}")] = "{{ $contract.Name }}"
-    {{- end }}
+    {{ end }}
 
     return rv
 }
@@ -65,8 +65,7 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
         /* machineType: */ XXX_insolar.MachineTypeBuiltin,
         /* ref:         */ shouldLoadRef("{{ $contract.CodeReference }}"),
     ))
-    {{- end }}
-
+    {{ end }}
     return rv
 }
 
