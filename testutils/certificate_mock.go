@@ -1382,10 +1382,6 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.GetRole")
 	}
 
-	if !m.GetRootDomainReferenceFinished() {
-		m.t.Fatal("Expected call to CertificateMock.GetRootDomainReference")
-	}
-
 	if !m.SerializeNodePartFinished() {
 		m.t.Fatal("Expected call to CertificateMock.SerializeNodePart")
 	}
@@ -1411,7 +1407,6 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetNodeRefFinished()
 		ok = ok && m.GetPublicKeyFinished()
 		ok = ok && m.GetRoleFinished()
-		ok = ok && m.GetRootDomainReferenceFinished()
 		ok = ok && m.SerializeNodePartFinished()
 
 		if ok {
@@ -1447,10 +1442,6 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetRoleFinished() {
 				m.t.Error("Expected call to CertificateMock.GetRole")
-			}
-
-			if !m.GetRootDomainReferenceFinished() {
-				m.t.Error("Expected call to CertificateMock.GetRootDomainReference")
 			}
 
 			if !m.SerializeNodePartFinished() {

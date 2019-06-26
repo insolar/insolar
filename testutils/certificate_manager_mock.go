@@ -491,7 +491,7 @@ func (m *CertificateManagerMock) VerifyAuthorizationCertificateFinished() bool {
 func (m *CertificateManagerMock) ValidateCallCounters() {
 
 	if !m.GetCertificateFinished() {
-		m.t.Fatal("Expected call to CertificateManagerMock.GetCertificate")
+		m.t.Fatal("Expected call to CertificateManagerMock.GetCertificate1")
 	}
 
 	if !m.NewUnsignedCertificateFinished() {
@@ -519,10 +519,6 @@ func (m *CertificateManagerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CertificateManagerMock) MinimockFinish() {
 
-	if !m.GetCertificateFinished() {
-		m.t.Fatal("Expected call to CertificateManagerMock.GetCertificate")
-	}
-
 	if !m.NewUnsignedCertificateFinished() {
 		m.t.Fatal("Expected call to CertificateManagerMock.NewUnsignedCertificate")
 	}
@@ -545,7 +541,6 @@ func (m *CertificateManagerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.GetCertificateFinished()
 		ok = ok && m.NewUnsignedCertificateFinished()
 		ok = ok && m.VerifyAuthorizationCertificateFinished()
 
@@ -555,10 +550,6 @@ func (m *CertificateManagerMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
-
-			if !m.GetCertificateFinished() {
-				m.t.Error("Expected call to CertificateManagerMock.GetCertificate")
-			}
 
 			if !m.NewUnsignedCertificateFinished() {
 				m.t.Error("Expected call to CertificateManagerMock.NewUnsignedCertificate")
