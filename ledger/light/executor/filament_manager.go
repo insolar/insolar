@@ -75,37 +75,38 @@ type FilamentManager struct {
 }
 
 func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, jetID insolar.JetID, request record.Request) error {
-	if request.Object == nil {
-		return errors.New("object is empty")
+	if requestID.IsEmpty() {
+		return errors.New("request id is empty")
+	}
+	if !jetID.IsValid() {
+		return errors.New("jet is not valid")
+	}
+	if request.Object == nil && request.Object.Record().IsEmpty() {
+		return errors.New("request object id is empty")
 	}
 
 	objectID := *request.Object.Record()
 
 	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {
-		return errors.Wrap(err, "failed to update a request's filament")
+		return errors.Wrap(err, "failed to fetch index")
 	}
 
 	if idx.Lifeline.PendingPointer != nil && requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
 		return errors.New("request from the past")
 	}
 
-	var composite record.CompositeFilamentRecord
-
 	// Save request record to storage.
 	{
 		virtual := record.Wrap(request)
-		hash := record.HashVirtual(m.pcs.ReferenceHasher(), virtual)
-		id := *insolar.NewID(requestID.Pulse(), hash)
 		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.recordStorage.Set(ctx, id, material)
+		err := m.recordStorage.Set(ctx, requestID, material)
 		if err != nil && err != object.ErrOverride {
 			return errors.Wrap(err, "failed to save a request record")
 		}
-		composite.RecordID = id
-		composite.Record = material
 	}
 
+	var filamentID insolar.ID
 	// Save filament record to storage.
 	{
 		rec := record.PendingFilament{
@@ -120,11 +121,10 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 		if err != nil {
 			return errors.Wrap(err, "failed to save filament record")
 		}
-		composite.MetaID = id
-		composite.Meta = material
+		filamentID = id
 	}
 
-	idx.Lifeline.PendingPointer = &composite.MetaID
+	idx.Lifeline.PendingPointer = &filamentID
 	if idx.Lifeline.EarliestOpenRequest == nil {
 		pn := requestID.Pulse()
 		idx.Lifeline.EarliestOpenRequest = &pn
