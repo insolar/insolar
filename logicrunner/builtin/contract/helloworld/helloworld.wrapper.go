@@ -299,7 +299,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
+	args := [1]interface{}{}
 	var args0 []byte
 	args[0] = &args0
 

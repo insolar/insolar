@@ -93,10 +93,11 @@ func GetImplementationFrom(object insolar.Reference) (*Member, error) {
 }
 
 // New is constructor
-func New(name string, key string) *ContractConstructorHolder {
-	var args [2]interface{}
-	args[0] = name
-	args[1] = key
+func New(rootDomain insolar.Reference, name string, key string) *ContractConstructorHolder {
+	var args [3]interface{}
+	args[0] = rootDomain
+	args[1] = name
+	args[2] = key
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -342,10 +343,9 @@ func (r *Member) GetPublicKeyAsImmutable() (string, error) {
 }
 
 // Call is proxy generated method
-func (r *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = rootDomain
-	args[1] = signedRequest
+func (r *Member) Call(signedRequest []byte) (interface{}, error) {
+	var args [1]interface{}
+	args[0] = signedRequest
 
 	var argsSerialized []byte
 
@@ -377,10 +377,9 @@ func (r *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 }
 
 // CallNoWait is proxy generated method
-func (r *Member) CallNoWait(rootDomain insolar.Reference, signedRequest []byte) error {
-	var args [2]interface{}
-	args[0] = rootDomain
-	args[1] = signedRequest
+func (r *Member) CallNoWait(signedRequest []byte) error {
+	var args [1]interface{}
+	args[0] = signedRequest
 
 	var argsSerialized []byte
 
@@ -398,10 +397,9 @@ func (r *Member) CallNoWait(rootDomain insolar.Reference, signedRequest []byte) 
 }
 
 // CallAsImmutable is proxy generated method
-func (r *Member) CallAsImmutable(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = rootDomain
-	args[1] = signedRequest
+func (r *Member) CallAsImmutable(signedRequest []byte) (interface{}, error) {
+	var args [1]interface{}
+	args[0] = signedRequest
 
 	var argsSerialized []byte
 
