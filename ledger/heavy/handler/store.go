@@ -81,14 +81,14 @@ func storeBlobs(
 	for _, rwb := range rawBlobs {
 		b, err := blob.Decode(rwb)
 		if err != nil {
-			inslog.Error(err, "heavyserver: deserialize blob failed")
+			inslog.Debug("heavyserver: deserialize blob failed: ", err)
 			continue
 		}
 
 		blobID := object.CalculateIDForBlob(pcs, pn, b.Value)
 		err = blobs.Set(ctx, *blobID, *b)
 		if err != nil {
-			inslog.Error(err, "heavyserver: blob storing failed")
+			inslog.Debug("heavyserver: blob storing failed: ", err)
 			continue
 		}
 	}
