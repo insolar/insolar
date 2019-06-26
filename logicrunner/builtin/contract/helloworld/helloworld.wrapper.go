@@ -17,7 +17,6 @@
 package helloworld
 
 import (
-	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
 )
