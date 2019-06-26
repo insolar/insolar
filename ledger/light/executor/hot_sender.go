@@ -73,8 +73,6 @@ func NewHotSender(
 func (m *HotSenderDefault) filterAndGroupIndexes(
 	ctx context.Context, oldPulse, newPulse insolar.PulseNumber,
 ) (map[insolar.JetID][]object.FilamentIndex, error) {
-	indexes := m.indexBucketAccessor.ForPulse(ctx, oldPulse)
-
 	limitPN, err := m.pulseCalculator.Backwards(ctx, oldPulse, m.lightChainLimit)
 	if err == pulse.ErrNotFound {
 		limitPN = *insolar.GenesisPulse
@@ -83,6 +81,8 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 	}
 
 	// filter out inactive indexes
+	indexes := m.indexBucketAccessor.ForPulse(ctx, oldPulse)
+	// filtering in-place (optimization to avoid double allocation)
 	filtered := indexes[:0]
 	for _, idx := range indexes {
 		if idx.LifelineLastUsed < limitPN.PulseNumber {
@@ -167,7 +167,7 @@ func (m *HotSenderDefault) sendForJet(
 		stats.Record(ctx, statHotObjectsSend.M(int64(len(hotIndexes))))
 	}
 
-	if !info.SplitPerformed {
+	if !info.MustSplit {
 		hots := m.hotDataForJet(ctx, indexesPerJet[info.ID])
 		go sender(hots, info.ID)
 		return nil

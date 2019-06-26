@@ -50,7 +50,6 @@ func TestJetSplitter(t *testing.T) {
 	jc.MeMock.Return(me)
 	rsp.ClonePendingStorageMock.Return()
 
-	// hasSplitIntention
 	pn := gen.PulseNumber()
 	// just avoid special pulses
 	if pn < 60000 {
@@ -93,7 +92,7 @@ func TestJetSplitter(t *testing.T) {
 		var gotJets []insolar.JetID
 		for _, info := range res {
 			gotJets = append(gotJets, info.ID)
-			assert.False(t, info.SplitPerformed, "split is not performed")
+			assert.False(t, info.MustSplit, "split is not performed")
 		}
 		require.Equal(t, jsort(jets), jsort(gotJets), "compare results")
 	})
@@ -103,20 +102,31 @@ func TestJetSplitter(t *testing.T) {
 
 		res, err := splitter.Do(ctx, previous, current, newpulse)
 		require.NoError(t, err, "splitter method Do error check")
-		require.Equal(t, len(jets), len(res), "compare jets count")
+		require.Equal(t, len(jets)+1, len(res), "compare jets count")
 		var gotJets []insolar.JetID
 		for _, info := range res {
 			gotJets = append(gotJets, info.ID)
 			assert.False(t, info.SplitIntent, "no split")
 
 			if info.ID != splitID {
-				assert.False(t, info.SplitPerformed, "split is not performed")
+				assert.False(t, info.MustSplit, "split is not performed")
 			} else {
-				assert.True(t, info.SplitPerformed, "split is performed")
+				assert.True(t, info.MustSplit, "split is performed")
 			}
 
 		}
-		require.Equal(t, jsort(jets), jsort(gotJets), "compare results")
+		expectJets := make([]insolar.JetID, 0, len(jets))
+		for _, id := range jets {
+			if id == splitID {
+				expectJets = append(expectJets,
+					jet.NewIDFromString("110"),
+					jet.NewIDFromString("111"),
+				)
+				continue
+			}
+			expectJets = append(expectJets, id)
+		}
+		require.Equal(t, jsort(expectJets), jsort(gotJets), "compare results")
 	})
 }
 
