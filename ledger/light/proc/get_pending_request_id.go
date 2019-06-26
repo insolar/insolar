@@ -35,7 +35,7 @@ type GetPendingRequestID struct {
 	reqPulse insolar.PulseNumber
 
 	dep struct {
-		filaments executor.FilamentAccessor
+		filaments executor.FilamentCalculator
 	}
 }
 
@@ -48,7 +48,7 @@ func NewGetPendingRequestID(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *
 	}
 }
 
-func (p *GetPendingRequestID) Dep(filaments executor.FilamentAccessor) {
+func (p *GetPendingRequestID) Dep(filaments executor.FilamentCalculator) {
 	p.dep.filaments = filaments
 }
 

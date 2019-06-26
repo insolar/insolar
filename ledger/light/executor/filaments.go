@@ -19,6 +19,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -36,45 +37,46 @@ type FilamentModifier interface {
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) error
 }
 
-type FilamentAccessor interface {
+type FilamentCalculator interface {
+	// Requests goes to network.
 	Requests(
-		ctx context.Context, objectID, from insolar.ID, readUntil, calcPulse insolar.PulseNumber,
+		ctx context.Context,
+		objectID, from insolar.ID,
+		readUntil, calcPulse insolar.PulseNumber,
 	) ([]record.CompositeFilamentRecord, error)
 
+	// PendingRequests only looks locally.
 	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]insolar.ID, error)
 }
 
-func NewFilamentManager(
+type FilamentCleaner interface {
+	Clear(objID insolar.ID)
+}
+
+func NewFilamentModifier(
 	indexes object.IndexStorage,
-	recordStorage object.RecordStorage,
-	coordinator jet.Coordinator,
+	recordStorage object.RecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
-	sender bus.Sender,
-	jetFetcher jet.Fetcher,
-) *FilamentManager {
-	return &FilamentManager{
-		cache:         newCacheStore(recordStorage),
-		indexes:       indexes,
-		recordStorage: recordStorage,
-		coordinator:   coordinator,
-		pcs:           pcs,
-		sender:        sender,
-		jetFetcher:    jetFetcher,
+	calculator FilamentCalculator,
+) *FilamentModifierDefault {
+	return &FilamentModifierDefault{
+		calculator: calculator,
+		indexes:    indexes,
+		records:    recordStorage,
+		pcs:        pcs,
 	}
 }
 
-type FilamentManager struct {
+type FilamentModifierDefault struct {
 	cache *cacheStore
 
-	indexes       object.IndexStorage
-	recordStorage object.RecordStorage
-	coordinator   jet.Coordinator
-	pcs           insolar.PlatformCryptographyScheme
-	sender        bus.Sender
-	jetFetcher    jet.Fetcher
+	calculator FilamentCalculator
+	indexes    object.IndexStorage
+	records    object.RecordModifier
+	pcs        insolar.PlatformCryptographyScheme
 }
 
-func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, jetID insolar.JetID, request record.Request) error {
+func (m *FilamentModifierDefault) SetRequest(ctx context.Context, requestID insolar.ID, jetID insolar.JetID, request record.Request) error {
 	if requestID.IsEmpty() {
 		return errors.New("request id is empty")
 	}
@@ -100,7 +102,7 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 	{
 		virtual := record.Wrap(request)
 		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.recordStorage.Set(ctx, requestID, material)
+		err := m.records.Set(ctx, requestID, material)
 		if err != nil && err != object.ErrOverride {
 			return errors.Wrap(err, "failed to save a request record")
 		}
@@ -117,7 +119,7 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 		hash := record.HashVirtual(m.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(requestID.Pulse(), hash)
 		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.recordStorage.Set(ctx, id, material)
+		err := m.records.Set(ctx, id, material)
 		if err != nil {
 			return errors.Wrap(err, "failed to save filament record")
 		}
@@ -138,7 +140,7 @@ func (m *FilamentManager) SetRequest(ctx context.Context, requestID insolar.ID, 
 	return nil
 }
 
-func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, jetID insolar.JetID, result record.Result) error {
+func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insolar.ID, jetID insolar.JetID, result record.Result) error {
 	if result.Object.IsEmpty() {
 		return errors.New("object is empty")
 	}
@@ -158,7 +160,7 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 		hash := record.HashVirtual(m.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(resultID.Pulse(), hash)
 		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.recordStorage.Set(ctx, id, material)
+		err := m.records.Set(ctx, id, material)
 		if err != nil && err != object.ErrOverride {
 			return errors.Wrap(err, "failed to save a result record")
 		}
@@ -176,7 +178,7 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 		hash := record.HashVirtual(m.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(resultID.Pulse(), hash)
 		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.recordStorage.Set(ctx, id, material)
+		err := m.records.Set(ctx, id, material)
 		if err != nil {
 			return errors.Wrap(err, "failed to save filament record")
 		}
@@ -186,7 +188,7 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 
 	idx.Lifeline.PendingPointer = &filamentRecord.MetaID
 
-	pending, err := m.calculatePending(ctx, resultID.Pulse(), objectID, idx)
+	pending, err := m.calculator.PendingRequests(ctx, resultID.Pulse(), objectID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
@@ -202,15 +204,38 @@ func (m *FilamentManager) SetResult(ctx context.Context, resultID insolar.ID, je
 	return nil
 }
 
-func (m *FilamentManager) Requests(
+type FilamentCalculatorDefault struct {
+	cache       *cacheStore
+	indexes     object.IndexAccessor
+	coordinator jet.Coordinator
+	jetFetcher  jet.Fetcher
+	sender      bus.Sender
+}
+
+func NewFilamentCalculator(
+	indexes object.IndexAccessor,
+	records object.RecordAccessor,
+	coordinator jet.Coordinator,
+	jetFetcher jet.Fetcher,
+	sender bus.Sender,
+) *FilamentCalculatorDefault {
+	return &FilamentCalculatorDefault{
+		cache:       newCacheStore(records),
+		indexes:     indexes,
+		coordinator: coordinator,
+		jetFetcher:  jetFetcher,
+		sender:      sender,
+	}
+}
+
+func (c *FilamentCalculatorDefault) Requests(
 	ctx context.Context, objectID insolar.ID, from insolar.ID, readUntil, calcPulse insolar.PulseNumber,
 ) ([]record.CompositeFilamentRecord, error) {
-	cache := m.cache.Get(objectID)
+	cache := c.cache.Get(objectID)
 	cache.RLock()
 	defer cache.RUnlock()
 
 	iter := cache.NewIterator(ctx, from)
-
 	var segment []record.CompositeFilamentRecord
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
@@ -230,24 +255,15 @@ func (m *FilamentManager) Requests(
 	return segment, nil
 }
 
-func (m *FilamentManager) PendingRequests(
+func (c *FilamentCalculatorDefault) PendingRequests(
 	ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID,
 ) ([]insolar.ID, error) {
-	idx, err := m.indexes.ForID(ctx, pulse, objectID)
+	idx, err := c.indexes.ForID(ctx, pulse, objectID)
 	if err != nil {
 		return nil, err
 	}
 
-	return m.calculatePending(ctx, pulse, objectID, idx)
-}
-
-func (m *FilamentManager) calculatePending(
-	ctx context.Context,
-	pulse insolar.PulseNumber,
-	objectID insolar.ID,
-	idx object.FilamentIndex,
-) ([]insolar.ID, error) {
-	cache := m.cache.Get(objectID)
+	cache := c.cache.Get(objectID)
 	cache.Lock()
 	defer cache.Unlock()
 
@@ -255,13 +271,16 @@ func (m *FilamentManager) calculatePending(
 		return []insolar.ID{}, nil
 	}
 
-	iter := m.newFetchingIterator(
+	iter := newFetchingIterator(
 		ctx,
 		cache,
 		objectID,
 		*idx.Lifeline.PendingPointer,
 		*idx.Lifeline.EarliestOpenRequest,
 		pulse,
+		c.jetFetcher,
+		c.coordinator,
+		c.sender,
 	)
 
 	var pending []insolar.ID
@@ -293,6 +312,13 @@ func (m *FilamentManager) calculatePending(
 	return ordered, nil
 }
 
+func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
+	cache := c.cache.Get(objID)
+	cache.Lock()
+	cache.Clear()
+	cache.Unlock()
+}
+
 type fetchingIterator struct {
 	iter  filamentIterator
 	cache *filamentCache
@@ -300,17 +326,140 @@ type fetchingIterator struct {
 	objectID             insolar.ID
 	readUntil, calcPulse insolar.PulseNumber
 
-	records     object.RecordAccessor
 	jetFetcher  jet.Fetcher
 	coordinator jet.Coordinator
 	sender      bus.Sender
 }
 
-func (m *FilamentManager) newFetchingIterator(
+type cacheStore struct {
+	records object.RecordAccessor
+
+	lock   sync.Mutex
+	caches map[insolar.ID]*filamentCache
+}
+
+func newCacheStore(r object.RecordAccessor) *cacheStore {
+	return &cacheStore{
+		caches:  map[insolar.ID]*filamentCache{},
+		records: r,
+	}
+}
+
+func (c *cacheStore) Get(id insolar.ID) *filamentCache {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	obj, ok := c.caches[id]
+	if !ok {
+		obj = newFilamentCache(c.records)
+		c.caches[id] = obj
+	}
+
+	return obj
+}
+
+func (c *cacheStore) Delete(id insolar.ID) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	delete(c.caches, id)
+}
+
+type filamentCache struct {
+	sync.RWMutex
+	cache map[insolar.ID]record.CompositeFilamentRecord
+
+	records object.RecordAccessor
+}
+
+func newFilamentCache(r object.RecordAccessor) *filamentCache {
+	return &filamentCache{
+		cache:   map[insolar.ID]record.CompositeFilamentRecord{},
+		records: r,
+	}
+}
+
+func (c *filamentCache) Update(recs []record.CompositeFilamentRecord) {
+	for _, rec := range recs {
+		c.cache[rec.MetaID] = rec
+	}
+}
+
+func (c *filamentCache) NewIterator(ctx context.Context, from insolar.ID) filamentIterator {
+	return filamentIterator{
+		currentID: &from,
+		cache:     c,
+	}
+}
+
+func (c *filamentCache) Clear() {
+	c.cache = map[insolar.ID]record.CompositeFilamentRecord{}
+}
+
+type filamentIterator struct {
+	currentID *insolar.ID
+	cache     *filamentCache
+}
+
+func (i *filamentIterator) PrevID() *insolar.ID {
+	return i.currentID
+}
+
+func (i *filamentIterator) HasPrev() bool {
+	return i.currentID != nil
+}
+
+func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRecord, error) {
+	if i.currentID == nil {
+		return record.CompositeFilamentRecord{}, object.ErrNotFound
+	}
+
+	composite, ok := i.cache.cache[*i.currentID]
+	if ok {
+		virtual := record.Unwrap(composite.Meta.Virtual)
+		filament, ok := virtual.(*record.PendingFilament)
+		if !ok {
+			return record.CompositeFilamentRecord{}, fmt.Errorf("unexpected filament record %T", virtual)
+		}
+		i.currentID = filament.PreviousRecord
+		return composite, nil
+	}
+
+	// Fetching filament record.
+	filamentRecord, err := i.cache.records.ForID(ctx, *i.currentID)
+	if err != nil {
+		return record.CompositeFilamentRecord{}, err
+	}
+	composite.MetaID = *i.currentID
+	composite.Meta = filamentRecord
+
+	// Fetching primary record.
+	virtual := record.Unwrap(filamentRecord.Virtual)
+	filament, ok := virtual.(*record.PendingFilament)
+	if !ok {
+		return record.CompositeFilamentRecord{}, fmt.Errorf("unexpected filament record %T", virtual)
+	}
+	rec, err := i.cache.records.ForID(ctx, filament.RecordID)
+	if err != nil {
+		return record.CompositeFilamentRecord{}, err
+	}
+	composite.RecordID = filament.RecordID
+	composite.Record = rec
+
+	// Adding to cache.
+	i.cache.cache[*i.currentID] = composite
+	i.currentID = filament.PreviousRecord
+
+	return composite, nil
+}
+
+func newFetchingIterator(
 	ctx context.Context,
 	cache *filamentCache,
 	objectID, from insolar.ID,
 	readUntil, calcPulse insolar.PulseNumber,
+	fetcher jet.Fetcher,
+	coordinator jet.Coordinator,
+	sender bus.Sender,
 ) *fetchingIterator {
 	return &fetchingIterator{
 		iter:        cache.NewIterator(ctx, from),
@@ -318,10 +467,9 @@ func (m *FilamentManager) newFetchingIterator(
 		objectID:    objectID,
 		readUntil:   readUntil,
 		calcPulse:   calcPulse,
-		records:     m.recordStorage,
-		jetFetcher:  m.jetFetcher,
-		coordinator: m.coordinator,
-		sender:      m.sender,
+		jetFetcher:  fetcher,
+		coordinator: coordinator,
+		sender:      sender,
 	}
 }
 

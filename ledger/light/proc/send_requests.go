@@ -34,7 +34,7 @@ type SendRequests struct {
 
 	dep struct {
 		sender    bus.Sender
-		filaments executor.FilamentAccessor
+		filaments executor.FilamentCalculator
 	}
 }
 
@@ -47,7 +47,7 @@ func NewSendRequests(msg payload.Meta, objID insolar.ID, startFrom insolar.ID, r
 	}
 }
 
-func (p *SendRequests) Dep(sender bus.Sender, filaments executor.FilamentAccessor) {
+func (p *SendRequests) Dep(sender bus.Sender, filaments executor.FilamentCalculator) {
 	p.dep.sender = sender
 	p.dep.filaments = filaments
 }
