@@ -139,7 +139,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		Cfg:   cfg,
 		state: make(map[Ref]*ObjectState),
 	}
-	res.rpc = lrCommon.NewRPC(NewRPCMethods(&res), cfg)
+	res.rpc = lrCommon.NewRPC(NewProxyMethods(&res), cfg)
 
 	err := initHandlers(&res)
 	if err != nil {
@@ -212,7 +212,7 @@ func initHandlers(lr *LogicRunner) error {
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
-	bi := builtin.NewBuiltIn(lr.ArtifactManager, NewRPCMethods(lr))
+	bi := builtin.NewBuiltIn(lr.ArtifactManager, NewProxyMethods(lr))
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err
 	}

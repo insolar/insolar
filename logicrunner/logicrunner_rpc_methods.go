@@ -35,12 +35,12 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
-type RPCMethods struct {
+type ProxyMethods struct {
 	lr *LogicRunner
 }
 
-func NewRPCMethods(lr *LogicRunner) *RPCMethods {
-	return &RPCMethods{lr: lr}
+func NewProxyMethods(lr *LogicRunner) *ProxyMethods {
+	return &ProxyMethods{lr: lr}
 }
 
 func recoverRPC(err *error) {
@@ -57,7 +57,7 @@ func recoverRPC(err *error) {
 	}
 }
 
-func (m *RPCMethods) getCurrent(
+func (m *ProxyMethods) getCurrent(
 	obj insolar.Reference, mode insolar.CallMode, reqRef insolar.Reference,
 ) (
 	*Transcript, error,
@@ -78,7 +78,7 @@ func (m *RPCMethods) getCurrent(
 }
 
 // GetCode is an RPC retrieving a code by its reference
-func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
+func (m *ProxyMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
 	defer recoverRPC(&err)
 
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
@@ -102,7 +102,7 @@ func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCod
 }
 
 // RouteCall routes call from a contract to a contract through event bus.
-func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
+func (m *ProxyMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
 	defer recoverRPC(&err)
 
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
@@ -156,7 +156,7 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
+func (m *ProxyMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
 	defer recoverRPC(&err)
 
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
@@ -196,7 +196,7 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 }
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
+func (m *ProxyMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
 	defer recoverRPC(&err)
 
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
@@ -237,7 +237,7 @@ var iteratorMap = make(map[string]artifacts.RefIterator)
 var iteratorMapLock = sync.RWMutex{}
 
 // GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
-func (m *RPCMethods) GetObjChildrenIterator(
+func (m *ProxyMethods) GetObjChildrenIterator(
 	req rpctypes.UpGetObjChildrenIteratorReq,
 	rep *rpctypes.UpGetObjChildrenIteratorResp,
 ) (
@@ -324,7 +324,7 @@ func (m *RPCMethods) GetObjChildrenIterator(
 }
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
+func (m *ProxyMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
 	defer recoverRPC(&err)
 
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
@@ -343,7 +343,7 @@ func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.Up
 }
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
+func (m *ProxyMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
 	defer recoverRPC(&err)
 
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
