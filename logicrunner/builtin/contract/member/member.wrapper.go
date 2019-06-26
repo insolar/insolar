@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package helloworld
+package member
 
 import (
 	"github.com/insolar/insolar/insolar"
@@ -38,7 +38,7 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	self := new(HelloWorld)
+	self := new(Member)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
@@ -64,7 +64,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	self := new(HelloWorld)
+	self := new(Member)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
@@ -88,32 +88,30 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 
-	self := new(HelloWorld)
+	self := new(Member)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGreet ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeGetName ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGreet ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetName ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
-	var args0 string
-	args[0] = &args0
+	args := []interface{}{}
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGreet ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetName ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Greet(args0)
+	ret0, ret1 := self.GetName()
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -129,18 +127,18 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 
-	self := new(HelloWorld)
+	self := new(Member)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeCount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeCount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -148,128 +146,11 @@ func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeCount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Count()
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-
-	self := new(HelloWorld)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeErrored ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeErrored ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeErrored ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.Errored()
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-
-	self := new(HelloWorld)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeCreateChild ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeCreateChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeCreateChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.CreateChild()
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_CountChild(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-
-	self := new(HelloWorld)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeCountChild ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeCountChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeCountChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.CountChild()
+	ret0, ret1 := self.GetPublicKey()
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -288,7 +169,7 @@ func INSMETHOD_CountChild(object []byte, data []byte) ([]byte, []byte, error) {
 func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 
-	self := new(HelloWorld)
+	self := new(Member)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ FakeCall ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
@@ -328,9 +209,56 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
+func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(Member)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeFindDeposit ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeFindDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := [2]interface{}{}
+	var args0 string
+	args[0] = &args0
+	var args1 string
+	args[1] = &args1
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeFindDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1, ret2 := self.FindDeposit(args0, args1)
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret2 = ph.MakeErrorSerializable(ret2)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1, ret2}, &ret)
+
+	return state, ret, err
+}
+
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	args := []interface{}{}
+	args := [2]interface{}{}
+	var args0 string
+	args[0] = &args0
+	var args1 string
+	args[1] = &args1
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -338,7 +266,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 		return nil, e
 	}
 
-	ret0, ret1 := New()
+	ret0, ret1 := New(args0, args1)
 	if ret1 != nil {
 		return nil, ret1
 	}
@@ -362,12 +290,10 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"Greet":       INSMETHOD_Greet,
-			"Count":       INSMETHOD_Count,
-			"Errored":     INSMETHOD_Errored,
-			"CreateChild": INSMETHOD_CreateChild,
-			"CountChild":  INSMETHOD_CountChild,
-			"Call":        INSMETHOD_Call,
+			"GetName":      INSMETHOD_GetName,
+			"GetPublicKey": INSMETHOD_GetPublicKey,
+			"Call":         INSMETHOD_Call,
+			"FindDeposit":  INSMETHOD_FindDeposit,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
