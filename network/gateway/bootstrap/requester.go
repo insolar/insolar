@@ -137,7 +137,6 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinC
 		ac.UpdateSchedule(ctx, permit, p.PulseNumber)
 		panic("call bootstrap again")
 	case packet.Reject:
-		//swith to no network
 		return respData, errors.New("Bootstrap request rejected")
 	}
 
