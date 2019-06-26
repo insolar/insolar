@@ -195,7 +195,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	info, err := requester.Info(sendURL)
 	check("Problems with obtaining info", err)
 
-	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey)
+	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey, cfg.PublicKey)
 	check("Problems with creating user config:", err)
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")

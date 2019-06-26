@@ -48,7 +48,7 @@ func contractError(body []byte) error {
 
 func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
+	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
@@ -62,7 +62,7 @@ func TestBadSeed(t *testing.T) {
 
 func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
+	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",

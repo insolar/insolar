@@ -42,7 +42,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		return nil, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
+	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
@@ -81,7 +81,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 		return "", err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
@@ -113,7 +113,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
@@ -145,7 +145,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		return nil, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
@@ -184,7 +184,7 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,

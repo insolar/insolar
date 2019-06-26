@@ -68,7 +68,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 			JSONRPC: "2.0",
 			ID:      1,
 			Method:  "api.call",
-			Params:  requester.Params{CallSite: "contract.createMember"},
+			Params:  requester.Params{CallSite: "contract.createMember", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
 		},
 		seedString,
 	)
@@ -123,7 +123,7 @@ func TestTimeoutSuite(t *testing.T) {
 	require.NoError(t, err)
 
 	userRef := testutils.RandomRef().String()
-	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString))
+	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
 
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner()
