@@ -251,12 +251,12 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
 	if lr.Cfg.BuiltIn != nil {
-		log.Error("Initializing builtin")
+		log.Debug("Initializing builtin")
 		if err := lr.initializeBuiltin(ctx); err != nil {
-			log.Errorf("Initializing builtin not done: %s", err.Error())
+			log.Errorf("Initialization of builtin contracts failed: %s", err.Error())
 			return err
 		}
-		log.Error("Initializing builtin done")
+		log.Debug("Initializing builtin done")
 	}
 
 	if lr.Cfg.GoPlugin != nil {

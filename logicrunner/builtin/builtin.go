@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 // BuiltIn is a contract runner engine
@@ -35,7 +34,7 @@ type BuiltIn struct {
 	// PrototypeRegistry    map[string]preprocessor.ContractWrapper
 	// PrototypeRefRegistry map[insolar.Reference]string
 	// Code ->
-	CodeRegistry    map[string]preprocessor.ContractWrapper
+	CodeRegistry    map[string]insolar.ContractWrapper
 	CodeRefRegistry map[insolar.Reference]string
 }
 
@@ -56,6 +55,9 @@ func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCal
 
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
 	defer span.End()
+
+	gls.Set("callCtx", callCtx)
+	defer gls.Cleanup()
 
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {

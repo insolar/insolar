@@ -616,6 +616,8 @@ type A struct{
 }
 
 func (s *PreprocessorSuite) TestProxyGeneration() {
+	s.T().Skip()
+
 	contracts, err := GetRealContractsNames()
 	s.Require().NoError(err)
 
