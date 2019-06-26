@@ -284,10 +284,12 @@ type Auther interface {
 	FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode
 }
 
+// Bootstrapper interface used to change behavior of handlers in different network states
 type Bootstrapper interface {
 	HandleNodeAuthorizeRequest(context.Context, Packet) (Packet, error)
 	HandleNodeBootstrapRequest(context.Context, Packet) (Packet, error)
 	HandleUpdateSchedule(context.Context, Packet) (Packet, error)
+	HandleReconnect(context.Context, Packet) (Packet, error)
 }
 
 // Rules are responsible for a majority and minimum roles checking
