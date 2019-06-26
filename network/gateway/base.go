@@ -249,7 +249,10 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 
 	// TODO: move time.Minute to config
 	if validateTimestamp(data.Timestamp, time.Minute) {
-		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongTimestamp, Error: ""}), nil
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{
+			Code:      packet.WrongTimestamp,
+			Timestamp: time.Now().UTC().Unix(),
+		}), nil
 	}
 
 	_, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
@@ -288,15 +291,14 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		return nil, err
 	}
 
-	// TODO: return correct discoveryCount
-	//discoveryCount := FindDiscoveryInActiveList(g.NodeKeeper.GetAccessor().GetActiveNodes())
-	var discoveryCount uint32
+	discoveryCount := len(network.FindDiscoveriesInNodeList(g.NodeKeeper.GetAccessor().GetActiveNodes(), g.CertificateManager.GetCertificate()))
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{
-		Code:   packet.Success,
-		Error:  "",
-		Permit: permit, DiscoveryCount: discoveryCount,
-		PulseNumber:  p.PulseNumber,
-		NetworkState: uint32(g.Gatewayer.Gateway().GetState()),
+		Code:           packet.Success,
+		Timestamp:      time.Now().UTC().Unix(),
+		Permit:         permit,
+		DiscoveryCount: uint32(discoveryCount),
+		PulseNumber:    p.PulseNumber,
+		NetworkState:   uint32(g.Gatewayer.Gateway().GetState()),
 	}), nil
 }
 
