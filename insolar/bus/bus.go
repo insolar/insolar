@@ -100,7 +100,7 @@ type Bus struct {
 // NewBus creates Bus instance with provided values.
 func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator, pcs insolar.PlatformCryptographyScheme) *Bus {
 	return &Bus{
-		timeout:     time.Second * 8,
+		timeout:     time.Second * 15,
 		pub:         pub,
 		replies:     make(map[payload.MessageHash]*lockedReply),
 		pulses:      pulses,

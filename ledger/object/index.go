@@ -79,8 +79,8 @@ type IndexBucketModifier interface {
 
 // IndexBucketAccessor provides an interface for fetching buckets from an index.
 type IndexBucketAccessor interface {
-	// ForPNAndJet returns a collection of buckets for a provided pn and jetID
-	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex
+	// ForPulse returns a collection of buckets for a provided pulse number.
+	ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingModifier -o ./ -s _mock.go
