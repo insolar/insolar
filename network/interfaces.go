@@ -269,8 +269,8 @@ type Gateway interface {
 	Auther() Auther
 	NeedLockMessageBus() bool
 	Bootstrapper() Bootstrapper
-
-	ShoudIgnorePulse(context.Context, insolar.Pulse) bool
+	// ShouldIgnorePulse returns true if network should skip pulse from real pulsar
+	ShouldIgnorePulse(context.Context, insolar.Pulse) bool
 }
 
 type Auther interface {

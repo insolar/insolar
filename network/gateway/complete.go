@@ -205,6 +205,6 @@ func (g *Complete) signCertHandler(ctx context.Context, request network.Packet) 
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.SignCertResponse{Sign: sign}), nil
 }
 
-func (g *Complete) ShoudIgnorePulse(context.Context, insolar.Pulse) bool {
+func (g *Complete) ShouldIgnorePulse(context.Context, insolar.Pulse) bool {
 	return false
 }

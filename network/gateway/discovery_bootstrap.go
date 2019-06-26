@@ -68,10 +68,6 @@ func (g *DiscoveryBootstrap) OnPulse(ctx context.Context, pu insolar.Pulse) erro
 	return g.Base.OnPulse(ctx, pu)
 }
 
-func (g *DiscoveryBootstrap) ShoudIgnorePulse(context.Context, insolar.Pulse) bool {
-	return false
-}
-
 func (g *DiscoveryBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
 	cert := g.CertificateManager.GetCertificate()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())

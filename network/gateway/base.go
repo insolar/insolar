@@ -175,8 +175,7 @@ func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insola
 
 // ============= Bootstrap =======
 
-// ShoudIgnorePulse returns true if network should skip pulse from real pulsar
-func (g *Base) ShoudIgnorePulse(context.Context, insolar.Pulse) bool {
+func (g *Base) ShouldIgnorePulse(context.Context, insolar.Pulse) bool {
 	return true
 }
 

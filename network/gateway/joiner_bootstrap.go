@@ -75,7 +75,7 @@ func (g *JoinerBootstrap) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	return g.Base.OnPulse(ctx, pu)
 }
 
-func (g *JoinerBootstrap) ShoudIgnorePulse(context.Context, insolar.Pulse) bool {
+func (g *JoinerBootstrap) ShouldIgnorePulse(context.Context, insolar.Pulse) bool {
 	return false
 }
 

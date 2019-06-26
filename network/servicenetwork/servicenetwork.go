@@ -251,9 +251,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	)
 	defer span.End()
 
-	// if n.gatewayer.Gateway().ShoudIgnorePulse(ctx, newPulse) {
-	// 	return
-	// }
+	if n.gatewayer.Gateway().ShouldIgnorePulse(ctx, newPulse) {
+		return
+	}
+
 	//todo call gatewayer
 	/*
 		if !n.NodeKeeper.IsBootstrapped() {
