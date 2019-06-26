@@ -95,8 +95,10 @@ func TestRecordStorage_Set(t *testing.T) {
 		require.NoError(t, err)
 
 		err = recordStorage.Set(ctx, id, rec)
-		require.Error(t, err)
-		assert.Equal(t, ErrOverride, err)
+		// see comments in record.go
+		require.NoError(t, err)
+		// require.Error(t, err)
+		// assert.Equal(t, ErrOverride, err)
 	})
 }
 

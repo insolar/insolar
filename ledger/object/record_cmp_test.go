@@ -102,10 +102,13 @@ func TestRecord_Components(t *testing.T) {
 		for _, r := range records {
 			memErr := memStorage.Set(ctx, r.id, r.rec)
 			dbErr := dbStorage.Set(ctx, r.id, r.rec)
-			require.Error(t, memErr)
-			require.Error(t, dbErr)
-			assert.Equal(t, object.ErrOverride, memErr)
-			assert.Equal(t, object.ErrOverride, dbErr)
+			// see comments in record.go
+			require.NoError(t, memErr)
+			require.NoError(t, dbErr)
+			//require.Error(t, memErr)
+			//require.Error(t, dbErr)
+			// assert.Equal(t, object.ErrOverride, memErr)
+			// assert.Equal(t, object.ErrOverride, dbErr)
 		}
 	})
 }

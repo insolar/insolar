@@ -116,6 +116,7 @@ func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq 
 		if p.dep.recentStorage.Count() > recentstorage.PendingRequestsLimit {
 			return insolar.ErrTooManyPendingRequests
 		}
+
 		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
 		recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
 

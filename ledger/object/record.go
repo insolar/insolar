@@ -100,7 +100,11 @@ func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec record.Materi
 
 	_, ok := m.recsStor[id]
 	if ok {
-		return ErrOverride
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK. When deduplication will be implemented we should
+		// change `nil` to `ErrOverride` here.
+		return nil
 	}
 
 	m.recsStor[id] = rec
@@ -208,7 +212,11 @@ func (r *RecordDB) set(id insolar.ID, rec record.Material) error {
 
 	_, err := r.db.Get(key)
 	if err == nil {
-		return ErrOverride
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK. When deduplication will be implemented we should
+		// change `nil` to `ErrOverride` here.
+		return nil
 	}
 
 	data, err := rec.Marshal()
