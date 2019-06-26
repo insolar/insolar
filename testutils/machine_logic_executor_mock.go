@@ -29,11 +29,6 @@ type MachineLogicExecutorMock struct {
 	CallMethodCounter    uint64
 	CallMethodPreCounter uint64
 	CallMethodMock       mMachineLogicExecutorMockCallMethod
-
-	StopFunc       func() (r error)
-	StopCounter    uint64
-	StopPreCounter uint64
-	StopMock       mMachineLogicExecutorMockStop
 }
 
 //NewMachineLogicExecutorMock returns a mock for github.com/insolar/insolar/insolar.MachineLogicExecutor
@@ -46,7 +41,6 @@ func NewMachineLogicExecutorMock(t minimock.Tester) *MachineLogicExecutorMock {
 
 	m.CallConstructorMock = mMachineLogicExecutorMockCallConstructor{mock: m}
 	m.CallMethodMock = mMachineLogicExecutorMockCallMethod{mock: m}
-	m.StopMock = mMachineLogicExecutorMockStop{mock: m}
 
 	return m
 }
@@ -363,140 +357,6 @@ func (m *MachineLogicExecutorMock) CallMethodFinished() bool {
 	return true
 }
 
-type mMachineLogicExecutorMockStop struct {
-	mock              *MachineLogicExecutorMock
-	mainExpectation   *MachineLogicExecutorMockStopExpectation
-	expectationSeries []*MachineLogicExecutorMockStopExpectation
-}
-
-type MachineLogicExecutorMockStopExpectation struct {
-	result *MachineLogicExecutorMockStopResult
-}
-
-type MachineLogicExecutorMockStopResult struct {
-	r error
-}
-
-//Expect specifies that invocation of MachineLogicExecutor.Stop is expected from 1 to Infinity times
-func (m *mMachineLogicExecutorMockStop) Expect() *mMachineLogicExecutorMockStop {
-	m.mock.StopFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &MachineLogicExecutorMockStopExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of MachineLogicExecutor.Stop
-func (m *mMachineLogicExecutorMockStop) Return(r error) *MachineLogicExecutorMock {
-	m.mock.StopFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &MachineLogicExecutorMockStopExpectation{}
-	}
-	m.mainExpectation.result = &MachineLogicExecutorMockStopResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of MachineLogicExecutor.Stop is expected once
-func (m *mMachineLogicExecutorMockStop) ExpectOnce() *MachineLogicExecutorMockStopExpectation {
-	m.mock.StopFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &MachineLogicExecutorMockStopExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *MachineLogicExecutorMockStopExpectation) Return(r error) {
-	e.result = &MachineLogicExecutorMockStopResult{r}
-}
-
-//Set uses given function f as a mock of MachineLogicExecutor.Stop method
-func (m *mMachineLogicExecutorMockStop) Set(f func() (r error)) *MachineLogicExecutorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.StopFunc = f
-	return m.mock
-}
-
-//Stop implements github.com/insolar/insolar/insolar.MachineLogicExecutor interface
-func (m *MachineLogicExecutorMock) Stop() (r error) {
-	counter := atomic.AddUint64(&m.StopPreCounter, 1)
-	defer atomic.AddUint64(&m.StopCounter, 1)
-
-	if len(m.StopMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.StopMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to MachineLogicExecutorMock.Stop.")
-			return
-		}
-
-		result := m.StopMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the MachineLogicExecutorMock.Stop")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.StopMock.mainExpectation != nil {
-
-		result := m.StopMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the MachineLogicExecutorMock.Stop")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.StopFunc == nil {
-		m.t.Fatalf("Unexpected call to MachineLogicExecutorMock.Stop.")
-		return
-	}
-
-	return m.StopFunc()
-}
-
-//StopMinimockCounter returns a count of MachineLogicExecutorMock.StopFunc invocations
-func (m *MachineLogicExecutorMock) StopMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.StopCounter)
-}
-
-//StopMinimockPreCounter returns the value of MachineLogicExecutorMock.Stop invocations
-func (m *MachineLogicExecutorMock) StopMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.StopPreCounter)
-}
-
-//StopFinished returns true if mock invocations count is ok
-func (m *MachineLogicExecutorMock) StopFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.StopMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.StopCounter) == uint64(len(m.StopMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.StopMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.StopCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.StopFunc != nil {
-		return atomic.LoadUint64(&m.StopCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *MachineLogicExecutorMock) ValidateCallCounters() {
@@ -507,10 +367,6 @@ func (m *MachineLogicExecutorMock) ValidateCallCounters() {
 
 	if !m.CallMethodFinished() {
 		m.t.Fatal("Expected call to MachineLogicExecutorMock.CallMethod")
-	}
-
-	if !m.StopFinished() {
-		m.t.Fatal("Expected call to MachineLogicExecutorMock.Stop")
 	}
 
 }
@@ -538,10 +394,6 @@ func (m *MachineLogicExecutorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to MachineLogicExecutorMock.CallMethod")
 	}
 
-	if !m.StopFinished() {
-		m.t.Fatal("Expected call to MachineLogicExecutorMock.Stop")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -558,7 +410,6 @@ func (m *MachineLogicExecutorMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.CallConstructorFinished()
 		ok = ok && m.CallMethodFinished()
-		ok = ok && m.StopFinished()
 
 		if ok {
 			return
@@ -573,10 +424,6 @@ func (m *MachineLogicExecutorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.CallMethodFinished() {
 				m.t.Error("Expected call to MachineLogicExecutorMock.CallMethod")
-			}
-
-			if !m.StopFinished() {
-				m.t.Error("Expected call to MachineLogicExecutorMock.Stop")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -596,10 +443,6 @@ func (m *MachineLogicExecutorMock) AllMocksCalled() bool {
 	}
 
 	if !m.CallMethodFinished() {
-		return false
-	}
-
-	if !m.StopFinished() {
 		return false
 	}
 
