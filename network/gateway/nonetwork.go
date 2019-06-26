@@ -59,10 +59,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
 func newNoNetwork(b *Base) *NoNetwork {
@@ -72,15 +69,14 @@ func newNoNetwork(b *Base) *NoNetwork {
 // NoNetwork initial state
 type NoNetwork struct {
 	*Base
-
-	// isDiscovery bool
-	// skip        uint32
 }
 
 func (g *NoNetwork) Run(ctx context.Context) {
 
 	cert := g.CertificateManager.GetCertificate()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
+
+	// TODO: clear NodeKeeper state
 
 	if len(discoveryNodes) == 0 {
 		g.zeroBootstrap(ctx)
@@ -90,71 +86,27 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	}
 
 	// run bootstrap
-	isDiscovery := network.OriginIsDiscovery(cert)
-	log.Info(isDiscovery)
-	//getAuth
-
-	// TODO: isDiscovery shaffle or sort
-
-	for _, n := range discoveryNodes {
-		h, _ := host.NewHostN(n.GetHost(), *n.GetNodeRef())
-
-		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("Error authorizing to host %s: %s", h.String(), err.Error())
-			continue
-		}
-
-		// TODO: check majority rule
-		// if res.DiscoveryCount
-
-		whichState := func() insolar.NetworkState {
-			if network.OriginIsDiscovery(cert) {
-				// TODO check ephemeral pulse res.PulseNumber
-				return insolar.DiscoveryBootstrap
-			}
-			return insolar.JoinerBootstrap
-		}
-
-		switch res.Code {
-		case packet.Success:
-			g.permit = res.Permit
-			g.Gatewayer.SwitchState(whichState())
-			return
-		case packet.WrongMandate:
-			panic("wrong mandate " + res.Error)
-		case packet.WrongVersion:
-			panic("wrong mandate " + res.Error)
-		}
-
+	if !network.OriginIsDiscovery(cert) {
+		g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
+		return
 	}
 
-	// run again ?
-	g.Gatewayer.SwitchState(insolar.NoNetworkState)
+	pulse, err := g.PulseAccessor.Latest(ctx)
+	if err != nil {
+		g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
+		return
+	}
 
-	// wait result from channel
-	// save permits and change state
+	if pulse.PulseNumber > insolar.FirstPulseNumber {
+		g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
+		return
+	}
 
+	g.Gatewayer.SwitchState(insolar.DiscoveryBootstrap)
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {
 	return insolar.NoNetworkState
-}
-
-func (g *NoNetwork) OnPulse(ctx context.Context, pu insolar.Pulse) error {
-	return g.Base.OnPulse(ctx, pu)
-}
-
-func (g *NoNetwork) ShoudIgnorePulse(ctx context.Context, newPulse insolar.Pulse) bool {
-	// if true { //!g.Base.NodeKeeper.IsBootstrapped() { always true here
-	// 	g.Bootstrapper.SetLastPulse(newPulse.NextPulseNumber)
-	// 	return true
-	// }
-	//
-	// return g.isDiscovery && !g.NodeKeeper.GetConsensusInfo().IsJoiner() &&
-	// 	newPulse.PulseNumber <= g.Bootstrapper.GetLastPulse()+insolar.PulseNumber(g.skip)
-	// TODO: ??
-	return true
 }
 
 // func (g *NoNetwork) connectToNewNetwork(ctx context.Context, address string) {

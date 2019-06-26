@@ -2,6 +2,10 @@ package gateway
 
 import (
 	"context"
+	"errors"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -17,12 +21,14 @@ type DiscoveryBootstrap struct {
 }
 
 func (g *DiscoveryBootstrap) Run(ctx context.Context) {
-	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(false)
 
-	if g.permit == nil {
+	permit, err := g.authorize(ctx)
+	if err != nil {
 		// log warn
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)
 	}
+
+	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(false)
 
 	claim, _ := g.NodeKeeper.GetOriginJoinClaim()
 	pulse, err := g.PulseAccessor.Latest(ctx)
@@ -30,7 +36,7 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 		pulse = insolar.Pulse{PulseNumber: 1}
 	}
 
-	resp, _ := g.BootstrapRequester.Bootstrap(ctx, g.permit, claim, &pulse)
+	resp, _ := g.BootstrapRequester.Bootstrap(ctx, permit, claim, &pulse)
 
 	if resp.Code == packet.Reject {
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)
@@ -82,6 +88,27 @@ func (g *DiscoveryBootstrap) ShoudIgnorePulse(context.Context, insolar.Pulse) bo
 	return false
 }
 
-func (g *DiscoveryBootstrap) bootstrapJoiner(ctx context.Context) {
-	g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
+func (g *DiscoveryBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
+	cert := g.CertificateManager.GetCertificate()
+	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
+	// todo: sort discoveryNodes
+
+	for _, n := range discoveryNodes {
+		if g.NodeKeeper.GetAccessor().GetActiveNode(*n.GetNodeRef()) != nil {
+			inslogger.FromContext(ctx).Info("Skip discovery already in active list: ", n.GetNodeRef().String())
+			continue
+		}
+
+		h, _ := host.NewHostN(n.GetHost(), *n.GetNodeRef())
+
+		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
+		if err != nil {
+			inslogger.FromContext(ctx).Errorf("Error authorizing to discovery node %s: %s", h.String(), err.Error())
+			continue
+		}
+
+		return res.Permit, nil
+	}
+
+	return nil, errors.New("Failed to authorize to any discovery node.")
 }

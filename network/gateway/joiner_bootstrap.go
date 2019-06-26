@@ -2,11 +2,13 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
@@ -20,19 +22,19 @@ type JoinerBootstrap struct {
 }
 
 func (g *JoinerBootstrap) Run(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "NetworkBootstrapper.bootstrapJoiner")
-	defer span.End()
-	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(true)
 
-	if g.permit == nil {
+	permit, err := g.authorize(ctx)
+	if err != nil {
 		// log warn
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)
 	}
 
+	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(true)
+
 	claim, _ := g.NodeKeeper.GetOriginJoinClaim()
 	pulse, _ := g.PulseAccessor.Latest(ctx)
 
-	resp, _ := g.BootstrapRequester.Bootstrap(ctx, g.permit, claim, &pulse)
+	resp, _ := g.BootstrapRequester.Bootstrap(ctx, permit, claim, &pulse)
 
 	if resp.Code == packet.Reject {
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)
@@ -97,4 +99,25 @@ func (bc *JoinerBootstrap) startBootstrap(ctx context.Context, perm *packet.Perm
 	// TODO:
 
 	return resp, nil
+}
+
+func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
+	cert := g.CertificateManager.GetCertificate()
+	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
+	// todo: shuffle discoveryNodes
+
+	for _, n := range discoveryNodes {
+		h, _ := host.NewHostN(n.GetHost(), *n.GetNodeRef())
+
+		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
+		if err != nil {
+			inslogger.FromContext(ctx).Errorf("Error authorizing to host %s: %s", h.String(), err.Error())
+			continue
+		}
+		// TODO: check majority
+
+		return res.Permit, nil
+	}
+
+	return nil, errors.New("Failed to authorize to any discovery node.")
 }
