@@ -372,6 +372,13 @@ outer:
 		case d := <-c.queuePh3Recv:
 			nodeStats := statTbl.NewRow()
 
+			logger.Debugf(
+				"\n%v\n%v\n%v\n%v\n",
+				selfData.Bitset,
+				d.vector.Bitset,
+				selfData.Bitset.CompareToStatRow(d.vector.Bitset), // TODO: ugly. pass it to ClassifyByNodeGsh?
+				nodeStats,
+			)
 			vr := nodeset.ClassifyByNodeGsh(selfData, d.vector, nodeStats, hasher)
 
 			logMsg := "add"
