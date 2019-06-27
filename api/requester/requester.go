@@ -202,10 +202,6 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
 	}
 
-	// if reqCfg.Params.PublicKey == "" {
-	// 	reqCfg.Params.PublicKey = userCfg.PrivateKey
-	// }
-
 	reqCfg.Params.Reference = userCfg.Caller
 	reqCfg.Params.Seed = seed
 

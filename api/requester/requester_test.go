@@ -239,7 +239,6 @@ func TestSend(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
 	reqConf.Method = "contract.createMember"
-	reqConf.Params.PublicKey = userConf.PublicKey
 	resp, err := Send(ctx, URL, userConf, reqConf)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
@@ -249,7 +248,6 @@ func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
 	reqConf.Method = "contract.createMember"
-	reqConf.Params.PublicKey = userConf.PublicKey
 	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, TESTSEED)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
@@ -258,7 +256,6 @@ func TestSendWithSeed(t *testing.T) {
 func TestSendWithSeed_WithBadUrl(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
-	reqConf.Params.PublicKey = userConf.PublicKey
 	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, TESTSEED)
 	require.EqualError(t, err, "[ SendWithSeed ] Problem with sending target request: [ getResponseBodyContract ] Bad http response code: 404")
 }
