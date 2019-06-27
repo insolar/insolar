@@ -55,7 +55,6 @@ import (
 	"math/rand"
 
 	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/utils"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
@@ -82,7 +81,6 @@ func NewRoundStrategy(
 }
 
 func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common2.PulseNumber, self common.NodeProfile) context.Context {
-	ctx = utils.NewPulseContext(ctx, expectedPulse.AsUint32())
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 		"node_id":   self.GetShortNodeID(),
 		"pulse":     expectedPulse,
