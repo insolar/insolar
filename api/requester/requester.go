@@ -32,9 +32,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 var httpClient *http.Client
@@ -202,14 +202,9 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
 	}
 
-	if reqCfg.Params.PublicKey == "" {
-		ks := platformpolicy.NewKeyProcessor()
-		pem, err := ks.ExportPublicKeyPEM(userCfg.privateKeyObject.(*ecdsa.PrivateKey).Public())
-		if err != nil {
-			return nil, errors.Wrap(err, "[ SendWithSeed ] Cant export public key to PEM")
-		}
-		reqCfg.Params.PublicKey = string(pem)
-	}
+	// if reqCfg.Params.PublicKey == "" {
+	// 	reqCfg.Params.PublicKey = userCfg.PrivateKey
+	// }
 
 	reqCfg.Params.Reference = userCfg.Caller
 	reqCfg.Params.Seed = seed

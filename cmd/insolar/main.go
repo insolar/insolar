@@ -206,6 +206,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 		Params: requester.Params{
 			CallSite:   "contract.createMember",
 			CallParams: []interface{}{userName, cfg.PublicKey},
+			PublicKey:  ucfg.PublicKey,
 		},
 		LogLevel: logLevelInsolar.String(),
 	}

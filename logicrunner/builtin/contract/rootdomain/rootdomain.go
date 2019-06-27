@@ -41,20 +41,51 @@ type RootDomain struct {
 	NodeDomain             insolar.Reference
 }
 
+// Get migration admin member reference
 func (rd RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
 	return &rd.MigrationAdminMember, nil
 }
 
+// Get migration wallet reference
 func (rd RootDomain) GetMigrationWalletRef() (*insolar.Reference, error) {
 	return &rd.MigrationWallet, nil
 }
 
+// Get migration daemon members references
 func (rd RootDomain) GetMigrationDaemonMembers() ([]insolar.Reference, error) {
 	return rd.MigrationDaemonMembers, nil
 }
 
+// Get root member reference
 func (rd RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
 	return &rd.RootMember, nil
+}
+
+// Pull out burn address from list
+func (rd *RootDomain) GetBurnAddress() (string, error) {
+	if len(rd.FreeBurnAddresses) == 0 {
+		return "", fmt.Errorf("no more burn addresses left")
+	}
+
+	result := rd.FreeBurnAddresses[0]
+	rd.FreeBurnAddresses = rd.FreeBurnAddresses[1:]
+
+	return result, nil
+}
+
+// Get member reference by public key
+func (rd RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, error) {
+	return rd.PublicKeyMap[trimPublicKey(publicKey)], nil
+}
+
+// Get member reference by burn address
+func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
+	return rd.BurnAddressMap[trimBurnAddress(burnAddress)], nil
+}
+
+// Get cost center reference
+func (rd RootDomain) GetCostCenter() (insolar.Reference, error) {
+	return rd.CostCenter, nil
 }
 
 // GetNodeDomainRef returns reference of NodeDomain instance
@@ -85,53 +116,33 @@ func (rd RootDomain) Info() (interface{}, error) {
 	return resJSON, nil
 }
 
+// Add burn addresses to list
 func (rd *RootDomain) AddBurnAddresses(burnAddresses []string) error {
 	rd.FreeBurnAddresses = append(rd.FreeBurnAddresses, burnAddresses...)
 
 	return nil
 }
 
+// Add burn addresse to list
 func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 	rd.FreeBurnAddresses = append(rd.FreeBurnAddresses, burnAddress)
 
 	return nil
 }
 
-func (rd *RootDomain) GetBurnAddress() (string, error) {
-	if len(rd.FreeBurnAddresses) == 0 {
-		return "", fmt.Errorf("no more burn addresses left")
-	}
-
-	result := rd.FreeBurnAddresses[0]
-	rd.FreeBurnAddresses = rd.FreeBurnAddresses[1:]
-
-	return result, nil
-}
-
+// Add new member to PublicKeyMap and BurnAddressMap
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
-	if _, ok := rd.PublicKeyMap[TrimPublicKey(publicKey)]; ok {
+	if _, ok := rd.PublicKeyMap[trimPublicKey(publicKey)]; ok {
 		return fmt.Errorf("member for this publicKey already exist")
 	}
-	rd.PublicKeyMap[TrimPublicKey(publicKey)] = memberRef
+	rd.PublicKeyMap[trimPublicKey(publicKey)] = memberRef
 
-	if _, ok := rd.PublicKeyMap[TrimPublicKey(burnAddress)]; ok {
+	if _, ok := rd.PublicKeyMap[trimPublicKey(burnAddress)]; ok {
 		return fmt.Errorf("member for this burnAddress already exist")
 	}
-	rd.BurnAddressMap[TrimBurnAddress(burnAddress)] = memberRef
+	rd.BurnAddressMap[trimBurnAddress(burnAddress)] = memberRef
 
 	return nil
-}
-
-func (rd RootDomain) GetReferenceByPublicKey(publicKey string) (insolar.Reference, error) {
-	return rd.PublicKeyMap[TrimPublicKey(publicKey)], nil
-}
-
-func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
-	return rd.BurnAddressMap[TrimBurnAddress(burnAddress)], nil
-}
-
-func (rd RootDomain) GetCostCenter() (insolar.Reference, error) {
-	return rd.CostCenter, nil
 }
 
 func (rd *RootDomain) CreateHelloWorld() (string, error) {
@@ -144,11 +155,11 @@ func (rd *RootDomain) CreateHelloWorld() (string, error) {
 	return m.GetReference().String(), nil
 }
 
-func TrimPublicKey(publicKey string) string {
-	return TrimBurnAddress(between(publicKey, "KEY-----", "-----END"))
+func trimPublicKey(publicKey string) string {
+	return trimBurnAddress(between(publicKey, "KEY-----", "-----END"))
 }
 
-func TrimBurnAddress(burnAddress string) string {
+func trimBurnAddress(burnAddress string) string {
 	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(burnAddress), "\n"), ""))
 }
 

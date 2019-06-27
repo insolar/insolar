@@ -102,6 +102,7 @@ func (g *certGen) registerNode() insolar.Reference {
 		Params: requester.Params{
 			CallSite:   "contract.registerNode",
 			CallParams: map[string]string{"publicKey": string(keySerialized), "role": g.staticRole.String()},
+			PublicKey:  userCfg.PublicKey,
 		},
 	}
 
@@ -217,6 +218,7 @@ func (g *certGen) getNodeRefByPublicKey() insolar.Reference {
 		Params: requester.Params{
 			CallSite:   "contract.getNodeRef",
 			CallParams: []interface{}{keySerialized},
+			PublicKey:  userCfg.PublicKey,
 		},
 	}
 

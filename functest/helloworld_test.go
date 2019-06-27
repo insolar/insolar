@@ -47,7 +47,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "call.api",
-		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: map[string]interface{}{}},
+		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "call.api",
-		Params:  requester.Params{CallSite: "Greet", CallParams: map[string]interface{}{"name": name}},
+		Params:  requester.Params{CallSite: "Greet", CallParams: map[string]interface{}{"name": name}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return "", err
@@ -118,7 +118,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "call.api",
-		Params:  requester.Params{CallSite: "Count", CallParams: map[string]interface{}{}},
+		Params:  requester.Params{CallSite: "Count", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return 0, err
@@ -150,7 +150,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "call.api",
-		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}},
+		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "call.api",
-		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}},
+		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return 0, err

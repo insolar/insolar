@@ -426,6 +426,7 @@ func (migrationDaemonMember *Member) migration(txHash string, burnAddress string
 	return strconv.Itoa(int(confirms)), nil
 }
 
+// Find deposits for this member with this txHash
 func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 
 	inputAmount := new(big.Int)
@@ -477,7 +478,7 @@ func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 
 func (m *Member) getReferenceByPublicKey(publicKey string) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(m.RootDomain)
-	ref, err := rootDomain.GetReferenceByPublicKey(publicKey)
+	ref, err := rootDomain.GetMemberByPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get get reference by public key: %s", err.Error())
 	}
