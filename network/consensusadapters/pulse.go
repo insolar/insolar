@@ -51,102 +51,31 @@
 package consensusadapters
 
 import (
-	"context"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/utils"
-	"go.opencensus.io/trace"
+	"github.com/insolar/insolar/network/consensus/common"
 )
 
-type stater interface {
-	State() ([]byte, error)
-}
-
-type pulseChanger interface {
-	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
-}
-
-type UpstreamPulseController struct {
-	stater       stater
-	pulseChanger pulseChanger
-}
-
-func NewUpstreamPulseController(stater stater, pulseChanger pulseChanger) *UpstreamPulseController {
-	return &UpstreamPulseController{
-		stater:       stater,
-		pulseChanger: pulseChanger,
-	}
-}
-
-func (u *UpstreamPulseController) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) PulseDetected() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	nshChan := make(chan common.NodeStateHash)
-
-	go awaitState(nshChan, u.stater)
-
-	return nshChan
-}
-
-func (u *UpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, pulseData common2.PulseData, activeCensus census.OperationalCensus) {
-	ctx := context.Background()
-
-	pulseNumber := report.PulseNumber
-
-	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
-
-	ctx, span := instracer.StartSpan(ctx, "UpstreamPulseController.CommitPulseChange")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
-	)
-	defer span.End()
-
-	pulse := NewPulseFromPulseData(pulseData)
-
-	u.pulseChanger.ChangePulse(ctx, pulse)
-}
-
-func (u *UpstreamPulseController) CancelPulseChange() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipLost(graceful bool) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipSuspended() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) SuspendTraffic() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) ResumeTraffic() {
-	panic("implement me")
-}
-
-func awaitState(c chan<- common.NodeStateHash, stater stater) {
-	state, err := stater.State()
-	if err != nil {
-		panic("Failed to retrieve node state hash")
+func NewPulseFromPulseData(pulseData common.PulseData) insolar.Pulse {
+	var prev insolar.PulseNumber
+	if pulseData.IsFirstPulse() {
+		prev = insolar.PulseNumber(pulseData.GetNextPulseNumber())
+	} else {
+		prev = insolar.PulseNumber(pulseData.PulseNumber)
 	}
 
-	c <- common2.NewDigest(common2.NewBits512FromBytes(state), SHA3512Digest).AsDigestHolder()
+	entropy := insolar.Entropy{}
+	bytes := pulseData.PulseEntropy.Bytes()
+	copy(entropy[:], bytes)
+	copy(entropy[pulseData.PulseEntropy.FixedByteSize():], bytes)
+
+	return insolar.Pulse{
+		PulseNumber:      insolar.PulseNumber(pulseData.PulseNumber),
+		NextPulseNumber:  insolar.PulseNumber(pulseData.GetNextPulseNumber()),
+		PrevPulseNumber:  prev,
+		PulseTimestamp:   int64(pulseData.Timestamp) * int64(time.Second/time.Nanosecond),
+		EpochPulseNumber: int(pulseData.PulseEpoch),
+		Entropy:          entropy,
+	}
 }

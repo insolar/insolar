@@ -106,7 +106,7 @@ type payloadWrapper struct {
 	Payload interface{}
 }
 
-// TODO: signature seems to be wrong :( context and error missed
+// TODO: signature seems to be wrong :( context missed
 func (ps *PacketSender) SendPacketToTransport(t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
 	ctx := context.TODO()
 	addr := t.GetDefaultEndpoint()
