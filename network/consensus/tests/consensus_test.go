@@ -164,6 +164,10 @@ type EmuRoundStrategy struct {
 	bundle core.PhaseControllersBundle
 }
 
+func (c *EmuRoundStrategy) GetNodeUpdateCallback() core.NodeUpdateCallback {
+	return c.bundle.GetNodeUpdateCallback()
+}
+
 func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common.PulseNumber) context.Context {
 	return ctx
 }

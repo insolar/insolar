@@ -90,6 +90,10 @@ func (rs *RoundStrategy) GetFullPhaseControllers(nodeCount int) []core.PhaseCont
 	return rs.bundle.GetFullPhaseControllers(nodeCount)
 }
 
+func (rs *RoundStrategy) GetNodeUpdateCallback() core.NodeUpdateCallback {
+	return rs.bundle.GetNodeUpdateCallback()
+}
+
 func (rs *RoundStrategy) RandUint32() uint32 {
 	return rand.Uint32()
 }

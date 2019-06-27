@@ -88,6 +88,10 @@ func (r *RegularPhaseBundle) GetPrepPhaseControllers() []core.PrepPhaseControlle
 	}
 }
 
+func (r *RegularPhaseBundle) GetNodeUpdateCallback() core.NodeUpdateCallback {
+	return nil
+}
+
 func (r *RegularPhaseBundle) GetFullPhaseControllers(nodeCount int) []core.PhaseController {
 
 	/* Ensure sufficient sizes of queues to avoid lockups */

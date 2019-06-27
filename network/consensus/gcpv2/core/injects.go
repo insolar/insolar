@@ -63,6 +63,12 @@ import (
 type PhaseControllersBundle interface {
 	GetPrepPhaseControllers() []PrepPhaseController
 	GetFullPhaseControllers(nodeCount int) []PhaseController
+	GetNodeUpdateCallback() NodeUpdateCallback
+}
+
+type NodeUpdateCallback interface {
+	OnTrustUpdated(n *NodeAppearance, before, after packets.NodeTrustLevel)
+	OnNodeStateAssigned(n *NodeAppearance, before, after packets.NodeTrustLevel)
 }
 
 type ConsensusController interface {

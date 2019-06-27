@@ -125,6 +125,9 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	/* Ensure that the target is LocalNode */
+	target.profile.(common2.LocalNodeProfile).LocalNodeProfile()
+
 	target.stateEvidence = c.stateEvidence
 	target.claimSignature = c.claimSignature
 
@@ -234,10 +237,12 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp comm
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	var err error
 	trustBefore = c.trust
-	modifiedNsh, _ = c._applyNodeMembership(mp)
+	modifiedNsh, err = c._applyNodeMembership(mp)
 
-	if witness.GetShortNodeID() != c.GetShortNodeID() { // a node can't be a witness to itself
+	if err == nil && witness.GetShortNodeID() != c.GetShortNodeID() { // a node can't be a witness to itself
+		trustBefore = c.trust
 		switch {
 		case c.neighborReports == 0:
 			c.trust.UpdateKeepNegative(packets.TrustBySome)
@@ -249,17 +254,21 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp comm
 			c.trust.UpdateKeepNegative(packets.TrustByNeighbors)
 		}
 		c.neighborReports++
+
+		if trustBefore != c.trust {
+			c.callback.onTrustUpdated(c, trustBefore, c.trust)
+		}
 	}
 
 	return modifiedNsh, trustBefore, c.trust
 }
 
-func (r *NodeAppearance) Frauds() errors.FraudFactory {
-	return r.callback.GetFraudFactory()
+func (c *NodeAppearance) Frauds() errors.FraudFactory {
+	return c.callback.GetFraudFactory()
 }
 
-func (r *NodeAppearance) Blames() errors.BlameFactory {
-	return r.callback.GetBlameFactory()
+func (c *NodeAppearance) Blames() errors.BlameFactory {
+	return c.callback.GetBlameFactory()
 }
 
 /* Evidence MUST be verified before this call */
@@ -276,6 +285,8 @@ func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile) (boo
 		c.neighbourWeight ^= common.FoldUint64(mp.StateEvidence.GetNodeStateHash().FoldToUint64())
 		c.stateEvidence = mp.StateEvidence
 		c.claimSignature = mp.ClaimSignature
+
+		c.callback.onNodeStateAssigned(c)
 
 		return true, nil
 	}
@@ -365,8 +376,10 @@ func (c *NodeAppearance) registerFraud(fraud errors.FraudError) error {
 		panic("empty fraud")
 	}
 
+	prevTrust := c.trust
 	if c.trust.Update(packets.FraudByThisNode) {
 		c.firstFraudDetails = &fraud
+		c.callback.onTrustUpdated(c, prevTrust, c.trust)
 	}
 	return fraud
 }
@@ -383,7 +396,10 @@ func (c *NodeAppearance) RegisterFraud(fraud errors.FraudError) error {
 	return c.registerFraud(fraud)
 }
 
-func (c *NodeAppearance) RegisterFraudWithTrust(fraud errors.FraudError) (trustBefore, trustAfter packets.NodeTrustLevel, err error) {
+/*
+deprecated
+*/
+func (c *NodeAppearance) RegisterFraudWithTrust(fraud errors.FraudError) (before, after packets.NodeTrustLevel, err error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -391,9 +407,10 @@ func (c *NodeAppearance) RegisterFraudWithTrust(fraud errors.FraudError) (trustB
 	if fraud.ViolatorNode() != c.GetProfile() {
 		panic("misplaced fraud")
 	}
-	trustBefore = c.trust
+
+	before = c.trust
 	err = c.registerFraud(fraud)
-	trustAfter = c.trust
+	after = c.trust
 
 	return
 }
