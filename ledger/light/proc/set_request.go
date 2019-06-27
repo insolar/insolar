@@ -116,23 +116,24 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 }
 
 func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq record.Virtual) error {
-	concrete := record.Unwrap(&virtReq)
-	req := concrete.(*record.Request)
+	// TODO: check it after INS-1939
+	// concrete := record.Unwrap(&virtReq)
+	// req := concrete.(*record.Request)
 
 	// Skip object creation and genesis
-	if req.CallType == record.CTMethod {
-		if p.dep.recentStorage.Count() > recentstorage.PendingRequestsLimit {
-			return insolar.ErrTooManyPendingRequests
-		}
-		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
-		recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
+	// if req.CallType == record.CTMethod {
+	// 	if p.dep.recentStorage.Count() > recentstorage.PendingRequestsLimit {
+	// 		return insolar.ErrTooManyPendingRequests
+	// 	}
+	// 	recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
+	// 	recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
 
-		// TODO: check it after INS-1939
-		// err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
-		// if err != nil {
-		// 	return errors.Wrap(err, "can't save result into filament-index")
-		// }
-	}
+	// TODO: check it after INS-1939
+	// err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
+	// if err != nil {
+	// 	return errors.Wrap(err, "can't save result into filament-index")
+	// }
+	// }
 
 	return nil
 }

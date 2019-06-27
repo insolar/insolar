@@ -108,13 +108,12 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 }
 
 func (p *SetResult) handlePendings(ctx context.Context, virtRec record.Virtual) error {
-	concrete := record.Unwrap(&virtRec)
-
-	rec := concrete.(*record.Result)
-	recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
-	recentStorage.RemovePendingRequest(ctx, rec.Object, *rec.Request.Record())
-
 	// TODO: check it after INS-1939
+	// concrete := record.Unwrap(&virtRec)
+	//
+	// rec := concrete.(*record.Result)
+	// recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
+	// recentStorage.RemovePendingRequest(ctx, rec.Object, *rec.Request.Record())
 	// err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
 	// if err != nil {
 	// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
