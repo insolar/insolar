@@ -59,11 +59,11 @@ import (
 )
 
 type stater interface {
-	State() ([]byte, error)
+	State() []byte
 }
 
 type calculator struct {
-	ArtifactManager            stater                             `inject:""`
+	Stater                     stater                             `inject:""`
 	NodeNetwork                insolar.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
@@ -80,17 +80,14 @@ func (c *calculator) Init(ctx context.Context) error {
 	return nil
 }
 
-func (c *calculator) getStateHash(_ insolar.StaticRole) (OriginHash, error) {
+func (c *calculator) getStateHash(_ insolar.StaticRole) OriginHash {
 	// TODO: do something with role
-	return c.ArtifactManager.State()
+	return c.Stater.State()
 }
 
 func (c *calculator) GetPulseProof(entry *PulseEntry) (OriginHash, *PulseProof, error) {
 	role := c.NodeNetwork.GetOrigin().Role()
-	stateHash, err := c.getStateHash(role)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Failed to get node stateHash")
-	}
+	stateHash := c.getStateHash(role)
 
 	pulseHash := entry.hash(c.merkleHelper)
 	nodeInfoHash := c.merkleHelper.nodeInfoHash(pulseHash, stateHash)

@@ -465,10 +465,10 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist
 }
 
 type staterMock struct {
-	stateFunc func() ([]byte, error)
+	stateFunc func() []byte
 }
 
-func (m staterMock) State() ([]byte, error) {
+func (m staterMock) State() []byte {
 	return m.stateFunc()
 }
 
@@ -501,8 +501,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	s.Require().NoError(err)
 
 	amMock := staterMock{
-		stateFunc: func() ([]byte, error) {
-			return make([]byte, packets.HashLength), nil
+		stateFunc: func() []byte {
+			return make([]byte, packets.HashLength)
 		},
 	}
 

@@ -265,8 +265,8 @@ func TestSendMessageHandler(t *testing.T) {
 
 type stater struct{}
 
-func (s *stater) State() ([]byte, error) {
-	return []byte("123"), nil
+func (s *stater) State() []byte {
+	return []byte("123")
 }
 
 func TestServiceNetwork_StartStop(t *testing.T) {

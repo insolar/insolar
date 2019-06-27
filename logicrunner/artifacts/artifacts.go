@@ -116,7 +116,7 @@ type Client interface {
 	) error
 
 	// State returns hash state for artifact manager.
-	State() ([]byte, error)
+	State() []byte
 
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
 	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
