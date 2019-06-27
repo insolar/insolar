@@ -69,10 +69,6 @@ type Ledger struct {
 
 	// Exporter holds configuration of Exporter
 	Exporter Exporter
-
-	// PendingRequestsLimit holds a number of pending requests, what can be stored in the system
-	// before they are declined
-	PendingRequestsLimit int
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -91,7 +87,5 @@ func NewLedger() Ledger {
 		Exporter: Exporter{
 			ExportLag: 40, // 40 seconds
 		},
-
-		PendingRequestsLimit: 1000,
 	}
 }

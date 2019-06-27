@@ -60,6 +60,7 @@ type Runner struct {
 	cfg                 *configuration.APIRunner
 	keyCache            map[string]crypto.PublicKey
 	cacheLock           *sync.RWMutex
+	timeout             time.Duration
 	SeedManager         *seedmanager.SeedManager
 	SeedGenerator       seedmanager.SeedGenerator
 }
@@ -77,27 +78,19 @@ func checkConfig(cfg *configuration.APIRunner) error {
 	if len(cfg.RPC) == 0 {
 		return errors.New("[ checkConfig ] RPC must exist")
 	}
-	if cfg.Timeout == 0 {
-		return errors.New("[ checkConfig ] Timeout must not be null")
-	}
 
 	return nil
 }
 
 func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
-	err := rpcServer.RegisterService(NewSeedService(ar), "seed")
+	err := rpcServer.RegisterService(NewNodeService(ar), "node")
 	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: seed")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
 	}
 
-	err = rpcServer.RegisterService(NewInfoService(ar), "info")
+	err = rpcServer.RegisterService(NewInfoService(ar), "network")
 	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: info")
-	}
-
-	err = rpcServer.RegisterService(NewStatusService(ar), "status")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: status")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: network")
 	}
 
 	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
@@ -126,6 +119,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 		server:    &http.Server{Addr: addrStr},
 		rpcServer: rpcServer,
 		cfg:       cfg,
+		timeout:   30 * time.Second,
 		keyCache:  make(map[string]crypto.PublicKey),
 		cacheLock: &sync.RWMutex{},
 	}

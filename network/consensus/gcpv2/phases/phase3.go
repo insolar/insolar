@@ -148,9 +148,9 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	defer cancel()
 
 	if !c.workerPrePhase3(ctx) {
-		//context was stopped in a hard way, we are dead in terms of consensus
-		//TODO should wait for further packets to decide if we need to turn ourselves into suspended state
-		//c.R.StopRoundByTimeout()
+		// context was stopped in a hard way, we are dead in terms of consensus
+		// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
+		// c.R.StopRoundByTimeout()
 		return
 	}
 	d := c.calcGshPair()
@@ -158,9 +158,9 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	go c.workerSendPhase3(ctx, d)
 
 	if !c.workerRecvPhase3(ctx, d) {
-		//context was stopped in a hard way, we are dead in terms of consensus
-		//TODO should wait for further packets to decide if we need to turn ourselves into suspended state
-		//c.R.StopRoundByTimeout()
+		// context was stopped in a hard way, we are dead in terms of consensus
+		// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
+		// c.R.StopRoundByTimeout()
 		return
 	}
 
@@ -446,7 +446,7 @@ outer:
 
 	b := c.R.CreateNextPopulationBuilder()
 	priming := c.R.GetPrimingCloudHash()
-	//population is to be updated somewhere here
+	// population is to be updated somewhere here
 	b.SetGlobulaStateHash(priming)
 	b.SealCensus()
 	c.R.FinishRound(b, priming)

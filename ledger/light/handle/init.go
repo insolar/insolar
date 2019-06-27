@@ -88,6 +88,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		case payload.TypeSetCode:
 			h := NewSetCode(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
+		case payload.TypeSetRequest:
+			h := NewSetRequest(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
 		case payload.TypePass:
 			err = s.handlePass(ctx, f, meta)
 		case payload.TypeError:
@@ -170,6 +173,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
+
 	payloadType, err := payload.UnmarshalType(originMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
@@ -191,6 +195,9 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeSetCode:
 		h := NewSetCode(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeSetRequest:
+		h := NewSetRequest(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())

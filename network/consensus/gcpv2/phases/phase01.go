@@ -137,9 +137,8 @@ func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core
 func (c *Phase1Controller) _handleNodeData(p1 packets.Phase1PacketReader, n *core.NodeAppearance) (bool, error) {
 	dupErr := n.SetReceivedWithDupCheck(c.GetPacketType())
 
-	//if p1.HasSelfIntro() {
+	// if p1.HasSelfIntro() {
 	// TODO register protocol misbehavior - IntroClaim was not expected
-	//}
 
 	mp := common.NewMembershipProfile(p1.GetNodeIndex(), p1.GetNodePower(), p1.GetNodeStateHashEvidence(), p1.GetNodeClaimsSignature())
 	if c.R.GetNodeCount() != int(p1.GetNodeCount()) {

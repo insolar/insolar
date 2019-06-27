@@ -36,6 +36,8 @@ type Dependencies struct {
 	UpdateObject           func(*UpdateObject)
 	SetBlob                func(*SetBlob)
 	SetRecord              func(*SetRecord)
+	SetRequest             func(*SetRequest)
+	SetActivationRequest   func(*SetActivationRequest)
 	RegisterChild          func(*RegisterChild)
 	GetPendingRequests     func(*GetPendingRequests)
 	GetPendingRequestID    func(*GetPendingRequestID)
@@ -61,4 +63,37 @@ func (p *ReturnReply) Proceed(ctx context.Context) error {
 	case <-ctx.Done():
 	}
 	return nil
+}
+
+// NewDependenciesMock returns all dependencies for handlers.
+// It's all empty.
+// Use it ONLY for tests.
+func NewDependenciesMock() *Dependencies {
+	return &Dependencies{
+		FetchJet:               func(*FetchJet) {},
+		CheckJet:               func(*CheckJet) {},
+		WaitHot:                func(*WaitHot) {},
+		WaitHotWM:              func(*WaitHotWM) {},
+		GetIndex:               func(*GetIndex) {},
+		GetIndexWM:             func(*GetIndexWM) {},
+		SendObject:             func(*SendObject) {},
+		GetCode:                func(*GetCode) {},
+		GetRequest:             func(*GetRequest) {},
+		UpdateObject:           func(*UpdateObject) {},
+		SetBlob:                func(*SetBlob) {},
+		SetRecord:              func(*SetRecord) {},
+		SetRequest:             func(*SetRequest) {},
+		SetActivationRequest:   func(*SetActivationRequest) {},
+		RegisterChild:          func(*RegisterChild) {},
+		GetPendingRequests:     func(*GetPendingRequests) {},
+		GetPendingRequestID:    func(*GetPendingRequestID) {},
+		GetJet:                 func(*GetJet) {},
+		GetChildren:            func(*GetChildren) {},
+		HotData:                func(*HotData) {},
+		PassState:              func(*PassState) {},
+		CalculateID:            func(*CalculateID) {},
+		SetCode:                func(*SetCode) {},
+		GetPendingFilament:     func(*GetPendingFilament) {},
+		RefreshPendingFilament: func(*RefreshPendingFilament) {},
+	}
 }

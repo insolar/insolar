@@ -55,18 +55,18 @@ func storeDrop(
 	ctx context.Context,
 	drops drop.Modifier,
 	rawDrop []byte,
-) error {
+) (*drop.Drop, error) {
 	d, err := drop.Decode(rawDrop)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
-		return err
+		return nil, err
 	}
 	err = drops.Set(ctx, *d)
 	if err != nil {
-		return errors.Wrapf(err, "heavyserver: drop storing failed")
+		return nil, errors.Wrapf(err, "heavyserver: drop storing failed")
 	}
 
-	return nil
+	return d, nil
 }
 
 func storeBlobs(
@@ -81,14 +81,18 @@ func storeBlobs(
 	for _, rwb := range rawBlobs {
 		b, err := blob.Decode(rwb)
 		if err != nil {
-			inslog.Error(err, "heavyserver: deserialize blob failed")
+			inslog.Error("heavyserver: deserialize blob failed: ", err)
 			continue
 		}
 
 		blobID := object.CalculateIDForBlob(pcs, pn, b.Value)
 		err = blobs.Set(ctx, *blobID, *b)
 		if err != nil {
-			inslog.Error(err, "heavyserver: blob storing failed")
+			if err == blob.ErrOverride {
+				inslog.Debug("heavyserver: blob storing failed: ", err)
+			} else {
+				inslog.Error("heavyserver: blob storing failed: ", err)
+			}
 			continue
 		}
 	}

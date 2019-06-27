@@ -114,7 +114,6 @@ func initComponents(
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
-	isGenesis bool,
 
 ) (*component.Manager, insolar.TerminationHandler) {
 	cm := component.Manager{}
@@ -128,7 +127,7 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm)
 	checkError(ctx, err, "failed to start Network")
 
 	terminationHandler := termination.NewHandler(nw)
@@ -166,6 +165,8 @@ func initComponents(
 		keyProcessor,
 		certManager,
 		logicRunner,
+		logicrunner.NewLogicExecutor(),
+		logicrunner.NewMachinesManager(),
 		nodeNetwork,
 		nw,
 		pulsemanager.NewPulseManager(),
@@ -181,6 +182,7 @@ func initComponents(
 		messageBus,
 		contractRequester,
 		artifacts.NewClient(b),
+		artifacts.NewDescriptorsCache(),
 		jc,
 		pulses,
 		jet.NewStore(),

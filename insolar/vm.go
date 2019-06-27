@@ -54,16 +54,13 @@ type MachineLogicExecutor interface {
 	) (
 		objectState []byte, err error,
 	)
-	Stop() error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.LogicRunner -o ../testutils -s _mock.go
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	HandleValidateCaseBindMessage(context.Context, Parcel) (res Reply, err error)
-	HandleValidationResultsMessage(context.Context, Parcel) (res Reply, err error)
-	HandleExecutorResultsMessage(context.Context, Parcel) (res Reply, err error)
+	LRI()
 	OnPulse(context.Context, Pulse) error
 }
 
@@ -100,4 +97,25 @@ type LogicCallContext struct {
 	Pulse           Pulse      // Number of the pulse
 	Immutable       bool
 	TraceID         string
+}
+
+// ContractConstructor is a typedef for wrapper contract header
+type ContractMethod func([]byte, []byte) ([]byte, []byte, error)
+
+// ContractMethods maps name to contract method
+type ContractMethods map[string]ContractMethod
+
+// ContractConstructor is a typedef of typical contract constructor
+type ContractConstructor func([]byte) ([]byte, error)
+
+// ContractConstructors maps name to contract constructor
+type ContractConstructors map[string]ContractConstructor
+
+// ContractWrapper stores all needed about contract wrapper (it's methods/constructors)
+type ContractWrapper struct {
+	GetCode      ContractMethod
+	GetPrototype ContractMethod
+
+	Methods      ContractMethods
+	Constructors ContractConstructors
 }

@@ -189,8 +189,8 @@ func (i *InMemoryIndex) ForID(ctx context.Context, pn insolar.PulseNumber, objID
 	return b.lifeline()
 }
 
-// ForPNAndJet returns a collection of buckets for a provided pn and jetID
-func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []FilamentIndex {
+// ForPulse returns a collection of buckets for a provided pulse number.
+func (i *InMemoryIndex) ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
@@ -199,16 +199,10 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		return nil
 	}
 
-	res := []FilamentIndex{}
-
+	res := make([]FilamentIndex, 0, len(bucks))
 	for _, b := range bucks {
-		if b.objectMeta.Lifeline.JetID != jetID {
-			continue
-		}
-
 		clonedLfl := CloneIndex(b.objectMeta.Lifeline)
 		var clonedRecords []insolar.ID
-
 		clonedRecords = append(clonedRecords, b.objectMeta.PendingRecords...)
 
 		res = append(res, FilamentIndex{
@@ -218,7 +212,6 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 			PendingRecords:   clonedRecords,
 		})
 	}
-
 	return res
 }
 
@@ -277,7 +270,14 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	metaID := *insolar.NewID(pn, hash)
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
-	if err != nil {
+	if err == ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK (nil error). When deduplication will be implemented
+		// we should change `nil` to `ErrOverride` here.
+		return nil
+	} else if err != nil {
 		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 
@@ -335,7 +335,14 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	metaID := *insolar.NewID(pn, hash)
 
 	err := i.recordStorage.Set(ctx, metaID, record.Material{Virtual: &pfv})
-	if err != nil {
+	if err == ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK (nil error). When deduplication will be implemented
+		// we should change `nil` to `ErrOverride` here.
+		return nil
+	} else if err != nil {
 		return errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
 

@@ -20,8 +20,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -33,9 +31,7 @@ type ExecutionState struct {
 
 	Ref Ref // Object reference
 
-	ObjectDescriptor    artifacts.ObjectDescriptor
-	PrototypeDescriptor artifacts.ObjectDescriptor
-	CodeDescriptor      artifacts.CodeDescriptor
+	ObjectDescriptor artifacts.ObjectDescriptor
 
 	Broker                *ExecutionBroker
 	CurrentList           *CurrentExecutionList
@@ -65,20 +61,6 @@ func (es *ExecutionState) RegisterLogicRunner(lr *LogicRunner) {
 		ledgerChecked: sync.Once{},
 		lr:            lr,
 	}
-}
-
-func (es *ExecutionState) WrapError(current *Transcript, err error, message string) error {
-	if err == nil {
-		err = errors.New(message)
-	} else {
-		err = errors.Wrap(err, message)
-	}
-	res := Error{Err: err}
-	res.Contract = &es.Ref
-	if current != nil {
-		res.Request = current.RequestRef
-	}
-	return res
 }
 
 func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Message {
@@ -112,6 +94,8 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			es.pending = message.NotPending
 			sendExecResults = true
 			es.LedgerHasMoreRequests = true
+		} else if es.Broker.finished.Len() > 0 {
+			sendExecResults = true
 		}
 
 		// rotation results also contain finished requests
@@ -208,7 +192,7 @@ func (es *ExecutionState) executeTranscript(ctx context.Context, t *Transcript, 
 	es.CurrentList.Set(*t.RequestRef, t)
 	es.Unlock()
 
-	args.lr.executeOrValidate(t.Context, es, t)
+	args.lr.executeAndReply(t.Context, es, t)
 
 	es.Lock()
 	es.CurrentList.Delete(*t.RequestRef)

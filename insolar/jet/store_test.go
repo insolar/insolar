@@ -58,8 +58,10 @@ func TestJetStorage_SplitJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	s := NewStore()
 
-	left, right, err := s.Split(ctx, 100, *insolar.NewJetID(0, nil))
+	zeroJet := insolar.ZeroJetID
+	left, right, err := s.Split(ctx, 100, insolar.ZeroJetID)
 	require.NoError(t, err)
+	require.Equal(t, "[JET 0 -]", zeroJet.DebugString())
 	require.Equal(t, "[JET 1 0]", left.DebugString())
 	require.Equal(t, "[JET 1 1]", right.DebugString())
 

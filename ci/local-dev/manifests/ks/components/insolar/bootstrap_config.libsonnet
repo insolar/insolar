@@ -14,7 +14,7 @@ local make_min_roles() = {
   generate():: {
 
     // common fields
-    root_keys_file: '/opt/insolar/config/root_member_keys.json',
+    members_keys_dir: '/opt/insolar/config/',
     node_keys_dir: '/opt/insolar/config/nodes',
     discovery_keys_dir: '/opt/insolar/config/discovery',
     heavy_genesis_config_file: "/opt/insolar/config/heavy_genesis.json",

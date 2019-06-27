@@ -17,12 +17,14 @@
 package helloworld
 
 import (
+	"encoding/json"
 	"fmt"
+
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/contract/member/signer"
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
 	hwProxy "github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
@@ -91,14 +93,41 @@ func (hw *HelloWorld) CountChild() (interface{}, error) {
 	return count, nil
 }
 
-func (hw *HelloWorld) Call(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
-	var name string
-	switch method {
+type Request struct {
+	JsonRpc  string `json:"jsonrpc"`
+	Id       int    `json:"id"`
+	Method   string `json:"method"`
+	Params   Params `json:"params"`
+	LogLevel string `json:"logLevel,omitempty"`
+}
+
+type Params struct {
+	Seed       string      `json:"seed"`
+	CallSite   string      `json:"callSite"`
+	CallParams interface{} `json:"callParams"`
+	Reference  string      `json:"reference"`
+	PublicKey  string      `json:"memberPubKey"`
+}
+
+func (hw *HelloWorld) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
+	var signature string
+	var pulseTimeStamp int64
+	var rawRequest []byte
+
+	err := signer.UnmarshalParams(signedRequest, &rawRequest, &signature, &pulseTimeStamp)
+	if err != nil {
+		return nil, fmt.Errorf(" Failed to decode: %s", err.Error())
+	}
+
+	request := Request{}
+	err = json.Unmarshal(rawRequest, &request)
+	if err != nil {
+		return nil, fmt.Errorf(" Failed to unmarshal: %s", err.Error())
+	}
+
+	switch request.Params.CallSite {
 	case "Greet":
-		if err := signer.UnmarshalParams(params, &name); err != nil {
-			return nil, fmt.Errorf("[ registerNodeCall ] Can't unmarshal params: %s", err.Error())
-		}
-		return hw.Greet(name)
+		return hw.Greet(request.Params.CallParams.(map[string]interface{})["name"].(string))
 	case "Count":
 		return hw.Count()
 	case "Errored":
@@ -108,7 +137,7 @@ func (hw *HelloWorld) Call(rootDomain insolar.Reference, method string, params [
 	case "CountChild":
 		return hw.CountChild()
 	default:
-		return nil, errors.New("Unknown method")
+		return nil, errors.New("Unknown method " + request.Params.CallSite)
 	}
 }
 

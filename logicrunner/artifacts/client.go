@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
-
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -47,21 +46,13 @@ type localStorage struct {
 	storage     map[insolar.Reference]interface{}
 }
 
-/*
-	objectStorageLock sync.RWMutex
-	objectStorage     map[insolar.Reference]ObjectDescriptor
-
-	codeStorageLock sync.RWMutex
-	codeStorage     map[insolar.Reference]CodeDescriptor
-}*/
-
 func (s *localStorage) Initialized() {
 	s.initialized = true
 }
 
 func (s *localStorage) StoreObject(reference insolar.Reference, descriptor interface{}) {
 	if s.initialized {
-		panic("Trying to initialize cache after initialization was finished")
+		panic("Trying to initialize singleFlightCache after initialization was finished")
 	}
 	s.storage[reference] = descriptor
 }
@@ -109,8 +100,6 @@ type client struct {
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
 	localStorage         *localStorage
-
-	codeCache map[insolar.ID]CodeDescriptor
 }
 
 // State returns hash state for artifact manager.
@@ -126,7 +115,6 @@ func NewClient(sender bus.Sender) *client { // nolint
 		senders:              messagebus.NewSenders(),
 		sender:               sender,
 		localStorage:         newLocalStorage(),
-		codeCache:            map[insolar.ID]CodeDescriptor{},
 	}
 }
 
@@ -152,26 +140,52 @@ func (m *client) RegisterRequest(
 	}
 
 	virtRec := record.Wrap(request)
+	buf, err := virtRec.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal record")
+	}
+
+	h := m.PCS.ReferenceHasher()
+	_, err = h.Write(buf)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to calculate hash")
+	}
+	recID := *insolar.NewID(currentPN, h.Sum(nil))
+
+	msg, err := payload.NewMessage(&payload.SetRequest{
+		Request: buf,
+	})
 
 	var recRef *insolar.Reference
 	switch request.CallType {
 	case record.CTMethod:
 		recRef = request.Object
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-		recID := insolar.NewID(currentPN, hash)
-		recRef = insolar.NewReference(*recID)
+		recRef = insolar.NewReference(recID)
 	default:
 		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
 
-	id, err := m.setRecord(
-		ctx,
-		virtRec,
-		*recRef,
-	)
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
+	defer done()
 
-	return id, errors.Wrap(err, "[ RegisterRequest ] ")
+	rep, ok := <-reps
+	if !ok {
+		return nil, ErrNoReply
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return &p.ID, nil
+	case *payload.Error:
+		return nil, errors.New(p.Text)
+	default:
+		return nil, fmt.Errorf("RegisterRequest: unexpected reply: %#v", p)
+	}
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -200,10 +214,6 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	if cd, ok := m.codeCache[*code.Record()]; ok {
-		return cd, nil
-	}
-
 	msg, err := payload.NewMessage(&payload.GetCode{
 		CodeID: *code.Record(),
 	})
@@ -216,7 +226,7 @@ func (m *client) GetCode(
 
 	rep, ok := <-reps
 	if !ok {
-		return nil, errors.New("no reply")
+		return nil, ErrNoReply
 	}
 
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
@@ -241,7 +251,6 @@ func (m *client) GetCode(
 			machineType: codeRecord.MachineType,
 			code:        p.Code,
 		}
-		m.codeCache[*code.Record()] = desc
 		return desc, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
@@ -333,8 +342,8 @@ func (m *client) GetObject(
 		}
 	}
 	if !success() {
-		logger.Error("no reply")
-		return nil, errors.New("no reply")
+		logger.Error(ErrNoReply)
+		return nil, ErrNoReply
 	}
 
 	rec := record.Material{}
@@ -602,7 +611,6 @@ func (m *client) DeployCode(
 		Code:   code,
 	}
 
-
 	pl, err := m.retryer(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
 	if err != nil {
 		return nil, err
@@ -629,7 +637,7 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 		done()
 
 		if !ok {
-			return nil, errors.New("no reply")
+			return nil, ErrNoReply
 		}
 		pl, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
@@ -645,7 +653,6 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 	return nil, fmt.Errorf("flow cancelled, retries exceeded")
 }
 
-
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 //
@@ -654,7 +661,7 @@ func (m *client) ActivatePrototype(
 	ctx context.Context,
 	object, parent, code insolar.Reference,
 	memory []byte,
-) (ObjectDescriptor, error) {
+) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivatePrototype")
 	instrumenter := instrument(ctx, "ActivatePrototype").err(&err)
@@ -665,8 +672,8 @@ func (m *client) ActivatePrototype(
 		span.End()
 		instrumenter.end()
 	}()
-	desc, err := m.activateObject(ctx, object, code, true, parent, false, memory)
-	return desc, err
+	err = m.activateObject(ctx, object, code, true, parent, false, memory)
+	return err
 }
 
 // ActivateObject creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -678,7 +685,7 @@ func (m *client) ActivateObject(
 	object, parent, prototype insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (ObjectDescriptor, error) {
+) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivateObject")
 	instrumenter := instrument(ctx, "ActivateObject").err(&err)
@@ -689,8 +696,8 @@ func (m *client) ActivateObject(
 		span.End()
 		instrumenter.end()
 	}()
-	desc, err := m.activateObject(ctx, object, prototype, false, parent, asDelegate, memory)
-	return desc, err
+	err = m.activateObject(ctx, object, prototype, false, parent, asDelegate, memory)
+	return err
 }
 
 // DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
@@ -699,7 +706,7 @@ func (m *client) ActivateObject(
 // Deactivated object cannot be changed.
 func (m *client) DeactivateObject(
 	ctx context.Context, request insolar.Reference, obj ObjectDescriptor, result []byte,
-) (*insolar.ID, error) {
+) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
 	instrumenter := instrument(ctx, "DeactivateObject").err(&err)
@@ -721,7 +728,7 @@ func (m *client) DeactivateObject(
 		Payload: result,
 	}
 
-	desc, err := m.sendUpdateObject(
+	err = m.sendUpdateObject(
 		ctx,
 		record.Wrap(deactivate),
 		record.Wrap(resultRecord),
@@ -729,9 +736,9 @@ func (m *client) DeactivateObject(
 		nil,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to deactivate object")
+		return errors.Wrap(err, "failed to deactivate object")
 	}
-	return &desc.State, nil
+	return nil
 }
 
 // UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -744,7 +751,7 @@ func (m *client) UpdateObject(
 	object ObjectDescriptor,
 	memory []byte,
 	result []byte,
-) (ObjectDescriptor, error) {
+) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdateObject")
 	instrumenter := instrument(ctx, "UpdateObject").err(&err)
@@ -758,10 +765,10 @@ func (m *client) UpdateObject(
 
 	if object.IsPrototype() {
 		err = errors.New("object is not an instance")
-		return nil, err
+		return err
 	}
-	desc, err := m.updateObject(ctx, request, object, memory, result)
-	return desc, err
+	err = m.updateObject(ctx, request, object, memory, result)
+	return err
 }
 
 // RegisterValidation marks provided object state as approved or disapproved.
@@ -850,14 +857,14 @@ func (m *client) activateObject(
 	parent insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (ObjectDescriptor, error) {
+) error {
 	parentDesc, err := m.GetObject(ctx, parent)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	currentPN, err := m.pulse(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	activate := record.Activate{
@@ -874,7 +881,7 @@ func (m *client) activateObject(
 		Request: obj,
 	}
 
-	o, err := m.sendUpdateObject(
+	err = m.sendUpdateObject(
 		ctx,
 		record.Wrap(activate),
 		record.Wrap(result),
@@ -882,7 +889,7 @@ func (m *client) activateObject(
 		memory,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to activate")
+		return errors.Wrap(err, "failed to activate")
 	}
 
 	var (
@@ -905,17 +912,10 @@ func (m *client) activateObject(
 		asType,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to register as child while activating")
+		return errors.Wrap(err, "failed to register as child while activating")
 	}
 
-	return &objectDescriptor{
-		head:         o.Head,
-		state:        o.State,
-		prototype:    o.Prototype,
-		childPointer: o.ChildPointer,
-		memory:       memory,
-		parent:       o.Parent,
-	}, nil
+	return nil
 }
 
 func (m *client) updateObject(
@@ -924,7 +924,7 @@ func (m *client) updateObject(
 	obj ObjectDescriptor,
 	memory []byte,
 	result []byte,
-) (ObjectDescriptor, error) {
+) error {
 	var (
 		image *insolar.Reference
 		err   error
@@ -935,7 +935,7 @@ func (m *client) updateObject(
 		image, err = obj.Prototype()
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update object")
+		return errors.Wrap(err, "failed to update object")
 	}
 
 	amend := record.Amend{
@@ -951,7 +951,7 @@ func (m *client) updateObject(
 		Payload: result,
 	}
 
-	o, err := m.sendUpdateObject(
+	err = m.sendUpdateObject(
 		ctx,
 		record.Wrap(amend),
 		record.Wrap(resultRecord),
@@ -959,17 +959,10 @@ func (m *client) updateObject(
 		memory,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update object")
+		return errors.Wrap(err, "failed to update object")
 	}
 
-	return &objectDescriptor{
-		head:         o.Head,
-		state:        o.State,
-		prototype:    o.Prototype,
-		childPointer: o.ChildPointer,
-		memory:       memory,
-		parent:       o.Parent,
-	}, nil
+	return nil
 }
 
 func (m *client) setRecord(
@@ -1042,14 +1035,14 @@ func (m *client) sendUpdateObject(
 	resRec record.Virtual,
 	obj insolar.Reference,
 	memory []byte,
-) (*reply.Object, error) {
+) error {
 	objRecData, err := objRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "setRecord: can't serialize record")
+		return errors.Wrap(err, "setRecord: can't serialize record")
 	}
 	resRecData, err := resRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "setRecord: can't serialize record")
+		return errors.Wrap(err, "setRecord: can't serialize record")
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
@@ -1067,16 +1060,16 @@ func (m *client) sendUpdateObject(
 		}, nil)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "UpdateObject message failed")
+		return errors.Wrap(err, "UpdateObject message failed")
 	}
 
 	switch rep := genericReply.(type) {
-	case *reply.Object:
-		return rep, nil
+	case *reply.OK:
+		return nil
 	case *reply.Error:
-		return nil, rep.Error()
+		return rep.Error()
 	default:
-		return nil, fmt.Errorf("sendUpdateObject: unexpected reply: %#v", rep)
+		return fmt.Errorf("sendUpdateObject: unexpected reply: %#v", rep)
 	}
 }
 

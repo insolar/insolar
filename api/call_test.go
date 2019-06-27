@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -28,6 +29,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
@@ -49,33 +51,34 @@ type TimeoutSuite struct {
 	delay chan struct{}
 }
 
-type APIresp struct {
-	Result string
-	Error  string
-}
-
 func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
 
 	close(suite.delay)
-	suite.api.cfg.Timeout = 60
+	suite.api.timeout = 60 * time.Second
+	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.RequestConfigJSON{},
-		seed[:],
+		&requester.Request{
+			JSONRPC: "2.0",
+			ID:      1,
+			Method:  "api.call",
+			Params:  requester.Params{CallSite: "contract.createMember"},
+		},
+		seedString,
 	)
 	suite.NoError(err)
 
-	var result APIresp
+	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("", result.Error)
-	suite.Equal("OK", result.Result)
+	suite.Nil(result.Error)
+	suite.Equal("OK", result.Result.ContractResult)
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
@@ -83,24 +86,26 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed)
 
-	suite.api.cfg.Timeout = 1
+	suite.api.timeout = 1 * time.Second
+
+	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.RequestConfigJSON{},
-		seed[:],
+		&requester.Request{},
+		seedString,
 	)
 	suite.NoError(err)
 
 	close(suite.delay)
 
-	var result APIresp
+	var result requester.ContractAnswer
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("Messagebus timeout exceeded", result.Error)
-	suite.Equal("", result.Result)
+	suite.Equal("API timeout exceeded", result.Error.Message)
+	suite.Nil(result.Result)
 }
 
 func TestTimeoutSuite(t *testing.T) {
@@ -123,9 +128,9 @@ func TestTimeoutSuite(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner()
 	cfg.Address = "localhost:19192"
-	cfg.Timeout = 1
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)
+	timeoutSuite.api.timeout = 1 * time.Second
 
 	cert := testutils.NewCertificateMock(timeoutSuite.mc)
 	cert.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
@@ -162,6 +167,7 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.ContractRequester = cr
 	timeoutSuite.api.CertificateManager = cm
 	timeoutSuite.api.Start(timeoutSuite.ctx)
+	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(time.Minute, time.Minute)
 
 	requester.SetTimeout(25)
 	suite.Run(t, timeoutSuite)
@@ -174,6 +180,6 @@ func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *TimeoutSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(1*time.Minute)
+	suite.mc.Wait(1 * time.Minute)
 	suite.mc.Finish()
 }

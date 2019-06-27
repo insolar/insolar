@@ -64,17 +64,9 @@ func NewCryptographyService() insolar.CryptographyService {
 	return &nodeCryptographyService{}
 }
 
-type inPlaceKeyStore struct {
-	privateKey crypto.PrivateKey
-}
-
-func (ipks *inPlaceKeyStore) GetPrivateKey(string) (crypto.PrivateKey, error) {
-	return ipks.privateKey, nil
-}
-
 func NewKeyBoundCryptographyService(privateKey crypto.PrivateKey) insolar.CryptographyService {
 	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
-	keyStore := &inPlaceKeyStore{privateKey: privateKey}
+	keyStore := keystore.NewInplaceKeyStore(privateKey)
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	cryptographyService := NewCryptographyService()
 

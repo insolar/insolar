@@ -20,10 +20,10 @@ import (
 type IndexBucketAccessorMock struct {
 	t minimock.Tester
 
-	ForPNAndJetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex)
-	ForPNAndJetCounter    uint64
-	ForPNAndJetPreCounter uint64
-	ForPNAndJetMock       mIndexBucketAccessorMockForPNAndJet
+	ForPulseFunc       func(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex)
+	ForPulseCounter    uint64
+	ForPulsePreCounter uint64
+	ForPulseMock       mIndexBucketAccessorMockForPulse
 }
 
 //NewIndexBucketAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexBucketAccessor
@@ -34,97 +34,96 @@ func NewIndexBucketAccessorMock(t minimock.Tester) *IndexBucketAccessorMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.ForPNAndJetMock = mIndexBucketAccessorMockForPNAndJet{mock: m}
+	m.ForPulseMock = mIndexBucketAccessorMockForPulse{mock: m}
 
 	return m
 }
 
-type mIndexBucketAccessorMockForPNAndJet struct {
+type mIndexBucketAccessorMockForPulse struct {
 	mock              *IndexBucketAccessorMock
-	mainExpectation   *IndexBucketAccessorMockForPNAndJetExpectation
-	expectationSeries []*IndexBucketAccessorMockForPNAndJetExpectation
+	mainExpectation   *IndexBucketAccessorMockForPulseExpectation
+	expectationSeries []*IndexBucketAccessorMockForPulseExpectation
 }
 
-type IndexBucketAccessorMockForPNAndJetExpectation struct {
-	input  *IndexBucketAccessorMockForPNAndJetInput
-	result *IndexBucketAccessorMockForPNAndJetResult
+type IndexBucketAccessorMockForPulseExpectation struct {
+	input  *IndexBucketAccessorMockForPulseInput
+	result *IndexBucketAccessorMockForPulseResult
 }
 
-type IndexBucketAccessorMockForPNAndJetInput struct {
+type IndexBucketAccessorMockForPulseInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-	p2 insolar.JetID
 }
 
-type IndexBucketAccessorMockForPNAndJetResult struct {
+type IndexBucketAccessorMockForPulseResult struct {
 	r []FilamentIndex
 }
 
-//Expect specifies that invocation of IndexBucketAccessor.ForPNAndJet is expected from 1 to Infinity times
-func (m *mIndexBucketAccessorMockForPNAndJet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *mIndexBucketAccessorMockForPNAndJet {
-	m.mock.ForPNAndJetFunc = nil
+//Expect specifies that invocation of IndexBucketAccessor.ForPulse is expected from 1 to Infinity times
+func (m *mIndexBucketAccessorMockForPulse) Expect(p context.Context, p1 insolar.PulseNumber) *mIndexBucketAccessorMockForPulse {
+	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexBucketAccessorMockForPNAndJetExpectation{}
+		m.mainExpectation = &IndexBucketAccessorMockForPulseExpectation{}
 	}
-	m.mainExpectation.input = &IndexBucketAccessorMockForPNAndJetInput{p, p1, p2}
+	m.mainExpectation.input = &IndexBucketAccessorMockForPulseInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of IndexBucketAccessor.ForPNAndJet
-func (m *mIndexBucketAccessorMockForPNAndJet) Return(r []FilamentIndex) *IndexBucketAccessorMock {
-	m.mock.ForPNAndJetFunc = nil
+//Return specifies results of invocation of IndexBucketAccessor.ForPulse
+func (m *mIndexBucketAccessorMockForPulse) Return(r []FilamentIndex) *IndexBucketAccessorMock {
+	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexBucketAccessorMockForPNAndJetExpectation{}
+		m.mainExpectation = &IndexBucketAccessorMockForPulseExpectation{}
 	}
-	m.mainExpectation.result = &IndexBucketAccessorMockForPNAndJetResult{r}
+	m.mainExpectation.result = &IndexBucketAccessorMockForPulseResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexBucketAccessor.ForPNAndJet is expected once
-func (m *mIndexBucketAccessorMockForPNAndJet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *IndexBucketAccessorMockForPNAndJetExpectation {
-	m.mock.ForPNAndJetFunc = nil
+//ExpectOnce specifies that invocation of IndexBucketAccessor.ForPulse is expected once
+func (m *mIndexBucketAccessorMockForPulse) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *IndexBucketAccessorMockForPulseExpectation {
+	m.mock.ForPulseFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &IndexBucketAccessorMockForPNAndJetExpectation{}
-	expectation.input = &IndexBucketAccessorMockForPNAndJetInput{p, p1, p2}
+	expectation := &IndexBucketAccessorMockForPulseExpectation{}
+	expectation.input = &IndexBucketAccessorMockForPulseInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *IndexBucketAccessorMockForPNAndJetExpectation) Return(r []FilamentIndex) {
-	e.result = &IndexBucketAccessorMockForPNAndJetResult{r}
+func (e *IndexBucketAccessorMockForPulseExpectation) Return(r []FilamentIndex) {
+	e.result = &IndexBucketAccessorMockForPulseResult{r}
 }
 
-//Set uses given function f as a mock of IndexBucketAccessor.ForPNAndJet method
-func (m *mIndexBucketAccessorMockForPNAndJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex)) *IndexBucketAccessorMock {
+//Set uses given function f as a mock of IndexBucketAccessor.ForPulse method
+func (m *mIndexBucketAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex)) *IndexBucketAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.ForPNAndJetFunc = f
+	m.mock.ForPulseFunc = f
 	return m.mock
 }
 
-//ForPNAndJet implements github.com/insolar/insolar/ledger/object.IndexBucketAccessor interface
-func (m *IndexBucketAccessorMock) ForPNAndJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r []FilamentIndex) {
-	counter := atomic.AddUint64(&m.ForPNAndJetPreCounter, 1)
-	defer atomic.AddUint64(&m.ForPNAndJetCounter, 1)
+//ForPulse implements github.com/insolar/insolar/ledger/object.IndexBucketAccessor interface
+func (m *IndexBucketAccessorMock) ForPulse(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex) {
+	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.ForPulseCounter, 1)
 
-	if len(m.ForPNAndJetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ForPNAndJetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to IndexBucketAccessorMock.ForPNAndJet. %v %v %v", p, p1, p2)
+	if len(m.ForPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ForPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to IndexBucketAccessorMock.ForPulse. %v %v", p, p1)
 			return
 		}
 
-		input := m.ForPNAndJetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexBucketAccessorMockForPNAndJetInput{p, p1, p2}, "IndexBucketAccessor.ForPNAndJet got unexpected parameters")
+		input := m.ForPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, IndexBucketAccessorMockForPulseInput{p, p1}, "IndexBucketAccessor.ForPulse got unexpected parameters")
 
-		result := m.ForPNAndJetMock.expectationSeries[counter-1].result
+		result := m.ForPulseMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the IndexBucketAccessorMock.ForPNAndJet")
+			m.t.Fatal("No results are set for the IndexBucketAccessorMock.ForPulse")
 			return
 		}
 
@@ -133,16 +132,16 @@ func (m *IndexBucketAccessorMock) ForPNAndJet(p context.Context, p1 insolar.Puls
 		return
 	}
 
-	if m.ForPNAndJetMock.mainExpectation != nil {
+	if m.ForPulseMock.mainExpectation != nil {
 
-		input := m.ForPNAndJetMock.mainExpectation.input
+		input := m.ForPulseMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexBucketAccessorMockForPNAndJetInput{p, p1, p2}, "IndexBucketAccessor.ForPNAndJet got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexBucketAccessorMockForPulseInput{p, p1}, "IndexBucketAccessor.ForPulse got unexpected parameters")
 		}
 
-		result := m.ForPNAndJetMock.mainExpectation.result
+		result := m.ForPulseMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the IndexBucketAccessorMock.ForPNAndJet")
+			m.t.Fatal("No results are set for the IndexBucketAccessorMock.ForPulse")
 		}
 
 		r = result.r
@@ -150,39 +149,39 @@ func (m *IndexBucketAccessorMock) ForPNAndJet(p context.Context, p1 insolar.Puls
 		return
 	}
 
-	if m.ForPNAndJetFunc == nil {
-		m.t.Fatalf("Unexpected call to IndexBucketAccessorMock.ForPNAndJet. %v %v %v", p, p1, p2)
+	if m.ForPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to IndexBucketAccessorMock.ForPulse. %v %v", p, p1)
 		return
 	}
 
-	return m.ForPNAndJetFunc(p, p1, p2)
+	return m.ForPulseFunc(p, p1)
 }
 
-//ForPNAndJetMinimockCounter returns a count of IndexBucketAccessorMock.ForPNAndJetFunc invocations
-func (m *IndexBucketAccessorMock) ForPNAndJetMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ForPNAndJetCounter)
+//ForPulseMinimockCounter returns a count of IndexBucketAccessorMock.ForPulseFunc invocations
+func (m *IndexBucketAccessorMock) ForPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ForPulseCounter)
 }
 
-//ForPNAndJetMinimockPreCounter returns the value of IndexBucketAccessorMock.ForPNAndJet invocations
-func (m *IndexBucketAccessorMock) ForPNAndJetMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ForPNAndJetPreCounter)
+//ForPulseMinimockPreCounter returns the value of IndexBucketAccessorMock.ForPulse invocations
+func (m *IndexBucketAccessorMock) ForPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ForPulsePreCounter)
 }
 
-//ForPNAndJetFinished returns true if mock invocations count is ok
-func (m *IndexBucketAccessorMock) ForPNAndJetFinished() bool {
+//ForPulseFinished returns true if mock invocations count is ok
+func (m *IndexBucketAccessorMock) ForPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ForPNAndJetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ForPNAndJetCounter) == uint64(len(m.ForPNAndJetMock.expectationSeries))
+	if len(m.ForPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ForPulseCounter) == uint64(len(m.ForPulseMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.ForPNAndJetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ForPNAndJetCounter) > 0
+	if m.ForPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ForPulseCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.ForPNAndJetFunc != nil {
-		return atomic.LoadUint64(&m.ForPNAndJetCounter) > 0
+	if m.ForPulseFunc != nil {
+		return atomic.LoadUint64(&m.ForPulseCounter) > 0
 	}
 
 	return true
@@ -192,8 +191,8 @@ func (m *IndexBucketAccessorMock) ForPNAndJetFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexBucketAccessorMock) ValidateCallCounters() {
 
-	if !m.ForPNAndJetFinished() {
-		m.t.Fatal("Expected call to IndexBucketAccessorMock.ForPNAndJet")
+	if !m.ForPulseFinished() {
+		m.t.Fatal("Expected call to IndexBucketAccessorMock.ForPulse")
 	}
 
 }
@@ -213,8 +212,8 @@ func (m *IndexBucketAccessorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexBucketAccessorMock) MinimockFinish() {
 
-	if !m.ForPNAndJetFinished() {
-		m.t.Fatal("Expected call to IndexBucketAccessorMock.ForPNAndJet")
+	if !m.ForPulseFinished() {
+		m.t.Fatal("Expected call to IndexBucketAccessorMock.ForPulse")
 	}
 
 }
@@ -231,7 +230,7 @@ func (m *IndexBucketAccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.ForPNAndJetFinished()
+		ok = ok && m.ForPulseFinished()
 
 		if ok {
 			return
@@ -240,8 +239,8 @@ func (m *IndexBucketAccessorMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.ForPNAndJetFinished() {
-				m.t.Error("Expected call to IndexBucketAccessorMock.ForPNAndJet")
+			if !m.ForPulseFinished() {
+				m.t.Error("Expected call to IndexBucketAccessorMock.ForPulse")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -256,7 +255,7 @@ func (m *IndexBucketAccessorMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexBucketAccessorMock) AllMocksCalled() bool {
 
-	if !m.ForPNAndJetFinished() {
+	if !m.ForPulseFinished() {
 		return false
 	}
 

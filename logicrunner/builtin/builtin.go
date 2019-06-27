@@ -26,8 +26,19 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/preprocessor"
+	lrCommon "github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
+
+type LogicRunnerRPCStub interface {
+	GetCode(rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
+	RouteCall(rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
+	SaveAsChild(rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
+	SaveAsDelegate(rpctypes.UpSaveAsDelegateReq, *rpctypes.UpSaveAsDelegateResp) error
+	GetObjChildrenIterator(rpctypes.UpGetObjChildrenIteratorReq, *rpctypes.UpGetObjChildrenIteratorResp) error
+	GetDelegate(rpctypes.UpGetDelegateReq, *rpctypes.UpGetDelegateResp) error
+	DeactivateObject(rpctypes.UpDeactivateObjectReq, *rpctypes.UpDeactivateObjectResp) error
+}
 
 // BuiltIn is a contract runner engine
 type BuiltIn struct {
@@ -35,20 +46,28 @@ type BuiltIn struct {
 	// PrototypeRegistry    map[string]preprocessor.ContractWrapper
 	// PrototypeRefRegistry map[insolar.Reference]string
 	// Code ->
-	CodeRegistry    map[string]preprocessor.ContractWrapper
+	CodeRegistry    map[string]insolar.ContractWrapper
 	CodeRefRegistry map[insolar.Reference]string
 }
 
 // NewBuiltIn is an constructor
-func NewBuiltIn(_ insolar.MessageBus, _ artifacts.Client) *BuiltIn {
+func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
+	codeDescriptors := InitializeCodeDescriptors()
+	for _, codeDescriptor := range codeDescriptors {
+		am.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
+	}
+
+	prototypeDescriptors := InitializePrototypeDescriptors()
+	for _, prototypeDescriptor := range prototypeDescriptors {
+		am.InjectObjectDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
+	}
+
+	lrCommon.CurrentProxyCtx = NewProxyHelper(stub)
+
 	return &BuiltIn{
 		CodeRefRegistry: InitializeCodeRefs(),
 		CodeRegistry:    InitializeContractMethods(),
 	}
-}
-
-func (b *BuiltIn) Stop() error {
-	return nil
 }
 
 func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
@@ -56,6 +75,9 @@ func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCal
 
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
 	defer span.End()
+
+	gls.Set("callCtx", callCtx)
+	defer gls.Cleanup()
 
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {

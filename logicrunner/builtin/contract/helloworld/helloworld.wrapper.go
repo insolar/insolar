@@ -18,8 +18,8 @@ package helloworld
 
 import (
 	"github.com/insolar/insolar/insolar"
+	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 type ExtendableError struct {
@@ -300,17 +300,11 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [5]interface{}{}
+	args := [2]interface{}{}
 	var args0 insolar.Reference
 	args[0] = &args0
-	var args1 string
+	var args1 []byte
 	args[1] = &args1
-	var args2 []byte
-	args[2] = &args2
-	var args3 []byte
-	args[3] = &args3
-	var args4 []byte
-	args[4] = &args4
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -318,7 +312,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Call(args0, args1, args2, args3, args4)
+	ret0, ret1 := self.Call(args0, args1)
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -363,11 +357,11 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	return ret, err
 }
 
-func Initialize() XXX_preprocessor.ContractWrapper {
-	return XXX_preprocessor.ContractWrapper{
+func Initialize() XXX_insolar.ContractWrapper {
+	return XXX_insolar.ContractWrapper{
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
-		Methods: XXX_preprocessor.ContractMethods{
+		Methods: XXX_insolar.ContractMethods{
 			"Greet":       INSMETHOD_Greet,
 			"Count":       INSMETHOD_Count,
 			"Errored":     INSMETHOD_Errored,
@@ -375,7 +369,7 @@ func Initialize() XXX_preprocessor.ContractWrapper {
 			"CountChild":  INSMETHOD_CountChild,
 			"Call":        INSMETHOD_Call,
 		},
-		Constructors: XXX_preprocessor.ContractConstructors{
+		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
 		},
 	}

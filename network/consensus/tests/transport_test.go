@@ -243,6 +243,10 @@ func (r *emuTransportCryptography) IsSignOfSignatureMethodSupported(m common.Sig
 	return true
 }
 
+func (r *emuTransportCryptography) IsDigestOfSignatureMethodSupported(m common.SignatureMethod) bool {
+	return true
+}
+
 func (r *emuTransportCryptography) IsSignMethodSupported(m common.SignMethod) bool {
 	return true
 }
