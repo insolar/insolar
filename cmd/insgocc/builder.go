@@ -40,9 +40,11 @@ var (
 		insolar.GenesisNameRootDomain,
 		insolar.GenesisNameNodeDomain,
 		insolar.GenesisNameNodeRecord,
-		insolar.GenesisNameRootMember,
-		insolar.GenesisNameRootWallet,
-		insolar.GenesisNameAllowance,
+		insolar.GenesisNameMember,
+		insolar.GenesisNameWallet,
+		insolar.GenesisNameDeposit,
+		insolar.GenesisNameTariff,
+		insolar.GenesisNameCostCenter,
 	}
 )
 
@@ -154,7 +156,8 @@ func (cb *contractsBuilder) prepare(ctx context.Context, names ...string) error 
 			if err != nil {
 				return errors.Wrap(err, "can't open proxy file")
 			}
-			err = code.WriteProxy(rootdomain.GenesisRef(name+"_proto").String(), proxy)
+			protoRef := rootdomain.GenesisRef(name + rootdomain.GenesisPrototypeSuffix)
+			err = code.WriteProxy(protoRef.String(), proxy)
 			closeAndCheck(proxy)
 			if err != nil {
 				return errors.Wrap(err, "can't write proxy")

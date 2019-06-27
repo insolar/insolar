@@ -71,7 +71,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	// This is a workaround. VM should not register such requests.
 	// TODO: check it after INS-1939
 	if request.CallType != record.CTMethod {
-		inslogger.FromContext(ctx).Warn("request is not registered: calltype is not a callmethod")
+		inslogger.FromContext(ctx).Warn("request is not registered")
 		return s.setActivationRequest(ctx, reqID, virtual, f)
 	}
 

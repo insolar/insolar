@@ -24,8 +24,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/insolar/insolar/application/contract/nodedomain"
-	"github.com/insolar/insolar/application/contract/noderecord"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
@@ -33,7 +31,10 @@ import (
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
 	"github.com/insolar/insolar/platformpolicy"
+
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -91,7 +92,7 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 		assert.Equal(t, n.role, nodeRec.Record.Role, "role is the same")
 	}
 
-	assert.Equal(t, ndMemory.NodeIndexPK, expectIndexMap, "NodeDomain memory contains expected map")
+	assert.Equal(t, ndMemory.NodeIndexPublicKey, expectIndexMap, "NodeDomain memory contains expected map")
 }
 
 func initArtifactManager(t *testing.T) artifact.Manager {
@@ -106,7 +107,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 		if ref == genesisrefs.ContractNodeDomain {
 			descMock.MemoryFunc = func() []byte {
 				return insolar.MustSerialize(&nodedomain.NodeDomain{
-					NodeIndexPK: indexMap,
+					NodeIndexPublicKey: indexMap,
 				})
 			}
 		} else {
@@ -142,7 +143,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 		}
 		var rec nodedomain.NodeDomain
 		insolar.MustDeserialize(memory, &rec)
-		indexMap = rec.NodeIndexPK
+		indexMap = rec.NodeIndexPublicKey
 		return nil, nil
 	}
 	amMock.ActivateObjectFunc = func(

@@ -142,20 +142,20 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
+		SetActivationRequest: func(p *proc.SetActivationRequest) {
+			p.Dep(
+				h.PCS,
+				h.WriteAccessor,
+				h.RecordModifier,
+				h.Sender,
+			)
+		},
 		SetResult: func(p *proc.SetResult) {
 			p.Dep(
 				h.WriteAccessor,
 				h.RecordModifier,
 				h.RecentStorageProvider,
 				h.PendingModifier,
-				h.Sender,
-			)
-		},
-		SetActivationRequest: func(p *proc.SetActivationRequest) {
-			p.Dep(
-				h.PCS,
-				h.WriteAccessor,
-				h.RecordModifier,
 				h.Sender,
 			)
 		},

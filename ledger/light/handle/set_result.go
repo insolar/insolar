@@ -53,7 +53,7 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 	if err := f.Procedure(ctx, calc, true); err != nil {
 		return err
 	}
-	reqID := calc.Result.ID
+	resID := calc.Result.ID
 
 	virtual := record.Virtual{}
 	err = virtual.Unmarshal(msg.Result)
@@ -96,7 +96,7 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "can't get index")
 	}
 
-	setResult := proc.NewSetResult(s.message, virtual, reqID, objJetID)
+	setResult := proc.NewSetResult(s.message, virtual, resID, objJetID)
 	s.dep.SetResult(setResult)
 	return f.Procedure(ctx, setResult, false)
 }

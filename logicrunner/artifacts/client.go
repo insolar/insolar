@@ -152,9 +152,9 @@ func (m *client) RegisterRequest(
 	}
 	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
-	msg := &payload.SetRequest{
+	msg, err := payload.NewMessage(&payload.SetRequest{
 		Request: buf,
-	}
+	})
 
 	var recRef *insolar.Reference
 	switch request.CallType {
@@ -166,10 +166,18 @@ func (m *client) RegisterRequest(
 		return nil, errors.New("RegisterRequest: not supported call type " + request.CallType.String())
 	}
 
-	pl, err := m.retryer(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef, 3)
-	if err != nil {
-		return nil, err
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, ErrNoReply
 	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "RegisterRequest: failed to unmarshal reply")
+	}
+
 	switch p := pl.(type) {
 	case *payload.ID:
 		return &p.ID, nil
@@ -218,7 +226,7 @@ func (m *client) GetCode(
 
 	rep, ok := <-reps
 	if !ok {
-		return nil, errors.New("no reply")
+		return nil, ErrNoReply
 	}
 
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
@@ -334,8 +342,8 @@ func (m *client) GetObject(
 		}
 	}
 	if !success() {
-		logger.Error("no reply")
-		return nil, errors.New("no reply")
+		logger.Error(ErrNoReply)
+		return nil, ErrNoReply
 	}
 
 	rec := record.Material{}
@@ -629,7 +637,7 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 		done()
 
 		if !ok {
-			return nil, errors.New("no reply")
+			return nil, ErrNoReply
 		}
 		pl, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
@@ -829,13 +837,23 @@ func (m *client) RegisterResult(
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterResult: failed to marshal record")
 	}
-	msg := &payload.SetResult{
+
+	msg, err := payload.NewMessage(&payload.SetResult{
 		Result: buf,
+	})
+
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("RegisterResult: no reply")
 	}
-	pl, err := m.retryer(ctx, msg, insolar.DynamicRoleLightExecutor, obj, 3)
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "RegisterResult: failed to unmarshal reply")
 	}
+
 	switch p := pl.(type) {
 	case *payload.ID:
 		return &p.ID, nil

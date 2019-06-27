@@ -19,51 +19,70 @@
 package functest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestCreateMember(t *testing.T) {
-	result, err := signedRequest(&root, "CreateMember", "Member", "000")
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+	addBurnAddress(t)
+	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
 	require.NotEqual(t, "", ref)
 }
 
-func TestCreateMemberWrongNameType(t *testing.T) {
-	_, err := signedRequest(&root, "CreateMember", 111, "000")
-	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
-}
-
-func TestCreateMemberWrongKeyType(t *testing.T) {
-	_, err := signedRequest(&root, "CreateMember", "Member", 111)
-	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
-}
-
-// no error
-func _TestCreateMemberOneParameter(t *testing.T) {
-	_, err := signedRequest(&root, "CreateMember", "text")
+func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
+	member1, err := newUserWithKeys()
 	require.NoError(t, err)
+	member1.ref = root.ref
+	addBurnAddress(t)
+	_, err = retryableCreateMember(member1, "contract.createMember", map[string]interface{}{}, true)
+	require.Nil(t, err)
+
+	member2, err := newUserWithKeys()
+	require.NoError(t, err)
+	member2.ref = root.ref
+
+	_, err = retryableCreateMember(member2, "contract.createMember", map[string]interface{}{}, true)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "no more burn addresses left")
 }
 
-func TestCreateMemberOneParameterOtherType(t *testing.T) {
-	_, err := signedRequest(&root, "CreateMember", 111)
-	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
+func TestCreateMemberWithBadKey(t *testing.T) {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+	member.pubKey = "fake"
+	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
 }
 
 func TestCreateMembersWithSameName(t *testing.T) {
-	firstMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
+	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	secondMemberRef, err := signedRequest(&root, "CreateMember", "Member", "000")
+	member.ref = root.ref
+
+	addBurnAddress(t)
+
+	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 
-	require.NotEqual(t, firstMemberRef, secondMemberRef)
-}
+	addBurnAddress(t)
 
-func TestCreateMemberByNoRoot(t *testing.T) {
-	member := createMember(t, "Member1")
-	_, err := signedRequest(member, "CreateMember", "Member2", "000")
+	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "member for this publicKey already exist")
+
+	memberForBurn, err := newUserWithKeys()
 	require.NoError(t, err)
+	memberForBurn.ref = root.ref
+
+	_, err = retryableCreateMember(memberForBurn, "contract.createMember", map[string]interface{}{}, true)
 }

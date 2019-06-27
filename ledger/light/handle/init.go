@@ -172,6 +172,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
+
 	payloadType, err := payload.UnmarshalType(originMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
