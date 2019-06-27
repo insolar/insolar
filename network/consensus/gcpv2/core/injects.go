@@ -91,7 +91,7 @@ type RoundStrategy interface {
 	RandUint32() uint32
 	ShuffleNodeSequence(n int, swap func(i, j int))
 	IsEphemeralPulseAllowed() bool
-	ConfigureRoundContext(ctx context.Context) context.Context
+	ConfigureRoundContext(ctx context.Context, expectedPulse common.PulseNumber) context.Context
 	AdjustConsensusTimings(timings *common2.RoundTimings)
 }
 

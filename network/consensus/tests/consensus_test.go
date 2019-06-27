@@ -164,7 +164,7 @@ type EmuRoundStrategy struct {
 	bundle core.PhaseControllersBundle
 }
 
-func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context) context.Context {
+func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common.PulseNumber) context.Context {
 	return ctx
 }
 
