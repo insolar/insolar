@@ -124,6 +124,18 @@ func processError(err error, extraMsg string, resp *requester.ContractAnswer, in
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
+func setRequestLogLevel(ctx context.Context, insLog insolar.Logger, traceID string,
+	requestLogLevel string, contractAnswer *requester.ContractAnswer) {
+	if len(requestLogLevel) > 0 {
+		logLevelNumber, err := insolar.ParseLevel(requestLogLevel)
+		if err != nil {
+			processError(err, "Can't parse logLevel", contractAnswer, insLog, traceID)
+			return
+		}
+		ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
+	}
+}
+
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceID := utils.RandTraceID()
@@ -173,14 +185,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		if len(contractRequest.LogLevel) > 0 {
-			logLevelNumber, err := insolar.ParseLevel(contractRequest.LogLevel)
-			if err != nil {
-				processError(err, "Can't parse logLevel", &contractAnswer, insLog, traceID)
-				return
-			}
-			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
-		}
+		setRequestLogLevel(ctx, insLog, traceID, contractRequest.LogLevel, &contractAnswer)
 
 		if err := ar.checkSeed(contractRequest.Params.Seed); err != nil {
 			processError(err, err.Error(), &contractAnswer, insLog, traceID)
