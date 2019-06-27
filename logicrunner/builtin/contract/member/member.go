@@ -36,8 +36,9 @@ import (
 
 type Member struct {
 	foundation.BaseContract
-	Name      string
-	PublicKey string
+	RootDomain insolar.Reference
+	Name       string
+	PublicKey  string
 }
 
 func (m *Member) GetName() (string, error) {
@@ -50,10 +51,11 @@ func (m *Member) GetPublicKey() (string, error) {
 	return m.PublicKey, nil
 }
 
-func New(name string, key string) (*Member, error) {
+func New(rootDomain insolar.Reference, name string, key string) (*Member, error) {
 	return &Member{
-		Name:      name,
-		PublicKey: key,
+		RootDomain: rootDomain,
+		Name:       name,
+		PublicKey:  key,
 	}, nil
 }
 
@@ -85,7 +87,7 @@ type Params struct {
 }
 
 // Call method for authorized calls
-func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
+func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	var signature string
 	var pulseTimeStamp int64
 	var rawRequest []byte
@@ -118,37 +120,37 @@ func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (inter
 
 	switch request.Params.CallSite {
 	case "CreateHelloWorld":
-		return rootdomain.GetObject(rootDomain).CreateHelloWorld()
+		return rootdomain.GetObject(m.RootDomain).CreateHelloWorld()
 	case "contract.registerNode":
-		return m.registerNodeCall(rootDomain, params)
+		return m.registerNodeCall(params)
 	case "contract.getNodeRef":
-		return m.getNodeRefCall(rootDomain, params)
+		return m.getNodeRefCall(params)
 	case "contract.createMember":
-		return m.createMemberByKey(rootDomain, request.Params.PublicKey)
+		return m.createMemberByKey(request.Params.PublicKey)
 	case "wallet.addBurnAddresses":
-		return m.addBurnAddressesCall(rootDomain, params)
+		return m.addBurnAddressesCall(params)
 	case "wallet.getBalance":
 		return getBalanceCall(params)
 	case "wallet.transfer":
 		return m.transferCall(params)
 	case "Migration":
-		return m.migrationCall(rootDomain, params)
+		return m.migrationCall(params)
 	case "contract.getReferenceByPublicKey":
-		return m.getReferenceByPublicKey(rootDomain, request.Params.PublicKey)
+		return m.getReferenceByPublicKey(request.Params.PublicKey)
 	}
 	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
 
-func (m *Member) getNodeRefCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
+func (m *Member) getNodeRefCall(params map[string]interface{}) (interface{}, error) {
 
 	publicKey, ok := params["publicKey"].(string)
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
 	}
 
-	return m.getNodeRef(rd, publicKey)
+	return m.getNodeRef(publicKey)
 }
-func (m *Member) registerNodeCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
+func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, error) {
 
 	publicKey, ok := params["publicKey"].(string)
 	if !ok {
@@ -160,16 +162,16 @@ func (m *Member) registerNodeCall(rd insolar.Reference, params map[string]interf
 		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
 	}
 
-	return m.registerNode(rd, publicKey, role)
+	return m.registerNode(publicKey, role)
 }
-func (migrationAdminMember *Member) addBurnAddressesCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
+func (migrationAdminMember *Member) addBurnAddressesCall(params map[string]interface{}) (interface{}, error) {
 
 	burnAddressesI, ok := params["burnAddresses"].([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'burnAddresses' param")
 	}
 
-	rootDomain := rootdomain.GetObject(rd)
+	rootDomain := rootdomain.GetObject(migrationAdminMember.RootDomain)
 	migrationAdminRef, err := rootDomain.GetMigrationAdminMemberRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get migration daemon admin reference from root domain: %s", err.Error())
@@ -241,7 +243,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	return w.Transfer(amount, toMemberReference)
 }
-func (m *Member) migrationCall(rd insolar.Reference, params map[string]interface{}) (interface{}, error) {
+func (m *Member) migrationCall(params map[string]interface{}) (interface{}, error) {
 
 	inAmount, ok := params["inAmount"].(string)
 	if !ok {
@@ -259,12 +261,12 @@ func (m *Member) migrationCall(rd insolar.Reference, params map[string]interface
 		return nil, fmt.Errorf("failed to parse unHoldDate: %s", err.Error())
 	}
 
-	return m.migration(rd, params["txHash"].(string), params["burnAddress"].(string), *amount, unHoldDate)
+	return m.migration(params["txHash"].(string), params["burnAddress"].(string), *amount, unHoldDate)
 }
 
 // Platform methods
-func (m *Member) registerNode(rd insolar.Reference, public string, role string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rd)
+func (m *Member) registerNode(public string, role string) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(m.RootDomain)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node domain ref: %s", err.Error())
@@ -279,8 +281,8 @@ func (m *Member) registerNode(rd insolar.Reference, public string, role string) 
 	return cert, nil
 }
 
-func (m *Member) getNodeRef(rd insolar.Reference, publicKey string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rd)
+func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(m.RootDomain)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get nodeDmainRef: %s", err.Error())
@@ -296,15 +298,15 @@ func (m *Member) getNodeRef(rd insolar.Reference, publicKey string) (interface{}
 }
 
 // Create member methods
-func (m *Member) createMemberByKey(rd insolar.Reference, key string) (interface{}, error) {
+func (m *Member) createMemberByKey(key string) (interface{}, error) {
 
-	rootDomain := rootdomain.GetObject(rd)
+	rootDomain := rootdomain.GetObject(m.RootDomain)
 	burnAddresses, err := rootDomain.GetBurnAddress()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
 	}
 
-	new, err := m.createMember(rd, burnAddresses, key)
+	new, err := m.createMember(burnAddresses, key)
 	if err != nil {
 		if e := rootDomain.AddBurnAddress(burnAddresses); e != nil {
 			return nil, fmt.Errorf("failed to add burn address back: %s; after error: %s", e.Error(), err.Error())
@@ -318,13 +320,13 @@ func (m *Member) createMemberByKey(rd insolar.Reference, key string) (interface{
 
 	return new.Reference.String(), nil
 }
-func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key string) (*member.Member, error) {
+func (m *Member) createMember(ethAddr string, key string) (*member.Member, error) {
 	if key == "" {
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	memberHolder := member.New(ethAddr, key)
-	new, err := memberHolder.AsChild(rdRef)
+	memberHolder := member.New(m.RootDomain, ethAddr, key)
+	new, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
 	}
@@ -368,8 +370,8 @@ func (m *Member) getDeposits() ([]map[string]string, error) {
 }
 
 // Migration methods
-func (migrationDaemonMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
-	rd := rootdomain.GetObject(rdRef)
+func (migrationDaemonMember *Member) migration(txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
+	rd := rootdomain.GetObject(migrationDaemonMember.RootDomain)
 
 	// Get migraion daemon members
 	migrationDaemonMembers, err := rd.GetMigrationDaemonMembers()
@@ -469,8 +471,8 @@ func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 	return false, deposit.Deposit{}, nil
 }
 
-func (m *Member) getReferenceByPublicKey(rd insolar.Reference, publicKey string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rd)
+func (m *Member) getReferenceByPublicKey(publicKey string) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(m.RootDomain)
 	ref, err := rootDomain.GetReferenceByPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get get reference by public key: %s", err.Error())
