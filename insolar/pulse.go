@@ -159,6 +159,8 @@ type PulseSenderConfirmation struct {
 
 // FirstPulseDate is the hardcoded date of the first pulse
 const firstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
+const InvalidPulseEpoch int = 0
+const EphemeralPulseEpoch = InvalidPulseEpoch + 1
 
 const (
 	// FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
@@ -177,11 +179,23 @@ const (
 var GenesisPulse = &Pulse{
 	PulseNumber:      FirstPulseNumber,
 	Entropy:          [EntropySize]byte{},
-	EpochPulseNumber: 1,
+	EpochPulseNumber: EphemeralPulseEpoch + 1,
+	PulseTimestamp:   firstPulseDate,
+}
+
+// EphemeralPulse is used for discovery network bootstrap
+var EphemeralPulse = &Pulse{
+	PulseNumber:      FirstPulseNumber,
+	Entropy:          [EntropySize]byte{},
+	EpochPulseNumber: EphemeralPulseEpoch,
 	PulseTimestamp:   firstPulseDate,
 }
 
 // CalculatePulseNumber is helper for calculating next pulse number, when a network is being started
 func CalculatePulseNumber(now time.Time) PulseNumber {
 	return PulseNumber(now.Unix() - firstPulseDate + FirstPulseNumber)
+}
+
+func IsEphemeralPulse(p *Pulse) bool {
+	return p.EpochPulseNumber == EphemeralPulseEpoch
 }

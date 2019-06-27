@@ -65,7 +65,7 @@ import (
 
 // PulseAccessor provides methods for accessing pulses.
 type PulseAccessor interface {
-	ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.PulseNumber, error)
+	ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error)
 	Latest(ctx context.Context) (insolar.Pulse, error)
 }
 
@@ -214,12 +214,12 @@ func (p *PulseStorage) Append(ctx context.Context, pulse insolar.Pulse) error {
 	return insertWithHead(head)
 }
 
-func (p *PulseStorage) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.PulseNumber, err error) {
+func (p *PulseStorage) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
 	nd, err := p.get(pn)
 	if err != nil {
 		return
 	}
-	return nd.Pulse.PulseNumber, nil
+	return nd.Pulse, nil
 }
 
 func (p *PulseStorage) Latest(ctx context.Context) (insolar.Pulse, error) {

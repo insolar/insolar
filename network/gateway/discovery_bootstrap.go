@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -22,7 +23,7 @@ type DiscoveryBootstrap struct {
 
 func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 
-	permit, err := g.authorize(ctx)
+	authorizeRes, err := g.authorize(ctx)
 	if err != nil {
 		// log warn
 		g.Gatewayer.SwitchState(insolar.NoNetworkState)
@@ -30,6 +31,10 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 	}
 
 	// TODO: check authorize result and switch to JoinerBootstrap if other network is complete
+	//if err == nil && !insolar.IsEphemeralPulse(&p) {
+	//	g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
+	//	return
+	//}
 
 	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(false)
 
@@ -38,7 +43,7 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 		pulse = insolar.Pulse{PulseNumber: 1}
 	}
 
-	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, g.joinClaim, &pulse)
+	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, g.joinClaim, &pulse)
 	if err != nil {
 
 	}
@@ -60,7 +65,7 @@ func (g *DiscoveryBootstrap) GetState() insolar.NetworkState {
 	return insolar.DiscoveryBootstrap
 }
 
-func (g *DiscoveryBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
+func (g *DiscoveryBootstrap) authorize(ctx context.Context) (*packet.AuthorizeResponse, error) {
 	cert := g.CertificateManager.GetCertificate()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
 	// todo: sort discoveryNodes
@@ -85,11 +90,18 @@ func (g *DiscoveryBootstrap) authorize(ctx context.Context) (*packet.Permit, err
 		}
 
 		if res.Permit == nil {
-			logger.Errorf("Error authorizing, got nil permit.")
+			logger.Error("Error authorizing, got nil permit.")
 			continue
 		}
 
-		return res.Permit, nil
+		gotPulse := pulse.FromProto(&res.Pulse)
+		localPulse, err := g.PulseAccessor.Latest(ctx)
+		if err == nil && insolar.IsEphemeralPulse(&localPulse) && gotPulse.PulseNumber < localPulse.PulseNumber {
+			logger.Info("Last stored pulse.")
+			continue
+		}
+
+		return res, nil
 	}
 
 	return nil, errors.New("Failed to authorize to any discovery node.")

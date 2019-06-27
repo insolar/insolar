@@ -96,8 +96,8 @@ func (g *NoNetwork) Run(ctx context.Context) {
 		return
 	}
 
-	pulse, err := g.PulseAccessor.Latest(ctx)
-	if err == nil && pulse.PulseNumber > insolar.FirstPulseNumber {
+	p, err := g.PulseAccessor.Latest(ctx)
+	if err == nil && !insolar.IsEphemeralPulse(&p) {
 		g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
 		return
 	}

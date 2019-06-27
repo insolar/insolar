@@ -89,7 +89,7 @@ message ReconnectRequest {
 
 message BootstrapRequest {
     bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim"];
-    pulse.PulseProto Pulse = 2;
+    pulse.PulseProto Pulse = 2 [(gogoproto.nullable) = false];
     Permit Permit = 3;
 }
 
@@ -137,7 +137,7 @@ message BootstrapResponse {
     BootstrapResponseCode Code = 1;
     uint32 ETA = 2;
 //    uint32 AssignShortID = 3;
-    uint32 PulseNumber = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    pulse.PulseProto Pulse = 3 [(gogoproto.nullable) = false];
 }
 
 message BasicResponse {
@@ -158,8 +158,8 @@ message AuthorizeResponse {
     string Error = 3;
     Permit Permit = 4;
     uint32 DiscoveryCount = 5;
-    uint32 PulseNumber = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    uint32 NetworkState = 7;
+    pulse.PulseProto Pulse = 6 [(gogoproto.nullable) = false];
+//    uint32 NetworkState = 7;
 }
 
 message SignCertResponse {

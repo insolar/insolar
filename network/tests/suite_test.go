@@ -56,6 +56,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/insolar/pulse"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -67,7 +68,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network/servicenetwork"
 
 	"github.com/insolar/insolar/certificate"
@@ -449,20 +449,20 @@ func newPulseManagerMock(keeper network.NodeKeeper) *pulseManagerMock {
 	return &pulseManagerMock{pulse: *insolar.GenesisPulse, keeper: keeper}
 }
 
-func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error) {
-	panic("not implemented")
-}
-
-func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	if p.pulse.PulseNumber == insolar.FirstPulseNumber {
-		return p.pulse, pulse.ErrNotFound
-	}
-
-	return p.pulse, nil
-}
+//func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error) {
+//	panic("not implemented")
+//}
+//
+//func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
+//	p.lock.Lock()
+//	defer p.lock.Unlock()
+//
+//	if p.pulse.PulseNumber == insolar.FirstPulseNumber {
+//		return p.pulse, pulse.ErrNotFound
+//	}
+//
+//	return p.pulse, nil
+//}
 
 func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist bool) error {
 	p.lock.Lock()
@@ -540,7 +540,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
 		&amMock, certManager, cryptographyService, serviceNetwork, keyProc, terminationHandler,
-		mb, testutils.NewContractRequesterMock(t))
+		mb, testutils.NewContractRequesterMock(t), pulse.NewStorageMem())
 
 	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
 	})

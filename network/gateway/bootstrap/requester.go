@@ -114,7 +114,7 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinC
 
 	req := &packet.BootstrapRequest{
 		JoinClaim: joinClaim,
-		Pulse:     pulse.ToProto(p),
+		Pulse:     *pulse.ToProto(p),
 		Permit:    permit,
 	}
 

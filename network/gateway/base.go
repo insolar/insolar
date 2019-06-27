@@ -87,6 +87,7 @@ type Base struct {
 	CertificateManager  insolar.CertificateManager  `inject:""`
 	HostNetwork         network.HostNetwork         `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
+	PulseAppender       pulse.Appender              `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 	PhaseManager        phases.PhaseManager         `inject:""`
 	Rules               network.Rules               `inject:""`
@@ -229,9 +230,9 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.P
 	// networkSize := uint32(len(g.NodeKeeper.GetAccessor().GetActiveNodes()))
 	return g.HostNetwork.BuildResponse(ctx, request,
 		&packet.BootstrapResponse{
-			Code:        packet.Accepted,
-			PulseNumber: lastPulse.PulseNumber,
-			ETA:         uint32(lastPulse.PulseNumber) + 50, // TODO: calculate ETA
+			Code:  packet.Accepted,
+			Pulse: *pulse.ToProto(&lastPulse),
+			ETA:   uint32(lastPulse.PulseNumber) + 50, // TODO: calculate ETA
 		}), nil
 }
 
@@ -241,6 +242,10 @@ func validateTimestamp(timestamp int64, delta time.Duration) bool {
 }
 
 func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.Packet) (network.Packet, error) {
+	if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
+		return nil, errors.New("Only discovery nodes could authorize other nodes. I am not a discovery node.")
+	}
+
 	if request.GetRequest() == nil || request.GetRequest().GetAuthorize() == nil {
 		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
 	}
@@ -269,12 +274,6 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		//return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
-	p, err := g.PulseAccessor.Latest(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Warn("Genesis pulse")
-		// return nil, err
-	}
-
 	// TODO: get random reconnectHost
 	// nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
 	o := g.NodeKeeper.GetOrigin()
@@ -296,14 +295,23 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		return nil, err
 	}
 
+	p, err := g.PulseAccessor.Latest(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Warn("Ephemeral pulse")
+		p = *insolar.EphemeralPulse
+		if err = g.PulseAppender.Append(ctx, p); err != nil {
+			inslogger.FromContext(ctx).Error("Failed to append pulse: ", err.Error())
+		}
+	}
+
 	discoveryCount := len(network.FindDiscoveriesInNodeList(g.NodeKeeper.GetAccessor().GetActiveNodes(), g.CertificateManager.GetCertificate()))
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{
 		Code:           packet.Success,
 		Timestamp:      time.Now().UTC().Unix(),
 		Permit:         permit,
 		DiscoveryCount: uint32(discoveryCount),
-		PulseNumber:    p.PulseNumber,
-		NetworkState:   uint32(g.Gatewayer.Gateway().GetState()),
+		Pulse:          *pulse.ToProto(&p),
+		//NetworkState:   uint32(g.Gatewayer.Gateway().GetState()),
 	}), nil
 }
 
