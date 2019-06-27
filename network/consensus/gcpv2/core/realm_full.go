@@ -148,8 +148,7 @@ func (r *FullRealm) initHandlers() (allControllers []PhaseController, perNodeCon
 
 func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 
-	localProfile := r.GetLocalProfile()
-	thisNodeID := localProfile.GetShortNodeID()
+	thisNodeID := r.GetLocalProfile().GetShortNodeID()
 	profiles := r.population.GetProfiles()
 	baselineWeight := r.strategy.RandUint32()
 
@@ -171,7 +170,6 @@ func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 			if r.self != nil {
 				panic("schizophrenia")
 			}
-			n.profile = localProfile //ensure that it has the right type
 			r.self = n
 		} else {
 			if j == len(profiles) {
@@ -298,7 +296,7 @@ func (r *FullRealm) GetShuffledOtherNodes() []*NodeAppearance {
 }
 
 func (r *FullRealm) GetLocalProfile() common2.LocalNodeProfile {
-	return r.population.GetLocalProfile()
+	return r.self.profile.(common2.LocalNodeProfile)
 }
 
 func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash, nch common2.NodeClaimSignature) {

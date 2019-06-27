@@ -11,9 +11,9 @@ func (p *nodeCallback) init() {
 }
 
 type nodeCallback struct {
-	fraudFactory errors.FraudFactory
-	blameFactory errors.BlameFactory
-	//phaseControllerCallback NodeUpdateCallback
+	fraudFactory            errors.FraudFactory
+	blameFactory            errors.BlameFactory
+	phaseControllerCallback NodeUpdateCallback
 }
 
 func (p *nodeCallback) GetFraudFactory() errors.FraudFactory {
