@@ -29,9 +29,15 @@ func (p *nodeCallback) captureMisbehavior(r errors.MisbehaviorReport) interface{
 }
 
 func (p *nodeCallback) onTrustUpdated(n *NodeAppearance, before packets.NodeTrustLevel, after packets.NodeTrustLevel) {
-
+	if p.phaseControllerCallback == nil {
+		return
+	}
+	p.phaseControllerCallback.OnTrustUpdated(n, before, after)
 }
 
 func (p *nodeCallback) onNodeStateAssigned(n *NodeAppearance) {
-
+	if p.phaseControllerCallback == nil {
+		return
+	}
+	p.phaseControllerCallback.OnNodeStateAssigned(n)
 }

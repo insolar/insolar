@@ -68,7 +68,7 @@ type PhaseControllersBundle interface {
 
 type NodeUpdateCallback interface {
 	OnTrustUpdated(n *NodeAppearance, before, after packets.NodeTrustLevel)
-	OnNodeStateAssigned(n *NodeAppearance, before, after packets.NodeTrustLevel)
+	OnNodeStateAssigned(n *NodeAppearance)
 }
 
 type ConsensusController interface {
