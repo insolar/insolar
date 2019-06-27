@@ -98,7 +98,7 @@ func customSend(data string) (map[string]interface{}, error) {
 func TestEmptyBody(t *testing.T) {
 	res, err := customSend("")
 	require.NoError(t, err)
-	require.Equal(t, "[ UnmarshalRequest ] Empty body", res["error"].(map[string]interface{})["message"].(string))
+	require.Equal(t, "failed to unmarshal request: [ UnmarshalRequest ] Empty body", res["error"].(map[string]interface{})["message"].(string))
 }
 
 func TestCrazyJSON(t *testing.T) {
