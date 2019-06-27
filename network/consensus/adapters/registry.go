@@ -93,7 +93,7 @@ func (mr *MandateRegistry) GetPrimingCloudHash() common2.CloudStateHash {
 }
 
 type OfflinePopulation struct {
-	// TODO: should't use nodekeeper here. We must go to the node domain via contract requester.
+	// TODO: should't use nodekeeper here.
 	nodeKeeper network.NodeKeeper
 	manager    insolar.CertificateManager
 }
