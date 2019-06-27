@@ -280,7 +280,7 @@ type nshGen struct {
 	nshDelay time.Duration
 }
 
-func (ng *nshGen) State() ([]byte, error) {
+func (ng *nshGen) State() []byte {
 	delay := ng.nshDelay
 	if delay != 0 {
 		time.Sleep(delay)
@@ -289,7 +289,7 @@ func (ng *nshGen) State() ([]byte, error) {
 	nshBytes := make([]byte, 64)
 	rand.Read(nshBytes)
 
-	return nshBytes, nil
+	return nshBytes
 }
 
 type pulseChanger struct{}

@@ -65,7 +65,7 @@ import (
 )
 
 type Stater interface {
-	State() ([]byte, error)
+	State() []byte
 }
 
 type PulseChanger interface {
@@ -143,10 +143,6 @@ func (u *UpstreamPulseController) ResumeTraffic() {
 }
 
 func awaitState(c chan<- common.NodeStateHash, stater Stater) {
-	state, err := stater.State()
-	if err != nil {
-		panic("Failed to retrieve node state hash")
-	}
-
-	c <- common2.NewDigest(common2.NewBits512FromBytes(state), SHA3512Digest).AsDigestHolder()
+	stateHash := stater.State()
+	c <- common2.NewDigest(common2.NewBits512FromBytes(stateHash), SHA3512Digest).AsDigestHolder()
 }
