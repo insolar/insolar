@@ -17,8 +17,8 @@
 package helloworld
 
 import (
+	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 type ExtendableError struct {
@@ -299,7 +299,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [5]interface{}{}
+	args := [1]interface{}{}
 	var args0 []byte
 	args[0] = &args0
 
@@ -354,11 +354,11 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	return ret, err
 }
 
-func Initialize() XXX_preprocessor.ContractWrapper {
-	return XXX_preprocessor.ContractWrapper{
+func Initialize() XXX_insolar.ContractWrapper {
+	return XXX_insolar.ContractWrapper{
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
-		Methods: XXX_preprocessor.ContractMethods{
+		Methods: XXX_insolar.ContractMethods{
 			"Greet":       INSMETHOD_Greet,
 			"Count":       INSMETHOD_Count,
 			"Errored":     INSMETHOD_Errored,
@@ -366,7 +366,7 @@ func Initialize() XXX_preprocessor.ContractWrapper {
 			"CountChild":  INSMETHOD_CountChild,
 			"Call":        INSMETHOD_Call,
 		},
-		Constructors: XXX_preprocessor.ContractConstructors{
+		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
 		},
 	}

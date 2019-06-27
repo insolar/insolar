@@ -24,11 +24,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/x-crypto/ecdsa"
 	"github.com/insolar/x-crypto/sha256"
 	"github.com/insolar/x-crypto/x509"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 // TODO: this file should be removed

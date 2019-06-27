@@ -745,7 +745,7 @@ func (r *One) CreateAllowance(member string) (error) {
 }
 `
 	obj := callConstructor(t, uploadContractOnce(t, "new_allowance_not_from_wallet", contractOneCode))
-	member := createMember(t, "NewAllowanceNotFromWalletTestMember")
+	member := createMember(t)
 
 	resp := callMethod(t, obj, "CreateAllowance", member.ref)
 	require.NotEmpty(t, resp.Error)
@@ -957,7 +957,7 @@ func (c *First) GetName() (string, error) {
 	require.Contains(
 		t,
 		string(resp.Reply.Result),
-		"[ RouteCall ] on calling main API: CallMethod returns error: proxy call error: try to call method of prototype as method of another prototype",
+		"try to call method of prototype as method of another prototype",
 	)
 }
 

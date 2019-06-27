@@ -97,9 +97,7 @@ type GenesisContractsConfig struct {
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
 type GenesisHeavyConfig struct {
 	// DiscoveryNodes is the list with discovery node info.
-	DiscoveryNodes []DiscoveryNodeRegister
-	// ContractsDir is the directory with contracts plugins and memory files.
-	PluginsDir      string
+	DiscoveryNodes  []DiscoveryNodeRegister
 	ContractsConfig GenesisContractsConfig
 	// Skip is flag for skipping genesis on heavy node. Useful for some test cases.
 	Skip bool

@@ -72,7 +72,7 @@ func TestRegisterNodeNotExistRole(t *testing.T) {
 }
 
 func TestRegisterNodeByNoRoot(t *testing.T) {
-	member := createMember(t, "Member1")
+	member := createMember(t)
 	const testRole = "virtual"
 	_, err := signedRequest(member, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.Contains(t, err.Error(), "only root member can register node")

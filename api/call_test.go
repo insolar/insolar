@@ -132,17 +132,6 @@ func TestTimeoutSuite(t *testing.T) {
 	require.NoError(t, err)
 	timeoutSuite.api.timeout = 1 * time.Second
 
-	cert := testutils.NewCertificateMock(timeoutSuite.mc)
-	cert.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
-		ref := testutils.RandomRef()
-		return &ref
-	}
-
-	cm := testutils.NewCertificateManagerMock(timeoutSuite.mc)
-	cm.GetCertificateFunc = func() (r insolar.Certificate) {
-		return cert
-	}
-
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
 	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
 		switch method {
@@ -165,7 +154,6 @@ func TestTimeoutSuite(t *testing.T) {
 	}
 
 	timeoutSuite.api.ContractRequester = cr
-	timeoutSuite.api.CertificateManager = cm
 	timeoutSuite.api.Start(timeoutSuite.ctx)
 	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(time.Minute, time.Minute)
 
