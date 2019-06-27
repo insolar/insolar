@@ -79,5 +79,10 @@ func TestCreateMembersWithSameName(t *testing.T) {
 	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "member for this publicKey already exist")
-	createMember(t)
+
+	memberForBurn, err := newUserWithKeys()
+	require.NoError(t, err)
+	memberForBurn.ref = root.ref
+
+	_, err = retryableCreateMember(memberForBurn, "contract.createMember", map[string]interface{}{}, true)
 }
