@@ -52,9 +52,12 @@ package adapters
 
 import (
 	"context"
-	common2 "github.com/insolar/insolar/network/consensus/common"
 	"math/rand"
 
+	common2 "github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/utils"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
@@ -78,7 +81,13 @@ func NewRoundStrategy(
 	}
 }
 
-func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common2.PulseNumber) context.Context {
+func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common2.PulseNumber, self common.NodeProfile) context.Context {
+	ctx = utils.NewPulseContext(ctx, expectedPulse.AsUint32())
+	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+		"node_id":   self.GetShortNodeID(),
+		"pulse":     expectedPulse,
+		"is_joiner": self.IsJoiner(),
+	})
 	return ctx
 }
 

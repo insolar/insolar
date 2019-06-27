@@ -119,8 +119,8 @@ func IsConnectionClosed(err error) bool {
 	return strings.Contains(err.Error(), "use of closed network connection")
 }
 
-func NewPulseContext(ctx context.Context, pulseNumber uint64) context.Context {
-	insTraceID := "pulse_" + strconv.FormatUint(pulseNumber, 10)
+func NewPulseContext(ctx context.Context, pulseNumber uint32) context.Context {
+	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
 	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
 	return ctx
 }
