@@ -391,15 +391,12 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
-		// FIXME: incorrect test.
 		b := newFilamentBuilder(ctx, pcs, records)
 		rec1 := b.AppendRecord(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
 		rec2 := b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		rec3 := b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		rec4 := b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		b.AppendRecord(insolar.FirstPulseNumber+3, record.Request{Nonce: rand.Uint64()})
+		b.AppendRecord(insolar.FirstPulseNumber+3, record.Result{Request: *insolar.NewReference(rec1.RecordID)})
+		rec4 := b.AppendRecord(insolar.FirstPulseNumber+3, record.Request{Nonce: rand.Uint64()})
+		b.AppendRecord(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
 
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()
@@ -407,7 +404,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
 			ObjID: objectID,
 			Lifeline: object.Lifeline{
-				PendingPointer:      &rec3.MetaID,
+				PendingPointer:      &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
@@ -415,8 +412,8 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 		recs, err := calculator.PendingRequests(ctx, fromPulse, objectID)
 		assert.NoError(t, err)
-		require.Equal(t, 3, len(recs))
-		assert.Equal(t, []insolar.ID{rec1.RecordID, rec2.RecordID, rec3.RecordID}, recs)
+		require.Equal(t, 2, len(recs))
+		assert.Equal(t, []insolar.ID{rec2.RecordID, rec4.RecordID}, recs)
 
 		mc.Finish()
 	})
