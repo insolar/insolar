@@ -80,7 +80,7 @@ func NewRoundStrategy(
 	}
 }
 
-func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common2.PulseNumber, self common.NodeProfile) context.Context {
+func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common2.PulseNumber, self common.LocalNodeProfile) context.Context {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 		"node_id":   self.GetShortNodeID(),
 		"pulse":     expectedPulse,
