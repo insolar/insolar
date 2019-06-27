@@ -432,7 +432,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 	})
 
 	resetComponents()
-	t.Run("happy fetches from network", func(t *testing.T) {
+	t.Run("happy fetches from light", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
 		rec1 := b.Append(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
 		rec2 := b.Append(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
@@ -507,7 +507,80 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 			return ch, func() {}
 		}
 
-		// Fetching from light.
+		recs, err = calculator.PendingRequests(ctx, fromPulse, objectID)
+		assert.NoError(t, err)
+		require.Equal(t, 2, len(recs))
+		assert.Equal(t, []insolar.ID{rec2.RecordID, rec4.RecordID}, recs)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("happy fetches from heavy", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		rec1 := b.Append(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
+		rec2 := b.Append(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		// This result is not in the storage.
+		missingRec := b.AppendNoPersist(insolar.FirstPulseNumber+3, record.Result{Request: *insolar.NewReference(rec1.RecordID)})
+		rec4 := b.Append(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
+		b.Append(insolar.FirstPulseNumber+5, record.Request{Nonce: rand.Uint64()})
+
+		objectID := gen.ID()
+		fromPulse := rec4.MetaID.Pulse()
+		earliestPending := rec1.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+			ObjID: objectID,
+			Lifeline: object.Lifeline{
+				PendingPointer:      &rec4.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		})
+		require.NoError(t, err)
+
+		coordinator.IsBeyondLimitFunc = func(_ context.Context, calc insolar.PulseNumber, target insolar.PulseNumber) (bool, error) {
+			require.Equal(t, fromPulse, calc)
+			require.Equal(t, missingRec.MetaID.Pulse(), target)
+			return true, nil
+		}
+
+		node := gen.Reference()
+		coordinator.HeavyFunc = func(_ context.Context, pn insolar.PulseNumber) (*insolar.Reference, error) {
+			require.Equal(t, fromPulse, pn)
+			return &node, nil
+		}
+		coordinator.MeMock.Return(node)
+
+		recs, err := calculator.PendingRequests(ctx, fromPulse, objectID)
+		assert.Error(t, err, "returns error if trying to fetch from self")
+
+		coordinator.MeMock.Return(gen.Reference())
+
+		sender.SendTargetFunc = func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+			pl, err := payload.Unmarshal(msg.Payload)
+			require.NoError(t, err)
+
+			getFilament, ok := pl.(*payload.GetFilament)
+			require.True(t, ok)
+
+			require.Equal(t, objectID, getFilament.ObjectID)
+			require.Equal(t, missingRec.MetaID, getFilament.StartFrom)
+			require.Equal(t, earliestPending, getFilament.ReadUntil)
+
+			require.NoError(t, err)
+			respMsg, err := payload.NewMessage(&payload.FilamentSegment{
+				ObjectID: objectID,
+				Records:  []record.CompositeFilamentRecord{missingRec},
+			})
+			require.NoError(t, err)
+			meta := payload.Meta{Payload: respMsg.Payload}
+			buf, err := meta.Marshal()
+			require.NoError(t, err)
+			respMsg.Payload = buf
+			ch := make(chan *message.Message, 1)
+			ch <- respMsg
+			return ch, func() {}
+		}
+
 		recs, err = calculator.PendingRequests(ctx, fromPulse, objectID)
 		assert.NoError(t, err)
 		require.Equal(t, 2, len(recs))
