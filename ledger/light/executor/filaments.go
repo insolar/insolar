@@ -26,8 +26,10 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentModifier -o ./ -s _mock.go
@@ -519,6 +521,13 @@ func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 func (i *fetchingIterator) fetchFromNetwork(
 	ctx context.Context, forID insolar.ID, calcPulse insolar.PulseNumber,
 ) ([]record.CompositeFilamentRecord, error) {
+	ctx, span := instracer.StartSpan(ctx, "fetchingIterator.fetchFromNetwork")
+	defer span.End()
+
+	span.AddAttributes(
+		trace.StringAttribute("forID", forID.DebugString()),
+	)
+
 	isBeyond, err := i.coordinator.IsBeyondLimit(ctx, i.calcPulse, forID.Pulse())
 	if err != nil {
 		panic(err)

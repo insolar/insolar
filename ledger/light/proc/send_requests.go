@@ -18,13 +18,16 @@ package proc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 type SendRequests struct {
@@ -53,6 +56,15 @@ func (p *SendRequests) Dep(sender bus.Sender, filaments executor.FilamentCalcula
 }
 
 func (p *SendRequests) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("SendRequests"))
+	defer span.End()
+
+	span.AddAttributes(
+		trace.StringAttribute("objID", p.objID.DebugString()),
+		trace.StringAttribute("startFrom", p.startFrom.DebugString()),
+		trace.StringAttribute("readUntil", p.readUntil.String()),
+	)
+
 	records, err := p.dep.filaments.Requests(ctx, p.objID, p.startFrom, p.readUntil, flow.Pulse(ctx))
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch filament")
