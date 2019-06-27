@@ -80,25 +80,25 @@ func ParseLevel(levelStr string) (LogLevel, error) {
 type LogFormat uint8
 
 const (
-	Text LogFormat = iota
-	JSON
+	TextFormat LogFormat = iota
+	JSONFormat
 )
 
 func ParseFormat(formatStr string) (LogFormat, error) {
 	switch strings.ToLower(formatStr) {
-	case Text.String():
-		return Text, nil
-	case JSON.String():
-		return JSON, nil
+	case TextFormat.String():
+		return TextFormat, nil
+	case JSONFormat.String():
+		return JSONFormat, nil
 	}
-	return Text, fmt.Errorf("unknown Format String: '%s', defaulting to Text", formatStr)
+	return TextFormat, fmt.Errorf("unknown Format String: '%s', defaulting to TextFormat", formatStr)
 }
 
 func (l LogFormat) String() string {
 	switch l {
-	case Text:
+	case TextFormat:
 		return "text"
-	case JSON:
+	case JSONFormat:
 		return "json"
 	}
 	return string(l)
