@@ -168,7 +168,7 @@ func (c *EmuRoundStrategy) GetNodeUpdateCallback() core.NodeUpdateCallback {
 	return c.bundle.GetNodeUpdateCallback()
 }
 
-func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common.PulseNumber) context.Context {
+func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common.PulseNumber, self common2.LocalNodeProfile) context.Context {
 	return ctx
 }
 

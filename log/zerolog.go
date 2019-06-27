@@ -124,9 +124,9 @@ func selectFormatter(format insolar.LogFormat) (io.Writer, error) {
 	var output io.Writer
 
 	switch format {
-	case insolar.Text:
+	case insolar.TextFormat:
 		output = newDefaultTextOutput()
-	case insolar.JSON:
+	case insolar.JSONFormat:
 		output = os.Stderr
 	default:
 		return nil, errors.New("unknown formatter " + format.String())

@@ -105,7 +105,7 @@ func (u *UpstreamPulseController) CommitPulseChange(report core.MembershipUpstre
 
 	pulseNumber := report.PulseNumber
 
-	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
+	ctx = utils.NewPulseContext(ctx, uint32(pulseNumber))
 
 	ctx, span := instracer.StartSpan(ctx, "UpstreamPulseController.CommitPulseChange")
 	span.AddAttributes(

@@ -113,7 +113,11 @@ func (r *PhasedRoundController) StartConsensusRound(upstream UpstreamPulseContro
 
 	ctx := r.realm.config.GetParentContext()
 	ctx, r.fullCancel = context.WithCancel(ctx)
-	r.realm.roundContext = r.realm.strategy.ConfigureRoundContext(ctx, r.realm.initialCensus.GetExpectedPulseNumber())
+	r.realm.roundContext = r.realm.strategy.ConfigureRoundContext(
+		ctx,
+		r.realm.initialCensus.GetExpectedPulseNumber(),
+		r.realm.GetLocalProfile(),
+	)
 
 	r.isRunning = true
 
