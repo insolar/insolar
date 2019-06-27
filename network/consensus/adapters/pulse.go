@@ -60,7 +60,7 @@ import (
 func NewPulseFromPulseData(pulseData common.PulseData) insolar.Pulse {
 	var prev insolar.PulseNumber
 	if pulseData.IsFirstPulse() {
-		prev = insolar.PulseNumber(pulseData.GetNextPulseNumber())
+		prev = insolar.PulseNumber(pulseData.GetPrevPulseNumber())
 	} else {
 		prev = insolar.PulseNumber(pulseData.PulseNumber)
 	}
