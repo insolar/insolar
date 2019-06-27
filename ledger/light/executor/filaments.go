@@ -524,10 +524,6 @@ func (i *fetchingIterator) fetchFromNetwork(
 	ctx, span := instracer.StartSpan(ctx, "fetchingIterator.fetchFromNetwork")
 	defer span.End()
 
-	span.AddAttributes(
-		trace.StringAttribute("forID", forID.DebugString()),
-	)
-
 	isBeyond, err := i.coordinator.IsBeyondLimit(ctx, i.calcPulse, forID.Pulse())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to calculate limit")
@@ -551,6 +547,12 @@ func (i *fetchingIterator) fetchFromNetwork(
 	if *node == i.coordinator.Me() {
 		return nil, errors.New("tried to send message to self")
 	}
+
+	span.AddAttributes(
+		trace.StringAttribute("objID", i.objectID.DebugString()),
+		trace.StringAttribute("startFrom", forID.DebugString()),
+		trace.StringAttribute("readUntil", i.readUntil.String()),
+	)
 
 	msg, err := payload.NewMessage(&payload.GetFilament{
 		ObjectID:  i.objectID,
