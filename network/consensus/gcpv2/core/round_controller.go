@@ -81,7 +81,8 @@ func NewPhasedRoundController(strategy RoundStrategy, chronicle census.Consensus
 	r := &PhasedRoundController{}
 
 	r.realm.coreRealm = newCoreRealm(&r.rw)
-	r.realm.coreRealm.errorFactory = errors2.NewMisbehaviorFactories(r.realm.coreRealm.captureMisbehavior)
+	r.realm.coreRealm.init()
+
 	r.realm.coreRealm.strategy = strategy
 	r.realm.coreRealm.config = config
 	r.realm.coreRealm.chronicle = chronicle
@@ -97,7 +98,7 @@ func NewPhasedRoundController(strategy RoundStrategy, chronicle census.Consensus
 	r.realm.coreRealm.packetBuilder = transport.GetPacketBuilder(r.realm.coreRealm.signer)
 
 	population := r.realm.coreRealm.initialCensus.GetOnlinePopulation()
-	r.realm.coreRealm.self = NewNodeAppearanceAsSelf(population.GetLocalProfile())
+	r.realm.coreRealm.self = NewNodeAppearanceAsSelf(population.GetLocalProfile(), &r.realm.coreRealm.nodeCallback)
 
 	return r
 }

@@ -64,32 +64,34 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile) *NodeAppearance {
+func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile, callback *nodeCallback) *NodeAppearance {
 	if np == nil {
 		panic("node profile is nil")
 	}
 	np.LocalNodeProfile() // to avoid linter's paranoia
 
 	return &NodeAppearance{
-		profile: np,
-		state:   packets.NodeStateLocalActive,
-		trust:   packets.SelfTrust,
+		profile:  np,
+		state:    packets.NodeStateLocalActive,
+		trust:    packets.SelfTrust,
+		callback: callback,
 	}
 }
 
-func (c *NodeAppearance) init(np common2.NodeProfile) {
+func (c *NodeAppearance) init(np common2.NodeProfile, callback *nodeCallback) {
 	if np == nil {
 		panic("node profile is nil")
 	}
 	c.profile = np
+	c.callback = callback
 }
 
 type NodeAppearance struct {
 	mutex sync.Mutex
 
 	/* Provided externally at construction. Don't need mutex */
-	profile common2.NodeProfile // set by construction
-	// errorFactory errors.MisbehaviorFactories
+	profile                common2.NodeProfile // set by construction
+	callback               *nodeCallback
 	handlers               []PhasePerNodePacketHandler
 	neighborTrustThreshold uint8
 
@@ -219,22 +221,21 @@ func (c *NodeAppearance) Locked(fn func() error) error {
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNodeMembership(mp common2.MembershipProfile, errorFactory errors.MisbehaviorFactories) (bool, error) {
+func (c *NodeAppearance) ApplyNodeMembership(mp common2.MembershipProfile) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	return c._applyNodeMembership(mp, errorFactory)
+	return c._applyNodeMembership(mp)
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp common2.MembershipProfile,
-	errorFactory errors.MisbehaviorFactories) (modifiedNsh bool, trustBefore, trustAfter packets.NodeTrustLevel) {
+func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp common2.MembershipProfile) (modifiedNsh bool, trustBefore, trustAfter packets.NodeTrustLevel) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	trustBefore = c.trust
-	modifiedNsh, _ = c._applyNodeMembership(mp, errorFactory)
+	modifiedNsh, _ = c._applyNodeMembership(mp)
 
 	if witness.GetShortNodeID() != c.GetShortNodeID() { // a node can't be a witness to itself
 		switch {
@@ -253,15 +254,23 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp comm
 	return modifiedNsh, trustBefore, c.trust
 }
 
+func (r *NodeAppearance) Frauds() errors.FraudFactory {
+	return r.callback.GetFraudFactory()
+}
+
+func (r *NodeAppearance) Blames() errors.BlameFactory {
+	return r.callback.GetBlameFactory()
+}
+
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile, errorFactory errors.MisbehaviorFactories) (bool, error) {
+func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile) (bool, error) {
 
 	if c.stateEvidence == nil {
 		if mp.IsEmpty() {
 			panic(fmt.Sprintf("membership evidence is nil: for=%v", c.GetShortNodeID()))
 		}
 		if c.GetIndex() != int(mp.Index) || c.GetPower() != mp.Power {
-			return false, c.registerFraud(errorFactory.GetFraudFactory().NewMismatchedMembershipRank(c.GetProfile(), mp))
+			return false, c.registerFraud(c.Frauds().NewMismatchedMembershipRank(c.GetProfile(), mp))
 		}
 
 		c.neighbourWeight ^= common.FoldUint64(mp.StateEvidence.GetNodeStateHash().FoldToUint64())
@@ -276,7 +285,7 @@ func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile, erro
 		return false, nil
 	}
 
-	return false, c.registerFraud(errorFactory.GetFraudFactory().NewMultipleMembershipProfiles(c.GetProfile(), lmp, mp))
+	return false, c.registerFraud(c.Frauds().NewMultipleMembershipProfiles(c.GetProfile(), lmp, mp))
 }
 
 //func (c *NodeAppearance) GetNodeStateHashEvidence() common2.NodeStateHashEvidence {

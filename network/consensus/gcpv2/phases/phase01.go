@@ -100,7 +100,7 @@ func handleEmbeddedPulsePacket(ctx context.Context, p packets.MemberPacketReader
 	if r.GetPulseData() == pp.GetPulseData() {
 		return defErr
 	}
-	return r.Blames().NewMismatchedPulsePacket(n.GetProfile(), r.GetOriginalPulse(), pp.GetPulseDataEvidence())
+	return n.Blames().NewMismatchedPulsePacket(n.GetProfile(), r.GetOriginalPulse(), pp.GetPulseDataEvidence())
 }
 
 var _ core.PhaseController = &Phase1Controller{}
@@ -143,10 +143,10 @@ func (c *Phase1Controller) _handleNodeData(p1 packets.Phase1PacketReader, n *cor
 
 	mp := common.NewMembershipProfile(p1.GetNodeIndex(), p1.GetNodePower(), p1.GetNodeStateHashEvidence(), p1.GetNodeClaimsSignature())
 	if c.R.GetNodeCount() != int(p1.GetNodeCount()) {
-		return false, n.RegisterFraud(c.R.Frauds().NewMismatchedMembershipRank(n.GetProfile(), mp))
+		return false, n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), mp))
 	}
 
-	modified, err := n.ApplyNodeMembership(mp, c.R.GetMisbehaviorFactories())
+	modified, err := n.ApplyNodeMembership(mp)
 	// if modified && dupErr != nil {
 	//	c.R.Log().Warnf("unexpected state: Phase1 was received, but NSH is unset: node=%v", n)
 	// }

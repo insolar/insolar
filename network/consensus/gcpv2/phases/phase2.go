@@ -109,8 +109,6 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 	// and this enable the added other node for sending Ph2 by this node
 	// }
 
-	ef := c.R.GetMisbehaviorFactories()
-
 	// TODO Verify neighbourhood first (incl presence of self) before applying it
 	var signalSent = false
 	for _, nb := range p2.GetNeighbourhood() {
@@ -136,10 +134,10 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 
 		nc := c.R.GetNodeCount()
 		if nc != int(nb.GetNodeCount()) {
-			trustBefore, trustAfter, _ = n.RegisterFraudWithTrust(c.R.Frauds().NewMismatchedMembershipNodeCount(n.GetProfile(), mp, nc))
+			trustBefore, trustAfter, _ = n.RegisterFraudWithTrust(n.Frauds().NewMismatchedMembershipNodeCount(n.GetProfile(), mp, nc))
 			modifiedNsh = false
 		} else {
-			modifiedNsh, trustBefore, trustAfter = neighbour.ApplyNeighbourEvidence(n, mp, ef)
+			modifiedNsh, trustBefore, trustAfter = neighbour.ApplyNeighbourEvidence(n, mp)
 		}
 
 		if modifiedNsh {

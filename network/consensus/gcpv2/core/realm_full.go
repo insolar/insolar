@@ -170,7 +170,7 @@ func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 			r.joinersCount++
 		}
 		n := &r.nodes[i]
-		n.init(p)
+		n.init(p, &r.coreRealm.nodeCallback)
 		n.neighborTrustThreshold = neighborTrustThreshold
 		n.neighbourWeight = baselineWeight
 		if p.GetShortNodeID() == thisNodeID {

@@ -107,5 +107,5 @@ func (c *PulseController) HandleHostPacket(ctx context.Context, p packets.Packet
 	if c.R.GetPulseData() == pd {
 		return nil
 	}
-	return c.R.Blames().NewMismatchedPulsarPacket(from, c.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
+	return c.R.GetBlameFactory().NewMismatchedPulsarPacket(from, c.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
 }
