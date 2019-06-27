@@ -79,6 +79,7 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
 
 	// TODO: clear NodeKeeper state
+	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{g.NodeKeeper.GetOrigin()})
 
 	if len(discoveryNodes) == 0 {
 		g.zeroBootstrap(ctx)

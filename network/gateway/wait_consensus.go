@@ -54,6 +54,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 func newWaitConsensus(b *Base) *WaitConsensus {
@@ -72,6 +73,11 @@ func (g *WaitConsensus) GetState() insolar.NetworkState {
 }
 
 func (g *WaitConsensus) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+
+	nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
+	wnodes := g.NodeKeeper.GetAccessor().GetWorkingNodes()
+	inslogger.FromContext(ctx).Infof("-=-=-=-= NodeKeeper active %d, working, %d", len(nodes), len(wnodes))
+
 	n := g.NodeKeeper.GetAccessor().GetActiveNode(g.NodeKeeper.GetOrigin().ID())
 	if n != nil {
 		// todo: check majority

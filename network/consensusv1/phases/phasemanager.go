@@ -61,6 +61,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/merkle"
 )
 
@@ -103,6 +104,11 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	consensusDelay := time.Since(pulseStartTime)
 	logger := inslogger.FromContext(ctx)
 	logger.Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
+	activeNodes := pm.NodeKeeper.GetAccessor().GetActiveNodes()
+	if len(activeNodes) < 2 {
+		logger.Info("[ NET Consensus ] oneNodeConsensus workaround =====")
+		return pm.oneNodeConsensus(ctx)
+	}
 
 	pulseDuration := getPulseDuration(pulse)
 
@@ -167,4 +173,11 @@ func contextTimeoutFromPulseStart(
 ) (context.Context, context.CancelFunc) {
 	timeout := ps.Add(time.Duration(k * float64(duration)))
 	return context.WithDeadline(ctx, timeout)
+}
+
+func (pm *Phases) oneNodeConsensus(ctx context.Context) error {
+	nodes := pm.NodeKeeper.GetAccessor().GetActiveNodes()
+	claim := pm.NodeKeeper.GetClaimQueue().Front()
+	pm.NodeKeeper.GetClaimQueue().Pop()
+	return pm.NodeKeeper.Sync(ctx, nodes, []packets.ReferendumClaim{claim})
 }
