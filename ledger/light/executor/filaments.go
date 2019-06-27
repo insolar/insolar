@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -269,6 +270,11 @@ func (c *FilamentCalculatorDefault) Requests(
 func (c *FilamentCalculatorDefault) PendingRequests(
 	ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID,
 ) ([]insolar.ID, error) {
+	logger := inslogger.FromContext(ctx).WithField("object_id", objectID.DebugString())
+
+	logger.Debug("started collecting pending requests")
+	defer logger.Debug("finished collecting pending requests")
+
 	idx, err := c.indexes.ForID(ctx, pulse, objectID)
 	if err != nil {
 		return nil, err
@@ -493,6 +499,8 @@ func (i *fetchingIterator) HasPrev() bool {
 }
 
 func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRecord, error) {
+	logger := inslogger.FromContext(ctx)
+
 	rec, err := i.iter.Prev(ctx)
 	switch err {
 	case nil:
@@ -500,6 +508,8 @@ func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 
 	case object.ErrNotFound:
 		// Update cache from network.
+		logger.Debug("fetching requests from network")
+		defer logger.Debug("received requests from network")
 		recs, err := i.fetchFromNetwork(ctx, *i.PrevID(), i.calcPulse)
 		if err != nil {
 			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
