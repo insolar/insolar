@@ -52,6 +52,7 @@ package adapters
 
 import (
 	"context"
+	common2 "github.com/insolar/insolar/network/consensus/common"
 	"math/rand"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
@@ -77,7 +78,7 @@ func NewRoundStrategy(
 	}
 }
 
-func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context) context.Context {
+func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common2.PulseNumber) context.Context {
 	return ctx
 }
 

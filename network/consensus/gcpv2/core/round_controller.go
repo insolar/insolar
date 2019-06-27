@@ -91,6 +91,7 @@ func NewPhasedRoundController(strategy RoundStrategy, chronicle census.Consensus
 	crypto := transport.GetCryptographyFactory()
 	r.realm.coreRealm.verifierFactory = crypto
 	r.realm.coreRealm.digest = crypto.GetDigestFactory()
+
 	sks := config.GetSecretKeyStore()
 	r.realm.coreRealm.signer = crypto.GetNodeSigner(sks)
 	r.realm.coreRealm.packetBuilder = transport.GetPacketBuilder(r.realm.coreRealm.signer)
@@ -111,7 +112,7 @@ func (r *PhasedRoundController) StartConsensusRound(upstream UpstreamPulseContro
 
 	ctx := r.realm.config.GetParentContext()
 	ctx, r.fullCancel = context.WithCancel(ctx)
-	r.realm.roundContext = r.realm.strategy.ConfigureRoundContext(ctx)
+	r.realm.roundContext = r.realm.strategy.ConfigureRoundContext(ctx, r.realm.initialCensus.GetExpectedPulseNumber())
 
 	r.isRunning = true
 
