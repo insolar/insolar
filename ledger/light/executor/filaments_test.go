@@ -314,11 +314,11 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
-		rec1 := b.AppendRequest(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
-		rec2 := b.AppendRequest(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		rec3 := b.AppendRequest(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		rec4 := b.AppendRequest(insolar.FirstPulseNumber+3, record.Request{Nonce: rand.Uint64()})
-		b.AppendRequest(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
+		rec1 := b.AppendRecord(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
+		rec2 := b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		rec3 := b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		rec4 := b.AppendRecord(insolar.FirstPulseNumber+3, record.Request{Nonce: rand.Uint64()})
+		b.AppendRecord(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
 
 		objectID := gen.ID()
 		fromID := rec4.MetaID
@@ -388,6 +388,38 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 		mc.Finish()
 	})
+
+	resetComponents()
+	t.Run("happy basic", func(t *testing.T) {
+		// FIXME: incorrect test.
+		b := newFilamentBuilder(ctx, pcs, records)
+		rec1 := b.AppendRecord(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
+		rec2 := b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		rec3 := b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		rec4 := b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		b.AppendRecord(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		b.AppendRecord(insolar.FirstPulseNumber+3, record.Request{Nonce: rand.Uint64()})
+
+		objectID := gen.ID()
+		fromPulse := rec4.MetaID.Pulse()
+		earliestPending := rec1.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+			ObjID: objectID,
+			Lifeline: object.Lifeline{
+				PendingPointer:      &rec3.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		})
+		require.NoError(t, err)
+
+		recs, err := calculator.PendingRequests(ctx, fromPulse, objectID)
+		assert.NoError(t, err)
+		require.Equal(t, 3, len(recs))
+		assert.Equal(t, []insolar.ID{rec1.RecordID, rec2.RecordID, rec3.RecordID}, recs)
+
+		mc.Finish()
+	})
 }
 
 type filamentBuilder struct {
@@ -409,10 +441,10 @@ func newFilamentBuilder(
 	}
 }
 
-func (b *filamentBuilder) AppendRequest(pn insolar.PulseNumber, request record.Request) record.CompositeFilamentRecord {
+func (b *filamentBuilder) AppendRecord(pn insolar.PulseNumber, rec record.Record) record.CompositeFilamentRecord {
 	var composite record.CompositeFilamentRecord
 	{
-		virtual := record.Wrap(request)
+		virtual := record.Wrap(rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
 		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}

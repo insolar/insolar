@@ -498,7 +498,7 @@ func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 
 	case object.ErrNotFound:
 		// Update cache from network.
-		recs, err := i.fetchFromNetwork(ctx, *i.PrevID())
+		recs, err := i.fetchFromNetwork(ctx, *i.PrevID(), i.calcPulse)
 		if err != nil {
 			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
 		}
@@ -516,14 +516,28 @@ func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	}
 }
 
-func (i *fetchingIterator) fetchFromNetwork(ctx context.Context, forID insolar.ID) ([]record.CompositeFilamentRecord, error) {
-	jetID, err := i.jetFetcher.Fetch(ctx, i.objectID, forID.Pulse())
+func (i *fetchingIterator) fetchFromNetwork(
+	ctx context.Context, forID insolar.ID, calcPulse insolar.PulseNumber,
+) ([]record.CompositeFilamentRecord, error) {
+	isBeyond, err := i.coordinator.IsBeyondLimit(ctx, i.calcPulse, forID.Pulse())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch jet")
+		panic(err)
 	}
-	node, err := i.coordinator.NodeForJet(ctx, *jetID, i.calcPulse, forID.Pulse())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to calculate node")
+	var node *insolar.Reference
+	if isBeyond {
+		node, err = i.coordinator.Heavy(ctx, calcPulse)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to calculate node")
+		}
+	} else {
+		jetID, err := i.jetFetcher.Fetch(ctx, i.objectID, forID.Pulse())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch jet")
+		}
+		node, err = i.coordinator.NodeForJet(ctx, *jetID, i.calcPulse, forID.Pulse())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to calculate node")
+		}
 	}
 	if *node == i.coordinator.Me() {
 		return nil, errors.New("tried to send message to self")
