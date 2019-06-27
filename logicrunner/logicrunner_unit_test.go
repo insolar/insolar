@@ -626,7 +626,6 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 
 	es.CurrentList.Set(msg.GetReference(), &Transcript{
 		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
-		SentResult: true,
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)

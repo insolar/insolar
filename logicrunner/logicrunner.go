@@ -323,8 +323,7 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 // values here (boolean flags) are inverted here, since it's common "predicate" checking function
 func noLoopCheckerPredicate(current *Transcript, args interface{}) bool {
 	apiReqID := args.(string)
-	if current.SentResult ||
-		current.Request.ReturnMode == record.ReturnNoWait ||
+	if current.Request.ReturnMode == record.ReturnNoWait ||
 		current.Request.APIRequestID != apiReqID {
 		return true
 	}
@@ -379,24 +378,9 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 	}
 }
 
-func (lr *LogicRunner) executeAndReply(ctx context.Context, es *ExecutionState, current *Transcript) {
-
-	inslogger.FromContext(ctx).Debug("executeAndReply")
-
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.ExecuteOrValidate")
-	defer span.End()
-
-	re, err := lr.executeLogic(ctx, current)
-	errstr := ""
-	if err != nil {
-		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
-		errstr = err.Error()
-	}
-
-	es.Lock()
-	defer es.Unlock()
-
-	current.SentResult = true
+func (lr *LogicRunner) sendRequestReply(
+	ctx context.Context, current *Transcript, re insolar.Reply, errstr string,
+) {
 	if current.Request.ReturnMode != record.ReturnResult {
 		return
 	}
@@ -428,6 +412,8 @@ func (lr *LogicRunner) executeAndReply(ctx context.Context, es *ExecutionState, 
 }
 
 func (lr *LogicRunner) executeLogic(ctx context.Context, current *Transcript) (insolar.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeLogic")
+	defer span.End()
 
 	if current.Request.CallType == record.CTMethod {
 		objDesc, err := lr.ArtifactManager.GetObject(ctx, *current.Request.Object)
