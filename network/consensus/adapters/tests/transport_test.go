@@ -52,6 +52,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -68,9 +69,9 @@ type emuPacketSender struct {
 	cloner emuPackerCloner
 }
 
-func (r *emuPacketSender) SendTo(t common2.NodeProfile, sendOptions core.PacketSendOptions, s core.PacketSender) {
+func (r *emuPacketSender) SendTo(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, s core.PacketSender) {
 	c := r.cloner.clonePacketFor(t, sendOptions)
-	s.SendPacketToTransport(t, sendOptions, c)
+	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
 type emuPacketBuilder struct {

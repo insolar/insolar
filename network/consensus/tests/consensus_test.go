@@ -109,7 +109,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 			if err == nil {
 				if packet != nil {
 					hostFrom := common.HostIdentity{Addr: *from}
-					err = h.controller.ProcessPacket(packet, &hostFrom)
+					err = h.controller.ProcessPacket(ctx, packet, &hostFrom)
 				}
 			}
 		}
@@ -120,7 +120,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	}
 }
 
-func (h *EmuHostConsensusAdapter) SendPacketToTransport(t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
+func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
 	h.send(t.GetDefaultEndpoint(), payload)
 }
 
@@ -164,7 +164,7 @@ type EmuRoundStrategy struct {
 	bundle core.PhaseControllersBundle
 }
 
-func (*EmuRoundStrategy) CreateRoundContext(ctx context.Context) context.Context {
+func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context) context.Context {
 	return ctx
 }
 

@@ -66,12 +66,12 @@ type PhaseControllersBundle interface {
 }
 
 type ConsensusController interface {
-	ProcessPacket(payload packets.PacketParser, from common.HostIdentityHolder) error
+	ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error
 	// LeaveConsensus()
 }
 
 type RoundController interface {
-	HandlePacket(packet packets.PacketParser, from common.HostIdentityHolder) error
+	HandlePacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder) error
 	StopConsensusRound()
 	StartConsensusRound(upstream UpstreamPulseController)
 }
@@ -91,7 +91,7 @@ type RoundStrategy interface {
 	RandUint32() uint32
 	ShuffleNodeSequence(n int, swap func(i, j int))
 	IsEphemeralPulseAllowed() bool
-	CreateRoundContext(ctx context.Context) context.Context
+	ConfigureRoundContext(ctx context.Context) context.Context
 	AdjustConsensusTimings(timings *common2.RoundTimings)
 }
 
@@ -102,7 +102,7 @@ type LocalNodeConfiguration interface {
 }
 
 type PacketSender interface {
-	SendPacketToTransport(t common2.NodeProfile, sendOptions PacketSendOptions, payload interface{})
+	SendPacketToTransport(ctx context.Context, t common2.NodeProfile, sendOptions PacketSendOptions, payload interface{})
 }
 
 type PacketSendOptions uint32
@@ -113,7 +113,7 @@ const (
 )
 
 type PreparedPacketSender interface {
-	SendTo(target common2.NodeProfile, sendOptions PacketSendOptions, sender PacketSender)
+	SendTo(ctx context.Context, target common2.NodeProfile, sendOptions PacketSendOptions, sender PacketSender)
 }
 
 type PacketBuilder interface {

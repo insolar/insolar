@@ -167,7 +167,7 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 	hostIdentity := common.HostIdentity{
 		Addr: common.HostAddress(address),
 	}
-	err = dh.consensusController.ProcessPacket( /*TODO: ctx, */ packetParser, &hostIdentity)
+	err = dh.consensusController.ProcessPacket(ctx, packetParser, &hostIdentity)
 	if err != nil {
 		logger.Error("Failed to process p")
 		return

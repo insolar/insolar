@@ -108,16 +108,15 @@ func (r *PhasedRoundController) StartConsensusRound(upstream UpstreamPulseContro
 	if r.fullCancel != nil {
 		panic("was started once")
 	}
+
+	ctx := r.realm.config.GetParentContext()
+	ctx, r.fullCancel = context.WithCancel(ctx)
+	r.realm.roundContext = r.realm.strategy.ConfigureRoundContext(ctx)
+
 	r.isRunning = true
 
 	r.realm.roundStartedAt = time.Now()
 	r.realm.coreRealm.upstream = upstream
-
-	ctx := r.realm.config.GetParentContext()
-	ctx, r.fullCancel = context.WithCancel(ctx)
-
-	r.realm.roundContext = r.realm.strategy.CreateRoundContext(ctx)
-	ctx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
 
 	preps := r.realm.strategy.GetPrepPhaseControllers()
 
@@ -127,8 +126,9 @@ func (r *PhasedRoundController) StartConsensusRound(upstream UpstreamPulseContro
 			completeFn:        r.finishPreparation,
 			postponedPacketFn: r.handlePostponedPacket,
 		}
-		r.prepR.start(ctx, preps,
-			10000 /* Should be excessively enough to avoid lockups */)
+		ctx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
+		//r.prepareCancel will be cancelled through r.fullCancel()
+		r.prepR.start(ctx, preps, 10000 /* Should be excessively enough to avoid lockups */)
 	} else {
 		r.prepR = nil
 		r.startFullRealm()
@@ -224,14 +224,15 @@ func (r *PhasedRoundController) startFullRealm() {
 
 func (r *PhasedRoundController) handlePostponedPacket(packet packets.PacketParser, from common.HostIdentityHolder) {
 	// NB! we may need to handle errors from delayed packets
-	_ = r.handlePacket(packet, from, true)
+	//There is no real context for delay reprocessing, so we use the round context
+	_ = r.handlePacket(r.realm.roundContext, packet, from, true)
 }
 
-func (r *PhasedRoundController) HandlePacket(packet packets.PacketParser, from common.HostIdentityHolder) error {
-	return r.handlePacket(packet, from, false)
+func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder) error {
+	return r.handlePacket(ctx, packet, from, false)
 }
 
-func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from common.HostIdentityHolder, preVerified bool) error {
+func (r *PhasedRoundController) handlePacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder, preVerified bool) error {
 
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
 	prep, filterPN, nextPN, err := r.beforeHandlePacket()
@@ -279,9 +280,9 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 			}
 			route := &r.realm.handlers[pt]
 			if route.HasMemberHandler() {
-				return route.handleMemberPacket(memberPacket, src)
+				return route.handleMemberPacket(ctx, memberPacket, src)
 			}
-			return route.handleHostPacket(packet, from)
+			return route.handleHostPacket(ctx, packet, from)
 		}
 	}
 
@@ -299,7 +300,7 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 		h := prep.handlers[pt]
 		var explicitPostpone = false
 		if h != nil {
-			explicitPostpone, err = h(packet, from)
+			explicitPostpone, err = h(ctx, packet, from)
 			if !explicitPostpone || err != nil {
 				return err
 			}
@@ -313,7 +314,7 @@ func (r *PhasedRoundController) handlePacket(packet packets.PacketParser, from c
 		}
 		return errPacketIsNotAllowed
 	}
-	return r.realm.handlers[pt].handleHostPacket(packet, from)
+	return r.realm.handlers[pt].handleHostPacket(ctx, packet, from)
 }
 
 // /* Initiates cancellation of this round */

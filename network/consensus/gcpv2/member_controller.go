@@ -51,6 +51,7 @@
 package gcpv2
 
 import (
+	"context"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/common"
@@ -127,9 +128,9 @@ func (h *ConsensusMemberController) discardRound() {
 	}
 }
 
-func (h *ConsensusMemberController) _processPacket(payload packets.PacketParser, from common.HostIdentityHolder, repeated bool) (bool, error) {
+func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder, repeated bool) (bool, error) {
 	round, created := h.ensureRound()
-	err := round.HandlePacket(payload, from)
+	err := round.HandlePacket(ctx, payload, from)
 
 	if ok, _ := errors.IsNextPulseArrivedError(err); ok {
 		if repeated || created {
@@ -140,15 +141,15 @@ func (h *ConsensusMemberController) _processPacket(payload packets.PacketParser,
 	return err == nil, err
 }
 
-func (h *ConsensusMemberController) ProcessPacket(payload packets.PacketParser, from common.HostIdentityHolder) error {
+func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error {
 
-	ok, err := h._processPacket(payload, from, false)
+	ok, err := h._processPacket(ctx, payload, from, false)
 	if ok || err != nil {
 		return err
 	}
 	h.discardRound()
 
-	_, err = h._processPacket(payload, from, true)
+	_, err = h._processPacket(ctx, payload, from, true)
 	return err
 }
 

@@ -111,7 +111,7 @@ func (*Phase3Controller) GetPacketType() packets.PacketType {
 	return packets.PacketPhase3
 }
 
-func (c *Phase3Controller) HandleMemberPacket(reader packets.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *Phase3Controller) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p3 := reader.AsPhase3Packet()
 
@@ -329,7 +329,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodese
 		default:
 		}
 
-		p3.SendTo(np.GetProfile(), 0, c.R.GetPacketSender())
+		p3.SendTo(ctx, np.GetProfile(), 0, c.R.GetPacketSender())
 		np.SetSentByPacketType(c.GetPacketType())
 	}
 }

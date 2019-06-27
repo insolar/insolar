@@ -95,7 +95,7 @@ func (*Phase2Controller) GetPacketType() packets.PacketType {
 	return packets.PacketPhase2
 }
 
-func (c *Phase2Controller) HandleMemberPacket(reader packets.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p2 := reader.AsPhase2Packet()
 	err := n.SetReceivedWithDupCheck(c.GetPacketType())
@@ -294,7 +294,7 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 		neighbourhoodBags, introductions, c.packetPrepareOptions)
 
 	for _, np := range neighbourhood[1:] { // start from 1 to skip sending to self
-		p2.SendTo(np.GetProfile(), 0, c.R.GetPacketSender())
+		p2.SendTo(ctx, np.GetProfile(), 0, c.R.GetPacketSender())
 		np.SetSentByPacketType(c.GetPacketType())
 		select {
 		case <-ctx.Done():
@@ -365,7 +365,7 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 		if !v.IsNshRequired() {
 			continue
 		}
-		pr1.SendTo(v.GetProfile(), 0, c.R.GetPacketSender())
+		pr1.SendTo(ctx, v.GetProfile(), 0, c.R.GetPacketSender())
 	}
 }
 

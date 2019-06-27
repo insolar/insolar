@@ -77,7 +77,7 @@ func NewRoundStrategy(
 	}
 }
 
-func (rs *RoundStrategy) CreateRoundContext(ctx context.Context) context.Context {
+func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context) context.Context {
 	return ctx
 }
 

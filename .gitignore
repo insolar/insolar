@@ -54,3 +54,4 @@ network_cache
 # Local doc build directory
 /docs/build
 
+*.lock
