@@ -35,7 +35,6 @@ type Dependencies struct {
 	GetRequest             func(*GetRequest)
 	UpdateObject           func(*UpdateObject)
 	SetBlob                func(*SetBlob)
-	SetRecord              func(*SetRecord)
 	SetRequest             func(*SetRequest)
 	SetResult              func(*SetResult)
 	SetActivationRequest   func(*SetActivationRequest)
@@ -82,7 +81,6 @@ func NewDependenciesMock() *Dependencies {
 		GetRequest:             func(*GetRequest) {},
 		UpdateObject:           func(*UpdateObject) {},
 		SetBlob:                func(*SetBlob) {},
-		SetRecord:              func(*SetRecord) {},
 		SetRequest:             func(*SetRequest) {},
 		SetActivationRequest:   func(*SetActivationRequest) {},
 		SetResult:              func(*SetResult) {},

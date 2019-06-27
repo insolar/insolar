@@ -991,40 +991,6 @@ func (m *client) updateObject(
 	return nil
 }
 
-func (m *client) setRecord(
-	ctx context.Context,
-	rec record.Virtual,
-	target insolar.Reference,
-) (*insolar.ID, error) {
-	data, err := rec.Marshal()
-	if err != nil {
-		return nil, errors.Wrap(err, "setRecord: can't serialize record")
-	}
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.RetryJetSender(m.JetStorage),
-		messagebus.RetryFlowCancelled(m.PulseAccessor),
-	)
-	genericReply, err := sender(ctx, &message.SetRecord{
-		Record:    data,
-		TargetRef: target,
-	}, nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	switch rep := genericReply.(type) {
-	case *reply.ID:
-		return &rep.ID, nil
-	case *reply.Error:
-		return nil, rep.Error()
-	default:
-		return nil, fmt.Errorf("setRecord: unexpected reply: %#v", rep)
-	}
-}
-
 func (m *client) setBlob(
 	ctx context.Context,
 	blob []byte,
