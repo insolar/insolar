@@ -146,9 +146,9 @@ func (c *Phase1Controller) _handleNodeData(p1 packets.Phase1PacketReader, n *cor
 	}
 
 	modified, err := n.ApplyNodeMembership(mp, c.R.GetMisbehaviorFactories())
-	//if modified && dupErr != nil {
+	// if modified && dupErr != nil {
 	//	c.R.Log().Warnf("unexpected state: Phase1 was received, but NSH is unset: node=%v", n)
-	//}
+	// }
 
 	if err != nil {
 		return modified, err
