@@ -43,13 +43,11 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 
 	state.Lock()
 	if state.ExecutionState == nil {
-		state.ExecutionState = &ExecutionState{
-			Ref:                   ref,
-			Queue:                 make([]ExecutionQueueElement, 0),
-			pending:               message.InPending,
-			PendingConfirmed:      false,
-			LedgerHasMoreRequests: true,
-		}
+		state.ExecutionState = NewExecutionState(ref)
+		state.ExecutionState.pending = message.InPending
+		state.ExecutionState.PendingConfirmed = false
+		state.ExecutionState.LedgerHasMoreRequests = true
+		state.ExecutionState.RegisterLogicRunner(p.LR)
 	} else {
 		executionState := state.ExecutionState
 		executionState.Lock()
@@ -69,6 +67,9 @@ type HandleAbandonedRequestsNotification struct {
 }
 
 func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flow.Flow) error {
+	h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}, Err: nil}
+	return nil
+
 	parcel := h.Message.Parcel
 	ctx = loggerWithTargetID(ctx, parcel)
 	logger := inslogger.FromContext(ctx)

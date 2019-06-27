@@ -20,12 +20,8 @@ import (
 	"context"
 	"encoding/gob"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type CaseRequest struct {
@@ -138,14 +134,14 @@ func (r *CaseBindReplay) NextRequest() *CaseRequest {
 }
 
 func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, cb CaseBind) (int, error) {
-	//os := lr.UpsertObjectState(ref)
+	//os := LogicRunner.UpsertObjectState(ref)
 	//vs := os.StartValidation(ref)
 	//
 	//vs.Lock()
 	//defer vs.Unlock()
 	//
 	//checker := &ValidationChecker{
-	//	lr: lr,
+	//	LogicRunner: LogicRunner,
 	//	cb: NewCaseBindReplay(cb),
 	//}
 	//vs.Behaviour = checker
@@ -172,7 +168,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, c
 	//	rep, err := func() (insolar.Reply, error) {
 	//		vs.Unlock()
 	//		defer vs.Lock()
-	//		return lr.executeOrValidate(ctx, vs, request.Parcel)
+	//		return LogicRunner.executeAndReply(ctx, vs, request.Parcel)
 	//	}()
 	//
 	//	err = vs.Behaviour.Result(rep, err)
@@ -181,59 +177,6 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, c
 	//	}
 	//}
 	return 1, nil
-}
-
-func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
-	ctx = loggerWithTargetID(ctx, inmsg)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidateCaseBindMessage starts ...")
-	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
-	if !ok {
-		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
-	}
-
-	procCheckRole := CheckOurRole{
-		msg:  msg,
-		role: insolar.DynamicRoleVirtualValidator,
-		lr:   lr,
-	}
-	if err := procCheckRole.Proceed(ctx); err != nil {
-		return nil, errors.Wrap(err, "[ HandleValidateCaseBindMessage ] can't play role")
-	}
-
-	passedStepsCount, validationError := lr.Validate(
-		ctx, msg.GetReference(), msg.GetPulse(), *NewCaseBindFromValidateMessage(ctx, lr.MessageBus, msg),
-	)
-	errstr := ""
-	if validationError != nil {
-		errstr = validationError.Error()
-	}
-
-	_, err := lr.MessageBus.Send(ctx, &message.ValidationResults{
-		RecordRef:        msg.GetReference(),
-		PassedStepsCount: passedStepsCount,
-		Error:            errstr,
-	}, nil)
-
-	return &reply.OK{}, err
-}
-
-func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
-	ctx = loggerWithTargetID(ctx, inmsg)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidationResultsMessage starts ...")
-	msg, ok := inmsg.Message().(*message.ValidationResults)
-	if !ok {
-		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
-	}
-
-	c := lr.GetConsensus(ctx, msg.RecordRef)
-	if err := c.AddValidated(ctx, inmsg, msg); err != nil {
-		return nil, err
-	}
-	return &reply.OK{}, nil
-}
-
-func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
-	return lr.FlowDispatcher.WrapBusHandle(ctx, inmsg)
 }
 
 func init() {

@@ -64,8 +64,8 @@ func (b *MockDB) Set(key Key, value []byte) error {
 }
 
 // NewIterator returns new Iterator over the memory storage.
-func (b *MockDB) NewIterator(scope Scope) Iterator {
-	mi := memoryIterator{scope: scope, fullPrefix: scope.Bytes(), db: b}
+func (b *MockDB) NewIterator(pivot Key, reverse bool) Iterator {
+	mi := memoryIterator{pivot: pivot, reverse: reverse, db: b}
 	b.lock.RLock()
 	return &mi
 }
@@ -77,28 +77,22 @@ func (k KeyItem) Less(than btree.Item) bool {
 }
 
 type memoryIterator struct {
-	scope      Scope
-	fullPrefix []byte
-	db         *MockDB
-	once       sync.Once
-	items      []KeyItem
-	current    int
+	pivot   Key
+	reverse bool
+	db      *MockDB
+	once    sync.Once
+	items   []KeyItem
+	current int
 }
 
 func (mi *memoryIterator) Close() {
 	mi.db.lock.RUnlock()
 }
 
-func (mi *memoryIterator) Seek(prefix []byte) {
-	mi.fullPrefix = append(mi.scope.Bytes(), prefix...)
-	mi.searchKeys()
-}
-
 func (mi *memoryIterator) Next() bool {
 	firstTime := false
 	mi.once.Do(func() {
 		mi.searchKeys()
-
 		firstTime = true
 	})
 	if firstTime {
@@ -113,7 +107,7 @@ func (mi *memoryIterator) Key() []byte {
 	if mi.current < 0 || mi.current >= len(mi.items) {
 		return nil
 	}
-	val := mi.items[mi.current][len(mi.scope.Bytes()):]
+	val := mi.items[mi.current][len(mi.pivot.Scope().Bytes()):]
 	return val
 }
 
@@ -131,8 +125,17 @@ func (mi *memoryIterator) Value() ([]byte, error) {
 
 func (mi *memoryIterator) searchKeys() {
 	mi.items = []KeyItem{}
-	mi.db.keys.AscendGreaterOrEqual(KeyItem(mi.fullPrefix), func(i btree.Item) bool {
-		if !bytes.HasPrefix(i.(KeyItem), mi.fullPrefix) {
+	var (
+		iterate func(pivot btree.Item, iterator btree.ItemIterator)
+	)
+	if mi.reverse {
+		iterate = mi.db.keys.DescendLessOrEqual
+	} else {
+		iterate = mi.db.keys.AscendGreaterOrEqual
+	}
+	pivot := KeyItem(append(mi.pivot.Scope().Bytes(), mi.pivot.ID()...))
+	iterate(pivot, func(i btree.Item) bool {
+		if !bytes.HasPrefix(i.(KeyItem), mi.pivot.Scope().Bytes()) {
 			return false
 		}
 		mi.items = append(mi.items, i.(KeyItem))

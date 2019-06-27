@@ -77,6 +77,17 @@ type MessageBus struct {
 	NextPulseMessagePoolLock    sync.RWMutex
 }
 
+func (mb *MessageBus) Init(ctx context.Context) error {
+	mb.Network.SetOperableFunc(func(ctx context.Context, operable bool) {
+		if operable {
+			mb.Release(ctx)
+		} else {
+			mb.Acquire(ctx)
+		}
+	})
+	return nil
+}
+
 func (mb *MessageBus) Acquire(ctx context.Context) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Acquire")
 	defer span.End()
@@ -114,14 +125,12 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 		signmessages:             config.Host.SignMessages,
 		NextPulseMessagePoolChan: make(chan interface{}),
 	}
-	mb.Acquire(context.Background())
 	return mb, nil
 }
 
 // Start initializes message bus.
 func (mb *MessageBus) Start(ctx context.Context) error {
 	mb.Network.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
-
 	return nil
 }
 
@@ -141,11 +150,6 @@ func (mb *MessageBus) Unlock(ctx context.Context) {
 // Register sets a function as a handler for particular message type,
 // only one handler per type is allowed
 func (mb *MessageBus) Register(p insolar.MessageType, handler insolar.MessageHandler) error {
-	_, ok := mb.handlers[p]
-	if ok {
-		return errors.New("handler for this type already exists")
-	}
-
 	mb.handlers[p] = handler
 	return nil
 }
@@ -213,7 +217,10 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 			return nil, errors.Wrap(err, "failed to calculate role")
 		}
 		res, done := mb.Sender.SendTarget(ctx, wmMsg, nodes[0])
-		repMsg := <-res
+		repMsg, ok := <-res
+		if !ok {
+			return nil, errors.New("can't get reply: reply channel was closed")
+		}
 		done()
 		return deserializePayload(repMsg)
 	}
@@ -223,6 +230,9 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 }
 
 func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
+	if msg == nil {
+		return nil, errors.New("can't deserialize payload of nil message")
+	}
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {

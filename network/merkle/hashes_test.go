@@ -177,10 +177,9 @@ func TestCalculatorHashes(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := testutils.NewTerminationHandlerMock(t)
-	mblock := testutils.NewMessageBusLockerMock(t)
 
 	cm := component.Manager{}
-	cm.Inject(th, nk, &am, calculator, service, scheme, mblock)
+	cm.Inject(th, nk, &am, calculator, service, scheme)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)

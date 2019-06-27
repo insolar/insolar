@@ -9,15 +9,17 @@ option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.populate_all) = false;
 
 message Packet {
-    bytes Sender = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
-    bytes Receiver = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
-    uint64 RequestID = 3;
-    string TraceID = 4;
-    uint32 Type = 5;
+    int32 polymorph = 16;
+
+    bytes Sender = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
+    bytes Receiver = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
+    uint64 RequestID = 22;
+    string TraceID = 23;
+    uint32 Type = 24;
 
     oneof Payload {
-        Request Request = 6;
-        Response Response = 7;
+        Request Request = 25;
+        Response Response = 26;
     }
 }
 
@@ -31,6 +33,7 @@ message Request {
         AuthorizeRequest Authorize = 6;
         RegisterRequest Register = 7;
         GenesisRequest Genesis = 8;
+        SignCertRequest SignCert = 9;
     }
 }
 
@@ -43,6 +46,8 @@ message Response {
         AuthorizeResponse Authorize = 5;
         RegisterResponse Register = 6;
         GenesisResponse Genesis = 7;
+        SignCertResponse SignCert = 8;
+        ErrorResponse Error = 9;
     }
 }
 
@@ -73,7 +78,7 @@ message PulseRequest {
 }
 
 message BootstrapRequest {
-    bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
+    bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim"];
     uint32 LastNodePulse = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     Permission Permission = 3;
 }
@@ -85,12 +90,17 @@ message AuthorizeRequest {
 message RegisterRequest {
     uint64 SessionID = 1;
     string Version = 2;
-    bytes JoinClaim = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
+    bytes JoinClaim = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim"];
 }
 
 message GenesisRequest {
     uint32 LastPulse = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes Discovery = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
+    bytes Discovery = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim"];
+}
+
+
+message SignCertRequest {
+    bytes NodeRef = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message RPCResponse {
@@ -160,4 +170,12 @@ message RegisterResponse {
 message GenesisResponse {
     GenesisRequest Response = 1;
     string Error = 2;
+}
+
+message SignCertResponse {
+    bytes Sign = 1;
+}
+
+message ErrorResponse {
+    string Error = 1;
 }

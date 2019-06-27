@@ -1,47 +1,51 @@
 #@IgnoreInspection BashAddShebang
+set -e
+set -x
 CONFIG_DIR=/opt/insolar/config
-GENESIS_CONFIG=$CONFIG_DIR/genesis.yaml
+BOOTSTRAP_CONFIG=$CONFIG_DIR/bootstrap.yaml
 HEAVY_GENESIS_CONFIG=$CONFIG_DIR/heavy_genesis.json
-NODES_DATA=$CONFIG_DIR/nodes
 DISCOVERY_KEYS=$CONFIG_DIR/discovery
 CERTS_KEYS=$CONFIG_DIR/certs
 
-NUM_NODES=$(fgrep '"host":' $GENESIS_CONFIG | grep -cv "#" )
-
 ls -alhR /opt
-if [ "$HOSTNAME" = seed-0 ] && ! ( test -e /opt/insolar/config/finished )
+if [[ "$HOSTNAME" = "seed-0" && ! $(test -e /opt/insolar/config/finished) ]]
 then
-    echo "generate bootstrap key"
-    insolar gen-key-pair > $CONFIG_DIR/bootstrap_keys.json
 
-    echo "generate root member key"
-    insolar gen-key-pair > $CONFIG_DIR/root_member_keys.json
+    echo "generate members keys in dir: $CONFIG_DIR"
+    insolar gen-key-pair > ${CONFIG_DIR}/root_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_admin_member_keys.json
+    for (( b = 0; b < 10; b++ ))
+    do
+    insolar gen-key-pair > ${CONFIG_DIR}/migration_daemon_${b}_member_keys.json
+    done
 
-    echo "generate genesis"
-    mkdir -vp $NODES_DATA
+    echo "generate bootstrap files"
     mkdir -vp $CERTS_KEYS
-    mkdir -vp $CONFIG_DIR/data
     mkdir -vp $DISCOVERY_KEYS
-    insolard --config $CONFIG_DIR/insolar-genesis.yaml --genesis $GENESIS_CONFIG --keyout $CERTS_KEYS
+    insolar bootstrap --config ${BOOTSTRAP_CONFIG} --certificates-out-dir ${CERTS_KEYS}
     touch /opt/insolar/config/finished
 else
     while ! (/usr/bin/test -e /opt/insolar/config/finished)
     do
-        echo "Waiting for genesis ... ( sleep 5 sec )"
+        echo "Waiting for bootstrap ... ( sleep 5 sec )"
         sleep 5s
     done
 fi
 
-echo next step
-if [ -f /opt/work/config/node-cert.json ]
+if [[ -f /opt/work/config/node-cert.json ]];
 then
     echo "skip work"
 else    
-    echo "copy genesis"
-    cp -vR $CONFIG_DIR/data /opt/work/
-    echo "copy configs"
     mkdir -vp /opt/work/config
-    cp -v $CERTS_KEYS/$(hostname | awk -F'-' '{ printf "seed-%d-cert.json", $2 }')  /opt/work/config/node-cert.json
-    cp -v $DISCOVERY_KEYS/$(hostname | awk -F'-' '{ printf "seed-%d-key.json", $2 }')  /opt/work/config/node-keys.json
+
+    echo "copy files required for genesis"
     cp -v ${HEAVY_GENESIS_CONFIG} /opt/work/config/heavy_genesis.json
+    cp -vR ${CONFIG_DIR}/plugins /opt/work/
+
+    echo "copy root member keys for benchmarking purposes"
+    cp -v ${CONFIG_DIR}/root_member_keys.json /opt/work/config/
+
+    echo "copy configs"
+    cp -v ${CERTS_KEYS}/$(hostname | awk -F'-' '{ printf "seed-%d-cert.json", $2 }')  /opt/work/config/node-cert.json
+    cp -v ${DISCOVERY_KEYS}/$(hostname | awk -F'-' '{ printf "seed-%d-key.json", $2 }')  /opt/work/config/node-keys.json
 fi

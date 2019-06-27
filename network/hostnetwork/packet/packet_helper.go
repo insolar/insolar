@@ -57,7 +57,6 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/pkg/errors"
@@ -82,6 +81,8 @@ func (p *Packet) SetRequest(request interface{}) {
 		r = &Request_Register{t}
 	case *GenesisRequest:
 		r = &Request_Genesis{t}
+	case *SignCertRequest:
+		r = &Request_SignCert{t}
 	default:
 		panic("Request payload is not a valid protobuf struct!")
 	}
@@ -105,6 +106,10 @@ func (p *Packet) SetResponse(response interface{}) {
 		r = &Response_Register{t}
 	case *GenesisResponse:
 		r = &Response_Genesis{t}
+	case *SignCertResponse:
+		r = &Response_SignCert{t}
+	case *ErrorResponse:
+		r = &Response_Error{t}
 	default:
 		panic("Response payload is not a valid protobuf struct!")
 	}
@@ -150,7 +155,7 @@ func SerializePacket(p *Packet) ([]byte, error) {
 }
 
 // DeserializePacket reads packet from io.Reader.
-func DeserializePacket(conn io.Reader) (*Packet, error) {
+func DeserializePacket(logger insolar.Logger, conn io.Reader) (*Packet, error) {
 	lengthBytes := make([]byte, 8)
 	if _, err := io.ReadFull(conn, lengthBytes); err != nil {
 		return nil, err
@@ -161,22 +166,20 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 		return nil, io.ErrUnexpectedEOF
 	}
 
-	log.Debugf("[ DeserializePacket ] packet length %d", length)
+	logger.Debugf("[ DeserializePacket ] packet length %d", length)
 	buf := make([]byte, length)
 	if _, err := io.ReadFull(conn, buf); err != nil {
-		log.Error("[ DeserializePacket ] couldn't read packet: ", err)
-		return nil, err
+		return nil, errors.Wrap(err, "failed to read packet")
 	}
-	log.Debugf("[ DeserializePacket ] read packet")
+	logger.Debugf("[ DeserializePacket ] read packet")
 
 	msg := &Packet{}
 	err = msg.Unmarshal(buf)
 	if err != nil {
-		log.Error("[ DeserializePacket ] couldn't decode packet: ", err)
-		return nil, err
+		return nil, errors.Wrap(err, "failed to decode packet")
 	}
 
-	log.Debugf("[ DeserializePacket ] decoded packet to %s", msg.DebugString())
+	logger.Debugf("[ DeserializePacket ] decoded packet to %s", msg.DebugString())
 
 	return msg, nil
 }
@@ -193,4 +196,15 @@ func (p *Packet) DebugString() string {
 		`Type:` + p.GetType().String() + `,` +
 		`IsResponse:` + strconv.FormatBool(p.IsResponse()) + `,` +
 		`}`
+}
+
+func NewPacket(sender, receiver *host.Host, packetType types.PacketType, id uint64) *Packet {
+	return &Packet{
+		// Polymorph field should be non-default so we have first byte 0x80 in serialized representation
+		Polymorph: 1,
+		Sender:    sender,
+		Receiver:  receiver,
+		Type:      uint32(packetType),
+		RequestID: id,
+	}
 }

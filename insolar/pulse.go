@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/insolar/insolar/insolar/utils"
@@ -74,9 +75,21 @@ func NewPulseNumber(buf []byte) PulseNumber {
 	return PulseNumber(binary.BigEndian.Uint32(buf))
 }
 
+func NewPulseNumberFromStr(pn string) (PulseNumber, error) {
+	i, err := strconv.ParseInt(pn, 10, 32)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to parse pulse number")
+	}
+	return PulseNumber(i), nil
+}
+
 // Bytes serializes pulse number.
 func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
+}
+
+func (pn PulseNumber) String() string {
+	return fmt.Sprintf("%d", pn)
 }
 
 func (pn *PulseNumber) MarshalTo(data []byte) (int, error) {
@@ -154,8 +167,8 @@ const (
 	PulseNumberJet = PulseNumber(1)
 	// PulseNumberCurrent is a special pulse number value that signifies current pulse number.
 	PulseNumberCurrent = PulseNumber(2)
-	// BuiltinPulseNumber declares special pulse number that creates namespace for builtin contracts
-	BuiltinPulseNumber = PulseNumber(200)
+	// BuiltinContractPulseNumber declares special pulse number that creates namespace for builtin contracts
+	BuiltinContractPulseNumber = PulseNumber(200)
 )
 
 // GenesisPulse is a first pulse for the system

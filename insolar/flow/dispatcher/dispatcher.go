@@ -18,13 +18,11 @@ package dispatcher
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync/atomic"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	wmBus "github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -120,17 +118,21 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 		ReplyTo:      make(chan bus.Reply),
 	}
 
-	meta := payload.Meta{}
-	err := meta.Unmarshal(msg.Payload)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal meta")
+	for k, v := range msg.Metadata {
+		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
-	ctx, logger := inslogger.WithField(ctx, "pulse", fmt.Sprintf("%d", meta.Pulse))
-	ctx = pulse.ContextWith(ctx, meta.Pulse)
+	logger := inslogger.FromContext(ctx)
+
+	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get("pulse"))
+	if err != nil {
+		logger.Error("failed to handle message", err)
+		return nil, nil
+	}
+	ctx = pulse.ContextWith(ctx, pn)
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
 	go func() {
 		f := thread.NewThread(msgBus, d.controller)
-		handle := d.getHandleByPulse(meta.Pulse)
+		handle := d.getHandleByPulse(pn)
 		err := f.Run(ctx, handle(msgBus))
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Handling failed"))

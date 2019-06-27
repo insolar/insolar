@@ -19,28 +19,36 @@ package handle
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetCode struct {
 	dep     *proc.Dependencies
-	code    insolar.Reference
-	replyTo chan<- bus.Reply
+	message payload.Meta
+	passed  bool
 }
 
-func NewGetCode(dep *proc.Dependencies, rep chan<- bus.Reply, code insolar.Reference) *GetCode {
+func NewGetCode(dep *proc.Dependencies, msg payload.Meta, passed bool) *GetCode {
 	return &GetCode{
 		dep:     dep,
-		code:    code,
-		replyTo: rep,
+		message: msg,
+		passed:  passed,
 	}
 }
 
 func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	code := proc.NewGetCode(s.code, s.replyTo)
+	msg := payload.GetCode{}
+	err := msg.Unmarshal(s.message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal GetCode message")
+	}
+
+	passIfNotFound := !s.passed
+	code := proc.NewGetCode(s.message, msg.CodeID, passIfNotFound)
 	s.dep.GetCode(code)
 	return f.Procedure(ctx, code, false)
 }

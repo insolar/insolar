@@ -19,7 +19,7 @@
 package functest
 
 import (
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/testutils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -39,15 +39,13 @@ func TestCallUploadedContract(t *testing.T) {
 			return str, nil
 		}`
 
-	prototypeRef := uploadContract(t, contractCode)
+
+	// if we running this test with count we need to get unique names
+	prototypeRef := uploadContract(t, testutils.RandStringBytes(16), contractCode)
 	objectRef := callConstructor(t, prototypeRef)
 
 	testParam := "test"
-	args := append(make([]string, 0), testParam)
-	argsSerialized, err := insolar.Serialize(args)
-	require.NoError(t, err)
-
-	methodResult := callMethod(t, objectRef, "Hello", argsSerialized)
-
-	require.Equal(t, testParam, methodResult.(string))
+	methodResult:= callMethod(t, objectRef, "Hello", testParam)
+	require.Empty(t, methodResult.Error)
+	require.Equal(t, testParam, methodResult.ExtractedReply)
 }

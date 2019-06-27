@@ -43,6 +43,7 @@ import (
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
@@ -195,7 +196,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(pubSub, Pulses, Coordinator)
+		WmBus = bus.NewBus(pubSub, Pulses, Coordinator, CryptoScheme)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -219,7 +220,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewInMemoryIndex()
+		indexes := object.NewInMemoryIndex(records, CryptoScheme)
 		writeController := hot.NewWriteController()
 
 		c := component.Manager{}
@@ -228,7 +229,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		hots := recentstorage.NewProvider()
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, &conf)
+		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
@@ -249,9 +250,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.WriteAccessor = writeController
 		handler.Sender = WmBus
 
-		jetCalculator := jet.NewCalculator(Coordinator, Jets)
+		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
-			Jets,
+			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
 			blobs,
@@ -261,42 +262,49 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 			conf.LightChainLimit,
 		)
-		dataGatherer := replication.NewDataGatherer(drops, blobs, records, indexes)
+
 		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
-			dataGatherer,
 			lightCleaner,
 			Bus,
 			Pulses,
+			drops,
+			blobs,
+			records,
+			indexes,
+			Jets,
+		)
+
+		jetSplitter := executor.NewJetSplitter(
+			Coordinator,
+			Jets,
+			Jets,
+			drops,
+			hots,
+		)
+
+		hotSender := executor.NewHotSender(
+			Bus,
+			drops,
+			indexes,
+			Pulses,
+			Jets,
+			conf.LightChainLimit,
 		)
 
 		pm := pulsemanager.NewPulseManager(
-			conf,
-			drops,
-			blobs,
-			blobs,
-			Pulses,
-			records,
-			records,
-			indexes,
+			jetSplitter,
 			lthSyncer,
 			writeController,
+			hotSender,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
-		pm.JetCoordinator = Coordinator
-		pm.CryptographyService = CryptoService
-		pm.PlatformCryptographyScheme = CryptoScheme
-		pm.RecentStorageProvider = hots
 		pm.JetReleaser = waiter
-		pm.JetAccessor = Jets
 		pm.JetModifier = Jets
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
-		pm.DropModifier = drops
-		pm.DropAccessor = drops
-		pm.DropCleaner = drops
 		pm.PulseAccessor = Pulses
 		pm.PulseCalculator = Pulses
 		pm.PulseAppender = Pulses
@@ -374,7 +382,6 @@ func startWatermill(
 	inRouter.AddMiddleware(
 		middleware.InstantAck,
 		b.IncomingMessageRouter,
-		middleware.CorrelationID,
 	)
 
 	inRouter.AddNoPublisherHandler(

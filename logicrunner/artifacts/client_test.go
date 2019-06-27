@@ -26,11 +26,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/messagebus"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
@@ -127,49 +125,6 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
-	code := []byte("test_code")
-	codeRef := testutils.RandomRef()
-
-	mb := testutils.NewMessageBusMock(s.T())
-	mb.SendFunc = func(p context.Context, p1 insolar.Message, p3 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		return &reply.Code{
-			Code: code,
-		}, nil
-	}
-
-	jc := jet.NewCoordinatorMock(s.T())
-	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
-	jc.MeMock.Return(insolar.Reference{})
-
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-
-	am := client{
-		DefaultBus:     mb,
-		PulseAccessor:  pa,
-		JetCoordinator: jc,
-		PCS:            s.scheme,
-		senders:        messagebus.NewSenders(),
-	}
-
-	desc, err := am.GetCode(s.ctx, codeRef)
-	receivedCode, err := desc.Code()
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), code, receivedCode)
-
-	mb.SendFunc = func(p context.Context, p1 insolar.Message, p3 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		s.T().Fatal("Func must not be called here")
-		return nil, nil
-	}
-
-	desc, err = am.GetCode(s.ctx, codeRef)
-	receivedCode, err = desc.Code()
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), code, receivedCode)
-
-}
-
 func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 	mc := minimock.NewController(s.T())
 	am := NewClient(nil)
@@ -200,59 +155,6 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 
 	_, err := am.GetChildren(s.ctx, *objRef, nil)
 	require.NoError(s.T(), err)
-}
-
-func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-
-	cs := platformpolicy.NewPlatformCryptographyScheme()
-	am := NewClient(nil)
-	am.PCS = cs
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
-
-	am.PulseAccessor = pa
-	am.JetStorage = s.jetStorage
-
-	s.T().Run("returns error on exceeding retry limit", func(t *testing.T) {
-		mb := testutils.NewMessageBusMock(mc)
-		am.DefaultBus = mb
-		mb.SendMock.Return(&reply.JetMiss{
-			JetID: insolar.ID(*insolar.NewJetID(5, []byte{1, 2, 3})),
-		}, nil)
-		ref := gen.Reference()
-		_, err := am.RegisterRequest(
-			s.ctx,
-			record.Request{Object: &ref},
-		)
-		require.Error(t, err)
-	})
-
-	s.T().Run("returns no error and updates tree when jet miss", func(t *testing.T) {
-		b_1101 := byte(0xD0)
-		b_11010101 := byte(0xD5)
-		mb := testutils.NewMessageBusMock(mc)
-		am.DefaultBus = mb
-		retries := 3
-		mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-			if retries == 0 {
-				return &reply.ID{}, nil
-			}
-			retries--
-			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101})), Pulse: insolar.FirstPulseNumber}, nil
-		}
-		ref := gen.Reference()
-		_, err := am.RegisterRequest(s.ctx, record.Request{Object: &ref})
-		require.NoError(t, err)
-
-		jetID, actual := s.jetStorage.ForID(
-			s.ctx, insolar.FirstPulseNumber, *insolar.NewID(0, []byte{0xD5}),
-		)
-
-		assert.Equal(t, insolar.NewJetID(4, []byte{b_1101}), &jetID, "proper jet ID for record")
-		assert.True(t, actual, "jet ID is actual in tree")
-	})
 }
 
 func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
@@ -303,7 +205,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	am.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
+	_, res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
 
 	// Assert
 	require.NoError(s.T(), err)

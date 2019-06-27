@@ -42,6 +42,7 @@ type TestMetrics struct {
 // returns initialized TestMetrics object.
 func Start(ctx context.Context, t *testing.T) (*TestMetrics, error) {
 	cfg := configuration.NewMetrics()
+	cfg.ReportingPeriod = time.Millisecond * 100
 	host, _ := parseAddr(cfg.ListenAddress)
 
 	// just use any available port

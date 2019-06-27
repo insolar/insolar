@@ -88,7 +88,7 @@ func (j *jet) ExtractLeafIDs(ids *[]insolar.JetID, path []byte, depth uint8) {
 	if j == nil {
 		return
 	}
-	if j.Left == nil && j.Right == nil {
+	if j.Left == nil && j.Right == nil && j.Actual {
 		*ids = append(*ids, *insolar.NewJetID(depth, path))
 		return
 	}
@@ -153,16 +153,10 @@ func (t *Tree) Split(id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
 		return insolar.ZeroJetID, insolar.ZeroJetID, errors.New("failed to split: incorrect jet provided")
 	}
 
+	left, right := Siblings(id)
 	j.Left = &jet{}
-	leftPrefix := resetBits(prefix, depth)
-	left := insolar.NewJetID(depth+1, leftPrefix)
-
 	j.Right = &jet{}
-	rightPrefix := resetBits(prefix, depth)
-	setBit(rightPrefix, depth)
-	right := insolar.NewJetID(depth+1, rightPrefix)
-
-	return *left, *right, nil
+	return left, right, nil
 }
 
 func (t *Tree) LeafIDs() []insolar.JetID {

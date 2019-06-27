@@ -14,10 +14,13 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package preprocessor
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -124,12 +127,12 @@ func (s *RealContractsSuite) TestCompiling() {
 	am := goplugintestutils.NewTestArtifactManager()
 	cb := goplugintestutils.NewContractBuilder(am, s.icc)
 
-	err := cb.Build(contracts)
+	err := cb.Build(context.Background(), contracts)
 	s.NoError(err)
 	cb.Clean()
 }
 
 func TestRealSmartContract(t *testing.T) {
-	t.Parallel()
+	t.Skip()
 	suite.Run(t, new(RealContractsSuite))
 }

@@ -56,7 +56,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -68,29 +68,6 @@ type BootstrapResult struct {
 	// FirstPulseTime    time.Time
 	ReconnectRequired bool
 	NetworkSize       int
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network.Controller -o ../testutils/network -s _mock.go
-
-// Controller contains network logic.
-type Controller interface {
-	component.Initer
-
-	// SendMessage send message to nodeID.
-	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
-	// SendBytes send bytes to nodeID.
-	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
-	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
-	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
-	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
-	SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error
-	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
-	Bootstrap(ctx context.Context) (*BootstrapResult, error)
-	// SetLastIgnoredPulse set pulse number after which we will begin setting new pulses to PulseManager
-	SetLastIgnoredPulse(number insolar.PulseNumber)
-	// GetLastIgnoredPulse get last pulse that will be ignored
-	GetLastIgnoredPulse() insolar.PulseNumber
-	AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error
 }
 
 // RequestHandler handler function to process incoming requests from network and return responses to these requests.
@@ -294,6 +271,7 @@ type Gateway interface {
 	OnPulse(context.Context, insolar.Pulse) error
 	NewGateway(insolar.NetworkState) Gateway
 	Auther() Auther
+	NeedLockMessageBus() bool
 }
 
 type Auther interface {

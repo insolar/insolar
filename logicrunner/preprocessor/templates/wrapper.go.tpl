@@ -18,7 +18,10 @@ package {{ .Package }}
 
 import (
 {{- range $import, $i := .Imports }}
-	{{$import}}
+	{{ $import }}
+{{- end }}
+{{ if $.GenerateInitialize -}}
+    XXX_insolar "github.com/insolar/insolar/insolar"
 {{- end }}
 )
 
@@ -30,8 +33,24 @@ func ( e *ExtendableError ) Error() string{
 	return e.S
 }
 
+func INS_META_INFO() ([] map[string]string) {
+	result := make([]map[string] string, 0)
+	{{ range $method := .Methods }}
+		{{ if $method.SagaInfo.IsSaga }}
+        {
+		info := make(map[string] string, 3)
+		info["Type"] = "SagaInfo"
+		info["MethodName"] = "{{ $method.Name }}"
+		info["RollbackMethodName"] = "{{ $method.SagaInfo.RollbackMethodName }}"
+        result = append(result, info)
+        }
+		{{end}}
+	{{end}}
+	return result
+}
+
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
@@ -57,7 +76,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 }
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
@@ -84,7 +103,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 {{ range $method := .Methods }}
 func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 
 	self := new({{ $.ContractType }})
 
@@ -131,7 +150,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 
 {{ range $f := .Functions }}
 func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	{{ $f.ArgumentsZeroList }}
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -160,16 +179,20 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
 {{ end }}
 
 {{ if $.GenerateInitialize -}}
-func Initialize() map[string]interface{} {
-    return map[string]interface{}{
-        "INSMETHOD_GetCode": INSMETHOD_GetCode,
-        "INSMETHOD_GetPrototype": INSMETHOD_GetPrototype,
-{{ range $method := .Methods -}}
-        "INSMETHOD_{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
-{{- end }}
-{{ range $f := .Functions -}}
-        "INSCONSTRUCTOR_{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
-{{ end }}
+func Initialize() XXX_insolar.ContractWrapper {
+    return XXX_insolar.ContractWrapper{
+        GetCode: INSMETHOD_GetCode,
+        GetPrototype: INSMETHOD_GetPrototype,
+        Methods: XXX_insolar.ContractMethods{
+            {{ range $method := .Methods -}}
+                    "{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
+            {{ end }}
+        },
+        Constructors: XXX_insolar.ContractConstructors{
+            {{ range $f := .Functions -}}
+                    "{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
+            {{ end }}
+        },
     }
 }
 {{- end }}

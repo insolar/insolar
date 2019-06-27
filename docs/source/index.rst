@@ -8,6 +8,10 @@ Insolar Documentation
 
    Insolar's documentation is under development, its structure is not yet finalized. Expect updates soon.
 
+To get a grip on how Insolar works, take a look at its :ref:`architecture overview <architecture>`.
+
+To connect to TestNet 1.1, go through :ref:`step-by-step instructions <connecting_to_testnet>`.
+
 .. // TODO: Develop a documentation entry point (main page) upon the content's readiness.
 
 .. toctree::
@@ -25,4 +29,4 @@ Insolar Documentation
    :maxdepth: 2
    :caption: Integration
 
-   connect-or-setup
+   integration

@@ -80,7 +80,7 @@ func (i *JetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
 	}
 }
 
-// For returns a collection of ids, that are stored for a specific jetID and a pulse number
+// For returns a collection of ids, that are stored for a specific jetID
 func (i *JetIndex) For(jetID insolar.JetID) map[insolar.ID]struct{} {
 	i.lock.Lock()
 	defer i.lock.Unlock()

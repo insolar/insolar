@@ -52,6 +52,8 @@ package common
 
 import (
 	"time"
+
+	"github.com/insolar/insolar/configuration"
 )
 
 // Options contains configuration options for the local host.
@@ -62,7 +64,8 @@ type Options struct {
 	// The maximum time to wait for a response to any packet.
 	PacketTimeout time.Duration
 
-	// InfiniteBootstrap bool
+	// The maximum time to wait for a response to ack packet.
+	AckPacketTimeout time.Duration
 
 	// Bootstrap reconnect timeout
 	BootstrapTimeout time.Duration
@@ -81,10 +84,20 @@ type Options struct {
 
 	// HandshakeSession TTL
 	HandshakeSessionTTL time.Duration
+}
 
-	// FakePulseDuration is a timeout to new pulse in ms
-	FakePulseDuration time.Duration
-
-	// CyclicBootstrapEnabled is a flag to enable/disable a cyclic bootstrap. Default - false
-	CyclicBootstrapEnabled bool
+// ConfigureOptions convert daemon configuration to controller options
+func ConfigureOptions(conf configuration.Configuration) *Options {
+	config := conf.Host
+	return &Options{
+		InfinityBootstrap:   config.InfinityBootstrap,
+		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Second,
+		MinTimeout:          time.Duration(config.MinTimeout) * time.Second,
+		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Second,
+		PingTimeout:         1 * time.Second,
+		PacketTimeout:       15 * time.Second,
+		AckPacketTimeout:    5 * time.Second,
+		BootstrapTimeout:    10 * time.Second,
+		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
+	}
 }

@@ -59,7 +59,7 @@ import (
 )
 
 func TestConsensusInfo(t *testing.T) {
-	ci := newConsensusInfo()
+	ci := NewConsensusInfo()
 	ref := testutils.RandomRef()
 	sid := insolar.ShortNodeID(10)
 	err := ci.AddTemporaryMapping(ref, sid, "127.0.0.1:666")
@@ -80,7 +80,7 @@ func TestConsensusInfo(t *testing.T) {
 }
 
 func TestConsensusInfo_AddTemporaryMapping(t *testing.T) {
-	ci := newConsensusInfo()
+	ci := NewConsensusInfo()
 	err := ci.AddTemporaryMapping(insolar.Reference{0}, 0, "invalid")
 	assert.Error(t, err)
 }

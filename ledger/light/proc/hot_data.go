@@ -42,6 +42,7 @@ type HotData struct {
 		RecentStorageProvider recentstorage.Provider
 		MessageBus            insolar.MessageBus
 		IndexBucketModifier   object.IndexBucketModifier
+		PendingModifier       object.PendingModifier
 		JetStorage            jet.Storage
 		JetFetcher            jet.Fetcher
 		JetReleaser           hot.JetReleaser
@@ -110,6 +111,10 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 	}()
 
+	p.Dep.JetStorage.Update(
+		ctx, p.msg.PulseNumber, true, jetID,
+	)
+
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
 	for _, meta := range p.msg.HotIndexes {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
@@ -118,16 +123,22 @@ func (p *HotData) process(ctx context.Context) error {
 			continue
 		}
 
+		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.msg.PulseNumber, meta.ObjID)
+		if objJetID != jetID {
+			logger.Warn("received wrong id")
+			continue
+		}
+
 		decodedIndex.JetID = jetID
 		err = p.Dep.IndexBucketModifier.SetBucket(
 			ctx,
 			p.msg.PulseNumber,
-			object.IndexBucket{
+			object.FilamentIndex{
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
-				LifelineLastUsed: meta.LastUsed,
-				Results:          []insolar.ID{},
-				Requests:         []insolar.ID{}},
+				LifelineLastUsed: meta.LifelineLastUsed,
+				PendingRecords:   []insolar.ID{},
+			},
 		)
 		if err != nil {
 			logger.Error(errors.Wrapf(err, "[handleHotRecords] failed to save index - %v", meta.ObjID.DebugString()))
@@ -135,10 +146,6 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 	}
-
-	p.Dep.JetStorage.Update(
-		ctx, p.msg.PulseNumber, true, jetID,
-	)
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
 

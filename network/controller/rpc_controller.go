@@ -73,11 +73,10 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/controller.RPCController -o ../../testutils/network -s _mock.go
+
 type RPCController interface {
 	component.Initer
-
-	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
-	IAmRPCController()
 
 	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
 	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
@@ -92,10 +91,6 @@ type rpcController struct {
 
 	options     *common.Options
 	methodTable map[string]insolar.RemoteProcedure
-}
-
-func (rpc *rpcController) IAmRPCController() {
-	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
 }
 
 func (rpc *rpcController) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
@@ -227,7 +222,7 @@ func (rpc *rpcController) SendBytes(ctx context.Context, nodeID insolar.Referenc
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
 	}
-	response, err := future.WaitResponse(rpc.options.PacketTimeout)
+	response, err := future.WaitResponse(rpc.options.AckPacketTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}

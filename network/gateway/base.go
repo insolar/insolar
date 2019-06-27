@@ -55,9 +55,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/log" // TODO remove before merge
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 )
 
@@ -67,11 +66,10 @@ type Base struct {
 	Self                network.Gateway
 	Network             network.Gatewayer
 	Nodekeeper          network.NodeKeeper
+	HostNetwork         network.HostNetwork
 	ContractRequester   insolar.ContractRequester
 	CryptographyService insolar.CryptographyService
 	CertificateManager  insolar.CertificateManager
-	GIL                 insolar.GlobalInsolarLock
-	MessageBus          insolar.MessageBus
 }
 
 // NewGateway creates new gateway on top of existing
@@ -100,9 +98,12 @@ func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	}
 	if g.Nodekeeper.IsBootstrapped() {
 		g.Network.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
-		g.Network.Gateway().Run(ctx)
 	}
 	return nil
+}
+
+func (g *Base) NeedLockMessageBus() bool {
+	return true
 }
 
 // Auther casts us to Auther or obtain it in another way

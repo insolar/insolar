@@ -22,12 +22,17 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+
+	"github.com/insolar/insolar/ledger/heavy/replica"
 	"github.com/insolar/insolar/log"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/ledger/genesis"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -58,7 +63,6 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 type components struct {
@@ -109,8 +113,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
-	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	logger := inslogger.FromContext(ctx)
+	wmLogger := log.NewWatermillLogAdapter(logger)
+	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 
 	// Network.
 	var (
@@ -138,9 +143,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	// API.
 	var (
-		Requester insolar.ContractRequester
-		Genesis   insolar.GenesisDataProvider
-		API       insolar.APIRunner
+		Requester       insolar.ContractRequester
+		GenesisProvider insolar.GenesisDataProvider
+		API             insolar.APIRunner
 	)
 	{
 		var err error
@@ -149,7 +154,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
 
-		Genesis, err = genesisdataprovider.New()
+		GenesisProvider, err = genesisdataprovider.New()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start GenesisDataProvider")
 		}
@@ -204,7 +209,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(pubSub, Pulses, Coordinator)
+		WmBus = bus.NewBus(pubSub, Pulses, Coordinator, CryptoScheme)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -218,23 +223,26 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	var (
-		PulseManager        insolar.PulseManager
-		Handler             *handler.Handler
-		DiscoveryNodesStore *genesis.Genesis
+		PulseManager insolar.PulseManager
+		Handler      *handler.Handler
+		Genesis      *genesis.Genesis
 	)
 	{
-		pulses := pulse.NewDB(DB)
 		records := object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB)
 		blobs := blob.NewDB(DB)
 		drops := drop.NewDB(DB)
+		jets := jet.NewDBStore(DB)
+		jetKeeper := replica.NewJetKeeper(jets, DB)
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
-		pm.PulseAppender = pulses
+		pm.PulseAppender = Pulses
+		pm.PulseAccessor = Pulses
+		pm.JetModifier = jets
 
 		h := handler.New()
 		h.RecordAccessor = records
@@ -247,6 +255,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.BlobModifier = blobs
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
+		h.PulseAccessor = Pulses
+		h.JetModifier = jets
+		h.JetKeeper = jetKeeper
 		h.Sender = WmBus
 
 		PulseManager = pm
@@ -261,9 +272,19 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			LifelineModifier: indexes,
 			LifelineAccessor: indexes,
 		}
-		DiscoveryNodesStore = &genesis.Genesis{
-			DiscoveryNodeManager: genesis.NewDiscoveryNodeManager(artifactManager),
-			DiscoveryNodes:       genesisCfg.DiscoveryNodes,
+		Genesis = &genesis.Genesis{
+			ArtifactManager: artifactManager,
+			BaseRecord: &genesis.BaseRecord{
+				DB:                    DB,
+				DropModifier:          drops,
+				PulseAppender:         Pulses,
+				PulseAccessor:         Pulses,
+				RecordModifier:        records,
+				IndexLifelineModifier: indexes,
+			},
+
+			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
+			ContractsConfig: genesisCfg.ContractsConfig,
 		}
 	}
 
@@ -281,7 +302,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Tokens,
 		Parcels,
 		artifacts.NewClient(WmBus),
-		Genesis,
+		GenesisProvider,
 		API,
 		KeyProcessor,
 		Termination,
@@ -291,14 +312,19 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NodeNetwork,
 		NetworkService,
 		pubSub,
-		DiscoveryNodesStore,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
+	if !genesisCfg.Skip {
+		if err := Genesis.Start(ctx); err != nil {
+			logger.Fatalf("genesis failed on heavy with error: %v", err)
+		}
+	}
+
+	startWatermill(ctx, wmLogger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
 
 	return c, nil
 }
@@ -337,7 +363,6 @@ func startWatermill(
 	inRouter.AddMiddleware(
 		middleware.InstantAck,
 		b.IncomingMessageRouter,
-		middleware.CorrelationID,
 	)
 
 	inRouter.AddNoPublisherHandler(

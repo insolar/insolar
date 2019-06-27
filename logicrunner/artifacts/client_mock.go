@@ -21,25 +21,20 @@ import (
 type ClientMock struct {
 	t minimock.Tester
 
-	ActivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r ObjectDescriptor, r1 error)
+	ActivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) (r error)
 	ActivateObjectCounter    uint64
 	ActivateObjectPreCounter uint64
 	ActivateObjectMock       mClientMockActivateObject
 
-	ActivatePrototypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r ObjectDescriptor, r1 error)
+	ActivatePrototypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) (r error)
 	ActivatePrototypeCounter    uint64
 	ActivatePrototypePreCounter uint64
 	ActivatePrototypeMock       mClientMockActivatePrototype
 
-	DeactivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor) (r *insolar.ID, r1 error)
+	DeactivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) (r error)
 	DeactivateObjectCounter    uint64
 	DeactivateObjectPreCounter uint64
 	DeactivateObjectMock       mClientMockDeactivateObject
-
-	DeclareTypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)
-	DeclareTypeCounter    uint64
-	DeclareTypePreCounter uint64
-	DeclareTypeMock       mClientMockDeclareType
 
 	DeployCodeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) (r *insolar.ID, r1 error)
 	DeployCodeCounter    uint64
@@ -66,7 +61,7 @@ type ClientMock struct {
 	GetObjectPreCounter uint64
 	GetObjectMock       mClientMockGetObject
 
-	GetPendingRequestFunc       func(p context.Context, p1 insolar.ID) (r insolar.Parcel, r1 error)
+	GetPendingRequestFunc       func(p context.Context, p1 insolar.ID) (r *insolar.Reference, r1 insolar.Parcel, r2 error)
 	GetPendingRequestCounter    uint64
 	GetPendingRequestPreCounter uint64
 	GetPendingRequestMock       mClientMockGetPendingRequest
@@ -75,6 +70,21 @@ type ClientMock struct {
 	HasPendingRequestsCounter    uint64
 	HasPendingRequestsPreCounter uint64
 	HasPendingRequestsMock       mClientMockHasPendingRequests
+
+	InjectCodeDescriptorFunc       func(p insolar.Reference, p1 CodeDescriptor)
+	InjectCodeDescriptorCounter    uint64
+	InjectCodeDescriptorPreCounter uint64
+	InjectCodeDescriptorMock       mClientMockInjectCodeDescriptor
+
+	InjectFinishFunc       func()
+	InjectFinishCounter    uint64
+	InjectFinishPreCounter uint64
+	InjectFinishMock       mClientMockInjectFinish
+
+	InjectObjectDescriptorFunc       func(p insolar.Reference, p1 ObjectDescriptor)
+	InjectObjectDescriptorCounter    uint64
+	InjectObjectDescriptorPreCounter uint64
+	InjectObjectDescriptorMock       mClientMockInjectObjectDescriptor
 
 	RegisterRequestFunc       func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)
 	RegisterRequestCounter    uint64
@@ -96,15 +106,10 @@ type ClientMock struct {
 	StatePreCounter uint64
 	StateMock       mClientMockState
 
-	UpdateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r ObjectDescriptor, r1 error)
+	UpdateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) (r error)
 	UpdateObjectCounter    uint64
 	UpdateObjectPreCounter uint64
 	UpdateObjectMock       mClientMockUpdateObject
-
-	UpdatePrototypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte, p5 *insolar.Reference) (r ObjectDescriptor, r1 error)
-	UpdatePrototypeCounter    uint64
-	UpdatePrototypePreCounter uint64
-	UpdatePrototypeMock       mClientMockUpdatePrototype
 }
 
 //NewClientMock returns a mock for github.com/insolar/insolar/logicrunner/artifacts.Client
@@ -118,7 +123,6 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.ActivateObjectMock = mClientMockActivateObject{mock: m}
 	m.ActivatePrototypeMock = mClientMockActivatePrototype{mock: m}
 	m.DeactivateObjectMock = mClientMockDeactivateObject{mock: m}
-	m.DeclareTypeMock = mClientMockDeclareType{mock: m}
 	m.DeployCodeMock = mClientMockDeployCode{mock: m}
 	m.GetChildrenMock = mClientMockGetChildren{mock: m}
 	m.GetCodeMock = mClientMockGetCode{mock: m}
@@ -126,12 +130,14 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.GetObjectMock = mClientMockGetObject{mock: m}
 	m.GetPendingRequestMock = mClientMockGetPendingRequest{mock: m}
 	m.HasPendingRequestsMock = mClientMockHasPendingRequests{mock: m}
+	m.InjectCodeDescriptorMock = mClientMockInjectCodeDescriptor{mock: m}
+	m.InjectFinishMock = mClientMockInjectFinish{mock: m}
+	m.InjectObjectDescriptorMock = mClientMockInjectObjectDescriptor{mock: m}
 	m.RegisterRequestMock = mClientMockRegisterRequest{mock: m}
 	m.RegisterResultMock = mClientMockRegisterResult{mock: m}
 	m.RegisterValidationMock = mClientMockRegisterValidation{mock: m}
 	m.StateMock = mClientMockState{mock: m}
 	m.UpdateObjectMock = mClientMockUpdateObject{mock: m}
-	m.UpdatePrototypeMock = mClientMockUpdatePrototype{mock: m}
 
 	return m
 }
@@ -152,57 +158,55 @@ type ClientMockActivateObjectInput struct {
 	p1 insolar.Reference
 	p2 insolar.Reference
 	p3 insolar.Reference
-	p4 insolar.Reference
-	p5 bool
-	p6 []byte
+	p4 bool
+	p5 []byte
 }
 
 type ClientMockActivateObjectResult struct {
-	r  ObjectDescriptor
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Client.ActivateObject is expected from 1 to Infinity times
-func (m *mClientMockActivateObject) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) *mClientMockActivateObject {
+func (m *mClientMockActivateObject) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) *mClientMockActivateObject {
 	m.mock.ActivateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockActivateObjectExpectation{}
 	}
-	m.mainExpectation.input = &ClientMockActivateObjectInput{p, p1, p2, p3, p4, p5, p6}
+	m.mainExpectation.input = &ClientMockActivateObjectInput{p, p1, p2, p3, p4, p5}
 	return m
 }
 
 //Return specifies results of invocation of Client.ActivateObject
-func (m *mClientMockActivateObject) Return(r ObjectDescriptor, r1 error) *ClientMock {
+func (m *mClientMockActivateObject) Return(r error) *ClientMock {
 	m.mock.ActivateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockActivateObjectExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockActivateObjectResult{r, r1}
+	m.mainExpectation.result = &ClientMockActivateObjectResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of Client.ActivateObject is expected once
-func (m *mClientMockActivateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) *ClientMockActivateObjectExpectation {
+func (m *mClientMockActivateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) *ClientMockActivateObjectExpectation {
 	m.mock.ActivateObjectFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ClientMockActivateObjectExpectation{}
-	expectation.input = &ClientMockActivateObjectInput{p, p1, p2, p3, p4, p5, p6}
+	expectation.input = &ClientMockActivateObjectInput{p, p1, p2, p3, p4, p5}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *ClientMockActivateObjectExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ClientMockActivateObjectResult{r, r1}
+func (e *ClientMockActivateObjectExpectation) Return(r error) {
+	e.result = &ClientMockActivateObjectResult{r}
 }
 
 //Set uses given function f as a mock of Client.ActivateObject method
-func (m *mClientMockActivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r ObjectDescriptor, r1 error)) *ClientMock {
+func (m *mClientMockActivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) (r error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -211,18 +215,18 @@ func (m *mClientMockActivateObject) Set(f func(p context.Context, p1 insolar.Ref
 }
 
 //ActivateObject implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r ObjectDescriptor, r1 error) {
+func (m *ClientMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) (r error) {
 	counter := atomic.AddUint64(&m.ActivateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.ActivateObjectCounter, 1)
 
 	if len(m.ActivateObjectMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ActivateObjectMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.ActivateObject. %v %v %v %v %v %v %v", p, p1, p2, p3, p4, p5, p6)
+			m.t.Fatalf("Unexpected call to ClientMock.ActivateObject. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
 			return
 		}
 
 		input := m.ActivateObjectMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockActivateObjectInput{p, p1, p2, p3, p4, p5, p6}, "Client.ActivateObject got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ClientMockActivateObjectInput{p, p1, p2, p3, p4, p5}, "Client.ActivateObject got unexpected parameters")
 
 		result := m.ActivateObjectMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -231,7 +235,6 @@ func (m *ClientMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -240,7 +243,7 @@ func (m *ClientMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 
 
 		input := m.ActivateObjectMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockActivateObjectInput{p, p1, p2, p3, p4, p5, p6}, "Client.ActivateObject got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ClientMockActivateObjectInput{p, p1, p2, p3, p4, p5}, "Client.ActivateObject got unexpected parameters")
 		}
 
 		result := m.ActivateObjectMock.mainExpectation.result
@@ -249,17 +252,16 @@ func (m *ClientMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
 
 	if m.ActivateObjectFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.ActivateObject. %v %v %v %v %v %v %v", p, p1, p2, p3, p4, p5, p6)
+		m.t.Fatalf("Unexpected call to ClientMock.ActivateObject. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
 		return
 	}
 
-	return m.ActivateObjectFunc(p, p1, p2, p3, p4, p5, p6)
+	return m.ActivateObjectFunc(p, p1, p2, p3, p4, p5)
 }
 
 //ActivateObjectMinimockCounter returns a count of ClientMock.ActivateObjectFunc invocations
@@ -308,56 +310,54 @@ type ClientMockActivatePrototypeInput struct {
 	p1 insolar.Reference
 	p2 insolar.Reference
 	p3 insolar.Reference
-	p4 insolar.Reference
-	p5 []byte
+	p4 []byte
 }
 
 type ClientMockActivatePrototypeResult struct {
-	r  ObjectDescriptor
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Client.ActivatePrototype is expected from 1 to Infinity times
-func (m *mClientMockActivatePrototype) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) *mClientMockActivatePrototype {
+func (m *mClientMockActivatePrototype) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) *mClientMockActivatePrototype {
 	m.mock.ActivatePrototypeFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockActivatePrototypeExpectation{}
 	}
-	m.mainExpectation.input = &ClientMockActivatePrototypeInput{p, p1, p2, p3, p4, p5}
+	m.mainExpectation.input = &ClientMockActivatePrototypeInput{p, p1, p2, p3, p4}
 	return m
 }
 
 //Return specifies results of invocation of Client.ActivatePrototype
-func (m *mClientMockActivatePrototype) Return(r ObjectDescriptor, r1 error) *ClientMock {
+func (m *mClientMockActivatePrototype) Return(r error) *ClientMock {
 	m.mock.ActivatePrototypeFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockActivatePrototypeExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockActivatePrototypeResult{r, r1}
+	m.mainExpectation.result = &ClientMockActivatePrototypeResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of Client.ActivatePrototype is expected once
-func (m *mClientMockActivatePrototype) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) *ClientMockActivatePrototypeExpectation {
+func (m *mClientMockActivatePrototype) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) *ClientMockActivatePrototypeExpectation {
 	m.mock.ActivatePrototypeFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ClientMockActivatePrototypeExpectation{}
-	expectation.input = &ClientMockActivatePrototypeInput{p, p1, p2, p3, p4, p5}
+	expectation.input = &ClientMockActivatePrototypeInput{p, p1, p2, p3, p4}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *ClientMockActivatePrototypeExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ClientMockActivatePrototypeResult{r, r1}
+func (e *ClientMockActivatePrototypeExpectation) Return(r error) {
+	e.result = &ClientMockActivatePrototypeResult{r}
 }
 
 //Set uses given function f as a mock of Client.ActivatePrototype method
-func (m *mClientMockActivatePrototype) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r ObjectDescriptor, r1 error)) *ClientMock {
+func (m *mClientMockActivatePrototype) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) (r error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -366,18 +366,18 @@ func (m *mClientMockActivatePrototype) Set(f func(p context.Context, p1 insolar.
 }
 
 //ActivatePrototype implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) ActivatePrototype(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r ObjectDescriptor, r1 error) {
+func (m *ClientMock) ActivatePrototype(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) (r error) {
 	counter := atomic.AddUint64(&m.ActivatePrototypePreCounter, 1)
 	defer atomic.AddUint64(&m.ActivatePrototypeCounter, 1)
 
 	if len(m.ActivatePrototypeMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ActivatePrototypeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.ActivatePrototype. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
+			m.t.Fatalf("Unexpected call to ClientMock.ActivatePrototype. %v %v %v %v %v", p, p1, p2, p3, p4)
 			return
 		}
 
 		input := m.ActivatePrototypeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockActivatePrototypeInput{p, p1, p2, p3, p4, p5}, "Client.ActivatePrototype got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ClientMockActivatePrototypeInput{p, p1, p2, p3, p4}, "Client.ActivatePrototype got unexpected parameters")
 
 		result := m.ActivatePrototypeMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -386,7 +386,6 @@ func (m *ClientMock) ActivatePrototype(p context.Context, p1 insolar.Reference, 
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -395,7 +394,7 @@ func (m *ClientMock) ActivatePrototype(p context.Context, p1 insolar.Reference, 
 
 		input := m.ActivatePrototypeMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockActivatePrototypeInput{p, p1, p2, p3, p4, p5}, "Client.ActivatePrototype got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ClientMockActivatePrototypeInput{p, p1, p2, p3, p4}, "Client.ActivatePrototype got unexpected parameters")
 		}
 
 		result := m.ActivatePrototypeMock.mainExpectation.result
@@ -404,17 +403,16 @@ func (m *ClientMock) ActivatePrototype(p context.Context, p1 insolar.Reference, 
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
 
 	if m.ActivatePrototypeFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.ActivatePrototype. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
+		m.t.Fatalf("Unexpected call to ClientMock.ActivatePrototype. %v %v %v %v %v", p, p1, p2, p3, p4)
 		return
 	}
 
-	return m.ActivatePrototypeFunc(p, p1, p2, p3, p4, p5)
+	return m.ActivatePrototypeFunc(p, p1, p2, p3, p4)
 }
 
 //ActivatePrototypeMinimockCounter returns a count of ClientMock.ActivatePrototypeFunc invocations
@@ -461,17 +459,16 @@ type ClientMockDeactivateObjectExpectation struct {
 type ClientMockDeactivateObjectInput struct {
 	p  context.Context
 	p1 insolar.Reference
-	p2 insolar.Reference
-	p3 ObjectDescriptor
+	p2 ObjectDescriptor
+	p3 []byte
 }
 
 type ClientMockDeactivateObjectResult struct {
-	r  *insolar.ID
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Client.DeactivateObject is expected from 1 to Infinity times
-func (m *mClientMockDeactivateObject) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor) *mClientMockDeactivateObject {
+func (m *mClientMockDeactivateObject) Expect(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) *mClientMockDeactivateObject {
 	m.mock.DeactivateObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -483,19 +480,19 @@ func (m *mClientMockDeactivateObject) Expect(p context.Context, p1 insolar.Refer
 }
 
 //Return specifies results of invocation of Client.DeactivateObject
-func (m *mClientMockDeactivateObject) Return(r *insolar.ID, r1 error) *ClientMock {
+func (m *mClientMockDeactivateObject) Return(r error) *ClientMock {
 	m.mock.DeactivateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockDeactivateObjectExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockDeactivateObjectResult{r, r1}
+	m.mainExpectation.result = &ClientMockDeactivateObjectResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of Client.DeactivateObject is expected once
-func (m *mClientMockDeactivateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor) *ClientMockDeactivateObjectExpectation {
+func (m *mClientMockDeactivateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) *ClientMockDeactivateObjectExpectation {
 	m.mock.DeactivateObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -505,12 +502,12 @@ func (m *mClientMockDeactivateObject) ExpectOnce(p context.Context, p1 insolar.R
 	return expectation
 }
 
-func (e *ClientMockDeactivateObjectExpectation) Return(r *insolar.ID, r1 error) {
-	e.result = &ClientMockDeactivateObjectResult{r, r1}
+func (e *ClientMockDeactivateObjectExpectation) Return(r error) {
+	e.result = &ClientMockDeactivateObjectResult{r}
 }
 
 //Set uses given function f as a mock of Client.DeactivateObject method
-func (m *mClientMockDeactivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor) (r *insolar.ID, r1 error)) *ClientMock {
+func (m *mClientMockDeactivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) (r error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -519,7 +516,7 @@ func (m *mClientMockDeactivateObject) Set(f func(p context.Context, p1 insolar.R
 }
 
 //DeactivateObject implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) DeactivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor) (r *insolar.ID, r1 error) {
+func (m *ClientMock) DeactivateObject(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) (r error) {
 	counter := atomic.AddUint64(&m.DeactivateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.DeactivateObjectCounter, 1)
 
@@ -539,7 +536,6 @@ func (m *ClientMock) DeactivateObject(p context.Context, p1 insolar.Reference, p
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -557,7 +553,6 @@ func (m *ClientMock) DeactivateObject(p context.Context, p1 insolar.Reference, p
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -595,159 +590,6 @@ func (m *ClientMock) DeactivateObjectFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.DeactivateObjectFunc != nil {
 		return atomic.LoadUint64(&m.DeactivateObjectCounter) > 0
-	}
-
-	return true
-}
-
-type mClientMockDeclareType struct {
-	mock              *ClientMock
-	mainExpectation   *ClientMockDeclareTypeExpectation
-	expectationSeries []*ClientMockDeclareTypeExpectation
-}
-
-type ClientMockDeclareTypeExpectation struct {
-	input  *ClientMockDeclareTypeInput
-	result *ClientMockDeclareTypeResult
-}
-
-type ClientMockDeclareTypeInput struct {
-	p  context.Context
-	p1 insolar.Reference
-	p2 insolar.Reference
-	p3 []byte
-}
-
-type ClientMockDeclareTypeResult struct {
-	r  *insolar.ID
-	r1 error
-}
-
-//Expect specifies that invocation of Client.DeclareType is expected from 1 to Infinity times
-func (m *mClientMockDeclareType) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) *mClientMockDeclareType {
-	m.mock.DeclareTypeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockDeclareTypeExpectation{}
-	}
-	m.mainExpectation.input = &ClientMockDeclareTypeInput{p, p1, p2, p3}
-	return m
-}
-
-//Return specifies results of invocation of Client.DeclareType
-func (m *mClientMockDeclareType) Return(r *insolar.ID, r1 error) *ClientMock {
-	m.mock.DeclareTypeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockDeclareTypeExpectation{}
-	}
-	m.mainExpectation.result = &ClientMockDeclareTypeResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Client.DeclareType is expected once
-func (m *mClientMockDeclareType) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) *ClientMockDeclareTypeExpectation {
-	m.mock.DeclareTypeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ClientMockDeclareTypeExpectation{}
-	expectation.input = &ClientMockDeclareTypeInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ClientMockDeclareTypeExpectation) Return(r *insolar.ID, r1 error) {
-	e.result = &ClientMockDeclareTypeResult{r, r1}
-}
-
-//Set uses given function f as a mock of Client.DeclareType method
-func (m *mClientMockDeclareType) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)) *ClientMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.DeclareTypeFunc = f
-	return m.mock
-}
-
-//DeclareType implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) DeclareType(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
-	counter := atomic.AddUint64(&m.DeclareTypePreCounter, 1)
-	defer atomic.AddUint64(&m.DeclareTypeCounter, 1)
-
-	if len(m.DeclareTypeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.DeclareTypeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.DeclareType. %v %v %v %v", p, p1, p2, p3)
-			return
-		}
-
-		input := m.DeclareTypeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockDeclareTypeInput{p, p1, p2, p3}, "Client.DeclareType got unexpected parameters")
-
-		result := m.DeclareTypeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.DeclareType")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.DeclareTypeMock.mainExpectation != nil {
-
-		input := m.DeclareTypeMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockDeclareTypeInput{p, p1, p2, p3}, "Client.DeclareType got unexpected parameters")
-		}
-
-		result := m.DeclareTypeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.DeclareType")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.DeclareTypeFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.DeclareType. %v %v %v %v", p, p1, p2, p3)
-		return
-	}
-
-	return m.DeclareTypeFunc(p, p1, p2, p3)
-}
-
-//DeclareTypeMinimockCounter returns a count of ClientMock.DeclareTypeFunc invocations
-func (m *ClientMock) DeclareTypeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.DeclareTypeCounter)
-}
-
-//DeclareTypeMinimockPreCounter returns the value of ClientMock.DeclareType invocations
-func (m *ClientMock) DeclareTypeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.DeclareTypePreCounter)
-}
-
-//DeclareTypeFinished returns true if mock invocations count is ok
-func (m *ClientMock) DeclareTypeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.DeclareTypeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.DeclareTypeCounter) == uint64(len(m.DeclareTypeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.DeclareTypeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.DeclareTypeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.DeclareTypeFunc != nil {
-		return atomic.LoadUint64(&m.DeclareTypeCounter) > 0
 	}
 
 	return true
@@ -1530,8 +1372,9 @@ type ClientMockGetPendingRequestInput struct {
 }
 
 type ClientMockGetPendingRequestResult struct {
-	r  insolar.Parcel
-	r1 error
+	r  *insolar.Reference
+	r1 insolar.Parcel
+	r2 error
 }
 
 //Expect specifies that invocation of Client.GetPendingRequest is expected from 1 to Infinity times
@@ -1547,14 +1390,14 @@ func (m *mClientMockGetPendingRequest) Expect(p context.Context, p1 insolar.ID) 
 }
 
 //Return specifies results of invocation of Client.GetPendingRequest
-func (m *mClientMockGetPendingRequest) Return(r insolar.Parcel, r1 error) *ClientMock {
+func (m *mClientMockGetPendingRequest) Return(r *insolar.Reference, r1 insolar.Parcel, r2 error) *ClientMock {
 	m.mock.GetPendingRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockGetPendingRequestExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockGetPendingRequestResult{r, r1}
+	m.mainExpectation.result = &ClientMockGetPendingRequestResult{r, r1, r2}
 	return m.mock
 }
 
@@ -1569,12 +1412,12 @@ func (m *mClientMockGetPendingRequest) ExpectOnce(p context.Context, p1 insolar.
 	return expectation
 }
 
-func (e *ClientMockGetPendingRequestExpectation) Return(r insolar.Parcel, r1 error) {
-	e.result = &ClientMockGetPendingRequestResult{r, r1}
+func (e *ClientMockGetPendingRequestExpectation) Return(r *insolar.Reference, r1 insolar.Parcel, r2 error) {
+	e.result = &ClientMockGetPendingRequestResult{r, r1, r2}
 }
 
 //Set uses given function f as a mock of Client.GetPendingRequest method
-func (m *mClientMockGetPendingRequest) Set(f func(p context.Context, p1 insolar.ID) (r insolar.Parcel, r1 error)) *ClientMock {
+func (m *mClientMockGetPendingRequest) Set(f func(p context.Context, p1 insolar.ID) (r *insolar.Reference, r1 insolar.Parcel, r2 error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1583,7 +1426,7 @@ func (m *mClientMockGetPendingRequest) Set(f func(p context.Context, p1 insolar.
 }
 
 //GetPendingRequest implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r insolar.Parcel, r1 error) {
+func (m *ClientMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r *insolar.Reference, r1 insolar.Parcel, r2 error) {
 	counter := atomic.AddUint64(&m.GetPendingRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPendingRequestCounter, 1)
 
@@ -1604,6 +1447,7 @@ func (m *ClientMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r inso
 
 		r = result.r
 		r1 = result.r1
+		r2 = result.r2
 
 		return
 	}
@@ -1622,6 +1466,7 @@ func (m *ClientMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r inso
 
 		r = result.r
 		r1 = result.r1
+		r2 = result.r2
 
 		return
 	}
@@ -1810,6 +1655,364 @@ func (m *ClientMock) HasPendingRequestsFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.HasPendingRequestsFunc != nil {
 		return atomic.LoadUint64(&m.HasPendingRequestsCounter) > 0
+	}
+
+	return true
+}
+
+type mClientMockInjectCodeDescriptor struct {
+	mock              *ClientMock
+	mainExpectation   *ClientMockInjectCodeDescriptorExpectation
+	expectationSeries []*ClientMockInjectCodeDescriptorExpectation
+}
+
+type ClientMockInjectCodeDescriptorExpectation struct {
+	input *ClientMockInjectCodeDescriptorInput
+}
+
+type ClientMockInjectCodeDescriptorInput struct {
+	p  insolar.Reference
+	p1 CodeDescriptor
+}
+
+//Expect specifies that invocation of Client.InjectCodeDescriptor is expected from 1 to Infinity times
+func (m *mClientMockInjectCodeDescriptor) Expect(p insolar.Reference, p1 CodeDescriptor) *mClientMockInjectCodeDescriptor {
+	m.mock.InjectCodeDescriptorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectCodeDescriptorExpectation{}
+	}
+	m.mainExpectation.input = &ClientMockInjectCodeDescriptorInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of Client.InjectCodeDescriptor
+func (m *mClientMockInjectCodeDescriptor) Return() *ClientMock {
+	m.mock.InjectCodeDescriptorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectCodeDescriptorExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Client.InjectCodeDescriptor is expected once
+func (m *mClientMockInjectCodeDescriptor) ExpectOnce(p insolar.Reference, p1 CodeDescriptor) *ClientMockInjectCodeDescriptorExpectation {
+	m.mock.InjectCodeDescriptorFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ClientMockInjectCodeDescriptorExpectation{}
+	expectation.input = &ClientMockInjectCodeDescriptorInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Client.InjectCodeDescriptor method
+func (m *mClientMockInjectCodeDescriptor) Set(f func(p insolar.Reference, p1 CodeDescriptor)) *ClientMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.InjectCodeDescriptorFunc = f
+	return m.mock
+}
+
+//InjectCodeDescriptor implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) InjectCodeDescriptor(p insolar.Reference, p1 CodeDescriptor) {
+	counter := atomic.AddUint64(&m.InjectCodeDescriptorPreCounter, 1)
+	defer atomic.AddUint64(&m.InjectCodeDescriptorCounter, 1)
+
+	if len(m.InjectCodeDescriptorMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.InjectCodeDescriptorMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.InjectCodeDescriptor. %v %v", p, p1)
+			return
+		}
+
+		input := m.InjectCodeDescriptorMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClientMockInjectCodeDescriptorInput{p, p1}, "Client.InjectCodeDescriptor got unexpected parameters")
+
+		return
+	}
+
+	if m.InjectCodeDescriptorMock.mainExpectation != nil {
+
+		input := m.InjectCodeDescriptorMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ClientMockInjectCodeDescriptorInput{p, p1}, "Client.InjectCodeDescriptor got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.InjectCodeDescriptorFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.InjectCodeDescriptor. %v %v", p, p1)
+		return
+	}
+
+	m.InjectCodeDescriptorFunc(p, p1)
+}
+
+//InjectCodeDescriptorMinimockCounter returns a count of ClientMock.InjectCodeDescriptorFunc invocations
+func (m *ClientMock) InjectCodeDescriptorMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectCodeDescriptorCounter)
+}
+
+//InjectCodeDescriptorMinimockPreCounter returns the value of ClientMock.InjectCodeDescriptor invocations
+func (m *ClientMock) InjectCodeDescriptorMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectCodeDescriptorPreCounter)
+}
+
+//InjectCodeDescriptorFinished returns true if mock invocations count is ok
+func (m *ClientMock) InjectCodeDescriptorFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.InjectCodeDescriptorMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.InjectCodeDescriptorCounter) == uint64(len(m.InjectCodeDescriptorMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.InjectCodeDescriptorMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.InjectCodeDescriptorCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.InjectCodeDescriptorFunc != nil {
+		return atomic.LoadUint64(&m.InjectCodeDescriptorCounter) > 0
+	}
+
+	return true
+}
+
+type mClientMockInjectFinish struct {
+	mock              *ClientMock
+	mainExpectation   *ClientMockInjectFinishExpectation
+	expectationSeries []*ClientMockInjectFinishExpectation
+}
+
+type ClientMockInjectFinishExpectation struct {
+}
+
+//Expect specifies that invocation of Client.InjectFinish is expected from 1 to Infinity times
+func (m *mClientMockInjectFinish) Expect() *mClientMockInjectFinish {
+	m.mock.InjectFinishFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectFinishExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Client.InjectFinish
+func (m *mClientMockInjectFinish) Return() *ClientMock {
+	m.mock.InjectFinishFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectFinishExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Client.InjectFinish is expected once
+func (m *mClientMockInjectFinish) ExpectOnce() *ClientMockInjectFinishExpectation {
+	m.mock.InjectFinishFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ClientMockInjectFinishExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Client.InjectFinish method
+func (m *mClientMockInjectFinish) Set(f func()) *ClientMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.InjectFinishFunc = f
+	return m.mock
+}
+
+//InjectFinish implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) InjectFinish() {
+	counter := atomic.AddUint64(&m.InjectFinishPreCounter, 1)
+	defer atomic.AddUint64(&m.InjectFinishCounter, 1)
+
+	if len(m.InjectFinishMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.InjectFinishMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.InjectFinish.")
+			return
+		}
+
+		return
+	}
+
+	if m.InjectFinishMock.mainExpectation != nil {
+
+		return
+	}
+
+	if m.InjectFinishFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.InjectFinish.")
+		return
+	}
+
+	m.InjectFinishFunc()
+}
+
+//InjectFinishMinimockCounter returns a count of ClientMock.InjectFinishFunc invocations
+func (m *ClientMock) InjectFinishMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectFinishCounter)
+}
+
+//InjectFinishMinimockPreCounter returns the value of ClientMock.InjectFinish invocations
+func (m *ClientMock) InjectFinishMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectFinishPreCounter)
+}
+
+//InjectFinishFinished returns true if mock invocations count is ok
+func (m *ClientMock) InjectFinishFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.InjectFinishMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.InjectFinishCounter) == uint64(len(m.InjectFinishMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.InjectFinishMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.InjectFinishCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.InjectFinishFunc != nil {
+		return atomic.LoadUint64(&m.InjectFinishCounter) > 0
+	}
+
+	return true
+}
+
+type mClientMockInjectObjectDescriptor struct {
+	mock              *ClientMock
+	mainExpectation   *ClientMockInjectObjectDescriptorExpectation
+	expectationSeries []*ClientMockInjectObjectDescriptorExpectation
+}
+
+type ClientMockInjectObjectDescriptorExpectation struct {
+	input *ClientMockInjectObjectDescriptorInput
+}
+
+type ClientMockInjectObjectDescriptorInput struct {
+	p  insolar.Reference
+	p1 ObjectDescriptor
+}
+
+//Expect specifies that invocation of Client.InjectObjectDescriptor is expected from 1 to Infinity times
+func (m *mClientMockInjectObjectDescriptor) Expect(p insolar.Reference, p1 ObjectDescriptor) *mClientMockInjectObjectDescriptor {
+	m.mock.InjectObjectDescriptorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectObjectDescriptorExpectation{}
+	}
+	m.mainExpectation.input = &ClientMockInjectObjectDescriptorInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of Client.InjectObjectDescriptor
+func (m *mClientMockInjectObjectDescriptor) Return() *ClientMock {
+	m.mock.InjectObjectDescriptorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectObjectDescriptorExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Client.InjectObjectDescriptor is expected once
+func (m *mClientMockInjectObjectDescriptor) ExpectOnce(p insolar.Reference, p1 ObjectDescriptor) *ClientMockInjectObjectDescriptorExpectation {
+	m.mock.InjectObjectDescriptorFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ClientMockInjectObjectDescriptorExpectation{}
+	expectation.input = &ClientMockInjectObjectDescriptorInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Client.InjectObjectDescriptor method
+func (m *mClientMockInjectObjectDescriptor) Set(f func(p insolar.Reference, p1 ObjectDescriptor)) *ClientMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.InjectObjectDescriptorFunc = f
+	return m.mock
+}
+
+//InjectObjectDescriptor implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) InjectObjectDescriptor(p insolar.Reference, p1 ObjectDescriptor) {
+	counter := atomic.AddUint64(&m.InjectObjectDescriptorPreCounter, 1)
+	defer atomic.AddUint64(&m.InjectObjectDescriptorCounter, 1)
+
+	if len(m.InjectObjectDescriptorMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.InjectObjectDescriptorMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.InjectObjectDescriptor. %v %v", p, p1)
+			return
+		}
+
+		input := m.InjectObjectDescriptorMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClientMockInjectObjectDescriptorInput{p, p1}, "Client.InjectObjectDescriptor got unexpected parameters")
+
+		return
+	}
+
+	if m.InjectObjectDescriptorMock.mainExpectation != nil {
+
+		input := m.InjectObjectDescriptorMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ClientMockInjectObjectDescriptorInput{p, p1}, "Client.InjectObjectDescriptor got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.InjectObjectDescriptorFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.InjectObjectDescriptor. %v %v", p, p1)
+		return
+	}
+
+	m.InjectObjectDescriptorFunc(p, p1)
+}
+
+//InjectObjectDescriptorMinimockCounter returns a count of ClientMock.InjectObjectDescriptorFunc invocations
+func (m *ClientMock) InjectObjectDescriptorMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectObjectDescriptorCounter)
+}
+
+//InjectObjectDescriptorMinimockPreCounter returns the value of ClientMock.InjectObjectDescriptor invocations
+func (m *ClientMock) InjectObjectDescriptorMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectObjectDescriptorPreCounter)
+}
+
+//InjectObjectDescriptorFinished returns true if mock invocations count is ok
+func (m *ClientMock) InjectObjectDescriptorFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.InjectObjectDescriptorMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.InjectObjectDescriptorCounter) == uint64(len(m.InjectObjectDescriptorMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.InjectObjectDescriptorMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.InjectObjectDescriptorCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.InjectObjectDescriptorFunc != nil {
+		return atomic.LoadUint64(&m.InjectObjectDescriptorCounter) > 0
 	}
 
 	return true
@@ -2421,18 +2624,17 @@ type ClientMockUpdateObjectExpectation struct {
 type ClientMockUpdateObjectInput struct {
 	p  context.Context
 	p1 insolar.Reference
-	p2 insolar.Reference
-	p3 ObjectDescriptor
+	p2 ObjectDescriptor
+	p3 []byte
 	p4 []byte
 }
 
 type ClientMockUpdateObjectResult struct {
-	r  ObjectDescriptor
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Client.UpdateObject is expected from 1 to Infinity times
-func (m *mClientMockUpdateObject) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) *mClientMockUpdateObject {
+func (m *mClientMockUpdateObject) Expect(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) *mClientMockUpdateObject {
 	m.mock.UpdateObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -2444,19 +2646,19 @@ func (m *mClientMockUpdateObject) Expect(p context.Context, p1 insolar.Reference
 }
 
 //Return specifies results of invocation of Client.UpdateObject
-func (m *mClientMockUpdateObject) Return(r ObjectDescriptor, r1 error) *ClientMock {
+func (m *mClientMockUpdateObject) Return(r error) *ClientMock {
 	m.mock.UpdateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockUpdateObjectExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockUpdateObjectResult{r, r1}
+	m.mainExpectation.result = &ClientMockUpdateObjectResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of Client.UpdateObject is expected once
-func (m *mClientMockUpdateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) *ClientMockUpdateObjectExpectation {
+func (m *mClientMockUpdateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) *ClientMockUpdateObjectExpectation {
 	m.mock.UpdateObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -2466,12 +2668,12 @@ func (m *mClientMockUpdateObject) ExpectOnce(p context.Context, p1 insolar.Refer
 	return expectation
 }
 
-func (e *ClientMockUpdateObjectExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ClientMockUpdateObjectResult{r, r1}
+func (e *ClientMockUpdateObjectExpectation) Return(r error) {
+	e.result = &ClientMockUpdateObjectResult{r}
 }
 
 //Set uses given function f as a mock of Client.UpdateObject method
-func (m *mClientMockUpdateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r ObjectDescriptor, r1 error)) *ClientMock {
+func (m *mClientMockUpdateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) (r error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2480,7 +2682,7 @@ func (m *mClientMockUpdateObject) Set(f func(p context.Context, p1 insolar.Refer
 }
 
 //UpdateObject implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r ObjectDescriptor, r1 error) {
+func (m *ClientMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) (r error) {
 	counter := atomic.AddUint64(&m.UpdateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateObjectCounter, 1)
 
@@ -2500,7 +2702,6 @@ func (m *ClientMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 in
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -2518,7 +2719,6 @@ func (m *ClientMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 in
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -2561,161 +2761,6 @@ func (m *ClientMock) UpdateObjectFinished() bool {
 	return true
 }
 
-type mClientMockUpdatePrototype struct {
-	mock              *ClientMock
-	mainExpectation   *ClientMockUpdatePrototypeExpectation
-	expectationSeries []*ClientMockUpdatePrototypeExpectation
-}
-
-type ClientMockUpdatePrototypeExpectation struct {
-	input  *ClientMockUpdatePrototypeInput
-	result *ClientMockUpdatePrototypeResult
-}
-
-type ClientMockUpdatePrototypeInput struct {
-	p  context.Context
-	p1 insolar.Reference
-	p2 insolar.Reference
-	p3 ObjectDescriptor
-	p4 []byte
-	p5 *insolar.Reference
-}
-
-type ClientMockUpdatePrototypeResult struct {
-	r  ObjectDescriptor
-	r1 error
-}
-
-//Expect specifies that invocation of Client.UpdatePrototype is expected from 1 to Infinity times
-func (m *mClientMockUpdatePrototype) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte, p5 *insolar.Reference) *mClientMockUpdatePrototype {
-	m.mock.UpdatePrototypeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockUpdatePrototypeExpectation{}
-	}
-	m.mainExpectation.input = &ClientMockUpdatePrototypeInput{p, p1, p2, p3, p4, p5}
-	return m
-}
-
-//Return specifies results of invocation of Client.UpdatePrototype
-func (m *mClientMockUpdatePrototype) Return(r ObjectDescriptor, r1 error) *ClientMock {
-	m.mock.UpdatePrototypeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockUpdatePrototypeExpectation{}
-	}
-	m.mainExpectation.result = &ClientMockUpdatePrototypeResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Client.UpdatePrototype is expected once
-func (m *mClientMockUpdatePrototype) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte, p5 *insolar.Reference) *ClientMockUpdatePrototypeExpectation {
-	m.mock.UpdatePrototypeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ClientMockUpdatePrototypeExpectation{}
-	expectation.input = &ClientMockUpdatePrototypeInput{p, p1, p2, p3, p4, p5}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ClientMockUpdatePrototypeExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ClientMockUpdatePrototypeResult{r, r1}
-}
-
-//Set uses given function f as a mock of Client.UpdatePrototype method
-func (m *mClientMockUpdatePrototype) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte, p5 *insolar.Reference) (r ObjectDescriptor, r1 error)) *ClientMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.UpdatePrototypeFunc = f
-	return m.mock
-}
-
-//UpdatePrototype implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) UpdatePrototype(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte, p5 *insolar.Reference) (r ObjectDescriptor, r1 error) {
-	counter := atomic.AddUint64(&m.UpdatePrototypePreCounter, 1)
-	defer atomic.AddUint64(&m.UpdatePrototypeCounter, 1)
-
-	if len(m.UpdatePrototypeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.UpdatePrototypeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.UpdatePrototype. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
-			return
-		}
-
-		input := m.UpdatePrototypeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockUpdatePrototypeInput{p, p1, p2, p3, p4, p5}, "Client.UpdatePrototype got unexpected parameters")
-
-		result := m.UpdatePrototypeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.UpdatePrototype")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.UpdatePrototypeMock.mainExpectation != nil {
-
-		input := m.UpdatePrototypeMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockUpdatePrototypeInput{p, p1, p2, p3, p4, p5}, "Client.UpdatePrototype got unexpected parameters")
-		}
-
-		result := m.UpdatePrototypeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.UpdatePrototype")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.UpdatePrototypeFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.UpdatePrototype. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
-		return
-	}
-
-	return m.UpdatePrototypeFunc(p, p1, p2, p3, p4, p5)
-}
-
-//UpdatePrototypeMinimockCounter returns a count of ClientMock.UpdatePrototypeFunc invocations
-func (m *ClientMock) UpdatePrototypeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.UpdatePrototypeCounter)
-}
-
-//UpdatePrototypeMinimockPreCounter returns the value of ClientMock.UpdatePrototype invocations
-func (m *ClientMock) UpdatePrototypeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.UpdatePrototypePreCounter)
-}
-
-//UpdatePrototypeFinished returns true if mock invocations count is ok
-func (m *ClientMock) UpdatePrototypeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.UpdatePrototypeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.UpdatePrototypeCounter) == uint64(len(m.UpdatePrototypeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.UpdatePrototypeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.UpdatePrototypeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.UpdatePrototypeFunc != nil {
-		return atomic.LoadUint64(&m.UpdatePrototypeCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ClientMock) ValidateCallCounters() {
@@ -2730,10 +2775,6 @@ func (m *ClientMock) ValidateCallCounters() {
 
 	if !m.DeactivateObjectFinished() {
 		m.t.Fatal("Expected call to ClientMock.DeactivateObject")
-	}
-
-	if !m.DeclareTypeFinished() {
-		m.t.Fatal("Expected call to ClientMock.DeclareType")
 	}
 
 	if !m.DeployCodeFinished() {
@@ -2764,6 +2805,18 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.HasPendingRequests")
 	}
 
+	if !m.InjectCodeDescriptorFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectCodeDescriptor")
+	}
+
+	if !m.InjectFinishFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectFinish")
+	}
+
+	if !m.InjectObjectDescriptorFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectObjectDescriptor")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ClientMock.RegisterRequest")
 	}
@@ -2782,10 +2835,6 @@ func (m *ClientMock) ValidateCallCounters() {
 
 	if !m.UpdateObjectFinished() {
 		m.t.Fatal("Expected call to ClientMock.UpdateObject")
-	}
-
-	if !m.UpdatePrototypeFinished() {
-		m.t.Fatal("Expected call to ClientMock.UpdatePrototype")
 	}
 
 }
@@ -2817,10 +2866,6 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.DeactivateObject")
 	}
 
-	if !m.DeclareTypeFinished() {
-		m.t.Fatal("Expected call to ClientMock.DeclareType")
-	}
-
 	if !m.DeployCodeFinished() {
 		m.t.Fatal("Expected call to ClientMock.DeployCode")
 	}
@@ -2849,6 +2894,18 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.HasPendingRequests")
 	}
 
+	if !m.InjectCodeDescriptorFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectCodeDescriptor")
+	}
+
+	if !m.InjectFinishFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectFinish")
+	}
+
+	if !m.InjectObjectDescriptorFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectObjectDescriptor")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ClientMock.RegisterRequest")
 	}
@@ -2869,10 +2926,6 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.UpdateObject")
 	}
 
-	if !m.UpdatePrototypeFinished() {
-		m.t.Fatal("Expected call to ClientMock.UpdatePrototype")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -2890,7 +2943,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ActivateObjectFinished()
 		ok = ok && m.ActivatePrototypeFinished()
 		ok = ok && m.DeactivateObjectFinished()
-		ok = ok && m.DeclareTypeFinished()
 		ok = ok && m.DeployCodeFinished()
 		ok = ok && m.GetChildrenFinished()
 		ok = ok && m.GetCodeFinished()
@@ -2898,12 +2950,14 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetObjectFinished()
 		ok = ok && m.GetPendingRequestFinished()
 		ok = ok && m.HasPendingRequestsFinished()
+		ok = ok && m.InjectCodeDescriptorFinished()
+		ok = ok && m.InjectFinishFinished()
+		ok = ok && m.InjectObjectDescriptorFinished()
 		ok = ok && m.RegisterRequestFinished()
 		ok = ok && m.RegisterResultFinished()
 		ok = ok && m.RegisterValidationFinished()
 		ok = ok && m.StateFinished()
 		ok = ok && m.UpdateObjectFinished()
-		ok = ok && m.UpdatePrototypeFinished()
 
 		if ok {
 			return
@@ -2922,10 +2976,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 
 			if !m.DeactivateObjectFinished() {
 				m.t.Error("Expected call to ClientMock.DeactivateObject")
-			}
-
-			if !m.DeclareTypeFinished() {
-				m.t.Error("Expected call to ClientMock.DeclareType")
 			}
 
 			if !m.DeployCodeFinished() {
@@ -2956,6 +3006,18 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to ClientMock.HasPendingRequests")
 			}
 
+			if !m.InjectCodeDescriptorFinished() {
+				m.t.Error("Expected call to ClientMock.InjectCodeDescriptor")
+			}
+
+			if !m.InjectFinishFinished() {
+				m.t.Error("Expected call to ClientMock.InjectFinish")
+			}
+
+			if !m.InjectObjectDescriptorFinished() {
+				m.t.Error("Expected call to ClientMock.InjectObjectDescriptor")
+			}
+
 			if !m.RegisterRequestFinished() {
 				m.t.Error("Expected call to ClientMock.RegisterRequest")
 			}
@@ -2974,10 +3036,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 
 			if !m.UpdateObjectFinished() {
 				m.t.Error("Expected call to ClientMock.UpdateObject")
-			}
-
-			if !m.UpdatePrototypeFinished() {
-				m.t.Error("Expected call to ClientMock.UpdatePrototype")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -3001,10 +3059,6 @@ func (m *ClientMock) AllMocksCalled() bool {
 	}
 
 	if !m.DeactivateObjectFinished() {
-		return false
-	}
-
-	if !m.DeclareTypeFinished() {
 		return false
 	}
 
@@ -3036,6 +3090,18 @@ func (m *ClientMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.InjectCodeDescriptorFinished() {
+		return false
+	}
+
+	if !m.InjectFinishFinished() {
+		return false
+	}
+
+	if !m.InjectObjectDescriptorFinished() {
+		return false
+	}
+
 	if !m.RegisterRequestFinished() {
 		return false
 	}
@@ -3053,10 +3119,6 @@ func (m *ClientMock) AllMocksCalled() bool {
 	}
 
 	if !m.UpdateObjectFinished() {
-		return false
-	}
-
-	if !m.UpdatePrototypeFinished() {
 		return false
 	}
 

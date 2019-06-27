@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/messagebus"
@@ -34,6 +33,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
@@ -55,7 +55,7 @@ type ContractRequester struct {
 func New() (*ContractRequester, error) {
 	return &ContractRequester{
 		ResultMap:   make(map[uint64]chan *message.ReturnResults),
-		callTimeout: time.Duration(configuration.NewAPIRunner().Timeout) * time.Second,
+		callTimeout: 25 * time.Second,
 	}, nil
 }
 
@@ -90,9 +90,10 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 
 	msg := &message.CallMethod{
 		Request: record.Request{
-			Object:    ref,
-			Method:    method,
-			Arguments: args,
+			Object:       ref,
+			Method:       method,
+			Arguments:    args,
+			APIRequestID: utils.TraceID(ctx),
 		},
 	}
 
@@ -167,7 +168,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		cr.ResultMutex.Lock()
 		delete(cr.ResultMap, seq)
 		cr.ResultMutex.Unlock()
-		return nil, errors.New("canceled")
+		return nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}
 }
 
