@@ -81,7 +81,7 @@ func New() *Handler {
 			p.Dep.BlobAccessor = h.BlobAccessor
 		},
 		SendRequests: func(p *proc.SendRequests) {
-			p.Dep(h.Sender, h.RecordAccessor)
+			p.Dep(h.Sender, h.RecordAccessor, h.IndexAccessor)
 		},
 	}
 	h.dep = &dep

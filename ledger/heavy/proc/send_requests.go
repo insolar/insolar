@@ -34,6 +34,7 @@ type SendRequests struct {
 	dep struct {
 		sender  bus.Sender
 		records object.RecordAccessor
+		indexes object.IndexAccessor
 	}
 }
 
@@ -43,9 +44,10 @@ func NewSendRequests(meta payload.Meta) *SendRequests {
 	}
 }
 
-func (p *SendRequests) Dep(sender bus.Sender, records object.RecordAccessor) {
+func (p *SendRequests) Dep(sender bus.Sender, records object.RecordAccessor, indexes object.IndexAccessor) {
 	p.dep.sender = sender
 	p.dep.records = records
+	p.dep.indexes = indexes
 }
 
 func (p *SendRequests) Proceed(ctx context.Context) error {
@@ -56,6 +58,11 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 	err := msg.Unmarshal(p.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode PassState payload")
+	}
+
+	_, err = p.dep.indexes.ForID(ctx, msg.StartFrom.Pulse(), msg.ObjectID)
+	if err != nil {
+		return errors.Wrap(err, "failed to find object")
 	}
 
 	var records []record.CompositeFilamentRecord
