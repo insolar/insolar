@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/metrics"
 
 	"github.com/insolar/insolar/api/requester"
@@ -124,7 +126,7 @@ func processError(err error, extraMsg string, resp *requester.ContractAnswer, in
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
-func writeResponse(insLog insolar.Logger, response http.ResponseWriter, contractAnswer *requester.ContractAnswer) {
+func writeResponse(insLog assert.TestingT, response http.ResponseWriter, contractAnswer *requester.ContractAnswer) {
 	res, err := json.MarshalIndent(*contractAnswer, "", "    ")
 	if err != nil {
 		res = []byte(`{"error": "can't marshal ContractAnswer to json'"}`)
@@ -144,12 +146,12 @@ func observeResultStatus(requestMethod string, contractAnswer *requester.Contrac
 	metrics.APIContractExecutionTime.WithLabelValues(requestMethod, success).Observe(time.Since(startTime).Seconds())
 }
 
-func processRequest(ctx *context.Context,
-	req *http.Request, contractRequest *requester.Request, contractAnswer *requester.ContractAnswer) ([]byte, error) {
+func processRequest(ctx context.Context,
+	req *http.Request, contractRequest *requester.Request, contractAnswer *requester.ContractAnswer) (context.Context, []byte, error) {
 
 	rawBody, err := UnmarshalRequest(req, contractRequest)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal request")
+		return ctx, nil, errors.Wrap(err, "failed to unmarshal request")
 	}
 
 	contractAnswer.JSONRPC = contractRequest.JSONRPC
@@ -158,13 +160,12 @@ func processRequest(ctx *context.Context,
 	if len(contractRequest.LogLevel) > 0 {
 		logLevelNumber, err := insolar.ParseLevel(contractRequest.LogLevel)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse logLevel")
+			return ctx, nil, errors.Wrap(err, "failed to parse logLevel")
 		}
-		c := inslogger.WithLoggerLevel(*ctx, logLevelNumber)
-		ctx = &c
+		ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 	}
 
-	return rawBody, nil
+	return ctx, rawBody, nil
 }
 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
@@ -184,7 +185,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
 
-		rawBody, err := processRequest(&ctx, req, contractRequest, contractAnswer)
+		ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
 		if err != nil {
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
