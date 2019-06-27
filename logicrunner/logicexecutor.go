@@ -22,7 +22,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -35,7 +34,7 @@ type LogicExecutor interface {
 }
 
 type logicExecutor struct {
-	LogicRunner      insolar.LogicRunner        `inject:""`
+	MachinesManager  MachinesManager            `inject:""`
 	DescriptorsCache artifacts.DescriptorsCache `inject:""`
 }
 
@@ -75,7 +74,7 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
 	}
 
-	executor, err := le.LogicRunner.GetExecutor(codeDesc.MachineType())
+	executor, err := le.MachinesManager.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}
@@ -126,7 +125,7 @@ func (le *logicExecutor) ExecuteConstructor(
 	transcript.LogicContext.Prototype = protoDesc.HeadRef()
 	transcript.LogicContext.Code = codeDesc.Ref()
 
-	executor, err := le.LogicRunner.GetExecutor(codeDesc.MachineType())
+	executor, err := le.MachinesManager.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}

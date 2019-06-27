@@ -43,7 +43,7 @@ func TestValidationState_ValidateMethodCall(t *testing.T) {
 		transcript *Transcript
 		error      bool
 		dc         artifacts.DescriptorsCache
-		lr         insolar.LogicRunner
+		mm         MachinesManager
 		res        *RequestResult
 	}{
 		{
@@ -59,7 +59,7 @@ func TestValidationState_ValidateMethodCall(t *testing.T) {
 
 				},
 			},
-			lr: testutils.NewLogicRunnerMock(mc).
+			mm: NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
@@ -92,7 +92,7 @@ func TestValidationState_ValidateMethodCall(t *testing.T) {
 				LogicContext: &insolar.LogicCallContext{
 				},
 			},
-			lr: testutils.NewLogicRunnerMock(mc),
+			mm: NewMachinesManagerMock(mc),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				ByObjectDescriptorMock.
 				Return(
@@ -106,7 +106,7 @@ func TestValidationState_ValidateMethodCall(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			vs := &logicExecutor{LogicRunner: test.lr, DescriptorsCache: test.dc}
+			vs := &logicExecutor{MachinesManager: test.mm, DescriptorsCache: test.dc}
 			res, err := vs.ExecuteMethod(ctx, test.transcript)
 			if test.error {
 				require.Error(t, err)
