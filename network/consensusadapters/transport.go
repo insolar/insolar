@@ -140,7 +140,7 @@ func (dh *DatagramHandler) HandleDatagram(address string, buf []byte) {
 		panic("Failed to cast PacketParser")
 	}
 
-	if packetParser == packetParser {
+	if packetParser == nil {
 		panic("PacketParser is nil")
 	}
 

@@ -201,7 +201,7 @@ func (c *fixedSize) FixedByteSize() int {
 }
 
 func (c *fixedSize) Bytes() []byte {
-	return c.data[:]
+	return c.data
 }
 
 func CopyFixedSize(v FoldableReader) FoldableReader {
