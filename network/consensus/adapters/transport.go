@@ -54,6 +54,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
@@ -107,15 +108,24 @@ type payloadWrapper struct {
 }
 
 // TODO: signature seems to be wrong :( context missed
-func (ps *PacketSender) SendPacketToTransport(t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
+func (ps *PacketSender) SendPacketToTransport(to common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
 	ctx := context.TODO()
-	addr := t.GetDefaultEndpoint()
+	addr := to.GetDefaultEndpoint().String()
 
-	bs := insolar.MustSerialize(payload)
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"receiver_addr":    addr,
+		"receiver_node_id": to.GetShortNodeID(),
+		"options":          sendOptions,
+	})
 
-	err := ps.datagramTransport.SendDatagram(ctx, addr.String(), bs)
+	bs, err := insolar.Serialize(payload)
 	if err != nil {
-		panic(err)
+		logger.Error("Failed to serialize payload")
+	}
+
+	err = ps.datagramTransport.SendDatagram(ctx, addr, bs)
+	if err != nil {
+		logger.Error("Failed to send datagram")
 	}
 }
 
@@ -131,24 +141,35 @@ func (dh *DatagramHandler) SetConsensusController(consensusController core.Conse
 	dh.consensusController = consensusController
 }
 
-func (dh *DatagramHandler) HandleDatagram(address string, buf []byte) {
-	packet := payloadWrapper{}
-	insolar.MustDeserialize(buf, packet)
+func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"address": address,
+	})
 
-	packetParser, ok := packet.Payload.(packets.PacketParser)
+	p := payloadWrapper{}
+	err := insolar.Deserialize(buf, p)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	packetParser, ok := p.Payload.(packets.PacketParser)
 	if !ok {
-		panic("Failed to cast PacketParser")
+		logger.Error("Failed to get PacketParser")
+		return
 	}
 
 	if packetParser == nil {
-		panic("PacketParser is nil")
+		logger.Error("PacketParser is nil")
+		return
 	}
 
 	hostIdentity := common.HostIdentity{
 		Addr: common.HostAddress(address),
 	}
-	err := dh.consensusController.ProcessPacket(packetParser, &hostIdentity)
+	err = dh.consensusController.ProcessPacket( /*TODO: ctx, */ packetParser, &hostIdentity)
 	if err != nil {
-		panic(err)
+		logger.Error("Failed to process p")
+		return
 	}
 }
