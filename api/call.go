@@ -124,6 +124,10 @@ func processError(err error, extraMsg string, resp *requester.ContractAnswer, in
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
+func setRequestLogLevel(contractRequest requester.Request) {
+
+}
+
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceID := utils.RandTraceID()
