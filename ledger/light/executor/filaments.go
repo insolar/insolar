@@ -530,7 +530,7 @@ func (i *fetchingIterator) fetchFromNetwork(
 
 	isBeyond, err := i.coordinator.IsBeyondLimit(ctx, i.calcPulse, forID.Pulse())
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to calculate limit")
 	}
 	var node *insolar.Reference
 	if isBeyond {

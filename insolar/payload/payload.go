@@ -27,22 +27,23 @@ type Type uint32
 //go:generate stringer -type=Type
 
 const (
-	TypeUnknown         Type = 0
-	TypeError           Type = 1
-	TypeID              Type = 2
-	TypeState           Type = 4
-	TypeGetObject       Type = 5
-	TypePassState       Type = 6
-	TypeObjIndex        Type = 7
-	TypeObjState        Type = 8
-	TypeIndex           Type = 9
-	TypePass            Type = 10
-	TypeGetCode         Type = 11
-	TypeCode            Type = 12
-	TypeSetCode         Type = 13
-	TypeSetRequest      Type = 14
-	TypeGetFilament     Type = 15
-	TypeFilamentSegment Type = 16
+	TypeUnknown Type = iota
+	TypeMeta
+	TypeError
+	TypeID
+	TypeState
+	TypeGetObject
+	TypePassState
+	TypeObjIndex
+	TypeObjState
+	TypeIndex
+	TypePass
+	TypeGetCode
+	TypeCode
+	TypeSetCode
+	TypeSetRequest
+	TypeGetFilament
+	TypeFilamentSegment
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -109,6 +110,9 @@ func UnmarshalType(data []byte) (Type, error) {
 
 func Marshal(payload Payload) ([]byte, error) {
 	switch pl := payload.(type) {
+	case *Meta:
+		pl.Polymorph = uint32(TypeMeta)
+		return pl.Marshal()
 	case *Error:
 		pl.Polymorph = uint32(TypeError)
 		return pl.Marshal()
@@ -159,6 +163,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return nil, err
 	}
 	switch tp {
+	case TypeMeta:
+		pl := Meta{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeError:
 		pl := Error{}
 		err := pl.Unmarshal(data)
