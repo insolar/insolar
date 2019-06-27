@@ -67,8 +67,8 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		composite.RecordID = *iter
-		composite.Record = filamentRecord
+		composite.MetaID = *iter
+		composite.Meta = filamentRecord
 
 		// Fetching primary record.
 		virtual := record.Unwrap(filamentRecord.Virtual)
