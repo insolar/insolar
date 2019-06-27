@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package consensusadapters
+package consensus
 
 import (
 	"context"
@@ -57,6 +57,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
@@ -64,7 +65,7 @@ import (
 	"github.com/insolar/insolar/network/transport"
 )
 
-type ConsensusDep struct {
+type Dep struct {
 	PrimingCloudStateHash [64]byte
 
 	Scheme             insolar.PlatformCryptographyScheme
@@ -73,19 +74,19 @@ type ConsensusDep struct {
 	NodeKeeper         network.NodeKeeper
 	DatagramTransport  transport.DatagramTransport
 
-	Stater       stater
-	PulseChanger pulseChanger
+	Stater       adapters.Stater
+	PulseChanger adapters.PulseChanger
 
 	// TODO: remove it from here
 	PacketBuilder func(core.TransportCryptographyFactory, core.LocalNodeConfiguration) core.PacketBuilder
 	PacketSender  core.PacketSender
 }
 
-func (cd *ConsensusDep) verify() {
+func (cd *Dep) verify() {
 	verify(cd)
 }
 
-type ConsensusBundle struct {
+type Consensus struct {
 	population                   census.ManyNodePopulation // TODO: there should be interface
 	mandateRegistry              census.MandateRegistry
 	misbehaviorRegistry          census.MisbehaviorRegistry
@@ -102,62 +103,83 @@ type ConsensusBundle struct {
 	consensusController          core.ConsensusController
 }
 
-func NewConsensusBundle(ctx context.Context, dep ConsensusDep) ConsensusBundle {
+func New(ctx context.Context, dep Dep) Consensus {
 	dep.verify()
 
-	bundle := ConsensusBundle{}
+	consensus := Consensus{}
 
 	certificate := dep.CertificateManager.GetCertificate()
 	origin := dep.NodeKeeper.GetOrigin()
 	knownNodes := dep.NodeKeeper.GetAccessor().GetActiveNodes()
 
-	bundle.population = NewPopulation(NewNodeIntroProfile(origin, certificate), NewNodeIntroProfileList(knownNodes, certificate))
-	bundle.mandateRegistry = NewMandateRegistry(
+	consensus.population = adapters.NewPopulation(
+		adapters.NewNodeIntroProfile(origin, certificate),
+		adapters.NewNodeIntroProfileList(knownNodes, certificate),
+	)
+	consensus.mandateRegistry = adapters.NewMandateRegistry(
 		common2.NewDigest(
-			common2.NewBits512FromBytes(dep.PrimingCloudStateHash[:]), SHA3512Digest,
+			common2.NewBits512FromBytes(
+				dep.PrimingCloudStateHash[:],
+			),
+			adapters.SHA3512Digest,
 		).AsDigestHolder(),
 	)
-	bundle.misbehaviorRegistry = NewMisbehaviorRegistry()
-	bundle.offlinePopulation = NewOfflinePopulation(dep.NodeKeeper, dep.CertificateManager)
-	bundle.versionedRegistries = NewVersionedRegistries(
-		bundle.mandateRegistry,
-		bundle.misbehaviorRegistry,
-		bundle.offlinePopulation,
+	consensus.misbehaviorRegistry = adapters.NewMisbehaviorRegistry()
+	consensus.offlinePopulation = adapters.NewOfflinePopulation(
+		dep.NodeKeeper,
+		dep.CertificateManager,
 	)
-	bundle.consensusChronicles = NewChronicles(bundle.population, bundle.versionedRegistries)
-	bundle.localNodeConfiguration = NewLocalNodeConfiguration(ctx, dep.KeyStore)
-	bundle.upstreamPulseController = NewUpstreamPulseController(dep.Stater, dep.PulseChanger)
-	bundle.roundStrategyFactory = NewRoundStrategyFactory()
-	bundle.transportCryptographyFactory = NewTransportCryptographyFactory(dep.Scheme)
-	bundle.packetBuilder = dep.PacketBuilder(bundle.transportCryptographyFactory, bundle.localNodeConfiguration)
+	consensus.versionedRegistries = adapters.NewVersionedRegistries(
+		consensus.mandateRegistry,
+		consensus.misbehaviorRegistry,
+		consensus.offlinePopulation,
+	)
+	consensus.consensusChronicles = adapters.NewChronicles(
+		consensus.population,
+		consensus.versionedRegistries,
+	)
+	consensus.localNodeConfiguration = adapters.NewLocalNodeConfiguration(
+		ctx,
+		dep.KeyStore,
+	)
+	consensus.upstreamPulseController = adapters.NewUpstreamPulseController(
+		dep.Stater,
+		dep.PulseChanger,
+	)
+	consensus.roundStrategyFactory = adapters.NewRoundStrategyFactory()
+	consensus.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
+	consensus.packetBuilder = dep.PacketBuilder(
+		consensus.transportCryptographyFactory,
+		consensus.localNodeConfiguration,
+	)
 	// TODO: comment until serialization ready
-	// bundle.packetSender = NewPacketSender(dep.DatagramTransport)
-	bundle.packetSender = dep.PacketSender
-	bundle.transportFactory = NewTransportFactory(
-		bundle.transportCryptographyFactory,
-		bundle.packetBuilder,
-		bundle.packetSender,
+	// consensus.packetSender = NewPacketSender(dep.DatagramTransport)
+	consensus.packetSender = dep.PacketSender
+	consensus.transportFactory = adapters.NewTransportFactory(
+		consensus.transportCryptographyFactory,
+		consensus.packetBuilder,
+		consensus.packetSender,
 	)
-	bundle.consensusController = gcpv2.NewConsensusMemberController(
-		bundle.consensusChronicles,
-		bundle.upstreamPulseController,
+	consensus.consensusController = gcpv2.NewConsensusMemberController(
+		consensus.consensusChronicles,
+		consensus.upstreamPulseController,
 		core.NewPhasedRoundControllerFactory(
-			bundle.localNodeConfiguration,
-			bundle.transportFactory,
-			bundle.roundStrategyFactory,
+			consensus.localNodeConfiguration,
+			consensus.transportFactory,
+			consensus.roundStrategyFactory,
 		),
 	)
 
-	bundle.verify()
-	return bundle
+	consensus.verify()
+	return consensus
 }
 
-func (cb *ConsensusBundle) Controller() core.ConsensusController {
-	return cb.consensusController
+func (c *Consensus) Controller() core.ConsensusController {
+	return c.consensusController
 }
 
-func (cb *ConsensusBundle) verify() {
-	verify(cb)
+func (c *Consensus) verify() {
+	verify(c)
 }
 
 func verify(s interface{}) {

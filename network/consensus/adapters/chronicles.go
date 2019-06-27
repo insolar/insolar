@@ -48,108 +48,19 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package consensusadapters
+package adapters
 
 import (
-	"context"
-	"time"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/utils"
-	"go.opencensus.io/trace"
 )
 
-type stater interface {
-	State() ([]byte, error)
+func NewChronicles(pop census.ManyNodePopulation, vc census.VersionedRegistries) census.ConsensusChronicles {
+	chronicles := census.NewLocalChronicles()
+	census.NewPrimingCensus(&pop, vc).SetAsActiveTo(chronicles)
+	return chronicles
 }
 
-type pulseChanger interface {
-	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
-}
-
-type UpstreamPulseController struct {
-	stater       stater
-	pulseChanger pulseChanger
-}
-
-func NewUpstreamPulseController(stater stater, pulseChanger pulseChanger) *UpstreamPulseController {
-	return &UpstreamPulseController{
-		stater:       stater,
-		pulseChanger: pulseChanger,
-	}
-}
-
-func (u *UpstreamPulseController) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) PulseDetected() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	nshChan := make(chan common.NodeStateHash)
-
-	go awaitState(nshChan, u.stater)
-
-	return nshChan
-}
-
-func (u *UpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, activeCensus census.OperationalCensus) {
-	ctx := context.Background()
-
-	pulseNumber := report.PulseNumber
-
-	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
-
-	ctx, span := instracer.StartSpan(ctx, "UpstreamPulseController.CommitPulseChange")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
-	)
-	defer span.End()
-
-	// TODO: mocking pulse
-	pulse := insolar.Pulse{
-		PulseNumber: insolar.PulseNumber(pulseNumber),
-	}
-
-	u.pulseChanger.ChangePulse(ctx, pulse)
-}
-
-func (u *UpstreamPulseController) CancelPulseChange() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipLost(graceful bool) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipSuspended() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) SuspendTraffic() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) ResumeTraffic() {
-	panic("implement me")
-}
-
-func awaitState(c chan<- common.NodeStateHash, stater stater) {
-	state, err := stater.State()
-	if err != nil {
-		panic("Failed to retrieve node state hash")
-	}
-
-	c <- common2.NewDigest(common2.NewBits512FromBytes(state), SHA3512Digest).AsDigestHolder()
+func NewPopulation(localNode common.NodeIntroProfile, nodes []common.NodeIntroProfile) census.ManyNodePopulation {
+	return census.NewManyNodePopulation(localNode, nodes, false)
 }

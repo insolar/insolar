@@ -48,46 +48,34 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package consensusadapters
+package adapters
 
 import (
-	"math/rand"
+	"time"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-type gshDigester struct {
-	// TODO do test or a proper digest calc
-	rnd      *rand.Rand
-	lastSeed int64
-}
-
-func (s *gshDigester) AddNext(digest common.DigestHolder) {
-	// it is a dirty emulation of digest
-	if s.rnd == nil {
-		s.rnd = rand.New(rand.NewSource(0))
+func NewPulseFromPulseData(pulseData common.PulseData) insolar.Pulse {
+	var prev insolar.PulseNumber
+	if pulseData.IsFirstPulse() {
+		prev = insolar.PulseNumber(pulseData.GetNextPulseNumber())
+	} else {
+		prev = insolar.PulseNumber(pulseData.PulseNumber)
 	}
-	s.lastSeed = int64(s.rnd.Uint64() ^ digest.FoldToUint64())
-	s.rnd.Seed(s.lastSeed)
-}
 
-func (s *gshDigester) GetDigestMethod() common.DigestMethod {
-	return "emuDigest64"
-}
+	entropy := insolar.Entropy{}
+	bytes := pulseData.PulseEntropy.Bytes()
+	copy(entropy[:], bytes)
+	copy(entropy[pulseData.PulseEntropy.FixedByteSize():], bytes)
 
-func (s *gshDigester) ForkSequence() common.SequenceDigester {
-	cp := gshDigester{}
-	if s.rnd != nil {
-		cp.rnd = rand.New(rand.NewSource(s.lastSeed))
+	return insolar.Pulse{
+		PulseNumber:      insolar.PulseNumber(pulseData.PulseNumber),
+		NextPulseNumber:  insolar.PulseNumber(pulseData.GetNextPulseNumber()),
+		PrevPulseNumber:  prev,
+		PulseTimestamp:   int64(pulseData.Timestamp) * int64(time.Second/time.Nanosecond),
+		EpochPulseNumber: int(pulseData.PulseEpoch),
+		Entropy:          entropy,
 	}
-	return &cp
-}
-
-func (s *gshDigester) FinishSequence() common.Digest {
-	if s.rnd == nil {
-		panic("nothing")
-	}
-	bits := common.NewBits64(s.rnd.Uint64())
-	s.rnd = nil
-	return common.NewDigest(&bits, s.GetDigestMethod())
 }

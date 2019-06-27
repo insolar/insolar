@@ -48,108 +48,73 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package consensusadapters
+package adapters
 
 import (
+	"context"
 	"crypto/ecdsa"
-	"fmt"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/utils"
 )
 
-type NodeIntroduction struct {
-	node insolar.NetworkNode
+var defaultRoundTimings = common2.RoundTimings{
+	StartPhase0At: 100 * time.Millisecond, // Not scaled
+
+	StartPhase1RetryAt: 200 * time.Millisecond, // 0 for no retries
+	EndOfPhase1:        250 * time.Millisecond,
+	EndOfPhase2:        400 * time.Millisecond,
+	EndOfPhase3:        500 * time.Millisecond,
+
+	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
+	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
-func NewNodeIntroduction(node insolar.NetworkNode) *NodeIntroduction {
-	return &NodeIntroduction{
-		node: node,
+func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *LocalNodeConfiguration {
+	privateKey, err := keyStore.GetPrivateKey("")
+	if err != nil {
+		panic(err)
+	}
+
+	ecdsaPrivateKey := privateKey.(*ecdsa.PrivateKey)
+
+	return &LocalNodeConfiguration{
+		ctx:            ctx,
+		timings:        defaultRoundTimings,
+		secretKeyStore: NewECDSASecretKeyStore(ecdsaPrivateKey),
 	}
 }
 
-func (ni *NodeIntroduction) GetShortNodeID() common.ShortNodeID {
-	return common.ShortNodeID(ni.node.ShortID())
+type LocalNodeConfiguration struct {
+	ctx            context.Context
+	timings        common2.RoundTimings
+	secretKeyStore common.SecretKeyStore
 }
 
-func (ni *NodeIntroduction) GetClaimEvidence() common.SignedEvidenceHolder {
-	// TODO: do something with sign
-	return nil
+func (c *LocalNodeConfiguration) GetParentContext() context.Context {
+	return c.ctx
 }
 
-type NodeIntroProfile struct {
-	node        insolar.NetworkNode
-	isDiscovery bool
-}
-
-func NewNodeIntroProfile(node insolar.NetworkNode, certificate insolar.Certificate) *NodeIntroProfile {
-	return &NodeIntroProfile{
-		node:        node,
-		isDiscovery: utils.IsDiscovery(node.ID(), certificate),
+func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) common2.RoundTimings {
+	if nextPulseDelta == 1 {
+		return c.timings
 	}
+	m := time.Duration(nextPulseDelta) // this is NOT a duration, but a multiplier
+	t := c.timings
+
+	t.StartPhase0At *= 1 // don't scale!
+	t.StartPhase1RetryAt *= m
+	t.EndOfPhase1 *= m
+	t.EndOfPhase2 *= m
+	t.EndOfPhase3 *= m
+	t.BeforeInPhase2ChasingDelay *= m
+	t.BeforeInPhase3ChasingDelay *= m
+
+	return t
 }
 
-func (nip *NodeIntroProfile) GetNodePrimaryRole() common2.NodePrimaryRole {
-	switch nip.node.Role() {
-	case insolar.StaticRoleVirtual:
-		return common2.PrimaryRoleVirtual
-	case insolar.StaticRoleLightMaterial:
-		return common2.PrimaryRoleLightMaterial
-	case insolar.StaticRoleHeavyMaterial:
-		return common2.PrimaryRoleHeavyMaterial
-	case insolar.StaticRoleUnknown:
-		fallthrough
-	default:
-		return common2.PrimaryRoleNeutral
-	}
-}
-
-func (nip *NodeIntroProfile) GetNodeSpecialRole() common2.NodeSpecialRole {
-	if nip.isDiscovery {
-		return common2.SpecialRoleDiscovery
-	}
-
-	return common2.SpecialRoleNoRole
-}
-
-func (nip *NodeIntroProfile) IsAllowedPower(p common2.MemberPower) bool {
-	// TODO: do something with power
-	return true
-}
-
-func (nip *NodeIntroProfile) GetIntroduction() common2.NodeIntroduction {
-	return NewNodeIntroduction(nip.node)
-}
-
-func (nip *NodeIntroProfile) GetDefaultEndpoint() common.HostAddress {
-	return common.HostAddress(nip.node.Address())
-}
-
-func (nip *NodeIntroProfile) GetNodePublicKeyStore() common.PublicKeyStore {
-	ecdsaPublicKey := nip.node.PublicKey().(*ecdsa.PublicKey)
-	return NewECDSAPublicKeyStore(ecdsaPublicKey)
-}
-
-func (nip *NodeIntroProfile) IsAcceptableHost(from common.HostIdentityHolder) bool {
-	endpoint := nip.GetDefaultEndpoint()
-	return endpoint.Equals(from.GetHostAddress())
-}
-
-func (nip *NodeIntroProfile) GetShortNodeID() common.ShortNodeID {
-	return common.ShortNodeID(nip.node.ShortID())
-}
-
-func (nip *NodeIntroProfile) String() string {
-	return fmt.Sprintf("{sid:%d, node:%s}", nip.node.ShortID(), nip.node.ID().String())
-}
-
-func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate) []common2.NodeIntroProfile {
-	intros := make([]common2.NodeIntroProfile, len(nodes))
-	for i, n := range nodes {
-		intros[i] = NewNodeIntroProfile(n, certificate)
-	}
-
-	return intros
+func (c *LocalNodeConfiguration) GetSecretKeyStore() common.SecretKeyStore {
+	return c.secretKeyStore
 }
