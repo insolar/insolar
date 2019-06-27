@@ -64,20 +64,20 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type stater interface {
+type Stater interface {
 	State() ([]byte, error)
 }
 
-type pulseChanger interface {
+type PulseChanger interface {
 	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
 }
 
 type UpstreamPulseController struct {
-	stater       stater
-	pulseChanger pulseChanger
+	stater       Stater
+	pulseChanger PulseChanger
 }
 
-func NewUpstreamPulseController(stater stater, pulseChanger pulseChanger) *UpstreamPulseController {
+func NewUpstreamPulseController(stater Stater, pulseChanger PulseChanger) *UpstreamPulseController {
 	return &UpstreamPulseController{
 		stater:       stater,
 		pulseChanger: pulseChanger,
@@ -142,7 +142,7 @@ func (u *UpstreamPulseController) ResumeTraffic() {
 	panic("implement me")
 }
 
-func awaitState(c chan<- common.NodeStateHash, stater stater) {
+func awaitState(c chan<- common.NodeStateHash, stater Stater) {
 	state, err := stater.State()
 	if err != nil {
 		panic("Failed to retrieve node state hash")

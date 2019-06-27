@@ -66,6 +66,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -94,7 +95,7 @@ func TestConsensusMain(t *testing.T) {
 
 		consensusAdapter := NewEmuHostConsensusAdapter(n.Address())
 
-		bundle := adapters.NewConsensusBundle(ctx, adapters.ConsensusDep{
+		cons := consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 			Scheme:                platformpolicy.NewPlatformCryptographyScheme(),
 			CertificateManager:    certificateManager,
@@ -108,7 +109,7 @@ func TestConsensusMain(t *testing.T) {
 			PacketSender: consensusAdapter,
 		})
 
-		controller := bundle.Controller()
+		controller := cons.Controller()
 		handler.SetConsensusController(controller)
 		consensusAdapter.SetConsensusController(controller)
 
