@@ -207,6 +207,9 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.P
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
 	}
+	if lastPulse.PulseNumber > data.Pulse.PulseNumber {
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateSchedule}), nil
+	}
 
 	err = bootstrap.ValidatePermit(data.Permit, g.CertificateManager.GetCertificate(), g.CryptographyService)
 	if err != nil {
@@ -222,9 +225,19 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.P
 		// TODO:
 		//pulseStartTime := time.Unix(0, data.Pulse.PulseTimestamp)
 		pulseStartTime := time.Now()
-		if err := g.PhaseManager.OnPulse(ctx, &lastPulse, pulseStartTime); err != nil {
+		g.PulseAppender.Append(ctx, lastPulse)
+		if err = g.PhaseManager.OnPulse(ctx, &lastPulse, pulseStartTime); err != nil {
 			inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
 		}
+		if err = g.NodeKeeper.MoveSyncToActive(ctx, lastPulse.PulseNumber); err != nil {
+			inslogger.FromContext(ctx).Error("Failed to MoveSyncToActive: ", err.Error())
+		}
+
+		// fixme twice consensus call
+		//lastPulse.PulseNumber += 1
+		//if err := g.PhaseManager.OnPulse(ctx, &lastPulse, pulseStartTime); err != nil {
+		//	inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
+		//}
 	}()
 
 	// networkSize := uint32(len(g.NodeKeeper.GetAccessor().GetActiveNodes()))
@@ -299,9 +312,6 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 	if err != nil {
 		inslogger.FromContext(ctx).Warn("Ephemeral pulse")
 		p = *insolar.EphemeralPulse
-		if err = g.PulseAppender.Append(ctx, p); err != nil {
-			inslogger.FromContext(ctx).Error("Failed to append pulse: ", err.Error())
-		}
 	}
 
 	discoveryCount := len(network.FindDiscoveriesInNodeList(g.NodeKeeper.GetAccessor().GetActiveNodes(), g.CertificateManager.GetCertificate()))
@@ -310,7 +320,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 		Timestamp:      time.Now().UTC().Unix(),
 		Permit:         permit,
 		DiscoveryCount: uint32(discoveryCount),
-		Pulse:          *pulse.ToProto(&p),
+		Pulse:          pulse.ToProto(&p),
 		//NetworkState:   uint32(g.Gatewayer.Gateway().GetState()),
 	}), nil
 }

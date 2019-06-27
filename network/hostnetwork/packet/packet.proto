@@ -158,7 +158,7 @@ message AuthorizeResponse {
     string Error = 3;
     Permit Permit = 4;
     uint32 DiscoveryCount = 5;
-    pulse.PulseProto Pulse = 6 [(gogoproto.nullable) = false];
+    pulse.PulseProto Pulse = 6;
 //    uint32 NetworkState = 7;
 }
 

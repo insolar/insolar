@@ -185,6 +185,19 @@ func (s *consensusSuite) SetupTest() {
 
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
+	// switch gatewayer to complete state - fake bootstrap
+	bnodes := make([]insolar.NetworkNode, 0)
+	for _, node := range s.fixture().bootstrapNodes {
+		bnodes = append(bnodes, node.serviceNetwork.NodeKeeper.GetOrigin())
+	}
+
+	for _, node := range s.fixture().bootstrapNodes {
+
+		node.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
+		node.serviceNetwork.Gatewayer.SwitchState(insolar.CompleteNetworkState)
+		pulseReceivers = append(pulseReceivers, node.host)
+	}
+
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
 
 	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
@@ -222,11 +235,8 @@ func (s *consensusSuite) SetupTest() {
 	}
 	fmt.Println("=================== SetupTest() Done")
 	log.Info("Start test pulsar")
-
-	// TODO: enable pulsar
-	// err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	// s.Require().NoError(err)
-
+	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	s.Require().NoError(err)
 }
 
 func (s *testSuite) waitResults(results chan error, expected int) {
@@ -390,6 +400,7 @@ func incrementTestPort() int {
 func (n *networkNode) init() error {
 	err := n.componentManager.Init(n.ctx)
 	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
+	n.serviceNetwork.BaseGateway.PhaseManager = n.serviceNetwork.PhaseManager
 	return err
 }
 

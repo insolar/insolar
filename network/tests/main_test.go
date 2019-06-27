@@ -75,20 +75,21 @@ var (
 )
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := newConsensusSuite(2, 0)
+	s := newConsensusSuite(5, 0)
 	suite.Run(t, s)
 }
 
-func TestServiceNetworkManyNodes(t *testing.T) {
-	t.Skip("Long time setup, wait for mock bootstrap")
-	s := newConsensusSuite(5, 10)
-	suite.Run(t, s)
-}
+//func TestServiceNetworkManyNodes(t *testing.T) {
+//	t.Skip("Long time setup, wait for mock bootstrap")
+//	s := newConsensusSuite(5, 10)
+//	suite.Run(t, s)
+//}
 
 // Consensus suite tests
 
 func (s *consensusSuite) TestNetworkConsensus3Times() {
-	s.waitForConsensus(3)
+	fmt.Println("------------------- TestNetworkConsensus3Times")
+	s.waitForConsensus(1)
 }
 
 func (s *consensusSuite) TestNodeConnect() {

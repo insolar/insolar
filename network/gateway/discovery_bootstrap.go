@@ -38,12 +38,13 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 
 	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(false)
 
-	pulse, err := g.PulseAccessor.Latest(ctx)
+	_, err = g.PulseAccessor.Latest(ctx)
+	pp := pulse.FromProto(authorizeRes.Pulse)
 	if err != nil {
-		pulse = insolar.Pulse{PulseNumber: 1}
+		g.PulseAppender.Append(ctx, *pp)
 	}
 
-	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, g.joinClaim, &pulse)
+	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, g.joinClaim, pp)
 	if err != nil {
 
 	}
@@ -94,12 +95,21 @@ func (g *DiscoveryBootstrap) authorize(ctx context.Context) (*packet.AuthorizeRe
 			continue
 		}
 
-		gotPulse := pulse.FromProto(&res.Pulse)
+		gotPulse := pulse.FromProto(res.Pulse)
 		localPulse, err := g.PulseAccessor.Latest(ctx)
-		if err == nil && insolar.IsEphemeralPulse(&localPulse) && gotPulse.PulseNumber < localPulse.PulseNumber {
-			logger.Info("Last stored pulse.")
+		if err != nil {
+			localPulse = *insolar.EphemeralPulse
+		}
+
+		if gotPulse.PulseNumber < localPulse.PulseNumber {
+			logger.Errorf("Skip authorize response with pulse number %d", gotPulse.PulseNumber)
 			continue
 		}
+
+		//if err == nil && insolar.IsEphemeralPulse(&localPulse) && gotPulse.PulseNumber > localPulse.PulseNumber {
+		//	logger.Info("Last stored pulse.")
+		//	continue
+		//}
 
 		return res, nil
 	}

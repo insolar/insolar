@@ -134,8 +134,9 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinC
 	// make claim with new  shortID
 	// bootstrap again
 	case packet.UpdateSchedule:
-		ac.UpdateSchedule(ctx, permit, p.PulseNumber)
-		panic("call bootstrap again")
+		//ac.UpdateSchedule(ctx, permit, p.PulseNumber)
+		//panic("call bootstrap again")
+		return respData, errors.New("Bootstrap got UpdateSchedule")
 	case packet.Reject:
 		return respData, errors.New("Bootstrap request rejected")
 	}

@@ -106,7 +106,8 @@ type ServiceNetwork struct {
 
 	HostNetwork network.HostNetwork
 
-	gatewayer    network.Gatewayer
+	Gatewayer    network.Gatewayer
+	BaseGateway  *gateway.Base
 	operableFunc insolar.NetworkOperableCallback
 
 	isGenesis bool
@@ -155,8 +156,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	cert := n.CertificateManager.GetCertificate()
 
-	baseGateway := &gateway.Base{}
-	n.gatewayer = gateway.NewGatewayer(baseGateway.NewGateway(insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {
+	n.BaseGateway = &gateway.Base{}
+	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {
 		if n.operableFunc != nil {
 			n.operableFunc(ctx, isNetworkOperable)
 		}
@@ -178,8 +179,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
 		network.NewRules(),
-		baseGateway,
-		n.gatewayer,
+		n.BaseGateway,
+		n.Gatewayer,
 	)
 	err = n.cm.Init(ctx)
 	if err != nil {
@@ -198,7 +199,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
 
-	n.gatewayer.Gateway().Run(ctx)
+	n.Gatewayer.Gateway().Run(ctx)
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
@@ -252,11 +253,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	)
 	defer span.End()
 
-	if n.gatewayer.Gateway().ShouldIgnorePulse(ctx, newPulse) {
+	if n.Gatewayer.Gateway().ShouldIgnorePulse(ctx, newPulse) {
 		return
 	}
 
-	//todo call gatewayer
+	//todo call Gatewayer
 	/*
 		if !n.NodeKeeper.IsBootstrapped() {
 			n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
@@ -290,12 +291,12 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		}
 	}
 
-	if err := n.gatewayer.Gateway().OnPulse(ctx, newPulse); err != nil {
+	if err := n.Gatewayer.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
 
 	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err := n.PulseManager.Set(ctx, newPulse, n.gatewayer.Gateway().GetState() == insolar.CompleteNetworkState)
+	err := n.PulseManager.Set(ctx, newPulse, n.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
@@ -320,7 +321,7 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
 		errMsg := "Failed to pass consensus: " + err.Error()
 		logger.Error(errMsg)
-		n.gatewayer.SwitchState(insolar.NoNetworkState)
+		n.Gatewayer.SwitchState(insolar.NoNetworkState)
 	}
 }
 
@@ -329,7 +330,7 @@ func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 }
 
 func (n *ServiceNetwork) GetState() insolar.NetworkState {
-	return n.gatewayer.Gateway().GetState()
+	return n.Gatewayer.Gateway().GetState()
 }
 
 func (n *ServiceNetwork) SetOperableFunc(f insolar.NetworkOperableCallback) {
