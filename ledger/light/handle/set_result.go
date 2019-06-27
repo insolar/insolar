@@ -42,13 +42,13 @@ func NewSetResult(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetRes
 }
 
 func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.SetRequest{}
+	msg := payload.SetResult{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal SetResult message")
 	}
 
-	calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
+	calc := proc.NewCalculateID(msg.Result, flow.Pulse(ctx))
 	s.dep.CalculateID(calc)
 	if err := f.Procedure(ctx, calc, true); err != nil {
 		return err
@@ -56,7 +56,7 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 	resID := calc.Result.ID
 
 	virtual := record.Virtual{}
-	err = virtual.Unmarshal(msg.Request)
+	err = virtual.Unmarshal(msg.Result)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal Result record")
 	}
