@@ -67,8 +67,8 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		composite.RecordID = *iter
-		composite.Record = filamentRecord
+		composite.MetaID = *iter
+		composite.Meta = filamentRecord
 
 		// Fetching primary record.
 		virtual := record.Unwrap(filamentRecord.Virtual)
@@ -83,8 +83,14 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		composite.RecordID = filament.RecordID
 		composite.Record = rec
 
+		records = append(records, composite)
+
 		// Iterating back.
 		iter = filament.PreviousRecord
+	}
+
+	if len(records) == 0 {
+		return errors.New("wrong filament request. empty segment")
 	}
 
 	rep, err := payload.NewMessage(&payload.FilamentSegment{
