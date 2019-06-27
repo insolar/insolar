@@ -48,58 +48,46 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package consensusadapters
+package adapters
 
 import (
-	"context"
 	"math/rand"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/common"
 )
 
-type RoundStrategy struct {
-	bundle      core.PhaseControllersBundle
-	chronicle   census.ConsensusChronicles
-	localConfig core.LocalNodeConfiguration
+type gshDigester struct {
+	// TODO do test or a proper digest calc
+	rnd      *rand.Rand
+	lastSeed int64
 }
 
-func NewRoundStrategy(
-	bundle core.PhaseControllersBundle,
-	chronicle census.ConsensusChronicles,
-	localConfig core.LocalNodeConfiguration,
-) *RoundStrategy {
-	return &RoundStrategy{
-		bundle:      bundle,
-		chronicle:   chronicle,
-		localConfig: localConfig,
+func (s *gshDigester) AddNext(digest common.DigestHolder) {
+	// it is a dirty emulation of digest
+	if s.rnd == nil {
+		s.rnd = rand.New(rand.NewSource(0))
 	}
+	s.lastSeed = int64(s.rnd.Uint64() ^ digest.FoldToUint64())
+	s.rnd.Seed(s.lastSeed)
 }
 
-func (rs *RoundStrategy) CreateRoundContext(ctx context.Context) context.Context {
-	return ctx
+func (s *gshDigester) GetDigestMethod() common.DigestMethod {
+	return "emuDigest64"
 }
 
-func (rs *RoundStrategy) GetPrepPhaseControllers() []core.PrepPhaseController {
-	return rs.bundle.GetPrepPhaseControllers()
+func (s *gshDigester) ForkSequence() common.SequenceDigester {
+	cp := gshDigester{}
+	if s.rnd != nil {
+		cp.rnd = rand.New(rand.NewSource(s.lastSeed))
+	}
+	return &cp
 }
 
-func (rs *RoundStrategy) GetFullPhaseControllers(nodeCount int) []core.PhaseController {
-	return rs.bundle.GetFullPhaseControllers(nodeCount)
-}
-
-func (rs *RoundStrategy) RandUint32() uint32 {
-	return rand.Uint32()
-}
-
-func (rs *RoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
-	rand.Shuffle(n, swap)
-}
-
-func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
-	return false
-}
-
-func (rs *RoundStrategy) AdjustConsensusTimings(timings *common.RoundTimings) {
+func (s *gshDigester) FinishSequence() common.Digest {
+	if s.rnd == nil {
+		panic("nothing")
+	}
+	bits := common.NewBits64(s.rnd.Uint64())
+	s.rnd = nil
+	return common.NewDigest(&bits, s.GetDigestMethod())
 }

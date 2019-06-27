@@ -48,19 +48,58 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package consensusadapters
+package adapters
 
 import (
+	"context"
+	"math/rand"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-func NewChronicles(pop census.ManyNodePopulation, vc census.VersionedRegistries) census.ConsensusChronicles {
-	chronicles := census.NewLocalChronicles()
-	census.NewPrimingCensus(&pop, vc).SetAsActiveTo(chronicles)
-	return chronicles
+type RoundStrategy struct {
+	bundle      core.PhaseControllersBundle
+	chronicle   census.ConsensusChronicles
+	localConfig core.LocalNodeConfiguration
 }
 
-func NewPopulation(localNode common.NodeIntroProfile, nodes []common.NodeIntroProfile) census.ManyNodePopulation {
-	return census.NewManyNodePopulation(localNode, nodes, false)
+func NewRoundStrategy(
+	bundle core.PhaseControllersBundle,
+	chronicle census.ConsensusChronicles,
+	localConfig core.LocalNodeConfiguration,
+) *RoundStrategy {
+	return &RoundStrategy{
+		bundle:      bundle,
+		chronicle:   chronicle,
+		localConfig: localConfig,
+	}
+}
+
+func (rs *RoundStrategy) CreateRoundContext(ctx context.Context) context.Context {
+	return ctx
+}
+
+func (rs *RoundStrategy) GetPrepPhaseControllers() []core.PrepPhaseController {
+	return rs.bundle.GetPrepPhaseControllers()
+}
+
+func (rs *RoundStrategy) GetFullPhaseControllers(nodeCount int) []core.PhaseController {
+	return rs.bundle.GetFullPhaseControllers(nodeCount)
+}
+
+func (rs *RoundStrategy) RandUint32() uint32 {
+	return rand.Uint32()
+}
+
+func (rs *RoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
+	rand.Shuffle(n, swap)
+}
+
+func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
+	return false
+}
+
+func (rs *RoundStrategy) AdjustConsensusTimings(timings *common.RoundTimings) {
 }

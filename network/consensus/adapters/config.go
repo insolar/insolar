@@ -48,105 +48,73 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package consensusadapters
+package adapters
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/utils"
-	"go.opencensus.io/trace"
+	"github.com/insolar/insolar/network/consensus/common"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-type stater interface {
-	State() ([]byte, error)
+var defaultRoundTimings = common2.RoundTimings{
+	StartPhase0At: 100 * time.Millisecond, // Not scaled
+
+	StartPhase1RetryAt: 200 * time.Millisecond, // 0 for no retries
+	EndOfPhase1:        250 * time.Millisecond,
+	EndOfPhase2:        400 * time.Millisecond,
+	EndOfPhase3:        500 * time.Millisecond,
+
+	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
+	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
-type pulseChanger interface {
-	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
-}
-
-type UpstreamPulseController struct {
-	stater       stater
-	pulseChanger pulseChanger
-}
-
-func NewUpstreamPulseController(stater stater, pulseChanger pulseChanger) *UpstreamPulseController {
-	return &UpstreamPulseController{
-		stater:       stater,
-		pulseChanger: pulseChanger,
-	}
-}
-
-func (u *UpstreamPulseController) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) PulseDetected() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	nshChan := make(chan common.NodeStateHash)
-
-	go awaitState(nshChan, u.stater)
-
-	return nshChan
-}
-
-func (u *UpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, pulseData common2.PulseData, activeCensus census.OperationalCensus) {
-	ctx := context.Background()
-
-	pulseNumber := report.PulseNumber
-
-	ctx = utils.NewPulseContext(ctx, uint64(pulseNumber))
-
-	ctx, span := instracer.StartSpan(ctx, "UpstreamPulseController.CommitPulseChange")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
-	)
-	defer span.End()
-
-	pulse := NewPulseFromPulseData(pulseData)
-
-	u.pulseChanger.ChangePulse(ctx, pulse)
-}
-
-func (u *UpstreamPulseController) CancelPulseChange() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipLost(graceful bool) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipSuspended() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) SuspendTraffic() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) ResumeTraffic() {
-	panic("implement me")
-}
-
-func awaitState(c chan<- common.NodeStateHash, stater stater) {
-	state, err := stater.State()
+func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *LocalNodeConfiguration {
+	privateKey, err := keyStore.GetPrivateKey("")
 	if err != nil {
-		panic("Failed to retrieve node state hash")
+		panic(err)
 	}
 
-	c <- common2.NewDigest(common2.NewBits512FromBytes(state), SHA3512Digest).AsDigestHolder()
+	ecdsaPrivateKey := privateKey.(*ecdsa.PrivateKey)
+
+	return &LocalNodeConfiguration{
+		ctx:            ctx,
+		timings:        defaultRoundTimings,
+		secretKeyStore: NewECDSASecretKeyStore(ecdsaPrivateKey),
+	}
+}
+
+type LocalNodeConfiguration struct {
+	ctx            context.Context
+	timings        common2.RoundTimings
+	secretKeyStore common.SecretKeyStore
+}
+
+func (c *LocalNodeConfiguration) GetParentContext() context.Context {
+	return c.ctx
+}
+
+func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) common2.RoundTimings {
+	if nextPulseDelta == 1 {
+		return c.timings
+	}
+	m := time.Duration(nextPulseDelta) // this is NOT a duration, but a multiplier
+	t := c.timings
+
+	t.StartPhase0At *= 1 // don't scale!
+	t.StartPhase1RetryAt *= m
+	t.EndOfPhase1 *= m
+	t.EndOfPhase2 *= m
+	t.EndOfPhase3 *= m
+	t.BeforeInPhase2ChasingDelay *= m
+	t.BeforeInPhase3ChasingDelay *= m
+
+	return t
+}
+
+func (c *LocalNodeConfiguration) GetSecretKeyStore() common.SecretKeyStore {
+	return c.secretKeyStore
 }

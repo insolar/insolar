@@ -48,46 +48,19 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package consensusadapters
+package adapters
 
 import (
-	"math/rand"
-
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-type gshDigester struct {
-	// TODO do test or a proper digest calc
-	rnd      *rand.Rand
-	lastSeed int64
+func NewChronicles(pop census.ManyNodePopulation, vc census.VersionedRegistries) census.ConsensusChronicles {
+	chronicles := census.NewLocalChronicles()
+	census.NewPrimingCensus(&pop, vc).SetAsActiveTo(chronicles)
+	return chronicles
 }
 
-func (s *gshDigester) AddNext(digest common.DigestHolder) {
-	// it is a dirty emulation of digest
-	if s.rnd == nil {
-		s.rnd = rand.New(rand.NewSource(0))
-	}
-	s.lastSeed = int64(s.rnd.Uint64() ^ digest.FoldToUint64())
-	s.rnd.Seed(s.lastSeed)
-}
-
-func (s *gshDigester) GetDigestMethod() common.DigestMethod {
-	return "emuDigest64"
-}
-
-func (s *gshDigester) ForkSequence() common.SequenceDigester {
-	cp := gshDigester{}
-	if s.rnd != nil {
-		cp.rnd = rand.New(rand.NewSource(s.lastSeed))
-	}
-	return &cp
-}
-
-func (s *gshDigester) FinishSequence() common.Digest {
-	if s.rnd == nil {
-		panic("nothing")
-	}
-	bits := common.NewBits64(s.rnd.Uint64())
-	s.rnd = nil
-	return common.NewDigest(&bits, s.GetDigestMethod())
+func NewPopulation(localNode common.NodeIntroProfile, nodes []common.NodeIntroProfile) census.ManyNodePopulation {
+	return census.NewManyNodePopulation(localNode, nodes, false)
 }

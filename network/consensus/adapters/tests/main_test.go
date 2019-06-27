@@ -66,7 +66,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/network/consensusadapters"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 	transport2 "github.com/insolar/insolar/network/transport"
@@ -88,13 +88,13 @@ func TestConsensusMain(t *testing.T) {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
 		nodeKeeper.SetInitialSnapshot(nodes)
 		certificateManager := initCrypto(n, discoveryNodes)
-		handler := consensusadapters.NewDatagramHandler()
+		handler := adapters.NewDatagramHandler()
 		transportFactory := transport2.NewFactory(configuration.NewHostNetwork().Transport)
 		transport, _ := transportFactory.CreateDatagramTransport(handler)
 
 		consensusAdapter := NewEmuHostConsensusAdapter(n.Address())
 
-		bundle := consensusadapters.NewConsensusBundle(ctx, consensusadapters.ConsensusDep{
+		bundle := adapters.NewConsensusBundle(ctx, adapters.ConsensusDep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 			Scheme:                platformpolicy.NewPlatformCryptographyScheme(),
 			CertificateManager:    certificateManager,
