@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetRequest_Proceed(t *testing.T) {
+func TestSetResult_Proceed(t *testing.T) {
 	t.Parallel()
 
 	ctx := flow.TestContextWithPulse(
@@ -51,42 +51,40 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	pending := recentstorage.NewPendingStorageMock(t)
 	pending.AddPendingRequestMock.Return()
+	pending.RemovePendingRequestMock.Return()
 	provider := recentstorage.NewProviderMock(t)
 	provider.GetPendingStorageMock.Return(pending)
-	provider.CountMock.Return(recentstorage.PendingRequestsLimit - 1)
 
-	ref := gen.Reference()
 	jetID := gen.JetID()
 	id := gen.ID()
 
 	virtual := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &record.Request{
-				Object:   &ref,
-				CallType: record.CTMethod,
+		Union: &record.Virtual_Result{
+			Result: &record.Result{
+				Object: id,
 			},
 		},
 	}
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	result := payload.SetResult{
+		Result: virtualBuf,
 	}
-	requestBuf, err := request.Marshal()
+	resultBuf, err := result.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: requestBuf,
+		Payload: resultBuf,
 	}
 
 	// Pendings limit not reached.
-	setRequestProc := NewSetRequest(msg, virtual, id, jetID)
-	setRequestProc.dep.writer = writeAccessor
-	setRequestProc.dep.sender = sender
-	setRequestProc.dep.recentStorage = provider
-	setRequestProc.dep.records = records
+	setResultProc := NewSetResult(msg, virtual, id, jetID)
+	setResultProc.dep.writer = writeAccessor
+	setResultProc.dep.sender = sender
+	setResultProc.dep.recentStorage = provider
+	setResultProc.dep.records = records
 
-	err = setRequestProc.Proceed(ctx)
+	err = setResultProc.Proceed(ctx)
 	require.NoError(t, err)
 }
