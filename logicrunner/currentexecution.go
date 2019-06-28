@@ -267,6 +267,13 @@ func (ces *CurrentExecutionList) Empty() bool {
 	return ces.Length() == 0
 }
 
+func (ces *CurrentExecutionList) Has(requestRef insolar.Reference) bool {
+	ces.lock.RLock()
+	defer ces.lock.RUnlock()
+	_, has := ces.executions[requestRef]
+	return has
+}
+
 type CurrentExecutionPredicate func(*Transcript, interface{}) bool
 
 func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
