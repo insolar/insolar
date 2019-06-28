@@ -134,7 +134,7 @@ func NewECDSADigestSigner(privateKey *ecdsa.PrivateKey, scheme insolar.PlatformC
 func (ds *ECDSADigestSigner) SignDigest(digest common.Digest) common.Signature {
 	digestBytes := digest.Bytes()
 
-	signer := ds.scheme.Signer(ds.privateKey)
+	signer := ds.scheme.DigestSigner(ds.privateKey)
 
 	sig, err := signer.Sign(digestBytes)
 	if err != nil {
@@ -194,7 +194,7 @@ func (sv *ECDSASignatureVerifier) IsValidDigestSignature(digest common.DigestHol
 	digestBytes := digest.Bytes()
 	signatureBytes := signature.Bytes()
 
-	verifier := sv.scheme.Verifier(sv.publicKey)
+	verifier := sv.scheme.DigestVerifier(sv.publicKey)
 	return verifier.Verify(insolar.SignatureFromBytes(signatureBytes), digestBytes)
 }
 

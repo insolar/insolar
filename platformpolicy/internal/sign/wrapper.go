@@ -25,17 +25,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ecdsaSignerWrapper struct {
+type ecdsaDigestSignerWrapper struct {
 	privateKey *ecdsa.PrivateKey
-	hasher     insolar.Hasher
 }
 
-func (sw *ecdsaSignerWrapper) Sign(data []byte) (*insolar.Signature, error) {
-	hash := sw.hasher.Hash(data)
-
-	r, s, err := ecdsa.Sign(rand.Reader, sw.privateKey, hash)
+func (sw *ecdsaDigestSignerWrapper) Sign(digest []byte) (*insolar.Signature, error) {
+	r, s, err := ecdsa.Sign(rand.Reader, sw.privateKey, digest)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
+		return nil, errors.Wrap(err, "[ DataSigner ] could't sign data")
 	}
 
 	ecdsaSignature := SerializeTwoBigInt(r, s)
@@ -44,12 +41,20 @@ func (sw *ecdsaSignerWrapper) Sign(data []byte) (*insolar.Signature, error) {
 	return &signature, nil
 }
 
-type ecdsaVerifyWrapper struct {
-	publicKey *ecdsa.PublicKey
-	hasher    insolar.Hasher
+type ecdsaDataSignerWrapper struct {
+	ecdsaDigestSignerWrapper
+	hasher insolar.Hasher
 }
 
-func (sw *ecdsaVerifyWrapper) Verify(signature insolar.Signature, data []byte) bool {
+func (sw *ecdsaDataSignerWrapper) Sign(data []byte) (*insolar.Signature, error) {
+	return sw.ecdsaDigestSignerWrapper.Sign(sw.hasher.Hash(data))
+}
+
+type ecdsaDigestVerifyWrapper struct {
+	publicKey *ecdsa.PublicKey
+}
+
+func (sw *ecdsaDigestVerifyWrapper) Verify(signature insolar.Signature, data []byte) bool {
 	if signature.Bytes() == nil {
 		return false
 	}
@@ -59,6 +64,14 @@ func (sw *ecdsaVerifyWrapper) Verify(signature insolar.Signature, data []byte) b
 		return false
 	}
 
-	hash := sw.hasher.Hash(data)
-	return ecdsa.Verify(sw.publicKey, hash, r, s)
+	return ecdsa.Verify(sw.publicKey, data, r, s)
+}
+
+type ecdsaDataVerifyWrapper struct {
+	ecdsaDigestVerifyWrapper
+	hasher insolar.Hasher
+}
+
+func (sw *ecdsaDataVerifyWrapper) Verify(signature insolar.Signature, data []byte) bool {
+	return sw.ecdsaDigestVerifyWrapper.Verify(signature, sw.hasher.Hash(data))
 }
