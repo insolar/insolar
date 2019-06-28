@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
+// Member - basic member contract.
 type Member struct {
 	foundation.BaseContract
 	RootDomain insolar.Reference
@@ -41,19 +42,19 @@ type Member struct {
 	PublicKey  string
 }
 
-// GetName get public key
+// GetName gets name.
 func (m *Member) GetName() (string, error) {
 	return m.Name, nil
 }
 
 var INSATTR_GetPublicKey_API = true
 
-// GetPublicKey get public key
+// GetPublicKey gets public key.
 func (m *Member) GetPublicKey() (string, error) {
 	return m.PublicKey, nil
 }
 
-// New creates new member
+// New creates new member.
 func New(rootDomain insolar.Reference, name string, key string) (*Member, error) {
 	return &Member{
 		RootDomain: rootDomain,
@@ -89,7 +90,7 @@ type Params struct {
 	PublicKey  string      `json:"memberPubKey"`
 }
 
-// Call method for authorized calls
+// Call returns response on request. Method for authorized calls.
 func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	var signature string
 	var pulseTimeStamp int64
@@ -428,7 +429,7 @@ func (m *Member) migration(txHash string, burnAddress string, amount big.Int, un
 	return strconv.Itoa(int(confirms)), nil
 }
 
-// Find deposits for this member with this transaction hash
+// Find deposits for this member with this transaction hash.
 func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 
 	inputAmount := new(big.Int)

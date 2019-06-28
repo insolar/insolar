@@ -36,6 +36,7 @@ const (
 	statusClose   status = "Close"
 )
 
+// Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
 	Timestamp               time.Time
@@ -48,17 +49,17 @@ type Deposit struct {
 	Status                  status
 }
 
-// GetTxHash get transaction hash
+// GetTxHash gets transaction hash.
 func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
 
-// GetAmount get amount
+// GetAmount gets amount.
 func (d *Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
-// New creates new deposit
+// New creates new deposit.
 func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
 	return &Deposit{
 
@@ -71,7 +72,7 @@ func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amou
 	}, nil
 }
 
-// MapMarshal get deposit information
+// MapMarshal gets deposit information.
 func (d *Deposit) MapMarshal() (map[string]string, error) {
 	return map[string]string{
 		"timestamp":       d.Timestamp.String(),
@@ -82,7 +83,7 @@ func (d *Deposit) MapMarshal() (map[string]string, error) {
 	}, nil
 }
 
-// Confirm confirm deposit by migration daemon
+// Confirm adds confirm for deposit by migration daemon.
 func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
 	if txHash != d.TxHash {
 		return 0, fmt.Errorf("transaction hash is incorrect")
