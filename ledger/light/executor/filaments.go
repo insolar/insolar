@@ -73,8 +73,6 @@ func NewFilamentModifier(
 }
 
 type FilamentModifierDefault struct {
-	cache *cacheStore
-
 	calculator FilamentCalculator
 	indexes    object.IndexStorage
 	records    object.RecordModifier
