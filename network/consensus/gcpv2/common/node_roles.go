@@ -1,9 +1,10 @@
 package common
 
-type NodePrimaryRole uint8
+type NodePrimaryRole uint8 //MUST BE 6-bit
 
 const (
-	PrimaryRoleNeutral NodePrimaryRole = iota
+	PrimaryRoleUnknown NodePrimaryRole = iota
+	PrimaryRoleNeutral
 	PrimaryRoleHeavyMaterial
 	PrimaryRoleLightMaterial
 	PrimaryRoleVirtual
@@ -27,6 +28,10 @@ func (v NodePrimaryRole) IsVirtual() bool {
 
 func (v NodePrimaryRole) IsNeutral() bool {
 	return v == PrimaryRoleNeutral
+}
+
+func (v NodePrimaryRole) IsUnknown() bool {
+	return v == PrimaryRoleUnknown
 }
 
 type NodeSpecialRole uint8
