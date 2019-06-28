@@ -88,8 +88,7 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 // Consensus suite tests
 
 func (s *consensusSuite) TestNetworkConsensus3Times() {
-	fmt.Println("------------------- TestNetworkConsensus3Times")
-	s.waitForConsensus(1)
+	s.waitForConsensus(3)
 }
 
 func (s *consensusSuite) TestNodeConnect() {

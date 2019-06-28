@@ -120,11 +120,13 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 }
 
 func (g *Base) Init(ctx context.Context) error {
-	// TODO check in states
 	g.HostNetwork.RegisterRequestHandler(types.Authorize, g.HandleNodeAuthorizeRequest) // validate cert
 	g.HostNetwork.RegisterRequestHandler(types.Bootstrap, g.HandleNodeBootstrapRequest) // provide joiner claim
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
+	g.HostNetwork.RegisterRequestHandler(types.Ping, func(ctx context.Context, req network.Packet) (network.Packet, error) {
+		return g.HostNetwork.BuildResponse(ctx, req, &packet.Ping{}), nil
+	})
 
 	var err error
 	g.joinClaim, err = g.NodeKeeper.GetOriginJoinClaim()
@@ -224,14 +226,15 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.P
 	go func() {
 		// TODO:
 		//pulseStartTime := time.Unix(0, data.Pulse.PulseTimestamp)
-		pulseStartTime := time.Now()
-		g.PulseAppender.Append(ctx, lastPulse)
-		if err = g.PhaseManager.OnPulse(ctx, &lastPulse, pulseStartTime); err != nil {
-			inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
-		}
-		if err = g.NodeKeeper.MoveSyncToActive(ctx, lastPulse.PulseNumber); err != nil {
-			inslogger.FromContext(ctx).Error("Failed to MoveSyncToActive: ", err.Error())
-		}
+
+		//pulseStartTime := time.Now()
+		//g.PulseAppender.Append(ctx, lastPulse)
+		//if err = g.PhaseManager.OnPulse(ctx, &lastPulse, pulseStartTime); err != nil {
+		//	inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
+		//}
+		//if err = g.NodeKeeper.MoveSyncToActive(ctx, lastPulse.PulseNumber); err != nil {
+		//	inslogger.FromContext(ctx).Error("Failed to MoveSyncToActive: ", err.Error())
+		//}
 
 		// fixme twice consensus call
 		//lastPulse.PulseNumber += 1
