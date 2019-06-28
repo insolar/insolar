@@ -244,12 +244,12 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	objectRef := testutils.RandomRef()
 
 	table := []struct {
-		name        string
-		inState     message.PendingState
-		outState    message.PendingState
-		message     bool
-		messageType record.Request_CT
-		amReply     *struct {
+		name     string
+		inState  message.PendingState
+		outState message.PendingState
+		message  bool
+		callType record.CallType
+		amReply  *struct {
 			has bool
 			err error
 		}
@@ -266,11 +266,11 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			outState: message.NotPending,
 		},
 		{
-			name:        "constructor call",
-			inState:     message.PendingUnknown,
-			message:     true,
-			messageType: record.CTSaveAsChild,
-			outState:    message.NotPending,
+			name:     "constructor call",
+			inState:  message.PendingUnknown,
+			message:  true,
+			callType: record.CTSaveAsChild,
+			outState: message.NotPending,
 		},
 		{
 			name:    "method call, not pending",
@@ -310,7 +310,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			parcel := testutils.NewParcelMock(t)
 			if test.message {
 				parcel.TypeMock.ExpectOnce().Return(insolar.TypeCallMethod)
-				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: test.messageType}})
+				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: test.callType}})
 			}
 			es := NewExecutionState(objectRef)
 			es.pending = test.inState
@@ -625,8 +625,7 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	es.CurrentList.Cleanup()
 
 	es.CurrentList.Set(msg.GetReference(), &Transcript{
-		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
-		SentResult: true,
+		Request: &record.Request{ReturnMode: record.ReturnNoWait},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
@@ -902,7 +901,7 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 	lr.MessageBus = suite.mb
 
 	lr.MachinesManager = suite.mm
-	
+
 	suite.am.InjectCodeDescriptorMock.Return()
 	suite.am.InjectObjectDescriptorMock.Return()
 	suite.am.InjectFinishMock.Return()

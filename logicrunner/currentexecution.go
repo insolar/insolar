@@ -132,7 +132,6 @@ type Transcript struct {
 	Request          *record.Request
 	RequestRef       *insolar.Reference
 	RequesterNode    *insolar.Reference
-	SentResult       bool
 	Nonce            uint64
 	Deactivate       bool
 	OutgoingRequests []OutgoingRequest
@@ -165,7 +164,6 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 		Request:       &msg.Request,
 		RequestRef:    requestRef,
 		RequesterNode: &sender,
-		SentResult:    false,
 		Nonce:         0,
 		Deactivate:    false,
 

@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/insolar/insolar/insolar"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
@@ -109,7 +107,7 @@ type Params struct {
 	PublicKey  string      `json:"memberPubKey"`
 }
 
-func (hw *HelloWorld) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
+func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 	var signature string
 	var pulseTimeStamp int64
 	var rawRequest []byte

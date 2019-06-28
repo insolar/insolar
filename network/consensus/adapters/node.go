@@ -57,6 +57,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -92,18 +93,7 @@ func NewNodeIntroProfile(node insolar.NetworkNode, certificate insolar.Certifica
 }
 
 func (nip *NodeIntroProfile) GetNodePrimaryRole() common2.NodePrimaryRole {
-	switch nip.node.Role() {
-	case insolar.StaticRoleVirtual:
-		return common2.PrimaryRoleVirtual
-	case insolar.StaticRoleLightMaterial:
-		return common2.PrimaryRoleLightMaterial
-	case insolar.StaticRoleHeavyMaterial:
-		return common2.PrimaryRoleHeavyMaterial
-	case insolar.StaticRoleUnknown:
-		fallthrough
-	default:
-		return common2.PrimaryRoleNeutral
-	}
+	return StaticRoleToPrimaryRole(nip.node.Role())
 }
 
 func (nip *NodeIntroProfile) GetNodeSpecialRole() common2.NodeSpecialRole {
@@ -152,4 +142,33 @@ func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Ce
 	}
 
 	return intros
+}
+
+func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
+	intro := common2.NodeIntroProfile(profile)
+	nn := intro.GetIntroduction().(*NodeIntroduction).node
+
+	networkNode := node.NewNode(
+		nn.ID(),
+		PrimaryRoleToStaticRole(profile.GetNodePrimaryRole()),
+		nn.PublicKey(),
+		profile.GetDefaultEndpoint().String(),
+		nn.Version(),
+	)
+
+	mutableNode := networkNode.(node.MutableNode)
+
+	mutableNode.SetShortID(nn.ShortID())
+	mutableNode.SetState(MembershipStateToNodeState(profile.GetState()))
+
+	return networkNode
+}
+
+func NewNetworkNodeList(profiles []common2.NodeProfile) []insolar.NetworkNode {
+	networkNodes := make([]insolar.NetworkNode, len(profiles))
+	for i, p := range profiles {
+		networkNodes[i] = NewNetworkNode(p)
+	}
+
+	return networkNodes
 }

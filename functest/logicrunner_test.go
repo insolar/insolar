@@ -745,7 +745,7 @@ func (r *One) CreateAllowance(member string) (error) {
 }
 `
 	obj := callConstructor(t, uploadContractOnce(t, "new_allowance_not_from_wallet", contractOneCode))
-	member := createMember(t, "NewAllowanceNotFromWalletTestMember")
+	member := createMember(t)
 
 	resp := callMethod(t, obj, "CreateAllowance", member.ref)
 	require.NotEmpty(t, resp.Error)

@@ -181,11 +181,9 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
-	var args0 insolar.Reference
+	args := [1]interface{}{}
+	var args0 []byte
 	args[0] = &args0
-	var args1 []byte
-	args[1] = &args1
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -193,7 +191,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Call(args0, args1)
+	ret0, ret1 := self.Call(args0)
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -254,11 +252,13 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	args := [2]interface{}{}
-	var args0 string
+	args := [3]interface{}{}
+	var args0 insolar.Reference
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
+	var args2 string
+	args[2] = &args2
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -266,7 +266,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 		return nil, e
 	}
 
-	ret0, ret1 := New(args0, args1)
+	ret0, ret1 := New(args0, args1, args2)
 	if ret1 != nil {
 		return nil, ret1
 	}

@@ -323,5 +323,18 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHa
 	r.isFinished = true
 
 	r.prepareNewMembers(builder.GetOnlinePopulationBuilder())
-	builder.BuildAndMakeExpected(csh)
+	expected := builder.BuildAndMakeExpected(csh)
+
+	r.upstreamMembershipConfirmed(expected)
+}
+
+func (r *coreRealm) upstreamMembershipConfirmed(expectedCensus census.ExpectedCensus) {
+	sp := r.GetSelf().GetProfile()
+	report := MembershipUpstreamReport{
+		PulseNumber:     r.pulseData.PulseNumber,
+		MemberPower:     sp.GetPower(),
+		MembershipState: sp.GetState(),
+	}
+
+	r.upstream.MembershipConfirmed(report, expectedCensus)
 }
