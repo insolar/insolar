@@ -112,7 +112,7 @@ func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.
 
 // Process handles incoming message.
 func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
-	ctx := context.Background()
+	ctx := msg.Context()
 	msgBus := bus.Message{
 		WatermillMsg: msg,
 		ReplyTo:      make(chan bus.Reply),
