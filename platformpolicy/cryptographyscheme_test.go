@@ -28,6 +28,6 @@ func TestNewPlatformPolicy(t *testing.T) {
 	require.NotNil(t, pcs)
 
 	pcsImpl := pcs.(*platformCryptographyScheme)
-	require.NotNil(t, pcsImpl.HashProvider)
-	require.NotNil(t, pcsImpl.SignProvider)
+	require.NotNil(t, pcsImpl.hashProvider)
+	require.NotNil(t, pcsImpl.signProvider)
 }

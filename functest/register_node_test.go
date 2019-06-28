@@ -107,11 +107,11 @@ func TestReceiveNodeCert(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Run("Verify network sign for "+discoveryNode.Host, func(t *testing.T) {
-			verified := scheme.Verifier(pKey).Verify(insolar.SignatureFromBytes(discoveryNode.NetworkSign), networkPart)
+			verified := scheme.DataVerifier(pKey, scheme.IntegrityHasher()).Verify(insolar.SignatureFromBytes(discoveryNode.NetworkSign), networkPart)
 			require.True(t, verified)
 		})
 		t.Run("Verify node sign for "+discoveryNode.Host, func(t *testing.T) {
-			verified := scheme.Verifier(pKey).Verify(insolar.SignatureFromBytes(discoveryNode.NodeSign), nodePart)
+			verified := scheme.DataVerifier(pKey, scheme.IntegrityHasher()).Verify(insolar.SignatureFromBytes(discoveryNode.NodeSign), nodePart)
 			require.True(t, verified)
 		})
 	}
