@@ -74,6 +74,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 		}
 	} else if es.pending == message.PendingUnknown {
 		es.pending = p.msg.Pending
+		logger.Debug("pending state was unknown, setting from previous executor to ", es.pending)
 
 		if es.pending == message.PendingUnknown {
 			p.Result.clarifyPending = true

@@ -72,6 +72,10 @@ type HandleAbandonedRequestsNotification struct {
 
 func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flow.Flow) error {
 	ctx = loggerWithTargetID(ctx, h.Parcel)
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
+	return nil
+
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("HandleAbandonedRequestsNotification.Present starts ...")
@@ -95,7 +99,7 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 		h.dep.Sender.Reply(ctx, h.Message, rep)
 		return err
 	}
-	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+	replyOk = bus.ReplyAsMessage(ctx, &reply.OK{})
 	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
 }

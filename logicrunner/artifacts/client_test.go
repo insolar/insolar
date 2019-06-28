@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/internal/ledger/store"
@@ -156,59 +155,6 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 
 	_, err := am.GetChildren(s.ctx, *objRef, nil)
 	require.NoError(s.T(), err)
-}
-
-func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-
-	cs := platformpolicy.NewPlatformCryptographyScheme()
-	am := NewClient(nil)
-	am.PCS = cs
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
-
-	am.PulseAccessor = pa
-	am.JetStorage = s.jetStorage
-
-	s.T().Run("returns error on exceeding retry limit", func(t *testing.T) {
-		mb := testutils.NewMessageBusMock(mc)
-		am.DefaultBus = mb
-		mb.SendMock.Return(&reply.JetMiss{
-			JetID: insolar.ID(*insolar.NewJetID(5, []byte{1, 2, 3})),
-		}, nil)
-		ref := gen.Reference()
-		_, err := am.RegisterRequest(
-			s.ctx,
-			record.Request{Object: &ref},
-		)
-		require.Error(t, err)
-	})
-
-	s.T().Run("returns no error and updates tree when jet miss", func(t *testing.T) {
-		b_1101 := byte(0xD0)
-		b_11010101 := byte(0xD5)
-		mb := testutils.NewMessageBusMock(mc)
-		am.DefaultBus = mb
-		retries := 3
-		mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-			if retries == 0 {
-				return &reply.ID{}, nil
-			}
-			retries--
-			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101})), Pulse: insolar.FirstPulseNumber}, nil
-		}
-		ref := gen.Reference()
-		_, err := am.RegisterRequest(s.ctx, record.Request{Object: &ref})
-		require.NoError(t, err)
-
-		jetID, actual := s.jetStorage.ForID(
-			s.ctx, insolar.FirstPulseNumber, *insolar.NewID(0, []byte{0xD5}),
-		)
-
-		assert.Equal(t, insolar.NewJetID(4, []byte{b_1101}), &jetID, "proper jet ID for record")
-		assert.True(t, actual, "jet ID is actual in tree")
-	})
 }
 
 func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {

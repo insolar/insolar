@@ -33,7 +33,7 @@ var (
 )
 
 func parseInputParams() {
-	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to file with Member keys")
+	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to dir with members keys")
 	pflag.StringVarP(&apiURL, "url", "u", defaultURL, "api url")
 	pflag.Parse()
 }

@@ -138,15 +138,31 @@ func NewMessageHandler(
 			p.Dep.Bus = h.Bus
 			p.Dep.Sender = h.Sender
 		},
-		SetRecord: func(p *proc.SetRecord) {
-			p.Dep.Bus = h.Bus
-			p.Dep.RecentStorageProvider = h.RecentStorageProvider
-			p.Dep.PendingModifier = h.PendingModifier
-			p.Dep.RecordModifier = h.RecordModifier
-			p.Dep.PCS = h.PCS
-			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
-			p.Dep.Sender = h.Sender
-			p.Dep.WriteAccessor = h.WriteAccessor
+		SetRequest: func(p *proc.SetRequest) {
+			p.Dep(
+				h.WriteAccessor,
+				h.RecordModifier,
+				h.RecentStorageProvider,
+				h.PendingModifier,
+				h.Sender,
+			)
+		},
+		SetActivationRequest: func(p *proc.SetActivationRequest) {
+			p.Dep(
+				h.PCS,
+				h.WriteAccessor,
+				h.RecordModifier,
+				h.Sender,
+			)
+		},
+		SetResult: func(p *proc.SetResult) {
+			p.Dep(
+				h.WriteAccessor,
+				h.RecordModifier,
+				h.RecentStorageProvider,
+				h.PendingModifier,
+				h.Sender,
+			)
 		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor

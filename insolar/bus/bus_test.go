@@ -269,6 +269,7 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 
 	replyMeta := payload.Meta{
 		OriginHash: originHash,
+		ID:         []byte(watermill.NewUUID()),
 	}
 	replyBuf, err := replyMeta.Marshal()
 	require.NoError(t, err)
@@ -345,6 +346,7 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 	require.NoError(t, err)
 	meta := payload.Meta{
 		OriginHash: hash,
+		ID:         []byte(watermill.NewUUID()),
 	}
 
 	metaBin, _ := meta.Marshal()
@@ -496,6 +498,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 
 		meta := payload.Meta{
 			OriginHash: hash,
+			ID:         []byte(watermill.NewUUID()),
 		}
 		buf, err := meta.Marshal()
 		require.NoError(t, err)
@@ -551,7 +554,12 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T
 	for i := 0; i < count; i++ {
 		go func() {
 			time.Sleep(time.Millisecond * 5)
-			_, _ = handler(message.NewMessage(watermill.NewUUID(), nil))
+			meta := payload.Meta{
+				ID: []byte(watermill.NewUUID()),
+			}
+			buf, err := meta.Marshal()
+			require.NoError(t, err)
+			_, _ = handler(message.NewMessage(watermill.NewUUID(), buf))
 		}()
 	}
 

@@ -70,11 +70,6 @@ func NewGoPlugin(conf *configuration.LogicRunner, eb insolar.MessageBus, am arti
 	return &gp, nil
 }
 
-// Stop stops runner(s) and RPC service
-func (gp *GoPlugin) Stop() error {
-	return nil
-}
-
 const timeout = time.Minute * 10
 
 // Downstream returns a connection to `ginsider`

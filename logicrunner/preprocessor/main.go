@@ -517,15 +517,19 @@ func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 }
 
 func openTemplate(fileName string) (*template.Template, error) {
+	functions := template.FuncMap{"Title": strings.Title}
+	tmpl := template.New(path.Base(fileName)).Funcs(functions)
+
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		return nil, errors.Wrap(nil, "couldn't find info about current file")
 	}
 	templateDir := filepath.Join(filepath.Dir(currentFile), fileName)
-	tmpl, err := template.ParseFiles(templateDir)
+	tmpl, err := tmpl.ParseFiles(templateDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't parse template for output")
 	}
+
 	return tmpl, nil
 }
 
@@ -834,5 +838,5 @@ func GenerateInitializationList(out io.Writer, contracts ContractList) error {
 		"Package":   "builtin",
 	}
 
-	return formatAndWrite(out, "initialize", data)
+	return formatAndWrite(out, "initialization", data)
 }

@@ -105,7 +105,7 @@ type Bus struct {
 // NewBus creates Bus instance with provided values.
 func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator, pcs insolar.PlatformCryptographyScheme) *Bus {
 	return &Bus{
-		timeout:     time.Second * 8,
+		timeout:     time.Second * 15,
 		pub:         pub,
 		replies:     make(map[payload.MessageHash]*lockedReply),
 		pulses:      pulses,
@@ -279,8 +279,14 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 			return nil, nil
 		}
 
-		msg.Metadata.Set("msg_hash", meta.OriginHash.String())
-		logger = logger.WithField("msg_hash", meta.OriginHash.String())
+		msgHash := payload.MessageHash{}
+		err = msgHash.Unmarshal(meta.ID)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "failed to unmarshal message id"))
+			return nil, nil
+		}
+		msg.Metadata.Set("msg_hash", msgHash.String())
+		logger = logger.WithField("msg_hash", msgHash.String())
 
 		msg.Metadata.Set("pulse", meta.Pulse.String())
 

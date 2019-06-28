@@ -122,6 +122,21 @@ ScanPrefix:
 	return res.String()
 }
 
+type JetIDCollection []JetID
+
+func (ids JetIDCollection) DebugString() string {
+	builder := strings.Builder{}
+	builder.WriteRune('[')
+	for i, id := range ids {
+		builder.WriteString(id.DebugString())
+		if i < len(ids)-1 {
+			builder.WriteRune(',')
+		}
+	}
+	builder.WriteRune(']')
+	return builder.String()
+}
+
 func (id JetID) Marshal() ([]byte, error) {
 	return id[:], nil
 }
