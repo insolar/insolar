@@ -66,7 +66,7 @@ func (authCert *AuthorizationCertificate) SerializeNodePart() []byte {
 
 // SignNodePart signs node part in certificate
 func (authCert *AuthorizationCertificate) SignNodePart(key crypto.PrivateKey) ([]byte, error) {
-	signer := scheme.Signer(key)
+	signer := scheme.DataSigner(key, scheme.IntegrityHasher())
 	sign, err := signer.Sign(authCert.SerializeNodePart())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignNodePart ] Can't Sign")

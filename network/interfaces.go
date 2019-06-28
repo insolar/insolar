@@ -131,6 +131,7 @@ type Future interface {
 	Request() Packet
 	Response() <-chan Packet
 	WaitResponse(duration time.Duration) (Packet, error)
+	Cancel()
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
