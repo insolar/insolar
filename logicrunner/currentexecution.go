@@ -56,6 +56,18 @@ func (d *TranscriptDequeue) Pop() *Transcript {
 	return elements[0]
 }
 
+func (d *TranscriptDequeue) Has(ref insolar.Reference) bool {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	for pos := len(d.queue) - 1; pos >= 0; pos-- {
+		if d.queue[pos].RequestRef.Compare(ref) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
 	d.lock.Lock()
 	toDelete := -1
@@ -322,11 +334,17 @@ func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Tran
 
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
+		if q.finished.Has(*transcript.RequestRef) {
+			continue
+		}
+
 		if transcript.LogicContext.Immutable {
 			go q.processImmutable(ctx, transcript)
 		} else {
 			q.mutableLock.RLock()
-			q.mutable.Prepend(transcript)
+			if !q.mutable.Has(*transcript.RequestRef) {
+				q.mutable.Prepend(transcript)
+			}
 			q.mutableLock.RUnlock()
 		}
 	}
@@ -338,11 +356,17 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 // One shouldn't mix immutable calls and mutable ones
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
+		if q.finished.Has(*transcript.RequestRef) {
+			continue
+		}
+
 		if transcript.LogicContext.Immutable {
 			go q.processImmutable(ctx, transcript)
 		} else {
 			q.mutableLock.RLock()
-			q.mutable.Push(transcript)
+			if !q.mutable.Has(*transcript.RequestRef) {
+				q.mutable.Push(transcript)
+			}
 			q.mutableLock.RUnlock()
 		}
 	}
