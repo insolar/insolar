@@ -41,27 +41,27 @@ type RootDomain struct {
 	NodeDomain             insolar.Reference
 }
 
-// Get migration admin member reference
+// GetMigrationAdminMemberRef get migration admin member reference
 func (rd RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
 	return &rd.MigrationAdminMember, nil
 }
 
-// Get migration wallet reference
+// GetMigrationWalletRef get migration wallet reference
 func (rd RootDomain) GetMigrationWalletRef() (*insolar.Reference, error) {
 	return &rd.MigrationWallet, nil
 }
 
-// Get migration daemon members references
+// GetMigrationDaemonMembers get migration daemon members references
 func (rd RootDomain) GetMigrationDaemonMembers() ([]insolar.Reference, error) {
 	return rd.MigrationDaemonMembers, nil
 }
 
-// Get root member reference
+// GetRootMemberRef get root member reference
 func (rd RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
 	return &rd.RootMember, nil
 }
 
-// Pull out burn address from list
+// GetBurnAddress pull out burn address from list
 func (rd *RootDomain) GetBurnAddress() (string, error) {
 	if len(rd.FreeBurnAddresses) == 0 {
 		return "", fmt.Errorf("no more burn addresses left")
@@ -73,17 +73,17 @@ func (rd *RootDomain) GetBurnAddress() (string, error) {
 	return result, nil
 }
 
-// Get member reference by public key
+// GetMemberByPublicKey get member reference by public key
 func (rd RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, error) {
 	return rd.PublicKeyMap[trimPublicKey(publicKey)], nil
 }
 
-// Get member reference by burn address
+// GetMemberByBurnAddress get member reference by burn address
 func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
 	return rd.BurnAddressMap[trimBurnAddress(burnAddress)], nil
 }
 
-// Get cost center reference
+// GetCostCenter get cost center reference
 func (rd RootDomain) GetCostCenter() (insolar.Reference, error) {
 	return rd.CostCenter, nil
 }
@@ -116,21 +116,21 @@ func (rd RootDomain) Info() (interface{}, error) {
 	return resJSON, nil
 }
 
-// Add burn addresses to list
+// AddBurnAddresses add burn addresses to list
 func (rd *RootDomain) AddBurnAddresses(burnAddresses []string) error {
 	rd.FreeBurnAddresses = append(rd.FreeBurnAddresses, burnAddresses...)
 
 	return nil
 }
 
-// Add burn addresse to list
+// AddBurnAddress add burn addresse to list
 func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 	rd.FreeBurnAddresses = append(rd.FreeBurnAddresses, burnAddress)
 
 	return nil
 }
 
-// Add new member to PublicKeyMap and BurnAddressMap
+// AddNewMemberToMaps add new member to PublicKeyMap and BurnAddressMap
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
 	if _, ok := rd.PublicKeyMap[trimPublicKey(publicKey)]; ok {
 		return fmt.Errorf("member for this publicKey already exist")

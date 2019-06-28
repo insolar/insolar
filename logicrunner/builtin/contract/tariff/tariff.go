@@ -34,7 +34,7 @@ func New(commissionRate string) (*Tariff, error) {
 	}, nil
 }
 
-// Calc commission for amount
+// CalcCommission calc commission for amount
 func (t Tariff) CalcCommission(amountStr string) (string, error) {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {

@@ -313,7 +313,7 @@ func (m *Member) createMemberByKey(key string) (interface{}, error) {
 		return nil, fmt.Errorf("failed to create member: %s", e.Error())
 	}
 
-	created, err := m.createMember(burnAddresses, key)
+	created, err := m.createMember("", key)
 	if err != nil {
 		return rollBack(err)
 	}
@@ -324,12 +324,12 @@ func (m *Member) createMemberByKey(key string) (interface{}, error) {
 
 	return created.Reference.String(), nil
 }
-func (m *Member) createMember(ethAddr string, key string) (*member.Member, error) {
+func (m *Member) createMember(name string, key string) (*member.Member, error) {
 	if key == "" {
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	memberHolder := member.New(m.RootDomain, ethAddr, key)
+	memberHolder := member.New(m.RootDomain, name, key)
 	created, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())

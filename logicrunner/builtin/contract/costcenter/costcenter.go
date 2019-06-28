@@ -35,24 +35,24 @@ func New(commissionWallet insolar.Reference, currentTariff insolar.Reference) (*
 	}, nil
 }
 
-// Set tariffs
+// SetTariffs set tariffs
 func (cc CostCenter) SetTariffs(tariffs []insolar.Reference) error {
 	cc.Tariffs = tariffs
 	return nil
 }
 
-// Get tariffs
+// GetTariffs get tariffs
 func (cc CostCenter) GetTariffs() ([]insolar.Reference, error) {
 	return cc.Tariffs, nil
 }
 
-// Set current tariff
+// SetCurrentTariff set current tariff
 func (cc CostCenter) SetCurrentTariff(currentTariff insolar.Reference) error {
 	cc.CurrentTariff = currentTariff
 	return nil
 }
 
-// Get current tariff
+// GetCurrentTariff get current tariff
 func (cc CostCenter) GetCurrentTariff() (insolar.Reference, error) {
 	return cc.CurrentTariff, nil
 }

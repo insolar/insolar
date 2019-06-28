@@ -48,12 +48,12 @@ type Deposit struct {
 	Status                  DepositStatus
 }
 
-// Get transaction hash
+// GetTxHash get transaction hash
 func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
 
-// Get amount
+// GetAmount get amount
 func (d *Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
@@ -70,7 +70,7 @@ func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amou
 	}, nil
 }
 
-// Get deposit information
+// MapMarshal get deposit information
 func (d *Deposit) MapMarshal() (map[string]string, error) {
 	return map[string]string{
 		"timestamp":       d.Timestamp.String(),
@@ -81,7 +81,7 @@ func (d *Deposit) MapMarshal() (map[string]string, error) {
 	}, nil
 }
 
-// Confirm deposit by migration daemon
+// Confirm confirm deposit by migration daemon
 func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
 	if txHash != d.TxHash {
 		return 0, fmt.Errorf("transaction hash is incorrect")
