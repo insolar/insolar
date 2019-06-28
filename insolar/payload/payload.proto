@@ -105,5 +105,5 @@ message Activate {
     uint32 Polymorph = 16;
 
     bytes Record = 20;
-    bytes Blob = 21;
+    bytes Memory = 21;
 }
