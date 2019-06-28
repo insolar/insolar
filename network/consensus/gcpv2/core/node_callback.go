@@ -10,6 +10,10 @@ func (p *nodeCallback) init() {
 	p.blameFactory = errors.NewBlameFactory(p.captureMisbehavior)
 }
 
+func (p *nodeCallback) setNodeToPhaseCallback(phaseControllerCallback NodeUpdateCallback) {
+	p.phaseControllerCallback = phaseControllerCallback
+}
+
 type nodeCallback struct {
 	fraudFactory            errors.FraudFactory
 	blameFactory            errors.BlameFactory

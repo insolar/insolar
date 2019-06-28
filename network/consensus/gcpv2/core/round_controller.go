@@ -125,6 +125,9 @@ func (r *PhasedRoundController) StartConsensusRound(upstream UpstreamPulseContro
 	r.realm.roundStartedAt = time.Now()
 	r.realm.coreRealm.upstream = upstream
 
+	nodeCallback := r.realm.strategy.GetNodeUpdateCallback()
+	r.realm.nodeCallback.setNodeToPhaseCallback(nodeCallback)
+
 	preps := r.realm.strategy.GetPrepPhaseControllers()
 
 	if len(preps) > 0 {
