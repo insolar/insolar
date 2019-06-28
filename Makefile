@@ -145,7 +145,7 @@ functest:
 functest_race:
 	make clean
 	GOBUILD='go build -race' make build
-	FUNCTEST_COUNT=100 make functest
+	FUNCTEST_COUNT=10 make functest
 
 .PHONY: test_func
 test_func: functest
