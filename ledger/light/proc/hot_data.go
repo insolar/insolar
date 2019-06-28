@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -38,14 +37,12 @@ type HotData struct {
 	msg     *message.HotData
 
 	Dep struct {
-		DropModifier          drop.Modifier
-		RecentStorageProvider recentstorage.Provider
-		MessageBus            insolar.MessageBus
-		IndexBucketModifier   object.IndexBucketModifier
-		PendingModifier       object.PendingModifier
-		JetStorage            jet.Storage
-		JetFetcher            jet.Fetcher
-		JetReleaser           hot.JetReleaser
+		DropModifier        drop.Modifier
+		MessageBus          insolar.MessageBus
+		IndexBucketModifier object.IndexBucketModifier
+		JetStorage          jet.Storage
+		JetFetcher          jet.Fetcher
+		JetReleaser         hot.JetReleaser
 	}
 }
 
@@ -65,33 +62,27 @@ func (p *HotData) Proceed(ctx context.Context) error {
 }
 
 func (p *HotData) process(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
 	jetID := insolar.JetID(*p.msg.Jet.Record())
-
-	logger.WithFields(map[string]interface{}{
-		"jet": jetID.DebugString(),
-	}).Info("received hot data")
 
 	err := p.Dep.DropModifier.Set(ctx, p.msg.Drop)
 	if err == drop.ErrOverride {
 		err = nil
 	}
 	if err != nil {
-		return errors.Wrapf(err, "[jet]: drop error (pulse: %v)", p.msg.Drop.Pulse)
+		return errors.Wrapf(err, "[HotData.process]: drop error (pulse: %v)", p.msg.Drop.Pulse)
 	}
-
-	pendingStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
-	logger.Debugf("received %d pending requests", len(p.msg.PendingRequests))
 
 	var notificationList []insolar.ID
 	for objID, objContext := range p.msg.PendingRequests {
 		if !objContext.Active {
 			notificationList = append(notificationList, objID)
 		}
-
 		objContext.Active = false
-		pendingStorage.SetContextToObject(ctx, objID, objContext)
 	}
+
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"jet": jetID.DebugString(),
+	})
 
 	go func() {
 		for _, objID := range notificationList {
@@ -111,9 +102,12 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 	}()
 
-	p.Dep.JetStorage.Update(
-		ctx, p.msg.PulseNumber, true, jetID,
-	)
+	messagePulse := p.msg.PulseNumber
+	err = p.Dep.JetStorage.Update(ctx, messagePulse, true, jetID)
+	if err != nil {
+		panic(errors.Wrapf(err, "[handleHotRecords] failed to actualize jet %v for pulse %v",
+			jetID.DebugString(), messagePulse))
+	}
 
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
 	for _, meta := range p.msg.HotIndexes {
@@ -123,7 +117,7 @@ func (p *HotData) process(ctx context.Context) error {
 			continue
 		}
 
-		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.msg.PulseNumber, meta.ObjID)
+		objJetID, _ := p.Dep.JetStorage.ForID(ctx, messagePulse, meta.ObjID)
 		if objJetID != jetID {
 			logger.Warn("received wrong id")
 			continue
@@ -132,7 +126,7 @@ func (p *HotData) process(ctx context.Context) error {
 		decodedIndex.JetID = jetID
 		err = p.Dep.IndexBucketModifier.SetBucket(
 			ctx,
-			p.msg.PulseNumber,
+			messagePulse,
 			object.FilamentIndex{
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
@@ -147,7 +141,7 @@ func (p *HotData) process(ctx context.Context) error {
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 	}
 
-	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
+	p.Dep.JetFetcher.Release(ctx, jetID, messagePulse)
 
 	p.replyTo <- bus.Reply{Reply: &reply.OK{}}
 

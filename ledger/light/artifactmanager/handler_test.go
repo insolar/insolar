@@ -17,7 +17,6 @@
 package artifactmanager
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"testing"
@@ -532,21 +531,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		Drop: drop.Drop{Pulse: insolar.FirstPulseNumber, Hash: []byte{88}, JetID: jetID},
 	}
 
-	pendingMock := recentstorage.NewPendingStorageMock(s.T())
-
-	pendingMock.SetContextToObjectFunc = func(p context.Context, p1 insolar.ID, p2 recentstorage.PendingObjectContext) {
-
-		if bytes.Equal(p1.Bytes(), secondID.Bytes()) {
-			require.Equal(s.T(), false, p2.Active)
-			return
-		}
-		if bytes.Equal(p1.Bytes(), thirdID.Bytes()) {
-			require.Equal(s.T(), false, p2.Active)
-			return
-		}
-		s.T().Fail()
-	}
-
 	idxStateModifierMock := object.NewLifelineStateModifierMock(s.T())
 	bucketMock := object.NewIndexBucketModifierMock(s.T())
 	idxMock := object.NewLifelineIndexMock(s.T())
@@ -567,12 +551,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		return nil
 	}
 
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetPendingStorageMock.Return(pendingMock)
-
 	h := NewMessageHandler(idxMock, bucketMock, idxStateModifierMock, nil, nil, &configuration.Ledger{})
 	h.JetCoordinator = jc
-	h.RecentStorageProvider = provideMock
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
@@ -588,10 +568,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	replyTo := make(chan bus.Reply, 1)
 	p := proc.NewHotData(hotIndexes, replyTo)
 	p.Dep.DropModifier = h.DropModifier
-	p.Dep.RecentStorageProvider = h.RecentStorageProvider
 	p.Dep.MessageBus = h.Bus
 	p.Dep.IndexBucketModifier = h.IndexBucketModifier
-	p.Dep.PendingModifier = h.PendingModifier
 	p.Dep.JetStorage = h.JetStorage
 	p.Dep.JetFetcher = h.jetTreeUpdater
 	p.Dep.JetReleaser = h.JetReleaser
@@ -607,7 +585,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.Equal(s.T(), drop.Drop{Pulse: insolar.FirstPulseNumber, Hash: []byte{88}, JetID: jetID}, savedDrop)
 
 	mc.Wait(1 * time.Minute)
-	pendingMock.MinimockFinish()
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {

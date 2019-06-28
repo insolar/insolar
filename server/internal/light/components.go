@@ -275,13 +275,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Jets,
 		)
 
-		jetSplitter := executor.NewJetSplitter(
-			Coordinator,
-			Jets,
-			Jets,
-			drops,
-			hots,
-		)
+		jetSplitter := executor.NewJetSplitter(jetCalculator, Jets, Jets, drops, drops)
 
 		hotSender := executor.NewHotSender(
 			Bus,
