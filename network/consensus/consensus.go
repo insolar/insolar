@@ -145,6 +145,7 @@ func New(ctx context.Context, dep Dep) Consensus {
 	consensus.upstreamPulseController = adapters.NewUpstreamPulseController(
 		dep.Stater,
 		dep.PulseChanger,
+		dep.NodeKeeper,
 	)
 	consensus.roundStrategyFactory = adapters.NewRoundStrategyFactory()
 	consensus.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)

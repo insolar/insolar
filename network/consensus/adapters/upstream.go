@@ -55,13 +55,13 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/utils"
-	"go.opencensus.io/trace"
 )
 
 type Stater interface {
@@ -75,12 +75,14 @@ type PulseChanger interface {
 type UpstreamPulseController struct {
 	stater       Stater
 	pulseChanger PulseChanger
+	nodeKeeper   network.NodeKeeper
 }
 
-func NewUpstreamPulseController(stater Stater, pulseChanger PulseChanger) *UpstreamPulseController {
+func NewUpstreamPulseController(stater Stater, pulseChanger PulseChanger, nodeKeeper network.NodeKeeper) *UpstreamPulseController {
 	return &UpstreamPulseController{
 		stater:       stater,
 		pulseChanger: pulseChanger,
+		nodeKeeper:   nodeKeeper,
 	}
 }
 
@@ -101,18 +103,7 @@ func (u *UpstreamPulseController) PreparePulseChange(report core.MembershipUpstr
 }
 
 func (u *UpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, pulseData common2.PulseData, activeCensus census.OperationalCensus) {
-	ctx := context.Background()
-
-	pulseNumber := report.PulseNumber
-
-	ctx = utils.NewPulseContext(ctx, uint32(pulseNumber))
-
-	ctx, span := instracer.StartSpan(ctx, "UpstreamPulseController.CommitPulseChange")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulseNumber)),
-	)
-	defer span.End()
-
+	ctx := contextFromReport(report)
 	pulse := NewPulseFromPulseData(pulseData)
 
 	u.pulseChanger.ChangePulse(ctx, pulse)
@@ -123,7 +114,20 @@ func (u *UpstreamPulseController) CancelPulseChange() {
 }
 
 func (u *UpstreamPulseController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	panic("implement me")
+	// TODO: use nodekeeper in chronicles and remove setting sync list from here
+
+	ctx := contextFromReport(report)
+
+	inslogger.FromContext(ctx).Error()
+	population := expectedCensus.GetOnlinePopulation()
+
+	networkNodes := NewNetworkNodeList(population.GetProfiles())
+
+	err := u.nodeKeeper.Sync(ctx, networkNodes, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	u.nodeKeeper.SetCloudHash(expectedCensus.GetCloudStateHash().Bytes())
 }
 
 func (u *UpstreamPulseController) MembershipLost(graceful bool) {
@@ -145,4 +149,8 @@ func (u *UpstreamPulseController) ResumeTraffic() {
 func awaitState(c chan<- common.NodeStateHash, stater Stater) {
 	stateHash := stater.State()
 	c <- common2.NewDigest(common2.NewBits512FromBytes(stateHash), SHA3512Digest).AsDigestHolder()
+}
+
+func contextFromReport(report core.MembershipUpstreamReport) context.Context {
+	return utils.NewPulseContext(context.Background(), uint32(report.PulseNumber))
 }
