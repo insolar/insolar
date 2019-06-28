@@ -112,7 +112,7 @@ func createMember(t *testing.T) *user {
 }
 
 func addBurnAddress(t *testing.T) {
-	_, err := signedRequest(&migrationAdmin, "wallet.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{"fake_ba"}})
+	_, err := signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{"fake_ba"}})
 	require.NoError(t, err)
 }
 

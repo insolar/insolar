@@ -28,6 +28,7 @@ type Tariff struct {
 	CommissionRate string
 }
 
+// New creates new tariff
 func New(commissionRate string) (*Tariff, error) {
 	return &Tariff{
 		CommissionRate: commissionRate,

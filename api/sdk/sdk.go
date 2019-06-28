@@ -202,7 +202,7 @@ func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
 
 	response, err := sdk.DoRequest(
 		userConfig,
-		"wallet.addBurnAddresses",
+		"migration.addBurnAddresses",
 		map[string]interface{}{"burnAddresses": burnAddresses},
 	)
 	if err != nil {

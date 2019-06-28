@@ -26,14 +26,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-type DepositStatus string
+type status string
 
 const (
-	DepositConfirms uint = 3
+	confirms uint = 3
 
-	Open    DepositStatus = "Open"
-	Holding DepositStatus = "Holding"
-	Close   DepositStatus = "Close"
+	open    status = "open"
+	holding status = "holding"
+	close   status = "close"
 )
 
 type Deposit struct {
@@ -45,7 +45,7 @@ type Deposit struct {
 	Amount                  string
 	Bonus                   string
 	TxHash                  string
-	Status                  DepositStatus
+	Status                  status
 }
 
 // GetTxHash get transaction hash
@@ -58,6 +58,7 @@ func (d *Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
+// New creates new deposit
 func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
 	return &Deposit{
 
@@ -66,7 +67,7 @@ func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amou
 		TxHash:                  txHash,
 		HoldReleaseDate:         holdReleaseDate,
 		Amount:                  amount,
-		Status:                  Open,
+		Status:                  open,
 	}, nil
 }
 
@@ -108,8 +109,8 @@ func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amou
 		} else {
 			d.MigrationDaemonConfirms[migrationDaemon] = true
 			d.Confirms++
-			if d.Confirms == DepositConfirms {
-				d.Status = Holding
+			if d.Confirms == confirms {
+				d.Status = holding
 			}
 			return d.Confirms, nil
 		}
