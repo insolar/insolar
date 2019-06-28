@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/replica"
@@ -87,6 +88,8 @@ func New() *Handler {
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
+	parentspan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	ctx = instracer.WithParentSpan(ctx, parentspan)
 
 	for k, v := range msg.Metadata {
 		ctx, _ = inslogger.WithField(ctx, k, v)
