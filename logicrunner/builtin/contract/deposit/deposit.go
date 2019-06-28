@@ -31,9 +31,9 @@ type status string
 const (
 	confirms uint = 3
 
-	open    status = "open"
-	holding status = "holding"
-	close   status = "close"
+	statusOpen    status = "Open"
+	statusHolding status = "Holding"
+	statusClose   status = "Close"
 )
 
 type Deposit struct {
@@ -67,7 +67,7 @@ func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amou
 		TxHash:                  txHash,
 		HoldReleaseDate:         holdReleaseDate,
 		Amount:                  amount,
-		Status:                  open,
+		Status:                  statusOpen,
 	}, nil
 }
 
@@ -110,7 +110,7 @@ func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amou
 			d.MigrationDaemonConfirms[migrationDaemon] = true
 			d.Confirms++
 			if d.Confirms == confirms {
-				d.Status = holding
+				d.Status = statusHolding
 			}
 			return d.Confirms, nil
 		}
