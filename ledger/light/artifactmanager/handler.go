@@ -143,10 +143,9 @@ func NewMessageHandler(
 		SetResult: func(p *proc.SetResult) {
 			p.Dep(
 				h.WriteAccessor,
-				h.RecordModifier,
-				h.RecentStorageProvider,
-				h.PendingModifier,
 				h.Sender,
+				h.IndexLocker,
+				h.filamentModifier,
 			)
 		},
 		SetBlob: func(p *proc.SetBlob) {
