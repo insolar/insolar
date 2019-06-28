@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
@@ -115,7 +116,7 @@ func (r *emuPacketBuilder) PreparePhase0Packet(sender common2.NodeProfile, pulsa
 	options core.PacketSendOptions) core.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
 		basePacket:  r.defaultBasePacket(sender, mp, nodeCount),
-		pulsePacket: pulsarPacket.(*EmuPulsarNetPacket),
+		pulsePacket: pulsarPacket,
 	}
 	return &emuPacketSender{&v}
 }
@@ -130,8 +131,9 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsa
 	mp common2.MembershipProfile, nodeCount int,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
-	pp := pulsarPacket.(*EmuPulsarNetPacket)
-	if pp == nil || !pp.pulseData.IsValidPulseData() {
+	pp := pulsarPacket.(*adapters.PulsePacketReader)
+	pulseData := pp.GetPulseData()
+	if pp == nil || !pulseData.IsValidPulseData() {
 		panic("pulse data is missing or invalid")
 	}
 
@@ -142,7 +144,7 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsa
 		},
 		selfIntro: sender.GetIntroduction(),
 	}
-	v.pn = pp.pulseData.PulseNumber
+	v.pn = pulseData.PulseNumber
 	v.isRequest = options&core.RequestForPhase1 != 0
 	if v.isRequest || options&core.SendWithoutPulseData != 0 {
 		v.pulsePacket = nil

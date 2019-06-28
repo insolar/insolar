@@ -56,6 +56,7 @@ import (
 	"runtime/debug"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -64,7 +65,7 @@ import (
 )
 
 type EmuHostConsensusAdapter struct {
-	controller core.ConsensusController
+	packetProcessor adapters.PacketProcessor
 
 	hostAddr common.HostAddress
 	inbound  <-chan Packet
@@ -75,8 +76,8 @@ func NewEmuHostConsensusAdapter(hostAddr string) *EmuHostConsensusAdapter {
 	return &EmuHostConsensusAdapter{hostAddr: common.HostAddress(hostAddr)}
 }
 
-func (h *EmuHostConsensusAdapter) SetConsensusController(controller core.ConsensusController) {
-	h.controller = controller
+func (h *EmuHostConsensusAdapter) SetPacketProcessor(packetProcessor adapters.PacketProcessor) {
+	h.packetProcessor = packetProcessor
 }
 
 func (h *EmuHostConsensusAdapter) ConnectTo(network *EmuNetwork) {
@@ -104,7 +105,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 			if err == nil {
 				if packet != nil {
 					hostFrom := common.HostIdentity{Addr: *from}
-					err = h.controller.ProcessPacket(ctx, packet, &hostFrom)
+					err = h.packetProcessor.ProcessPacket(ctx, packet, &hostFrom)
 				}
 			}
 		}

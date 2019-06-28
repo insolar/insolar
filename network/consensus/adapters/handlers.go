@@ -51,89 +51,82 @@
 package adapters
 
 import (
-	"time"
+	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-func NewPulse(pulseData common.PulseData) insolar.Pulse {
-	var prev insolar.PulseNumber
-	if !pulseData.IsFirstPulse() {
-		prev = insolar.PulseNumber(pulseData.GetPrevPulseNumber())
-	} else {
-		prev = insolar.PulseNumber(pulseData.PulseNumber)
+type PacketProcessor interface {
+	ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error
+}
+
+type DatagramHandler struct {
+	packetProcessor PacketProcessor
+}
+
+func NewDatagramHandler() *DatagramHandler {
+	return &DatagramHandler{}
+}
+
+func (dh *DatagramHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
+	dh.packetProcessor = packetProcessor
+}
+
+func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"address": address,
+	})
+
+	p := payloadWrapper{}
+	err := insolar.Deserialize(buf, p)
+	if err != nil {
+		logger.Error(err)
+		return
 	}
 
-	entropy := insolar.Entropy{}
-	bytes := pulseData.PulseEntropy.Bytes()
-	copy(entropy[:], bytes)
-	copy(entropy[pulseData.PulseEntropy.FixedByteSize():], bytes)
+	packetParser, ok := p.Payload.(packets.PacketParser)
+	if !ok {
+		logger.Error("Failed to get PacketParser")
+		return
+	}
 
-	return insolar.Pulse{
-		PulseNumber:      insolar.PulseNumber(pulseData.PulseNumber),
-		NextPulseNumber:  insolar.PulseNumber(pulseData.GetNextPulseNumber()),
-		PrevPulseNumber:  prev,
-		PulseTimestamp:   int64(pulseData.Timestamp) * int64(time.Second/time.Nanosecond),
-		EpochPulseNumber: int(pulseData.PulseEpoch),
-		Entropy:          entropy,
+	if packetParser == nil {
+		logger.Error("PacketParser is nil")
+		return
+	}
+
+	hostIdentity := common.HostIdentity{
+		Addr: common.HostAddress(address),
+	}
+	err = dh.packetProcessor.ProcessPacket(ctx, packetParser, &hostIdentity)
+	if err != nil {
+		logger.Error("Failed to process packet")
+		return
 	}
 }
 
-func NewPulseData(pulse insolar.Pulse) common.PulseData {
-	data := common.NewPulsarData(
-		common.PulseNumber(pulse.PulseNumber),
-		uint16(pulse.NextPulseNumber-pulse.PulseNumber),
-		uint16(pulse.PulseNumber-pulse.PrevPulseNumber),
-		common.NewBits512FromBytes(pulse.Entropy[:]).FoldToBits256(),
-	)
-	return *data
+type PulseHandler struct {
+	packetProcessor PacketProcessor
 }
 
-type PulsePacketReader struct {
-	pulse insolar.Pulse
+func NewPulseHandler() *PulseHandler {
+	return &PulseHandler{}
 }
 
-func (p *PulsePacketReader) OriginalPulsarPacket() {}
-
-func (p *PulsePacketReader) GetPulseData() common.PulseData {
-	return NewPulseData(p.pulse)
+func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
+	ph.packetProcessor = packetProcessor
 }
 
-func (p *PulsePacketReader) GetPulseDataEvidence() common2.OriginalPulsarPacket {
-	return p
-}
+func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse) {
+	pulsePayload := NewPulsePacketParser(pulse)
 
-func NewPulsePacketReader(pulse insolar.Pulse) *PulsePacketReader {
-	return &PulsePacketReader{pulse}
-}
-
-type PulsePacketParser struct {
-	pulse insolar.Pulse
-}
-
-func NewPulsePacketParser(pulse insolar.Pulse) *PulsePacketParser {
-	return &PulsePacketParser{pulse}
-}
-
-func (p *PulsePacketParser) GetPacketType() packets.PacketType {
-	return packets.PacketPulse
-}
-
-func (p *PulsePacketParser) GetPulseNumber() common.PulseNumber {
-	return common.PulseNumber(p.pulse.PulseNumber)
-}
-
-func (p *PulsePacketParser) GetPulsePacket() packets.PulsePacketReader {
-	return NewPulsePacketReader(p.pulse)
-}
-
-func (p *PulsePacketParser) GetMemberPacket() packets.MemberPacketReader {
-	return nil
-}
-
-func (p *PulsePacketParser) GetPacketSignature() common.SignedDigest {
-	return common.SignedDigest{}
+	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &common.HostIdentity{
+		Addr: "pulsar",
+	})
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
 }
