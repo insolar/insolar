@@ -34,8 +34,16 @@ func (pcs *platformCryptographyScheme) PublicKeySize() int {
 	return sign.TwoBigIntBytesLength
 }
 
-func (pcs *platformCryptographyScheme) SignatureSIze() int {
+func (pcs *platformCryptographyScheme) SignatureSize() int {
 	return sign.TwoBigIntBytesLength
+}
+
+func (pcs *platformCryptographyScheme) ReferenceHashSize() int {
+	return 224 / 8
+}
+
+func (pcs *platformCryptographyScheme) IntegrityHashSize() int {
+	return 512 / 8
 }
 
 func (pcs *platformCryptographyScheme) ReferenceHasher() insolar.Hasher {

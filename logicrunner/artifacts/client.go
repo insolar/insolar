@@ -103,9 +103,9 @@ type client struct {
 }
 
 // State returns hash state for artifact manager.
-func (m *client) State() ([]byte, error) {
+func (m *client) State() []byte {
 	// This is a temporary stab to simulate real hash.
-	return m.PCS.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
+	return m.PCS.IntegrityHasher().Hash([]byte{1, 2, 3})
 }
 
 // NewClient creates new client instance.

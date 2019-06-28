@@ -146,10 +146,14 @@ func (p FraudFactory) NewHostFraud(fraudType int, msg string, violatorHost commo
 	return p.NewFraud(fraudType, msg, violatorHost, nil, details...)
 }
 
-func (p FraudFactory) NewMultipleNsh(violator common2.NodeProfile, evidence1 common2.NodeStateHashEvidence, evidence2 common2.NodeStateHashEvidence) FraudError {
-	return p.NewNodeFraud(FraudMultipleNsh, "multiple NSH", violator, evidence1, evidence2)
+func (p FraudFactory) NewMultipleMembershipProfiles(violator common2.NodeProfile, evidence1 common2.MembershipProfile, evidence2 common2.MembershipProfile) FraudError {
+	return p.NewNodeFraud(FraudMultipleNsh, "multiple membership profile", violator, evidence1, evidence2)
 }
 
-func (p FraudFactory) NewMismatchedRank(violator common2.NodeProfile, evidence common2.NodeStateHashEvidence) FraudError {
-	return p.NewNodeFraud(MismatchedRank, "mismatched rank", violator, evidence)
+func (p FraudFactory) NewMismatchedMembershipRank(violator common2.NodeProfile, mp common2.MembershipProfile) FraudError {
+	return p.NewNodeFraud(MismatchedRank, "mismatched membership profile rank", violator, mp)
+}
+
+func (p FraudFactory) NewMismatchedMembershipNodeCount(violator common2.NodeProfile, mp common2.MembershipProfile, nodeCount int) FraudError {
+	return p.NewNodeFraud(MismatchedRank, "mismatched membership profile node count", violator, mp, nodeCount)
 }

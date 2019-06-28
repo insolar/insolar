@@ -53,9 +53,9 @@ package transport
 import (
 	"context"
 	"fmt"
-	"log"
 	"testing"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -67,8 +67,8 @@ type testNode struct {
 	address string
 }
 
-func (t *testNode) HandleDatagram(address string, buf []byte) {
-	log.Println("Handle Datagram ", buf)
+func (t *testNode) HandleDatagram(ctx context.Context, address string, buf []byte) {
+	inslogger.FromContext(ctx).Info("Handle Datagram ", buf)
 }
 
 func newTestNode(port int) (*testNode, error) {

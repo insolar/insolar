@@ -168,7 +168,7 @@ func (t *TestArtifactManager) HasPendingRequests(ctx context.Context, object ins
 }
 
 // State implementation for tests
-func (t *TestArtifactManager) State() ([]byte, error) {
+func (t *TestArtifactManager) State() []byte {
 	panic("implement me")
 }
 
