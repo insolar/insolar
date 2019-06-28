@@ -68,10 +68,24 @@ type SignedGlobulaNodeState struct {
 }
 
 type GlobulaNodeRank struct {
-	Power      uint16 // serialized to [00-07] MemberPower
-	Index      uint16 // serialized to [08-17]
-	TotalCount uint16 // serialized to [18-27]
-	// Flags uint8		  //[28-31] Reserved, [31] is used in neighbourhood claims
+	Power      uint16                 // serialized to [00-07] MemberPower
+	Index      uint16                 // serialized to [08-17]
+	TotalCount uint16                 // serialized to [18-27]
+	Condition  NodeOperationCondition //serialized to [28-29]
+	//[30-31] Reserved, [31] is used in neighbourhood claims
+}
+
+type NodeOperationCondition uint8 //MUST BE 2bit value
+const (
+	NodeNormalOps NodeOperationCondition = iota
+	NodeJustJoinedOps
+)
+
+func (v NodeOperationCondition) asUnit32() uint32 {
+	if v > 3 {
+		panic("illegal value")
+	}
+	return v
 }
 
 type CloudStateHash common.Bits512
@@ -84,6 +98,7 @@ func (v GlobulaNodeRank) Serialize() SerializedGlobulaNodeRank {
 	r := uint32(common2.MemberPowerOf(v.Power))
 	r |= ensureNodeIndex(v.Index) << 8
 	r |= ensureNodeIndex(v.TotalCount) << 18
+	r |= v.Condition.asUnit32() << 28
 	return SerializedGlobulaNodeRank(r)
 }
 

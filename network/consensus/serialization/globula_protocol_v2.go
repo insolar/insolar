@@ -52,6 +52,7 @@ package serialization
 
 import (
 	"github.com/insolar/insolar/network/consensus/common"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
 type GlobulaConsensusProtocolV2Packet struct {
@@ -59,10 +60,15 @@ type GlobulaConsensusProtocolV2Packet struct {
 	PulseNumber common.PulseNumber          `insolar-transport:"[30-31]=0"`                // [30-31] MUST = 0, ByteSize=4
 
 	// Phases 0-2
-	NodeRank          SerializedGlobulaNodeRank `insolar-transport:"Packet=0,1,2"`                       // ByteSize=4, current rank
-	GlobulaNodeState  *EmbeddedGlobulaNodeState `insolar-transport:"Packet=1,2"`                         // ByteSize=128
-	SelfIntroToJoiner *IntroductionToJoiner     `insolar-transport:"optional=PacketFlags[2];Packet=1,2"` // ByteSize=?
-	PulsarPacket      *EmbeddedPulsarData       `insolar-transport:"optional=PacketFlags[1];Packet=0,1"` // ByteSize>=124
+	NodeRank         SerializedGlobulaNodeRank `insolar-transport:"Packet=0,1,2"` // ByteSize=4, current rank
+	GlobulaNodeState *CompactGlobulaNodeState  `insolar-transport:"Packet=1,2"`   // ByteSize=128
+
+	PulsarPacket *EmbeddedPulsarData `insolar-transport:"optional=PacketFlags[1];Packet=0,1"` // ByteSize>=124
+
+	//These 3 fields below are mutually exclusive by consensus logic
+	SelfIntroToJoiner *IntroductionToJoiner   `insolar-transport:"optional=PacketFlags[2];Packet=1,2"` // ByteSize=234
+	SelfIntroOfJoiner *IntroductionOfJoiner   `insolar-transport:"optional=PacketFlags[2];Packet=1"`   // ByteSize>82
+	MemberAnnounce    *MembershipAnnouncement `insolar-transport:"optional=PacketFlags[3];Packet=1"`   // ByteSize=41, 202, 214
 
 	// Phase 3
 	/*
@@ -75,15 +81,12 @@ type GlobulaConsensusProtocolV2Packet struct {
 		4 - Missing node
 	*/
 	GlobulaNodeBitset  *NodeAppearanceBitset `insolar-transport:"Packet=3"`                                                          // ByteSize=1..335
-	TrustedStateVector *GlobulaStateVector   `insolar-transport:"Packet=3;TrustedStateVector.ExpectedRank[28-31]=flags:Phase3Flags"` // ByteSize=96
+	TrustedStateVector *GlobulaStateVector   `insolar-transport:"Packet=3;TrustedStateVector.ExpectedRank[30-31]=flags:Phase3Flags"` // ByteSize=96
 	DoubtedStateVector *GlobulaStateVector   `insolar-transport:"optional=Phase3Flags[0];Packet=3"`                                  // ByteSize=96
 	// FraudStateVector *GlobulaStateVector `insolar-transport:"optional=Phase3Flags[1];Packet=3"` //ByteSize=96
 
 	// Claim Section
-	LeaveClaim *LeaveAnnouncementClaim `insolar-transport:"Packet=1"` // ByteSize=5, exclusive
-	JoinClaim  *JoinRequestClaim       `insolar-transport:"Packet=1"` // ByteSize=177, exclusive
-
-	Neighbourhood []NodeNeighbourClaim `insolar-transport:"Packet=2"` // ByteSize=N*[197,374]
+	Neighbourhood []NodeNeighbourClaim `insolar-transport:"Packet=2"` // ByteSize=N*[133, 174, 335, 347]
 
 	// 	ReferendumVotes []ReferendumVote `insolar-transport:"Packet=3"`
 
@@ -92,18 +95,19 @@ type GlobulaConsensusProtocolV2Packet struct {
 	PacketSignature common.Bits512 // ByteSize=64
 }
 
-/*
-	Phase0 size: >=148
-	Phase1 size: >=405 normal, >=645 to joiner, >=822 to joiner with JoinClaim :: w/o pulse data -124
-	Phase2 size: 217 + N*[197,374] ... 1800 byte => (8+self) members .. 4+2 .. 4 joining neighbours
-	Phase3 size: >=218 <=728
+/*  SIZES ARE OUTDATED
 
-	Network traffic 1001 nodes:
-				     IN          OUT
-		Phase0: <    148 000 	148 000
-		Phase1: <    645 000    645 000
-		Phase2: <  1 600 000  1 600 000    //neighbourhood = 5-7
-		Phase3: <    728 000 	728 000
+Phase0 size: >=148
+Phase1 size: >=405 normal, >=645 to joiner, >=822 to joiner with JoinClaim :: w/o pulse data -124
+Phase2 size: 217 + N*[197,374] ... 1800 byte => (8+self) members .. 4+2 .. 4 joining neighbours
+Phase3 size: >=218 <=728
+
+Network traffic 1001 nodes:
+			     IN          OUT
+	Phase0: <    148 000 	148 000
+	Phase1: <    645 000    645 000
+	Phase2: <  1 600 000  1 600 000    //neighbourhood = 5-7
+	Phase3: <    728 000 	728 000
 
 */
 
@@ -115,7 +119,7 @@ type EmbeddedPulsarData struct {
 	PulsarPulsePacketExt // ByteSize>=108
 }
 
-type EmbeddedGlobulaNodeState struct {
+type CompactGlobulaNodeState struct {
 	// ByteSize=128
 	// PulseDataHash            common.Bits256 //available externally
 	// FoldedLastCloudStateHash common.Bits224 //available externally
@@ -131,9 +135,12 @@ type GlobulaStateVector struct {
 		GlobulaStateHash = merkle(GlobulaNodeStateSignature of all nodes of this vector)
 		SignedGlobulaStateHash = sign(GlobulaStateHash, SK(sending node))
 	*/
-	SignedGlobulaStateHash common.Bits512            // ByteSize=64
-	Phase1SignaturesHash   common.Bits224            // ByteSize=28
-	ExpectedRank           SerializedGlobulaNodeRank // ByteSize=4
+	SignedGlobulaStateHash common.Bits512 // ByteSize=64
+	/*
+		Hash(all MembershipAnnouncement.Signature of this vector).FoldTo224()
+	*/
+	MembershipAnnouncementHash common.Bits224            // ByteSize=28
+	ExpectedRank               SerializedGlobulaNodeRank // ByteSize=4
 }
 
 type NodeAppearanceBitset struct {
@@ -146,47 +153,47 @@ type NodeAppearanceBitset struct {
 // type CloudIdentity common.Bits512 //ByteSize=64
 
 type IntroductionToJoiner struct {
-	// ByteSize=240
-	// CloudIdentity CloudIdentity //ByteSize=64
-	LastCloudStateHash CloudStateHash   // ByteSize=64
-	SelfIntro          NodeIntroduction // ByteSize=176
+	// ByteSize=234
+	LastCloudStateHash CloudStateHash // ByteSize=64
+	SelfIntro          NodeBriefIntro // ByteSize=102 | 106 | 118
+	SelfIntroSignature common.Bits512 // ByteSize=64
+}
+
+type IntroductionOfJoiner struct {
+	// ByteSize>82
+	ExtraIntro NodeExtraIntro
 }
 
 type NodeBriefIntro struct {
-	// ByteSize=142
-	ProtocolVersionAndFlags uint16
-	ShortNodeID             common.ShortNodeID
-	InboundRelayID          common.ShortNodeID // =0 - no relay is needed to send packets to the node
-	IssuedAt                common.PulseNumber
-	NodePK                  common.Bits512 // works as a unique node identity
-	NodeSignature           common.Bits512
+	// ByteSize=6 + (4 | 6 | 18) + 92 = 102 | 106 | 118
+	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
+	SpecialRoles        common2.NodeSpecialRole
+	ShortID             common.ShortNodeID
+
+	// 4 | 6 | 18 bytes
+	InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
+	BasePort       uint16             `insolar-transport:"AddrMode=0,1"`
+	PrimaryIPv4    uint32             `insolar-transport:"AddrMode=0"`
+	PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
+
+	// 92 bytes
+	ExtraIntroHash common.Bits224
+	NodePK         common.Bits512 // works as a unique node identity
 }
 
-type NodeExtIntro struct {
-	// ByteSize>=128
-	NodeIntroHash          common.Bits256
-	IssuedByPKFolded       common.Bits256 // DiscoveryNode
+type NodeExtraIntro struct {
+	// ByteSize>=82
+	IssuedAt     common.PulseNumber
+	IssuedAtTime uint64
+
+	EndpointLen    uint8
+	ExtraEndpoints []uint16
+
+	ProofLen               uint8
 	NodeReferenceWithProof []common.Bits512
-	IssuerSignature        common.Bits512
-}
 
-type NodeIntroduction struct {
-	// ByteSize=176
-	ProtocolVersionAndFlags uint16
-	Reserved0               uint8
-	ValidAsRequestFor       uint8 // for how long this intro can be used for joining, but it is not validity of Intro packet itself
-	ShortNodeID             common.ShortNodeID
-	InboundRelayID          common.ShortNodeID // =0 - no relay is needed to send packets to the node
-	IssuedAt                common.PulseNumber
-	NodePK                  common.Bits512 // works as a unique node identity
-	NodeSignature           common.Bits512
-}
-
-type JoinerMandate struct {
-	NodeIntroHash          common.Bits256
-	IssuedByPK             common.Bits512 // DiscoveryNode
-	NodeReferenceWithProof []common.Bits512
-	IssuerSignature        common.Bits512
+	DiscoveryIssuerNodeId         common.ShortNodeID
+	FullIntroSignatureByDiscovery common.Bits512
 }
 
 type ClaimHeader struct {
@@ -205,45 +212,34 @@ type EmptyClaim struct {
 	ClaimHeader `insolar-transport:"delimiter;ClaimType=0;length=header"`
 }
 
-type LeaveAnnouncementClaim struct {
-	// ByteSize=5
-	ClaimHeader `insolar-transport:"exclusive;ClaimType=1"` // Must be the only claim per packet, identified by len<128
+type MembershipAnnouncement struct {
+	// ByteSize = 41 | 202 | 214
+
+	LeaverAnnouncement *LeaverAnnouncement //first byte = 0 // ByteSize = 9
+	JoinerAnnouncement *JoinerAnnouncement //first byte != 0 // ByteSize = 166 | 170 | 182
+
+	NodeShortSignature common.Bits256 // ByteSize = 32
+}
+
+type LeaverAnnouncement struct {
+	// ByteSize = 9
+	Reserved0   uint8 // == 0
 	LeaveReason uint32
+	PulseNumber common.PulseNumber //MUST be equal to the current pulse number
 }
 
-type JoinRequestClaim struct {
-	// ByteSize=177
-	ClaimHeader `insolar-transport:"exclusive;ClaimType=2"` // Must be the only per packet, identified by len>128
-	Intro       NodeIntroduction
-}
-
-type JoinerMandateClaim struct {
-	ClaimHeader   `insolar-transport:"exclusive;ClaimType=3"` // Must be the only per packet, identified by len>128
-	JoinerMandate JoinerMandate
+type JoinerAnnouncement struct {
+	// ByteSize = 166 | 170 | 182
+	JoinerIntro          NodeBriefIntro // ByteSize=102 | 106 | 118
+	JoinerIntroSignature common.Bits512 // ByteSize=64
 }
 
 type NodeNeighbourClaim struct {
-	// ByteSize=[197,374]
-	ClaimHeader `insolar-transport:"ClaimType=4"`
+	// ByteSize=133, 174, 335, 347
+	ClaimHeader `insolar-transport:"ClaimType=1"`
 
-	NodeRank         SerializedGlobulaNodeRank `insolar-transport:"[30-31]=flags:nodeRank"` // ByteSize=4
-	GlobulaNodeState EmbeddedGlobulaNodeState  // ByteSize=128
+	NodeRank         SerializedGlobulaNodeRank `insolar-transport:"[30-31]=flags:reserved"` // ByteSize=4
+	GlobulaNodeState CompactGlobulaNodeState   // ByteSize=128
 
-	// As claimClass=1 is exclusive, this packet signature is of signature claims
-	Phase1PacketSignature *common.Bits512 `insolar-transport:"optional=nodeRank[31]"` // ByteSize=64
-
-	// Only claimClass=1 is allowed here
-	LeaveClaim    *LeaveAnnouncementClaim // ByteSize=5
-	JoinClaim     *JoinRequestClaim       // ByteSize=177
-	JoinerMandate *JoinerMandateClaim
-
-	// EndOfClaims EmptyClaim - not included, end of claims identified by len of NodeNeighbourClaim
-}
-
-type PowerActivationClaim struct {
-	// ByteSize>64
-	ClaimHeader   `insolar-transport:"claimClass=2"`
-	NodeReference common.Bits512
-	// merkle proofs?
-	// or signed by HME
+	MembershipAnnouncement *MembershipAnnouncement //presence is detected by claim length // ByteSize = 41 | 202 | 214
 }

@@ -57,11 +57,10 @@ type UnifiedProtocolPacketHeader struct {
 	/*
 		Functions of TargetID, SourceID and RelayId depends on ProtocolType
 	*/
-	ReceiverID            uint32 // NB! MUST not be included into packet Signature, MUST NOT =0
-	ProtocolAndPacketType uint8  `insolar-transport:"[0:3]=header:Packet;[4:7]=header:Protocol"` // [00-03]PacketType [04-07]ProtocolType
-	PacketFlags           uint8  `insolar-transport:"[:]=flags:PacketFlags"`
-	// bit[0] RelayFlag =1 when RelayTargetID is !=0 (otherwise that field is excluded)
-	//
+	ReceiverID uint32 // NB! MUST not be included into packet Signature, MUST NOT =0
+
+	ProtocolAndPacketType  uint8  `insolar-transport:"[0:3]=header:Packet;[4:7]=header:Protocol"` // [00-03]PacketType [04-07]ProtocolType
+	PacketFlags            uint8  `insolar-transport:"[:]=flags:PacketFlags"`
 	HeaderAndPayloadLength uint16 // [00-13] ByteLength of Payload, [14-15] reserved = 0
 	SourceID               uint32 // may differ from actual sender when relay is in use, MUST NOT =0
 	RelayTargetID          uint32 // indicates final destination, if =0 then there is no relay allowed by sender and receiver MUST decline a packet if actual sender != source
