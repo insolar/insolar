@@ -69,9 +69,9 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong request type: %T", rec)
 	}
 	// This is a workaround. VM should not register such requests.
-	// TODO: remove after INS-1939
+	// TODO: check it after INS-1939
 	if request.CallType != record.CTMethod {
-		inslogger.FromContext(ctx).Error("request is not registered")
+		inslogger.FromContext(ctx).Warn("request is not registered")
 		return s.setActivationRequest(ctx, reqID, virtual, f)
 	}
 

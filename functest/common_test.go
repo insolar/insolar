@@ -51,7 +51,7 @@ func TestGetRequest(t *testing.T) {
 	unmarshalCallResponse(t, body, getResponse)
 	require.NotNil(t, getResponse.Error)
 
-	require.Equal(t, "[ UnmarshalRequest ] Empty body", getResponse.Error.Message)
+	require.Equal(t, "failed to unmarshal request: [ UnmarshalRequest ] Empty body", getResponse.Error.Message)
 	require.Nil(t, getResponse.Result)
 }
 
@@ -67,6 +67,6 @@ func TestWrongJson(t *testing.T) {
 	unmarshalCallResponse(t, body, response)
 	require.NotNil(t, response.Error)
 
-	require.Equal(t, "[ UnmarshalRequest ] Can't unmarshal input params: invalid character 's' looking for beginning of value", response.Error.Message)
+	require.Equal(t, "failed to unmarshal request: [ UnmarshalRequest ] Can't unmarshal input params: invalid character 's' looking for beginning of value", response.Error.Message)
 	require.Nil(t, response.Result)
 }

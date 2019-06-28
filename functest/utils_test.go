@@ -96,12 +96,12 @@ type rpcStatusResponse struct {
 	Result statusResponse `json:"result"`
 }
 
-func createMember(t *testing.T, name string) *user {
+func createMember(t *testing.T) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	addBurnAddresses(t)
+	addBurnAddress(t)
 
 	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func createMember(t *testing.T, name string) *user {
 	return member
 }
 
-func addBurnAddresses(t *testing.T) {
+func addBurnAddress(t *testing.T) {
 	_, err := signedRequest(&migrationAdmin, "wallet.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{"fake_ba"}})
 	require.NoError(t, err)
 }

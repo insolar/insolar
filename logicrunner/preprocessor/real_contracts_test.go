@@ -133,6 +133,6 @@ func (s *RealContractsSuite) TestCompiling() {
 }
 
 func TestRealSmartContract(t *testing.T) {
-	t.Parallel()
+	t.Skip()
 	suite.Run(t, new(RealContractsSuite))
 }

@@ -62,7 +62,9 @@ type LogicRunnerCommonTestSuite struct {
 	dc  *artifacts.DescriptorsCacheMock
 	mb  *testutils.MessageBusMock
 	jc  *jet.CoordinatorMock
+	mm  *mmanager
 	lr  *LogicRunner
+	le  *logicExecutor
 	es  ExecutionState
 	ps  *pulse.AccessorMock
 	mle *testutils.MachineLogicExecutorMock
@@ -77,6 +79,8 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.mc = minimock.NewController(suite.T())
 	suite.am = artifacts.NewClientMock(suite.mc)
 	suite.dc = artifacts.NewDescriptorsCacheMock(suite.mc)
+	suite.mm = &mmanager{}
+	suite.le = &logicExecutor{DescriptorsCache: suite.dc, MachinesManager: suite.mm}
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
@@ -90,22 +94,16 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.ArtifactManager = suite.am
 	suite.lr.DescriptorsCache = suite.dc
 	suite.lr.MessageBus = suite.mb
+	suite.lr.MachinesManager = suite.mm
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
 	suite.lr.NodeNetwork = suite.nn
+	suite.lr.LogicExecutor = suite.le
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	suite.mc.Wait(2 * time.Minute)
 	suite.mc.Finish()
-
-	for _, e := range suite.lr.Executors {
-		if e == nil {
-			continue
-		}
-		// e.Stop() is about to be called in lr.Stop() method
-		e.(*testutils.MachineLogicExecutorMock).StopMock.Expect().Return(nil)
-	}
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
 	// that weren't shut down in case no Stop was called
@@ -246,12 +244,12 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	objectRef := testutils.RandomRef()
 
 	table := []struct {
-		name        string
-		inState     message.PendingState
-		outState    message.PendingState
-		message     bool
-		messageType record.Request_CT
-		amReply     *struct {
+		name     string
+		inState  message.PendingState
+		outState message.PendingState
+		message  bool
+		callType record.CallType
+		amReply  *struct {
 			has bool
 			err error
 		}
@@ -268,11 +266,11 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			outState: message.NotPending,
 		},
 		{
-			name:        "constructor call",
-			inState:     message.PendingUnknown,
-			message:     true,
-			messageType: record.CTSaveAsChild,
-			outState:    message.NotPending,
+			name:     "constructor call",
+			inState:  message.PendingUnknown,
+			message:  true,
+			callType: record.CTSaveAsChild,
+			outState: message.NotPending,
 		},
 		{
 			name:    "method call, not pending",
@@ -312,7 +310,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			parcel := testutils.NewParcelMock(t)
 			if test.message {
 				parcel.TypeMock.ExpectOnce().Return(insolar.TypeCallMethod)
-				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: test.messageType}})
+				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: test.callType}})
 			}
 			es := NewExecutionState(objectRef)
 			es.pending = test.inState
@@ -627,8 +625,7 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	es.CurrentList.Cleanup()
 
 	es.CurrentList.Set(msg.GetReference(), &Transcript{
-		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
-		SentResult: true,
+		Request: &record.Request{ReturnMode: record.ReturnNoWait},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
@@ -729,8 +726,9 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	oDesc.MemoryMock.Return(data)
 
 	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
-	suite.lr.Executors[insolar.MachineTypeBuiltin] = mle
 	mle.CallMethodMock.Return(data, nil, nil)
+
+	suite.mm.Executors[insolar.MachineTypeBuiltin] = mle
 
 	request := &record.Request{
 		Object: &randRef,
@@ -747,7 +745,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	// In this case Update isn't send to ledger (objects data/newData are the same)
 	suite.am.RegisterResultMock.Return(nil, nil)
 
-	_, err := suite.lr.executeMethodCall(suite.ctx, current)
+	_, err := suite.lr.executeLogic(suite.ctx, current)
 	suite.Require().NoError(err)
 	suite.Require().Equal(uint64(0), suite.am.UpdateObjectCounter)
 
@@ -755,7 +753,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	newData := make([]byte, 5, 5)
 	mle.CallMethodMock.Return(newData, nil, nil)
 
-	_, err = suite.lr.executeMethodCall(suite.ctx, current)
+	_, err = suite.lr.executeLogic(suite.ctx, current)
 	suite.Require().NoError(err)
 	suite.Require().Equal(uint64(1), suite.am.UpdateObjectCounter)
 }
@@ -901,18 +899,16 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 
 	suite.mb.MustRegisterMock.Return()
 	lr.MessageBus = suite.mb
+
+	lr.MachinesManager = suite.mm
+
 	suite.am.InjectCodeDescriptorMock.Return()
 	suite.am.InjectObjectDescriptorMock.Return()
 	suite.am.InjectFinishMock.Return()
 	lr.ArtifactManager = suite.am
 
 	err = lr.Start(suite.ctx)
-	log.Error(err)
 	suite.Require().NoError(err)
-
-	executor, err := lr.GetExecutor(insolar.MachineTypeBuiltin)
-	suite.NotNil(executor)
-	suite.NoError(err)
 
 	err = lr.Stop(suite.ctx)
 	suite.Require().NoError(err)
@@ -940,7 +936,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	}
 
 	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
-	err := suite.lr.RegisterExecutor(insolar.MachineTypeBuiltin, mle)
+	err := suite.mm.RegisterExecutor(insolar.MachineTypeBuiltin, mle)
 	suite.Require().NoError(err)
 
 	mle.CallMethodMock.Return([]byte{1, 2, 3}, []byte{}, nil)
@@ -1055,7 +1051,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	}
 
 	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
-	err := suite.lr.RegisterExecutor(insolar.MachineTypeBuiltin, mle)
+	err := suite.mm.RegisterExecutor(insolar.MachineTypeBuiltin, mle)
 	suite.Require().NoError(err)
 
 	type whenType int
@@ -1132,7 +1128,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				}
 
 				if test.when == whenIsAuthorized {
-					// Please note that changePulse calls lr.ChangePulse which calls IsAuthorized.
+					// Please note that changePulse calls LogicRunner.ChangePulse which calls IsAuthorized.
 					// In other words this procedure is not called sequentially!
 					changePulse()
 				}
@@ -1381,7 +1377,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	// 4) immutable 1 will ping on channel 1 and exit
 	// 5) mutable request will continue execution and exit
 	mle := testutils.NewMachineLogicExecutorMock(s.mc)
-	s.lr.Executors[insolar.MachineTypeBuiltin] = mle
+	s.mm.Executors[insolar.MachineTypeBuiltin] = mle
 
 	var mutableChan = make(chan interface{}, 1)
 	var immutableChan chan interface{} = nil
@@ -1511,7 +1507,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulseObject, parentRef)
 
 	mle := testutils.NewMachineLogicExecutorMock(s.mc)
-	s.lr.Executors[insolar.MachineTypeBuiltin] = mle
+	s.mm.Executors[insolar.MachineTypeBuiltin] = mle
 
 	mle.CallMethodMock.Set(func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 []byte,
 		p4 string, p5 insolar.Arguments) (r []byte, r1 insolar.Arguments, r2 error) {
@@ -1754,15 +1750,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestSendTaskToNextExecutor() {
 
 	_, ok := s.lr.state[s.objectRef]
 	s.Equal(false, ok)
-}
-
-func makeQueue(ctx context.Context, size int) []Transcript {
-	q := make([]Transcript, size)
-	for i := range q {
-		q[i].Context = ctx
-	}
-
-	return q
 }
 
 func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
