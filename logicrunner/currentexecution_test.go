@@ -166,13 +166,24 @@ func (s *ExecutionBrokerSuite) TestPut() {
 		return b.processActive == false
 	}
 
-	tr := &Transcript{LogicContext: &insolar.LogicCallContext{Immutable: false}}
+	reqRef1 := gen.Reference()
+	tr := &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		RequestRef: &reqRef1,
+	}
+
 	b.Put(ctx, false, tr)
 	b.processLock.Lock()
 	s.False(b.processActive) // this flag should be disbaled
 	b.processLock.Unlock()
 
 	s.Len(b.mutable.queue, 1)
+
+	reqRef2 := gen.Reference()
+	tr = &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		RequestRef: &reqRef2,
+	}
 
 	b.Put(ctx, true, tr)
 	b.processLock.Lock()
@@ -205,7 +216,11 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 		return b.processActive == false
 	}
 
-	tr := &Transcript{LogicContext: &insolar.LogicCallContext{Immutable: false}}
+	reqRef1 := gen.Reference()
+	tr := &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		RequestRef: &reqRef1,
+	}
 	b.Prepend(ctx, false, tr)
 	b.processLock.Lock()
 	s.False(b.processActive) // this flag should be disbaled
@@ -213,6 +228,11 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 
 	s.Len(b.mutable.queue, 1)
 
+	reqRef2 := gen.Reference()
+	tr = &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		RequestRef: &reqRef2,
+	}
 	b.Prepend(ctx, true, tr)
 	b.processLock.Lock()
 	s.True(b.processActive) // this flag should be enabled

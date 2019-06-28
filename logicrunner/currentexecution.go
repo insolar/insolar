@@ -334,7 +334,7 @@ func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Tran
 
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.finished.Has(*transcript.RequestRef) {
+		if q.finished != nil && q.finished.Has(*transcript.RequestRef) {
 			continue
 		}
 
