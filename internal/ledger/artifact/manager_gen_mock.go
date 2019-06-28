@@ -21,15 +21,10 @@ import (
 type ManagerMock struct {
 	t minimock.Tester
 
-	ActivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r ObjectDescriptor, r1 error)
+	ActivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r error)
 	ActivateObjectCounter    uint64
 	ActivateObjectPreCounter uint64
 	ActivateObjectMock       mManagerMockActivateObject
-
-	ActivatePrototypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r ObjectDescriptor, r1 error)
-	ActivatePrototypeCounter    uint64
-	ActivatePrototypePreCounter uint64
-	ActivatePrototypeMock       mManagerMockActivatePrototype
 
 	DeployCodeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) (r *insolar.ID, r1 error)
 	DeployCodeCounter    uint64
@@ -51,7 +46,7 @@ type ManagerMock struct {
 	RegisterResultPreCounter uint64
 	RegisterResultMock       mManagerMockRegisterResult
 
-	UpdateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r ObjectDescriptor, r1 error)
+	UpdateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r error)
 	UpdateObjectCounter    uint64
 	UpdateObjectPreCounter uint64
 	UpdateObjectMock       mManagerMockUpdateObject
@@ -66,7 +61,6 @@ func NewManagerMock(t minimock.Tester) *ManagerMock {
 	}
 
 	m.ActivateObjectMock = mManagerMockActivateObject{mock: m}
-	m.ActivatePrototypeMock = mManagerMockActivatePrototype{mock: m}
 	m.DeployCodeMock = mManagerMockDeployCode{mock: m}
 	m.GetObjectMock = mManagerMockGetObject{mock: m}
 	m.RegisterRequestMock = mManagerMockRegisterRequest{mock: m}
@@ -98,8 +92,7 @@ type ManagerMockActivateObjectInput struct {
 }
 
 type ManagerMockActivateObjectResult struct {
-	r  ObjectDescriptor
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Manager.ActivateObject is expected from 1 to Infinity times
@@ -115,14 +108,14 @@ func (m *mManagerMockActivateObject) Expect(p context.Context, p1 insolar.Refere
 }
 
 //Return specifies results of invocation of Manager.ActivateObject
-func (m *mManagerMockActivateObject) Return(r ObjectDescriptor, r1 error) *ManagerMock {
+func (m *mManagerMockActivateObject) Return(r error) *ManagerMock {
 	m.mock.ActivateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ManagerMockActivateObjectExpectation{}
 	}
-	m.mainExpectation.result = &ManagerMockActivateObjectResult{r, r1}
+	m.mainExpectation.result = &ManagerMockActivateObjectResult{r}
 	return m.mock
 }
 
@@ -137,12 +130,12 @@ func (m *mManagerMockActivateObject) ExpectOnce(p context.Context, p1 insolar.Re
 	return expectation
 }
 
-func (e *ManagerMockActivateObjectExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ManagerMockActivateObjectResult{r, r1}
+func (e *ManagerMockActivateObjectExpectation) Return(r error) {
+	e.result = &ManagerMockActivateObjectResult{r}
 }
 
 //Set uses given function f as a mock of Manager.ActivateObject method
-func (m *mManagerMockActivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r ObjectDescriptor, r1 error)) *ManagerMock {
+func (m *mManagerMockActivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r error)) *ManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -151,7 +144,7 @@ func (m *mManagerMockActivateObject) Set(f func(p context.Context, p1 insolar.Re
 }
 
 //ActivateObject implements github.com/insolar/insolar/internal/ledger/artifact.Manager interface
-func (m *ManagerMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r ObjectDescriptor, r1 error) {
+func (m *ManagerMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r error) {
 	counter := atomic.AddUint64(&m.ActivateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.ActivateObjectCounter, 1)
 
@@ -171,7 +164,6 @@ func (m *ManagerMock) ActivateObject(p context.Context, p1 insolar.Reference, p2
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -189,7 +181,6 @@ func (m *ManagerMock) ActivateObject(p context.Context, p1 insolar.Reference, p2
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -227,161 +218,6 @@ func (m *ManagerMock) ActivateObjectFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.ActivateObjectFunc != nil {
 		return atomic.LoadUint64(&m.ActivateObjectCounter) > 0
-	}
-
-	return true
-}
-
-type mManagerMockActivatePrototype struct {
-	mock              *ManagerMock
-	mainExpectation   *ManagerMockActivatePrototypeExpectation
-	expectationSeries []*ManagerMockActivatePrototypeExpectation
-}
-
-type ManagerMockActivatePrototypeExpectation struct {
-	input  *ManagerMockActivatePrototypeInput
-	result *ManagerMockActivatePrototypeResult
-}
-
-type ManagerMockActivatePrototypeInput struct {
-	p  context.Context
-	p1 insolar.Reference
-	p2 insolar.Reference
-	p3 insolar.Reference
-	p4 insolar.Reference
-	p5 []byte
-}
-
-type ManagerMockActivatePrototypeResult struct {
-	r  ObjectDescriptor
-	r1 error
-}
-
-//Expect specifies that invocation of Manager.ActivatePrototype is expected from 1 to Infinity times
-func (m *mManagerMockActivatePrototype) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) *mManagerMockActivatePrototype {
-	m.mock.ActivatePrototypeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ManagerMockActivatePrototypeExpectation{}
-	}
-	m.mainExpectation.input = &ManagerMockActivatePrototypeInput{p, p1, p2, p3, p4, p5}
-	return m
-}
-
-//Return specifies results of invocation of Manager.ActivatePrototype
-func (m *mManagerMockActivatePrototype) Return(r ObjectDescriptor, r1 error) *ManagerMock {
-	m.mock.ActivatePrototypeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ManagerMockActivatePrototypeExpectation{}
-	}
-	m.mainExpectation.result = &ManagerMockActivatePrototypeResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Manager.ActivatePrototype is expected once
-func (m *mManagerMockActivatePrototype) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) *ManagerMockActivatePrototypeExpectation {
-	m.mock.ActivatePrototypeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ManagerMockActivatePrototypeExpectation{}
-	expectation.input = &ManagerMockActivatePrototypeInput{p, p1, p2, p3, p4, p5}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ManagerMockActivatePrototypeExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ManagerMockActivatePrototypeResult{r, r1}
-}
-
-//Set uses given function f as a mock of Manager.ActivatePrototype method
-func (m *mManagerMockActivatePrototype) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r ObjectDescriptor, r1 error)) *ManagerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.ActivatePrototypeFunc = f
-	return m.mock
-}
-
-//ActivatePrototype implements github.com/insolar/insolar/internal/ledger/artifact.Manager interface
-func (m *ManagerMock) ActivatePrototype(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r ObjectDescriptor, r1 error) {
-	counter := atomic.AddUint64(&m.ActivatePrototypePreCounter, 1)
-	defer atomic.AddUint64(&m.ActivatePrototypeCounter, 1)
-
-	if len(m.ActivatePrototypeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ActivatePrototypeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ManagerMock.ActivatePrototype. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
-			return
-		}
-
-		input := m.ActivatePrototypeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ManagerMockActivatePrototypeInput{p, p1, p2, p3, p4, p5}, "Manager.ActivatePrototype got unexpected parameters")
-
-		result := m.ActivatePrototypeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ManagerMock.ActivatePrototype")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ActivatePrototypeMock.mainExpectation != nil {
-
-		input := m.ActivatePrototypeMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ManagerMockActivatePrototypeInput{p, p1, p2, p3, p4, p5}, "Manager.ActivatePrototype got unexpected parameters")
-		}
-
-		result := m.ActivatePrototypeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ManagerMock.ActivatePrototype")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ActivatePrototypeFunc == nil {
-		m.t.Fatalf("Unexpected call to ManagerMock.ActivatePrototype. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
-		return
-	}
-
-	return m.ActivatePrototypeFunc(p, p1, p2, p3, p4, p5)
-}
-
-//ActivatePrototypeMinimockCounter returns a count of ManagerMock.ActivatePrototypeFunc invocations
-func (m *ManagerMock) ActivatePrototypeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ActivatePrototypeCounter)
-}
-
-//ActivatePrototypeMinimockPreCounter returns the value of ManagerMock.ActivatePrototype invocations
-func (m *ManagerMock) ActivatePrototypeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ActivatePrototypePreCounter)
-}
-
-//ActivatePrototypeFinished returns true if mock invocations count is ok
-func (m *ManagerMock) ActivatePrototypeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ActivatePrototypeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ActivatePrototypeCounter) == uint64(len(m.ActivatePrototypeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ActivatePrototypeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ActivatePrototypeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ActivatePrototypeFunc != nil {
-		return atomic.LoadUint64(&m.ActivatePrototypeCounter) > 0
 	}
 
 	return true
@@ -1016,8 +852,7 @@ type ManagerMockUpdateObjectInput struct {
 }
 
 type ManagerMockUpdateObjectResult struct {
-	r  ObjectDescriptor
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Manager.UpdateObject is expected from 1 to Infinity times
@@ -1033,14 +868,14 @@ func (m *mManagerMockUpdateObject) Expect(p context.Context, p1 insolar.Referenc
 }
 
 //Return specifies results of invocation of Manager.UpdateObject
-func (m *mManagerMockUpdateObject) Return(r ObjectDescriptor, r1 error) *ManagerMock {
+func (m *mManagerMockUpdateObject) Return(r error) *ManagerMock {
 	m.mock.UpdateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ManagerMockUpdateObjectExpectation{}
 	}
-	m.mainExpectation.result = &ManagerMockUpdateObjectResult{r, r1}
+	m.mainExpectation.result = &ManagerMockUpdateObjectResult{r}
 	return m.mock
 }
 
@@ -1055,12 +890,12 @@ func (m *mManagerMockUpdateObject) ExpectOnce(p context.Context, p1 insolar.Refe
 	return expectation
 }
 
-func (e *ManagerMockUpdateObjectExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ManagerMockUpdateObjectResult{r, r1}
+func (e *ManagerMockUpdateObjectExpectation) Return(r error) {
+	e.result = &ManagerMockUpdateObjectResult{r}
 }
 
 //Set uses given function f as a mock of Manager.UpdateObject method
-func (m *mManagerMockUpdateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r ObjectDescriptor, r1 error)) *ManagerMock {
+func (m *mManagerMockUpdateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r error)) *ManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1069,7 +904,7 @@ func (m *mManagerMockUpdateObject) Set(f func(p context.Context, p1 insolar.Refe
 }
 
 //UpdateObject implements github.com/insolar/insolar/internal/ledger/artifact.Manager interface
-func (m *ManagerMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r ObjectDescriptor, r1 error) {
+func (m *ManagerMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r error) {
 	counter := atomic.AddUint64(&m.UpdateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateObjectCounter, 1)
 
@@ -1089,7 +924,6 @@ func (m *ManagerMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 i
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -1107,7 +941,6 @@ func (m *ManagerMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 i
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -1158,10 +991,6 @@ func (m *ManagerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ManagerMock.ActivateObject")
 	}
 
-	if !m.ActivatePrototypeFinished() {
-		m.t.Fatal("Expected call to ManagerMock.ActivatePrototype")
-	}
-
 	if !m.DeployCodeFinished() {
 		m.t.Fatal("Expected call to ManagerMock.DeployCode")
 	}
@@ -1203,10 +1032,6 @@ func (m *ManagerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ManagerMock.ActivateObject")
 	}
 
-	if !m.ActivatePrototypeFinished() {
-		m.t.Fatal("Expected call to ManagerMock.ActivatePrototype")
-	}
-
 	if !m.DeployCodeFinished() {
 		m.t.Fatal("Expected call to ManagerMock.DeployCode")
 	}
@@ -1242,7 +1067,6 @@ func (m *ManagerMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.ActivateObjectFinished()
-		ok = ok && m.ActivatePrototypeFinished()
 		ok = ok && m.DeployCodeFinished()
 		ok = ok && m.GetObjectFinished()
 		ok = ok && m.RegisterRequestFinished()
@@ -1258,10 +1082,6 @@ func (m *ManagerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ActivateObjectFinished() {
 				m.t.Error("Expected call to ManagerMock.ActivateObject")
-			}
-
-			if !m.ActivatePrototypeFinished() {
-				m.t.Error("Expected call to ManagerMock.ActivatePrototype")
 			}
 
 			if !m.DeployCodeFinished() {
@@ -1297,10 +1117,6 @@ func (m *ManagerMock) MinimockWait(timeout time.Duration) {
 func (m *ManagerMock) AllMocksCalled() bool {
 
 	if !m.ActivateObjectFinished() {
-		return false
-	}
-
-	if !m.ActivatePrototypeFinished() {
 		return false
 	}
 

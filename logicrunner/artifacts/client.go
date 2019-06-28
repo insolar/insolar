@@ -888,14 +888,10 @@ func (m *client) activateObject(
 	if err != nil {
 		return err
 	}
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return err
-	}
 
 	activate := record.Activate{
 		Request:     obj,
-		Memory:      *object.CalculateIDForBlob(m.PCS, currentPN, memory),
+		Memory:      memory,
 		Image:       prototype,
 		IsPrototype: isPrototype,
 		Parent:      parent,

@@ -140,7 +140,7 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 	}
 
 	contract := insolar.NewReference(*nodeID)
-	_, err = nm.artifactManager.ActivateObject(
+	err = nm.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		*contract,
@@ -178,7 +178,7 @@ func (nm *DiscoveryNodeManager) updateNodeDomainIndex(
 		return errors.Wrap(err, "failed to serialize index for node domain")
 	}
 
-	_, err = nm.artifactManager.UpdateObject(
+	err = nm.artifactManager.UpdateObject(
 		ctx,
 		genesisrefs.ContractRootDomain,
 		genesisrefs.ContractNodeDomain,
