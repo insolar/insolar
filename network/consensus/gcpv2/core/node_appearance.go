@@ -108,7 +108,7 @@ type NodeAppearance struct {
 	state           packets.NodeState
 	trust           packets.NodeTrustLevel
 	neighborReports uint8
-	claimHash       common2.NodeClaimSignature
+	//claimHash       common2.NodeClaimSignature
 }
 
 func (c *NodeAppearance) String() string {
