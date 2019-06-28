@@ -21,17 +21,17 @@ import (
 type ClientMock struct {
 	t minimock.Tester
 
-	ActivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) (r ObjectDescriptor, r1 error)
+	ActivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) (r error)
 	ActivateObjectCounter    uint64
 	ActivateObjectPreCounter uint64
 	ActivateObjectMock       mClientMockActivateObject
 
-	ActivatePrototypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) (r ObjectDescriptor, r1 error)
+	ActivatePrototypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) (r error)
 	ActivatePrototypeCounter    uint64
 	ActivatePrototypePreCounter uint64
 	ActivatePrototypeMock       mClientMockActivatePrototype
 
-	DeactivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) (r *insolar.ID, r1 error)
+	DeactivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) (r error)
 	DeactivateObjectCounter    uint64
 	DeactivateObjectPreCounter uint64
 	DeactivateObjectMock       mClientMockDeactivateObject
@@ -101,12 +101,12 @@ type ClientMock struct {
 	RegisterValidationPreCounter uint64
 	RegisterValidationMock       mClientMockRegisterValidation
 
-	StateFunc       func() (r []byte, r1 error)
+	StateFunc       func() (r []byte)
 	StateCounter    uint64
 	StatePreCounter uint64
 	StateMock       mClientMockState
 
-	UpdateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) (r ObjectDescriptor, r1 error)
+	UpdateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) (r error)
 	UpdateObjectCounter    uint64
 	UpdateObjectPreCounter uint64
 	UpdateObjectMock       mClientMockUpdateObject
@@ -163,8 +163,7 @@ type ClientMockActivateObjectInput struct {
 }
 
 type ClientMockActivateObjectResult struct {
-	r  ObjectDescriptor
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Client.ActivateObject is expected from 1 to Infinity times
@@ -180,14 +179,14 @@ func (m *mClientMockActivateObject) Expect(p context.Context, p1 insolar.Referen
 }
 
 //Return specifies results of invocation of Client.ActivateObject
-func (m *mClientMockActivateObject) Return(r ObjectDescriptor, r1 error) *ClientMock {
+func (m *mClientMockActivateObject) Return(r error) *ClientMock {
 	m.mock.ActivateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockActivateObjectExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockActivateObjectResult{r, r1}
+	m.mainExpectation.result = &ClientMockActivateObjectResult{r}
 	return m.mock
 }
 
@@ -202,12 +201,12 @@ func (m *mClientMockActivateObject) ExpectOnce(p context.Context, p1 insolar.Ref
 	return expectation
 }
 
-func (e *ClientMockActivateObjectExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ClientMockActivateObjectResult{r, r1}
+func (e *ClientMockActivateObjectExpectation) Return(r error) {
+	e.result = &ClientMockActivateObjectResult{r}
 }
 
 //Set uses given function f as a mock of Client.ActivateObject method
-func (m *mClientMockActivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) (r ObjectDescriptor, r1 error)) *ClientMock {
+func (m *mClientMockActivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) (r error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -216,7 +215,7 @@ func (m *mClientMockActivateObject) Set(f func(p context.Context, p1 insolar.Ref
 }
 
 //ActivateObject implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) (r ObjectDescriptor, r1 error) {
+func (m *ClientMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 bool, p5 []byte) (r error) {
 	counter := atomic.AddUint64(&m.ActivateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.ActivateObjectCounter, 1)
 
@@ -236,7 +235,6 @@ func (m *ClientMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -254,7 +252,6 @@ func (m *ClientMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -317,8 +314,7 @@ type ClientMockActivatePrototypeInput struct {
 }
 
 type ClientMockActivatePrototypeResult struct {
-	r  ObjectDescriptor
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Client.ActivatePrototype is expected from 1 to Infinity times
@@ -334,14 +330,14 @@ func (m *mClientMockActivatePrototype) Expect(p context.Context, p1 insolar.Refe
 }
 
 //Return specifies results of invocation of Client.ActivatePrototype
-func (m *mClientMockActivatePrototype) Return(r ObjectDescriptor, r1 error) *ClientMock {
+func (m *mClientMockActivatePrototype) Return(r error) *ClientMock {
 	m.mock.ActivatePrototypeFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockActivatePrototypeExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockActivatePrototypeResult{r, r1}
+	m.mainExpectation.result = &ClientMockActivatePrototypeResult{r}
 	return m.mock
 }
 
@@ -356,12 +352,12 @@ func (m *mClientMockActivatePrototype) ExpectOnce(p context.Context, p1 insolar.
 	return expectation
 }
 
-func (e *ClientMockActivatePrototypeExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ClientMockActivatePrototypeResult{r, r1}
+func (e *ClientMockActivatePrototypeExpectation) Return(r error) {
+	e.result = &ClientMockActivatePrototypeResult{r}
 }
 
 //Set uses given function f as a mock of Client.ActivatePrototype method
-func (m *mClientMockActivatePrototype) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) (r ObjectDescriptor, r1 error)) *ClientMock {
+func (m *mClientMockActivatePrototype) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) (r error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -370,7 +366,7 @@ func (m *mClientMockActivatePrototype) Set(f func(p context.Context, p1 insolar.
 }
 
 //ActivatePrototype implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) ActivatePrototype(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) (r ObjectDescriptor, r1 error) {
+func (m *ClientMock) ActivatePrototype(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 []byte) (r error) {
 	counter := atomic.AddUint64(&m.ActivatePrototypePreCounter, 1)
 	defer atomic.AddUint64(&m.ActivatePrototypeCounter, 1)
 
@@ -390,7 +386,6 @@ func (m *ClientMock) ActivatePrototype(p context.Context, p1 insolar.Reference, 
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -408,7 +403,6 @@ func (m *ClientMock) ActivatePrototype(p context.Context, p1 insolar.Reference, 
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -470,8 +464,7 @@ type ClientMockDeactivateObjectInput struct {
 }
 
 type ClientMockDeactivateObjectResult struct {
-	r  *insolar.ID
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Client.DeactivateObject is expected from 1 to Infinity times
@@ -487,14 +480,14 @@ func (m *mClientMockDeactivateObject) Expect(p context.Context, p1 insolar.Refer
 }
 
 //Return specifies results of invocation of Client.DeactivateObject
-func (m *mClientMockDeactivateObject) Return(r *insolar.ID, r1 error) *ClientMock {
+func (m *mClientMockDeactivateObject) Return(r error) *ClientMock {
 	m.mock.DeactivateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockDeactivateObjectExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockDeactivateObjectResult{r, r1}
+	m.mainExpectation.result = &ClientMockDeactivateObjectResult{r}
 	return m.mock
 }
 
@@ -509,12 +502,12 @@ func (m *mClientMockDeactivateObject) ExpectOnce(p context.Context, p1 insolar.R
 	return expectation
 }
 
-func (e *ClientMockDeactivateObjectExpectation) Return(r *insolar.ID, r1 error) {
-	e.result = &ClientMockDeactivateObjectResult{r, r1}
+func (e *ClientMockDeactivateObjectExpectation) Return(r error) {
+	e.result = &ClientMockDeactivateObjectResult{r}
 }
 
 //Set uses given function f as a mock of Client.DeactivateObject method
-func (m *mClientMockDeactivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) (r *insolar.ID, r1 error)) *ClientMock {
+func (m *mClientMockDeactivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) (r error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -523,7 +516,7 @@ func (m *mClientMockDeactivateObject) Set(f func(p context.Context, p1 insolar.R
 }
 
 //DeactivateObject implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) DeactivateObject(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) (r *insolar.ID, r1 error) {
+func (m *ClientMock) DeactivateObject(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte) (r error) {
 	counter := atomic.AddUint64(&m.DeactivateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.DeactivateObjectCounter, 1)
 
@@ -543,7 +536,6 @@ func (m *ClientMock) DeactivateObject(p context.Context, p1 insolar.Reference, p
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -561,7 +553,6 @@ func (m *ClientMock) DeactivateObject(p context.Context, p1 insolar.Reference, p
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -2493,8 +2484,7 @@ type ClientMockStateExpectation struct {
 }
 
 type ClientMockStateResult struct {
-	r  []byte
-	r1 error
+	r []byte
 }
 
 //Expect specifies that invocation of Client.State is expected from 1 to Infinity times
@@ -2510,14 +2500,14 @@ func (m *mClientMockState) Expect() *mClientMockState {
 }
 
 //Return specifies results of invocation of Client.State
-func (m *mClientMockState) Return(r []byte, r1 error) *ClientMock {
+func (m *mClientMockState) Return(r []byte) *ClientMock {
 	m.mock.StateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockStateExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockStateResult{r, r1}
+	m.mainExpectation.result = &ClientMockStateResult{r}
 	return m.mock
 }
 
@@ -2532,12 +2522,12 @@ func (m *mClientMockState) ExpectOnce() *ClientMockStateExpectation {
 	return expectation
 }
 
-func (e *ClientMockStateExpectation) Return(r []byte, r1 error) {
-	e.result = &ClientMockStateResult{r, r1}
+func (e *ClientMockStateExpectation) Return(r []byte) {
+	e.result = &ClientMockStateResult{r}
 }
 
 //Set uses given function f as a mock of Client.State method
-func (m *mClientMockState) Set(f func() (r []byte, r1 error)) *ClientMock {
+func (m *mClientMockState) Set(f func() (r []byte)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2546,7 +2536,7 @@ func (m *mClientMockState) Set(f func() (r []byte, r1 error)) *ClientMock {
 }
 
 //State implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) State() (r []byte, r1 error) {
+func (m *ClientMock) State() (r []byte) {
 	counter := atomic.AddUint64(&m.StatePreCounter, 1)
 	defer atomic.AddUint64(&m.StateCounter, 1)
 
@@ -2563,7 +2553,6 @@ func (m *ClientMock) State() (r []byte, r1 error) {
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -2576,7 +2565,6 @@ func (m *ClientMock) State() (r []byte, r1 error) {
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -2639,8 +2627,7 @@ type ClientMockUpdateObjectInput struct {
 }
 
 type ClientMockUpdateObjectResult struct {
-	r  ObjectDescriptor
-	r1 error
+	r error
 }
 
 //Expect specifies that invocation of Client.UpdateObject is expected from 1 to Infinity times
@@ -2656,14 +2643,14 @@ func (m *mClientMockUpdateObject) Expect(p context.Context, p1 insolar.Reference
 }
 
 //Return specifies results of invocation of Client.UpdateObject
-func (m *mClientMockUpdateObject) Return(r ObjectDescriptor, r1 error) *ClientMock {
+func (m *mClientMockUpdateObject) Return(r error) *ClientMock {
 	m.mock.UpdateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockUpdateObjectExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockUpdateObjectResult{r, r1}
+	m.mainExpectation.result = &ClientMockUpdateObjectResult{r}
 	return m.mock
 }
 
@@ -2678,12 +2665,12 @@ func (m *mClientMockUpdateObject) ExpectOnce(p context.Context, p1 insolar.Refer
 	return expectation
 }
 
-func (e *ClientMockUpdateObjectExpectation) Return(r ObjectDescriptor, r1 error) {
-	e.result = &ClientMockUpdateObjectResult{r, r1}
+func (e *ClientMockUpdateObjectExpectation) Return(r error) {
+	e.result = &ClientMockUpdateObjectResult{r}
 }
 
 //Set uses given function f as a mock of Client.UpdateObject method
-func (m *mClientMockUpdateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) (r ObjectDescriptor, r1 error)) *ClientMock {
+func (m *mClientMockUpdateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) (r error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2692,7 +2679,7 @@ func (m *mClientMockUpdateObject) Set(f func(p context.Context, p1 insolar.Refer
 }
 
 //UpdateObject implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) (r ObjectDescriptor, r1 error) {
+func (m *ClientMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 ObjectDescriptor, p3 []byte, p4 []byte) (r error) {
 	counter := atomic.AddUint64(&m.UpdateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateObjectCounter, 1)
 
@@ -2712,7 +2699,6 @@ func (m *ClientMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 Ob
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -2730,7 +2716,6 @@ func (m *ClientMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 Ob
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}

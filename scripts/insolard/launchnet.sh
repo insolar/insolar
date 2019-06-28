@@ -34,7 +34,6 @@ SCRIPTS_DIR=scripts/insolard/
 CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs/
 
 PULSAR_KEYS=${CONFIGS_DIR}pulsar_keys.json
-ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}root_member_keys.json
 HEAVY_GENESIS_CONFIG_FILE=${CONFIGS_DIR}heavy_genesis.json
 CONTRACTS_PLUGINS_DIR=${LAUNCHNET_BASE_DIR}contracts
 
@@ -187,8 +186,13 @@ generate_pulsar_keys()
 
 generate_root_member_keys()
 {
-    echo "generate root member_keys: $ROOT_MEMBER_KEYS_FILE"
-    bin/insolar gen-key-pair > $ROOT_MEMBER_KEYS_FILE
+    echo "generate members keys in dir: $CONFIGS_DIR"
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
+    for (( b = 0; b < 10; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
+    done
 }
 
 check_working_dir()
@@ -230,6 +234,7 @@ process_input_params()
             run_insgorund=false
             ;;
         g)
+            GENESIS=1
             bootstrap
             ;;
         b)
@@ -393,7 +398,11 @@ echo "discovery nodes started ..."
 if [[ "$NUM_NODES" -ne "0"  && "$run_insgorund" == "true" ]]
 then
     wait_for_complete_network_state
-    ./scripts/insolard/start_nodes.sh
+    if [[ "$GENESIS" == "1" ]]; then
+        ./scripts/insolard/start_nodes.sh -g
+    else
+        ./scripts/insolard/start_nodes.sh
+    fi
 fi
 
 if [[ "$watch_pulse" == "true" ]]

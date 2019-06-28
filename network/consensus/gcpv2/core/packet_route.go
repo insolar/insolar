@@ -51,6 +51,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -67,23 +68,23 @@ type packetRoute struct {
 	realm           *FullRealm
 }
 
-func (r *packetRoute) handleMemberPacket(reader packets.MemberPacketReader, from *NodeAppearance) error {
+func (r *packetRoute) handleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance) error {
 	if r.handlerMember == nil {
 		return errPacketIsNotAllowed
 	}
-	return r.handlerMember(reader, from)
+	return r.handlerMember(ctx, reader, from)
 }
 
-func (r *packetRoute) redirectMemberPacket(reader packets.MemberPacketReader, from *NodeAppearance) error {
+func (r *packetRoute) redirectMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance) error {
 	h := from.handlers[r.redirectPerNode]
 	if h == nil {
 		return errPacketIsNotAllowed
 	}
-	return h(reader, from, r.realm)
+	return h(ctx, reader, from, r.realm)
 }
 
-func (r *packetRoute) handleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) error {
-	return r.handlerHost(reader, from)
+func (r *packetRoute) handleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
+	return r.handlerHost(ctx, reader, from)
 }
 
 func (r *packetRoute) setRedirectHandler(redirectID int) {

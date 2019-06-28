@@ -53,6 +53,7 @@ package common
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"math/bits"
 	"strings"
@@ -98,6 +99,10 @@ func (v Bits64) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
 }
 
+func (v Bits64) Bytes() []byte {
+	return v[:]
+}
+
 type Bits128 [16]byte
 
 func (v *Bits128) WriteTo(w io.Writer) (int64, error) {
@@ -120,6 +125,10 @@ func (v *Bits128) FixedByteSize() int {
 
 func (v Bits128) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
+}
+
+func (v Bits128) Bytes() []byte {
+	return v[:]
 }
 
 type Bits224 [24]byte
@@ -145,6 +154,10 @@ func (v *Bits224) FixedByteSize() int {
 
 func (v Bits224) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
+}
+
+func (v Bits224) Bytes() []byte {
+	return v[:]
 }
 
 type Bits256 [32]byte
@@ -187,6 +200,10 @@ func (v *Bits256) FixedByteSize() int {
 
 func (v Bits256) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
+}
+
+func (v Bits256) Bytes() []byte {
+	return v[:]
 }
 
 type Bits512 [64]byte
@@ -233,6 +250,10 @@ func (v *Bits512) FixedByteSize() int {
 
 func (v Bits512) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
+}
+
+func (v Bits512) Bytes() []byte {
+	return v[:]
 }
 
 /* Array size must be aligned to 8 bytes */
@@ -300,4 +321,43 @@ func EncodeToString(s []byte, prefix string, separator string, everyN int) strin
 		i = n
 	}
 	return buf.String()
+}
+
+func copyToFixedBits(dst, src []byte, expectedSize int) {
+	size := len(src)
+	if size != expectedSize {
+		panic(fmt.Sprintf("Length missmatch, expected: %d, actual: %d", expectedSize, size))
+	}
+
+	copy(dst, src)
+}
+
+func NewBits64FromBytes(bytes []byte) *Bits64 {
+	b := Bits64{}
+	copyToFixedBits(b[:], bytes, b.FixedByteSize())
+	return &b
+}
+
+func NewBits128FromBytes(bytes []byte) *Bits128 {
+	b := Bits128{}
+	copyToFixedBits(b[:], bytes, b.FixedByteSize())
+	return &b
+}
+
+func NewBits224FromBytes(bytes []byte) *Bits224 {
+	b := Bits224{}
+	copyToFixedBits(b[:], bytes, b.FixedByteSize())
+	return &b
+}
+
+func NewBits256FromBytes(bytes []byte) *Bits256 {
+	b := Bits256{}
+	copyToFixedBits(b[:], bytes, b.FixedByteSize())
+	return &b
+}
+
+func NewBits512FromBytes(bytes []byte) *Bits512 {
+	b := Bits512{}
+	copyToFixedBits(b[:], bytes, b.FixedByteSize())
+	return &b
 }

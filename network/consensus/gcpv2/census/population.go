@@ -195,10 +195,10 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, loc
 	slotIndex := 1
 
 	for _, n := range nodes {
-		if n == localNode {
+		id := n.GetShortNodeID()
+		if id == localNode.GetShortNodeID() {
 			continue
 		}
-		id := n.GetShortNodeID()
 		if _, ok := c.slotByID[id]; ok {
 			panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 		}

@@ -20,24 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/pkg/errors"
 )
-
-// RegisterExecutor registers an executor for particular `MachineType`
-func (lr *LogicRunner) RegisterExecutor(t insolar.MachineType, e insolar.MachineLogicExecutor) error {
-	lr.Executors[int(t)] = e
-	return nil
-}
-
-// GetExecutor returns an executor for the `MachineType` if it was registered (`RegisterExecutor`),
-// returns error otherwise
-func (lr *LogicRunner) GetExecutor(t insolar.MachineType) (insolar.MachineLogicExecutor, error) {
-	if res := lr.Executors[int(t)]; res != nil {
-		return res, nil
-	}
-
-	return nil, errors.Errorf("No executor registered for machine %d", int(t))
-}
 
 func (lr *LogicRunner) GetObjectState(ref Ref) *ObjectState {
 	lr.stateMutex.RLock()

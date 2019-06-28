@@ -79,7 +79,7 @@ type Client interface {
 		ctx context.Context,
 		request, parent, code insolar.Reference,
 		memory []byte,
-	) (ObjectDescriptor, error)
+	) error
 
 	// ActivateObject creates activate object record in storage. If memory is not provided, the prototype default
 	// memory will be used.
@@ -90,7 +90,7 @@ type Client interface {
 		request, parent, prototype insolar.Reference,
 		asDelegate bool,
 		memory []byte,
-	) (ObjectDescriptor, error)
+	) error
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
@@ -102,7 +102,7 @@ type Client interface {
 		obj ObjectDescriptor,
 		memory []byte,
 		result []byte,
-	) (ObjectDescriptor, error)
+	) error
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
@@ -113,10 +113,10 @@ type Client interface {
 		request insolar.Reference,
 		obj ObjectDescriptor,
 		result []byte,
-	) (*insolar.ID, error)
+	) error
 
 	// State returns hash state for artifact manager.
-	State() ([]byte, error)
+	State() []byte
 
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
 	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
@@ -178,7 +178,7 @@ type RefIterator interface {
 // of objects without fetching them twice
 type DescriptorsCache interface {
 	ByPrototypeRef(ctx context.Context, protoRef insolar.Reference) (ObjectDescriptor, CodeDescriptor, error)
-	ByObjectDescriptor(ctx context.Context, obj ObjectDescriptor)  (ObjectDescriptor, CodeDescriptor, error)
+	ByObjectDescriptor(ctx context.Context, obj ObjectDescriptor) (ObjectDescriptor, CodeDescriptor, error)
 	GetPrototype(ctx context.Context, ref insolar.Reference) (ObjectDescriptor, error)
 	GetCode(ctx context.Context, ref insolar.Reference) (CodeDescriptor, error)
 }

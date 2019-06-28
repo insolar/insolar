@@ -43,13 +43,13 @@ func (suite *MainAPISuite) TestGetRequest() {
 	suite.NoError(err)
 	body, err := ioutil.ReadAll(resp.Body)
 	suite.NoError(err)
-	suite.Contains(string(body[:]), `"[ UnmarshalRequest ] Empty body"`)
+	suite.Contains(string(body[:]), `failed to unmarshal request: [ UnmarshalRequest ] Empty body`)
 }
 
 func (suite *MainAPISuite) TestSerialization() {
 	var a uint = 1
-	var b bool = true
-	var c string = "test"
+	var b = true
+	var c = "test"
 
 	serArgs, err := insolar.MarshalArgs(a, b, c)
 	suite.NoError(err)
@@ -88,10 +88,6 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 	suite.Contains(err.Error(), "RPC must exist")
 
 	cfg.RPC = "test"
-	_, err = NewRunner(&cfg)
-	suite.Contains(err.Error(), "Timeout must not be null")
-
-	cfg.Timeout = 2
 	_, err = NewRunner(&cfg)
 	suite.NoError(err)
 }

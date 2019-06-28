@@ -53,6 +53,7 @@ package bootstrap
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/insolar"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -98,7 +99,7 @@ func TestRequester_Bootstrap(t *testing.T) {
 	// inject HostNetwork
 	r.(*requester).HostNetwork = hn
 
-	resp, err := r.Bootstrap(context.Background(), p, claim, 0)
+	resp, err := r.Bootstrap(context.Background(), p, claim, insolar.GenesisPulse)
 	assert.Nil(t, resp)
 	assert.Error(t, err)
 }

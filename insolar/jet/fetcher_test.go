@@ -225,10 +225,11 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 
 		fjm := *insolar.NewJetID(0, nil)
 		js.ForIDMock.Return(fjm, false)
-		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) {
+		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) error {
 			require.Equal(t, insolar.FirstPulseNumber+insolar.PulseNumber(100), pn)
 			require.True(t, actual)
 			require.Equal(t, []insolar.JetID{*insolar.NewJetID(0, nil)}, jets)
+			return nil
 		}
 
 		jetID, err := jtu.Fetch(ctx, target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
@@ -290,13 +291,14 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		treeMu := sync.Mutex{}
 		tree := NewTree(false)
 
-		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) {
+		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) error {
 			treeMu.Lock()
 			defer treeMu.Unlock()
 
 			for _, id := range jets {
 				tree.Update(id, actual)
 			}
+			return nil
 		}
 		js.ForIDFunc = func(ctx context.Context, pulse insolar.PulseNumber, id insolar.ID) (insolar.JetID, bool) {
 			treeMu.Lock()

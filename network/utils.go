@@ -51,9 +51,12 @@
 package network
 
 import (
+	"context"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"io"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -194,4 +197,10 @@ func FindDiscoveriesInNodeList(nodes []insolar.NetworkNode, cert insolar.Certifi
 	}
 
 	return result
+}
+
+func NewPulseContext(ctx context.Context, pulseNumber uint32) context.Context {
+	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
+	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
+	return ctx
 }

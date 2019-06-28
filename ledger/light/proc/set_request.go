@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
@@ -88,7 +89,14 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		JetID:   p.jetID,
 	}
 	err = p.dep.records.Set(ctx, p.requestID, material)
-	if err != nil {
+	if err == object.ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK (nil error). When deduplication will be implemented
+		// we should change `nil` to `ErrOverride` here.
+		return nil
+	} else if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 
@@ -108,22 +116,24 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 }
 
 func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq record.Virtual) error {
-	concrete := record.Unwrap(&virtReq)
-	req := concrete.(*record.Request)
+	// TODO: check it after INS-1939
+	// concrete := record.Unwrap(&virtReq)
+	// req := concrete.(*record.Request)
 
 	// Skip object creation and genesis
-	if req.CallType == record.CTMethod {
-		if p.dep.recentStorage.Count() > recentstorage.PendingRequestsLimit {
-			return insolar.ErrTooManyPendingRequests
-		}
-		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
-		recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
+	// if req.CallType == record.CTMethod {
+	// 	if p.dep.recentStorage.Count() > recentstorage.PendingRequestsLimit {
+	// 		return insolar.ErrTooManyPendingRequests
+	// 	}
+	// 	recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
+	// 	recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
 
-		// err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
-		// if err != nil {
-		// 	return errors.Wrap(err, "can't save result into filament-index")
-		// }
-	}
+	// TODO: check it after INS-1939
+	// err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
+	// if err != nil {
+	// 	return errors.Wrap(err, "can't save result into filament-index")
+	// }
+	// }
 
 	return nil
 }

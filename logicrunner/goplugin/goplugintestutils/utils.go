@@ -168,7 +168,7 @@ func (t *TestArtifactManager) HasPendingRequests(ctx context.Context, object ins
 }
 
 // State implementation for tests
-func (t *TestArtifactManager) State() ([]byte, error) {
+func (t *TestArtifactManager) State() []byte {
 	panic("implement me")
 }
 
@@ -250,7 +250,7 @@ func (t *TestArtifactManager) ActivatePrototype(
 	ctx context.Context,
 	request, parent, code insolar.Reference,
 	memory []byte,
-) (artifacts.ObjectDescriptor, error) {
+) error {
 	id := testutils.RandomID()
 
 	t.Prototypes[request] = &TestObjectDescriptor{
@@ -262,7 +262,7 @@ func (t *TestArtifactManager) ActivatePrototype(
 		Delegates:    make(map[insolar.Reference]insolar.Reference),
 	}
 
-	return t.Objects[request], nil
+	return nil
 }
 
 // ActivateObject implementation for tests
@@ -271,7 +271,7 @@ func (t *TestArtifactManager) ActivateObject(
 	request, parent, prototype insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (artifacts.ObjectDescriptor, error) {
+) error {
 	id := testutils.RandomID()
 
 	t.Objects[request] = &TestObjectDescriptor{
@@ -285,13 +285,13 @@ func (t *TestArtifactManager) ActivateObject(
 	if asDelegate {
 		pObj, ok := t.Objects[parent]
 		if !ok {
-			return nil, errors.New("No parent to inject delegate into")
+			return errors.New("No parent to inject delegate into")
 		}
 
 		pObj.Delegates[prototype] = request
 	}
 
-	return t.Objects[request], nil
+	return nil
 }
 
 // DeactivateObject implementation for tests
@@ -299,7 +299,7 @@ func (t *TestArtifactManager) DeactivateObject(
 	ctx context.Context,
 	request insolar.Reference, obj artifacts.ObjectDescriptor,
 	result []byte,
-) (*insolar.ID, error) {
+) error {
 	panic("not implemented")
 }
 
@@ -310,16 +310,15 @@ func (t *TestArtifactManager) UpdateObject(
 	object artifacts.ObjectDescriptor,
 	memory []byte,
 	result []byte,
-) (artifacts.ObjectDescriptor, error) {
+) error {
 	objDesc, ok := t.Objects[*object.HeadRef()]
 	if !ok {
-		return nil, errors.New("No object to update")
+		return errors.New("No object to update")
 	}
 
 	objDesc.Data = memory
 
-	// TODO: return real exact "ref"
-	return objDesc, nil
+	return nil
 }
 
 // RegisterValidation implementation for tests
@@ -385,7 +384,7 @@ func AMPublishCode(
 	assert.NoError(t, err)
 	protoRef = &insolar.Reference{}
 	protoRef.SetRecord(*protoID)
-	_, err = am.ActivatePrototype(ctx, *protoRef, insolar.GenesisRecord.Ref(), *codeRef, nil)
+	err = am.ActivatePrototype(ctx, *protoRef, insolar.GenesisRecord.Ref(), *codeRef, nil)
 	assert.NoError(t, err, "create template for contract data")
 
 	return typeRef, codeRef, protoRef, err
@@ -506,7 +505,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		cb.Codes[name] = codeRef
 
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
-		_, err = cb.ArtifactManager.ActivatePrototype(
+		err = cb.ArtifactManager.ActivatePrototype(
 			ctx,
 			*cb.Prototypes[name],
 			insolar.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!

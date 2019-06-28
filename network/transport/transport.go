@@ -59,7 +59,7 @@ import (
 
 // DatagramHandler interface provides callback method to process received datagrams
 type DatagramHandler interface {
-	HandleDatagram(address string, buf []byte)
+	HandleDatagram(ctx context.Context, address string, buf []byte)
 }
 
 // DatagramTransport interface provides methods to send and receive datagrams
