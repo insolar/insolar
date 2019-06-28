@@ -328,7 +328,7 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHa
 	r.upstreamMembershipConfirmed(expected)
 }
 
-func (r *coreRealm) upstreamMembershipConfirmed(expectedCensus census.ExpectedCensus) {
+func (r *coreRealm) upstreamMembershipConfirmed(expectedCensus census.OperationalCensus) {
 	sp := r.GetSelf().GetProfile()
 	report := MembershipUpstreamReport{
 		PulseNumber:     r.pulseData.PulseNumber,
