@@ -12,6 +12,8 @@ HEALTHCHECK = healthcheck
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
+GOBUILD ?= go build
+FUNCTEST_COUNT ?= 1
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
 TEST_ARGS ?= -timeout 1200s
@@ -95,41 +97,41 @@ $(BIN_DIR):
 
 .PHONY: $(INSOLARD)
 $(INSOLARD):
-	go build -o $(BIN_DIR)/$(INSOLARD) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolard/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(INSOLARD) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolard/*.go
 
 .PHONY: $(INSOLAR)
 $(INSOLAR):
-	go build -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolar/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
 $(INSGOCC): cmd/insgocc/insgocc.go logicrunner/preprocessor
-	go build -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+	$(GOBUILD) -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(BININSGOCC): $(INSGOCC)
 
 .PHONY: $(PULSARD)
 $(PULSARD):
-	go build -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
 
 .PHONY: $(INSGORUND)
 $(INSGORUND):
-	CGO_ENABLED=1 go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
+	CGO_ENABLED=1 $(GOBUILD) -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
 
 .PHONY: $(BENCHMARK)
 $(BENCHMARK):
-	go build -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
 
 .PHONY: $(PULSEWATCHER)
 $(PULSEWATCHER):
-	go build -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
 
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
-	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
 
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
-	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
 
 .PHONY: test_unit
 test_unit:
@@ -137,7 +139,13 @@ test_unit:
 
 .PHONY: functest
 functest:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest ./functest -count=1
+	CGO_ENABLED=1 go test -test.v $(TEST_ARGS) -tags functest ./functest -count=$(FUNCTEST_COUNT)
+
+.PNONY: functest_race
+functest_race:
+	make clean
+	GOBUILD='go build -race' make build
+	FUNCTEST_COUNT=10 make functest
 
 .PHONY: test_func
 test_func: functest
@@ -232,4 +240,4 @@ regen-builtin: $(BININSGOCC)
 	$(BININSGOCC) regen-builtin
 
 build-track:
-	go build -o $(BIN_DIR)/track ./scripts/cmd/track/track.go
+	$(GOBUILD) -o $(BIN_DIR)/track ./scripts/cmd/track/track.go
