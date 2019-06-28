@@ -245,7 +245,12 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 		return b.processActive == false
 	}
 
-	tr := &Transcript{LogicContext: &insolar.LogicCallContext{Immutable: true}}
+	reqRef1 := gen.Reference()
+	tr := &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: true},
+		RequestRef: &reqRef1,
+	}
+
 	b.Prepend(ctx, false, tr)
 	b.processLock.Lock()
 	s.False(b.processActive) // we're not starting processor, but job is started
@@ -255,6 +260,12 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
 	s.Require().True(wait(processGoroutineExits))
 
+	reqRef2 := gen.Reference()
+	tr = &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: true},
+		RequestRef: &reqRef2,
+	}
+
 	b.Prepend(ctx, true, tr)
 	b.processLock.Lock()
 	s.True(b.processActive) // we're not starting processor, but job is started
@@ -262,6 +273,12 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	finishProcessing = func() bool { return b.finished.Len() == 2 }
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
 	s.Require().True(wait(processGoroutineExits))
+
+	reqRef3 := gen.Reference()
+	tr = &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: true},
+		RequestRef: &reqRef3,
+	}
 
 	// we can't process messages, do not do it
 	b.checkFunc = forbidProcessingFunc
@@ -273,6 +290,12 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	finishProcessing = func() bool { return b.immutable.Len() == 1 }
 	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
 	s.Require().True(wait(processGoroutineExits))
+
+	reqRef4 := gen.Reference()
+	tr = &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: true},
+		RequestRef: &reqRef4,
+	}
 
 	b.Prepend(ctx, true, tr)
 	b.processLock.Lock()

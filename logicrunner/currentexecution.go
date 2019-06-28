@@ -356,7 +356,7 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 // One shouldn't mix immutable calls and mutable ones
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.finished.Has(*transcript.RequestRef) {
+		if q.finished != nil && q.finished.Has(*transcript.RequestRef) {
 			continue
 		}
 
