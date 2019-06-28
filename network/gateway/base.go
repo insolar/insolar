@@ -185,7 +185,7 @@ func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insola
 // ============= Bootstrap =======
 
 func (g *Base) ShouldIgnorePulse(context.Context, insolar.Pulse) bool {
-	return true
+	return false
 }
 
 func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.Packet) (network.Packet, error) {

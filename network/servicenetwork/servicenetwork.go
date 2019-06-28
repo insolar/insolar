@@ -305,11 +305,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
 
-// func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
-// 	return n.isDiscovery && !n.NodeKeeper.GetConsensusInfo().IsJoiner() &&
-// 		newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+insolar.PulseNumber(n.skip)
-// }
-
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 

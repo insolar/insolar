@@ -56,7 +56,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/insolar/pulse"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -185,17 +184,16 @@ func (s *consensusSuite) SetupTest() {
 
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
-	// switch gatewayer to complete state - fake bootstrap
-	bnodes := make([]insolar.NetworkNode, 0)
-	for _, node := range s.fixture().bootstrapNodes {
-		bnodes = append(bnodes, node.serviceNetwork.NodeKeeper.GetOrigin())
-	}
-
-	for _, node := range s.fixture().bootstrapNodes {
-
-		node.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
-		node.serviceNetwork.Gatewayer.SwitchState(insolar.CompleteNetworkState)
-		pulseReceivers = append(pulseReceivers, node.host)
+	if UseFakeBootstrap {
+		bnodes := make([]insolar.NetworkNode, 0)
+		for _, node := range s.fixture().bootstrapNodes {
+			bnodes = append(bnodes, node.serviceNetwork.NodeKeeper.GetOrigin())
+		}
+		for _, node := range s.fixture().bootstrapNodes {
+			node.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
+			node.serviceNetwork.Gatewayer.SwitchState(insolar.CompleteNetworkState)
+			pulseReceivers = append(pulseReceivers, node.host)
+		}
 	}
 
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
@@ -460,20 +458,22 @@ func newPulseManagerMock(keeper network.NodeKeeper) *pulseManagerMock {
 	return &pulseManagerMock{pulse: *insolar.GenesisPulse, keeper: keeper}
 }
 
-//func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error) {
-//	panic("not implemented")
-//}
-//
-//func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
-//	p.lock.Lock()
-//	defer p.lock.Unlock()
-//
-//	if p.pulse.PulseNumber == insolar.FirstPulseNumber {
-//		return p.pulse, pulse.ErrNotFound
-//	}
-//
-//	return p.pulse, nil
-//}
+func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error) {
+	panic("not implemented")
+}
+
+func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	//if p.pulse.PulseNumber == insolar.FirstPulseNumber {
+	//	return p.pulse, pulse.ErrNotFound
+	//}
+	return p.pulse, nil
+}
+func (p *pulseManagerMock) Append(ctx context.Context, pulse insolar.Pulse) error {
+	return nil
+}
 
 func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist bool) error {
 	p.lock.Lock()
@@ -540,22 +540,21 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		// in servicenetwork internal component manager with fake factory
 		node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport))
 	}
-	if UseFakeBootstrap {
-		// little hack: this Register will override DiscoveryBootstrapper
-		// in servicenetwork internal component manager with fakeBootstrap
-		// TODO: node.componentManager.Register(newFakeBootstrap(s.fixture()))
-	}
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterMock.Return()
-
-	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
-		&amMock, certManager, cryptographyService, serviceNetwork, keyProc, terminationHandler,
-		mb, testutils.NewContractRequesterMock(t), pulse.NewStorageMem())
-
-	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
-	})
-
+	node.componentManager.Inject(
+		realKeeper,
+		newPulseManagerMock(realKeeper.(network.NodeKeeper)),
+		pubMock,
+		&amMock,
+		certManager,
+		cryptographyService,
+		serviceNetwork,
+		keyProc,
+		terminationHandler,
+		testutils.NewContractRequesterMock(t),
+		//pulse.NewStorageMem(),
+	)
+	//serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {})
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler
 }
