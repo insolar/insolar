@@ -299,8 +299,16 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 
 	res, err := tu.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "[ nodesForPulse ] Can't get node of 'light' role")
 	}
+
+	// we have to go to heavy when we get up on existing ledger
+	heavy, err := tu.Nodes.InRole(pulse, insolar.StaticRoleHeavyMaterial)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodesForPulse ] Can't get node of 'heavy' role")
+	}
+
+	res = append(res, heavy...)
 
 	me := tu.coordinator.Me()
 	for i := range res {
