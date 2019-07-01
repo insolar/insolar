@@ -101,7 +101,7 @@ type ClientMock struct {
 	RegisterValidationPreCounter uint64
 	RegisterValidationMock       mClientMockRegisterValidation
 
-	StateFunc       func() (r []byte, r1 error)
+	StateFunc       func() (r []byte)
 	StateCounter    uint64
 	StatePreCounter uint64
 	StateMock       mClientMockState
@@ -2484,8 +2484,7 @@ type ClientMockStateExpectation struct {
 }
 
 type ClientMockStateResult struct {
-	r  []byte
-	r1 error
+	r []byte
 }
 
 //Expect specifies that invocation of Client.State is expected from 1 to Infinity times
@@ -2501,14 +2500,14 @@ func (m *mClientMockState) Expect() *mClientMockState {
 }
 
 //Return specifies results of invocation of Client.State
-func (m *mClientMockState) Return(r []byte, r1 error) *ClientMock {
+func (m *mClientMockState) Return(r []byte) *ClientMock {
 	m.mock.StateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockStateExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockStateResult{r, r1}
+	m.mainExpectation.result = &ClientMockStateResult{r}
 	return m.mock
 }
 
@@ -2523,12 +2522,12 @@ func (m *mClientMockState) ExpectOnce() *ClientMockStateExpectation {
 	return expectation
 }
 
-func (e *ClientMockStateExpectation) Return(r []byte, r1 error) {
-	e.result = &ClientMockStateResult{r, r1}
+func (e *ClientMockStateExpectation) Return(r []byte) {
+	e.result = &ClientMockStateResult{r}
 }
 
 //Set uses given function f as a mock of Client.State method
-func (m *mClientMockState) Set(f func() (r []byte, r1 error)) *ClientMock {
+func (m *mClientMockState) Set(f func() (r []byte)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2537,7 +2536,7 @@ func (m *mClientMockState) Set(f func() (r []byte, r1 error)) *ClientMock {
 }
 
 //State implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) State() (r []byte, r1 error) {
+func (m *ClientMock) State() (r []byte) {
 	counter := atomic.AddUint64(&m.StatePreCounter, 1)
 	defer atomic.AddUint64(&m.StateCounter, 1)
 
@@ -2554,7 +2553,6 @@ func (m *ClientMock) State() (r []byte, r1 error) {
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -2567,7 +2565,6 @@ func (m *ClientMock) State() (r []byte, r1 error) {
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}

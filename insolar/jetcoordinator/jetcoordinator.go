@@ -93,38 +93,42 @@ func (jc *Coordinator) QueryRole(
 ) ([]insolar.Reference, error) {
 	switch role {
 	case insolar.DynamicRoleVirtualExecutor:
-		node, err := jc.VirtualExecutorForObject(ctx, objID, pulse)
+		n, err := jc.VirtualExecutorForObject(ctx, objID, pulse)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "calc DynamicRoleVirtualExecutor for object %v failed", objID.String())
 		}
-		return []insolar.Reference{*node}, nil
+		return []insolar.Reference{*n}, nil
 
 	case insolar.DynamicRoleVirtualValidator:
 		return jc.VirtualValidatorsForObject(ctx, objID, pulse)
 
 	case insolar.DynamicRoleLightExecutor:
 		if objID.Pulse() == insolar.PulseNumberJet {
-			node, err := jc.LightExecutorForJet(ctx, objID, pulse)
+			n, err := jc.LightExecutorForJet(ctx, objID, pulse)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "calc DynamicRoleLightExecutor for object %v failed", objID.String())
 			}
-			return []insolar.Reference{*node}, nil
+			return []insolar.Reference{*n}, nil
 		}
-		node, err := jc.LightExecutorForObject(ctx, objID, pulse)
+		n, err := jc.LightExecutorForObject(ctx, objID, pulse)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "calc LightExecutorForObject for object %v failed", objID.String())
 		}
-		return []insolar.Reference{*node}, nil
+		return []insolar.Reference{*n}, nil
 
 	case insolar.DynamicRoleLightValidator:
-		return jc.LightValidatorsForObject(ctx, objID, pulse)
+		ref, err := jc.LightValidatorsForObject(ctx, objID, pulse)
+		if err != nil {
+			return nil, errors.Wrapf(err, "calc DynamicRoleLightValidator for object %v failed", objID.String())
+		}
+		return ref, nil
 
 	case insolar.DynamicRoleHeavyExecutor:
-		node, err := jc.Heavy(ctx, pulse)
+		n, err := jc.Heavy(ctx, pulse)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "calc DynamicRoleHeavyExecutor for pulse %v failed", pulse.String())
 		}
-		return []insolar.Reference{*node}, nil
+		return []insolar.Reference{*n}, nil
 	}
 
 	panic("unexpected role")
@@ -147,7 +151,7 @@ func (jc *Coordinator) VirtualValidatorsForObject(
 ) ([]insolar.Reference, error) {
 	nodes, err := jc.virtualsForObject(ctx, objID, pulse, VirtualValidatorCount+VirtualExecutorCount)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "calc VirtualValidatorsForObject for object %v failed", objID.String())
 	}
 	// Skipping `VirtualExecutorCount` for validators
 	// because it will be selected as the executor(s) for the same pulse.

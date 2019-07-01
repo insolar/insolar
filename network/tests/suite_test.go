@@ -465,10 +465,10 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist
 }
 
 type staterMock struct {
-	stateFunc func() ([]byte, error)
+	stateFunc func() []byte
 }
 
-func (m staterMock) State() ([]byte, error) {
+func (m staterMock) State() []byte {
 	return m.stateFunc()
 }
 
@@ -497,12 +497,12 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
-	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager, false)
+	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	s.Require().NoError(err)
 
 	amMock := staterMock{
-		stateFunc: func() ([]byte, error) {
-			return make([]byte, packets.HashLength), nil
+		stateFunc: func() []byte {
+			return make([]byte, packets.HashLength)
 		},
 	}
 
