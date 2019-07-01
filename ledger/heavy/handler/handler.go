@@ -91,8 +91,8 @@ func New() *Handler {
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-	parentspan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
-	ctx = instracer.WithParentSpan(ctx, parentspan)
+	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	ctx = instracer.WithParentSpan(ctx, parentSpan)
 
 	for k, v := range msg.Metadata {
 		ctx, _ = inslogger.WithField(ctx, k, v)

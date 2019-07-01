@@ -100,8 +100,8 @@ func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.
 
 	ctx := context.Background()
 	ctx = inslogger.ContextWithTrace(ctx, watermillMsg.Metadata.Get(wmBus.MetaTraceID))
-	parentspan := instracer.MustDeserialize([]byte(watermillMsg.Metadata.Get(wmBus.MetaSpanData)))
-	ctx = instracer.WithParentSpan(ctx, parentspan)
+	parentSpan := instracer.MustDeserialize([]byte(watermillMsg.Metadata.Get(wmBus.MetaSpanData)))
+	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	logger := inslogger.FromContext(ctx)
 	go func() {
 		f := thread.NewThread(msg, d.controller)
@@ -133,8 +133,8 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	}
 	ctx = pulse.ContextWith(ctx, pn)
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
-	parentspan := instracer.MustDeserialize([]byte(msg.Metadata.Get(wmBus.MetaSpanData)))
-	ctx = instracer.WithParentSpan(ctx, parentspan)
+	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(wmBus.MetaSpanData)))
+	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
 		f := thread.NewThread(msgBus, d.controller)
 		handle := d.getHandleByPulse(pn)

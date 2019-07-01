@@ -366,8 +366,8 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-	parentspan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
-	ctx = instracer.WithParentSpan(ctx, parentspan)
+	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	ctx = instracer.WithParentSpan(ctx, parentSpan)
 
 	err := n.sendMessage(ctx, msg)
 	if err != nil {
