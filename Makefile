@@ -8,6 +8,7 @@ INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
+SIMPLEREQUESTER = simplerequester
 HEALTHCHECK = healthcheck
 
 ALL_PACKAGES = ./...
@@ -126,6 +127,10 @@ $(PULSEWATCHER):
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
 	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
+
+.PHONY: $(SIMPLEREQUESTER)
+$(SIMPLEREQUESTER):
+	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/simplerequester/*.go
 
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
