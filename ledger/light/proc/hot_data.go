@@ -108,7 +108,7 @@ func (p *HotData) process(ctx context.Context) error {
 			continue
 		}
 
-		objJetID, _ := p.Dep.JetStorage.ForID(ctx, messagePulse, meta.ObjID)
+		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.msg.PulseNumber, meta.ObjID)
 		if objJetID != jetID {
 			logger.Warn("received wrong id")
 			continue
@@ -117,7 +117,7 @@ func (p *HotData) process(ctx context.Context) error {
 		decodedIndex.JetID = jetID
 		err = p.Dep.IndexModifier.SetIndex(
 			ctx,
-			messagePulse,
+			p.msg.PulseNumber,
 			object.FilamentIndex{
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
@@ -134,7 +134,7 @@ func (p *HotData) process(ctx context.Context) error {
 		go p.notifyPending(ctx, meta.ObjID, decodedIndex, pendingNotifyPulse.PulseNumber)
 	}
 
-	p.Dep.JetFetcher.Release(ctx, jetID, messagePulse)
+	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
 
 	p.replyTo <- bus.Reply{Reply: &reply.OK{}}
 

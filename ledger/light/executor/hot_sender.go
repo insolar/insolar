@@ -60,7 +60,7 @@ func NewHotSender(
 ) *HotSenderDefault {
 	return &HotSenderDefault{
 		bus:             bus,
-		dropAccessor:        dropAccessor,
+		dropAccessor:    dropAccessor,
 		indexAccessor:   indexAccessor,
 		pulseCalculator: pulseCalculator,
 		jetAccessor:     jetAccessor,
