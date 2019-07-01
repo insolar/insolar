@@ -18,7 +18,6 @@ package messagebus
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -193,7 +192,6 @@ func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugS
 			retries := retriesCount
 			var lastPulse insolar.PulseNumber
 			for retries >= 0 {
-				fmt.Println("retry bc of incorrect pulse for ", inslogger.TraceID(ctx))
 
 				currentPulse, err := accessor.Latest(ctx)
 				if err != nil {

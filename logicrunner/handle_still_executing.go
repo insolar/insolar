@@ -18,7 +18,6 @@ package logicrunner
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -37,7 +36,6 @@ type HandleStillExecuting struct {
 }
 
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
-	fmt.Println("start reply now love")
 	ctx = loggerWithTargetID(ctx, h.Parcel)
 	lr := h.dep.lr
 	inslogger.FromContext(ctx).Debug("HandleStillExecuting.Present starts ...")
@@ -49,9 +47,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 
 	inslogger.FromContext(ctx).Debug("Got information that ", ref, " is still executing")
 
-	fmt.Println("before lock for reply now love")
 	os.Lock()
-	fmt.Println("after lock for reply now love")
 	if os.ExecutionState == nil {
 		// we are first, strange, soon ExecuteResults message should come
 		os.ExecutionState = NewExecutionState(*ref)
@@ -72,7 +68,6 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		es.Unlock()
 	}
 	os.Unlock()
-	fmt.Println("do reply now love")
 	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 
 	return nil

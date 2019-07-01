@@ -53,7 +53,6 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -395,9 +394,6 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
-		if msg == nil {
-			fmt.Println("SendMessageHandler, get nil msg")
-		}
 		err := n.Pub.Publish(bus.TopicIncoming, msg)
 		if err != nil {
 			return errors.Wrap(err, "error while publish msg to TopicIncoming")
@@ -408,7 +404,6 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	if err != nil {
 		return errors.Wrap(err, "error while converting message to bytes")
 	}
-	// ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
 	res, err := n.RPC.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
 	if err != nil {
 		return errors.Wrap(err, "error while sending watermillMsg to controller")
@@ -434,10 +429,6 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 	logger = inslogger.FromContext(ctx)
 	if inslogger.TraceID(ctx) != msg.Metadata.Get(bus.MetaTraceID) {
 		logger.Errorf("traceID from context (%s) is different from traceID from message Metadata (%s)", inslogger.TraceID(ctx), msg.Metadata.Get(bus.MetaTraceID))
-	}
-	// TODO: check pulse here
-	if msg == nil {
-		fmt.Println("processIncoming, get nil msg")
 	}
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)

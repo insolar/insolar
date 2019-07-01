@@ -159,8 +159,7 @@ func InitHandlers(lr *LogicRunner, s bus.Sender) (*watermillMsg.Router, error) {
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
 		return &Init{
-			dep: dep,
-			// TODO: use wm.Message instead of bus.Message
+			dep:     dep,
 			Message: msg,
 		}
 	}
@@ -254,12 +253,9 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
-	lr.RegisterHandlers()
 
 	return nil
 }
-
-func (lr *LogicRunner) RegisterHandlers() {}
 
 // Stop stops logic runner component and its executors
 func (lr *LogicRunner) Stop(ctx context.Context) error {
