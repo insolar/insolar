@@ -46,7 +46,7 @@ func NewNodeService(runner *Runner) *NodeService {
 
 // Get returns new active seed.
 //
-//   IncomingRequest structure:
+//   Request structure:
 //   {
 //     "jsonrpc": "2.0",
 //     "method": "node.GetSeed",

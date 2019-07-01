@@ -92,7 +92,7 @@ func (f *future) Receiver() *host.Host {
 	return f.receiver
 }
 
-// IncomingRequest returns original request packet.
+// Request returns original request packet.
 func (f *future) Request() network.Packet {
 	return f.request
 }

@@ -79,7 +79,7 @@ func (cb *CaseBind) getCaseBindForMessage(_ context.Context) []message.CaseBindR
 	//	}
 	//	requests[i] = message.CaseBindRequest{
 	//		Parcel:         req.Parcel,
-	//		IncomingRequest:        req.IncomingRequest,
+	//		Request:        req.Request,
 	//		MessageBusTape: buf.Bytes(),
 	//		Reply:          req.Reply,
 	//		Error:          req.Error,
@@ -161,7 +161,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, c
 	//	sender := request.Parcel.GetSender()
 	//	vs.Current = &CurrentExecution{
 	//		Context:       ctx,
-	//		IncomingRequest:       &request.IncomingRequest,
+	//		Request:       &request.Request,
 	//		RequesterNode: &sender,
 	//	}
 	//

@@ -656,7 +656,7 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 //
-// IncomingRequest reference will be this object's identifier and referred as "object head".
+// Request reference will be this object's identifier and referred as "object head".
 func (m *client) ActivatePrototype(
 	ctx context.Context,
 	object, parent, code insolar.Reference,
@@ -679,7 +679,7 @@ func (m *client) ActivatePrototype(
 // ActivateObject creates activate object record in storage. Provided prototype reference will be used as objects prototype
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 //
-// IncomingRequest reference will be this object's identifier and referred as "object head".
+// Request reference will be this object's identifier and referred as "object head".
 func (m *client) ActivateObject(
 	ctx context.Context,
 	object, parent, prototype insolar.Reference,

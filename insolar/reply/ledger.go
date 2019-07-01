@@ -120,7 +120,7 @@ func (r *Jet) Type() insolar.ReplyType {
 	return TypeJet
 }
 
-// IncomingRequest contains jet.
+// Request contains jet.
 type Request struct {
 	ID     insolar.ID
 	Record []byte

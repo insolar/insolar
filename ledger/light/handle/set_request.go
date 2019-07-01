@@ -60,7 +60,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	virtual := record.Virtual{}
 	err = virtual.Unmarshal(msg.Request)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal IncomingRequest record")
+		return errors.Wrap(err, "failed to unmarshal Request record")
 	}
 
 	rec := record.Unwrap(&virtual)

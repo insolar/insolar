@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// IncomingRequest is a representation of request struct to api
+// Request is a representation of request struct to api
 type Request struct {
 	JSONRPC  string `json:"jsonrpc"`
 	ID       int    `json:"id"`

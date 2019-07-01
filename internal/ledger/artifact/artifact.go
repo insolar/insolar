@@ -45,7 +45,7 @@ type Manager interface {
 	// ActivateObject creates activate object record in storage.
 	// If memory is not provided, the prototype default memory will be used.
 	//
-	// IncomingRequest reference will be this object's identifier and referred as "object head".
+	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(
 		ctx context.Context,
 		domain, obj, parent, prototype insolar.Reference,
@@ -158,7 +158,7 @@ func (m *Scope) RegisterResult(
 // ActivateObject creates activate object record in storage.
 // If memory is not provided, the prototype default memory will be used.
 //
-// IncomingRequest reference will be this object's identifier and referred as "object head".
+// Request reference will be this object's identifier and referred as "object head".
 func (m *Scope) ActivateObject(
 	ctx context.Context,
 	domain, obj, parent, prototype insolar.Reference,
