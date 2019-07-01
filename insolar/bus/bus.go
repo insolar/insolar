@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
@@ -51,6 +52,9 @@ const (
 
 	// MetaTraceID is key for traceID
 	MetaTraceID = "TraceID"
+
+	// MetaSpanData is key for a span data
+	MetaSpanData = "SpanData"
 )
 
 const (
@@ -157,6 +161,7 @@ func (b *Bus) SendTarget(
 	logger := inslogger.FromContext(ctx)
 
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+	msg.Metadata.Set(MetaSpanData, string(instracer.MustSerialize(ctx)))
 	msg.SetContext(ctx)
 	wrapped, err := b.wrapMeta(msg, target, payload.MessageHash{})
 	if err != nil {
@@ -231,6 +236,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	replyHash := wrapped.ID
 
 	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+	reply.Metadata.Set(MetaSpanData, string(instracer.MustSerialize(ctx)))
 	reply.SetContext(ctx)
 
 	logger.Debugf("sending reply %s", base58.Encode(replyHash))
