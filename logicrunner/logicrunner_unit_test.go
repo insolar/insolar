@@ -310,7 +310,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			parcel := testutils.NewParcelMock(t)
 			if test.message {
 				parcel.TypeMock.ExpectOnce().Return(insolar.TypeCallMethod)
-				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: test.callType}})
+				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{IncomingRequest: record.IncomingRequest{CallType: test.callType}})
 			}
 			es := NewExecutionState(objectRef)
 			es.pending = test.inState
@@ -335,7 +335,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	suite.T().Run("method call, AM error", func(t *testing.T) {
 		parcel := testutils.NewParcelMock(t)
 		parcel.TypeMock.Expect().Return(insolar.TypeCallMethod)
-		parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: record.CTMethod}})
+		parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{IncomingRequest: record.IncomingRequest{CallType: record.CTMethod}})
 
 		es := NewExecutionState(objectRef)
 		es.pending = message.PendingUnknown
@@ -585,7 +585,7 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 
 	objectRef := testutils.RandomRef()
 	msg := &message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			ReturnMode:   record.ReturnResult,
 			Object:       &objectRef,
 			APIRequestID: reqIdA,
@@ -593,13 +593,13 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	}
 	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &Transcript{
-		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdA},
+		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult, APIRequestID: reqIdA},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().True(loop)
 
 	es.CurrentList.Set(msg.GetReference(), &Transcript{
-		Request: &record.Request{ReturnMode: record.ReturnResult, APIRequestID: reqIdB},
+		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult, APIRequestID: reqIdB},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
@@ -608,14 +608,14 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	es.CurrentList.Cleanup()
 
 	msg = &message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			ReturnMode: record.ReturnNoWait,
 			Object:     &objectRef,
 		},
 	}
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &Transcript{
-		Request: &record.Request{ReturnMode: record.ReturnResult},
+		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
@@ -623,14 +623,14 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
 	es.CurrentList.Set(msg.GetReference(), &Transcript{
-		Request: &record.Request{ReturnMode: record.ReturnNoWait},
+		Request: &record.IncomingRequest{ReturnMode: record.ReturnNoWait},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 	es.CurrentList.Cleanup()
 
 	es.CurrentList.Set(msg.GetReference(), &Transcript{
-		Request: &record.Request{ReturnMode: record.ReturnNoWait},
+		Request: &record.IncomingRequest{ReturnMode: record.ReturnNoWait},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
@@ -735,7 +735,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 
 	suite.mm.Executors[insolar.MachineTypeBuiltin] = mle
 
-	request := &record.Request{
+	request := &record.IncomingRequest{
 		Object: &randRef,
 		Method: "some",
 	}
@@ -980,7 +980,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	suite.am.HasPendingRequestsMock.Return(false, nil)
 
-	suite.am.RegisterRequestMock.Set(func(ctx context.Context, r record.Request) (*insolar.ID, error) {
+	suite.am.RegisterRequestMock.Set(func(ctx context.Context, r record.IncomingRequest) (*insolar.ID, error) {
 		reqId := testutils.RandomID()
 		return &reqId, nil
 	})
@@ -1007,7 +1007,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	for i := 0; i < num; i++ {
 		go func(i int) {
 			msg := &message.CallMethod{
-				Request: record.Request{
+				IncomingRequest: record.IncomingRequest{
 					Prototype:    &protoRef,
 					Object:       &objectRef,
 					Method:       "some",
@@ -1148,7 +1148,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			if test.when > whenIsAuthorized {
-				suite.am.RegisterRequestFunc = func(ctx context.Context, req record.Request) (*insolar.ID, error) {
+				suite.am.RegisterRequestFunc = func(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
 					if test.when == whenRegisterRequest {
 						changePulse()
 						// Due to specific implementation of HandleCall.handleActual
@@ -1259,7 +1259,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			msg := &message.CallMethod{
-				Request: record.Request{
+				IncomingRequest: record.IncomingRequest{
 					Prototype: &protoRef,
 					Object:    &objectRef,
 					Method:    "some",
@@ -1346,7 +1346,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 
 	// prepare all three requests
 	mutableMsg := message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			ReturnMode:   record.ReturnResult,
 			Object:       &objectRef,
 			APIRequestID: utils.RandTraceID(),
@@ -1357,7 +1357,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	mutableTranscript := NewTranscript(s.ctx, mutableParcel, &mutableRequestRef, &pulseObject, parentRef)
 
 	immutableMsg1 := message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			ReturnMode:   record.ReturnResult,
 			Object:       &objectRef,
 			APIRequestID: utils.RandTraceID(),
@@ -1368,7 +1368,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
 
 	immutableMsg2 := message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			ReturnMode:   record.ReturnResult,
 			Object:       &objectRef,
 			APIRequestID: utils.RandTraceID(),
@@ -1493,7 +1493,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 
 	immutableMsg1 := message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			ReturnMode:   record.ReturnResult,
 			Object:       &objectRef,
 			APIRequestID: utils.RandTraceID(),
@@ -1504,7 +1504,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
 
 	immutableMsg2 := message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			ReturnMode:   record.ReturnResult,
 			Object:       &objectRef,
 			APIRequestID: utils.RandTraceID(),
@@ -1847,7 +1847,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 	es.Broker.Put(s.ctx, false, &Transcript{
 		FromLedger:   true,
 		LogicContext: &insolar.LogicCallContext{Immutable: false},
-		RequestRef: &reqRef},
+		RequestRef:   &reqRef},
 	)
 
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
@@ -1906,11 +1906,11 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	es := NewExecutionState(s.ref)
 	es.LedgerHasMoreRequests = true
 
-	testRequestRef := record.Request{Object: &s.ref}
+	testRequestRef := record.IncomingRequest{Object: &s.ref}
 
 	parcel := &message.Parcel{
 		PulseNumber: s.oldRequestPulseNumber,
-		Msg:         &message.CallMethod{Request: testRequestRef},
+		Msg:         &message.CallMethod{IncomingRequest: testRequestRef},
 	}
 	s.am.GetPendingRequestMock.Return(testRequestRef.Object, parcel, nil)
 

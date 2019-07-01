@@ -36,7 +36,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentModifier -o ./ -s _mock.go
 
 type FilamentModifier interface {
-	SetRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.Request) error
+	SetRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.IncomingRequest) error
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) error
 }
 
@@ -79,7 +79,7 @@ type FilamentModifierDefault struct {
 	pcs        insolar.PlatformCryptographyScheme
 }
 
-func (m *FilamentModifierDefault) SetRequest(ctx context.Context, requestID insolar.ID, jetID insolar.JetID, request record.Request) error {
+func (m *FilamentModifierDefault) SetRequest(ctx context.Context, requestID insolar.ID, jetID insolar.JetID, request record.IncomingRequest) error {
 	if requestID.IsEmpty() {
 		return errors.New("request id is empty")
 	}
@@ -308,7 +308,7 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 
 		virtual := record.Unwrap(rec.Record.Virtual)
 		switch r := virtual.(type) {
-		case *record.Request:
+		case *record.IncomingRequest:
 			if _, ok := hasResult[rec.RecordID]; !ok {
 				pending = append(pending, rec.RecordID)
 			}

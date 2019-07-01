@@ -317,7 +317,7 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 
 	virtRec := rec.Virtual
 	concrete := record.Unwrap(virtRec)
-	_, ok := concrete.(*record.Request)
+	_, ok := concrete.(*record.IncomingRequest)
 	if !ok {
 		return nil, errors.New("failed to decode request")
 	}
