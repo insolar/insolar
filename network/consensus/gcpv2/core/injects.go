@@ -76,19 +76,29 @@ type ConsensusController interface {
 	/* Ungraceful stop */
 	Abort()
 	/* Graceful exit, actual moment of leave will be indicated via Upstream */
-	RequestLeave()
+	//RequestLeave()
 
 	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
 	GetActivePowerLimit() (common2.MemberPower, common.PulseNumber)
-	/* Returns the last request power limit and pulse number when it could be applied. Without active population pulse number will be 0. */
-	GetRequestedPowerLimit() common2.MemberPower
-	/* Will set requested power accordingly to the level requested here and allowed for this node. */
-	AdjustPowerLimit(pwl MemberPowerLevel)
 }
 
-type ConsensusFeeder interface {
-	PickJoinCandidate()
-	RemoveJoinCandidate()
+type CandidateProfile packets.FullIntroductionReader
+
+type CandidateControlFeeder interface {
+	PickNextJoinCandidate() CandidateProfile
+	RemoveJoinCandidate(candidateAdded bool, nodeID common.ShortNodeID) bool
+}
+
+type ConsensusControlFeeder interface {
+	//To Be used
+
+	GetRequiredPowerLevel() MemberPowerLevel
+	OnAppliedPowerLevel(pwl MemberPowerLevel, pw common2.MemberPower, effectiveSince common.PulseNumber)
+
+	GetRequiredGracefulLeave() (bool, uint32)
+	OnAppliedGracefulLeave(exitCode uint32, effectiveSince common.PulseNumber)
+
+	//OnAppliedPopulation()
 }
 
 type MemberPowerLevel uint8
@@ -107,7 +117,7 @@ type RoundController interface {
 }
 
 type RoundControllerFactory interface {
-	CreateConsensusRound(chronicle census.ConsensusChronicles, requestedPower common2.MemberPower) RoundController
+	CreateConsensusRound(chronicle census.ConsensusChronicles, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder) RoundController
 	GetLocalConfiguration() LocalNodeConfiguration
 }
 

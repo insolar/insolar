@@ -83,10 +83,16 @@ func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicle
 	ctx := network.ctx
 	// &EmuConsensusStrategy{ctx: ctx}
 	upstream := NewEmuUpstreamPulseController(ctx, defaultNshGenerationDelay)
-	var strategyFactory core.RoundStrategyFactory = &EmuRoundStrategyFactory{}
+	strategyFactory := &EmuRoundStrategyFactory{}
+	candidateFeeder := &core.SequencialCandidateFeeder{}
+	controlFeeder := &EmuControlFeeder{}
 
-	h.controller = gcpv2.NewConsensusMemberController(chronicles, upstream,
-		core.NewPhasedRoundControllerFactory(config, NewEmuTransport(h), strategyFactory))
+	h.controller = gcpv2.NewConsensusMemberController(
+		chronicles, upstream,
+		core.NewPhasedRoundControllerFactory(config, NewEmuTransport(h), strategyFactory),
+		candidateFeeder,
+		controlFeeder,
+	)
 
 	h.inbound, h.outbound = network.AddHost(ctx, h.hostAddr)
 	go h.run(ctx)
@@ -190,4 +196,22 @@ func (*EmuRoundStrategy) IsEphemeralPulseAllowed() bool {
 }
 
 func (*EmuRoundStrategy) AdjustConsensusTimings(timings *common2.RoundTimings) {
+}
+
+var _ core.ConsensusControlFeeder = &EmuControlFeeder{}
+
+type EmuControlFeeder struct{}
+
+func (*EmuControlFeeder) GetRequiredPowerLevel() core.MemberPowerLevel {
+	return core.PowerLevelFull
+}
+
+func (*EmuControlFeeder) OnAppliedPowerLevel(pwl core.MemberPowerLevel, pw common2.MemberPower, effectiveSince common.PulseNumber) {
+}
+
+func (*EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
+	return false, 0
+}
+
+func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince common.PulseNumber) {
 }

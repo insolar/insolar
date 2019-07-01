@@ -53,7 +53,6 @@ package core
 import (
 	"context"
 	"fmt"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"sync"
 	"time"
 
@@ -78,11 +77,12 @@ type PhasedRoundController struct {
 }
 
 func NewPhasedRoundController(strategy RoundStrategy, chronicle census.ConsensusChronicles, transport TransportFactory,
-	config LocalNodeConfiguration, requestedPower common2.MemberPower) *PhasedRoundController {
+	config LocalNodeConfiguration, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder) *PhasedRoundController {
 
 	r := &PhasedRoundController{chronicle: chronicle}
-	r.realm.coreRealm.init(&r.rw, strategy, transport, config, chronicle.GetLatestCensus(), requestedPower)
-	r.realm.init(transport)
+
+	r.realm.coreRealm.init(&r.rw, strategy, transport, config, chronicle.GetLatestCensus(), controlFeeder.GetRequiredPowerLevel())
+	r.realm.init(transport, controlFeeder, candidateFeeder)
 
 	return r
 }

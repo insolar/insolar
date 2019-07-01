@@ -68,8 +68,10 @@ type FullRealm struct {
 	nodeContext
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
-	packetBuilder PacketBuilder
-	packetSender  PacketSender
+	packetBuilder   PacketBuilder
+	packetSender    PacketSender
+	controlFeeder   ConsensusControlFeeder
+	candidateFeeder CandidateControlFeeder
 
 	handlers []packetDispatcher
 
@@ -91,9 +93,11 @@ func (r *FullRealm) GetPacketBuilder() PacketBuilder {
 	return r.packetBuilder
 }
 
-func (r *FullRealm) init(transport TransportFactory) {
+func (r *FullRealm) init(transport TransportFactory, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder) {
 	r.packetSender = transport.GetPacketSender()
 	r.packetBuilder = transport.GetPacketBuilder(r.signer)
+	r.controlFeeder = controlFeeder
+	r.candidateFeeder = candidateFeeder
 }
 
 /* LOCK - runs under RoundController lock */

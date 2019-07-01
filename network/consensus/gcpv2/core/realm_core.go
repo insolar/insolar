@@ -99,7 +99,7 @@ type coreRealm struct {
 }
 
 func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport TransportFactory,
-	config LocalNodeConfiguration, initialCensus census.OperationalCensus, requestedPower common2.MemberPower) {
+	config LocalNodeConfiguration, initialCensus census.OperationalCensus, requestedPower MemberPowerLevel) {
 
 	r.hLocker = hLocker
 
@@ -121,13 +121,29 @@ func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport Tran
 	*/
 	nodeContext := &nodeContext{}
 	r.self = NewNodeAppearanceAsSelf(population.GetLocalProfile(), nodeContext)
-	r.self.requestedPower = requestedPower
+	r.self.requestedPower = r._toPowerLimit(requestedPower)
 
 	nodeContext.initPrep(
 		func(report errors.MisbehaviorReport) interface{} {
 			r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
+}
+
+func (*coreRealm) _toPowerLimit(pwl MemberPowerLevel) common2.MemberPower {
+	//TODO HACK - this is a simplified logic, must use node profile
+	switch pwl {
+	case PowerLevelZero:
+		return common2.MemberPowerOf(0)
+	case PowerLevelMinimal:
+		return common2.MemberPowerOf(25)
+	case PowerLevelReduced:
+		return common2.MemberPowerOf(75)
+	case PowerLevelFull:
+		return common2.MemberPowerOf(100)
+	default:
+		panic("illegal value")
+	}
 }
 
 func (r *coreRealm) GetStrategy() RoundStrategy {
