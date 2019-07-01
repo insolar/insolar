@@ -89,13 +89,13 @@ type synclist struct {
 }
 
 type testlock struct {
-	lock     IDLocker
+	lock     IndexLocker
 	synclist *synclist
 }
 
 func newtestlocker() *testlock {
 	return &testlock{
-		lock:     NewIDLocker(),
+		lock:     NewIndexLocker(),
 		synclist: &synclist{list: []string{}},
 	}
 }

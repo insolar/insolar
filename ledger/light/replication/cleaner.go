@@ -102,13 +102,13 @@ func (c *LightCleaner) clean(ctx context.Context) {
 
 		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, c.lightChainLimit)
 		if err == pulse.ErrNotFound {
-			logger.Errorf("[Cleaner][NotifyAboutPulse] expiredPn for pn - %v doesn't exist. limit - %v", pn, c.lightChainLimit)
+			logger.Warnf("[Cleaner][NotifyAboutPulse] expiredPn for pn - %v doesn't exist. limit - %v",
+				pn, c.lightChainLimit)
 			continue
 		}
 		if err != nil {
 			panic(err)
 		}
-
 		c.cleanPulse(ctx, expiredPn.PulseNumber)
 	}
 }

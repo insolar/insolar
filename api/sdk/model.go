@@ -20,12 +20,14 @@ package sdk
 type Member struct {
 	Reference  string
 	PrivateKey string
+	PublicKey  string
 }
 
 // NewMember creates new Member
-func NewMember(ref string, key string) *Member {
+func NewMember(ref string, privateKey string, publicKey string) *Member {
 	return &Member{
 		Reference:  ref,
-		PrivateKey: key,
+		PrivateKey: privateKey,
+		PublicKey:  publicKey,
 	}
 }

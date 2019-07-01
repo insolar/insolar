@@ -98,13 +98,15 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, SetResult fails because it should update light's index state
-	idx := proc.NewGetIndexWM(*request.Object.Record(), objJetID, s.message)
-	s.dep.GetIndexWM(idx)
-	if err := f.Procedure(ctx, idx, false); err != nil {
-		return errors.Wrap(err, "can't get index")
+	if request.CallType == record.CTMethod {
+		getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
+		s.dep.GetIndexWM(getIndex)
+		if err := f.Procedure(ctx, getIndex, false); err != nil {
+			return err
+		}
 	}
 
-	setRequest := proc.NewSetRequest(s.message, virtual, reqID, objJetID)
+	setRequest := proc.NewSetRequest(s.message, *request, reqID, objJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }
