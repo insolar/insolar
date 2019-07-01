@@ -70,7 +70,7 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 
 	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "lifeline not found")
+	require.Contains(t, err.Error(), "index not found")
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldSecondBalance, newSecondBalance)
@@ -84,7 +84,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 
 	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": testutils.RandomRef().String()})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "lifeline not found")
+	require.Contains(t, err.Error(), "index not found")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)
