@@ -23,7 +23,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -62,12 +61,6 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal meta")
 	}
-	payloadType, err := payload.UnmarshalType(meta.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload type")
-	}
-
-	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	parcel, err := insolarMsg.DeserializeParcel(bytes.NewBuffer(meta.Payload))
 	if err != nil {
@@ -131,25 +124,11 @@ type InnerInit struct {
 }
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
-	var err error
-
-	meta := payload.Meta{}
-	err = meta.Unmarshal(s.Message.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal meta")
-	}
-	payloadType, err := payload.UnmarshalType(meta.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload type")
-	}
-
-	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
-
 	switch s.Message.Metadata.Get(bus.MetaType) {
 	case getLedgerPendingRequestMsg:
 		h := GetLedgerPendingRequest{
 			dep:     s.dep,
-			Message: meta,
+			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
 	default:

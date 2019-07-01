@@ -19,10 +19,10 @@ package logicrunner
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
@@ -30,7 +30,7 @@ import (
 type GetLedgerPendingRequest struct {
 	dep *Dependencies
 
-	Message payload.Meta
+	Message *watermillMsg.Message
 }
 
 func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) error {
