@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
@@ -329,56 +330,52 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 
 func (b *Bus) CheckPulse(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		// ctx, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
-		// meta := payload.Meta{}
-		// err := meta.Unmarshal(msg.Payload)
-		// if err != nil {
-		// 	logger.Error(errors.Wrap(err, "can't deserialize meta payload"))
-		// }
-		// ctx, _ = inslogger.WithField(ctx, "pulse", fmt.Sprint(meta.Pulse))
-		//
-		// ctx, span := instracer.StartSpan(ctx, "Sender.checkPulse")
-		// defer span.End()
-		//
-		// latestPulse, err := b.pulses.Latest(ctx)
-		// if err != nil {
-		// 	return nil, errors.Wrap(err, "failed to fetch pulse")
-		// }
-		//
-		// if meta.Pulse < latestPulse.PulseNumber {
-		// 	msgType := msg.Metadata.Get(MetaType)
-		// 	if meta.Pulse < latestPulse.PrevPulseNumber {
-		// 		inslogger.FromContext(ctx).Errorf(
-		// 			"[ checkPulse ] Pulse is TOO OLD: (message: %d, current: %d) Message is: %#v",
-		// 			meta.Pulse, latestPulse.PulseNumber, msgType,
-		// 		)
-		// 	}
-		//
-		// 	// Message is from past. Return error for some messages, allow for others.
-		// 	switch msgType {
-		// 	case
-		// 		insolar.TypeGetObject.String(),
-		// 		insolar.TypeGetDelegate.String(),
-		// 		insolar.TypeGetChildren.String(),
-		// 		insolar.TypeSetRecord.String(),
-		// 		insolar.TypeUpdateObject.String(),
-		// 		insolar.TypeRegisterChild.String(),
-		// 		insolar.TypeSetBlob.String(),
-		// 		insolar.TypeGetPendingRequests.String(),
-		// 		insolar.TypeValidateRecord.String(),
-		// 		insolar.TypeHotRecords.String(),
-		// 		insolar.TypeCallMethod.String():
-		// 		err := errors.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", meta.Pulse, latestPulse.PulseNumber, msgType)
-		// 		inslogger.FromContext(ctx).Error(err)
-		// 		meta := payload.Meta{}
-		// 		err = meta.Unmarshal(msg.Payload)
-		// 		if err != nil {
-		// 			return nil, errors.Wrap(err, "failed to unmarshal meta")
-		// 		}
-		// 		b.Reply(ctx, meta, ErrorAsMessage(ctx, err))
-		// 		return nil, fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", meta.Pulse, latestPulse.PulseNumber, msgType)
-		// 	}
-		// }
+		ctx, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
+		meta := payload.Meta{}
+		err := meta.Unmarshal(msg.Payload)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "can't deserialize meta payload in middleware"))
+		}
+		ctx, _ = inslogger.WithField(ctx, "pulse", fmt.Sprint(meta.Pulse))
+
+		ctx, span := instracer.StartSpan(ctx, "Sender.checkPulse")
+		defer span.End()
+
+		latestPulse, err := b.pulses.Latest(ctx)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "failed to fetch pulse in middleware"))
+			return nil, nil
+		}
+
+		if meta.Pulse < latestPulse.PulseNumber {
+			msgType := msg.Metadata.Get(MetaType)
+			if meta.Pulse < latestPulse.PrevPulseNumber {
+				inslogger.FromContext(ctx).Errorf(
+					"[ checkPulse ] Pulse is TOO OLD in middleware: (message: %d, current: %d) Message is: %#v",
+					meta.Pulse, latestPulse.PulseNumber, msgType,
+				)
+			}
+
+			// Message is from past. Return error for some messages, allow for others.
+			switch msgType {
+			case
+				insolar.TypeGetObject.String(),
+				insolar.TypeGetDelegate.String(),
+				insolar.TypeGetChildren.String(),
+				insolar.TypeSetRecord.String(),
+				insolar.TypeUpdateObject.String(),
+				insolar.TypeRegisterChild.String(),
+				insolar.TypeSetBlob.String(),
+				insolar.TypeGetPendingRequests.String(),
+				insolar.TypeValidateRecord.String(),
+				insolar.TypeHotRecords.String(),
+				insolar.TypeCallMethod.String():
+				err := errors.Errorf("[ checkPulse ] Incorrect message pulse in middleware (parcel: %d, current: %d) Msg: %s (lol) %s", meta.Pulse, latestPulse.PulseNumber, msgType, msg.Metadata)
+				inslogger.FromContext(ctx).Error(err)
+				b.Reply(ctx, meta, ErrorAsMessage(ctx, err))
+				return nil, nil
+			}
+		}
 
 		return h(msg)
 	}
