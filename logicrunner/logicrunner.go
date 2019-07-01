@@ -346,7 +346,7 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	inslogger.FromContext(ctx).Debug("loop detected")
+	inslogger.FromContext(ctx).Error("loop detected")
 	return true
 }
 

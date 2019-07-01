@@ -248,8 +248,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.RecordAccessor = records
 		h.RecordModifier = records
 		h.JetCoordinator = Coordinator
-		h.IndexLifelineAccessor = indexes
-		h.IndexBucketModifier = indexes
+		h.IndexAccessor = indexes
+		h.IndexModifier = indexes
 		h.Bus = Bus
 		h.BlobAccessor = blobs
 		h.BlobModifier = blobs
@@ -264,23 +264,23 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Handler = h
 
 		artifactManager := &artifact.Scope{
-			PulseNumber:      insolar.FirstPulseNumber,
-			PCS:              CryptoScheme,
-			BlobStorage:      blobs,
-			RecordAccessor:   records,
-			RecordModifier:   records,
-			LifelineModifier: indexes,
-			LifelineAccessor: indexes,
+			PulseNumber:    insolar.FirstPulseNumber,
+			PCS:            CryptoScheme,
+			BlobStorage:    blobs,
+			RecordAccessor: records,
+			RecordModifier: records,
+			IndexModifier:  indexes,
+			IndexAccessor:  indexes,
 		}
 		Genesis = &genesis.Genesis{
 			ArtifactManager: artifactManager,
 			BaseRecord: &genesis.BaseRecord{
-				DB:                    DB,
-				DropModifier:          drops,
-				PulseAppender:         Pulses,
-				PulseAccessor:         Pulses,
-				RecordModifier:        records,
-				IndexLifelineModifier: indexes,
+				DB:             DB,
+				DropModifier:   drops,
+				PulseAppender:  Pulses,
+				PulseAccessor:  Pulses,
+				RecordModifier: records,
+				IndexModifier:  indexes,
 			},
 
 			DiscoveryNodes:  genesisCfg.DiscoveryNodes,

@@ -150,10 +150,6 @@ functest_race:
 .PHONY: test_func
 test_func: functest
 
-.PHONY: test_network_integration
-test_network_integration:
-	CGO_ENABLED=1 go test -tags networktest $(TEST_ARGS) ./network/servicenetwork/
-
 .PHONY: test_slow
 test_slow:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/...
@@ -162,7 +158,7 @@ test_slow:
 test: test_unit
 
 .PHONY: test_all
-test_all: test_unit test_func test_network_integration test_slow
+test_all: test_unit test_func test_slow
 
 .PHONY: test_with_coverage
 test_with_coverage: $(ARTIFACTS_DIR)
@@ -230,9 +226,9 @@ docker: docker-insolard docker-genesis docker-insgorund
 generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
-	protoc -I./vendor -I./ --gogoslick_out=./ insolar/payload/payload.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src insolar/payload/payload.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/lifeline.proto
-	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src ledger/object/filamentindex.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/filamentindex.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto
 
