@@ -73,8 +73,8 @@ func TestConsensusMain(t *testing.T) {
 	ctx = inslogger.SetLogger(ctx, logger)
 
 	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         100 * time.Millisecond,
-		MaxDelay:         300 * time.Millisecond,
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
 		Variance:         0.2,
 		SpikeProbability: 0.1,
 	})
@@ -91,7 +91,7 @@ func TestConsensusMain(t *testing.T) {
 
 	network.Start(ctx)
 
-	go CreateGenerator(2, 10, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
+	go CreateGenerator(10, 2, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")

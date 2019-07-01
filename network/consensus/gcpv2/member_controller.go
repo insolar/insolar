@@ -122,11 +122,12 @@ func (h *ConsensusMemberController) AdjustPowerLimit(pwl core.MemberPowerLevel) 
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
+	//TODO pick allowed levels from the mandate
 	switch pwl {
 	case core.PowerLevelZero:
 		h.requestedPower = 0
 	case core.PowerLevelMinimal:
-		h.requestedPower = 25 //TODO pick allowed levels from mandate
+		h.requestedPower = 25
 	case core.PowerLevelReduced:
 		h.requestedPower = 75
 	case core.PowerLevelFull:
@@ -167,45 +168,52 @@ func (h *ConsensusMemberController) _getOrCreateRound() (core.RoundController, b
 	return h.currentRound, true
 }
 
-func (h *ConsensusMemberController) _discardRound() core.RoundController {
+func (h *ConsensusMemberController) _discardRound(toBeDiscarded core.RoundController) core.RoundController {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
 	round := h.currentRound
+	if toBeDiscarded != nil && toBeDiscarded != round {
+		//This round was already discarded
+		return nil
+	}
 	h.currentRound = nil
 
 	return round
 }
 
-func (h *ConsensusMemberController) discardRound() {
-	round := h._discardRound()
+func (h *ConsensusMemberController) discardRound(toBeDiscarded core.RoundController) {
+	round := h._discardRound(toBeDiscarded)
 	if round != nil {
 		go round.StopConsensusRound()
 	}
 }
 
-func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder, repeated bool) (bool, error) {
+func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder, repeated bool) (core.RoundController, bool, error) {
 	round, created := h.ensureRound()
 	err := round.HandlePacket(ctx, payload, from)
 
 	if ok, _ := errors.IsNextPulseArrivedError(err); ok {
 		if repeated || created {
-			return false, err
+			return round, false, err
 		}
-		return false, nil
+		return round, false, nil
 	}
-	return err == nil, err
+	return round, err == nil, err
 }
 
 func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error {
 
-	ok, err := h._processPacket(ctx, payload, from, false)
+	h.mutex.RLock()
+	h.mutex.RUnlock()
+
+	round, ok, err := h._processPacket(ctx, payload, from, false)
 	if ok || err != nil {
 		return err
 	}
-	h.discardRound()
+	h.discardRound(round)
 
-	_, err = h._processPacket(ctx, payload, from, true)
+	_, _, err = h._processPacket(ctx, payload, from, true)
 	return err
 }
 
@@ -215,6 +223,6 @@ func (h *ConsensusMemberController) MembershipConfirmed(report core.MembershipUp
 }
 
 func (h *ConsensusMemberController) MembershipLost(graceful bool) {
-	h.discardRound()
+	h.discardRound(nil)
 	h.upstreamPulseController.MembershipLost(graceful)
 }

@@ -249,7 +249,11 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet packets
 		}
 
 		if prep == nil { // Full realm is active - we can use node projections
-			route := &r.realm.handlers[pt]
+			route, err := r.realm.getPacketDispatcher(pt)
+			if err != nil {
+				return err
+			}
+
 			pop := r.realm.GetPopulation()
 			sid := packet.GetSourceId()
 			src := pop.GetNodeAppearance(sid)
@@ -292,7 +296,11 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet packets
 	if prep != nil { // Prep realm is active
 		return prep.handleHostPacket(ctx, packet, from)
 	}
-	return r.realm.handlers[pt].dispatchHostPacket(ctx, packet, from)
+	route, err := r.realm.getPacketDispatcher(pt)
+	if err != nil {
+		return err
+	}
+	return route.dispatchHostPacket(ctx, packet, from)
 }
 
 func (r *PhasedRoundController) verifyRoute(ctx context.Context, packet packets.PacketParser) (bool, error) {

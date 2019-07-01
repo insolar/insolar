@@ -118,3 +118,7 @@ func (r *packetDispatcher) HasMemberHandler() bool {
 func (r *packetDispatcher) HasUnknownMemberHandler() bool {
 	return r.tp.IsUnknownAllowed()
 }
+
+func (r *packetDispatcher) IsEnabled() bool {
+	return r.ctl != nil
+}

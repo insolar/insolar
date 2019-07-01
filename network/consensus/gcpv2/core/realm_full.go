@@ -51,6 +51,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -293,7 +294,7 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHa
 	r.upstreamMembershipConfirmed(expected)
 }
 
-func (r *coreRealm) upstreamMembershipConfirmed(expectedCensus census.OperationalCensus) {
+func (r *FullRealm) upstreamMembershipConfirmed(expectedCensus census.OperationalCensus) {
 	sp := r.GetSelf().GetProfile()
 	report := MembershipUpstreamReport{
 		PulseNumber:     r.pulseData.PulseNumber,
@@ -302,4 +303,11 @@ func (r *coreRealm) upstreamMembershipConfirmed(expectedCensus census.Operationa
 	}
 
 	r.upstream.MembershipConfirmed(report, expectedCensus)
+}
+
+func (r *FullRealm) getPacketDispatcher(pt packets.PacketType) (*packetDispatcher, error) {
+	if int(pt) >= len(r.handlers) || !r.handlers[pt].IsEnabled() {
+		return nil, fmt.Errorf("packet type (%v) has no handler", pt)
+	}
+	return &r.handlers[pt], nil
 }
