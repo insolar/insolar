@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "FilamentCalculator" can be found in github.com/insolar/insolar/ledger/light/executor
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -229,7 +229,7 @@ type FilamentCalculatorMockRequestDuplicateResult struct {
 	r2 error
 }
 
-// Expect specifies that invocation of FilamentCalculator.RequestDuplicate is expected from 1 to Infinity times
+//Expect specifies that invocation of FilamentCalculator.RequestDuplicate is expected from 1 to Infinity times
 func (m *mFilamentCalculatorMockRequestDuplicate) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) *mFilamentCalculatorMockRequestDuplicate {
 	m.mock.RequestDuplicateFunc = nil
 	m.expectationSeries = nil
@@ -241,7 +241,7 @@ func (m *mFilamentCalculatorMockRequestDuplicate) Expect(p context.Context, p1 i
 	return m
 }
 
-// Return specifies results of invocation of FilamentCalculator.RequestDuplicate
+//Return specifies results of invocation of FilamentCalculator.RequestDuplicate
 func (m *mFilamentCalculatorMockRequestDuplicate) Return(r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) *FilamentCalculatorMock {
 	m.mock.RequestDuplicateFunc = nil
 	m.expectationSeries = nil
@@ -253,7 +253,7 @@ func (m *mFilamentCalculatorMockRequestDuplicate) Return(r *record.CompositeFila
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of FilamentCalculator.RequestDuplicate is expected once
+//ExpectOnce specifies that invocation of FilamentCalculator.RequestDuplicate is expected once
 func (m *mFilamentCalculatorMockRequestDuplicate) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) *FilamentCalculatorMockRequestDuplicateExpectation {
 	m.mock.RequestDuplicateFunc = nil
 	m.mainExpectation = nil
@@ -268,7 +268,7 @@ func (e *FilamentCalculatorMockRequestDuplicateExpectation) Return(r *record.Com
 	e.result = &FilamentCalculatorMockRequestDuplicateResult{r, r1, r2}
 }
 
-// Set uses given function f as a mock of FilamentCalculator.RequestDuplicate method
+//Set uses given function f as a mock of FilamentCalculator.RequestDuplicate method
 func (m *mFilamentCalculatorMockRequestDuplicate) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error)) *FilamentCalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -277,7 +277,7 @@ func (m *mFilamentCalculatorMockRequestDuplicate) Set(f func(p context.Context, 
 	return m.mock
 }
 
-// RequestDuplicate implements github.com/insolar/insolar/ledger/light/executor.FilamentCalculator interface
+//RequestDuplicate implements github.com/insolar/insolar/ledger/light/executor.FilamentCalculator interface
 func (m *FilamentCalculatorMock) RequestDuplicate(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
 	counter := atomic.AddUint64(&m.RequestDuplicatePreCounter, 1)
 	defer atomic.AddUint64(&m.RequestDuplicateCounter, 1)
@@ -331,17 +331,17 @@ func (m *FilamentCalculatorMock) RequestDuplicate(p context.Context, p1 insolar.
 	return m.RequestDuplicateFunc(p, p1, p2, p3, p4)
 }
 
-// RequestDuplicateMinimockCounter returns a count of FilamentCalculatorMock.RequestDuplicateFunc invocations
+//RequestDuplicateMinimockCounter returns a count of FilamentCalculatorMock.RequestDuplicateFunc invocations
 func (m *FilamentCalculatorMock) RequestDuplicateMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RequestDuplicateCounter)
 }
 
-// RequestDuplicateMinimockPreCounter returns the value of FilamentCalculatorMock.RequestDuplicate invocations
+//RequestDuplicateMinimockPreCounter returns the value of FilamentCalculatorMock.RequestDuplicate invocations
 func (m *FilamentCalculatorMock) RequestDuplicateMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RequestDuplicatePreCounter)
 }
 
-// RequestDuplicateFinished returns true if mock invocations count is ok
+//RequestDuplicateFinished returns true if mock invocations count is ok
 func (m *FilamentCalculatorMock) RequestDuplicateFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RequestDuplicateMock.expectationSeries) > 0 {
