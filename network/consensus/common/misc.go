@@ -83,7 +83,7 @@ type NodeEndpoint interface {
 type NodeEndpointType uint8
 
 const (
-	IpEndpoint NodeEndpointType = iota
+	IPEndpoint NodeEndpointType = iota
 	NameEndpoint
 	RelayEndpoint
 )

@@ -92,7 +92,7 @@ func NewPulseData(pulse insolar.Pulse) common.PulseData {
 		uint16(pulse.PulseNumber-pulse.PrevPulseNumber),
 		common.NewBits512FromBytes(pulse.Entropy[:]).FoldToBits256(),
 	)
-	data.Timestamp = uint32(int64(pulse.PulseTimestamp) / nanosecondsInSecond)
+	data.Timestamp = uint32(pulse.PulseTimestamp / nanosecondsInSecond)
 	return *data
 }
 
