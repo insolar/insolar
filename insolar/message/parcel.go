@@ -80,8 +80,8 @@ func (p *Parcel) Context(ctx context.Context) context.Context {
 	if p.ServiceData.TraceSpanData == nil {
 		return ctx
 	}
-	parentspan := instracer.MustDeserialize(p.ServiceData.TraceSpanData)
-	return instracer.WithParentSpan(ctx, parentspan)
+	parentSpan := instracer.MustDeserialize(p.ServiceData.TraceSpanData)
+	return instracer.WithParentSpan(ctx, parentSpan)
 }
 
 func (p *Parcel) DelegationToken() insolar.DelegationToken {
