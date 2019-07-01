@@ -120,7 +120,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
-		var record Request
+		var record IncomingRequest
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -132,7 +132,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 				a.NoError(err)
 				a.Equal(bin, binNew)
 
-				var recordNew Request
+				var recordNew IncomingRequest
 				err = recordNew.Unmarshal(binNew)
 				require.NoError(t, err)
 

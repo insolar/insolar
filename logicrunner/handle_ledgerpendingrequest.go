@@ -110,7 +110,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	msg := parcel.Message().(*message.CallMethod)
 
-	parcel.SetSender(msg.Request.Sender)
+	parcel.SetSender(msg.IncomingRequest.Sender)
 
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(

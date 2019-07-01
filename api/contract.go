@@ -123,7 +123,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 
 	contractID, err := s.runner.ArtifactManager.RegisterRequest(
 		ctx,
-		record.Request{
+		record.IncomingRequest{
 			CallType:     record.CTSaveAsChild,
 			Prototype:    &base,
 			APIRequestID: utils.TraceID(ctx),
@@ -188,7 +188,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	}
 
 	msg := &message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			Caller:       testutils.RandomRef(),
 			Object:       objectRef,
 			Method:       args.Method,

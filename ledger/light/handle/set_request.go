@@ -64,7 +64,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	rec := record.Unwrap(&virtual)
-	request, ok := rec.(*record.Request)
+	request, ok := rec.(*record.IncomingRequest)
 	if !ok {
 		return fmt.Errorf("wrong request type: %T", rec)
 	}
