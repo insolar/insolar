@@ -56,6 +56,18 @@ func (d *TranscriptDequeue) Pop() *Transcript {
 	return elements[0]
 }
 
+func (d *TranscriptDequeue) Has(ref insolar.Reference) bool {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	for pos := len(d.queue) - 1; pos >= 0; pos-- {
+		if d.queue[pos].RequestRef.Compare(ref) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
 	d.lock.Lock()
 	toDelete := -1
@@ -129,7 +141,7 @@ type Transcript struct {
 	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
-	Request          *record.Request
+	Request          *record.IncomingRequest
 	RequestRef       *insolar.Reference
 	RequesterNode    *insolar.Reference
 	Nonce            uint64
@@ -161,7 +173,7 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 	return &Transcript{
 		Context:       ctx,
 		LogicContext:  logicalContext,
-		Request:       &msg.Request,
+		Request:       &msg.IncomingRequest,
 		RequestRef:    requestRef,
 		RequesterNode: &sender,
 		Nonce:         0,
@@ -173,14 +185,14 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 }
 
 type OutgoingRequest struct {
-	Request   record.Request
+	Request   record.IncomingRequest
 	NewObject *Ref
 	Response  []byte
 	Error     error
 }
 
 func (t *Transcript) AddOutgoingRequest(
-	ctx context.Context, request record.Request, result []byte, newObject *Ref, err error,
+	ctx context.Context, request record.IncomingRequest, result []byte, newObject *Ref, err error,
 ) {
 	rec := OutgoingRequest{
 		Request:   request,
@@ -255,6 +267,13 @@ func (ces *CurrentExecutionList) Empty() bool {
 	return ces.Length() == 0
 }
 
+func (ces *CurrentExecutionList) Has(requestRef insolar.Reference) bool {
+	ces.lock.RLock()
+	defer ces.lock.RUnlock()
+	_, has := ces.executions[requestRef]
+	return has
+}
+
 type CurrentExecutionPredicate func(*Transcript, interface{}) bool
 
 func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
@@ -322,11 +341,17 @@ func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Tran
 
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
+		if q.finished != nil && q.finished.Has(*transcript.RequestRef) {
+			continue
+		}
+
 		if transcript.LogicContext.Immutable {
 			go q.processImmutable(ctx, transcript)
 		} else {
 			q.mutableLock.RLock()
-			q.mutable.Prepend(transcript)
+			if !q.mutable.Has(*transcript.RequestRef) {
+				q.mutable.Prepend(transcript)
+			}
 			q.mutableLock.RUnlock()
 		}
 	}
@@ -338,11 +363,17 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 // One shouldn't mix immutable calls and mutable ones
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
+		if q.finished != nil && q.finished.Has(*transcript.RequestRef) {
+			continue
+		}
+
 		if transcript.LogicContext.Immutable {
 			go q.processImmutable(ctx, transcript)
 		} else {
 			q.mutableLock.RLock()
-			q.mutable.Push(transcript)
+			if !q.mutable.Has(*transcript.RequestRef) {
+				q.mutable.Push(transcript)
+			}
 			q.mutableLock.RUnlock()
 		}
 	}

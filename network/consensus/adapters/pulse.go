@@ -60,6 +60,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
+const nanosecondsInSecond = int64(time.Second / time.Nanosecond)
+
 func NewPulse(pulseData common.PulseData) insolar.Pulse {
 	var prev insolar.PulseNumber
 	if !pulseData.IsFirstPulse() {
@@ -77,7 +79,7 @@ func NewPulse(pulseData common.PulseData) insolar.Pulse {
 		PulseNumber:      insolar.PulseNumber(pulseData.PulseNumber),
 		NextPulseNumber:  insolar.PulseNumber(pulseData.GetNextPulseNumber()),
 		PrevPulseNumber:  prev,
-		PulseTimestamp:   int64(pulseData.Timestamp) * int64(time.Second/time.Nanosecond),
+		PulseTimestamp:   int64(pulseData.Timestamp) * nanosecondsInSecond,
 		EpochPulseNumber: int(pulseData.PulseEpoch),
 		Entropy:          entropy,
 	}
@@ -90,7 +92,7 @@ func NewPulseData(pulse insolar.Pulse) common.PulseData {
 		uint16(pulse.PulseNumber-pulse.PrevPulseNumber),
 		common.NewBits512FromBytes(pulse.Entropy[:]).FoldToBits256(),
 	)
-	data.Timestamp = uint32(int64(pulse.PulseTimestamp) / int64(time.Second/time.Nanosecond))
+	data.Timestamp = uint32(pulse.PulseTimestamp / nanosecondsInSecond)
 	return *data
 }
 

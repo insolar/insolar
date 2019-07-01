@@ -234,9 +234,9 @@ func (p MembershipProfile) Equals(o MembershipProfile) bool {
 func (p MembershipProfile) StringParts() string {
 	if p.Power == p.RequestedPower {
 		return fmt.Sprintf("pw:%v se:%v cs:%v", p.Power, p.StateEvidence, p.AnnounceSignature)
-	} else {
-		return fmt.Sprintf("pw:%v->%v se:%v cs:%v", p.Power, p.RequestedPower, p.StateEvidence, p.AnnounceSignature)
 	}
+
+	return fmt.Sprintf("pw:%v->%v se:%v cs:%v", p.Power, p.RequestedPower, p.StateEvidence, p.AnnounceSignature)
 }
 
 func (p MembershipProfile) String() string {

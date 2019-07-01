@@ -66,6 +66,7 @@ type Result struct {
 // UserConfigJSON holds info about user
 type UserConfigJSON struct {
 	PrivateKey       string `json:"private_key"`
+	PublicKey        string `json:"public_key"`
 	Caller           string `json:"caller"`
 	privateKeyObject crypto.PrivateKey
 }
@@ -132,8 +133,8 @@ func ReadRequestConfigFromFile(path string) (*Request, error) {
 }
 
 // CreateUserConfig creates user config from arguments
-func CreateUserConfig(caller string, privKey string) (*UserConfigJSON, error) {
-	userConfig := UserConfigJSON{PrivateKey: privKey, Caller: caller}
+func CreateUserConfig(caller string, privKey string, publicKey string) (*UserConfigJSON, error) {
+	userConfig := UserConfigJSON{PrivateKey: privKey, Caller: caller, PublicKey: publicKey}
 	var err error
 
 	ks := platformpolicy.NewKeyProcessor()

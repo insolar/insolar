@@ -107,8 +107,9 @@ func TestConsensusMain(t *testing.T) {
 			CertificateManager:    certificateManager,
 			KeyStore:              keystore.NewInplaceKeyStore(nodeInfos[i].privateKey),
 			NodeKeeper:            nodeKeeper,
-			Stater:                &nshGen{nshDelay: defaultNshGenerationDelay},
+			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
 			PulseChanger:          &pulseChanger{},
+			StateUpdater:          &stateUpdater{nodeKeeper},
 			PacketBuilder:         NewEmuPacketBuilder,
 			DatagramTransport:     transport,
 			// TODO: remove
@@ -123,11 +124,10 @@ func TestConsensusMain(t *testing.T) {
 
 	network.Start(ctx)
 
-	pulsar := NewPulsar(pulseHandlers)
+	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
-			time.Sleep(10 * time.Second)
 		}
 	}()
 
@@ -304,4 +304,18 @@ type pulseChanger struct{}
 
 func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
+}
+
+type stateUpdater struct {
+	nodeKeeper network2.NodeKeeper
+}
+
+func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
+
+	// err := su.nodeKeeper.Sync(ctx, nodes, nil)
+	// if err != nil {
+	// 	inslogger.FromContext(ctx).Error(err)
+	// }
+	// su.nodeKeeper.SetCloudHash(cloudStateHash)
 }

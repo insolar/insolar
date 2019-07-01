@@ -26,20 +26,20 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-// Wallet - basic wallet contract
+// Wallet - basic wallet contract.
 type Wallet struct {
 	foundation.BaseContract
 	Balance string
 }
 
-// New creates new wallet
+// New creates new wallet.
 func New(balance string) (*Wallet, error) {
 	return &Wallet{
 		Balance: balance,
 	}, nil
 }
 
-// Transfer transfers money to given wallet
+// Transfer transfers money to given wallet.
 func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
@@ -81,7 +81,7 @@ func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interf
 	return nil, fmt.Errorf("failed to accept balance to wallet: %s", acceptErr.Error())
 }
 
-// Accept transfer to balance
+// Accept accepts transfer to balance.
 func (w *Wallet) Accept(amountStr string) (err error) {
 
 	amount := new(big.Int)
@@ -105,7 +105,7 @@ func (w *Wallet) Accept(amountStr string) (err error) {
 	return nil
 }
 
-// GetBalance gets total balance
+// GetBalance gets total balance.
 func (w *Wallet) GetBalance() (string, error) {
 	return w.Balance, nil
 }

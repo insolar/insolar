@@ -20,8 +20,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// EncodeIndex converts lifeline index into binary format.
-func EncodeIndex(index Lifeline) []byte {
+// EncodeLifeline converts lifeline index into binary format.
+func EncodeLifeline(index Lifeline) []byte {
 	res, err := index.Marshal()
 	if err != nil {
 		panic(err)
@@ -30,9 +30,9 @@ func EncodeIndex(index Lifeline) []byte {
 	return res
 }
 
-// MustDecodeIndex converts byte array into lifeline index struct.
-func MustDecodeIndex(buff []byte) (index Lifeline) {
-	idx, err := DecodeIndex(buff)
+// MustDecodeLifeline converts byte array into lifeline index struct.
+func MustDecodeLifeline(buff []byte) (index Lifeline) {
+	idx, err := DecodeLifeline(buff)
 	if err != nil {
 		panic(err)
 	}
@@ -40,15 +40,15 @@ func MustDecodeIndex(buff []byte) (index Lifeline) {
 	return idx
 }
 
-// DecodeIndex converts byte array into lifeline index struct.
-func DecodeIndex(buff []byte) (Lifeline, error) {
+// DecodeLifeline converts byte array into lifeline index struct.
+func DecodeLifeline(buff []byte) (Lifeline, error) {
 	lfl := Lifeline{}
 	err := lfl.Unmarshal(buff)
 	return lfl, err
 }
 
-// CloneIndex returns copy of argument idx value.
-func CloneIndex(idx Lifeline) Lifeline {
+// CloneLifeline returns copy of argument idx value.
+func CloneLifeline(idx Lifeline) Lifeline {
 	if idx.LatestState != nil {
 		tmp := *idx.LatestState
 		idx.LatestState = &tmp
@@ -72,22 +72,32 @@ func CloneIndex(idx Lifeline) Lifeline {
 		idx.Delegates = []LifelineDelegate{}
 	}
 
+	if idx.EarliestOpenRequest != nil {
+		tmp := *idx.EarliestOpenRequest
+		idx.EarliestOpenRequest = &tmp
+	}
+
+	if idx.PendingPointer != nil {
+		tmp := *idx.PendingPointer
+		idx.PendingPointer = &tmp
+	}
+
 	return idx
 }
 
-func (l *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
-	for _, d := range l.Delegates {
+func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
+	for _, d := range m.Delegates {
 		if d.Key == key {
 			d.Value = value
 			return
 		}
 	}
 
-	l.Delegates = append(l.Delegates, LifelineDelegate{Key: key, Value: value})
+	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
 }
 
-func (l *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
-	for _, d := range l.Delegates {
+func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
+	for _, d := range m.Delegates {
 		if d.Key == key {
 			return d.Value, true
 		}
