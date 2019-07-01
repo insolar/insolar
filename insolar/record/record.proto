@@ -68,6 +68,7 @@ message IncomingRequest {
     bytes Arguments = 31;
     bytes Sender = 32 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     string APIRequestID = 33;
+    bytes Reason = 34 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message OutgoingRequest {
@@ -90,6 +91,7 @@ message OutgoingRequest {
     bytes Arguments = 31;
     bytes Sender = 32 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     string APIRequestID = 33;
+    bytes Reason = 34 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message Result {
