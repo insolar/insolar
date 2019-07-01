@@ -28,13 +28,15 @@ type Tariff struct {
 	CommissionRate string
 }
 
+// New creates new tariff.
 func New(commissionRate string) (*Tariff, error) {
 	return &Tariff{
 		CommissionRate: commissionRate,
 	}, nil
 }
 
-func (t Tariff) GetCommission(amountStr string) (string, error) {
+// CalcCommission calculates commission for amount.
+func (t Tariff) CalcCommission(amountStr string) (string, error) {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return "", fmt.Errorf("can't parse amount")

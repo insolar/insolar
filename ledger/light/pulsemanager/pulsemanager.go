@@ -82,8 +82,8 @@ func NewPulseManager(
 	pm := &PulseManager{
 		JetSplitter:     jetSplitter,
 		LightReplicator: lightToHeavySyncer,
-		HotSender:       hotSender,
 		WriteManager:    writeManager,
+		HotSender:       hotSender,
 	}
 	return pm
 }

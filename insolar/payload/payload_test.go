@@ -50,6 +50,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		pl payload.Payload
 	}
 	table := []data{
+		{tp: payload.TypeMeta, pl: &payload.Meta{}},
 		{tp: payload.TypeError, pl: &payload.Error{}},
 		{tp: payload.TypeID, pl: &payload.ID{}},
 		{tp: payload.TypeState, pl: &payload.State{}},
@@ -60,6 +61,8 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeCode, pl: &payload.Code{}},
 		{tp: payload.TypeGetCode, pl: &payload.GetCode{}},
 		{tp: payload.TypeSetCode, pl: &payload.SetCode{}},
+		{tp: payload.TypeGetFilament, pl: &payload.GetFilament{}},
+		// {tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
 		{tp: payload.TypeSetRequest, pl: &payload.SetRequest{}},
 		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
 	}

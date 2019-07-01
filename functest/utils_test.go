@@ -112,7 +112,7 @@ func createMember(t *testing.T) *user {
 }
 
 func addBurnAddress(t *testing.T) {
-	_, err := signedRequest(&migrationAdmin, "wallet.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{"fake_ba"}})
+	_, err := signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{"fake_ba"}})
 	require.NoError(t, err)
 }
 
@@ -218,7 +218,7 @@ func retryableCreateMember(user *user, method string, params map[string]interfac
 
 func signedRequest(user *user, method string, params map[string]interface{}) (interface{}, error) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
+	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey, user.pubKey)
 	if err != nil {
 		return nil, err
 	}

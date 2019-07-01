@@ -147,7 +147,7 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		return expectRecords
 	}
 
-	indexAccessor := object.NewIndexBucketAccessorMock(ctrl)
+	indexAccessor := object.NewIndexAccessorMock(ctrl)
 	indexAccessor.ForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []object.FilamentIndex {
 		return expectIndexes
 	}
