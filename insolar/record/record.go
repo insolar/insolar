@@ -129,3 +129,24 @@ func (Genesis) GetImage() *insolar.Reference {
 func (Genesis) GetIsPrototype() bool {
 	return false
 }
+
+type Request interface {
+	RequestObject() insolar.Reference
+	RequestReason() insolar.Reference
+}
+
+func (req *IncomingRequest) RequestObject() insolar.Reference {
+	return *req.GetObject()
+}
+
+func (req *IncomingRequest) RequestReason() insolar.Reference {
+	return req.GetReason()
+}
+
+func (req *OutgoingRequest) RequestObject() insolar.Reference {
+	return *req.GetObject()
+}
+
+func (req *OutgoingRequest) RequestReason() insolar.Reference {
+	return req.GetReason()
+}

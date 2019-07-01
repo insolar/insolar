@@ -291,3 +291,27 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 		}
 	})
 }
+
+func TestRequestInterface_IncomingRequest(t *testing.T) {
+	t.Parallel()
+	objref := gen.Reference()
+	req := &IncomingRequest{
+		Object: &objref,
+		Reason: gen.Reference(),
+	}
+	iface := Request(req)
+	require.Equal(t, *req.Object, iface.RequestObject())
+	require.Equal(t, req.Reason, iface.RequestReason())
+}
+
+func TestRequestInterface_OutgoingRequest(t *testing.T) {
+	t.Parallel()
+	objref := gen.Reference()
+	req := &OutgoingRequest{
+		Object: &objref,
+		Reason: gen.Reference(),
+	}
+	iface := Request(req)
+	require.Equal(t, *req.Object, iface.RequestObject())
+	require.Equal(t, req.Reason, iface.RequestReason())
+}
