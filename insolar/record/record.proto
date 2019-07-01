@@ -30,36 +30,56 @@ message Jet {
     // TODO
 }
 
-message Request {
+enum CallType {
+    CTMethod = 0;
+    CTSaveAsChild = 1;
+    CTSaveAsDelegate = 2;
+
+    CTGenesis = 3;
+}
+
+enum ReturnMode {
+    // ReturnResult - return result as soon as it is ready
+    ReturnResult = 0;
+
+    // ReturnNoWait - call method and return without results
+    ReturnNoWait = 1;
+
+    // ReturnValidated (not yet) - return result only when it's validated
+}
+
+message Request { // TODO rename to IncomingRequest when filaments will be done, see INS-2707
     option (gogoproto.face) = true;
 
     int32 polymorph = 16;
-
-    enum CT {
-        CTMethod = 0;
-        CTSaveAsChild = 1;
-        CTSaveAsDelegate = 2;
-
-        CTGenesis = 3;
-    }
-
-    CT CallType = 20;
-
+    CallType CallType = 20;
     bytes Caller = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes CallerPrototype = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     uint64 Nonce = 23;
     uint64 Sequence = 24;
+    ReturnMode ReturnMode = 25;
+    bool Immutable = 26;
 
-    enum RM {
-        // ReturnResult - return result as soon as it is ready
-        ReturnResult = 0;
+    bytes Base = 27 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference"];
+    bytes Object = 28 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference"];
+    bytes Prototype = 29 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference"];
 
-        // ReturnNoWait - call method and return without results
-        ReturnNoWait = 1;
+    string Method = 30;
+    bytes Arguments = 31;
+    bytes Sender = 32 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    string APIRequestID = 33;
+}
 
-        // ReturnValidated (not yet) - return result only when it's validated
-    }
-    RM ReturnMode = 25;
+message OutgoingRequest {
+    option (gogoproto.face) = true;
+
+    int32 polymorph = 16;
+    CallType CallType = 20;
+    bytes Caller = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes CallerPrototype = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    uint64 Nonce = 23;
+    uint64 Sequence = 24;
+    ReturnMode ReturnMode = 25;
     bool Immutable = 26;
 
     bytes Base = 27 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference"];
@@ -169,4 +189,14 @@ message Material {
     bytes JetID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
 
     bytes Signature = 200;
+}
+
+message CompositeFilamentRecord {
+    int32 polymorph = 16;
+
+    bytes RecordID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    Material Record = 21 [(gogoproto.nullable) = false];
+
+    bytes MetaID = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    Material Meta = 23 [(gogoproto.nullable) = false];
 }

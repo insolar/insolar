@@ -114,12 +114,6 @@ func RandomJetWithDepth(depth uint8) insolar.ID {
 	return insolar.ID(*insolar.NewJetID(depth, resetBits(jetbuf[1:], depth)))
 }
 
-func BrokenPK() [66]byte {
-	var result [66]byte
-	result[0] = 255
-	return result
-}
-
 // JetFromString converts string representation of Jet to insolar.ID.
 //
 // Examples: "010" converts to Jet with depth 3 and prefix "01".
@@ -181,11 +175,19 @@ func (m *cryptographySchemeMock) IntegrityHasher() insolar.Hasher {
 	return &hasherMock{h: sha3.New512()}
 }
 
-func (m *cryptographySchemeMock) Signer(privateKey crypto.PrivateKey) insolar.Signer {
+func (m *cryptographySchemeMock) DataSigner(privateKey crypto.PrivateKey, hasher insolar.Hasher) insolar.Signer {
 	panic("not implemented")
 }
 
-func (m *cryptographySchemeMock) Verifier(publicKey crypto.PublicKey) insolar.Verifier {
+func (m *cryptographySchemeMock) DigestSigner(privateKey crypto.PrivateKey) insolar.Signer {
+	panic("not implemented")
+}
+
+func (m *cryptographySchemeMock) DataVerifier(publicKey crypto.PublicKey, hasher insolar.Hasher) insolar.Verifier {
+	panic("not implemented")
+}
+
+func (m *cryptographySchemeMock) DigestVerifier(publicKey crypto.PublicKey) insolar.Verifier {
 	panic("not implemented")
 }
 
@@ -193,7 +195,15 @@ func (m *cryptographySchemeMock) PublicKeySize() int {
 	panic("not implemented")
 }
 
-func (m *cryptographySchemeMock) SignatureSIze() int {
+func (m *cryptographySchemeMock) SignatureSize() int {
+	panic("not implemented")
+}
+
+func (m *cryptographySchemeMock) ReferenceHashSize() int {
+	panic("not implemented")
+}
+
+func (m *cryptographySchemeMock) IntegrityHashSize() int {
 	panic("not implemented")
 }
 

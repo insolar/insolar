@@ -81,25 +81,26 @@ func (*Phase0Controller) GetPacketType() packets.PacketType {
 	return packets.PacketPhase0
 }
 
-func (c *Phase0Controller) HandleMemberPacket(p packets.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *Phase0Controller) HandleMemberPacket(ctx context.Context, p packets.MemberPacketReader, n *core.NodeAppearance) error {
 	p0 := p.AsPhase0Packet()
 	pp := p0.GetEmbeddedPulsePacket()
 
 	err := n.SetReceivedWithDupCheck(c.GetPacketType())
-	return handleEmbeddedPulsePacket(p, pp, n, c.R, err)
+	return handleEmbeddedPulsePacket(ctx, p, pp, n, c.R, err)
 }
 
-func handleEmbeddedPulsePacket(p packets.MemberPacketReader, pp packets.PulsePacketReader, n *core.NodeAppearance,
+func handleEmbeddedPulsePacket(ctx context.Context, p packets.MemberPacketReader, pp packets.PulsePacketReader, n *core.NodeAppearance,
 	r *core.FullRealm, defErr error) error {
 
 	// TODO validate pulse data
 	pp.GetPulseDataEvidence()
 	p.GetPacketSignature()
+	_ = ctx.Err()
 
 	if r.GetPulseData() == pp.GetPulseData() {
 		return defErr
 	}
-	return r.Blames().NewMismatchedPulsePacket(n.GetProfile(), r.GetOriginalPulse(), pp.GetPulseDataEvidence())
+	return n.Blames().NewMismatchedPulsePacket(n.GetProfile(), r.GetOriginalPulse(), pp.GetPulseDataEvidence())
 }
 
 var _ core.PhaseController = &Phase1Controller{}
@@ -114,13 +115,13 @@ func (*Phase1Controller) GetPacketType() packets.PacketType {
 	return packets.PacketPhase1
 }
 
-func (c *Phase1Controller) HandleMemberPacket(p packets.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *Phase1Controller) HandleMemberPacket(ctx context.Context, p packets.MemberPacketReader, n *core.NodeAppearance) error {
 	p1 := p.AsPhase1Packet()
 	err := c.handleNodeData(p1, n)
 
 	if err == nil && p1.HasPulseData() {
 		pp := p1.GetEmbeddedPulsePacket()
-		err = handleEmbeddedPulsePacket(p, pp, n, c.R, nil)
+		err = handleEmbeddedPulsePacket(ctx, p, pp, n, c.R, nil)
 	}
 	return err
 }
@@ -137,19 +138,18 @@ func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core
 func (c *Phase1Controller) _handleNodeData(p1 packets.Phase1PacketReader, n *core.NodeAppearance) (bool, error) {
 	dupErr := n.SetReceivedWithDupCheck(c.GetPacketType())
 
-	//if p1.HasSelfIntro() {
+	// if p1.HasSelfIntro() {
 	// TODO register protocol misbehavior - IntroClaim was not expected
-	//}
-	// if c.R.GetNodeCount() != int(p1.GetNodeCount()) {
-	// 	//TODO SEND fraud state to others (to Phase2)
-	// 	return false, n.RegisterFraud(R.Frauds().NewMismatchedRank(n.GetProfile(), p1.GetNodeStateHashEvidence()))
-	// }
 
-	mp := common.NewMembershipProfile(p1.GetNodeIndex(), p1.GetNodePower(), p1.GetNodeStateHash())
-	modified, err := n.ApplyNodeMembership(mp, p1.GetNodeStateHashEvidence(), c.R.GetMisbehaviorFactories())
-	if modified && dupErr != nil {
-		c.R.Log().Warnf("unexpected state: Phase1 was received, but NSH is unset: node=%v", n)
+	mp := common.NewMembershipProfile(p1.GetNodeIndex(), p1.GetNodePower(), p1.GetNodeStateHashEvidence(), p1.GetNodeClaimsSignature())
+	if c.R.GetNodeCount() != int(p1.GetNodeCount()) {
+		return false, n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), mp))
 	}
+
+	modified, err := n.ApplyNodeMembership(mp)
+	// if modified && dupErr != nil {
+	//	c.R.Log().Warnf("unexpected state: Phase1 was received, but NSH is unset: node=%v", n)
+	// }
 
 	if err != nil {
 		return modified, err
@@ -166,7 +166,9 @@ func (c *Phase1Controller) workerPhase01(ctx context.Context) {
 	if startIndex < 0 {
 		return
 	}
-	c.R.PrepareAndSetLocalNodeStateHashEvidence(nsh)
+
+	//TODO Hack! MUST provide claims hash
+	c.R.PrepareAndSetLocalNodeStateHashEvidence(nsh, nsh)
 
 	c.workerSendPhase1(ctx, startIndex)
 }
@@ -187,11 +189,13 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (common.NodeSta
 		return nsh, 0
 	}
 
-	p0 := c.R.GetPacketBuilder().PreparePhase0Packet(c.R.GetLocalProfile(), c.R.GetOriginalPulse(), c.packetPrepareOptions)
+	p0 := c.R.GetPacketBuilder().PreparePhase0Packet(c.R.GetLocalProfile(), c.R.GetOriginalPulse(),
+		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
+		c.packetPrepareOptions)
 
 	for lastIndex, target := range c.R.GetShuffledOtherNodes() {
 		if !target.HasReceivedAnyPhase() {
-			p0.SendTo(target.GetProfile(), 0, c.R.GetPacketSender())
+			p0.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
 			target.SetSentPhase(packets.Phase0)
 		}
 		select {
@@ -214,7 +218,8 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (common.NodeSta
 func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.GetLocalProfile(), c.R.GetOriginalPulse(),
-		c.R.GetSelf().GetNodeStateHashEvidence(), c.packetPrepareOptions)
+		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
+		c.packetPrepareOptions)
 
 	otherNodes := c.R.GetShuffledOtherNodes()
 	for i := range otherNodes {
@@ -226,7 +231,7 @@ func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int)
 			// if something was received from this node, then we don't need to send a copy of pulse data to it
 			sendOptions |= core.SendWithoutPulseData
 		}
-		p1.SendTo(target.GetProfile(), sendOptions, c.R.GetPacketSender())
+		p1.SendTo(ctx, target.GetProfile(), sendOptions, c.R.GetPacketSender())
 		target.SetSentByPacketType(c.GetPacketType())
 		select {
 		case <-ctx.Done():
@@ -248,25 +253,26 @@ func (c *ReqPhase1Controller) GetPacketType() packets.PacketType {
 	return packets.PacketReqPhase1
 }
 
-func (c *ReqPhase1Controller) HandleMemberPacket(p packets.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *ReqPhase1Controller) HandleMemberPacket(ctx context.Context, p packets.MemberPacketReader, n *core.NodeAppearance) error {
 	p1 := p.AsPhase1Packet()
 	err := c.delegate.handleNodeData(p1, n)
 	if err != nil {
 		return err
 	}
 	if !c.R.GetSelf().IsNshRequired() {
-		c.sendReqPhase1Reply(n)
+		c.sendReqPhase1Reply(ctx, n)
 	} else {
 		c.R.Log().Warn("got Phase1 request, but NSH is still unavailable")
 	}
 	return nil
 }
 
-func (c *ReqPhase1Controller) sendReqPhase1Reply(target *core.NodeAppearance) {
+func (c *ReqPhase1Controller) sendReqPhase1Reply(ctx context.Context, target *core.NodeAppearance) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.GetLocalProfile(), c.R.GetOriginalPulse(),
-		c.R.GetSelf().GetNodeStateHashEvidence(), core.SendWithoutPulseData|c.packetPrepareOptions)
+		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
+		core.SendWithoutPulseData|c.packetPrepareOptions)
 
-	p1.SendTo(target.GetProfile(), 0, c.R.GetPacketSender())
+	p1.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
 	target.SetSentByPacketType(c.GetPacketType())
 }

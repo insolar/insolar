@@ -30,52 +30,49 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
-	"golang.org/x/sync/errgroup"
 )
 
 // HotSender provides sending hot records send for provided pulse.
 type HotSender interface {
-	SendHot(ctx context.Context, jets []JetInfo, old, new insolar.PulseNumber) error
+	SendHot(ctx context.Context, old, new insolar.PulseNumber, jets []insolar.JetID) error
 }
 
 // HotSenderDefault implements HotSender.
 type HotSenderDefault struct {
-	bus                 insolar.MessageBus
-	dropModifier        drop.Modifier
-	indexBucketAccessor object.IndexBucketAccessor
-	pulseCalculator     pulse.Calculator
-	jetAccessor         jet.Accessor
+	bus             insolar.MessageBus
+	dropAccessor    drop.Accessor
+	indexAccessor   object.IndexAccessor
+	pulseCalculator pulse.Calculator
+	jetAccessor     jet.Accessor
 
-	// light limit configuration
+	// lightChainLimit is the LM-node cache limit configuration (how long index could be unused)
 	lightChainLimit int
 }
 
 // NewHotSender returns a new instance of a default HotSender implementation.
 func NewHotSender(
 	bus insolar.MessageBus,
-	dropModifier drop.Modifier,
-	indexBucketAccessor object.IndexBucketAccessor,
+	dropAccessor drop.Accessor,
+	indexAccessor object.IndexAccessor,
 	pulseCalculator pulse.Calculator,
 	jetAccessor jet.Accessor,
 	lightChainLimit int,
 ) *HotSenderDefault {
 	return &HotSenderDefault{
-		bus:                 bus,
-		dropModifier:        dropModifier,
-		indexBucketAccessor: indexBucketAccessor,
-		pulseCalculator:     pulseCalculator,
-		jetAccessor:         jetAccessor,
+		bus:             bus,
+		dropAccessor:    dropAccessor,
+		indexAccessor:   indexAccessor,
+		pulseCalculator: pulseCalculator,
+		jetAccessor:     jetAccessor,
 
 		lightChainLimit: lightChainLimit,
 	}
 }
 
 func (m *HotSenderDefault) filterAndGroupIndexes(
-	ctx context.Context, oldPulse, newPulse insolar.PulseNumber,
+	ctx context.Context, currentPulse, newPulse insolar.PulseNumber,
 ) (map[insolar.JetID][]object.FilamentIndex, error) {
-	indexes := m.indexBucketAccessor.ForPulse(ctx, oldPulse)
-
-	limitPN, err := m.pulseCalculator.Backwards(ctx, oldPulse, m.lightChainLimit)
+	limitPN, err := m.pulseCalculator.Backwards(ctx, currentPulse, m.lightChainLimit)
 	if err == pulse.ErrNotFound {
 		limitPN = *insolar.GenesisPulse
 	} else if err != nil {
@@ -83,6 +80,8 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 	}
 
 	// filter out inactive indexes
+	indexes := m.indexAccessor.ForPulse(ctx, currentPulse)
+	// filtering in-place (optimization to avoid double allocation)
 	filtered := indexes[:0]
 	for _, idx := range indexes {
 		if idx.LifelineLastUsed < limitPN.PulseNumber {
@@ -101,102 +100,88 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 
 // SendHot send hot records from oldPulse to all jets in newPulse.
 func (m *HotSenderDefault) SendHot(
-	ctx context.Context, jets []JetInfo, oldPulse, newPulse insolar.PulseNumber,
+	ctx context.Context, currentPulse, newPulse insolar.PulseNumber, jets []insolar.JetID,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "hot_sender.start")
 	defer span.End()
+	logger := inslogger.FromContext(ctx)
 
-	// get indexes grouped by actual jet ID
-	byJet, err := m.filterAndGroupIndexes(ctx, oldPulse, newPulse)
+	byJet, err := m.filterAndGroupIndexes(ctx, currentPulse, newPulse)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get filament indexes for %v pulse", newPulse)
 	}
 
-	// process every jet asynchronously
-	var eg errgroup.Group
-	for _, info := range jets {
-		info := info
-		eg.Go(func() error {
-			return m.sendForJet(ctx, info, byJet, oldPulse, newPulse)
-		})
-	}
-	return errors.Wrap(eg.Wait(), "got error on jets sync")
-}
+	for _, id := range jets {
+		jetID := id
+		logger := logger.WithSkipFrameCount(1).WithField("jetID", jetID.DebugString())
 
-func logErrorStr(ctx context.Context, jetID insolar.JetID, s string) {
-	logger := inslogger.FromContext(ctx)
-	logger.WithSkipFrameCount(1).WithFields(map[string]interface{}{
-		"err":   s,
-		"jetID": jetID.DebugString(),
-	}).Error("failed to send hot data")
+		block, err := m.findDrop(ctx, currentPulse, jetID)
+		if err != nil {
+			return errors.Wrapf(err, "get drop for pulse %v and jet %v failed", currentPulse, jetID.DebugString())
+		}
+		logger.Infof("save drop for pulse %v", currentPulse)
+
+		// send data for every jet asynchronously
+		go func() {
+			logger.Infof("SPLIT> fire sendForJet in goroutine")
+			err := m.sendForJet(ctx, jetID, newPulse, byJet[jetID], block)
+			if err != nil {
+				logger.WithField("error", err.Error()).Error("hot sender: sendForJet failed")
+			} else {
+				logger.Info("hot sender: sendForJet OK")
+			}
+		}()
+	}
+	return nil
 }
 
 func (m *HotSenderDefault) sendForJet(
 	ctx context.Context,
-	info JetInfo,
-	indexesPerJet map[insolar.JetID][]object.FilamentIndex,
-	oldPulse, newPulse insolar.PulseNumber,
+	jetID insolar.JetID,
+	pn insolar.PulseNumber,
+	indexes []object.FilamentIndex,
+	block drop.Drop,
 ) error {
-	block, err := m.createDrop(ctx, info, oldPulse)
+	ctx, span := instracer.StartSpan(ctx, "hot_sender.send_hot")
+	defer span.End()
+
+	hots := m.hotDataForJet(ctx, indexes)
+	stats.Record(ctx, statHotObjectsTotal.M(int64(len(hots))))
+
+	msg := &message.HotData{
+		Jet:         *insolar.NewReference(insolar.ID(jetID)),
+		Drop:        block,
+		HotIndexes:  hots,
+		PulseNumber: pn,
+	}
+
+	genericRep, err := m.bus.Send(ctx, msg, nil)
 	if err != nil {
-		return errors.Wrapf(err, "create drop on pulse %v failed", oldPulse)
+		return errors.Wrapf(err, "failed to send hot data, method Send failed")
+	}
+	if _, ok := genericRep.(*reply.OK); !ok {
+		return errors.Wrapf(err, "failed to send hot data, not OK reply")
 	}
 
-	sender := func(hotIndexes []message.HotIndex, jetID insolar.JetID) {
-		ctx, span := instracer.StartSpan(ctx, "hot_sender.send_hot")
-		defer span.End()
-		stats.Record(ctx, statHotObjectsTotal.M(int64(len(hotIndexes))))
-
-		msg := &message.HotData{
-			Jet:         *insolar.NewReference(insolar.ID(jetID)),
-			Drop:        *block,
-			HotIndexes:  hotIndexes,
-			PulseNumber: newPulse,
-		}
-
-		genericRep, err := m.bus.Send(ctx, msg, nil)
-		if err != nil {
-			logErrorStr(ctx, jetID, err.Error())
-			return
-		}
-		if _, ok := genericRep.(*reply.OK); !ok {
-			logErrorStr(ctx, jetID, "failed to send hot data")
-			return
-		}
-
-		stats.Record(ctx, statHotObjectsSend.M(int64(len(hotIndexes))))
-	}
-
-	if !info.SplitPerformed {
-		hots := m.hotDataForJet(ctx, indexesPerJet[info.ID])
-		go sender(hots, info.ID)
-		return nil
-	}
-
-	left, right := jet.Siblings(info.ID)
-	hotsLeft := m.hotDataForJet(ctx, indexesPerJet[left])
-	hotsRight := m.hotDataForJet(ctx, indexesPerJet[right])
-	go sender(hotsLeft, left)
-	go sender(hotsRight, right)
+	stats.Record(ctx, statHotObjectsSend.M(int64(len(hots))))
 	return nil
 }
 
-func (m *HotSenderDefault) createDrop(ctx context.Context, info JetInfo, p insolar.PulseNumber) (
-	block *drop.Drop,
-	err error,
-) {
-	block = &drop.Drop{
-		Pulse: p,
-		JetID: info.ID,
-		Split: info.SplitIntent,
+// findDrop try to get drop for provided jet and if not found tries
+// to find Parent's jet (if jet have been split and we have no previous drop for it by this reason)
+func (m *HotSenderDefault) findDrop(
+	ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID,
+) (drop.Drop, error) {
+	block, err := m.dropAccessor.ForPulse(ctx, jetID, pn)
+	if err == drop.ErrNotFound {
+		jetID = jet.Parent(jetID)
+		// try to get parent
+		block, err = m.dropAccessor.ForPulse(ctx, jetID, pn)
+		if err == drop.ErrNotFound {
+			err = errors.Wrap(err, "drop for parent jet not found too")
+		}
 	}
-
-	err = m.dropModifier.Set(ctx, *block)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to set drop %#v", block)
-	}
-
-	return block, nil
+	return block, err
 }
 
 // hotDataForJet prepares list of HotIndex struct from provided FilamentIndex struct.

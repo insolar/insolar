@@ -63,15 +63,21 @@ import (
 type PhaseControllersBundle interface {
 	GetPrepPhaseControllers() []PrepPhaseController
 	GetFullPhaseControllers(nodeCount int) []PhaseController
+	GetNodeUpdateCallback() NodeUpdateCallback
+}
+
+type NodeUpdateCallback interface {
+	OnTrustUpdated(n *NodeAppearance, before, after packets.NodeTrustLevel)
+	OnNodeStateAssigned(n *NodeAppearance)
 }
 
 type ConsensusController interface {
-	ProcessPacket(payload packets.PacketParser, from common.HostIdentityHolder) error
+	ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error
 	// LeaveConsensus()
 }
 
 type RoundController interface {
-	HandlePacket(packet packets.PacketParser, from common.HostIdentityHolder) error
+	HandlePacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder) error
 	StopConsensusRound()
 	StartConsensusRound(upstream UpstreamPulseController)
 }
@@ -91,7 +97,7 @@ type RoundStrategy interface {
 	RandUint32() uint32
 	ShuffleNodeSequence(n int, swap func(i, j int))
 	IsEphemeralPulseAllowed() bool
-	CreateRoundContext(ctx context.Context) context.Context
+	ConfigureRoundContext(ctx context.Context, expectedPulse common.PulseNumber, self common2.LocalNodeProfile) context.Context
 	AdjustConsensusTimings(timings *common2.RoundTimings)
 }
 
@@ -102,7 +108,7 @@ type LocalNodeConfiguration interface {
 }
 
 type PacketSender interface {
-	SendPacketToTransport(t common2.NodeProfile, sendOptions PacketSendOptions, payload interface{})
+	SendPacketToTransport(ctx context.Context, t common2.NodeProfile, sendOptions PacketSendOptions, payload interface{})
 }
 
 type PacketSendOptions uint32
@@ -113,21 +119,26 @@ const (
 )
 
 type PreparedPacketSender interface {
-	SendTo(target common2.NodeProfile, sendOptions PacketSendOptions, sender PacketSender)
+	SendTo(ctx context.Context, target common2.NodeProfile, sendOptions PacketSendOptions, sender PacketSender)
 }
 
 type PacketBuilder interface {
 	GetNeighbourhoodSize(populationCount int) common2.NeighbourhoodSizes
 
-	PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket, options PacketSendOptions) PreparedPacketSender
-	PreparePhase1Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket, nsh common2.NodeStateHashEvidence,
+	PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
+		mp common2.MembershipProfile, nodeCount int,
+		options PacketSendOptions) PreparedPacketSender
+	PreparePhase1Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
+		mp common2.MembershipProfile, nodeCount int,
 		options PacketSendOptions) PreparedPacketSender
 
 	/* Prepare receives all introductions at once, but PreparedSendPacket.SendTo MUST:
 	1. exclude all intros when target is not joiner
 	2. exclude the intro of the target
 	*/
-	PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData, neighbourhood []packets.NodeStateHashReportReader,
+	PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData,
+		mp common2.MembershipProfile, nodeCount int,
+		neighbourhood []packets.NodeStateHashReportReader,
 		intros []common2.NodeIntroduction, options PacketSendOptions) PreparedPacketSender
 
 	PreparePhase3Packet(sender common2.NodeProfile, pd common.PulseData, bitset nodeset.NodeBitset,

@@ -24,53 +24,51 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
 type SetResult struct {
-	message   payload.Meta
-	request   record.Virtual
-	requestID insolar.ID
-	jetID     insolar.JetID
+	message  payload.Meta
+	result   record.Result
+	resultID insolar.ID
+	jetID    insolar.JetID
 
 	dep struct {
-		writer        hot.WriteAccessor
-		records       object.RecordModifier
-		recentStorage recentstorage.Provider
-		pendings      object.PendingModifier
-		sender        bus.Sender
+		writer   hot.WriteAccessor
+		filament executor.FilamentModifier
+		sender   bus.Sender
+		locker   object.IndexLocker
 	}
 }
 
 func NewSetResult(
 	msg payload.Meta,
-	rec record.Virtual,
-	recID insolar.ID,
+	res record.Result,
+	resID insolar.ID,
 	jetID insolar.JetID,
 ) *SetResult {
 	return &SetResult{
-		message:   msg,
-		request:   rec,
-		requestID: recID,
-		jetID:     jetID,
+		message:  msg,
+		result:   res,
+		resultID: resID,
+		jetID:    jetID,
 	}
 }
 
 func (p *SetResult) Dep(
 	w hot.WriteAccessor,
-	r object.RecordModifier,
-	rs recentstorage.Provider,
-	pnds object.PendingModifier,
 	s bus.Sender,
+	l object.IndexLocker,
+	f executor.FilamentModifier,
 ) {
 	p.dep.writer = w
-	p.dep.records = r
-	p.dep.recentStorage = rs
-	p.dep.pendings = pnds
 	p.dep.sender = s
+	p.dep.locker = l
+	p.dep.filament = f
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
@@ -83,41 +81,27 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	material := record.Material{
-		Virtual: &p.request,
-		JetID:   p.jetID,
-	}
-	err = p.dep.records.Set(ctx, p.requestID, material)
-	if err != nil {
+	p.dep.locker.Lock(&p.result.Object)
+	defer p.dep.locker.Unlock(&p.result.Object)
+
+	err = p.dep.filament.SetResult(ctx, p.resultID, p.jetID, p.result)
+	if err == object.ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK (nil error). When deduplication will be implemented
+		// we should change `nil` to `ErrOverride` here.
+		return nil
+	} else if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 
-	err = p.handlePendings(ctx, p.request)
-	if err != nil {
-		return err
-	}
-
-	msg, err := payload.NewMessage(&payload.ID{ID: p.requestID})
+	msg, err := payload.NewMessage(&payload.ID{ID: p.resultID})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
 	go p.dep.sender.Reply(ctx, p.message, msg)
-
-	return nil
-}
-
-func (p *SetResult) handlePendings(ctx context.Context, virtRec record.Virtual) error {
-	// TODO: check it after INS-1939
-	// concrete := record.Unwrap(&virtRec)
-	//
-	// rec := concrete.(*record.Result)
-	// recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
-	// recentStorage.RemovePendingRequest(ctx, rec.Object, *rec.Request.Record())
-	// err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, calculatedID, *r)
-	// if err != nil {
-	// 	return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
-	// }
 
 	return nil
 }

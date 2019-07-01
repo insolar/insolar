@@ -20,27 +20,40 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/internal/hash"
 )
 
 type ecdsaProvider struct {
-	HashProvider hash.AlgorithmProvider `inject:""`
 }
 
 func NewECDSAProvider() AlgorithmProvider {
 	return &ecdsaProvider{}
 }
 
-func (p *ecdsaProvider) Sign(privateKey crypto.PrivateKey) insolar.Signer {
-	return &ecdsaSignerWrapper{
+func (p *ecdsaProvider) DataSigner(privateKey crypto.PrivateKey, hasher insolar.Hasher) insolar.Signer {
+	return &ecdsaDataSignerWrapper{
+		ecdsaDigestSignerWrapper: ecdsaDigestSignerWrapper{
+			privateKey: MustConvertPrivateKeyToEcdsa(privateKey),
+		},
+		hasher: hasher,
+	}
+}
+func (p *ecdsaProvider) DigestSigner(privateKey crypto.PrivateKey) insolar.Signer {
+	return &ecdsaDigestSignerWrapper{
 		privateKey: MustConvertPrivateKeyToEcdsa(privateKey),
-		hasher:     p.HashProvider.Hash512bits(),
 	}
 }
 
-func (p *ecdsaProvider) Verify(publicKey crypto.PublicKey) insolar.Verifier {
-	return &ecdsaVerifyWrapper{
+func (p *ecdsaProvider) DataVerifier(publicKey crypto.PublicKey, hasher insolar.Hasher) insolar.Verifier {
+	return &ecdsaDataVerifyWrapper{
+		ecdsaDigestVerifyWrapper: ecdsaDigestVerifyWrapper{
+			publicKey: MustConvertPublicKeyToEcdsa(publicKey),
+		},
+		hasher: hasher,
+	}
+}
+
+func (p *ecdsaProvider) DigestVerifier(publicKey crypto.PublicKey) insolar.Verifier {
+	return &ecdsaDigestVerifyWrapper{
 		publicKey: MustConvertPublicKeyToEcdsa(publicKey),
-		hasher:    p.HashProvider.Hash512bits(),
 	}
 }

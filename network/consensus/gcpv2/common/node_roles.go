@@ -32,6 +32,7 @@ func (v NodePrimaryRole) IsNeutral() bool {
 type NodeSpecialRole uint8
 
 const (
+	SpecialRoleNoRole    NodeSpecialRole = 0
 	SpecialRoleDiscovery NodeSpecialRole = 1 << iota
 )
 

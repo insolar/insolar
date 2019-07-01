@@ -68,6 +68,11 @@ func (id *ID) Pulse() PulseNumber {
 	return PulseNumber(pulse)
 }
 
+// SetPulse sets IDs pulse.
+func (id *ID) SetPulse(pn PulseNumber) {
+	copy(id[:PulseNumberSize], pn.Bytes())
+}
+
 // Hash returns a copy of Hash part of ID.
 func (id *ID) Hash() []byte {
 	recHash := make([]byte, RecordHashSize)
@@ -104,7 +109,7 @@ func NewIDFromBase58(str string) (*ID, error) {
 	return &id, nil
 }
 
-// MarshalJSON serializes ID into JSON.
+// MarshalJSON serializes ID into JSONFormat.
 func (id *ID) MarshalJSON() ([]byte, error) {
 	if id == nil {
 		return json.Marshal(nil)
@@ -194,7 +199,7 @@ func NewReferenceFromBase58(str string) (*Reference, error) {
 	return NewReference(*recordID), nil
 }
 
-// MarshalJSON serializes reference into JSON.
+// MarshalJSON serializes reference into JSONFormat.
 func (ref *Reference) MarshalJSON() ([]byte, error) {
 	if ref == nil {
 		return json.Marshal(nil)

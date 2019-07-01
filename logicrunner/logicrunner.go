@@ -345,7 +345,7 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	inslogger.FromContext(ctx).Debug("loop detected")
+	inslogger.FromContext(ctx).Error("loop detected")
 	return true
 }
 
@@ -501,8 +501,13 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 				if es.CurrentList.Empty() {
 					state.ExecutionState = nil
 				}
-			} else if es.pending == message.NotPending && es.LedgerHasMoreRequests {
-				lr.startGetLedgerPendingRequest(ctx, es)
+			} else {
+				if es.pending == message.NotPending && es.LedgerHasMoreRequests {
+					lr.startGetLedgerPendingRequest(ctx, es)
+				}
+				if es.pending == message.NotPending {
+					es.Broker.StartProcessorIfNeeded(ctx)
+				}
 			}
 
 			es.Unlock()

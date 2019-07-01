@@ -89,7 +89,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			)
 		} else if es.pending == message.InPending && !es.PendingConfirmed {
 			inslogger.FromContext(ctx).Warn(
-				"looks like pending executor died, continuing execution",
+				"looks like pending executor died, continuing execution on next executor",
 			)
 			es.pending = message.NotPending
 			sendExecResults = true
@@ -131,7 +131,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			}
 		} else if es.pending == message.InPending && !es.PendingConfirmed {
 			inslogger.FromContext(ctx).Warn(
-				"looks like pending executor died, continuing execution",
+				"looks like pending executor died, re-starting execution",
 			)
 			es.pending = message.NotPending
 			es.LedgerHasMoreRequests = true

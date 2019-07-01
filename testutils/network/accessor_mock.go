@@ -24,6 +24,11 @@ type AccessorMock struct {
 	GetActiveNodePreCounter uint64
 	GetActiveNodeMock       mAccessorMockGetActiveNode
 
+	GetActiveNodeByAddrFunc       func(p string) (r insolar.NetworkNode)
+	GetActiveNodeByAddrCounter    uint64
+	GetActiveNodeByAddrPreCounter uint64
+	GetActiveNodeByAddrMock       mAccessorMockGetActiveNodeByAddr
+
 	GetActiveNodeByShortIDFunc       func(p insolar.ShortNodeID) (r insolar.NetworkNode)
 	GetActiveNodeByShortIDCounter    uint64
 	GetActiveNodeByShortIDPreCounter uint64
@@ -59,6 +64,7 @@ func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	}
 
 	m.GetActiveNodeMock = mAccessorMockGetActiveNode{mock: m}
+	m.GetActiveNodeByAddrMock = mAccessorMockGetActiveNodeByAddr{mock: m}
 	m.GetActiveNodeByShortIDMock = mAccessorMockGetActiveNodeByShortID{mock: m}
 	m.GetActiveNodesMock = mAccessorMockGetActiveNodes{mock: m}
 	m.GetWorkingNodeMock = mAccessorMockGetWorkingNode{mock: m}
@@ -210,6 +216,153 @@ func (m *AccessorMock) GetActiveNodeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetActiveNodeFunc != nil {
 		return atomic.LoadUint64(&m.GetActiveNodeCounter) > 0
+	}
+
+	return true
+}
+
+type mAccessorMockGetActiveNodeByAddr struct {
+	mock              *AccessorMock
+	mainExpectation   *AccessorMockGetActiveNodeByAddrExpectation
+	expectationSeries []*AccessorMockGetActiveNodeByAddrExpectation
+}
+
+type AccessorMockGetActiveNodeByAddrExpectation struct {
+	input  *AccessorMockGetActiveNodeByAddrInput
+	result *AccessorMockGetActiveNodeByAddrResult
+}
+
+type AccessorMockGetActiveNodeByAddrInput struct {
+	p string
+}
+
+type AccessorMockGetActiveNodeByAddrResult struct {
+	r insolar.NetworkNode
+}
+
+//Expect specifies that invocation of Accessor.GetActiveNodeByAddr is expected from 1 to Infinity times
+func (m *mAccessorMockGetActiveNodeByAddr) Expect(p string) *mAccessorMockGetActiveNodeByAddr {
+	m.mock.GetActiveNodeByAddrFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &AccessorMockGetActiveNodeByAddrExpectation{}
+	}
+	m.mainExpectation.input = &AccessorMockGetActiveNodeByAddrInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Accessor.GetActiveNodeByAddr
+func (m *mAccessorMockGetActiveNodeByAddr) Return(r insolar.NetworkNode) *AccessorMock {
+	m.mock.GetActiveNodeByAddrFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &AccessorMockGetActiveNodeByAddrExpectation{}
+	}
+	m.mainExpectation.result = &AccessorMockGetActiveNodeByAddrResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Accessor.GetActiveNodeByAddr is expected once
+func (m *mAccessorMockGetActiveNodeByAddr) ExpectOnce(p string) *AccessorMockGetActiveNodeByAddrExpectation {
+	m.mock.GetActiveNodeByAddrFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &AccessorMockGetActiveNodeByAddrExpectation{}
+	expectation.input = &AccessorMockGetActiveNodeByAddrInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *AccessorMockGetActiveNodeByAddrExpectation) Return(r insolar.NetworkNode) {
+	e.result = &AccessorMockGetActiveNodeByAddrResult{r}
+}
+
+//Set uses given function f as a mock of Accessor.GetActiveNodeByAddr method
+func (m *mAccessorMockGetActiveNodeByAddr) Set(f func(p string) (r insolar.NetworkNode)) *AccessorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetActiveNodeByAddrFunc = f
+	return m.mock
+}
+
+//GetActiveNodeByAddr implements github.com/insolar/insolar/network.Accessor interface
+func (m *AccessorMock) GetActiveNodeByAddr(p string) (r insolar.NetworkNode) {
+	counter := atomic.AddUint64(&m.GetActiveNodeByAddrPreCounter, 1)
+	defer atomic.AddUint64(&m.GetActiveNodeByAddrCounter, 1)
+
+	if len(m.GetActiveNodeByAddrMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetActiveNodeByAddrMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to AccessorMock.GetActiveNodeByAddr. %v", p)
+			return
+		}
+
+		input := m.GetActiveNodeByAddrMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, AccessorMockGetActiveNodeByAddrInput{p}, "Accessor.GetActiveNodeByAddr got unexpected parameters")
+
+		result := m.GetActiveNodeByAddrMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the AccessorMock.GetActiveNodeByAddr")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetActiveNodeByAddrMock.mainExpectation != nil {
+
+		input := m.GetActiveNodeByAddrMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, AccessorMockGetActiveNodeByAddrInput{p}, "Accessor.GetActiveNodeByAddr got unexpected parameters")
+		}
+
+		result := m.GetActiveNodeByAddrMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the AccessorMock.GetActiveNodeByAddr")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetActiveNodeByAddrFunc == nil {
+		m.t.Fatalf("Unexpected call to AccessorMock.GetActiveNodeByAddr. %v", p)
+		return
+	}
+
+	return m.GetActiveNodeByAddrFunc(p)
+}
+
+//GetActiveNodeByAddrMinimockCounter returns a count of AccessorMock.GetActiveNodeByAddrFunc invocations
+func (m *AccessorMock) GetActiveNodeByAddrMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetActiveNodeByAddrCounter)
+}
+
+//GetActiveNodeByAddrMinimockPreCounter returns the value of AccessorMock.GetActiveNodeByAddr invocations
+func (m *AccessorMock) GetActiveNodeByAddrMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetActiveNodeByAddrPreCounter)
+}
+
+//GetActiveNodeByAddrFinished returns true if mock invocations count is ok
+func (m *AccessorMock) GetActiveNodeByAddrFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetActiveNodeByAddrMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetActiveNodeByAddrCounter) == uint64(len(m.GetActiveNodeByAddrMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetActiveNodeByAddrMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetActiveNodeByAddrCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetActiveNodeByAddrFunc != nil {
+		return atomic.LoadUint64(&m.GetActiveNodeByAddrCounter) > 0
 	}
 
 	return true
@@ -932,6 +1085,10 @@ func (m *AccessorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to AccessorMock.GetActiveNode")
 	}
 
+	if !m.GetActiveNodeByAddrFinished() {
+		m.t.Fatal("Expected call to AccessorMock.GetActiveNodeByAddr")
+	}
+
 	if !m.GetActiveNodeByShortIDFinished() {
 		m.t.Fatal("Expected call to AccessorMock.GetActiveNodeByShortID")
 	}
@@ -973,6 +1130,10 @@ func (m *AccessorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to AccessorMock.GetActiveNode")
 	}
 
+	if !m.GetActiveNodeByAddrFinished() {
+		m.t.Fatal("Expected call to AccessorMock.GetActiveNodeByAddr")
+	}
+
 	if !m.GetActiveNodeByShortIDFinished() {
 		m.t.Fatal("Expected call to AccessorMock.GetActiveNodeByShortID")
 	}
@@ -1008,6 +1169,7 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetActiveNodeFinished()
+		ok = ok && m.GetActiveNodeByAddrFinished()
 		ok = ok && m.GetActiveNodeByShortIDFinished()
 		ok = ok && m.GetActiveNodesFinished()
 		ok = ok && m.GetWorkingNodeFinished()
@@ -1023,6 +1185,10 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetActiveNodeFinished() {
 				m.t.Error("Expected call to AccessorMock.GetActiveNode")
+			}
+
+			if !m.GetActiveNodeByAddrFinished() {
+				m.t.Error("Expected call to AccessorMock.GetActiveNodeByAddr")
 			}
 
 			if !m.GetActiveNodeByShortIDFinished() {
@@ -1058,6 +1224,10 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 func (m *AccessorMock) AllMocksCalled() bool {
 
 	if !m.GetActiveNodeFinished() {
+		return false
+	}
+
+	if !m.GetActiveNodeByAddrFinished() {
 		return false
 	}
 

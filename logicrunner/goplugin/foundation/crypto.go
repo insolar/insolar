@@ -17,7 +17,6 @@
 package foundation
 
 import (
-	"crypto"
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
@@ -27,46 +26,7 @@ import (
 	"github.com/insolar/x-crypto/ecdsa"
 	"github.com/insolar/x-crypto/sha256"
 	"github.com/insolar/x-crypto/x509"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
 )
-
-// TODO: this file should be removed
-
-var platformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
-var keyProcessor = platformpolicy.NewKeyProcessor()
-
-// Sign signs given seed.
-func Sign(data []byte, key crypto.PrivateKey) ([]byte, error) {
-	signature, err := platformCryptographyScheme.Signer(key).Sign(data)
-	if err != nil {
-		return nil, err
-	}
-	return signature.Bytes(), nil
-}
-
-// Verify verifies signature.
-func Verify(data []byte, signatureRaw []byte, publicKey crypto.PublicKey) bool {
-	return platformCryptographyScheme.Verifier(publicKey).Verify(insolar.SignatureFromBytes(signatureRaw), data)
-}
-
-func GeneratePrivateKey() (crypto.PrivateKey, error) {
-	return keyProcessor.GeneratePrivateKey()
-}
-
-func ImportPublicKey(publicKey string) (crypto.PublicKey, error) {
-	return keyProcessor.ImportPublicKeyPEM([]byte(publicKey))
-}
-
-func ExportPublicKey(publicKey crypto.PublicKey) (string, error) {
-	key, err := keyProcessor.ExportPublicKeyPEM(publicKey)
-	return string(key), err
-}
-
-func ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
-	return keyProcessor.ExtractPublicKey(privateKey)
-}
 
 // PointsFromDER is used to convert raw DER string to R S points which are representation of the signature
 func PointsFromDER(der []byte) (*big.Int, *big.Int) {

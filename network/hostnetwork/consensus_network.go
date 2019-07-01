@@ -203,8 +203,8 @@ func NewConsensusNetwork(nodeID string, shortID insolar.ShortNodeID) (network.Co
 }
 
 // HandleDatagram callback method handles udp datagram from transport
-func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
-	logger := inslogger.FromContext(context.Background())
+func (nc *networkConsensus) HandleDatagram(ctx context.Context, address string, buf []byte) {
+	logger := inslogger.FromContext(ctx)
 	r := bytes.NewReader(buf)
 	p, err := packets.ExtractPacket(r)
 	if err != nil {

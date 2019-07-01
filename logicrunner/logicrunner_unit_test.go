@@ -244,12 +244,12 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	objectRef := testutils.RandomRef()
 
 	table := []struct {
-		name        string
-		inState     message.PendingState
-		outState    message.PendingState
-		message     bool
-		messageType record.Request_CT
-		amReply     *struct {
+		name     string
+		inState  message.PendingState
+		outState message.PendingState
+		message  bool
+		callType record.CallType
+		amReply  *struct {
 			has bool
 			err error
 		}
@@ -266,11 +266,11 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			outState: message.NotPending,
 		},
 		{
-			name:        "constructor call",
-			inState:     message.PendingUnknown,
-			message:     true,
-			messageType: record.CTSaveAsChild,
-			outState:    message.NotPending,
+			name:     "constructor call",
+			inState:  message.PendingUnknown,
+			message:  true,
+			callType: record.CTSaveAsChild,
+			outState: message.NotPending,
 		},
 		{
 			name:    "method call, not pending",
@@ -310,7 +310,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			parcel := testutils.NewParcelMock(t)
 			if test.message {
 				parcel.TypeMock.ExpectOnce().Return(insolar.TypeCallMethod)
-				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: test.messageType}})
+				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{Request: record.Request{CallType: test.callType}})
 			}
 			es := NewExecutionState(objectRef)
 			es.pending = test.inState
@@ -496,7 +496,11 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 
 				parcel := testutils.NewParcelMock(suite.mc)
 				parcel.ContextMock.Expect(context.Background()).Return(context.Background())
-				msg.Queue = append(msg.Queue, message.ExecutionQueueElement{Parcel: parcel})
+				reqRef := gen.Reference()
+				msg.Queue = append(
+					msg.Queue,
+					message.ExecutionQueueElement{Parcel: parcel, Request: &reqRef},
+				)
 
 				parcel.MessageMock.Return(&message.CallMethod{})
 				parcel.GetSenderMock.Return(gen.Reference())
@@ -512,7 +516,8 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				for test.object.queueLen > 0 {
 					test.object.queueLen--
 
-					os.ExecutionState.Broker.mutable.Push(&Transcript{})
+					reqRef := gen.Reference()
+					os.ExecutionState.Broker.mutable.Push(&Transcript{RequestRef: &reqRef})
 				}
 			}
 
@@ -625,7 +630,7 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	es.CurrentList.Cleanup()
 
 	es.CurrentList.Set(msg.GetReference(), &Transcript{
-		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
+		Request: &record.Request{ReturnMode: record.ReturnNoWait},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
@@ -901,7 +906,7 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 	lr.MessageBus = suite.mb
 
 	lr.MachinesManager = suite.mm
-	
+
 	suite.am.InjectCodeDescriptorMock.Return()
 	suite.am.InjectObjectDescriptorMock.Return()
 	suite.am.InjectFinishMock.Return()
@@ -975,8 +980,11 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	suite.am.HasPendingRequestsMock.Return(false, nil)
 
-	reqId := testutils.RandomID()
-	suite.am.RegisterRequestMock.Return(&reqId, nil)
+	suite.am.RegisterRequestMock.Set(func(ctx context.Context, r record.Request) (*insolar.ID, error) {
+		reqId := testutils.RandomID()
+		return &reqId, nil
+	})
+
 	resId := testutils.RandomID()
 	suite.am.RegisterResultMock.Return(&resId, nil)
 
@@ -1835,9 +1843,11 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) AfterTest(suiteName, testName
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueElement() {
 	es := NewExecutionState(s.ref)
+	reqRef := gen.Reference()
 	es.Broker.Put(s.ctx, false, &Transcript{
 		FromLedger:   true,
-		LogicContext: &insolar.LogicCallContext{Immutable: false}},
+		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		RequestRef: &reqRef},
 	)
 
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}

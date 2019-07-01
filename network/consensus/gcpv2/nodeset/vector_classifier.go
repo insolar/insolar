@@ -51,8 +51,6 @@
 package nodeset
 
 import (
-	"fmt"
-
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
@@ -95,7 +93,6 @@ func ClassifyByNodeGsh(selfData HashedNodeVector, otherData HashedNodeVector, no
 	}
 
 	summarize(otherData.Bitset, verifyRes&^NvrSenderFault, sr, nodeStats)
-	fmt.Printf("%v\n%v\n%v\n%v\n", selfData.Bitset, otherData.Bitset, sr, nodeStats)
 	return verifyRes
 }
 
