@@ -204,9 +204,6 @@ func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload 
 
 func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error {
 
-	h.mutex.RLock()
-	h.mutex.RUnlock()
-
 	round, ok, err := h._processPacket(ctx, payload, from, false)
 	if ok || err != nil {
 		return err

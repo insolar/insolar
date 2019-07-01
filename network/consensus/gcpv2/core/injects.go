@@ -86,6 +86,11 @@ type ConsensusController interface {
 	AdjustPowerLimit(pwl MemberPowerLevel)
 }
 
+type ConsensusFeeder interface {
+	PickJoinCandidate()
+	RemoveJoinCandidate()
+}
+
 type MemberPowerLevel uint8
 
 const (
