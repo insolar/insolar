@@ -52,6 +52,17 @@ type FilamentCalculator interface {
 
 	// PendingRequests only looks locally.
 	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]insolar.ID, error)
+
+	RequestDuplicate(
+		ctx context.Context,
+		startFrom insolar.PulseNumber,
+		objectID, requestID insolar.ID,
+		request record.Request,
+	) (
+		foundRequest *record.CompositeFilamentRecord,
+		foundResult *record.CompositeFilamentRecord,
+		err error,
+	)
 }
 
 type FilamentCleaner interface {
@@ -325,6 +336,61 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 	}
 
 	return ordered, nil
+}
+
+func (c *FilamentCalculatorDefault) RequestDuplicate(
+	ctx context.Context, startFrom insolar.PulseNumber, objectID, requestID insolar.ID, request record.Request,
+) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
+	logger := inslogger.FromContext(ctx).WithField("object_id", objectID.DebugString())
+
+	logger.Debug("started to search duplicated requests")
+	defer logger.Debug("finished to search duplicated requests")
+
+	if request.GetReason().IsEmpty() {
+		return nil, nil, errors.New("reason is empty")
+	}
+
+	idx, err := c.indexes.ForID(ctx, startFrom, objectID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cache := c.cache.Get(objectID)
+	cache.Lock()
+	defer cache.Unlock()
+
+	iter := newFetchingIterator(
+		ctx,
+		cache,
+		objectID,
+		*idx.Lifeline.PendingPointer,
+		request.GetReason().Record().Pulse(),
+		startFrom,
+		c.jetFetcher,
+		c.coordinator,
+		c.sender,
+	)
+
+	for iter.HasPrev() {
+		rec, err := iter.Prev(ctx)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to calculate pending")
+		}
+
+		if rec.RecordID == requestID {
+			foundRequest = &rec
+		}
+
+		virtual := record.Unwrap(rec.Record.Virtual)
+		switch r := virtual.(type) {
+		case *record.Result:
+			if *r.Request.Record() == requestID {
+				foundResult = &rec
+			}
+		}
+	}
+
+	return foundRequest, foundResult, nil
 }
 
 func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
