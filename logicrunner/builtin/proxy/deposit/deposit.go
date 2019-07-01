@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-type DepositStatus string
+type status string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
