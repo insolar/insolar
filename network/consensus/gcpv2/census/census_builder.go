@@ -231,11 +231,8 @@ func (c *DynamicPopulationBuilder) GetCount() int {
 	return c.census.population.GetCount()
 }
 
-func (c *DynamicPopulationBuilder) GetLocalProfile() common2.LocalNodeProfile {
-	c.census.mutex.RLock()
-	defer c.census.mutex.RUnlock()
-
-	return c.census.population.GetLocalProfile()
+func (c *DynamicPopulationBuilder) GetLocalProfile() common2.UpdatableNodeProfile {
+	return c.FindProfile(c.census.population.GetLocalProfile().GetShortNodeID())
 }
 
 func (c *DynamicPopulationBuilder) FindProfile(nodeID common.ShortNodeID) common2.UpdatableNodeProfile {

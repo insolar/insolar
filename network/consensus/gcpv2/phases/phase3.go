@@ -53,6 +53,7 @@ package phases
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/common"
@@ -193,9 +194,9 @@ func workerQueueFlusher(ctxRound context.Context, q0 chan ph3Data, q1 <-chan Tru
 }
 
 func (c *Phase3Controller) workerPrePhase3(ctx context.Context) bool {
-	logger := c.R.Log()
+	log := inslogger.FromContext(ctx)
 
-	logger.Debug(">>>>workerPrePhase3: begin")
+	log.Debug(">>>>workerPrePhase3: begin")
 
 	timings := c.R.GetTimings()
 	startOfPhase3 := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
@@ -210,13 +211,13 @@ outer:
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Debug(">>>>workerPrePhase3: ctx.Done")
+			log.Debug(">>>>workerPrePhase3: ctx.Done")
 			return false // ctx.Err() ?
 		case <-chasingDelayTimer.Channel():
-			logger.Debug(">>>>workerPrePhase3: chaseExpired")
+			log.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
 		case <-startOfPhase3:
-			logger.Debug(">>>>workerPrePhase3: startOfPhase3")
+			log.Debug(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case sig := <-c.queueTrustUpdated:
 			if sig.IsPingSignal() { // ping indicates arrival of Phase2 packet, to support chasing
@@ -238,21 +239,22 @@ outer:
 			default:
 				countTrustBySome++
 
+				pop := c.R.GetPopulation()
 				// We have some-trusted from all nodes, and the majority of them are well-trusted
-				if countTrustBySome >= c.R.GetOthersCount() && countTrustByNeighbors >= c.R.GetBftMajorityCount() {
-					logger.Debug(">>>>workerPrePhase3: all")
+				if countTrustBySome >= pop.GetOthersCount() && countTrustByNeighbors >= pop.GetBftMajorityCount() {
+					log.Debug(">>>>workerPrePhase3: all")
 					break outer
 				}
 
 				if chasingDelayTimer.IsEnabled() {
 					// We have answers from all nodes, and the majority of them are well-trusted
-					if countHasNsh >= c.R.GetOthersCount() && countTrustByNeighbors >= c.R.GetBftMajorityCount() {
+					if countHasNsh >= pop.GetOthersCount() && countTrustByNeighbors >= pop.GetBftMajorityCount() {
 						chasingDelayTimer.RestartChase()
-						logger.Debug(">>>>workerPrePhase3: chaseStartedAll")
-					} else if countTrustBySome-countFraud >= c.R.GetBftMajorityCount() {
+						log.Debug(">>>>workerPrePhase3: chaseStartedAll")
+					} else if countTrustBySome-countFraud >= pop.GetBftMajorityCount() {
 						// We can start chasing-timeout after getting answers from majority of some-trusted nodes
 						chasingDelayTimer.RestartChase()
-						logger.Debug(">>>>workerPrePhase3: chaseStartedSome")
+						log.Debug(">>>>workerPrePhase3: chaseStartedSome")
 					}
 				}
 			}
@@ -263,7 +265,7 @@ outer:
 	for c.R.GetSelf().IsNshRequired() {
 		select {
 		case <-ctx.Done():
-			logger.Debug(">>>>workerPrePhase3: ctx.Done")
+			log.Debug(">>>>workerPrePhase3: ctx.Done")
 			return false // ctx.Err() ?
 		case <-c.queueTrustUpdated:
 		case <-time.After(loopingMinimalDelay):
@@ -282,9 +284,8 @@ func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
 	var aggDoubted common.SequenceDigester
 
 	bitset := make(nodeset.NodeBitset, c.R.GetNodeCount())
-	nodes := c.R.GetIndexedNodes()
-	for i := range nodes {
-		membership, trust := nodes[i].GetNodeMembershipAndTrust()
+	for i, n := range c.R.GetPopulation().GetIndexedNodes() {
+		membership, trust := n.GetNodeMembershipAndTrust()
 		switch {
 		case membership.IsEmpty():
 			bitset[i] = nodeset.NbsTimeout
@@ -319,10 +320,10 @@ func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
 
 func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodeset.HashedNodeVector) {
 
-	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.GetLocalProfile(), c.R.GetPulseData(),
+	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.CreateLocalAnnouncement(),
 		selfData.Bitset, selfData.TrustedVector, selfData.DoubtedVector, c.packetPrepareOptions)
 
-	for _, np := range c.R.GetShuffledOtherNodes() {
+	for _, np := range c.R.GetPopulation().GetShuffledOtherNodes() {
 		select {
 		case <-ctx.Done():
 			return
@@ -335,7 +336,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodese
 }
 
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodeset.HashedNodeVector) bool {
-	logger := c.R.Log()
+	log := inslogger.FromContext(ctx)
 
 	timings := c.R.GetTimings()
 	softDeadline := time.After(c.R.AdjustedAfter(timings.EndOfPhase3))
@@ -344,7 +345,7 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodese
 	statTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
 	statTbl.PutRow(c.R.GetSelf().GetIndex(), selfData.Bitset.LocalToConsensusStatRow())
 
-	remainingNodes := c.R.GetOthersCount()
+	remainingNodes := c.R.GetPopulation().GetOthersCount()
 
 	// TODO detect nodes produced similar bitmaps, but different GSH
 	// even if we wont have all NSH, we can let to know these nodes on such collision
@@ -359,20 +360,20 @@ outer:
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Debug("Phase3 cancelled")
+			log.Debug("Phase3 cancelled")
 			return false
 		case <-softDeadline:
-			logger.Debug("Phase3 deadline")
+			log.Debug("Phase3 deadline")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, true, c.R)
 			break outer
 		case <-chasingDelayTimer.Channel():
-			logger.Debug("Phase3 chasing expired")
+			log.Debug("Phase3 chasing expired")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, true, c.R)
 			break outer
 		case d := <-c.queuePh3Recv:
 			nodeStats := statTbl.NewRow()
 
-			logger.Debugf(
+			log.Debugf(
 				"\n%v\n%v\n%v\n%v\n",
 				selfData.Bitset,
 				d.vector.Bitset,
@@ -386,7 +387,7 @@ outer:
 				logMsg = "missed"
 			}
 
-			logger.Debugf(
+			log.Debugf(
 				"%s: s:%v, t:%v, %d, %d, %d: %v",
 				logMsg,
 				d.np.GetShortNodeID(),
@@ -406,7 +407,7 @@ outer:
 
 			if remainingNodes <= 0 {
 				consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, false, c.R)
-				logger.Debug("Phase3 done all")
+				log.Debug("Phase3 done all")
 				break outer
 			} else {
 				consensusSelection = c.consensusStrategy.TrySelectOnAdded(&statTbl, d.np.GetProfile(), nodeStats, c.R)
@@ -414,10 +415,10 @@ outer:
 					continue
 				}
 				if chasingDelayTimer.IsEnabled() && consensusSelection.CanBeImproved() {
-					logger.Debug("Phase3 (re)start chasing")
+					log.Debug("Phase3 (re)start chasing")
 					chasingDelayTimer.RestartChase()
 				} else {
-					logger.Debug("Phase3 done strategy")
+					log.Debug("Phase3 done strategy")
 					break outer
 				}
 			}
@@ -427,7 +428,7 @@ outer:
 	// TODO do table generation only when it is needed for logging
 	// if c.R.Log().IsInfo() {
 	tblHeader := fmt.Sprintf("Consensus Node View: %v", c.R.GetSelfNodeID())
-	logger.Debug(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
+	log.Debug(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
 	// }
 
 	if consensusSelection == nil {
@@ -445,9 +446,9 @@ outer:
 	}
 
 	if sameWithActive {
-		logger.Infof("Consensus is finished as same")
+		log.Infof("Consensus is finished as same")
 	} else {
-		logger.Infof("Consensus is finished as different, %v", selectionSet)
+		log.Infof("Consensus is finished as different, %v", selectionSet)
 		// TODO update population and/or start Phase 4
 	}
 
@@ -462,6 +463,6 @@ outer:
 }
 
 func (c *Phase3Controller) handleNodeHashing(index int, digester common.SequenceDigester) {
-	nsh := c.R.GetNodeAppearanceByIndex(index).GetNodeMembershipProfile().StateEvidence.GetNodeStateHash()
+	nsh := c.R.GetPopulation().GetNodeAppearanceByIndex(index).GetNodeMembershipProfile().StateEvidence.GetNodeStateHash()
 	digester.AddNext(nsh)
 }

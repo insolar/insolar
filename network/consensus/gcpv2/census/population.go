@@ -156,8 +156,11 @@ func (c *ManyNodePopulation) makeCopyOfMap(slots map[common2.ShortNodeID]*updata
 	if less == nil {
 		for id, vv := range slots {
 			idx := vv.GetIndex()
+			if idx < 0 {
+				panic(fmt.Sprintf("unsorted index: %v", vv))
+			}
 			if c.slots[idx].NodeIntroProfile != nil {
-				panic(fmt.Sprintf("duplicate index: %v", idx))
+				panic(fmt.Sprintf("duplicate index: %v", vv))
 			}
 			c.slots[idx] = *vv
 			v := &c.slots[idx]
@@ -355,7 +358,7 @@ func (c *DynamicPopulation) AddJoinerProfile(n common.NodeIntroProfile) common.U
 	if _, ok := c.slotByID[id]; ok {
 		panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 	}
-	v := updatableSlot{newNodeSlot(0 /* force later collision without sorting */, n, nil)}
+	v := updatableSlot{newNodeSlot(-1, n, nil)}
 	c.slotByID[id] = &v
 	return &v
 }

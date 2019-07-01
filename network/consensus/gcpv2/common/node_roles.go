@@ -3,7 +3,7 @@ package common
 type NodePrimaryRole uint8 //MUST BE 6-bit
 
 const (
-	PrimaryRoleUnknown NodePrimaryRole = iota
+	PrimaryRoleInactive NodePrimaryRole = iota
 	PrimaryRoleNeutral
 	PrimaryRoleHeavyMaterial
 	PrimaryRoleLightMaterial
@@ -30,8 +30,8 @@ func (v NodePrimaryRole) IsNeutral() bool {
 	return v == PrimaryRoleNeutral
 }
 
-func (v NodePrimaryRole) IsUnknown() bool {
-	return v == PrimaryRoleUnknown
+func (v NodePrimaryRole) IsInactive() bool {
+	return v == PrimaryRoleInactive
 }
 
 type NodeSpecialRole uint8

@@ -132,21 +132,44 @@ func (c *EmuVersionedRegistries) GetVersionPulseData() common.PulseData {
 const ShortNodeIdOffset = 1000
 
 func NewEmuNodeIntro(id int, s common.HostAddress, pr common2.NodePrimaryRole, sr common2.NodeSpecialRole) common2.NodeIntroProfile {
-	return &emuNodeIntro{id: common.ShortNodeID(ShortNodeIdOffset + id), n: s, pr: pr, sr: sr}
+	return &emuNodeIntro{
+		id: common.ShortNodeID(ShortNodeIdOffset + id),
+		n:  &emuEndpoint{name: s},
+		pr: pr,
+		sr: sr,
+	}
+}
+
+var _ common.NodeEndpoint = &emuEndpoint{}
+
+type emuEndpoint struct {
+	name common.HostAddress
+}
+
+func (p *emuEndpoint) GetEndpointType() common.NodeEndpointType {
+	return common.NameEndpoint
+}
+
+func (*emuEndpoint) GetRelayID() common.ShortNodeID {
+	return 0
+}
+
+func (p *emuEndpoint) GetNameAddress() common.HostAddress {
+	return p.name
 }
 
 type emuNodeIntro struct {
-	n  common.HostAddress
+	n  common.NodeEndpoint
 	id common.ShortNodeID
 	pr common2.NodePrimaryRole
 	sr common2.NodeSpecialRole
 }
 
-func (c *emuNodeIntro) GetNodePrimaryRole() common2.NodePrimaryRole {
+func (c *emuNodeIntro) GetPrimaryRole() common2.NodePrimaryRole {
 	return c.pr
 }
 
-func (c *emuNodeIntro) GetNodeSpecialRole() common2.NodeSpecialRole {
+func (c *emuNodeIntro) GetSpecialRoles() common2.NodeSpecialRole {
 	return c.sr
 }
 
@@ -158,7 +181,7 @@ func (c *emuNodeIntro) GetClaimEvidence() common.SignedEvidenceHolder {
 	return nil
 }
 
-func (c *emuNodeIntro) GetDefaultEndpoint() common.HostAddress {
+func (c *emuNodeIntro) GetDefaultEndpoint() common.NodeEndpoint {
 	return c.n
 }
 
@@ -167,7 +190,8 @@ func (*emuNodeIntro) GetNodePublicKeyStore() common.PublicKeyStore {
 }
 
 func (c *emuNodeIntro) IsAcceptableHost(from common.HostIdentityHolder) bool {
-	return c.n.Equals(from.GetHostAddress())
+	addr := c.n.GetNameAddress()
+	return addr.Equals(from.GetHostAddress())
 }
 
 func (c *emuNodeIntro) GetShortNodeID() common.ShortNodeID {

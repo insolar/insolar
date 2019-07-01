@@ -57,7 +57,7 @@ type UnifiedProtocolPacketHeader struct {
 	/*
 		Functions of TargetID, SourceID and RelayId depends on ProtocolType
 	*/
-	ReceiverID uint32 // NB! MUST not be included into packet Signature, MUST NOT =0
+	ReceiverID uint32 // NB! MUST for Signature calculation must be considered as 0, actual value can be different
 
 	ProtocolAndPacketType  uint8  `insolar-transport:"[0:3]=header:Packet;[4:7]=header:Protocol"` // [00-03]PacketType [04-07]ProtocolType
 	PacketFlags            uint8  `insolar-transport:"[:]=flags:PacketFlags"`

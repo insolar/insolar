@@ -52,6 +52,7 @@ package gcpv2
 
 import (
 	"context"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/common"
@@ -68,6 +69,8 @@ func NewConsensusMemberController(chronicle census.ConsensusChronicles, upstream
 		upstreamPulseController: upstream,
 		chronicle:               chronicle,
 		roundFactory:            roundFactory,
+		hasRequestedPower:       true,
+		requestedPower:          100,
 	}
 }
 
@@ -82,6 +85,57 @@ type ConsensusMemberController struct {
 	mutex sync.RWMutex
 	/* mutex needed */
 	currentRound core.RoundController
+
+	hasRequestedPower bool
+	requestedPower    common2.MemberPower
+}
+
+func (h *ConsensusMemberController) Abort() {
+	panic("implement me")
+}
+
+func (h *ConsensusMemberController) RequestLeave() {
+	panic("implement me")
+}
+
+func (h *ConsensusMemberController) GetActivePowerLimit() (common2.MemberPower, common.PulseNumber) {
+	census := h.chronicle.GetActiveCensus()
+	return census.GetOnlinePopulation().GetLocalProfile().GetPower(), census.GetPulseNumber()
+}
+
+func (h *ConsensusMemberController) _getRequestedPowerLimit() common2.MemberPower {
+	if h.hasRequestedPower {
+		return h.requestedPower
+	}
+
+	census := h.chronicle.GetLatestCensus()
+	return census.GetOnlinePopulation().GetLocalProfile().GetDeclaredPower()
+}
+
+func (h *ConsensusMemberController) GetRequestedPowerLimit() common2.MemberPower {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h._getRequestedPowerLimit()
+}
+
+func (h *ConsensusMemberController) AdjustPowerLimit(pwl core.MemberPowerLevel) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	switch pwl {
+	case core.PowerLevelZero:
+		h.requestedPower = 0
+	case core.PowerLevelMinimal:
+		h.requestedPower = 25 //TODO pick allowed levels from mandate
+	case core.PowerLevelReduced:
+		h.requestedPower = 75
+	case core.PowerLevelFull:
+		h.requestedPower = 100
+	default:
+		panic("illegal value")
+	}
+
+	h.hasRequestedPower = true
 }
 
 func (h *ConsensusMemberController) getCurrentRound() core.RoundController {
@@ -106,7 +160,9 @@ func (h *ConsensusMemberController) _getOrCreateRound() (core.RoundController, b
 		return h.currentRound, false
 	}
 
-	h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle)
+	pw := h._getRequestedPowerLimit()
+	h.hasRequestedPower = false
+	h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle, pw)
 	h.currentRound.StartConsensusRound(h)
 	return h.currentRound, true
 }

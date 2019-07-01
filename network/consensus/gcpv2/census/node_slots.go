@@ -90,6 +90,15 @@ func (c *nodeSlot) GetPower() common2.MemberPower {
 	return 0
 }
 
+func (c *nodeSlot) GetOrdering() (common2.NodePrimaryRole, common2.MemberPower, common.ShortNodeID) {
+	p := c.GetPower()
+	r := c.GetPrimaryRole()
+	if p == 0 {
+		r = common2.PrimaryRoleInactive
+	}
+	return r, p, c.GetShortNodeID()
+}
+
 func (c *nodeSlot) GetState() common2.MembershipState {
 	return c.state
 }
@@ -105,10 +114,6 @@ func (c *nodeSlot) GetSignatureVerifier() common.SignatureVerifier {
 	return c.verifier
 }
 
-func (c *nodeSlot) IsJoiner() bool {
-	return c.state.IsJoining()
-}
-
 var _ common2.UpdatableNodeProfile = &updatableSlot{}
 
 type updatableSlot struct {
@@ -118,6 +123,10 @@ type updatableSlot struct {
 func (c *updatableSlot) SetRank(index int, state common2.MembershipState, power common2.MemberPower) {
 	c.SetIndex(index)
 	c.state = state
+	c.power = power
+}
+
+func (c *updatableSlot) SetPower(power common2.MemberPower) {
 	c.power = power
 }
 

@@ -64,42 +64,42 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile, callback *nodeCallback) *NodeAppearance {
-	if np == nil {
-		panic("node profile is nil")
-	}
+func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile, callback *nodeContext) *NodeAppearance {
 	np.LocalNodeProfile() // to avoid linter's paranoia
 
-	return &NodeAppearance{
-		profile:  np,
-		state:    packets.NodeStateLocalActive,
-		trust:    packets.SelfTrust,
-		callback: callback,
+	r := &NodeAppearance{
+		state: packets.NodeStateLocalActive,
+		trust: packets.SelfTrust,
 	}
+	r.init(np, callback)
+	return r
 }
 
-func (c *NodeAppearance) init(np common2.NodeProfile, callback *nodeCallback) {
+func (c *NodeAppearance) init(np common2.NodeProfile, callback NodeContextHolder) {
 	if np == nil {
 		panic("node profile is nil")
 	}
 	c.profile = np
 	c.callback = callback
+	c.announceHandler = newNoAnnouncementsHandler()
 }
 
 type NodeAppearance struct {
 	mutex sync.Mutex
 
 	/* Provided externally at construction. Don't need mutex */
-	profile                common2.NodeProfile // set by construction
-	callback               *nodeCallback
-	handlers               []PhasePerNodePacketHandler
-	neighborTrustThreshold uint8
+	profile  common2.NodeProfile // set by construction
+	callback *nodeContext
+	handlers []PhasePerNodePacketFunc
 
 	/* Other fields - need mutex */
 
 	//membership common2.MembershipProfile // one-time set
-	claimSignature common2.NodeClaimSignature    // one-time set
-	stateEvidence  common2.NodeStateHashEvidence // one-time set
+	announceSignature common2.MemberAnnouncementSignature // one-time set
+	stateEvidence     common2.NodeStateHashEvidence       // one-time set
+	requestedPower    common2.MemberPower                 // one-time set
+
+	announceHandler AnnounceHandler
 
 	firstFraudDetails *errors.FraudError
 
@@ -108,7 +108,6 @@ type NodeAppearance struct {
 	state           packets.NodeState
 	trust           packets.NodeTrustLevel
 	neighborReports uint8
-	//claimHash       common2.NodeClaimSignature
 }
 
 func (c *NodeAppearance) String() string {
@@ -129,22 +128,15 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	target.profile.(common2.LocalNodeProfile).LocalNodeProfile()
 
 	target.stateEvidence = c.stateEvidence
-	target.claimSignature = c.claimSignature
+	target.announceSignature = c.announceSignature
+	target.requestedPower = c.requestedPower
 
 	target.state = c.state
 	target.trust = c.trust
 }
 
-// func (c *NodeAppearance) Frauds() errors.FraudFactory {
-// 	return c.errorFactory.GetFraudFactory()
-// }
-//
-// func (c *NodeAppearance) Blames() errors.BlameFactory {
-// 	return c.errorFactory.GetBlameFactory()
-// }
-
 func (c *NodeAppearance) IsJoiner() bool {
-	return c.profile.IsJoiner()
+	return false
 }
 
 func (c *NodeAppearance) GetIndex() int {
@@ -165,11 +157,8 @@ func (c *NodeAppearance) GetProfile() common2.NodeProfile {
 	return c.profile
 }
 
-func (c *NodeAppearance) VerifyPacketAuthenticity(packet packets.PacketParser, from common.HostIdentityHolder, preVerified bool) error {
-	if preVerified {
-		return nil
-	}
-	return VerifyPacketAuthenticityBy(packet, c.profile, c.profile.GetSignatureVerifier(), from)
+func (c *NodeAppearance) VerifyPacketAuthenticity(packet packets.PacketParser, from common.HostIdentityHolder, strictFrom bool) error {
+	return VerifyPacketAuthenticityBy(packet, c.profile, c.profile.GetSignatureVerifier(), from, strictFrom)
 }
 
 func (c *NodeAppearance) SetReceivedPhase(phase packets.PhaseNumber) bool {
@@ -232,35 +221,33 @@ func (c *NodeAppearance) ApplyNodeMembership(mp common2.MembershipProfile) (bool
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp common2.MembershipProfile) (modifiedNsh bool, trustBefore, trustAfter packets.NodeTrustLevel) {
+func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp common2.MembershipProfile) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	var err error
-	trustBefore = c.trust
-	modifiedNsh, err = c._applyNodeMembership(mp)
+	trustBefore := c.trust
+	modified, err := c._applyNodeMembership(mp)
 
 	if err == nil && witness.GetShortNodeID() != c.GetShortNodeID() { // a node can't be a witness to itself
-		trustBefore = c.trust
 		switch {
 		case c.neighborReports == 0:
 			c.trust.UpdateKeepNegative(packets.TrustBySome)
 		case c.neighborReports == uint8(math.MaxUint8):
 			panic("overflow")
-		case c.neighborReports > c.neighborTrustThreshold:
+		case c.neighborReports > c.GetNeighborTrustThreshold():
 			break // to allow the next statement to fire only once
-		case c.neighborReports+1 > c.neighborTrustThreshold:
+		case c.neighborReports+1 > c.GetNeighborTrustThreshold():
 			c.trust.UpdateKeepNegative(packets.TrustByNeighbors)
 		}
 		c.neighborReports++
 
-		if trustBefore != c.trust {
-			c.callback.onTrustUpdated(c, trustBefore, c.trust)
-		}
+	}
+	if trustBefore != c.trust {
+		c.callback.onTrustUpdated(c, trustBefore, c.trust)
 	}
 
-	return modifiedNsh, trustBefore, c.trust
+	return modified, err
 }
 
 func (c *NodeAppearance) Frauds() errors.FraudFactory {
@@ -274,40 +261,42 @@ func (c *NodeAppearance) Blames() errors.BlameFactory {
 /* Evidence MUST be verified before this call */
 func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile) (bool, error) {
 
-	if c.stateEvidence == nil {
-		if mp.IsEmpty() {
-			panic(fmt.Sprintf("membership evidence is nil: for=%v", c.GetShortNodeID()))
-		}
-		if c.GetIndex() != int(mp.Index) || c.GetPower() != mp.Power {
-			return false, c.registerFraud(c.Frauds().NewMismatchedMembershipRank(c.GetProfile(), mp))
-		}
-
-		c.neighbourWeight ^= common.FoldUint64(mp.StateEvidence.GetNodeStateHash().FoldToUint64())
-		c.stateEvidence = mp.StateEvidence
-		c.claimSignature = mp.ClaimSignature
-
-		c.callback.onNodeStateAssigned(c)
-
-		return true, nil
+	if mp.IsEmpty() {
+		panic(fmt.Sprintf("membership evidence is nil: for=%v", c.GetShortNodeID()))
 	}
 
-	lmp := c.getMembership()
-	if mp.Equals(lmp) {
-		return false, nil
+	if c.stateEvidence != nil {
+		lmp := c.getMembership()
+		if mp.Equals(lmp) {
+			return false, nil
+		}
+
+		return c.registerFraud(c.Frauds().NewMultipleMembershipProfiles(c.GetProfile(), lmp, mp))
 	}
 
-	return false, c.registerFraud(c.Frauds().NewMultipleMembershipProfiles(c.GetProfile(), lmp, mp))
+	err := c._handleAnnouncement(mp)
+	if err != nil {
+		return false, err
+	}
+
+	c.neighbourWeight ^= common.FoldUint64(mp.StateEvidence.GetNodeStateHash().FoldToUint64())
+	c.stateEvidence = mp.StateEvidence
+	c.announceSignature = mp.AnnounceSignature
+	c.requestedPower = mp.RequestedPower
+
+	c.callback.onNodeStateAssigned(c)
+
+	return true, nil
 }
 
-//func (c *NodeAppearance) GetNodeStateHashEvidence() common2.NodeStateHashEvidence {
-//	c.mutex.Lock()
-//	defer c.mutex.Unlock()
-//
-//	if c.stateEvidence == nil {
-//		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
-//	}
-//	return c.membership
-//}
+func (c *NodeAppearance) _handleAnnouncement(mp common2.MembershipProfile) error {
+	ah, err := c.announceHandler.CaptureAnnouncement(mp)
+	if err != nil {
+		return err
+	}
+	c.announceHandler = ah
+	return nil
+}
 
 func (c *NodeAppearance) GetNodeMembershipProfile() common2.MembershipProfile {
 	c.mutex.Lock()
@@ -325,19 +314,19 @@ func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() common2.MembershipPro
 	return c.getMembership()
 }
 
-func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence common2.NodeStateHashEvidence, claims common2.NodeClaimSignature) {
+func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence common2.NodeStateHashEvidence, announce common2.MemberAnnouncementSignature) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	if c.stateEvidence != nil {
 		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
 	}
-	if claims == nil {
+	if announce == nil {
 		panic("illegal param")
 	}
 	c.neighbourWeight ^= common.FoldUint64(evidence.GetNodeStateHash().FoldToUint64())
 	c.stateEvidence = evidence
-	c.claimSignature = claims
+	c.announceSignature = announce
 }
 
 func (c *NodeAppearance) GetNodeMembershipAndTrust() (common2.MembershipProfile, packets.NodeTrustLevel) {
@@ -371,7 +360,7 @@ func (c *NodeAppearance) GetPower() common2.MemberPower {
 	return c.profile.GetPower()
 }
 
-func (c *NodeAppearance) registerFraud(fraud errors.FraudError) error {
+func (c *NodeAppearance) registerFraud(fraud errors.FraudError) (bool, error) {
 	if fraud.IsUnknown() {
 		panic("empty fraud")
 	}
@@ -380,11 +369,12 @@ func (c *NodeAppearance) registerFraud(fraud errors.FraudError) error {
 	if c.trust.Update(packets.FraudByThisNode) {
 		c.firstFraudDetails = &fraud
 		c.callback.onTrustUpdated(c, prevTrust, c.trust)
+		return true, fraud
 	}
-	return fraud
+	return false, fraud
 }
 
-func (c *NodeAppearance) RegisterFraud(fraud errors.FraudError) error {
+func (c *NodeAppearance) RegisterFraud(fraud errors.FraudError) (bool, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -396,25 +386,37 @@ func (c *NodeAppearance) RegisterFraud(fraud errors.FraudError) error {
 	return c.registerFraud(fraud)
 }
 
-/*
-deprecated
-*/
-func (c *NodeAppearance) RegisterFraudWithTrust(fraud errors.FraudError) (before, after packets.NodeTrustLevel, err error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	/* Here the pointer comparison is intentional to ensure exact NodeProfile, as it may change across rounds etc */
-	if fraud.ViolatorNode() != c.GetProfile() {
-		panic("misplaced fraud")
-	}
-
-	before = c.trust
-	err = c.registerFraud(fraud)
-	after = c.trust
-
-	return
+func (c *NodeAppearance) getMembership() common2.MembershipProfile {
+	return common2.NewMembershipProfileByNode(c.profile, c.stateEvidence, c.announceSignature, c.requestedPower)
 }
 
-func (c *NodeAppearance) getMembership() common2.MembershipProfile {
-	return common2.NewMembershipProfileByNode(c.profile, c.stateEvidence, c.claimSignature)
+func (c *NodeAppearance) GetNeighborTrustThreshold() uint8 {
+	return c.callback.GetNeighbourhoodTrustThreshold()
+}
+
+func (c *NodeAppearance) NotifyOnCustom(event interface{}) {
+	c.callback.onCustomEvent(c, event)
+}
+
+func (c *NodeAppearance) getPacketHandler(i int) PhasePerNodePacketFunc {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if len(c.handlers) == 0 {
+		return nil
+	}
+	return c.handlers[i]
+}
+
+func (c *NodeAppearance) ResetAllPacketHandlers() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.handlers = nil
+}
+
+func (c *NodeAppearance) ResetPacketHandler(i int) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if len(c.handlers) > 0 {
+		c.handlers[i] = nil
+	}
 }

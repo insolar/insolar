@@ -54,6 +54,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
+	"time"
 )
 
 type PacketParser interface {
@@ -64,6 +65,12 @@ type PacketParser interface {
 
 	GetPulsePacket() PulsePacketReader
 	GetMemberPacket() MemberPacketReader
+
+	GetSourceId() common.ShortNodeID
+	GetReceiverId() common.ShortNodeID
+
+	/* Returns zero when no relay */
+	GetRelayTargetID() common.ShortNodeID
 
 	GetPacketSignature() common.SignedDigest
 }
@@ -77,11 +84,6 @@ type PulsePacketReader interface {
 type MemberPacketReader interface {
 	GetPacketType() PacketType
 
-	GetSourceShortNodeId() common.ShortNodeID
-
-	HasTargetShortNodeId() bool
-	GetTargetShortNodeId() common.ShortNodeID
-
 	AsPhase0Packet() Phase0PacketReader
 	AsPhase1Packet() Phase1PacketReader
 	AsPhase2Packet() Phase2PacketReader
@@ -94,44 +96,41 @@ type PhasePacketReader interface {
 	GetPulseNumber() common.PulseNumber
 }
 
-type NodeStateHashReportReader interface {
-	common2.NodeStateHashReader
-	GetShortNodeID() common.ShortNodeID
-	GetNodeTrustLevel() NodeTrustLevel
-}
-
 type Phase0PacketReader interface {
 	PhasePacketReader
-	common2.NodeRankReader
 
+	GetNodeRank() common2.MembershipRank
 	GetEmbeddedPulsePacket() PulsePacketReader
 }
 
 type Phase1PacketReader interface {
 	PhasePacketReader
-	common2.NodeStateHashReader
 
 	HasPulseData() bool /* PulseData/PulsarData is optional for Phase1 */
 	GetEmbeddedPulsePacket() PulsePacketReader
 
-	HasSelfIntro() bool
-	GetSelfIntroduction() common2.NodeIntroduction
+	//HasSelfIntro() bool
+	GetCloudIntroduction() CloudIntroductionReader
+	GetFullIntroduction() FullIntroductionReader
 
-	// TODO Join and leave claims
-	// TODO nodePower etc
+	GetAnnouncementReader() MembershipAnnouncementReader
+	//GetNodeBriefIntro()
+	//GetNodeFullIntro()
+	//GetCloudIntro()
 }
 
 type Phase2PacketReader interface {
 	PhasePacketReader
-	common2.NodeRankReader
 
-	GetNeighbourhood() []NodeStateHashReportReader
-	GetIntroductions() []common2.NodeIntroduction
+	GetBriefIntroduction() BriefIntroductionReader
+	GetAnnouncementReader() MembershipAnnouncementReader
+	GetNeighbourhood() []MembershipAnnouncementReader
+
+	//GetNodeBriefIntro()
 }
 
 type Phase3PacketReader interface {
 	PhasePacketReader
-	common2.NodeRankReader
 
 	GetBitset() nodeset.NodeBitset
 	GetTrustedGsh() common2.GlobulaStateHash
@@ -139,4 +138,61 @@ type Phase3PacketReader interface {
 
 	GetTrustedCshEvidence() common.SignedEvidenceHolder
 	GetDoubtedCshEvidence() common.SignedEvidenceHolder
+}
+
+type MembershipAnnouncementReader interface {
+	GetNodeID() common.ShortNodeID
+	GetNodeRank() common2.MembershipRank
+	GetRequestedPower() common2.MemberPower
+	GetNodeStateHashEvidence() common2.NodeStateHashEvidence
+	GetAnnouncementSignature() common2.MemberAnnouncementSignature
+
+	// Methods below are not applicable when GetNodeRank().IsJoiner()
+	IsLeaving() bool
+	GetLeaveReason() uint32
+
+	/*
+		If GetJoinerID() == 0 then there is no joiner announced by the member
+		If this reader is part of Neighbourhood then nonzero GetJoinerID() will be equal to GetNodeID()
+	*/
+	GetJoinerID() common.ShortNodeID
+	/* Can be nil when this reader is part of Neighbourhood - then joiner data is in the sender's announcmenet */
+	GetJoinerAnnouncement() JoinerAnnouncementReader
+}
+
+type JoinerAnnouncementReader interface {
+	GetBriefIntro() BriefIntroductionReader
+	GetBriefIntroSignature() common.SignatureHolder
+}
+
+type CloudIntroductionReader interface {
+	GetLastCloudStateHash() common.DigestHolder
+	GetJoinerSecret() common.DigestHolder
+	GetCloudIdentity() common.DigestHolder
+}
+
+type BriefIntroductionReader interface {
+	GetNodeID() common.ShortNodeID
+	GetNodePrimaryRole() common2.NodePrimaryRole
+	GetNodeSpecialRoles() common2.NodeSpecialRole
+	GetNodePK() common.SignatureKeyHolder
+
+	GetNodeEndpoint() common.NodeEndpoint
+}
+
+type FullIntroductionReader interface {
+	BriefIntroductionReader
+
+	GetIssuedAtPulse() common.PulseNumber // =0 when a node was connected during zeronet
+	GetIssuedAtTime() time.Time
+
+	GetMaxPower() common2.MemberPower
+	GetPowerLevels() [2]common2.MemberPower
+
+	GetExtraEndpoints() []common.NodeEndpoint
+
+	//NodeRefProof	[]common.Bits512
+
+	GetIssuerID() common.ShortNodeID
+	GetIssuerSignature() common.SignatureHolder
 }

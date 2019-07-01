@@ -58,7 +58,7 @@ import (
 )
 
 type HostProfile interface {
-	GetDefaultEndpoint() common.HostAddress
+	GetDefaultEndpoint() common.NodeEndpoint
 	GetNodePublicKeyStore() common.PublicKeyStore
 	IsAcceptableHost(from common.HostIdentityHolder) bool
 	// GetHostType()
@@ -73,8 +73,8 @@ type NodeIntroProfile interface {
 	HostProfile
 	GetShortNodeID() common.ShortNodeID
 	GetIntroduction() NodeIntroduction
-	GetNodePrimaryRole() NodePrimaryRole
-	GetNodeSpecialRole() NodeSpecialRole
+	GetPrimaryRole() NodePrimaryRole
+	GetSpecialRoles() NodeSpecialRole
 	IsAllowedPower(p MemberPower) bool
 }
 
@@ -83,9 +83,9 @@ type NodeProfile interface {
 	GetIndex() int
 	GetDeclaredPower() MemberPower
 	GetPower() MemberPower
+	GetOrdering() (NodePrimaryRole, MemberPower, common.ShortNodeID)
 	GetSignatureVerifier() common.SignatureVerifier
 	GetState() MembershipState
-	IsJoiner() bool
 	HasWorkingPower() bool
 }
 
@@ -96,6 +96,7 @@ type LocalNodeProfile interface {
 
 type UpdatableNodeProfile interface {
 	NodeProfile
+	SetPower(declaredPower MemberPower)
 	SetRank(index int, state MembershipState, declaredPower MemberPower)
 	SetSignatureVerifier(verifier common.SignatureVerifier)
 	// Update certificate / mandate
@@ -166,40 +167,55 @@ func (v MembershipState) IsLeaving() bool {
 }
 
 func LessForNodeProfile(c NodeProfile, o NodeProfile) bool {
-	cP := c.GetPower()
-	oP := o.GetPower()
+	cR, cP, cI := c.GetOrdering()
+	oR, oP, oI := o.GetOrdering()
+
+	/* Reversed order */
+	if cR < oR {
+		return false
+	} else if cR > oR {
+		return true
+	}
+
 	if cP < oP {
 		return true
 	} else if cP > oP {
 		return false
 	}
 
-	cI := c.GetShortNodeID()
-	oI := o.GetShortNodeID()
 	return cI < oI
 }
 
 type MembershipProfile struct {
-	Index          uint16
-	Power          MemberPower
-	StateEvidence  NodeStateHashEvidence
-	ClaimSignature NodeClaimSignature
+	Index             uint16
+	Power             MemberPower
+	RequestedPower    MemberPower
+	StateEvidence     NodeStateHashEvidence
+	AnnounceSignature MemberAnnouncementSignature
 }
 
-func NewMembershipProfile(index uint16, power MemberPower, nsh NodeStateHashEvidence, nch NodeClaimSignature) MembershipProfile {
-	return MembershipProfile{Index: index, Power: power, StateEvidence: nsh, ClaimSignature: nch}
+func NewMembershipProfile(index uint16, power MemberPower, nsh NodeStateHashEvidence, nas MemberAnnouncementSignature,
+	ep MemberPower) MembershipProfile {
+	return MembershipProfile{
+		Index:             index,
+		Power:             power,
+		RequestedPower:    ep,
+		StateEvidence:     nsh,
+		AnnounceSignature: nas,
+	}
 }
 
-func NewMembershipProfileByNode(np NodeProfile, nsh NodeStateHashEvidence, nch NodeClaimSignature) MembershipProfile {
-	return NewMembershipProfile(uint16(np.GetIndex()), np.GetPower(), nsh, nch)
+func NewMembershipProfileByNode(np NodeProfile, nsh NodeStateHashEvidence, nas MemberAnnouncementSignature,
+	ep MemberPower) MembershipProfile {
+	return NewMembershipProfile(uint16(np.GetIndex()), np.GetPower(), nsh, nas, ep)
 }
 
 func (p MembershipProfile) IsEmpty() bool {
-	return p.StateEvidence == nil || p.ClaimSignature == nil
+	return p.StateEvidence == nil || p.AnnounceSignature == nil
 }
 
 func (p MembershipProfile) Equals(o MembershipProfile) bool {
-	if p.Index != o.Index || p.Power != o.Power || p.IsEmpty() || o.IsEmpty() {
+	if p.Index != o.Index || p.Power != o.Power || p.IsEmpty() || o.IsEmpty() || p.RequestedPower != o.RequestedPower {
 		return false
 	}
 
@@ -212,9 +228,17 @@ func (p MembershipProfile) Equals(o MembershipProfile) bool {
 		}
 	}
 
-	return p.ClaimSignature == o.ClaimSignature || p.ClaimSignature.Equals(o.ClaimSignature)
+	return p.AnnounceSignature == o.AnnounceSignature || p.AnnounceSignature.Equals(o.AnnounceSignature)
+}
+
+func (p MembershipProfile) StringParts() string {
+	if p.Power == p.RequestedPower {
+		return fmt.Sprintf("pw:%v se:%v cs:%v", p.Power, p.StateEvidence, p.AnnounceSignature)
+	} else {
+		return fmt.Sprintf("pw:%v->%v se:%v cs:%v", p.Power, p.RequestedPower, p.StateEvidence, p.AnnounceSignature)
+	}
 }
 
 func (p MembershipProfile) String() string {
-	return fmt.Sprintf("idx:%03d pw:%v se:%v cs:%v", p.Index, p.Power, p.StateEvidence, p.ClaimSignature)
+	return fmt.Sprintf("idx:%03d %s", p.Index, p.StringParts())
 }

@@ -85,7 +85,7 @@ func TestConsensusMain(t *testing.T) {
 
 	for i, n := range nodes {
 		chronicles := NewEmuChronicles(nodes, i, &primingCloudStateHash)
-		node := NewConsensusNode(n.GetDefaultEndpoint())
+		node := NewConsensusNode(n.GetDefaultEndpoint().GetNameAddress())
 		node.ConnectTo(chronicles, network, config)
 	}
 

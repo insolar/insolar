@@ -52,7 +52,6 @@ package core
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -62,19 +61,39 @@ import (
 
 type PhaseControllersBundle interface {
 	GetPrepPhaseControllers() []PrepPhaseController
-	GetFullPhaseControllers(nodeCount int) []PhaseController
-	GetNodeUpdateCallback() NodeUpdateCallback
+	GetFullPhaseControllers(nodeCount int) ([]PhaseController, NodeUpdateCallback)
 }
 
 type NodeUpdateCallback interface {
 	OnTrustUpdated(n *NodeAppearance, before, after packets.NodeTrustLevel)
 	OnNodeStateAssigned(n *NodeAppearance)
+	OnCustomEvent(n *NodeAppearance, event interface{})
 }
 
 type ConsensusController interface {
 	ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error
-	// LeaveConsensus()
+
+	/* Ungraceful stop */
+	Abort()
+	/* Graceful exit, actual moment of leave will be indicated via Upstream */
+	RequestLeave()
+
+	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
+	GetActivePowerLimit() (common2.MemberPower, common.PulseNumber)
+	/* Returns the last request power limit and pulse number when it could be applied. Without active population pulse number will be 0. */
+	GetRequestedPowerLimit() common2.MemberPower
+	/* Will set requested power accordingly to the level requested here and allowed for this node. */
+	AdjustPowerLimit(pwl MemberPowerLevel)
 }
+
+type MemberPowerLevel uint8
+
+const (
+	PowerLevelZero MemberPowerLevel = iota
+	PowerLevelMinimal
+	PowerLevelReduced
+	PowerLevelFull
+)
 
 type RoundController interface {
 	HandlePacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder) error
@@ -83,7 +102,7 @@ type RoundController interface {
 }
 
 type RoundControllerFactory interface {
-	CreateConsensusRound(chronicle census.ConsensusChronicles) RoundController
+	CreateConsensusRound(chronicle census.ConsensusChronicles, requestedPower common2.MemberPower) RoundController
 	GetLocalConfiguration() LocalNodeConfiguration
 }
 
@@ -123,26 +142,22 @@ type PreparedPacketSender interface {
 }
 
 type PacketBuilder interface {
-	GetNeighbourhoodSize(populationCount int) common2.NeighbourhoodSizes
+	GetNeighbourhoodSize() common2.NeighbourhoodSizes
 
-	PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
-		mp common2.MembershipProfile, nodeCount int,
+	PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
 		options PacketSendOptions) PreparedPacketSender
-	PreparePhase1Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
-		mp common2.MembershipProfile, nodeCount int,
+	PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
 		options PacketSendOptions) PreparedPacketSender
 
 	/* Prepare receives all introductions at once, but PreparedSendPacket.SendTo MUST:
 	1. exclude all intros when target is not joiner
 	2. exclude the intro of the target
 	*/
-	PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData,
-		mp common2.MembershipProfile, nodeCount int,
-		neighbourhood []packets.NodeStateHashReportReader,
-		intros []common2.NodeIntroduction, options PacketSendOptions) PreparedPacketSender
+	PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
+		neighbourhood []packets.MembershipAnnouncementReader, options PacketSendOptions) PreparedPacketSender
 
-	PreparePhase3Packet(sender common2.NodeProfile, pd common.PulseData, bitset nodeset.NodeBitset,
-		gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
+	PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
+		bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
 		options PacketSendOptions) PreparedPacketSender
 }
 

@@ -92,11 +92,11 @@ func NewNodeIntroProfile(node insolar.NetworkNode, certificate insolar.Certifica
 	}
 }
 
-func (nip *NodeIntroProfile) GetNodePrimaryRole() common2.NodePrimaryRole {
+func (nip *NodeIntroProfile) GetPrimaryRole() common2.NodePrimaryRole {
 	return StaticRoleToPrimaryRole(nip.node.Role())
 }
 
-func (nip *NodeIntroProfile) GetNodeSpecialRole() common2.NodeSpecialRole {
+func (nip *NodeIntroProfile) GetSpecialRoles() common2.NodeSpecialRole {
 	if nip.isDiscovery {
 		return common2.SpecialRoleDiscovery
 	}
@@ -150,7 +150,7 @@ func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
 
 	networkNode := node.NewNode(
 		nn.ID(),
-		PrimaryRoleToStaticRole(profile.GetNodePrimaryRole()),
+		PrimaryRoleToStaticRole(profile.GetPrimaryRole()),
 		nn.PublicKey(),
 		profile.GetDefaultEndpoint().String(),
 		nn.Version(),

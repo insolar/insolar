@@ -97,11 +97,20 @@ type SignatureKeyHolder interface {
 	FoldableReader
 	GetSignMethod() SignMethod
 	GetSignatureKeyMethod() SignatureMethod
+	GetSignatureKeyType() SignatureKeyType
 	Equals(other SignatureKeyHolder) bool
 }
 
+type SignatureKeyType uint8
+
+const (
+	SymmetricKey SignatureKeyType = iota
+	SecretAsymmetricKey
+	PublicAsymmetricKey
+)
+
 type CertificateHolder interface {
-	GetSignatureKey() SignatureKeyHolder
+	GetPublicKey() SignatureKeyHolder
 	IsValidForHostAddress(HostAddress string) bool
 }
 
@@ -316,4 +325,12 @@ func (r *SignedData) WriteTo(w io.Writer) (int64, error) {
 
 func (r SignedData) String() string {
 	return fmt.Sprintf("[bytes=%v]%v", r.hReader, r.hSignedDigest)
+}
+
+func (v SignatureKeyType) IsSymmetric() bool {
+	return v == SymmetricKey
+}
+
+func (v SignatureKeyType) IsSecret() bool {
+	return v != PublicAsymmetricKey
 }

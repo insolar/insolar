@@ -50,7 +50,10 @@
 
 package core
 
-import "github.com/insolar/insolar/network/consensus/gcpv2/census"
+import (
+	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+)
 
 var _ RoundControllerFactory = &PhasedRoundControllerFactory{}
 
@@ -68,7 +71,7 @@ func (c *PhasedRoundControllerFactory) GetLocalConfiguration() LocalNodeConfigur
 	return c.config
 }
 
-func (c *PhasedRoundControllerFactory) CreateConsensusRound(chronicle census.ConsensusChronicles) RoundController {
+func (c *PhasedRoundControllerFactory) CreateConsensusRound(chronicle census.ConsensusChronicles, requestedPower common.MemberPower) RoundController {
 	strategy := c.strategyFactory.CreateRoundStrategy(chronicle, c.config)
-	return NewPhasedRoundController(strategy, chronicle, c.transport, c.config)
+	return NewPhasedRoundController(strategy, chronicle, c.transport, c.config, requestedPower)
 }

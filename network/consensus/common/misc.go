@@ -73,6 +73,21 @@ func (addr HostAddress) String() string {
 	return string(addr)
 }
 
+type NodeEndpoint interface {
+	GetEndpointType() NodeEndpointType
+	GetRelayID() ShortNodeID
+	GetNameAddress() HostAddress
+	//GetIpAddress() packets.NodeAddress
+}
+
+type NodeEndpointType uint8
+
+const (
+	IpEndpoint NodeEndpointType = iota
+	NameEndpoint
+	RelayEndpoint
+)
+
 type HostIdentityHolder interface {
 	GetHostAddress() HostAddress
 	GetTransportKey() SignatureKeyHolder

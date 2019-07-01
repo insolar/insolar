@@ -59,6 +59,7 @@ type ConsensusChronicles interface {
 	GetActiveCensus() ActiveCensus
 	GetExpectedCensus() ExpectedCensus
 	GetLatestCensus() OperationalCensus
+	GetRecentCensus(pn common.PulseNumber) OperationalCensus
 	// FindArchivedCensus(pn common.PulseNumber) ArchivedCensus
 }
 
@@ -158,5 +159,5 @@ type OnlinePopulationBuilder interface {
 	RemoveProfile(nodeID common.ShortNodeID)
 	GetUnorderedProfiles() []common2.UpdatableNodeProfile
 	FindProfile(nodeID common.ShortNodeID) common2.UpdatableNodeProfile
-	GetLocalProfile() common2.LocalNodeProfile
+	GetLocalProfile() common2.UpdatableNodeProfile
 }

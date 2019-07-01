@@ -58,39 +58,21 @@ type NodeStateHash interface {
 	common.DigestHolder
 }
 
-type NodeClaimSignature interface {
+type GlobulaStateHash interface {
 	common.DigestHolder
 }
 
-type NodeStateHashEvidence interface {
-	GetNodeStateHash() NodeStateHash
-	GetGlobulaNodeStateSignature() common.SignatureHolder
-}
-
-type GlobulaStateHash interface {
-	NodeStateHash
-}
-
 type CloudStateHash interface {
-	NodeStateHash
+	common.DigestHolder
+}
+
+type MemberAnnouncementSignature interface {
+	common.SignatureHolder
 }
 
 type OriginalPulsarPacket interface {
-	// common.SignedEvidenceHolder
-	// GetPulsarId() PulsarId
+	common.FixedReader
 	OriginalPulsarPacket()
-}
-
-type NodeRankReader interface {
-	GetNodeIndex() uint16
-	GetNodeCount() uint16
-	GetNodePower() MemberPower
-}
-
-type NodeStateHashReader interface {
-	NodeRankReader
-	GetNodeStateHashEvidence() NodeStateHashEvidence
-	GetNodeClaimsSignature() NodeClaimSignature
 }
 
 func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {

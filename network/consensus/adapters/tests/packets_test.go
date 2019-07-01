@@ -264,8 +264,8 @@ type EmuPhase1NetPacket struct {
 	// packetType uint8 // to reuse this type for Phase1 and Phase1Req
 }
 
-func (r *EmuPhase1NetPacket) GetNodeClaimsSignature() common2.NodeClaimSignature {
-	return r.mp.ClaimSignature
+func (r *EmuPhase1NetPacket) GetNodeClaimsSignature() common2.MemberAnnouncementSignature {
+	return r.mp.AnnounceSignature
 }
 
 func (r *EmuPhase1NetPacket) HasSelfIntro() bool {
