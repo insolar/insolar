@@ -135,6 +135,7 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 		Arguments: req.Arguments,
 
 		APIRequestID: current.Request.APIRequestID,
+		Reason:       *current.RequestRef,
 	}
 
 	if !req.Wait {
@@ -183,6 +184,7 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
+		Reason:       *current.RequestRef,
 	}
 
 	msg := &message.CallMethod{IncomingRequest: reqRecord}
@@ -222,6 +224,7 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
+		Reason:       *current.RequestRef,
 	}
 	msg := &message.CallMethod{IncomingRequest: reqRecord}
 
