@@ -51,7 +51,7 @@ func NewInfoService(runner *Runner) *InfoService {
 
 // Get returns info about genesis objects.
 //
-//   IncomingRequest structure:
+//   Request structure:
 //   {
 //     "jsonrpc": "2.0",
 //     "method": "network.getInfo",
