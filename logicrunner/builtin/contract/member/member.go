@@ -163,7 +163,7 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 
 	role, ok := params["role"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
+		return nil, fmt.Errorf("incorect input: failed to get 'role' param")
 	}
 
 	return m.registerNode(publicKey, role)
@@ -199,16 +199,16 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 }
 func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 
-	mReferenceStr, ok := params["reference"].(string)
+	referenceStr, ok := params["reference"].(string)
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
 	}
 
-	mRef, err := insolar.NewReferenceFromBase58(mReferenceStr)
+	reference, err := insolar.NewReferenceFromBase58(referenceStr)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse reference: %s", err.Error())
+		return 0, fmt.Errorf("failed to parse 'reference': %s", err.Error())
 	}
-	m := member.GetObject(*mRef)
+	m := member.GetObject(*reference)
 
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
@@ -225,8 +225,9 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	recipientReferenceStr, ok := params["toMemberReference"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'recipientReference' param")
+		return nil, fmt.Errorf("incorect input: failed to get 'toMemberReference' param")
 	}
+
 	amount, ok := params["amount"].(string)
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
@@ -234,7 +235,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	recipientReference, err := insolar.NewReferenceFromBase58(recipientReferenceStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse 'to' param: %s", err.Error())
+		return nil, fmt.Errorf("failed to parse 'toMemberReference' param: %s", err.Error())
 	}
 	if m.GetReference() == *recipientReference {
 		return nil, fmt.Errorf("recipient must be different from the sender")
@@ -249,26 +250,41 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 }
 func (m *Member) migrationCall(params map[string]interface{}) (interface{}, error) {
 
-	inAmount, ok := params["amount"].(string)
+	amountStr, ok := params["amount"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'inAmount' param")
+		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
 	}
 
 	amount := new(big.Int)
-	amount, ok = amount.SetString(inAmount, 10)
+	amount, ok = amount.SetString(amountStr, 10)
 	if !ok {
 		return nil, fmt.Errorf("failed to parse amount")
 	}
 
-	unHoldDate, err := helper.ParseTimestamp(params["currentDate"].(string))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse unHoldDate: %s", err.Error())
+	currentDateStr, ok := params["currentDate"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'currentDate' param")
 	}
 
-	return m.migration(params["txId"].(string), params["burnAddress"].(string), *amount, unHoldDate)
+	currentDate, err := helper.ParseTimestamp(currentDateStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse 'currentDate': %s", err.Error())
+	}
+
+	txId, ok := params["txId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'txId' param")
+	}
+
+	burnAddress, ok := params["burnAddress"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'burnAddress' param")
+	}
+
+	return m.migration(txId, burnAddress, *amount, currentDate)
 }
 
-// Platform methods
+// Platform methods.
 func (m *Member) registerNode(public string, role string) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
@@ -300,7 +316,7 @@ func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
 	return nodeRef, nil
 }
 
-// Create member methods
+// Create member methods.
 func (m *Member) createMemberByKey(key string) (interface{}, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
@@ -376,7 +392,7 @@ func (m *Member) getDeposits() ([]map[string]string, error) {
 	return result, nil
 }
 
-// Migration methods
+// Migration methods.
 func (m *Member) migration(txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
 	rd := rootdomain.GetObject(m.RootDomain)
 
@@ -429,7 +445,7 @@ func (m *Member) migration(txHash string, burnAddress string, amount big.Int, un
 	return strconv.Itoa(int(confirms)), nil
 }
 
-// Find deposits for this member with this transaction hash.
+// FindDeposit finds deposits for this member with this transaction hash.
 func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 
 	inputAmount := new(big.Int)

@@ -30,7 +30,9 @@ type status string
 
 const (
 	confirms uint = 3
+)
 
+const (
 	statusOpen    status = "Open"
 	statusHolding status = "Holding"
 	statusClose   status = "Close"
