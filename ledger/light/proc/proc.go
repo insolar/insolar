@@ -51,6 +51,7 @@ type Dependencies struct {
 	SetCode                func(*SetCode)
 	GetPendingFilament     func(*GetPendingFilament)
 	RefreshPendingFilament func(*RefreshPendingFilament)
+	GetDelegate            func(*GetDelegate)
 	Sender                 bus.Sender
 }
 
@@ -105,5 +106,6 @@ func NewDependenciesMock() *Dependencies {
 		SetCode:                func(*SetCode) {},
 		GetPendingFilament:     func(*GetPendingFilament) {},
 		RefreshPendingFilament: func(*RefreshPendingFilament) {},
+		GetDelegate:            func(*GetDelegate) {},
 	}
 }

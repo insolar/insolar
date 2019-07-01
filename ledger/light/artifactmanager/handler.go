@@ -268,6 +268,9 @@ func NewMessageHandler(
 		SetCode: func(p *proc.SetCode) {
 			p.Dep(h.WriteAccessor, h.RecordModifier, h.BlobModifier, h.PCS, h.Sender)
 		},
+		GetDelegate: func(p *proc.GetDelegate) {
+			p.Dep.Sender = h.Sender
+		},
 		Sender: h.Sender,
 	}
 
