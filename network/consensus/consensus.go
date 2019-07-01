@@ -74,8 +74,9 @@ type Dep struct {
 	NodeKeeper         network.NodeKeeper
 	DatagramTransport  transport.DatagramTransport
 
-	Stater       adapters.Stater
+	StateGetter  adapters.StateGetter
 	PulseChanger adapters.PulseChanger
+	StateUpdater adapters.StateUpdater
 
 	// TODO: remove it from here
 	PacketBuilder func(core.TransportCryptographyFactory, core.LocalNodeConfiguration) core.PacketBuilder
@@ -143,9 +144,9 @@ func New(ctx context.Context, dep Dep) Consensus {
 		dep.KeyStore,
 	)
 	consensus.upstreamPulseController = adapters.NewUpstreamPulseController(
-		dep.Stater,
+		dep.StateGetter,
 		dep.PulseChanger,
-		dep.NodeKeeper,
+		dep.StateUpdater,
 	)
 	consensus.roundStrategyFactory = adapters.NewRoundStrategyFactory()
 	consensus.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
