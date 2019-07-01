@@ -344,7 +344,7 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 
 func (c *FilamentCalculatorDefault) RequestDuplicate(
 	ctx context.Context, startFrom insolar.PulseNumber, objectID, requestID insolar.ID, request record.Request,
-) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
+) (*record.CompositeFilamentRecord, *record.CompositeFilamentRecord, error) {
 	logger := inslogger.FromContext(ctx).WithField("object_id", objectID.DebugString())
 
 	logger.Debug("started to search duplicated requests")
@@ -359,14 +359,13 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	if err != nil {
 		return nil, nil, err
 	}
+	if idx.Lifeline.PendingPointer == nil {
+		return nil, nil, nil
+	}
 
 	cache := c.cache.Get(objectID)
 	cache.Lock()
 	defer cache.Unlock()
-
-	if idx.Lifeline.PendingPointer == nil {
-		return nil, nil, nil
-	}
 
 	iter := newFetchingIterator(
 		ctx,
@@ -380,6 +379,9 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		c.sender,
 	)
 
+	var foundRequest *record.CompositeFilamentRecord
+	var foundResult *record.CompositeFilamentRecord
+
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
 		if err != nil {
@@ -391,8 +393,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		}
 
 		virtual := record.Unwrap(rec.Record.Virtual)
-		r, ok := virtual.(*record.Result)
-		if ok {
+		if r, ok := virtual.(*record.Result); ok {
 			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
 				foundResult = &rec
 			}
