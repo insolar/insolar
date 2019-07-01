@@ -103,6 +103,8 @@ func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.
 	parentSpan, err := instracer.Deserialize([]byte(watermillMsg.Metadata.Get(wmBus.MetaSpanData)))
 	if err == nil {
 		ctx = instracer.WithParentSpan(ctx, parentSpan)
+	} else {
+		inslogger.FromContext(ctx).Error(err)
 	}
 	logger := inslogger.FromContext(ctx)
 	go func() {

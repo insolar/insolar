@@ -369,6 +369,8 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	if err == nil {
 		ctx = instracer.WithParentSpan(ctx, parentSpan)
+	} else {
+		inslogger.FromContext(ctx).Error(err)
 	}
 	err = n.sendMessage(ctx, msg)
 	if err != nil {
