@@ -123,11 +123,10 @@ func TestConsensusMain(t *testing.T) {
 
 	network.Start(ctx)
 
-	pulsar := NewPulsar(pulseHandlers)
+	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
-			time.Sleep(10 * time.Second)
 		}
 	}()
 
