@@ -92,7 +92,14 @@ func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
 	wmMsg.Metadata.Set(wmBus.MetaTraceID, inslogger.TraceID(ctx))
-	wmMsg.Metadata.Set(wmBus.MetaSpanData, string(instracer.MustSerialize(ctx)))
+
+	sp, err := instracer.Serialize(ctx)
+	if err == nil {
+		wmMsg.Metadata.Set(wmBus.MetaSpanData, string(sp))
+	} else {
+		inslogger.FromContext(ctx).Error(err)
+	}
+
 	wmMsg.Metadata.Set(MessageTypeField, msgType)
 
 	return wmMsg
