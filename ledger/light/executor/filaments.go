@@ -391,8 +391,8 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		}
 
 		virtual := record.Unwrap(rec.Record.Virtual)
-		switch r := virtual.(type) {
-		case *record.Result:
+		r, ok := virtual.(*record.Result)
+		if ok {
 			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
 				foundResult = &rec
 			}
