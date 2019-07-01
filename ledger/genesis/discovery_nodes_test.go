@@ -121,7 +121,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 
 	amMock.RegisterRequestFunc = func(
 		_ context.Context,
-		req record.Request,
+		req record.IncomingRequest,
 	) (*insolar.ID, error) {
 		virtRec := record.Wrap(req)
 		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)

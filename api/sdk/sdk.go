@@ -80,7 +80,7 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 			return nil, errors.Wrap(err, "failed to unmarshal keys")
 		}
 
-		return requester.CreateUserConfig(ref, keys.Private)
+		return requester.CreateUserConfig(ref, keys.Private, keys.Public)
 	}
 
 	response, err := requester.Info(buffer.next())
@@ -132,7 +132,7 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
 	reqCfg := &requester.Request{
-		Params:   requester.Params{CallParams: params, CallSite: method},
+		Params:   requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey},
 		Method:   "api.Call",
 		LogLevel: sdk.logLevel.(string),
 	}
@@ -170,30 +170,39 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	}
 	privateKeyStr := string(privateKeyBytes)
 
-	memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
+	publicKey, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to extract public key")
 	}
+	publicKeyStr := string(publicKey)
+
+	userConfig, err := requester.CreateUserConfig(sdk.rootMember.Caller, privateKeyStr, publicKeyStr)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to create user config for request")
+	}
 
 	response, err := sdk.DoRequest(
-		sdk.rootMember.Caller,
-		privateKeyStr,
+		userConfig,
 		"contract.createMember",
-		map[string]interface{}{"publicKey": string(memberPubKeyStr)},
+		map[string]interface{}{},
 	)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "request was failed ")
 	}
 
-	return NewMember(response.ContractResult.(string), privateKeyStr), response.TraceID, nil
+	return NewMember(response.ContractResult.(string), privateKeyStr, publicKeyStr), response.TraceID, nil
 }
 
 // AddBurnAddresses method add burn addresses
 func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
+	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create user config for request")
+	}
+
 	response, err := sdk.DoRequest(
-		sdk.migrationAdminMember.Caller,
-		sdk.migrationAdminMember.PrivateKey,
-		"wallet.addBurnAddresses",
+		userConfig,
+		"migration.addBurnAddresses",
 		map[string]interface{}{"burnAddresses": burnAddresses},
 	)
 	if err != nil {
@@ -205,9 +214,12 @@ func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
 
 // Transfer method send money from one member to another
 func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error) {
+	userConfig, err := requester.CreateUserConfig(from.Reference, from.PrivateKey, from.PublicKey)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create user config for request")
+	}
 	response, err := sdk.DoRequest(
-		from.Reference,
-		from.PrivateKey,
+		userConfig,
 		"wallet.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": to.Reference},
 	)
@@ -220,31 +232,31 @@ func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error
 
 // GetBalance returns current balance of the given member.
 func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
-	response, err := sdk.DoRequest(m.Reference,
-		m.PrivateKey,
+	userConfig, err := requester.CreateUserConfig(m.Reference, m.PrivateKey, m.PublicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create user config for request")
+	}
+	response, err := sdk.DoRequest(
+		userConfig,
 		"wallet.getBalance",
 		map[string]interface{}{"reference": m.Reference},
 	)
 	if err != nil {
-		return new(big.Int), errors.Wrap(err, "request was failed ")
+		return nil, errors.Wrap(err, "request was failed ")
 	}
 
 	result, ok := new(big.Int).SetString(response.ContractResult.(string), 10)
 	if !ok {
-		return new(big.Int), errors.Errorf("can't parse returned balance")
+		return nil, errors.Errorf("can't parse returned balance")
 	}
 
 	return result, nil
 }
 
-func (sdk *SDK) DoRequest(callerRef string, callerKey string, method string, params map[string]interface{}) (*requester.Result, error) {
+func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.Result, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
-	config, err := requester.CreateUserConfig(callerRef, callerKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create user config for request")
-	}
 
-	body, err := sdk.sendRequest(ctx, method, params, config)
+	body, err := sdk.sendRequest(ctx, method, params, user)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request")
 	}

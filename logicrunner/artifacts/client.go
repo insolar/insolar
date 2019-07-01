@@ -121,7 +121,7 @@ func NewClient(sender bus.Sender) *client { // nolint
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterRequest(
-	ctx context.Context, request record.Request,
+	ctx context.Context, request record.IncomingRequest,
 ) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterRequest")
@@ -442,7 +442,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 			return nil, nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
 		}
 		concrete := record.Unwrap(&rec)
-		castedRecord, ok := concrete.(*record.Request)
+		castedRecord, ok := concrete.(*record.IncomingRequest)
 		if !ok {
 			return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
@@ -453,7 +453,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 			TraceSpanData: instracer.MustSerialize(ctx),
 		}
 		return insolar.NewReference(requestID), &message.Parcel{Msg: &message.CallMethod{
-			Request: *castedRecord}, ServiceData: serviceData}, nil
+			IncomingRequest: *castedRecord}, ServiceData: serviceData}, nil
 	case *reply.Error:
 		return nil, nil, r.Error()
 	default:

@@ -28,7 +28,7 @@ import (
 // Client is a high level storage interface.
 type Client interface {
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, request record.Request) (*insolar.ID, error)
+	RegisterRequest(ctx context.Context, request record.IncomingRequest) (*insolar.ID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//

@@ -130,7 +130,7 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 
 	nodeID, err := nm.artifactManager.RegisterRequest(
 		ctx,
-		record.Request{
+		record.IncomingRequest{
 			CallType: record.CTGenesis,
 			Method:   node.Record.PublicKey,
 		},

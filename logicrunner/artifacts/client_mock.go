@@ -86,7 +86,7 @@ type ClientMock struct {
 	InjectObjectDescriptorPreCounter uint64
 	InjectObjectDescriptorMock       mClientMockInjectObjectDescriptor
 
-	RegisterRequestFunc       func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)
+	RegisterRequestFunc       func(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
 	RegisterRequestMock       mClientMockRegisterRequest
@@ -2031,7 +2031,7 @@ type ClientMockRegisterRequestExpectation struct {
 
 type ClientMockRegisterRequestInput struct {
 	p  context.Context
-	p1 record.Request
+	p1 record.IncomingRequest
 }
 
 type ClientMockRegisterRequestResult struct {
@@ -2040,7 +2040,7 @@ type ClientMockRegisterRequestResult struct {
 }
 
 //Expect specifies that invocation of Client.RegisterRequest is expected from 1 to Infinity times
-func (m *mClientMockRegisterRequest) Expect(p context.Context, p1 record.Request) *mClientMockRegisterRequest {
+func (m *mClientMockRegisterRequest) Expect(p context.Context, p1 record.IncomingRequest) *mClientMockRegisterRequest {
 	m.mock.RegisterRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -2064,7 +2064,7 @@ func (m *mClientMockRegisterRequest) Return(r *insolar.ID, r1 error) *ClientMock
 }
 
 //ExpectOnce specifies that invocation of Client.RegisterRequest is expected once
-func (m *mClientMockRegisterRequest) ExpectOnce(p context.Context, p1 record.Request) *ClientMockRegisterRequestExpectation {
+func (m *mClientMockRegisterRequest) ExpectOnce(p context.Context, p1 record.IncomingRequest) *ClientMockRegisterRequestExpectation {
 	m.mock.RegisterRequestFunc = nil
 	m.mainExpectation = nil
 
@@ -2079,7 +2079,7 @@ func (e *ClientMockRegisterRequestExpectation) Return(r *insolar.ID, r1 error) {
 }
 
 //Set uses given function f as a mock of Client.RegisterRequest method
-func (m *mClientMockRegisterRequest) Set(f func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)) *ClientMock {
+func (m *mClientMockRegisterRequest) Set(f func(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2088,7 +2088,7 @@ func (m *mClientMockRegisterRequest) Set(f func(p context.Context, p1 record.Req
 }
 
 //RegisterRequest implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) RegisterRequest(p context.Context, p1 record.Request) (r *insolar.ID, r1 error) {
+func (m *ClientMock) RegisterRequest(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.RegisterRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterRequestCounter, 1)
 

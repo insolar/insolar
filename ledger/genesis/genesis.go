@@ -220,7 +220,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 
 	_, err := g.ArtifactManager.RegisterRequest(
 		ctx,
-		record.Request{
+		record.IncomingRequest{
 			CallType: record.CTGenesis,
 			Method:   name,
 		},

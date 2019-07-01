@@ -36,7 +36,7 @@ type ManagerMock struct {
 	GetObjectPreCounter uint64
 	GetObjectMock       mManagerMockGetObject
 
-	RegisterRequestFunc       func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)
+	RegisterRequestFunc       func(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
 	RegisterRequestMock       mManagerMockRegisterRequest
@@ -541,7 +541,7 @@ type ManagerMockRegisterRequestExpectation struct {
 
 type ManagerMockRegisterRequestInput struct {
 	p  context.Context
-	p1 record.Request
+	p1 record.IncomingRequest
 }
 
 type ManagerMockRegisterRequestResult struct {
@@ -550,7 +550,7 @@ type ManagerMockRegisterRequestResult struct {
 }
 
 //Expect specifies that invocation of Manager.RegisterRequest is expected from 1 to Infinity times
-func (m *mManagerMockRegisterRequest) Expect(p context.Context, p1 record.Request) *mManagerMockRegisterRequest {
+func (m *mManagerMockRegisterRequest) Expect(p context.Context, p1 record.IncomingRequest) *mManagerMockRegisterRequest {
 	m.mock.RegisterRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -574,7 +574,7 @@ func (m *mManagerMockRegisterRequest) Return(r *insolar.ID, r1 error) *ManagerMo
 }
 
 //ExpectOnce specifies that invocation of Manager.RegisterRequest is expected once
-func (m *mManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 record.Request) *ManagerMockRegisterRequestExpectation {
+func (m *mManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 record.IncomingRequest) *ManagerMockRegisterRequestExpectation {
 	m.mock.RegisterRequestFunc = nil
 	m.mainExpectation = nil
 
@@ -589,7 +589,7 @@ func (e *ManagerMockRegisterRequestExpectation) Return(r *insolar.ID, r1 error) 
 }
 
 //Set uses given function f as a mock of Manager.RegisterRequest method
-func (m *mManagerMockRegisterRequest) Set(f func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)) *ManagerMock {
+func (m *mManagerMockRegisterRequest) Set(f func(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error)) *ManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -598,7 +598,7 @@ func (m *mManagerMockRegisterRequest) Set(f func(p context.Context, p1 record.Re
 }
 
 //RegisterRequest implements github.com/insolar/insolar/internal/ledger/artifact.Manager interface
-func (m *ManagerMock) RegisterRequest(p context.Context, p1 record.Request) (r *insolar.ID, r1 error) {
+func (m *ManagerMock) RegisterRequest(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.RegisterRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterRequestCounter, 1)
 
