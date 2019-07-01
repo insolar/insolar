@@ -26,32 +26,32 @@ import (
 )
 
 type SetBlob struct {
-	dep       *proc.Dependencies
-	msg       *message.SetBlob
-	wmmessage payload.Meta
+	dep  *proc.Dependencies
+	msg  *message.SetBlob
+	meta payload.Meta
 }
 
-func NewSetBlob(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.SetBlob) *SetBlob {
+func NewSetBlob(dep *proc.Dependencies, meta payload.Meta, msg *message.SetBlob) *SetBlob {
 	return &SetBlob{
-		dep:       dep,
-		msg:       msg,
-		wmmessage: wmmessage,
+		dep:  dep,
+		msg:  msg,
+		meta: meta,
 	}
 }
 
 func (s *SetBlob) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.wmmessage)
+	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.meta)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.wmmessage)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.meta)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
-	setBlob := proc.NewSetBlob(jet.Result.Jet, s.wmmessage, s.msg)
+	setBlob := proc.NewSetBlob(jet.Result.Jet, s.meta, s.msg)
 	s.dep.SetBlob(setBlob)
 	return f.Procedure(ctx, setBlob, false)
 }

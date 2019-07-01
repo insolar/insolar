@@ -63,8 +63,6 @@ const (
 const (
 	// TypeError is Type for messages with error in Payload
 	TypeError = "error"
-	// TypeReply is Type for messages with Reply in reply's Payload
-	TypeReply = "reply"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
@@ -150,7 +148,6 @@ func ErrorAsMessage(ctx context.Context, e error) *message.Message {
 func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
 	resInBytes := reply.ToBytes(rep)
 	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(MetaType, TypeReply)
 	return resAsMsg
 }
 
@@ -298,10 +295,6 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 
 		if meta.OriginHash.IsZero() {
 			logger.Debug("not a reply")
-			// msgType := msg.Metadata.Get(MetaType)
-			// if msgType != TypeReply && msgType != TypeError {
-			// 	return handle(msg)
-			// }
 			return handle(msg)
 		}
 
@@ -320,9 +313,6 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		reply.wg.Add(1)
 		b.repliesMutex.RUnlock()
 
-		if msg == nil {
-			fmt.Println("IncomingMessageRouter, get nil msg")
-		}
 		select {
 		case reply.messages <- msg:
 		case <-reply.done:
@@ -356,7 +346,7 @@ func (b *Bus) CheckPulse(h message.HandlerFunc) message.HandlerFunc {
 			msgType := msg.Metadata.Get(MetaType)
 			if meta.Pulse < latestPulse.PrevPulseNumber {
 				inslogger.FromContext(ctx).Errorf(
-					"[ checkPulse ] Pulse is TOO OLD in middleware: (message: %d, current: %d) Message is: %#v",
+					"[ CheckPulse ] Pulse is TOO OLD in middleware: (message: %d, current: %d) Message is: %#v",
 					meta.Pulse, latestPulse.PulseNumber, msgType,
 				)
 			}
@@ -375,7 +365,7 @@ func (b *Bus) CheckPulse(h message.HandlerFunc) message.HandlerFunc {
 				insolar.TypeValidateRecord.String(),
 				insolar.TypeHotRecords.String(),
 				insolar.TypeCallMethod.String():
-				err := errors.Errorf("[ checkPulse ] Incorrect message pulse in middleware (parcel: %d, current: %d) Msg: %s (lol) %s", meta.Pulse, latestPulse.PulseNumber, msgType, msg.Metadata)
+				err := errors.Errorf("[ CheckPulse ] Incorrect message pulse in middleware (parcel: %d, current: %d) Msg: %s", meta.Pulse, latestPulse.PulseNumber, msgType)
 				inslogger.FromContext(ctx).Error(err)
 				b.Reply(ctx, meta, ErrorAsMessage(ctx, err))
 				return nil, nil

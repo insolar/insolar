@@ -26,21 +26,21 @@ import (
 )
 
 type GetJet struct {
-	dep          *proc.Dependencies
-	msg          *message.GetJet
-	watermillMsg payload.Meta
+	dep  *proc.Dependencies
+	msg  *message.GetJet
+	meta payload.Meta
 }
 
-func NewGetJet(dep *proc.Dependencies, watermillMsg payload.Meta, msg *message.GetJet) *GetJet {
+func NewGetJet(dep *proc.Dependencies, meta payload.Meta, msg *message.GetJet) *GetJet {
 	return &GetJet{
-		dep:          dep,
-		msg:          msg,
-		watermillMsg: watermillMsg,
+		dep:  dep,
+		msg:  msg,
+		meta: meta,
 	}
 }
 
 func (s *GetJet) Present(ctx context.Context, f flow.Flow) error {
-	getJet := proc.NewGetJet(s.msg, s.watermillMsg)
+	getJet := proc.NewGetJet(s.msg, s.meta)
 	s.dep.GetJet(getJet)
 	return f.Procedure(ctx, getJet, false)
 }

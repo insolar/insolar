@@ -25,8 +25,6 @@ import (
 // Handle is a one-function synchronous process that can call routines to do long processing.
 // IMPORTANT: Asynchronous code is NOT ALLOWED here.
 // To create a new Handle of a given message use dispatcher.NewHandler procedure.
-// After creating a Handle you can register it in MessageBus like this:
-// `h.Sender.MustRegister(insolar.TypeGetObject, createdHandle.WrapBusHandle)`
 // You can find an example in insolar/ladger/artifactmanager/dispatcher.go
 type Handle func(context.Context, Flow) error
 

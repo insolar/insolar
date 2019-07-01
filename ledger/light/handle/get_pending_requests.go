@@ -30,18 +30,18 @@ import (
 )
 
 type GetPendingRequests struct {
-	dep       *proc.Dependencies
-	msg       *message.GetPendingRequests
-	wmmessage payload.Meta
-	reqPulse  insolar.PulseNumber
+	dep      *proc.Dependencies
+	msg      *message.GetPendingRequests
+	meta     payload.Meta
+	reqPulse insolar.PulseNumber
 }
 
-func NewGetPendingRequests(dep *proc.Dependencies, wmmessage payload.Meta, parcel insolar.Parcel) *GetPendingRequests {
+func NewGetPendingRequests(dep *proc.Dependencies, meta payload.Meta, parcel insolar.Parcel) *GetPendingRequests {
 	return &GetPendingRequests{
-		dep:       dep,
-		msg:       parcel.Message().(*message.GetPendingRequests),
-		wmmessage: wmmessage,
-		reqPulse:  parcel.Pulse(),
+		dep:      dep,
+		msg:      parcel.Message().(*message.GetPendingRequests),
+		meta:     meta,
+		reqPulse: parcel.Pulse(),
 	}
 }
 
@@ -52,19 +52,19 @@ func (s *GetPendingRequests) Present(ctx context.Context, f flow.Flow) error {
 	)
 	defer span.End()
 
-	jet := proc.NewFetchJet(*s.msg.DefaultTarget().Record(), flow.Pulse(ctx), s.wmmessage)
+	jet := proc.NewFetchJet(*s.msg.DefaultTarget().Record(), flow.Pulse(ctx), s.meta)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.wmmessage)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.meta)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
-	getPendingRequests := proc.NewGetPendingRequests(jet.Result.Jet, s.wmmessage, s.msg, s.reqPulse)
+	getPendingRequests := proc.NewGetPendingRequests(jet.Result.Jet, s.meta, s.msg, s.reqPulse)
 	s.dep.GetPendingRequests(getPendingRequests)
 	return f.Procedure(ctx, getPendingRequests, false)
 }

@@ -28,40 +28,40 @@ import (
 
 type GetDelegate struct {
 	dep    *proc.Dependencies
-	msg    payload.Meta
+	meta   payload.Meta
 	parcel insolar.Parcel
 }
 
-func NewGetDelegate(dep *proc.Dependencies, msg payload.Meta, parcel insolar.Parcel) *GetDelegate {
+func NewGetDelegate(dep *proc.Dependencies, meta payload.Meta, parcel insolar.Parcel) *GetDelegate {
 	return &GetDelegate{
 		dep:    dep,
 		parcel: parcel,
-		msg:    msg,
+		meta:   meta,
 	}
 }
 
 func (s *GetDelegate) Present(ctx context.Context, f flow.Flow) error {
 	msg := s.parcel.Message().(*message.GetDelegate)
 
-	jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.msg)
+	jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.meta)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.msg)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.meta)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
-	idx := proc.NewEnsureIndex(msg.Head, jet.Result.Jet, s.msg, flow.Pulse(ctx))
+	idx := proc.NewEnsureIndex(msg.Head, jet.Result.Jet, s.meta, flow.Pulse(ctx))
 	s.dep.GetIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 
-	getDelegate := proc.NewGetDelegate(msg, s.msg)
+	getDelegate := proc.NewGetDelegate(msg, s.meta)
 	s.dep.GetDelegate(getDelegate)
 	if err := f.Procedure(ctx, getDelegate, false); err != nil {
 		return err

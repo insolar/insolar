@@ -19,13 +19,13 @@ package artifactmanager
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 
-	wbus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
@@ -72,7 +72,7 @@ type MessageHandler struct {
 	conf           *configuration.Ledger
 	jetTreeUpdater jet.Fetcher
 
-	Sender         wbus.Sender
+	Sender         bus.Sender
 	FlowDispatcher *dispatcher.Dispatcher
 	handlers       map[insolar.MessageType]insolar.MessageHandler
 
@@ -253,13 +253,13 @@ func NewMessageHandler(
 		Sender: h.Sender,
 	}
 
-	initHandle := func(msg *watermillMsg.Message) *handle.Init {
+	initHandle := func(msg *message.Message) *handle.Init {
 		return handle.NewInit(dep, h.Sender, msg)
 	}
 
-	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
+	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg *message.Message) flow.Handle {
 		return initHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
+	}, func(msg *message.Message) flow.Handle {
 		return initHandle(msg).Future
 	})
 	return h

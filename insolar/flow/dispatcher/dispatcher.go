@@ -18,12 +18,11 @@ package dispatcher
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync/atomic"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	wmBus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 
@@ -67,35 +66,10 @@ func (d *Dispatcher) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.M
 	return d.handles.present
 }
 
-// func (d *Dispatcher) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-// 	msg := bus.Message{
-// 		Parcel: parcel,
-// 	}
-//
-// 	ctx = pulse.ContextWith(ctx, parcel.Pulse())
-//
-// 	f := thread.NewThread(msg, d.controller)
-// 	handle := d.getHandleByPulse(parcel.Pulse())
-//
-// 	err := f.Run(ctx, handle(msg))
-// 	var rep bus.Reply
-// 	select {
-// 	case rep = <-msg.ReplyTo:
-// 		return rep.Reply, rep.Err
-// 	default:
-// 	}
-//
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	return nil, errors.New("no reply from handler")
-// }
-
 func (d *Dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, error) {
 	ctx := context.Background()
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
-	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(wmBus.MetaSpanData)))
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	if err == nil {
 		ctx = instracer.WithParentSpan(ctx, parentSpan)
 	} else {
@@ -121,22 +95,21 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	}
 	logger := inslogger.FromContext(ctx)
 
-	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get(wmBus.MetaPulse))
+	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get(bus.MetaPulse))
 	if err != nil {
-		fmt.Println("msg: ", msg.Metadata, msg.UUID)
 		logger.Error("failed to handle message", err)
 		return nil, nil
 	}
 	ctx = pulse.ContextWith(ctx, pn)
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
-	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(wmBus.MetaSpanData)))
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
+	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
 		f := thread.NewThread(msg, d.controller)
 		handle := d.getHandleByPulse(pn)
 		err := f.Run(ctx, handle(msg))
 		if err != nil {
-			logger.Error(errors.Wrap(err, "Handling failed"))
+			logger.Error(errors.Wrap(err, "Handling failed: "))
 		}
 	}()
 	return nil, nil

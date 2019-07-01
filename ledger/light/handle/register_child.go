@@ -27,42 +27,42 @@ import (
 )
 
 type RegisterChild struct {
-	dep       *proc.Dependencies
-	wmmessage payload.Meta
-	message   *message.RegisterChild
-	pulse     insolar.PulseNumber
+	dep     *proc.Dependencies
+	meta    payload.Meta
+	message *message.RegisterChild
+	pulse   insolar.PulseNumber
 }
 
-func NewRegisterChild(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
+func NewRegisterChild(dep *proc.Dependencies, meta payload.Meta, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
 	return &RegisterChild{
-		dep:       dep,
-		wmmessage: wmmessage,
-		message:   msg,
-		pulse:     pulse,
+		dep:     dep,
+		meta:    meta,
+		message: msg,
+		pulse:   pulse,
 	}
 }
 
 func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.wmmessage)
+	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.meta)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
 
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.wmmessage)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.meta)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
-	getIndex := proc.NewEnsureIndex(s.message.Parent, jet.Result.Jet, s.wmmessage, flow.Pulse(ctx))
+	getIndex := proc.NewEnsureIndex(s.message.Parent, jet.Result.Jet, s.meta, flow.Pulse(ctx))
 	s.dep.GetIndex(getIndex)
 	err := f.Procedure(ctx, getIndex, true)
 	if err != nil {
 		return err
 	}
 
-	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, s.wmmessage)
+	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, s.meta)
 	s.dep.RegisterChild(registerChild)
 	return f.Procedure(ctx, registerChild, false)
 }

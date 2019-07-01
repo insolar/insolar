@@ -27,20 +27,20 @@ import (
 
 type GetRequest struct {
 	dep     *proc.Dependencies
-	message payload.Meta
+	meta    payload.Meta
 	request insolar.ID
 }
 
-func NewGetRequest(dep *proc.Dependencies, message payload.Meta, request insolar.ID) *GetRequest {
+func NewGetRequest(dep *proc.Dependencies, meta payload.Meta, request insolar.ID) *GetRequest {
 	return &GetRequest{
 		dep:     dep,
 		request: request,
-		message: message,
+		meta:    meta,
 	}
 }
 
 func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
-	code := proc.NewGetRequest(s.request, s.message)
+	code := proc.NewGetRequest(s.request, s.meta)
 	s.dep.GetRequest(code)
 	return f.Procedure(ctx, code, false)
 }

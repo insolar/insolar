@@ -392,7 +392,6 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
-	msg.Metadata.Set(MetaType, TypeReply)
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
@@ -427,7 +426,6 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
-	msg.Metadata.Set(MetaType, TypeReply)
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 

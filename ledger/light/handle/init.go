@@ -117,7 +117,7 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 		h := NewHotData(s.dep, meta, msg)
 		return f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("no handler for message type (parcel) %s", msgType)
+		return fmt.Errorf("no handler for meta type (parcel) %s", msgType)
 	}
 }
 
@@ -170,7 +170,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case payload.TypeError:
 		err = f.Handle(ctx, NewError(s.message).Present)
 	default:
-		err = fmt.Errorf("no handler for message type %s", payloadType.String())
+		err = fmt.Errorf("no handler for meta type %s", payloadType.String())
 	}
 	if err != nil {
 		s.replyError(ctx, meta, err)
@@ -224,7 +224,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		h := NewSetResult(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
-		err = fmt.Errorf("no handler for message type %s", payloadType.String())
+		err = fmt.Errorf("no handler for meta type %s", payloadType.String())
 	}
 	if err != nil {
 		s.replyError(ctx, originMeta, err)

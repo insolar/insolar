@@ -119,13 +119,49 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	return nil, nil
 }
 
-func (h *Handler) Init(ctx context.Context) error {
-	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
-	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
-	return nil
+func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) error {
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize payload to parcel")
+	}
+
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
+	defer span.End()
+
+	var rep insolar.Reply
+	msgType := msg.Metadata.Get(bus.MetaType)
+	switch msgType {
+	case insolar.TypeGetRequest.String():
+		rep, err = h.handleGetRequest(ctx, parcel)
+	case insolar.TypeGetChildren.String():
+		rep, err = h.handleGetChildren(ctx, parcel)
+	case insolar.TypeGetDelegate.String():
+		rep, err = h.handleGetDelegate(ctx, parcel)
+	default:
+		err = fmt.Errorf("no handler for message type %s", msgType)
+	}
+	if err != nil {
+		h.replyError(ctx, meta, err)
+	} else {
+		resInBytes := reply.ToBytes(rep)
+		resAsMsg := watermillMsg.NewMessage(watermill.NewUUID(), resInBytes)
+		go h.Sender.Reply(ctx, meta, resAsMsg)
+	}
+	return err
 }
 
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
+	msgType := msg.Metadata.Get(bus.MetaType)
+	if msgType != "" {
+		return h.handleParcel(ctx, msg)
+	}
+
 	var err error
 
 	meta := payload.Meta{}
@@ -156,35 +192,8 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		err = h.handlePass(ctx, meta)
 	case payload.TypeError:
 		h.handleError(ctx, meta)
-		// default:
-		// 	err = fmt.Errorf("no handler for message type %s", payloadType.String())
-	}
-
-	msgType := msg.Metadata.Get(bus.MetaType)
-	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
-	if err != nil {
-		return errors.Wrap(err, "can't deserialize payload to parcel")
-	}
-	var rep insolar.Reply
-	switch msgType {
-	case insolar.TypeGetRequest.String():
-		rep, err = h.handleGetRequest(ctx, parcel)
-	case insolar.TypeGetChildren.String():
-		rep, err = h.handleGetChildren(ctx, parcel)
-	case insolar.TypeGetDelegate.String():
-		rep, err = h.handleGetDelegate(ctx, parcel)
-	}
-	if err != nil {
-		h.replyError(ctx, meta, err)
-	} else {
-		resInBytes := reply.ToBytes(rep)
-		replyType := bus.TypeReply
-		resAsMsg := watermillMsg.NewMessage(watermill.NewUUID(), resInBytes)
-		resAsMsg.Metadata.Set(bus.MetaType, replyType)
-		// receiver := msg.Metadata.Get(bus.MetaSender)
-		// resAsMsg.Metadata.Set(bus.MetaReceiver, receiver)
-		// resAsMsg.Metadata.Set(bus.MetaTraceID, msg.Metadata.Get(bus.MetaTraceID))
-		go h.Sender.Reply(ctx, meta, resAsMsg)
+	default:
+		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
 	return err
 }
@@ -198,6 +207,12 @@ func (h *Handler) handleError(ctx context.Context, msg payload.Meta) {
 	}
 
 	inslogger.FromContext(ctx).Error("received error: ", pl.Text)
+}
+
+func (h *Handler) Init(ctx context.Context) error {
+	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
+	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
+	return nil
 }
 
 func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
