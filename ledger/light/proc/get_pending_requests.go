@@ -21,10 +21,11 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 type GetPendingRequests struct {
@@ -33,9 +34,9 @@ type GetPendingRequests struct {
 	jet      insolar.JetID
 	reqPulse insolar.PulseNumber
 
-	Dep struct {
-		RecentStorageProvider recentstorage.Provider
-		Sender                bus.Sender
+	dep struct {
+		index  object.IndexAccessor
+		sender bus.Sender
 	}
 }
 
@@ -48,19 +49,19 @@ func NewGetPendingRequests(jetID insolar.JetID, message payload.Meta, msg *messa
 	}
 }
 
-func (p *GetPendingRequests) Proceed(ctx context.Context) error {
-	msg := p.msg
-	jetID := insolar.ID(p.jet)
+func (p *GetPendingRequests) Dep(index object.IndexAccessor, sender bus.Sender) {
+	p.dep.index = index
+	p.dep.sender = sender
+}
 
-	hasPendingRequests := false
-	pendingStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-	for _, reqID := range pendingStorage.GetRequestsForObject(*msg.Object.Record()) {
-		if reqID.Pulse() < p.reqPulse {
-			hasPendingRequests = true
-			break
-		}
+func (p *GetPendingRequests) Proceed(ctx context.Context) error {
+	idx, err := p.dep.index.ForID(ctx, flow.Pulse(ctx), *p.msg.Object.Record())
+	if err != nil {
+		return err
 	}
-	rep := bus.ReplyAsMessage(ctx, &reply.HasPendingRequests{Has: hasPendingRequests})
-	p.Dep.Sender.Reply(ctx, p.message, rep)
+	rep := bus.ReplyAsMessage(ctx, &reply.HasPendingRequests{
+		Has: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
+	})
+	p.dep.sender.Reply(ctx, p.message, rep)
 	return nil
 }

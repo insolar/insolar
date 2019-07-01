@@ -19,7 +19,9 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -30,8 +32,11 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
+)
+
+const (
+	pendingNotifyThreshold = 2
 )
 
 type HotData struct {
@@ -39,15 +44,15 @@ type HotData struct {
 	msg     *message.HotData
 
 	Dep struct {
-		DropModifier          drop.Modifier
-		RecentStorageProvider recentstorage.Provider
-		MessageBus            insolar.MessageBus
-		IndexBucketModifier   object.IndexBucketModifier
-		PendingModifier       object.PendingModifier
-		JetStorage            jet.Storage
-		JetFetcher            jet.Fetcher
-		JetReleaser           hot.JetReleaser
-		Sender                bus.Sender
+		DropModifier  drop.Modifier
+		MessageBus    insolar.MessageBus
+		IndexModifier object.IndexModifier
+		JetStorage    jet.Storage
+		JetFetcher    jet.Fetcher
+		JetReleaser   hot.JetReleaser
+		Coordinator   jet.Coordinator
+		Calculator    pulse.Calculator
+		Sender        bus.Sender
 	}
 }
 
@@ -68,59 +73,39 @@ func (p *HotData) Proceed(ctx context.Context) error {
 }
 
 func (p *HotData) process(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
 	jetID := insolar.JetID(*p.msg.Jet.Record())
-
-	logger.WithFields(map[string]interface{}{
-		"jet": jetID.DebugString(),
-	}).Info("received hot data")
 
 	err := p.Dep.DropModifier.Set(ctx, p.msg.Drop)
 	if err == drop.ErrOverride {
 		err = nil
 	}
 	if err != nil {
-		return errors.Wrapf(err, "[jet]: drop error (pulse: %v)", p.msg.Drop.Pulse)
+		return errors.Wrapf(err, "[HotData.process]: drop error (pulse: %v)", p.msg.Drop.Pulse)
 	}
 
-	pendingStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
-	logger.Debugf("received %d pending requests", len(p.msg.PendingRequests))
-
-	var notificationList []insolar.ID
-	for objID, objContext := range p.msg.PendingRequests {
-		if !objContext.Active {
-			notificationList = append(notificationList, objID)
-		}
-
-		objContext.Active = false
-		pendingStorage.SetContextToObject(ctx, objID, objContext)
-	}
-
-	go func() {
-		for _, objID := range notificationList {
-			go func(objID insolar.ID) {
-				rep, err := p.Dep.MessageBus.Send(ctx, &message.AbandonedRequestsNotification{
-					Object: objID,
-				}, nil)
-
-				if err != nil {
-					logger.Error("failed to notify about pending requests")
-					return
-				}
-				if _, ok := rep.(*reply.OK); !ok {
-					logger.Error("received unexpected reply on pending notification")
-				}
-			}(objID)
-		}
-	}()
-
-	p.Dep.JetStorage.Update(
+	err = p.Dep.JetStorage.Update(
 		ctx, p.msg.PulseNumber, true, jetID,
 	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update jet tree")
+	}
+
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"jet": jetID.DebugString(),
+	})
+
+	pendingNotifyPulse, err := p.Dep.Calculator.Backwards(ctx, flow.Pulse(ctx), pendingNotifyThreshold)
+	if err != nil {
+		if err == pulse.ErrNotFound {
+			pendingNotifyPulse = *insolar.GenesisPulse
+		} else {
+			return errors.Wrap(err, "failed to calculate pending notify pulse")
+		}
+	}
 
 	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
 	for _, meta := range p.msg.HotIndexes {
-		decodedIndex, err := object.DecodeIndex(meta.Index)
+		decodedIndex, err := object.DecodeLifeline(meta.Index)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -133,7 +118,7 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 
 		decodedIndex.JetID = jetID
-		err = p.Dep.IndexBucketModifier.SetBucket(
+		err = p.Dep.IndexModifier.SetIndex(
 			ctx,
 			p.msg.PulseNumber,
 			object.FilamentIndex{
@@ -148,6 +133,8 @@ func (p *HotData) process(ctx context.Context) error {
 			continue
 		}
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
+
+		go p.notifyPending(ctx, meta.ObjID, decodedIndex, pendingNotifyPulse.PulseNumber)
 	}
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
@@ -164,5 +151,29 @@ func (p *HotData) releaseHotDataWaiters(ctx context.Context) {
 	err := p.Dep.JetReleaser.Unlock(ctx, *jetID)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
+	}
+}
+
+func (p *HotData) notifyPending(
+	ctx context.Context,
+	objectID insolar.ID,
+	lifeline object.Lifeline,
+	notifyLimit insolar.PulseNumber,
+) {
+	// No pending requests.
+	if lifeline.EarliestOpenRequest == nil {
+		return
+	}
+
+	// Too early to notify.
+	if *lifeline.EarliestOpenRequest >= notifyLimit {
+		return
+	}
+
+	_, err := p.Dep.MessageBus.Send(ctx, &message.AbandonedRequestsNotification{
+		Object: objectID,
+	}, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("failed to notify about pending requests")
 	}
 }

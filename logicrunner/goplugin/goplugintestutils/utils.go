@@ -168,7 +168,7 @@ func (t *TestArtifactManager) HasPendingRequests(ctx context.Context, object ins
 }
 
 // State implementation for tests
-func (t *TestArtifactManager) State() ([]byte, error) {
+func (t *TestArtifactManager) State() []byte {
 	panic("implement me")
 }
 
@@ -187,7 +187,7 @@ func NewTestArtifactManager() *TestArtifactManager {
 }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error) {
+func (t *TestArtifactManager) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
@@ -379,7 +379,7 @@ func AMPublishCode(
 	nonce := testutils.RandomRef()
 	protoID, err := am.RegisterRequest(
 		ctx,
-		record.Request{CallType: record.CTSaveAsChild, Prototype: &nonce},
+		record.IncomingRequest{CallType: record.CTSaveAsChild, Prototype: &nonce},
 	)
 	assert.NoError(t, err)
 	protoRef = &insolar.Reference{}
@@ -432,7 +432,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		nonce := testutils.RandomRef()
 		protoID, err := cb.ArtifactManager.RegisterRequest(
 			ctx,
-			record.Request{
+			record.IncomingRequest{
 				CallType:  record.CTSaveAsChild,
 				Prototype: &nonce,
 			},
@@ -479,7 +479,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		nonce := testutils.RandomRef()
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
 			ctx,
-			record.Request{
+			record.IncomingRequest{
 				CallType:  record.CTSaveAsChild,
 				Prototype: &nonce,
 			},

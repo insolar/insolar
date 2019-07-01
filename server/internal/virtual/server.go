@@ -96,7 +96,6 @@ func (s *Server) Serve() {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		certManager,
-		false,
 	)
 
 	ctx, inslog = inslogger.WithField(ctx, "nodeid", certManager.GetCertificate().GetNodeRef().String())

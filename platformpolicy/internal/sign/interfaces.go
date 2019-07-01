@@ -23,6 +23,8 @@ import (
 )
 
 type AlgorithmProvider interface {
-	Sign(crypto.PrivateKey) insolar.Signer
-	Verify(crypto.PublicKey) insolar.Verifier
+	DataSigner(crypto.PrivateKey, insolar.Hasher) insolar.Signer
+	DigestSigner(crypto.PrivateKey) insolar.Signer
+	DataVerifier(crypto.PublicKey, insolar.Hasher) insolar.Verifier
+	DigestVerifier(crypto.PublicKey) insolar.Verifier
 }

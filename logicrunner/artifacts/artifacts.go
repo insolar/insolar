@@ -28,7 +28,7 @@ import (
 // Client is a high level storage interface.
 type Client interface {
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, request record.Request) (*insolar.ID, error)
+	RegisterRequest(ctx context.Context, request record.IncomingRequest) (*insolar.ID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -116,7 +116,7 @@ type Client interface {
 	) error
 
 	// State returns hash state for artifact manager.
-	State() ([]byte, error)
+	State() []byte
 
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
 	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)

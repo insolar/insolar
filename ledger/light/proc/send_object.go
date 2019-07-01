@@ -39,15 +39,13 @@ type SendObject struct {
 	index    object.Lifeline
 
 	Dep struct {
-		Coordinator     jet.Coordinator
-		Jets            jet.Storage
-		JetFetcher      jet.Fetcher
-		RecordAccessor  object.RecordAccessor
-		Blobs           blob.Accessor
-		Bus             insolar.MessageBus
-		Sender          bus.Sender
-		PendingAccessor object.PendingAccessor
-		PendingModifier object.PendingModifier
+		Coordinator    jet.Coordinator
+		Jets           jet.Storage
+		JetFetcher     jet.Fetcher
+		RecordAccessor object.RecordAccessor
+		Blobs          blob.Accessor
+		Bus            insolar.MessageBus
+		Sender         bus.Sender
 	}
 }
 

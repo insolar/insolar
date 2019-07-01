@@ -277,7 +277,7 @@ func TestSetResult_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.GetIndexWM:
+			case *proc.EnsureIndexWM:
 				return nil
 			case *proc.SetResult:
 				return nil
@@ -312,7 +312,7 @@ func TestSetResult_ErrorFromGetIndex(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.GetIndexWM:
+			case *proc.EnsureIndexWM:
 				return errors.New("error from getindex")
 			default:
 				panic("unknown procedure")
@@ -335,7 +335,7 @@ func TestSetResult_ErrorFromGetIndex(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.GetIndexWM:
+			case *proc.EnsureIndexWM:
 				return nil
 			case *proc.SetResult:
 				return nil
@@ -370,7 +370,7 @@ func TestSetResult_ErrorFromSetResult(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.GetIndexWM:
+			case *proc.EnsureIndexWM:
 				return nil
 			case *proc.SetResult:
 				return errors.New("error from setresult")
@@ -395,7 +395,7 @@ func TestSetResult_ErrorFromSetResult(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.GetIndexWM:
+			case *proc.EnsureIndexWM:
 				return nil
 			case *proc.SetResult:
 				return nil

@@ -116,10 +116,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 		msg := parcel.Message().(*message.HotData)
 		h := NewHotData(s.dep, meta, msg)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetPendingFilament.String():
-		msg := parcel.Message().(*message.GetPendingFilament)
-		h := NewGetPendingFilament(s.dep, meta, msg)
-		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type (parcel) %s", msgType)
 	}
@@ -151,6 +147,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case payload.TypeGetObject:
 		h := NewGetObject(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetFilament:
+		h := NewGetRequests(s.dep, meta)
+		return f.Handle(ctx, h.Present)
 	case payload.TypePassState:
 		h := NewPassState(s.dep, meta)
 		err = f.Handle(ctx, h.Present)

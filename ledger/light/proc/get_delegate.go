@@ -19,6 +19,7 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
@@ -30,23 +31,29 @@ import (
 
 type GetDelegate struct {
 	message payload.Meta
-	idx     *object.Lifeline
 	msg     *message.GetDelegate
 	Dep     struct {
-		Sender wmBus.Sender
+		Sender        wmBus.Sender
+		IndexAccessor object.IndexAccessor
 	}
 }
 
-func NewGetDelegate(msg *message.GetDelegate, idx *object.Lifeline, message payload.Meta) *GetDelegate {
+func NewGetDelegate(msg *message.GetDelegate, message payload.Meta) *GetDelegate {
 	return &GetDelegate{
 		msg:     msg,
 		message: message,
-		idx:     idx,
 	}
 }
 
 func (s *GetDelegate) Proceed(ctx context.Context) error {
-	delegateRef, ok := s.idx.DelegateByKey(s.msg.AsType)
+	idx, err := s.Dep.IndexAccessor.ForID(ctx, flow.Pulse(ctx), *s.msg.Head.Record())
+	if err != nil {
+		msg := wmBus.ErrorAsMessage(ctx, err)
+		s.Dep.Sender.Reply(ctx, s.message, msg)
+		return err
+	}
+
+	delegateRef, ok := idx.Lifeline.DelegateByKey(s.msg.AsType)
 	if !ok {
 		err := errors.New("the object has no delegate for this type")
 		msg := wmBus.ErrorAsMessage(ctx, err)

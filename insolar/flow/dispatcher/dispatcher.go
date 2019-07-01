@@ -24,6 +24,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	wmBus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -94,6 +95,12 @@ func (d *Dispatcher) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.M
 func (d *Dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, error) {
 	ctx := context.Background()
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(wmBus.MetaSpanData)))
+	if err == nil {
+		ctx = instracer.WithParentSpan(ctx, parentSpan)
+	} else {
+		inslogger.FromContext(ctx).Error(err)
+	}
 	logger := inslogger.FromContext(ctx)
 	go func() {
 		f := thread.NewThread(msg, d.controller)
@@ -114,7 +121,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	}
 	logger := inslogger.FromContext(ctx)
 
-	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get("pulse"))
+	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get(wmBus.MetaPulse))
 	if err != nil {
 		fmt.Println("msg: ", msg.Metadata, msg.UUID)
 		logger.Error("failed to handle message", err)
@@ -122,6 +129,8 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	}
 	ctx = pulse.ContextWith(ctx, pn)
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
+	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(wmBus.MetaSpanData)))
+	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
 		f := thread.NewThread(msg, d.controller)
 		handle := d.getHandleByPulse(pn)

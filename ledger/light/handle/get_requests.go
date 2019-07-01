@@ -20,27 +20,32 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 )
 
-type GetPendingFilament struct {
-	dep       *proc.Dependencies
-	msg       *message.GetPendingFilament
-	wmmessage payload.Meta
+type GetRequests struct {
+	dep *proc.Dependencies
+
+	meta payload.Meta
 }
 
-func NewGetPendingFilament(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.GetPendingFilament) *GetPendingFilament {
-	return &GetPendingFilament{
-		dep:       dep,
-		msg:       msg,
-		wmmessage: wmmessage,
+func NewGetRequests(dep *proc.Dependencies, meta payload.Meta) *GetRequests {
+	return &GetRequests{
+		dep:  dep,
+		meta: meta,
 	}
 }
 
-func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
-	getFilament := proc.NewGetPendingFilament(s.msg, s.wmmessage)
-	s.dep.GetPendingFilament(getFilament)
+func (s *GetRequests) Present(ctx context.Context, f flow.Flow) error {
+	msg := payload.GetFilament{}
+	err := msg.Unmarshal(s.meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload")
+	}
+
+	getFilament := proc.NewSendRequests(s.meta, msg.ObjectID, msg.StartFrom, msg.ReadUntil)
+	s.dep.SendRequests(getFilament)
 	return f.Procedure(ctx, getFilament, false)
 }

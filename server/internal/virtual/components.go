@@ -115,7 +115,6 @@ func initComponents(
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
-	isGenesis bool,
 
 ) (*component.Manager, insolar.TerminationHandler, func(), error) {
 	cm := component.Manager{}
@@ -126,7 +125,7 @@ func initComponents(
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm)
 	checkError(ctx, err, "failed to start Network")
 
 	terminationHandler := termination.NewHandler(nw)

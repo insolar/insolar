@@ -37,26 +37,25 @@ type RegisterChild struct {
 	jet     insolar.JetID
 	msg     *message.RegisterChild
 	pulse   insolar.PulseNumber
-	idx     object.Lifeline
 	message payload.Meta
 
 	Dep struct {
-		IDLocker              object.IDLocker
-		LifelineIndex         object.LifelineIndex
-		JetCoordinator        jet.Coordinator
-		RecordModifier        object.RecordModifier
-		LifelineStateModifier object.LifelineStateModifier
-		PCS                   insolar.PlatformCryptographyScheme
-		Sender                bus.Sender
+		IndexLocker   object.IndexLocker
+		IndexModifier object.IndexModifier
+		IndexAccessor object.IndexAccessor
+
+		JetCoordinator jet.Coordinator
+		RecordModifier object.RecordModifier
+		PCS            insolar.PlatformCryptographyScheme
+		Sender         bus.Sender
 	}
 }
 
-func NewRegisterChild(jet insolar.JetID, msg *message.RegisterChild, pulse insolar.PulseNumber, index object.Lifeline, message payload.Meta) *RegisterChild {
+func NewRegisterChild(jet insolar.JetID, msg *message.RegisterChild, pulse insolar.PulseNumber, message payload.Meta) *RegisterChild {
 	return &RegisterChild{
 		jet:     jet,
 		msg:     msg,
 		pulse:   pulse,
-		idx:     index,
 		message: message,
 	}
 }
@@ -82,15 +81,20 @@ func (p *RegisterChild) process(ctx context.Context) error {
 		return errors.New("wrong child record")
 	}
 
-	p.Dep.IDLocker.Lock(p.msg.Parent.Record())
-	defer p.Dep.IDLocker.Unlock(p.msg.Parent.Record())
+	p.Dep.IndexLocker.Lock(p.msg.Parent.Record())
+	defer p.Dep.IndexLocker.Unlock(p.msg.Parent.Record())
+
+	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.pulse, *p.msg.Parent.Record())
+	if err != nil {
+		return err
+	}
 
 	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	recID := insolar.NewID(p.pulse, hash)
 
 	// Children exist and pointer does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if p.idx.ChildPointer != nil && !childRec.PrevChild.Equal(*p.idx.ChildPointer) && p.idx.ChildPointer != recID {
+	if idx.Lifeline.ChildPointer != nil && !childRec.PrevChild.Equal(*idx.Lifeline.ChildPointer) && idx.Lifeline.ChildPointer != recID {
 		return errors.New("invalid child record")
 	}
 
@@ -110,20 +114,17 @@ func (p *RegisterChild) process(ctx context.Context) error {
 		return errors.Wrap(err, "can't save record into storage")
 	}
 
-	p.idx.ChildPointer = child
+	idx.Lifeline.ChildPointer = child
 	if p.msg.AsType != nil {
-		p.idx.SetDelegate(*p.msg.AsType, p.msg.Child)
+		idx.Lifeline.SetDelegate(*p.msg.AsType, p.msg.Child)
 	}
-	p.idx.LatestUpdate = p.pulse
-	p.idx.JetID = p.jet
+	idx.Lifeline.LatestUpdate = p.pulse
+	idx.Lifeline.JetID = p.jet
+	idx.LifelineLastUsed = p.pulse
 
-	err = p.Dep.LifelineIndex.Set(ctx, p.pulse, *p.msg.Parent.Record(), p.idx)
+	err = p.Dep.IndexModifier.SetIndex(ctx, p.pulse, idx)
 	if err != nil {
 		return err
-	}
-	err = p.Dep.LifelineStateModifier.SetLifelineUsage(ctx, p.pulse, *p.msg.Parent.Record())
-	if err != nil {
-		return errors.Wrap(err, "can't update a lifeline status")
 	}
 
 	msg := bus.ReplyAsMessage(ctx, &reply.ID{ID: *child})

@@ -69,6 +69,10 @@ func (addr *HostAddress) EqualsToString(o string) bool {
 	return addr.Equals(HostAddress(o))
 }
 
+func (addr HostAddress) String() string {
+	return string(addr)
+}
+
 type HostIdentityHolder interface {
 	GetHostAddress() HostAddress
 	GetTransportKey() SignatureKeyHolder
@@ -110,6 +114,7 @@ type Foldable interface {
 type FixedReader interface {
 	io.WriterTo
 	io.Reader
+	Bytes() []byte
 	FixedByteSize() int
 }
 
@@ -193,6 +198,10 @@ func (c *fixedSize) FoldToUint64() uint64 {
 
 func (c *fixedSize) FixedByteSize() int {
 	return len(c.data)
+}
+
+func (c *fixedSize) Bytes() []byte {
+	return c.data
 }
 
 func CopyFixedSize(v FoldableReader) FoldableReader {

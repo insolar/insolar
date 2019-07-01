@@ -54,7 +54,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -113,7 +112,6 @@ type ServiceNetwork struct {
 	HostNetwork  network.HostNetwork
 	OperableFunc func(ctx context.Context, operable bool)
 
-	isGenesis   bool
 	isDiscovery bool
 	skip        int
 
@@ -124,8 +122,8 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis, skip: conf.Service.Skip}
+func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, skip: conf.Service.Skip}
 	return serviceNetwork, nil
 }
 
@@ -265,11 +263,10 @@ func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	// node leaving from network
 	// all components need to do what they want over net in gracefulStop
-	if !n.isGenesis {
-		logger.Info("ServiceNetwork.GracefulStop wait for accepting leaving claim")
-		n.TerminationHandler.Leave(ctx, 0)
-		logger.Info("ServiceNetwork.GracefulStop - leaving claim accepted")
-	}
+
+	logger.Info("ServiceNetwork.GracefulStop wait for accepting leaving claim")
+	n.TerminationHandler.Leave(ctx, 0)
+	logger.Info("ServiceNetwork.GracefulStop - leaving claim accepted")
 
 	return nil
 }
@@ -287,16 +284,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	if n.isGenesis {
-		return
-	}
-
-	// Because we want to set InsTraceID (it's our custom traceID)
-	// Because @egorikas didn't have enough time for sending `insTraceID` from pulsar
-	// We calculate it 2 times, first time on a pulsar's side. Second time on a network's side
-	insTraceID := "pulse_" + strconv.FormatUint(uint64(newPulse.PulseNumber), 10)
-	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
-
+	ctx = utils.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
 	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
 	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
 	span.AddAttributes(
@@ -323,6 +311,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	// Ignore insolar.ErrNotFound because
 	// sometimes we can't fetch current pulse in new nodes
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
+	// TODO: remove pulse checks here after new consensus ready
 	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
 		if err != pulse.ErrNotFound {
 			currentPulse = *insolar.GenesisPulse
@@ -333,6 +322,14 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 			return
 		}
 	}
+
+	n.ChangePulse(ctx, newPulse)
+
+	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
+}
+
+func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
+	logger := inslogger.FromContext(ctx)
 
 	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
@@ -345,7 +342,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	}
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 
-	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
 
 func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
@@ -371,8 +367,13 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-
-	err := n.sendMessage(ctx, msg)
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	if err == nil {
+		ctx = instracer.WithParentSpan(ctx, parentSpan)
+	} else {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	err = n.sendMessage(ctx, msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send message")
 	}

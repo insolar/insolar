@@ -17,6 +17,7 @@
 package proc
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -26,8 +27,8 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
@@ -46,23 +47,15 @@ func TestSetResult_Proceed(t *testing.T) {
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Return()
 
-	records := object.NewRecordModifierMock(t)
-	records.SetMock.Return(nil)
-
-	pending := recentstorage.NewPendingStorageMock(t)
-	pending.AddPendingRequestMock.Return()
-	pending.RemovePendingRequestMock.Return()
-	provider := recentstorage.NewProviderMock(t)
-	provider.GetPendingStorageMock.Return(pending)
-
 	jetID := gen.JetID()
 	id := gen.ID()
 
+	res := &record.Result{
+		Object: id,
+	}
 	virtual := record.Virtual{
 		Union: &record.Virtual_Result{
-			Result: &record.Result{
-				Object: id,
-			},
+			Result: res,
 		},
 	}
 	virtualBuf, err := virtual.Marshal()
@@ -78,12 +71,21 @@ func TestSetResult_Proceed(t *testing.T) {
 		Payload: resultBuf,
 	}
 
+	filamentModifier := executor.NewFilamentModifierMock(t)
+	filamentModifier.SetResultFunc = func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (r error) {
+		require.Equal(t, id, p1)
+		require.Equal(t, jetID, p2)
+		require.Equal(t, *res, p3)
+
+		return nil
+	}
+
 	// Pendings limit not reached.
-	setResultProc := NewSetResult(msg, virtual, id, jetID)
+	setResultProc := NewSetResult(msg, *res, id, jetID)
 	setResultProc.dep.writer = writeAccessor
 	setResultProc.dep.sender = sender
-	setResultProc.dep.recentStorage = provider
-	setResultProc.dep.records = records
+	setResultProc.dep.locker = object.NewIndexLocker()
+	setResultProc.dep.filament = filamentModifier
 
 	err = setResultProc.Proceed(ctx)
 	require.NoError(t, err)

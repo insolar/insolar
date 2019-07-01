@@ -85,8 +85,8 @@ func (*PulsePrepController) GetPacketType() packets.PacketType {
 	return packets.PacketPulse
 }
 
-func (r *PulsePrepController) HandleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error) {
-	err = r.pulseStrategy.HandlePrepPulsarPacket(reader.GetPulsePacket(), from, r.realm, true)
+func (r *PulsePrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error) {
+	err = r.pulseStrategy.HandlePrepPulsarPacket(ctx, reader.GetPulsePacket(), from, r.realm, true)
 	return err == nil, err
 }
 
@@ -100,12 +100,12 @@ func (*PulseController) GetPacketType() packets.PacketType {
 	return packets.PacketPulse
 }
 
-func (c *PulseController) HandleHostPacket(p packets.PacketParser, from common.HostIdentityHolder) error {
+func (c *PulseController) HandleHostPacket(ctx context.Context, p packets.PacketParser, from common.HostIdentityHolder) error {
 	pp := p.GetPulsePacket()
 	// FullRealm already has a pulse data, so can only check it
 	pd := pp.GetPulseData()
 	if c.R.GetPulseData() == pd {
 		return nil
 	}
-	return c.R.Blames().NewMismatchedPulsarPacket(from, c.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
+	return c.R.GetBlameFactory().NewMismatchedPulsarPacket(from, c.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
 }

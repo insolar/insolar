@@ -92,6 +92,7 @@ func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
 	wmMsg.Metadata.Set(bus.MetaTraceID, inslogger.TraceID(ctx))
+	wmMsg.Metadata.Set(bus.MetaSpanData, string(instracer.MustSerialize(ctx)))
 	wmMsg.Metadata.Set(bus.MetaType, msgType)
 
 	return wmMsg
@@ -334,7 +335,7 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	inslogger.FromContext(ctx).Debug("loop detected")
+	inslogger.FromContext(ctx).Error("loop detected")
 	return true
 }
 

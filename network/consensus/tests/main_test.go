@@ -68,7 +68,7 @@ func TestConsensusMain(t *testing.T) {
 	ctx := context.Background()
 	logger := inslogger.FromContext(ctx).WithCaller(false)
 	logger, _ = logger.WithLevelNumber(insolar.DebugLevel)
-	logger, _ = logger.WithFormat(insolar.Text)
+	logger, _ = logger.WithFormat(insolar.TextFormat)
 
 	ctx = inslogger.SetLogger(ctx, logger)
 

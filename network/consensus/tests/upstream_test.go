@@ -105,7 +105,7 @@ func (r *EmuUpstreamPulseController) PreparePulseChange(report core.MembershipUp
 	return c
 }
 
-func (*EmuUpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, activeCensus census.OperationalCensus) {
+func (*EmuUpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, pd common2.PulseData, activeCensus census.OperationalCensus) {
 }
 
 func (*EmuUpstreamPulseController) CancelPulseChange() {

@@ -22,6 +22,7 @@ import (
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -35,7 +36,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -46,18 +46,20 @@ type UpdateObject struct {
 	PulseNumber  insolar.PulseNumber
 
 	Dep struct {
-		RecordModifier        object.RecordModifier
-		Bus                   insolar.MessageBus
-		Coordinator           jet.Coordinator
-		BlobModifier          blob.Modifier
-		RecentStorageProvider recentstorage.Provider
-		PCS                   insolar.PlatformCryptographyScheme
-		IDLocker              object.IDLocker
-		LifelineIndex         object.LifelineIndex
-		LifelineStateModifier object.LifelineStateModifier
-		Sender                wmBus.Sender
-		WriteAccessor         hot.WriteAccessor
-		PendingModifier       object.PendingModifier
+		RecordModifier object.RecordModifier
+		Bus            insolar.MessageBus
+		Coordinator    jet.Coordinator
+		BlobModifier   blob.Modifier
+		PCS            insolar.PlatformCryptographyScheme
+
+		IndexLocker   object.IndexLocker
+		IndexAccessor object.IndexAccessor
+		IndexModifier object.IndexModifier
+
+		WriteAccessor hot.WriteAccessor
+		Filaments     executor.FilamentModifier
+
+		Sender wmBus.Sender
 	}
 }
 
@@ -125,15 +127,20 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		s.Memory = *calculatedID
 	}
 
-	p.Dep.IDLocker.Lock(p.Message.Object.Record())
-	defer p.Dep.IDLocker.Unlock(p.Message.Object.Record())
+	p.Dep.IndexLocker.Lock(p.Message.Object.Record())
+	defer p.Dep.IndexLocker.Unlock(p.Message.Object.Record())
 
-	idx, err := p.Dep.LifelineIndex.ForID(ctx, p.PulseNumber, *p.Message.Object.Record())
+	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.PulseNumber, *p.Message.Object.Record())
 	// No index on our node.
-	if err == object.ErrLifelineNotFound {
+	if err == object.ErrIndexNotFound {
 		if state.ID() == record.StateActivation {
 			// We are activating the object. There is no index for it anywhere.
-			idx = object.Lifeline{StateID: record.StateUndefined}
+			idx = object.FilamentIndex{
+				Lifeline:         object.Lifeline{StateID: record.StateUndefined},
+				LifelineLastUsed: p.PulseNumber,
+				PendingRecords:   []insolar.ID{},
+				ObjID:            *p.Message.Object.Record(),
+			}
 			logger.Debugf("new lifeline created")
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
@@ -155,7 +162,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: err}
 	}
 
-	if err = validateState(idx.StateID, state.ID()); err != nil {
+	if err = validateState(idx.Lifeline.StateID, state.ID()); err != nil {
 		return bus.Reply{Reply: &reply.Error{ErrType: reply.ErrDeactivated}}
 	}
 
@@ -164,7 +171,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 	// LifelineIndex exists and latest record id does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.LatestState != nil && !state.PrevStateID().Equal(*idx.LatestState) && idx.LatestState != recID {
+	if idx.Lifeline.LatestState != nil && !state.PrevStateID().Equal(*idx.Lifeline.LatestState) && idx.Lifeline.LatestState != recID {
 		return bus.Reply{Err: errors.New("invalid state record")}
 	}
 
@@ -183,26 +190,22 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	} else if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "can't save record into storage")}
 	}
-	idx.LatestState = id
-	idx.StateID = state.ID()
+	idx.Lifeline.LatestState = id
+	idx.Lifeline.StateID = state.ID()
 	if state.ID() == record.StateActivation {
-		idx.Parent = state.(*record.Activate).Parent
+		idx.Lifeline.Parent = state.(*record.Activate).Parent
 	}
 
-	idx.LatestUpdate = p.PulseNumber
-	idx.JetID = p.JetID
-	err = p.Dep.LifelineIndex.Set(ctx, p.PulseNumber, *p.Message.Object.Record(), idx)
+	idx.Lifeline.LatestUpdate = p.PulseNumber
+	idx.Lifeline.JetID = p.JetID
+	idx.LifelineLastUsed = p.PulseNumber
+	err = p.Dep.IndexModifier.SetIndex(ctx, p.PulseNumber, idx)
 	if err != nil {
 		return bus.Reply{Err: err}
 	}
-	err = p.Dep.LifelineStateModifier.SetLifelineUsage(ctx, p.PulseNumber, *p.Message.Object.Record())
-	if err != nil {
-		return bus.Reply{Err: errors.Wrap(err, "failed to update lifeline usage state")}
-	}
+	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
 
-	logger.WithField("state", idx.LatestState.DebugString()).Debug("saved object")
-
-	_, err = p.recordResult(ctx)
+	err = p.recordResult(ctx)
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "failed to record result")}
 	}
@@ -212,75 +215,58 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 func (p *UpdateObject) saveIndexFromHeavy(
 	ctx context.Context, jetID insolar.JetID, obj insolar.Reference, heavy *insolar.Reference,
-) (object.Lifeline, error) {
+) (object.FilamentIndex, error) {
 	genericReply, err := p.Dep.Bus.Send(ctx, &message.GetObjectIndex{
 		Object: obj,
 	}, &insolar.MessageSendOptions{
 		Receiver: heavy,
 	})
 	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to send")
+		return object.FilamentIndex{}, errors.Wrap(err, "failed to send")
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
 	if !ok {
-		return object.Lifeline{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
+		return object.FilamentIndex{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx, err := object.DecodeIndex(rep.Index)
+	lfl, err := object.DecodeLifeline(rep.Index)
 	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to decode")
+		return object.FilamentIndex{}, errors.Wrap(err, "failed to decode")
 	}
 
-	idx.JetID = jetID
-	err = p.Dep.LifelineIndex.Set(ctx, p.PulseNumber, *obj.Record(), idx)
+	lfl.JetID = jetID
+	idx := object.FilamentIndex{
+		ObjID:            *obj.Record(),
+		Lifeline:         lfl,
+		PendingRecords:   []insolar.ID{},
+		LifelineLastUsed: p.PulseNumber,
+	}
+	err = p.Dep.IndexModifier.SetIndex(ctx, p.PulseNumber, idx)
 	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to save")
+		return object.FilamentIndex{}, errors.Wrap(err, "failed to save")
 	}
 	return idx, nil
 }
 
-func (p *UpdateObject) recordResult(ctx context.Context) (*insolar.ID, error) {
-	virtRec := record.Virtual{}
-	err := virtRec.Unmarshal(p.Message.ResultRecord)
+func (p *UpdateObject) recordResult(ctx context.Context) error {
+	virtual := record.Virtual{}
+	err := virtual.Unmarshal(p.Message.ResultRecord)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize record")
+		return errors.Wrap(err, "can't deserialize record")
 	}
 
-	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
+	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtual)
 	id := insolar.NewID(p.PulseNumber, hash)
-	rec := record.Material{
-		Virtual: &virtRec,
-		JetID:   p.JetID,
+
+	result, ok := record.Unwrap(&virtual).(*record.Result)
+	if !ok {
+		return errors.New("unexpected record type")
 	}
 
-	err = p.Dep.RecordModifier.Set(ctx, *id, rec)
-
-	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
-	} else if err != nil {
-		return nil, errors.Wrap(err, "can't save record into storage")
-	}
-	err = p.closePending(ctx, *id, &virtRec)
+	err = p.Dep.Filaments.SetResult(ctx, *id, p.JetID, *result)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't close Pending")
+		return errors.Wrap(err, "failed to save result")
 	}
 
-	return id, nil
-}
-
-func (p *UpdateObject) closePending(ctx context.Context, id insolar.ID, virtRec *record.Virtual) error {
-	concrete := record.Unwrap(virtRec)
-	switch r := concrete.(type) {
-	case *record.Result:
-		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.JetID))
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
-
-		err := p.Dep.PendingModifier.SetResult(ctx, p.PulseNumber, r.Object, id, *r)
-		if err != nil {
-			return errors.Wrap(err, "can't save result into filament-index")
-		}
-	default:
-		return errors.New(fmt.Sprintf("unexpected virtual record of type %T", r))
-	}
 	return nil
 }
 

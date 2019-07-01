@@ -18,7 +18,6 @@ package handle
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
@@ -41,8 +40,10 @@ func NewHotData(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.Hot
 }
 
 func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
-	fmt.Println("start TypeHotRecords in Present")
-	proc := proc.NewHotData(s.message, s.wmmessage)
-	s.dep.HotData(proc)
-	return f.Procedure(ctx, proc, false)
+	hdProc := proc.NewHotData(s.message, s.wmmessage)
+	s.dep.HotData(hdProc)
+	if err := f.Procedure(ctx, hdProc, false); err != nil {
+		return err
+	}
+	return nil
 }

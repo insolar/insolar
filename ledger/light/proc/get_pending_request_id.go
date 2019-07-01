@@ -21,10 +21,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
+	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/pkg/errors"
 )
 
 type GetPendingRequestID struct {
@@ -33,9 +35,9 @@ type GetPendingRequestID struct {
 	jet      insolar.JetID
 	reqPulse insolar.PulseNumber
 
-	Dep struct {
-		RecentStorageProvider recentstorage.Provider
-		Sender                bus.Sender
+	dep struct {
+		filaments executor.FilamentCalculator
+		sender    bus.Sender
 	}
 }
 
@@ -48,17 +50,23 @@ func NewGetPendingRequestID(jetID insolar.JetID, message payload.Meta, msg *mess
 	}
 }
 
-func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
-	msg := p.msg
-	jetID := insolar.ID(p.jet)
+func (p *GetPendingRequestID) Dep(filaments executor.FilamentCalculator, sender bus.Sender) {
+	p.dep.filaments = filaments
+	p.dep.sender = sender
+}
 
-	requests := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
-	if len(requests) == 0 {
+func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
+	ids, err := p.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), p.msg.ObjectID)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate pending")
+	}
+	if len(ids) == 0 {
 		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrNoPendingRequests})
-		p.Dep.Sender.Reply(ctx, p.message, msg)
+		p.dep.sender.Reply(ctx, p.message, msg)
 		return nil
 	}
-	m := bus.ReplyAsMessage(ctx, &reply.ID{ID: requests[0]})
-	p.Dep.Sender.Reply(ctx, p.message, m)
+
+	m := bus.ReplyAsMessage(ctx, &reply.ID{ID: ids[0]})
+	p.dep.sender.Reply(ctx, p.message, m)
 	return nil
 }

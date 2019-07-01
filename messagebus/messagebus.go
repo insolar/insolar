@@ -108,9 +108,6 @@ func (mb *MessageBus) Init(ctx context.Context) error {
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.Acquire")
-	defer span.End()
-
 	counter := atomic.AddInt64(&mb.counter, 1)
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
 	if counter == 1 {
@@ -121,9 +118,6 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 }
 
 func (mb *MessageBus) Release(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.Release")
-	defer span.End()
-
 	counter := atomic.AddInt64(&mb.counter, -1)
 	if counter < 0 {
 		panic("Trying to unlock without locking")

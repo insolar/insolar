@@ -82,9 +82,9 @@ func (*Phase0PrepController) GetPacketType() packets.PacketType {
 	return packets.PacketPhase0
 }
 
-func (r *Phase0PrepController) HandleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error) {
+func (r *Phase0PrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error) {
 	p := reader.GetMemberPacket().AsPhase0Packet()
-	err = r.pulseStrategy.HandlePrepPulsarPacket(p.GetEmbeddedPulsePacket(), from, r.realm, false)
+	err = r.pulseStrategy.HandlePrepPulsarPacket(ctx, p.GetEmbeddedPulsePacket(), from, r.realm, false)
 	return err == nil, err
 }
 
@@ -106,9 +106,9 @@ func (*Phase1PrepController) GetPacketType() packets.PacketType {
 	return packets.PacketPhase1
 }
 
-func (r *Phase1PrepController) HandleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error) {
+func (r *Phase1PrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error) {
 	p := reader.GetMemberPacket().AsPhase1Packet()
-	err = r.pulseStrategy.HandlePrepPulsarPacket(p.GetEmbeddedPulsePacket(), from, r.realm, false)
+	err = r.pulseStrategy.HandlePrepPulsarPacket(ctx, p.GetEmbeddedPulsePacket(), from, r.realm, false)
 	return err == nil, err
 }
 
