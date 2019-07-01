@@ -17,6 +17,7 @@
 package executor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sync"
@@ -293,6 +294,9 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 	cache.Lock()
 	defer cache.Unlock()
 
+	if idx.Lifeline.PendingPointer == nil {
+		return []insolar.ID{}, nil
+	}
 	if idx.Lifeline.EarliestOpenRequest == nil {
 		return []insolar.ID{}, nil
 	}
@@ -349,6 +353,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	if request.GetReason().IsEmpty() {
 		return nil, nil, errors.New("reason is empty")
 	}
+	reason := request.GetReason()
 
 	idx, err := c.indexes.ForID(ctx, startFrom, objectID)
 	if err != nil {
@@ -359,12 +364,16 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	cache.Lock()
 	defer cache.Unlock()
 
+	if idx.Lifeline.PendingPointer == nil {
+		return nil, nil, nil
+	}
+
 	iter := newFetchingIterator(
 		ctx,
 		cache,
 		objectID,
 		*idx.Lifeline.PendingPointer,
-		request.GetReason().Record().Pulse(),
+		reason.Record().Pulse(),
 		startFrom,
 		c.jetFetcher,
 		c.coordinator,
@@ -377,14 +386,14 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 			return nil, nil, errors.Wrap(err, "failed to calculate pending")
 		}
 
-		if rec.RecordID == requestID {
+		if bytes.Equal(rec.RecordID.Hash(), requestID.Hash()) {
 			foundRequest = &rec
 		}
 
 		virtual := record.Unwrap(rec.Record.Virtual)
 		switch r := virtual.(type) {
 		case *record.Result:
-			if *r.Request.Record() == requestID {
+			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
 				foundResult = &rec
 			}
 		}
