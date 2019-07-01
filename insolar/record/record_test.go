@@ -300,8 +300,8 @@ func TestRequestInterface_IncomingRequest(t *testing.T) {
 		Reason: gen.Reference(),
 	}
 	iface := Request(req)
-	require.Equal(t, *req.Object, iface.RequestObject())
-	require.Equal(t, req.Reason, iface.RequestReason())
+	require.Equal(t, req.Object, iface.GetObject())
+	require.Equal(t, req.Reason, iface.GetReason())
 }
 
 func TestRequestInterface_OutgoingRequest(t *testing.T) {
@@ -312,6 +312,6 @@ func TestRequestInterface_OutgoingRequest(t *testing.T) {
 		Reason: gen.Reference(),
 	}
 	iface := Request(req)
-	require.Equal(t, *req.Object, iface.RequestObject())
-	require.Equal(t, req.Reason, iface.RequestReason())
+	require.Equal(t, req.Object, iface.GetObject())
+	require.Equal(t, req.Reason, iface.GetReason())
 }
