@@ -44,6 +44,11 @@ const (
 // ID is a unified record ID.
 type ID [RecordIDSize]byte
 
+type Request interface {
+	Object() Reference
+	Reason() Reference
+}
+
 // String implements stringer on ID and returns base58 encoded value
 func (id *ID) String() string {
 	return base58.Encode(id[:])
