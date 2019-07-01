@@ -169,7 +169,7 @@ message Virtual {
         Genesis Genesis = 101;
         Child Child = 102;
         Jet Jet = 103;
-        IncomingRequest Request = 104;
+        IncomingRequest IncomingRequest = 104;
         Result Result = 105;
         Type Type = 106;
         Code Code = 107;

@@ -61,8 +61,8 @@ func TestSetRequest_Proceed(t *testing.T) {
 		CallType: record.CTMethod,
 	}
 	virtual := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &request,
+		Union: &record.Virtual_IncomingRequest{
+			IncomingRequest: &request,
 		},
 	}
 	virtualBuf, err := virtual.Marshal()

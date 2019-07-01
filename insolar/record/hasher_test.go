@@ -62,8 +62,8 @@ func TestHashVirtual(t *testing.T) {
 		h := sha256.New()
 		hashBefore := record.HashVirtual(h, rec)
 
-		rec.Union = &record.Virtual_Request{
-			Request: &record.IncomingRequest{},
+		rec.Union = &record.Virtual_IncomingRequest{
+			IncomingRequest: &record.IncomingRequest{},
 		}
 		h = sha256.New()
 		hashAfter := record.HashVirtual(h, rec)
@@ -167,8 +167,8 @@ func getVirtualRecord() record.Virtual {
 	requestRecord.Object = &obj
 
 	virtualRecord := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &requestRecord,
+		Union: &record.Virtual_IncomingRequest{
+			IncomingRequest: &requestRecord,
 		},
 	}
 

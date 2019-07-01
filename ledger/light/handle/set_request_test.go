@@ -143,8 +143,8 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 
 	// IncomingRequest object is nil
 	virtual := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &record.IncomingRequest{
+		Union: &record.Virtual_IncomingRequest{
+			IncomingRequest: &record.IncomingRequest{
 				Object: nil,
 			},
 		},
@@ -416,8 +416,8 @@ func metaRequestMsg(t *testing.T) payload.Meta {
 	ref := gen.Reference()
 
 	virtual := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &record.IncomingRequest{
+		Union: &record.Virtual_IncomingRequest{
+			IncomingRequest: &record.IncomingRequest{
 				Object: &ref,
 			},
 		},

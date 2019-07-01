@@ -118,8 +118,8 @@ func getVirtualRecord() record.Virtual {
 	requestRecord.Object = &obj
 
 	virtualRecord := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &requestRecord,
+		Union: &record.Virtual_IncomingRequest{
+			IncomingRequest: &requestRecord,
 		},
 	}
 
