@@ -286,6 +286,13 @@ func (r *PulseData) GetNextPulseNumber() PulseNumber {
 	return r.PulseNumber.Next(r.NextPulseDelta)
 }
 
+func (r *PulseData) GetPrevPulseNumber() PulseNumber {
+	if r.IsFirstPulse() {
+		panic("illegal state")
+	}
+	return r.PulseNumber.Prev(r.PrevPulseDelta)
+}
+
 func (r *PulseData) CreateNextExpected() *PulseData {
 	s := PulseData{
 		PulseNumber: r.GetNextPulseNumber(),

@@ -131,6 +131,7 @@ type Future interface {
 	Request() Packet
 	Response() <-chan Packet
 	WaitResponse(duration time.Duration) (Packet, error)
+	Cancel()
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
@@ -247,6 +248,8 @@ type Accessor interface {
 	GetActiveNodes() []insolar.NetworkNode
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
+	// GetActiveNodeByAddr get active node by addr. Returns nil if node is not found.
+	GetActiveNodeByAddr(address string) insolar.NetworkNode
 }
 
 // Mutator is interface that provides read and write access to a snapshot

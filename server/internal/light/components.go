@@ -118,7 +118,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	{
 		var err error
 		// External communication.
-		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &c.cmp, false)
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &c.cmp)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
@@ -274,12 +274,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Jets,
 		)
 
-		jetSplitter := executor.NewJetSplitter(
-			Coordinator,
-			Jets,
-			Jets,
-			drops,
-		)
+		jetSplitter := executor.NewJetSplitter(jetCalculator, Jets, Jets, drops, drops)
 
 		hotSender := executor.NewHotSender(
 			Bus,

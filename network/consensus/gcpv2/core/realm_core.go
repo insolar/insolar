@@ -78,12 +78,13 @@ type hLocker interface {
 type coreRealm struct {
 	/* Provided externally at construction. Don't need mutex */
 	hLocker
+	nodeCallback
+
 	roundContext  context.Context
 	strategy      RoundStrategy
 	config        LocalNodeConfiguration
 	chronicle     census.ConsensusChronicles
 	initialCensus census.OperationalCensus
-	errorFactory  errors.MisbehaviorFactories
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
 	signer          common.DigestSigner
@@ -106,6 +107,10 @@ type coreRealm struct {
 
 func newCoreRealm(hLocker hLocker) coreRealm {
 	return coreRealm{hLocker: hLocker}
+}
+
+func (r *coreRealm) init() {
+	r.nodeCallback.init()
 }
 
 func (r *coreRealm) Log() insolar.Logger {
@@ -138,18 +143,6 @@ func (r *coreRealm) GetStrategy() RoundStrategy {
 
 func (r *coreRealm) GetRandomUint32() uint32 {
 	return r.strategy.RandUint32()
-}
-
-func (r *coreRealm) GetMisbehaviorFactories() errors.MisbehaviorFactories {
-	return r.errorFactory
-}
-
-func (r *coreRealm) Frauds() errors.FraudFactory {
-	return r.errorFactory.GetFraudFactory()
-}
-
-func (r *coreRealm) Blames() errors.BlameFactory {
-	return r.errorFactory.GetBlameFactory()
 }
 
 func (r *coreRealm) ShuffleNodeProjections(nodeRefs []*NodeAppearance) {
@@ -189,6 +182,7 @@ func (r *coreRealm) GetSelf() *NodeAppearance {
 	return r.self
 }
 
+/* Overrides nodeCallback.captureMisbehavior */
 func (r *coreRealm) captureMisbehavior(report errors.MisbehaviorReport) interface{} {
 	r.ReportMisbehavior(report)
 	return nil

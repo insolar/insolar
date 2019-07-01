@@ -70,19 +70,14 @@ func (p *HotData) Proceed(ctx context.Context) error {
 }
 
 func (p *HotData) process(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
 	jetID := insolar.JetID(*p.msg.Jet.Record())
-
-	logger.WithFields(map[string]interface{}{
-		"jet": jetID.DebugString(),
-	}).Info("received hot data")
 
 	err := p.Dep.DropModifier.Set(ctx, p.msg.Drop)
 	if err == drop.ErrOverride {
 		err = nil
 	}
 	if err != nil {
-		return errors.Wrapf(err, "[jet]: drop error (pulse: %v)", p.msg.Drop.Pulse)
+		return errors.Wrapf(err, "[HotData.process]: drop error (pulse: %v)", p.msg.Drop.Pulse)
 	}
 
 	err = p.Dep.JetStorage.Update(
@@ -91,6 +86,10 @@ func (p *HotData) process(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to update jet tree")
 	}
+
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"jet": jetID.DebugString(),
+	})
 
 	pendingNotifyPulse, err := p.Dep.Calculator.Backwards(ctx, flow.Pulse(ctx), pendingNotifyThreshold)
 	if err != nil {
@@ -109,7 +108,7 @@ func (p *HotData) process(ctx context.Context) error {
 			continue
 		}
 
-		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.msg.PulseNumber, meta.ObjID)
+		objJetID, _ := p.Dep.JetStorage.ForID(ctx, messagePulse, meta.ObjID)
 		if objJetID != jetID {
 			logger.Warn("received wrong id")
 			continue
@@ -118,7 +117,7 @@ func (p *HotData) process(ctx context.Context) error {
 		decodedIndex.JetID = jetID
 		err = p.Dep.IndexModifier.SetIndex(
 			ctx,
-			p.msg.PulseNumber,
+			messagePulse,
 			object.FilamentIndex{
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
@@ -135,7 +134,7 @@ func (p *HotData) process(ctx context.Context) error {
 		go p.notifyPending(ctx, meta.ObjID, decodedIndex, pendingNotifyPulse.PulseNumber)
 	}
 
-	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
+	p.Dep.JetFetcher.Release(ctx, jetID, messagePulse)
 
 	p.replyTo <- bus.Reply{Reply: &reply.OK{}}
 

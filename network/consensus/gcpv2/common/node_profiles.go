@@ -51,6 +51,7 @@
 package common
 
 import (
+	"fmt"
 	"math/bits"
 
 	"github.com/insolar/insolar/network/consensus/common"
@@ -179,22 +180,41 @@ func LessForNodeProfile(c NodeProfile, o NodeProfile) bool {
 }
 
 type MembershipProfile struct {
-	Index uint16
-	Power MemberPower
-	Nsh   NodeStateHash
+	Index          uint16
+	Power          MemberPower
+	StateEvidence  NodeStateHashEvidence
+	ClaimSignature NodeClaimSignature
 }
 
-func NewMembershipProfile(index uint16, power MemberPower, nsh NodeStateHash) MembershipProfile {
-	return MembershipProfile{Index: index, Power: power, Nsh: nsh}
+func NewMembershipProfile(index uint16, power MemberPower, nsh NodeStateHashEvidence, nch NodeClaimSignature) MembershipProfile {
+	return MembershipProfile{Index: index, Power: power, StateEvidence: nsh, ClaimSignature: nch}
+}
+
+func NewMembershipProfileByNode(np NodeProfile, nsh NodeStateHashEvidence, nch NodeClaimSignature) MembershipProfile {
+	return NewMembershipProfile(uint16(np.GetIndex()), np.GetPower(), nsh, nch)
 }
 
 func (p MembershipProfile) IsEmpty() bool {
-	return p.Nsh == nil
+	return p.StateEvidence == nil || p.ClaimSignature == nil
 }
 
 func (p MembershipProfile) Equals(o MembershipProfile) bool {
-	if p.Index != o.Index || p.Power != o.Power || p.Nsh == nil || o.Nsh == nil {
+	if p.Index != o.Index || p.Power != o.Power || p.IsEmpty() || o.IsEmpty() {
 		return false
 	}
-	return p.Nsh == o.Nsh || p.Nsh.Equals(o.Nsh)
+
+	if p.StateEvidence != o.StateEvidence {
+		if !p.StateEvidence.GetNodeStateHash().Equals(o.StateEvidence.GetNodeStateHash()) {
+			return false
+		}
+		if !p.StateEvidence.GetGlobulaNodeStateSignature().Equals(o.StateEvidence.GetGlobulaNodeStateSignature()) {
+			return false
+		}
+	}
+
+	return p.ClaimSignature == o.ClaimSignature || p.ClaimSignature.Equals(o.ClaimSignature)
+}
+
+func (p MembershipProfile) String() string {
+	return fmt.Sprintf("idx:%03d pw:%v se:%v cs:%v", p.Index, p.Power, p.StateEvidence, p.ClaimSignature)
 }

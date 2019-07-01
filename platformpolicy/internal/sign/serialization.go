@@ -17,7 +17,6 @@
 package sign
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -25,41 +24,17 @@ import (
 
 const (
 	expectedBigIntBytesLength = 32
-	sizeBytesLength           = 2
-	TwoBigIntBytesLength      = (expectedBigIntBytesLength * 2) + sizeBytesLength
+	TwoBigIntBytesLength      = expectedBigIntBytesLength * 2
 )
 
 func SerializeTwoBigInt(one, two *big.Int) []byte {
-	oneBytes := one.Bytes()
-	twoBytes := two.Bytes()
-
-	oneBytesLen := len(oneBytes)
-	twoBytesLen := len(twoBytes)
-
-	if oneBytesLen > expectedBigIntBytesLength || twoBytesLen > expectedBigIntBytesLength {
-		err := fmt.Sprintf(
-			"[ serializeTwoBigInt ] wrong one, two length. one: %d; two: %d; needed: %d. One was: %s, Two was: %s",
-			oneBytesLen,
-			twoBytesLen,
-			expectedBigIntBytesLength,
-			one.String(),
-			two.String(),
-		)
-		panic(err)
-	}
+	oneBytes := mustCanonicalizeInt(one)
+	twoBytes := mustCanonicalizeInt(two)
 
 	var serialized [TwoBigIntBytesLength]byte
 
-	serialized[0] = uint8(oneBytesLen)
-	serialized[1] = uint8(twoBytesLen)
-
-	oneStartPos := sizeBytesLength
-	oneEndPos := oneStartPos + oneBytesLen
-	copy(serialized[oneStartPos:oneEndPos], oneBytes)
-
-	twoStartPos := sizeBytesLength + expectedBigIntBytesLength
-	twoEndPos := twoStartPos + twoBytesLen
-	copy(serialized[twoStartPos:twoEndPos], twoBytes)
+	copy(serialized[:expectedBigIntBytesLength], oneBytes)
+	copy(serialized[expectedBigIntBytesLength:TwoBigIntBytesLength], twoBytes)
 
 	return serialized[:]
 }
@@ -71,20 +46,37 @@ func DeserializeTwoBigInt(data []byte) (*big.Int, *big.Int, error) {
 
 	var one, two big.Int
 
-	oneBytesLen := int(data[0])
-	twoBytesLen := int(data[1])
+	one.SetBytes(data[:expectedBigIntBytesLength])
+	two.SetBytes(data[expectedBigIntBytesLength:TwoBigIntBytesLength])
 
-	if oneBytesLen > expectedBigIntBytesLength || twoBytesLen > expectedBigIntBytesLength {
-		return nil, nil, errors.Errorf("[ DeserializeTwoBigInt ] wrong data to parse one len: %d, two len: %d", oneBytesLen, twoBytesLen)
+	return &one, &two, nil
+}
+
+func canonicalizeInt(val *big.Int) ([]byte, error) {
+	bytes := val.Bytes()
+	size := len(bytes)
+
+	if size > expectedBigIntBytesLength {
+		return nil, errors.Errorf("Failed to canonicalize big.Int - wrong length: %d", size)
 	}
 
-	oneStartPos := sizeBytesLength
-	oneEndPos := oneStartPos + oneBytesLen
+	paddingSize := expectedBigIntBytesLength - size
+	if paddingSize > 0 {
+		paddedBytes := make([]byte, size+paddingSize)
 
-	twoStartPos := sizeBytesLength + expectedBigIntBytesLength
-	twoEndPos := twoStartPos + twoBytesLen
+		copy(paddedBytes[paddingSize:], bytes)
+		return paddedBytes, nil
+	}
 
-	one.SetBytes(data[oneStartPos:oneEndPos])
-	two.SetBytes(data[twoStartPos:twoEndPos])
-	return &one, &two, nil
+	return bytes, nil
+}
+
+func mustCanonicalizeInt(val *big.Int) []byte {
+	bytes, err := canonicalizeInt(val)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return bytes
 }
