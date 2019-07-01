@@ -30,9 +30,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/rpc/v2/json2"
 
 	"github.com/stretchr/testify/require"
 
@@ -147,7 +147,7 @@ func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte 
 func getSeed(t *testing.T) string {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "node.GetSeed",
+		"method":  "node.getSeed",
 		"id":      "",
 	})
 	getSeedResponse := &getSeedResponse{}
@@ -159,7 +159,7 @@ func getSeed(t *testing.T) string {
 func getInfo(t *testing.T) infoResponse {
 	pp := postParams{
 		"jsonrpc": "2.0",
-		"method":  "network.GetInfo",
+		"method":  "network.getInfo",
 		"id":      "",
 	}
 	body := getRPSResponseBody(t, pp)
@@ -172,7 +172,7 @@ func getInfo(t *testing.T) infoResponse {
 func getStatus(t *testing.T) statusResponse {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "node.GetStatus",
+		"method":  "node.getStatus",
 		"id":      "",
 	})
 	rpcStatusResponse := &rpcStatusResponse{}
@@ -294,7 +294,7 @@ func uploadContractOnce(t *testing.T, name string, code string) *insolar.Referen
 func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.Upload",
+		"method":  "contract.upload",
 		"id":      "",
 		"params": map[string]string{
 			"name": contractName,
@@ -326,7 +326,7 @@ func uploadContract(t *testing.T, contractName string, contractCode string) *ins
 func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Reference {
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.CallConstructor",
+		"method":  "contract.callConstructor",
 		"id":      "",
 		"params": map[string]string{
 			"PrototypeRefString": prototypeRef.String(),
@@ -359,7 +359,7 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args 
 
 	callMethodBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.CallMethod",
+		"method":  "contract.callMethod",
 		"id":      "",
 		"params": map[string]interface{}{
 			"ObjectRefString": objectRef.String(),
