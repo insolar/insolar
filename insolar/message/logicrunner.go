@@ -61,7 +61,7 @@ func (rr *ReturnResults) AllowedSenderObjectAndRole() (*insolar.Reference, insol
 
 // CallMethod - Simply call method and return result
 type CallMethod struct {
-	record.Request
+	record.IncomingRequest
 
 	PulseNum insolar.PulseNumber // DIRTY: EVIL: HACK
 }
