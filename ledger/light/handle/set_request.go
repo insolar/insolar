@@ -60,11 +60,11 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	virtual := record.Virtual{}
 	err = virtual.Unmarshal(msg.Request)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal Request record")
+		return errors.Wrap(err, "failed to unmarshal IncomingRequest record")
 	}
 
 	rec := record.Unwrap(&virtual)
-	request, ok := rec.(*record.Request)
+	request, ok := rec.(*record.IncomingRequest)
 	if !ok {
 		return fmt.Errorf("wrong request type: %T", rec)
 	}

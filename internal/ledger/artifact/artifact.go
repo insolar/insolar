@@ -37,7 +37,7 @@ type Manager interface {
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error)
+	RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error)
 
 	// RegisterResult saves payload result in storage (emulates of save call result by VM).
 	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
@@ -45,7 +45,7 @@ type Manager interface {
 	// ActivateObject creates activate object record in storage.
 	// If memory is not provided, the prototype default memory will be used.
 	//
-	// Request reference will be this object's identifier and referred as "object head".
+	// IncomingRequest reference will be this object's identifier and referred as "object head".
 	ActivateObject(
 		ctx context.Context,
 		domain, obj, parent, prototype insolar.Reference,
@@ -136,7 +136,7 @@ func (m *Scope) GetObject(
 }
 
 // RegisterRequest creates request record in storage.
-func (m *Scope) RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error) {
+func (m *Scope) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
 	virtRec := record.Wrap(req)
 	return m.setRecord(ctx, virtRec)
 }
@@ -158,7 +158,7 @@ func (m *Scope) RegisterResult(
 // ActivateObject creates activate object record in storage.
 // If memory is not provided, the prototype default memory will be used.
 //
-// Request reference will be this object's identifier and referred as "object head".
+// IncomingRequest reference will be this object's identifier and referred as "object head".
 func (m *Scope) ActivateObject(
 	ctx context.Context,
 	domain, obj, parent, prototype insolar.Reference,

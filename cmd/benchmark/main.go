@@ -136,7 +136,7 @@ func printResults(s scenario) {
 	writeToOutput(
 		s.getOut(),
 		fmt.Sprintf(
-			"Scenario %s: Average Request Duration - %s\n",
+			"Scenario %s: Average IncomingRequest Duration - %s\n",
 			s.getName(), s.getAverageOperationDuration(),
 		),
 	)

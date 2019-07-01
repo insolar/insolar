@@ -56,7 +56,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	jetID := gen.JetID()
 	id := gen.ID()
 
-	request := record.Request{
+	request := record.IncomingRequest{
 		Object:   &ref,
 		CallType: record.CTMethod,
 	}

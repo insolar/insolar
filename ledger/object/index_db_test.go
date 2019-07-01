@@ -242,17 +242,17 @@ func TestIndexDB_Records(t *testing.T) {
 
 		// Records
 		idT := insolar.NewID(pnT, nil)
-		rT := record.Request{Object: insolar.NewReference(gen.ID())}
+		rT := record.IncomingRequest{Object: insolar.NewReference(gen.ID())}
 		rTV := record.Wrap(rT)
 		_ = rms.set(*idT, record.Material{Virtual: &rTV})
 
 		idS := insolar.NewID(pnS, nil)
-		rS := record.Request{Object: insolar.NewReference(gen.ID())}
+		rS := record.IncomingRequest{Object: insolar.NewReference(gen.ID())}
 		rSV := record.Wrap(rS)
 		_ = rms.set(*idS, record.Material{Virtual: &rSV})
 
 		id := insolar.NewID(pn, nil)
-		r := record.Request{Object: insolar.NewReference(gen.ID())}
+		r := record.IncomingRequest{Object: insolar.NewReference(gen.ID())}
 		rv := record.Wrap(r)
 		_ = rms.set(*id, record.Material{Virtual: &rv})
 

@@ -73,12 +73,12 @@ const (
 	PacketPulse /* Triggers Phase0-1 */
 	PacketFraud /* Delivers fraud proof, by request only */
 
-	PacketReqPhase1 /* Request to resend own NSH - will be replied with PacketPhase1 without PulseData.
+	PacketReqPhase1 /* IncomingRequest to resend own NSH - will be replied with PacketPhase1 without PulseData.
 	The reply MUST include all claims presented in the original Phase1 packet.
 	This request MUST be replied not more than 1 time per requesting node per consensus round,
 	otherwise is ignored.
 	*/
-	PacketReqIntro /* Request to resend other's (NSH + intro) - will be replied with PacketPhase2.
+	PacketReqIntro /* IncomingRequest to resend other's (NSH + intro) - will be replied with PacketPhase2.
 	Only joiners can send this request, and only to anyone in a relevant neighbourhood.
 	Limited by 1 times per requesting node per consensus round per requested intro,
 	otherwise is ignored.

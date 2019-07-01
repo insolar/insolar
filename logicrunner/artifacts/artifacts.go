@@ -28,7 +28,7 @@ import (
 // Client is a high level storage interface.
 type Client interface {
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, request record.Request) (*insolar.ID, error)
+	RegisterRequest(ctx context.Context, request record.IncomingRequest) (*insolar.ID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -74,7 +74,7 @@ type Client interface {
 	// ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
 	// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 	//
-	// Request reference will be this object's identifier and referred as "object head".
+	// IncomingRequest reference will be this object's identifier and referred as "object head".
 	ActivatePrototype(
 		ctx context.Context,
 		request, parent, code insolar.Reference,
@@ -84,7 +84,7 @@ type Client interface {
 	// ActivateObject creates activate object record in storage. If memory is not provided, the prototype default
 	// memory will be used.
 	//
-	// Request reference will be this object's identifier and referred as "object head".
+	// IncomingRequest reference will be this object's identifier and referred as "object head".
 	ActivateObject(
 		ctx context.Context,
 		request, parent, prototype insolar.Reference,

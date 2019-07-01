@@ -6,17 +6,18 @@ package packet
 import (
 	bytes "bytes"
 	fmt "fmt"
+	io "io"
+	math "math"
+	reflect "reflect"
+	strconv "strconv"
+	strings "strings"
+
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 	pulse "github.com/insolar/insolar/insolar/pulse"
 	github_com_insolar_insolar_network_consensusv1_packets "github.com/insolar/insolar/network/consensusv1/packets"
 	github_com_insolar_insolar_network_hostnetwork_host "github.com/insolar/insolar/network/hostnetwork/host"
-	io "io"
-	math "math"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -137,7 +138,7 @@ type isPacket_Payload interface {
 }
 
 type Packet_Request struct {
-	Request *Request `protobuf:"bytes,25,opt,name=Request,proto3,oneof"`
+	Request *Request `protobuf:"bytes,25,opt,name=IncomingRequest,proto3,oneof"`
 }
 type Packet_Response struct {
 	Response *Response `protobuf:"bytes,26,opt,name=Response,proto3,oneof"`
@@ -199,7 +200,7 @@ func _Packet_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 func _Packet_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
 	m := msg.(*Packet)
 	switch tag {
-	case 25: // Payload.Request
+	case 25: // Payload.IncomingRequest
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -242,7 +243,7 @@ func _Packet_OneofSizer(msg proto.Message) (n int) {
 }
 
 type Request struct {
-	// Types that are valid to be assigned to Request:
+	// Types that are valid to be assigned to IncomingRequest:
 	//	*Request_Ping
 	//	*Request_RPC
 	//	*Request_Cascade
@@ -252,7 +253,7 @@ type Request struct {
 	//	*Request_Register
 	//	*Request_Genesis
 	//	*Request_SignCert
-	Request isRequest_Request `protobuf_oneof:"Request"`
+	Request isRequest_Request `protobuf_oneof:"IncomingRequest"`
 }
 
 func (m *Request) Reset()      { *m = Request{} }
@@ -419,7 +420,7 @@ func (*Request) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error
 
 func _Request_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	m := msg.(*Request)
-	// Request
+	// IncomingRequest
 	switch x := m.Request.(type) {
 	case *Request_Ping:
 		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
@@ -468,7 +469,7 @@ func _Request_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 		}
 	case nil:
 	default:
-		return fmt.Errorf("Request.Request has unexpected type %T", x)
+		return fmt.Errorf("IncomingRequest.IncomingRequest has unexpected type %T", x)
 	}
 	return nil
 }
@@ -476,7 +477,7 @@ func _Request_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
 	m := msg.(*Request)
 	switch tag {
-	case 1: // Request.Ping
+	case 1: // IncomingRequest.Ping
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -484,7 +485,7 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Ping{msg}
 		return true, err
-	case 2: // Request.RPC
+	case 2: // IncomingRequest.RPC
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -492,7 +493,7 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_RPC{msg}
 		return true, err
-	case 3: // Request.Cascade
+	case 3: // IncomingRequest.Cascade
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -500,7 +501,7 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Cascade{msg}
 		return true, err
-	case 4: // Request.Pulse
+	case 4: // IncomingRequest.Pulse
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -508,7 +509,7 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Pulse{msg}
 		return true, err
-	case 5: // Request.Bootstrap
+	case 5: // IncomingRequest.Bootstrap
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -516,7 +517,7 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Bootstrap{msg}
 		return true, err
-	case 6: // Request.Authorize
+	case 6: // IncomingRequest.Authorize
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -524,7 +525,7 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Authorize{msg}
 		return true, err
-	case 7: // Request.Register
+	case 7: // IncomingRequest.Register
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -532,7 +533,7 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Register{msg}
 		return true, err
-	case 8: // Request.Genesis
+	case 8: // IncomingRequest.Genesis
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -540,7 +541,7 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Genesis{msg}
 		return true, err
-	case 9: // Request.SignCert
+	case 9: // IncomingRequest.SignCert
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -555,7 +556,7 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 
 func _Request_OneofSizer(msg proto.Message) (n int) {
 	m := msg.(*Request)
-	// Request
+	// IncomingRequest
 	switch x := m.Request.(type) {
 	case *Request_Ping:
 		s := proto.Size(x.Ping)
@@ -1766,7 +1767,7 @@ func init() {
 	proto.RegisterEnum("packet.ResponseCode", ResponseCode_name, ResponseCode_value)
 	proto.RegisterEnum("packet.BasicResponseCode", BasicResponseCode_name, BasicResponseCode_value)
 	proto.RegisterType((*Packet)(nil), "packet.Packet")
-	proto.RegisterType((*Request)(nil), "packet.Request")
+	proto.RegisterType((*Request)(nil), "packet.IncomingRequest")
 	proto.RegisterType((*Response)(nil), "packet.Response")
 	proto.RegisterType((*Ping)(nil), "packet.Ping")
 	proto.RegisterType((*RPCRequest)(nil), "packet.RPCRequest")
@@ -3138,7 +3139,7 @@ func (this *Packet_Request) GoString() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&packet.Packet_Request{` +
-		`Request:` + fmt.Sprintf("%#v", this.Request) + `}`}, ", ")
+		`IncomingRequest:` + fmt.Sprintf("%#v", this.Request) + `}`}, ", ")
 	return s
 }
 func (this *Packet_Response) GoString() string {
@@ -3154,9 +3155,9 @@ func (this *Request) GoString() string {
 		return "nil"
 	}
 	s := make([]string, 0, 13)
-	s = append(s, "&packet.Request{")
+	s = append(s, "&packet.IncomingRequest{")
 	if this.Request != nil {
-		s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
+		s = append(s, "IncomingRequest: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -5418,7 +5419,7 @@ func (this *Packet_Request) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Packet_Request{`,
-		`Request:` + strings.Replace(fmt.Sprintf("%v", this.Request), "Request", "Request", 1) + `,`,
+		`IncomingRequest:` + strings.Replace(fmt.Sprintf("%v", this.Request), "IncomingRequest", "IncomingRequest", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5437,8 +5438,8 @@ func (this *Request) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Request{`,
-		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
+	s := strings.Join([]string{`&IncomingRequest{`,
+		`IncomingRequest:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -6070,7 +6071,7 @@ func (m *Packet) Unmarshal(dAtA []byte) error {
 			}
 		case 25:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -6185,10 +6186,10 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Request: wiretype end group for non-group")
+			return fmt.Errorf("proto: IncomingRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Request: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: IncomingRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

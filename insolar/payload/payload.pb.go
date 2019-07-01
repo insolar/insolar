@@ -6,14 +6,15 @@ package payload
 import (
 	bytes "bytes"
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
-	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
 	io "io"
 	math "math"
 	reflect "reflect"
 	strings "strings"
+
+	_ "github.com/gogo/protobuf/gogoproto"
+	proto "github.com/gogo/protobuf/proto"
+	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -660,7 +661,7 @@ func (m *Jet) GetPolymorph() uint32 {
 
 type SetRequest struct {
 	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	Request   []byte `protobuf:"bytes,20,opt,name=Request,proto3" json:"Request,omitempty"`
+	Request   []byte `protobuf:"bytes,20,opt,name=IncomingRequest,proto3" json:"IncomingRequest,omitempty"`
 }
 
 func (m *SetRequest) Reset()      { *m = SetRequest{} }
@@ -1562,7 +1563,7 @@ func (this *SetRequest) GoString() string {
 	s := make([]string, 0, 6)
 	s = append(s, "&payload.SetRequest{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
-	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
+	s = append(s, "IncomingRequest: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2758,7 +2759,7 @@ func (this *SetRequest) String() string {
 	}
 	s := strings.Join([]string{`&SetRequest{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
-		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
+		`IncomingRequest:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4509,7 +4510,7 @@ func (m *SetRequest) Unmarshal(dAtA []byte) error {
 			}
 		case 20:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {

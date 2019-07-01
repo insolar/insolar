@@ -141,7 +141,7 @@ type Transcript struct {
 	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
-	Request          *record.Request
+	Request          *record.IncomingRequest
 	RequestRef       *insolar.Reference
 	RequesterNode    *insolar.Reference
 	Nonce            uint64
@@ -173,7 +173,7 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 	return &Transcript{
 		Context:       ctx,
 		LogicContext:  logicalContext,
-		Request:       &msg.Request,
+		Request:       &msg.IncomingRequest,
 		RequestRef:    requestRef,
 		RequesterNode: &sender,
 		Nonce:         0,
@@ -185,14 +185,14 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 }
 
 type OutgoingRequest struct {
-	Request   record.Request
+	Request   record.IncomingRequest
 	NewObject *Ref
 	Response  []byte
 	Error     error
 }
 
 func (t *Transcript) AddOutgoingRequest(
-	ctx context.Context, request record.Request, result []byte, newObject *Ref, err error,
+	ctx context.Context, request record.IncomingRequest, result []byte, newObject *Ref, err error,
 ) {
 	rec := OutgoingRequest{
 		Request:   request,

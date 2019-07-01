@@ -84,7 +84,7 @@ func (p *Packet) SetRequest(request interface{}) {
 	case *SignCertRequest:
 		r = &Request_SignCert{t}
 	default:
-		panic("Request payload is not a valid protobuf struct!")
+		panic("IncomingRequest payload is not a valid protobuf struct!")
 	}
 	p.Payload = &Packet_Request{Request: &Request{Request: r}}
 }

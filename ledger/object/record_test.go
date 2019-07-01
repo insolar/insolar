@@ -184,7 +184,7 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 
 // getVirtualRecord generates random Virtual record
 func getVirtualRecord() record.Virtual {
-	var requestRecord record.Request
+	var requestRecord record.IncomingRequest
 
 	obj := gen.Reference()
 	requestRecord.Object = &obj

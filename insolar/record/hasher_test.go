@@ -63,7 +63,7 @@ func TestHashVirtual(t *testing.T) {
 		hashBefore := record.HashVirtual(h, rec)
 
 		rec.Union = &record.Virtual_Request{
-			Request: &record.Request{},
+			Request: &record.IncomingRequest{},
 		}
 		h = sha256.New()
 		hashAfter := record.HashVirtual(h, rec)
@@ -161,7 +161,7 @@ func TestHashMaterial(t *testing.T) {
 
 // getVirtualRecord generates random Virtual record
 func getVirtualRecord() record.Virtual {
-	var requestRecord record.Request
+	var requestRecord record.IncomingRequest
 
 	obj := gen.Reference()
 	requestRecord.Object = &obj

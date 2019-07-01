@@ -40,7 +40,7 @@ func Wrap(record Record) Virtual {
 				Jet: &generic,
 			},
 		}
-	case Request:
+	case IncomingRequest:
 		return Virtual{
 			Union: &Virtual_Request{
 				Request: &generic,

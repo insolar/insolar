@@ -48,7 +48,7 @@ enum ReturnMode {
     // ReturnValidated (not yet) - return result only when it's validated
 }
 
-message Request { // TODO rename to IncomingRequest when filaments will be done, see INS-2707
+message IncomingRequest {
     option (gogoproto.face) = true;
 
     int32 polymorph = 16;
@@ -169,7 +169,7 @@ message Virtual {
         Genesis Genesis = 101;
         Child Child = 102;
         Jet Jet = 103;
-        Request Request = 104;
+        IncomingRequest Request = 104;
         Result Result = 105;
         Type Type = 106;
         Code Code = 107;

@@ -40,7 +40,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 	}
 
 	objRef := gen.Reference()
-	validRequest := record.Request{Object: &objRef}
+	validRequest := record.IncomingRequest{Object: &objRef}
 
 	resetComponents()
 	t.Run("object id is empty", func(t *testing.T) {
@@ -317,11 +317,11 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 	t.Run("happy basic", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
 		storageRecs := make([]record.CompositeFilamentRecord, 5)
-		storageRecs[0] = b.Append(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
-		storageRecs[1] = b.Append(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		storageRecs[2] = b.Append(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		storageRecs[3] = b.Append(insolar.FirstPulseNumber+3, record.Request{Nonce: rand.Uint64()})
-		storageRecs[4] = b.Append(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
+		storageRecs[0] = b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
+		storageRecs[1] = b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
+		storageRecs[2] = b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
+		storageRecs[3] = b.Append(insolar.FirstPulseNumber+3, record.IncomingRequest{Nonce: rand.Uint64()})
+		storageRecs[4] = b.Append(insolar.FirstPulseNumber+4, record.IncomingRequest{Nonce: rand.Uint64()})
 
 		objectID := gen.ID()
 		fromID := storageRecs[3].MetaID
@@ -405,11 +405,11 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
-		rec1 := b.Append(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
-		rec2 := b.Append(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
+		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
 		b.Append(insolar.FirstPulseNumber+3, record.Result{Request: *insolar.NewReference(rec1.RecordID)})
-		rec4 := b.Append(insolar.FirstPulseNumber+3, record.Request{Nonce: rand.Uint64()})
-		b.Append(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
+		rec4 := b.Append(insolar.FirstPulseNumber+3, record.IncomingRequest{Nonce: rand.Uint64()})
+		b.Append(insolar.FirstPulseNumber+4, record.IncomingRequest{Nonce: rand.Uint64()})
 
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()
@@ -434,12 +434,12 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 	resetComponents()
 	t.Run("happy fetches from light", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
-		rec1 := b.Append(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
-		rec2 := b.Append(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
+		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
 		// This result is not in the storage.
 		missingRec := b.AppendNoPersist(insolar.FirstPulseNumber+3, record.Result{Request: *insolar.NewReference(rec1.RecordID)})
-		rec4 := b.Append(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
-		b.Append(insolar.FirstPulseNumber+5, record.Request{Nonce: rand.Uint64()})
+		rec4 := b.Append(insolar.FirstPulseNumber+4, record.IncomingRequest{Nonce: rand.Uint64()})
+		b.Append(insolar.FirstPulseNumber+5, record.IncomingRequest{Nonce: rand.Uint64()})
 
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()
@@ -518,12 +518,12 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 	resetComponents()
 	t.Run("happy fetches from heavy", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
-		rec1 := b.Append(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
-		rec2 := b.Append(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
+		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
+		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
 		// This result is not in the storage.
 		missingRec := b.AppendNoPersist(insolar.FirstPulseNumber+3, record.Result{Request: *insolar.NewReference(rec1.RecordID)})
-		rec4 := b.Append(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
-		b.Append(insolar.FirstPulseNumber+5, record.Request{Nonce: rand.Uint64()})
+		rec4 := b.Append(insolar.FirstPulseNumber+4, record.IncomingRequest{Nonce: rand.Uint64()})
+		b.Append(insolar.FirstPulseNumber+5, record.IncomingRequest{Nonce: rand.Uint64()})
 
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()

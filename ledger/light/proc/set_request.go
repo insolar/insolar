@@ -33,7 +33,7 @@ import (
 
 type SetRequest struct {
 	message   payload.Meta
-	request   record.Request
+	request   record.IncomingRequest
 	requestID insolar.ID
 	jetID     insolar.JetID
 
@@ -48,7 +48,7 @@ type SetRequest struct {
 
 func NewSetRequest(
 	msg payload.Meta,
-	rec record.Request,
+	rec record.IncomingRequest,
 	recID insolar.ID,
 	jetID insolar.JetID,
 ) *SetRequest {

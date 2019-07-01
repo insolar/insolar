@@ -77,7 +77,7 @@ type Future interface {
 	// Receiver returns the initiator of the packet.
 	Receiver() *host.Host
 
-	// Request returns origin request.
+	// IncomingRequest returns origin request.
 	Request() network.Packet
 
 	// Response is a channel to listen for future response.

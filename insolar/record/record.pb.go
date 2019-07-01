@@ -6,15 +6,16 @@ package record
 import (
 	bytes "bytes"
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
-	github_com_gogo_protobuf_proto "github.com/gogo/protobuf/proto"
-	proto "github.com/gogo/protobuf/proto"
-	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 	io "io"
 	math "math"
 	reflect "reflect"
 	strconv "strconv"
 	strings "strings"
+
+	_ "github.com/gogo/protobuf/gogoproto"
+	github_com_gogo_protobuf_proto "github.com/gogo/protobuf/proto"
+	proto "github.com/gogo/protobuf/proto"
+	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -189,7 +190,7 @@ func (m *Jet) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Jet proto.InternalMessageInfo
 
-type Request struct {
+type IncomingRequest struct {
 	Polymorph       int32                                         `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	CallType        CallType                                      `protobuf:"varint,20,opt,name=CallType,proto3,enum=record.CallType" json:"CallType,omitempty"`
 	Caller          github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,21,opt,name=Caller,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Caller"`
@@ -207,15 +208,15 @@ type Request struct {
 	APIRequestID    string                                        `protobuf:"bytes,33,opt,name=APIRequestID,proto3" json:"APIRequestID,omitempty"`
 }
 
-func (m *Request) Reset()      { *m = Request{} }
-func (*Request) ProtoMessage() {}
-func (*Request) Descriptor() ([]byte, []int) {
+func (m *IncomingRequest) Reset()      { *m = IncomingRequest{} }
+func (*IncomingRequest) ProtoMessage() {}
+func (*IncomingRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{3}
 }
-func (m *Request) XXX_Unmarshal(b []byte) error {
+func (m *IncomingRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *IncomingRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
 		return xxx_messageInfo_Request.Marshal(b, m, deterministic)
 	} else {
@@ -227,13 +228,13 @@ func (m *Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *Request) XXX_Merge(src proto.Message) {
+func (m *IncomingRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Request.Merge(m, src)
 }
-func (m *Request) XXX_Size() int {
+func (m *IncomingRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *Request) XXX_DiscardUnknown() {
+func (m *IncomingRequest) XXX_DiscardUnknown() {
 	xxx_messageInfo_Request.DiscardUnknown(m)
 }
 
@@ -292,7 +293,7 @@ var xxx_messageInfo_OutgoingRequest proto.InternalMessageInfo
 type Result struct {
 	Polymorph int32                                        `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	Object    github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,20,opt,name=Object,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Object"`
-	Request   github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
+	Request   github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=IncomingRequest,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"IncomingRequest"`
 	Payload   []byte                                       `protobuf:"bytes,22,opt,name=Payload,proto3" json:"Payload,omitempty"`
 }
 
@@ -331,7 +332,7 @@ var xxx_messageInfo_Result proto.InternalMessageInfo
 type Type struct {
 	Polymorph       int32                                        `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	Domain          github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,20,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
-	Request         github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
+	Request         github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=IncomingRequest,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"IncomingRequest"`
 	TypeDeclaration []byte                                       `protobuf:"bytes,22,opt,name=TypeDeclaration,proto3" json:"TypeDeclaration,omitempty"`
 }
 
@@ -370,7 +371,7 @@ var xxx_messageInfo_Type proto.InternalMessageInfo
 type Code struct {
 	Polymorph   int32                                          `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	Domain      github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,20,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
-	Request     github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,21,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
+	Request     github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,21,opt,name=IncomingRequest,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"IncomingRequest"`
 	Code        []byte                                         `protobuf:"bytes,22,opt,name=Code,proto3" json:"Code,omitempty"`
 	MachineType github_com_insolar_insolar_insolar.MachineType `protobuf:"varint,23,opt,name=MachineType,proto3,customtype=github.com/insolar/insolar/insolar.MachineType" json:"MachineType"`
 }
@@ -410,7 +411,7 @@ var xxx_messageInfo_Code proto.InternalMessageInfo
 type Activate struct {
 	Polymorph   int32                                        `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	Domain      github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,20,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
-	Request     github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
+	Request     github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=IncomingRequest,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"IncomingRequest"`
 	Memory      github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,22,opt,name=Memory,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Memory"`
 	Image       github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,23,opt,name=Image,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Image"`
 	IsPrototype bool                                         `protobuf:"varint,24,opt,name=IsPrototype,proto3" json:"IsPrototype,omitempty"`
@@ -453,7 +454,7 @@ var xxx_messageInfo_Activate proto.InternalMessageInfo
 type Amend struct {
 	Polymorph   int32                                        `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	Domain      github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,20,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
-	Request     github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
+	Request     github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=IncomingRequest,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"IncomingRequest"`
 	Memory      github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,22,opt,name=Memory,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Memory"`
 	Image       github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,23,opt,name=Image,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Image"`
 	IsPrototype bool                                         `protobuf:"varint,24,opt,name=IsPrototype,proto3" json:"IsPrototype,omitempty"`
@@ -495,7 +496,7 @@ var xxx_messageInfo_Amend proto.InternalMessageInfo
 type Deactivate struct {
 	Polymorph int32                                        `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	Domain    github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,20,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
-	Request   github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
+	Request   github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=IncomingRequest,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"IncomingRequest"`
 	PrevState github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,22,opt,name=PrevState,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"PrevState"`
 }
 
@@ -636,7 +637,7 @@ type Virtual_Jet struct {
 	Jet *Jet `protobuf:"bytes,103,opt,name=Jet,proto3,oneof"`
 }
 type Virtual_Request struct {
-	Request *Request `protobuf:"bytes,104,opt,name=Request,proto3,oneof"`
+	Request *IncomingRequest `protobuf:"bytes,104,opt,name=IncomingRequest,proto3,oneof"`
 }
 type Virtual_Result struct {
 	Result *Result `protobuf:"bytes,105,opt,name=Result,proto3,oneof"`
@@ -700,7 +701,7 @@ func (m *Virtual) GetJet() *Jet {
 	return nil
 }
 
-func (m *Virtual) GetRequest() *Request {
+func (m *Virtual) GetRequest() *IncomingRequest {
 	if x, ok := m.GetUnion().(*Virtual_Request); ok {
 		return x.Request
 	}
@@ -866,11 +867,11 @@ func _Virtual_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Jet{msg}
 		return true, err
-	case 104: // union.Request
+	case 104: // union.IncomingRequest
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(Request)
+		msg := new(IncomingRequest)
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Request{msg}
 		return true, err
@@ -1086,7 +1087,7 @@ func init() {
 	proto.RegisterType((*Genesis)(nil), "record.Genesis")
 	proto.RegisterType((*Child)(nil), "record.Child")
 	proto.RegisterType((*Jet)(nil), "record.Jet")
-	proto.RegisterType((*Request)(nil), "record.Request")
+	proto.RegisterType((*IncomingRequest)(nil), "record.IncomingRequest")
 	proto.RegisterType((*OutgoingRequest)(nil), "record.OutgoingRequest")
 	proto.RegisterType((*Result)(nil), "record.Result")
 	proto.RegisterType((*Type)(nil), "record.Type")
@@ -1280,14 +1281,14 @@ func (this *Jet) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Request) Equal(that interface{}) bool {
+func (this *IncomingRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Request)
+	that1, ok := that.(*IncomingRequest)
 	if !ok {
-		that2, ok := that.(Request)
+		that2, ok := that.(IncomingRequest)
 		if ok {
 			that1 = &that2
 		} else {
@@ -2168,76 +2169,76 @@ type RequestFace interface {
 	GetAPIRequestID() string
 }
 
-func (this *Request) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *IncomingRequest) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *Request) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *IncomingRequest) TestProto() github_com_gogo_protobuf_proto.Message {
 	return NewRequestFromFace(this)
 }
 
-func (this *Request) GetPolymorph() int32 {
+func (this *IncomingRequest) GetPolymorph() int32 {
 	return this.Polymorph
 }
 
-func (this *Request) GetCallType() CallType {
+func (this *IncomingRequest) GetCallType() CallType {
 	return this.CallType
 }
 
-func (this *Request) GetCaller() github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetCaller() github_com_insolar_insolar_insolar.Reference {
 	return this.Caller
 }
 
-func (this *Request) GetCallerPrototype() github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetCallerPrototype() github_com_insolar_insolar_insolar.Reference {
 	return this.CallerPrototype
 }
 
-func (this *Request) GetNonce() uint64 {
+func (this *IncomingRequest) GetNonce() uint64 {
 	return this.Nonce
 }
 
-func (this *Request) GetSequence() uint64 {
+func (this *IncomingRequest) GetSequence() uint64 {
 	return this.Sequence
 }
 
-func (this *Request) GetReturnMode() ReturnMode {
+func (this *IncomingRequest) GetReturnMode() ReturnMode {
 	return this.ReturnMode
 }
 
-func (this *Request) GetImmutable() bool {
+func (this *IncomingRequest) GetImmutable() bool {
 	return this.Immutable
 }
 
-func (this *Request) GetBase() *github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetBase() *github_com_insolar_insolar_insolar.Reference {
 	return this.Base
 }
 
-func (this *Request) GetObject() *github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetObject() *github_com_insolar_insolar_insolar.Reference {
 	return this.Object
 }
 
-func (this *Request) GetPrototype() *github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetPrototype() *github_com_insolar_insolar_insolar.Reference {
 	return this.Prototype
 }
 
-func (this *Request) GetMethod() string {
+func (this *IncomingRequest) GetMethod() string {
 	return this.Method
 }
 
-func (this *Request) GetArguments() []byte {
+func (this *IncomingRequest) GetArguments() []byte {
 	return this.Arguments
 }
 
-func (this *Request) GetSender() github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetSender() github_com_insolar_insolar_insolar.Reference {
 	return this.Sender
 }
 
-func (this *Request) GetAPIRequestID() string {
+func (this *IncomingRequest) GetAPIRequestID() string {
 	return this.APIRequestID
 }
 
-func NewRequestFromFace(that RequestFace) *Request {
-	this := &Request{}
+func NewRequestFromFace(that RequestFace) *IncomingRequest {
+	this := &IncomingRequest{}
 	this.Polymorph = that.GetPolymorph()
 	this.CallType = that.GetCallType()
 	this.Caller = that.GetCaller()
@@ -2525,12 +2526,12 @@ func (this *Jet) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Request) GoString() string {
+func (this *IncomingRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 19)
-	s = append(s, "&record.Request{")
+	s = append(s, "&record.IncomingRequest{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "CallType: "+fmt.Sprintf("%#v", this.CallType)+",\n")
 	s = append(s, "Caller: "+fmt.Sprintf("%#v", this.Caller)+",\n")
@@ -2581,7 +2582,7 @@ func (this *Result) GoString() string {
 	s = append(s, "&record.Result{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Object: "+fmt.Sprintf("%#v", this.Object)+",\n")
-	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
+	s = append(s, "IncomingRequest: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "Payload: "+fmt.Sprintf("%#v", this.Payload)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -2594,7 +2595,7 @@ func (this *Type) GoString() string {
 	s = append(s, "&record.Type{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
+	s = append(s, "IncomingRequest: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "TypeDeclaration: "+fmt.Sprintf("%#v", this.TypeDeclaration)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -2607,7 +2608,7 @@ func (this *Code) GoString() string {
 	s = append(s, "&record.Code{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
+	s = append(s, "IncomingRequest: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "Code: "+fmt.Sprintf("%#v", this.Code)+",\n")
 	s = append(s, "MachineType: "+fmt.Sprintf("%#v", this.MachineType)+",\n")
 	s = append(s, "}")
@@ -2621,7 +2622,7 @@ func (this *Activate) GoString() string {
 	s = append(s, "&record.Activate{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
+	s = append(s, "IncomingRequest: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "Memory: "+fmt.Sprintf("%#v", this.Memory)+",\n")
 	s = append(s, "Image: "+fmt.Sprintf("%#v", this.Image)+",\n")
 	s = append(s, "IsPrototype: "+fmt.Sprintf("%#v", this.IsPrototype)+",\n")
@@ -2638,7 +2639,7 @@ func (this *Amend) GoString() string {
 	s = append(s, "&record.Amend{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
+	s = append(s, "IncomingRequest: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "Memory: "+fmt.Sprintf("%#v", this.Memory)+",\n")
 	s = append(s, "Image: "+fmt.Sprintf("%#v", this.Image)+",\n")
 	s = append(s, "IsPrototype: "+fmt.Sprintf("%#v", this.IsPrototype)+",\n")
@@ -2654,7 +2655,7 @@ func (this *Deactivate) GoString() string {
 	s = append(s, "&record.Deactivate{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
+	s = append(s, "IncomingRequest: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "PrevState: "+fmt.Sprintf("%#v", this.PrevState)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -2714,7 +2715,7 @@ func (this *Virtual_Request) GoString() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&record.Virtual_Request{` +
-		`Request:` + fmt.Sprintf("%#v", this.Request) + `}`}, ", ")
+		`IncomingRequest:` + fmt.Sprintf("%#v", this.Request) + `}`}, ", ")
 	return s
 }
 func (this *Virtual_Result) GoString() string {
@@ -2913,7 +2914,7 @@ func (m *Jet) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Request) Marshal() (dAtA []byte, err error) {
+func (m *IncomingRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2923,7 +2924,7 @@ func (m *Request) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Request) MarshalTo(dAtA []byte) (int, error) {
+func (m *IncomingRequest) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -4066,7 +4067,7 @@ func (m *Jet) Size() (n int) {
 	return n
 }
 
-func (m *Request) Size() (n int) {
+func (m *IncomingRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -4571,11 +4572,11 @@ func (this *Jet) String() string {
 	}, "")
 	return s
 }
-func (this *Request) String() string {
+func (this *IncomingRequest) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Request{`,
+	s := strings.Join([]string{`&IncomingRequest{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`CallType:` + fmt.Sprintf("%v", this.CallType) + `,`,
 		`Caller:` + fmt.Sprintf("%v", this.Caller) + `,`,
@@ -4626,7 +4627,7 @@ func (this *Result) String() string {
 	s := strings.Join([]string{`&Result{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Object:` + fmt.Sprintf("%v", this.Object) + `,`,
-		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
+		`IncomingRequest:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`Payload:` + fmt.Sprintf("%v", this.Payload) + `,`,
 		`}`,
 	}, "")
@@ -4639,7 +4640,7 @@ func (this *Type) String() string {
 	s := strings.Join([]string{`&Type{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
+		`IncomingRequest:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`TypeDeclaration:` + fmt.Sprintf("%v", this.TypeDeclaration) + `,`,
 		`}`,
 	}, "")
@@ -4652,7 +4653,7 @@ func (this *Code) String() string {
 	s := strings.Join([]string{`&Code{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
+		`IncomingRequest:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`Code:` + fmt.Sprintf("%v", this.Code) + `,`,
 		`MachineType:` + fmt.Sprintf("%v", this.MachineType) + `,`,
 		`}`,
@@ -4666,7 +4667,7 @@ func (this *Activate) String() string {
 	s := strings.Join([]string{`&Activate{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
+		`IncomingRequest:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`Memory:` + fmt.Sprintf("%v", this.Memory) + `,`,
 		`Image:` + fmt.Sprintf("%v", this.Image) + `,`,
 		`IsPrototype:` + fmt.Sprintf("%v", this.IsPrototype) + `,`,
@@ -4683,7 +4684,7 @@ func (this *Amend) String() string {
 	s := strings.Join([]string{`&Amend{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
+		`IncomingRequest:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`Memory:` + fmt.Sprintf("%v", this.Memory) + `,`,
 		`Image:` + fmt.Sprintf("%v", this.Image) + `,`,
 		`IsPrototype:` + fmt.Sprintf("%v", this.IsPrototype) + `,`,
@@ -4699,7 +4700,7 @@ func (this *Deactivate) String() string {
 	s := strings.Join([]string{`&Deactivate{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
+		`IncomingRequest:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`PrevState:` + fmt.Sprintf("%v", this.PrevState) + `,`,
 		`}`,
 	}, "")
@@ -4764,7 +4765,7 @@ func (this *Virtual_Request) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Virtual_Request{`,
-		`Request:` + strings.Replace(fmt.Sprintf("%v", this.Request), "Request", "Request", 1) + `,`,
+		`IncomingRequest:` + strings.Replace(fmt.Sprintf("%v", this.Request), "IncomingRequest", "IncomingRequest", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5190,7 +5191,7 @@ func (m *Jet) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Request) Unmarshal(dAtA []byte) error {
+func (m *IncomingRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -5213,10 +5214,10 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Request: wiretype end group for non-group")
+			return fmt.Errorf("proto: IncomingRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Request: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: IncomingRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 16:
@@ -6213,7 +6214,7 @@ func (m *Result) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 21:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -6385,7 +6386,7 @@ func (m *Type) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 21:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -6557,7 +6558,7 @@ func (m *Code) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 21:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -6748,7 +6749,7 @@ func (m *Activate) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 21:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -7025,7 +7026,7 @@ func (m *Amend) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 21:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -7282,7 +7283,7 @@ func (m *Deactivate) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 21:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -7665,7 +7666,7 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 104:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -7692,7 +7693,7 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &Request{}
+			v := &IncomingRequest{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}

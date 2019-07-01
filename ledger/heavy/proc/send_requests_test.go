@@ -82,10 +82,10 @@ func TestSendRequests_Proceed(t *testing.T) {
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
-		rec1 := b.Append(insolar.FirstPulseNumber+1, record.Request{Nonce: rand.Uint64()})
-		rec2 := b.Append(insolar.FirstPulseNumber+2, record.Request{Nonce: rand.Uint64()})
-		rec3 := b.Append(insolar.FirstPulseNumber+4, record.Request{Nonce: rand.Uint64()})
-		b.Append(insolar.FirstPulseNumber+5, record.Request{Nonce: rand.Uint64()})
+		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
+		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
+		rec3 := b.Append(insolar.FirstPulseNumber+4, record.IncomingRequest{Nonce: rand.Uint64()})
+		b.Append(insolar.FirstPulseNumber+5, record.IncomingRequest{Nonce: rand.Uint64()})
 
 		msg := payload.GetFilament{
 			ObjectID:  gen.ID(),

@@ -184,7 +184,7 @@ func TestCallMethodCanceled(t *testing.T) {
 	}
 
 	msg := &message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			Object:    &ref,
 			Prototype: &prototypeRef,
 			Method:    method,
@@ -235,7 +235,7 @@ func TestCallMethodWaitResults(t *testing.T) {
 	}
 
 	msg := &message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			Object:    &ref,
 			Prototype: &prototypeRef,
 			Method:    method,
