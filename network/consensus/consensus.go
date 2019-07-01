@@ -175,7 +175,19 @@ func New(ctx context.Context, dep Dep) Consensus {
 	return consensus
 }
 
-func (c *Consensus) Controller() core.ConsensusController {
+type packetProcessorSetter interface {
+	SetPacketProcessor(adapters.PacketProcessor)
+}
+
+type Controller interface {
+	// Leave
+	// SetPower
+}
+
+func (c Consensus) Install(setters ...packetProcessorSetter) Controller {
+	for _, setter := range setters {
+		setter.SetPacketProcessor(c.consensusController)
+	}
 	return c.consensusController
 }
 

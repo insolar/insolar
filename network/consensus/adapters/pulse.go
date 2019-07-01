@@ -55,11 +55,13 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-func NewPulseFromPulseData(pulseData common.PulseData) insolar.Pulse {
+func NewPulse(pulseData common.PulseData) insolar.Pulse {
 	var prev insolar.PulseNumber
-	if pulseData.IsFirstPulse() {
+	if !pulseData.IsFirstPulse() {
 		prev = insolar.PulseNumber(pulseData.GetPrevPulseNumber())
 	} else {
 		prev = insolar.PulseNumber(pulseData.PulseNumber)
@@ -78,4 +80,60 @@ func NewPulseFromPulseData(pulseData common.PulseData) insolar.Pulse {
 		EpochPulseNumber: int(pulseData.PulseEpoch),
 		Entropy:          entropy,
 	}
+}
+
+func NewPulseData(pulse insolar.Pulse) common.PulseData {
+	data := common.NewPulsarData(
+		common.PulseNumber(pulse.PulseNumber),
+		uint16(pulse.NextPulseNumber-pulse.PulseNumber),
+		uint16(pulse.PulseNumber-pulse.PrevPulseNumber),
+		common.NewBits512FromBytes(pulse.Entropy[:]).FoldToBits256(),
+	)
+	return *data
+}
+
+type PulsePacketReader struct {
+	pulse insolar.Pulse
+}
+
+func (p *PulsePacketReader) OriginalPulsarPacket() {}
+
+func (p *PulsePacketReader) GetPulseData() common.PulseData {
+	return NewPulseData(p.pulse)
+}
+
+func (p *PulsePacketReader) GetPulseDataEvidence() common2.OriginalPulsarPacket {
+	return p
+}
+
+func NewPulsePacketReader(pulse insolar.Pulse) *PulsePacketReader {
+	return &PulsePacketReader{pulse}
+}
+
+type PulsePacketParser struct {
+	pulse insolar.Pulse
+}
+
+func NewPulsePacketParser(pulse insolar.Pulse) *PulsePacketParser {
+	return &PulsePacketParser{pulse}
+}
+
+func (p *PulsePacketParser) GetPacketType() packets.PacketType {
+	return packets.PacketPulse
+}
+
+func (p *PulsePacketParser) GetPulseNumber() common.PulseNumber {
+	return common.PulseNumber(p.pulse.PulseNumber)
+}
+
+func (p *PulsePacketParser) GetPulsePacket() packets.PulsePacketReader {
+	return NewPulsePacketReader(p.pulse)
+}
+
+func (p *PulsePacketParser) GetMemberPacket() packets.MemberPacketReader {
+	return nil
+}
+
+func (p *PulsePacketParser) GetPacketSignature() common.SignedDigest {
+	return common.SignedDigest{}
 }

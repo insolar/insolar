@@ -1,7 +1,7 @@
 //
 // Modified BSD 3-Clause Clear License
 //
-// Copyright (config) 2019 Insolar Technologies GmbH
+// Copyright (c) 2019 Insolar Technologies GmbH
 //
 // All rights reserved.
 //
@@ -13,7 +13,7 @@
 //  * Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other materials
 //    provided with the distribution.
-//  * Neither the addr of Insolar Technologies GmbH nor the names of its contributors
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
 //    may be used to endorse or promote products derived from this software without
 //    specific prior written permission.
 //
@@ -35,7 +35,7 @@
 //
 //    (b) prepare modifications and derivative works of this software,
 //
-//    (config) distribute this software (including without limitation in source code, binary or
+//    (c) distribute this software (including without limitation in source code, binary or
 //        object code form), and
 //
 //    (d) reproduce copies of this software
@@ -51,30 +51,50 @@
 package tests
 
 import (
+	"context"
 	"math/rand"
-	"time"
 
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common"
 )
+
+const (
+	initialPulse = 100000
+	pulseDelta   = 10
+)
+
+type Pulsar struct {
+	pulseDelta    uint16
+	pulseNumber   common.PulseNumber
+	pulseHandlers []network.PulseHandler
+}
+
+func NewPulsar(pulseHandlers []network.PulseHandler) Pulsar {
+	return Pulsar{
+		pulseDelta:    pulseDelta,
+		pulseNumber:   initialPulse,
+		pulseHandlers: pulseHandlers,
+	}
+}
+
+func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
+	prevDelta := p.pulseDelta
+	if p.pulseNumber == initialPulse {
+		prevDelta = 0
+	}
+
+	data := *common.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
+	p.pulseNumber += common.PulseNumber(p.pulseDelta)
+
+	for i := 0; i < attempts; i++ {
+		handler := p.pulseHandlers[rand.Intn(len(p.pulseHandlers))]
+		go handler.HandlePulse(ctx, adapters.NewPulse(data))
+	}
+}
 
 func randBits256() common.Bits256 {
 	v := common.Bits256{}
 	_, _ = rand.Read(v[:])
 	return v
-}
-
-func CreateGenerator(pulseCount int, pulseDelta uint16, output chan<- interface{}) {
-	var pulseNum common.PulseNumber = 100000
-	for i := 0; i < pulseCount; i++ {
-		prevDelta := pulseDelta
-		if i == 0 {
-			prevDelta = 0
-		}
-		output <- WrapPacketParser(&EmuPulsarNetPacket{
-			pulseData: *common.NewPulsarData(pulseNum, pulseDelta, prevDelta, randBits256()),
-		})
-
-		pulseNum += common.PulseNumber(pulseDelta)
-		time.Sleep(10 * time.Second)
-	}
 }

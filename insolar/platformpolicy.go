@@ -44,8 +44,10 @@ type PlatformCryptographyScheme interface {
 	ReferenceHasher() Hasher
 	IntegrityHasher() Hasher
 
-	Signer(crypto.PrivateKey) Signer
-	Verifier(crypto.PublicKey) Verifier
+	DataSigner(crypto.PrivateKey, Hasher) Signer
+	DigestSigner(key crypto.PrivateKey) Signer
+	DataVerifier(crypto.PublicKey, Hasher) Verifier
+	DigestVerifier(crypto.PublicKey) Verifier
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.KeyProcessor -o ../testutils -s _mock.go

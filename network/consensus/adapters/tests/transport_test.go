@@ -1,7 +1,7 @@
 //
 // Modified BSD 3-Clause Clear License
 //
-// Copyright (config) 2019 Insolar Technologies GmbH
+// Copyright (c) 2019 Insolar Technologies GmbH
 //
 // All rights reserved.
 //
@@ -13,7 +13,7 @@
 //  * Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other materials
 //    provided with the distribution.
-//  * Neither the addr of Insolar Technologies GmbH nor the names of its contributors
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
 //    may be used to endorse or promote products derived from this software without
 //    specific prior written permission.
 //
@@ -35,7 +35,7 @@
 //
 //    (b) prepare modifications and derivative works of this software,
 //
-//    (config) distribute this software (including without limitation in source code, binary or
+//    (c) distribute this software (including without limitation in source code, binary or
 //        object code form), and
 //
 //    (d) reproduce copies of this software
@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
@@ -115,7 +116,7 @@ func (r *emuPacketBuilder) PreparePhase0Packet(sender common2.NodeProfile, pulsa
 	options core.PacketSendOptions) core.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
 		basePacket:  r.defaultBasePacket(sender, mp, nodeCount),
-		pulsePacket: pulsarPacket.(*EmuPulsarNetPacket),
+		pulsePacket: pulsarPacket,
 	}
 	return &emuPacketSender{&v}
 }
@@ -130,8 +131,9 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsa
 	mp common2.MembershipProfile, nodeCount int,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
-	pp := pulsarPacket.(*EmuPulsarNetPacket)
-	if pp == nil || !pp.pulseData.IsValidPulseData() {
+	pp := pulsarPacket.(*adapters.PulsePacketReader)
+	pulseData := pp.GetPulseData()
+	if pp == nil || !pulseData.IsValidPulseData() {
 		panic("pulse data is missing or invalid")
 	}
 
@@ -142,7 +144,7 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsa
 		},
 		selfIntro: sender.GetIntroduction(),
 	}
-	v.pn = pp.pulseData.PulseNumber
+	v.pn = pulseData.PulseNumber
 	v.isRequest = options&core.RequestForPhase1 != 0
 	if v.isRequest || options&core.SendWithoutPulseData != 0 {
 		v.pulsePacket = nil

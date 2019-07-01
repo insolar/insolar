@@ -1,7 +1,7 @@
 //
 // Modified BSD 3-Clause Clear License
 //
-// Copyright (config) 2019 Insolar Technologies GmbH
+// Copyright (c) 2019 Insolar Technologies GmbH
 //
 // All rights reserved.
 //
@@ -13,7 +13,7 @@
 //  * Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other materials
 //    provided with the distribution.
-//  * Neither the addr of Insolar Technologies GmbH nor the names of its contributors
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
 //    may be used to endorse or promote products derived from this software without
 //    specific prior written permission.
 //
@@ -35,7 +35,7 @@
 //
 //    (b) prepare modifications and derivative works of this software,
 //
-//    (config) distribute this software (including without limitation in source code, binary or
+//    (c) distribute this software (including without limitation in source code, binary or
 //        object code form), and
 //
 //    (d) reproduce copies of this software
@@ -53,6 +53,7 @@ package tests
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
@@ -80,59 +81,6 @@ func (v EmuPacketWrapper) String() string {
 	return fmt.Sprintf("Wrap{%v}", v.parser)
 }
 
-var _ packets.PulsePacketReader = &EmuPulsarNetPacket{}
-var _ common2.OriginalPulsarPacket = &EmuPulsarNetPacket{}
-var _ packets.PacketParser = &EmuPulsarNetPacket{}
-
-type EmuPulsarNetPacket struct {
-	pulseData common.PulseData
-}
-
-func (r *EmuPulsarNetPacket) OriginalPulsarPacket() {
-}
-
-func (r *EmuPulsarNetPacket) GetPacketSignature() common.SignedDigest {
-	return common.SignedDigest{}
-}
-
-func (*EmuPulsarNetPacket) GetPacketType() packets.PacketType {
-	return packets.PacketPulse
-}
-
-func (*EmuPulsarNetPacket) GetMemberPacket() packets.MemberPacketReader {
-	return nil
-}
-
-func (*EmuPulsarNetPacket) GetEvidenceSignature() common.SignedDigest {
-	return common.SignedDigest{}
-}
-
-func (r *EmuPulsarNetPacket) GetPulseData() common.PulseData {
-	return r.pulseData
-}
-
-func (r *EmuPulsarNetPacket) GetPulseDataEvidence() common2.OriginalPulsarPacket {
-	return r
-}
-
-func (r *EmuPulsarNetPacket) GetPulseNumber() common.PulseNumber {
-	return r.pulseData.PulseNumber
-}
-
-func (*EmuPulsarNetPacket) IsPulsePacket() bool {
-	return true
-}
-
-func (r *EmuPulsarNetPacket) GetPulsePacket() packets.PulsePacketReader {
-	return r
-}
-
-func (r *EmuPulsarNetPacket) String() string {
-	return fmt.Sprintf("pd:{%v}, pulsar:*", r.pulseData)
-}
-
-// var _ gcp_v2.PhasePacketReader = &basePacket{}
-// var _ gcp_v2.MemberPacketReader = &basePacket{}
 var _ common.SignedEvidenceHolder = &basePacket{}
 
 type basePacket struct {
@@ -179,10 +127,6 @@ func (r *basePacket) GetPacketSignature() common.SignedDigest {
 	return r.sd
 }
 
-func (*basePacket) IsPulsePacket() bool {
-	return false
-}
-
 func (r *basePacket) GetPulsePacket() packets.PulsePacketReader {
 	return nil
 }
@@ -203,14 +147,6 @@ func (r *basePacket) AsPhase3Packet() packets.Phase3PacketReader {
 	return nil
 }
 
-func (r *basePacket) GetEvidenceSignature() common.SignedDigest {
-	return common.SignedDigest{}
-}
-
-func (r *basePacket) GetPulseDataEvidence() common.SignedEvidenceHolder {
-	return r
-}
-
 func (r *basePacket) String() string {
 	return fmt.Sprintf("s:%v, t:%v", r.src, r.tgt)
 }
@@ -222,7 +158,7 @@ var _ emuPackerCloner = &EmuPhase0NetPacket{}
 
 type EmuPhase0NetPacket struct {
 	basePacket
-	pulsePacket *EmuPulsarNetPacket
+	pulsePacket common2.OriginalPulsarPacket
 	pn          common.PulseNumber
 }
 
@@ -242,11 +178,11 @@ func (r *EmuPhase0NetPacket) GetPulseNumber() common.PulseNumber {
 	if r.pulsePacket == nil {
 		return r.pn
 	}
-	return r.pulsePacket.pulseData.PulseNumber
+	return r.pulsePacket.(*adapters.PulsePacketReader).GetPulseData().PulseNumber
 }
 
 func (r *EmuPhase0NetPacket) GetEmbeddedPulsePacket() packets.PulsePacketReader {
-	return r.pulsePacket
+	return r.pulsePacket.(*adapters.PulsePacketReader)
 }
 
 func (r *EmuPhase0NetPacket) String() string {

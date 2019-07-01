@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package adapters
 
@@ -149,7 +149,7 @@ func TestECDSADigestSigner_SignDigest(t *testing.T) {
 	ds := NewECDSADigestSigner(privateKey, scheme)
 	digester := NewSha3512Digester(scheme)
 
-	verifier := scheme.Verifier(publicKey)
+	verifier := scheme.DigestVerifier(publicKey)
 
 	b := make([]byte, 120)
 	rand.Read(b)
@@ -224,7 +224,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature(t *testing.T) {
 	digester := NewSha3512Digester(scheme)
 	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
 
-	signer := scheme.Signer(privateKey)
+	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
 	rand.Read(b)
@@ -244,7 +244,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature_InvalidMethod(t *testing.
 	digester := NewSha3512Digester(scheme)
 	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
 
-	signer := scheme.Signer(privateKey)
+	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
 	rand.Read(b)
@@ -273,7 +273,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature(t *testing.T) {
 	digester := NewSha3512Digester(scheme)
 	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
 
-	signer := scheme.Signer(privateKey)
+	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
 	rand.Read(b)
@@ -294,7 +294,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature_InvalidMethod(t *testing.T)
 	digester := NewSha3512Digester(scheme)
 	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
 
-	signer := scheme.Signer(privateKey)
+	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
 	rand.Read(b)

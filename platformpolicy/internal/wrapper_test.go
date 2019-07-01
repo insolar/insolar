@@ -19,7 +19,6 @@ package internal
 import (
 	"testing"
 
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/platformpolicy/internal/hash"
 	"github.com/insolar/insolar/platformpolicy/internal/sign"
@@ -34,15 +33,14 @@ func TestEcdsaMarshalUnmarshal(t *testing.T) {
 	kp := platformpolicy.NewKeyProcessor()
 	provider := sign.NewECDSAProvider()
 
-	cm := component.Manager{}
-	cm.Inject(provider, hash.NewSHA3Provider())
+	hasher := hash.NewSHA3Provider().Hash512bits()
 
 	for i := 0; i < count; i++ {
 		privateKey, err := kp.GeneratePrivateKey()
 		assert.NoError(t, err)
 
-		signer := provider.Sign(privateKey)
-		verifier := provider.Verify(kp.ExtractPublicKey(privateKey))
+		signer := provider.DataSigner(privateKey, hasher)
+		verifier := provider.DataVerifier(kp.ExtractPublicKey(privateKey), hasher)
 
 		signature, err := signer.Sign(data.Bytes())
 		assert.NoError(t, err)

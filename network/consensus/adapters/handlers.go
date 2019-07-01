@@ -48,49 +48,85 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package adapters
 
-type NodePrimaryRole uint8 //MUST BE 6-bit
+import (
+	"context"
 
-const (
-	PrimaryRoleInactive NodePrimaryRole = iota
-	PrimaryRoleNeutral
-	PrimaryRoleHeavyMaterial
-	PrimaryRoleLightMaterial
-	PrimaryRoleVirtual
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-func (v NodePrimaryRole) IsMaterial() bool {
-	return v == PrimaryRoleHeavyMaterial || v == PrimaryRoleLightMaterial
+type PacketProcessor interface {
+	ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error
 }
 
-func (v NodePrimaryRole) IsHeavyMaterial() bool {
-	return v == PrimaryRoleHeavyMaterial
+type DatagramHandler struct {
+	packetProcessor PacketProcessor
 }
 
-func (v NodePrimaryRole) IsLightMaterial() bool {
-	return v == PrimaryRoleLightMaterial
+func NewDatagramHandler() *DatagramHandler {
+	return &DatagramHandler{}
 }
 
-func (v NodePrimaryRole) IsVirtual() bool {
-	return v == PrimaryRoleVirtual
+func (dh *DatagramHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
+	dh.packetProcessor = packetProcessor
 }
 
-func (v NodePrimaryRole) IsNeutral() bool {
-	return v == PrimaryRoleNeutral
+func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"address": address,
+	})
+
+	p := payloadWrapper{}
+	err := insolar.Deserialize(buf, p)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	packetParser, ok := p.Payload.(packets.PacketParser)
+	if !ok {
+		logger.Error("Failed to get PacketParser")
+		return
+	}
+
+	if packetParser == nil {
+		logger.Error("PacketParser is nil")
+		return
+	}
+
+	hostIdentity := common.HostIdentity{
+		Addr: common.HostAddress(address),
+	}
+	err = dh.packetProcessor.ProcessPacket(ctx, packetParser, &hostIdentity)
+	if err != nil {
+		logger.Error("Failed to process packet")
+		return
+	}
 }
 
-func (v NodePrimaryRole) IsInactive() bool {
-	return v == PrimaryRoleInactive
+type PulseHandler struct {
+	packetProcessor PacketProcessor
 }
 
-type NodeSpecialRole uint8
+func NewPulseHandler() *PulseHandler {
+	return &PulseHandler{}
+}
 
-const (
-	SpecialRoleNoRole    NodeSpecialRole = 0
-	SpecialRoleDiscovery NodeSpecialRole = 1 << iota
-)
+func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
+	ph.packetProcessor = packetProcessor
+}
 
-func (v NodeSpecialRole) IsDiscovery() bool {
-	return v == SpecialRoleDiscovery
+func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse) {
+	pulsePayload := NewPulsePacketParser(pulse)
+
+	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &common.HostIdentity{
+		Addr: "pulsar",
+	})
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
 }

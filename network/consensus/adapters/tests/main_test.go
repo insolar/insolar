@@ -1,7 +1,7 @@
 //
 // Modified BSD 3-Clause Clear License
 //
-// Copyright (config) 2019 Insolar Technologies GmbH
+// Copyright (c) 2019 Insolar Technologies GmbH
 //
 // All rights reserved.
 //
@@ -13,7 +13,7 @@
 //  * Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other materials
 //    provided with the distribution.
-//  * Neither the addr of Insolar Technologies GmbH nor the names of its contributors
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
 //    may be used to endorse or promote products derived from this software without
 //    specific prior written permission.
 //
@@ -35,7 +35,7 @@
 //
 //    (b) prepare modifications and derivative works of this software,
 //
-//    (config) distribute this software (including without limitation in source code, binary or
+//    (c) distribute this software (including without limitation in source code, binary or
 //        object code form), and
 //
 //    (d) reproduce copies of this software
@@ -66,6 +66,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/node"
@@ -85,17 +86,22 @@ func TestConsensusMain(t *testing.T) {
 	nodeInfos := generateNodeInfos(nodeIdents)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
+	pulseHandlers := make([]network2.PulseHandler, 0, len(nodes))
+
 	for i, n := range nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
 		nodeKeeper.SetInitialSnapshot(nodes)
 		certificateManager := initCrypto(n, discoveryNodes)
-		handler := adapters.NewDatagramHandler()
+		datagramHandler := adapters.NewDatagramHandler()
 		transportFactory := transport2.NewFactory(configuration.NewHostNetwork().Transport)
-		transport, _ := transportFactory.CreateDatagramTransport(handler)
+		transport, _ := transportFactory.CreateDatagramTransport(datagramHandler)
 
 		consensusAdapter := NewEmuHostConsensusAdapter(n.Address())
 
-		cons := consensus.New(ctx, consensus.Dep{
+		pulseHandler := adapters.NewPulseHandler()
+		pulseHandlers = append(pulseHandlers, pulseHandler)
+
+		_ = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 			Scheme:                platformpolicy.NewPlatformCryptographyScheme(),
 			CertificateManager:    certificateManager,
@@ -107,11 +113,7 @@ func TestConsensusMain(t *testing.T) {
 			DatagramTransport:     transport,
 			// TODO: remove
 			PacketSender: consensusAdapter,
-		})
-
-		controller := cons.Controller()
-		handler.SetConsensusController(controller)
-		consensusAdapter.SetConsensusController(controller)
+		}).Install(datagramHandler, pulseHandler, consensusAdapter)
 
 		_ = transport.Start(ctx)
 		consensusAdapter.ConnectTo(network)
@@ -121,7 +123,13 @@ func TestConsensusMain(t *testing.T) {
 
 	network.Start(ctx)
 
-	go CreateGenerator(2, 10, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
+	pulsar := NewPulsar(pulseHandlers)
+	go func() {
+		for {
+			pulsar.Pulse(ctx, 4+len(nodes)/10)
+			time.Sleep(10 * time.Second)
+		}
+	}()
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")

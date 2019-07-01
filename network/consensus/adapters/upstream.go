@@ -104,7 +104,7 @@ func (u *UpstreamPulseController) PreparePulseChange(report core.MembershipUpstr
 
 func (u *UpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, pulseData common2.PulseData, activeCensus census.OperationalCensus) {
 	ctx := contextFromReport(report)
-	pulse := NewPulseFromPulseData(pulseData)
+	pulse := NewPulse(pulseData)
 
 	u.pulseChanger.ChangePulse(ctx, pulse)
 }
@@ -118,9 +118,7 @@ func (u *UpstreamPulseController) MembershipConfirmed(report core.MembershipUpst
 
 	ctx := contextFromReport(report)
 
-	inslogger.FromContext(ctx).Error()
 	population := expectedCensus.GetOnlinePopulation()
-
 	networkNodes := NewNetworkNodeList(population.GetProfiles())
 
 	err := u.nodeKeeper.Sync(ctx, networkNodes, nil)
