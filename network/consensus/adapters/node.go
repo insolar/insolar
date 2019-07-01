@@ -113,8 +113,10 @@ func (nip *NodeIntroProfile) GetIntroduction() common2.NodeIntroduction {
 	return NewNodeIntroduction(nip.node)
 }
 
-func (nip *NodeIntroProfile) GetDefaultEndpoint() common.HostAddress {
-	return common.HostAddress(nip.node.Address())
+func (nip *NodeIntroProfile) GetDefaultEndpoint() common.NodeEndpoint {
+	return &NodeEndpoint{
+		name: common.HostAddress(nip.node.Address()),
+	}
 }
 
 func (nip *NodeIntroProfile) GetNodePublicKeyStore() common.PublicKeyStore {
@@ -123,7 +125,7 @@ func (nip *NodeIntroProfile) GetNodePublicKeyStore() common.PublicKeyStore {
 }
 
 func (nip *NodeIntroProfile) IsAcceptableHost(from common.HostIdentityHolder) bool {
-	endpoint := nip.GetDefaultEndpoint()
+	endpoint := nip.GetDefaultEndpoint().GetNameAddress()
 	return endpoint.Equals(from.GetHostAddress())
 }
 
@@ -133,6 +135,22 @@ func (nip *NodeIntroProfile) GetShortNodeID() common.ShortNodeID {
 
 func (nip *NodeIntroProfile) String() string {
 	return fmt.Sprintf("{sid:%d, node:%s}", nip.node.ShortID(), nip.node.ID().String())
+}
+
+type NodeEndpoint struct {
+	name common.HostAddress
+}
+
+func (p *NodeEndpoint) GetEndpointType() common.NodeEndpointType {
+	return common.NameEndpoint
+}
+
+func (*NodeEndpoint) GetRelayID() common.ShortNodeID {
+	return 0
+}
+
+func (p *NodeEndpoint) GetNameAddress() common.HostAddress {
+	return p.name
 }
 
 func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate) []common2.NodeIntroProfile {
@@ -152,7 +170,7 @@ func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
 		nn.ID(),
 		PrimaryRoleToStaticRole(profile.GetPrimaryRole()),
 		nn.PublicKey(),
-		profile.GetDefaultEndpoint().String(),
+		profile.GetDefaultEndpoint().GetNameAddress().String(),
 		nn.Version(),
 	)
 

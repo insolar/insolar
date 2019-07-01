@@ -87,7 +87,7 @@ func NewEmuPacketBuilder(crypto core.TransportCryptographyFactory, localConfig c
 	}
 }
 
-func (r *emuPacketBuilder) GetNeighbourhoodSize(populationCount int) common2.NeighbourhoodSizes {
+func (r *emuPacketBuilder) GetNeighbourhoodSize() common2.NeighbourhoodSizes {
 	return common2.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
 }
 
@@ -100,22 +100,21 @@ func (r *emuPacketBuilder) defaultSign() common.SignedDigest {
 	return sd
 }
 
-func (r *emuPacketBuilder) defaultBasePacket(sender common2.NodeProfile, mp common2.MembershipProfile, nodeCount int) basePacket {
+func (r *emuPacketBuilder) defaultBasePacket(sender *packets.NodeAnnouncementProfile) basePacket {
 	sd := r.defaultSign()
 
 	return basePacket{
-		src:       sender.GetShortNodeID(),
-		mp:        mp,
-		nodeCount: uint16(nodeCount),
+		src:       sender.GetNodeID(),
+		mp:        sender.GetMembershipProfile(),
+		nodeCount: sender.GetNodeCount(),
 		sd:        sd,
 	}
 }
 
-func (r *emuPacketBuilder) PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
-	mp common2.MembershipProfile, nodeCount int,
+func (r *emuPacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
-		basePacket:  r.defaultBasePacket(sender, mp, nodeCount),
+		basePacket:  r.defaultBasePacket(sender),
 		pulsePacket: pulsarPacket,
 	}
 	return &emuPacketSender{&v}
@@ -127,8 +126,7 @@ func (r *EmuPhase0NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
-	mp common2.MembershipProfile, nodeCount int,
+func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
 	pp := pulsarPacket.(*adapters.PulsePacketReader)
@@ -139,10 +137,9 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsa
 
 	v := EmuPhase1NetPacket{
 		EmuPhase0NetPacket: EmuPhase0NetPacket{
-			basePacket:  r.defaultBasePacket(sender, mp, nodeCount),
+			basePacket:  r.defaultBasePacket(sender),
 			pulsePacket: pp,
 		},
-		selfIntro: sender.GetIntroduction(),
 	}
 	v.pn = pulseData.PulseNumber
 	v.isRequest = options&core.RequestForPhase1 != 0
@@ -157,9 +154,6 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 	c := *r
 	c.tgt = t.GetShortNodeID()
 
-	if !t.IsJoiner() {
-		c.selfIntro = nil
-	}
 	if sendOptions&core.SendWithoutPulseData != 0 {
 		c.pulsePacket = nil
 	}
@@ -167,16 +161,14 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData,
-	mp common2.MembershipProfile, nodeCount int,
-	neighbourhood []packets.NodeStateHashReportReader,
-	intros []common2.NodeIntroduction, options core.PacketSendOptions) core.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
+	neighbourhood []packets.MembershipAnnouncementReader,
+	options core.PacketSendOptions) core.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{
-		basePacket:    r.defaultBasePacket(sender, mp, nodeCount),
-		pulseNumber:   pd.PulseNumber,
+		basePacket:    r.defaultBasePacket(sender),
+		pulseNumber:   sender.GetPulseNumber(),
 		neighbourhood: neighbourhood,
-		intros:        intros,
 	}
 	return &emuPacketSender{&v}
 }
@@ -184,29 +176,17 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender common2.NodeProfile, pd co
 func (r *EmuPhase2NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
-
-	if !t.IsJoiner() || len(c.intros) == 1 /* the only joiner */ {
-		c.intros = nil
-	} else {
-		c.intros = make([]common2.NodeIntroduction, 0, len(r.intros)-1)
-		for _, ni := range r.intros {
-			if ni.GetShortNodeID() == t.GetShortNodeID() {
-				continue
-			}
-			c.intros = append(c.intros, ni)
-		}
-	}
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase3Packet(sender common2.NodeProfile, pd common.PulseData,
+func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
 	bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
-		basePacket:  r.defaultBasePacket(sender, common2.MembershipProfile{}, 0),
+		basePacket:  r.defaultBasePacket(sender),
 		bitset:      bitset,
-		pulseNumber: pd.PulseNumber,
+		pulseNumber: sender.GetPulseNumber(),
 		gshTrusted:  gshTrusted,
 		gshDoubted:  gshDoubted,
 	}

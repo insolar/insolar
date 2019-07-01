@@ -81,7 +81,7 @@ type payloadWrapper struct {
 }
 
 func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
-	addr := to.GetDefaultEndpoint().String()
+	addr := to.GetDefaultEndpoint().GetNameAddress().String()
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"receiver_addr":    addr,

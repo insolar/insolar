@@ -92,6 +92,46 @@ type basePacket struct {
 	sd common.SignedDigest
 }
 
+func (r *basePacket) GetRequestedPower() common2.MemberPower {
+	return r.mp.RequestedPower
+}
+
+func (r *basePacket) IsLeaving() bool {
+	return false
+}
+
+func (r *basePacket) GetLeaveReason() uint32 {
+	return 0
+}
+
+func (r *basePacket) GetJoinerID() common.ShortNodeID {
+	return 0
+}
+
+func (r *basePacket) GetJoinerAnnouncement() packets.JoinerAnnouncementReader {
+	return nil
+}
+
+func (r *basePacket) GetNodeStateHashEvidence() common2.NodeStateHashEvidence {
+	return r.mp.StateEvidence
+}
+
+func (r *basePacket) GetAnnouncementSignature() common2.MemberAnnouncementSignature {
+	return r.mp.AnnounceSignature
+}
+
+func (r *basePacket) GetNodeID() common.ShortNodeID {
+	return r.tgt
+}
+
+func (r *basePacket) GetNodeRank() common2.MembershipRank {
+	return common2.NewMembershipRank(r.mp.Power, r.mp.Index, r.nodeCount, 0)
+}
+
+func (r *basePacket) GetAnnouncementReader() packets.MembershipAnnouncementReader {
+	return r
+}
+
 func (r *basePacket) GetEvidence() common.SignedData {
 	v := common.NewBits64(0)
 	d := common.NewDigest(&v, "stub")
@@ -99,32 +139,24 @@ func (r *basePacket) GetEvidence() common.SignedData {
 	return common.NewSignedData(&v, d, s)
 }
 
-func (r *basePacket) GetNodeCount() uint16 {
-	return r.nodeCount
-}
-
-func (r *basePacket) GetNodeIndex() uint16 {
-	return r.mp.Index
-}
-
-func (r *basePacket) GetNodePower() common2.MemberPower {
-	return r.mp.Power
-}
-
-func (r *basePacket) GetSourceShortNodeId() common.ShortNodeID {
+func (r *basePacket) GetSourceId() common.ShortNodeID {
 	return r.src
 }
 
-func (r *basePacket) HasTargetShortNodeId() bool {
-	return r.tgt != common.AbsentShortNodeID
+func (r *basePacket) GetReceiverId() common.ShortNodeID {
+	return r.tgt
 }
 
-func (r *basePacket) GetTargetShortNodeId() common.ShortNodeID {
-	return r.tgt
+func (r *basePacket) GetRelayTargetID() common.ShortNodeID {
+	return common.AbsentShortNodeID
 }
 
 func (r *basePacket) GetPacketSignature() common.SignedDigest {
 	return r.sd
+}
+
+func (*basePacket) IsPulsePacket() bool {
+	return false
 }
 
 func (r *basePacket) GetPulsePacket() packets.PulsePacketReader {
@@ -145,6 +177,14 @@ func (r *basePacket) AsPhase2Packet() packets.Phase2PacketReader {
 
 func (r *basePacket) AsPhase3Packet() packets.Phase3PacketReader {
 	return nil
+}
+
+func (r *basePacket) GetEvidenceSignature() common.SignedDigest {
+	return r.sd
+}
+
+func (r *basePacket) GetPulseDataEvidence() common.SignedEvidenceHolder {
+	return r
 }
 
 func (r *basePacket) String() string {
@@ -195,21 +235,20 @@ var _ packets.PacketParser = &EmuPhase1NetPacket{}
 
 type EmuPhase1NetPacket struct {
 	EmuPhase0NetPacket
-	selfIntro common2.NodeIntroduction
 	isRequest bool
 	// packetType uint8 // to reuse this type for Phase1 and Phase1Req
 }
 
+func (r *EmuPhase1NetPacket) GetCloudIntroduction() packets.CloudIntroductionReader {
+	panic("implement me")
+}
+
+func (r *EmuPhase1NetPacket) GetFullIntroduction() packets.FullIntroductionReader {
+	panic("implement me")
+}
+
 func (r *EmuPhase1NetPacket) GetNodeClaimsSignature() common2.MemberAnnouncementSignature {
 	return r.mp.AnnounceSignature
-}
-
-func (r *EmuPhase1NetPacket) HasSelfIntro() bool {
-	return r.selfIntro != nil
-}
-
-func (r *EmuPhase1NetPacket) GetSelfIntroduction() common2.NodeIntroduction {
-	return r.selfIntro
 }
 
 func (r *EmuPhase1NetPacket) String() string {
@@ -217,7 +256,7 @@ func (r *EmuPhase1NetPacket) String() string {
 	if r.isRequest {
 		prefix = "rq"
 	}
-	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d intr:%v", prefix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount, r.selfIntro)
+	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d", prefix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
 }
 
 func (r *EmuPhase1NetPacket) GetPacketType() packets.PacketType {
@@ -255,19 +294,18 @@ var _ packets.PacketParser = &EmuPhase2NetPacket{}
 type EmuPhase2NetPacket struct {
 	basePacket
 	pulseNumber   common.PulseNumber
-	neighbourhood []packets.NodeStateHashReportReader
-	intros        []common2.NodeIntroduction
+	neighbourhood []packets.MembershipAnnouncementReader
+}
+
+func (r *EmuPhase2NetPacket) GetBriefIntroduction() packets.BriefIntroductionReader {
+	panic("implement me")
 }
 
 func (r *EmuPhase2NetPacket) String() string {
-	return fmt.Sprintf("ph:2 %s, pn:%v, ngbh:%v, intr:%v", r.basePacket.String(), r.pulseNumber, r.neighbourhood, r.intros)
+	return fmt.Sprintf("ph:2 %s pn:%v mp:{%v} nc:%d ngbh:%v", r.basePacket.String(), r.pulseNumber, r.mp, r.nodeCount, r.neighbourhood)
 }
 
-func (r *EmuPhase2NetPacket) GetIntroductions() []common2.NodeIntroduction {
-	return r.intros
-}
-
-func (r *EmuPhase2NetPacket) GetNeighbourhood() []packets.NodeStateHashReportReader {
+func (r *EmuPhase2NetPacket) GetNeighbourhood() []packets.MembershipAnnouncementReader {
 	return r.neighbourhood
 }
 

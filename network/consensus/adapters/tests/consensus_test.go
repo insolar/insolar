@@ -117,7 +117,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 }
 
 func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
-	h.send(t.GetDefaultEndpoint(), payload)
+	h.send(t.GetDefaultEndpoint().GetNameAddress(), payload)
 }
 
 func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *common.HostAddress, err error) {

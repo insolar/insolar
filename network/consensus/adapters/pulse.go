@@ -51,6 +51,7 @@
 package adapters
 
 import (
+	"io"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -89,6 +90,7 @@ func NewPulseData(pulse insolar.Pulse) common.PulseData {
 		uint16(pulse.PulseNumber-pulse.PrevPulseNumber),
 		common.NewBits512FromBytes(pulse.Entropy[:]).FoldToBits256(),
 	)
+	data.Timestamp = uint32(int64(pulse.PulseTimestamp) / int64(time.Second/time.Nanosecond))
 	return *data
 }
 
@@ -106,6 +108,22 @@ func (p *PulsePacketReader) GetPulseDataEvidence() common2.OriginalPulsarPacket 
 	return p
 }
 
+func (p *PulsePacketReader) WriteTo(w io.Writer) (n int64, err error) {
+	panic("implement me")
+}
+
+func (p *PulsePacketReader) Read(b []byte) (n int, err error) {
+	panic("implement me")
+}
+
+func (p *PulsePacketReader) Bytes() []byte {
+	panic("implement me")
+}
+
+func (p *PulsePacketReader) FixedByteSize() int {
+	panic("implement me")
+}
+
 func NewPulsePacketReader(pulse insolar.Pulse) *PulsePacketReader {
 	return &PulsePacketReader{pulse}
 }
@@ -116,6 +134,18 @@ type PulsePacketParser struct {
 
 func NewPulsePacketParser(pulse insolar.Pulse) *PulsePacketParser {
 	return &PulsePacketParser{pulse}
+}
+
+func (p *PulsePacketParser) GetSourceId() common.ShortNodeID {
+	panic("implement me")
+}
+
+func (p *PulsePacketParser) GetReceiverId() common.ShortNodeID {
+	panic("implement me")
+}
+
+func (p *PulsePacketParser) GetRelayTargetID() common.ShortNodeID {
+	panic("implement me")
 }
 
 func (p *PulsePacketParser) GetPacketType() packets.PacketType {
