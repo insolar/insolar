@@ -119,6 +119,14 @@ func IsConnectionClosed(err error) bool {
 	return strings.Contains(err.Error(), "use of closed network connection")
 }
 
+func IsClosedPipe(err error) bool {
+	if err == nil {
+		return false
+	}
+	err = errors.Cause(err)
+	return strings.Contains(err.Error(), "read/write on closed pipe")
+}
+
 func NewPulseContext(ctx context.Context, pulseNumber uint32) context.Context {
 	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
 	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
