@@ -48,13 +48,13 @@ func contractError(body []byte) error {
 
 func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
+	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "call.api",
-		Params:  requester.Params{CallSite: "contract.createMember"},
+		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
 	}, "MTExMQ==")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
@@ -62,13 +62,13 @@ func TestBadSeed(t *testing.T) {
 
 func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
+	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "call.api",
-		Params:  requester.Params{CallSite: "contract.createMember"},
+		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
 	}, "z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")

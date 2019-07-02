@@ -32,11 +32,13 @@ import (
 func NewBroker(ctx context.Context, count int) *ExecutionBroker {
 	br := NewExecutionBroker(nil, nil, nil)
 	for i := 0; i < count; i++ {
+		reqRef := gen.Reference()
 		br.Put(ctx, false, &Transcript{
 			LogicContext: &insolar.LogicCallContext{
 				Immutable: false,
 			},
 			Context: ctx,
+			RequestRef: &reqRef,
 		})
 	}
 	return br

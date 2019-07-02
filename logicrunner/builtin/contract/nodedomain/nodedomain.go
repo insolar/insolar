@@ -25,14 +25,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-// NodeDomain holds noderecords
+// NodeDomain holds node records.
 type NodeDomain struct {
 	foundation.BaseContract
 
 	NodeIndexPublicKey map[string]string
 }
 
-// NewNodeDomain create new NodeDomain
+// NewNodeDomain create new NodeDomain.
 func NewNodeDomain() (*NodeDomain, error) {
 	return &NodeDomain{
 		NodeIndexPublicKey: make(map[string]string),
@@ -43,7 +43,7 @@ func (nd *NodeDomain) getNodeRecord(ref insolar.Reference) *noderecord.NodeRecor
 	return noderecord.GetObject(ref)
 }
 
-// RegisterNode registers node in system
+// RegisterNode registers node in system.
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
 
 	root, err := rootdomain.GetObject(*nd.GetContext().Parent).GetRootMemberRef()
@@ -66,7 +66,7 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	return newNodeRef, err
 }
 
-// GetNodeRefByPublicKey returns node ref
+// GetNodeRefByPublicKey returns node reference.
 func (nd *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 	nodeRef, ok := nd.NodeIndexPublicKey[publicKey]
 	if !ok {
@@ -75,7 +75,7 @@ func (nd *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 	return nodeRef, nil
 }
 
-// RemoveNode deletes node from registry
+// RemoveNode deletes node from registry.
 func (nd *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 	node := nd.getNodeRecord(nodeRef)
 	nodePK, err := node.GetPublicKey()

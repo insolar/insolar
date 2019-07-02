@@ -122,7 +122,7 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 
 	current.Nonce++
 
-	reqRecord := record.Request{
+	reqRecord := record.IncomingRequest{
 		Caller:          req.Callee,
 		CallerPrototype: req.CalleePrototype,
 		Nonce:           current.Nonce,
@@ -135,13 +135,14 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 		Arguments: req.Arguments,
 
 		APIRequestID: current.Request.APIRequestID,
+		Reason:       *current.RequestRef,
 	}
 
 	if !req.Wait {
 		reqRecord.ReturnMode = record.ReturnNoWait
 	}
 
-	msg := &message.CallMethod{Request: reqRecord}
+	msg := &message.CallMethod{IncomingRequest: reqRecord}
 	res, err := m.lr.ContractRequester.CallMethod(ctx, msg)
 	current.AddOutgoingRequest(ctx, reqRecord, rep.Result, nil, err)
 	if err != nil {
@@ -171,7 +172,7 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 
 	current.Nonce++
 
-	reqRecord := record.Request{
+	reqRecord := record.IncomingRequest{
 		Caller:          req.Callee,
 		CallerPrototype: req.CalleePrototype,
 		Nonce:           current.Nonce,
@@ -183,9 +184,10 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
+		Reason:       *current.RequestRef,
 	}
 
-	msg := &message.CallMethod{Request: reqRecord}
+	msg := &message.CallMethod{IncomingRequest: reqRecord}
 
 	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
 	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)
@@ -210,7 +212,7 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 	defer span.End()
 
 	current.Nonce++
-	reqRecord := record.Request{
+	reqRecord := record.IncomingRequest{
 		Caller:          req.Callee,
 		CallerPrototype: req.CalleePrototype,
 		Nonce:           current.Nonce,
@@ -222,8 +224,9 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
+		Reason:       *current.RequestRef,
 	}
-	msg := &message.CallMethod{Request: reqRecord}
+	msg := &message.CallMethod{IncomingRequest: reqRecord}
 
 	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
 	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)

@@ -39,11 +39,11 @@ type HotSender interface {
 
 // HotSenderDefault implements HotSender.
 type HotSenderDefault struct {
-	bus                 insolar.MessageBus
-	dropAccessor        drop.Accessor
-	indexBucketAccessor object.IndexBucketAccessor
-	pulseCalculator     pulse.Calculator
-	jetAccessor         jet.Accessor
+	bus             insolar.MessageBus
+	dropAccessor    drop.Accessor
+	indexAccessor   object.IndexAccessor
+	pulseCalculator pulse.Calculator
+	jetAccessor     jet.Accessor
 
 	// lightChainLimit is the LM-node cache limit configuration (how long index could be unused)
 	lightChainLimit int
@@ -53,17 +53,17 @@ type HotSenderDefault struct {
 func NewHotSender(
 	bus insolar.MessageBus,
 	dropAccessor drop.Accessor,
-	indexBucketAccessor object.IndexBucketAccessor,
+	indexAccessor object.IndexAccessor,
 	pulseCalculator pulse.Calculator,
 	jetAccessor jet.Accessor,
 	lightChainLimit int,
 ) *HotSenderDefault {
 	return &HotSenderDefault{
-		bus:                 bus,
-		dropAccessor:        dropAccessor,
-		indexBucketAccessor: indexBucketAccessor,
-		pulseCalculator:     pulseCalculator,
-		jetAccessor:         jetAccessor,
+		bus:             bus,
+		dropAccessor:    dropAccessor,
+		indexAccessor:   indexAccessor,
+		pulseCalculator: pulseCalculator,
+		jetAccessor:     jetAccessor,
 
 		lightChainLimit: lightChainLimit,
 	}
@@ -80,7 +80,7 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 	}
 
 	// filter out inactive indexes
-	indexes := m.indexBucketAccessor.ForPulse(ctx, currentPulse)
+	indexes := m.indexAccessor.ForPulse(ctx, currentPulse)
 	// filtering in-place (optimization to avoid double allocation)
 	filtered := indexes[:0]
 	for _, idx := range indexes {

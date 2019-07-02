@@ -68,6 +68,11 @@ func (id *ID) Pulse() PulseNumber {
 	return PulseNumber(pulse)
 }
 
+// SetPulse sets IDs pulse.
+func (id *ID) SetPulse(pn PulseNumber) {
+	copy(id[:PulseNumberSize], pn.Bytes())
+}
+
 // Hash returns a copy of Hash part of ID.
 func (id *ID) Hash() []byte {
 	recHash := make([]byte, RecordHashSize)

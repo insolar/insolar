@@ -89,7 +89,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	}
 
 	msg := &message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			Object:       ref,
 			Method:       method,
 			Arguments:    args,

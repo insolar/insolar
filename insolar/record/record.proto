@@ -48,7 +48,7 @@ enum ReturnMode {
     // ReturnValidated (not yet) - return result only when it's validated
 }
 
-message Request { // TODO rename to IncomingRequest when filaments will be done, see INS-2707
+message IncomingRequest {
     option (gogoproto.face) = true;
 
     int32 polymorph = 16;
@@ -68,6 +68,7 @@ message Request { // TODO rename to IncomingRequest when filaments will be done,
     bytes Arguments = 31;
     bytes Sender = 32 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     string APIRequestID = 33;
+    bytes Reason = 34 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message OutgoingRequest {
@@ -90,6 +91,7 @@ message OutgoingRequest {
     bytes Arguments = 31;
     bytes Sender = 32 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     string APIRequestID = 33;
+    bytes Reason = 34 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message Result {
@@ -169,7 +171,7 @@ message Virtual {
         Genesis Genesis = 101;
         Child Child = 102;
         Jet Jet = 103;
-        Request Request = 104;
+        IncomingRequest IncomingRequest = 104;
         Result Result = 105;
         Type Type = 106;
         Code Code = 107;
@@ -189,4 +191,14 @@ message Material {
     bytes JetID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
 
     bytes Signature = 200;
+}
+
+message CompositeFilamentRecord {
+    int32 polymorph = 16;
+
+    bytes RecordID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    Material Record = 21 [(gogoproto.nullable) = false];
+
+    bytes MetaID = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    Material Meta = 23 [(gogoproto.nullable) = false];
 }

@@ -52,12 +52,10 @@ func TestValidationState_ValidateMethodCall(t *testing.T) {
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil),
-				Request: &record.Request{
+				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
-				LogicContext: &insolar.LogicCallContext{
-
-				},
+				LogicContext: &insolar.LogicCallContext{},
 			},
 			mm: NewMachinesManagerMock(mc).
 				GetExecutorMock.
@@ -78,7 +76,7 @@ func TestValidationState_ValidateMethodCall(t *testing.T) {
 				),
 			res: &RequestResult{
 				NewMemory: []byte{1, 2, 3},
-				Result: []byte{3, 2, 1},
+				Result:    []byte{3, 2, 1},
 			},
 			error: false,
 		},
@@ -86,11 +84,10 @@ func TestValidationState_ValidateMethodCall(t *testing.T) {
 			name: "parent mismatch",
 			transcript: &Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).ParentMock.Return(nil),
-				Request: &record.Request{
+				Request: &record.IncomingRequest{
 					Prototype: &insolar.Reference{},
 				},
-				LogicContext: &insolar.LogicCallContext{
-				},
+				LogicContext: &insolar.LogicCallContext{},
 			},
 			mm: NewMachinesManagerMock(mc),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
