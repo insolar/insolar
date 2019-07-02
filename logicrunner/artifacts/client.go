@@ -926,7 +926,7 @@ func (m *client) activateObject(
 	}
 	virtChild := record.Wrap(child)
 
-	_, err = m.registerChild(
+	err = m.registerChild(
 		ctx,
 		virtChild,
 		parent,
@@ -1067,10 +1067,10 @@ func (m *client) registerChild(
 	parent insolar.Reference,
 	child insolar.Reference,
 	asType *insolar.Reference,
-) (*insolar.ID, error) {
+) error {
 	data, err := rec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "setRecord: can't serialize record")
+		return errors.Wrap(err, "setRecord: can't serialize record")
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
@@ -1086,16 +1086,16 @@ func (m *client) registerChild(
 	}, nil)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	switch rep := genericReact.(type) {
 	case *reply.ID:
-		return &rep.ID, nil
+		return nil
 	case *reply.Error:
-		return nil, rep.Error()
+		return rep.Error()
 	default:
-		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", rep)
+		return fmt.Errorf("registerChild: unexpected reply: %#v", rep)
 	}
 }
 
