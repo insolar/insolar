@@ -169,7 +169,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{Immutable: false},
-		RequestRef: &reqRef1,
+		RequestRef:   &reqRef1,
 	}
 
 	b.Put(ctx, false, tr)
@@ -182,7 +182,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
 		LogicContext: &insolar.LogicCallContext{Immutable: false},
-		RequestRef: &reqRef2,
+		RequestRef:   &reqRef2,
 	}
 
 	b.Put(ctx, true, tr)
@@ -219,7 +219,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{Immutable: false},
-		RequestRef: &reqRef1,
+		RequestRef:   &reqRef1,
 	}
 	b.Prepend(ctx, false, tr)
 	b.processLock.Lock()
@@ -231,7 +231,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
 		LogicContext: &insolar.LogicCallContext{Immutable: false},
-		RequestRef: &reqRef2,
+		RequestRef:   &reqRef2,
 	}
 	b.Prepend(ctx, true, tr)
 	b.processLock.Lock()
@@ -268,7 +268,7 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{Immutable: true},
-		RequestRef: &reqRef1,
+		RequestRef:   &reqRef1,
 	}
 
 	b.Prepend(ctx, false, tr)
@@ -283,7 +283,7 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
 		LogicContext: &insolar.LogicCallContext{Immutable: true},
-		RequestRef: &reqRef2,
+		RequestRef:   &reqRef2,
 	}
 
 	b.Prepend(ctx, true, tr)
@@ -297,7 +297,7 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	reqRef3 := gen.Reference()
 	tr = &Transcript{
 		LogicContext: &insolar.LogicCallContext{Immutable: true},
-		RequestRef: &reqRef3,
+		RequestRef:   &reqRef3,
 	}
 
 	// we can't process messages, do not do it
@@ -314,7 +314,7 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	reqRef4 := gen.Reference()
 	tr = &Transcript{
 		LogicContext: &insolar.LogicCallContext{Immutable: true},
-		RequestRef: &reqRef4,
+		RequestRef:   &reqRef4,
 	}
 
 	b.Prepend(ctx, true, tr)

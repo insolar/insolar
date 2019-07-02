@@ -37,7 +37,7 @@ func NewBroker(ctx context.Context, count int) *ExecutionBroker {
 			LogicContext: &insolar.LogicCallContext{
 				Immutable: false,
 			},
-			Context: ctx,
+			Context:    ctx,
 			RequestRef: &reqRef,
 		})
 	}
