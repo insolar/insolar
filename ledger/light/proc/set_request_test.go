@@ -68,7 +68,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	pl := payload.SetRequest{
+	pl := payload.SetIncomingRequest{
 		Request: virtualBuf,
 	}
 	requestBuf, err := pl.Marshal()

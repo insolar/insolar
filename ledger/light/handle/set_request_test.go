@@ -63,7 +63,7 @@ func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
 		}
 	})
 
-	request := payload.SetRequest{
+	request := payload.SetIncomingRequest{
 		Request: []byte{1, 2, 3, 4, 5},
 	}
 	buf, err := request.Marshal()
@@ -108,7 +108,7 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
+	request := payload.SetIncomingRequest{
 		Request: virtualBuf,
 	}
 	requestBuf, err := request.Marshal()
@@ -152,7 +152,7 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
+	request := payload.SetIncomingRequest{
 		Request: virtualBuf,
 	}
 	requestBuf, err := request.Marshal()
@@ -425,7 +425,7 @@ func metaRequestMsg(t *testing.T) payload.Meta {
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
+	request := payload.SetIncomingRequest{
 		Request: virtualBuf,
 	}
 	requestBuf, err := request.Marshal()

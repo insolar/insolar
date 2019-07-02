@@ -152,7 +152,7 @@ func (m *client) RegisterRequest(
 	}
 	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
-	msg, err := payload.NewMessage(&payload.SetRequest{
+	msg, err := payload.NewMessage(&payload.SetIncomingRequest{
 		Request: buf,
 	})
 

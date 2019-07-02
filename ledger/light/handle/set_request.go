@@ -44,10 +44,10 @@ func NewSetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetRe
 }
 
 func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.SetRequest{}
+	msg := payload.SetIncomingRequest{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal SetRequest message")
+		return errors.Wrap(err, "failed to unmarshal SetIncomingRequest message")
 	}
 
 	calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
