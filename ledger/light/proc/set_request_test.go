@@ -60,18 +60,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		Object:   &ref,
 		CallType: record.CTMethod,
 	}
-	virtual := record.Virtual{
-		Union: &record.Virtual_IncomingRequest{
-			IncomingRequest: &request,
-		},
-	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
-
-	pl := payload.SetRequest{
-		Request: virtualBuf,
-	}
-	requestBuf, err := pl.Marshal()
+	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
@@ -82,7 +71,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	pmm.SetRequestMock.Return(nil)
 
 	// Pendings limit not reached.
-	p := NewSetRequest(msg, request, id, jetID)
+	p := NewSetRequest(msg, &request, id, jetID)
 	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker())
 
 	err = p.Proceed(ctx)

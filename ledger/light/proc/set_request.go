@@ -33,7 +33,7 @@ import (
 
 type SetRequest struct {
 	message   payload.Meta
-	request   record.IncomingRequest
+	request   record.Request
 	requestID insolar.ID
 	jetID     insolar.JetID
 
@@ -48,7 +48,7 @@ type SetRequest struct {
 
 func NewSetRequest(
 	msg payload.Meta,
-	rec record.IncomingRequest,
+	rec record.Request,
 	recID insolar.ID,
 	jetID insolar.JetID,
 ) *SetRequest {
@@ -84,21 +84,26 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	if p.request.CallType == record.CTMethod {
-		p.dep.locker.Lock(p.request.Object.Record())
-		defer p.dep.locker.Unlock(p.request.Object.Record())
+	if req, ok := p.request.(*record.IncomingRequest); ok {
+		if req.CallType == record.CTMethod {
+			p.dep.locker.Lock(req.Object.Record())
+			defer p.dep.locker.Unlock(req.Object.Record())
 
-		err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
-		if err == object.ErrOverride {
-			inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
-			// Since there is no deduplication yet it's quite possible that there will be
-			// two writes by the same key. For this reason currently instead of reporting
-			// an error we return OK (nil error). When deduplication will be implemented
-			// we should change `nil` to `ErrOverride` here.
-			return nil
-		} else if err != nil {
-			return errors.Wrap(err, "failed to store record")
+			err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, *req)
+			if err == object.ErrOverride {
+				inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+				// Since there is no deduplication yet it's quite possible that there will be
+				// two writes by the same key. For this reason currently instead of reporting
+				// an error we return OK (nil error). When deduplication will be implemented
+				// we should change `nil` to `ErrOverride` here.
+				return nil
+			} else if err != nil {
+				return errors.Wrap(err, "failed to store record")
+			}
 		}
+	}
+	if _, ok := p.request.(*record.OutgoingRequest); ok {
+		panic("not implemented")
 	}
 
 	msg, err := payload.NewMessage(&payload.ID{ID: p.requestID})

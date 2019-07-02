@@ -18,7 +18,6 @@ package handle
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
@@ -29,58 +28,53 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SetRequest struct {
+type SetOutgoingRequest struct {
 	dep     *proc.Dependencies
 	message payload.Meta
 	passed  bool
 }
 
-func NewSetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetRequest {
-	return &SetRequest{
+func NewSetOutgoingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetIncomingRequest {
+	return &SetIncomingRequest{
 		dep:     dep,
 		message: msg,
 		passed:  passed,
 	}
 }
 
-func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.SetRequest{}
+func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
+	msg := payload.SetOutgoingRequest{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal SetRequest message")
+		return errors.Wrap(err, "failed to unmarshal SetIncomingRequest message")
 	}
 
-	calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
+	rawReq, err := msg.Request.Marshal()
+	if err != nil {
+		return nil
+	}
+	calc := proc.NewCalculateID(rawReq, flow.Pulse(ctx))
 	s.dep.CalculateID(calc)
 	if err := f.Procedure(ctx, calc, true); err != nil {
 		return err
 	}
 	reqID := calc.Result.ID
 
-	virtual := record.Virtual{}
-	err = virtual.Unmarshal(msg.Request)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal Request record")
-	}
+	virtual := record.Wrap(msg.Request)
 
-	rec := record.Unwrap(&virtual)
-	request, ok := rec.(*record.IncomingRequest)
-	if !ok {
-		return fmt.Errorf("wrong request type: %T", rec)
-	}
 	// This is a workaround. VM should not register such requests.
 	// TODO: check it after INS-1939
-	if request.CallType != record.CTMethod {
+	if msg.Request.CallType != record.CTMethod {
 		inslogger.FromContext(ctx).Warn("request is not registered")
 		return s.setActivationRequest(ctx, reqID, virtual, f)
 	}
 
-	if request.Object == nil {
+	if msg.Request.Object == nil {
 		return errors.New("object is nil")
 	}
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(*request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewCheckJet(*msg.Request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
@@ -98,20 +92,20 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, SetResult fails because it should update light's index state
-	if request.CallType == record.CTMethod {
-		getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
+	if msg.Request.CallType == record.CTMethod {
+		getIndex := proc.NewEnsureIndexWM(*msg.Request.Object.Record(), objJetID, s.message)
 		s.dep.GetIndexWM(getIndex)
 		if err := f.Procedure(ctx, getIndex, false); err != nil {
 			return err
 		}
 	}
 
-	setRequest := proc.NewSetRequest(s.message, *request, reqID, objJetID)
+	setRequest := proc.NewSetRequest(s.message, &msg.Request, reqID, objJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }
 
-func (s *SetRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Virtual, f flow.Flow) error {
+func (s *SetOutgoingRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Virtual, f flow.Flow) error {
 	passIfNotExecutor := !s.passed
 	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)

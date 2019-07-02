@@ -179,6 +179,7 @@ message Virtual {
         Amend Amend = 109;
         Deactivate Deactivate = 110;
         PendingFilament PendingFilament = 111;
+        OutgoingRequest OutgoingRequest = 112;
     }
 
     bytes Signature = 200;

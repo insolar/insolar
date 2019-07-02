@@ -152,8 +152,8 @@ func (m *client) RegisterRequest(
 	}
 	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
-	msg, err := payload.NewMessage(&payload.SetRequest{
-		Request: buf,
+	msg, err := payload.NewMessage(&payload.SetIncomingRequest{
+		Request: request,
 	})
 
 	var recRef *insolar.Reference
