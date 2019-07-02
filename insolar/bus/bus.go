@@ -61,8 +61,8 @@ const (
 )
 
 const (
-	// TypeError is Type for messages with error in Payload
-	TypeError = "error"
+	// TypeReply is Type for messages with insolar.Reply in Payload
+	TypeReply = "reply"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
@@ -130,24 +130,10 @@ func (b *Bus) removeReplyChannel(ctx context.Context, h payload.MessageHash, rep
 	})
 }
 
-func ErrorAsMessage(ctx context.Context, e error) *message.Message {
-	if e == nil {
-		inslogger.FromContext(ctx).Errorf("provided error is nil")
-		return nil
-	}
-	resInBytes, err := ErrorToBytes(e)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "can't convert error to bytes"))
-		return nil
-	}
-	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(MetaType, TypeError)
-	return resAsMsg
-}
-
 func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
 	resInBytes := reply.ToBytes(rep)
 	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
+	resAsMsg.Metadata.Set(MetaType, TypeReply)
 	return resAsMsg
 }
 
@@ -381,7 +367,12 @@ func (b *Bus) CheckPulse(h message.HandlerFunc) message.HandlerFunc {
 				insolar.TypeCallMethod.String():
 				err := errors.Errorf("[ CheckPulse ] Incorrect message pulse in middleware (parcel: %d, current: %d) Msg: %s", meta.Pulse, latestPulse.PulseNumber, msgType)
 				inslogger.FromContext(ctx).Error(err)
-				b.Reply(ctx, meta, ErrorAsMessage(ctx, err))
+				errReply, newErr := payload.NewMessage(&payload.Error{Text: err.Error()})
+				if newErr != nil {
+					logger.Error(errors.Wrap(err, "can't create message from error"))
+					return nil, nil
+				}
+				b.Reply(ctx, meta, errReply)
 				return nil, nil
 			}
 		}

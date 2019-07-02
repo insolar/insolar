@@ -245,7 +245,7 @@ func TestMessageBus_deserializePayload_GetError(t *testing.T) {
 	buf, err := meta.Marshal()
 	require.NoError(t, err)
 	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
-	msg.Metadata.Set(bus.MetaType, bus.TypeError)
+	msg.Metadata.Set(bus.MetaType, bus.TypeReply)
 
 	r, err := deserializePayload(msg)
 
@@ -281,7 +281,7 @@ func TestMessageBus_deserializePayload_GetError_WrongBytes(t *testing.T) {
 	buf, err := meta.Marshal()
 	require.NoError(t, err)
 	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
-	msg.Metadata.Set(bus.MetaType, bus.TypeError)
+	msg.Metadata.Set(bus.MetaType, bus.TypeReply)
 
 	r, err := deserializePayload(msg)
 

@@ -95,11 +95,14 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	}
 	if err := f.Procedure(ctx, &procInitializeExecutionState, false); err != nil {
 		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
-		rep := bus.ErrorAsMessage(ctx, err)
-		h.dep.Sender.Reply(ctx, h.Message, rep)
+		rep, newErr := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if newErr != nil {
+			return newErr
+		}
+		go h.dep.Sender.Reply(ctx, h.Message, rep)
 		return err
 	}
 	replyOk = bus.ReplyAsMessage(ctx, &reply.OK{})
-	h.dep.Sender.Reply(ctx, h.Message, replyOk)
+	go h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
 }

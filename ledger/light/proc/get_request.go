@@ -69,6 +69,6 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 	}
 
 	msg := bus.ReplyAsMessage(ctx, rep)
-	p.Dep.Sender.Reply(ctx, p.message, msg)
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }

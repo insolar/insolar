@@ -65,8 +65,11 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	if err != nil {
 		err := errors.Wrap(err, "failed to fetch jet")
 		if err != nil {
-			msg := bus.ErrorAsMessage(ctx, err)
-			p.Dep.Sender.Reply(ctx, p.message, msg)
+			msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+			if err != nil {
+				return err
+			}
+			go p.Dep.Sender.Reply(ctx, p.message, msg)
 		}
 		return err
 	}
@@ -74,14 +77,17 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	if err != nil {
 		err := errors.Wrap(err, "failed to calculate executor for jet")
 		if err != nil {
-			msg := bus.ErrorAsMessage(ctx, err)
-			p.Dep.Sender.Reply(ctx, p.message, msg)
+			msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+			if err != nil {
+				return err
+			}
+			go p.Dep.Sender.Reply(ctx, p.message, msg)
 		}
 		return err
 	}
 	if *executor != p.Dep.Coordinator.Me() {
 		msg := bus.ReplyAsMessage(ctx, &reply.JetMiss{JetID: *jetID, Pulse: p.pulse})
-		p.Dep.Sender.Reply(ctx, p.message, msg)
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		return errors.New("jet miss")
 	}
 
@@ -112,7 +118,7 @@ func (p *WaitHot) Proceed(ctx context.Context) error {
 	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
 	if err != nil {
 		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrHotDataTimeout})
-		p.Dep.Sender.Reply(ctx, p.message, msg)
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		return err
 	}
 

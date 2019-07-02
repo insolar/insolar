@@ -47,6 +47,6 @@ func NewGetJet(msg *message.GetJet, message payload.Meta) *GetJet {
 func (p *GetJet) Proceed(ctx context.Context) error {
 	jetID, actual := p.Dep.Jets.ForID(ctx, p.msg.Pulse, p.msg.Object)
 	msg := bus.ReplyAsMessage(ctx, &reply.Jet{ID: insolar.ID(jetID), Actual: actual})
-	p.Dep.Sender.Reply(ctx, p.message, msg)
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }

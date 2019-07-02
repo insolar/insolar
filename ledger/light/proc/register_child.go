@@ -63,8 +63,11 @@ func NewRegisterChild(jet insolar.JetID, msg *message.RegisterChild, pulse insol
 func (p *RegisterChild) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		msg := bus.ErrorAsMessage(ctx, err)
-		p.Dep.Sender.Reply(ctx, p.message, msg)
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }
@@ -128,6 +131,6 @@ func (p *RegisterChild) process(ctx context.Context) error {
 	}
 
 	msg := bus.ReplyAsMessage(ctx, &reply.ID{ID: *child})
-	p.Dep.Sender.Reply(ctx, p.message, msg)
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }

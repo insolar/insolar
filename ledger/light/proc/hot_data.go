@@ -66,8 +66,11 @@ func NewHotData(msg *message.HotData, message payload.Meta) *HotData {
 func (p *HotData) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		msg := bus.ErrorAsMessage(ctx, err)
-		p.Dep.Sender.Reply(ctx, p.message, msg)
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }
@@ -140,7 +143,7 @@ func (p *HotData) process(ctx context.Context) error {
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
 
 	msg := bus.ReplyAsMessage(ctx, &reply.OK{})
-	p.Dep.Sender.Reply(ctx, p.message, msg)
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 
 	p.releaseHotDataWaiters(ctx)
 	return nil

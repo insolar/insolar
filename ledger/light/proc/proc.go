@@ -68,7 +68,11 @@ func (p *ReturnReply) Proceed(ctx context.Context) error {
 	}
 	var msg *message.Message
 	if p.Err != nil {
-		msg = bus.ErrorAsMessage(ctx, p.Err)
+		var err error
+		msg, err = payload.NewMessage(&payload.Error{Text: p.Err.Error()})
+		if err != nil {
+			return err
+		}
 	} else {
 		msg = bus.ReplyAsMessage(ctx, p.Reply)
 	}

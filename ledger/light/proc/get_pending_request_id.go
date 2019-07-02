@@ -62,11 +62,11 @@ func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
 	}
 	if len(ids) == 0 {
 		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrNoPendingRequests})
-		p.dep.sender.Reply(ctx, p.message, msg)
+		go p.dep.sender.Reply(ctx, p.message, msg)
 		return nil
 	}
 
 	m := bus.ReplyAsMessage(ctx, &reply.ID{ID: ids[0]})
-	p.dep.sender.Reply(ctx, p.message, m)
+	go p.dep.sender.Reply(ctx, p.message, m)
 	return nil
 }

@@ -187,11 +187,15 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 
 	var repMsg *watermillMsg.Message
 	if err != nil {
-		repMsg = bus.ErrorAsMessage(ctx, err)
+		var newErr error
+		repMsg, newErr = payload.NewMessage(&payload.Error{Text: err.Error()})
+		if newErr != nil {
+			return newErr
+		}
 	} else {
 		repMsg = bus.ReplyAsMessage(ctx, rep)
 	}
-	h.dep.Sender.Reply(ctx, h.Message, repMsg)
+	go h.dep.Sender.Reply(ctx, h.Message, repMsg)
 
 	return nil
 

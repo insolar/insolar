@@ -48,7 +48,10 @@ func NewGetDelegate(msg *message.GetDelegate, message payload.Meta) *GetDelegate
 func (s *GetDelegate) Proceed(ctx context.Context) error {
 	idx, err := s.Dep.IndexAccessor.ForID(ctx, flow.Pulse(ctx), *s.msg.Head.Record())
 	if err != nil {
-		msg := wmBus.ErrorAsMessage(ctx, err)
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
 		s.Dep.Sender.Reply(ctx, s.message, msg)
 		return err
 	}
@@ -56,7 +59,10 @@ func (s *GetDelegate) Proceed(ctx context.Context) error {
 	delegateRef, ok := idx.Lifeline.DelegateByKey(s.msg.AsType)
 	if !ok {
 		err := errors.New("the object has no delegate for this type")
-		msg := wmBus.ErrorAsMessage(ctx, err)
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
 		s.Dep.Sender.Reply(ctx, s.message, msg)
 		return err
 	}

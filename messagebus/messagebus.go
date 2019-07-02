@@ -249,21 +249,35 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize meta payload")
-	}
-	if msg.Metadata.Get(bus.MetaType) == bus.TypeError {
-		errReply, err := bus.DeserializeError(bytes.NewBuffer(meta.Payload))
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize payload to error")
-		}
-		return nil, errReply
+		return nil, errors.Wrap(err, "can't deserialize message payload")
 	}
 
-	rep, err := reply.Deserialize(bytes.NewBuffer(meta.Payload))
-	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize payload to reply")
+	if msg.Metadata.Get(bus.MetaType) == bus.TypeReply {
+		rep, err := reply.Deserialize(bytes.NewBuffer(meta.Payload))
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize payload to reply")
+		}
+		fmt.Println("lol kek love, ", rep.Type())
+		return rep, nil
 	}
-	return rep, nil
+
+	payloadType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal payload type")
+	}
+	if payloadType != payload.TypeError {
+		return nil, errors.Wrap(err, fmt.Sprintf("message bus recieve unexpected payload type: %s", payloadType))
+	}
+
+	pl, err := payload.UnmarshalFromMeta(msg.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal error")
+	}
+	p, ok := pl.(*payload.Error)
+	if !ok {
+		return nil, errors.Errorf("unexpected error type %T", pl)
+	}
+	return nil, errors.New(p.Text)
 }
 
 // CreateParcel creates signed message from provided message.

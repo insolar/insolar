@@ -61,8 +61,11 @@ func NewEnsureIndex(obj insolar.Reference, jetID insolar.JetID, msg payload.Meta
 func (p *EnsureIndex) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		msg := bus.ErrorAsMessage(ctx, err)
-		p.Dep.Sender.Reply(ctx, p.message, msg)
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }

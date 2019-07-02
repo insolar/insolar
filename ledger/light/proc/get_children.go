@@ -62,11 +62,15 @@ func (p *GetChildren) Proceed(ctx context.Context) error {
 	r := p.reply(ctx)
 	var msg *watermillMsg.Message
 	if r.Err != nil {
-		msg = wmBus.ErrorAsMessage(ctx, r.Err)
+		var err error
+		msg, err = payload.NewMessage(&payload.Error{Text: r.Err.Error()})
+		if err != nil {
+			return err
+		}
 	} else {
 		msg = wmBus.ReplyAsMessage(ctx, r.Reply)
 	}
-	p.Dep.Sender.Reply(ctx, p.message, msg)
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }
 

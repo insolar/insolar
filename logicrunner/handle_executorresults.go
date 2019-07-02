@@ -169,7 +169,11 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 
 	var rep *watermillMsg.Message
 	if err != nil {
-		rep = bus.ErrorAsMessage(ctx, err)
+		var newErr error
+		rep, newErr = payload.NewMessage(&payload.Error{Text: err.Error()})
+		if newErr != nil {
+			return newErr
+		}
 	} else {
 		rep = bus.ReplyAsMessage(ctx, &reply.OK{})
 	}
