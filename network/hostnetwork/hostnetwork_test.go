@@ -154,15 +154,17 @@ func TestNewHostNetwork_InvalidReference(t *testing.T) {
 }
 
 type hostSuite struct {
-	t        *testing.T
-	ctx      context.Context
-	id1, id2 string
-	n1, n2   network.HostNetwork
-	resolver *MockResolver
-	cm1, cm2 *component.Manager
+	t          *testing.T
+	ctx1, ctx2 context.Context
+	id1, id2   string
+	n1, n2     network.HostNetwork
+	resolver   *MockResolver
+	cm1, cm2   *component.Manager
 }
 
-func newHostSuite(ctx context.Context, t *testing.T) *hostSuite {
+func newHostSuite(t *testing.T) *hostSuite {
+	ctx1 := context.Background()
+	ctx2 := context.Background()
 	resolver := newMockResolver()
 	id1 := ID1 + DOMAIN
 	id2 := ID2 + DOMAIN
@@ -179,22 +181,22 @@ func newHostSuite(ctx context.Context, t *testing.T) *hostSuite {
 	require.NoError(t, err)
 	cm2.Inject(f2, n2, resolver)
 
-	err = cm1.Init(ctx)
+	err = cm1.Init(ctx1)
 	require.NoError(t, err)
-	err = cm2.Init(ctx)
+	err = cm2.Init(ctx2)
 	require.NoError(t, err)
 
 	return &hostSuite{
-		t: t, ctx: ctx, id1: id1, id2: id2, n1: n1, n2: n2, resolver: resolver, cm1: cm1, cm2: cm2,
+		t: t, ctx1: ctx1, ctx2: ctx2, id1: id1, id2: id2, n1: n1, n2: n2, resolver: resolver, cm1: cm1, cm2: cm2,
 	}
 }
 
 func (s *hostSuite) Start() {
 	// start the second hostNetwork before the first because most test cases perform sending packets first -> second,
 	// so the second hostNetwork should be ready to receive packets when the first starts to send
-	err := s.n2.Start(s.ctx)
+	err := s.cm1.Start(s.ctx1)
 	require.NoError(s.t, err)
-	err = s.n1.Start(s.ctx)
+	err = s.cm2.Start(s.ctx2)
 	require.NoError(s.t, err)
 
 	err = s.resolver.addMapping(s.id1, s.n1.PublicAddress())
@@ -205,17 +207,16 @@ func (s *hostSuite) Start() {
 
 func (s *hostSuite) Stop() {
 	// stop hostNetworks in the reverse order of their start
-	err := s.n1.Stop(s.ctx)
+	err := s.cm1.Stop(s.ctx1)
 	assert.NoError(s.t, err)
-	err = s.n2.Stop(s.ctx)
+	err = s.cm2.Stop(s.ctx2)
 	assert.NoError(s.t, err)
 }
 
 func TestNewHostNetwork(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	ctx := context.Background()
-	s := newHostSuite(ctx, t)
+	s := newHostSuite(t)
 	defer s.Stop()
 
 	count := 10
@@ -234,7 +235,7 @@ func TestNewHostNetwork(t *testing.T) {
 	for i := 0; i < count; i++ {
 		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
-		f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
+		f, err := s.n1.SendRequest(s.ctx1, types.Ping, &packet.Ping{}, *ref)
 		require.NoError(t, err)
 		f.Cancel()
 	}
@@ -284,9 +285,8 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket2(t *testing.T) {
-	//defer leaktest.Check(t)()
-	ctx := context.Background()
-	s := newHostSuite(ctx, t)
+	defer leaktest.Check(t)()
+	s := newHostSuite(t)
 	defer s.Stop()
 
 	wg := sync.WaitGroup{}
@@ -308,7 +308,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
+	f, err := s.n1.SendRequest(s.ctx1, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 	f.Cancel()
 
@@ -316,9 +316,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket3(t *testing.T) {
-	ctx := context.Background()
-	ctx = inslogger.WithLoggerLevel(ctx, insolar.DebugLevel)
-	s := newHostSuite(ctx, t)
+	s := newHostSuite(t)
 	defer s.Stop()
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
@@ -335,7 +333,7 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	request := &packet.PulseRequest{TraceSpanData: data}
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := s.n1.SendRequest(s.ctx, types.Pulse, request, *ref)
+	f, err := s.n1.SendRequest(s.ctx1, types.Pulse, request, *ref)
 	require.NoError(t, err)
 
 	r, err := f.WaitResponse(time.Minute)
@@ -346,18 +344,17 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 
 	data = []byte("666")
 	request = &packet.PulseRequest{TraceSpanData: data}
-	f, err = s.n1.SendRequest(s.ctx, types.Pulse, request, *ref)
+	f, err = s.n1.SendRequest(s.ctx1, types.Pulse, request, *ref)
 	require.NoError(t, err)
 
-	r = <-f.Response()
+	r, err = f.WaitResponse(time.Second)
+	assert.NoError(t, err)
 	d = r.GetResponse().GetBasic().Error
 	require.Equal(t, d, "666666")
 }
 
 func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
-	ctx := context.Background()
-	ctx = inslogger.WithLoggerLevel(ctx, insolar.DebugLevel)
-	s := newHostSuite(ctx, t)
+	s := newHostSuite(t)
 	defer s.Stop()
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
@@ -371,13 +368,13 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
+	f, err := s.n1.SendRequest(s.ctx1, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
 	_, err = f.WaitResponse(time.Microsecond * 10)
 	require.Error(t, err)
 
-	f, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
+	f, err = s.n1.SendRequest(s.ctx1, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
 	_, err = f.WaitResponse(time.Minute)
@@ -385,9 +382,8 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 }
 
 func TestHostNetwork_WrongHandler(t *testing.T) {
-	//defer leaktest.Check(t)()
-	ctx := context.Background()
-	s := newHostSuite(ctx, t)
+	defer leaktest.Check(t)()
+	s := newHostSuite(t)
 	defer s.Stop()
 
 	wg := sync.WaitGroup{}
@@ -404,19 +400,19 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
+	f, err := s.n1.SendRequest(s.ctx1, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 	f.Cancel()
 
 	// should timeout because there is no handler set for Ping packet
 	result := utils.WaitTimeout(&wg, time.Millisecond*100)
 	require.False(t, result)
+	wg.Done()
 }
 
 func TestStartStopSend(t *testing.T) {
-	//defer leaktest.Check(t)()
-	ctx := context.Background()
-	s := newHostSuite(ctx, t)
+	defer leaktest.Check(t)()
+	s := newHostSuite(t)
 	defer s.Stop()
 
 	wg := sync.WaitGroup{}
@@ -434,16 +430,19 @@ func TestStartStopSend(t *testing.T) {
 	send := func() {
 		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
-		f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
+		f, err := s.n1.SendRequest(s.ctx1, types.Ping, &packet.Ping{}, *ref)
 		require.NoError(t, err)
-		<-f.Response()
+		_, err = f.WaitResponse(time.Second)
+		assert.NoError(t, err)
 	}
 
 	send()
 
-	err := s.n1.Stop(s.ctx)
+	err := s.cm1.Stop(s.ctx1)
 	require.NoError(t, err)
-	err = s.n1.Start(s.ctx)
+
+	//s.ctx1 = context.Background()
+	err = s.cm1.Start(s.ctx1)
 	require.NoError(t, err)
 
 	send()
@@ -451,7 +450,7 @@ func TestStartStopSend(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestToHost_NotStarted(t *testing.T) {
-	//defer leaktest.Check(t)()
+	defer leaktest.Check(t)()
 
 	hn, err := NewHostNetwork(ID1 + DOMAIN)
 	require.NoError(t, err)

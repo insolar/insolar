@@ -52,6 +52,7 @@ package hostnetwork
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/utils"
 	"io"
 
 	"github.com/pkg/errors"
@@ -87,12 +88,32 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 	// get only log level from context, discard TraceID in favor of packet TraceID
 	packetCtx := inslogger.WithLoggerLevel(context.Background(), logLevel)
 
+	// context cancel monitoring
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				err := reader.Close()
+				if err != nil {
+					mainLogger.Error("[ HandleStream ] Failed to close reader: ", err.Error())
+				}
+				return
+			default:
+			}
+		}
+	}()
+
 	for {
 		p, err := packet.DeserializePacket(mainLogger, reader)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				mainLogger.Info("[ HandleStream ] Connection closed by peer")
+				return
+			}
+
+			if utils.IsConnectionClosed(err) || utils.IsClosedPipe(err) {
+				mainLogger.Info("[ HandleStream ] Connection closed.")
 				return
 			}
 
