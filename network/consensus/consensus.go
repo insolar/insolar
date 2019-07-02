@@ -170,6 +170,8 @@ func New(ctx context.Context, dep Dep) Consensus {
 			consensus.transportFactory,
 			consensus.roundStrategyFactory,
 		),
+		&core.SequencialCandidateFeeder{},
+		adapters.NewConsensusControlFeeder(),
 	)
 
 	consensus.verify()
