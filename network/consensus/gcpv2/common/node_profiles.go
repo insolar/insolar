@@ -52,7 +52,9 @@ package common
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"math/bits"
+	"time"
 
 	"github.com/insolar/insolar/network/consensus/common"
 )
@@ -64,18 +66,24 @@ type HostProfile interface {
 	// GetHostType()
 }
 
-type NodeIntroduction interface {
+type NodeIntroduction interface { //full intro
 	GetClaimEvidence() common.SignedEvidenceHolder
 	GetShortNodeID() common.ShortNodeID
+
+	GetNodeReference() insolar.Reference
+
+	IsAllowedPower(p MemberPower) bool
+	ConvertPowerRequest(request PowerRequest) MemberPower
 }
 
-type NodeIntroProfile interface {
+type NodeIntroProfile interface { //brief intro
 	HostProfile
 	GetShortNodeID() common.ShortNodeID
-	GetIntroduction() NodeIntroduction
 	GetPrimaryRole() NodePrimaryRole
 	GetSpecialRoles() NodeSpecialRole
-	IsAllowedPower(p MemberPower) bool
+
+	HasIntroduction() bool             //must be always true for LocalNodeProfile
+	GetIntroduction() NodeIntroduction //full intro, will panic when HasIntroduction() == false
 }
 
 type NodeProfile interface {
@@ -87,6 +95,37 @@ type NodeProfile interface {
 	GetSignatureVerifier() common.SignatureVerifier
 	GetState() MembershipState
 	HasWorkingPower() bool
+}
+
+type BriefCandidateProfile interface {
+	GetNodeID() common.ShortNodeID
+	GetNodePrimaryRole() NodePrimaryRole
+	GetNodeSpecialRoles() NodeSpecialRole
+	GetStartPower() MemberPower
+	GetNodePK() common.SignatureKeyHolder
+
+	GetNodeEndpoint() common.NodeEndpoint
+}
+
+type CandidateProfile interface {
+	BriefCandidateProfile
+
+	GetIssuedAtPulse() common.PulseNumber // =0 when a node was connected during zeronet
+	GetIssuedAtTime() time.Time
+
+	GetPowerLevels() MemberPowerSet
+
+	GetExtraEndpoints() []common.NodeEndpoint
+
+	//NodeRefProof	[]common.Bits512
+
+	GetIssuerID() common.ShortNodeID
+	GetIssuerSignature() common.SignatureHolder
+}
+
+type NodeProfileFactory interface {
+	CreateBriefIntroProfile(candidate BriefCandidateProfile, nodeSignature common.SignatureHolder) NodeIntroProfile
+	UpgradeIntroProfile(profile NodeIntroProfile, candidate CandidateProfile) NodeIntroProfile
 }
 
 type LocalNodeProfile interface {
@@ -104,7 +143,16 @@ type UpdatableNodeProfile interface {
 
 type MemberPower uint8
 
+const MaxLinearMemberPower = (0x1F+32)<<(0xFF>>5) - 32
+
 func MemberPowerOf(linearValue uint16) MemberPower { // TODO tests are needed
+	if linearValue <= 0x1F {
+		return MemberPower(linearValue)
+	}
+	if linearValue >= MaxLinearMemberPower {
+		return 0xFF
+	}
+
 	linearValue += 32
 	pwr := uint8(bits.Len16(linearValue))
 	if pwr > 6 {
@@ -117,7 +165,222 @@ func MemberPowerOf(linearValue uint16) MemberPower { // TODO tests are needed
 }
 
 func (v MemberPower) ToLinearValue() uint16 {
+	if v <= 0x1F {
+		return uint16(v)
+	}
 	return uint16(v&0x1F+32)<<(v>>5) - 32
+}
+
+func (v MemberPower) PercentAndMin(percent int, min MemberPower) MemberPower {
+	vv := (int(v.ToLinearValue()) * percent) / 100
+	if vv >= MaxLinearMemberPower {
+		return ^MemberPower(0)
+	}
+	if vv <= int(min.ToLinearValue()) {
+		return min
+	}
+	return MemberPowerOf(uint16(vv))
+}
+
+/*
+	MemberPowerSet enables power control by both discreet values or ranges.
+	Zero level is always allowed by default
+		PowerLevels[0] - min power value, must be <= PowerLevels[3], node is not allowed to set power lower than this value, except for zero power
+		PowerLevels[3] - max power value, node is not allowed to set power higher than this value
+
+	To define only distinct value, all values must be >0, e.g. (p1 = PowerLevels[1], p2 = PowerLevels[2]):
+		[10, 20, 30, 40] - a node can only choose of: 0, 10, 20, 30, 40
+		[10, 10, 30, 40] - a node can only choose of: 0, 10, 30, 40
+		[10, 20, 20, 40] - a node can only choose of: 0, 10, 20, 40
+		[10, 20, 20, 20] - a node can only choose of: 0, 10, 20
+		[10, 10, 10, 10] - a node can only choose of: 0, 10
+
+	Presence of 0 values treats nearest non-zero value as range boundaries, e.g.
+		[ 0, 20, 30, 40] - a node can choose of: [0..20], 30, 40
+		[10,  0, 30, 40] - a node can choose of: 0, [10..30], 40
+		[10, 20,  0, 40] - a node can choose of: 0, 10, [20..40]
+		[10,  0,  0, 40] - a node can choose of: 0, [10..40] ??? should be a special case?
+		[ 0,  0,  0, 40] - a node can choose of: [0..40] ??? should be a special case?
+
+	Special case:
+		[ 0,  0,  0,  0] - a node can only use: 0
+
+	Illegal cases:
+		[ x,  y,  z,  0] - when any !=0 value of x, y, z
+		[ 0,  x,  0,  y] - when x != 0 and y != 0
+	    any combination of non-zero x, y such that x > y and y > 0 and position(x) < position(y)
+*/
+type MemberPowerSet [4]MemberPower
+
+func (v MemberPowerSet) Normalize() MemberPowerSet {
+	if v.IsValid() {
+		return v
+	}
+	return [...]MemberPower{0, 0, 0, 0}
+}
+
+func (v MemberPowerSet) IsValid() bool {
+	if v[3] == 0 {
+		return v[0] == 0 && v[1] == 0 && v[2] == 0
+	}
+
+	if v[2] == 0 {
+		if v[0] == 0 {
+			return v[1] == 0
+		}
+		if v[1] == 0 {
+			return v[0] <= v[3]
+		}
+		return v[0] <= v[1] && v[1] <= v[3]
+	}
+
+	if v[2] > v[3] {
+		return false
+	}
+	if v[1] == 0 {
+		return v[0] <= v[2]
+	}
+
+	return v[0] <= v[1] && v[1] <= v[2]
+}
+
+/*
+Always true for p=0. Requires normalized ops.
+*/
+func (v MemberPowerSet) IsAllowed(p MemberPower) bool {
+	if p == 0 || v[0] == p || v[1] == p || v[2] == p || v[3] == p {
+		return true
+	}
+	if v[0] > p || v[3] < p {
+		return false
+	}
+
+	if v[2] == 0 { // [min, ?, 0, max]
+		if v[0] == 0 || v[1] == 0 {
+			return true
+		} // [0, ?0, 0, max] or [min, 0, 0, max]
+
+		// [min, p1, 0, max]
+		return v[1] <= p
+	}
+
+	if v[1] == 0 { // [?, 0, p2, max]
+		if v[0] == 0 { // [0, 0, p2, max]
+			return p <= v[2] || p == v[3]
+		}
+		//[min, 0, p2, max]
+		return v[3] == p || v[2] >= p
+	}
+	// [min, p1, p2, max]
+	return false
+}
+
+/*
+Only for normalized
+*/
+func (v MemberPowerSet) IsEmpty() bool {
+	return v[0] == 0 && v[3] == 0
+}
+
+/*
+Only for normalized
+*/
+func (v MemberPowerSet) Max() MemberPower {
+	return v[3]
+}
+
+/*
+Only for normalized
+*/
+func (v MemberPowerSet) Min() MemberPower {
+	return v[0]
+}
+
+/*
+Only for normalized
+*/
+func (v MemberPowerSet) ForLevel(lvl common.CapacityLevel) MemberPower {
+	return v.ForLevelWithPercents(lvl, 20, 60, 80)
+}
+
+/*
+Only for normalized
+*/
+func (v MemberPowerSet) ForLevelWithPercents(lvl common.CapacityLevel, pMinimal, pReduced, pNormal int) MemberPower {
+
+	if lvl == common.LevelZero || v.IsEmpty() {
+		return 0
+	}
+
+	switch lvl {
+	case common.LevelMinimal:
+		if v[0] != 0 {
+			return v[0]
+		}
+		vv := v.Max().PercentAndMin(pMinimal, 1)
+
+		if v[1] != 0 {
+			if vv >= v[1] {
+				return v[1]
+			}
+			return vv
+		}
+		if v[2] != 0 && vv >= v[2] {
+			return v[2]
+		}
+		return vv
+	case common.LevelReduced:
+		if v[1] != 0 {
+			return v[1]
+		}
+		vv := v.Max().PercentAndMin(pReduced, 1)
+
+		if v[2] != 0 && vv >= v[2] {
+			return v[2]
+		}
+		if v[0] != 0 && vv <= v[0] {
+			return v[0]
+		}
+		return vv
+	case common.LevelNormal:
+		if v[2] != 0 {
+			return v[2]
+		}
+		vv := v.Max().PercentAndMin(pNormal, 1)
+
+		if v[1] != 0 {
+			if vv >= v[1] {
+				return vv
+			}
+			return v[1]
+		}
+		if v[0] != 0 && vv <= v[0] {
+			return v[0]
+		}
+		return vv
+	case common.LevelMax:
+		return v[3]
+	default:
+		panic("missing")
+	}
+}
+
+type PowerRequest int16
+
+func NewPowerRequestByLevel(v common.CapacityLevel) PowerRequest {
+	return -PowerRequest(v)
+}
+
+func NewPowerRequest(v MemberPower) PowerRequest {
+	return PowerRequest(v)
+}
+
+func (v PowerRequest) AsCapacityLevel() (bool, common.CapacityLevel) {
+	return v < 0, common.CapacityLevel(-v)
+}
+
+func (v PowerRequest) AsMemberPower() (bool, MemberPower) {
+	return v >= 0, MemberPower(v)
 }
 
 type MembershipState int8

@@ -54,7 +54,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
-	"time"
 )
 
 type PacketParser interface {
@@ -172,27 +171,9 @@ type CloudIntroductionReader interface {
 }
 
 type BriefIntroductionReader interface {
-	GetNodeID() common.ShortNodeID
-	GetNodePrimaryRole() common2.NodePrimaryRole
-	GetNodeSpecialRoles() common2.NodeSpecialRole
-	GetNodePK() common.SignatureKeyHolder
-
-	GetNodeEndpoint() common.NodeEndpoint
+	common2.BriefCandidateProfile
 }
 
 type FullIntroductionReader interface {
-	BriefIntroductionReader
-
-	GetIssuedAtPulse() common.PulseNumber // =0 when a node was connected during zeronet
-	GetIssuedAtTime() time.Time
-
-	GetMaxPower() common2.MemberPower
-	GetPowerLevels() [2]common2.MemberPower
-
-	GetExtraEndpoints() []common.NodeEndpoint
-
-	//NodeRefProof	[]common.Bits512
-
-	GetIssuerID() common.ShortNodeID
-	GetIssuerSignature() common.SignatureHolder
+	common2.CandidateProfile
 }

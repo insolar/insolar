@@ -2,16 +2,17 @@ package core
 
 import (
 	"github.com/insolar/insolar/network/consensus/common"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"sync"
 )
 
 type SequencialCandidateFeeder struct {
 	mx  sync.Mutex
-	buf []CandidateProfile
+	buf []common2.CandidateProfile
 }
 
-func (p *SequencialCandidateFeeder) PickNextJoinCandidate() CandidateProfile {
+func (p *SequencialCandidateFeeder) PickNextJoinCandidate() common2.CandidateProfile {
 	p.mx.Lock()
 	defer p.mx.Unlock()
 

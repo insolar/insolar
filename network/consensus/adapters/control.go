@@ -56,7 +56,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 type ConsensusControlFeeder struct{}
@@ -65,11 +64,11 @@ func NewConsensusControlFeeder() *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{}
 }
 
-func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() core.MemberPowerLevel {
-	return core.PowerLevelFull
+func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() common.PowerRequest {
+	return common.NewPowerRequestByLevel(common2.LevelNormal)
 }
 
-func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pwl core.MemberPowerLevel, pw common.MemberPower, effectiveSince common2.PulseNumber) {
+func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw common.MemberPower, effectiveSince common2.PulseNumber) {
 	ctx := context.TODO()
 
 	inslogger.FromContext(ctx).Info(">>> Power level applied")

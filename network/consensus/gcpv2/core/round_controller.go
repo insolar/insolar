@@ -66,9 +66,10 @@ type PhasedRoundController struct {
 	rw sync.RWMutex
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
-	chronicle     census.ConsensusChronicles
-	fullCancel    context.CancelFunc /* cancels prepareCancel as well */
-	prepareCancel context.CancelFunc
+	chronicle      census.ConsensusChronicles
+	fullCancel     context.CancelFunc /* cancels prepareCancel as well */
+	prepareCancel  context.CancelFunc
+	prevPulseRound RoundController
 
 	/* Other fields - need mutex */
 	isRunning bool
@@ -77,10 +78,12 @@ type PhasedRoundController struct {
 }
 
 func NewPhasedRoundController(strategy RoundStrategy, chronicle census.ConsensusChronicles, transport TransportFactory,
-	config LocalNodeConfiguration, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder) *PhasedRoundController {
+	config LocalNodeConfiguration, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder,
+	prevPulseRound RoundController) *PhasedRoundController {
 
 	r := &PhasedRoundController{chronicle: chronicle}
 
+	r.prevPulseRound = prevPulseRound
 	r.realm.coreRealm.init(&r.rw, strategy, transport, config, chronicle.GetLatestCensus(), controlFeeder.GetRequiredPowerLevel())
 	r.realm.init(transport, controlFeeder, candidateFeeder)
 
@@ -147,12 +150,13 @@ func (r *PhasedRoundController) StopConsensusRound() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
+	r.prevPulseRound = nil //prevents memory leak
+
 	if r.fullCancel == nil || !r.isRunning {
-		return // false
+		return
 	}
 	r.isRunning = false
 	r.fullCancel()
-	// return true
 }
 
 /* LOCK: simple */

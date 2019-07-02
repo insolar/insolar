@@ -202,11 +202,11 @@ var _ core.ConsensusControlFeeder = &EmuControlFeeder{}
 
 type EmuControlFeeder struct{}
 
-func (*EmuControlFeeder) GetRequiredPowerLevel() core.MemberPowerLevel {
-	return core.PowerLevelFull
+func (*EmuControlFeeder) GetRequiredPowerLevel() common2.PowerRequest {
+	return common2.NewPowerRequestByLevel(common.LevelNormal)
 }
 
-func (*EmuControlFeeder) OnAppliedPowerLevel(pwl core.MemberPowerLevel, pw common2.MemberPower, effectiveSince common.PulseNumber) {
+func (*EmuControlFeeder) OnAppliedPowerLevel(pw common2.MemberPower, effectiveSince common.PulseNumber) {
 }
 
 func (*EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {

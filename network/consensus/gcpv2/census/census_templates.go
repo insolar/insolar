@@ -62,7 +62,12 @@ type PrimingCensusTemplate struct {
 	online     copyOnlinePopulationTo
 	pd         common.PulseData
 
-	registries VersionedRegistries
+	registries     VersionedRegistries
+	profileFactory common2.NodeProfileFactory
+}
+
+func (c *PrimingCensusTemplate) GetProfileFactory() common2.NodeProfileFactory {
+	return c.profileFactory
 }
 
 func (c *PrimingCensusTemplate) setVersionedRegistries(vr VersionedRegistries) {
@@ -76,8 +81,13 @@ func (c *PrimingCensusTemplate) getVersionedRegistries() VersionedRegistries {
 	return c.registries
 }
 
-func NewPrimingCensus(population copyOnlinePopulationTo, registries VersionedRegistries) *PrimingCensusTemplate {
-	r := &PrimingCensusTemplate{registries: registries, online: population, pd: registries.GetVersionPulseData()}
+func NewPrimingCensus(population copyOnlinePopulationTo, pf common2.NodeProfileFactory, registries VersionedRegistries) *PrimingCensusTemplate {
+	r := &PrimingCensusTemplate{
+		registries:     registries,
+		online:         population,
+		profileFactory: pf,
+		pd:             registries.GetVersionPulseData(),
+	}
 	return r
 }
 

@@ -71,6 +71,25 @@ func NewNodeIntroduction(node insolar.NetworkNode) *NodeIntroduction {
 	}
 }
 
+func (ni *NodeIntroduction) ConvertPowerRequest(request common2.PowerRequest) common2.MemberPower {
+	// TODO: do something with power
+	if ok, cl := request.AsCapacityLevel(); ok {
+		return common2.MemberPowerOf(uint16(cl.DefaultPercent()))
+	}
+	_, pw := request.AsMemberPower()
+	return pw
+}
+
+func (ni *NodeIntroduction) GetNodeReference() insolar.Reference {
+	// Node Reference
+	panic("implement me")
+}
+
+func (ni *NodeIntroduction) IsAllowedPower(p common2.MemberPower) bool {
+	// TODO: do something with power
+	return true
+}
+
 func (ni *NodeIntroduction) GetShortNodeID() common.ShortNodeID {
 	return common.ShortNodeID(ni.node.ShortID())
 }
@@ -104,8 +123,7 @@ func (nip *NodeIntroProfile) GetSpecialRoles() common2.NodeSpecialRole {
 	return common2.SpecialRoleNoRole
 }
 
-func (nip *NodeIntroProfile) IsAllowedPower(p common2.MemberPower) bool {
-	// TODO: do something with power
+func (nip *NodeIntroProfile) HasIntroduction() bool {
 	return true
 }
 

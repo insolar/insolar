@@ -72,6 +72,7 @@ type FullRealm struct {
 	packetSender    PacketSender
 	controlFeeder   ConsensusControlFeeder
 	candidateFeeder CandidateControlFeeder
+	profileFactory  common2.NodeProfileFactory
 
 	handlers []packetDispatcher
 
@@ -111,6 +112,7 @@ func (r *FullRealm) start(census census.ActiveCensus, population census.OnlinePo
 func (r *FullRealm) initBasics(census census.ActiveCensus) {
 
 	r.census = census
+	r.profileFactory = r.census.GetProfileFactory()
 
 	r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta, r.IsJoiner())
 	r.strategy.AdjustConsensusTimings(&r.timings)
@@ -162,6 +164,12 @@ func (r *FullRealm) initPopulation(population census.OnlinePopulation, individua
 		panic("inconsistent transition of self between realms")
 	}
 	prevSelf.copySelfTo(newSelf)
+
+	//cp := r.candidateFeeder.PickNextJoinCandidate()
+	//if cp != nil {
+	//	np := r.profileFactory.CreateBriefIntroProfile(cp)
+	//}
+
 	r.self = newSelf
 }
 

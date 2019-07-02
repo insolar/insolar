@@ -234,3 +234,24 @@ func CopyFixedSize(v FoldableReader) FoldableReader {
 
 type ShortNodeID uint32 // ZERO is RESERVED
 const AbsentShortNodeID ShortNodeID = 0
+
+type CapacityLevel uint8
+
+const (
+	LevelZero CapacityLevel = iota
+	LevelMinimal
+	LevelReduced
+	LevelNormal
+	LevelMax
+)
+
+const CapacityLevelCount = LevelMax + 1
+
+func (v CapacityLevel) DefaultPercent() int {
+	// 0, 25, 75, 100, 125
+	return v.ChooseInt([...]int{0, 20, 60, 80, 100})
+}
+
+func (v CapacityLevel) ChooseInt(options [CapacityLevelCount]int) int {
+	return options[v]
+}

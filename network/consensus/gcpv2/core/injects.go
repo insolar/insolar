@@ -82,33 +82,22 @@ type ConsensusController interface {
 	GetActivePowerLimit() (common2.MemberPower, common.PulseNumber)
 }
 
-type CandidateProfile packets.FullIntroductionReader
-
 type CandidateControlFeeder interface {
-	PickNextJoinCandidate() CandidateProfile
+	PickNextJoinCandidate() common2.CandidateProfile
 	RemoveJoinCandidate(candidateAdded bool, nodeID common.ShortNodeID) bool
 }
 
 type ConsensusControlFeeder interface {
 	//To Be used
 
-	GetRequiredPowerLevel() MemberPowerLevel
-	OnAppliedPowerLevel(pwl MemberPowerLevel, pw common2.MemberPower, effectiveSince common.PulseNumber)
+	GetRequiredPowerLevel() common2.PowerRequest
+	OnAppliedPowerLevel(pw common2.MemberPower, effectiveSince common.PulseNumber)
 
 	GetRequiredGracefulLeave() (bool, uint32)
 	OnAppliedGracefulLeave(exitCode uint32, effectiveSince common.PulseNumber)
 
 	//OnAppliedPopulation()
 }
-
-type MemberPowerLevel uint8
-
-const (
-	PowerLevelZero MemberPowerLevel = iota
-	PowerLevelMinimal
-	PowerLevelReduced
-	PowerLevelFull
-)
 
 type RoundController interface {
 	HandlePacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder) error
@@ -117,7 +106,8 @@ type RoundController interface {
 }
 
 type RoundControllerFactory interface {
-	CreateConsensusRound(chronicle census.ConsensusChronicles, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder) RoundController
+	CreateConsensusRound(chronicle census.ConsensusChronicles, controlFeeder ConsensusControlFeeder,
+		candidateFeeder CandidateControlFeeder, prevPulseRound RoundController) RoundController
 	GetLocalConfiguration() LocalNodeConfiguration
 }
 
@@ -156,8 +146,12 @@ type PreparedPacketSender interface {
 	SendTo(ctx context.Context, target common2.NodeProfile, sendOptions PacketSendOptions, sender PacketSender)
 }
 
+//type PreparedIntro interface {}
+
 type PacketBuilder interface {
 	GetNeighbourhoodSize() common2.NeighbourhoodSizes
+
+	//PrepareIntro
 
 	PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
 		options PacketSendOptions) PreparedPacketSender

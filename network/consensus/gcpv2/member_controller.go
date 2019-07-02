@@ -87,13 +87,13 @@ type ConsensusMemberController struct {
 
 	mutex sync.RWMutex
 	/* mutex needed */
-	currentRound core.RoundController
+	prevRound, currentRound core.RoundController
 	//isAborted bool
 	isRoundRunning bool
 }
 
 func (h *ConsensusMemberController) Abort() {
-	h.discardRound(nil)
+	h.discardRound(nil, true)
 }
 
 func (h *ConsensusMemberController) GetActivePowerLimit() (common2.MemberPower, common.PulseNumber) {
@@ -124,28 +124,34 @@ func (h *ConsensusMemberController) _getOrCreateRound() (core.RoundController, b
 	}
 
 	h.isRoundRunning = false
-	h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle, h.controlFeeder, h.candidateFeeder)
+	h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle, h.controlFeeder, h.candidateFeeder, h.prevRound)
+	h.prevRound = nil
 	h.currentRound.StartConsensusRound(core.UpstreamPulseController(h))
 	return h.currentRound, true, h.isRoundRunning
 }
 
-func (h *ConsensusMemberController) _discardRound(toBeDiscarded core.RoundController) core.RoundController {
+func (h *ConsensusMemberController) _discardRound(toBeDiscarded core.RoundController, clearPrev bool) core.RoundController {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
 	round := h.currentRound
-	if toBeDiscarded != nil && toBeDiscarded != round {
+	if round == nil || toBeDiscarded != nil && toBeDiscarded != round {
 		//This round was already discarded
 		return nil
 	}
 	h.isRoundRunning = false
 	h.currentRound = nil
+	if clearPrev {
+		h.prevRound = nil
+	} else {
+		h.prevRound = round
+	}
 
 	return round
 }
 
-func (h *ConsensusMemberController) discardRound(toBeDiscarded core.RoundController) {
-	round := h._discardRound(toBeDiscarded)
+func (h *ConsensusMemberController) discardRound(toBeDiscarded core.RoundController, clearPrev bool) {
+	round := h._discardRound(toBeDiscarded, clearPrev)
 	if round != nil {
 		go round.StopConsensusRound()
 	}
@@ -177,7 +183,7 @@ func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload p
 		return err
 	}
 
-	h.discardRound(round)
+	h.discardRound(round, false)
 	_, _, err = h._processPacket(ctx, payload, from)
 	return err
 }
@@ -187,6 +193,6 @@ func (h *ConsensusMemberController) MembershipConfirmed(report core.MembershipUp
 }
 
 func (h *ConsensusMemberController) MembershipLost(graceful bool) {
-	h.discardRound(nil)
+	h.discardRound(nil, false)
 	h.upstreamPulseController.MembershipLost(graceful)
 }

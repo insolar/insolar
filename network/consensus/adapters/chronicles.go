@@ -55,9 +55,9 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-func NewChronicles(pop census.ManyNodePopulation, vc census.VersionedRegistries) census.ConsensusChronicles {
+func NewChronicles(pop census.ManyNodePopulation, pf common.NodeProfileFactory, vc census.VersionedRegistries) census.ConsensusChronicles {
 	chronicles := census.NewLocalChronicles()
-	census.NewPrimingCensus(&pop, vc).SetAsActiveTo(chronicles)
+	census.NewPrimingCensus(&pop, pf, vc).SetAsActiveTo(chronicles)
 	return chronicles
 }
 

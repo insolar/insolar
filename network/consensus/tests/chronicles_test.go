@@ -52,6 +52,7 @@ package tests
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"math"
 
 	"github.com/insolar/insolar/network/consensus/common"
@@ -63,7 +64,11 @@ import (
 func NewEmuChronicles(intros []common2.NodeIntroProfile, localNodeIndex int, primingCloudStateHash common2.CloudStateHash) census.ConsensusChronicles {
 	pop := census.NewManyNodePopulation(intros[localNodeIndex], intros, false)
 	chronicles := census.NewLocalChronicles()
-	census.NewPrimingCensus(&pop, &EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash}).SetAsActiveTo(chronicles)
+	census.NewPrimingCensus(
+		&pop,
+		nil,
+		&EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash},
+	).SetAsActiveTo(chronicles)
 	return chronicles
 }
 
@@ -163,6 +168,22 @@ type emuNodeIntro struct {
 	id common.ShortNodeID
 	pr common2.NodePrimaryRole
 	sr common2.NodeSpecialRole
+}
+
+func (c *emuNodeIntro) GetNodeReference() insolar.Reference {
+	panic("implement me")
+}
+
+func (c *emuNodeIntro) HasIntroduction() bool {
+	return true
+}
+
+func (c *emuNodeIntro) ConvertPowerRequest(request common2.PowerRequest) common2.MemberPower {
+	if ok, cl := request.AsCapacityLevel(); ok {
+		return common2.MemberPowerOf(uint16(cl.DefaultPercent()))
+	}
+	_, pw := request.AsMemberPower()
+	return pw
 }
 
 func (c *emuNodeIntro) GetPrimaryRole() common2.NodePrimaryRole {

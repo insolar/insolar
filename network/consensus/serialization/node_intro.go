@@ -12,12 +12,13 @@ type NodeBriefIntro struct {
 }
 
 type NodeBriefIntroExt struct {
-	// ByteSize= 2 + (4, 6, 18) + 64 = 70, 72, 84
+	// ByteSize= 3 + (4, 6, 18) + 64 = 70, 72, 84
 
 	//ShortID             common.ShortNodeID
 
 	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
 	SpecialRoles        common2.NodeSpecialRole
+	StartPower          common2.MemberPower
 
 	// 4 | 6 | 18 bytes
 	InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
@@ -35,12 +36,11 @@ type NodeFullIntro struct {
 }
 
 type NodeFullIntroExt struct {
-	// ByteSize>=85
+	// ByteSize>=86
 	IssuedAtPulse common.PulseNumber // =0 when a node was connected during zeronet
 	IssuedAtTime  uint64
 
-	FullPower   common2.MemberPower
-	PowerLevels [2]common2.MemberPower
+	PowerLevels common2.MemberPowerSet // ByteSize=4
 
 	EndpointLen    uint8
 	ExtraEndpoints []uint16
