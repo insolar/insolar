@@ -38,7 +38,7 @@ type One struct {
 	Number int
 }
 
-func NewOne() (*One, error) {
+func New() (*One, error) {
 	return &One{}, nil
 }
 
@@ -56,7 +56,7 @@ func (c *One) Dec() (int, error) {
 	return c.Number, nil
 }
 `
-	objectRef := callConstructor(t, uploadContractOnce(t, "test", contractCode), "NewOne")
+	objectRef := callConstructor(t, uploadContractOnce(t, "test", contractCode), "New")
 
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objectRef, "Get")
@@ -1154,4 +1154,42 @@ func (r *Three) DoNothing() (error) {
 		"[ RouteCall ] on calling main API: Try to call route from immutable method",
 		resp.ExtractedError,
 	)
+}
+
+func TestMultipleConstructorsCall(t *testing.T) {
+	var contractCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+	Number int
+}
+
+func New() (*One, error) {
+	return &One{Number: 0}, nil
+}
+
+func NewWithNumber(num int) (*One, error) {
+	return &One{Number: num}, nil
+}
+
+func (c *One) Get() (int, error) {
+	return c.Number, nil
+}
+`
+	objRef := callConstructor(t, uploadContractOnce(t, "test", contractCode), "New")
+
+	// be careful - jsonUnmarshal convert json numbers to float64
+	result := callMethod(t, objRef, "Get")
+	require.Empty(t, result.Error)
+	require.Equal(t, float64(0), result.ExtractedReply)
+
+	objRef = callConstructor(t, uploadContractOnce(t, "test", contractCode), "NewWithNumber", 12)
+
+	// be careful - jsonUnmarshal convert json numbers to float64
+	result = callMethod(t, objRef, "Get")
+	require.Empty(t, result.Error)
+	require.Equal(t, float64(12), result.ExtractedReply)
 }
