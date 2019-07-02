@@ -125,7 +125,7 @@ func (s *RealContractsSuite) TestCompiling() {
 	}
 
 	am := goplugintestutils.NewTestArtifactManager()
-	cb := goplugintestutils.NewContractBuilder(am, s.icc)
+	cb := goplugintestutils.NewContractBuilder(am, s.icc, nil)
 
 	err := cb.Build(context.Background(), contracts)
 	s.NoError(err)

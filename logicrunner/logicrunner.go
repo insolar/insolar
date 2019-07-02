@@ -19,6 +19,7 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 
@@ -433,6 +434,9 @@ func (lr *LogicRunner) executeLogic(ctx context.Context, current *Transcript) (i
 
 	switch {
 	case res.Activation:
+		fmt.Println(request.Base)
+		fmt.Println("WHY")
+		fmt.Println(request.Prototype)
 		err = lr.ArtifactManager.ActivateObject(
 			ctx, *current.RequestRef, *request.Base, *request.Prototype,
 			request.CallType == record.CTSaveAsDelegate,

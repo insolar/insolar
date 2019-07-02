@@ -323,13 +323,18 @@ func uploadContract(t *testing.T, contractName string, contractCode string) *ins
 	return prototypeRef
 }
 
-func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Reference {
+func callConstructor(t *testing.T, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
+	argsSerialized, err := insolar.Serialize(args)
+	require.NoError(t, err)
+
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.CallConstructor",
 		"id":      "",
-		"params": map[string]string{
+		"params": map[string]interface{}{
 			"PrototypeRefString": prototypeRef.String(),
+			"Method":             method,
+			"MethodArgs":         argsSerialized,
 		},
 	})
 	require.NotEmpty(t, objectBody)
@@ -341,7 +346,7 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 		Error   json2.Error              `json:"error"`
 	}{}
 
-	err := json.Unmarshal(objectBody, &callConstructorRes)
+	err = json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
 	require.Empty(t, callConstructorRes.Error)
 
