@@ -357,6 +357,21 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	return true
 }
 
+// GetContractRequester implements RPCMethodsDeps interface method.
+func (lr *LogicRunner) GetContractRequester() insolar.ContractRequester {
+	return lr.ContractRequester
+}
+
+// GetArtifactManager implements RPCMethodsDeps interface method.
+func (lr *LogicRunner) GetArtifactManager() artifacts.Client {
+	return lr.ArtifactManager
+}
+
+// GetDescriptorsCache implements RPCMethodsDeps interface method.
+func (lr *LogicRunner) GetDescriptorsCache() artifacts.DescriptorsCache {
+	return lr.DescriptorsCache
+}
+
 // finishPendingIfNeeded checks whether last execution was a pending one.
 // If this is true as a side effect the function sends a PendingFinished
 // message to the current executor

@@ -35,12 +35,21 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
-type RPCMethods struct {
-	lr *LogicRunner
+// RPCMethodsDeps represents dependencies of RPCMethods. This type is needed mostly for
+// unit testing. LogicRunner implements RPCMethodsDeps.
+type RPCMethodsDeps interface {
+	GetObjectState(ref Ref) *ObjectState // AALEKSEEV TODO return interface
+	GetContractRequester() insolar.ContractRequester
+	GetArtifactManager() artifacts.Client
+	GetDescriptorsCache() artifacts.DescriptorsCache
 }
 
-func NewRPCMethods(lr *LogicRunner) *RPCMethods {
-	return &RPCMethods{lr: lr}
+type RPCMethods struct {
+	deps RPCMethodsDeps
+}
+
+func NewRPCMethods(lr RPCMethodsDeps) *RPCMethods {
+	return &RPCMethods{deps: lr}
 }
 
 func recoverRPC(err *error) {
@@ -62,7 +71,7 @@ func (m *RPCMethods) getCurrent(
 ) (
 	*Transcript, error,
 ) {
-	os := m.lr.GetObjectState(obj)
+	os := m.deps.GetObjectState(obj)
 	if os == nil {
 		return nil, errors.New("Failed to find requested object state. ref: " + obj.String())
 	}
@@ -90,7 +99,7 @@ func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCod
 	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
 	defer span.End()
 
-	codeDescriptor, err := m.lr.DescriptorsCache.GetCode(ctx, req.Code)
+	codeDescriptor, err := m.deps.GetDescriptorsCache().GetCode(ctx, req.Code)
 	if err != nil {
 		return err
 	}
@@ -143,7 +152,7 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 	}
 
 	msg := &message.CallMethod{IncomingRequest: reqRecord}
-	res, err := m.lr.ContractRequester.CallMethod(ctx, msg)
+	res, err := m.deps.GetContractRequester().CallMethod(ctx, msg)
 	current.AddOutgoingRequest(ctx, reqRecord, rep.Result, nil, err)
 	if err != nil {
 		return err
@@ -189,7 +198,7 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 
 	msg := &message.CallMethod{IncomingRequest: reqRecord}
 
-	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
+	ref, err := m.deps.GetContractRequester().CallConstructor(ctx, msg)
 	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)
 
 	rep.Reference = ref
@@ -228,7 +237,7 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 	}
 	msg := &message.CallMethod{IncomingRequest: reqRecord}
 
-	ref, err := m.lr.ContractRequester.CallConstructor(ctx, msg)
+	ref, err := m.deps.GetContractRequester().CallConstructor(ctx, msg)
 	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)
 
 	rep.Reference = ref
@@ -258,7 +267,7 @@ func (m *RPCMethods) GetObjChildrenIterator(
 	ctx, span := instracer.StartSpan(ctx, "RPC.GetObjChildrenIterator")
 	defer span.End()
 
-	am := m.lr.ArtifactManager
+	am := m.deps.GetArtifactManager()
 
 	iteratorID := req.IteratorID
 
@@ -337,7 +346,7 @@ func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.Up
 
 	ctx := current.Context
 
-	ref, err := m.lr.ArtifactManager.GetDelegate(ctx, req.Object, req.OfType)
+	ref, err := m.deps.GetArtifactManager().GetDelegate(ctx, req.Object, req.OfType)
 	if err != nil {
 		return err
 	}
