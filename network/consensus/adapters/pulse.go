@@ -71,7 +71,7 @@ func NewPulse(pulseData common.PulseData) insolar.Pulse {
 	}
 
 	entropy := insolar.Entropy{}
-	bytes := pulseData.PulseEntropy.Bytes()
+	bytes := pulseData.PulseEntropy.AsBytes()
 	copy(entropy[:], bytes)
 	copy(entropy[pulseData.PulseEntropy.FixedByteSize():], bytes)
 
@@ -118,7 +118,7 @@ func (p *PulsePacketReader) Read(b []byte) (n int, err error) {
 	panic("implement me")
 }
 
-func (p *PulsePacketReader) Bytes() []byte {
+func (p *PulsePacketReader) AsBytes() []byte {
 	panic("implement me")
 }
 

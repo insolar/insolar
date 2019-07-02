@@ -127,7 +127,7 @@ func (u *UpstreamPulseController) MembershipConfirmed(report core.MembershipUpst
 		ctx,
 		insolar.PulseNumber(report.PulseNumber),
 		networkNodes,
-		expectedCensus.GetCloudStateHash().Bytes(),
+		expectedCensus.GetCloudStateHash().AsBytes(),
 	)
 }
 

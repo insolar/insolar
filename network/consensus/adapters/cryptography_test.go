@@ -91,7 +91,7 @@ func TestSha3512Digester_GetDigestOf(t *testing.T) {
 
 	expected := scheme.IntegrityHasher().Hash(b)
 
-	require.Equal(t, expected, digest.Bytes())
+	require.Equal(t, expected, digest.AsBytes())
 }
 
 func TestSha3512Digester_GetDigestMethod(t *testing.T) {
@@ -156,13 +156,13 @@ func TestECDSADigestSigner_SignDigest(t *testing.T) {
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature := ds.SignDigest(digest)
 	require.Equal(t, scheme.SignatureSize(), signature.FixedByteSize())
 	require.Equal(t, signature.GetSignatureMethod(), SHA3512Digest.SignedBy(SECP256r1Sign))
 
-	signatureBytes := signature.Bytes()
+	signatureBytes := signature.AsBytes()
 
 	require.True(t, verifier.Verify(insolar.SignatureFromBytes(signatureBytes), digestBytes))
 }
@@ -231,7 +231,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature(t *testing.T) {
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
@@ -251,7 +251,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature_InvalidMethod(t *testing.
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 	bits := common.NewBits512FromBytes(signature.Bytes())
@@ -280,7 +280,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature(t *testing.T) {
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
@@ -301,7 +301,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature_InvalidMethod(t *testing.T)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 

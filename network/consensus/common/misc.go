@@ -129,7 +129,9 @@ type Foldable interface {
 type FixedReader interface {
 	io.WriterTo
 	io.Reader
-	Bytes() []byte
+	AsBytes() []byte
+	AsByteString() string
+
 	FixedByteSize() int
 }
 
@@ -199,6 +201,10 @@ type fixedSize struct {
 	data []byte
 }
 
+func (c *fixedSize) AsByteString() string {
+	return string(c.data)
+}
+
 func (c *fixedSize) WriteTo(w io.Writer) (n int64, err error) {
 	return io.Copy(w, c)
 }
@@ -215,7 +221,7 @@ func (c *fixedSize) FixedByteSize() int {
 	return len(c.data)
 }
 
-func (c *fixedSize) Bytes() []byte {
+func (c *fixedSize) AsBytes() []byte {
 	return c.data
 }
 

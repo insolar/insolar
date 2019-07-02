@@ -159,6 +159,14 @@ type SignedEvidenceHolder interface {
 	GetEvidence() SignedData
 }
 
+func (v SignatureKeyType) IsSymmetric() bool {
+	return v == SymmetricKey
+}
+
+func (v SignatureKeyType) IsSecret() bool {
+	return v != PublicAsymmetricKey
+}
+
 func (d DigestMethod) SignedBy(s SignMethod) SignatureMethod {
 	return SignatureMethod(string(d) + "/" + string(s))
 }
@@ -327,10 +335,38 @@ func (r SignedData) String() string {
 	return fmt.Sprintf("[bytes=%v]%v", r.hReader, r.hSignedDigest)
 }
 
-func (v SignatureKeyType) IsSymmetric() bool {
-	return v == SymmetricKey
+func NewSignatureKey(data FoldableReader, signatureMethod SignatureMethod, keyType SignatureKeyType) SignatureKey {
+	return SignatureKey{
+		hFoldReader:     data,
+		signatureMethod: signatureMethod,
+		keyType:         keyType,
+	}
 }
 
-func (v SignatureKeyType) IsSecret() bool {
-	return v != PublicAsymmetricKey
+var _ SignatureKeyHolder = &SignatureKey{}
+
+type SignatureKey struct {
+	hFoldReader
+	signatureMethod SignatureMethod
+	keyType         SignatureKeyType
+}
+
+func (p *SignatureKey) GetSignMethod() SignMethod {
+	return p.signatureMethod.SignMethod()
+}
+
+func (p *SignatureKey) GetSignatureKeyMethod() SignatureMethod {
+	return p.signatureMethod
+}
+
+func (p *SignatureKey) GetSignatureKeyType() SignatureKeyType {
+	return p.keyType
+}
+
+func (p *SignatureKey) Equals(o SignatureKeyHolder) bool {
+	return EqualFixedLenWriterTo(p, o)
+}
+
+func (p SignatureKey) String() string {
+	return fmt.Sprintf("⚿%v", p.hFoldReader)
 }

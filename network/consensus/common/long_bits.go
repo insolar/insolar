@@ -95,11 +95,15 @@ func (v *Bits64) FixedByteSize() int {
 	return len(*v)
 }
 
+func (v *Bits64) AsByteString() string {
+	return string(v[:])
+}
+
 func (v Bits64) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
 }
 
-func (v Bits64) Bytes() []byte {
+func (v Bits64) AsBytes() []byte {
 	return v[:]
 }
 
@@ -127,7 +131,11 @@ func (v Bits128) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
 }
 
-func (v Bits128) Bytes() []byte {
+func (v *Bits128) AsByteString() string {
+	return string(v[:])
+}
+
+func (v Bits128) AsBytes() []byte {
 	return v[:]
 }
 
@@ -156,8 +164,12 @@ func (v Bits224) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
 }
 
-func (v Bits224) Bytes() []byte {
+func (v Bits224) AsBytes() []byte {
 	return v[:]
+}
+
+func (v *Bits224) AsByteString() string {
+	return string(v[:])
 }
 
 type Bits256 [32]byte
@@ -202,8 +214,12 @@ func (v Bits256) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
 }
 
-func (v Bits256) Bytes() []byte {
+func (v Bits256) AsBytes() []byte {
 	return v[:]
+}
+
+func (v *Bits256) AsByteString() string {
+	return string(v[:])
 }
 
 type Bits512 [64]byte
@@ -252,8 +268,12 @@ func (v Bits512) String() string {
 	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
 }
 
-func (v Bits512) Bytes() []byte {
+func (v Bits512) AsBytes() []byte {
 	return v[:]
+}
+
+func (v *Bits512) AsByteString() string {
+	return string(v[:])
 }
 
 /* Array size must be aligned to 8 bytes */
