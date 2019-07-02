@@ -89,6 +89,10 @@ type EmuPulsarNetPacket struct {
 	pulseData common.PulseData
 }
 
+func (r *EmuPulsarNetPacket) AsByteString() string {
+	panic("implement me")
+}
+
 func (r *EmuPulsarNetPacket) WriteTo(w io.Writer) (n int64, err error) {
 	panic("implement me")
 }
@@ -97,7 +101,7 @@ func (r *EmuPulsarNetPacket) Read(p []byte) (n int, err error) {
 	panic("implement me")
 }
 
-func (r *EmuPulsarNetPacket) Bytes() []byte {
+func (r *EmuPulsarNetPacket) AsBytes() []byte {
 	panic("implement me")
 }
 

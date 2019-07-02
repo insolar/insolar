@@ -98,7 +98,8 @@ func (h *ConsensusMemberController) Abort() {
 
 func (h *ConsensusMemberController) GetActivePowerLimit() (common2.MemberPower, common.PulseNumber) {
 	actCensus := h.chronicle.GetActiveCensus()
-	return actCensus.GetOnlinePopulation().GetLocalProfile().GetPower(), actCensus.GetPulseNumber()
+	//TODO adjust power by state
+	return actCensus.GetOnlinePopulation().GetLocalProfile().GetDeclaredPower(), actCensus.GetPulseNumber()
 }
 
 func (h *ConsensusMemberController) getCurrentRound() (core.RoundController, bool) {

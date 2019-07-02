@@ -51,6 +51,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 
@@ -86,12 +87,12 @@ type FullRealm struct {
 	isFinished bool
 }
 
-func (r *FullRealm) GetPacketSender() PacketSender {
-	return r.packetSender
-}
-
-func (r *FullRealm) GetPacketBuilder() PacketBuilder {
-	return r.packetBuilder
+/* LOCK - runs under RoundController lock */
+func (r *FullRealm) start(census census.ActiveCensus, population census.OnlinePopulation) {
+	r.initBasics(census)
+	allCtls, perNodeCtls := r.initHandlers(population.GetCount())
+	r.initPopulation(population, perNodeCtls)
+	r.startWorkers(allCtls)
 }
 
 func (r *FullRealm) init(transport TransportFactory, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder) {
@@ -99,14 +100,6 @@ func (r *FullRealm) init(transport TransportFactory, controlFeeder ConsensusCont
 	r.packetBuilder = transport.GetPacketBuilder(r.signer)
 	r.controlFeeder = controlFeeder
 	r.candidateFeeder = candidateFeeder
-}
-
-/* LOCK - runs under RoundController lock */
-func (r *FullRealm) start(census census.ActiveCensus, population census.OnlinePopulation) {
-	r.initBasics(census)
-	allCtls, perNodeCtls := r.initHandlers(population.GetCount())
-	r.initPopulation(population, perNodeCtls)
-	r.startWorkers(allCtls)
 }
 
 func (r *FullRealm) initBasics(census census.ActiveCensus) {
@@ -154,7 +147,22 @@ func (r *FullRealm) initHandlers(nodeCount int) (allControllers []PhaseControlle
 
 func (r *FullRealm) initPopulation(population census.OnlinePopulation, individualHandlers []PhaseController) {
 
-	r.population = NewMemberRealmPopulation(r.strategy, population, individualHandlers, &r.nodeContext, r)
+	r.population = NewMemberRealmPopulation(r.strategy, population,
+		func(ctx context.Context, n *NodeAppearance) {
+			n.callback = &r.nodeContext
+			for k, ctl := range individualHandlers {
+				var ph PhasePerNodePacketFunc
+				ph, ctx = ctl.CreatePerNodePacketHandler(k, n, r, ctx)
+				if ph == nil {
+					continue
+				}
+				if n.handlers == nil {
+					n.handlers = make([]PhasePerNodePacketFunc, len(individualHandlers))
+				}
+				n.handlers[k] = ph
+			}
+		})
+
 	newSelf := r.population.GetSelf()
 	prevSelf := r.self
 	r.self = nil
@@ -167,7 +175,9 @@ func (r *FullRealm) initPopulation(population census.OnlinePopulation, individua
 
 	//cp := r.candidateFeeder.PickNextJoinCandidate()
 	//if cp != nil {
-	//	np := r.profileFactory.CreateBriefIntroProfile(cp)
+	//	jc := r.CreatePurgatoryNode(cp)
+	//	r.UpgradeToDynamicNode(jc, cp)
+	//	newSelf.requestedJoiner = jc
 	//}
 
 	r.self = newSelf
@@ -180,6 +190,14 @@ func (r *FullRealm) startWorkers(controllers []PhaseController) {
 	for _, ctl := range controllers {
 		ctl.StartWorker(r.roundContext)
 	}
+}
+
+func (r *FullRealm) GetPacketSender() PacketSender {
+	return r.packetSender
+}
+
+func (r *FullRealm) GetPacketBuilder() PacketBuilder {
+	return r.packetBuilder
 }
 
 func (r *FullRealm) GetSigner() common.DigestSigner {
@@ -228,7 +246,7 @@ func (r *coreRealm) UpstreamPreparePulseChange() <-chan common2.NodeStateHash {
 	sp := r.GetSelf().GetProfile()
 	report := MembershipUpstreamReport{
 		PulseNumber:     r.pulseData.PulseNumber,
-		MemberPower:     sp.GetPower(),
+		MemberPower:     sp.GetDeclaredPower(),
 		MembershipState: sp.GetState(),
 	}
 	return r.upstream.PreparePulseChange(report)
@@ -310,7 +328,7 @@ func (r *FullRealm) upstreamMembershipConfirmed(expectedCensus census.Operationa
 	sp := r.GetSelf().GetProfile()
 	report := MembershipUpstreamReport{
 		PulseNumber:     r.pulseData.PulseNumber,
-		MemberPower:     sp.GetPower(),
+		MemberPower:     sp.GetDeclaredPower(),
 		MembershipState: sp.GetState(),
 	}
 
@@ -323,3 +341,24 @@ func (r *FullRealm) getPacketDispatcher(pt packets.PacketType) (*packetDispatche
 	}
 	return &r.handlers[pt], nil
 }
+
+//func (r *FullRealm) getPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
+//
+//}
+//
+//func (r *FullRealm) createPurgatoryNode(profile common2.BriefCandidateProfile, nodeSignature common.SignatureHolder) *NodeAppearance {
+//	pr := r.profileFactory.CreateBriefIntroProfile(profile, nodeSignature)
+//
+//}
+//
+//func (r *FullRealm) _registerPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
+//
+//}
+//
+//func (r *FullRealm) CreatePurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
+//	r.
+//}
+//
+//func (r *FullRealm) UpgradeToDynamicNode(n *NodeAppearance, profile common2.CandidateProfile) {
+//
+//}

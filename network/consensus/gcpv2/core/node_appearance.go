@@ -71,16 +71,17 @@ func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile, callback *nodeContext)
 		state: packets.NodeStateLocalActive,
 		trust: packets.SelfTrust,
 	}
-	r.init(np, callback)
+	r.init(np, callback, 0)
 	return r
 }
 
-func (c *NodeAppearance) init(np common2.NodeProfile, callback NodeContextHolder) {
+func (c *NodeAppearance) init(np common2.NodeProfile, callback NodeContextHolder, baselineWeight uint32) {
 	if np == nil {
 		panic("node profile is nil")
 	}
 	c.profile = np
 	c.callback = callback
+	c.neighbourWeight = baselineWeight
 	c.announceHandler = newNoAnnouncementsHandler()
 }
 
@@ -99,8 +100,9 @@ type NodeAppearance struct {
 	stateEvidence     common2.NodeStateHashEvidence       // one-time set
 	requestedPower    common2.MemberPower                 // one-time set
 
-	announceHandler AnnounceHandler
+	requestedJoiner *NodeAppearance // one-time set
 
+	announceHandler   AnnounceHandler
 	firstFraudDetails *errors.FraudError
 
 	neighbourWeight uint32
@@ -354,10 +356,6 @@ func (c *NodeAppearance) GetNeighbourWeight() uint32 {
 	defer c.mutex.Unlock()
 
 	return c.neighbourWeight
-}
-
-func (c *NodeAppearance) GetPower() common2.MemberPower {
-	return c.profile.GetPower()
 }
 
 func (c *NodeAppearance) registerFraud(fraud errors.FraudError) (bool, error) {

@@ -75,28 +75,8 @@ func (c *nodeSlot) Less(o common2.NodeProfile) bool {
 	return common2.LessForNodeProfile(c, o)
 }
 
-func (c *nodeSlot) HasWorkingPower() bool {
-	return c.state.IsWorking() && c.power > 0
-}
-
 func (c *nodeSlot) GetDeclaredPower() common2.MemberPower {
 	return c.power
-}
-
-func (c *nodeSlot) GetPower() common2.MemberPower {
-	if c.state.IsWorking() {
-		return c.power
-	}
-	return 0
-}
-
-func (c *nodeSlot) GetOrdering() (common2.NodePrimaryRole, common2.MemberPower, common.ShortNodeID) {
-	p := c.GetPower()
-	r := c.GetPrimaryRole()
-	if p == 0 {
-		r = common2.PrimaryRoleInactive
-	}
-	return r, p, c.GetShortNodeID()
 }
 
 func (c *nodeSlot) GetState() common2.MembershipState {

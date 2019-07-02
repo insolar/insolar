@@ -170,8 +170,19 @@ type emuNodeIntro struct {
 	sr common2.NodeSpecialRole
 }
 
-func (c *emuNodeIntro) GetNodeReference() insolar.Reference {
+func (c *emuNodeIntro) GetNodePublicKey() common.SignatureKeyHolder {
+	v := &common.Bits512{}
+	common.FillBitsWithStaticNoise(uint32(c.id), v[:])
+	k := common.NewSignatureKey(v, "stub/stub", common.PublicAsymmetricKey)
+	return &k
+}
+
+func (c *emuNodeIntro) GetStartPower() common2.MemberPower {
 	panic("implement me")
+}
+
+func (c *emuNodeIntro) GetNodeReference() insolar.Reference {
+	panic("unsupported")
 }
 
 func (c *emuNodeIntro) HasIntroduction() bool {

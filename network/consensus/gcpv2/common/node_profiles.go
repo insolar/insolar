@@ -81,6 +81,8 @@ type NodeIntroProfile interface { //brief intro
 	GetShortNodeID() common.ShortNodeID
 	GetPrimaryRole() NodePrimaryRole
 	GetSpecialRoles() NodeSpecialRole
+	GetNodePublicKey() common.SignatureKeyHolder
+	GetStartPower() MemberPower
 
 	HasIntroduction() bool             //must be always true for LocalNodeProfile
 	GetIntroduction() NodeIntroduction //full intro, will panic when HasIntroduction() == false
@@ -90,11 +92,8 @@ type NodeProfile interface {
 	NodeIntroProfile
 	GetIndex() int
 	GetDeclaredPower() MemberPower
-	GetPower() MemberPower
-	GetOrdering() (NodePrimaryRole, MemberPower, common.ShortNodeID)
 	GetSignatureVerifier() common.SignatureVerifier
 	GetState() MembershipState
-	HasWorkingPower() bool
 }
 
 type BriefCandidateProfile interface {
@@ -429,9 +428,18 @@ func (v MembershipState) IsLeaving() bool {
 	return v == Leaving
 }
 
+func nodeProfileOrdering(np NodeProfile) (NodePrimaryRole, MemberPower, common.ShortNodeID) {
+	p := np.GetDeclaredPower()
+	r := np.GetPrimaryRole()
+	if p == 0 || !np.GetState().IsWorking() {
+		return PrimaryRoleInactive, 0, np.GetShortNodeID()
+	}
+	return r, p, np.GetShortNodeID()
+}
+
 func LessForNodeProfile(c NodeProfile, o NodeProfile) bool {
-	cR, cP, cI := c.GetOrdering()
-	oR, oP, oI := o.GetOrdering()
+	cR, cP, cI := nodeProfileOrdering(c)
+	oR, oP, oI := nodeProfileOrdering(o)
 
 	/* Reversed order */
 	if cR < oR {
@@ -470,7 +478,7 @@ func NewMembershipProfile(index uint16, power MemberPower, nsh NodeStateHashEvid
 
 func NewMembershipProfileByNode(np NodeProfile, nsh NodeStateHashEvidence, nas MemberAnnouncementSignature,
 	ep MemberPower) MembershipProfile {
-	return NewMembershipProfile(uint16(np.GetIndex()), np.GetPower(), nsh, nas, ep)
+	return NewMembershipProfile(uint16(np.GetIndex()), np.GetDeclaredPower(), nsh, nas, ep)
 }
 
 func (p MembershipProfile) IsEmpty() bool {
@@ -504,4 +512,26 @@ func (p MembershipProfile) StringParts() string {
 
 func (p MembershipProfile) String() string {
 	return fmt.Sprintf("idx:%03d %s", p.Index, p.StringParts())
+}
+
+var _ NodeProfile = &JoinerNodeProfile{}
+
+type JoinerNodeProfile struct {
+	NodeIntroProfile
+}
+
+func (*JoinerNodeProfile) GetIndex() int {
+	return 0
+}
+
+func (p *JoinerNodeProfile) GetDeclaredPower() MemberPower {
+	return p.GetStartPower()
+}
+
+func (*JoinerNodeProfile) GetSignatureVerifier() common.SignatureVerifier {
+	return nil
+}
+
+func (*JoinerNodeProfile) GetState() MembershipState {
+	return Joining
 }

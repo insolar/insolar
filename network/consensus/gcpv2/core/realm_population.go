@@ -28,34 +28,40 @@ type RealmPopulation interface {
 }
 
 func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation,
-	individualHandlers []PhaseController, nodeContext NodeContextHolder, realm *FullRealm) *MemberRealmPopulation {
+	fn NodeInitFunc) *MemberRealmPopulation {
 
 	nodeCount := population.GetCount()
 
 	r := &MemberRealmPopulation{
 		population:       population,
+		nodeInit:         fn,
+		baselineWeight:   strategy.RandUint32(),
 		nodeCount:        nodeCount,
 		bftMajorityCount: common.BftMajority(nodeCount),
 		nodeIndex:        make([]*NodeAppearance, nodeCount),
 		nodeShuffle:      make([]*NodeAppearance, nodeCount-1),
 	}
-	r.initPopulation(strategy, individualHandlers, nodeContext, realm)
+	r.initPopulation()
+	ShuffleNodeProjections(strategy, r.nodeShuffle)
+
 	return r
 }
 
-func (r *MemberRealmPopulation) initPopulation(strategy RoundStrategy, individualHandlers []PhaseController, nodeContext NodeContextHolder, realm *FullRealm) {
+type NodeInitFunc func(ctx context.Context, n *NodeAppearance)
+
+func (r *MemberRealmPopulation) initPopulation() {
 	profiles := r.population.GetProfiles()
 	thisNodeID := r.population.GetLocalProfile().GetShortNodeID()
-	baselineWeight := strategy.RandUint32()
 
 	nodes := make([]NodeAppearance, r.nodeCount)
 
 	var j = 0
 	for i, p := range profiles {
 		n := &nodes[i]
-		n.init(p, nodeContext)
-		n.neighbourWeight = baselineWeight
 		r.nodeIndex[i] = n
+
+		n.init(p, nil, r.baselineWeight)
+		r.nodeInit(context.Background(), n)
 
 		if p.GetShortNodeID() == thisNodeID {
 			if r.self != nil {
@@ -69,27 +75,15 @@ func (r *MemberRealmPopulation) initPopulation(strategy RoundStrategy, individua
 			r.nodeShuffle[j] = n
 			j++
 		}
-
-		var sharedContext = context.Background()
-		for k, ctl := range individualHandlers {
-			var ph PhasePerNodePacketFunc
-			ph, sharedContext = ctl.CreatePerNodePacketHandler(k, n, realm, sharedContext)
-			if ph == nil {
-				continue
-			}
-			if n.handlers == nil {
-				n.handlers = make([]PhasePerNodePacketFunc, len(individualHandlers))
-			}
-			n.handlers[k] = ph
-		}
 	}
-	ShuffleNodeProjections(strategy, r.nodeShuffle)
 }
 
 var _ RealmPopulation = &MemberRealmPopulation{}
 
 type MemberRealmPopulation struct {
-	population census.OnlinePopulation
+	population     census.OnlinePopulation
+	nodeInit       NodeInitFunc
+	baselineWeight uint32
 
 	nodeIndex   []*NodeAppearance
 	nodeShuffle []*NodeAppearance // excluding self
@@ -101,6 +95,9 @@ type MemberRealmPopulation struct {
 	//	purgatory	map[common.ShortNodeID]*NodeAppearance
 	rw      sync.RWMutex
 	joiners map[common.ShortNodeID]*NodeAppearance
+
+	purgatoryByPK map[string] /* used as string(PK.Bytes())  */ *NodeAppearance
+	purgatoryByID map[common.ShortNodeID][]*NodeAppearance
 }
 
 func (r *MemberRealmPopulation) GetSelf() *NodeAppearance {
@@ -152,4 +149,13 @@ func (r *MemberRealmPopulation) GetShuffledOtherNodes() []*NodeAppearance {
 
 func (r *MemberRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	return r.nodeIndex
+}
+
+func (r *MemberRealmPopulation) createNode(ctx context.Context, np common2.NodeProfile) *NodeAppearance {
+	//np.GetNodePublicKey().AsByteString()
+
+	n := &NodeAppearance{}
+	n.init(np, nil, r.baselineWeight)
+	r.nodeInit(ctx, n)
+	return n
 }
