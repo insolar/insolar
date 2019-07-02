@@ -52,9 +52,10 @@ package common
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/insolar"
 	"math/bits"
 	"time"
+
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common"
 )
@@ -117,6 +118,7 @@ type CandidateProfile interface {
 
 	GetExtraEndpoints() []common.NodeEndpoint
 
+	GetReference() insolar.Reference
 	//NodeRefProof	[]common.Bits512
 
 	GetIssuerID() common.ShortNodeID

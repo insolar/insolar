@@ -61,6 +61,7 @@ import (
 	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -68,6 +69,7 @@ import (
 type Dep struct {
 	PrimingCloudStateHash [64]byte
 
+	KeyProcessor       insolar.KeyProcessor
 	Scheme             insolar.PlatformCryptographyScheme
 	CertificateManager insolar.CertificateManager
 	KeyStore           insolar.KeyStore
@@ -93,6 +95,7 @@ type Consensus struct {
 	misbehaviorRegistry          census.MisbehaviorRegistry
 	offlinePopulation            census.OfflinePopulation
 	versionedRegistries          census.VersionedRegistries
+	nodeProfileFactory           common.NodeProfileFactory
 	consensusChronicles          census.ConsensusChronicles
 	localNodeConfiguration       core.LocalNodeConfiguration
 	upstreamPulseController      core.UpstreamPulseController
@@ -135,8 +138,10 @@ func New(ctx context.Context, dep Dep) Consensus {
 		consensus.misbehaviorRegistry,
 		consensus.offlinePopulation,
 	)
+	consensus.nodeProfileFactory = adapters.NewNodeProfileFactory(dep.KeyProcessor)
 	consensus.consensusChronicles = adapters.NewChronicles(
 		consensus.population,
+		consensus.nodeProfileFactory,
 		consensus.versionedRegistries,
 	)
 	consensus.localNodeConfiguration = adapters.NewLocalNodeConfiguration(

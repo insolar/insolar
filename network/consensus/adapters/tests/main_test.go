@@ -103,6 +103,7 @@ func TestConsensusMain(t *testing.T) {
 
 		_ = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+			KeyProcessor:          platformpolicy.NewKeyProcessor(),
 			Scheme:                platformpolicy.NewPlatformCryptographyScheme(),
 			CertificateManager:    certificateManager,
 			KeyStore:              keystore.NewInplaceKeyStore(nodeInfos[i].privateKey),
