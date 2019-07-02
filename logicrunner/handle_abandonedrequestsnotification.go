@@ -45,7 +45,7 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 
 	state.Lock()
 	executionState, err := state.GetModeState(insolar.ExecuteCallMode)
-	if err != nil { // AALEKSEEV TODO hopefully this will work, OR executionState can be null?
+	if err != nil {
 		es := NewExecutionState(ref)
 		es.pending = message.InPending
 		es.PendingConfirmed = false

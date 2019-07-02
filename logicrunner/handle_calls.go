@@ -92,7 +92,7 @@ func (h *HandleCall) handleActual(
 
 	os.Lock()
 	es, err := os.GetModeState(insolar.ExecuteCallMode)
-	if err != nil { // AALEKSEEV TODO hopefully it's OK. or nil can be returned?
+	if err != nil {
 		es = NewExecutionState(ref)
 		es.RegisterLogicRunner(lr)
 		os.SetExecutionState(es)
@@ -215,7 +215,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 
 	os.Lock()
 	es, err := os.GetModeState(insolar.ExecuteCallMode)
-	if err != nil { // AALEKSEEV TODO hopefully this is OK
+	if err != nil {
 		es = NewExecutionState(ref)
 		es.RegisterLogicRunner(lr)
 		os.SetExecutionState(es)
