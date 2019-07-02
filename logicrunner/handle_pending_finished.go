@@ -19,6 +19,8 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
@@ -45,17 +47,18 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 	os := lr.UpsertObjectState(*ref)
 
 	os.Lock()
-	if os.ExecutionState == nil {
+	es, err := os.GetModeState(insolar.ExecuteCallMode)
+	if err != nil {
 		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = NewExecutionState(*ref)
-		os.ExecutionState.pending = message.NotPending
-		os.ExecutionState.RegisterLogicRunner(lr)
+		es = NewExecutionState(*ref)
+		es.pending = message.NotPending
+		es.RegisterLogicRunner(lr)
+		os.SetExecutionState(es)
 		os.Unlock()
 
 		h.Message.ReplyTo <- replyOk
 		return nil
 	}
-	es := os.ExecutionState
 	os.Unlock()
 
 	es.Lock()

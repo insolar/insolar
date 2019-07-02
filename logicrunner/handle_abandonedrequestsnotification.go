@@ -19,6 +19,8 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -42,18 +44,19 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 	state := p.LR.UpsertObjectState(ref)
 
 	state.Lock()
-	if state.ExecutionState == nil {
-		state.ExecutionState = NewExecutionState(ref)
-		state.ExecutionState.pending = message.InPending
-		state.ExecutionState.PendingConfirmed = false
-		state.ExecutionState.LedgerHasMoreRequests = true
-		state.ExecutionState.RegisterLogicRunner(p.LR)
+	executionState, err := state.GetModeState(insolar.ExecuteCallMode)
+	if err != nil { // AALEKSEEV TODO hopefully this will work, OR executionState can be null?
+		es := NewExecutionState(ref)
+		es.pending = message.InPending
+		es.PendingConfirmed = false
+		es.LedgerHasMoreRequests = true
+		es.RegisterLogicRunner(p.LR)
+
+		state.SetExecutionState(es)
 	} else {
-		executionState := state.ExecutionState
 		executionState.Lock()
 		executionState.LedgerHasMoreRequests = true
 		executionState.Unlock()
-
 	}
 	state.Unlock()
 

@@ -54,31 +54,45 @@ const maxQueueLength = 10
 
 type Ref = insolar.Reference
 
-// Context of one contract execution
-type ObjectState struct {
+// ObjectState represents a context of one contract execution
+type ObjectState interface {
+	sync.Locker
+
+	GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error) // AALEKSEEV TODO return interface
+	MustModeState(mode insolar.CallMode) *ExecutionState                // AALEKSEEV TODO return interface
+	SetExecutionState(es *ExecutionState)                               // AALEKSEEV TODO accept interface
+	Empty() bool
+}
+
+type objectState struct {
 	sync.Mutex
 
 	ExecutionState *ExecutionState
 	Validation     *ExecutionState
 }
 
-func (st *ObjectState) GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error) {
+func NewObjectState(executionState *ExecutionState, validation *ExecutionState) ObjectState {
+	return &objectState{ExecutionState: executionState, Validation: validation}
+}
+
+func (st *objectState) GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error) {
 	switch mode {
 	case insolar.ExecuteCallMode:
 		rv = st.ExecutionState
 	case insolar.ValidateCallMode:
 		rv = st.Validation
 	default:
-		err = errors.Errorf("'%d' is unknown object processing mode", mode)
+		return nil, errors.Errorf("'%d' is unknown object processing mode", mode)
 	}
 
-	if rv == nil && err != nil {
-		err = errors.Errorf("object is not in '%s' mode", mode)
+	if rv == nil {
+		return nil, errors.Errorf("object is not in '%s' mode", mode)
 	}
-	return rv, err
+
+	return rv, nil
 }
 
-func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
+func (st *objectState) MustModeState(mode insolar.CallMode) *ExecutionState {
 	res, err := st.GetModeState(mode)
 	if err != nil {
 		panic(err)
@@ -87,6 +101,14 @@ func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
 		panic("object " + res.Ref.String() + " has no Current")
 	}
 	return res
+}
+
+func (st *objectState) SetExecutionState(es *ExecutionState) {
+	st.ExecutionState = es
+}
+
+func (st *objectState) Empty() bool {
+	return st.ExecutionState == nil && st.Validation == nil
 }
 
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
@@ -121,7 +143,7 @@ type LogicRunner struct {
 
 	Cfg *configuration.LogicRunner
 
-	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
+	state      map[Ref]ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
 	rpc *lrCommon.RPC
@@ -145,7 +167,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	}
 	res := LogicRunner{
 		Cfg:   cfg,
-		state: make(map[Ref]*ObjectState),
+		state: make(map[Ref]ObjectState),
 	}
 	res.rpc = lrCommon.NewRPC(NewRPCMethods(&res), cfg)
 
@@ -514,7 +536,8 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 		)
 		state.Lock()
 
-		if es := state.ExecutionState; es != nil {
+		es, err := state.GetModeState(insolar.ExecuteCallMode)
+		if err == nil {
 			es.Lock()
 
 			toSend := es.OnPulse(ctx, meNext)
@@ -522,7 +545,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 			if !meNext {
 				if es.CurrentList.Empty() {
-					state.ExecutionState = nil
+					state.SetExecutionState(nil)
 				}
 			} else {
 				if es.pending == message.NotPending && es.LedgerHasMoreRequests {
@@ -536,7 +559,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 			es.Unlock()
 		}
 
-		if state.ExecutionState == nil && state.Validation == nil {
+		if state.Empty() {
 			delete(lr.state, ref)
 		}
 

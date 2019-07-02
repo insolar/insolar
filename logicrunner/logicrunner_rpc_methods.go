@@ -38,7 +38,7 @@ import (
 // RPCMethodsDeps represents dependencies of RPCMethods. This type is needed mostly for
 // unit testing. LogicRunner implements RPCMethodsDeps.
 type RPCMethodsDeps interface {
-	GetObjectState(ref Ref) *ObjectState // AALEKSEEV TODO return interface
+	GetObjectState(ref Ref) ObjectState
 	GetContractRequester() insolar.ContractRequester
 	GetArtifactManager() artifacts.Client
 	GetDescriptorsCache() artifacts.DescriptorsCache

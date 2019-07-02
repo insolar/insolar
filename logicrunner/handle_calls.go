@@ -91,13 +91,14 @@ func (h *HandleCall) handleActual(
 	os := lr.UpsertObjectState(ref)
 
 	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = NewExecutionState(ref)
-		os.ExecutionState.RegisterLogicRunner(lr)
+	es, err := os.GetModeState(insolar.ExecuteCallMode)
+	if err != nil { // AALEKSEEV TODO hopefully it's OK. or nil can be returned?
+		es = NewExecutionState(ref)
+		es.RegisterLogicRunner(lr)
+		os.SetExecutionState(es)
 	}
-	es := os.ExecutionState
-	os.Unlock()
 
+	os.Unlock()
 	es.Lock()
 
 	procCheckRole := CheckOurRole{
@@ -213,11 +214,12 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	os := lr.UpsertObjectState(ref)
 
 	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = NewExecutionState(ref)
-		os.ExecutionState.RegisterLogicRunner(lr)
+	es, err := os.GetModeState(insolar.ExecuteCallMode)
+	if err != nil { // AALEKSEEV TODO hopefully this is OK
+		es = NewExecutionState(ref)
+		es.RegisterLogicRunner(lr)
+		os.SetExecutionState(es)
 	}
-	es := os.ExecutionState
 	os.Unlock()
 
 	es.Lock()

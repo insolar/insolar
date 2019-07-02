@@ -19,6 +19,8 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
@@ -46,14 +48,15 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	inslogger.FromContext(ctx).Debug("Got information that ", ref, " is still executing")
 
 	os.Lock()
-	if os.ExecutionState == nil {
+	es, err := os.GetModeState(insolar.ExecuteCallMode)
+	if err != nil {
 		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = NewExecutionState(*ref)
-		os.ExecutionState.pending = message.InPending
-		os.ExecutionState.PendingConfirmed = true
-		os.ExecutionState.RegisterLogicRunner(lr)
+		es = NewExecutionState(*ref)
+		es.pending = message.InPending
+		es.PendingConfirmed = true
+		es.RegisterLogicRunner(lr)
+		os.SetExecutionState(es)
 	} else {
-		es := os.ExecutionState
 		es.Lock()
 		if es.pending == message.NotPending {
 			// It might be when StillExecuting comes after PendingFinished

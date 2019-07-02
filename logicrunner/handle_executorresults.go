@@ -19,6 +19,8 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -47,11 +49,12 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	state := p.LR.UpsertObjectState(ref)
 
 	state.Lock()
-	if state.ExecutionState == nil {
-		state.ExecutionState = NewExecutionState(ref)
-		state.ExecutionState.RegisterLogicRunner(p.LR)
+	es, err := state.GetModeState(insolar.ExecuteCallMode)
+	if err != nil {
+		es = NewExecutionState(ref)
+		es.RegisterLogicRunner(p.LR)
+		state.SetExecutionState(es)
 	}
-	es := state.ExecutionState
 	p.Result.es = es
 	state.Unlock()
 

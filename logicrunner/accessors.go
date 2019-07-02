@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func (lr *LogicRunner) GetObjectState(ref Ref) *ObjectState {
+func (lr *LogicRunner) GetObjectState(ref Ref) ObjectState {
 	lr.stateMutex.RLock()
 	res, ok := lr.state[ref]
 	lr.stateMutex.RUnlock()
@@ -32,7 +32,7 @@ func (lr *LogicRunner) GetObjectState(ref Ref) *ObjectState {
 	return res
 }
 
-func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
+func (lr *LogicRunner) UpsertObjectState(ref Ref) ObjectState {
 	lr.stateMutex.RLock()
 	if res, ok := lr.state[ref]; ok {
 		lr.stateMutex.RUnlock()
@@ -43,12 +43,12 @@ func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
 	lr.stateMutex.Lock()
 	defer lr.stateMutex.Unlock()
 	if _, ok := lr.state[ref]; !ok {
-		lr.state[ref] = &ObjectState{}
+		lr.state[ref] = NewObjectState(nil, nil)
 	}
 	return lr.state[ref]
 }
 
-func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
+func (lr *LogicRunner) MustObjectState(ref Ref) ObjectState {
 	res := lr.GetObjectState(ref)
 	if res == nil {
 		panic("No requested object state. ref: " + ref.String())
@@ -64,7 +64,11 @@ func (lr *LogicRunner) GetExecutionState(ref Ref) *ExecutionState {
 
 	os.Lock()
 	defer os.Unlock()
-	return os.ExecutionState
+	st, err := os.GetModeState(insolar.ExecuteCallMode)
+	if err != nil {
+		return nil
+	}
+	return st
 }
 
 func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
