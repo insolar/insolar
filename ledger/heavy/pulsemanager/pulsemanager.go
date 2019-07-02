@@ -174,12 +174,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 
 // Start starts pulse manager.
 func (m *PulseManager) Start(ctx context.Context) error {
-	origin := m.NodeNet.GetOrigin()
-	err := m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
-	if err != nil && err != node.ErrOverride {
-		return err
-	}
-
 	return nil
 }
 

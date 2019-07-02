@@ -54,6 +54,17 @@ type FilamentCalculator interface {
 	// PendingRequests only looks locally.
 	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]insolar.ID, error)
 
+	RequestDuplicate(
+		ctx context.Context,
+		startFrom insolar.PulseNumber,
+		objectID, requestID insolar.ID,
+		request record.Request,
+	) (
+		foundRequest *record.CompositeFilamentRecord,
+		foundResult *record.CompositeFilamentRecord,
+		err error,
+	)
+
 	ResultDuplicate(ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
 }
 
@@ -285,6 +296,9 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 	cache.Lock()
 	defer cache.Unlock()
 
+	if idx.Lifeline.PendingPointer == nil {
+		return []insolar.ID{}, nil
+	}
 	if idx.Lifeline.EarliestOpenRequest == nil {
 		return []insolar.ID{}, nil
 	}
@@ -383,6 +397,71 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 	}
 
 	return foundResult, errors.New("request for result is not found")
+}
+
+func (c *FilamentCalculatorDefault) RequestDuplicate(
+	ctx context.Context, startFrom insolar.PulseNumber, objectID, requestID insolar.ID, request record.Request,
+) (*record.CompositeFilamentRecord, *record.CompositeFilamentRecord, error) {
+	logger := inslogger.FromContext(ctx).WithField("object_id", objectID.DebugString())
+
+	logger.Debug("started to search duplicated requests")
+	defer logger.Debug("finished to search duplicated requests")
+
+	if request.GetReason().IsEmpty() {
+		return nil, nil, errors.New("reason is empty")
+	}
+	reason := request.GetReason()
+
+	idx, err := c.indexes.ForID(ctx, startFrom, objectID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if idx.Lifeline.PendingPointer == nil {
+		return nil, nil, nil
+	}
+
+	cache := c.cache.Get(objectID)
+	cache.Lock()
+	defer cache.Unlock()
+
+	iter := newFetchingIterator(
+		ctx,
+		cache,
+		objectID,
+		*idx.Lifeline.PendingPointer,
+		reason.Record().Pulse(),
+		startFrom,
+		c.jetFetcher,
+		c.coordinator,
+		c.sender,
+	)
+
+	var foundRequest *record.CompositeFilamentRecord
+	var foundResult *record.CompositeFilamentRecord
+
+	for iter.HasPrev() {
+		rec, err := iter.Prev(ctx)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to calculate pending")
+		}
+
+		if bytes.Equal(rec.RecordID.Hash(), requestID.Hash()) {
+			foundRequest = &rec
+		}
+
+		virtual := record.Unwrap(rec.Record.Virtual)
+		if r, ok := virtual.(*record.Result); ok {
+			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
+				foundResult = &rec
+			}
+		}
+
+		if foundRequest != nil && foundResult != nil {
+			return foundRequest, foundResult, nil
+		}
+	}
+
+	return foundRequest, foundResult, nil
 }
 
 func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
