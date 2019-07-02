@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "api.call",
+  "params": {
+    "callSite": "contract.getReferenceByPK",
+    "reference": "1tJD6aE2ZkCJE9wr6fw2HHYoV91YQhpMBok1S4q1uV.11111111111111111111111111111111",
+    "callParams": {
+    }
+  }
+}

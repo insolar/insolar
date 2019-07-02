@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "method": "call.api",
+  "id": 1,
+  "params": {
+    "seed": "knqXjMbNYKZpb5f7vF4Lr2Aiqxvvt1yVzCh2e2WJQpo=",
+    "callSite": "contract.createMember",
+    "callParams": { },
+    "reference": "1tJBqpFDFVRnHghz4bFtZx5Cidnf3U5vvVqgxMBKKX.11111111111111111111111111111111",
+    "memberPubKey": "-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMSbA4KvO/jlwY+8WFDEdwhCLlsEC\\nF3/GYvu9iTWHwCctx1wTbGGjNLY03EjXyYxaf8coNbSbZeu+jXcWeMHG0A==\\n-----END PUBLIC KEY-----"
+  }
+}

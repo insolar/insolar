@@ -1,0 +1,35 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "api.call",
+  "params": {
+    "seed": "knqXjMbNYKZpb5f7vF4Lr2Aiqxvvt1yVzCh2e2WJQpo",
+    "callSite": "migration.addBurnAddresses",
+    "callParams": {
+      "burnAddresses": [
+        "0xbd8647335d76d5c7b053e769a45239e0c2f6f19a",
+        "0x7e8028a397387975fc3ccd84b4253245a7a28da6",
+        "0x513337ff17019eaf75117d7d574c6f78ac102b44",
+        "0x0ec963ff8965366ce0db256227f7666be386dfd0",
+        "0x1a3272eeeac7759adef8bc527804e9a4584fced7",
+        "0xf4a471022ff88a8cf0326087a025872d204b8fe2",
+        "0xc849e4210083975226385015f9fee7d749f01654",
+        "0xd7b9a9b2f665849c4071ad5af77d8c76aa30fb32",
+        "0x56ec87150c44dce6d9a73281fe4c5d1f9671805a",
+        "0xf4a471022ff88a8cf0326087a025872d204b8fe2",
+        "0x32c7a87c60c0417c0a5371348bbdc42e19216574",
+        "0x25d48e5f628c73f049cd0299d613e1f9c0a35256",
+        "0x77441159d634758249ce852bd5322d2d4138a8f6",
+        "0x66312c6ae9f2a90f540f662f3622c2f705852139",
+        "0x27e1d264dcce43fbe9e1b48ba1d774d9b8047353",
+        "0x27e1d264dcce43fbe9e1b48ba1d774d9b8047353",
+        "0xba262de2538f534652a98784a4586955c38434cb",
+        "0xb1298e180afd7e3450e7f1c9c46d729b070e2c65",
+        "0xd483354dc64d470d930441220e30a849a02fb7b5",
+        "0x4388d818f3973ea13b3cd2ef98197a9cfac99ef3"
+      ]
+    },
+    "reference": "1tJBqpFDFVRnHghz4bFtZx5Cidnf3U5vvVqgxMBKKX.11111111111111111111111111111111",
+    "memberPubKey": "-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMSbA4KvO/jlwY+8WFDEdwhCLlsEC\\nF3/GYvu9iTWHwCctx1wTbGGjNLY03EjXyYxaf8coNbSbZeu+jXcWeMHG0A==\\n-----END PUBLIC KEY-----"
+  }
+}

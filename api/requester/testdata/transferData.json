@@ -1,0 +1,17 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "api.call",
+  "params": {
+    "seed": "U1wGm8xl+WUFIPFLdFupTXKMXbLoJbv0nA/ImZAtHZk=",
+    "callSite": "wallet.transfer",
+    "callParams": {
+     "txId": "0xd1844c003fc2531625538800e2f7834b4913be73f34765472ad6fb547d0ce2df",
+      "amount": "10",
+      "commission": "1",
+      "toMemberRef": "6rpRnPeq7VyyzoqMC2e2qJtgWNGHi1eZ74FbxLgee9j.11111111111111111111111111111111"
+    },
+    "reference": "6rpRnPeq7VyyzoqMC2e2qJtgWNGHi1eZ74FbxLgee9j.11111111111111111111111111111111",
+    "memberPubKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEJm4goCJVLWST6mbyYKbXJIwwjOyY\nascxKxksDc1Qqk3EEwkP2sAP4AsUL/Pl/21g/83Xf93b8Ov65z82rLQ5Lw==\n-----END PUBLIC KEY-----"
+  }
+}
