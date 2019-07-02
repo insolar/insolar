@@ -52,8 +52,9 @@ package gcpv2
 
 import (
 	"context"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"sync"
+
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
