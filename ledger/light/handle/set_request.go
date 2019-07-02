@@ -29,21 +29,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SetRequest struct {
+type SetIncomingRequest struct {
 	dep     *proc.Dependencies
 	message payload.Meta
 	passed  bool
 }
 
-func NewSetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetRequest {
-	return &SetRequest{
+func NewSetIncomingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetIncomingRequest {
+	return &SetIncomingRequest{
 		dep:     dep,
 		message: msg,
 		passed:  passed,
 	}
 }
 
-func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
+func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 	msg := payload.SetIncomingRequest{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
@@ -111,7 +111,7 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	return f.Procedure(ctx, setRequest, false)
 }
 
-func (s *SetRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Virtual, f flow.Flow) error {
+func (s *SetIncomingRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Virtual, f flow.Flow) error {
 	passIfNotExecutor := !s.passed
 	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)

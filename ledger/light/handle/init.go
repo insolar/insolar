@@ -92,7 +92,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 			h := NewSetCode(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeSetIncomingRequest:
-			h := NewSetRequest(s.dep, meta, false)
+			h := NewSetIncomingRequest(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeSetResult:
 			h := NewSetResult(s.dep, meta, false)
@@ -195,7 +195,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		h := NewSetCode(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeSetIncomingRequest:
-		h := NewSetRequest(s.dep, originMeta, true)
+		h := NewSetIncomingRequest(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeSetResult:
 		h := NewSetResult(s.dep, originMeta, true)
