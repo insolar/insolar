@@ -146,7 +146,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		Cfg:   cfg,
 		state: make(map[Ref]*ObjectState),
 	}
-	res.rpc = lrCommon.NewRPC(NewRPCMethods(&res), cfg)
 
 	err := initHandlers(&res)
 	if err != nil {
@@ -219,7 +218,10 @@ func initHandlers(lr *LogicRunner) error {
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
-	bi := builtin.NewBuiltIn(lr.ArtifactManager, NewRPCMethods(lr))
+	bi := builtin.NewBuiltIn(
+		lr.ArtifactManager,
+		NewRPCMethods(lr, lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester),
+	)
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err
 	}
@@ -241,6 +243,15 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (lr *LogicRunner) Init(ctx context.Context) error {
+	lr.rpc = lrCommon.NewRPC(
+		NewRPCMethods(lr, lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester),
+		lr.Cfg,
+	)
 
 	return nil
 }
