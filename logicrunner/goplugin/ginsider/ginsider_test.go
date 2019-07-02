@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// +build slowtest
 // +build !race
 
 // TODO test failed in race test call. added build tag to ignore this test
@@ -29,6 +28,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -115,8 +115,13 @@ func (s *HealthCheckSuite) prepareGoInsider(gi *GoInsider, protocol, socket stri
 	go rpc.Accept(listener)
 }
 
+// protection from count > 1 in go test invocation
+var onceHealthCheck sync.Once
+
 func TestHealthCheck(t *testing.T) {
-	suite.Run(t, new(HealthCheckSuite))
+	onceHealthCheck.Do(func() {
+		suite.Run(t, new(HealthCheckSuite))
+	})
 }
 
 func init() {

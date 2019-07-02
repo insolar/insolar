@@ -150,15 +150,11 @@ functest_race:
 .PHONY: test_func
 test_func: functest
 
-.PHONY: test_slow
-test_slow:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/...
-
 .PHONY: test
 test: test_unit
 
 .PHONY: test_all
-test_all: test_unit test_func test_slow
+test_all: test_unit test_func
 
 .PHONY: test_with_coverage
 test_with_coverage: $(ARTIFACTS_DIR)
@@ -175,17 +171,12 @@ $(ARTIFACTS_DIR):
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage:
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic -tags slowtest $(ALL_PACKAGES)
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
 .PHONY: ci_test_unit
 ci_test_unit:
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
-
-.PHONY: ci_test_slow
-ci_test_slow:
-	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func:
