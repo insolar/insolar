@@ -112,12 +112,12 @@ func WithParentSpan(ctx context.Context, pspan TraceSpan) context.Context {
 	return context.WithValue(ctx, parentSpanKey{}, pspan)
 }
 
-func getParentSpan(ctx context.Context) (parentspan TraceSpan, ok bool) {
+func getParentSpan(ctx context.Context) (parentSpan TraceSpan, ok bool) {
 	val := ctx.Value(parentSpanKey{})
 	if val == nil {
 		return
 	}
-	parentspan, ok = val.(TraceSpan)
+	parentSpan, ok = val.(TraceSpan)
 	return
 }
 
