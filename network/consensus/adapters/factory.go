@@ -51,9 +51,12 @@
 package adapters
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phases"
 )
@@ -174,4 +177,47 @@ func (tf *TransportFactory) GetPacketBuilder(signer common.DigestSigner) core.Pa
 
 func (tf *TransportFactory) GetCryptographyFactory() core.TransportCryptographyFactory {
 	return tf.cryptographyFactory
+}
+
+type NodeProfileFactory struct {
+	keyProcessor insolar.KeyProcessor
+}
+
+func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) *NodeProfileFactory {
+	return &NodeProfileFactory{
+		keyProcessor: keyProcessor,
+	}
+}
+
+func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate common2.BriefCandidateProfile, nodeSignature common.SignatureHolder) common2.NodeIntroProfile {
+	intro := newNodeIntroduction(
+		candidate.GetNodeID(),
+		insolar.Reference{},
+		nodeSignature.CopyOfSignature(),
+	)
+
+	pk, err := npf.keyProcessor.ImportPublicKeyBinary(candidate.GetNodePK().Bytes())
+	if err != nil {
+		panic(err)
+	}
+
+	store := NewECDSAPublicKeyStore(pk.(*ecdsa.PublicKey))
+
+	return newNodeIntroProfile(
+		candidate.GetNodeID(),
+		candidate.GetNodePrimaryRole(),
+		candidate.GetNodeSpecialRoles(),
+		intro,
+		candidate.GetNodeEndpoint(),
+		store,
+	)
+}
+
+func (npf *NodeProfileFactory) UpgradeIntroProfile(profile common2.NodeIntroProfile, candidate common2.CandidateProfile) common2.NodeIntroProfile {
+	p := profile.(*NodeIntroProfile)
+	i := p.intro.(*NodeIntroduction)
+
+	i.ref = candidate.GetReference()
+
+	return p
 }

@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"

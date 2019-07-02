@@ -52,9 +52,10 @@ package phases
 
 import (
 	"context"
+	"time"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	common2 "github.com/insolar/insolar/network/consensus/common"
-	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"

@@ -76,6 +76,11 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
+var (
+	keyProcessor = platformpolicy.NewKeyProcessor()
+	scheme       = platformpolicy.NewPlatformCryptographyScheme()
+)
+
 func TestConsensusMain(t *testing.T) {
 	startedAt := time.Now()
 
@@ -103,7 +108,8 @@ func TestConsensusMain(t *testing.T) {
 
 		_ = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-			Scheme:                platformpolicy.NewPlatformCryptographyScheme(),
+			KeyProcessor:          keyProcessor,
+			Scheme:                scheme,
 			CertificateManager:    certificateManager,
 			KeyStore:              keystore.NewInplaceKeyStore(nodeInfos[i].privateKey),
 			NodeKeeper:            nodeKeeper,
@@ -185,8 +191,6 @@ func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole)
 }
 
 func generateNodeInfos(nodeIdents []nodeIdentity) []*nodeInfo {
-	keyProcessor := platformpolicy.NewKeyProcessor()
-
 	nodeInfos := make([]*nodeInfo, 0, len(nodeIdents))
 	for _, ni := range nodeIdents {
 		privateKey, _ := keyProcessor.GeneratePrivateKey()
@@ -222,7 +226,7 @@ func nodesFromInfo(nodeInfos []*nodeInfo) ([]insolar.NetworkNode, []insolar.Netw
 			isDiscovery = true
 		}
 
-		nn := newNetworkNode(i, info.addr, info.role, info.publicKey)
+		nn := newNetworkNode(i, info.addr, info.role, info.publicKey, info.privateKey)
 		nodes[i] = nn
 		if isDiscovery {
 			discoveryNodes = append(discoveryNodes, nn)
@@ -234,7 +238,7 @@ func nodesFromInfo(nodeInfos []*nodeInfo) ([]insolar.NetworkNode, []insolar.Netw
 
 const shortNodeIdOffset = 1000
 
-func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.PublicKey) node.MutableNode {
+func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.PublicKey, sk crypto.PrivateKey) node.MutableNode {
 	n := node.NewNode(
 		testutils.RandomRef(),
 		role,
@@ -244,19 +248,31 @@ func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.Publ
 	)
 	mn := n.(node.MutableNode)
 	mn.SetShortID(insolar.ShortNodeID(shortNodeIdOffset + id))
+
+	hasher := scheme.IntegrityHasher()
+	signer := scheme.DigestSigner(sk)
+
+	data := []byte{1, 3, 3, 7}
+	digest := hasher.Hash(data)
+	signature, _ := signer.Sign(digest)
+	mn.SetEvidence(node.Evidence{
+		Data:      data,
+		Digest:    digest,
+		Signature: signature.Bytes(),
+	})
+
 	return mn
 }
 
 func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) *certificate.CertificateManager {
 	pubKey := node.PublicKey()
 
-	proc := platformpolicy.NewKeyProcessor()
-	publicKey, _ := proc.ExportPublicKeyPEM(pubKey)
+	publicKey, _ := keyProcessor.ExportPublicKeyPEM(pubKey)
 
 	bootstrapNodes := make([]certificate.BootstrapNode, 0, len(discoveryNodes))
 	for _, dn := range discoveryNodes {
 		pubKey := dn.PublicKey()
-		pubKeyBuf, _ := proc.ExportPublicKeyPEM(pubKey)
+		pubKeyBuf, _ := keyProcessor.ExportPublicKeyPEM(pubKey)
 
 		bootstrapNode := certificate.NewBootstrapNode(
 			pubKey,
@@ -278,7 +294,7 @@ func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) 
 
 	// dump cert and read it again from json for correct private files initialization
 	jsonCert, _ := cert.Dump()
-	cert, _ = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
+	cert, _ = certificate.ReadCertificateFromReader(pubKey, keyProcessor, strings.NewReader(jsonCert))
 	return certificate.NewCertificateManager(cert)
 }
 

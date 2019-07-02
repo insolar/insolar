@@ -53,8 +53,9 @@ package phases
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"time"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/network/consensus/common"
 

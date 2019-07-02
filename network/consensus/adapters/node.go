@@ -62,12 +62,28 @@ import (
 )
 
 type NodeIntroduction struct {
-	node insolar.NetworkNode
+	shortID   common.ShortNodeID
+	ref       insolar.Reference
+	signature common.Signature
 }
 
-func NewNodeIntroduction(node insolar.NetworkNode) *NodeIntroduction {
+func NewNodeIntroduction(networkNode insolar.NetworkNode) *NodeIntroduction {
+	return newNodeIntroduction(
+		common.ShortNodeID(networkNode.ShortID()),
+		networkNode.ID(),
+		common.Signature{},
+		// common.NewSignature(
+		// 	common.NewBits512FromBytes(evidence.Signature),
+		// 	SHA3512Digest.SignedBy(SECP256r1Sign),
+		// ),
+	)
+}
+
+func newNodeIntroduction(shortID common.ShortNodeID, ref insolar.Reference, signature common.Signature) *NodeIntroduction {
 	return &NodeIntroduction{
-		node: node,
+		shortID:   shortID,
+		ref:       ref,
+		signature: signature,
 	}
 }
 
@@ -81,8 +97,7 @@ func (ni *NodeIntroduction) ConvertPowerRequest(request common2.PowerRequest) co
 }
 
 func (ni *NodeIntroduction) GetNodeReference() insolar.Reference {
-	// Node Reference
-	panic("implement me")
+	return ni.ref
 }
 
 func (ni *NodeIntroduction) IsAllowedPower(p common2.MemberPower) bool {
@@ -91,36 +106,63 @@ func (ni *NodeIntroduction) IsAllowedPower(p common2.MemberPower) bool {
 }
 
 func (ni *NodeIntroduction) GetShortNodeID() common.ShortNodeID {
-	return common.ShortNodeID(ni.node.ShortID())
+	return ni.shortID
 }
 
 func (ni *NodeIntroduction) GetClaimEvidence() common.SignedEvidenceHolder {
-	// TODO: do something with sign
+	// TODO: return ni.signature
 	return nil
 }
 
 type NodeIntroProfile struct {
-	node        insolar.NetworkNode
-	isDiscovery bool
+	shortID     common.ShortNodeID
+	primaryRole common2.NodePrimaryRole
+	specialRole common2.NodeSpecialRole
+	intro       common2.NodeIntroduction
+	endpoint    common.NodeEndpoint
+	store       common.PublicKeyStore
 }
 
 func NewNodeIntroProfile(node insolar.NetworkNode, certificate insolar.Certificate) *NodeIntroProfile {
+	specialRole := common2.SpecialRoleNoRole
+	if utils.IsDiscovery(node.ID(), certificate) {
+		specialRole = common2.SpecialRoleDiscovery
+	}
+
+	return newNodeIntroProfile(
+		common.ShortNodeID(node.ShortID()),
+		StaticRoleToPrimaryRole(node.Role()),
+		specialRole,
+		NewNodeIntroduction(node),
+		NewNodeEndpoint(node.Address()),
+		NewECDSAPublicKeyStore(node.PublicKey().(*ecdsa.PublicKey)),
+	)
+}
+
+func newNodeIntroProfile(
+	shortID common.ShortNodeID,
+	primaryRole common2.NodePrimaryRole,
+	specialRole common2.NodeSpecialRole,
+	intro common2.NodeIntroduction,
+	endpoint common.NodeEndpoint,
+	store common.PublicKeyStore,
+) *NodeIntroProfile {
 	return &NodeIntroProfile{
-		node:        node,
-		isDiscovery: utils.IsDiscovery(node.ID(), certificate),
+		shortID:     shortID,
+		primaryRole: primaryRole,
+		specialRole: specialRole,
+		intro:       intro,
+		endpoint:    endpoint,
+		store:       store,
 	}
 }
 
 func (nip *NodeIntroProfile) GetPrimaryRole() common2.NodePrimaryRole {
-	return StaticRoleToPrimaryRole(nip.node.Role())
+	return nip.primaryRole
 }
 
 func (nip *NodeIntroProfile) GetSpecialRoles() common2.NodeSpecialRole {
-	if nip.isDiscovery {
-		return common2.SpecialRoleDiscovery
-	}
-
-	return common2.SpecialRoleNoRole
+	return nip.specialRole
 }
 
 func (nip *NodeIntroProfile) HasIntroduction() bool {
@@ -128,35 +170,38 @@ func (nip *NodeIntroProfile) HasIntroduction() bool {
 }
 
 func (nip *NodeIntroProfile) GetIntroduction() common2.NodeIntroduction {
-	return NewNodeIntroduction(nip.node)
+	return nip.intro
 }
 
 func (nip *NodeIntroProfile) GetDefaultEndpoint() common.NodeEndpoint {
-	return &NodeEndpoint{
-		name: common.HostAddress(nip.node.Address()),
-	}
+	return nip.endpoint
 }
 
 func (nip *NodeIntroProfile) GetNodePublicKeyStore() common.PublicKeyStore {
-	ecdsaPublicKey := nip.node.PublicKey().(*ecdsa.PublicKey)
-	return NewECDSAPublicKeyStore(ecdsaPublicKey)
+	return nip.store
 }
 
 func (nip *NodeIntroProfile) IsAcceptableHost(from common.HostIdentityHolder) bool {
-	endpoint := nip.GetDefaultEndpoint().GetNameAddress()
-	return endpoint.Equals(from.GetHostAddress())
+	address := nip.endpoint.GetNameAddress()
+	return address.Equals(from.GetHostAddress())
 }
 
 func (nip *NodeIntroProfile) GetShortNodeID() common.ShortNodeID {
-	return common.ShortNodeID(nip.node.ShortID())
+	return nip.shortID
 }
 
 func (nip *NodeIntroProfile) String() string {
-	return fmt.Sprintf("{sid:%d, node:%s}", nip.node.ShortID(), nip.node.ID().String())
+	return fmt.Sprintf("{sid:%d, node:%s}", nip.shortID, nip.intro.GetNodeReference().String())
 }
 
 type NodeEndpoint struct {
 	name common.HostAddress
+}
+
+func NewNodeEndpoint(address string) *NodeEndpoint {
+	return &NodeEndpoint{
+		name: common.HostAddress(address),
+	}
 }
 
 func (p *NodeEndpoint) GetEndpointType() common.NodeEndpointType {
@@ -181,21 +226,37 @@ func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Ce
 }
 
 func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
-	intro := common2.NodeIntroProfile(profile)
-	nn := intro.GetIntroduction().(*NodeIntroduction).node
+	store := profile.GetNodePublicKeyStore()
+	introduction := profile.GetIntroduction()
 
 	networkNode := node.NewNode(
-		nn.ID(),
+		introduction.GetNodeReference(),
 		PrimaryRoleToStaticRole(profile.GetPrimaryRole()),
-		nn.PublicKey(),
+		store.(*ECDSAPublicKeyStore).publicKey,
 		profile.GetDefaultEndpoint().GetNameAddress().String(),
-		nn.Version(),
+		"",
 	)
 
 	mutableNode := networkNode.(node.MutableNode)
 
-	mutableNode.SetShortID(nn.ShortID())
+	mutableNode.SetShortID(insolar.ShortNodeID(profile.GetShortNodeID()))
 	mutableNode.SetState(MembershipStateToNodeState(profile.GetState()))
+
+	// evidence := introduction.GetClaimEvidence().GetEvidence()
+	//
+	// buf := bytes.NewBuffer(nil)
+	// _, err := evidence.WriteTo(buf)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	//
+	// signedDigest := evidence.GetSignedDigest()
+	//
+	// mutableNode.SetEvidence(node.Evidence{
+	// 	Data:      buf.Bytes(),
+	// 	Digest:    signedDigest.GetDigest().Bytes(),
+	// 	Signature: signedDigest.GetSignature().Bytes(),
+	// })
 
 	return networkNode
 }

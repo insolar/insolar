@@ -52,8 +52,9 @@ package tests
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/insolar"
 	"math"
+
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
