@@ -46,7 +46,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	msg := payload.GetObject{}
 	err := msg.Unmarshal(s.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal GetObject meta")
+		return errors.Wrap(err, "failed to unmarshal GetObject message")
 	}
 
 	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())

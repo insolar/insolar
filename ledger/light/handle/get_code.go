@@ -44,7 +44,7 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 	msg := payload.GetCode{}
 	err := msg.Unmarshal(s.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal GetCode meta")
+		return errors.Wrap(err, "failed to unmarshal GetCode message")
 	}
 
 	passIfNotFound := !s.passed

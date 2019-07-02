@@ -26,32 +26,32 @@ import (
 )
 
 type UpdateObject struct {
-	dep       *proc.Dependencies
-	msg       *message.UpdateObject
-	wmmessage payload.Meta
+	dep  *proc.Dependencies
+	msg  *message.UpdateObject
+	meta payload.Meta
 }
 
-func NewUpdateObject(dep *proc.Dependencies, wmmessage payload.Meta, msg *message.UpdateObject) *UpdateObject {
+func NewUpdateObject(dep *proc.Dependencies, meta payload.Meta, msg *message.UpdateObject) *UpdateObject {
 	return &UpdateObject{
-		dep:       dep,
-		msg:       msg,
-		wmmessage: wmmessage,
+		dep:  dep,
+		msg:  msg,
+		meta: meta,
 	}
 }
 
 func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.msg.Object.Record(), flow.Pulse(ctx), s.wmmessage)
+	jet := proc.NewFetchJet(*s.msg.Object.Record(), flow.Pulse(ctx), s.meta)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.wmmessage)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.meta)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
-	update := proc.NewUpdateObject(jet.Result.Jet, s.msg, flow.Pulse(ctx), s.wmmessage)
+	update := proc.NewUpdateObject(jet.Result.Jet, s.msg, flow.Pulse(ctx), s.meta)
 	s.dep.UpdateObject(update)
 	return f.Procedure(ctx, update, false)
 }

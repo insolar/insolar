@@ -62,65 +62,6 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	return err
 }
 
-func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
-	meta := payload.Meta{}
-	err := meta.Unmarshal(s.message.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal meta")
-	}
-	s.meta = meta
-
-	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
-	if err != nil {
-		return errors.Wrap(err, "can't deserialize payload")
-	}
-
-	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
-	defer span.End()
-
-	msgType := s.message.Metadata.Get(wbus.MetaType)
-	switch msgType {
-	case insolar.TypeSetBlob.String():
-		msg := parcel.Message().(*message.SetBlob)
-		h := NewSetBlob(s.dep, meta, msg)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetRequest.String():
-		msg := parcel.Message().(*message.GetRequest)
-		h := NewGetRequest(s.dep, meta, msg.Request)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeUpdateObject.String():
-		msg := parcel.Message().(*message.UpdateObject)
-		h := NewUpdateObject(s.dep, meta, msg)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetChildren.String():
-		h := NewGetChildren(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetDelegate.String():
-		h := NewGetDelegate(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetPendingRequests.String():
-		h := NewGetPendingRequests(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetPendingRequestID.String():
-		h := NewGetPendingRequestID(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeRegisterChild.String():
-		msg := parcel.Message().(*message.RegisterChild)
-		h := NewRegisterChild(s.dep, meta, msg, parcel.Pulse())
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetJet.String():
-		msg := parcel.Message().(*message.GetJet)
-		h := NewGetJet(s.dep, meta, msg)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeHotRecords.String():
-		msg := parcel.Message().(*message.HotData)
-		h := NewHotData(s.dep, meta, msg)
-		return f.Handle(ctx, h.Present)
-	default:
-		return fmt.Errorf("no handler for meta type (parcel) %s", msgType)
-	}
-}
-
 func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	msgType := s.message.Metadata.Get(wbus.MetaType)
 	if msgType != "" {
@@ -170,12 +111,72 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case payload.TypeError:
 		err = f.Handle(ctx, NewError(s.message).Present)
 	default:
-		err = fmt.Errorf("no handler for meta type %s", payloadType.String())
+		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
 	if err != nil {
 		s.replyError(ctx, meta, err)
 	}
 	return err
+}
+
+func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
+	meta := payload.Meta{}
+	err := meta.Unmarshal(s.message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+	s.meta = meta
+
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize payload")
+	}
+
+	msgType := s.message.Metadata.Get(wbus.MetaType)
+	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
+	defer span.End()
+
+	switch msgType {
+	case insolar.TypeSetBlob.String():
+		msg := parcel.Message().(*message.SetBlob)
+		h := NewSetBlob(s.dep, meta, msg)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetRequest.String():
+		msg := parcel.Message().(*message.GetRequest)
+		h := NewGetRequest(s.dep, meta, msg.Request)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeUpdateObject.String():
+		msg := parcel.Message().(*message.UpdateObject)
+		h := NewUpdateObject(s.dep, meta, msg)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetChildren.String():
+		h := NewGetChildren(s.dep, meta, parcel)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetDelegate.String():
+		h := NewGetDelegate(s.dep, meta, parcel)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetPendingRequests.String():
+		h := NewGetPendingRequests(s.dep, meta, parcel)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetPendingRequestID.String():
+		h := NewGetPendingRequestID(s.dep, meta, parcel)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeRegisterChild.String():
+		msg := parcel.Message().(*message.RegisterChild)
+		h := NewRegisterChild(s.dep, meta, msg, parcel.Pulse())
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetJet.String():
+		msg := parcel.Message().(*message.GetJet)
+		h := NewGetJet(s.dep, meta, msg)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeHotRecords.String():
+		msg := parcel.Message().(*message.HotData)
+		h := NewHotData(s.dep, meta, msg)
+		return f.Handle(ctx, h.Present)
+	default:
+		return fmt.Errorf("no handler for message type %s (from parcel)", msgType)
+	}
 }
 
 func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) error {
@@ -224,7 +225,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		h := NewSetResult(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
-		err = fmt.Errorf("no handler for meta type %s", payloadType.String())
+		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
 	if err != nil {
 		s.replyError(ctx, originMeta, err)
