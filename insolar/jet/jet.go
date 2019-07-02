@@ -41,7 +41,7 @@ type Accessor interface {
 type Modifier interface {
 	// Update updates jet tree for specified pulse.
 	Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error
-	// Split performs jet split and returns resulting jet ids.
+	// Split performs jet split and returns resulting jet ids. Always set Active flag to true for leafs.
 	Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error)
 	// Clone copies tree from one pulse to another. Use it to copy the past tree into new pulse.
 	Clone(ctx context.Context, from, to insolar.PulseNumber) error

@@ -64,7 +64,7 @@ type LogicRunnerCommonTestSuite struct {
 	jc  *jet.CoordinatorMock
 	mm  *mmanager
 	lr  *LogicRunner
-	le  *logicExecutor
+	re  *RequestsExecutorMock
 	es  ExecutionState
 	ps  *pulse.AccessorMock
 	mle *testutils.MachineLogicExecutorMock
@@ -80,7 +80,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.am = artifacts.NewClientMock(suite.mc)
 	suite.dc = artifacts.NewDescriptorsCacheMock(suite.mc)
 	suite.mm = &mmanager{}
-	suite.le = &logicExecutor{DescriptorsCache: suite.dc, MachinesManager: suite.mm}
+	suite.re = NewRequestsExecutorMock(suite.mc)
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
@@ -98,7 +98,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
 	suite.lr.NodeNetwork = suite.nn
-	suite.lr.LogicExecutor = suite.le
+	suite.lr.RequestsExecutor = suite.re
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
@@ -716,63 +716,6 @@ func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 	}
 }
 
-func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
-	cRef := testutils.RandomRef()
-	cDesc := artifacts.NewCodeDescriptorMock(suite.mc)
-	cDesc.RefMock.Return(&cRef)
-	cDesc.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
-
-	pRef := testutils.RandomRef()
-	pDesc := artifacts.NewObjectDescriptorMock(suite.mc)
-	pDesc.HeadRefMock.Return(&pRef)
-
-	oDesc := artifacts.NewObjectDescriptorMock(suite.mc)
-	oDesc.ParentMock.Return(nil)
-
-	suite.am.GetObjectMock.Return(oDesc, nil)
-	suite.am.UpdateObjectMock.Return(nil)
-
-	randRef := testutils.RandomRef()
-
-	es := NewExecutionState(randRef)
-	es.Broker = NewBroker(suite.ctx, 1)
-	suite.dc.ByObjectDescriptorMock.Return(pDesc, cDesc, nil)
-	data := []byte(testutils.RandomString())
-	oDesc.MemoryMock.Return(data)
-
-	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
-	mle.CallMethodMock.Return(data, nil, nil)
-
-	suite.mm.Executors[insolar.MachineTypeBuiltin] = mle
-
-	request := &record.IncomingRequest{
-		Object: &randRef,
-		Method: "some",
-	}
-
-	current := &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &randRef,
-		Request:      request,
-	}
-	es.CurrentList.Set(randRef, current)
-
-	// In this case Update isn't send to ledger (objects data/newData are the same)
-	suite.am.RegisterResultMock.Return(nil, nil)
-
-	_, err := suite.lr.executeLogic(suite.ctx, current)
-	suite.Require().NoError(err)
-	suite.Require().Equal(uint64(0), suite.am.UpdateObjectCounter)
-
-	// In this case Update is send to ledger (objects data/newData are different)
-	newData := make([]byte, 5, 5)
-	mle.CallMethodMock.Return(newData, nil, nil)
-
-	_, err = suite.lr.executeLogic(suite.ctx, current)
-	suite.Require().NoError(err)
-	suite.Require().Equal(uint64(1), suite.am.UpdateObjectCounter)
-}
-
 func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessage() {
 	suite.T().Skip("we disabled handling of this notification for now")
 
@@ -966,15 +909,8 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		return true, nil
 	}
 
-	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
-	err := suite.mm.RegisterExecutor(insolar.MachineTypeBuiltin, mle)
-	suite.Require().NoError(err)
-
-	mle.CallMethodMock.Return([]byte{1, 2, 3}, []byte{}, nil)
-
 	nodeMock := network.NewNetworkNodeMock(suite.T())
 	nodeMock.IDMock.Return(meRef)
-	suite.nn.GetOriginMock.Return(nodeMock)
 
 	od := artifacts.NewObjectDescriptorMock(suite.T())
 	od.PrototypeMock.Return(&protoRef, nil)
@@ -990,20 +926,6 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
 	cd.RefMock.Return(&codeRef)
 
-	suite.am.GetObjectFunc = func(
-		ctx context.Context, obj insolar.Reference,
-	) (artifacts.ObjectDescriptor, error) {
-		switch obj {
-		case objectRef:
-			return od, nil
-		case protoRef:
-			return pd, nil
-		}
-		return nil, errors.New("unexpected call")
-	}
-
-	suite.dc.ByObjectDescriptorMock.Return(pd, cd, nil)
-
 	suite.am.HasPendingRequestsMock.Return(false, nil)
 
 	suite.am.RegisterRequestMock.Set(func(ctx context.Context, r record.IncomingRequest) (*insolar.ID, error) {
@@ -1011,24 +933,12 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		return &reqId, nil
 	})
 
-	resId := testutils.RandomID()
-	suite.am.RegisterResultMock.Return(&resId, nil)
+	suite.re.ExecuteAndSaveMock.Return(nil, nil)
+	suite.re.SendReplyMock.Return()
 
 	num := 100
 	wg := sync.WaitGroup{}
-	wg.Add(num * 2)
-
-	suite.mb.SendFunc = func(
-		ctx context.Context, msg insolar.Message, opts *insolar.MessageSendOptions,
-	) (insolar.Reply, error) {
-		switch msg.Type() {
-		case insolar.TypeReturnResults:
-			wg.Done()
-			return &reply.OK{}, nil
-		}
-		suite.Require().Fail(fmt.Sprintf("unexpected message send: %#v", msg))
-		return nil, errors.New("unexpected message")
-	}
+	wg.Add(num)
 
 	for i := 0; i < num; i++ {
 		go func(i int) {
@@ -1062,9 +972,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	objectRef := testutils.RandomRef()
-	parentRef := testutils.RandomRef()
 	protoRef := testutils.RandomRef()
-	codeRef := testutils.RandomRef()
 
 	meRef := testutils.RandomRef()
 	notMeRef := testutils.RandomRef()
@@ -1083,10 +991,6 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 		defer lck.Unlock()
 		return insolar.Pulse{PulseNumber: pn}, nil
 	}
-
-	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
-	err := suite.mm.RegisterExecutor(insolar.MachineTypeBuiltin, mle)
-	suite.Require().NoError(err)
 
 	type whenType int
 	const (
@@ -1128,7 +1032,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			name: "pulse change in CallMethod",
 			when: whenCallMethod,
 			messagesExpected: []insolar.MessageType{
-				insolar.TypeExecutorResults, insolar.TypeReturnResults, insolar.TypePendingFinished, insolar.TypeStillExecuting,
+				insolar.TypeExecutorResults, insolar.TypePendingFinished, insolar.TypeStillExecuting,
 			},
 			pendingInExecutorResults:  message.InPending,
 			queueLenInExecutorResults: 0,
@@ -1205,51 +1109,17 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			if test.when > whenHasPendingRequest {
-				mle.CallMethodFunc = func(
-					ctx context.Context, lctx *insolar.LogicCallContext, r insolar.Reference,
-					mem []byte, method string, args insolar.Arguments,
-				) ([]byte, insolar.Arguments, error) {
+				suite.re.ExecuteAndSaveFunc = func(
+					ctx context.Context, transcript *Transcript,
+				) (insolar.Reply, error) {
 					if test.when == whenCallMethod {
 						changePulse()
 					}
 
-					return []byte{1, 2, 3}, []byte{}, nil
+					return &reply.CallMethod{Result: []byte{3, 2, 1}}, nil
 				}
 
-				nodeMock := network.NewNetworkNodeMock(suite.T())
-				nodeMock.IDMock.Return(meRef)
-				suite.nn.GetOriginMock.Return(nodeMock)
-
-				od := artifacts.NewObjectDescriptorMock(suite.T())
-				od.PrototypeMock.Return(&protoRef, nil)
-				od.MemoryMock.Return([]byte{1, 2, 3})
-				od.ParentMock.Return(&parentRef)
-				od.HeadRefMock.Return(&objectRef)
-
-				pd := artifacts.NewObjectDescriptorMock(suite.T())
-				pd.CodeMock.Return(&codeRef, nil)
-				pd.HeadRefMock.Return(&protoRef)
-
-				cd := artifacts.NewCodeDescriptorMock(suite.T())
-				cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
-				cd.RefMock.Return(&codeRef)
-
-				suite.am.GetObjectFunc = func(
-					ctx context.Context, obj insolar.Reference,
-				) (artifacts.ObjectDescriptor, error) {
-					switch obj {
-					case objectRef:
-						return od, nil
-					case protoRef:
-						return pd, nil
-					}
-					return nil, errors.New("unexpected call")
-				}
-
-				suite.dc.ByObjectDescriptorMock.Return(pd, cd, nil)
-
-				resId := testutils.RandomID()
-				suite.am.RegisterResultMock.Return(&resId, nil)
+				suite.re.SendReplyMock.Return()
 			}
 
 			wg := sync.WaitGroup{}
@@ -1329,41 +1199,8 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	es.pending = message.NotPending
 	os.SetExecutionState(es)
 
-	// prepare prototype/code descriptors to run needed executor
-	cRef := testutils.RandomRef()
-	cDesc := artifacts.NewCodeDescriptorMock(s.mc)
-	cDesc.RefMock.Return(&cRef)
-	cDesc.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
-
-	pRef := testutils.RandomRef()
-	pDesc := artifacts.NewObjectDescriptorMock(s.mc)
-	pDesc.HeadRefMock.Return(&pRef)
-
-	oDesc := artifacts.NewObjectDescriptorMock(s.mc)
-	oDesc.ParentMock.Return(nil)
-	oDesc.MemoryMock.Return(make([]byte, 0))
-
-	s.dc.ByObjectDescriptorMock.Return(pDesc, cDesc, nil)
-	s.am.GetObjectMock.Set(func(p context.Context, p1 insolar.Reference) (r artifacts.ObjectDescriptor, r1 error) {
-		if p1.Equal(objectRef) {
-			return oDesc, nil
-		} else if p1.Equal(pRef) {
-			return pDesc, nil
-		} else {
-			panic("unexpected")
-		}
-	})
-
-	s.am.RegisterResultMock.Return(nil, nil)
-
-	s.mb.SendMock.Return(nil, nil)
-	nodeMock := network.NewNetworkNodeMock(s.mc)
-	nodeMock.IDMock.Return(objectRef)
-	s.nn.GetOriginMock.Return(nodeMock)
-
 	// prepare request objects
 	parentRef := gen.Reference()
-
 	mutableRequestRef := gen.Reference()
 	immutableRequestRef1 := gen.Reference()
 	immutableRequestRef2 := gen.Reference()
@@ -1410,26 +1247,25 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	// 3) immutable 2 will start execution and will ping on channel 2 and exit
 	// 4) immutable 1 will ping on channel 1 and exit
 	// 5) mutable request will continue execution and exit
-	mle := testutils.NewMachineLogicExecutorMock(s.mc)
-	s.mm.Executors[insolar.MachineTypeBuiltin] = mle
 
 	var mutableChan = make(chan interface{}, 1)
 	var immutableChan chan interface{} = nil
 	var immutableLock = sync.Mutex{}
-	mle.CallMethodMock.Set(func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 []byte,
-		p4 string, p5 insolar.Arguments) (r []byte, r1 insolar.Arguments, r2 error) {
 
-		if p1.Request.Equal(mutableRequestRef) {
+	s.re.SendReplyMock.Return()
+	s.re.ExecuteAndSaveMock.Set(func(ctx context.Context, transcript *Transcript) (insolar.Reply, error) {
+
+		if transcript.RequestRef.Equal(mutableRequestRef) {
 			log.Debug("mutableChan 1")
 			select {
 			case _ = <-mutableChan:
 				log.Info("mutable got notifications")
-				return make([]byte, 0), nil, nil
+				return &reply.CallMethod{Result: []byte{1,2,3}}, nil
 			case <-time.After(2 * time.Minute):
 				panic("timeout on waiting for immutable request 1 pinged us")
-				return make([]byte, 0), nil, nil
+				return &reply.CallMethod{Result: []byte{1,2,3}}, nil
 			}
-		} else if p1.Request.Equal(immutableRequestRef1) || p1.Request.Equal(immutableRequestRef2) {
+		} else if transcript.RequestRef.Equal(immutableRequestRef1) || transcript.RequestRef.Equal(immutableRequestRef2) {
 			newChan := false
 			immutableLock.Lock()
 			if immutableChan == nil {
@@ -1443,10 +1279,10 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 				case _ = <-immutableChan:
 					mutableChan <- struct{}{}
 					log.Info("notify mutable chan and exit")
-					return make([]byte, 0), nil, nil
+					return &reply.CallMethod{Result: []byte{1,2,3}}, nil
 				case <-time.After(2 * time.Minute):
 					panic("timeout on waiting for immutable request 2 pinged us")
-					return make([]byte, 0), nil, nil
+					return &reply.CallMethod{Result: []byte{1,2,3}}, nil
 				}
 			} else {
 				log.Info("notify immutable chan and exit")
@@ -1455,7 +1291,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		} else {
 			panic("unreachable")
 		}
-		return make([]byte, 0), nil, nil
+		return &reply.CallMethod{Result: []byte{1,2,3}}, nil
 	})
 
 	// do not start ledger checking for requests
@@ -1478,43 +1314,10 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 	es.pending = message.NotPending
 	os.SetExecutionState(es)
 
-	// prepare prototype/code descriptors to run needed executor
-	cRef := testutils.RandomRef()
-	cDesc := artifacts.NewCodeDescriptorMock(s.mc)
-	cDesc.RefMock.Return(&cRef)
-	cDesc.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
-
-	pRef := testutils.RandomRef()
-	pDesc := artifacts.NewObjectDescriptorMock(s.mc)
-	pDesc.HeadRefMock.Return(&pRef)
-
-	oDesc := artifacts.NewObjectDescriptorMock(s.mc)
-	oDesc.ParentMock.Return(nil)
-	oDesc.MemoryMock.Return(make([]byte, 0))
-
-	s.dc.ByObjectDescriptorMock.Return(pDesc, cDesc, nil)
-	s.am.GetObjectMock.Set(func(p context.Context, p1 insolar.Reference) (r artifacts.ObjectDescriptor, r1 error) {
-		if p1.Equal(objectRef) {
-			return oDesc, nil
-		} else if p1.Equal(pRef) {
-			return pDesc, nil
-		} else {
-			panic("unexpected")
-		}
-	})
-
-	s.am.RegisterResultMock.Return(nil, nil)
-
-	s.mb.SendMock.Return(nil, nil)
-	nodeMock := network.NewNetworkNodeMock(s.mc)
-	nodeMock.IDMock.Return(objectRef)
-	s.nn.GetOriginMock.Return(nodeMock)
-
 	// prepare request objects
 	parentRef := gen.Reference()
 
 	immutableRequestRef1 := gen.Reference()
-	immutableRequestRef2 := gen.Reference()
 
 	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 
@@ -1529,40 +1332,16 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, false, true)
 	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
 
-	immutableMsg2 := message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			ReturnMode:   record.ReturnResult,
-			Object:       &objectRef,
-			APIRequestID: utils.RandTraceID(),
-			Immutable:    true,
-		},
-	}
-	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, false, true)
-	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulseObject, parentRef)
-
-	mle := testutils.NewMachineLogicExecutorMock(s.mc)
-	s.mm.Executors[insolar.MachineTypeBuiltin] = mle
-
-	mle.CallMethodMock.Set(func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 []byte,
-		p4 string, p5 insolar.Arguments) (r []byte, r1 insolar.Arguments, r2 error) {
-
-		if p1.Request.Equal(immutableRequestRef1) {
-			return make([]byte, 1), nil, nil
-		} else if p1.Request.Equal(immutableRequestRef2) {
-			es.CurrentList.Get(*p1.Request).Deactivate = true
-			return make([]byte, 0), nil, nil
-		}
-		panic("unexpected")
-	})
+	s.re.ExecuteAndSaveMock.Return(&reply.CallMethod{Result: []byte{1, 2, 3}}, nil)
+	s.re.SendReplyMock.Return()
 
 	// do not start ledger checking for requests
 	es.Broker.processFuncArgs.(*ExecuteTranscriptArgs).ledgerChecked.Do(func() {})
 
-	es.Broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
+	es.Broker.Put(s.ctx, true, immutableTranscript1)
 
-	checkFinished := func() bool { return es.Broker.finished.Len() >= 2 }
+	checkFinished := func() bool { return es.Broker.finished.Len() >= 1 }
 	s.True(wait(checkFinished))
-	s.Equal(uint64(2), s.am.RegisterResultCounter)
 }
 
 func TestLogicRunner(t *testing.T) {

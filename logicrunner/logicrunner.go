@@ -41,7 +41,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -138,7 +137,7 @@ type LogicRunner struct {
 	ArtifactManager            artifacts.Client                   `inject:""`
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
-	LogicExecutor              LogicExecutor                      `inject:""`
+	RequestsExecutor           RequestsExecutor                   `inject:""`
 	MachinesManager            MachinesManager                    `inject:""`
 
 	Cfg *configuration.LogicRunner
@@ -420,95 +419,6 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 				inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
 			}
 		}()
-	}
-}
-
-func (lr *LogicRunner) sendRequestReply(
-	ctx context.Context, current *Transcript, re insolar.Reply, errstr string,
-) {
-	if current.Request.ReturnMode != record.ReturnResult {
-		return
-	}
-
-	target := *current.RequesterNode
-	request := *current.RequestRef
-	seq := current.Request.Sequence
-
-	go func() {
-		inslogger.FromContext(ctx).Debugf("Sending Method Results for %#v", request)
-
-		_, err := lr.MessageBus.Send(
-			ctx,
-			&message.ReturnResults{
-				Caller:   lr.NodeNetwork.GetOrigin().ID(),
-				Target:   target,
-				Sequence: seq,
-				Reply:    re,
-				Error:    errstr,
-			},
-			&insolar.MessageSendOptions{
-				Receiver: &target,
-			},
-		)
-		if err != nil {
-			inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
-		}
-	}()
-}
-
-func (lr *LogicRunner) executeLogic(ctx context.Context, current *Transcript) (insolar.Reply, error) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeLogic")
-	defer span.End()
-
-	if current.Request.CallType == record.CTMethod {
-		objDesc, err := lr.ArtifactManager.GetObject(ctx, *current.Request.Object)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object")
-		}
-		current.ObjectDescriptor = objDesc
-	}
-
-	res, err := lr.LogicExecutor.Execute(ctx, current)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't executeAndReply request")
-	}
-
-	am := lr.ArtifactManager
-	request := current.Request
-
-	switch {
-	case res.Activation:
-		err = lr.ArtifactManager.ActivateObject(
-			ctx, *current.RequestRef, *request.Base, *request.Prototype,
-			request.CallType == record.CTSaveAsDelegate,
-			res.NewMemory,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't activate object")
-		}
-		return &reply.CallConstructor{Object: current.RequestRef}, err
-	case res.Deactivation:
-		err := am.DeactivateObject(
-			ctx, *current.RequestRef, current.ObjectDescriptor, res.Result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't deactivate object")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
-	case res.NewMemory != nil:
-		err := am.UpdateObject(
-			ctx, *current.RequestRef, current.ObjectDescriptor, res.NewMemory, res.Result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't update object")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
-	default:
-		_, err = am.RegisterResult(ctx, *request.Object, *current.RequestRef, res.Result)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't save results")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
 	}
 }
 

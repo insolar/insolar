@@ -66,6 +66,7 @@ func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual 
 	}
 	return nil
 }
+
 func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
 	s.Lock()
 	defer s.Unlock()
