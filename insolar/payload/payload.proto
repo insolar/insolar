@@ -106,6 +106,7 @@ message Activate {
     uint32 Polymorph = 16;
 
     bytes Record = 20;
+    bytes Result = 21;
 }
 
 message GetFilament {
