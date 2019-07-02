@@ -164,7 +164,7 @@ type CallMethodReply struct {
 func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *CallMethodReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
-	inslog.Infof("[ ContractService.CallMethod ] Incoming request: %s", args.Method)
+	inslog.Infof("[ ContractService.CallMethod ] Incoming request: %s", r.RequestURI)
 
 	if len(args.ObjectRefString) == 0 {
 		return errors.New("params.ObjectRefString is missing")

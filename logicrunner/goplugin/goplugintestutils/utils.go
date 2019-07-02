@@ -475,6 +475,8 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 	return nil
 }
 
+// Using registerRequest without VM is a tmp solution while there is no logic of contract uploading in VM
+// Because of this we need copy some logic in test code
 func (cb *ContractsBuilder) registerRequest(ctx context.Context, request record.IncomingRequest) (*insolar.ID, error) {
 	var err error
 	var lastPulse insolar.PulseNumber
