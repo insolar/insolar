@@ -17,8 +17,6 @@
 package logicrunner
 
 import (
-	"fmt"
-	"runtime/debug"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -30,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
@@ -41,20 +38,6 @@ type RPCMethods struct {
 
 func NewRPCMethods(lr *LogicRunner) *RPCMethods {
 	return &RPCMethods{lr: lr}
-}
-
-func recoverRPC(err *error) {
-	if r := recover(); r != nil {
-		// Global logger is used because there is no access to context here
-		log.Errorf("Recovered panic:\n%s", string(debug.Stack()))
-		if err != nil {
-			if *err == nil {
-				*err = errors.New(fmt.Sprint(r))
-			} else {
-				*err = errors.New(fmt.Sprint(*err, r))
-			}
-		}
-	}
 }
 
 func (m *RPCMethods) getCurrent(
@@ -78,9 +61,7 @@ func (m *RPCMethods) getCurrent(
 }
 
 // GetCode is an RPC retrieving a code by its reference
-func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
-	defer recoverRPC(&err)
-
+func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
@@ -102,9 +83,7 @@ func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCod
 }
 
 // RouteCall routes call from a contract to a contract through event bus.
-func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
-	defer recoverRPC(&err)
-
+func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
@@ -157,9 +136,7 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
-	defer recoverRPC(&err)
-
+func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
@@ -198,9 +175,7 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 }
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
-	defer recoverRPC(&err)
-
+func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
@@ -244,10 +219,8 @@ func (m *RPCMethods) GetObjChildrenIterator(
 	req rpctypes.UpGetObjChildrenIteratorReq,
 	rep *rpctypes.UpGetObjChildrenIteratorResp,
 ) (
-	err error,
+	error,
 ) {
-	defer recoverRPC(&err)
-
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
@@ -327,9 +300,7 @@ func (m *RPCMethods) GetObjChildrenIterator(
 }
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
-	defer recoverRPC(&err)
-
+func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
@@ -346,9 +317,7 @@ func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.Up
 }
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
-	defer recoverRPC(&err)
-
+func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
 	current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
