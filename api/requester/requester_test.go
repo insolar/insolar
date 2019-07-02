@@ -74,12 +74,12 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var respData = Result{}
+	var respData = Result{ContractResult: map[string]interface{}{}}
 
 	if params.Method == "contract.createMember" {
-		respData.ContractResult = TESTREFERENCE
+		respData.ContractResult["reference"] = TESTREFERENCE
 	} else {
-		respData.ContractResult = TESTSEED
+		respData.ContractResult["seed"] = TESTSEED
 	}
 
 	writeReponse(response, respData)
@@ -215,7 +215,7 @@ func TestGetResponseBody(t *testing.T) {
 	result := Result{}
 	_ = json.Unmarshal(data, &result)
 	require.NoError(t, err)
-	require.Contains(t, result.ContractResult, "VGVzdA==")
+	require.Contains(t, result.ContractResult["seed"], "VGVzdA==")
 }
 
 func TestSetVerbose(t *testing.T) {

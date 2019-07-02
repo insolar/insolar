@@ -34,7 +34,7 @@ func TestNodeCert(t *testing.T) {
 		"jsonrpc": "2.0",
 		"method":  "cert.get",
 		"id":      1,
-		"params":  map[string]string{"ref": res.(string)},
+		"params":  map[string]string{"ref": res["reference"].(string)},
 	})
 
 	require.NotEqual(t, "", string(body))

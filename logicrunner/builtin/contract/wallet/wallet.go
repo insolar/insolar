@@ -40,7 +40,7 @@ func New(balance string) (*Wallet, error) {
 }
 
 // Transfer transfers money to given wallet.
-func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interface{}, error) {
+func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (map[string]interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
@@ -69,7 +69,7 @@ func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interf
 
 	acceptErr := toWallet.Accept(amount.String())
 	if acceptErr == nil {
-		return "", nil
+		return map[string]interface{}{"commission": "10"}, nil
 	}
 
 	newBalance, err = safemath.Add(balance, amount)

@@ -31,7 +31,7 @@ func getNodeRefSignedCall(params map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return res.(string), nil
+	return res["reference"].(string), nil
 }
 
 func TestGetNodeRefByPublicKey(t *testing.T) {

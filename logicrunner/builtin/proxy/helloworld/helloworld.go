@@ -169,14 +169,14 @@ func (r *HelloWorld) GetCode() (insolar.Reference, error) {
 }
 
 // Greet is proxy generated method
-func (r *HelloWorld) Greet(name string) (interface{}, error) {
+func (r *HelloWorld) Greet(name string) (map[string]interface{}, error) {
 	var args [1]interface{}
 	args[0] = name
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -223,14 +223,14 @@ func (r *HelloWorld) GreetNoWait(name string) error {
 }
 
 // GreetAsImmutable is proxy generated method
-func (r *HelloWorld) GreetAsImmutable(name string) (interface{}, error) {
+func (r *HelloWorld) GreetAsImmutable(name string) (map[string]interface{}, error) {
 	var args [1]interface{}
 	args[0] = name
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -257,13 +257,13 @@ func (r *HelloWorld) GreetAsImmutable(name string) (interface{}, error) {
 }
 
 // Count is proxy generated method
-func (r *HelloWorld) Count() (interface{}, error) {
+func (r *HelloWorld) Count() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -309,13 +309,13 @@ func (r *HelloWorld) CountNoWait() error {
 }
 
 // CountAsImmutable is proxy generated method
-func (r *HelloWorld) CountAsImmutable() (interface{}, error) {
+func (r *HelloWorld) CountAsImmutable() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -342,13 +342,13 @@ func (r *HelloWorld) CountAsImmutable() (interface{}, error) {
 }
 
 // Errored is proxy generated method
-func (r *HelloWorld) Errored() (interface{}, error) {
+func (r *HelloWorld) Errored() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -394,13 +394,13 @@ func (r *HelloWorld) ErroredNoWait() error {
 }
 
 // ErroredAsImmutable is proxy generated method
-func (r *HelloWorld) ErroredAsImmutable() (interface{}, error) {
+func (r *HelloWorld) ErroredAsImmutable() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -427,13 +427,13 @@ func (r *HelloWorld) ErroredAsImmutable() (interface{}, error) {
 }
 
 // CreateChild is proxy generated method
-func (r *HelloWorld) CreateChild() (interface{}, error) {
+func (r *HelloWorld) CreateChild() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -479,13 +479,13 @@ func (r *HelloWorld) CreateChildNoWait() error {
 }
 
 // CreateChildAsImmutable is proxy generated method
-func (r *HelloWorld) CreateChildAsImmutable() (interface{}, error) {
+func (r *HelloWorld) CreateChildAsImmutable() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -512,13 +512,13 @@ func (r *HelloWorld) CreateChildAsImmutable() (interface{}, error) {
 }
 
 // CountChild is proxy generated method
-func (r *HelloWorld) CountChild() (interface{}, error) {
+func (r *HelloWorld) CountChild() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -564,13 +564,13 @@ func (r *HelloWorld) CountChildNoWait() error {
 }
 
 // CountChildAsImmutable is proxy generated method
-func (r *HelloWorld) CountChildAsImmutable() (interface{}, error) {
+func (r *HelloWorld) CountChildAsImmutable() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -597,14 +597,14 @@ func (r *HelloWorld) CountChildAsImmutable() (interface{}, error) {
 }
 
 // Call is proxy generated method
-func (r *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
+func (r *HelloWorld) Call(signedRequest []byte) (map[string]interface{}, error) {
 	var args [1]interface{}
 	args[0] = signedRequest
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -651,14 +651,14 @@ func (r *HelloWorld) CallNoWait(signedRequest []byte) error {
 }
 
 // CallAsImmutable is proxy generated method
-func (r *HelloWorld) CallAsImmutable(signedRequest []byte) (interface{}, error) {
+func (r *HelloWorld) CallAsImmutable(signedRequest []byte) (map[string]interface{}, error) {
 	var args [1]interface{}
 	args[0] = signedRequest
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

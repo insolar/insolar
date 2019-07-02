@@ -38,18 +38,18 @@ type One struct {
 	Number int
 }
 
-func (c *One) Inc() (int, error) {
+func (c *One) Inc() (map[string]interface {}, error) {
 	c.Number++
-	return c.Number, nil
+	return map[string]interface {}{"result": c.Number}, nil
 }
 
-func (c *One) Get() (int, error) {
-	return c.Number, nil
+func (c *One) Get() (map[string]interface {}, error) {
+	return map[string]interface {}{"result": c.Number}, nil
 }
 
-func (c *One) Dec() (int, error) {
+func (c *One) Dec() (map[string]interface {}, error) {
 	c.Number--
-	return c.Number, nil
+	return map[string]interface {}{"result": c.Number}, nil
 }
 `
 	objectRef := callConstructor(t, uploadContractOnce(t, "test", contractCode))
@@ -57,7 +57,7 @@ func (c *One) Dec() (int, error) {
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objectRef, "Get")
 	require.Empty(t, result.Error)
-	require.Equal(t, float64(0), result.ExtractedReply)
+	require.Equal(t, float64(0), result.ExtractedReply["result"])
 
 	result = callMethod(t, objectRef, "Inc")
 	require.Empty(t, result.Error)
@@ -115,8 +115,8 @@ func (r *One) Again(s string) (string, error) {
 	return "Hi, " + s + "! Two said: " + res, nil
 }
 
-func (r *One)GetFriend() (string, error) {
-	return r.Friend.String(), nil
+func (r *One)GetFriend() (map[string]interface {}, error) {
+	return map[string]interface {}{"friend": r.Friend.String()}, nil
 }
 
 func (r *One) TestPayload() (two.Payload, error) {
@@ -197,7 +197,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	resp = callMethod(t, objectRef, "GetFriend")
 	require.Empty(t, resp.Error)
 
-	two, err2 := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	two, err2 := insolar.NewReferenceFromBase58(resp.ExtractedReply["friend"].(string))
 	require.NoError(t, err2)
 
 	for i := 6; i <= 9; i++ {
@@ -452,36 +452,36 @@ type Contract struct {
 	foundation.BaseContract
 }
 
-func (c *Contract) NewChilds(cnt int) (int, error) {
+func (c *Contract) NewChilds(cnt int) (map[string]interface {}, error) {
 	s := 0
 	for i := 1; i < cnt; i++ {
         child.New(i).AsChild(c.GetReference())
 		s += i
 	} 
-	return s, nil
+	return map[string]interface {}{"sum": s}, nil
 }
 
-func (c *Contract) SumChildsByIterator() (int, error) {
+func (c *Contract) SumChildsByIterator() (map[string]interface {}, error) {
 	s := 0
 	iterator, err := c.NewChildrenTypedIterator(child.GetPrototype())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	for iterator.HasNext() {
 		chref, err := iterator.Next()
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 
 		o := child.GetObject(chref)
 		n, err := o.GetNum()
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		s += n
 	}
-	return s, nil
+	return map[string]interface {}{"sum": s}, nil
 }
 
 `
@@ -509,15 +509,15 @@ func New(n int) (*Child, error) {
 
 	resp := callMethod(t, obj, "SumChildsByIterator")
 	require.Empty(t, resp.Error, "empty children")
-	require.Equal(t, float64(0), resp.ExtractedReply)
+	require.Equal(t, float64(0), resp.ExtractedReply["sum"].(float64))
 
 	resp = callMethod(t, obj, "NewChilds", 10)
 	require.Empty(t, resp.Error, "add children")
-	require.Equal(t, float64(45), resp.ExtractedReply)
+	require.Equal(t, float64(45), resp.ExtractedReply["sum"].(float64))
 
 	resp = callMethod(t, obj, "SumChildsByIterator")
 	require.Empty(t, resp.Error, "sum real children")
-	require.Equal(t, float64(45), resp.ExtractedReply)
+	require.Equal(t, float64(45), resp.ExtractedReply["sum"].(float64))
 }
 
 func TestErrorInterface(t *testing.T) {
@@ -817,15 +817,15 @@ func TestGetRemoteData(t *testing.T) {
 	foundation.BaseContract
  }
 
- func (r *One) GetChildPrototype() (string, error) {
+ func (r *One) GetChildPrototype() (map[string]interface {}, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return insolar.Reference{}.String(), err
+		return map[string]interface {}{"reference": insolar.Reference{}.String()}, err
 	}
 
 	ref, err := child.GetPrototype()
- 	return ref.String(), err
+ 	return map[string]interface {}{"reference": ref.String()}, err
  }
 `
 	var contractTwoCode = `
@@ -845,7 +845,7 @@ func TestGetRemoteData(t *testing.T) {
 
 	resp := callMethod(t, obj, "GetChildPrototype")
 	require.Empty(t, resp.Error)
-	require.Equal(t, codeTwoRef.String(), resp.ExtractedReply.(string))
+	require.Equal(t, codeTwoRef.String(), resp.ExtractedReply["reference"].(string))
 }
 
 func TestNoLoopsWhileNotificationCall(t *testing.T) {

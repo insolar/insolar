@@ -82,7 +82,7 @@ func (ar *Runner) checkSeed(paramsSeed string) error {
 	return nil
 }
 
-func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64) (interface{}, error) {
+func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64) (map[string]interface{}, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
 	defer span.End()
 
@@ -121,7 +121,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 }
 
 func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
-	errResponse := &requester.Error{Message: extraMsg, Code: ResultError, TraceID: traceID}
+	errResponse := &requester.Error{Message: extraMsg, Code: ResultError, Data: requester.Data{TraceID: traceID}}
 	resp.Error = errResponse
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
@@ -129,7 +129,7 @@ func processError(err error, extraMsg string, resp *requester.ContractAnswer, in
 func writeResponse(insLog assert.TestingT, response http.ResponseWriter, contractAnswer *requester.ContractAnswer) {
 	res, err := json.MarshalIndent(*contractAnswer, "", "    ")
 	if err != nil {
-		res = []byte(`{"error": "can't marshal ContractAnswer to json'"}`)
+		res = []byte(`{"jsonrpc": "2.0", "id": 1, "error": "can't marshal ContractAnswer to json; error: '` + err.Error() + `'"}`)
 	}
 	response.Header().Add("Content-Type", "application/json")
 	_, err = response.Write(res)
@@ -202,7 +202,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		var result interface{}
+		var result map[string]interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
 			result, err = ar.makeCall(ctx, *contractRequest, rawBody, signature, 0)
@@ -220,7 +220,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 
 		case <-time.After(ar.timeout):
-			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, TraceID: traceID}
+			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, Data: requester.Data{TraceID: traceID}}
 			contractAnswer.Error = errResponse
 			return
 		}

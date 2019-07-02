@@ -37,29 +37,29 @@ type HelloWorld struct {
 var INSATTR_Greet_API = true
 
 // Greet greats the caller
-func (hw *HelloWorld) Greet(name string) (interface{}, error) {
+func (hw *HelloWorld) Greet(name string) (map[string]interface{}, error) {
 	hw.Greeted++
-	return fmt.Sprintf("Hello %s' world", name), nil
+	return map[string]interface{}{"message": fmt.Sprintf("Hello %s' world", name)}, nil
 }
 
-func (hw *HelloWorld) Count() (interface{}, error) {
-	return hw.Greeted, nil
+func (hw *HelloWorld) Count() (map[string]interface{}, error) {
+	return map[string]interface{}{"greeted": hw.Greeted}, nil
 }
 
-func (hw *HelloWorld) Errored() (interface{}, error) {
+func (hw *HelloWorld) Errored() (map[string]interface{}, error) {
 	return nil, errors.New("TestError")
 }
 
-func (hw *HelloWorld) CreateChild() (interface{}, error) {
+func (hw *HelloWorld) CreateChild() (map[string]interface{}, error) {
 	hwHolder := hwProxy.New()
 	chw, err := hwHolder.AsChild(hw.GetReference())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ HelloWorld.CreateChild ] Can't save as child")
 	}
-	return chw.GetReference().String(), nil
+	return map[string]interface{}{"reference": chw.GetReference().String()}, nil
 }
 
-func (hw *HelloWorld) CountChild() (interface{}, error) {
+func (hw *HelloWorld) CountChild() (map[string]interface{}, error) {
 	count := 0
 
 	iterator, err := hw.NewChildrenTypedIterator(hwProxy.GetPrototype())
@@ -80,7 +80,7 @@ func (hw *HelloWorld) CountChild() (interface{}, error) {
 			return nil, fmt.Errorf("[ CountChild ] Can't get count of child: %s", err.Error())
 		}
 
-		childCount, ok := childCountI.(uint64)
+		childCount, ok := childCountI["greeted"].(uint64)
 		if !ok {
 			return nil, fmt.Errorf("[ CountChild ] Bad childCount format, expected int got %T", childCountI)
 		}
@@ -88,7 +88,7 @@ func (hw *HelloWorld) CountChild() (interface{}, error) {
 		count = count + int(childCount)
 	}
 
-	return count, nil
+	return map[string]interface{}{"count": count}, nil
 }
 
 type Request struct {
@@ -107,7 +107,7 @@ type Params struct {
 	PublicKey  string      `json:"memberPubKey"`
 }
 
-func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
+func (hw *HelloWorld) Call(signedRequest []byte) (map[string]interface{}, error) {
 	var signature string
 	var pulseTimeStamp int64
 	var rawRequest []byte

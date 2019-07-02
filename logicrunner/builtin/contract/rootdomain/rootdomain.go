@@ -145,14 +145,14 @@ func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, m
 	return nil
 }
 
-func (rd *RootDomain) CreateHelloWorld() (string, error) {
+func (rd *RootDomain) CreateHelloWorld() (map[string]interface{}, error) {
 	helloWorldHolder := helloworld.New()
 	m, err := helloWorldHolder.AsChild(rd.GetReference())
 	if err != nil {
-		return "", fmt.Errorf("failed to save as child: %s", err.Error())
+		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
 	}
 
-	return m.GetReference().String(), nil
+	return map[string]interface{}{"reference": m.GetReference().String()}, nil
 }
 
 func trimPublicKey(publicKey string) string {

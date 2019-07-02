@@ -32,7 +32,7 @@ func TestCreateMember(t *testing.T) {
 	addBurnAddress(t)
 	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
-	ref, ok := result.(string)
+	ref, ok := result["reference"].(string)
 	require.True(t, ok)
 	require.NotEqual(t, "", ref)
 }

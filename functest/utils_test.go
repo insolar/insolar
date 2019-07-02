@@ -105,7 +105,7 @@ func createMember(t *testing.T) *user {
 
 	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
-	ref, ok := result.(string)
+	ref, ok := result["reference"].(string)
 	require.True(t, ok)
 	member.ref = ref
 	return member
@@ -116,22 +116,41 @@ func addBurnAddress(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func getBalanceNoErr(t *testing.T, caller *user, reference string) *big.Int {
-	balance, err := getBalance(caller, reference)
+func getBalanceNoErr(t *testing.T, caller *user, reference string) (*big.Int, []map[string]string) {
+	balance, deposits, err := getBalance(caller, reference)
 	require.NoError(t, err)
-	return balance
+	return balance, deposits
 }
 
-func getBalance(caller *user, reference string) (*big.Int, error) {
+func getBalance(caller *user, reference string) (*big.Int, []map[string]string, error) {
 	res, err := signedRequest(caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	amount, ok := new(big.Int).SetString(res.(string), 10)
+
+	balance, ok := res["balance"].(string)
 	if !ok {
-		return nil, fmt.Errorf("can't parse input amount")
+		return nil, nil, errors.Errorf("failed to get 'balance' from result")
 	}
-	return amount, nil
+
+	depositsI, ok := res["deposits"]
+	if !ok {
+		return nil, nil, errors.Errorf("failed to get 'deposits' from result")
+	}
+
+	var deposits []map[string]string
+	if depositsI != nil {
+		deposits, ok = depositsI.([]map[string]string)
+		if !ok {
+			return nil, nil, errors.Errorf("failed to cast deposit to []map[string]string")
+		}
+	}
+
+	amount, ok := new(big.Int).SetString(balance, 10)
+	if !ok {
+		return nil, nil, fmt.Errorf("can't parse input amount")
+	}
+	return amount, deposits, nil
 }
 
 func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
@@ -193,9 +212,9 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func retryableCreateMember(user *user, method string, params map[string]interface{}, updatePublicKey bool) (interface{}, error) {
+func retryableCreateMember(user *user, method string, params map[string]interface{}, updatePublicKey bool) (map[string]interface{}, error) {
 	// TODO: delete this after deduplication (INS-2778)
-	var result interface{}
+	var result map[string]interface{}
 	var err error
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
@@ -216,7 +235,7 @@ func retryableCreateMember(user *user, method string, params map[string]interfac
 	return result, err
 }
 
-func signedRequest(user *user, method string, params map[string]interface{}) (interface{}, error) {
+func signedRequest(user *user, method string, params map[string]interface{}) (map[string]interface{}, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey, user.pubKey)
 	if err != nil {
@@ -376,6 +395,8 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args 
 		Error   json2.Error         `json:"error"`
 	}{}
 
+	fmt.Println("string(callMethodBody)")
+	fmt.Println(string(callMethodBody))
 	err = json.Unmarshal(callMethodBody, &callRes)
 	require.NoError(t, err)
 	require.Empty(t, callRes.Error)

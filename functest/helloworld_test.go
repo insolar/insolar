@@ -61,7 +61,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		return nil, errors.Errorf("[ NewHelloWorld ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(string)
+	rv, ok := result.Result.ContractResult["reference"].(string)
 	if !ok {
 		return nil, errors.Errorf("[ NewHelloWorld ] Failed to decode: expected string, got %T", result.Result)
 	}
@@ -100,7 +100,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 		return "", errors.Errorf("[ Greet ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(string)
+	rv, ok := result.Result.ContractResult["message"].(string)
 	if !ok {
 		return "", errors.Errorf("[ Greet ] Failed to decode: expected string, got %T", result.Result)
 	}
@@ -132,7 +132,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		return 0, errors.Errorf("[ Count ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(float64)
+	rv, ok := result.Result.ContractResult["greeted"].(float64)
 	if !ok {
 		return 0, errors.Errorf("[ Count ] Failed to decode: expected float64, got %T", result.Result)
 	}
@@ -164,7 +164,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		return nil, errors.Errorf("[ CreateChild ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(string)
+	rv, ok := result.Result.ContractResult["reference"].(string)
 	if !ok {
 		return nil, errors.Errorf("[ CreateChild ] Failed to decode: expected string, got %T", result.Result)
 	}
@@ -203,7 +203,7 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 		return 0, errors.Errorf("[ CountChild ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(float64)
+	rv, ok := result.Result.ContractResult["reference"].(float64)
 	if !ok {
 		return 0, errors.Errorf("[ CountChild ] Failed to decode result: expected float64, got %T", result.Result)
 	}

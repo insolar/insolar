@@ -29,13 +29,13 @@ import (
 
 func TestGetBalance(t *testing.T) {
 	firstMember := createMember(t)
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	firstBalance, _ := getBalanceNoErr(t, firstMember, firstMember.ref)
 	r := big.NewInt(1000000000)
 	require.Equal(t, r, firstBalance)
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
+	_, _, err := getBalance(&root, testutils.RandomRef().String())
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "index not found")
 }

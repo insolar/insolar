@@ -155,7 +155,7 @@ func (r *Wallet) GetCode() (insolar.Reference, error) {
 }
 
 // Transfer is proxy generated method
-func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interface{}, error) {
+func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (map[string]interface{}, error) {
 	var args [2]interface{}
 	args[0] = amountStr
 	args[1] = toMember
@@ -163,7 +163,7 @@ func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interf
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -211,7 +211,7 @@ func (r *Wallet) TransferNoWait(amountStr string, toMember *insolar.Reference) e
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Wallet) TransferAsImmutable(amountStr string, toMember *insolar.Reference) (interface{}, error) {
+func (r *Wallet) TransferAsImmutable(amountStr string, toMember *insolar.Reference) (map[string]interface{}, error) {
 	var args [2]interface{}
 	args[0] = amountStr
 	args[1] = toMember
@@ -219,7 +219,7 @@ func (r *Wallet) TransferAsImmutable(amountStr string, toMember *insolar.Referen
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

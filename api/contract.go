@@ -166,10 +166,10 @@ type CallMethodArgs struct {
 
 // CallMethodReply is reply that Contract.CallMethod returns
 type CallMethodReply struct {
-	Reply          reply.CallMethod  `json:"Reply"`
-	ExtractedReply interface{}       `json:"ExtractedReply"`
-	Error          *foundation.Error `json:"Error"`
-	ExtractedError string            `json:"ExtractedError"`
+	Reply          reply.CallMethod       `json:"Reply"`
+	ExtractedReply map[string]interface{} `json:"ExtractedReply"`
+	Error          *foundation.Error      `json:"Error"`
+	ExtractedError string                 `json:"ExtractedError"`
 }
 
 // CallConstructor make an object from its prototype
@@ -204,27 +204,18 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	re.Reply = *callMethodReply.(*reply.CallMethod)
 
-	var extractedReply interface{}
+	var extractedReply map[string]interface{}
 	extractedReply, _, err = extractor.CallResponse(re.Reply.Result)
 	if err != nil {
 		return errors.Wrap(err, "Can't extract response")
 	}
 
-	// TODO need to understand why sometimes errors goes to reply
-	// see tests TestConstructorReturnNil, TestContractCallingContract, TestPrototypeMismatch
-	switch extractedReply.(type) {
-	case map[interface{}]interface{}:
-		replyMap := extractedReply.(map[interface{}]interface{})
-		if len(replyMap) == 1 {
-			for k, v := range replyMap {
-				if reflect.ValueOf(k).String() == "S" && len(reflect.TypeOf(v).String()) > 0 {
-					re.ExtractedError = reflect.ValueOf(v).String()
-				}
+	if len(extractedReply) == 1 {
+		for k, v := range extractedReply {
+			if k == "S" && len(reflect.TypeOf(v).String()) > 0 {
+				re.ExtractedError = reflect.ValueOf(v).String()
 			}
 		}
-	default:
-		re.ExtractedReply = extractedReply
 	}
-
 	return nil
 }

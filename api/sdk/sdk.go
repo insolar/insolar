@@ -190,7 +190,12 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "request was failed ")
 	}
 
-	return NewMember(response.ContractResult.(string), privateKeyStr, publicKeyStr), response.TraceID, nil
+	reference, ok := response.ContractResult["reference"].(string)
+	if !ok {
+		return nil, "", fmt.Errorf("failed to get 'reference' from result")
+	}
+
+	return NewMember(reference, privateKeyStr, publicKeyStr), response.TraceID, nil
 }
 
 // AddBurnAddresses method add burn addresses
@@ -245,7 +250,12 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 		return nil, errors.Wrap(err, "request was failed ")
 	}
 
-	result, ok := new(big.Int).SetString(response.ContractResult.(string), 10)
+	balance, ok := response.ContractResult["balance"].(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to get 'balance' from result")
+	}
+
+	result, ok := new(big.Int).SetString(balance, 10)
 	if !ok {
 		return nil, errors.Errorf("can't parse returned balance")
 	}
@@ -267,7 +277,7 @@ func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params 
 	}
 
 	if response.Error != nil {
-		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.TraceID)
+		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.Data.TraceID)
 	}
 
 	return response.Result, nil
