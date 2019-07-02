@@ -903,41 +903,65 @@ func (m *client) activateObject(
 		Request: obj,
 	}
 
-	err = m.sendUpdateObject(
-		ctx,
-		record.Wrap(activate),
-		record.Wrap(result),
-		obj,
-		memory,
-	)
+	virtActivate := record.Wrap(activate)
+	virtResult := record.Wrap(result)
+
+	activateBuf, err := virtActivate.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to activate")
+		return errors.Wrap(err, "ActivateObject: can't serialize record")
 	}
-
-	var (
-		asType *insolar.Reference
-	)
-	child := record.Child{Ref: obj}
-	if parentDesc.ChildPointer() != nil {
-		child.PrevChild = *parentDesc.ChildPointer()
-	}
-	if asDelegate {
-		asType = &prototype
-	}
-	virtChild := record.Wrap(child)
-
-	err = m.registerChild(
-		ctx,
-		virtChild,
-		parent,
-		obj,
-		asType,
-	)
+	resultBuf, err := virtResult.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to register as child while activating")
+		return errors.Wrap(err, "ActivateObject: can't serialize record")
 	}
 
-	return nil
+	msg, err := payload.NewMessage(&payload.Activate{
+		Record: activateBuf,
+		Result: resultBuf,
+	})
+
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return errors.New("ActivateObject: no reply")
+	}
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return errors.Wrap(err, "ActivateObject: failed to unmarshal reply")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		var (
+			asType *insolar.Reference
+		)
+		child := record.Child{Ref: obj}
+		if parentDesc.ChildPointer() != nil {
+			child.PrevChild = *parentDesc.ChildPointer()
+		}
+		if asDelegate {
+			asType = &prototype
+		}
+		virtChild := record.Wrap(child)
+
+		err = m.registerChild(
+			ctx,
+			virtChild,
+			parent,
+			obj,
+			asType,
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to register as child while activating")
+		}
+		return nil
+	case *payload.Error:
+		return errors.New(p.Text)
+	default:
+		return fmt.Errorf("ActivateObject: unexpected reply: %#v", p)
+	}
 }
 
 func (m *client) updateObject(
