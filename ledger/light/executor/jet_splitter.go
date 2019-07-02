@@ -92,16 +92,15 @@ func (js *JetSplitterDefault) Do(
 		panic("Failed to clone jets")
 	}
 
-	// get all jets processed on current pulse
 	all := js.jetCalculator.MineForPulse(ctx, currentPulse)
 	// result at least the same size
 	result := make([]insolar.JetID, 0, len(all))
 
 	var splitCandidatesIndexes []int
 	for i, jetID := range all {
-		// if no split intention, just update actual flag in new pulse and add to split candidates
-		// in new pulse if splitsLimit counter greater than sero
+		// if no split intention, add to next pulse split candidates if splitsLimit counter greater than zero
 		if !js.dropExistsAndHasSplitFlag(ctx, previousPulse, jetID) {
+			// mark jet as actual for new pulse
 			if err := js.jetModifier.Update(ctx, newPulse, true, jetID); err != nil {
 				panic("failed to update jets on LM-node: " + err.Error())
 			}
@@ -116,9 +115,6 @@ func (js *JetSplitterDefault) Do(
 		leftJetID, rightJetID, err := js.jetModifier.Split(ctx, newPulse, jetID)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to split jet tree")
-		}
-		if err = js.jetModifier.Update(ctx, newPulse, true, leftJetID, rightJetID); err != nil {
-			panic("failed to update jets on LM-node: " + err.Error())
 		}
 
 		inslog.WithFields(map[string]interface{}{
