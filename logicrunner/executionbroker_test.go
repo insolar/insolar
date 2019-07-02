@@ -28,6 +28,18 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 )
 
+// wait is Exponential retries waiting function
+// example usage: require.True(wait(func))
+func wait(check func() bool) bool {
+	for i := 0; i < 16; i++ {
+		time.Sleep(time.Millisecond * time.Duration(math.Pow(2, float64(i))))
+		if check() {
+			return true
+		}
+	}
+	return false
+}
+
 type TranscriptDequeueSuite struct{ suite.Suite }
 
 func TestTranscriptDequeue(t *testing.T) { suite.Run(t, new(TranscriptDequeueSuite)) }
@@ -141,18 +153,6 @@ func (s *TranscriptDequeueSuite) TestTake() {
 type ExecutionBrokerSuite struct{ suite.Suite }
 
 func TestExecutionBroker(t *testing.T) { suite.Run(t, new(ExecutionBrokerSuite)) }
-
-// wait is Exponential retries waiting function
-// example usage: require.True(wait(func))
-func wait(check func() bool) bool {
-	for i := 0; i < 16; i++ {
-		time.Sleep(time.Millisecond * time.Duration(math.Pow(2, float64(i))))
-		if check() {
-			return true
-		}
-	}
-	return false
-}
 
 func (s *ExecutionBrokerSuite) TestPut() {
 	ctx := context.TODO()
