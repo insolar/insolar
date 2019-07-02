@@ -17,6 +17,7 @@
 package executor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sync"
@@ -52,6 +53,8 @@ type FilamentCalculator interface {
 
 	// PendingRequests only looks locally.
 	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]insolar.ID, error)
+
+	ResultDuplicate(ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
 }
 
 type FilamentCleaner interface {
@@ -325,6 +328,66 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 	}
 
 	return ordered, nil
+}
+
+func (c *FilamentCalculatorDefault) ResultDuplicate(
+	ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result,
+) (*record.CompositeFilamentRecord, error) {
+	logger := inslogger.FromContext(ctx).WithField("object_id", objectID.DebugString())
+
+	logger.Debug("started to search duplicated requests")
+	defer logger.Debug("finished to search duplicated requests")
+
+	if result.Request.IsEmpty() {
+		return nil, errors.New("request is empty")
+	}
+	idx, err := c.indexes.ForID(ctx, startFrom, objectID)
+	if err != nil {
+		return nil, err
+	}
+	if idx.Lifeline.PendingPointer == nil {
+		return nil, nil
+	}
+
+	cache := c.cache.Get(objectID)
+	cache.Lock()
+	defer cache.Unlock()
+
+	iter := newFetchingIterator(
+		ctx,
+		cache,
+		objectID,
+		*idx.Lifeline.PendingPointer,
+		result.Request.Record().Pulse(),
+		startFrom,
+		c.jetFetcher,
+		c.coordinator,
+		c.sender,
+	)
+
+	var foundRequest *record.CompositeFilamentRecord
+	var foundResult *record.CompositeFilamentRecord
+
+	for iter.HasPrev() {
+		rec, err := iter.Prev(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to calculate pending")
+		}
+
+		if bytes.Equal(rec.RecordID.Hash(), resultID.Hash()) {
+			foundResult = &rec
+		}
+
+		if bytes.Equal(rec.RecordID.Hash(), result.Request.Record().Hash()) {
+			foundRequest = &rec
+		}
+
+		if foundResult != nil && foundRequest != nil {
+			return foundResult, nil
+		}
+	}
+
+	return foundResult, errors.New("request for result is not found")
 }
 
 func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
