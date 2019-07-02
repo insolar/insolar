@@ -192,18 +192,16 @@ func (es *ExecutionState) executeTranscript(ctx context.Context, t *Transcript, 
 	es.CurrentList.Set(*t.RequestRef, t)
 	es.Unlock()
 
-	re, err := args.lr.executeLogic(ctx, t)
-	errstr := ""
+	re, err := args.lr.RequestsExecutor.ExecuteAndSave(ctx, t)
 	if err != nil {
 		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
-		errstr = err.Error()
 	}
 
 	es.Lock()
 	es.CurrentList.Delete(*t.RequestRef)
 	es.Unlock()
 
-	args.lr.sendRequestReply(t.Context, t, re, errstr)
+	go args.lr.RequestsExecutor.SendReply(t.Context, t, re, err)
 
 	if t.FromLedger {
 		// we've already told ledger that we've processed it's task;
