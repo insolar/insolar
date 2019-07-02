@@ -365,7 +365,6 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		c.sender,
 	)
 
-	var foundRequest *record.CompositeFilamentRecord
 	var foundResult *record.CompositeFilamentRecord
 
 	for iter.HasPrev() {
@@ -379,10 +378,6 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		}
 
 		if bytes.Equal(rec.RecordID.Hash(), result.Request.Record().Hash()) {
-			foundRequest = &rec
-		}
-
-		if foundResult != nil && foundRequest != nil {
 			return foundResult, nil
 		}
 	}

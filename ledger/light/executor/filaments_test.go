@@ -686,6 +686,31 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 		mc.Finish()
 	})
+
+	resetComponents()
+	t.Run("returns no result. request is found", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
+		req1 := b.Append(insolar.FirstPulseNumber+1, req)
+		res := record.Result{Request: *insolar.NewReference(req1.RecordID)}
+		resID := insolar.NewID(insolar.FirstPulseNumber+1, []byte{1})
+
+		objectID := gen.ID()
+		fromPulse := req1.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+			ObjID: objectID,
+			Lifeline: object.Lifeline{
+				PendingPointer: &req1.MetaID,
+			},
+		})
+		require.NoError(t, err)
+
+		fRes, err := calculator.ResultDuplicate(ctx, fromPulse, objectID, *resID, res)
+		require.NoError(t, err)
+		require.Nil(t, fRes)
+
+		mc.Finish()
+	})
 }
 
 type filamentBuilder struct {
