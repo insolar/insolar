@@ -80,3 +80,7 @@ required = [
 [[constraint]]
   name = "github.com/insolar/x-crypto"
   version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/fortytw2/leaktest"
+  version = "1.3.0"

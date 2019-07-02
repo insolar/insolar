@@ -55,6 +55,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/fortytw2/leaktest"
 	"sync"
 	"testing"
 
@@ -75,15 +76,16 @@ var (
 )
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := newConsensusSuite(12, 0)
+	defer leaktest.Check(t)()
+	s := newConsensusSuite(1, 0)
 	suite.Run(t, s)
 }
 
-func TestServiceNetworkManyNodes(t *testing.T) {
-	t.Skip("Long time setup, wait for mock bootstrap")
-	s := newConsensusSuite(5, 10)
-	suite.Run(t, s)
-}
+//func TestServiceNetworkManyNodes(t *testing.T) {
+//	t.Skip("Long time setup, wait for mock bootstrap")
+//	s := newConsensusSuite(5, 10)
+//	suite.Run(t, s)
+//}
 
 // Consensus suite tests
 

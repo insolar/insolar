@@ -81,6 +81,14 @@
   revision = "2de33835d10275975374b37b2dcfd22c9020a1f5"
 
 [[projects]]
+  digest = "1:547f5df5f708c880f0af507317c8d022b8d62053a5cb075e23c6eeed09eb2e4e"
+  name = "github.com/fortytw2/leaktest"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9a23578d06a26ec1b47bfc8965bf5e7011df8bd6"
+  version = "v1.3.0"
+
+[[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -637,6 +645,7 @@
     "github.com/ThreeDotsLabs/watermill/message/router/middleware",
     "github.com/blang/semver",
     "github.com/dgraph-io/badger",
+    "github.com/fortytw2/leaktest",
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/protoc-gen-gogoslick",

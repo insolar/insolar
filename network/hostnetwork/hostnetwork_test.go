@@ -52,6 +52,7 @@ package hostnetwork
 
 import (
 	"context"
+	"github.com/fortytw2/leaktest"
 	"sync"
 	"testing"
 	"time"
@@ -158,6 +159,7 @@ type hostSuite struct {
 	id1, id2 string
 	n1, n2   network.HostNetwork
 	resolver *MockResolver
+	cm1, cm2 *component.Manager
 }
 
 func newHostSuite(ctx context.Context, t *testing.T) *hostSuite {
@@ -177,13 +179,13 @@ func newHostSuite(ctx context.Context, t *testing.T) *hostSuite {
 	require.NoError(t, err)
 	cm2.Inject(f2, n2, resolver)
 
-	err = n1.Init(ctx)
+	err = cm1.Init(ctx)
 	require.NoError(t, err)
-	err = n2.Init(ctx)
+	err = cm2.Init(ctx)
 	require.NoError(t, err)
 
 	return &hostSuite{
-		t: t, ctx: ctx, id1: id1, id2: id2, n1: n1, n2: n2, resolver: resolver,
+		t: t, ctx: ctx, id1: id1, id2: id2, n1: n1, n2: n2, resolver: resolver, cm1: cm1, cm2: cm2,
 	}
 }
 
@@ -203,11 +205,15 @@ func (s *hostSuite) Start() {
 
 func (s *hostSuite) Stop() {
 	// stop hostNetworks in the reverse order of their start
-	_ = s.n1.Stop(s.ctx)
-	_ = s.n2.Stop(s.ctx)
+	err := s.n1.Stop(s.ctx)
+	assert.NoError(s.t, err)
+	err = s.n2.Stop(s.ctx)
+	assert.NoError(s.t, err)
 }
 
 func TestNewHostNetwork(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ctx := context.Background()
 	s := newHostSuite(ctx, t)
 	defer s.Stop()
@@ -278,6 +284,7 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket2(t *testing.T) {
+	//defer leaktest.Check(t)()
 	ctx := context.Background()
 	s := newHostSuite(ctx, t)
 	defer s.Stop()
@@ -378,6 +385,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 }
 
 func TestHostNetwork_WrongHandler(t *testing.T) {
+	//defer leaktest.Check(t)()
 	ctx := context.Background()
 	s := newHostSuite(ctx, t)
 	defer s.Stop()
@@ -406,6 +414,7 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 }
 
 func TestStartStopSend(t *testing.T) {
+	//defer leaktest.Check(t)()
 	ctx := context.Background()
 	s := newHostSuite(ctx, t)
 	defer s.Stop()
@@ -442,6 +451,8 @@ func TestStartStopSend(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestToHost_NotStarted(t *testing.T) {
+	//defer leaktest.Check(t)()
+
 	hn, err := NewHostNetwork(ID1 + DOMAIN)
 	require.NoError(t, err)
 
