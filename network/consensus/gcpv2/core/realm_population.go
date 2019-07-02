@@ -65,10 +65,8 @@ type RealmPopulation interface {
 	GetJoinersCount() int
 	GetBftMajorityCount() int
 
-	//GetOnlyActiveNode(id common.ShortNodeID) (common2.NodeProfile, error)
-	//GetOnlyDynamicNodeAppearance(id common.ShortNodeID) *NodeAppearance
 	GetNodeAppearance(id common.ShortNodeID) *NodeAppearance
-	//GetOrAddNodeAppearance(id common.ShortNodeID) *NodeAppearance
+	GetJoinerNodeAppearance(id common.ShortNodeID) *NodeAppearance
 	GetNodeAppearanceByIndex(idx int) *NodeAppearance
 
 	GetShuffledOtherNodes() []*NodeAppearance
@@ -76,6 +74,9 @@ type RealmPopulation interface {
 
 	GetSelf() *NodeAppearance
 	//CreateDynamicNode(constructionContext context.Context) *NodeAppearance
+
+	//AddToPurgatory(np common2.NodeIntroProfile) (*NodeAppearance, int)
+	//AddToJoiners(n *NodeAppearance) (*NodeAppearance, int)
 }
 
 func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation,
@@ -143,12 +144,11 @@ type MemberRealmPopulation struct {
 	nodeCount        int
 	bftMajorityCount int
 
-	//	purgatory	map[common.ShortNodeID]*NodeAppearance
-	rw      sync.RWMutex
-	joiners map[common.ShortNodeID]*NodeAppearance
+	rw sync.RWMutex
 
-	purgatoryByPK map[string] /* used as string(PK.Bytes())  */ *NodeAppearance
-	purgatoryByID map[common.ShortNodeID][]*NodeAppearance
+	joiners       map[common.ShortNodeID]*NodeAppearance
+	purgatoryByPK map[string]*NodeAppearance
+	purgatoryByID map[common.ShortNodeID]*[]*NodeAppearance
 }
 
 func (r *MemberRealmPopulation) GetSelf() *NodeAppearance {
@@ -171,23 +171,27 @@ func (r *MemberRealmPopulation) GetBftMajorityCount() int {
 	return r.bftMajorityCount
 }
 
-func (r *MemberRealmPopulation) GetOnlyActiveNode(id common.ShortNodeID) common2.NodeProfile {
-	return r.population.FindProfile(id)
+func (r *MemberRealmPopulation) GetNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+	na := r.getActiveNodeAppearance(id)
+	if na != nil {
+		return na
+	}
+	return r.GetJoinerNodeAppearance(id)
 }
 
-func (r *MemberRealmPopulation) GetOnlyDynamicNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+func (r *MemberRealmPopulation) GetJoinerNodeAppearance(id common.ShortNodeID) *NodeAppearance {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
 	return r.joiners[id]
 }
 
-func (r *MemberRealmPopulation) GetNodeAppearance(id common.ShortNodeID) *NodeAppearance {
-	np := r.GetOnlyActiveNode(id)
+func (r *MemberRealmPopulation) getActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+	np := r.population.FindProfile(id)
 	if np != nil {
 		return r.GetNodeAppearanceByIndex(np.GetIndex())
 	}
-	return r.GetOnlyDynamicNodeAppearance(id)
+	return nil
 }
 
 func (r *MemberRealmPopulation) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
@@ -202,11 +206,87 @@ func (r *MemberRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	return r.nodeIndex
 }
 
-func (r *MemberRealmPopulation) createNode(ctx context.Context, np common2.NodeProfile) *NodeAppearance {
+func (r *MemberRealmPopulation) createNode(ctx context.Context, inp common2.NodeIntroProfile) *NodeAppearance {
 	//np.GetNodePublicKey().AsByteString()
+	np := &common2.JoinerNodeProfile{NodeIntroProfile: inp}
 
 	n := &NodeAppearance{}
 	n.init(np, nil, r.baselineWeight)
 	r.nodeInit(ctx, n)
 	return n
+}
+
+const PurgatoryDuplicatePK = -1
+const PurgatoryExistingMember = -2
+
+//TODO remember who has sent
+func (r *MemberRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppearance, int) {
+	if !n.profile.GetState().IsUndefined() {
+		panic("illegal value")
+	}
+
+	id := n.profile.GetShortNodeID()
+	na := r.getActiveNodeAppearance(id)
+	if na != nil {
+		return na, PurgatoryExistingMember
+	}
+
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	nn := r.joiners[id]
+	if nn != nil {
+		return nn, PurgatoryExistingMember
+	}
+
+	if r.purgatoryByPK == nil {
+		r.purgatoryByPK = make(map[string]*NodeAppearance)
+		r.purgatoryByID = make(map[common.ShortNodeID]*[]*NodeAppearance)
+
+		r.purgatoryByPK[n.profile.GetNodePublicKey().AsByteString()] = n
+		r.purgatoryByID[n.profile.GetShortNodeID()] = &[]*NodeAppearance{n}
+		return n, 0
+	}
+
+	pk := n.profile.GetNodePublicKey().AsByteString()
+	nn = r.purgatoryByPK[pk]
+	if nn != nil {
+		return nn, PurgatoryDuplicatePK
+	}
+
+	nodes := r.purgatoryByID[id]
+
+	if nodes == nil {
+		nodes = &[]*NodeAppearance{n}
+		r.purgatoryByID[id] = nodes
+		return n, 0
+	} else {
+		*nodes = append(*nodes, n)
+		return n, len(*nodes) - 1
+	}
+}
+
+func (r *MemberRealmPopulation) AddToJoiners(n *NodeAppearance) (*NodeAppearance, int) {
+	if !n.profile.GetState().IsJoining() {
+		panic("illegal value")
+	}
+
+	id := n.profile.GetShortNodeID()
+	na := r.getActiveNodeAppearance(id)
+	if na != nil {
+		return na, PurgatoryExistingMember
+	}
+
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	nn := r.joiners[id]
+	if nn != nil {
+		return nn, PurgatoryExistingMember
+	}
+
+	delete(r.purgatoryByPK, n.profile.GetNodePublicKey().AsByteString())
+	delete(r.purgatoryByID, n.profile.GetShortNodeID())
+
+	return n, 0
 }

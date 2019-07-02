@@ -176,9 +176,13 @@ func (r *FullRealm) initPopulation(population census.OnlinePopulation, individua
 
 	//cp := r.candidateFeeder.PickNextJoinCandidate()
 	//if cp != nil {
-	//	jc := r.CreatePurgatoryNode(cp)
-	//	r.UpgradeToDynamicNode(jc, cp)
-	//	newSelf.requestedJoiner = jc
+	//	nip := r.profileFactory.CreateBriefIntroProfile(cp, cp.GetJoinerSignature())
+	//	nip = r.profileFactory.UpgradeIntroProfile(nip, cp)
+	//
+	//	r.population.AddToJoiners()
+	////	jc := r.CreatePurgatoryNode(cp)
+	////	r.UpgradeToDynamicNode(jc, cp)
+	////	newSelf.requestedJoiner = jc
 	//}
 
 	r.self = newSelf
@@ -293,19 +297,29 @@ func (r *FullRealm) preparePrimingMembers(pop census.OnlinePopulationBuilder) {
 	}
 }
 
+const pulsesInJustJoined = 1
+const pulsesInSuspected = 1
+
 func (r *FullRealm) prepareRegularMembers(pop census.OnlinePopulationBuilder) {
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() == nil {
 			v := r.GetSignatureVerifier(p.GetNodePublicKeyStore())
 			p.SetSignatureVerifier(v)
 		}
+		ns := p.GetState()
+		if ns.GetCountInSuspected() >= pulsesInSuspected {
+			panic("node must be removed as suspected")
+		}
+		ns = ns.UpdateOnNextPulse(pulsesInJustJoined)
+		p.SetState(ns)
+
 		idx := p.GetIndex()
 		if idx >= 0 {
 			na := r.population.GetNodeAppearanceByIndex(idx)
 			p.SetPower(na.requestedPower)
 		} else {
-			//TODO find joiner nodes
-			panic("unsupported: joiner nodes")
+			na := r.population.GetJoinerNodeAppearance(p.GetShortNodeID())
+			p.SetPower(na.requestedPower)
 		}
 	}
 }

@@ -110,6 +110,10 @@ func (c *updatableSlot) SetPower(power common2.MemberPower) {
 	c.power = power
 }
 
+func (c *updatableSlot) SetState(s common2.MembershipState) {
+	c.state = s
+}
+
 func (c *updatableSlot) SetIndex(index int) {
 	if index < 0 || index > math.MaxUint16 {
 		panic("wrong index")

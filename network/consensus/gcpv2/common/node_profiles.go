@@ -107,8 +107,14 @@ type BriefCandidateProfile interface {
 	GetNodeEndpoint() common.NodeEndpoint
 }
 
-type CandidateProfile interface {
+type SignedBriefCandidateProfile interface {
 	BriefCandidateProfile
+
+	GetIssuerSignature() common.SignatureHolder
+}
+
+type CandidateProfile interface {
+	SignedBriefCandidateProfile
 
 	GetIssuedAtPulse() common.PulseNumber // =0 when a node was connected during zeronet
 	GetIssuedAtTime() time.Time
@@ -121,7 +127,7 @@ type CandidateProfile interface {
 	//NodeRefProof	[]common.Bits512
 
 	GetIssuerID() common.ShortNodeID
-	GetIssuerSignature() common.SignatureHolder
+	GetJoinerSignature() common.SignatureHolder
 }
 
 type NodeProfileFactory interface {
@@ -136,6 +142,7 @@ type LocalNodeProfile interface {
 
 type UpdatableNodeProfile interface {
 	NodeProfile
+	SetState(s MembershipState)
 	SetPower(declaredPower MemberPower)
 	SetRank(index int, state MembershipState, declaredPower MemberPower)
 	SetSignatureVerifier(verifier common.SignatureVerifier)
@@ -387,31 +394,76 @@ func (v PowerRequest) AsMemberPower() (bool, MemberPower) {
 type MembershipState int8
 
 const (
-	SuspectedOnce MembershipState = iota - 1
-	Undefined
+	Suspected MembershipState = iota - 1
+	Undefined                 /* Purgatory node */
 	Joining
 	Working
-	Leaving
+	JustJoined
 )
 
 func (v MembershipState) IsSuspect() bool {
-	return v <= SuspectedOnce
+	return v <= Suspected
 }
 
-func (v MembershipState) TimesAsSuspect() int {
+func (v MembershipState) IsJustJoined() bool {
+	return v >= JustJoined
+}
+
+func (v MembershipState) GetCountInSuspected() int {
 	if !v.IsSuspect() {
 		return 0
 	}
-	return 1 + int(SuspectedOnce-v)
+	return 1 + int(Suspected-v)
 }
 
-func (v *MembershipState) IncrementSuspect() (becameSuspect bool) {
-	if v.IsSuspect() {
-		*v--
-		return false
+func (v MembershipState) AsJustJoinedRemainingCount() int {
+	if !v.IsJustJoined() {
+		return 0
 	}
-	*v = SuspectedOnce
-	return true
+	return 1 + int(v-JustJoined)
+}
+
+func (v MembershipState) SetJustJoined(count int) MembershipState {
+	if count <= 0 {
+		panic("illegal value")
+	}
+	return JustJoined + MembershipState(count) - 1
+}
+
+func (v MembershipState) IncrementSuspected() MembershipState {
+	if v.IsUndefined() {
+		panic("illegal state")
+	}
+	if v.IsSuspect() {
+		return v - 1
+	}
+	return Suspected
+}
+
+func (v MembershipState) DecrementJustJoined() MembershipState {
+	if v.IsUndefined() {
+		panic("illegal state")
+	}
+	if v.IsJustJoined() {
+		return v - 1
+	}
+	return v
+}
+
+func (v MembershipState) UpdateOnNextPulse(justJoinedCount int) MembershipState {
+	if v.IsUndefined() {
+		panic("illegal state")
+	}
+	if v.IsJoining() {
+		if justJoinedCount == 0 {
+			return Working
+		}
+		return v.SetJustJoined(justJoinedCount)
+	}
+	if v.IsSuspect() || v.IsJustJoined() {
+		return v - 1
+	}
+	return v
 }
 
 func (v MembershipState) IsUndefined() bool {
@@ -419,15 +471,11 @@ func (v MembershipState) IsUndefined() bool {
 }
 
 func (v MembershipState) IsWorking() bool {
-	return v == Working
+	return v >= Working
 }
 
 func (v MembershipState) IsJoining() bool {
 	return v == Joining
-}
-
-func (v MembershipState) IsLeaving() bool {
-	return v == Leaving
 }
 
 func nodeProfileOrdering(np NodeProfile) (NodePrimaryRole, MemberPower, common.ShortNodeID) {
@@ -520,6 +568,7 @@ var _ NodeProfile = &JoinerNodeProfile{}
 
 type JoinerNodeProfile struct {
 	NodeIntroProfile
+	MembershipState MembershipState
 }
 
 func (*JoinerNodeProfile) GetIndex() int {

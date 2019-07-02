@@ -138,7 +138,7 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 }
 
 func (c *NodeAppearance) IsJoiner() bool {
-	return false
+	return c.profile.GetState().IsJoining()
 }
 
 func (c *NodeAppearance) GetIndex() int {
@@ -411,10 +411,20 @@ func (c *NodeAppearance) ResetAllPacketHandlers() {
 	c.handlers = nil
 }
 
-func (c *NodeAppearance) ResetPacketHandler(i int) {
+func (c *NodeAppearance) ResetPacketHandlers(indices ...int) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if len(c.handlers) > 0 {
+	if len(c.handlers) == 0 {
+		return
+	}
+
+	for i := range indices {
 		c.handlers[i] = nil
 	}
+	for _, h := range c.handlers {
+		if h != nil {
+			return
+		}
+	}
+	c.handlers = nil
 }

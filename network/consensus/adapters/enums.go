@@ -89,7 +89,7 @@ func MembershipStateToNodeState(membershipState common.MembershipState) insolar.
 	switch membershipState {
 	case common.Joining:
 		return insolar.NodePending
-	case common.SuspectedOnce: // TODO: not sure
+	case common.Suspected: // TODO: not sure
 		fallthrough
 	case common.Working:
 		return insolar.NodeReady
