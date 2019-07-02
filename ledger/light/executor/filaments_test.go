@@ -590,6 +590,104 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 	})
 }
 
+func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
+	t.Parallel()
+	mc := minimock.NewController(t)
+	ctx := inslogger.TestContext(t)
+
+	var (
+		indexes     object.IndexStorage
+		records     object.RecordStorage
+		coordinator *jet.CoordinatorMock
+		fetcher     *jet.FetcherMock
+		sender      *bus.SenderMock
+		pcs         insolar.PlatformCryptographyScheme
+		calculator  *executor.FilamentCalculatorDefault
+	)
+	resetComponents := func() {
+		indexes = object.NewIndexStorageMemory()
+		records = object.NewRecordMemory()
+		coordinator = jet.NewCoordinatorMock(mc)
+		fetcher = jet.NewFetcherMock(mc)
+		sender = bus.NewSenderMock(mc)
+		pcs = testutils.NewPlatformCryptographyScheme()
+		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, fetcher, sender)
+	}
+
+	resetComponents()
+	t.Run("returns error if reason is empty", func(t *testing.T) {
+		_, err := calculator.ResultDuplicate(ctx, gen.PulseNumber(), gen.ID(), gen.ID(), record.Result{})
+		assert.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("no records", func(t *testing.T) {
+		objectID := gen.ID()
+		fromPulse := gen.PulseNumber()
+		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+			ObjID: objectID,
+		})
+		require.NoError(t, err)
+
+		res, err := calculator.ResultDuplicate(ctx, fromPulse, objectID, gen.ID(), record.Result{Request: gen.Reference()})
+
+		assert.NoError(t, err)
+		assert.Nil(t, res)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("returns result. request is found too", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
+		req1 := b.Append(insolar.FirstPulseNumber+1, req)
+		res := record.Result{Request: *insolar.NewReference(req1.RecordID)}
+		res1 := b.Append(insolar.FirstPulseNumber+2, res)
+
+		objectID := gen.ID()
+		fromPulse := res1.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+			ObjID: objectID,
+			Lifeline: object.Lifeline{
+				PendingPointer: &res1.MetaID,
+			},
+		})
+		require.NoError(t, err)
+
+		fRes, err := calculator.ResultDuplicate(ctx, fromPulse, objectID, res1.RecordID, res)
+		require.NoError(t, err)
+		require.Equal(t, *fRes, res1)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("returns result. request isn't found", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		res := record.Result{Request: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber+2, nil))}
+		res1 := b.Append(insolar.FirstPulseNumber+2, res)
+
+		objectID := gen.ID()
+		fromPulse := res1.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+			ObjID: objectID,
+			Lifeline: object.Lifeline{
+				PendingPointer: &res1.MetaID,
+			},
+		})
+		require.NoError(t, err)
+
+		fRes, err := calculator.ResultDuplicate(ctx, fromPulse, objectID, res1.RecordID, res)
+		require.Error(t, err)
+		require.Equal(t, *fRes, res1)
+
+		mc.Finish()
+	})
+}
+
 type filamentBuilder struct {
 	records   object.RecordModifier
 	currentID insolar.ID
