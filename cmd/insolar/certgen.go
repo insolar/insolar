@@ -132,7 +132,7 @@ func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
 	response, err := requester.GetResponseBodyPlatform(g.API+"/rpc", requester.PlatformRequest{
 		JSONRPC:        JSONRPCVersion,
-		Method:         "cert.Get",
+		Method:         "cert.get",
 		ID:             1,
 		PlatformParams: map[string]string{"ref": ref.String()},
 	})

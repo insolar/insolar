@@ -49,7 +49,7 @@ func NewNodeService(runner *Runner) *NodeService {
 //   Request structure:
 //   {
 //     "jsonrpc": "2.0",
-//     "method": "node.GetSeed",
+//     "method": "node.getSeed",
 //     "id": str|int|null
 //   }
 //
