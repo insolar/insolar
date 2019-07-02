@@ -166,6 +166,7 @@ func initComponents(
 		certManager,
 		logicRunner,
 		logicrunner.NewLogicExecutor(),
+		logicrunner.NewRequestsExecutor(),
 		logicrunner.NewMachinesManager(),
 		nodeNetwork,
 		nw,
