@@ -57,11 +57,13 @@ type UploadArgs struct {
 // UploadReply is reply that Contract.Upload returns
 type UploadReply struct {
 	PrototypeRef string `json:"PrototypeRef"`
+	TraceID      string `json:"TraceID"`
 }
 
 // Upload builds code and return prototype ref
 func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	reply.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
 
@@ -104,11 +106,13 @@ type CallConstructorArgs struct {
 // CallConstructorReply is reply that Contract.CallConstructor returns
 type CallConstructorReply struct {
 	ObjectRef string `json:"ObjectRef"`
+	TraceID   string `json:"TraceID"`
 }
 
 // CallConstructor make an object from its prototype
 func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	reply.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ ContractService.CallConstructor ] Incoming request: %s", r.RequestURI)
 
@@ -158,11 +162,13 @@ type CallMethodReply struct {
 	ExtractedReply interface{}       `json:"ExtractedReply"`
 	Error          *foundation.Error `json:"Error"`
 	ExtractedError string            `json:"ExtractedError"`
+	TraceID        string            `json:"TraceID"`
 }
 
 // CallConstructor make an object from its prototype
 func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *CallMethodReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	re.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ ContractService.CallMethod ] Incoming request: %s", r.RequestURI)
 
