@@ -148,6 +148,17 @@ func NewMessageHandler(
 				h.filamentModifier,
 			)
 		},
+		ActivateObject: func(p *proc.ActivateObject) {
+			p.Dep(
+				h.Records,
+				h.IndexLocker,
+				h.IndexStorage,
+				h.filamentModifier,
+				h.WriteAccessor,
+				h.Sender,
+				h.PCS,
+			)
+		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
