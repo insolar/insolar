@@ -1179,14 +1179,24 @@ func (c *One) Get() (int, error) {
 	return c.Number, nil
 }
 `
-	objRef := callConstructor(t, uploadContractOnce(t, "test", contractCode), "New")
+
+	prototypeRef := uploadContractOnce(t, "test", contractCode)
+
+	objRef := callConstructor(t, prototypeRef, "NewWithNumber", 7)
 
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objRef, "Get")
 	require.Empty(t, result.Error)
+	require.Equal(t, float64(7), result.ExtractedReply)
+
+	objRef = callConstructor(t, prototypeRef, "New")
+
+	// be careful - jsonUnmarshal convert json numbers to float64
+	result = callMethod(t, objRef, "Get")
+	require.Empty(t, result.Error)
 	require.Equal(t, float64(0), result.ExtractedReply)
 
-	objRef = callConstructor(t, uploadContractOnce(t, "test", contractCode), "NewWithNumber", 12)
+	objRef = callConstructor(t, prototypeRef, "NewWithNumber", 12)
 
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result = callMethod(t, objRef, "Get")
