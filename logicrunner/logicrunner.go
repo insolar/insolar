@@ -57,9 +57,9 @@ type Ref = insolar.Reference
 type ObjectState interface {
 	sync.Locker
 
-	GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error) // AALEKSEEV TODO return interface
-	MustModeState(mode insolar.CallMode) *ExecutionState                // AALEKSEEV TODO return interface
-	SetExecutionState(es *ExecutionState)                               // AALEKSEEV TODO accept interface
+	GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error)
+	MustModeState(mode insolar.CallMode) *ExecutionState
+	SetExecutionState(es *ExecutionState)
 	Empty() bool
 }
 
