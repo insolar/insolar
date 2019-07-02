@@ -138,9 +138,8 @@ var _ common.SignedEvidenceHolder = &basePacket{}
 type basePacket struct {
 	src       common.ShortNodeID
 	tgt       common.ShortNodeID
-	nodePower common2.MemberPower
 	nodeCount uint16
-	nodeIndex uint16
+	mp        common2.MembershipProfile
 }
 
 func (r *basePacket) GetEvidence() common.SignedData {
@@ -150,16 +149,16 @@ func (r *basePacket) GetEvidence() common.SignedData {
 	return common.NewSignedData(&v, d, s)
 }
 
-func (r *basePacket) GetNodeIndex() uint16 {
-	return r.nodeIndex
-}
-
 func (r *basePacket) GetNodeCount() uint16 {
 	return r.nodeCount
 }
 
+func (r *basePacket) GetNodeIndex() uint16 {
+	return r.mp.Index
+}
+
 func (r *basePacket) GetNodePower() common2.MemberPower {
-	return r.nodePower
+	return r.mp.Power
 }
 
 func (r *basePacket) GetSourceShortNodeId() common.ShortNodeID {
@@ -221,8 +220,8 @@ var _ emuPackerCloner = &EmuPhase0NetPacket{}
 
 type EmuPhase0NetPacket struct {
 	basePacket
-	packet *EmuPulsarNetPacket
-	pn     common.PulseNumber
+	pulsePacket *EmuPulsarNetPacket
+	pn          common.PulseNumber
 }
 
 func (r *EmuPhase0NetPacket) GetPacketType() packets.PacketType {
@@ -238,18 +237,18 @@ func (r *EmuPhase0NetPacket) AsPhase0Packet() packets.Phase0PacketReader {
 }
 
 func (r *EmuPhase0NetPacket) GetPulseNumber() common.PulseNumber {
-	if r.packet == nil {
+	if r.pulsePacket == nil {
 		return r.pn
 	}
-	return r.packet.pulseData.PulseNumber
+	return r.pulsePacket.pulseData.PulseNumber
 }
 
 func (r *EmuPhase0NetPacket) GetEmbeddedPulsePacket() packets.PulsePacketReader {
-	return r.packet
+	return r.pulsePacket
 }
 
 func (r *EmuPhase0NetPacket) String() string {
-	return fmt.Sprintf("ph:0 %v, pulsePkt: {%v}", r.basePacket.String(), r.packet)
+	return fmt.Sprintf("ph:0 %v pulsePkt: {%v} mp:{%v} nc:%d ", r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
 }
 
 var _ packets.Phase1PacketReader = &EmuPhase1NetPacket{}
@@ -258,10 +257,13 @@ var _ packets.PacketParser = &EmuPhase1NetPacket{}
 
 type EmuPhase1NetPacket struct {
 	EmuPhase0NetPacket
-	nsh       common2.NodeStateHashEvidence
 	selfIntro common2.NodeIntroduction
 	isRequest bool
 	// packetType uint8 // to reuse this type for Phase1 and Phase1Req
+}
+
+func (r *EmuPhase1NetPacket) GetNodeClaimsSignature() common2.NodeClaimSignature {
+	return r.mp.ClaimSignature
 }
 
 func (r *EmuPhase1NetPacket) HasSelfIntro() bool {
@@ -277,7 +279,7 @@ func (r *EmuPhase1NetPacket) String() string {
 	if r.isRequest {
 		prefix = "rq"
 	}
-	return fmt.Sprintf("ph:1%s %s, pulsePkt:{%v}, nsh:%+v, intr:%v", prefix, r.basePacket.String(), r.packet, r.nsh, r.selfIntro)
+	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d intr:%v", prefix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount, r.selfIntro)
 }
 
 func (r *EmuPhase1NetPacket) GetPacketType() packets.PacketType {
@@ -296,16 +298,12 @@ func (r *EmuPhase1NetPacket) AsPhase1Packet() packets.Phase1PacketReader {
 	return r
 }
 
-func (r *EmuPhase1NetPacket) GetNodeStateHash() common2.NodeStateHash {
-	return r.nsh.GetNodeStateHash()
-}
-
 func (r *EmuPhase1NetPacket) GetNodeStateHashEvidence() common2.NodeStateHashEvidence {
-	return r.nsh
+	return r.mp.StateEvidence
 }
 
 func (r *EmuPhase1NetPacket) HasPulseData() bool {
-	return r.packet != nil
+	return r.pulsePacket != nil
 }
 
 func (r *EmuPhase1NetPacket) GetMemberPacket() packets.MemberPacketReader {
@@ -324,7 +322,7 @@ type EmuPhase2NetPacket struct {
 }
 
 func (r *EmuPhase2NetPacket) String() string {
-	return fmt.Sprintf("ph:2 %s, pn:%v, ngbh:%v, intr:%v", r.basePacket.String(), r.pulseNumber, r.neighbourhood, r.intros)
+	return fmt.Sprintf("ph:2 %s pn:%v mp:{%v} nc:%d ngbh:%v intr:%v", r.basePacket.String(), r.pulseNumber, r.mp, r.nodeCount, r.neighbourhood, r.intros)
 }
 
 func (r *EmuPhase2NetPacket) GetIntroductions() []common2.NodeIntroduction {
@@ -364,7 +362,7 @@ type EmuPhase3NetPacket struct {
 }
 
 func (r *EmuPhase3NetPacket) String() string {
-	return fmt.Sprintf("ph:3 %s, pn:%v, set:%v, gshT:%v, gshD:%v", r.basePacket.String(), r.pulseNumber,
+	return fmt.Sprintf("ph:3 %s, pn:%v set:%v gshT:%v gshD:%v", r.basePacket.String(), r.pulseNumber,
 		r.bitset, r.gshTrusted, r.gshDoubted)
 }
 

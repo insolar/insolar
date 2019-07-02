@@ -110,7 +110,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	msg := parcel.Message().(*message.CallMethod)
 
-	parcel.SetSender(msg.Request.Sender)
+	parcel.SetSender(msg.IncomingRequest.Sender)
 
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(
@@ -134,8 +134,12 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	}
 
 	u.hasPending = true
-
 	es.LedgerHasMoreRequests = true
+
+	if es.CurrentList.Has(*requestRef) {
+		return nil
+	}
+
 	t := NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
 	t.FromLedger = true
 	es.Broker.Prepend(ctx, true, t)

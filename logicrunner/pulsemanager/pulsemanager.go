@@ -136,8 +136,8 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 		fromNetwork := m.NodeNet.GetWorkingNodes()
 		toSet := make([]insolar.Node, 0, len(fromNetwork))
-		for _, node := range fromNetwork {
-			toSet = append(toSet, insolar.Node{ID: node.ID(), Role: node.Role()})
+		for _, n := range fromNetwork {
+			toSet = append(toSet, insolar.Node{ID: n.ID(), Role: n.Role()})
 		}
 		err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 		if err != nil {

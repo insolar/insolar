@@ -169,9 +169,9 @@ func TestCalculatorHashes(t *testing.T) {
 		return "key", nil
 	}
 
-	am := staterMock{
-		stateFunc: func() (r []byte, r1 error) {
-			return []byte("state"), nil
+	stater := staterMock{
+		stateFunc: func() []byte {
+			return []byte("state")
 		},
 	}
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -179,9 +179,9 @@ func TestCalculatorHashes(t *testing.T) {
 	th := testutils.NewTerminationHandlerMock(t)
 
 	cm := component.Manager{}
-	cm.Inject(th, nk, &am, calculator, service, scheme)
+	cm.Inject(th, nk, &stater, calculator, service, scheme)
 
-	require.NotNil(t, calculator.ArtifactManager)
+	require.NotNil(t, calculator.Stater)
 	require.NotNil(t, calculator.NodeNetwork)
 	require.NotNil(t, calculator.CryptographyService)
 	require.NotNil(t, calculator.PlatformCryptographyScheme)

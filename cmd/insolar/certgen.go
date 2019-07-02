@@ -102,6 +102,7 @@ func (g *certGen) registerNode() insolar.Reference {
 		Params: requester.Params{
 			CallSite:   "contract.registerNode",
 			CallParams: map[string]string{"publicKey": string(keySerialized), "role": g.staticRole.String()},
+			PublicKey:  userCfg.PublicKey,
 		},
 	}
 
@@ -131,7 +132,7 @@ func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
 	response, err := requester.GetResponseBodyPlatform(g.API+"/rpc", requester.PlatformRequest{
 		JSONRPC:        JSONRPCVersion,
-		Method:         "cert.Get",
+		Method:         "cert.get",
 		ID:             1,
 		PlatformParams: map[string]string{"ref": ref.String()},
 	})
@@ -217,6 +218,7 @@ func (g *certGen) getNodeRefByPublicKey() insolar.Reference {
 		Params: requester.Params{
 			CallSite:   "contract.getNodeRef",
 			CallParams: []interface{}{keySerialized},
+			PublicKey:  userCfg.PublicKey,
 		},
 	}
 

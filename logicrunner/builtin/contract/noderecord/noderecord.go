@@ -23,20 +23,20 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-// RecordInfo holds record info
+// RecordInfo holds record info.
 type RecordInfo struct {
 	PublicKey string
 	Role      insolar.StaticRole
 }
 
-// NodeRecord contains info about node
+// NodeRecord contains info about node.
 type NodeRecord struct {
 	foundation.BaseContract
 
 	Record RecordInfo
 }
 
-// NewNodeRecord creates new NodeRecord
+// NewNodeRecord creates new NodeRecord.
 func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 	if len(publicKey) == 0 {
 		return nil, fmt.Errorf("public key is required")
@@ -60,24 +60,24 @@ func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 
 var INSATTR_GetNodeInfo_API = true
 
-// GetNodeInfo returns RecordInfo
+// GetNodeInfo returns RecordInfo.
 func (nr *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	return nr.Record, nil
 }
 
 var INSATTR_GetPublicKey_API = true
 
-// GetPublicKey returns public key
+// GetPublicKey returns public key.
 func (nr *NodeRecord) GetPublicKey() (string, error) {
 	return nr.Record.PublicKey, nil
 }
 
-// GetRole returns role
+// GetRole returns role.
 func (nr *NodeRecord) GetRole() (insolar.StaticRole, error) {
 	return nr.Record.Role, nil
 }
 
-// Destroy makes request to destroy current node record
+// Destroy makes request to destroy current node record.
 func (nr *NodeRecord) Destroy() error {
 	return nr.SelfDestruct()
 }

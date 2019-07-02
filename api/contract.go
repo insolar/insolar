@@ -123,7 +123,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 
 	base := insolar.GenesisRecord.Ref()
 	msg := &message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			Method:          args.Method,
 			Arguments:       args.MethodArgs,
 			Base:            &base,
@@ -176,7 +176,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	}
 
 	msg := &message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			Caller:       testutils.RandomRef(),
 			Object:       objectRef,
 			Method:       args.Method,

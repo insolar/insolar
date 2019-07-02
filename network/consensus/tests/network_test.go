@@ -330,7 +330,7 @@ func (emuRt *EmuRoute) _recvPacket(originPacket *Packet) {
 		}
 		outRoute := emuRt.network.getHostRoute(originPacket.Host)
 		if outRoute == nil {
-			//the sender receiver is not available anymore
+			// the sender receiver is not available anymore
 			return
 		}
 		targetPacket := Packet{Payload: ErrUnknownEmuHost(emuRt.host), Host: outRoute.host}

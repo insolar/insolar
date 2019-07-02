@@ -49,7 +49,6 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
-		false,
 	)
 	require.NotNil(t, cm)
 

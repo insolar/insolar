@@ -234,6 +234,7 @@ process_input_params()
             run_insgorund=false
             ;;
         g)
+            GENESIS=1
             bootstrap
             ;;
         b)
@@ -397,7 +398,11 @@ echo "discovery nodes started ..."
 if [[ "$NUM_NODES" -ne "0"  && "$run_insgorund" == "true" ]]
 then
     wait_for_complete_network_state
-    ./scripts/insolard/start_nodes.sh
+    if [[ "$GENESIS" == "1" ]]; then
+        ./scripts/insolard/start_nodes.sh -g
+    else
+        ./scripts/insolard/start_nodes.sh
+    fi
 fi
 
 if [[ "$watch_pulse" == "true" ]]

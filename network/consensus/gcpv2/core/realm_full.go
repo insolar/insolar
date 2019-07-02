@@ -53,7 +53,6 @@ package core
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -82,18 +81,11 @@ type FullRealm struct {
 	population census.OnlinePopulation
 
 	/* Other fields - need mutex */
-	// nshEvidence common2.NodeStateHashEvidence
 	isFinished bool
 }
 
 /* LOCK - runs under RoundController lock */
 func (r *FullRealm) start() {
-	r.roundContext, _ = inslogger.WithFields(r.roundContext, map[string]interface{}{
-		"node_id":   r.GetSelfNodeID(),
-		"pulse":     r.GetPulseNumber(),
-		"is_joiner": r.IsJoiner(),
-	})
-
 	r.census = r.chronicle.GetActiveCensus()
 	r.population = r.census.GetOnlinePopulation()
 
@@ -156,7 +148,7 @@ func (r *FullRealm) initHandlers() (allControllers []PhaseController, perNodeCon
 
 func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 
-	thisNodeID := r.population.GetLocalProfile().GetShortNodeID()
+	thisNodeID := r.GetLocalProfile().GetShortNodeID()
 	profiles := r.population.GetProfiles()
 	baselineWeight := r.strategy.RandUint32()
 
@@ -171,7 +163,7 @@ func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
 			r.joinersCount++
 		}
 		n := &r.nodes[i]
-		n.init(p)
+		n.init(p, &r.coreRealm.nodeCallback)
 		n.neighborTrustThreshold = neighborTrustThreshold
 		n.neighbourWeight = baselineWeight
 		if p.GetShortNodeID() == thisNodeID {
@@ -304,13 +296,13 @@ func (r *FullRealm) GetShuffledOtherNodes() []*NodeAppearance {
 }
 
 func (r *FullRealm) GetLocalProfile() common2.LocalNodeProfile {
-	return r.population.GetLocalProfile()
+	return r.self.profile.(common2.LocalNodeProfile)
 }
 
-func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash) {
+func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash, nch common2.NodeClaimSignature) {
 	// TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
 	v := nsh.SignWith(r.signer)
-	r.self.SetLocalNodeStateHashEvidence(common2.NewNodeStateHashEvidence(v))
+	r.self.SetLocalNodeStateHashEvidence(common2.NewNodeStateHashEvidence(v), nch)
 }
 
 func (r *FullRealm) GetIndexedNodes() []NodeAppearance {
@@ -331,5 +323,18 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHa
 	r.isFinished = true
 
 	r.prepareNewMembers(builder.GetOnlinePopulationBuilder())
-	builder.BuildAndMakeExpected(csh)
+	expected := builder.BuildAndMakeExpected(csh)
+
+	r.upstreamMembershipConfirmed(expected)
+}
+
+func (r *coreRealm) upstreamMembershipConfirmed(expectedCensus census.OperationalCensus) {
+	sp := r.GetSelf().GetProfile()
+	report := MembershipUpstreamReport{
+		PulseNumber:     r.pulseData.PulseNumber,
+		MemberPower:     sp.GetPower(),
+		MembershipState: sp.GetState(),
+	}
+
+	r.upstream.MembershipConfirmed(report, expectedCensus)
 }

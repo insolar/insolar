@@ -92,8 +92,8 @@ func (f *fakeNode) HandleStream(ctx context.Context, address string, stream io.R
 	f.tcpBuf <- b
 }
 
-func (f *fakeNode) HandleDatagram(address string, buf []byte) {
-	log.Printf("HandleDatagram from %s: %v", address, buf)
+func (f *fakeNode) HandleDatagram(ctx context.Context, address string, buf []byte) {
+	inslogger.FromContext(ctx).Info("HandleDatagram from %s: %v", address, buf)
 	f.udpBuf <- buf
 }
 

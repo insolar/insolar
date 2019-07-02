@@ -53,6 +53,7 @@ package common
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 type DigestMethod string
@@ -120,11 +121,12 @@ type SecretKeyStore interface {
 
 type SignatureVerifier interface {
 	IsDigestMethodSupported(m DigestMethod) bool
-	IsValidDataSignature(data io.Reader, signature SignatureHolder) bool
-
-	IsSignOfSignatureMethodSupported(m SignatureMethod) bool
 	IsSignMethodSupported(m SignMethod) bool
+	IsDigestOfSignatureMethodSupported(m SignatureMethod) bool
+	IsSignOfSignatureMethodSupported(m SignatureMethod) bool
+
 	IsValidDigestSignature(digest DigestHolder, signature SignatureHolder) bool
+	IsValidDataSignature(data io.Reader, signature SignatureHolder) bool
 }
 
 type SignatureVerifierFactory interface {
@@ -150,6 +152,22 @@ type SignedEvidenceHolder interface {
 
 func (d DigestMethod) SignedBy(s SignMethod) SignatureMethod {
 	return SignatureMethod(string(d) + "/" + string(s))
+}
+
+func (s SignatureMethod) DigestMethod() DigestMethod {
+	parts := strings.Split(string(s), "/")
+	if len(parts) != 2 {
+		return ""
+	}
+	return DigestMethod(parts[0])
+}
+
+func (s SignatureMethod) SignMethod() SignMethod {
+	parts := strings.Split(string(s), "/")
+	if len(parts) != 2 {
+		return ""
+	}
+	return SignMethod(parts[1])
 }
 
 type hFoldReader FoldableReader

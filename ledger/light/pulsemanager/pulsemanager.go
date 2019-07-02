@@ -82,14 +82,16 @@ func NewPulseManager(
 	pm := &PulseManager{
 		JetSplitter:     jetSplitter,
 		LightReplicator: lightToHeavySyncer,
-		HotSender:       hotSender,
 		WriteManager:    writeManager,
+		HotSender:       hotSender,
 	}
 	return pm
 }
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
+	logger := inslogger.FromContext(ctx)
+
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
 	if m.stopped {
@@ -113,18 +115,18 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		return nil
 	}
 
-	logger := inslogger.FromContext(ctx)
-
 	if oldPulse != nil && prevPN != nil {
 		err = m.WriteManager.CloseAndWait(ctx, oldPulse.PulseNumber)
 		if err != nil {
-			logger.Error("can't close pulse for writing", err)
+			panic(errors.Wrap(err, "can't close pulse for writing"))
 		}
-		err = m.HotSender.SendHot(ctx, jets, oldPulse.PulseNumber, newPulse.PulseNumber)
+		err = m.HotSender.SendHot(ctx, oldPulse.PulseNumber, newPulse.PulseNumber, jets)
 		if err != nil {
-			return err
+			logger.Error("send Hot failed: ", err)
 		}
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
+	} else {
+		logger.Debugf("SPLIT> skip send Hots oldPulse=%v, prevPN=%v", oldPulse, prevPN)
 	}
 
 	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
@@ -147,7 +149,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 func (m *PulseManager) setUnderGilSection(
 	ctx context.Context, newPulse insolar.Pulse, persist bool,
 ) (
-	[]executor.JetInfo, *insolar.Pulse, *insolar.PulseNumber, error,
+	[]insolar.JetID, *insolar.Pulse, *insolar.PulseNumber, error,
 ) {
 	var (
 		oldPulse *insolar.Pulse
@@ -159,7 +161,6 @@ func (m *PulseManager) setUnderGilSection(
 	defer span.End()
 	defer m.GIL.Release(ctx)
 
-	// FIXME: @andreyromancev. 17.12.18. return insolar.Pulse here.
 	storagePulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil && err != pulse.ErrNotFound {
 		return nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
@@ -202,7 +203,7 @@ func (m *PulseManager) setUnderGilSection(
 		}
 	}
 
-	var jets []executor.JetInfo
+	var jets []insolar.JetID
 	if persist && prevPN != nil && oldPulse != nil {
 		jets, err = m.JetSplitter.Do(ctx, *prevPN, oldPulse.PulseNumber, newPulse.PulseNumber)
 
@@ -224,20 +225,18 @@ func (m *PulseManager) setUnderGilSection(
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		// No active nodes for pulse. It means there was no processing (network start).
 		if len(nodes) == 0 {
-			// Activate zero jet for jet tree and unlock jet waiter.
+			logger.Debug("activate zero jet for jet tree and unlock jet waiter.")
 			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
 			if err != nil {
-				return nil, nil, nil, errors.Wrapf(err, "failed to upfate zeroJet")
+				return nil, nil, nil, errors.Wrapf(err, "failed to update zeroJet")
 			}
 			err = m.JetReleaser.Unlock(ctx, insolar.ID(insolar.ZeroJetID))
 			if err != nil {
-				if err == artifactmanager.ErrWaiterNotLocked {
-					inslogger.FromContext(ctx).Error(err)
-				} else {
+				if err != artifactmanager.ErrWaiterNotLocked {
 					return nil, nil, nil, errors.Wrap(err, "failed to unlock zero jet")
 				}
+				logger.Error(err)
 			}
 		}
 	}
@@ -252,18 +251,12 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
 }
 
-// Start starts pulse manager
+// Start starts pulse manager.
 func (m *PulseManager) Start(ctx context.Context) error {
-	origin := m.NodeNet.GetOrigin()
-	err := m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
-	if err != nil && err != node.ErrOverride {
-		return err
-	}
-
 	return nil
 }
 
-// Stop stops PulseManager
+// Stop stops PulseManager.
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
 	m.setLock.Lock()
