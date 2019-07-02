@@ -54,10 +54,14 @@ func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal Activate.Record record")
 	}
 
-	rec := record.Unwrap(&activateVirt)
-	activate, ok := rec.(*record.Activate)
+	act := record.Unwrap(&activateVirt)
+	activate, ok := act.(*record.Activate)
 	if !ok {
-		return fmt.Errorf("wrong request type: %T", rec)
+		return fmt.Errorf("wrong activate record type: %T", act)
+	}
+
+	if activate.Request.IsEmpty() {
+		return errors.New("request is nil")
 	}
 
 	calcAct := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
@@ -76,7 +80,7 @@ func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
 	res := record.Unwrap(&resultVirt)
 	result, ok := res.(*record.Result)
 	if !ok {
-		return fmt.Errorf("wrong request type: %T", rec)
+		return fmt.Errorf("wrong result record type: %T", res)
 	}
 
 	calcRes := proc.NewCalculateID(msg.Result, flow.Pulse(ctx))
