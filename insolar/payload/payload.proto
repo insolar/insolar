@@ -93,7 +93,7 @@ message Jet {
 message SetIncomingRequest {
     uint32 Polymorph = 16;
 
-    bytes Request = 20;
+    record.Virtual Request = 20 [(gogoproto.nullable) = false];
 }
 
 message SetResult {

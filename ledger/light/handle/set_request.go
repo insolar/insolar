@@ -50,20 +50,19 @@ func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal SetIncomingRequest message")
 	}
 
-	calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
+	buf, err := msg.Request.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	calc := proc.NewCalculateID(buf, flow.Pulse(ctx))
 	s.dep.CalculateID(calc)
 	if err := f.Procedure(ctx, calc, true); err != nil {
 		return err
 	}
 	reqID := calc.Result.ID
 
-	virtual := record.Virtual{}
-	err = virtual.Unmarshal(msg.Request)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal Request record")
-	}
-
-	rec := record.Unwrap(&virtual)
+	rec := record.Unwrap(&msg.Request)
 	request, ok := rec.(*record.IncomingRequest)
 	if !ok {
 		return fmt.Errorf("wrong request type: %T", rec)
@@ -72,7 +71,7 @@ func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 	// TODO: check it after INS-1939
 	if request.CallType != record.CTMethod {
 		inslogger.FromContext(ctx).Warn("request is not registered")
-		return s.setActivationRequest(ctx, reqID, virtual, f)
+		return s.setActivationRequest(ctx, reqID, msg.Request, f)
 	}
 
 	if request.Object == nil {
