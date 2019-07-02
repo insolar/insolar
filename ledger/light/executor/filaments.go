@@ -398,6 +398,10 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 				foundResult = &rec
 			}
 		}
+
+		if foundRequest != nil && foundResult != nil {
+			return foundRequest, foundResult, nil
+		}
 	}
 
 	return foundRequest, foundResult, nil
