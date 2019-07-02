@@ -156,6 +156,10 @@ func (m *client) RegisterRequest(
 		Request: buf,
 	})
 
+	if err != nil {
+		return nil, errors.Wrap(err, "RegisterRequest: failed to create message")
+	}
+
 	var recRef *insolar.Reference
 	switch request.CallType {
 	case record.CTMethod:
@@ -842,6 +846,10 @@ func (m *client) RegisterResult(
 		Result: buf,
 	})
 
+	if err != nil {
+		return nil, errors.Wrap(err, "RegisterResult: failed to create message")
+	}
+
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
 	defer done()
 
@@ -919,6 +927,10 @@ func (m *client) activateObject(
 		Record: activateBuf,
 		Result: resultBuf,
 	})
+
+	if err != nil {
+		return errors.Wrap(err, "ActivateObject: failed to create message")
+	}
 
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
 	defer done()

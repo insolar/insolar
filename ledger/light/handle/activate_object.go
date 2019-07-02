@@ -70,7 +70,7 @@ func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
 	resultVirt := record.Virtual{}
 	err = resultVirt.Unmarshal(msg.Result)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal Activate.Record record")
+		return errors.Wrap(err, "failed to unmarshal Activate.Result record")
 	}
 
 	res := record.Unwrap(&resultVirt)
