@@ -119,7 +119,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	}
 	msg.Sender = cr.JetCoordinator.Me()
 
-	var reqRef [insolar.RecordHashSize]byte
+	var reqHash [insolar.RecordHashSize]byte
 	var ch chan *message.ReturnResults
 
 	if !async {
@@ -135,9 +135,9 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 			return nil, errors.Wrap(err, "[ ContractRequester::Call ] Failed to calculate hash")
 		}
 
-		copy(reqRef[:], h.Sum(nil)[0:insolar.RecordHashSize])
+		copy(reqHash[:], h.Sum(nil)[0:insolar.RecordHashSize])
 		ch = make(chan *message.ReturnResults, 1)
-		cr.ResultMap[reqRef] = ch
+		cr.ResultMap[reqHash] = ch
 
 		cr.ResultMutex.Unlock()
 	}
@@ -165,18 +165,18 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
 	defer cancel()
 
-	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request, ". Method: ", msg.Method, ". reqRef: ", hex.EncodeToString(reqRef[:]))
+	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request, ". Method: ", msg.Method, ". reqRef: ", hex.EncodeToString(reqHash[:]))
 
 	select {
 	case ret := <-ch:
-		inslogger.FromContext(ctx).Debug("Got Method results. reqRef: ", hex.EncodeToString(reqRef[:]))
+		inslogger.FromContext(ctx).Debug("Got Method results. reqRef: ", hex.EncodeToString(reqHash[:]))
 		if ret.Error != "" {
 			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
 		return ret.Reply, nil
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, reqRef)
+		delete(cr.ResultMap, reqHash)
 		cr.ResultMutex.Unlock()
 		return nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}
@@ -212,17 +212,17 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	defer cr.ResultMutex.Unlock()
 
 	logger := inslogger.FromContext(ctx)
-	var reqRef [insolar.RecordHashSize]byte
-	copy(reqRef[:], msg.ReqRef.Record().Bytes()[insolar.RecordHashOffset:])
-	c, ok := cr.ResultMap[reqRef]
+	var reqHash [insolar.RecordHashSize]byte
+	copy(reqHash[:], msg.ReqRef.Record().Hash())
+	c, ok := cr.ResultMap[reqHash]
 	if !ok {
-		logger.Info("oops unwaited results reqRef=", hex.EncodeToString(reqRef[:]))
+		logger.Info("oops unwaited results reqRef=", hex.EncodeToString(reqHash[:]))
 		return &reply.OK{}, nil
 	}
-	logger.Debug("Got wanted results reqRef=", hex.EncodeToString(reqRef[:]))
+	logger.Debug("Got wanted results reqRef=", hex.EncodeToString(reqHash[:]))
 
 	c <- msg
-	delete(cr.ResultMap, reqRef)
+	delete(cr.ResultMap, reqHash)
 
 	return &reply.OK{}, nil
 }
