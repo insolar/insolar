@@ -200,6 +200,9 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	case payload.TypeSetIncomingRequest:
 		h := NewSetIncomingRequest(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeSetOutgoingRequest:
+		h := NewSetOutgoingRequest(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeSetResult:
 		h := NewSetResult(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)

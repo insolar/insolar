@@ -35,8 +35,8 @@ type SetOutgoingRequest struct {
 	passed  bool
 }
 
-func NewSetOutgoingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetIncomingRequest {
-	return &SetIncomingRequest{
+func NewSetOutgoingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetOutgoingRequest {
+	return &SetOutgoingRequest{
 		dep:     dep,
 		message: msg,
 		passed:  passed,
