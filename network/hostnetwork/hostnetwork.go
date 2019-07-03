@@ -152,6 +152,7 @@ func (hn *hostNetwork) Start(ctx context.Context) error {
 // Stop listening to network requests.
 func (hn *hostNetwork) Stop(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
+		hn.pool.Reset()
 		err := hn.transport.Stop(ctx)
 		if err != nil {
 			return errors.Wrap(err, "Failed to stop transport.")

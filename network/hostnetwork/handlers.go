@@ -71,6 +71,7 @@ type RequestHandler func(ctx context.Context, p *packet.Packet)
 type StreamHandler struct {
 	requestHandler  RequestHandler
 	responseHandler future.PacketHandler
+	pool            pool.ConnectionPool
 }
 
 // NewStreamHandler creates new StreamHandler
@@ -93,10 +94,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 		for {
 			select {
 			case <-ctx.Done():
-				err := reader.Close()
-				if err != nil {
-					mainLogger.Error("[ HandleStream ] Failed to close reader: ", err.Error())
-				}
+				// utils.CloseVerbose(reader)
 				return
 			default:
 			}
@@ -109,6 +107,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				mainLogger.Info("[ HandleStream ] Connection closed by peer")
+				utils.CloseVerbose(reader)
 				return
 			}
 

@@ -163,8 +163,8 @@ type hostSuite struct {
 }
 
 func newHostSuite(t *testing.T) *hostSuite {
-	ctx1 := context.Background()
-	ctx2 := context.Background()
+	ctx1 := inslogger.ContextWithTrace(context.Background(), "AAA")
+	ctx2 := inslogger.ContextWithTrace(context.Background(), "BBB")
 	resolver := newMockResolver()
 	id1 := ID1 + DOMAIN
 	id2 := ID2 + DOMAIN
@@ -441,7 +441,7 @@ func TestStartStopSend(t *testing.T) {
 	err := s.cm1.Stop(s.ctx1)
 	require.NoError(t, err)
 
-	//s.ctx1 = context.Background()
+	s.ctx1 = context.Background()
 	err = s.cm1.Start(s.ctx1)
 	require.NoError(t, err)
 
