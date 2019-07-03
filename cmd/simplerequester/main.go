@@ -2,9 +2,17 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
+
+	"github.com/insolar/x-crypto/elliptic"
+
+	"github.com/insolar/x-crypto/x509"
+
+	"github.com/insolar/x-crypto/ecdsa"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/log"
@@ -18,12 +26,15 @@ var (
 	memberRef      string
 	paramsFile     string
 	memberKeysPath string
+	privateKeyHex  string
 )
 
 const defaultURL = "http://localhost:19101/api"
 
 func parseInputParams() {
+	fmt.Println("Parse data")
 	pflag.StringVarP(&memberKeysPath, "memberkeys", "k", "", "path to file with Member keys")
+	pflag.StringVarP(&privateKeyHex, "privateKeyHex", "h", "", "private key in hex foramt")
 	pflag.StringVarP(&apiURL, "url", "u", defaultURL, "api url")
 	pflag.StringVarP(&paramsFile, "paramsFile", "f", "", "json file params")
 
@@ -68,18 +79,69 @@ func main() {
 		os.Exit(1)
 	}
 
-	rawConf, err := ioutil.ReadFile(memberKeysPath)
-	check("[ simpleRequester ]", err)
+	if len(memberKeysPath) > 0 {
+		rawConf, err := ioutil.ReadFile(memberKeysPath)
+		check("[ simpleRequester ]", err)
 
-	stringParams, _ := json.Marshal(request.Params.CallParams)
-	fmt.Println("callParams: " + string(stringParams))
-	fmt.Println("Method: " + request.Method)
-	fmt.Println("Reference: " + request.Params.Reference)
+		stringParams, _ := json.Marshal(request.Params.CallParams)
+		fmt.Println("callParams: " + string(stringParams))
+		fmt.Println("Method: " + request.Method)
+		fmt.Println("Reference: " + request.Params.Reference)
 
-	keys := &memberKeys{}
-	err = json.Unmarshal(rawConf, keys)
-	check("[ simpleRequester ] failed to unmarshal", err)
-	response, err := execute(apiURL, *keys, *request)
-	check("[ simpleRequester ] failed to execute", err)
-	fmt.Println("Execute result: \n", response)
+		keys := &memberKeys{}
+		err = json.Unmarshal(rawConf, keys)
+		check("[ simpleRequester ] failed to unmarshal", err)
+		response, err := execute(apiURL, *keys, *request)
+		check("[ simpleRequester ] failed to execute", err)
+		fmt.Println("Execute result: \n", response)
+	}
+	if len(privateKeyHex) > 0 {
+		stringParams, _ := json.Marshal(request.Params.CallParams)
+		fmt.Println("callParams: " + string(stringParams))
+		fmt.Println("Method: " + request.Method)
+		fmt.Println("Reference: " + request.Params.Reference)
+
+		i := new(big.Int)
+		i.SetString(privateKeyHex, 16)
+
+		privateKey := new(ecdsa.PrivateKey)
+		privateKey.PublicKey.Curve = elliptic.P256K()
+		privateKey.D = new(big.Int).SetBytes(i.Bytes())
+
+		privateKey.PublicKey.X, privateKey.PublicKey.Y = privateKey.PublicKey.Curve.ScalarBaseMult(i.Bytes())
+
+		publicKey := &privateKey.PublicKey
+
+		pemPriv := exportPrivateToPem(privateKey)
+		check("[ simpleRequester ] failed to convert private to pem", err)
+		pemPub := exportPublicToPem(publicKey)
+		check("[ simpleRequester ] failed to convert public to pem", err)
+
+		keys := &memberKeys{Private: pemPriv, Public: pemPub}
+		check("[ simpleRequester ] failed to unmarshal", err)
+		response, err := execute(apiURL, *keys, *request)
+		check("[ simpleRequester ] failed to execute", err)
+		fmt.Println("Execute result: \n", response)
+	} else {
+		fmt.Println("Private key cannot be null", err)
+		os.Exit(1)
+	}
+}
+
+func exportPrivateToPem(ecdsaPrivateKey *ecdsa.PrivateKey) string {
+	x509Encoded, err := x509.MarshalECPrivateKey(ecdsaPrivateKey)
+	if err != nil {
+		return ""
+	}
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+	return string(pemEncoded)
+}
+
+func exportPublicToPem(publicKey *ecdsa.PublicKey) string {
+	x509EncodedPub, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return ""
+	}
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+	return string(pemEncoded)
 }
