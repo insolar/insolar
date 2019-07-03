@@ -44,7 +44,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 
 	resetComponents()
 	t.Run("object id is empty", func(t *testing.T) {
-		err := manager.SetRequest(ctx, insolar.ID{}, gen.JetID(), validRequest)
+		err := manager.SetRequest(ctx, insolar.ID{}, gen.JetID(), &validRequest)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -52,7 +52,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 
 	resetComponents()
 	t.Run("jet is not valid", func(t *testing.T) {
-		err := manager.SetRequest(ctx, gen.ID(), insolar.JetID{}, validRequest)
+		err := manager.SetRequest(ctx, gen.ID(), insolar.JetID{}, &validRequest)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -60,7 +60,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 
 	resetComponents()
 	t.Run("index does not exist", func(t *testing.T) {
-		err := manager.SetRequest(ctx, gen.ID(), gen.JetID(), validRequest)
+		err := manager.SetRequest(ctx, gen.ID(), gen.JetID(), &validRequest)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -80,7 +80,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = manager.SetRequest(ctx, reqID, gen.JetID(), validRequest)
+		err = manager.SetRequest(ctx, reqID, gen.JetID(), &validRequest)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -102,7 +102,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = manager.SetRequest(ctx, requestID, jetID, validRequest)
+		err = manager.SetRequest(ctx, requestID, jetID, &validRequest)
 		assert.NoError(t, err)
 
 		idx, err := indexes.ForID(ctx, requestID.Pulse(), *validRequest.Object.Record())

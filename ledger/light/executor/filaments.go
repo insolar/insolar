@@ -37,7 +37,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentModifier -o ./ -s _mock.go
 
 type FilamentModifier interface {
-	SetRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.IncomingRequest) error
+	SetRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.Request) error
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) error
 }
 
@@ -93,18 +93,18 @@ type FilamentModifierDefault struct {
 	pcs        insolar.PlatformCryptographyScheme
 }
 
-func (m *FilamentModifierDefault) SetRequest(ctx context.Context, requestID insolar.ID, jetID insolar.JetID, request record.IncomingRequest) error {
+func (m *FilamentModifierDefault) SetRequest(ctx context.Context, requestID insolar.ID, jetID insolar.JetID, request record.Request) error {
 	if requestID.IsEmpty() {
 		return errors.New("request id is empty")
 	}
 	if !jetID.IsValid() {
 		return errors.New("jet is not valid")
 	}
-	if request.Object == nil && request.Object.Record().IsEmpty() {
+	if request.GetObject() == nil && request.GetObject().Record().IsEmpty() {
 		return errors.New("request object id is empty")
 	}
 
-	objectID := *request.Object.Record()
+	objectID := *request.GetObject().Record()
 
 	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {

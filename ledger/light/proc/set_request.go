@@ -33,7 +33,7 @@ import (
 
 type SetRequest struct {
 	message   payload.Meta
-	request   record.IncomingRequest
+	request   record.Request
 	requestID insolar.ID
 	jetID     insolar.JetID
 
@@ -48,7 +48,7 @@ type SetRequest struct {
 
 func NewSetRequest(
 	msg payload.Meta,
-	rec record.IncomingRequest,
+	rec record.Request,
 	recID insolar.ID,
 	jetID insolar.JetID,
 ) *SetRequest {
@@ -84,8 +84,8 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	p.dep.locker.Lock(p.request.Object.Record())
-	defer p.dep.locker.Unlock(p.request.Object.Record())
+	p.dep.locker.Lock(p.request.GetObject().Record())
+	defer p.dep.locker.Unlock(p.request.GetObject().Record())
 
 	err = p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
 	if err == object.ErrOverride {

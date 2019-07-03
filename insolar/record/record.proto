@@ -172,13 +172,14 @@ message Virtual {
         Child Child = 102;
         Jet Jet = 103;
         IncomingRequest IncomingRequest = 104;
-        Result Result = 105;
-        Type Type = 106;
-        Code Code = 107;
-        Activate Activate = 108;
-        Amend Amend = 109;
-        Deactivate Deactivate = 110;
-        PendingFilament PendingFilament = 111;
+        OutgoingRequest OutgoingRequest = 105;
+        Result Result = 106;
+        Type Type = 107;
+        Code Code = 108;
+        Activate Activate = 109;
+        Amend Amend = 110;
+        Deactivate Deactivate = 111;
+        PendingFilament PendingFilament = 112;
     }
 
     bytes Signature = 200;
