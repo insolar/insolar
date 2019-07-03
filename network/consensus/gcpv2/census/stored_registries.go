@@ -73,9 +73,15 @@ type MisbehaviorRegistry interface {
 type MandateRegistry interface {
 	FindRegisteredProfile(host common.HostIdentityHolder) common2.HostProfile
 	GetPrimingCloudHash() common2.CloudStateHash
+	GetConsensusConfiguration() ConsensusConfiguration
 }
 
 type OfflinePopulation interface {
 	FindRegisteredProfile(identity common.HostIdentityHolder) common2.HostProfile
 	// FindPulsarProfile(pulsarId PulsarId) PulsarProfile
+}
+
+type ConsensusConfiguration interface {
+	GetPulsesForJustJoinedState() uint8
+	GetPulsesForSuspectedState() uint8
 }

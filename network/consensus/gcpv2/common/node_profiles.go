@@ -52,6 +52,7 @@ package common
 
 import (
 	"fmt"
+	"math"
 	"math/bits"
 	"time"
 
@@ -86,7 +87,7 @@ type NodeIntroProfile interface { //brief intro
 	GetStartPower() MemberPower
 
 	HasIntroduction() bool             //must be always true for LocalNodeProfile
-	GetIntroduction() NodeIntroduction //full intro, will panic when HasIntroduction() == false
+	GetIntroduction() NodeIntroduction //not null, full intro, will panic when HasIntroduction() == false
 }
 
 type NodeProfile interface {
@@ -391,7 +392,7 @@ type MembershipState int8
 
 const (
 	Suspected MembershipState = iota - 1
-	Undefined                 /* Purgatory node */
+	Undefined                 /* node in Purgatory */
 	Joining
 	Working
 	JustJoined
@@ -419,8 +420,15 @@ func (v MembershipState) AsJustJoinedRemainingCount() int {
 	return 1 + int(v-JustJoined)
 }
 
+func (v MembershipState) InSuspectedExceeded(limit int) bool {
+	if limit < 0 || limit > (int(Suspected)-math.MinInt8) {
+		panic("illegal value")
+	}
+	return v.GetCountInSuspected() > limit
+}
+
 func (v MembershipState) SetJustJoined(count int) MembershipState {
-	if count <= 0 {
+	if count < 1 || count > (math.MaxInt8-int(JustJoined)) {
 		panic("illegal value")
 	}
 	return JustJoined + MembershipState(count) - 1
@@ -431,6 +439,9 @@ func (v MembershipState) IncrementSuspected() MembershipState {
 		panic("illegal state")
 	}
 	if v.IsSuspect() {
+		if v == math.MinInt8 {
+			panic("underflow")
+		}
 		return v - 1
 	}
 	return Suspected

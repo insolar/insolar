@@ -54,7 +54,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -94,6 +93,7 @@ func (r *FullRealm) start(census census.ActiveCensus, population census.OnlinePo
 	r.initBasics(census)
 	allCtls, perNodeCtls := r.initHandlers(population.GetCount())
 	r.initPopulation(population, perNodeCtls)
+	r.initSelf()
 	r.startWorkers(allCtls)
 }
 
@@ -164,21 +164,30 @@ func (r *FullRealm) initPopulation(population census.OnlinePopulation, individua
 				n.handlers[k] = ph
 			}
 		})
+}
 
+func (r *FullRealm) initSelf() {
 	newSelf := r.population.GetSelf()
 	prevSelf := r.self
-	r.self = nil
 
-	// Transition data from prev self
-	if newSelf.IsJoiner() != prevSelf.IsJoiner() || newSelf.GetShortNodeID() != prevSelf.GetShortNodeID() {
+	if newSelf.GetShortNodeID() != prevSelf.GetShortNodeID() {
 		panic("inconsistent transition of self between realms")
 	}
-	prevSelf.copySelfTo(newSelf)
 
+	prevSelf.copySelfTo(newSelf)
+	r.self = newSelf
+
+	newSelf.requestedLeave, newSelf.requestedLeaveExitCode = r.controlFeeder.GetRequiredGracefulLeave()
+	if !newSelf.requestedLeave {
+		newSelf.requestedJoiner = r.pickNextJoinCandidate()
+	}
+}
+
+func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
 	for {
 		cp := r.candidateFeeder.PickNextJoinCandidate()
 		if cp == nil {
-			break
+			return nil
 		}
 
 		nip := r.profileFactory.CreateBriefIntroProfile(cp, cp.GetJoinerSignature())
@@ -194,12 +203,10 @@ func (r *FullRealm) initPopulation(population census.OnlinePopulation, individua
 			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetNodeID(), nodes)
 		}
 		if nna != nil {
-			newSelf.requestedJoiner = nna
-			break
+			return nna
 		}
 		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetNodeID())
 	}
-	r.self = newSelf
 }
 
 func (r *FullRealm) startWorkers(controllers []PhaseController) {
@@ -311,20 +318,22 @@ func (r *FullRealm) preparePrimingMembers(pop census.OnlinePopulationBuilder) {
 	}
 }
 
-const pulsesInJustJoined = 1
-const pulsesInSuspected = 1
-
 func (r *FullRealm) prepareRegularMembers(pop census.OnlinePopulationBuilder) {
+	cc := r.census.GetMandateRegistry().GetConsensusConfiguration()
+
+	pulsesInJustJoined := cc.GetPulsesForJustJoinedState()
+	pulsesInSuspected := cc.GetPulsesForSuspectedState()
+
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() == nil {
 			v := r.GetSignatureVerifier(p.GetNodePublicKeyStore())
 			p.SetSignatureVerifier(v)
 		}
 		ns := p.GetState()
-		if ns.GetCountInSuspected() >= pulsesInSuspected {
+		if ns.InSuspectedExceeded(int(pulsesInSuspected)) {
 			panic("node must be removed as suspected")
 		}
-		ns = ns.UpdateOnNextPulse(pulsesInJustJoined)
+		ns = ns.UpdateOnNextPulse(int(pulsesInJustJoined))
 		p.SetState(ns)
 
 		idx := p.GetIndex()
