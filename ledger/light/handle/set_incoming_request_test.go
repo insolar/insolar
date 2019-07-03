@@ -41,43 +41,9 @@ func TestSetRequest_BadMsgPayload(t *testing.T) {
 		Payload: []byte{1, 2, 3, 4, 5},
 	}
 
-	handler := handle.NewSetRequest(nil, msg, false)
+	handler := handle.NewSetIncomingRequest(nil, msg, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
-	require.Error(t, err)
-}
-
-func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
-
-	request := payload.SetRequest{
-		Request: []byte{1, 2, 3, 4, 5},
-	}
-	buf, err := request.Marshal()
-	require.NoError(t, err)
-
-	msg := payload.Meta{
-		// This buf is not wrapped as virtual record.
-		Payload: buf,
-	}
-
-	handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
-
-	err = handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
@@ -106,11 +72,9 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	request := payload.SetIncomingRequest{
+		Request: virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
@@ -119,7 +83,7 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
@@ -150,11 +114,9 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	request := payload.SetIncomingRequest{
+		Request: virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
@@ -163,7 +125,7 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	assert.EqualError(t, err, "object is nil")
@@ -192,7 +154,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "something strange from checkjet")
 	})
@@ -211,7 +173,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -232,7 +194,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, true)
+		handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, true)
 		err := handler.Present(ctx, f)
 		require.Error(t, err)
 		assert.Equal(t, proc.ErrNotExecutor, err)
@@ -264,7 +226,7 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from waithot")
 	})
@@ -289,7 +251,7 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -322,7 +284,7 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "can't get index: error from getindex")
 	})
@@ -347,7 +309,7 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -382,7 +344,7 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from setrequest")
 	})
@@ -407,7 +369,7 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -423,11 +385,9 @@ func metaRequestMsg(t *testing.T) payload.Meta {
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	request := payload.SetIncomingRequest{
+		Request: virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
