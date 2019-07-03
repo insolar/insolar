@@ -292,12 +292,3 @@ func TestCreateSignatureVerifier(t *testing.T) {
 	svf.GetSignatureVerifierWithPKSMock.Set(func(common.PublicKeyStore) common.SignatureVerifier { return sv })
 	require.Equal(t, r.CreateSignatureVerifier(svf), sv)
 }
-
-func TestLocked(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
-	lp.LocalNodeProfileMock.Set(func() {})
-	callback := &nodeContext{}
-	r := NewNodeAppearanceAsSelf(lp, callback)
-	fn := func() error { return errors.ErrRepeatedPhasePacket }
-	require.Equal(t, r.Locked(fn), errors.ErrRepeatedPhasePacket)
-}
