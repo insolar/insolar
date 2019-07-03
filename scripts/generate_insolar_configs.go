@@ -27,13 +27,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
+
 	"github.com/insolar/insolar/bootstrap"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
-	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
 )
 
 func baseDir() string {
@@ -127,6 +128,15 @@ func main() {
 		Jobs: map[string][]string{},
 	}
 
+	var heavyRootIndex int
+	heavyRootIndex = -1
+	for i, node := range bootstrapConf.DiscoveryNodes {
+		if node.Role == "heavy_material" {
+			heavyRootIndex = i
+			break
+		}
+	}
+
 	// process discovery nodes
 	for index, node := range bootstrapConf.DiscoveryNodes {
 		nodeIndex := index + 1
@@ -195,6 +205,22 @@ func main() {
 		conf.KeysPath = node.KeysFile
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(nodeDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(nodeCertificatePathTemplate, nodeIndex)
+
+		if node.Role == "heavy_replica" {
+			conf.Ledger.Replica.Role = "replica"
+			if heavyRootIndex >= 0 {
+				conf.Ledger.Replica.ParentAddress = bootstrapConf.DiscoveryNodes[heavyRootIndex].Host
+				conf.Ledger.Replica.ParentCertPath = fmt.Sprintf(discoveryCertificatePathTemplate, heavyRootIndex+1)
+			}
+		}
+
+		if node.Role == "heavy_observer" {
+			conf.Ledger.Replica.Role = "observer"
+			if heavyRootIndex >= 0 {
+				conf.Ledger.Replica.ParentAddress = bootstrapConf.DiscoveryNodes[heavyRootIndex].Host
+				conf.Ledger.Replica.ParentCertPath = fmt.Sprintf(discoveryCertificatePathTemplate, heavyRootIndex+1)
+			}
+		}
 
 		nodesConfigs = append(nodesConfigs, conf)
 

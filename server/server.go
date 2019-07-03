@@ -19,6 +19,7 @@ package server
 import (
 	"github.com/insolar/insolar/server/internal/heavy"
 	"github.com/insolar/insolar/server/internal/light"
+	"github.com/insolar/insolar/server/internal/observer"
 	"github.com/insolar/insolar/server/internal/virtual"
 )
 
@@ -36,4 +37,8 @@ func NewHeavyServer(cfgPath string, gensisCfgPath string, trace bool) Server {
 
 func NewVirtualServer(cfgPath string, trace bool) Server {
 	return virtual.New(cfgPath, trace)
+}
+
+func NewObserverServer(cfgPath string, trace bool) Server {
+	return observer.New(cfgPath, trace)
 }

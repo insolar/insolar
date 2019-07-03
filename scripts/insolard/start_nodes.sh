@@ -23,7 +23,7 @@ ROOT_MEMBER_KEYS_FILE=${LAUNCHNET_BASE_DIR}configs/root_member_keys.json
 #GENERATED_CONFIGS_DIR=${LAUNCHNET_BASE_DIR}/configs/generated_configs/nodes
 
 NUM_NODES=$(sed -n '/^nodes:/,$p' ${BOOTSTRAP_CONFIG} | grep "host:" | grep -cv "#" )
-ROLES=($(sed -n '/^nodes:/,$p' ./scripts/insolard/bootstrap_template.yaml | grep "role" | cut -d: -f2))
+ROLES=($(sed -n '/^nodes:/,$p' ./scripts/insolard/bootstrap_template.yaml | grep "role" | grep -v "#" | cut -d: -f2))
 (>&2 echo "ROLES=$ROLES")
 (>&2 echo "NUM_NODES=$NUM_NODES")
 #exit
@@ -66,7 +66,7 @@ generate_nodes_certs()
     mkdir -p $NODES_DATA/certs/
     for i in `seq 1 $NUM_NODES`
     do
-        role="${ROLES[$i]//\"}"
+        role="${ROLES[$i-1]//\"}"
         set -x
         ${INSOLAR_CMD} certgen \
             --root-keys ${ROOT_MEMBER_KEYS_FILE} \

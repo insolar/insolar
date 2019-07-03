@@ -21,14 +21,15 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/server"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
@@ -69,6 +70,12 @@ func main() {
 		s.Serve()
 	case insolar.StaticRoleVirtual:
 		s := server.NewVirtualServer(params.configPath, params.traceEnabled)
+		s.Serve()
+	case insolar.StaticRoleHeavyReplica:
+		s := server.NewHeavyServer(params.configPath, params.genesisConfigPath, params.traceEnabled)
+		s.Serve()
+	case insolar.StaticRoleHeavyObserver:
+		s := server.NewObserverServer(params.configPath, params.traceEnabled)
 		s.Serve()
 	}
 }

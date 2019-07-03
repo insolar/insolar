@@ -117,11 +117,11 @@ nodes:
     role: "virtual"
     keys_file: "{{ .BaseDir }}/nodes/1/keys.json"
     cert_name: "node_cert_1.json"
-#  -
-#    host: "127.0.0.1:63846"
-#    role: "virtual"
-#    keys_file: "{{ .BaseDir }}/nodes/2/keys.json"
-#    cert_name: "node_cert_2.json"
+  -
+    host: "127.0.0.1:63846"
+    role: "heavy_observer"
+    keys_file: "{{ .BaseDir }}/nodes/2/keys.json"
+    cert_name: "node_cert_2.json"
 #  -
 #    host: "127.0.0.1:63856"
 #    role: "virtual"
