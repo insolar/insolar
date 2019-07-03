@@ -60,6 +60,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile -o ../../testutils -s _mock.go
+
 type HostProfile interface {
 	GetDefaultEndpoint() common.NodeEndpoint
 	GetNodePublicKeyStore() common.PublicKeyStore
@@ -130,6 +132,8 @@ type NodeProfileFactory interface {
 	/* This method MUST: (1) ensure same values of both params; (2) create a new copy of NodeIntroProfile */
 	UpgradeIntroProfile(profile NodeIntroProfile, candidate CandidateProfile) NodeIntroProfile
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile -o ../../testutils -s _mock.go
 
 type LocalNodeProfile interface {
 	NodeProfile

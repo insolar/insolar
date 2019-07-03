@@ -111,6 +111,8 @@ const (
 	RelayEndpoint
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.HostIdentityHolder -o ../testutils -s _mock.go
+
 type HostIdentityHolder interface {
 	GetHostAddress() HostAddress
 	GetTransportKey() SignatureKeyHolder

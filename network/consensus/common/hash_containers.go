@@ -128,6 +128,8 @@ type SecretKeyStore interface {
 	AsPublicKeyStore() PublicKeyStore
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureVerifier -o ../testutils -s _mock.go
+
 type SignatureVerifier interface {
 	IsDigestMethodSupported(m DigestMethod) bool
 	IsSignMethodSupported(m SignMethod) bool
@@ -137,6 +139,8 @@ type SignatureVerifier interface {
 	IsValidDigestSignature(digest DigestHolder, signature SignatureHolder) bool
 	IsValidDataSignature(data io.Reader, signature SignatureHolder) bool
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureVerifierFactory -o ../testutils -s _mock.go
 
 type SignatureVerifierFactory interface {
 	GetSignatureVerifierWithPKS(pks PublicKeyStore) SignatureVerifier
