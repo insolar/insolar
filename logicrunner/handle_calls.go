@@ -88,7 +88,7 @@ func (h *HandleCall) handleActual(
 
 	lr := h.dep.lr
 	ref := msg.GetReference()
-	os := lr.UpsertObjectState(ref)
+	os := lr.StateStorage.UpsertObjectState(ref)
 
 	os.Lock()
 	if os.ExecutionState == nil {
@@ -210,7 +210,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	lr := h.dep.lr
 	ref := msg.ObjectReference
 
-	os := lr.UpsertObjectState(ref)
+	os := lr.StateStorage.UpsertObjectState(ref)
 
 	os.Lock()
 	if os.ExecutionState == nil {

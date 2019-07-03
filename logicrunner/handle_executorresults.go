@@ -44,7 +44,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	ref := p.msg.GetReference()
 
-	state := p.LR.UpsertObjectState(ref)
+	state := p.LR.StateStorage.UpsertObjectState(ref)
 
 	state.Lock()
 	if state.ExecutionState == nil {

@@ -38,7 +38,7 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	defer span.End()
 
 	lr := p.dep.lr
-	es := lr.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
+	es := lr.StateStorage.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
 	if es == nil {
 		return nil
 	}
