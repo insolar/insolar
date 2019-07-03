@@ -27,16 +27,18 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	var (
-		pcs     insolar.PlatformCryptographyScheme
-		indexes object.IndexStorage
-		records object.RecordStorage
-		manager *executor.FilamentModifierDefault
+		pcs        insolar.PlatformCryptographyScheme
+		indexes    object.IndexStorage
+		records    object.RecordStorage
+		manager    *executor.FilamentModifierDefault
+		calculator *executor.FilamentCalculatorMock
 	)
 	resetComponents := func() {
 		pcs = testutils.NewPlatformCryptographyScheme()
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
-		manager = executor.NewFilamentModifier(indexes, records, pcs, nil)
+		calculator = executor.NewFilamentCalculatorMock(t)
+		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator)
 	}
 
 	objRef := gen.Reference()
@@ -101,6 +103,13 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
+
+		calculator.RequestDuplicateFunc = func(_ context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
+			require.Equal(t, p1, requestID.Pulse())
+			require.Equal(t, p2, *validRequest.Object.Record())
+			require.Equal(t, p3, requestID)
+			return nil, nil, nil
+		}
 
 		_, _, err = manager.SetRequest(ctx, requestID, jetID, &validRequest)
 		assert.NoError(t, err)
@@ -201,9 +210,6 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 			return []insolar.ID{expectedFilamentRecordID}, nil
 		}
-		calculator.RequestDuplicateFunc = func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
-			return nil, nil, nil
-		}
 
 		latestPendingPulse := latestPendingID.Pulse()
 		err := indexes.SetIndex(ctx, resultID.Pulse(), object.FilamentIndex{
@@ -221,18 +227,18 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		idx, err := indexes.ForID(ctx, resultID.Pulse(), validResult.Object)
 		require.NoError(t, err)
 
-		assert.Equal(t, expectedFilamentRecordID, *idx.Lifeline.PendingPointer)
-		assert.Equal(t, resultID.Pulse(), *idx.Lifeline.EarliestOpenRequest)
+		require.Equal(t, expectedFilamentRecordID, *idx.Lifeline.PendingPointer)
+		require.Equal(t, resultID.Pulse(), *idx.Lifeline.EarliestOpenRequest)
 
 		rec, err := records.ForID(ctx, expectedFilamentRecordID)
 		require.NoError(t, err)
 		virtual = record.Wrap(expectedFilamentRecord)
-		assert.Equal(t, record.Material{Virtual: &virtual, JetID: jetID}, rec)
+		require.Equal(t, record.Material{Virtual: &virtual, JetID: jetID}, rec)
 
 		rec, err = records.ForID(ctx, resultID)
 		require.NoError(t, err)
 		virtual = record.Wrap(validResult)
-		assert.Equal(t, record.Material{Virtual: &virtual, JetID: jetID}, rec)
+		require.Equal(t, record.Material{Virtual: &virtual, JetID: jetID}, rec)
 
 		mc.Finish()
 	})
