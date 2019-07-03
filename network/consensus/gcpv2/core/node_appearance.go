@@ -139,6 +139,7 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 
 	target.state = c.state
 	target.trust = c.trust
+	target.callback.updatePopulationVersion()
 }
 
 func (c *NodeAppearance) IsJoiner() bool {
@@ -170,12 +171,16 @@ func (c *NodeAppearance) VerifyPacketAuthenticity(packet packets.PacketParser, f
 func (c *NodeAppearance) SetReceivedPhase(phase packets.PhaseNumber) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
+	c.callback.updatePopulationVersion()
 	return c.state.UpdReceivedPhase(phase)
 }
 
 func (c *NodeAppearance) SetReceivedByPacketType(pt packets.PacketType) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
+	c.callback.updatePopulationVersion()
 	return c.state.UpdReceivedPacket(pt)
 }
 
@@ -183,12 +188,16 @@ func (c *NodeAppearance) SetReceivedByPacketType(pt packets.PacketType) bool {
 func (c *NodeAppearance) SetSentPhase(phase packets.PhaseNumber) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
+	c.callback.updatePopulationVersion()
 	return c.state.UpdSentPhase(phase)
 }
 
 func (c *NodeAppearance) SetSentByPacketType(pt packets.PacketType) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
+	c.callback.updatePopulationVersion()
 	return c.state.UpdSentPacket(pt)
 }
 
@@ -209,13 +218,6 @@ func (c *NodeAppearance) GetSignatureVerifier(vFactory common.SignatureVerifierF
 
 func (c *NodeAppearance) CreateSignatureVerifier(vFactory common.SignatureVerifierFactory) common.SignatureVerifier {
 	return vFactory.GetSignatureVerifierWithPKS(c.profile.GetNodePublicKeyStore())
-}
-
-func (c *NodeAppearance) Locked(fn func() error) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	return fn()
 }
 
 /* Evidence MUST be verified before this call */
@@ -246,8 +248,9 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp comm
 		case c.neighborReports+1 > c.GetNeighborTrustThreshold():
 			c.trust.UpdateKeepNegative(packets.TrustByNeighbors)
 		}
-		c.neighborReports++
 
+		c.neighborReports++
+		c.callback.updatePopulationVersion()
 	}
 	if trustBefore != c.trust {
 		c.callback.onTrustUpdated(c, trustBefore, c.trust)
@@ -279,6 +282,8 @@ func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile) (boo
 
 		return c.registerFraud(c.Frauds().NewMultipleMembershipProfiles(c.GetProfile(), lmp, mp))
 	}
+
+	c.callback.updatePopulationVersion()
 
 	err := c._handleAnnouncement(mp)
 	if err != nil {
@@ -330,9 +335,11 @@ func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence common2.NodeStat
 	if announce == nil {
 		panic("illegal param")
 	}
+
 	c.neighbourWeight ^= common.FoldUint64(evidence.GetNodeStateHash().FoldToUint64())
 	c.stateEvidence = evidence
 	c.announceSignature = announce
+	c.callback.updatePopulationVersion()
 }
 
 func (c *NodeAppearance) GetNodeMembershipAndTrust() (common2.MembershipProfile, packets.NodeTrustLevel) {
@@ -370,6 +377,7 @@ func (c *NodeAppearance) registerFraud(fraud errors.FraudError) (bool, error) {
 	prevTrust := c.trust
 	if c.trust.Update(packets.FraudByThisNode) {
 		c.firstFraudDetails = &fraud
+		c.callback.updatePopulationVersion()
 		c.callback.onTrustUpdated(c, prevTrust, c.trust)
 		return true, fraud
 	}

@@ -48,82 +48,22 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package merkle
 
-import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-	"sync/atomic"
-)
+import "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
-func (p *nodeContext) initPrep(capture errors.MisbehaviorReportFunc) {
-	p.fraudFactory = errors.NewFraudFactory(capture)
-	p.blameFactory = errors.NewBlameFactory(capture)
-}
+type GlobulaLeaf struct {
+	NodeGroup common.NodePrimaryRole // ByteSize = 1; =0 for zero-power nodes irrelevant of actual role
+	/*
+		Power      common2.MemberPower // serialized to [00-07]
+		NodeIndex  uint16              // serialized to [08-17]
+		NodeCount uint16               // serialized to [18-27]
+		Condition  MemberCondition     //serialized to [28-29]
+		//[30-31] Reserved
+	*/
+	Rank common.MembershipRank // ByteSize = 4
 
-func (p *nodeContext) initFull(neighborTrustThreshold uint8, capture errors.MisbehaviorReportFunc) {
+	PowerBase  uint32 // 23
+	PowerTotal uint32 // 23
 
-	p.fraudFactory = errors.NewFraudFactory(capture)
-	p.blameFactory = errors.NewBlameFactory(capture)
-	p.nbTrustThreshold = neighborTrustThreshold
-}
-
-func (p *nodeContext) setNodeToPhaseCallback(phaseControllerCallback NodeUpdateCallback) {
-	p.phaseControllerCallback = phaseControllerCallback
-}
-
-type NodeContextHolder *nodeContext
-
-type nodeContext struct {
-	fraudFactory            errors.FraudFactory
-	blameFactory            errors.BlameFactory
-	phaseControllerCallback NodeUpdateCallback
-
-	populationVersion uint32 //atomic
-
-	nbTrustThreshold uint8
-}
-
-func (p *nodeContext) updatePopulationVersion() {
-	atomic.AddUint32(&p.populationVersion, 1)
-}
-
-func (p *nodeContext) GetPopulationVersion() uint32 {
-	return atomic.LoadUint32(&p.populationVersion)
-}
-
-func (p *nodeContext) GetNeighbourhoodTrustThreshold() uint8 {
-	if p.nbTrustThreshold == 0 {
-		panic("illegal state: not allowed for PrepRealm")
-	}
-	return p.nbTrustThreshold
-}
-
-func (p *nodeContext) GetFraudFactory() errors.FraudFactory {
-	return p.fraudFactory
-}
-
-func (p *nodeContext) GetBlameFactory() errors.BlameFactory {
-	return p.blameFactory
-}
-
-func (p *nodeContext) onTrustUpdated(n *NodeAppearance, before packets.NodeTrustLevel, after packets.NodeTrustLevel) {
-	if p.phaseControllerCallback == nil {
-		return
-	}
-	p.phaseControllerCallback.OnTrustUpdated(n, before, after)
-}
-
-func (p *nodeContext) onNodeStateAssigned(n *NodeAppearance) {
-	if p.phaseControllerCallback == nil {
-		return
-	}
-	p.phaseControllerCallback.OnNodeStateAssigned(n)
-}
-
-func (p *nodeContext) onCustomEvent(n *NodeAppearance, event interface{}) {
-	if p.phaseControllerCallback == nil {
-		return
-	}
-	p.phaseControllerCallback.OnCustomEvent(n, event)
 }

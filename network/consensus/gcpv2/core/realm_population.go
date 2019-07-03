@@ -52,10 +52,7 @@ package core
 
 import (
 	"context"
-	"sync"
-
 	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
@@ -66,6 +63,7 @@ type RealmPopulation interface {
 	GetBftMajorityCount() int
 
 	GetNodeAppearance(id common.ShortNodeID) *NodeAppearance
+	GetActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance
 	GetJoinerNodeAppearance(id common.ShortNodeID) *NodeAppearance
 	GetNodeAppearanceByIndex(idx int) *NodeAppearance
 
@@ -73,151 +71,11 @@ type RealmPopulation interface {
 	GetIndexedNodes() []*NodeAppearance
 
 	GetSelf() *NodeAppearance
-	//CreateDynamicNode(constructionContext context.Context) *NodeAppearance
 
-	CreateNodeAppearance(ctx context.Context, inp common2.NodeIntroProfile) *NodeAppearance
+	CreateNodeAppearance(ctx context.Context, inp common2.NodeProfile) *NodeAppearance
+
 	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
 	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)
-}
-
-func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation,
-	fn NodeInitFunc) *MemberRealmPopulation {
-
-	nodeCount := population.GetCount()
-
-	r := &MemberRealmPopulation{
-		population:       population,
-		nodeInit:         fn,
-		baselineWeight:   strategy.RandUint32(),
-		nodeCount:        nodeCount,
-		bftMajorityCount: common.BftMajority(nodeCount),
-		nodeIndex:        make([]*NodeAppearance, nodeCount),
-		nodeShuffle:      make([]*NodeAppearance, nodeCount-1),
-	}
-	r.initPopulation()
-	ShuffleNodeProjections(strategy, r.nodeShuffle)
-
-	return r
-}
-
-type NodeInitFunc func(ctx context.Context, n *NodeAppearance)
-
-func (r *MemberRealmPopulation) initPopulation() {
-	profiles := r.population.GetProfiles()
-	thisNodeID := r.population.GetLocalProfile().GetShortNodeID()
-
-	nodes := make([]NodeAppearance, r.nodeCount)
-
-	var j = 0
-	for i, p := range profiles {
-		n := &nodes[i]
-		r.nodeIndex[i] = n
-
-		n.init(p, nil, r.baselineWeight)
-		r.nodeInit(context.Background(), n)
-
-		if p.GetShortNodeID() == thisNodeID {
-			if r.self != nil {
-				panic("schizophrenia")
-			}
-			r.self = n
-		} else {
-			if j == len(profiles) {
-				panic("didnt find myself among active nodes")
-			}
-			r.nodeShuffle[j] = n
-			j++
-		}
-	}
-}
-
-var _ RealmPopulation = &MemberRealmPopulation{}
-
-type MemberRealmPopulation struct {
-	population     census.OnlinePopulation
-	nodeInit       NodeInitFunc
-	baselineWeight uint32
-
-	nodeIndex   []*NodeAppearance
-	nodeShuffle []*NodeAppearance // excluding self
-	self        *NodeAppearance
-
-	nodeCount        int
-	bftMajorityCount int
-
-	rw sync.RWMutex
-
-	joiners       map[common.ShortNodeID]*NodeAppearance
-	purgatoryByPK map[string]*NodeAppearance
-	purgatoryByID map[common.ShortNodeID]*[]*NodeAppearance
-}
-
-func (r *MemberRealmPopulation) GetSelf() *NodeAppearance {
-	return r.self
-}
-
-func (r *MemberRealmPopulation) GetNodeCount() int {
-	return r.nodeCount
-}
-
-func (r *MemberRealmPopulation) GetJoinersCount() int {
-	return 0
-}
-
-func (r *MemberRealmPopulation) GetOthersCount() int {
-	return r.nodeCount - 1
-}
-
-func (r *MemberRealmPopulation) GetBftMajorityCount() int {
-	return r.bftMajorityCount
-}
-
-func (r *MemberRealmPopulation) GetNodeAppearance(id common.ShortNodeID) *NodeAppearance {
-	na := r.getActiveNodeAppearance(id)
-	if na != nil {
-		return na
-	}
-	return r.GetJoinerNodeAppearance(id)
-}
-
-func (r *MemberRealmPopulation) GetJoinerNodeAppearance(id common.ShortNodeID) *NodeAppearance {
-	r.rw.RLock()
-	defer r.rw.RUnlock()
-
-	return r.joiners[id]
-}
-
-func (r *MemberRealmPopulation) getActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance {
-	np := r.population.FindProfile(id)
-	if np != nil {
-		return r.GetNodeAppearanceByIndex(np.GetIndex())
-	}
-	return nil
-}
-
-func (r *MemberRealmPopulation) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
-	return r.nodeIndex[idx]
-}
-
-func (r *MemberRealmPopulation) GetShuffledOtherNodes() []*NodeAppearance {
-	return r.nodeShuffle
-}
-
-func (r *MemberRealmPopulation) GetIndexedNodes() []*NodeAppearance {
-	return r.nodeIndex
-}
-
-func (r *MemberRealmPopulation) CreateNodeAppearance(ctx context.Context, inp common2.NodeIntroProfile) *NodeAppearance {
-
-	np := &joiningNodeProfile{NodeIntroProfile: inp}
-	if inp.HasIntroduction() {
-		np.membershipState = common2.Joining
-	}
-
-	n := &NodeAppearance{}
-	n.init(np, nil, r.baselineWeight)
-	r.nodeInit(ctx, n)
-	return n
 }
 
 type PurgatoryNodeState int
@@ -225,102 +83,4 @@ type PurgatoryNodeState int
 const PurgatoryDuplicatePK PurgatoryNodeState = -1
 const PurgatoryExistingMember PurgatoryNodeState = -2
 
-//TODO remember who has sent the original data
-func (r *MemberRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState) {
-	if !n.profile.GetState().IsUndefined() {
-		panic("illegal value")
-	}
-
-	id := n.profile.GetShortNodeID()
-	na := r.getActiveNodeAppearance(id)
-	if na != nil {
-		return na, PurgatoryExistingMember
-	}
-
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	nn := r.joiners[id]
-	if nn != nil {
-		return nn, PurgatoryExistingMember
-	}
-
-	if r.purgatoryByPK == nil {
-		r.purgatoryByPK = make(map[string]*NodeAppearance)
-		r.purgatoryByID = make(map[common.ShortNodeID]*[]*NodeAppearance)
-
-		r.purgatoryByPK[n.profile.GetNodePublicKey().AsByteString()] = n
-		r.purgatoryByID[n.profile.GetShortNodeID()] = &[]*NodeAppearance{n}
-		return n, 0
-	}
-
-	pk := n.profile.GetNodePublicKey().AsByteString()
-	nn = r.purgatoryByPK[pk]
-	if nn != nil {
-		return nn, PurgatoryDuplicatePK
-	}
-
-	nodes := r.purgatoryByID[id]
-
-	if nodes == nil {
-		nodes = &[]*NodeAppearance{n}
-		r.purgatoryByID[id] = nodes
-		return n, 0
-	} else {
-		*nodes = append(*nodes, n)
-		return n, PurgatoryNodeState(len(*nodes) - 1)
-	}
-}
-
-func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
-	if n.profile.GetState().IsUndefined() {
-		panic("illegal value")
-	}
-
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	id := n.profile.GetShortNodeID()
-
-	delete(r.purgatoryByPK, n.profile.GetNodePublicKey().AsByteString())
-	nodes := r.purgatoryByID[id]
-	if nodes != nil {
-		delete(r.purgatoryByID, id)
-	} else {
-		nodes = &[]*NodeAppearance{}
-	}
-
-	na := r.getActiveNodeAppearance(id)
-	if na != nil {
-		return na, *nodes
-	}
-
-	na = r.joiners[id]
-	if na != nil {
-		return na, *nodes
-	}
-	return n, *nodes
-}
-
-var _ common2.NodeProfile = &joiningNodeProfile{}
-
-type joiningNodeProfile struct {
-	common2.NodeIntroProfile
-	membershipState common2.MembershipState
-}
-
-func (*joiningNodeProfile) GetIndex() int {
-	return 0
-}
-
-func (p *joiningNodeProfile) GetDeclaredPower() common2.MemberPower {
-	return p.GetStartPower()
-}
-
-func (*joiningNodeProfile) GetSignatureVerifier() common.SignatureVerifier {
-	return nil
-}
-
-func (p *joiningNodeProfile) GetState() common2.MembershipState {
-	return p.membershipState
-}
+type NodeInitFunc func(ctx context.Context, n *NodeAppearance)

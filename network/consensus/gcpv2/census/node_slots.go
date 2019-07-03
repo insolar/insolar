@@ -57,9 +57,9 @@ import (
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-var _ common2.LocalNodeProfile = &nodeSlot{}
+var _ common2.LocalNodeProfile = &NodeProfileSlot{}
 
-type nodeSlot struct {
+type NodeProfileSlot struct {
 	common2.NodeIntroProfile
 	verifier common.SignatureVerifier
 	index    uint16
@@ -67,37 +67,38 @@ type nodeSlot struct {
 	power    common2.MemberPower
 }
 
-func newNodeSlot(index int, p common2.NodeIntroProfile, verifier common.SignatureVerifier) nodeSlot {
-	return nodeSlot{index: uint16(index), state: common2.Joining, NodeIntroProfile: p, verifier: verifier}
+func NewNodeProfile(index int, s common2.MembershipState, p common2.NodeIntroProfile, verifier common.SignatureVerifier, pw common2.MemberPower) NodeProfileSlot {
+
+	return NodeProfileSlot{index: uint16(index), state: s, NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
-func (c *nodeSlot) Less(o common2.NodeProfile) bool {
+func (c *NodeProfileSlot) Less(o common2.NodeProfile) bool {
 	return common2.LessForNodeProfile(c, o)
 }
 
-func (c *nodeSlot) GetDeclaredPower() common2.MemberPower {
+func (c *NodeProfileSlot) GetDeclaredPower() common2.MemberPower {
 	return c.power
 }
 
-func (c *nodeSlot) GetState() common2.MembershipState {
+func (c *NodeProfileSlot) GetState() common2.MembershipState {
 	return c.state
 }
 
-func (c *nodeSlot) LocalNodeProfile() {
+func (c *NodeProfileSlot) LocalNodeProfile() {
 }
 
-func (c *nodeSlot) GetIndex() int {
+func (c *NodeProfileSlot) GetIndex() int {
 	return int(c.index)
 }
 
-func (c *nodeSlot) GetSignatureVerifier() common.SignatureVerifier {
+func (c *NodeProfileSlot) GetSignatureVerifier() common.SignatureVerifier {
 	return c.verifier
 }
 
 var _ common2.UpdatableNodeProfile = &updatableSlot{}
 
 type updatableSlot struct {
-	nodeSlot
+	NodeProfileSlot
 }
 
 func (c *updatableSlot) SetRank(index int, state common2.MembershipState, power common2.MemberPower) {
