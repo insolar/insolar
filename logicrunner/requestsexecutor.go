@@ -147,7 +147,6 @@ func (e *requestsExecutor) SendReply(
 	}
 
 	target := *transcript.RequesterNode
-	seq := transcript.Request.Sequence
 
 	errstr := ""
 	if err != nil {
@@ -157,7 +156,7 @@ func (e *requestsExecutor) SendReply(
 		ctx,
 		&message.ReturnResults{
 			Target:   target,
-			Sequence: seq,
+			ReqRef:  *transcript.RequestRef,
 			Reply:    re,
 			Error:    errstr,
 		},

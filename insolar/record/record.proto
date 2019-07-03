@@ -56,7 +56,6 @@ message IncomingRequest {
     bytes Caller = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes CallerPrototype = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     uint64 Nonce = 23;
-    uint64 Sequence = 24;
     ReturnMode ReturnMode = 25;
     bool Immutable = 26;
 
@@ -79,7 +78,6 @@ message OutgoingRequest {
     bytes Caller = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes CallerPrototype = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     uint64 Nonce = 23;
-    uint64 Sequence = 24;
     ReturnMode ReturnMode = 25;
     bool Immutable = 26;
 

@@ -36,16 +36,17 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"encoding/hex"
 )
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
 	MessageBus     insolar.MessageBus `inject:""`
 	ResultMutex    sync.Mutex
-	ResultMap      map[uint64]chan *message.ReturnResults
-	Sequence       uint64
+	ResultMap      map[[insolar.RecordHashSize]byte]chan *message.ReturnResults
 	PulseAccessor  pulse.Accessor  `inject:""`
 	JetCoordinator jet.Coordinator `inject:""`
+	PCS            insolar.PlatformCryptographyScheme `inject:""`
 	// callTimeout is mainly needed for unit tests which
 	// sometimes may unpredictably fail on CI with a default timeout
 	callTimeout time.Duration
@@ -54,7 +55,7 @@ type ContractRequester struct {
 // New creates new ContractRequester
 func New() (*ContractRequester, error) {
 	return &ContractRequester{
-		ResultMap:   make(map[uint64]chan *message.ReturnResults),
+		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *message.ReturnResults),
 		callTimeout: 25 * time.Second,
 	}, nil
 }
@@ -118,16 +119,25 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	}
 	msg.Sender = cr.JetCoordinator.Me()
 
-	var seq uint64
+	var reqRef [insolar.RecordHashSize]byte
 	var ch chan *message.ReturnResults
 
 	if !async {
 		cr.ResultMutex.Lock()
-		cr.Sequence++
-		seq = cr.Sequence
-		msg.Sequence = seq
+		virtRec := record.Wrap(msg.IncomingRequest)
+		buf, err := virtRec.Marshal()
+		if err != nil {
+			return nil, errors.Wrap(err, "[ ContractRequester::Call ] Failed to marshal record")
+		}
+		h := cr.PCS.ReferenceHasher()
+		_, err = h.Write(buf)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ ContractRequester::Call ] Failed to calculate hash")
+		}
+
+		copy(reqRef[:], h.Sum(nil)[0:insolar.RecordHashSize])
 		ch = make(chan *message.ReturnResults, 1)
-		cr.ResultMap[seq] = ch
+		cr.ResultMap[reqRef] = ch
 
 		cr.ResultMutex.Unlock()
 	}
@@ -155,18 +165,18 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
 	defer cancel()
 
-	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request, ". Method: ", msg.Method, ". SeqId: ", seq)
+	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request, ". Method: ", msg.Method, ". reqRef: ", hex.EncodeToString(reqRef[:]))
 
 	select {
 	case ret := <-ch:
-		inslogger.FromContext(ctx).Debug("Got Method results. SeqId: ", seq)
+		inslogger.FromContext(ctx).Debug("Got Method results. reqRef: ", hex.EncodeToString(reqRef[:]))
 		if ret.Error != "" {
 			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
 		return ret.Reply, nil
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, seq)
+		delete(cr.ResultMap, reqRef)
 		cr.ResultMutex.Unlock()
 		return nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}
@@ -202,15 +212,17 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	defer cr.ResultMutex.Unlock()
 
 	logger := inslogger.FromContext(ctx)
-	c, ok := cr.ResultMap[msg.Sequence]
+	var reqRef [insolar.RecordHashSize]byte
+	copy(reqRef[:], msg.ReqRef.Record().Bytes()[insolar.RecordHashOffset:])
+	c, ok := cr.ResultMap[reqRef]
 	if !ok {
-		logger.Info("oops unwaited results seq=", msg.Sequence)
+		logger.Info("oops unwaited results reqRef=", hex.EncodeToString(reqRef[:]))
 		return &reply.OK{}, nil
 	}
-	logger.Debug("Got wanted results seq=", msg.Sequence)
+	logger.Debug("Got wanted results reqRef=", hex.EncodeToString(reqRef[:]))
 
 	c <- msg
-	delete(cr.ResultMap, msg.Sequence)
+	delete(cr.ResultMap, reqRef)
 
 	return &reply.OK{}, nil
 }

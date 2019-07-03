@@ -34,7 +34,7 @@ const (
 // ReturnResults - push results of methods
 type ReturnResults struct {
 	Target   insolar.Reference
-	Sequence uint64
+	ReqRef   insolar.Reference
 	Reply    insolar.Reply
 	Error    string
 }
