@@ -324,6 +324,9 @@ type ExecutionBroker struct {
 	processLock   sync.Mutex
 
 	StartProcessorIfNeededCount int32
+
+	deduplicationTable map[insolar.Reference]bool
+	deduplicationLock  sync.Mutex
 }
 
 var ErrRetryLater = errors.New("Failed to start task, retry next time")
@@ -351,9 +354,20 @@ func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Tran
 	q.immutable.Push(transcript)
 }
 
+func (q *ExecutionBroker) isDuplicate(_ context.Context, transcript *Transcript) bool {
+	q.deduplicationLock.Lock()
+	defer q.deduplicationLock.Unlock()
+
+	if _, ok := q.deduplicationTable[*transcript.RequestRef]; ok {
+		return true
+	}
+	q.deduplicationTable[*transcript.RequestRef] = true
+	return false
+}
+
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.finished != nil && q.finished.Has(*transcript.RequestRef) {
+		if q.isDuplicate(ctx, transcript) {
 			continue
 		}
 
@@ -361,9 +375,7 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 			go q.processImmutable(ctx, transcript)
 		} else {
 			q.mutableLock.RLock()
-			if !q.mutable.Has(*transcript.RequestRef) {
-				q.mutable.Prepend(transcript)
-			}
+			q.mutable.Prepend(transcript)
 			q.mutableLock.RUnlock()
 		}
 	}
@@ -375,7 +387,7 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 // One shouldn't mix immutable calls and mutable ones
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.finished != nil && q.finished.Has(*transcript.RequestRef) {
+		if q.isDuplicate(ctx, transcript) {
 			continue
 		}
 
@@ -383,9 +395,7 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 			go q.processImmutable(ctx, transcript)
 		} else {
 			q.mutableLock.RLock()
-			if !q.mutable.Has(*transcript.RequestRef) {
-				q.mutable.Push(transcript)
-			}
+			q.mutable.Push(transcript)
 			q.mutableLock.RUnlock()
 		}
 	}
@@ -503,6 +513,11 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 
 	_ = q.mutable.Rotate()
 	_ = q.immutable.Rotate()
+
+	q.deduplicationLock.Lock()
+	q.deduplicationTable = make(map[insolar.Reference]bool)
+	q.deduplicationLock.Unlock()
+
 	q.mutableLock.Unlock()
 
 	return rv
@@ -518,5 +533,8 @@ func NewExecutionBroker(checkFunc CheckCallback, execFunc ExecuteTranscriptCallb
 		checkFunc:       checkFunc,
 		processFunc:     execFunc,
 		processFuncArgs: args,
+
+		deduplicationLock:  sync.Mutex{},
+		deduplicationTable: make(map[insolar.Reference]bool),
 	}
 }
