@@ -44,7 +44,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 
 	resetComponents()
 	t.Run("object id is empty", func(t *testing.T) {
-		err := manager.SetRequest(ctx, insolar.ID{}, gen.JetID(), &validRequest)
+		_, _, err := manager.SetRequest(ctx, insolar.ID{}, gen.JetID(), &validRequest)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -52,7 +52,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 
 	resetComponents()
 	t.Run("jet is not valid", func(t *testing.T) {
-		err := manager.SetRequest(ctx, gen.ID(), insolar.JetID{}, &validRequest)
+		_, _, err := manager.SetRequest(ctx, gen.ID(), insolar.JetID{}, &validRequest)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -60,7 +60,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 
 	resetComponents()
 	t.Run("index does not exist", func(t *testing.T) {
-		err := manager.SetRequest(ctx, gen.ID(), gen.JetID(), &validRequest)
+		_, _, err := manager.SetRequest(ctx, gen.ID(), gen.JetID(), &validRequest)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -80,7 +80,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = manager.SetRequest(ctx, reqID, gen.JetID(), &validRequest)
+		_, _, err = manager.SetRequest(ctx, reqID, gen.JetID(), &validRequest)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -102,7 +102,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = manager.SetRequest(ctx, requestID, jetID, &validRequest)
+		_, _, err = manager.SetRequest(ctx, requestID, jetID, &validRequest)
 		assert.NoError(t, err)
 
 		idx, err := indexes.ForID(ctx, requestID.Pulse(), *validRequest.Object.Record())
@@ -200,6 +200,9 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 			require.Equal(t, validResult.Object, id)
 
 			return []insolar.ID{expectedFilamentRecordID}, nil
+		}
+		calculator.RequestDuplicateFunc = func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
+			return nil, nil, nil
 		}
 
 		latestPendingPulse := latestPendingID.Pulse()

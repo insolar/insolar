@@ -51,7 +51,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	records.SetMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetRequestMock.Return(nil)
+	filaments.SetRequestMock.Return(nil, nil, nil)
 
 	ref := gen.Reference()
 	jetID := gen.JetID()

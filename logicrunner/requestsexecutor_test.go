@@ -57,14 +57,14 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 			transcript: &Transcript{
 				RequestRef: &requestRef,
 				Request: &record.IncomingRequest{
-					CallType: record.CTSaveAsChild,
+					CallType:  record.CTSaveAsChild,
 					Base:      &baseRef,
 					Prototype: &protoRef,
 				},
 			},
-			le: NewLogicExecutorMock(mc).ExecuteMock.Return(&RequestResult{Activation: true}, nil),
-			am:     artifacts.NewClientMock(mc).ActivateObjectMock.Return(nil),
-			reply:  &reply.CallConstructor{Object: &requestRef},
+			le:    NewLogicExecutorMock(mc).ExecuteMock.Return(&RequestResult{Activation: true}, nil),
+			am:    artifacts.NewClientMock(mc).ActivateObjectMock.Return(nil),
+			reply: &reply.CallConstructor{Object: &requestRef},
 		},
 	}
 
@@ -108,7 +108,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 					CallType: record.CTSaveAsChild,
 				},
 			},
-			le: NewLogicExecutorMock(mc).ExecuteMock.Return(&RequestResult{Activation: true}, nil),
+			le:     NewLogicExecutorMock(mc).ExecuteMock.Return(&RequestResult{Activation: true}, nil),
 			result: &RequestResult{Activation: true},
 		},
 		{
@@ -118,8 +118,8 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 					Object: &objRef,
 				},
 			},
-			am: artifacts.NewClientMock(mc).GetObjectMock.Return(nil, nil),
-			le: NewLogicExecutorMock(mc).ExecuteMock.Return(&RequestResult{Activation: true}, nil),
+			am:     artifacts.NewClientMock(mc).GetObjectMock.Return(nil, nil),
+			le:     NewLogicExecutorMock(mc).ExecuteMock.Return(&RequestResult{Activation: true}, nil),
 			result: &RequestResult{Activation: true},
 		},
 		{
@@ -129,7 +129,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 					Object: &objRef,
 				},
 			},
-			am: artifacts.NewClientMock(mc).GetObjectMock.Return(nil, errors.New("some")),
+			am:    artifacts.NewClientMock(mc).GetObjectMock.Return(nil, errors.New("some")),
 			error: true,
 		},
 		{
@@ -139,8 +139,8 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 					Object: &objRef,
 				},
 			},
-			am: artifacts.NewClientMock(mc).GetObjectMock.Return(nil, nil),
-			le: NewLogicExecutorMock(mc).ExecuteMock.Return(nil, errors.New("some")),
+			am:    artifacts.NewClientMock(mc).GetObjectMock.Return(nil, nil),
+			le:    NewLogicExecutorMock(mc).ExecuteMock.Return(nil, errors.New("some")),
 			error: true,
 		},
 	}

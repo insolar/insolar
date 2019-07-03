@@ -183,8 +183,8 @@ func (m *client) RegisterRequest(
 	}
 
 	switch p := pl.(type) {
-	case *payload.ID:
-		return &p.ID, nil
+	case *payload.RequestInfo:
+		return &p.RequestID, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
 	default:
