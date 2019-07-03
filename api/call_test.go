@@ -51,6 +51,8 @@ type TimeoutSuite struct {
 	delay chan struct{}
 }
 
+var okResult = map[string]interface{}{"result": "OK"}
+
 func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
@@ -78,7 +80,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
 	suite.Nil(result.Error)
-	suite.Equal("OK", result.Result.ContractResult)
+	suite.Equal(okResult, result.Result.ContractResult)
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
@@ -144,7 +146,7 @@ func TestTimeoutSuite(t *testing.T) {
 			}, nil
 		default:
 			<-timeoutSuite.delay
-			var result = "OK"
+			var result = okResult
 			var contractErr *foundation.Error
 			data, _ := insolar.MarshalArgs(result, contractErr)
 			return &reply.CallMethod{
