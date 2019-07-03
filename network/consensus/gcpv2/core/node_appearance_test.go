@@ -59,8 +59,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 	gcommon "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/network/consensus/gcpv2/testutils"
 	ctestutils "github.com/insolar/insolar/network/consensus/testutils"
@@ -84,7 +82,7 @@ func TestInit(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	assert.Panics(t, func() { r.init(nil, callback, 0) })
+	require.Panics(t, func() { r.init(nil, callback, 0) })
 	r.init(lp, callback, 0)
 	require.Equal(t, r.state, packets.NodeStateLocalActive)
 	require.Equal(t, r.trust, packets.SelfTrust)

@@ -54,30 +54,30 @@ import (
 	"math"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVerifySizes(t *testing.T) {
 	ns := &NeighbourhoodSizes{}
 	ns.NeighbourhoodSize = 1
-	assert.Panics(t, ns.VerifySizes)
+	require.Panics(t, ns.VerifySizes)
 	ns.NeighbourhoodSize = 5
 	ns.NeighbourhoodTrustThreshold = 0
-	assert.Panics(t, ns.VerifySizes)
+	require.Panics(t, ns.VerifySizes)
 	ns.NeighbourhoodTrustThreshold = math.MaxUint8 + 1
-	assert.Panics(t, ns.VerifySizes)
+	require.Panics(t, ns.VerifySizes)
 	ns.NeighbourhoodTrustThreshold = 1
 	ns.JoinersPerNeighbourhood = 0
-	assert.Panics(t, ns.VerifySizes)
+	require.Panics(t, ns.VerifySizes)
 	ns.JoinersPerNeighbourhood = 1
-	assert.Panics(t, ns.VerifySizes)
+	require.Panics(t, ns.VerifySizes)
 	ns.JoinersPerNeighbourhood = 2
 	ns.JoinersBoost = -1
-	assert.Panics(t, ns.VerifySizes)
+	require.Panics(t, ns.VerifySizes)
 	ns.JoinersBoost = 0
 	ns.NeighbourhoodSize = 0
-	assert.Panics(t, ns.VerifySizes)
+	require.Panics(t, ns.VerifySizes)
 	ns.NeighbourhoodSize = 5
-	assert.NotPanics(t, ns.VerifySizes)
+	require.NotPanics(t, ns.VerifySizes)
 
 }

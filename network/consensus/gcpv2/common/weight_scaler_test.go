@@ -55,12 +55,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNeighbourWeightScalerInt64(t *testing.T) {
-	assert.Panics(t, func() { NewNeighbourWeightScalerInt64(-1) })
+	require.Panics(t, func() { NewNeighbourWeightScalerInt64(-1) })
 	fullRange := int64(0)
 	n1 := NewNeighbourWeightScalerInt64(fullRange)
 	require.Equal(t, n1.max, uint32(fullRange))
