@@ -60,15 +60,6 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("SetOutgoingRequest can't be a cretion request")
 	}
 
-	return s.setRequest(ctx, msg, request, f)
-}
-
-func (s *SetOutgoingRequest) setRequest(
-	ctx context.Context,
-	msg payload.SetOutgoingRequest,
-	request *record.OutgoingRequest,
-	f flow.Flow,
-) error {
 	if request.Object == nil {
 		return errors.New("object is nil")
 	}
