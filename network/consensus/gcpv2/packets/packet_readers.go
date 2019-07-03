@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser -o ../../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser -o ../testutils -s _mock.go
 
 type PacketParser interface {
 	GetPacketType() PacketType

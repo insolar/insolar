@@ -51,44 +51,31 @@
 package common
 
 import (
+	"testing"
+
+	"github.com/insolar/insolar/network/consensus/testutils"
+
 	"github.com/insolar/insolar/network/consensus/common"
+
+	"github.com/stretchr/testify/require"
 )
 
-type NodeStateHash interface {
-	common.DigestHolder
+func TestNewNodeStateHashEvidence(t *testing.T) {
+	sd := common.NewSignedDigest(common.Digest{}, common.Signature{})
+	sh := NewNodeStateHashEvidence(sd)
+	require.Equal(t, sh.(*nodeStateHashEvidence).SignedDigest, sd)
 }
 
-type GlobulaStateHash interface {
-	common.DigestHolder
+func TestGetNodeStateHash(t *testing.T) {
+	fr := testutils.NewFoldableReaderMock(t)
+	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
+	sh := NewNodeStateHashEvidence(sd)
+	require.Equal(t, sh.GetNodeStateHash().GetDigestMethod(), sd.GetDigest().AsDigestHolder().GetDigestMethod())
 }
 
-type CloudStateHash interface {
-	common.DigestHolder
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../testutils -s _mock.go
-
-type MemberAnnouncementSignature interface {
-	common.SignatureHolder
-}
-
-type OriginalPulsarPacket interface {
-	common.FixedReader
-	OriginalPulsarPacket()
-}
-
-func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
-
-type nodeStateHashEvidence struct {
-	common.SignedDigest
-}
-
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
-
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() common.SignatureHolder {
-	return c.GetSignatureHolder()
+func TestGetGlobulaNodeStateSignature(t *testing.T) {
+	fr := testutils.NewFoldableReaderMock(t)
+	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
+	sh := NewNodeStateHashEvidence(sd)
+	require.Equal(t, sh.GetGlobulaNodeStateSignature().GetSignatureMethod(), sd.GetSignature().AsSignatureHolder().GetSignatureMethod())
 }

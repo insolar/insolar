@@ -52,8 +52,9 @@ package common
 
 import (
 	"bytes"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"io"
+
+	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
 type HostAddress string
@@ -159,6 +160,8 @@ type FixedReader interface {
 
 	FixedByteSize() int
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.FoldableReader -o ../testutils -s _mock.go
 
 type FoldableReader interface {
 	FixedReader
