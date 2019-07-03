@@ -284,9 +284,17 @@ func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
 	aggTrusted := c.R.GetDigestFactory().GetGshDigester()
 	var aggDoubted common.SequenceDigester
 
-	bitset := make(nodeset.NodeBitset, c.R.GetNodeCount())
-	for i, n := range c.R.GetPopulation().GetIndexedNodes() {
+	pop := c.R.GetPopulation()
+
+	indexedNodes := c.R.GetPopulation().GetIndexedNodes()
+	nodeCount := len(indexedNodes)
+	joiners := make([]*core.NodeAppearance, nodeCount)
+	bitset := make(nodeset.NodeBitset, nodeCount)
+
+	for i, n := range indexedNodes {
 		membership, trust := n.GetNodeMembershipAndTrust()
+		power, leaving, exitCode, joiner := n.GetRequested()
+
 		switch {
 		case membership.IsEmpty():
 			bitset[i] = nodeset.NbsTimeout
@@ -334,6 +342,8 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodese
 		p3.SendTo(ctx, np.GetProfile(), 0, c.R.GetPacketSender())
 		np.SetSentByPacketType(c.GetPacketType())
 	}
+
+	//TODO send to shuffled joiners as well?
 }
 
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodeset.HashedNodeVector) bool {

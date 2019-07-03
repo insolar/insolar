@@ -181,6 +181,7 @@ func (r *FullRealm) initSelf() {
 	if !newSelf.requestedLeave {
 		newSelf.requestedJoiner = r.pickNextJoinCandidate()
 	}
+	newSelf.callback.updatePopulationVersion()
 }
 
 func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {

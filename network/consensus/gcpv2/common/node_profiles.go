@@ -477,6 +477,10 @@ func (v MembershipState) IsUndefined() bool {
 	return v == Undefined
 }
 
+func (v MembershipState) IsActive() bool {
+	return v != Undefined && v != Joining
+}
+
 func (v MembershipState) IsWorking() bool {
 	return v >= Working
 }

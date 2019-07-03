@@ -111,10 +111,10 @@ Network traffic ~1000 nodes:
 			     IN          OUT
 	Phase0: <    208 000 	208 000
 	Phase1: <    800 000    800 000
-	Phase2: <  1 400 000  1 400 000    //neighbourhood = 5
+	Phase2: <  1 200 000  1 200 000    //neighbourhood = 5
 	Phase3: <    600 000 	600 000
 
-	Total: ~	 3MB		3MB
+	Total:		~3MB	   ~3MB
 */
 
 type EmbeddedPulsarData struct {
