@@ -150,13 +150,12 @@ func NewMessageHandler(
 		},
 		ActivateObject: func(p *proc.ActivateObject) {
 			p.Dep(
-				h.Records,
+				h.WriteAccessor,
 				h.IndexLocker,
+				h.Records,
 				h.IndexStorage,
 				h.filamentModifier,
-				h.WriteAccessor,
 				h.Sender,
-				h.PCS,
 			)
 		},
 		SetBlob: func(p *proc.SetBlob) {

@@ -18,7 +18,6 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -41,14 +40,12 @@ type ActivateObject struct {
 	jetID      insolar.JetID
 
 	dep struct {
-		records       object.RecordModifier
+		writeAccessor hot.WriteAccessor
 		indexLocker   object.IndexLocker
+		records       object.RecordModifier
 		indexModifier object.IndexModifier
 		filament      executor.FilamentModifier
-
-		writeAccessor hot.WriteAccessor
 		sender        bus.Sender
-		pcs           insolar.PlatformCryptographyScheme
 	}
 }
 
@@ -71,13 +68,12 @@ func NewActivateObject(
 }
 
 func (a *ActivateObject) Dep(
-	r object.RecordModifier,
+	w hot.WriteAccessor,
 	il object.IndexLocker,
+	r object.RecordModifier,
 	im object.IndexModifier,
 	f executor.FilamentModifier,
-	w hot.WriteAccessor,
 	s bus.Sender,
-	pcs insolar.PlatformCryptographyScheme,
 ) {
 	a.dep.records = r
 	a.dep.indexLocker = il
@@ -85,7 +81,6 @@ func (a *ActivateObject) Dep(
 	a.dep.filament = f
 	a.dep.writeAccessor = w
 	a.dep.sender = s
-	a.dep.pcs = pcs
 }
 
 func (a *ActivateObject) Proceed(ctx context.Context) error {
@@ -116,7 +111,7 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 		// two writes by the same key. For this reason currently instead of reporting
 		// an error we return OK (nil error). When deduplication will be implemented
 		// we should change `nil` to `ErrOverride` here.
-		logger.WithField("type", fmt.Sprintf("%T", activateVirt)).Warn("set record override (#1)")
+		logger.Errorf("can't save record into storage: %s", err)
 		return nil
 	} else if err != nil {
 		return errors.Wrap(err, "can't save record into storage")
