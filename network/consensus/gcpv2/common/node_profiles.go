@@ -69,7 +69,7 @@ type HostProfile interface {
 }
 
 type NodeIntroduction interface { //full intro
-	GetClaimEvidence() common.SignedEvidenceHolder
+	GetClaimSignature() common.SignatureHolder
 	GetShortNodeID() common.ShortNodeID
 
 	GetNodeReference() insolar.Reference

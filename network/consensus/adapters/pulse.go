@@ -122,6 +122,10 @@ func (p *PulsePacketReader) AsBytes() []byte {
 	panic("implement me")
 }
 
+func (p *PulsePacketReader) AsByteString() string {
+	panic("implement me")
+}
+
 func (p *PulsePacketReader) FixedByteSize() int {
 	panic("implement me")
 }
