@@ -131,8 +131,10 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 	}
 }
 
-type CheckCallback func(context.Context) error
-type ExecuteTranscriptCallback func(context.Context, *Transcript, interface{}) error
+type ExecutionBrokerMethods interface {
+	Check(context.Context) error
+	ExecuteTranscript(context.Context, *Transcript) error
+}
 
 type ExecutionBroker struct {
 	mutableLock sync.RWMutex
@@ -140,9 +142,7 @@ type ExecutionBroker struct {
 	immutable   *TranscriptDequeue
 	finished    *TranscriptDequeue
 
-	checkFunc       CheckCallback
-	processFunc     ExecuteTranscriptCallback
-	processFuncArgs interface{}
+	methods ExecutionBrokerMethods
 
 	processActive bool
 	processLock   sync.Mutex
@@ -164,20 +164,18 @@ type ExecutionBrokerRotationResult struct {
 func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Transcript) {
 	logger := inslogger.FromContext(ctx).WithField("RequestReference", transcript.RequestRef)
 
-	if q.checkFunc != nil && q.processFunc != nil {
-		if err := q.checkFunc(ctx); err == nil {
-			if err := q.processFunc(ctx, transcript, q.processFuncArgs); err == nil {
-				// In case when we're in pending - we should store it to execute later
-				q.finished.Push(transcript)
-				return
-			} else if err != ErrRetryLater {
-				logger.Error("[ processImmutable ] Failed to process immutable Transcript:", err)
-				return
-			}
+	if err := q.methods.Check(ctx); err == nil {
+		if err := q.methods.ExecuteTranscript(ctx, transcript); err == nil {
+			// In case when we're in pending - we should store it to execute later
+			q.finished.Push(transcript)
+			return
 		} else if err != ErrRetryLater {
-			logger.Error("[ processImmutable ] check function returned error:", err)
+			logger.Error("[ processImmutable ] Failed to process immutable Transcript:", err)
 			return
 		}
+	} else if err != ErrRetryLater {
+		logger.Error("[ processImmutable ] check function returned error:", err)
+		return
 	}
 
 	// we're retrying this request later, we're in pending now
@@ -263,10 +261,6 @@ func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference
 func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
-	if q.checkFunc == nil {
-		return
-	}
-
 	q.processLock.Lock()
 	// i've removed "if we have tasks here"; we can be there in two cases:
 	// 1) we've put a task into queue and automatically start processor
@@ -281,7 +275,7 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 			var err error
 
 			// сhecking we're eligible to execute contracts
-			if err = q.checkFunc(ctx); err == nil {
+			if err = q.methods.Check(ctx); err == nil {
 				// processing immutable queue (it can appear if we were in pending state)
 				// run simultaneously all immutable transcripts and forget about them
 				for elem := q.immutable.Pop(); elem != nil; elem = q.immutable.Pop() {
@@ -292,7 +286,7 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 				for transcript := q.Get(ctx); transcript != nil; transcript = q.Get(ctx) {
 					logger := logger.WithField("RequestReference", transcript.RequestRef)
 
-					err = q.processFunc(ctx, transcript, q.processFuncArgs)
+					err = q.methods.ExecuteTranscript(ctx, transcript)
 					if err == ErrRetryLater {
 						q.Prepend(ctx, false, transcript)
 						break
@@ -347,16 +341,14 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 	return rv
 }
 
-func NewExecutionBroker(checkFunc CheckCallback, execFunc ExecuteTranscriptCallback, args interface{}) *ExecutionBroker {
+func NewExecutionBroker(methods ExecutionBrokerMethods) *ExecutionBroker {
 	return &ExecutionBroker{
 		mutableLock: sync.RWMutex{},
 		mutable:     NewTranscriptDequeue(),
 		immutable:   NewTranscriptDequeue(),
 		finished:    NewTranscriptDequeue(),
 
-		checkFunc:       checkFunc,
-		processFunc:     execFunc,
-		processFuncArgs: args,
+		methods: methods,
 
 		deduplicationLock:  sync.Mutex{},
 		deduplicationTable: make(map[insolar.Reference]bool),
