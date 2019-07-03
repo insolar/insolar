@@ -53,9 +53,9 @@ package common
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network/consensus/testutils"
-
 	"github.com/insolar/insolar/network/consensus/common"
+
+	"github.com/insolar/insolar/network/consensus/testutils"
 
 	"github.com/stretchr/testify/require"
 )
