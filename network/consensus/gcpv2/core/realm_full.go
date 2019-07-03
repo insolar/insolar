@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 
@@ -191,8 +192,7 @@ func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
 			return nil
 		}
 
-		nip := r.profileFactory.CreateBriefIntroProfile(cp, cp.GetJoinerSignature())
-		nip = r.profileFactory.UpgradeIntroProfile(nip, cp)
+		nip := r.profileFactory.CreateFullIntroProfile(cp)
 		na := r.population.CreateNodeAppearance(r.roundContext, nip)
 		nna, nodes := r.population.AddToDynamics(na)
 
@@ -394,7 +394,7 @@ func (r *FullRealm) CreatePurgatoryNode(ctx context.Context, intro packets.Brief
 	panic("not implemented")
 	//nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
 	//if fIntro, ok := intro.(packets.FullIntroductionReader); ok && !fIntro.GetIssuerID().IsAbsent() {
-	//	nip = r.profileFactory.UpgradeIntroProfile(nip, fIntro)
+	//	nip = r.profileFactory.CreateFullIntroProfile(nip, fIntro)
 	//}
 	//na := r.population.CreateNodeAppearance(r.roundContext, nip)
 	//

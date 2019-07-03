@@ -69,24 +69,16 @@ type NodeIntroduction struct {
 }
 
 func NewNodeIntroduction(networkNode insolar.NetworkNode) *NodeIntroduction {
-	mutableNode := networkNode.(node.MutableNode)
-	signature := mutableNode.GetSignature()
-
 	return newNodeIntroduction(
 		common.ShortNodeID(networkNode.ShortID()),
 		networkNode.ID(),
-		common.NewSignature(
-			common.NewBits512FromBytes(signature.Bytes()),
-			SHA3512Digest.SignedBy(SECP256r1Sign),
-		).AsSignatureHolder(),
 	)
 }
 
-func newNodeIntroduction(shortID common.ShortNodeID, ref insolar.Reference, signature common.SignatureHolder) *NodeIntroduction {
+func newNodeIntroduction(shortID common.ShortNodeID, ref insolar.Reference) *NodeIntroduction {
 	return &NodeIntroduction{
-		shortID:   shortID,
-		ref:       ref,
-		signature: signature,
+		shortID: shortID,
+		ref:     ref,
 	}
 }
 
@@ -111,10 +103,6 @@ func (ni *NodeIntroduction) GetShortNodeID() common.ShortNodeID {
 	return ni.shortID
 }
 
-func (ni *NodeIntroduction) GetClaimSignature() common.SignatureHolder {
-	return ni.signature
-}
-
 type NodeIntroProfile struct {
 	shortID     common.ShortNodeID
 	primaryRole common2.NodePrimaryRole
@@ -123,23 +111,32 @@ type NodeIntroProfile struct {
 	endpoint    common.NodeEndpoint
 	store       common.PublicKeyStore
 	keyHolder   common.SignatureKeyHolder
+
+	signature common.SignatureHolder
 }
 
-func NewNodeIntroProfile(node insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) *NodeIntroProfile {
+func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) *NodeIntroProfile {
 	specialRole := common2.SpecialRoleNone
-	if utils.IsDiscovery(node.ID(), certificate) {
+	if utils.IsDiscovery(networkNode.ID(), certificate) {
 		specialRole = common2.SpecialRoleDiscovery
 	}
 
-	publicKey := node.PublicKey().(*ecdsa.PublicKey)
+	publicKey := networkNode.PublicKey().(*ecdsa.PublicKey)
+	mutableNode := networkNode.(node.MutableNode)
+	signature := mutableNode.GetSignature()
+
 	return newNodeIntroProfile(
-		common.ShortNodeID(node.ShortID()),
-		StaticRoleToPrimaryRole(node.Role()),
+		common.ShortNodeID(networkNode.ShortID()),
+		StaticRoleToPrimaryRole(networkNode.Role()),
 		specialRole,
-		NewNodeIntroduction(node),
-		NewNodeEndpoint(node.Address()),
+		NewNodeIntroduction(networkNode),
+		NewNodeEndpoint(networkNode.Address()),
 		NewECDSAPublicKeyStore(publicKey),
 		NewECDSASignatureKeyHolder(publicKey, keyProcessor),
+		common.NewSignature(
+			common.NewBits512FromBytes(signature.Bytes()),
+			SHA3512Digest.SignedBy(SECP256r1Sign),
+		).AsSignatureHolder(),
 	)
 }
 
@@ -151,6 +148,7 @@ func newNodeIntroProfile(
 	endpoint common.NodeEndpoint,
 	store common.PublicKeyStore,
 	keyHolder common.SignatureKeyHolder,
+	signature common.SignatureHolder,
 ) *NodeIntroProfile {
 	return &NodeIntroProfile{
 		shortID:     shortID,
@@ -160,6 +158,7 @@ func newNodeIntroProfile(
 		endpoint:    endpoint,
 		store:       store,
 		keyHolder:   keyHolder,
+		signature:   signature,
 	}
 }
 
@@ -172,7 +171,7 @@ func (nip *NodeIntroProfile) GetSpecialRoles() common2.NodeSpecialRole {
 }
 
 func (nip *NodeIntroProfile) HasIntroduction() bool {
-	return true
+	return nip.intro != nil
 }
 
 func (nip *NodeIntroProfile) GetIntroduction() common2.NodeIntroduction {
@@ -203,6 +202,10 @@ func (nip *NodeIntroProfile) IsAcceptableHost(from common.HostIdentityHolder) bo
 
 func (nip *NodeIntroProfile) GetShortNodeID() common.ShortNodeID {
 	return nip.shortID
+}
+
+func (nip *NodeIntroProfile) GetAnnouncementSignature() common.SignatureHolder {
+	return nip.signature
 }
 
 func (nip *NodeIntroProfile) String() string {
@@ -267,7 +270,7 @@ func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
 
 	mutableNode.SetShortID(insolar.ShortNodeID(profile.GetShortNodeID()))
 	mutableNode.SetState(MembershipStateToNodeState(profile.GetState()))
-	mutableNode.SetSignature(insolar.SignatureFromBytes(introduction.GetClaimSignature().AsBytes()))
+	mutableNode.SetSignature(insolar.SignatureFromBytes(profile.GetAnnouncementSignature().AsBytes()))
 
 	return networkNode
 }
