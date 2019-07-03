@@ -69,11 +69,8 @@ type HostProfile interface {
 }
 
 type NodeIntroduction interface { //full intro
-	GetClaimSignature() common.SignatureHolder
 	GetShortNodeID() common.ShortNodeID
-
 	GetNodeReference() insolar.Reference
-
 	IsAllowedPower(p MemberPower) bool
 	ConvertPowerRequest(request PowerRequest) MemberPower
 }
@@ -85,6 +82,7 @@ type NodeIntroProfile interface { //brief intro
 	GetSpecialRoles() NodeSpecialRole
 	GetNodePublicKey() common.SignatureKeyHolder
 	GetStartPower() MemberPower
+	GetAnnouncementSignature() common.SignatureHolder
 
 	HasIntroduction() bool             //must be always true for LocalNodeProfile
 	GetIntroduction() NodeIntroduction //not null, full intro, will panic when HasIntroduction() == false
@@ -127,9 +125,9 @@ type CandidateProfile interface {
 }
 
 type NodeProfileFactory interface {
-	CreateBriefIntroProfile(candidate BriefCandidateProfile, nodeSignature common.SignatureHolder) NodeIntroProfile
+	CreateBriefIntroProfile(candidate BriefCandidateProfile) NodeIntroProfile
 	/* This method MUST: (1) ensure same values of both params; (2) create a new copy of NodeIntroProfile */
-	UpgradeIntroProfile(profile NodeIntroProfile, candidate CandidateProfile) NodeIntroProfile
+	CreateFullIntroProfile(candidate CandidateProfile) NodeIntroProfile
 }
 
 type LocalNodeProfile interface {

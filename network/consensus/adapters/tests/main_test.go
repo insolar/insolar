@@ -130,7 +130,7 @@ func TestConsensusMain(t *testing.T) {
 
 	network.Start(ctx)
 
-	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
+	pulsar := NewPulsar(2, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
@@ -157,8 +157,8 @@ func initLogger() context.Context {
 
 func initNetwork(ctx context.Context) *EmuNetwork {
 	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         100 * time.Millisecond,
-		MaxDelay:         300 * time.Millisecond,
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
 		Variance:         0.2,
 		SpikeProbability: 0.1,
 	})

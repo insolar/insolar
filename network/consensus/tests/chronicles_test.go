@@ -228,7 +228,7 @@ func (*emuNodeIntro) IsAllowedPower(p common2.MemberPower) bool {
 	return true
 }
 
-func (c *emuNodeIntro) GetClaimSignature() common.SignatureHolder {
+func (c *emuNodeIntro) GetAnnouncementSignature() common.SignatureHolder {
 	return nil
 }
 

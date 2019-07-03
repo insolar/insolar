@@ -75,17 +75,23 @@ func (mr *MisbehaviorRegistry) AddReport(report errors.MisbehaviorReport) {
 }
 
 type MandateRegistry struct {
-	cloudHash common2.CloudStateHash
+	cloudHash              common2.CloudStateHash
+	consensusConfiguration census.ConsensusConfiguration
 }
 
-func NewMandateRegistry(cloudHash common2.CloudStateHash) *MandateRegistry {
+func NewMandateRegistry(cloudHash common2.CloudStateHash, consensusConfiguration census.ConsensusConfiguration) *MandateRegistry {
 	return &MandateRegistry{
-		cloudHash: cloudHash,
+		cloudHash:              cloudHash,
+		consensusConfiguration: consensusConfiguration,
 	}
 }
 
 func (mr *MandateRegistry) FindRegisteredProfile(host common.HostIdentityHolder) common2.HostProfile {
 	panic("implement me")
+}
+
+func (mr *MandateRegistry) GetConsensusConfiguration() census.ConsensusConfiguration {
+	return mr.consensusConfiguration
 }
 
 func (mr *MandateRegistry) GetPrimingCloudHash() common2.CloudStateHash {
