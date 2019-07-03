@@ -53,6 +53,7 @@ package serialization
 import (
 	"io"
 
+	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
@@ -87,34 +88,30 @@ type UnifiedProtocolPacketHeader struct {
 	TargetID               uint32 // indicates final destination, if =0 then there is no relay allowed by sender and receiver MUST decline a packet if actual sender != source
 }
 
-func NewUnifiedProtocolPacketHeader() UnifiedProtocolPacketHeader {
-	return UnifiedProtocolPacketHeader{}
+func (p UnifiedProtocolPacketHeader) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
 }
 
-func (h *UnifiedProtocolPacketHeader) WriteTo(w io.Writer) (int64, error) {
-	return serializeTo(w, h)
+func (p *UnifiedProtocolPacketHeader) GetPacketType() packets.PacketType {
+	return packets.PacketType(p.ProtocolAndPacketType & packetTypeMask)
 }
 
-func (h *UnifiedProtocolPacketHeader) GetPacketType() packets.PacketType {
-	return packets.PacketType(h.ProtocolAndPacketType & packetTypeMask)
+func (p *UnifiedProtocolPacketHeader) GetProtocol() uint8 {
+	return p.ProtocolAndPacketType >> protocolShift
 }
 
-func (h *UnifiedProtocolPacketHeader) GetProtocol() uint8 {
-	return h.ProtocolAndPacketType >> protocolShift
+func (p *UnifiedProtocolPacketHeader) GetPayloadLength() uint16 {
+	return p.HeaderAndPayloadLength & payloadLengthMask
 }
 
-func (h *UnifiedProtocolPacketHeader) GetPayloadLength() uint16 {
-	return h.HeaderAndPayloadLength & payloadLengthMask
+func (p *UnifiedProtocolPacketHeader) GetHeader() uint16 {
+	return p.HeaderAndPayloadLength >> headerShift
 }
 
-func (h *UnifiedProtocolPacketHeader) GetHeader() uint16 {
-	return h.HeaderAndPayloadLength >> headerShift
-}
-
-func (h *UnifiedProtocolPacketHeader) GetFlag(i FlagType) bool {
+func (p *UnifiedProtocolPacketHeader) GetFlag(i FlagType) bool {
 	if i > 7 {
 		panic("invalid flag index")
 	}
 
-	return (h.PacketFlags & (0x1 << i)) > 0
+	return (p.PacketFlags & (0x1 << i)) > 0
 }

@@ -51,45 +51,122 @@
 package serialization
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
 	"io"
+	"reflect"
+	"strings"
 
 	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/pkg/errors"
 )
 
-type ClaimHeader struct {
-	TypeAndLength uint16 `insolar-transport:"header;[0-9]=length;[10-15]=header:ClaimType;group=Claims"` // [00-09] ByteLength [10-15] ClaimClass
-	// actual payload
+type SerializerTo interface {
+	SerializeTo(writer io.Writer, signer common.DataSigner) error
 }
 
-func (p ClaimHeader) SerializeTo(writer io.Writer, signer common.DataSigner) error {
-	return serializeTo(writer, signer, p)
+var defaultByteOrder = binary.BigEndian
+
+const (
+	fieldBufSize  = 2048
+	packetBufSize = 2048
+)
+
+func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) error {
+	var fieldInternalBuffer [fieldBufSize]byte
+
+	checksumBuffer := &bytes.Buffer{}
+	fieldBuf := bytes.NewBuffer(fieldInternalBuffer[0:0:fieldBufSize])
+
+	v := reflect.ValueOf(data)
+	vt := v.Type()
+
+	fmt.Println(vt.NumField())
+
+	for i := 0; i < vt.NumField(); i++ {
+
+		fvt := vt.Field(i)
+		fv := v.Field(i)
+
+		// Skip nil pointer fields since it's optional
+		if fv.Kind() == reflect.Ptr && fv.IsNil() {
+			if !isOptional(fvt) {
+				return errors.Errorf("Invalid nil field: %s.%s", vt.Name(), fvt.Name)
+			}
+
+			continue
+		}
+
+		if shouldGenerateSignature(fvt) && signer != nil {
+			sd := signer.GetSignOfData(checksumBuffer)
+			sigBytes := sd.GetSignature().AsBytes()
+			bits := common.NewBits512FromBytes(sigBytes)
+			fv.Set(reflect.ValueOf(bits))
+		}
+
+		err := writeValue(fv, fieldBuf, signer)
+		if err != nil {
+			return err
+		}
+
+		b := fieldBuf.Bytes()
+
+		_, err = checksumBuffer.Write(b)
+		if err != nil {
+			return err
+		}
+
+		if !shouldIgnoreInSerialization(fvt) {
+			_, err := writer.Write(b)
+			if err != nil {
+				return err
+			}
+		}
+
+		fieldBuf.Reset()
+	}
+
+	return nil
 }
 
-type GenericClaim struct {
-	// ByteSize>=1
-	ClaimHeader
-	Payload []byte
+func writeValue(fv reflect.Value, writer io.Writer, signer common.DataSigner) error {
+	var err error
+
+	val := fv.Interface()
+	switch v := val.(type) {
+	case SerializerTo:
+		err = v.SerializeTo(writer, signer)
+	default:
+		err = binary.Write(writer, defaultByteOrder, val)
+	}
+
+	return err
 }
 
-func (p GenericClaim) SerializeTo(writer io.Writer, signer common.DataSigner) error {
-	return serializeTo(writer, signer, p)
+func shouldIgnoreInSerialization(field reflect.StructField) bool {
+	tag, ok := field.Tag.Lookup("insolar-transport")
+	if !ok {
+		return false
+	}
+
+	return strings.Contains(tag, "ignore=send")
 }
 
-type EmptyClaim struct {
-	// ByteSize=1
-	ClaimHeader `insolar-transport:"delimiter;ClaimType=0;length=header"`
+func shouldGenerateSignature(field reflect.StructField) bool {
+	tag, ok := field.Tag.Lookup("insolar-transport")
+	if !ok {
+		return false
+	}
+
+	return strings.Contains(tag, "generate=signature")
 }
 
-func (p EmptyClaim) SerializeTo(writer io.Writer, signer common.DataSigner) error {
-	return serializeTo(writer, signer, p)
-}
+func isOptional(field reflect.StructField) bool {
+	tag, ok := field.Tag.Lookup("insolar-transport")
+	if !ok {
+		return false
+	}
 
-type ClaimList struct {
-	// ByteSize>=1
-	Claims      []GenericClaim
-	EndOfClaims EmptyClaim // ByteSize=1 - indicates end of claims
-}
-
-func (p ClaimList) SerializeTo(writer io.Writer, signer common.DataSigner) error {
-	return serializeTo(writer, signer, p)
+	return strings.Contains(tag, "optional=")
 }

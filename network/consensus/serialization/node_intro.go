@@ -51,6 +51,8 @@
 package serialization
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
@@ -70,14 +72,18 @@ type NodeBriefIntro struct {
 	StartPower          common2.MemberPower
 
 	// 4 | 6 | 18 bytes
-	InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
-	BasePort       uint16             `insolar-transport:"AddrMode=0,1"`
-	PrimaryIPv4    uint32             `insolar-transport:"AddrMode=0"`
-	PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
+	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
+	BasePort    uint16 `insolar-transport:"AddrMode=0,1"`
+	PrimaryIPv4 uint32 `insolar-transport:"AddrMode=0"`
+	// PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
 
 	// 128 bytes
 	NodePK          common.Bits512 // works as a unique node identity
 	JoinerSignature common.Bits512 // ByteSize=64
+}
+
+func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
 }
 
 type NodeFullIntro struct {
@@ -99,4 +105,8 @@ type NodeFullIntro struct {
 
 	DiscoveryIssuerNodeId common.ShortNodeID
 	IssuerSignature       common.Bits512
+}
+
+func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
 }

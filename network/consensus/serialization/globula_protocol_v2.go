@@ -51,6 +51,8 @@
 package serialization
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
@@ -63,6 +65,10 @@ type GlobulaConsensusProtocolV2Packet struct {
 	EncryptionData  []byte
 
 	PacketSignature common.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
+}
+
+func (p GlobulaConsensusProtocolV2Packet) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
 }
 
 type PacketBody struct {
@@ -91,12 +97,16 @@ type PacketBody struct {
 	BriefSelfIntro *NodeBriefIntro `insolar-transport:"Packet=  2;optional=PacketFlags[1:2]=1"`   // ByteSize= 135, 137, 147
 	FullSelfIntro  *NodeFullIntro  `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=2,3"` // ByteSize>= 221, 223, 233
 	CloudIntro     *CloudIntro     `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=2,3"` // ByteSize= 128
-	JoinerSecret   common.Bits512  `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=3"`   // ByteSize= 64
+	JoinerSecret   *common.Bits512 `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=3"`   // ByteSize= 64
 
 	Neighbourhood Neighbourhood `insolar-transport:"Packet=2"` // ByteSize= 1 + N * (205 .. 220)
 	Vectors       NodeVectors   `insolar-transport:"Packet=3"` // ByteSize=133..599
 
 	Claims ClaimList `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
+}
+
+func (p PacketBody) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
 }
 
 /*
@@ -126,6 +136,10 @@ type EmbeddedPulsarData struct {
 	PulsarSignature      common.Bits512 // ByteSize=64
 }
 
+func (p EmbeddedPulsarData) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
+}
+
 type CloudIntro struct {
 	// ByteSize=128
 
@@ -133,10 +147,18 @@ type CloudIntro struct {
 	LastCloudStateHash common.Bits512
 }
 
+func (p CloudIntro) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
+}
+
 type Neighbourhood struct {
 	// ByteSize= 1 + N * (205 .. 220)
 	NeighbourCount uint8
 	Neighbours     []NeighbourAnnouncement
+}
+
+func (p Neighbourhood) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
 }
 
 type NeighbourAnnouncement struct {
@@ -159,7 +181,23 @@ type NeighbourAnnouncement struct {
 	Member *NodeAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136
 
 	/* AnnounceSignature is copied from the original Phase1 */
-	AnnounceSignature common.Bits512 `insolar-transport:"optional"` // ByteSize = 64
+	AnnounceSignature *common.Bits512 `insolar-transport:"optional"` // ByteSize = 64
+}
+
+func (p NeighbourAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
+}
+
+type NonJoinerMembershipAnnouncement struct {
+	/* For non-joiner ONLY */
+	RequestedPower    common2.MemberPower // ByteSize=1
+	Member            NodeAnnouncement    // ByteSize = 132, 136, 267, 269, 279
+	AnnounceSignature common.Bits512      // ByteSize = 64
+	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
+}
+
+func (p NonJoinerMembershipAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
 }
 
 type MembershipAnnouncement struct {
@@ -176,10 +214,13 @@ type MembershipAnnouncement struct {
 	CurrentRank common2.MembershipRank // ByteSize=4
 
 	/* For non-joiner ONLY */
-	RequestedPower    common2.MemberPower `insolar-transport:"optional=CurrentRank!=0"` // ByteSize=1
-	Member            *NodeAnnouncement   `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136, 267, 269, 279
-	AnnounceSignature common.Bits512      `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 64
+	NonJoinerMembershipAnnouncement NonJoinerMembershipAnnouncement `insolar-transport:"optional=CurrentRank!=0"`
+
 	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
+}
+
+func (p MembershipAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
 }
 
 type NodeAnnouncement struct {
@@ -204,12 +245,24 @@ type NodeAnnouncement struct {
 	Joiner *JoinAnnouncement `insolar-transport:"optional"` // ByteSize = 135, 137, 147
 }
 
+func (p NodeAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
+}
+
 type JoinAnnouncement struct {
 	// ByteSize= 135, 137, 147
 	NodeBriefIntro
 }
 
+func (p JoinAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
+}
+
 type LeaveAnnouncement struct {
 	// ByteSize = 4
 	LeaveReason uint32
+}
+
+func (p LeaveAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+	return serializeTo(writer, signer, p)
 }

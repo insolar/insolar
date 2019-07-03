@@ -51,45 +51,60 @@
 package serialization
 
 import (
-	"io"
+	"bytes"
+	"fmt"
+	"testing"
 
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/stretchr/testify/require"
 )
 
-type ClaimHeader struct {
-	TypeAndLength uint16 `insolar-transport:"header;[0-9]=length;[10-15]=header:ClaimType;group=Claims"` // [00-09] ByteLength [10-15] ClaimClass
-	// actual payload
+func TestNewUnifiedProtocolPacketHeader_SerializeTo(t *testing.T) {
+	header := UnifiedProtocolPacketHeader{
+		SourceID:   132,
+		ReceiverID: 321,
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	err := header.SerializeTo(buf, nil)
+	require.NoError(t, err)
+
+	bs := buf.Bytes()
+	fmt.Println(bs)
+	require.EqualValues(t, 16, len(bs))
 }
 
-func (p ClaimHeader) SerializeTo(writer io.Writer, signer common.DataSigner) error {
-	return serializeTo(writer, signer, p)
+func TestJoinAnnouncement_SerializeTo(t *testing.T) {
+	joinAnnouncement := JoinAnnouncement{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	err := joinAnnouncement.SerializeTo(buf, nil)
+	require.NoError(t, err)
+
+	bs := buf.Bytes()
+	fmt.Println(bs)
+	require.EqualValues(t, 137, len(bs))
 }
 
-type GenericClaim struct {
-	// ByteSize>=1
-	ClaimHeader
-	Payload []byte
+func TestLeaveAnnouncement_SerializeTo(t *testing.T) {
+	leaveAnnouncement := LeaveAnnouncement{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	err := leaveAnnouncement.SerializeTo(buf, nil)
+	require.NoError(t, err)
+
+	bs := buf.Bytes()
+	fmt.Println(bs)
+	require.EqualValues(t, 4, len(bs))
 }
 
-func (p GenericClaim) SerializeTo(writer io.Writer, signer common.DataSigner) error {
-	return serializeTo(writer, signer, p)
-}
+func TestNodeBriefIntro_SerializeTo(t *testing.T) {
+	nodeBriefIntro := NodeBriefIntro{}
 
-type EmptyClaim struct {
-	// ByteSize=1
-	ClaimHeader `insolar-transport:"delimiter;ClaimType=0;length=header"`
-}
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	err := nodeBriefIntro.SerializeTo(buf, nil)
+	require.NoError(t, err)
 
-func (p EmptyClaim) SerializeTo(writer io.Writer, signer common.DataSigner) error {
-	return serializeTo(writer, signer, p)
-}
-
-type ClaimList struct {
-	// ByteSize>=1
-	Claims      []GenericClaim
-	EndOfClaims EmptyClaim // ByteSize=1 - indicates end of claims
-}
-
-func (p ClaimList) SerializeTo(writer io.Writer, signer common.DataSigner) error {
-	return serializeTo(writer, signer, p)
+	bs := buf.Bytes()
+	fmt.Println(bs)
+	require.EqualValues(t, 137, len(bs))
 }
