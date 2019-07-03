@@ -18,7 +18,6 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -34,7 +33,7 @@ import (
 
 type SetRequest struct {
 	message   payload.Meta
-	request   record.Request
+	request   record.IncomingRequest
 	requestID insolar.ID
 	jetID     insolar.JetID
 
@@ -49,7 +48,7 @@ type SetRequest struct {
 
 func NewSetRequest(
 	msg payload.Meta,
-	rec record.Request,
+	rec record.IncomingRequest,
 	recID insolar.ID,
 	jetID insolar.JetID,
 ) *SetRequest {
@@ -85,43 +84,19 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	switch req := p.request.(type) {
-	case *record.IncomingRequest:
-		if req.CallType == record.CTMethod {
-			p.dep.locker.Lock(req.Object.Record())
-			defer p.dep.locker.Unlock(req.Object.Record())
+	p.dep.locker.Lock(p.request.Object.Record())
+	defer p.dep.locker.Unlock(p.request.Object.Record())
 
-			err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, req)
-			if err == object.ErrOverride {
-				inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
-				// Since there is no deduplication yet it's quite possible that there will be
-				// two writes by the same key. For this reason currently instead of reporting
-				// an error we return OK (nil error). When deduplication will be implemented
-				// we should change `nil` to `ErrOverride` here.
-				return nil
-			} else if err != nil {
-				return errors.Wrap(err, "failed to store record")
-			}
-		}
-	case *record.OutgoingRequest:
-		if req.CallType == record.CTMethod {
-			p.dep.locker.Lock(req.Object.Record())
-			defer p.dep.locker.Unlock(req.Object.Record())
-
-			err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, req)
-			if err == object.ErrOverride {
-				inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
-				// Since there is no deduplication yet it's quite possible that there will be
-				// two writes by the same key. For this reason currently instead of reporting
-				// an error we return OK (nil error). When deduplication will be implemented
-				// we should change `nil` to `ErrOverride` here.
-				return nil
-			} else if err != nil {
-				return errors.Wrap(err, "failed to store record")
-			}
-		}
-	default:
-		return fmt.Errorf("unknown request type: %v", p.request)
+	err = p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
+	if err == object.ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK (nil error). When deduplication will be implemented
+		// we should change `nil` to `ErrOverride` here.
+		return nil
+	} else if err != nil {
+		return errors.Wrap(err, "failed to store record")
 	}
 
 	msg, err := payload.NewMessage(&payload.ID{ID: p.requestID})
