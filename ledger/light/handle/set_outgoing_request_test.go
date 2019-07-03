@@ -18,7 +18,6 @@ package handle_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -29,11 +28,12 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetRequest_BadMsgPayload(t *testing.T) {
+func TestSetOutgoingRequest_BadMsgPayload(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -41,47 +41,13 @@ func TestSetRequest_BadMsgPayload(t *testing.T) {
 		Payload: []byte{1, 2, 3, 4, 5},
 	}
 
-	handler := handle.NewSetRequest(nil, msg, false)
+	handler := handle.NewSetOutgoingRequest(nil, msg, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
 	require.Error(t, err)
 }
 
-func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
-
-	request := payload.SetRequest{
-		Request: []byte{1, 2, 3, 4, 5},
-	}
-	buf, err := request.Marshal()
-	require.NoError(t, err)
-
-	msg := payload.Meta{
-		// This buf is not wrapped as virtual record.
-		Payload: buf,
-	}
-
-	handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
-
-	err = handler.Present(ctx, f)
-	require.Error(t, err)
-}
-
-func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
+func TestSetOutgoingRequest_IncorrectRecordInVirtual(t *testing.T) {
 	t.Parallel()
 
 	ctx := flow.TestContextWithPulse(
@@ -106,11 +72,9 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	request := payload.SetOutgoingRequest{
+		Request: virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
@@ -119,13 +83,13 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
-func TestSetRequest_EmptyRequestObject(t *testing.T) {
+func TestSetOutgoingRequest_EmptyRequestObject(t *testing.T) {
 	t.Parallel()
 
 	ctx := flow.TestContextWithPulse(
@@ -144,17 +108,15 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 
 	// IncomingRequest object is nil
 	virtual := record.Virtual{
-		Union: &record.Virtual_IncomingRequest{
-			IncomingRequest: &record.IncomingRequest{
+		Union: &record.Virtual_OutgoingRequest{
+			OutgoingRequest: &record.OutgoingRequest{
 				Object: nil,
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	request := payload.SetOutgoingRequest{
+		Request: virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
@@ -163,20 +125,20 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	assert.EqualError(t, err, "object is nil")
 }
 
-func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
+func TestSetOutgoingRequest_FlowWithPassedFlag(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaOutgoingRequestMsg(t)
 
 	t.Run("checkjet procedure returns unknown err", func(t *testing.T) {
 		t.Parallel()
@@ -192,7 +154,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "something strange from checkjet")
 	})
@@ -211,7 +173,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -232,21 +194,21 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, true)
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, true)
 		err := handler.Present(ctx, f)
 		require.Error(t, err)
 		assert.Equal(t, proc.ErrNotExecutor, err)
 	})
 }
 
-func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
+func TestSetOutgoingRequest_ErrorFromWaitHot(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaOutgoingRequestMsg(t)
 
 	t.Run("waithot procedure returns err", func(t *testing.T) {
 		t.Parallel()
@@ -264,7 +226,7 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from waithot")
 	})
@@ -289,20 +251,20 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
+func TestSetOutgoingRequest_ErrorFromGetIndex(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaOutgoingRequestMsg(t)
 
 	t.Run("getindex procedure returns err", func(t *testing.T) {
 		t.Parallel()
@@ -322,7 +284,7 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "can't get index: error from getindex")
 	})
@@ -347,20 +309,20 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
+func TestSetOutgoingRequest_ErrorFromSetRequest(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaOutgoingRequestMsg(t)
 
 	t.Run("setrequest procedure returns err", func(t *testing.T) {
 		t.Parallel()
@@ -373,16 +335,16 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
-				return nil
 			case *proc.SetRequest:
 				return errors.New("error from setrequest")
+			case *proc.EnsureIndexWM:
+				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from setrequest")
 	})
@@ -407,27 +369,25 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func metaRequestMsg(t *testing.T) payload.Meta {
+func metaOutgoingRequestMsg(t *testing.T) payload.Meta {
 	ref := gen.Reference()
 
 	virtual := record.Virtual{
-		Union: &record.Virtual_IncomingRequest{
-			IncomingRequest: &record.IncomingRequest{
+		Union: &record.Virtual_OutgoingRequest{
+			OutgoingRequest: &record.OutgoingRequest{
 				Object: &ref,
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	request := payload.SetOutgoingRequest{
+		Request: virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)

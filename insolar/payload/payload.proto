@@ -90,10 +90,16 @@ message Jet {
     bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }
 
-message SetRequest {
+message SetIncomingRequest {
     uint32 Polymorph = 16;
 
-    bytes Request = 20;
+    record.Virtual Request = 20 [(gogoproto.nullable) = false];
+}
+
+message SetOutgoingRequest {
+    uint32 Polymorph = 16;
+
+    record.Virtual Request = 20 [(gogoproto.nullable) = false];
 }
 
 message SetResult {

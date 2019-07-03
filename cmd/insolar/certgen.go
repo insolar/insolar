@@ -55,31 +55,14 @@ func (g *certGen) loadKeys() {
 	g.pubKey = g.keyProcessor.ExtractPublicKey(g.privKey)
 }
 
-type RegisterResult struct {
-	JSONRPC string `json:"jsonrpc"`
-	ID      int    `json:"id"`
-	Result  Result `json:"result,omitempty"`
-	Error   Error  `json:"error,omitempty"`
-}
-
-type Error struct {
-	Code    int    `json:"code,omitempty"`
-	Message string `json:"message,omitempty"`
-}
-
-type Result struct {
-	ContractResult interface{} `json:"payload"`
-	TraceID        string      `json:"traceID,omitempty"`
-}
-
 func extractReference(response []byte, requestTypeMsg string) insolar.Reference {
-	r := RegisterResult{}
+	r := requester.ContractAnswer{}
 	err := json.Unmarshal(response, &r)
 	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
 	if verbose {
 		fmt.Println("Response:", string(response))
 	}
-	if r.Error.Message != "" || r.Error.Code < 0 {
+	if r.Error != nil {
 		fmt.Printf("Error while '%s' occured : %s \n", requestTypeMsg, r.Error.Message)
 		os.Exit(1)
 	}

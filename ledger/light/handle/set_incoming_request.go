@@ -27,32 +27,28 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SetRequest struct {
+type SetIncomingRequest struct {
 	dep     *proc.Dependencies
 	message payload.Meta
 	passed  bool
 }
 
-func NewSetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetRequest {
-	return &SetRequest{
+func NewSetIncomingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetIncomingRequest {
+	return &SetIncomingRequest{
 		dep:     dep,
 		message: msg,
 		passed:  passed,
 	}
 }
 
-func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.SetRequest{}
+func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
+	msg := payload.SetIncomingRequest{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal SetRequest message")
 	}
 
-	virtual := record.Virtual{}
-	err = virtual.Unmarshal(msg.Request)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal Request record")
-	}
+	virtual := msg.Request
 
 	rec := record.Unwrap(&virtual)
 	request, ok := rec.(*record.IncomingRequest)
@@ -69,13 +65,18 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	return s.setRequest(ctx, msg, request, f)
 }
 
-func (s *SetRequest) setActivationRequest(
+func (s *SetIncomingRequest) setActivationRequest(
 	ctx context.Context,
-	msg payload.SetRequest,
+	msg payload.SetIncomingRequest,
 	virtual record.Virtual,
 	f flow.Flow,
 ) error {
-	calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
+	buf, err := msg.Request.Marshal()
+	if err != nil {
+		return err
+	}
+
+	calc := proc.NewCalculateID(buf, flow.Pulse(ctx))
 	s.dep.CalculateID(calc)
 	if err := f.Procedure(ctx, calc, true); err != nil {
 		return err
@@ -105,9 +106,9 @@ func (s *SetRequest) setActivationRequest(
 	return f.Procedure(ctx, setActivationRequest, false)
 }
 
-func (s *SetRequest) setRequest(
+func (s *SetIncomingRequest) setRequest(
 	ctx context.Context,
-	msg payload.SetRequest,
+	msg payload.SetIncomingRequest,
 	request *record.IncomingRequest,
 	f flow.Flow,
 ) error {
@@ -115,7 +116,12 @@ func (s *SetRequest) setRequest(
 		return errors.New("object is nil")
 	}
 
-	calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
+	buf, err := msg.Request.Marshal()
+	if err != nil {
+		return err
+	}
+
+	calc := proc.NewCalculateID(buf, flow.Pulse(ctx))
 	s.dep.CalculateID(calc)
 	if err := f.Procedure(ctx, calc, true); err != nil {
 		return err
@@ -147,7 +153,7 @@ func (s *SetRequest) setRequest(
 		return err
 	}
 
-	setRequest := proc.NewSetRequest(s.message, *request, reqID, objJetID)
+	setRequest := proc.NewSetRequest(s.message, request, reqID, objJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }

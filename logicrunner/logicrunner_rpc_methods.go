@@ -44,19 +44,19 @@ type ProxyImplementation interface {
 }
 
 type RPCMethods struct {
-	lr         *LogicRunner
+	ss         StateStorage
 	execution  ProxyImplementation
 	validation ProxyImplementation
 }
 
 func NewRPCMethods(
-	lr *LogicRunner,
 	am artifacts.Client,
 	dc artifacts.DescriptorsCache,
 	cr insolar.ContractRequester,
+	ss StateStorage,
 ) *RPCMethods {
 	return &RPCMethods{
-		lr:         lr,
+		ss:         ss,
 		execution:  NewExecutionProxyImplementation(dc, cr, am),
 		validation: NewValidationProxyImplementation(),
 	}
@@ -67,7 +67,7 @@ func (m *RPCMethods) getCurrent(
 ) (
 	ProxyImplementation, *Transcript, error,
 ) {
-	os := m.lr.GetObjectState(obj)
+	os := m.ss.GetObjectState(obj)
 	if os == nil {
 		return nil, nil, errors.New("Failed to find requested object state. ref: " + obj.String())
 	}
@@ -132,9 +132,7 @@ func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpcty
 func (m *RPCMethods) GetObjChildrenIterator(
 	req rpctypes.UpGetObjChildrenIteratorReq,
 	rep *rpctypes.UpGetObjChildrenIteratorResp,
-) (
-	error,
-) {
+) error {
 	impl, current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
@@ -322,9 +320,7 @@ func (m *executionProxyImplementation) GetObjChildrenIterator(
 	ctx context.Context, current *Transcript,
 	req rpctypes.UpGetObjChildrenIteratorReq,
 	rep *rpctypes.UpGetObjChildrenIteratorResp,
-) (
-	error,
-) {
+) error {
 	ctx, span := instracer.StartSpan(ctx, "RPC.GetObjChildrenIterator")
 	defer span.End()
 
@@ -455,9 +451,7 @@ func (m *validationProxyImplementation) GetObjChildrenIterator(
 	ctx context.Context, current *Transcript,
 	req rpctypes.UpGetObjChildrenIteratorReq,
 	rep *rpctypes.UpGetObjChildrenIteratorResp,
-) (
-	error,
-) {
+) error {
 	panic("implement me")
 }
 

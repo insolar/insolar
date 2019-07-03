@@ -44,7 +44,12 @@ import (
 
 const sendRetryCount = 5
 
-var contracts map[string]*insolar.Reference
+type contractInfo struct {
+	reference *insolar.Reference
+	testName  string
+}
+
+var contracts map[string]*contractInfo
 
 type postParams map[string]interface{}
 
@@ -283,12 +288,21 @@ func newUserWithKeys() (*user, error) {
 	}, nil
 }
 
-// this is needed for running tests with count
+// uploadContractOnce is needed for running tests with count
+// use unique names when uploading contracts otherwise your contract won't be uploaded
 func uploadContractOnce(t *testing.T, name string, code string) *insolar.Reference {
 	if _, ok := contracts[name]; !ok {
-		contracts[name] = uploadContract(t, name, code)
+		ref := uploadContract(t, name, code)
+		contracts[name] = &contractInfo{
+			reference: ref,
+			testName:  t.Name(),
+		}
 	}
-	return contracts[name]
+	require.Equal(
+		t, contracts[name].testName, t.Name(),
+		"[ uploadContractOnce ] You cant use name of contract multiple times: "+contracts[name].testName,
+	)
+	return contracts[name].reference
 }
 
 func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
@@ -323,13 +337,18 @@ func uploadContract(t *testing.T, contractName string, contractCode string) *ins
 	return prototypeRef
 }
 
-func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Reference {
+func callConstructor(t *testing.T, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
+	argsSerialized, err := insolar.Serialize(args)
+	require.NoError(t, err)
+
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.callConstructor",
 		"id":      "",
-		"params": map[string]string{
+		"params": map[string]interface{}{
 			"PrototypeRefString": prototypeRef.String(),
+			"Method":             method,
+			"MethodArgs":         argsSerialized,
 		},
 	})
 	require.NotEmpty(t, objectBody)
@@ -341,7 +360,7 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 		Error   json2.Error              `json:"error"`
 	}{}
 
-	err := json.Unmarshal(objectBody, &callConstructorRes)
+	err = json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
 	require.Empty(t, callConstructorRes.Error)
 
