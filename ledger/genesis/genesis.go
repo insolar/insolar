@@ -234,7 +234,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		parentRef = rootdomain.GenesisRef(state.ParentName)
 	}
 
-	_, err = g.ArtifactManager.ActivateObject(
+	err = g.ArtifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		objRef,
