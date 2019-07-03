@@ -75,8 +75,9 @@ type RealmPopulation interface {
 	GetSelf() *NodeAppearance
 	//CreateDynamicNode(constructionContext context.Context) *NodeAppearance
 
-	//AddToPurgatory(np common2.NodeIntroProfile) (*NodeAppearance, int)
-	//AddToJoiners(n *NodeAppearance) (*NodeAppearance, int)
+	CreateNodeAppearance(ctx context.Context, inp common2.NodeIntroProfile) *NodeAppearance
+	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
+	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)
 }
 
 func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation,
@@ -206,9 +207,12 @@ func (r *MemberRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	return r.nodeIndex
 }
 
-func (r *MemberRealmPopulation) createNode(ctx context.Context, inp common2.NodeIntroProfile) *NodeAppearance {
-	//np.GetNodePublicKey().AsByteString()
-	np := &common2.JoinerNodeProfile{NodeIntroProfile: inp}
+func (r *MemberRealmPopulation) CreateNodeAppearance(ctx context.Context, inp common2.NodeIntroProfile) *NodeAppearance {
+
+	np := &joiningNodeProfile{NodeIntroProfile: inp}
+	if inp.HasIntroduction() {
+		np.membershipState = common2.Joining
+	}
 
 	n := &NodeAppearance{}
 	n.init(np, nil, r.baselineWeight)
@@ -216,11 +220,13 @@ func (r *MemberRealmPopulation) createNode(ctx context.Context, inp common2.Node
 	return n
 }
 
-const PurgatoryDuplicatePK = -1
-const PurgatoryExistingMember = -2
+type PurgatoryNodeState int
 
-//TODO remember who has sent
-func (r *MemberRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppearance, int) {
+const PurgatoryDuplicatePK PurgatoryNodeState = -1
+const PurgatoryExistingMember PurgatoryNodeState = -2
+
+//TODO remember who has sent the original data
+func (r *MemberRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState) {
 	if !n.profile.GetState().IsUndefined() {
 		panic("illegal value")
 	}
@@ -262,31 +268,59 @@ func (r *MemberRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppearan
 		return n, 0
 	} else {
 		*nodes = append(*nodes, n)
-		return n, len(*nodes) - 1
+		return n, PurgatoryNodeState(len(*nodes) - 1)
 	}
 }
 
-func (r *MemberRealmPopulation) AddToJoiners(n *NodeAppearance) (*NodeAppearance, int) {
-	if !n.profile.GetState().IsJoining() {
+func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
+	if n.profile.GetState().IsUndefined() {
 		panic("illegal value")
-	}
-
-	id := n.profile.GetShortNodeID()
-	na := r.getActiveNodeAppearance(id)
-	if na != nil {
-		return na, PurgatoryExistingMember
 	}
 
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	nn := r.joiners[id]
-	if nn != nil {
-		return nn, PurgatoryExistingMember
-	}
+	id := n.profile.GetShortNodeID()
 
 	delete(r.purgatoryByPK, n.profile.GetNodePublicKey().AsByteString())
-	delete(r.purgatoryByID, n.profile.GetShortNodeID())
+	nodes := r.purgatoryByID[id]
+	if nodes != nil {
+		delete(r.purgatoryByID, id)
+	} else {
+		nodes = &[]*NodeAppearance{}
+	}
 
-	return n, 0
+	na := r.getActiveNodeAppearance(id)
+	if na != nil {
+		return na, *nodes
+	}
+
+	na = r.joiners[id]
+	if na != nil {
+		return na, *nodes
+	}
+	return n, *nodes
+}
+
+var _ common2.NodeProfile = &joiningNodeProfile{}
+
+type joiningNodeProfile struct {
+	common2.NodeIntroProfile
+	membershipState common2.MembershipState
+}
+
+func (*joiningNodeProfile) GetIndex() int {
+	return 0
+}
+
+func (p *joiningNodeProfile) GetDeclaredPower() common2.MemberPower {
+	return p.GetStartPower()
+}
+
+func (*joiningNodeProfile) GetSignatureVerifier() common.SignatureVerifier {
+	return nil
+}
+
+func (p *joiningNodeProfile) GetState() common2.MembershipState {
+	return p.membershipState
 }

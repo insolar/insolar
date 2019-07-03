@@ -91,7 +91,7 @@ type OperationalCensus interface {
 type ActiveCensus interface {
 	OperationalCensus
 	GetPulseData() common.PulseData
-	GetProfileFactory() common2.NodeProfileFactory
+	GetProfileFactory(ksf common.KeyStoreFactory) common2.NodeProfileFactory
 }
 
 type ExpectedCensus interface {

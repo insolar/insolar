@@ -179,6 +179,7 @@ type TransportFactory interface {
 
 type TransportCryptographyFactory interface {
 	common.SignatureVerifierFactory
+	common.KeyStoreFactory
 	GetDigestFactory() common.DigestFactory
 	GetNodeSigner(sks common.SecretKeyStore) common.DigestSigner
 }

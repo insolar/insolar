@@ -52,6 +52,7 @@ package tests
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"math"
 
 	"github.com/insolar/insolar/insolar"
@@ -150,6 +151,10 @@ var _ common.NodeEndpoint = &emuEndpoint{}
 
 type emuEndpoint struct {
 	name common.HostAddress
+}
+
+func (p *emuEndpoint) GetIpAddress() packets.NodeAddress {
+	panic("implement me")
 }
 
 func (p *emuEndpoint) GetEndpointType() common.NodeEndpointType {

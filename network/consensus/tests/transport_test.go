@@ -223,6 +223,10 @@ func (r *EmuPhase3NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 type emuTransportCryptography struct {
 }
 
+func (r *emuTransportCryptography) GetPublicKeyStore(skh common.SignatureKeyHolder) common.PublicKeyStore {
+	return nil
+}
+
 func (r *emuTransportCryptography) GetPacketDigester() common.DataDigester {
 	panic("not implemented")
 }

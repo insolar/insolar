@@ -105,16 +105,11 @@ type BriefCandidateProfile interface {
 	GetNodePK() common.SignatureKeyHolder
 
 	GetNodeEndpoint() common.NodeEndpoint
-}
-
-type SignedBriefCandidateProfile interface {
-	BriefCandidateProfile
-
-	GetIssuerSignature() common.SignatureHolder
+	GetJoinerSignature() common.SignatureHolder
 }
 
 type CandidateProfile interface {
-	SignedBriefCandidateProfile
+	BriefCandidateProfile
 
 	GetIssuedAtPulse() common.PulseNumber // =0 when a node was connected during zeronet
 	GetIssuedAtTime() time.Time
@@ -127,11 +122,12 @@ type CandidateProfile interface {
 	//NodeRefProof	[]common.Bits512
 
 	GetIssuerID() common.ShortNodeID
-	GetJoinerSignature() common.SignatureHolder
+	GetIssuerSignature() common.SignatureHolder
 }
 
 type NodeProfileFactory interface {
 	CreateBriefIntroProfile(candidate BriefCandidateProfile, nodeSignature common.SignatureHolder) NodeIntroProfile
+	/* This method MUST: (1) ensure same values of both params; (2) create a new copy of NodeIntroProfile */
 	UpgradeIntroProfile(profile NodeIntroProfile, candidate CandidateProfile) NodeIntroProfile
 }
 
@@ -564,25 +560,19 @@ func (p MembershipProfile) String() string {
 	return fmt.Sprintf("idx:%03d %s", p.Index, p.StringParts())
 }
 
-var _ NodeProfile = &JoinerNodeProfile{}
+func EqualIntroProfiles(p NodeIntroProfile, o NodeIntroProfile) bool {
+	if p == nil || o == nil {
+		return false
+	}
+	if p == o {
+		return true
+	}
 
-type JoinerNodeProfile struct {
-	NodeIntroProfile
-	MembershipState MembershipState
-}
+	if p.GetShortNodeID() != o.GetShortNodeID() || p.GetPrimaryRole() != o.GetPrimaryRole() ||
+		p.GetSpecialRoles() != o.GetSpecialRoles() || p.GetStartPower() != o.GetStartPower() ||
+		!p.GetNodePublicKey().Equals(o.GetNodePublicKey()) {
+		return false
+	}
 
-func (*JoinerNodeProfile) GetIndex() int {
-	return 0
-}
-
-func (p *JoinerNodeProfile) GetDeclaredPower() MemberPower {
-	return p.GetStartPower()
-}
-
-func (*JoinerNodeProfile) GetSignatureVerifier() common.SignatureVerifier {
-	return nil
-}
-
-func (*JoinerNodeProfile) GetState() MembershipState {
-	return Joining
+	return common.EqualNodeEndpoints(p.GetDefaultEndpoint(), o.GetDefaultEndpoint())
 }

@@ -59,36 +59,53 @@ type GlobulaConsensusProtocolV2Packet struct {
 	Header      UnifiedProtocolPacketHeader `insolar-transport:"Protocol=0x01;Packet=0-4"` // ByteSize=16
 	PulseNumber common.PulseNumber          `insolar-transport:"[30-31]=0"`                // [30-31] MUST ==0, ByteSize=4
 
+	EncryptableBody PacketBody
+	EncryptionData  []byte
+
+	PacketSignature common.Bits512 // ByteSize=64
+}
+
+type PacketBody struct {
+	/*
+		PacketFlags - flags =1 outside of the prescribed phases should cause packet read error
+		[0]   - valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
+		[1:2]
+			for Phase 1, 2: HasIntro : introduction is present
+				0 - no intro
+				1 - brief intro (this option is only allowed Phase 2 only)
+				2 - full intro + cloud intro
+				3 - full intro + cloud intro + joiner secret (only for member-to-joiner packet)
+			for Phase 3: ExtraVectorCount : number of additional vectors inside NodeVectors
+	*/
+
 	// Phases 0-2
 	// - Phase0 is not sent to joiners and suspects, and PulsarPacket field must not be sent by joiners
-	PulsarPacket *EmbeddedPulsarData     `insolar-transport:"optional=PacketFlags[0];Packet=0,1"` // ByteSize>=124
-	Announcement *MembershipAnnouncement `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 166, 168, 180, (MEMBER) 197, 201, 359, 361, 373
-
-	// ONLY from member to joiner
-	CloudToJoiner      *CloudIntro     `insolar-transport:"optional=PacketFlags[1];Packet=1"` // ByteSize= 192
-	BriefIntroToJoiner *BriefSelfIntro `insolar-transport:"optional=PacketFlags[1];Packet=2"` // ByteSize= 70, 72, 84
+	PulsarPacket *EmbeddedPulsarData     `insolar-transport:"Packet=0,1;optional=PacketFlags[0]"` // ByteSize>=124
+	Announcement *MembershipAnnouncement `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 5, (MEMBER) 201, 205 (MEMBER+JOINER) 196, 198, 208
 
 	/*
 		FullSelfIntro MUST be included when any of the following are true
 			1. sender or receiver is a joiner
 			2. sender or receiver is suspect and the other node was joined after this node became suspect
 	*/
-	FullSelfIntro *FullSelfIntro `insolar-transport:"optional=PacketFlags[1];Packet=1"` // ByteSize> 152
+	BriefSelfIntro *NodeBriefIntro `insolar-transport:"Packet=  2;optional=PacketFlags[1:2]=1"`   // ByteSize= 135, 137, 147
+	FullSelfIntro  *NodeFullIntro  `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=2,3"` // ByteSize>= 221, 223, 233
+	CloudIntro     *CloudIntro     `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=2,3"` // ByteSize= 128
+	JoinerSecret   common.Bits512  `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=3"`   // ByteSize= 64
 
-	Neighbourhood Neighbourhood `insolar-transport:"Packet=2"` // ByteSize= 1 + N * (107 - 209)
+	Neighbourhood Neighbourhood `insolar-transport:"Packet=2"` // ByteSize= 1 + N * (205 .. 220)
 	Vectors       NodeVectors   `insolar-transport:"Packet=3"` // ByteSize=133..599
 
-	Claims          ClaimList      `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
-	PacketSignature common.Bits512 // ByteSize=64
+	Claims ClaimList `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
 }
 
 /*
 
 Phase0 packet: >=208
-Phase1 packet: >=754 normal, >=926
-Phase2 packet: 561 (w/j) + N * (107 - 209) ... 1900 byte => (6+self) members/joiners
-				w=5 -> 1397 byte
-Phase3 packet: >=218 <=684
+Phase1 packet: >=717 																(claims ~700 bytes)
+Phase2 packet: 293 + N * (205 .. 220) ... 1500 byte => (6+self) members/joiners
+				w=5 -> 1173 byte
+Phase3 packet: >=218 <=684															(claims ~700 bytes)
 
 Network traffic ~1000 nodes:
 			     IN          OUT
@@ -109,90 +126,86 @@ type EmbeddedPulsarData struct {
 }
 
 type CloudIntro struct {
-	// ByteSize=192
+	// ByteSize=128
 
 	CloudIdentity      common.Bits512 // ByteSize=64
-	JoinerSecret       common.Bits512
 	LastCloudStateHash common.Bits512
 }
 
-type BriefSelfIntro struct {
-	// ByteSize= 70, 72, 84
-	NodeBriefIntroExt // ByteSize= 70, 72, 84
-}
-
-type FullSelfIntro struct {
-	// ByteSize= >=82 + (70, 72, 84) = >152
-	NodeBriefIntroExt
-	NodeFullIntroExt
-}
-
 type Neighbourhood struct {
-	// ByteSize=1 + N * (170 - 209)
+	// ByteSize= 1 + N * (205 .. 220)
 	NeighbourCount uint8
 	Neighbours     []NeighbourAnnouncement
 }
 
 type NeighbourAnnouncement struct {
-	// ByteSize= 4 + x
-	// ByteSize(JOINER) = 171, 173, 185
-	// ByteSize(MEMBER) = 205, 209
+	// ByteSize(JOINER) = 73 + (135, 137, 147) = 208, 210, 220
+	// ByteSize(MEMBER) = 73 + (132, 136) = 205, 209
 	NeighbourNodeID common.ShortNodeID // ByteSize=4 // !=0
-	MembershipAnnouncement
-}
-type MembershipAnnouncement struct {
-	// ByteSize= 5 + (162, 164, 176, 196, 200)
-	// ByteSize(JOINER MEMBER) = 167, 169, 181
-	// ByteSize(MEMBER) = 201, 205
-	// ByteSize(SELF) = 201, 205, 363, 365, 377
-	// ByteSize(JOINER SELF) = 167, 169, 181
 
 	CurrentRank    common2.MembershipRank // ByteSize=4
 	RequestedPower common2.MemberPower    // ByteSize=1
 
 	/*
 		As joiner has no state before joining, its announcement and relevant signature are considered equal to
-		NodeBriefIntro and its signature.
-		CurrentRank of joiner will always be ZERO, as joiner has no index/nodeCount/power.
-		The field "Joiner" MUST BE OMITTED when	this joiner is introduced by the sending node (NeighbourNodeID == StateUpdate.AnnounceID)
+		NodeBriefIntro and related signature, and CurrentRank of joiner will always be ZERO, as joiner has no index/nodeCount/power.
+
+		The field "Joiner" MUST BE OMITTED when	this joiner is introduced by the sending node
 	*/
-	Joiner *JoinAnnouncement `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 162, 164, 176
+	Joiner *JoinAnnouncement `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
 
 	/* For non-joiner */
-	Member *MemberAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 197, 201
+	Member *NodeAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136
+
+	/* AnnounceSignature is copied from the original Phase1 */
+	AnnounceSignature common.Bits512 `insolar-transport:"optional"` // ByteSize = 64
 }
 
-type MemberAnnouncement struct {
-	// ByteSize = 196 + (0, 4, 162, 164, 176) = 196, 200, 358, 360, 372
-	// ByteSize(SELF) = 196, 200, 358, 360, 372
-	// ByteSize(MEMBER) = 196, 200
+type MembershipAnnouncement struct {
+	// ByteSize(MEMBER) = 69 + (132, 136) = 201, 205
+	// ByteSize(MEMBER + JOINER) = 69 + (167, 169, 181) = 196, 198, 208
+	// ByteSize(JOINER) = 4
+
+	/*
+		This field MUST be excluded from the packet, but considered for signature calculation.
+		Value of this field equals SourceID
+	*/
+	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
+
+	CurrentRank common2.MembershipRank // ByteSize=4
+
+	/* For non-joiner ONLY */
+	RequestedPower    common2.MemberPower `insolar-transport:"optional=CurrentRank!=0"` // ByteSize=1
+	Member            *NodeAnnouncement   `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136, 267, 269, 279
+	AnnounceSignature common.Bits512      `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 64
+	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
+}
+
+type NodeAnnouncement struct {
+	// ByteSize(MembershipAnnouncement) = 132, 136, 267, 269, 279
+	// ByteSize(NeighbourAnnouncement) = 132, 136
 
 	NodeState  common2.CompactGlobulaNodeState // ByteSize=128
 	AnnounceID common.ShortNodeID              // ByteSize=4 // =0 - no announcement, =self - is leaver, else has joiner
 	/*
-
-		Presence of the following fields depends on current parsing context:
-		1. When MembershipAnnouncement is used (for node own StateUpdate), then
-			a. "Leaver" is present when AnnounceID = thisNodeID, and it means that this node is leaving
-			b. otherwise "Joiner" is present when AnnounceID != 0, and it means that this node has introduced a joiner with ID = AnnounceID
-
-			AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
-
-		2. When NeighbourAnnouncement is used for a neighbour node, then
-			a. "Leaver" is present when AnnounceID = NeighbourNodeID, and it means that the neighbour node is leaving
-			b. while AnnounceID != 0 means that this node has introduced a joiner with ID = AnnounceID, but field "Joiner" will NOT be present.
-
-			AnnounceSignature is copied from the original Phase1
+		1. When is in MembershipAnnouncement
+			"Leaver" is present when AnnounceID = Header.SourceID (sender is leaving)
+		2. When is in NeighbourAnnouncement
+			"Leaver" is present when AnnounceID = NeighbourNodeID (neighbour is leaving)
 	*/
-	Leaver            *LeaveAnnouncement `insolar-transport:"optional"` // ByteSize = 4
-	Joiner            *JoinAnnouncement  `insolar-transport:"optional"` // ByteSize = 162, 164, 176
-	AnnounceSignature common.Bits512     `insolar-transport:"optional"` // ByteSize = 64
+	Leaver *LeaveAnnouncement `insolar-transport:"optional"` // ByteSize = 4
+	/*
+		1. "Joiner" is NEVER present when "Leaver" is present
+		2. when AnnounceID != 0 (sender/neighbour has introduced a joiner with AnnounceID)
+			a. "Joiner" is present when is in MembershipAnnouncement
+			b. "Joiner" is NEVER present when is in NeighbourAnnouncement
+	*/
+	Joiner *JoinAnnouncement `insolar-transport:"optional"` // ByteSize = 135, 137, 147
 }
 
 type JoinAnnouncement struct {
-	// ByteSize = 162, 164, 176
-	JoinerIntro     NodeBriefIntroExt // ByteSize= 98, 100, 112 // NodeId is available outside
-	JoinerSignature common.Bits512    // ByteSize=64 // = sign(NodeBriefIntro, SK(joiner))
+	// ByteSize= 135, 137, 147
+	NodeBriefIntro
 }
 
 type LeaveAnnouncement struct {

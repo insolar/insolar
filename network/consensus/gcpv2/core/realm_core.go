@@ -85,7 +85,7 @@ type coreRealm struct {
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
 	signer          common.DigestSigner
 	digest          common.DigestFactory
-	verifierFactory common.SignatureVerifierFactory
+	verifierFactory TransportCryptographyFactory
 	upstream        UpstreamPulseController
 	roundStartedAt  time.Time
 
@@ -108,12 +108,11 @@ func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport Tran
 	r.config = config
 	r.initialCensus = initialCensus
 
-	crypto := transport.GetCryptographyFactory()
-	r.verifierFactory = crypto
-	r.digest = crypto.GetDigestFactory()
+	r.verifierFactory = transport.GetCryptographyFactory()
+	r.digest = r.verifierFactory.GetDigestFactory()
 
 	sks := config.GetSecretKeyStore()
-	r.signer = crypto.GetNodeSigner(sks)
+	r.signer = r.verifierFactory.GetNodeSigner(sks)
 
 	population := r.initialCensus.GetOnlinePopulation()
 

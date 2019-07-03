@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 
@@ -106,7 +107,7 @@ func (r *FullRealm) init(transport TransportFactory, controlFeeder ConsensusCont
 func (r *FullRealm) initBasics(census census.ActiveCensus) {
 
 	r.census = census
-	r.profileFactory = r.census.GetProfileFactory()
+	r.profileFactory = census.GetProfileFactory(r.verifierFactory)
 
 	r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta, r.IsJoiner())
 	r.strategy.AdjustConsensusTimings(&r.timings)
@@ -174,17 +175,30 @@ func (r *FullRealm) initPopulation(population census.OnlinePopulation, individua
 	}
 	prevSelf.copySelfTo(newSelf)
 
-	//cp := r.candidateFeeder.PickNextJoinCandidate()
-	//if cp != nil {
-	//	nip := r.profileFactory.CreateBriefIntroProfile(cp, cp.GetJoinerSignature())
-	//	nip = r.profileFactory.UpgradeIntroProfile(nip, cp)
-	//
-	//	r.population.AddToJoiners()
-	////	jc := r.CreatePurgatoryNode(cp)
-	////	r.UpgradeToDynamicNode(jc, cp)
-	////	newSelf.requestedJoiner = jc
-	//}
+	for {
+		cp := r.candidateFeeder.PickNextJoinCandidate()
+		if cp == nil {
+			break
+		}
 
+		nip := r.profileFactory.CreateBriefIntroProfile(cp, cp.GetJoinerSignature())
+		nip = r.profileFactory.UpgradeIntroProfile(nip, cp)
+		na := r.population.CreateNodeAppearance(r.roundContext, nip)
+		nna, nodes := r.population.AddToDynamics(na)
+
+		if !common2.EqualIntroProfiles(nna.profile, na.profile) {
+			nodes = append(nodes, na)
+			nna = nil
+		}
+		if nodes != nil {
+			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetNodeID(), nodes)
+		}
+		if nna != nil {
+			newSelf.requestedJoiner = nna
+			break
+		}
+		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetNodeID())
+	}
 	r.self = newSelf
 }
 
@@ -355,6 +369,35 @@ func (r *FullRealm) getPacketDispatcher(pt packets.PacketType) (*packetDispatche
 		return nil, fmt.Errorf("packet type (%v) has no handler", pt)
 	}
 	return &r.handlers[pt], nil
+}
+
+func (r *FullRealm) GetProfileFactory() common2.NodeProfileFactory {
+	return r.profileFactory
+}
+
+func (r *FullRealm) CreatePurgatoryNode(ctx context.Context, intro packets.BriefIntroductionReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
+
+	panic("not implemented")
+	//nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
+	//if fIntro, ok := intro.(packets.FullIntroductionReader); ok && !fIntro.GetIssuerID().IsAbsent() {
+	//	nip = r.profileFactory.UpgradeIntroProfile(nip, fIntro)
+	//}
+	//na := r.population.CreateNodeAppearance(r.roundContext, nip)
+	//
+	//nna, ps := r.population.AddToPurgatory(na)
+	//
+	//if !common2.EqualIntroProfiles(nna.profile, na.profile) {
+	//	nodes = append(nodes, na)
+	//	nna = nil
+	//}
+	//if nodes != nil {
+	//	inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetNodeID(), nodes)
+	//}
+	//if nna != nil {
+	//	newSelf.requestedJoiner = nna
+	//	break
+	//}
+
 }
 
 //func (r *FullRealm) getPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {

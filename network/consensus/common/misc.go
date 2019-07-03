@@ -52,6 +52,7 @@ package common
 
 import (
 	"bytes"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"io"
 )
 
@@ -77,7 +78,29 @@ type NodeEndpoint interface {
 	GetEndpointType() NodeEndpointType
 	GetRelayID() ShortNodeID
 	GetNameAddress() HostAddress
-	//GetIpAddress() packets.NodeAddress
+	GetIpAddress() packets.NodeAddress
+}
+
+func EqualNodeEndpoints(p, o NodeEndpoint) bool {
+	if p == nil || o == nil {
+		return false
+	}
+	if p == o {
+		return true
+	}
+
+	if p.GetEndpointType() != o.GetEndpointType() {
+		return false
+	}
+	switch p.GetEndpointType() {
+	case NameEndpoint:
+		return p.GetNameAddress() == o.GetNameAddress()
+	case IPEndpoint:
+		return p.GetIpAddress() == o.GetIpAddress()
+	case RelayEndpoint:
+		return p.GetRelayID() == o.GetRelayID()
+	}
+	panic("missing")
 }
 
 type NodeEndpointType uint8
@@ -240,6 +263,8 @@ func CopyFixedSize(v FoldableReader) FoldableReader {
 
 type ShortNodeID uint32 // ZERO is RESERVED
 const AbsentShortNodeID ShortNodeID = 0
+
+func (v ShortNodeID) IsAbsent() bool { return v == AbsentShortNodeID }
 
 type CapacityLevel uint8
 

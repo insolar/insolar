@@ -142,6 +142,10 @@ type SignatureVerifierFactory interface {
 	GetSignatureVerifierWithPKS(pks PublicKeyStore) SignatureVerifier
 }
 
+type KeyStoreFactory interface {
+	GetPublicKeyStore(skh SignatureKeyHolder) PublicKeyStore
+}
+
 type DataSigner interface {
 	DigestSigner
 	DataDigester

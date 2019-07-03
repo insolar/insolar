@@ -66,10 +66,9 @@ type NodeVectors struct {
 		3 - Fraud node
 		4 - Missing node
 	*/
-	StateVectorMask    *NodeAppearanceBitset `insolar-transport:"Packet=3"`                                                          // ByteSize=1..335
-	TrustedStateVector *GlobulaStateVector   `insolar-transport:"Packet=3;TrustedStateVector.ExpectedRank[30-31]=flags:phase3Flags"` // ByteSize=132
-	DoubtedStateVector *GlobulaStateVector   `insolar-transport:"optional=phase3Flags[0];Packet=3"`                                  // ByteSize=132
-	// FraudStateVector *GlobulaStateVector `insolar-transport:"optional=phase3Flags[1];Packet=3"` //ByteSize=132
+	StateVectorMask        NodeAppearanceBitset // ByteSize=1..335
+	MainStateVector        GlobulaStateVector   // ByteSize=132
+	AdditionalStateVectors []GlobulaStateVector `insolar-transport:"count=PacketFlags[1:2]"` // ByteSize=count * 132
 }
 
 type NodeAppearanceBitset struct {
@@ -81,14 +80,7 @@ type NodeAppearanceBitset struct {
 
 type GlobulaStateVector struct {
 	// ByteSize=132
-	ExpectedRank common2.MembershipRank // ByteSize=4
-	/*
-		GlobulaVectorHash = merkle(GlobulaNodeStateSignature of all nodes of this vector)
-		SignedVectorHash = sign(GlobulaVectorHash, SK(sending node))
-	*/
-	SignedVectorHash common.Bits512 // ByteSize=64
-	/*
-		Hash(all MembershipUpdate.Signature of this vector)
-	*/
-	AnnouncementVectorHash common.Bits512
+	ExpectedRank           common2.MembershipRank // ByteSize=4
+	VectorHash             common.Bits512         // ByteSize=64
+	SignedGlobulaStateHash common.Bits512         // ByteSize=64
 }

@@ -66,7 +66,7 @@ type PrimingCensusTemplate struct {
 	profileFactory common2.NodeProfileFactory
 }
 
-func (c *PrimingCensusTemplate) GetProfileFactory() common2.NodeProfileFactory {
+func (c *PrimingCensusTemplate) GetProfileFactory(ksf common.KeyStoreFactory) common2.NodeProfileFactory {
 	return c.profileFactory
 }
 

@@ -56,15 +56,14 @@ import (
 )
 
 type NodeBriefIntro struct {
-	// ByteSize= 74, 76, 88
-	ShortID common.ShortNodeID
-	NodeBriefIntroExt
-}
+	// ByteSize= 135, 137, 147
+	// ByteSize= 135 + (0, 2, 12)
 
-type NodeBriefIntroExt struct {
-	// ByteSize= 3 + (4, 6, 18) + 64 = 70, 72, 84
-
-	//ShortID             common.ShortNodeID
+	/*
+		This field MUST be excluded from the packet, but considered for signature calculation.
+		Value of this field equals SourceID or AnnounceID.
+	*/
+	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
 
 	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
 	SpecialRoles        common2.NodeSpecialRole
@@ -76,16 +75,16 @@ type NodeBriefIntroExt struct {
 	PrimaryIPv4    uint32             `insolar-transport:"AddrMode=0"`
 	PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
 
-	// 64 bytes
-	NodePK common.Bits512 // works as a unique node identity
+	// 128 bytes
+	NodePK          common.Bits512 // works as a unique node identity
+	JoinerSignature common.Bits512 // ByteSize=64
 }
 
 type NodeFullIntro struct {
-	NodeBriefIntro
-	NodeFullIntroExt
-}
+	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
 
-type NodeFullIntroExt struct {
+	NodeBriefIntro // ByteSize= 135, 137, 147
+
 	// ByteSize>=86
 	IssuedAtPulse common.PulseNumber // =0 when a node was connected during zeronet
 	IssuedAtTime  uint64
@@ -98,6 +97,6 @@ type NodeFullIntroExt struct {
 	ProofLen     uint8
 	NodeRefProof []common.Bits512
 
-	DiscoveryIssuerNodeId         common.ShortNodeID
-	FullIntroSignatureByDiscovery common.Bits512
+	DiscoveryIssuerNodeId common.ShortNodeID
+	IssuerSignature       common.Bits512
 }

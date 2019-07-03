@@ -60,8 +60,8 @@ type UnifiedProtocolPacketHeader struct {
 	ReceiverID uint32 // NB! MUST for Signature calculation must be considered as 0, actual value can be different
 
 	ProtocolAndPacketType  uint8  `insolar-transport:"[0:3]=header:Packet;[4:7]=header:Protocol"` // [00-03]PacketType [04-07]ProtocolType
-	PacketFlags            uint8  `insolar-transport:"[:]=flags:PacketFlags"`
+	PacketFlags            uint8  `insolar-transport:"[0]=IsRelayRestricted;[1]=IsBodyEncrypted;[2:]=flags:PacketFlags"`
 	HeaderAndPayloadLength uint16 // [00-13] ByteLength of Payload, [14-15] reserved = 0
 	SourceID               uint32 // may differ from actual sender when relay is in use, MUST NOT =0
-	RelayTargetID          uint32 // indicates final destination, if =0 then there is no relay allowed by sender and receiver MUST decline a packet if actual sender != source
+	TargetID               uint32 // indicates final destination, if =0 then there is no relay allowed by sender and receiver MUST decline a packet if actual sender != source
 }

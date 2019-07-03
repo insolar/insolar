@@ -58,6 +58,8 @@ const (
 	PrimaryRoleHeavyMaterial
 	PrimaryRoleLightMaterial
 	PrimaryRoleVirtual
+	//PrimaryRoleCascade
+	//PrimaryRoleRecrypt
 )
 
 func (v NodePrimaryRole) IsMaterial() bool {
@@ -87,7 +89,7 @@ func (v NodePrimaryRole) IsInactive() bool {
 type NodeSpecialRole uint8
 
 const (
-	SpecialRoleNoRole    NodeSpecialRole = 0
+	SpecialRoleNone      NodeSpecialRole = 0
 	SpecialRoleDiscovery NodeSpecialRole = 1 << iota
 )
 
