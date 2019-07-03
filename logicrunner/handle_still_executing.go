@@ -41,7 +41,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 
 	msg := parcel.Message().(*message.StillExecuting)
 	ref := msg.DefaultTarget()
-	os := lr.UpsertObjectState(*ref)
+	os := lr.StateStorage.UpsertObjectState(*ref)
 
 	inslogger.FromContext(ctx).Debug("Got information that ", ref, " is still executing")
 

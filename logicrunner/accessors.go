@@ -17,47 +17,68 @@
 package logicrunner
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/insolar"
+	"sync"
 )
 
-func (lr *LogicRunner) GetObjectState(ref Ref) *ObjectState {
-	lr.stateMutex.RLock()
-	res, ok := lr.state[ref]
-	lr.stateMutex.RUnlock()
+type StateStorage interface {
+	sync.Locker
+
+	GetObjectState(ref Ref) *ObjectState
+	UpsertObjectState(ref Ref) *ObjectState
+	MustObjectState(ref Ref) *ObjectState
+	GetExecutionState(ref Ref) *ExecutionState
+	DeleteObjectState(ref Ref)
+	StateMap() *map[Ref]*ObjectState
+}
+
+type stateStorage struct {
+	sync.RWMutex
+	state map[Ref]*ObjectState // if object exists, we are validating or executing it right now
+}
+
+func NewStateStorage() StateStorage {
+	ss := &stateStorage{
+		state: make(map[Ref]*ObjectState),
+	}
+	return ss
+}
+
+func (ss *stateStorage) GetObjectState(ref Ref) *ObjectState {
+	ss.RLock()
+	res, ok := ss.state[ref]
+	ss.RUnlock()
 	if !ok {
 		return nil
 	}
 	return res
 }
 
-func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
-	lr.stateMutex.RLock()
-	if res, ok := lr.state[ref]; ok {
-		lr.stateMutex.RUnlock()
+func (ss *stateStorage) UpsertObjectState(ref Ref) *ObjectState {
+	ss.RLock()
+	if res, ok := ss.state[ref]; ok {
+		ss.RUnlock()
 		return res
 	}
-	lr.stateMutex.RUnlock()
+	ss.RUnlock()
 
-	lr.stateMutex.Lock()
-	defer lr.stateMutex.Unlock()
-	if _, ok := lr.state[ref]; !ok {
-		lr.state[ref] = &ObjectState{}
+	ss.Lock()
+	defer ss.Unlock()
+	if _, ok := ss.state[ref]; !ok {
+		ss.state[ref] = &ObjectState{}
 	}
-	return lr.state[ref]
+	return ss.state[ref]
 }
 
-func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
-	res := lr.GetObjectState(ref)
+func (ss *stateStorage) MustObjectState(ref Ref) *ObjectState {
+	res := ss.GetObjectState(ref)
 	if res == nil {
 		panic("No requested object state. ref: " + ref.String())
 	}
 	return res
 }
 
-func (lr *LogicRunner) GetExecutionState(ref Ref) *ExecutionState {
-	os := lr.GetObjectState(ref)
+func (ss *stateStorage) GetExecutionState(ref Ref) *ExecutionState {
+	os := ss.GetObjectState(ref)
 	if os == nil {
 		return nil
 	}
@@ -67,10 +88,10 @@ func (lr *LogicRunner) GetExecutionState(ref Ref) *ExecutionState {
 	return os.ExecutionState
 }
 
-func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
-	pulse, err := lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return &pulse
+func (ss *stateStorage) DeleteObjectState(ref Ref) {
+	delete(ss.state, ref)
+}
+
+func (ss *stateStorage) StateMap() *map[Ref]*ObjectState {
+	return &ss.state
 }
