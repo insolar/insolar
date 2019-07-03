@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package proc
+package proc_test
 
 import (
 	"testing"
@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
@@ -82,7 +83,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	pmm.SetRequestMock.Return(nil)
 
 	// Pendings limit not reached.
-	p := NewSetRequest(msg, request, id, jetID)
+	p := proc.NewSetRequest(msg, request, id, jetID)
 	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker())
 
 	err = p.Proceed(ctx)

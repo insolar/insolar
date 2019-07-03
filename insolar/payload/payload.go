@@ -41,10 +41,11 @@ const (
 	TypeGetCode
 	TypeCode
 	TypeSetCode
-	TypeSetRequest
 	TypeGetFilament
 	TypeFilamentSegment
+	TypeSetRequest
 	TypeSetResult
+	TypeActivate
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -156,6 +157,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *SetResult:
 		pl.Polymorph = uint32(TypeSetResult)
 		return pl.Marshal()
+	case *Activate:
+		pl.Polymorph = uint32(TypeActivate)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -225,6 +229,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeSetResult:
 		pl := SetResult{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeActivate:
+		pl := Activate{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
