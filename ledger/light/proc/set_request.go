@@ -89,7 +89,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			p.dep.locker.Lock(req.Object.Record())
 			defer p.dep.locker.Unlock(req.Object.Record())
 
-			err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, *req)
+			err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, req)
 			if err == object.ErrOverride {
 				inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
 				// Since there is no deduplication yet it's quite possible that there will be

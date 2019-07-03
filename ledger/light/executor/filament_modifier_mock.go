@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "FilamentModifier" can be found in github.com/insolar/insolar/ledger/light/executor
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,7 +21,7 @@ import (
 type FilamentModifierMock struct {
 	t minimock.Tester
 
-	SetRequestFunc       func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.IncomingRequest) (r error)
+	SetRequestFunc       func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) (r error)
 	SetRequestCounter    uint64
 	SetRequestPreCounter uint64
 	SetRequestMock       mFilamentModifierMockSetRequest
@@ -61,7 +61,7 @@ type FilamentModifierMockSetRequestInput struct {
 	p  context.Context
 	p1 insolar.ID
 	p2 insolar.JetID
-	p3 record.IncomingRequest
+	p3 record.Request
 }
 
 type FilamentModifierMockSetRequestResult struct {
@@ -69,7 +69,7 @@ type FilamentModifierMockSetRequestResult struct {
 }
 
 //Expect specifies that invocation of FilamentModifier.SetRequest is expected from 1 to Infinity times
-func (m *mFilamentModifierMockSetRequest) Expect(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.IncomingRequest) *mFilamentModifierMockSetRequest {
+func (m *mFilamentModifierMockSetRequest) Expect(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) *mFilamentModifierMockSetRequest {
 	m.mock.SetRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -93,7 +93,7 @@ func (m *mFilamentModifierMockSetRequest) Return(r error) *FilamentModifierMock 
 }
 
 //ExpectOnce specifies that invocation of FilamentModifier.SetRequest is expected once
-func (m *mFilamentModifierMockSetRequest) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.IncomingRequest) *FilamentModifierMockSetRequestExpectation {
+func (m *mFilamentModifierMockSetRequest) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) *FilamentModifierMockSetRequestExpectation {
 	m.mock.SetRequestFunc = nil
 	m.mainExpectation = nil
 
@@ -108,7 +108,7 @@ func (e *FilamentModifierMockSetRequestExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of FilamentModifier.SetRequest method
-func (m *mFilamentModifierMockSetRequest) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.IncomingRequest) (r error)) *FilamentModifierMock {
+func (m *mFilamentModifierMockSetRequest) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) (r error)) *FilamentModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -117,7 +117,7 @@ func (m *mFilamentModifierMockSetRequest) Set(f func(p context.Context, p1 insol
 }
 
 //SetRequest implements github.com/insolar/insolar/ledger/light/executor.FilamentModifier interface
-func (m *FilamentModifierMock) SetRequest(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.IncomingRequest) (r error) {
+func (m *FilamentModifierMock) SetRequest(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) (r error) {
 	counter := atomic.AddUint64(&m.SetRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.SetRequestCounter, 1)
 
