@@ -102,8 +102,8 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	// suite.mc.Wait(2 * time.Minute)
-	// suite.mc.Finish()
+	suite.mc.Wait(2 * time.Minute)
+	suite.mc.Finish()
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
 	// that weren't shut down in case no Stop was called
