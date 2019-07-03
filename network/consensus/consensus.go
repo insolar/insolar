@@ -117,8 +117,8 @@ func New(ctx context.Context, dep Dep) Consensus {
 	knownNodes := dep.NodeKeeper.GetAccessor().GetActiveNodes()
 
 	consensus.population = adapters.NewPopulation(
-		adapters.NewNodeIntroProfile(origin, certificate),
-		adapters.NewNodeIntroProfileList(knownNodes, certificate),
+		adapters.NewNodeIntroProfile(origin, certificate, dep.KeyProcessor),
+		adapters.NewNodeIntroProfileList(knownNodes, certificate, dep.KeyProcessor),
 	)
 	consensus.mandateRegistry = adapters.NewMandateRegistry(
 		common2.NewDigest(
@@ -132,6 +132,7 @@ func New(ctx context.Context, dep Dep) Consensus {
 	consensus.offlinePopulation = adapters.NewOfflinePopulation(
 		dep.NodeKeeper,
 		dep.CertificateManager,
+		dep.KeyProcessor,
 	)
 	consensus.versionedRegistries = adapters.NewVersionedRegistries(
 		consensus.mandateRegistry,

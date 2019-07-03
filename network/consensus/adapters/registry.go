@@ -94,14 +94,16 @@ func (mr *MandateRegistry) GetPrimingCloudHash() common2.CloudStateHash {
 
 type OfflinePopulation struct {
 	// TODO: should't use nodekeeper here.
-	nodeKeeper network.NodeKeeper
-	manager    insolar.CertificateManager
+	nodeKeeper   network.NodeKeeper
+	manager      insolar.CertificateManager
+	keyProcessor insolar.KeyProcessor
 }
 
-func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.CertificateManager) *OfflinePopulation {
+func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.CertificateManager, keyProcessor insolar.KeyProcessor) *OfflinePopulation {
 	return &OfflinePopulation{
-		nodeKeeper: nodeKeeper,
-		manager:    manager,
+		nodeKeeper:   nodeKeeper,
+		manager:      manager,
+		keyProcessor: keyProcessor,
 	}
 }
 
@@ -109,7 +111,7 @@ func (op *OfflinePopulation) FindRegisteredProfile(identity common.HostIdentityH
 	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetHostAddress().String())
 	cert := op.manager.GetCertificate()
 
-	return NewNodeIntroProfile(node, cert)
+	return NewNodeIntroProfile(node, cert, op.keyProcessor)
 }
 
 type VersionedRegistries struct {

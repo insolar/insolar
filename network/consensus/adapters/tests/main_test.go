@@ -255,11 +255,8 @@ func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.Publ
 	data := []byte{1, 3, 3, 7}
 	digest := hasher.Hash(data)
 	signature, _ := signer.Sign(digest)
-	mn.SetEvidence(node.Evidence{
-		Data:      data,
-		Digest:    digest,
-		Signature: signature.Bytes(),
-	})
+
+	mn.SetSignature(*signature)
 
 	return mn
 }

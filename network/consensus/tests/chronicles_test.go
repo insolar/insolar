@@ -52,8 +52,9 @@ package tests
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"math"
+
+	"github.com/insolar/insolar/network/consensusv1/packets"
 
 	"github.com/insolar/insolar/insolar"
 
@@ -215,7 +216,7 @@ func (*emuNodeIntro) IsAllowedPower(p common2.MemberPower) bool {
 	return true
 }
 
-func (c *emuNodeIntro) GetClaimEvidence() common.SignedEvidenceHolder {
+func (c *emuNodeIntro) GetClaimSignature() common.SignatureHolder {
 	return nil
 }
 

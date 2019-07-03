@@ -57,6 +57,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
 )
@@ -64,22 +65,24 @@ import (
 type NodeIntroduction struct {
 	shortID   common.ShortNodeID
 	ref       insolar.Reference
-	signature common.Signature
+	signature common.SignatureHolder
 }
 
 func NewNodeIntroduction(networkNode insolar.NetworkNode) *NodeIntroduction {
+	mutableNode := networkNode.(node.MutableNode)
+	signature := mutableNode.GetSignature()
+
 	return newNodeIntroduction(
 		common.ShortNodeID(networkNode.ShortID()),
 		networkNode.ID(),
-		common.Signature{},
-		// common.NewSignature(
-		// 	common.NewBits512FromBytes(evidence.Signature),
-		// 	SHA3512Digest.SignedBy(SECP256r1Sign),
-		// ),
+		common.NewSignature(
+			common.NewBits512FromBytes(signature.Bytes()),
+			SHA3512Digest.SignedBy(SECP256r1Sign),
+		).AsSignatureHolder(),
 	)
 }
 
-func newNodeIntroduction(shortID common.ShortNodeID, ref insolar.Reference, signature common.Signature) *NodeIntroduction {
+func newNodeIntroduction(shortID common.ShortNodeID, ref insolar.Reference, signature common.SignatureHolder) *NodeIntroduction {
 	return &NodeIntroduction{
 		shortID:   shortID,
 		ref:       ref,
@@ -88,7 +91,6 @@ func newNodeIntroduction(shortID common.ShortNodeID, ref insolar.Reference, sign
 }
 
 func (ni *NodeIntroduction) ConvertPowerRequest(request common2.PowerRequest) common2.MemberPower {
-	// TODO: do something with power
 	if ok, cl := request.AsCapacityLevel(); ok {
 		return common2.MemberPowerOf(uint16(cl.DefaultPercent()))
 	}
@@ -109,9 +111,8 @@ func (ni *NodeIntroduction) GetShortNodeID() common.ShortNodeID {
 	return ni.shortID
 }
 
-func (ni *NodeIntroduction) GetClaimEvidence() common.SignedEvidenceHolder {
-	// TODO: return ni.signature
-	return nil
+func (ni *NodeIntroduction) GetClaimSignature() common.SignatureHolder {
+	return ni.signature
 }
 
 type NodeIntroProfile struct {
@@ -121,21 +122,24 @@ type NodeIntroProfile struct {
 	intro       common2.NodeIntroduction
 	endpoint    common.NodeEndpoint
 	store       common.PublicKeyStore
+	keyHolder   common.SignatureKeyHolder
 }
 
-func NewNodeIntroProfile(node insolar.NetworkNode, certificate insolar.Certificate) *NodeIntroProfile {
+func NewNodeIntroProfile(node insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) *NodeIntroProfile {
 	specialRole := common2.SpecialRoleNone
 	if utils.IsDiscovery(node.ID(), certificate) {
 		specialRole = common2.SpecialRoleDiscovery
 	}
 
+	publicKey := node.PublicKey().(*ecdsa.PublicKey)
 	return newNodeIntroProfile(
 		common.ShortNodeID(node.ShortID()),
 		StaticRoleToPrimaryRole(node.Role()),
 		specialRole,
 		NewNodeIntroduction(node),
 		NewNodeEndpoint(node.Address()),
-		NewECDSAPublicKeyStore(node.PublicKey().(*ecdsa.PublicKey)),
+		NewECDSAPublicKeyStore(publicKey),
+		NewECDSASignatureKeyHolder(publicKey, keyProcessor),
 	)
 }
 
@@ -146,6 +150,7 @@ func newNodeIntroProfile(
 	intro common2.NodeIntroduction,
 	endpoint common.NodeEndpoint,
 	store common.PublicKeyStore,
+	keyHolder common.SignatureKeyHolder,
 ) *NodeIntroProfile {
 	return &NodeIntroProfile{
 		shortID:     shortID,
@@ -154,6 +159,7 @@ func newNodeIntroProfile(
 		intro:       intro,
 		endpoint:    endpoint,
 		store:       store,
+		keyHolder:   keyHolder,
 	}
 }
 
@@ -181,6 +187,15 @@ func (nip *NodeIntroProfile) GetNodePublicKeyStore() common.PublicKeyStore {
 	return nip.store
 }
 
+func (nip *NodeIntroProfile) GetNodePublicKey() common.SignatureKeyHolder {
+	return nip.keyHolder
+}
+
+func (nip *NodeIntroProfile) GetStartPower() common2.MemberPower {
+	// TODO: get from certificate
+	return 10
+}
+
 func (nip *NodeIntroProfile) IsAcceptableHost(from common.HostIdentityHolder) bool {
 	address := nip.endpoint.GetNameAddress()
 	return address.Equals(from.GetHostAddress())
@@ -196,11 +211,18 @@ func (nip *NodeIntroProfile) String() string {
 
 type NodeEndpoint struct {
 	name common.HostAddress
+	addr packets.NodeAddress
 }
 
 func NewNodeEndpoint(address string) *NodeEndpoint {
+	addr, err := packets.NewNodeAddress(address)
+	if err != nil {
+		panic(err)
+	}
+
 	return &NodeEndpoint{
 		name: common.HostAddress(address),
+		addr: addr,
 	}
 }
 
@@ -216,10 +238,14 @@ func (p *NodeEndpoint) GetNameAddress() common.HostAddress {
 	return p.name
 }
 
-func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate) []common2.NodeIntroProfile {
+func (p *NodeEndpoint) GetIpAddress() packets.NodeAddress {
+	return p.addr
+}
+
+func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) []common2.NodeIntroProfile {
 	intros := make([]common2.NodeIntroProfile, len(nodes))
 	for i, n := range nodes {
-		intros[i] = NewNodeIntroProfile(n, certificate)
+		intros[i] = NewNodeIntroProfile(n, certificate, keyProcessor)
 	}
 
 	return intros
@@ -241,22 +267,7 @@ func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
 
 	mutableNode.SetShortID(insolar.ShortNodeID(profile.GetShortNodeID()))
 	mutableNode.SetState(MembershipStateToNodeState(profile.GetState()))
-
-	// evidence := introduction.GetClaimEvidence().GetEvidence()
-	//
-	// buf := bytes.NewBuffer(nil)
-	// _, err := evidence.WriteTo(buf)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	//
-	// signedDigest := evidence.GetSignedDigest()
-	//
-	// mutableNode.SetEvidence(node.Evidence{
-	// 	Data:      buf.Bytes(),
-	// 	Digest:    signedDigest.GetDigest().Bytes(),
-	// 	Signature: signedDigest.GetSignature().Bytes(),
-	// })
+	mutableNode.SetSignature(insolar.SignatureFromBytes(introduction.GetClaimSignature().AsBytes()))
 
 	return networkNode
 }

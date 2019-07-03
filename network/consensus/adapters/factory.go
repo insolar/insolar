@@ -135,6 +135,12 @@ func (cf *TransportCryptographyFactory) GetNodeSigner(sks common.SecretKeyStore)
 	return NewECDSADigestSigner(isks.privateKey, cf.scheme)
 }
 
+func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh common.SignatureKeyHolder) common.PublicKeyStore {
+	kh := skh.(*ECDSASignatureKeyHolder)
+
+	return NewECDSAPublicKeyStore(kh.publicKey)
+}
+
 type RoundStrategyFactory struct{}
 
 func NewRoundStrategyFactory() *RoundStrategyFactory {
@@ -193,10 +199,11 @@ func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate common2.BriefCa
 	intro := newNodeIntroduction(
 		candidate.GetNodeID(),
 		insolar.Reference{},
-		nodeSignature.CopyOfSignature(),
+		nodeSignature,
 	)
 
-	pk, err := npf.keyProcessor.ImportPublicKeyBinary(candidate.GetNodePK().Bytes())
+	keyHolder := candidate.GetNodePK()
+	pk, err := npf.keyProcessor.ImportPublicKeyBinary(keyHolder.AsBytes())
 	if err != nil {
 		panic(err)
 	}
@@ -210,6 +217,7 @@ func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate common2.BriefCa
 		intro,
 		candidate.GetNodeEndpoint(),
 		store,
+		keyHolder,
 	)
 }
 
