@@ -23,14 +23,15 @@ func _() {
 	_ = x[TypeCode-12]
 	_ = x[TypeSetCode-13]
 	_ = x[TypeSetIncomingRequest-14]
-	_ = x[TypeGetFilament-15]
-	_ = x[TypeFilamentSegment-16]
-	_ = x[TypeSetResult-17]
+	_ = x[TypeSetOutgoingRequest-15]
+	_ = x[TypeGetFilament-16]
+	_ = x[TypeFilamentSegment-17]
+	_ = x[TypeSetResult-18]
 }
 
-const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeGetFilamentTypeFilamentSegmentTypeSetResult"
+const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeGetFilamentTypeFilamentSegmentTypeSetResult"
 
-var _Type_index = [...]uint8{0, 11, 19, 28, 34, 43, 56, 69, 81, 93, 102, 110, 121, 129, 140, 162, 177, 196, 209}
+var _Type_index = [...]uint8{0, 11, 19, 28, 34, 43, 56, 69, 81, 93, 102, 110, 121, 129, 140, 162, 184, 199, 218, 231}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

@@ -94,6 +94,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		case payload.TypeSetIncomingRequest:
 			h := NewSetIncomingRequest(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
+		case payload.TypeSetOutgoingRequest:
+			h := NewSetOutgoingRequest(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
 		case payload.TypeSetResult:
 			h := NewSetResult(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)

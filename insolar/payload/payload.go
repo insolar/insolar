@@ -42,6 +42,7 @@ const (
 	TypeCode
 	TypeSetCode
 	TypeSetIncomingRequest
+	TypeSetOutgoingRequest
 	TypeGetFilament
 	TypeFilamentSegment
 	TypeSetResult
@@ -153,6 +154,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *SetIncomingRequest:
 		pl.Polymorph = uint32(TypeSetIncomingRequest)
 		return pl.Marshal()
+	case *SetOutgoingRequest:
+		pl.Polymorph = uint32(TypeSetOutgoingRequest)
+		return pl.Marshal()
 	case *SetResult:
 		pl.Polymorph = uint32(TypeSetResult)
 		return pl.Marshal()
@@ -221,6 +225,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeSetIncomingRequest:
 		pl := SetIncomingRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSetOutgoingRequest:
+		pl := SetOutgoingRequest{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeSetResult:

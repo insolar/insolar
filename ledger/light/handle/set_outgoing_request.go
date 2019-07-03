@@ -1,18 +1,18 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 
 package handle
 
@@ -29,13 +29,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SetIncomingRequest struct {
+type SetOutgoingRequest struct {
 	dep     *proc.Dependencies
 	message payload.Meta
 	passed  bool
 }
 
-func NewSetIncomingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetIncomingRequest {
+func NewSetOutgoingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetIncomingRequest {
 	return &SetIncomingRequest{
 		dep:     dep,
 		message: msg,
@@ -43,15 +43,15 @@ func NewSetIncomingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool
 	}
 }
 
-func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.SetIncomingRequest{}
+func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
+	msg := payload.SetOutgoingRequest{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal SetIncomingRequest message")
 	}
 
 	rec := record.Unwrap(&msg.Request)
-	request, ok := rec.(*record.IncomingRequest)
+	request, ok := rec.(*record.OutgoingRequest)
 	if !ok {
 		return fmt.Errorf("wrong request type: %T", rec)
 	}
@@ -111,7 +111,7 @@ func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 	return f.Procedure(ctx, setRequest, false)
 }
 
-func (s *SetIncomingRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Virtual, f flow.Flow) error {
+func (s *SetOutgoingRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Virtual, f flow.Flow) error {
 	passIfNotExecutor := !s.passed
 	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)

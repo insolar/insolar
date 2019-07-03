@@ -80,7 +80,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	pmm.SetRequestMock.Return(nil)
 
 	// Pendings limit not reached.
-	p := NewSetRequest(msg, request, id, jetID)
+	p := NewSetRequest(msg, &request, id, jetID)
 	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker())
 
 	err = p.Proceed(ctx)
