@@ -52,6 +52,7 @@ package bootstrap
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -94,5 +95,5 @@ func TestCreateAndVerifyPermit(t *testing.T) {
 	err = ValidatePermit(permit, cert, createCryptographyService(t))
 	assert.NoError(t, err)
 
-	// todo: verify timestamp
+	assert.Less(t, time.Now().Unix(), permit.Payload.ExpireTimestamp)
 }

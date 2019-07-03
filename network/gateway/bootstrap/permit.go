@@ -61,27 +61,26 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-// CreatePermit creates permit for joiner node to
+const PERMIT_TTL = 300
+
+// CreatePermit creates permit as signed protobuf for joiner node to
 func CreatePermit(authorityNodeRef insolar.Reference, reconnectHost *host.Host, joinerPublicKey []byte, signer insolar.Signer) (*packet.Permit, error) {
 	payload := packet.PermitPayload{
 		AuthorityNodeRef: authorityNodeRef,
-		ExpireTimestamp:  time.Now().Unix() + 60*5, //TODO: config for ExpireTimestamp
+		ExpireTimestamp:  time.Now().Unix() + PERMIT_TTL,
 		ReconnectTo:      reconnectHost,
 		JoinerPublicKey:  joinerPublicKey,
 	}
 
-	// FIXME
-	//data, err := payload.Marshal()
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "failed to marshal bootstrap permit")
-	//}
-	//signature, err := signer.Sign(data)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "failed to sign bootstrap permit")
-	//}
-	//
-	//return &packet.Permit{Payload: payload, Signature: signature.Bytes()}, nil
-	return &packet.Permit{Payload: payload, Signature: []byte{}}, nil
+	data, err := payload.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal bootstrap permit")
+	}
+	signature, err := signer.Sign(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign bootstrap permit")
+	}
+	return &packet.Permit{Payload: payload, Signature: signature.Bytes()}, nil
 }
 
 // ValidatePermit validate granted permit and verifies signature of Authority Node
@@ -96,25 +95,10 @@ func ValidatePermit(permit *packet.Permit, cert insolar.Certificate, verifier in
 		return errors.New("failed to marshal bootstrap permission payload part")
 	}
 
-	// FIXME
-	//verified := verifier.Verify(discovery.GetPublicKey(), insolar.SignatureFromBytes(permit.Signature), payload)
-	//if !verified {
-	//	return errors.New("bootstrap permission payload verification failed")
-	//}
+	verified := verifier.Verify(discovery.GetPublicKey(), insolar.SignatureFromBytes(permit.Signature), payload)
+
+	if !verified {
+		return errors.New("bootstrap permission payload verification failed")
+	}
 	return nil
 }
-
-// func (bc *Bootstrap) getRandActiveDiscoveryAddress() string {
-// 	if len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) <= 1 {
-// 		return bc.NodeKeeper.GetOrigin().Address()
-// 	}
-//
-// 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-// 	index := r.Intn(len(bc.Certificate.GetDiscoveryNodes()))
-// 	n := bc.NodeKeeper.GetAccessor().GetActiveNode(*bc.Certificate.GetDiscoveryNodes()[index].GetNodeRef())
-// 	if (n != nil) && (n.GetState() == insolar.NodeReady) {
-// 		return bc.Certificate.GetDiscoveryNodes()[index].GetHost()
-// 	}
-//
-// 	return bc.NodeKeeper.GetOrigin().Address()
-// }

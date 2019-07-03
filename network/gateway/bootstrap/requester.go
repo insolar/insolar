@@ -104,7 +104,7 @@ func (ac *requester) Authorize(ctx context.Context, host *host.Host, cert insola
 	}
 
 	authData := &packet.AuthorizeData{Certificate: serializedCert, Version: version.Version}
-	response, err := ac.authorizeWithTimestamp(ctx, host, authData, time.Now().UTC().Unix())
+	response, err := ac.authorizeWithTimestamp(ctx, host, authData, time.Now().Unix())
 	if err != nil {
 		return nil, err
 	}

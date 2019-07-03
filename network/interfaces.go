@@ -242,6 +242,8 @@ type Accessor interface {
 	GetWorkingNodes() []insolar.NetworkNode
 	// GetWorkingNodesByRole get working nodes by role.
 	GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference
+	// GetRandomWorkingNode returns random node to bootstrap on it
+	GetRandomWorkingNode() insolar.NetworkNode
 
 	// GetActiveNode returns active node.
 	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
