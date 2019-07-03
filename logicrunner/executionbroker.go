@@ -96,6 +96,7 @@ func (d *TranscriptDequeue) HasFromLedger() *Transcript {
 
 func (d *TranscriptDequeue) Take(count int) []*Transcript {
 	d.lock.Lock()
+	defer d.lock.Unlock()
 
 	size := len(d.queue)
 	if size < count {
@@ -105,23 +106,24 @@ func (d *TranscriptDequeue) Take(count int) []*Transcript {
 	elements := d.queue[:count]
 	d.queue = d.queue[count:]
 
-	d.lock.Unlock()
 	return elements
 }
 
 func (d *TranscriptDequeue) Rotate() []*Transcript {
 	d.lock.Lock()
+	defer d.lock.Unlock()
+
 	rv := d.queue
 	d.queue = make([]*Transcript, 0)
-	d.lock.Unlock()
+
 	return rv
 }
 
 func (d *TranscriptDequeue) Len() int {
 	d.lock.Lock()
-	rv := len(d.queue)
-	d.lock.Unlock()
-	return rv
+	defer d.lock.Unlock()
+
+	return len(d.queue)
 }
 
 func NewTranscriptDequeue() *TranscriptDequeue {
@@ -131,9 +133,10 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 	}
 }
 
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerMethods -o ./ -s _mock.go
 type ExecutionBrokerMethods interface {
 	Check(context.Context) error
-	ExecuteTranscript(context.Context, *Transcript) error
+	Execute(context.Context, *Transcript) error
 }
 
 type ExecutionBroker struct {
@@ -146,8 +149,6 @@ type ExecutionBroker struct {
 
 	processActive bool
 	processLock   sync.Mutex
-
-	StartProcessorIfNeededCount int32
 
 	deduplicationTable map[insolar.Reference]bool
 	deduplicationLock  sync.Mutex
@@ -165,7 +166,7 @@ func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Tran
 	logger := inslogger.FromContext(ctx).WithField("RequestReference", transcript.RequestRef)
 
 	if err := q.methods.Check(ctx); err == nil {
-		if err := q.methods.ExecuteTranscript(ctx, transcript); err == nil {
+		if err := q.methods.Execute(ctx, transcript); err == nil {
 			// In case when we're in pending - we should store it to execute later
 			q.finished.Push(transcript)
 			return
@@ -232,11 +233,11 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 	}
 }
 
-func (q *ExecutionBroker) Get(_ context.Context) *Transcript {
+func (q *ExecutionBroker) get(_ context.Context) *Transcript {
 	q.mutableLock.RLock()
-	rv := q.mutable.Pop()
-	q.mutableLock.RUnlock()
-	return rv
+	defer q.mutableLock.RUnlock()
+
+	return q.mutable.Pop()
 }
 
 func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
@@ -251,9 +252,42 @@ func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
 
 func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference) *Transcript {
 	q.mutableLock.RLock()
-	rv := q.mutable.PopByReference(r)
-	q.mutableLock.RUnlock()
-	return rv
+	defer q.mutableLock.RUnlock()
+
+	return q.mutable.PopByReference(r)
+}
+
+func (q *ExecutionBroker) startProcessor(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+
+	// сhecking we're eligible to execute contracts
+	if err := q.methods.Check(ctx); err == nil {
+		// processing immutable queue (it can appear if we were in pending state)
+		// run simultaneously all immutable transcripts and forget about them
+		for elem := q.immutable.Pop(); elem != nil; elem = q.immutable.Pop() {
+			go q.processImmutable(ctx, elem)
+		}
+
+		// processing mutable queue
+		for transcript := q.get(ctx); transcript != nil; transcript = q.get(ctx) {
+			logger := logger.WithField("RequestReference", transcript.RequestRef)
+
+			if err := q.methods.Execute(ctx, transcript); err == ErrRetryLater {
+				q.Prepend(ctx, false, transcript)
+				break
+			} else if err != nil {
+				logger.Error("[ StartProcessorIfNeeded ] Failed to process transcript:", err)
+			}
+
+			q.finished.Push(transcript)
+		}
+	} else if err != ErrRetryLater {
+		logger.Error("[ StartProcessorIfNeeded ] check function returned error:", err)
+	}
+
+	q.processLock.Lock()
+	q.processActive = false
+	q.processLock.Unlock()
 }
 
 // StartProcessorIfNeeded processes queue messages in strict order
@@ -268,44 +302,10 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	// both cases means we knew what we are doing and so it's just an
 	// unneeded optimisation
 	if !q.processActive {
-		q.StartProcessorIfNeededCount++
 		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
 
-		go func() {
-			var err error
-
-			// сhecking we're eligible to execute contracts
-			if err = q.methods.Check(ctx); err == nil {
-				// processing immutable queue (it can appear if we were in pending state)
-				// run simultaneously all immutable transcripts and forget about them
-				for elem := q.immutable.Pop(); elem != nil; elem = q.immutable.Pop() {
-					go q.processImmutable(ctx, elem)
-				}
-
-				// processing mutable queue
-				for transcript := q.Get(ctx); transcript != nil; transcript = q.Get(ctx) {
-					logger := logger.WithField("RequestReference", transcript.RequestRef)
-
-					err = q.methods.ExecuteTranscript(ctx, transcript)
-					if err == ErrRetryLater {
-						q.Prepend(ctx, false, transcript)
-						break
-					} else if err != nil {
-						logger.Error("[ StartProcessorIfNeeded ] Failed to process transcript:", err)
-					}
-
-					q.finished.Push(transcript)
-				}
-			} else if err != ErrRetryLater {
-				logger.Error("[ StartProcessorIfNeeded ] check function returned error:", err)
-			}
-
-			q.processLock.Lock()
-			q.processActive = false
-			q.processLock.Unlock()
-		}()
-
 		q.processActive = true
+		go q.startProcessor(ctx)
 	}
 	q.processLock.Unlock()
 }
