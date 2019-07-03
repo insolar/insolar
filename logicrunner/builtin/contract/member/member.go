@@ -110,6 +110,8 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	switch request.Params.CallSite {
 	case "contract.createMember":
 		selfSigned = true
+	case "migration.createMember":
+		selfSigned = true
 	case "contract.getReferenceByPublicKey":
 		selfSigned = true
 	}
@@ -129,7 +131,9 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "contract.getNodeRef":
 		return m.getNodeRefCall(params)
 	case "contract.createMember":
-		return m.createMemberByKey(request.Params.PublicKey)
+		return m.createContractMember(request.Params.PublicKey)
+	case "migration.createMember":
+		return m.createMigrationMember(request.Params.PublicKey)
 	case "migration.addBurnAddresses":
 		return m.addBurnAddressesCall(params)
 	case "wallet.getBalance":
@@ -325,7 +329,7 @@ func (m *Member) getNodeRef(publicKey string) (map[string]interface{}, error) {
 }
 
 // Create member methods.
-func (m *Member) createMemberByKey(key string) (map[string]interface{}, error) {
+func (m *Member) createMigrationMember(key string) (map[string]interface{}, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 	burnAddress, err := rootDomain.GetBurnAddress()
@@ -353,6 +357,21 @@ func (m *Member) createMemberByKey(key string) (map[string]interface{}, error) {
 			"reference":   created.Reference.String(),
 			"burnAddress": burnAddress},
 		nil
+}
+func (m *Member) createContractMember(key string) (map[string]interface{}, error) {
+
+	rootDomain := rootdomain.GetObject(m.RootDomain)
+
+	created, err := m.createMember("", key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create member: %s", err.Error())
+	}
+
+	if err = rootDomain.AddNewMemberToPublicKeyMap(key, created.Reference); err != nil {
+		return nil, fmt.Errorf("failed to add new member to PublicKey's map: %s", err.Error())
+	}
+
+	return created.Reference.String(), nil
 }
 func (m *Member) createMember(name string, key string) (*member.Member, error) {
 	if key == "" {

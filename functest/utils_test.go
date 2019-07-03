@@ -220,7 +220,7 @@ func retryableCreateMember(user *user, method string, params map[string]interfac
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		result, err = signedRequest(user, method, params)
 		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
-			return result, err
+			return result, errors.Errorf("Error while signed request occured: %s", err)
 		}
 		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
 		newUser, nErr := newUserWithKeys()
@@ -258,6 +258,7 @@ func signedRequest(user *user, method string, params map[string]interface{}) (ma
 		resp = requester.ContractAnswer{}
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
+			fmt.Println(string(res))
 			return nil, err
 		}
 
