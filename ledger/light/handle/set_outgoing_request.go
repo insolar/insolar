@@ -20,11 +20,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -56,9 +54,28 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong request type: %T", rec)
 	}
 
+	var create = request.CallType == record.CTSaveAsChild || request.CallType == record.CTSaveAsDelegate
+
+	if create {
+		return fmt.Errorf("SetOutgoingRequest can't be a cretion request")
+	}
+
+	return s.setRequest(ctx, msg, request, f)
+}
+
+func (s *SetOutgoingRequest) setRequest(
+	ctx context.Context,
+	msg payload.SetOutgoingRequest,
+	request *record.OutgoingRequest,
+	f flow.Flow,
+) error {
+	if request.Object == nil {
+		return errors.New("object is nil")
+	}
+
 	buf, err := msg.Request.Marshal()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	calc := proc.NewCalculateID(buf, flow.Pulse(ctx))
@@ -67,17 +84,6 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 	reqID := calc.Result.ID
-
-	// This is a workaround. VM should not register such requests.
-	// TODO: check it after INS-1939
-	if request.CallType != record.CTMethod {
-		inslogger.FromContext(ctx).Warn("request is not registered")
-		return s.setActivationRequest(ctx, reqID, msg.Request, f)
-	}
-
-	if request.Object == nil {
-		return errors.New("object is nil")
-	}
 
 	passIfNotExecutor := !s.passed
 	jet := proc.NewCheckJet(*request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
@@ -98,33 +104,13 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, SetResult fails because it should update light's index state
-	if request.CallType == record.CTMethod {
-		getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
-		s.dep.GetIndexWM(getIndex)
-		if err := f.Procedure(ctx, getIndex, false); err != nil {
-			return err
-		}
+	getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
+	s.dep.GetIndexWM(getIndex)
+	if err := f.Procedure(ctx, getIndex, false); err != nil {
+		return err
 	}
 
 	setRequest := proc.NewSetRequest(s.message, request, reqID, objJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
-}
-
-func (s *SetOutgoingRequest) setActivationRequest(ctx context.Context, reqID insolar.ID, request record.Virtual, f flow.Flow) error {
-	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
-	s.dep.CheckJet(jet)
-	if err := f.Procedure(ctx, jet, true); err != nil {
-		if err == proc.ErrNotExecutor && passIfNotExecutor {
-			return nil
-		}
-		return err
-	}
-	reqJetID := jet.Result.Jet
-
-	setActivationRequest := proc.NewSetActivationRequest(s.message, request, reqID, reqJetID)
-
-	s.dep.SetActivationRequest(setActivationRequest)
-	return f.Procedure(ctx, setActivationRequest, false)
 }
