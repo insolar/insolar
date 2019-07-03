@@ -71,9 +71,9 @@ type RealmPopulation interface {
 	GetIndexedNodes() []*NodeAppearance
 
 	GetSelf() *NodeAppearance
-	//CreateDynamicNode(constructionContext context.Context) *NodeAppearance
 
 	CreateNodeAppearance(ctx context.Context, inp common2.NodeProfile) *NodeAppearance
+
 	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
 	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)
 }

@@ -74,7 +74,7 @@ func NewOneNodePopulation(localNode common.NodeIntroProfile, verifier common2.Si
 	localNode.GetShortNodeID()
 	return OneNodePopulation{
 		localNode: updatableSlot{
-			nodeSlot: newNodeSlot(0, localNode, verifier),
+			NodeProfileSlot: NewNodeProfile(0, common.Working, localNode, verifier, localNode.GetStartPower()),
 		},
 	}
 }
@@ -113,11 +113,11 @@ func (c *OneNodePopulation) GetCount() int {
 }
 
 func (c *OneNodePopulation) GetProfiles() []common.NodeProfile {
-	return []common.NodeProfile{&c.localNode.nodeSlot}
+	return []common.NodeProfile{&c.localNode.NodeProfileSlot}
 }
 
 func (c *OneNodePopulation) GetLocalProfile() common.LocalNodeProfile {
-	return &c.localNode.nodeSlot
+	return &c.localNode.NodeProfileSlot
 }
 
 var _ copyOnlinePopulationTo = &ManyNodePopulation{}
@@ -205,7 +205,7 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, loc
 		if _, ok := c.slotByID[id]; ok {
 			panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 		}
-		buf[slotIndex].nodeSlot = newNodeSlot(slotIndex, n, nil)
+		buf[slotIndex].NodeProfileSlot = NewNodeProfile(slotIndex, common.Working, n, nil, 0)
 		buf[slotIndex].setJoiner(joiners)
 		c.slotByID[id] = &buf[slotIndex]
 
@@ -215,7 +215,7 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, loc
 }
 
 func (c *ManyNodePopulation) FindProfile(nodeID common2.ShortNodeID) common.NodeProfile {
-	return &c.slotByID[nodeID].nodeSlot
+	return &c.slotByID[nodeID].NodeProfileSlot
 }
 
 func (c *ManyNodePopulation) GetCount() int {
@@ -225,7 +225,7 @@ func (c *ManyNodePopulation) GetCount() int {
 func (c *ManyNodePopulation) GetProfiles() []common.NodeProfile {
 	r := make([]common.NodeProfile, len(c.slots))
 	for i := range c.slots {
-		r[i] = &c.slots[i].nodeSlot
+		r[i] = &c.slots[i].NodeProfileSlot
 	}
 	return r
 }
@@ -271,7 +271,7 @@ func (c *DynamicPopulation) makeCopyOf(slots []updatableSlot, local *updatableSl
 }
 
 func (c *DynamicPopulation) FindProfile(nodeID common2.ShortNodeID) common.NodeProfile {
-	return &c.slotByID[nodeID].nodeSlot
+	return &c.slotByID[nodeID].NodeProfileSlot
 }
 
 func (c *DynamicPopulation) FindUpdatableProfile(nodeID common2.ShortNodeID) common.UpdatableNodeProfile {
@@ -303,7 +303,7 @@ func (c *DynamicPopulation) GetProfiles() []common.NodeProfile {
 		if r[idx] != nil {
 			panic(fmt.Sprintf("duplicate index: %v", idx))
 		}
-		r[idx] = &v.nodeSlot
+		r[idx] = &v.NodeProfileSlot
 	}
 	return r
 }
@@ -358,7 +358,7 @@ func (c *DynamicPopulation) AddJoinerProfile(n common.NodeIntroProfile) common.U
 	if _, ok := c.slotByID[id]; ok {
 		panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 	}
-	v := updatableSlot{newNodeSlot(-1, n, nil)}
+	v := updatableSlot{NewNodeProfile(-1, common.Joining, n, nil, n.GetStartPower())}
 	c.slotByID[id] = &v
 	return &v
 }

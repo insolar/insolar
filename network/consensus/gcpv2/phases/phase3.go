@@ -287,14 +287,14 @@ func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
 
 	pop := c.R.GetPopulation()
 
-	indexedNodes := c.R.GetPopulation().GetIndexedNodes()
+	indexedNodes := pop.GetIndexedNodes()
 	nodeCount := len(indexedNodes)
-	joiners := make([]*core.NodeAppearance, nodeCount)
+	//joiners := make([]*core.NodeAppearance, nodeCount)
 	bitset := make(nodeset.NodeBitset, nodeCount)
 
 	for i, n := range indexedNodes {
 		membership, trust := n.GetNodeMembershipAndTrust()
-		power, leaving, exitCode, joiner := n.GetRequested()
+		//power, leaving, exitCode, joiner := n.GetRequested()
 
 		switch {
 		case membership.IsEmpty():

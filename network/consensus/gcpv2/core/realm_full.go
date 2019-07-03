@@ -193,7 +193,9 @@ func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
 		}
 
 		nip := r.profileFactory.CreateFullIntroProfile(cp)
-		na := r.population.CreateNodeAppearance(r.roundContext, nip)
+		sv := r.GetSignatureVerifier(nip.GetNodePublicKeyStore())
+		np := census.NewNodeProfile(0, common2.Working, nip, sv, 0)
+		na := r.population.CreateNodeAppearance(r.roundContext, &np)
 		nna, nodes := r.population.AddToDynamics(na)
 
 		if !common2.EqualIntroProfiles(nna.profile, na.profile) {
