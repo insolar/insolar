@@ -63,36 +63,54 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	var create = request.CallType == record.CTSaveAsChild || request.CallType == record.CTSaveAsDelegate
 
 	if create {
-		calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
-		s.dep.CalculateID(calc)
-		if err := f.Procedure(ctx, calc, true); err != nil {
-			return err
-		}
-		reqID := calc.Result.ID
-
-		passIfNotExecutor := !s.passed
-		jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
-		s.dep.CheckJet(jet)
-		if err := f.Procedure(ctx, jet, true); err != nil {
-			if err == proc.ErrNotExecutor && passIfNotExecutor {
-				return nil
-			}
-			return err
-		}
-		reqJetID := jet.Result.Jet
-
-		hot := proc.NewWaitHotWM(reqJetID, flow.Pulse(ctx), s.message)
-		s.dep.WaitHotWM(hot)
-		if err := f.Procedure(ctx, hot, false); err != nil {
-			return err
-		}
-
-		setActivationRequest := proc.NewSetActivationRequest(s.message, virtual, reqID, reqJetID)
-
-		s.dep.SetActivationRequest(setActivationRequest)
-		return f.Procedure(ctx, setActivationRequest, false)
+		return s.setActivationRequest(ctx, msg, virtual, f)
 	}
 
+	return s.setRequest(ctx, msg, request, f)
+}
+
+func (s *SetRequest) setActivationRequest(
+	ctx context.Context,
+	msg payload.SetRequest,
+	virtual record.Virtual,
+	f flow.Flow,
+) error {
+	calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
+	s.dep.CalculateID(calc)
+	if err := f.Procedure(ctx, calc, true); err != nil {
+		return err
+	}
+	reqID := calc.Result.ID
+
+	passIfNotExecutor := !s.passed
+	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.CheckJet(jet)
+	if err := f.Procedure(ctx, jet, true); err != nil {
+		if err == proc.ErrNotExecutor && passIfNotExecutor {
+			return nil
+		}
+		return err
+	}
+	reqJetID := jet.Result.Jet
+
+	hot := proc.NewWaitHotWM(reqJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHotWM(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
+	setActivationRequest := proc.NewSetActivationRequest(s.message, virtual, reqID, reqJetID)
+
+	s.dep.SetActivationRequest(setActivationRequest)
+	return f.Procedure(ctx, setActivationRequest, false)
+}
+
+func (s *SetRequest) setRequest(
+	ctx context.Context,
+	msg payload.SetRequest,
+	request *record.IncomingRequest,
+	f flow.Flow,
+) error {
 	if request.Object == nil {
 		return errors.New("object is nil")
 	}
@@ -132,5 +150,4 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 	setRequest := proc.NewSetRequest(s.message, *request, reqID, objJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
-
 }
