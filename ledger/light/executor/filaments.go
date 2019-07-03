@@ -121,7 +121,10 @@ func (m *FilamentModifierDefault) SetRequest(
 	}
 
 	foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), objectID, requestID, request)
-	if foundRequest != nil || foundResult != nil || err != nil {
+	if err != nil && err != ErrEmptyReason {
+		return nil, nil, err
+	}
+	if foundRequest != nil || foundResult != nil {
 		return foundRequest, foundResult, err
 	}
 
@@ -418,7 +421,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	defer logger.Debug("finished to search duplicated requests")
 
 	if request.GetReason().IsEmpty() {
-		return nil, nil, errors.New("reason is empty")
+		return nil, nil, ErrEmptyReason
 	}
 	reason := request.GetReason()
 
