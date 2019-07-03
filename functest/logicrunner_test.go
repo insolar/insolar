@@ -467,91 +467,6 @@ func (r *One) NotPanic() error {
 	require.Empty(t, resp.ExtractedError)
 }
 
-func TestGetChildren(t *testing.T) {
-	goContract := `
-package main
-
-import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	child "github.com/insolar/insolar/application/proxy/get_children_child"
-)
-
-type Contract struct {
-	foundation.BaseContract
-}
-
-func New() (*Contract, error) {
-	return &Contract{}, nil
-}
-
-func (c *Contract) NewChilds(cnt int) (int, error) {
-	s := 0
-	for i := 1; i < cnt; i++ {
-        child.New(i).AsChild(c.GetReference())
-		s += i
-	}
-	return s, nil
-}
-
-func (c *Contract) SumChildsByIterator() (int, error) {
-	s := 0
-	iterator, err := c.NewChildrenTypedIterator(child.GetPrototype())
-	if err != nil {
-		return 0, err
-	}
-
-	for iterator.HasNext() {
-		chref, err := iterator.Next()
-		if err != nil {
-			return 0, err
-		}
-
-		o := child.GetObject(chref)
-		n, err := o.GetNum()
-		if err != nil {
-			return 0, err
-		}
-		s += n
-	}
-	return s, nil
-}
-
-`
-	goChild := `
-package main
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-
-type Child struct {
-	foundation.BaseContract
-	Num int
-}
-
-func (c *Child) GetNum() (int, error) {
-	return c.Num, nil
-}
-
-
-func New(n int) (*Child, error) {
-	return &Child{Num: n}, nil
-}
-`
-
-	uploadContractOnce(t, "get_children_child", goChild)
-	obj := callConstructor(t, uploadContractOnce(t, "get_children_one", goContract), "New")
-
-	resp := callMethod(t, obj, "SumChildsByIterator")
-	require.Empty(t, resp.Error, "empty children")
-	require.Equal(t, float64(0), resp.ExtractedReply)
-
-	resp = callMethod(t, obj, "NewChilds", 10)
-	require.Empty(t, resp.Error, "add children")
-	require.Equal(t, float64(45), resp.ExtractedReply)
-
-	resp = callMethod(t, obj, "SumChildsByIterator")
-	require.Empty(t, resp.Error, "sum real children")
-	require.Equal(t, float64(45), resp.ExtractedReply)
-}
-
 func TestErrorInterface(t *testing.T) {
 	var contractOneCode = `
 package main
@@ -1180,19 +1095,12 @@ func (c *One) Get() (int, error) {
 }
 `
 
-	prototypeRef := uploadContractOnce(t, "test", contractCode)
+	prototypeRef := uploadContractOnce(t, "test_multiple_constructor", contractCode)
 
-	objRef := callConstructor(t, prototypeRef, "NewWithNumber", 7)
+	objRef := callConstructor(t, prototypeRef, "New")
 
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objRef, "Get")
-	require.Empty(t, result.Error)
-	require.Equal(t, float64(7), result.ExtractedReply)
-
-	objRef = callConstructor(t, prototypeRef, "New")
-
-	// be careful - jsonUnmarshal convert json numbers to float64
-	result = callMethod(t, objRef, "Get")
 	require.Empty(t, result.Error)
 	require.Equal(t, float64(0), result.ExtractedReply)
 

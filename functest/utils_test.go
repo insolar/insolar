@@ -44,7 +44,12 @@ import (
 
 const sendRetryCount = 5
 
-var contracts map[string]*insolar.Reference
+type contractInfo struct {
+	reference *insolar.Reference
+	testName  string
+}
+
+var contracts map[string]*contractInfo
 
 type postParams map[string]interface{}
 
@@ -283,12 +288,21 @@ func newUserWithKeys() (*user, error) {
 	}, nil
 }
 
-// this is needed for running tests with count
+// uploadContractOnce is needed for running tests with count
+// use unique names when uploading contracts otherwise your contract won't be uploaded
 func uploadContractOnce(t *testing.T, name string, code string) *insolar.Reference {
 	if _, ok := contracts[name]; !ok {
-		contracts[name] = uploadContract(t, name, code)
+		ref := uploadContract(t, name, code)
+		contracts[name] = &contractInfo{
+			reference: ref,
+			testName:  t.Name(),
+		}
 	}
-	return contracts[name]
+	require.Equal(
+		t, contracts[name].testName, t.Name(),
+		"[ uploadContractOnce ] You cant use name of contract multiple times: "+contracts[name].testName,
+	)
+	return contracts[name].reference
 }
 
 func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
