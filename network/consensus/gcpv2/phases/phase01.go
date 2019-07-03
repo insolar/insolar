@@ -55,8 +55,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -174,11 +172,7 @@ func (c *Phase1Controller) workerPhase01(ctx context.Context) {
 	if startIndex < 0 {
 		return
 	}
-
-	//TODO Hack! MUST provide claims hash
-	nas := common2.NewSignature(nsh, "stubSign")
-
-	c.R.PrepareAndSetLocalNodeStateHashEvidence(nsh, &nas)
+	c.R.PrepareAndSetLocalNodeStateHashEvidence(nsh)
 
 	c.workerSendPhase1(ctx, startIndex)
 }

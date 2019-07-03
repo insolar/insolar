@@ -290,10 +290,14 @@ func (r *FullRealm) GetLocalProfile() common2.LocalNodeProfile {
 	return r.self.profile.(common2.LocalNodeProfile)
 }
 
-func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash, nas common2.MemberAnnouncementSignature) {
+func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash) {
 	// TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
+
+	//TODO Hack! MUST provide announcement hash
+	nas := common.NewSignature(nsh, "stubSign")
+
 	v := nsh.SignWith(r.signer)
-	r.self.SetLocalNodeStateHashEvidence(common2.NewNodeStateHashEvidence(v), nas)
+	r.self.SetLocalNodeStateHashEvidence(common2.NewNodeStateHashEvidence(v), &nas)
 }
 
 func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *packets.NodeAnnouncementProfile {
