@@ -342,7 +342,7 @@ func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Tran
 	q.immutable.Push(transcript)
 }
 
-func (q *ExecutionBroker) isDuplicate(ctx context.Context, transcript *Transcript) bool {
+func (q *ExecutionBroker) isDuplicate(_ context.Context, transcript *Transcript) bool {
 	q.deduplicationLock.Lock()
 	defer q.deduplicationLock.Unlock()
 
