@@ -54,30 +54,47 @@ import (
 	"math"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 )
 
-func TestVerifySizes(t *testing.T) {
-	ns := &NeighbourhoodSizes{}
-	ns.NeighbourhoodSize = 1
-	assert.Panics(t, ns.VerifySizes)
-	ns.NeighbourhoodSize = 5
-	ns.NeighbourhoodTrustThreshold = 0
-	assert.Panics(t, ns.VerifySizes)
-	ns.NeighbourhoodTrustThreshold = math.MaxUint8 + 1
-	assert.Panics(t, ns.VerifySizes)
-	ns.NeighbourhoodTrustThreshold = 1
-	ns.JoinersPerNeighbourhood = 0
-	assert.Panics(t, ns.VerifySizes)
-	ns.JoinersPerNeighbourhood = 1
-	assert.Panics(t, ns.VerifySizes)
-	ns.JoinersPerNeighbourhood = 2
-	ns.JoinersBoost = -1
-	assert.Panics(t, ns.VerifySizes)
-	ns.JoinersBoost = 0
-	ns.NeighbourhoodSize = 0
-	assert.Panics(t, ns.VerifySizes)
-	ns.NeighbourhoodSize = 5
-	assert.NotPanics(t, ns.VerifySizes)
+func TestNewNeighbourWeightScalerInt64(t *testing.T) {
+	assert.Panics(t, func() { NewNeighbourWeightScalerInt64(-1) })
+	fullRange := int64(0)
+	n1 := NewNeighbourWeightScalerInt64(fullRange)
+	require.Equal(t, n1.max, uint32(fullRange))
+	require.Equal(t, n1.shift, uint8(0))
+	fullRange = int64(1 << 32)
+	n2 := NewNeighbourWeightScalerInt64(fullRange)
+	require.Equal(t, n2.shift, uint8(1))
+	require.Equal(t, n2.max, uint32(fullRange>>1))
+}
 
+func TestNewNeighbourWeightScalerUint64(t *testing.T) {
+	fullRange := uint64(0)
+	n1 := NewNeighbourWeightScalerUint64(fullRange)
+	require.Equal(t, n1.max, uint32(fullRange))
+	require.Equal(t, n1.shift, uint8(0))
+	fullRange = uint64(1 << 32)
+	n2 := NewNeighbourWeightScalerUint64(fullRange)
+	require.Equal(t, n2.shift, uint8(1))
+	require.Equal(t, n2.max, uint32(fullRange>>1))
+}
+
+func TestScaleInt64(t *testing.T) {
+	n1 := NewNeighbourWeightScalerInt64(0)
+	require.Equal(t, n1.ScaleInt64(-1), uint32(0))
+	require.Equal(t, n1.ScaleInt64(0), uint32(math.MaxUint32))
+	n2 := NewNeighbourWeightScalerInt64(1 << 32)
+	require.Equal(t, n2.ScaleInt64(1<<32), uint32(math.MaxUint32))
+	require.Equal(t, n2.ScaleInt64(1<<30), uint32(0x3fffffff))
+}
+
+func TestScaleUint64(t *testing.T) {
+	n1 := NewNeighbourWeightScalerUint64(0)
+	require.Equal(t, n1.ScaleUint64(0), uint32(math.MaxUint32))
+	n2 := NewNeighbourWeightScalerUint64(1 << 32)
+	require.Equal(t, n2.ScaleUint64(1<<32), uint32(math.MaxUint32))
+	require.Equal(t, n2.ScaleUint64(1<<30), uint32(0x3fffffff))
 }
