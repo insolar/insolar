@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"time"
 
@@ -201,6 +202,17 @@ func (t *Transcript) AddOutgoingRequest(
 		Error:     err,
 	}
 	t.OutgoingRequests = append(t.OutgoingRequests, rec)
+}
+
+func (t *Transcript) HasOutgoingRequest(
+	ctx context.Context, request record.IncomingRequest,
+) *OutgoingRequest {
+	for i := range t.OutgoingRequests {
+		if reflect.DeepEqual(t.OutgoingRequests[i].Request, request) {
+			return &t.OutgoingRequests[i]
+		}
+	}
+	return nil
 }
 
 type CurrentExecutionList struct {
