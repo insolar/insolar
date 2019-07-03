@@ -32,9 +32,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 var httpClient *http.Client
@@ -71,7 +71,6 @@ func createHTTPClient() *http.Client {
 
 // verbose switches on verbose mode
 var verbose = false
-var scheme = platformpolicy.NewPlatformCryptographyScheme()
 
 func verboseInfo(ctx context.Context, msg string) {
 	if verbose {
@@ -170,11 +169,11 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	return body, nil
 }
 
-// GetSeed makes rpc request to node.GetSeed method and extracts it
+// GetSeed makes rpc request to node.getSeed method and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
 		JSONRPC: JSONRPCVersion,
-		Method:  "node.GetSeed",
+		Method:  "node.getSeed",
 		ID:      1,
 	})
 	if err != nil {
@@ -201,15 +200,6 @@ func GetSeed(url string) (string, error) {
 func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Request, seed string) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
-	}
-
-	if reqCfg.Params.PublicKey == "" {
-		ks := platformpolicy.NewKeyProcessor()
-		pem, err := ks.ExportPublicKeyPEM(userCfg.privateKeyObject.(*ecdsa.PrivateKey).Public())
-		if err != nil {
-			return nil, errors.Wrap(err, "[ SendWithSeed ] Cant export public key to PEM")
-		}
-		reqCfg.Params.PublicKey = string(pem)
 	}
 
 	reqCfg.Params.Reference = userCfg.Caller
@@ -306,9 +296,9 @@ func getDefaultRPCParams(method string) PlatformRequest {
 	}
 }
 
-// Info makes rpc request to network.GetInfo method and extracts it
+// Info makes rpc request to network.getInfo method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	params := getDefaultRPCParams("network.GetInfo")
+	params := getDefaultRPCParams("network.getInfo")
 
 	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {
@@ -330,7 +320,7 @@ func Info(url string) (*InfoResponse, error) {
 
 // Status makes rpc request to info.Status method and extracts it
 func Status(url string) (*StatusResponse, error) {
-	params := getDefaultRPCParams("node.GetStatus")
+	params := getDefaultRPCParams("node.getStatus")
 
 	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {

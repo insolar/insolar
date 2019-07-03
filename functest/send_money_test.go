@@ -42,8 +42,8 @@ func checkBalanceFewTimes(t *testing.T, caller *user, ref string, expected big.I
 
 // TODO: uncomment after undoing of all transaction in failed request will be supported
 func TestTransferMoney(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	secondMember := createMember(t, "Member2")
+	firstMember := createMember(t)
+	secondMember := createMember(t)
 	// Skip validation of balance before/after transfer
 	// oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	// oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
@@ -60,39 +60,39 @@ func TestTransferMoney(t *testing.T) {
 }
 
 func TestTransferMoneyFromNotExist(t *testing.T) {
-	firstMember := createMember(t, "Member1")
+	firstMember := createMember(t)
 	firstMember.ref = testutils.RandomRef().String()
 
-	secondMember := createMember(t, "Member2")
+	secondMember := createMember(t)
 	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
 	amount := "10"
 
 	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "lifeline not found")
+	require.Contains(t, err.Error(), "index not found")
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldSecondBalance, newSecondBalance)
 }
 
 func TestTransferMoneyToNotExist(t *testing.T) {
-	firstMember := createMember(t, "Member1")
+	firstMember := createMember(t)
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 
 	amount := "10"
 
 	_, err := signedRequest(firstMember, "wallet.transfer", map[string]interface{}{"amount": amount, "toMemberReference": testutils.RandomRef().String()})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "lifeline not found")
+	require.Contains(t, err.Error(), "index not found")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)
 }
 
 func TestTransferNegativeAmount(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	secondMember := createMember(t, "Member2")
+	firstMember := createMember(t)
+	secondMember := createMember(t)
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
@@ -110,8 +110,8 @@ func TestTransferNegativeAmount(t *testing.T) {
 // TODO: unskip test after undoing of all transaction in failed request will be supported
 func TestTransferAllAmount(t *testing.T) {
 	t.Skip()
-	firstMember := createMember(t, "Member1")
-	secondMember := createMember(t, "Member2")
+	firstMember := createMember(t)
+	secondMember := createMember(t)
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
@@ -129,8 +129,8 @@ func TestTransferAllAmount(t *testing.T) {
 }
 
 func TestTransferMoreThanAvailableAmount(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	secondMember := createMember(t, "Member2")
+	firstMember := createMember(t)
+	secondMember := createMember(t)
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
@@ -147,7 +147,7 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 }
 
 func TestTransferToMyself(t *testing.T) {
-	member := createMember(t, "Member1")
+	member := createMember(t)
 	oldMemberBalance := getBalanceNoErr(t, member, member.ref)
 
 	amount := "20"
@@ -164,8 +164,8 @@ func TestTransferToMyself(t *testing.T) {
 
 // TODO: uncomment after undoing of all transaction in failed request will be supported
 func TestTransferTwoTimes(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	secondMember := createMember(t, "Member2")
+	firstMember := createMember(t)
+	secondMember := createMember(t)
 	// Skip validation of balance before/after transfer
 	// oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	// oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)

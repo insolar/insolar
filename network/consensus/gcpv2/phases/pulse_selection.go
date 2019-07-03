@@ -51,13 +51,14 @@
 package phases
 
 import (
+	"context"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 type PulseSelectionStrategy interface {
-	HandlePrepPulsarPacket(p packets.PulsePacketReader, from common.HostIdentityHolder, realm *core.PrepRealm, fromPulsar bool) error
+	HandlePrepPulsarPacket(ctx context.Context, p packets.PulsePacketReader, from common.HostIdentityHolder, realm *core.PrepRealm, fromPulsar bool) error
 }
 
 var _ PulseSelectionStrategy = &TakeFirstSelectionStrategy{}
@@ -69,6 +70,6 @@ func NewTakeFirstSelectionStrategy() PulseSelectionStrategy {
 	return &TakeFirstSelectionStrategy{}
 }
 
-func (*TakeFirstSelectionStrategy) HandlePrepPulsarPacket(p packets.PulsePacketReader, from common.HostIdentityHolder, r *core.PrepRealm, fromPulsar bool) error {
+func (*TakeFirstSelectionStrategy) HandlePrepPulsarPacket(ctx context.Context, p packets.PulsePacketReader, from common.HostIdentityHolder, r *core.PrepRealm, fromPulsar bool) error {
 	return r.ApplyPulseData(p, fromPulsar)
 }

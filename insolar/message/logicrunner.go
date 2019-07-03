@@ -19,6 +19,7 @@ package message
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -33,7 +34,6 @@ const (
 // ReturnResults - push results of methods
 type ReturnResults struct {
 	Target   insolar.Reference
-	Caller   insolar.Reference
 	Sequence uint64
 	Reply    insolar.Reply
 	Error    string
@@ -44,7 +44,8 @@ func (rr *ReturnResults) Type() insolar.MessageType {
 }
 
 func (rr *ReturnResults) GetCaller() *insolar.Reference {
-	return &rr.Caller
+	log.Error("GetCaller shouldn't be called on ReturnResults message")
+	return nil
 }
 
 func (rr *ReturnResults) DefaultTarget() *insolar.Reference {
@@ -61,7 +62,7 @@ func (rr *ReturnResults) AllowedSenderObjectAndRole() (*insolar.Reference, insol
 
 // CallMethod - Simply call method and return result
 type CallMethod struct {
-	record.Request
+	record.IncomingRequest
 
 	PulseNum insolar.PulseNumber // DIRTY: EVIL: HACK
 }

@@ -28,7 +28,7 @@ import (
 )
 
 func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
+	firstMember := createMember(t)
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	r := big.NewInt(1000000000)
 	require.Equal(t, r, firstBalance)
@@ -37,5 +37,5 @@ func TestGetBalance(t *testing.T) {
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "lifeline not found")
+	require.Contains(t, err.Error(), "index not found")
 }

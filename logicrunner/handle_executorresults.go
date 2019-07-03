@@ -44,7 +44,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	ref := p.msg.GetReference()
 
-	state := p.LR.UpsertObjectState(ref)
+	state := p.LR.StateStorage.UpsertObjectState(ref)
 
 	state.Lock()
 	if state.ExecutionState == nil {
@@ -71,6 +71,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 		}
 	} else if es.pending == message.PendingUnknown {
 		es.pending = p.msg.Pending
+		logger.Debug("pending state was unknown, setting from previous executor to ", es.pending)
 
 		if es.pending == message.PendingUnknown {
 			p.Result.clarifyPending = true

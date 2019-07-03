@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
@@ -28,20 +29,28 @@ import (
 
 type GetDelegate struct {
 	replyTo chan<- bus.Reply
-	idx     *object.Lifeline
 	msg     *message.GetDelegate
+
+	Dep struct {
+		IndexAccessor object.IndexAccessor
+	}
 }
 
-func NewGetDelegate(msg *message.GetDelegate, idx *object.Lifeline, rep chan<- bus.Reply) *GetDelegate {
+func NewGetDelegate(msg *message.GetDelegate, rep chan<- bus.Reply) *GetDelegate {
 	return &GetDelegate{
 		msg:     msg,
 		replyTo: rep,
-		idx:     idx,
 	}
 }
 
 func (s *GetDelegate) Proceed(ctx context.Context) error {
-	delegateRef, ok := s.idx.DelegateByKey(s.msg.AsType)
+	idx, err := s.Dep.IndexAccessor.ForID(ctx, flow.Pulse(ctx), *s.msg.Head.Record())
+	if err != nil {
+		s.replyTo <- bus.Reply{Reply: nil, Err: err}
+		return err
+	}
+
+	delegateRef, ok := idx.Lifeline.DelegateByKey(s.msg.AsType)
 	if !ok {
 		err := errors.New("the object has no delegate for this type")
 		s.replyTo <- bus.Reply{Reply: nil, Err: err}

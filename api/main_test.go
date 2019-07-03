@@ -43,7 +43,7 @@ func (suite *MainAPISuite) TestGetRequest() {
 	suite.NoError(err)
 	body, err := ioutil.ReadAll(resp.Body)
 	suite.NoError(err)
-	suite.Contains(string(body[:]), `"[ UnmarshalRequest ] Empty body"`)
+	suite.Contains(string(body[:]), `failed to unmarshal request: [ UnmarshalRequest ] Empty body`)
 }
 
 func (suite *MainAPISuite) TestSerialization() {

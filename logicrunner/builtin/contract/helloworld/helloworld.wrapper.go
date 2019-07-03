@@ -17,7 +17,6 @@
 package helloworld
 
 import (
-	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
 )
@@ -300,11 +299,9 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
-	var args0 insolar.Reference
+	args := [1]interface{}{}
+	var args0 []byte
 	args[0] = &args0
-	var args1 []byte
-	args[1] = &args1
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -312,7 +309,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Call(args0, args1)
+	ret0, ret1 := self.Call(args0)
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)

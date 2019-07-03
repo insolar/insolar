@@ -60,12 +60,12 @@ import (
 
 type PrepPhaseController interface {
 	GetPacketType() packets.PacketType
-	HandleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error)
+	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error)
 	BeforeStart(realm *PrepRealm)
 	StartWorker(ctx context.Context)
 }
 
-type PrepPhasePacketHandler func(reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error)
+type PrepPhasePacketHandler func(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error)
 
 type PhaseControllerHandlerType uint8
 
@@ -78,18 +78,18 @@ const (
 type PhaseController interface {
 	GetPacketType() packets.PacketType
 	IsPerNode() PhaseControllerHandlerType
-	HandleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) error // IsPerNode() == HandlerTypeHostPacket
-	HandleMemberPacket(reader packets.MemberPacketReader, src *NodeAppearance) error    // IsPerNode() == HandlerTypeMemberPacket
-	CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler          // IsPerNode() == HandlerTypePerNodePacket
+	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error // IsPerNode() == HandlerTypeHostPacket
+	HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error    // IsPerNode() == HandlerTypeMemberPacket
+	CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler                               // IsPerNode() == HandlerTypePerNodePacket
 	BeforeStart(realm *FullRealm)
 	StartWorker(ctx context.Context)
 }
 
-type PhaseHostPacketHandler func(reader packets.PacketParser, from common.HostIdentityHolder) error
-type PhaseNodePacketHandler func(reader packets.MemberPacketReader, from *NodeAppearance) error
+type PhaseHostPacketHandler func(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error
+type PhaseNodePacketHandler func(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance) error
 
 /* realm is provided for this handler to avoid being replicated in individual handlers */
-type PhasePerNodePacketHandler func(reader packets.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
+type PhasePerNodePacketHandler func(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
 
 type PhaseControllerPerMemberTemplate struct {
 	R *FullRealm
@@ -103,7 +103,7 @@ func (*PhaseControllerPerMemberTemplate) IsPerNode() PhaseControllerHandlerType 
 	return HandlerTypeMemberPacket
 }
 
-func (*PhaseControllerPerMemberTemplate) HandleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) error {
+func (*PhaseControllerPerMemberTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
 	panic("illegal call")
 }
 
@@ -127,11 +127,11 @@ func (*PhaseControllerPerNodeTemplate) IsPerNode() PhaseControllerHandlerType {
 	return HandlerTypePerNodePacket
 }
 
-func (*PhaseControllerPerNodeTemplate) HandleHostPacket(reader packets.PacketParser, from common.HostIdentityHolder) error {
+func (*PhaseControllerPerNodeTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
 	panic("illegal call")
 }
 
-func (*PhaseControllerPerNodeTemplate) HandleMemberPacket(reader packets.MemberPacketReader, src *NodeAppearance) error {
+func (*PhaseControllerPerNodeTemplate) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error {
 	panic("illegal call")
 }
 
@@ -146,7 +146,7 @@ func (c *PhaseControllerPerHostTemplate) BeforeStart(realm *FullRealm) {
 	c.R = realm
 }
 
-func (*PhaseControllerPerHostTemplate) HandleMemberPacket(reader packets.MemberPacketReader, src *NodeAppearance) error {
+func (*PhaseControllerPerHostTemplate) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error {
 	panic("illegal call")
 }
 

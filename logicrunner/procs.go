@@ -31,8 +31,8 @@ import (
 // ------------- CheckOurRole
 
 type CheckOurRole struct {
-	msg  insolar.Message
-	role insolar.DynamicRole
+	msg         insolar.Message
+	role        insolar.DynamicRole
 	pulseNumber insolar.PulseNumber
 
 	lr *LogicRunner
@@ -90,7 +90,7 @@ func (r *RegisterRequest) Proceed(ctx context.Context) error {
 	defer span.End()
 
 	msg := r.parcel.Message().(*message.CallMethod)
-	id, err := r.ArtifactManager.RegisterRequest(ctx, msg.Request)
+	id, err := r.ArtifactManager.RegisterRequest(ctx, msg.IncomingRequest)
 	if err != nil {
 		return err
 	}

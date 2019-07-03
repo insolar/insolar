@@ -37,16 +37,6 @@ func TestCreateMember(t *testing.T) {
 	require.NotEqual(t, "", ref)
 }
 
-func TestCreateMemberWithBadKey(t *testing.T) {
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	member.ref = root.ref
-	member.pubKey = "fake"
-	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
-}
-
 func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
@@ -62,4 +52,37 @@ func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
 	_, err = retryableCreateMember(member2, "contract.createMember", map[string]interface{}{}, true)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "no more burn addresses left")
+}
+
+func TestCreateMemberWithBadKey(t *testing.T) {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+	member.pubKey = "fake"
+	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
+}
+
+func TestCreateMembersWithSameName(t *testing.T) {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+
+	addBurnAddress(t)
+
+	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	require.NoError(t, err)
+
+	addBurnAddress(t)
+
+	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "member for this publicKey already exist")
+
+	memberForBurn, err := newUserWithKeys()
+	require.NoError(t, err)
+	memberForBurn.ref = root.ref
+
+	_, err = retryableCreateMember(memberForBurn, "contract.createMember", map[string]interface{}{}, true)
 }

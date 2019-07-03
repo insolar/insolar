@@ -51,6 +51,7 @@
 package tests
 
 import (
+	"context"
 	"io"
 	"math/rand"
 
@@ -92,9 +93,9 @@ type emuPacketSender struct {
 	cloner emuPackerCloner
 }
 
-func (r *emuPacketSender) SendTo(t common2.NodeProfile, sendOptions core.PacketSendOptions, s core.PacketSender) {
+func (r *emuPacketSender) SendTo(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, s core.PacketSender) {
 	c := r.cloner.clonePacketFor(t, sendOptions)
-	s.SendPacketToTransport(t, sendOptions, c)
+	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
 type emuPacketBuilder struct {
@@ -105,10 +106,15 @@ func (r *emuPacketBuilder) GetNeighbourhoodSize(populationCount int) common2.Nei
 }
 
 func (r *emuPacketBuilder) PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
+	mp common2.MembershipProfile, nodeCount int,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
-		basePacket: basePacket{src: sender.GetShortNodeID()},
-		packet:     pulsarPacket.(*EmuPulsarNetPacket)}
+		basePacket: basePacket{
+			src:       sender.GetShortNodeID(),
+			nodeCount: uint16(nodeCount),
+			mp:        mp,
+		},
+		pulsePacket: pulsarPacket.(*EmuPulsarNetPacket)}
 	return &emuPacketSender{&v}
 }
 
@@ -119,7 +125,8 @@ func (r *EmuPhase0NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 }
 
 func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket,
-	nsh common2.NodeStateHashEvidence, options core.PacketSendOptions) core.PreparedPacketSender {
+	mp common2.MembershipProfile, nodeCount int,
+	options core.PacketSendOptions) core.PreparedPacketSender {
 
 	pp := pulsarPacket.(*EmuPulsarNetPacket)
 	if pp == nil || !pp.pulseData.IsValidPulseData() {
@@ -128,14 +135,18 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsa
 
 	v := EmuPhase1NetPacket{
 		EmuPhase0NetPacket: EmuPhase0NetPacket{
-			basePacket: basePacket{src: sender.GetShortNodeID()},
-			packet:     pp},
+			basePacket: basePacket{
+				src:       sender.GetShortNodeID(),
+				nodeCount: uint16(nodeCount),
+				mp:        mp,
+			},
+			pulsePacket: pp},
 		selfIntro: sender.GetIntroduction(),
-		nsh:       nsh}
+	}
 	v.pn = pp.pulseData.PulseNumber
 	v.isRequest = options&core.RequestForPhase1 != 0
 	if v.isRequest || options&core.SendWithoutPulseData != 0 {
-		v.packet = nil
+		v.pulsePacket = nil
 	}
 
 	return &emuPacketSender{&v}
@@ -149,18 +160,23 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 		c.selfIntro = nil
 	}
 	if sendOptions&core.SendWithoutPulseData != 0 {
-		c.packet = nil
+		c.pulsePacket = nil
 	}
 
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData, neighbourhood []packets.NodeStateHashReportReader,
+func (r *emuPacketBuilder) PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData,
+	mp common2.MembershipProfile, nodeCount int,
+	neighbourhood []packets.NodeStateHashReportReader,
 	intros []common2.NodeIntroduction, options core.PacketSendOptions) core.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{
 		basePacket: basePacket{
-			src: sender.GetShortNodeID()},
+			src:       sender.GetShortNodeID(),
+			nodeCount: uint16(nodeCount),
+			mp:        mp,
+		},
 		pulseNumber:   pd.PulseNumber,
 		neighbourhood: neighbourhood,
 		intros:        intros}
@@ -185,8 +201,8 @@ func (r *EmuPhase2NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase3Packet(sender common2.NodeProfile, pd common.PulseData, bitset nodeset.NodeBitset,
-	gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
+func (r *emuPacketBuilder) PreparePhase3Packet(sender common2.NodeProfile, pd common.PulseData,
+	bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
@@ -225,6 +241,10 @@ func (r *emuTransportCryptography) IsValidDataSignature(data io.Reader, signatur
 }
 
 func (r *emuTransportCryptography) IsSignOfSignatureMethodSupported(m common.SignatureMethod) bool {
+	return true
+}
+
+func (r *emuTransportCryptography) IsDigestOfSignatureMethodSupported(m common.SignatureMethod) bool {
 	return true
 }
 

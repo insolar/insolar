@@ -103,11 +103,13 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 		var err error
 		payload, from, err := h.receive(ctx)
 		if err == nil {
-			packet, err := h.parsePayload(payload)
+			var packet packets.PacketParser
+
+			packet, err = h.parsePayload(payload)
 			if err == nil {
 				if packet != nil {
 					hostFrom := common.HostIdentity{Addr: *from}
-					err = h.controller.ProcessPacket(packet, &hostFrom)
+					err = h.controller.ProcessPacket(ctx, packet, &hostFrom)
 				}
 			}
 		}
@@ -118,7 +120,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	}
 }
 
-func (h *EmuHostConsensusAdapter) SendPacketToTransport(t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
+func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
 	h.send(t.GetDefaultEndpoint(), payload)
 }
 
@@ -162,7 +164,11 @@ type EmuRoundStrategy struct {
 	bundle core.PhaseControllersBundle
 }
 
-func (*EmuRoundStrategy) CreateRoundContext(ctx context.Context) context.Context {
+func (c *EmuRoundStrategy) GetNodeUpdateCallback() core.NodeUpdateCallback {
+	return c.bundle.GetNodeUpdateCallback()
+}
+
+func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common.PulseNumber, self common2.LocalNodeProfile) context.Context {
 	return ctx
 }
 

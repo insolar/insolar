@@ -68,7 +68,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 			JSONRPC: "2.0",
 			ID:      1,
 			Method:  "api.call",
-			Params:  requester.Params{CallSite: "contract.createMember"},
+			Params:  requester.Params{CallSite: "contract.createMember", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
 		},
 		seedString,
 	)
@@ -123,7 +123,7 @@ func TestTimeoutSuite(t *testing.T) {
 	require.NoError(t, err)
 
 	userRef := testutils.RandomRef().String()
-	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString))
+	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
 
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner()
@@ -131,17 +131,6 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)
 	timeoutSuite.api.timeout = 1 * time.Second
-
-	cert := testutils.NewCertificateMock(timeoutSuite.mc)
-	cert.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
-		ref := testutils.RandomRef()
-		return &ref
-	}
-
-	cm := testutils.NewCertificateManagerMock(timeoutSuite.mc)
-	cm.GetCertificateFunc = func() (r insolar.Certificate) {
-		return cert
-	}
 
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
 	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
@@ -165,7 +154,6 @@ func TestTimeoutSuite(t *testing.T) {
 	}
 
 	timeoutSuite.api.ContractRequester = cr
-	timeoutSuite.api.CertificateManager = cm
 	timeoutSuite.api.Start(timeoutSuite.ctx)
 	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(time.Minute, time.Minute)
 

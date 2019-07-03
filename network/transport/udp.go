@@ -175,7 +175,7 @@ func (t *udpTransport) loop(ctx context.Context) {
 		}
 
 		stats.Record(ctx, consensusv1.RecvSize.M(int64(n)))
-		go t.handler.HandleDatagram(addr.String(), buf[:n])
+		go t.handler.HandleDatagram(ctx, addr.String(), buf[:n])
 	}
 }
 

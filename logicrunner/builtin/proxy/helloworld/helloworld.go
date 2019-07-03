@@ -597,10 +597,9 @@ func (r *HelloWorld) CountChildAsImmutable() (interface{}, error) {
 }
 
 // Call is proxy generated method
-func (r *HelloWorld) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = rootDomain
-	args[1] = signedRequest
+func (r *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
+	var args [1]interface{}
+	args[0] = signedRequest
 
 	var argsSerialized []byte
 
@@ -632,10 +631,9 @@ func (r *HelloWorld) Call(rootDomain insolar.Reference, signedRequest []byte) (i
 }
 
 // CallNoWait is proxy generated method
-func (r *HelloWorld) CallNoWait(rootDomain insolar.Reference, signedRequest []byte) error {
-	var args [2]interface{}
-	args[0] = rootDomain
-	args[1] = signedRequest
+func (r *HelloWorld) CallNoWait(signedRequest []byte) error {
+	var args [1]interface{}
+	args[0] = signedRequest
 
 	var argsSerialized []byte
 
@@ -653,10 +651,9 @@ func (r *HelloWorld) CallNoWait(rootDomain insolar.Reference, signedRequest []by
 }
 
 // CallAsImmutable is proxy generated method
-func (r *HelloWorld) CallAsImmutable(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = rootDomain
-	args[1] = signedRequest
+func (r *HelloWorld) CallAsImmutable(signedRequest []byte) (interface{}, error) {
+	var args [1]interface{}
+	args[0] = signedRequest
 
 	var argsSerialized []byte
 

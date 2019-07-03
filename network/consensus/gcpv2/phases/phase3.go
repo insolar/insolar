@@ -111,7 +111,7 @@ func (*Phase3Controller) GetPacketType() packets.PacketType {
 	return packets.PacketPhase3
 }
 
-func (c *Phase3Controller) HandleMemberPacket(reader packets.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *Phase3Controller) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p3 := reader.AsPhase3Packet()
 
@@ -148,9 +148,9 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	defer cancel()
 
 	if !c.workerPrePhase3(ctx) {
-		//context was stopped in a hard way, we are dead in terms of consensus
-		//TODO should wait for further packets to decide if we need to turn ourselves into suspended state
-		//c.R.StopRoundByTimeout()
+		// context was stopped in a hard way, we are dead in terms of consensus
+		// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
+		// c.R.StopRoundByTimeout()
 		return
 	}
 	d := c.calcGshPair()
@@ -158,9 +158,9 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	go c.workerSendPhase3(ctx, d)
 
 	if !c.workerRecvPhase3(ctx, d) {
-		//context was stopped in a hard way, we are dead in terms of consensus
-		//TODO should wait for further packets to decide if we need to turn ourselves into suspended state
-		//c.R.StopRoundByTimeout()
+		// context was stopped in a hard way, we are dead in terms of consensus
+		// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
+		// c.R.StopRoundByTimeout()
 		return
 	}
 
@@ -299,14 +299,14 @@ func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
 			bitset[i] = nodeset.NbsHighTrust
 		}
 		if bitset[i].IsTrusted() {
-			aggTrusted.AddNext(membership.Nsh)
+			aggTrusted.AddNext(membership.StateEvidence.GetNodeStateHash())
 			if aggDoubted == nil {
 				continue
 			}
 		} else if aggDoubted == nil {
 			aggDoubted = aggTrusted.ForkSequence()
 		}
-		aggDoubted.AddNext(membership.Nsh)
+		aggDoubted.AddNext(membership.StateEvidence.GetNodeStateHash())
 	}
 
 	res := nodeset.HashedNodeVector{Bitset: bitset}
@@ -329,7 +329,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodese
 		default:
 		}
 
-		p3.SendTo(np.GetProfile(), 0, c.R.GetPacketSender())
+		p3.SendTo(ctx, np.GetProfile(), 0, c.R.GetPacketSender())
 		np.SetSentByPacketType(c.GetPacketType())
 	}
 }
@@ -372,6 +372,13 @@ outer:
 		case d := <-c.queuePh3Recv:
 			nodeStats := statTbl.NewRow()
 
+			logger.Debugf(
+				"\n%v\n%v\n%v\n%v\n",
+				selfData.Bitset,
+				d.vector.Bitset,
+				selfData.Bitset.CompareToStatRow(d.vector.Bitset), // TODO: ugly. pass it to ClassifyByNodeGsh?
+				nodeStats,
+			)
 			vr := nodeset.ClassifyByNodeGsh(selfData, d.vector, nodeStats, hasher)
 
 			logMsg := "add"
@@ -446,7 +453,7 @@ outer:
 
 	b := c.R.CreateNextPopulationBuilder()
 	priming := c.R.GetPrimingCloudHash()
-	//population is to be updated somewhere here
+	// population is to be updated somewhere here
 	b.SetGlobulaStateHash(priming)
 	b.SealCensus()
 	c.R.FinishRound(b, priming)
@@ -455,6 +462,6 @@ outer:
 }
 
 func (c *Phase3Controller) handleNodeHashing(index int, digester common.SequenceDigester) {
-	nsh := c.R.GetNodeAppearanceByIndex(index).GetNodeStateHashEvidence().GetNodeStateHash()
+	nsh := c.R.GetNodeAppearanceByIndex(index).GetNodeMembershipProfile().StateEvidence.GetNodeStateHash()
 	digester.AddNext(nsh)
 }

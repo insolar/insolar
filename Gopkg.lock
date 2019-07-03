@@ -171,17 +171,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:9fe4b4f866007c9981c6c44c02d5533b1fb78ca408355eb64e767ef416eb9dfb"
-  name = "github.com/gorilla/rpc"
-  packages = [
-    "v2",
-    "v2/json2",
-  ]
-  pruneopts = "UT"
-  revision = "22c016f3df3febe0c1f6727598b6389507e03a18"
-  version = "v1.1.0"
-
-[[projects]]
   digest = "1:0ade334594e69404d80d9d323445d2297ff8161637f9b2d347cc6973d2d6f05b"
   name = "github.com/hashicorp/errwrap"
   packages = ["."]
@@ -223,6 +212,17 @@
   pruneopts = "UT"
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
+
+[[projects]]
+  digest = "1:d585d1cae389b646325b7ef48032cdc9b58e68cd88c1fdc5da795eabb2114455"
+  name = "github.com/insolar/rpc"
+  packages = [
+    "v2",
+    "v2/json2",
+  ]
+  pruneopts = "UT"
+  revision = "60ccffd3c0df575286752c08ae3d6312f728291d"
+  version = "v1.2.1"
 
 [[projects]]
   digest = "1:9f86b5f5862a8ae44a5e2461619ac8f0fd1c75d670b735e40c4319f61bcb4bd3"
@@ -557,12 +557,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d6b0cfc5ae30841c4b116ac589629f56f8add0955a39f11d8c0d06ca67f5b3d5"
+  digest = "1:5e4d81c50cffcb124b899e4f3eabec3930c73532f0096c27f94476728ba03028"
   name = "golang.org/x/sync"
-  packages = [
-    "errgroup",
-    "semaphore",
-  ]
+  packages = ["semaphore"]
   pruneopts = "UT"
   revision = "42b317875d0fa942474b76e1b46a6060d720ae6e"
 
@@ -647,8 +644,8 @@
     "github.com/gojuno/minimock",
     "github.com/google/btree",
     "github.com/google/gofuzz",
-    "github.com/gorilla/rpc/v2",
-    "github.com/gorilla/rpc/v2/json2",
+    "github.com/insolar/rpc/v2",
+    "github.com/insolar/rpc/v2/json2",
     "github.com/insolar/x-crypto/ecdsa",
     "github.com/insolar/x-crypto/sha256",
     "github.com/insolar/x-crypto/x509",
@@ -678,7 +675,6 @@
     "go.opencensus.io/trace",
     "go.opencensus.io/zpages",
     "golang.org/x/crypto/sha3",
-    "golang.org/x/sync/errgroup",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"

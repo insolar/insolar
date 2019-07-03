@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"time"
 
@@ -54,6 +55,18 @@ func (d *TranscriptDequeue) Pop() *Transcript {
 		return nil
 	}
 	return elements[0]
+}
+
+func (d *TranscriptDequeue) Has(ref insolar.Reference) bool {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	for pos := len(d.queue) - 1; pos >= 0; pos-- {
+		if d.queue[pos].RequestRef.Compare(ref) == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
@@ -129,10 +142,9 @@ type Transcript struct {
 	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
-	Request          *record.Request
+	Request          *record.IncomingRequest
 	RequestRef       *insolar.Reference
 	RequesterNode    *insolar.Reference
-	SentResult       bool
 	Nonce            uint64
 	Deactivate       bool
 	OutgoingRequests []OutgoingRequest
@@ -162,10 +174,9 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 	return &Transcript{
 		Context:       ctx,
 		LogicContext:  logicalContext,
-		Request:       &msg.Request,
+		Request:       &msg.IncomingRequest,
 		RequestRef:    requestRef,
 		RequesterNode: &sender,
-		SentResult:    false,
 		Nonce:         0,
 		Deactivate:    false,
 
@@ -175,14 +186,14 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 }
 
 type OutgoingRequest struct {
-	Request   record.Request
+	Request   record.IncomingRequest
 	NewObject *Ref
 	Response  []byte
 	Error     error
 }
 
 func (t *Transcript) AddOutgoingRequest(
-	ctx context.Context, request record.Request, result []byte, newObject *Ref, err error,
+	ctx context.Context, request record.IncomingRequest, result []byte, newObject *Ref, err error,
 ) {
 	rec := OutgoingRequest{
 		Request:   request,
@@ -191,6 +202,17 @@ func (t *Transcript) AddOutgoingRequest(
 		Error:     err,
 	}
 	t.OutgoingRequests = append(t.OutgoingRequests, rec)
+}
+
+func (t *Transcript) HasOutgoingRequest(
+	ctx context.Context, request record.IncomingRequest,
+) *OutgoingRequest {
+	for i := range t.OutgoingRequests {
+		if reflect.DeepEqual(t.OutgoingRequests[i].Request, request) {
+			return &t.OutgoingRequests[i]
+		}
+	}
+	return nil
 }
 
 type CurrentExecutionList struct {
@@ -257,6 +279,13 @@ func (ces *CurrentExecutionList) Empty() bool {
 	return ces.Length() == 0
 }
 
+func (ces *CurrentExecutionList) Has(requestRef insolar.Reference) bool {
+	ces.lock.RLock()
+	defer ces.lock.RUnlock()
+	_, has := ces.executions[requestRef]
+	return has
+}
+
 type CurrentExecutionPredicate func(*Transcript, interface{}) bool
 
 func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
@@ -295,6 +324,9 @@ type ExecutionBroker struct {
 	processLock   sync.Mutex
 
 	StartProcessorIfNeededCount int32
+
+	deduplicationTable map[insolar.Reference]bool
+	deduplicationLock  sync.Mutex
 }
 
 var ErrRetryLater = errors.New("Failed to start task, retry next time")
@@ -322,8 +354,23 @@ func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Tran
 	q.immutable.Push(transcript)
 }
 
+func (q *ExecutionBroker) isDuplicate(_ context.Context, transcript *Transcript) bool {
+	q.deduplicationLock.Lock()
+	defer q.deduplicationLock.Unlock()
+
+	if _, ok := q.deduplicationTable[*transcript.RequestRef]; ok {
+		return true
+	}
+	q.deduplicationTable[*transcript.RequestRef] = true
+	return false
+}
+
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
+		if q.isDuplicate(ctx, transcript) {
+			continue
+		}
+
 		if transcript.LogicContext.Immutable {
 			go q.processImmutable(ctx, transcript)
 		} else {
@@ -340,6 +387,10 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 // One shouldn't mix immutable calls and mutable ones
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
+		if q.isDuplicate(ctx, transcript) {
+			continue
+		}
+
 		if transcript.LogicContext.Immutable {
 			go q.processImmutable(ctx, transcript)
 		} else {
@@ -462,6 +513,11 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 
 	_ = q.mutable.Rotate()
 	_ = q.immutable.Rotate()
+
+	q.deduplicationLock.Lock()
+	q.deduplicationTable = make(map[insolar.Reference]bool)
+	q.deduplicationLock.Unlock()
+
 	q.mutableLock.Unlock()
 
 	return rv
@@ -477,5 +533,8 @@ func NewExecutionBroker(checkFunc CheckCallback, execFunc ExecuteTranscriptCallb
 		checkFunc:       checkFunc,
 		processFunc:     execFunc,
 		processFuncArgs: args,
+
+		deduplicationLock:  sync.Mutex{},
+		deduplicationTable: make(map[insolar.Reference]bool),
 	}
 }

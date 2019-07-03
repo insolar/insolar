@@ -83,8 +83,8 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 		expectedRight = insolar.JetID{0, 0, 0, 1, 1, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		expectedLeafs = Tree{Head: &jet{
 			Actual: false,
-			Left:   &jet{Actual: false},
-			Right:  &jet{Actual: false},
+			Left:   &jet{Actual: true},
+			Right:  &jet{Actual: true},
 		}}
 	)
 

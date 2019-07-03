@@ -24,8 +24,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
@@ -168,7 +173,7 @@ func (t *TestArtifactManager) HasPendingRequests(ctx context.Context, object ins
 }
 
 // State implementation for tests
-func (t *TestArtifactManager) State() ([]byte, error) {
+func (t *TestArtifactManager) State() []byte {
 	panic("implement me")
 }
 
@@ -187,7 +192,7 @@ func NewTestArtifactManager() *TestArtifactManager {
 }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error) {
+func (t *TestArtifactManager) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
@@ -339,60 +344,10 @@ func CBORMarshal(t testing.TB, o interface{}) []byte {
 	return data
 }
 
-// CBORUnMarshal - testing deserialize helper
-func CBORUnMarshal(t testing.TB, data []byte) interface{} {
-	var ret interface{}
-	err := insolar.Deserialize(data, &ret)
-	assert.NoError(t, err, "serialise")
-	return ret
-}
-
-// CBORUnMarshalToSlice - wrapper for CBORUnMarshal, expects slice
-func CBORUnMarshalToSlice(t testing.TB, in []byte) []interface{} {
-	r := CBORUnMarshal(t, in)
-	assert.IsType(t, []interface{}{}, r)
-	return r.([]interface{})
-}
-
-// AMPublishCode publishes code on ledger
-func AMPublishCode(
-	t testing.TB,
-	am artifacts.Client,
-	domain insolar.Reference,
-	request insolar.Reference,
-	mtype insolar.MachineType,
-	code []byte,
-) (
-	typeRef *insolar.Reference,
-	codeRef *insolar.Reference,
-	protoRef *insolar.Reference,
-	err error,
-) {
-	ctx := context.TODO()
-	codeID, err := am.DeployCode(
-		ctx, domain, request, code, mtype,
-	)
-	assert.NoError(t, err, "create code on ledger")
-	codeRef = &insolar.Reference{}
-	codeRef.SetRecord(*codeID)
-
-	nonce := testutils.RandomRef()
-	protoID, err := am.RegisterRequest(
-		ctx,
-		record.Request{CallType: record.CTSaveAsChild, Prototype: &nonce},
-	)
-	assert.NoError(t, err)
-	protoRef = &insolar.Reference{}
-	protoRef.SetRecord(*protoID)
-	err = am.ActivatePrototype(ctx, *protoRef, insolar.GenesisRecord.Ref(), *codeRef, nil)
-	assert.NoError(t, err, "create template for contract data")
-
-	return typeRef, codeRef, protoRef, err
-}
-
 // ContractsBuilder for tests
 type ContractsBuilder struct {
-	root string
+	root          string
+	pulseAccessor pulse.Accessor
 
 	ArtifactManager artifacts.Client
 	IccPath         string
@@ -402,7 +357,7 @@ type ContractsBuilder struct {
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am artifacts.Client, icc string) *ContractsBuilder {
+func NewContractBuilder(am artifacts.Client, icc string, accessor pulse.Accessor) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
@@ -410,6 +365,7 @@ func NewContractBuilder(am artifacts.Client, icc string) *ContractsBuilder {
 
 	cb := &ContractsBuilder{
 		root:            tmpDir,
+		pulseAccessor:   accessor,
 		Prototypes:      make(map[string]*insolar.Reference),
 		Codes:           make(map[string]*insolar.Reference),
 		ArtifactManager: am,
@@ -430,13 +386,12 @@ func (cb *ContractsBuilder) Clean() {
 func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
-		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx,
-			record.Request{
-				CallType:  record.CTSaveAsChild,
-				Prototype: &nonce,
-			},
-		)
+		request := record.IncomingRequest{
+			CallType:  record.CTSaveAsChild,
+			Prototype: &nonce,
+		}
+		protoID, err := cb.registerRequest(ctx, request)
+
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
 		}
@@ -479,7 +434,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		nonce := testutils.RandomRef()
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
 			ctx,
-			record.Request{
+			record.IncomingRequest{
 				CallType:  record.CTSaveAsChild,
 				Prototype: &nonce,
 			},
@@ -518,6 +473,43 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 	}
 
 	return nil
+}
+
+// Using registerRequest without VM is a tmp solution while there is no logic of contract uploading in VM
+// Because of this we need copy some logic in test code
+func (cb *ContractsBuilder) registerRequest(ctx context.Context, request record.IncomingRequest) (*insolar.ID, error) {
+	var err error
+	var lastPulse insolar.PulseNumber
+
+	retries := 5
+	logger := inslogger.FromContext(ctx)
+
+	if cb.pulseAccessor == nil {
+		logger.Warnf("[ registerRequest ] No pulse accessor passed: no retries for register request")
+		return cb.ArtifactManager.RegisterRequest(ctx, request)
+	}
+
+	for current := 1; current <= retries; current++ {
+		currentPulse, err := cb.pulseAccessor.Latest(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ registerRequest ] Can't get latest pulse")
+		}
+
+		if currentPulse.PulseNumber == lastPulse {
+			logger.Debugf("[ registerRequest ]  wait for pulse change. Current: %d", currentPulse)
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		lastPulse = currentPulse.PulseNumber
+
+		contractID, err := cb.ArtifactManager.RegisterRequest(ctx, request)
+		if err == nil || !strings.Contains(err.Error(), flow.ErrCancelled.Error()) {
+			return contractID, err
+		}
+
+		logger.Debugf("[ registerRequest ] retry. attempt: %d/%d", current, retries)
+	}
+	return nil, errors.Wrap(err, "flow cancelled, retries exceeded")
 }
 
 func (cb *ContractsBuilder) proxy(name string) error {

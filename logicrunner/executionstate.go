@@ -89,7 +89,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			)
 		} else if es.pending == message.InPending && !es.PendingConfirmed {
 			inslogger.FromContext(ctx).Warn(
-				"looks like pending executor died, continuing execution",
+				"looks like pending executor died, continuing execution on next executor",
 			)
 			es.pending = message.NotPending
 			sendExecResults = true
@@ -131,7 +131,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			}
 		} else if es.pending == message.InPending && !es.PendingConfirmed {
 			inslogger.FromContext(ctx).Warn(
-				"looks like pending executor died, continuing execution",
+				"looks like pending executor died, re-starting execution",
 			)
 			es.pending = message.NotPending
 			es.LedgerHasMoreRequests = true
@@ -192,11 +192,16 @@ func (es *ExecutionState) executeTranscript(ctx context.Context, t *Transcript, 
 	es.CurrentList.Set(*t.RequestRef, t)
 	es.Unlock()
 
-	args.lr.executeAndReply(t.Context, es, t)
+	re, err := args.lr.RequestsExecutor.ExecuteAndSave(ctx, t)
+	if err != nil {
+		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
+	}
 
 	es.Lock()
 	es.CurrentList.Delete(*t.RequestRef)
 	es.Unlock()
+
+	go args.lr.RequestsExecutor.SendReply(t.Context, t, re, err)
 
 	if t.FromLedger {
 		// we've already told ledger that we've processed it's task;

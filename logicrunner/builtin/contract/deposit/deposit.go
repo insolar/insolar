@@ -26,16 +26,19 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-type DepositStatus string
+type status string
 
 const (
-	DepositConfirms uint = 3
-
-	Open    DepositStatus = "Open"
-	Holding DepositStatus = "Holding"
-	Close   DepositStatus = "Close"
+	confirms uint = 3
 )
 
+const (
+	statusOpen    status = "Open"
+	statusHolding status = "Holding"
+	statusClose   status = "Close"
+)
+
+// Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
 	Timestamp               time.Time
@@ -45,17 +48,20 @@ type Deposit struct {
 	Amount                  string
 	Bonus                   string
 	TxHash                  string
-	Status                  DepositStatus
+	Status                  status
 }
 
+// GetTxHash gets transaction hash.
 func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
 
+// GetAmount gets amount.
 func (d *Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
+// New creates new deposit.
 func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
 	return &Deposit{
 
@@ -64,10 +70,11 @@ func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amou
 		TxHash:                  txHash,
 		HoldReleaseDate:         holdReleaseDate,
 		Amount:                  amount,
-		Status:                  Open,
+		Status:                  statusOpen,
 	}, nil
 }
 
+// MapMarshal gets deposit information.
 func (d *Deposit) MapMarshal() (map[string]string, error) {
 	return map[string]string{
 		"timestamp":       d.Timestamp.String(),
@@ -78,6 +85,7 @@ func (d *Deposit) MapMarshal() (map[string]string, error) {
 	}, nil
 }
 
+// Confirm adds confirm for deposit by migration daemon.
 func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
 	if txHash != d.TxHash {
 		return 0, fmt.Errorf("transaction hash is incorrect")
@@ -104,8 +112,8 @@ func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amou
 		} else {
 			d.MigrationDaemonConfirms[migrationDaemon] = true
 			d.Confirms++
-			if d.Confirms == DepositConfirms {
-				d.Status = Holding
+			if d.Confirms == confirms {
+				d.Status = statusHolding
 			}
 			return d.Confirms, nil
 		}
