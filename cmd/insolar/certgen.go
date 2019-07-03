@@ -62,7 +62,7 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 	if verbose {
 		fmt.Println("Response:", string(response))
 	}
-	if r.Error.Message != "" || r.Error.Code < 0 {
+	if r.Error != nil {
 		fmt.Printf("Error while '%s' occured : %s \n", requestTypeMsg, r.Error.Message)
 		os.Exit(1)
 	}
