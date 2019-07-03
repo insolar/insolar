@@ -23,6 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -115,6 +116,20 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	default:
 		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
+}
+
+func (s *Init) Past(ctx context.Context, f flow.Flow) error {
+	meta := payload.Meta{}
+	err := meta.Unmarshal(s.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+	errMsg, err := payload.NewMessage(&payload.Error{Text: "flow cancelled: get message from past on virtual node", Code: uint32(payload.CodeFlowCanceled)})
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
+	}
+	go s.dep.Sender.Reply(ctx, meta, errMsg)
+	return nil
 }
 
 type InnerInit struct {

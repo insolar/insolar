@@ -18,7 +18,6 @@ package bus
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -320,64 +319,6 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		reply.wg.Done()
 
 		return nil, nil
-	}
-}
-
-func (b *Bus) CheckPulse(h message.HandlerFunc) message.HandlerFunc {
-	return func(msg *message.Message) ([]*message.Message, error) {
-		ctx, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
-		meta := payload.Meta{}
-		err := meta.Unmarshal(msg.Payload)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "can't deserialize meta payload in middleware"))
-		}
-		ctx, _ = inslogger.WithField(ctx, "pulse", fmt.Sprint(meta.Pulse))
-
-		ctx, span := instracer.StartSpan(ctx, "Sender.checkPulse")
-		defer span.End()
-
-		latestPulse, err := b.pulses.Latest(ctx)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "failed to fetch pulse in middleware"))
-			return nil, nil
-		}
-
-		if meta.Pulse < latestPulse.PulseNumber {
-			msgType := msg.Metadata.Get(MetaType)
-			if meta.Pulse < latestPulse.PrevPulseNumber {
-				inslogger.FromContext(ctx).Errorf(
-					"[ CheckPulse ] Pulse is TOO OLD in middleware: (message: %d, current: %d) Message is: %#v",
-					meta.Pulse, latestPulse.PulseNumber, msgType,
-				)
-			}
-
-			// Message is from past. Return error for some messages, allow for others.
-			switch msgType {
-			case
-				insolar.TypeGetObject.String(),
-				insolar.TypeGetDelegate.String(),
-				insolar.TypeGetChildren.String(),
-				insolar.TypeSetRecord.String(),
-				insolar.TypeUpdateObject.String(),
-				insolar.TypeRegisterChild.String(),
-				insolar.TypeSetBlob.String(),
-				insolar.TypeGetPendingRequests.String(),
-				insolar.TypeValidateRecord.String(),
-				insolar.TypeHotRecords.String(),
-				insolar.TypeCallMethod.String():
-				err := errors.Errorf("[ CheckPulse ] Incorrect message pulse in middleware (parcel: %d, current: %d) Msg: %s", meta.Pulse, latestPulse.PulseNumber, msgType)
-				inslogger.FromContext(ctx).Error(err)
-				errReply, newErr := payload.NewMessage(&payload.Error{Text: err.Error()})
-				if newErr != nil {
-					logger.Error(errors.Wrap(err, "can't create message from error"))
-					return nil, nil
-				}
-				b.Reply(ctx, meta, errReply)
-				return nil, nil
-			}
-		}
-
-		return h(msg)
 	}
 }
 

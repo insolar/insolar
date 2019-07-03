@@ -38,17 +38,19 @@ type Dispatcher struct {
 	handles struct {
 		present flow.MakeHandle
 		future  flow.MakeHandle
+		past    flow.MakeHandle
 	}
 	controller         *thread.Controller
 	currentPulseNumber uint32
 }
 
-func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle) *Dispatcher {
+func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) *Dispatcher {
 	d := &Dispatcher{
 		controller: thread.NewController(),
 	}
 	d.handles.present = present
 	d.handles.future = future
+	d.handles.past = past
 	d.currentPulseNumber = insolar.FirstPulseNumber
 	return d
 }
@@ -62,6 +64,9 @@ func (d *Dispatcher) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 func (d *Dispatcher) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
 	if uint32(msgPulseNumber) > atomic.LoadUint32(&d.currentPulseNumber) {
 		return d.handles.future
+	}
+	if uint32(msgPulseNumber) < atomic.LoadUint32(&d.currentPulseNumber) {
+		return d.handles.past
 	}
 	return d.handles.present
 }

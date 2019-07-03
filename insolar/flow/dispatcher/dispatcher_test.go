@@ -42,7 +42,7 @@ func TestNewDispatcher(t *testing.T) {
 	}
 	require.False(t, ok)
 
-	d := NewDispatcher(f, f)
+	d := NewDispatcher(f, f, f)
 	require.NotNil(t, d.controller)
 	handle := d.handles.present(&message.Message{})
 	require.Nil(t, handle)

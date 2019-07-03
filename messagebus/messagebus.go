@@ -223,7 +223,6 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 
 	_, ok := transferredToWatermill[msg.Type()]
 	if ok {
-		readBarrier(ctx, &mb.globalLock)
 		wmMsg := mb.createWatermillMessage(ctx, parcel, currentPulse)
 		nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, ops)
 		if err != nil {

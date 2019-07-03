@@ -56,7 +56,7 @@ func TestEmptyHandle(t *testing.T) {
 				replyChan <- testReply
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
 
 	msg := &message.Message{}
 	_, err := disp.Process(msg)
@@ -83,7 +83,7 @@ func TestCallEmptyProcedure(t *testing.T) {
 				replyChan <- testReply
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
 
 	msg := &message.Message{}
 	_, err := disp.Process(msg)
@@ -111,7 +111,7 @@ func TestProcedureReturnError(t *testing.T) {
 				replyChan <- testReply
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
 
 	msg := &message.Message{}
 	_, err := disp.Process(msg)
@@ -146,7 +146,7 @@ func TestChangePulse(t *testing.T) {
 				replyChan <- testReply
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
 
 	handleProcessed := make(chan struct{})
 	go func() {
@@ -194,7 +194,7 @@ func TestChangePulseAndMigrate(t *testing.T) {
 				})
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
 
 	handleProcessed := make(chan struct{})
 	go func() {

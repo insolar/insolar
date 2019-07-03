@@ -261,6 +261,8 @@ func NewMessageHandler(
 		return initHandle(msg).Present
 	}, func(msg *message.Message) flow.Handle {
 		return initHandle(msg).Future
+	}, func(msg *message.Message) flow.Handle {
+		return initHandle(msg).Past
 	})
 	return h
 }

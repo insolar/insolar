@@ -173,6 +173,8 @@ func InitHandlers(lr *LogicRunner, s bus.Sender) (*watermillMsg.Router, error) {
 		return initHandle(msg).Present
 	}, func(msg *watermillMsg.Message) flow.Handle {
 		return initHandle(msg).Future
+	}, func(msg *watermillMsg.Message) flow.Handle {
+		return initHandle(msg).Past
 	})
 
 	innerInitHandle := func(msg *watermillMsg.Message) *InnerInit {
@@ -183,6 +185,8 @@ func InitHandlers(lr *LogicRunner, s bus.Sender) (*watermillMsg.Router, error) {
 	}
 
 	lr.innerFlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
+		return innerInitHandle(msg).Present
+	}, func(msg *watermillMsg.Message) flow.Handle {
 		return innerInitHandle(msg).Present
 	}, func(msg *watermillMsg.Message) flow.Handle {
 		return innerInitHandle(msg).Present
@@ -267,9 +271,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
 	if err := lr.rpc.Stop(ctx); err != nil {
-		return err
-	}
-	if err := lr.router.Close(); err != nil {
 		return err
 	}
 

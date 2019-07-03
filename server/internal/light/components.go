@@ -384,7 +384,6 @@ func (c *components) startWatermill(
 
 	inRouter.AddMiddleware(
 		b.IncomingMessageRouter,
-		b.CheckPulse,
 	)
 
 	inRouter.AddNoPublisherHandler(

@@ -238,7 +238,6 @@ func startWatermill(
 
 	inRouter.AddMiddleware(
 		b.IncomingMessageRouter,
-		b.CheckPulse,
 	)
 
 	inRouter.AddNoPublisherHandler(
