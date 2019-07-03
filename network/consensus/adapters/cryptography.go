@@ -207,3 +207,42 @@ func (sv *ECDSASignatureVerifier) IsValidDataSignature(data io.Reader, signature
 
 	return sv.IsValidDigestSignature(digest.AsDigestHolder(), signature)
 }
+
+type ECDSASignatureKeyHolder struct {
+	common.Bits512
+	publicKey *ecdsa.PublicKey
+}
+
+func NewECDSASignatureKeyHolder(publicKey *ecdsa.PublicKey, processor insolar.KeyProcessor) *ECDSASignatureKeyHolder {
+	publicKeyBytes, err := processor.ExportPublicKeyBinary(publicKey)
+	if err != nil {
+		panic(err)
+	}
+
+	bits := common.NewBits512FromBytes(publicKeyBytes)
+	return &ECDSASignatureKeyHolder{
+		Bits512:   *bits,
+		publicKey: publicKey,
+	}
+}
+
+func (kh *ECDSASignatureKeyHolder) GetSignMethod() common.SignMethod {
+	return SECP256r1Sign
+}
+
+func (kh *ECDSASignatureKeyHolder) GetSignatureKeyMethod() common.SignatureMethod {
+	return SHA3512Digest.SignedBy(SECP256r1Sign)
+}
+
+func (kh *ECDSASignatureKeyHolder) GetSignatureKeyType() common.SignatureKeyType {
+	return common.PublicAsymmetricKey
+}
+
+func (kh *ECDSASignatureKeyHolder) Equals(other common.SignatureKeyHolder) bool {
+	okh, ok := other.(*ECDSASignatureKeyHolder)
+	if !ok {
+		return false
+	}
+
+	return kh.Bits512 == okh.Bits512
+}

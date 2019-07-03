@@ -55,6 +55,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/network/consensus/common"
@@ -374,13 +375,16 @@ outer:
 		case d := <-c.queuePh3Recv:
 			nodeStats := statTbl.NewRow()
 
-			log.Debugf(
-				"\n%v\n%v\n%v\n%v\n",
-				selfData.Bitset,
-				d.vector.Bitset,
-				selfData.Bitset.CompareToStatRow(d.vector.Bitset), // TODO: ugly. pass it to ClassifyByNodeGsh?
-				nodeStats,
-			)
+			if log.Is(insolar.DebugLevel) {
+				log.Debugf(
+					"\n%v\n%v\n%v\n%v\n",
+					selfData.Bitset,
+					d.vector.Bitset,
+					selfData.Bitset.CompareToStatRow(d.vector.Bitset), // TODO: ugly. pass it to ClassifyByNodeGsh?
+					nodeStats,
+				)
+			}
+
 			vr := nodeset.ClassifyByNodeGsh(selfData, d.vector, nodeStats, hasher)
 
 			logMsg := "add"
@@ -388,16 +392,18 @@ outer:
 				logMsg = "missed"
 			}
 
-			log.Debugf(
-				"%s: s:%v, t:%v, %d, %d, %d: %v",
-				logMsg,
-				d.np.GetShortNodeID(),
-				c.R.GetSelf().GetShortNodeID(),
-				d.np.GetIndex(),
-				remainingNodes,
-				vr,
-				nodeStats,
-			)
+			if log.Is(insolar.DebugLevel) {
+				log.Debugf(
+					"%s: s:%v, t:%v, %d, %d, %d: %v",
+					logMsg,
+					d.np.GetShortNodeID(),
+					c.R.GetSelf().GetShortNodeID(),
+					d.np.GetIndex(),
+					remainingNodes,
+					vr,
+					nodeStats,
+				)
+			}
 
 			statTbl.PutRow(d.np.GetIndex(), nodeStats)
 			remainingNodes--
@@ -426,11 +432,10 @@ outer:
 		}
 	}
 
-	// TODO do table generation only when it is needed for logging
-	// if c.R.Log().IsInfo() {
-	tblHeader := fmt.Sprintf("Consensus Node View: %v", c.R.GetSelfNodeID())
-	log.Debug(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
-	// }
+	if log.Is(insolar.DebugLevel) {
+		tblHeader := fmt.Sprintf("Consensus Node View: %v", c.R.GetSelfNodeID())
+		log.Warn(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
+	}
 
 	if consensusSelection == nil {
 		panic("illegal state")
@@ -447,7 +452,7 @@ outer:
 	}
 
 	if sameWithActive {
-		log.Infof("Consensus is finished as same")
+		log.Info("Consensus is finished as same")
 	} else {
 		log.Infof("Consensus is finished as different, %v", selectionSet)
 		// TODO update population and/or start Phase 4

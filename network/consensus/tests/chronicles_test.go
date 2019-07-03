@@ -52,8 +52,9 @@ package tests
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"math"
+
+	"github.com/insolar/insolar/network/consensusv1/packets"
 
 	"github.com/insolar/insolar/insolar"
 
@@ -99,6 +100,18 @@ func NewEmuNodeIntros(names ...string) []common2.NodeIntroProfile {
 type EmuVersionedRegistries struct {
 	pd                    common.PulseData
 	primingCloudStateHash common2.CloudStateHash
+}
+
+func (c *EmuVersionedRegistries) GetPulsesForJustJoinedState() uint8 {
+	return 1
+}
+
+func (c *EmuVersionedRegistries) GetPulsesForSuspectedState() uint8 {
+	return 1
+}
+
+func (c *EmuVersionedRegistries) GetConsensusConfiguration() census.ConsensusConfiguration {
+	return c
 }
 
 func (c *EmuVersionedRegistries) GetPrimingCloudHash() common2.CloudStateHash {
@@ -184,7 +197,7 @@ func (c *emuNodeIntro) GetNodePublicKey() common.SignatureKeyHolder {
 }
 
 func (c *emuNodeIntro) GetStartPower() common2.MemberPower {
-	panic("implement me")
+	return 10
 }
 
 func (c *emuNodeIntro) GetNodeReference() insolar.Reference {
@@ -215,7 +228,7 @@ func (*emuNodeIntro) IsAllowedPower(p common2.MemberPower) bool {
 	return true
 }
 
-func (c *emuNodeIntro) GetClaimEvidence() common.SignedEvidenceHolder {
+func (c *emuNodeIntro) GetAnnouncementSignature() common.SignatureHolder {
 	return nil
 }
 

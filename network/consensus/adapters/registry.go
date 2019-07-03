@@ -75,17 +75,23 @@ func (mr *MisbehaviorRegistry) AddReport(report errors.MisbehaviorReport) {
 }
 
 type MandateRegistry struct {
-	cloudHash common2.CloudStateHash
+	cloudHash              common2.CloudStateHash
+	consensusConfiguration census.ConsensusConfiguration
 }
 
-func NewMandateRegistry(cloudHash common2.CloudStateHash) *MandateRegistry {
+func NewMandateRegistry(cloudHash common2.CloudStateHash, consensusConfiguration census.ConsensusConfiguration) *MandateRegistry {
 	return &MandateRegistry{
-		cloudHash: cloudHash,
+		cloudHash:              cloudHash,
+		consensusConfiguration: consensusConfiguration,
 	}
 }
 
 func (mr *MandateRegistry) FindRegisteredProfile(host common.HostIdentityHolder) common2.HostProfile {
 	panic("implement me")
+}
+
+func (mr *MandateRegistry) GetConsensusConfiguration() census.ConsensusConfiguration {
+	return mr.consensusConfiguration
 }
 
 func (mr *MandateRegistry) GetPrimingCloudHash() common2.CloudStateHash {
@@ -94,14 +100,16 @@ func (mr *MandateRegistry) GetPrimingCloudHash() common2.CloudStateHash {
 
 type OfflinePopulation struct {
 	// TODO: should't use nodekeeper here.
-	nodeKeeper network.NodeKeeper
-	manager    insolar.CertificateManager
+	nodeKeeper   network.NodeKeeper
+	manager      insolar.CertificateManager
+	keyProcessor insolar.KeyProcessor
 }
 
-func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.CertificateManager) *OfflinePopulation {
+func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.CertificateManager, keyProcessor insolar.KeyProcessor) *OfflinePopulation {
 	return &OfflinePopulation{
-		nodeKeeper: nodeKeeper,
-		manager:    manager,
+		nodeKeeper:   nodeKeeper,
+		manager:      manager,
+		keyProcessor: keyProcessor,
 	}
 }
 
@@ -109,7 +117,7 @@ func (op *OfflinePopulation) FindRegisteredProfile(identity common.HostIdentityH
 	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetHostAddress().String())
 	cert := op.manager.GetCertificate()
 
-	return NewNodeIntroProfile(node, cert)
+	return NewNodeIntroProfile(node, cert, op.keyProcessor)
 }
 
 type VersionedRegistries struct {

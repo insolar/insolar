@@ -122,7 +122,8 @@ type EmbeddedPulsarData struct {
 	Header UnifiedProtocolPacketHeader // ByteSize=16
 
 	// PulseNumber common.PulseNumber //available externally
-	PulsarPulsePacketExt // ByteSize>=108
+	PulsarPulsePacketExt                // ByteSize>=108
+	PulsarSignature      common.Bits512 // ByteSize=64
 }
 
 type CloudIntro struct {

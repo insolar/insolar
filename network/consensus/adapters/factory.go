@@ -135,6 +135,12 @@ func (cf *TransportCryptographyFactory) GetNodeSigner(sks common.SecretKeyStore)
 	return NewECDSADigestSigner(isks.privateKey, cf.scheme)
 }
 
+func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh common.SignatureKeyHolder) common.PublicKeyStore {
+	kh := skh.(*ECDSASignatureKeyHolder)
+
+	return NewECDSAPublicKeyStore(kh.publicKey)
+}
+
 type RoundStrategyFactory struct{}
 
 func NewRoundStrategyFactory() *RoundStrategyFactory {
@@ -189,14 +195,9 @@ func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) *NodeProfileFactor
 	}
 }
 
-func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate common2.BriefCandidateProfile, nodeSignature common.SignatureHolder) common2.NodeIntroProfile {
-	intro := newNodeIntroduction(
-		candidate.GetNodeID(),
-		insolar.Reference{},
-		nodeSignature.CopyOfSignature(),
-	)
-
-	pk, err := npf.keyProcessor.ImportPublicKeyBinary(candidate.GetNodePK().Bytes())
+func (npf *NodeProfileFactory) createProfile(candidate common2.BriefCandidateProfile, signature common.SignatureHolder, intro common2.NodeIntroduction) *NodeIntroProfile {
+	keyHolder := candidate.GetNodePK()
+	pk, err := npf.keyProcessor.ImportPublicKeyBinary(keyHolder.AsBytes())
 	if err != nil {
 		panic(err)
 	}
@@ -207,17 +208,20 @@ func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate common2.BriefCa
 		candidate.GetNodeID(),
 		candidate.GetNodePrimaryRole(),
 		candidate.GetNodeSpecialRoles(),
-		intro,
+		nil,
 		candidate.GetNodeEndpoint(),
 		store,
+		keyHolder,
+		signature,
 	)
 }
 
-func (npf *NodeProfileFactory) UpgradeIntroProfile(profile common2.NodeIntroProfile, candidate common2.CandidateProfile) common2.NodeIntroProfile {
-	p := profile.(*NodeIntroProfile)
-	i := p.intro.(*NodeIntroduction)
+func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate common2.BriefCandidateProfile) common2.NodeIntroProfile {
+	return npf.createProfile(candidate, candidate.GetJoinerSignature(), nil)
+}
 
-	i.ref = candidate.GetReference()
+func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate common2.CandidateProfile) common2.NodeIntroProfile {
+	intro := newNodeIntroduction(candidate.GetNodeID(), candidate.GetReference())
 
-	return p
+	return npf.createProfile(candidate, candidate.GetJoinerSignature(), intro)
 }

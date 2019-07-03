@@ -93,8 +93,8 @@ func MembershipStateToNodeState(membershipState common.MembershipState) insolar.
 		fallthrough
 	case common.Working:
 		return insolar.NodeReady
-	case common.Leaving:
-		return insolar.NodeLeaving
+	case common.JustJoined:
+		return insolar.NodeReady
 	case common.Undefined:
 		fallthrough
 	default:

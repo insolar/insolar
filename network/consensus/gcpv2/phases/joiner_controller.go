@@ -52,6 +52,7 @@ package phases
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -147,7 +148,7 @@ func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader
 		//r.GetProfileFactory().CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
 		//nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
 		//if fIntro, ok := intro.(packets.FullIntroductionReader); ok && !fIntro.GetIssuerID().IsAbsent() {
-		//	nip = r.profileFactory.UpgradeIntroProfile(nip, fIntro)
+		//	nip = r.profileFactory.CreateFullIntroProfile(nip, fIntro)
 		//}
 		//na := r.population.CreateNodeAppearance(r.roundContext, nip)
 		//
@@ -160,7 +161,7 @@ func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader
 	case packets.PacketPhase2:
 		p2 := reader.AsPhase2Packet()
 		intro := p2.GetBriefIntroduction()
-		r.GetProfileFactory().CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
+		r.GetProfileFactory().CreateBriefIntroProfile(intro)
 		return p.applyBriefInfo(ctx, p2.GetBriefIntroduction(), from, r)
 	}
 	return nil, nil

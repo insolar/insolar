@@ -90,7 +90,8 @@ func (cd *Dep) verify() {
 }
 
 type Consensus struct {
-	population                   census.ManyNodePopulation // TODO: there should be interface
+	population                   census.ManyNodePopulation     // TODO: there should be interface
+	consensusConfiguration       census.ConsensusConfiguration // TODO: there should be interface
 	mandateRegistry              census.MandateRegistry
 	misbehaviorRegistry          census.MisbehaviorRegistry
 	offlinePopulation            census.OfflinePopulation
@@ -117,9 +118,10 @@ func New(ctx context.Context, dep Dep) Consensus {
 	knownNodes := dep.NodeKeeper.GetAccessor().GetActiveNodes()
 
 	consensus.population = adapters.NewPopulation(
-		adapters.NewNodeIntroProfile(origin, certificate),
-		adapters.NewNodeIntroProfileList(knownNodes, certificate),
+		adapters.NewNodeIntroProfile(origin, certificate, dep.KeyProcessor),
+		adapters.NewNodeIntroProfileList(knownNodes, certificate, dep.KeyProcessor),
 	)
+	consensus.consensusConfiguration = adapters.NewConsensusConfiguration()
 	consensus.mandateRegistry = adapters.NewMandateRegistry(
 		common2.NewDigest(
 			common2.NewBits512FromBytes(
@@ -127,11 +129,13 @@ func New(ctx context.Context, dep Dep) Consensus {
 			),
 			adapters.SHA3512Digest,
 		).AsDigestHolder(),
+		consensus.consensusConfiguration,
 	)
 	consensus.misbehaviorRegistry = adapters.NewMisbehaviorRegistry()
 	consensus.offlinePopulation = adapters.NewOfflinePopulation(
 		dep.NodeKeeper,
 		dep.CertificateManager,
+		dep.KeyProcessor,
 	)
 	consensus.versionedRegistries = adapters.NewVersionedRegistries(
 		consensus.mandateRegistry,

@@ -100,7 +100,9 @@ type NodeAppearance struct {
 	stateEvidence     common2.NodeStateHashEvidence       // one-time set
 	requestedPower    common2.MemberPower                 // one-time set
 
-	requestedJoiner *NodeAppearance // one-time set
+	requestedJoiner        *NodeAppearance // one-time set
+	requestedLeave         bool            // one-time set
+	requestedLeaveExitCode uint32          // one-time set
 
 	announceHandler   AnnounceHandler
 	firstFraudDetails *errors.FraudError
@@ -132,6 +134,8 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	target.stateEvidence = c.stateEvidence
 	target.announceSignature = c.announceSignature
 	target.requestedPower = c.requestedPower
+	target.announceHandler = c.announceHandler
+	target.firstFraudDetails = c.firstFraudDetails
 
 	target.state = c.state
 	target.trust = c.trust

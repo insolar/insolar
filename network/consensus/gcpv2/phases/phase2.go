@@ -133,7 +133,7 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 			nb.GetAnnouncementSignature(), nb.GetRequestedPower())
 
 		// TODO validate node proof - if fails, then fraud on sender
-		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetEvidence())
+		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetSignature())
 		// TODO check NodeRank also
 		// if p1.HasSelfIntro() {
 		//	// TODO register protocol misbehavior - IntroClaim was not expected
@@ -338,7 +338,7 @@ func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
 func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	log := inslogger.FromContext(ctx)
 
-	log.Infof("Phase2 has started re-requesting Phase1")
+	log.Info("Phase2 has started re-requesting Phase1")
 
 	s := c.R.GetSelf()
 	if s.IsNshRequired() {
