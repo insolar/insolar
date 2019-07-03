@@ -97,6 +97,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		case payload.TypeSetResult:
 			h := NewSetResult(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
+		case payload.TypeActivate:
+			h := NewActivateObject(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
 		case payload.TypePass:
 			err = s.handlePass(ctx, f, meta)
 		case payload.TypeError:
@@ -199,6 +202,9 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeSetResult:
 		h := NewSetResult(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeActivate:
+		h := NewActivateObject(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())

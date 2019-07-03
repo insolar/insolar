@@ -65,6 +65,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		// {tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
 		{tp: payload.TypeSetRequest, pl: &payload.SetRequest{}},
 		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
+		{tp: payload.TypeActivate, pl: &payload.Activate{}},
 	}
 
 	for _, d := range table {
