@@ -50,6 +50,27 @@
 
 package serialization
 
+import (
+	"io"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+)
+
+const (
+	packetTypeMask = 15 // 0b00001111
+	protocolShift  = 4
+
+	payloadLengthMask = 16383 // 0b0011111111111111
+	headerShift       = 14
+)
+
+type FlagType uint8
+
+const (
+	IsRelayRestricted = iota
+	IsBodyEncrypted
+)
+
 /*
 	ByteSize=16
 */
@@ -64,4 +85,36 @@ type UnifiedProtocolPacketHeader struct {
 	HeaderAndPayloadLength uint16 // [00-13] ByteLength of Payload, [14-15] reserved = 0
 	SourceID               uint32 // may differ from actual sender when relay is in use, MUST NOT =0
 	TargetID               uint32 // indicates final destination, if =0 then there is no relay allowed by sender and receiver MUST decline a packet if actual sender != source
+}
+
+func NewUnifiedProtocolPacketHeader() UnifiedProtocolPacketHeader {
+	return UnifiedProtocolPacketHeader{}
+}
+
+func (h *UnifiedProtocolPacketHeader) WriteTo(w io.Writer) (int64, error) {
+	return serializeTo(w, h)
+}
+
+func (h *UnifiedProtocolPacketHeader) GetPacketType() packets.PacketType {
+	return packets.PacketType(h.ProtocolAndPacketType & packetTypeMask)
+}
+
+func (h *UnifiedProtocolPacketHeader) GetProtocol() uint8 {
+	return h.ProtocolAndPacketType >> protocolShift
+}
+
+func (h *UnifiedProtocolPacketHeader) GetPayloadLength() uint16 {
+	return h.HeaderAndPayloadLength & payloadLengthMask
+}
+
+func (h *UnifiedProtocolPacketHeader) GetHeader() uint16 {
+	return h.HeaderAndPayloadLength >> headerShift
+}
+
+func (h *UnifiedProtocolPacketHeader) GetFlag(i FlagType) bool {
+	if i > 7 {
+		panic("invalid flag index")
+	}
+
+	return (h.PacketFlags & (0x1 << i)) > 0
 }

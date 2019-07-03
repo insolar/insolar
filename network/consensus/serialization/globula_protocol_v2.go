@@ -62,7 +62,7 @@ type GlobulaConsensusProtocolV2Packet struct {
 	EncryptableBody PacketBody
 	EncryptionData  []byte
 
-	PacketSignature common.Bits512 // ByteSize=64
+	PacketSignature common.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
 }
 
 type PacketBody struct {
