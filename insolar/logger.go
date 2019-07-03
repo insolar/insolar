@@ -156,4 +156,6 @@ type Logger interface {
 	WithFields(map[string]interface{}) Logger
 	// WithField return copy of Logger with predefined single field.
 	WithField(string, interface{}) Logger
+
+	Is(level LogLevel) bool
 }
