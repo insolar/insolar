@@ -91,45 +91,46 @@ func (s *SetRequest) Present(ctx context.Context, f flow.Flow) error {
 
 		s.dep.SetActivationRequest(setActivationRequest)
 		return f.Procedure(ctx, setActivationRequest, false)
-	} else {
-		if request.Object == nil {
-			return errors.New("object is nil")
-		}
-
-		calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
-		s.dep.CalculateID(calc)
-		if err := f.Procedure(ctx, calc, true); err != nil {
-			return err
-		}
-		reqID := calc.Result.ID
-
-		passIfNotExecutor := !s.passed
-		jet := proc.NewCheckJet(*request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
-		s.dep.CheckJet(jet)
-		if err := f.Procedure(ctx, jet, true); err != nil {
-			if err == proc.ErrNotExecutor && passIfNotExecutor {
-				return nil
-			}
-			return err
-		}
-		objJetID := jet.Result.Jet
-
-		hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
-		s.dep.WaitHotWM(hot)
-		if err := f.Procedure(ctx, hot, false); err != nil {
-			return err
-		}
-
-		// To ensure, that we have the index. Because index can be on a heavy node.
-		// If we don't have it and heavy does, SetResult fails because it should update light's index state
-		getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
-		s.dep.GetIndexWM(getIndex)
-		if err := f.Procedure(ctx, getIndex, false); err != nil {
-			return err
-		}
-
-		setRequest := proc.NewSetRequest(s.message, *request, reqID, objJetID)
-		s.dep.SetRequest(setRequest)
-		return f.Procedure(ctx, setRequest, false)
 	}
+
+	if request.Object == nil {
+		return errors.New("object is nil")
+	}
+
+	calc := proc.NewCalculateID(msg.Request, flow.Pulse(ctx))
+	s.dep.CalculateID(calc)
+	if err := f.Procedure(ctx, calc, true); err != nil {
+		return err
+	}
+	reqID := calc.Result.ID
+
+	passIfNotExecutor := !s.passed
+	jet := proc.NewCheckJet(*request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.CheckJet(jet)
+	if err := f.Procedure(ctx, jet, true); err != nil {
+		if err == proc.ErrNotExecutor && passIfNotExecutor {
+			return nil
+		}
+		return err
+	}
+	objJetID := jet.Result.Jet
+
+	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHotWM(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
+	// To ensure, that we have the index. Because index can be on a heavy node.
+	// If we don't have it and heavy does, SetResult fails because it should update light's index state
+	getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
+	s.dep.GetIndexWM(getIndex)
+	if err := f.Procedure(ctx, getIndex, false); err != nil {
+		return err
+	}
+
+	setRequest := proc.NewSetRequest(s.message, *request, reqID, objJetID)
+	s.dep.SetRequest(setRequest)
+	return f.Procedure(ctx, setRequest, false)
+
 }
