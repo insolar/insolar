@@ -50,6 +50,12 @@ func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal SetIncomingRequest message")
 	}
 
+	rec := record.Unwrap(&msg.Request)
+	request, ok := rec.(*record.IncomingRequest)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", rec)
+	}
+
 	buf, err := msg.Request.Marshal()
 	if err != nil {
 		return nil
@@ -62,11 +68,6 @@ func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 	}
 	reqID := calc.Result.ID
 
-	rec := record.Unwrap(&msg.Request)
-	request, ok := rec.(*record.IncomingRequest)
-	if !ok {
-		return fmt.Errorf("wrong request type: %T", rec)
-	}
 	// This is a workaround. VM should not register such requests.
 	// TODO: check it after INS-1939
 	if request.CallType != record.CTMethod {

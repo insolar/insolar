@@ -96,6 +96,12 @@ message SetIncomingRequest {
     record.Virtual Request = 20 [(gogoproto.nullable) = false];
 }
 
+message SetOutgoingRequest {
+    uint32 Polymorph = 16;
+
+    record.Virtual Request = 20 [(gogoproto.nullable) = false];
+}
+
 message SetResult {
     uint32 Polymorph = 16;
 

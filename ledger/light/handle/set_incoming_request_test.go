@@ -46,40 +46,6 @@ func TestSetRequest_BadMsgPayload(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
-
-	request := payload.SetIncomingRequest{
-		Request: []byte{1, 2, 3, 4, 5},
-	}
-	buf, err := request.Marshal()
-	require.NoError(t, err)
-
-	msg := payload.Meta{
-		// This buf is not wrapped as virtual record.
-		Payload: buf,
-	}
-
-	handler := NewSetIncomingRequest(proc.NewDependenciesMock(), msg, false)
-
-	err = handler.Present(ctx, f)
-	require.Error(t, err)
-}
-
 func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 	t.Parallel()
 
@@ -105,11 +71,9 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
 	request := payload.SetIncomingRequest{
-		Request: virtualBuf,
+		Request: virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
@@ -149,11 +113,9 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
 	request := payload.SetIncomingRequest{
-		Request: virtualBuf,
+		Request: virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
@@ -422,11 +384,9 @@ func metaRequestMsg(t *testing.T) payload.Meta {
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
 	request := payload.SetIncomingRequest{
-		Request: virtualBuf,
+		Request: virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
