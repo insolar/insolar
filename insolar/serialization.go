@@ -26,14 +26,14 @@ func Serialize(o interface{}) ([]byte, error) {
 	ch := new(codec.CborHandle)
 	var data []byte
 	err := codec.NewEncoderBytes(&data, ch).Encode(o)
-	return data, errors.Wrap(err, "[ Serialize ]")
+	return data, errors.Wrap(err, "failed to encode")
 }
 
 // Deserialize deserializes data to specific interface
 func Deserialize(data []byte, to interface{}) error {
 	ch := new(codec.CborHandle)
 	err := codec.NewDecoderBytes(data, ch).Decode(&to)
-	return errors.Wrap(err, "[ Deserialize ]")
+	return errors.Wrap(err, "failed to decode")
 }
 
 // MustSerialize serializes interface, panics on error.
@@ -60,7 +60,7 @@ func MarshalArgs(args ...interface{}) (Arguments, error) {
 
 	argsSerialized, err := Serialize(args)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ MarshalArgs ]")
+		return nil, errors.Wrap(err, "failed to serialize arguments")
 	}
 
 	result := Arguments(argsSerialized)
@@ -75,7 +75,7 @@ func UnMarshalResponse(resp []byte, typeHolders []interface{}) ([]interface{}, e
 
 	err := Deserialize(resp, marshRes)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ UnMarshalResponse ]")
+		return nil, errors.Wrap(err, "failed to deserialize response")
 	}
 
 	return marshRes, nil

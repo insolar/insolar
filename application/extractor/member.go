@@ -29,7 +29,7 @@ func CallResponse(data []byte) (map[string]interface{}, *foundation.Error, error
 	var contractErr *foundation.Error
 	_, err := insolar.UnMarshalResponse(data, []interface{}{&result, &contractErr})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ CallResponse ] Can't unmarshal response")
+		return nil, nil, errors.Wrap(err, "can't unmarshal response")
 	}
 
 	return result, contractErr, nil

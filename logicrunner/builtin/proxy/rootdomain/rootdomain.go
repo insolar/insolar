@@ -1342,13 +1342,13 @@ func (r *RootDomain) AddNewMemberToPublicKeyMapAsImmutable(publicKey string, mem
 }
 
 // CreateHelloWorld is proxy generated method
-func (r *RootDomain) CreateHelloWorld() (string, error) {
+func (r *RootDomain) CreateHelloWorld() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 string
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -1394,13 +1394,13 @@ func (r *RootDomain) CreateHelloWorldNoWait() error {
 }
 
 // CreateHelloWorldAsImmutable is proxy generated method
-func (r *RootDomain) CreateHelloWorldAsImmutable() (string, error) {
+func (r *RootDomain) CreateHelloWorldAsImmutable() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 string
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

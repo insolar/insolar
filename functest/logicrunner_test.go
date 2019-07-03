@@ -90,29 +90,29 @@ type One struct {
 	Friend insolar.Reference
 }
 
-func (r *One) Hello(s string) (string, error) {
+func (r *One) Hello(s string) (map[string]interface {}, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return "1", err
+		return  map[string]interface {}{"message": "1"}, err
 	}
 
 	res, err := friend.Hello(s)
 	if err != nil {
-		return "2", err
+		return  map[string]interface {}{"message": "2"}, err
 	}
 	
 	r.Friend = friend.GetReference()
-	return "Hi, " + s + "! Two said: " + res, nil
+	return map[string]interface {}{"message": "Hi, " + s + "! Two said: " + res["message"].(string)}, nil
 }
 
-func (r *One) Again(s string) (string, error) {
+func (r *One) Again(s string) (map[string]interface {}, error) {
 	res, err := two.GetObject(r.Friend).Hello(s)
 	if err != nil {
-		return "", err
+		return  map[string]interface {}{"message": ""}, err
 	}
 	
-	return "Hi, " + s + "! Two said: " + res, nil
+	return map[string]interface {}{"message": "Hi, " + s + "! Two said: " + res["message"].(string)}, nil
 }
 
 func (r *One)GetFriend() (map[string]interface {}, error) {
@@ -162,9 +162,9 @@ func New() (*Two, error) {
 	return &Two{X:0}, nil;
 }
 
-func (r *Two) Hello(s string) (string, error) {
+func (r *Two) Hello(s string) (map[string]interface {}, error) {
 	r.X ++
-	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
+	return map[string]interface {}{"message": fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)}, nil
 }
 
 func (r *Two) GetPayload() (Payload, error) {
@@ -186,12 +186,12 @@ func (r *Two) GetPayloadString() (string, error) {
 
 	resp := callMethod(t, objectRef, "Hello", "ins")
 	require.Empty(t, resp.Error)
-	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", resp.ExtractedReply)
+	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", resp.ExtractedReply["message"].(string))
 
 	for i := 2; i <= 5; i++ {
 		resp = callMethod(t, objectRef, "Again", "ins")
 		require.Empty(t, resp.Error)
-		require.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), resp.ExtractedReply)
+		require.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), resp.ExtractedReply["message"].(string))
 	}
 
 	resp = callMethod(t, objectRef, "GetFriend")
@@ -203,7 +203,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	for i := 6; i <= 9; i++ {
 		resp = callMethod(t, two, "Hello", "Insolar")
 		require.Empty(t, resp.Error)
-		require.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), resp.ExtractedReply)
+		require.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), resp.ExtractedReply["message"].(string))
 	}
 
 	type Payload struct {

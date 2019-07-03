@@ -32,10 +32,10 @@ func TestMigrationCreateMember(t *testing.T) {
 	addBurnAddress(t)
 	result, err := retryableCreateMember(member, "migration.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
-	ref, ok := result.(map[string]string)["reference"]
+	ref, ok := result["reference"]
 	require.True(t, ok)
 	require.NotEqual(t, "", ref)
-	burnAddress, ok := result.(map[string]string)["burnAddress"]
+	burnAddress, ok := result["burnAddress"]
 	require.True(t, ok)
 	require.NotEqual(t, "fake_ba", burnAddress)
 }

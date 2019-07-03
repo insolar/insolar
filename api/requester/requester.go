@@ -276,13 +276,13 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	verboseInfo(ctx, "Sending GETSEED request ...")
 	seed, err := GetSeed(url)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
+		return nil, errors.Wrap(err, "problem with getting seed")
 	}
 	verboseInfo(ctx, "GETSEED request completed. seed: "+seed)
 
 	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ]")
+		return nil, errors.Wrap(err, "failed to send with seed")
 	}
 
 	return response, nil

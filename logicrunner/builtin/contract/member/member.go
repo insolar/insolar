@@ -90,7 +90,7 @@ type Params struct {
 }
 
 // Call returns response on request. Method for authorized calls.
-func (m *Member) Call(signedRequest []byte) (interface{}, error) {
+func (m *Member) Call(signedRequest []byte) (map[string]interface{}, error) {
 	var signature string
 	var pulseTimeStamp int64
 	var rawRequest []byte
@@ -370,8 +370,7 @@ func (m *Member) createContractMember(key string) (map[string]interface{}, error
 	if err = rootDomain.AddNewMemberToPublicKeyMap(key, created.Reference); err != nil {
 		return nil, fmt.Errorf("failed to add new member to PublicKey's map: %s", err.Error())
 	}
-
-	return created.Reference.String(), nil
+	return map[string]interface{}{"reference": created.Reference.String()}, nil
 }
 func (m *Member) createMember(name string, key string) (*member.Member, error) {
 	if key == "" {
@@ -526,12 +525,12 @@ func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 	return false, deposit.Deposit{}, nil
 }
 
-func (m *Member) getReferenceByPublicKey(publicKey string) (interface{}, error) {
+func (m *Member) getReferenceByPublicKey(publicKey string) (map[string]interface{}, error) {
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 	ref, err := rootDomain.GetMemberByPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get get reference by public key: %s", err.Error())
 	}
-	return ref.String(), nil
+	return map[string]interface{}{"reference": ref.String()}, nil
 
 }

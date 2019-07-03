@@ -144,6 +144,7 @@ func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, m
 
 	return nil
 }
+
 // AddNewMemberToPublicKeyMap adds new member to PublicKeyMap
 func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
 	if _, ok := rd.PublicKeyMap[trimPublicKey(publicKey)]; ok {

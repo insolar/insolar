@@ -220,7 +220,7 @@ func retryableCreateMember(user *user, method string, params map[string]interfac
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		result, err = signedRequest(user, method, params)
 		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
-			return result, errors.Errorf("Error while signed request occured: %s", err)
+			return result, errors.Wrap(err, "error while signed request occurred")
 		}
 		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
 		newUser, nErr := newUserWithKeys()
@@ -239,7 +239,7 @@ func signedRequest(user *user, method string, params map[string]interface{}) (ma
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey, user.pubKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create user config")
 	}
 	var resp requester.ContractAnswer
 	currentIterNum := 1
@@ -252,14 +252,14 @@ func signedRequest(user *user, method string, params map[string]interface{}) (ma
 		})
 
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to send request")
 		}
 
 		resp = requester.ContractAnswer{}
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
 			fmt.Println(string(res))
-			return nil, err
+			return nil, errors.Wrap(err, "failed to unmarshal")
 		}
 
 		break
@@ -267,13 +267,13 @@ func signedRequest(user *user, method string, params map[string]interface{}) (ma
 
 	if resp.Error != nil {
 		if currentIterNum > sendRetryCount {
-			return nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
+			return nil, errors.New("number of retries exceeded. " + resp.Error.Message)
 		}
 
 		return nil, errors.New(resp.Error.Message)
 	} else {
 		if resp.Result == nil {
-			return nil, errors.New("Error and result are nil")
+			return nil, errors.New("error and result are nil")
 		} else {
 			return resp.Result.ContractResult, nil
 		}
@@ -396,8 +396,6 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args 
 		Error   json2.Error         `json:"error"`
 	}{}
 
-	fmt.Println("string(callMethodBody)")
-	fmt.Println(string(callMethodBody))
 	err = json.Unmarshal(callMethodBody, &callRes)
 	require.NoError(t, err)
 	require.Empty(t, callRes.Error)
