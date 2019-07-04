@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -129,7 +130,7 @@ func processError(err error, extraMsg string, resp *requester.ContractAnswer, in
 func writeResponse(insLog assert.TestingT, response http.ResponseWriter, contractAnswer *requester.ContractAnswer) {
 	res, err := json.MarshalIndent(*contractAnswer, "", "    ")
 	if err != nil {
-		res = []byte(`{"jsonrpc": "2.0", "id": 1, "error": "can't marshal ContractAnswer to json; error: '` + err.Error() + `'"}`)
+		res = []byte(`{"jsonrpc": "2.0", "id": ` + strconv.Itoa(contractAnswer.ID) + `, "error": "can't marshal ContractAnswer to json; error: '` + err.Error() + `'"}`)
 	}
 	response.Header().Add("Content-Type", "application/json")
 	_, err = response.Write(res)
