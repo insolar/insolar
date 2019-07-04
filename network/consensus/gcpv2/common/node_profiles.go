@@ -109,6 +109,7 @@ type BriefCandidateProfile interface {
 	GetJoinerSignature() common.SignatureHolder
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.CandidateProfile -o ../testutils -s _mock.go
 type CandidateProfile interface {
 	BriefCandidateProfile
 
