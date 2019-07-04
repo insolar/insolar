@@ -24,6 +24,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"regexp"
+	"runtime"
 	"strings"
 
 	"io/ioutil"
@@ -227,6 +229,20 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 	if err != nil {
 		return nil, err
 	}
+
+	var caller string
+	fpcs := make([]uintptr, 1)
+	for i := 2; i < 10; i++ {
+		if n := runtime.Callers(i, fpcs); n == 0 {
+			break
+		}
+		caller = runtime.FuncForPC(fpcs[0] - 1).Name()
+		if ok, _ := regexp.MatchString(`\.Test`, caller); ok {
+			break
+		}
+		caller = ""
+	}
+
 	var resp requester.ContractAnswer
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
@@ -235,6 +251,7 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 			ID:      1,
 			Method:  "call.api",
 			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
+			Test:    caller,
 		})
 
 		if err != nil {
