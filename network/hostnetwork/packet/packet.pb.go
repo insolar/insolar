@@ -6,18 +6,17 @@ package packet
 import (
 	bytes "bytes"
 	fmt "fmt"
-	io "io"
-	math "math"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 	pulse "github.com/insolar/insolar/insolar/pulse"
 	github_com_insolar_insolar_network_consensusv1_packets "github.com/insolar/insolar/network/consensusv1/packets"
 	github_com_insolar_insolar_network_hostnetwork_host "github.com/insolar/insolar/network/hostnetwork/host"
+	io "io"
+	math "math"
+	reflect "reflect"
+	strconv "strconv"
+	strings "strings"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1776,7 +1775,7 @@ func init() {
 	proto.RegisterType((*PulseRequest)(nil), "packet.PulseRequest")
 	proto.RegisterType((*BootstrapRequest)(nil), "packet.BootstrapRequest")
 	proto.RegisterType((*AuthorizeRequest)(nil), "packet.AuthorizeRequest")
-	proto.RegisterType((*RegisterRequest)(nil), "packet.RegisterIncomingRequest")
+	proto.RegisterType((*RegisterRequest)(nil), "packet.RegisterRequest")
 	proto.RegisterType((*GenesisRequest)(nil), "packet.GenesisRequest")
 	proto.RegisterType((*SignCertRequest)(nil), "packet.SignCertRequest")
 	proto.RegisterType((*RPCResponse)(nil), "packet.RPCResponse")
@@ -3408,7 +3407,7 @@ func (this *RegisterRequest) GoString() string {
 		return "nil"
 	}
 	s := make([]string, 0, 7)
-	s = append(s, "&packet.RegisterIncomingRequest{")
+	s = append(s, "&packet.RegisterRequest{")
 	s = append(s, "SessionID: "+fmt.Sprintf("%#v", this.SessionID)+",\n")
 	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
 	s = append(s, "JoinClaim: "+fmt.Sprintf("%#v", this.JoinClaim)+",\n")
@@ -5509,7 +5508,7 @@ func (this *Request_Register) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Request_Register{`,
-		`Register:` + strings.Replace(fmt.Sprintf("%v", this.Register), "RegisterIncomingRequest", "RegisterIncomingRequest", 1) + `,`,
+		`Register:` + strings.Replace(fmt.Sprintf("%v", this.Register), "RegisterRequest", "RegisterRequest", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5715,7 +5714,7 @@ func (this *RegisterRequest) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&RegisterIncomingRequest{`,
+	s := strings.Join([]string{`&RegisterRequest{`,
 		`SessionID:` + fmt.Sprintf("%v", this.SessionID) + `,`,
 		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
 		`JoinClaim:` + fmt.Sprintf("%v", this.JoinClaim) + `,`,
@@ -7744,10 +7743,10 @@ func (m *RegisterRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: RegisterIncomingRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: RegisterRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RegisterIncomingRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: RegisterRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
