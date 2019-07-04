@@ -579,7 +579,7 @@ type Two struct {
 func New() (*Two, error) {
 	return &Two{}, nil
 }
-func (r *Two) Hello() (map[string]interface {}, error) {
+func (r *Two) Hello() (*map[string]interface {}, error) {
 	return nil, nil
 }
 `
@@ -1092,8 +1092,8 @@ func NewWithNumber(num int) (*One, error) {
 	return &One{Number: num}, nil
 }
 
-func (c *One) Get() (int, error) {
-	return c.Number, nil
+func (c *One) Get() (map[string]interface {}, error) {
+	return map[string]interface {}{"result": c.Number}, nil
 }
 `
 
@@ -1104,12 +1104,12 @@ func (c *One) Get() (int, error) {
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objRef, "Get")
 	require.Empty(t, result.Error)
-	require.Equal(t, float64(0), result.ExtractedReply)
+	require.Equal(t, float64(0), result.ExtractedReply["result"].(float64))
 
 	objRef = callConstructor(t, prototypeRef, "NewWithNumber", 12)
 
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result = callMethod(t, objRef, "Get")
 	require.Empty(t, result.Error)
-	require.Equal(t, float64(12), result.ExtractedReply)
+	require.Equal(t, float64(12), result.ExtractedReply["result"].(float64))
 }

@@ -86,7 +86,7 @@ func TestCallResponse_UnmarshalError(t *testing.T) {
 
 	result, contractErr, err := CallResponse(data)
 
-	require.Contains(t, err.Error(), "Can't unmarshal response")
+	require.Contains(t, err.Error(), "can't unmarshal response")
 	require.Nil(t, contractErr)
 	require.Nil(t, result)
 }
