@@ -30,7 +30,7 @@ type MachinesManager interface {
 }
 
 type mmanager struct {
-	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
+	Executors [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
 }
 
 func NewMachinesManager() MachinesManager {

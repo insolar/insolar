@@ -34,8 +34,8 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 )
 
 func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMock {
@@ -111,7 +111,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 		cReq.ResultMutex.Lock()
 		for _, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
-				Reply:    &reply.CallMethod{},
+				Reply: &reply.CallMethod{},
 			}
 		}
 		cReq.ResultMutex.Unlock()
@@ -151,7 +151,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 		cReq.ResultMutex.Lock()
 		for _, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
-				Reply:    nil,
+				Reply: nil,
 			}
 		}
 		cReq.ResultMutex.Unlock()
@@ -280,7 +280,7 @@ func TestReceiveResult(t *testing.T) {
 	var reqHash [insolar.RecordHashSize]byte
 	copy(reqHash[:], reqRef.Record().Hash())
 
-	msg := &message.ReturnResults{ RequestRef: reqRef }
+	msg := &message.ReturnResults{RequestRef: reqRef}
 	parcel := testutils.NewParcelMock(mc).MessageMock.Return(
 		msg,
 	)
