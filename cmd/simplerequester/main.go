@@ -106,6 +106,11 @@ func main() {
 
 		privateKey := new(ecdsa.PrivateKey)
 		privateKey.PublicKey.Curve = elliptic.P256K()
+		if 8*len(i.Bytes()) != privateKey.Params().BitSize {
+			fmt.Println("invalid length, need %d bits", privateKey.Params().BitSize)
+			os.Exit(1)
+		}
+
 		privateKey.D = new(big.Int).SetBytes(i.Bytes())
 
 		privateKey.PublicKey.X, privateKey.PublicKey.Y = privateKey.PublicKey.Curve.ScalarBaseMult(i.Bytes())
