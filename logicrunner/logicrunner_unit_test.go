@@ -1250,6 +1250,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 			log.Debug("mutableChan 1")
 			select {
 			case _ = <-mutableChan:
+
 				log.Info("mutable got notifications")
 				return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
 			case <-time.After(2 * time.Minute):
@@ -1282,9 +1283,6 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		}
 		return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
 	})
-
-	// do not start ledger checking for requests
-	s.am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 
 	es.Broker.Put(s.ctx, true, mutableTranscript)
 	s.True(es.Broker.processActive)
@@ -1323,9 +1321,6 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 
 	s.re.ExecuteAndSaveMock.Return(&reply.CallMethod{Result: []byte{1, 2, 3}}, nil)
 	s.re.SendReplyMock.Return()
-
-	// do not start ledger checking for requests
-	s.am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 
 	es.Broker.Put(s.ctx, true, immutableTranscript1)
 
