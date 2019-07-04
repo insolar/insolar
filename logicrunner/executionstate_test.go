@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 )
@@ -37,11 +38,10 @@ func NewBroker(t *testing.T, ctx context.Context, count int) *ExecutionBroker {
 	for i := 0; i < count; i++ {
 		reqRef := gen.Reference()
 		br.Put(ctx, false, &Transcript{
-			LogicContext: &insolar.LogicCallContext{
-				Immutable: false,
-			},
-			Context:    ctx,
-			RequestRef: &reqRef,
+			LogicContext: &insolar.LogicCallContext{},
+			Context:      ctx,
+			RequestRef:   &reqRef,
+			Request:      &record.IncomingRequest{},
 		})
 	}
 	return br

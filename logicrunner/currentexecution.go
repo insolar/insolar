@@ -60,7 +60,6 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 		Pulse:           *pulse,
 		TraceID:         inslogger.TraceID(ctx),
 		CallerPrototype: &msg.CallerPrototype,
-		Immutable:       msg.Immutable,
 	}
 	sender := parcel.GetSender()
 
@@ -146,7 +145,7 @@ func (ces *CurrentExecutionList) GetByTraceID(traceid string) *Transcript {
 func (ces *CurrentExecutionList) GetMutable() *Transcript {
 	ces.lock.RLock()
 	for _, ce := range ces.executions {
-		if !ce.LogicContext.Immutable {
+		if !ce.Request.Immutable {
 			ces.lock.RUnlock()
 			return ce
 		}
