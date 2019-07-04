@@ -119,14 +119,14 @@ func NewClient(sender bus.Sender) *client { // nolint
 	}
 }
 
-// RegisterRequest sends message for request registration,
+// RegisterIncomingRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterRequest(
+func (m *client) RegisterIncomingRequest(
 	ctx context.Context, request record.IncomingRequest,
 ) (*insolar.ID, error) {
 	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterRequest")
-	instrumenter := instrument(ctx, "RegisterRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterIncomingRequest")
+	instrumenter := instrument(ctx, "RegisterIncomingRequest").err(&err)
 	defer func() {
 		if err != nil {
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
@@ -143,13 +143,13 @@ func (m *client) RegisterRequest(
 	virtRec := record.Wrap(request)
 	buf, err := virtRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterRequest: failed to marshal record")
+		return nil, errors.Wrap(err, "RegisterIncomingRequest: failed to marshal record")
 	}
 
 	h := m.PCS.ReferenceHasher()
 	_, err = h.Write(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterRequest: failed to calculate hash")
+		return nil, errors.Wrap(err, "RegisterIncomingRequest: failed to calculate hash")
 	}
 	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
@@ -158,7 +158,7 @@ func (m *client) RegisterRequest(
 	})
 
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterRequest: failed to create message")
+		return nil, errors.Wrap(err, "RegisterIncomingRequest: failed to create message")
 	}
 
 	var recRef *insolar.Reference
@@ -168,7 +168,7 @@ func (m *client) RegisterRequest(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
 		recRef = insolar.NewReference(recID)
 	default:
-		return nil, errors.New("RegisterRequest: not supported call type " + request.CallType.String())
+		return nil, errors.New("RegisterIncomingRequest: not supported call type " + request.CallType.String())
 	}
 
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
@@ -180,16 +180,16 @@ func (m *client) RegisterRequest(
 	}
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterRequest: failed to unmarshal reply")
+		return nil, errors.Wrap(err, "RegisterIncomingRequest: failed to unmarshal reply")
 	}
 
 	switch p := pl.(type) {
-	case *payload.ID:
-		return &p.ID, nil
+	case *payload.RequestInfo:
+		return &p.RequestID, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
 	default:
-		return nil, fmt.Errorf("RegisterRequest: unexpected reply: %#v", p)
+		return nil, fmt.Errorf("RegisterIncomingRequest: unexpected reply: %#v", p)
 	}
 }
 

@@ -86,10 +86,10 @@ type ClientMock struct {
 	InjectObjectDescriptorPreCounter uint64
 	InjectObjectDescriptorMock       mClientMockInjectObjectDescriptor
 
-	RegisterRequestFunc       func(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error)
-	RegisterRequestCounter    uint64
-	RegisterRequestPreCounter uint64
-	RegisterRequestMock       mClientMockRegisterRequest
+	RegisterIncomingRequestFunc       func(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error)
+	RegisterIncomingRequestCounter    uint64
+	RegisterIncomingRequestPreCounter uint64
+	RegisterIncomingRequestMock       mClientMockRegisterIncomingRequest
 
 	RegisterResultFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)
 	RegisterResultCounter    uint64
@@ -133,7 +133,7 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.InjectCodeDescriptorMock = mClientMockInjectCodeDescriptor{mock: m}
 	m.InjectFinishMock = mClientMockInjectFinish{mock: m}
 	m.InjectObjectDescriptorMock = mClientMockInjectObjectDescriptor{mock: m}
-	m.RegisterRequestMock = mClientMockRegisterRequest{mock: m}
+	m.RegisterIncomingRequestMock = mClientMockRegisterIncomingRequest{mock: m}
 	m.RegisterResultMock = mClientMockRegisterResult{mock: m}
 	m.RegisterValidationMock = mClientMockRegisterValidation{mock: m}
 	m.StateMock = mClientMockState{mock: m}
@@ -2018,92 +2018,92 @@ func (m *ClientMock) InjectObjectDescriptorFinished() bool {
 	return true
 }
 
-type mClientMockRegisterRequest struct {
+type mClientMockRegisterIncomingRequest struct {
 	mock              *ClientMock
-	mainExpectation   *ClientMockRegisterRequestExpectation
-	expectationSeries []*ClientMockRegisterRequestExpectation
+	mainExpectation   *ClientMockRegisterIncomingRequestExpectation
+	expectationSeries []*ClientMockRegisterIncomingRequestExpectation
 }
 
-type ClientMockRegisterRequestExpectation struct {
-	input  *ClientMockRegisterRequestInput
-	result *ClientMockRegisterRequestResult
+type ClientMockRegisterIncomingRequestExpectation struct {
+	input  *ClientMockRegisterIncomingRequestInput
+	result *ClientMockRegisterIncomingRequestResult
 }
 
-type ClientMockRegisterRequestInput struct {
+type ClientMockRegisterIncomingRequestInput struct {
 	p  context.Context
 	p1 record.IncomingRequest
 }
 
-type ClientMockRegisterRequestResult struct {
+type ClientMockRegisterIncomingRequestResult struct {
 	r  *insolar.ID
 	r1 error
 }
 
-//Expect specifies that invocation of Client.RegisterRequest is expected from 1 to Infinity times
-func (m *mClientMockRegisterRequest) Expect(p context.Context, p1 record.IncomingRequest) *mClientMockRegisterRequest {
-	m.mock.RegisterRequestFunc = nil
+//Expect specifies that invocation of Client.RegisterIncomingRequest is expected from 1 to Infinity times
+func (m *mClientMockRegisterIncomingRequest) Expect(p context.Context, p1 record.IncomingRequest) *mClientMockRegisterIncomingRequest {
+	m.mock.RegisterIncomingRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockRegisterRequestExpectation{}
+		m.mainExpectation = &ClientMockRegisterIncomingRequestExpectation{}
 	}
-	m.mainExpectation.input = &ClientMockRegisterRequestInput{p, p1}
+	m.mainExpectation.input = &ClientMockRegisterIncomingRequestInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of Client.RegisterRequest
-func (m *mClientMockRegisterRequest) Return(r *insolar.ID, r1 error) *ClientMock {
-	m.mock.RegisterRequestFunc = nil
+//Return specifies results of invocation of Client.RegisterIncomingRequest
+func (m *mClientMockRegisterIncomingRequest) Return(r *insolar.ID, r1 error) *ClientMock {
+	m.mock.RegisterIncomingRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockRegisterRequestExpectation{}
+		m.mainExpectation = &ClientMockRegisterIncomingRequestExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockRegisterRequestResult{r, r1}
+	m.mainExpectation.result = &ClientMockRegisterIncomingRequestResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Client.RegisterRequest is expected once
-func (m *mClientMockRegisterRequest) ExpectOnce(p context.Context, p1 record.IncomingRequest) *ClientMockRegisterRequestExpectation {
-	m.mock.RegisterRequestFunc = nil
+//ExpectOnce specifies that invocation of Client.RegisterIncomingRequest is expected once
+func (m *mClientMockRegisterIncomingRequest) ExpectOnce(p context.Context, p1 record.IncomingRequest) *ClientMockRegisterIncomingRequestExpectation {
+	m.mock.RegisterIncomingRequestFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &ClientMockRegisterRequestExpectation{}
-	expectation.input = &ClientMockRegisterRequestInput{p, p1}
+	expectation := &ClientMockRegisterIncomingRequestExpectation{}
+	expectation.input = &ClientMockRegisterIncomingRequestInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *ClientMockRegisterRequestExpectation) Return(r *insolar.ID, r1 error) {
-	e.result = &ClientMockRegisterRequestResult{r, r1}
+func (e *ClientMockRegisterIncomingRequestExpectation) Return(r *insolar.ID, r1 error) {
+	e.result = &ClientMockRegisterIncomingRequestResult{r, r1}
 }
 
-//Set uses given function f as a mock of Client.RegisterRequest method
-func (m *mClientMockRegisterRequest) Set(f func(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error)) *ClientMock {
+//Set uses given function f as a mock of Client.RegisterIncomingRequest method
+func (m *mClientMockRegisterIncomingRequest) Set(f func(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.RegisterRequestFunc = f
+	m.mock.RegisterIncomingRequestFunc = f
 	return m.mock
 }
 
-//RegisterRequest implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) RegisterRequest(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error) {
-	counter := atomic.AddUint64(&m.RegisterRequestPreCounter, 1)
-	defer atomic.AddUint64(&m.RegisterRequestCounter, 1)
+//RegisterIncomingRequest implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) RegisterIncomingRequest(p context.Context, p1 record.IncomingRequest) (r *insolar.ID, r1 error) {
+	counter := atomic.AddUint64(&m.RegisterIncomingRequestPreCounter, 1)
+	defer atomic.AddUint64(&m.RegisterIncomingRequestCounter, 1)
 
-	if len(m.RegisterRequestMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RegisterRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.RegisterRequest. %v %v", p, p1)
+	if len(m.RegisterIncomingRequestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RegisterIncomingRequestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.RegisterIncomingRequest. %v %v", p, p1)
 			return
 		}
 
-		input := m.RegisterRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockRegisterRequestInput{p, p1}, "Client.RegisterRequest got unexpected parameters")
+		input := m.RegisterIncomingRequestMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClientMockRegisterIncomingRequestInput{p, p1}, "Client.RegisterIncomingRequest got unexpected parameters")
 
-		result := m.RegisterRequestMock.expectationSeries[counter-1].result
+		result := m.RegisterIncomingRequestMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.RegisterRequest")
+			m.t.Fatal("No results are set for the ClientMock.RegisterIncomingRequest")
 			return
 		}
 
@@ -2113,16 +2113,16 @@ func (m *ClientMock) RegisterRequest(p context.Context, p1 record.IncomingReques
 		return
 	}
 
-	if m.RegisterRequestMock.mainExpectation != nil {
+	if m.RegisterIncomingRequestMock.mainExpectation != nil {
 
-		input := m.RegisterRequestMock.mainExpectation.input
+		input := m.RegisterIncomingRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockRegisterRequestInput{p, p1}, "Client.RegisterRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ClientMockRegisterIncomingRequestInput{p, p1}, "Client.RegisterIncomingRequest got unexpected parameters")
 		}
 
-		result := m.RegisterRequestMock.mainExpectation.result
+		result := m.RegisterIncomingRequestMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.RegisterRequest")
+			m.t.Fatal("No results are set for the ClientMock.RegisterIncomingRequest")
 		}
 
 		r = result.r
@@ -2131,39 +2131,39 @@ func (m *ClientMock) RegisterRequest(p context.Context, p1 record.IncomingReques
 		return
 	}
 
-	if m.RegisterRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.RegisterRequest. %v %v", p, p1)
+	if m.RegisterIncomingRequestFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.RegisterIncomingRequest. %v %v", p, p1)
 		return
 	}
 
-	return m.RegisterRequestFunc(p, p1)
+	return m.RegisterIncomingRequestFunc(p, p1)
 }
 
-//RegisterRequestMinimockCounter returns a count of ClientMock.RegisterRequestFunc invocations
-func (m *ClientMock) RegisterRequestMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RegisterRequestCounter)
+//RegisterIncomingRequestMinimockCounter returns a count of ClientMock.RegisterIncomingRequestFunc invocations
+func (m *ClientMock) RegisterIncomingRequestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RegisterIncomingRequestCounter)
 }
 
-//RegisterRequestMinimockPreCounter returns the value of ClientMock.RegisterRequest invocations
-func (m *ClientMock) RegisterRequestMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RegisterRequestPreCounter)
+//RegisterIncomingRequestMinimockPreCounter returns the value of ClientMock.RegisterIncomingRequest invocations
+func (m *ClientMock) RegisterIncomingRequestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RegisterIncomingRequestPreCounter)
 }
 
-//RegisterRequestFinished returns true if mock invocations count is ok
-func (m *ClientMock) RegisterRequestFinished() bool {
+//RegisterIncomingRequestFinished returns true if mock invocations count is ok
+func (m *ClientMock) RegisterIncomingRequestFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RegisterRequestMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RegisterRequestCounter) == uint64(len(m.RegisterRequestMock.expectationSeries))
+	if len(m.RegisterIncomingRequestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RegisterIncomingRequestCounter) == uint64(len(m.RegisterIncomingRequestMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.RegisterRequestMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RegisterRequestCounter) > 0
+	if m.RegisterIncomingRequestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RegisterIncomingRequestCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.RegisterRequestFunc != nil {
-		return atomic.LoadUint64(&m.RegisterRequestCounter) > 0
+	if m.RegisterIncomingRequestFunc != nil {
+		return atomic.LoadUint64(&m.RegisterIncomingRequestCounter) > 0
 	}
 
 	return true
@@ -2814,8 +2814,8 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.InjectObjectDescriptor")
 	}
 
-	if !m.RegisterRequestFinished() {
-		m.t.Fatal("Expected call to ClientMock.RegisterRequest")
+	if !m.RegisterIncomingRequestFinished() {
+		m.t.Fatal("Expected call to ClientMock.RegisterIncomingRequest")
 	}
 
 	if !m.RegisterResultFinished() {
@@ -2903,8 +2903,8 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.InjectObjectDescriptor")
 	}
 
-	if !m.RegisterRequestFinished() {
-		m.t.Fatal("Expected call to ClientMock.RegisterRequest")
+	if !m.RegisterIncomingRequestFinished() {
+		m.t.Fatal("Expected call to ClientMock.RegisterIncomingRequest")
 	}
 
 	if !m.RegisterResultFinished() {
@@ -2950,7 +2950,7 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.InjectCodeDescriptorFinished()
 		ok = ok && m.InjectFinishFinished()
 		ok = ok && m.InjectObjectDescriptorFinished()
-		ok = ok && m.RegisterRequestFinished()
+		ok = ok && m.RegisterIncomingRequestFinished()
 		ok = ok && m.RegisterResultFinished()
 		ok = ok && m.RegisterValidationFinished()
 		ok = ok && m.StateFinished()
@@ -3015,8 +3015,8 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to ClientMock.InjectObjectDescriptor")
 			}
 
-			if !m.RegisterRequestFinished() {
-				m.t.Error("Expected call to ClientMock.RegisterRequest")
+			if !m.RegisterIncomingRequestFinished() {
+				m.t.Error("Expected call to ClientMock.RegisterIncomingRequest")
 			}
 
 			if !m.RegisterResultFinished() {
@@ -3099,7 +3099,7 @@ func (m *ClientMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.RegisterRequestFinished() {
+	if !m.RegisterIncomingRequestFinished() {
 		return false
 	}
 

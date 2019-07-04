@@ -129,3 +129,12 @@ message FilamentSegment {
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     repeated record.CompositeFilamentRecord Records = 21 [(gogoproto.nullable) = false];
 }
+
+message RequestInfo {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Request = 22;
+    bytes Result = 23;
+}
