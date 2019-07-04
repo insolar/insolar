@@ -54,7 +54,7 @@ type TimeoutSuite struct {
 func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
-	suite.api.SeedManager.Add(*seed)
+	suite.api.SeedManager.Add(*seed, 0)
 
 	close(suite.delay)
 	suite.api.timeout = 60 * time.Second
@@ -84,7 +84,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
-	suite.api.SeedManager.Add(*seed)
+	suite.api.SeedManager.Add(*seed, 0)
 
 	suite.api.timeout = 1 * time.Second
 

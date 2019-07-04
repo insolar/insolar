@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/insolar"
 )
 
 func TestSeedFromBytes_BadInputSize(t *testing.T) {
@@ -55,7 +56,8 @@ func getSeed(t *testing.T) Seed {
 func TestSeedManager_Add(t *testing.T) {
 	sm := NewSpecified(time.Duration(1*time.Minute), DefaultCleanPeriod)
 	seed := getSeed(t)
-	sm.Add(seed)
+	sm.Add(seed, 5)
+	require.Equal(t, insolar.PulseNumber(5), sm.seedPool[seed].pulse)
 	require.True(t, sm.Exists(seed))
 }
 
@@ -63,8 +65,8 @@ func TestSeedManager_ExpiredSeed(t *testing.T) {
 	expTime := time.Duration(1 * time.Minute)
 	sm := NewSpecified(expTime, DefaultCleanPeriod)
 	seed := getSeed(t)
-	sm.Add(seed)
-	sm.seedPool[seed] = time.Now().UnixNano() - 1000
+	sm.Add(seed, 0)
+	sm.seedPool[seed] = storedSeed{time.Now().UnixNano() - 1000, 0}
 	require.False(t, sm.Exists(seed))
 }
 
@@ -72,9 +74,9 @@ func TestSeedManager_ExistsThanExpiredSeed(t *testing.T) {
 	seed := getSeed(t)
 	ttl := time.Duration(1 * time.Minute)
 	sm := NewSpecified(ttl, DefaultCleanPeriod)
-	sm.Add(seed)
+	sm.Add(seed, 0)
 	require.True(t, sm.Exists(seed))
-	sm.seedPool[seed] = time.Now().UnixNano() - 1000
+	sm.seedPool[seed] = storedSeed{time.Now().UnixNano() - 1000, 0}
 	require.False(t, sm.Exists(seed))
 }
 
@@ -82,8 +84,8 @@ func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
 	expTime := time.Duration(1 * time.Minute)
 	sm := NewSpecified(expTime, 1*time.Minute)
 	seed := getSeed(t)
-	sm.Add(seed)
-	sm.seedPool[seed] = time.Now().UnixNano() - 1000
+	sm.Add(seed, 0)
+	sm.seedPool[seed] = storedSeed{time.Now().UnixNano() - 1000, 0}
 	require.False(t, sm.Exists(seed))
 }
 
@@ -103,7 +105,7 @@ func TestRace(t *testing.T) {
 			numIterations := 300
 			for j := 0; j < numIterations; j++ {
 				seeds = append(seeds, getSeed(t))
-				sm.Add(seeds[len(seeds)-1])
+				sm.Add(seeds[len(seeds)-1], 0)
 			}
 			<-time.After(cleanPeriod)
 			for j := 0; j < numIterations; j++ {

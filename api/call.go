@@ -65,24 +65,24 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	return body, nil
 }
 
-func (ar *Runner) checkSeed(paramsSeed string) error {
+func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
 	if err != nil {
-		return errors.New("[ checkSeed ] Failed to decode seed from string")
+		return 0, errors.New("[ checkSeed ] Failed to decode seed from string")
 	}
 	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {
-		return errors.New("[ checkSeed ] Bad seed param")
+		return 0, errors.New("[ checkSeed ] Bad seed param")
 	}
 
-	if !ar.SeedManager.Exists(*seed) {
-		return errors.New("[ checkSeed ] Incorrect seed")
+	if pulse, ok := ar.SeedManager.Pop(*seed); ok {
+		return pulse, nil
 	}
 
-	return nil
+	return 0, errors.New("[ checkSeed ] Incorrect seed")
 }
 
-func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64) (interface{}, error) {
+func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
 	defer span.End()
 
@@ -101,6 +101,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 		reference,
 		"Call",
 		[]interface{}{requestArgs},
+		seedPulse,
 	)
 
 	if err != nil {
@@ -197,7 +198,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		if err := ar.checkSeed(contractRequest.Params.Seed); err != nil {
+		seedPulse, err := ar.checkSeed(contractRequest.Params.Seed)
+		if err != nil {
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
@@ -205,7 +207,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, *contractRequest, rawBody, signature, 0)
+			result, err = ar.makeCall(ctx, *contractRequest, rawBody, signature, 0, seedPulse)
 			ch <- nil
 		}()
 		select {
