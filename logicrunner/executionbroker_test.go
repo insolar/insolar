@@ -378,10 +378,10 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	b := NewExecutionBroker(methodsMock)
 
 	for i := 0; i < 4; i++ {
-		b.mutableLock.Lock()
+		b.stateLock.Lock()
 		b.immutable.Push(&Transcript{})
 		b.mutable.Push(&Transcript{})
-		b.mutableLock.Unlock()
+		b.stateLock.Unlock()
 	}
 
 	rotationResults := b.Rotate(10)
@@ -393,9 +393,9 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	s.False(rotationResults.LedgerHasMoreRequests)
 
 	for i := 0; i < 4; i++ {
-		b.mutableLock.Lock()
+		b.stateLock.Lock()
 		b.immutable.Push(&Transcript{})
-		b.mutableLock.Unlock()
+		b.stateLock.Unlock()
 	}
 
 	rotationResults = b.Rotate(10)

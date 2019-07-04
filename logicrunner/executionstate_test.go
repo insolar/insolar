@@ -53,7 +53,7 @@ func newExecutionStateLength(t *testing.T, ctx context.Context, count int, list 
 	es := NewExecutionState(gen.Reference())
 	es.Broker = NewBroker(t, ctx, count)
 	if list != nil {
-		es.CurrentList = list
+		es.Broker.currentList = list
 	}
 	if pending != nil {
 		es.pending = *pending
