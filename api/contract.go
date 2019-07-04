@@ -202,13 +202,16 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 		return errors.Wrap(err, "CallMethod failed with error")
 	}
 
+	inslog.Infof("callMethodReply: %v", callMethodReply)
 	re.Reply = *callMethodReply.(*reply.CallMethod)
+	inslog.Infof("re.Reply: %v", string(re.Reply.Result))
 
 	var extractedReply map[string]interface{}
 	extractedReply, _, err = extractor.CallResponse(re.Reply.Result)
 	if err != nil {
 		return errors.Wrap(err, "Can't extract response")
 	}
+	inslog.Infof("extractedReply: %v", extractedReply)
 
 	if len(extractedReply) == 1 {
 		for k, v := range extractedReply {

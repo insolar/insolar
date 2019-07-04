@@ -156,9 +156,13 @@ func getBalance(caller *user, reference string) (*big.Int, []map[string]string, 
 func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
+	fmt.Println("postResp")
+	fmt.Println(postResp)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
+	fmt.Println("body")
+	fmt.Println(string(body))
 	require.NoError(t, err)
 	return body
 }

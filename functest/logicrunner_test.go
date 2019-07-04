@@ -19,6 +19,7 @@
 package functest
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -57,6 +58,12 @@ func (c *One) Dec() (map[string]interface {}, error) {
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objectRef, "Get")
 	require.Empty(t, result.Error)
+	s, err := hex.DecodeString(string(result.Reply.Result))
+	fmt.Println(result)
+	fmt.Println(string(result.Reply.Result))
+	fmt.Println("DecodeString")
+	fmt.Println(err)
+	fmt.Println(string(s))
 	require.Equal(t, float64(0), result.ExtractedReply["result"])
 
 	result = callMethod(t, objectRef, "Inc")
