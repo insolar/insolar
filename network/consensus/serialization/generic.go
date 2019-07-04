@@ -53,7 +53,6 @@ package serialization
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"reflect"
 	"strings"
@@ -82,8 +81,6 @@ func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) e
 	v := reflect.ValueOf(data)
 	vt := v.Type()
 
-	fmt.Println(vt.NumField())
-
 	for i := 0; i < vt.NumField(); i++ {
 
 		fvt := vt.Field(i)
@@ -98,11 +95,17 @@ func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) e
 			continue
 		}
 
-		if shouldGenerateSignature(fvt) && signer != nil {
+		if shouldGenerateSignature(fvt) /* TODO: */ && signer != nil {
 			sd := signer.GetSignOfData(checksumBuffer)
 			sigBytes := sd.GetSignature().AsBytes()
-			bits := common.NewBits512FromBytes(sigBytes)
-			fv.Set(reflect.ValueOf(bits))
+			bits := *common.NewBits512FromBytes(sigBytes)
+
+			bs := [64]byte(bits)
+
+			reflect.Copy(fv, reflect.ValueOf(bs))
+			// signPtr := fv.Interface()
+			// signBits := signPtr.(common.Bits512)
+			// fv.Set(sigBytes)
 		}
 
 		err := writeValue(fv, fieldBuf, signer)
@@ -133,6 +136,10 @@ func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) e
 func writeValue(fv reflect.Value, writer io.Writer, signer common.DataSigner) error {
 	var err error
 
+	if fv.Kind() == reflect.Slice {
+		return writeSlice(fv, writer, signer)
+	}
+
 	val := fv.Interface()
 	switch v := val.(type) {
 	case SerializerTo:
@@ -142,6 +149,19 @@ func writeValue(fv reflect.Value, writer io.Writer, signer common.DataSigner) er
 	}
 
 	return err
+}
+
+func writeSlice(fv reflect.Value, writer io.Writer, signer common.DataSigner) error {
+	for i := 0; i < fv.Len(); i++ {
+		v := fv.Index(i)
+
+		err := writeValue(v, writer, signer)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func shouldIgnoreInSerialization(field reflect.StructField) bool {
@@ -168,5 +188,5 @@ func isOptional(field reflect.StructField) bool {
 		return false
 	}
 
-	return strings.Contains(tag, "optional=")
+	return strings.Contains(tag, "optional=") || strings.Contains(tag, "Packet=")
 }

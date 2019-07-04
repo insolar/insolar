@@ -52,9 +52,12 @@ package serialization
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
 
@@ -102,6 +105,26 @@ func TestNodeBriefIntro_SerializeTo(t *testing.T) {
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
 	err := nodeBriefIntro.SerializeTo(buf, nil)
+	require.NoError(t, err)
+
+	bs := buf.Bytes()
+	fmt.Println(bs)
+	require.EqualValues(t, 137, len(bs))
+}
+
+func TestGlobulaConsensusProtocolV2Packet_SerializeTo(t *testing.T) {
+	packet := GlobulaConsensusProtocolV2Packet{}
+
+	processor := platformpolicy.NewKeyProcessor()
+	key, _ := processor.GeneratePrivateKey()
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	signer := adapters.NewECDSADataSigner(
+		adapters.NewSha3512Digester(scheme),
+		adapters.NewECDSADigestSigner(key.(*ecdsa.PrivateKey), scheme),
+	)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	err := packet.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
 	bs := buf.Bytes()

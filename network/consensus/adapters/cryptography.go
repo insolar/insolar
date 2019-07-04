@@ -151,6 +151,28 @@ func (ds *ECDSADigestSigner) GetSignMethod() common.SignMethod {
 	return SECP256r1Sign
 }
 
+type ECDSADataSigner struct {
+	common.DataDigester
+	common.DigestSigner
+}
+
+func NewECDSADataSigner(dataDigester common.DataDigester, digestSigner common.DigestSigner) *ECDSADataSigner {
+	return &ECDSADataSigner{
+		DataDigester: dataDigester,
+		DigestSigner: digestSigner,
+	}
+}
+
+func (ds *ECDSADataSigner) GetSignOfData(reader io.Reader) common.SignedDigest {
+	digest := ds.DataDigester.GetDigestOf(reader)
+	signature := ds.DigestSigner.SignDigest(digest)
+	return common.NewSignedDigest(digest, signature)
+}
+
+func (ds *ECDSADataSigner) GetSignatureMethod() common.SignatureMethod {
+	return ds.DataDigester.GetDigestMethod().SignedBy(ds.DigestSigner.GetSignMethod())
+}
+
 type ECDSASignatureVerifier struct {
 	digester  *Sha3512Digester
 	scheme    insolar.PlatformCryptographyScheme
