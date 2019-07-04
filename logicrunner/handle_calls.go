@@ -153,7 +153,7 @@ func (h *HandleCall) handleActual(
 		} else {
 			inslogger.FromContext(ctx).Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
 		}
-		// and return RegisterIncomingRequest as usual
+		// and return the reply as usual
 	} else {
 		// it's 'fast' operation, so we don't need to check that pulse ends
 		es.Broker.StartProcessorIfNeeded(ctx)
