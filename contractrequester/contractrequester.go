@@ -29,6 +29,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"encoding/hex"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
@@ -36,7 +38,6 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"encoding/hex"
 )
 
 // ContractRequester helps to call contracts
@@ -44,8 +45,8 @@ type ContractRequester struct {
 	MessageBus     insolar.MessageBus `inject:""`
 	ResultMutex    sync.Mutex
 	ResultMap      map[[insolar.RecordHashSize]byte]chan *message.ReturnResults
-	PulseAccessor  pulse.Accessor  `inject:""`
-	JetCoordinator jet.Coordinator `inject:""`
+	PulseAccessor  pulse.Accessor                     `inject:""`
+	JetCoordinator jet.Coordinator                    `inject:""`
 	PCS            insolar.PlatformCryptographyScheme `inject:""`
 	// callTimeout is mainly needed for unit tests which
 	// sometimes may unpredictably fail on CI with a default timeout
