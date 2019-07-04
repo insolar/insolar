@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
@@ -120,14 +119,14 @@ func NewClient(sender bus.Sender) *client { // nolint
 	}
 }
 
-// RegisterIncomingRequest sends message for incoming request registration,
-// returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterIncomingRequest(
-	ctx context.Context, request record.IncomingRequest,
+// registerRequest registers incoming or outgoing request.
+func (m *client) registerRequest(
+	ctx context.Context, req record.Record, msgPayload payload.Payload, callType record.CallType,
+	objectRef *insolar.Reference,
 ) (*insolar.ID, error) {
 	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterIncomingRequest")
-	instrumenter := instrument(ctx, "RegisterIncomingRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.registerRequest")
+	instrumenter := instrument(ctx, "registerRequest").err(&err)
 	defer func() {
 		if err != nil {
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
@@ -136,40 +135,35 @@ func (m *client) RegisterIncomingRequest(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	virtRec := record.Wrap(request)
+	virtRec := record.Wrap(req)
 	buf, err := virtRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterIncomingRequest: failed to marshal record")
+		return nil, errors.Wrap(err, "registerRequest: failed to marshal record")
 	}
 
 	h := m.PCS.ReferenceHasher()
 	_, err = h.Write(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterIncomingRequest: failed to calculate hash")
+		return nil, errors.Wrap(err, "registerRequest: failed to calculate hash")
 	}
-	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
-	msg, err := payload.NewMessage(&payload.SetIncomingRequest{
-		Request: virtRec,
-	})
-
+	msg, err := payload.NewMessage(msgPayload)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterIncomingRequest: failed to create message")
+		return nil, errors.Wrap(err, "registerRequest: failed to create message")
 	}
 
 	var recRef *insolar.Reference
-	switch request.CallType {
+	switch callType {
 	case record.CTMethod:
-		recRef = request.Object
+		recRef = objectRef
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		recRef = insolar.NewReference(recID)
+		recRef, err = m.genReferenceForCallTypeOtherThanCTMethod(ctx)
 	default:
-		return nil, errors.New("RegisterIncomingRequest: not supported call type " + request.CallType.String())
+		err = errors.New("registerRequest: not supported call type " + callType.String())
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
@@ -181,7 +175,7 @@ func (m *client) RegisterIncomingRequest(
 	}
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterIncomingRequest: failed to unmarshal reply")
+		return nil, errors.Wrap(err, "registerRequest: failed to unmarshal reply")
 	}
 
 	switch p := pl.(type) {
@@ -190,16 +184,42 @@ func (m *client) RegisterIncomingRequest(
 	case *payload.Error:
 		return nil, errors.New(p.Text)
 	default:
-		return nil, fmt.Errorf("RegisterIncomingRequest: unexpected reply: %#v", p)
+		return nil, fmt.Errorf("registerRequest: unexpected reply: %#v", p)
 	}
+}
+
+func (m *client) genReferenceForCallTypeOtherThanCTMethod(ctx context.Context) (*insolar.Reference, error) {
+	h := m.PCS.ReferenceHasher()
+	currentPN, err := m.pulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+	recID := *insolar.NewID(currentPN, h.Sum(nil))
+	return insolar.NewReference(recID), nil
+}
+
+// RegisterIncomingRequest sends message for incoming request registration,
+// returns request record Ref if request successfully created or already exists.
+func (m *client) RegisterIncomingRequest(
+	ctx context.Context, request record.IncomingRequest,
+) (*insolar.ID, error) {
+	incomingRequest := &payload.SetIncomingRequest{Request: record.Wrap(request)}
+	id, err := m.registerRequest(ctx, request, incomingRequest, request.CallType, request.GetObject())
+	if err != nil {
+		return id, errors.Wrap(err, "RegisterIncomingRequest")
+	}
+	return id, err
 }
 
 // RegisterOutgoingRequest sends message for outgoing request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request record.OutgoingRequest) (*insolar.ID, error) {
-	// AALEKSEEV TODO implement
-	fakeId := gen.ID()
-	return &fakeId, nil
+	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
+	id, err := m.registerRequest(ctx, request, outgoingRequest, request.CallType, request.GetObject())
+	if err != nil {
+		return id, errors.Wrap(err, "RegisterOutgoingRequest")
+	}
+	return id, err
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
