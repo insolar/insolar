@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -87,19 +86,33 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	p.dep.locker.Lock(p.request.GetObject().Record())
 	defer p.dep.locker.Unlock(p.request.GetObject().Record())
 
-	err = p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
-	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
-		// Since there is no deduplication yet it's quite possible that there will be
-		// two writes by the same key. For this reason currently instead of reporting
-		// an error we return OK (nil error). When deduplication will be implemented
-		// we should change `nil` to `ErrOverride` here.
-		return nil
-	} else if err != nil {
+	req, res, err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
+	if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 
-	msg, err := payload.NewMessage(&payload.ID{ID: p.requestID})
+	var reqBuf []byte
+	var resBuf []byte
+
+	if req != nil {
+		reqBuf, err = req.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal stored record")
+		}
+	}
+	if res != nil {
+		resBuf, err = res.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal stored record")
+		}
+	}
+
+	msg, err := payload.NewMessage(&payload.RequestInfo{
+		ObjectID:  *p.request.GetObject().Record(),
+		RequestID: p.requestID,
+		Request:   reqBuf,
+		Result:    resBuf,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
