@@ -101,7 +101,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 		reference,
 		"Call",
 		[]interface{}{requestArgs},
-		seedPulse,
+		// seedPulse,
 	)
 
 	if err != nil {
@@ -199,6 +199,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		}
 
 		seedPulse, err := ar.checkSeed(contractRequest.Params.Seed)
+		_ = seedPulse
 		if err != nil {
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
