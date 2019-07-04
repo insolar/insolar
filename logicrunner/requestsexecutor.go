@@ -155,10 +155,10 @@ func (e *requestsExecutor) SendReply(
 	_, err = e.MessageBus.Send(
 		ctx,
 		&message.ReturnResults{
-			Target:   target,
-			ReqRef:  *transcript.RequestRef,
-			Reply:    re,
-			Error:    errstr,
+			Target:     target,
+			RequestRef: *transcript.RequestRef,
+			Reply:      re,
+			Error:      errstr,
 		},
 		&insolar.MessageSendOptions{
 			Receiver: &target,

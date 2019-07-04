@@ -33,10 +33,10 @@ const (
 
 // ReturnResults - push results of methods
 type ReturnResults struct {
-	Target   insolar.Reference
-	ReqRef   insolar.Reference
-	Reply    insolar.Reply
-	Error    string
+	Target     insolar.Reference
+	RequestRef insolar.Reference
+	Reply      insolar.Reply
+	Error      string
 }
 
 func (rr *ReturnResults) Type() insolar.MessageType {

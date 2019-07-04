@@ -106,6 +106,22 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	return routResult, nil
 }
 
+func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest, hash *[insolar.RecordHashSize]byte) error {
+	virtRec := record.Wrap(request)
+	buf, err := virtRec.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to marshal record")
+	}
+	h := cr.PCS.ReferenceHasher()
+	_, err = h.Write(buf)
+	if err != nil {
+		return errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to calculate hash")
+	}
+
+	copy(hash[:], h.Sum(nil)[0:insolar.RecordHashSize])
+	return nil
+}
+
 func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
 	defer span.End()
@@ -119,23 +135,15 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	}
 	msg.Sender = cr.JetCoordinator.Me()
 
-	var reqHash [insolar.RecordHashSize]byte
 	var ch chan *message.ReturnResults
+	var reqHash [insolar.RecordHashSize]byte
 
 	if !async {
 		cr.ResultMutex.Lock()
-		virtRec := record.Wrap(msg.IncomingRequest)
-		buf, err := virtRec.Marshal()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ ContractRequester::Call ] Failed to marshal record")
-		}
-		h := cr.PCS.ReferenceHasher()
-		_, err = h.Write(buf)
+		err := cr.calcRequestHash(msg.IncomingRequest, &reqHash)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ ContractRequester::Call ] Failed to calculate hash")
 		}
-
-		copy(reqHash[:], h.Sum(nil)[0:insolar.RecordHashSize])
 		ch = make(chan *message.ReturnResults, 1)
 		cr.ResultMap[reqHash] = ch
 
@@ -213,7 +221,7 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 
 	logger := inslogger.FromContext(ctx)
 	var reqHash [insolar.RecordHashSize]byte
-	copy(reqHash[:], msg.ReqRef.Record().Hash())
+	copy(reqHash[:], msg.RequestRef.Record().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
 		logger.Info("oops unwaited results reqRef=", hex.EncodeToString(reqHash[:]))

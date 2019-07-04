@@ -50,11 +50,12 @@ func TestNew(t *testing.T) {
 	messageBus := mockMessageBus(t, nil)
 	pulseAccessor := pulse.NewAccessorMock(t)
 	jetCoordinator := jet.NewCoordinatorMock(t)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(messageBus, contractRequester, pulseAccessor, jetCoordinator)
+	cm.Inject(messageBus, contractRequester, pulseAccessor, jetCoordinator, pcs)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
@@ -279,7 +280,7 @@ func TestReceiveResult(t *testing.T) {
 	var reqHash [insolar.RecordHashSize]byte
 	copy(reqHash[:], reqRef.Record().Hash())
 
-	msg := &message.ReturnResults{ ReqRef: reqRef }
+	msg := &message.ReturnResults{ RequestRef: reqRef }
 	parcel := testutils.NewParcelMock(mc).MessageMock.Return(
 		msg,
 	)
