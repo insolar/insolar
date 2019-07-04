@@ -57,8 +57,7 @@ import (
 )
 
 func TestGetPower(t *testing.T) {
-	mr := MembershipRank(1)
-	require.Equal(t, mr.GetPower(), MemberPower(1))
+	require.Equal(t, MembershipRank(1).GetPower(), MemberPower(1))
 }
 
 func TestGetIndex(t *testing.T) {
