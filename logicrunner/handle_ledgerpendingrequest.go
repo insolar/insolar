@@ -136,10 +136,6 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	u.hasPending = true
 	es.LedgerHasMoreRequests = true
 
-	if es.CurrentList.Has(*requestRef) {
-		return nil
-	}
-
 	t := NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
 	t.FromLedger = true
 	es.Broker.Prepend(ctx, true, t)

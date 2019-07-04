@@ -374,3 +374,24 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	s.Len(rotationResults.Finished, 0)
 	s.True(rotationResults.LedgerHasMoreRequests)
 }
+
+func (s *ExecutionBrokerSuite) TestDeduplication() {
+	ctx := context.TODO()
+	forbidProcessingFunc := func(_ context.Context) error { return ErrRetryLater }
+	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
+
+	b := NewExecutionBroker(forbidProcessingFunc, executeFunc, nil)
+
+	reqRef1 := gen.Reference()
+	b.Put(ctx, false, &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		RequestRef:   &reqRef1,
+	}) // no duplication
+	s.Len(b.mutable.queue, 1)
+
+	b.Put(ctx, false, &Transcript{
+		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		RequestRef:   &reqRef1,
+	}) // duplication
+	s.Len(b.mutable.queue, 1)
+}
