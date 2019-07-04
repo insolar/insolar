@@ -18,7 +18,6 @@ package insolar
 
 import (
 	"context"
-	"time"
 )
 
 // MachineType is a type of virtual machine
@@ -95,8 +94,6 @@ type LogicCallContext struct {
 	CallerPrototype *Reference // Image of the caller
 	Parent          *Reference // Parent of the callee
 	Caller          *Reference // Contract that made the call
-	Time            time.Time  // Time when call was made
-	Pulse           Pulse      // Number of the pulse
 	TraceID         string
 }
 
