@@ -22,11 +22,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 )
+
+// wait is Exponential retries waiting function
+// example usage: require.True(wait(func))
+func wait(check func() bool) bool {
+	for i := 0; i < 16; i++ {
+		time.Sleep(time.Millisecond * time.Duration(math.Pow(2, float64(i))))
+		if check() {
+			return true
+		}
+	}
+	return false
+}
 
 type TranscriptDequeueSuite struct{ suite.Suite }
 
@@ -138,28 +151,49 @@ func (s *TranscriptDequeueSuite) TestTake() {
 	s.Len(trs, 0)
 }
 
-type ExecutionBrokerSuite struct{ suite.Suite }
+type ExecutionBrokerSuite struct {
+	suite.Suite
+	*minimock.Controller
+}
 
 func TestExecutionBroker(t *testing.T) { suite.Run(t, new(ExecutionBrokerSuite)) }
 
-// wait is Exponential retries waiting function
-// example usage: require.True(wait(func))
-func wait(check func() bool) bool {
-	for i := 0; i < 16; i++ {
-		time.Sleep(time.Millisecond * time.Duration(math.Pow(2, float64(i))))
-		if check() {
-			return true
-		}
+func (s *ExecutionBrokerSuite) BeforeTest(suiteName, testName string) {
+	s.Controller = minimock.NewController(s.T())
+}
+
+func waitOnChannel(channel chan struct{}) bool {
+	select {
+	case <-channel:
+		return true
+	case <-time.After(1 * time.Minute):
+		return false
 	}
-	return false
+}
+
+func channelIsEmpty(channel chan struct{}) bool {
+	select {
+	case <-channel:
+		return false
+	default:
+		return true
+	}
 }
 
 func (s *ExecutionBrokerSuite) TestPut() {
 	ctx := context.TODO()
-	allowProcessingFunc := func(_ context.Context) error { return nil }
-	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
 
-	b := NewExecutionBroker(allowProcessingFunc, executeFunc, nil)
+	waitChannel := make(chan struct{})
+	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
+	methodsMock.CheckMock.Return(nil)
+	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) error {
+		if !t.LogicContext.Immutable {
+			waitChannel <- struct{}{}
+		}
+		return nil
+	})
+
+	b := NewExecutionBroker(methodsMock)
 	processGoroutineExits := func() bool {
 		b.processLock.Lock()
 		defer b.processLock.Unlock()
@@ -173,7 +207,6 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	}
 
 	b.Put(ctx, false, tr)
-
 	s.Len(b.mutable.queue, 1)
 
 	reqRef2 := gen.Reference()
@@ -183,10 +216,10 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	}
 
 	b.Put(ctx, true, tr)
-
-	finishProcessing := func() bool { return b.finished.Len() == 2 }
-	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
+	s.True(waitOnChannel(waitChannel), "failed to wait until queue processor'll finish processing")
 	s.Require().True(wait(processGoroutineExits))
+	s.Empty(waitChannel)
 
 	s.Len(b.mutable.queue, 0)
 	s.Len(b.immutable.queue, 0)
@@ -200,10 +233,18 @@ func (s *ExecutionBrokerSuite) TestPut() {
 
 func (s *ExecutionBrokerSuite) TestPrepend() {
 	ctx := context.TODO()
-	allowProcessingFunc := func(_ context.Context) error { return nil }
-	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
 
-	b := NewExecutionBroker(allowProcessingFunc, executeFunc, nil)
+	waitChannel := make(chan struct{})
+	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
+	methodsMock.CheckMock.Return(nil)
+	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) error {
+		if !t.LogicContext.Immutable {
+			waitChannel <- struct{}{}
+		}
+		return nil
+	})
+
+	b := NewExecutionBroker(methodsMock)
 	processGoroutineExits := func() bool {
 		b.processLock.Lock()
 		defer b.processLock.Unlock()
@@ -216,7 +257,6 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 		RequestRef:   &reqRef1,
 	}
 	b.Prepend(ctx, false, tr)
-
 	s.Len(b.mutable.queue, 1)
 
 	reqRef2 := gen.Reference()
@@ -225,10 +265,11 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 		RequestRef:   &reqRef2,
 	}
 	b.Prepend(ctx, true, tr)
-
-	finishProcessing := func() bool { return b.finished.Len() == 2 }
-	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
+	s.Require().True(waitOnChannel(waitChannel), "failed to wait until queue processor'll finish processing")
 	s.Require().True(wait(processGoroutineExits))
+	s.Require().Empty(waitChannel)
+
 	s.Len(b.mutable.queue, 0)
 	s.Len(b.immutable.queue, 0)
 	s.Len(b.finished.queue, 2)
@@ -240,13 +281,23 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 }
 
 func (s *ExecutionBrokerSuite) TestImmutable() {
-
 	ctx := context.TODO()
-	forbidProcessingFunc := func(_ context.Context) error { return ErrRetryLater }
-	allowProcessingFunc := func(_ context.Context) error { return nil }
-	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
 
-	b := NewExecutionBroker(allowProcessingFunc, executeFunc, nil)
+	waitMutableChannel := make(chan struct{})
+	waitImmutableChannel := make(chan struct{})
+
+	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
+	methodsMock.CheckMock.Return(nil)
+	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) error {
+		if !t.LogicContext.Immutable {
+			waitMutableChannel <- struct{}{}
+		} else {
+			waitImmutableChannel <- struct{}{}
+		}
+		return nil
+	})
+
+	b := NewExecutionBroker(methodsMock)
 	processGoroutineExits := func() bool {
 		b.processLock.Lock()
 		defer b.processLock.Unlock()
@@ -260,10 +311,9 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	}
 
 	b.Prepend(ctx, false, tr)
-
-	finishProcessing := func() bool { return b.finished.Len() == 1 }
-	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
 	s.Require().True(wait(processGoroutineExits))
+	s.Require().Empty(waitMutableChannel)
 
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
@@ -272,9 +322,9 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	}
 
 	b.Prepend(ctx, true, tr)
-	finishProcessing = func() bool { return b.finished.Len() == 2 }
-	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
 	s.Require().True(wait(processGoroutineExits))
+	s.Require().Empty(waitMutableChannel)
 
 	reqRef3 := gen.Reference()
 	tr = &Transcript{
@@ -283,11 +333,10 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	}
 
 	// we can't process messages, do not do it
-	b.checkFunc = forbidProcessingFunc
-	b.Prepend(ctx, false, tr)
+	methodsMock.CheckMock.Return(ErrRetryLater)
 
-	finishProcessing = func() bool { return b.immutable.Len() == 1 }
-	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+	b.Prepend(ctx, false, tr)
+	s.Require().True(wait(func() bool { return b.immutable.Len() == 1 }), "failed to wait until immutable was put")
 	s.Require().True(wait(processGoroutineExits))
 
 	reqRef4 := gen.Reference()
@@ -297,18 +346,15 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	}
 
 	b.Prepend(ctx, true, tr)
-	finishProcessing = func() bool { return b.immutable.Len() == 2 }
-	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
+
+	s.Require().True(wait(func() bool { return b.immutable.Len() == 2 }), "failed to wait until immutable was put")
 	s.Require().True(wait(processGoroutineExits))
+	s.Require().Empty(waitMutableChannel)
 
 	b.StartProcessorIfNeeded(ctx)
-	finishProcessing = func() bool {
-		b.processLock.Lock()
-		defer b.processLock.Unlock()
-		return b.processActive == false
-	}
-	s.Require().True(wait(finishProcessing), "failed to wait while processing is finished")
 	s.Require().True(wait(processGoroutineExits))
+	s.Empty(waitMutableChannel)
+	s.Empty(waitImmutableChannel)
 
 	rotationResults := b.Rotate(10)
 	s.Len(rotationResults.Requests, 2)
@@ -317,7 +363,10 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 }
 
 func (s *ExecutionBrokerSuite) TestRotate() {
-	b := NewExecutionBroker(nil, nil, nil)
+	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
+	methodsMock.CheckMock.Return(nil)
+	methodsMock.ExecuteMock.Return(nil)
+	b := NewExecutionBroker(methodsMock)
 
 	for i := 0; i < 4; i++ {
 		b.mutableLock.Lock()
@@ -377,10 +426,10 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 
 func (s *ExecutionBrokerSuite) TestDeduplication() {
 	ctx := context.TODO()
-	forbidProcessingFunc := func(_ context.Context) error { return ErrRetryLater }
-	executeFunc := func(_ context.Context, _ *Transcript, _ interface{}) error { return nil }
 
-	b := NewExecutionBroker(forbidProcessingFunc, executeFunc, nil)
+	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
+	methodsMock.CheckMock.Return(ErrRetryLater)
+	b := NewExecutionBroker(methodsMock)
 
 	reqRef1 := gen.Reference()
 	b.Put(ctx, false, &Transcript{
