@@ -19,6 +19,7 @@ package artifacts
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
@@ -630,7 +631,21 @@ func (m *client) DeployCode(
 }
 
 func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (payload.Payload, error) {
+	var lastPulse insolar.PulseNumber
+
 	for tries > 0 {
+		currentPulse, err := m.PulseAccessor.Latest(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ retryer ] Can't get latest pulse")
+		}
+
+		if currentPulse.PulseNumber == lastPulse {
+			inslogger.FromContext(ctx).Debugf("[ retryer ]  wait for pulse change. Current: %d", currentPulse)
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		lastPulse = currentPulse.PulseNumber
+
 		msg, err := payload.NewMessage(ppl)
 		if err != nil {
 			return nil, err
@@ -645,16 +660,16 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 		}
 		pl, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal reply")
+			return nil, errors.Wrap(err, "[ retryer ] failed to unmarshal reply")
 		}
 
 		if p, ok := pl.(*payload.Error); !ok || p.Code != payload.CodeFlowCanceled {
 			return pl, nil
 		}
-		inslogger.FromContext(ctx).Warn("flow cancelled, retrying")
+		inslogger.FromContext(ctx).Debug("[ retryer ] flow cancelled, retrying")
 		tries--
 	}
-	return nil, fmt.Errorf("flow cancelled, retries exceeded")
+	return nil, fmt.Errorf("[ retryer ] flow cancelled, retries exceeded")
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -842,24 +857,13 @@ func (m *client) RegisterResult(
 		return nil, errors.Wrap(err, "RegisterResult: failed to marshal record")
 	}
 
-	msg, err := payload.NewMessage(&payload.SetResult{
+	psr := &payload.SetResult{
 		Result: buf,
-	})
-
-	if err != nil {
-		return nil, errors.Wrap(err, "RegisterResult: failed to create message")
 	}
 
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
-	defer done()
-
-	rep, ok := <-reps
-	if !ok {
-		return nil, errors.New("RegisterResult: no reply")
-	}
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	pl, err := m.retryer(ctx, psr, insolar.DynamicRoleLightExecutor, obj, 3)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterResult: failed to unmarshal reply")
+		return nil, err
 	}
 
 	switch p := pl.(type) {
