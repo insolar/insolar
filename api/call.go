@@ -191,6 +191,10 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
+		if contractRequest.Test != "" {
+			insLog.Infof("Request related to %s", contractRequest.Test)
+		}
+
 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 		if err != nil {
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
