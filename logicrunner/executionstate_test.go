@@ -25,30 +25,33 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 )
 
-func NewBroker(ctx context.Context, count int) *ExecutionBroker {
-	br := NewExecutionBroker(nil, nil, nil)
+func NewBroker(t *testing.T, ctx context.Context, count int) *ExecutionBroker {
+	mock := NewExecutionBrokerMethodsMock(t)
+	mock.CheckMock.Return(nil)
+	mock.ExecuteMock.Return(nil)
+	br := NewExecutionBroker(mock)
 	for i := 0; i < count; i++ {
 		reqRef := gen.Reference()
 		br.Put(ctx, false, &Transcript{
-			LogicContext: &insolar.LogicCallContext{
-				Immutable: false,
-			},
-			Context:    ctx,
-			RequestRef: &reqRef,
+			LogicContext: &insolar.LogicCallContext{},
+			Context:      ctx,
+			RequestRef:   &reqRef,
+			Request:      &record.IncomingRequest{},
 		})
 	}
 	return br
 }
 
-func newExecutionStateLength(ctx context.Context, count int, list *CurrentExecutionList,
+func newExecutionStateLength(t *testing.T, ctx context.Context, count int, list *CurrentExecutionList,
 	pending *message.PendingState) *ExecutionState {
 
 	es := NewExecutionState(gen.Reference())
-	es.Broker = NewBroker(ctx, count)
+	es.Broker = NewBroker(t, ctx, count)
 	if list != nil {
 		es.CurrentList = list
 	}
@@ -78,7 +81,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		},
 		{
 			name:             "we have queue",
-			es:               newExecutionStateLength(ctx, 1, nil, nil),
+			es:               newExecutionStateLength(t, ctx, 1, nil, nil),
 			numberOfMessages: 1,
 			checkES: func(t *testing.T, es *ExecutionState) {
 				require.Len(t, es.Broker.mutable.queue, 0)
@@ -87,7 +90,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		{
 			name:             "we have queue, we are next",
 			meNext:           true,
-			es:               newExecutionStateLength(ctx, 1, nil, nil),
+			es:               newExecutionStateLength(t, ctx, 1, nil, nil),
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
 				require.Len(t, es.Broker.mutable.queue, 1)
@@ -95,7 +98,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		},
 		{
 			name:             "running something without queue, pending execution",
-			es:               newExecutionStateLength(ctx, 0, list, nil),
+			es:               newExecutionStateLength(t, ctx, 0, list, nil),
 			numberOfMessages: 2,
 			checkES: func(t *testing.T, es *ExecutionState) {
 				require.Len(t, es.Broker.mutable.queue, 0)
@@ -104,7 +107,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		},
 		{
 			name:             "running something without queue, we're next",
-			es:               newExecutionStateLength(ctx, 0, list, nil),
+			es:               newExecutionStateLength(t, ctx, 0, list, nil),
 			meNext:           true,
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
@@ -113,7 +116,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		},
 		{
 			name:             "in not confirmed pending and no queue, still message",
-			es:               newExecutionStateLength(ctx, 0, nil, &inPending),
+			es:               newExecutionStateLength(t, ctx, 0, nil, &inPending),
 			numberOfMessages: 1,
 			checkES: func(t *testing.T, es *ExecutionState) {
 				require.Equal(t, message.NotPending, es.pending)
@@ -121,7 +124,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 		},
 		{
 			name:             "in not confirmed pending and no queue, we're next",
-			es:               newExecutionStateLength(ctx, 0, nil, &inPending),
+			es:               newExecutionStateLength(t, ctx, 0, nil, &inPending),
 			meNext:           true,
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {

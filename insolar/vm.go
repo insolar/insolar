@@ -18,7 +18,6 @@ package insolar
 
 import (
 	"context"
-	"time"
 )
 
 // MachineType is a type of virtual machine
@@ -83,20 +82,23 @@ func (m CallMode) String() string {
 	}
 }
 
-// LogicCallContext is a context of contract execution
+// LogicCallContext is a context of contract execution. Everything
+// that is required to implement foundation functions. This struct
+// shouldn't be used in core components.
 type LogicCallContext struct {
 	Mode            CallMode   // either "execution" or "validation"
-	Callee          *Reference // Contract that was called
-	Request         *Reference // ref of request
-	Prototype       *Reference // Image of the callee
-	Code            *Reference // ref of contract code
-	CallerPrototype *Reference // Image of the caller
+
+	Request         *Reference // reference of incoming request record
+
+	Callee          *Reference // Contract that is called
 	Parent          *Reference // Parent of the callee
+	Prototype       *Reference // Prototype (base class) of the callee
+	Code            *Reference // Code reference of the callee
+
 	Caller          *Reference // Contract that made the call
-	Time            time.Time  // Time when call was made
-	Pulse           Pulse      // Number of the pulse
-	Immutable       bool
-	TraceID         string
+	CallerPrototype *Reference // Prototype (base class) of the caller
+
+	TraceID         string     // trace mark for Jaegar and friends
 }
 
 // ContractConstructor is a typedef for wrapper contract header

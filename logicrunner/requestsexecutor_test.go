@@ -297,6 +297,8 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 	requestRef := gen.Reference()
 	nodeRef := gen.Reference()
 
+	reqRef := testutils.RandomRef()
+
 	table := []struct {
 		name       string
 		reply      insolar.Reply
@@ -308,9 +310,8 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			name: "success",
 			transcript: &Transcript{
 				RequesterNode: &nodeRef,
-				Request: &record.IncomingRequest{
-					Sequence: 321,
-				},
+				RequestRef:    &reqRef,
+				Request:       &record.IncomingRequest{},
 			},
 			reply: &reply.CallConstructor{Object: &requestRef},
 			mb: testutils.NewMessageBusMock(mc).SendMock.Set(
@@ -325,9 +326,8 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			name: "error",
 			transcript: &Transcript{
 				RequesterNode: &nodeRef,
-				Request: &record.IncomingRequest{
-					Sequence: 321,
-				},
+				RequestRef:    &reqRef,
+				Request:       &record.IncomingRequest{},
 			},
 			reply: &reply.CallConstructor{Object: &requestRef},
 			mb: testutils.NewMessageBusMock(mc).SendMock.Set(

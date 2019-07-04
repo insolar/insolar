@@ -201,7 +201,7 @@ func (m *executionProxyImplementation) RouteCall(
 ) error {
 	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
 
-	if current.LogicContext.Immutable {
+	if current.Request.Immutable {
 		return errors.New("Try to call route from immutable method")
 	}
 
@@ -388,7 +388,7 @@ func (m *validationProxyImplementation) GetCode(
 func (m *validationProxyImplementation) RouteCall(
 	ctx context.Context, current *Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
 ) error {
-	if current.LogicContext.Immutable {
+	if current.Request.Immutable {
 		return errors.New("immutable method can't make calls")
 	}
 
