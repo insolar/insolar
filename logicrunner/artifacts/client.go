@@ -21,21 +21,22 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/messagebus"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -119,7 +120,7 @@ func NewClient(sender bus.Sender) *client { // nolint
 	}
 }
 
-// RegisterIncomingRequest sends message for request registration,
+// RegisterIncomingRequest sends message for incoming request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterIncomingRequest(
 	ctx context.Context, request record.IncomingRequest,
@@ -191,6 +192,14 @@ func (m *client) RegisterIncomingRequest(
 	default:
 		return nil, fmt.Errorf("RegisterIncomingRequest: unexpected reply: %#v", p)
 	}
+}
+
+// RegisterOutgoingRequest sends message for outgoing request registration,
+// returns request record Ref if request successfully created or already exists.
+func (m *client) RegisterOutgoingRequest(ctx context.Context, request record.OutgoingRequest) (*insolar.ID, error) {
+	// AALEKSEEV TODO implement
+	fakeId := gen.ID()
+	return &fakeId, nil
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.

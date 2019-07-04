@@ -205,10 +205,25 @@ func (m *executionProxyImplementation) RouteCall(
 		return errors.New("Try to call route from immutable method")
 	}
 
-	reqRecord := routeCallRequestRecord(ctx, current, req)
+	// Step 1. Register outgoing request.
 
-	msg := &message.CallMethod{IncomingRequest: reqRecord}
-	res, err := m.cr.CallMethod(ctx, msg)
+	// If pulse changes during registering of OutgoingRequest we don't care because
+	// we _already_ are processing the request. We should continue to execute and
+	// the next executor will wait for us in pending state. For this reason Flow is not
+	// used for registering the outgoing request.
+	regOutgoingMsg := record.OutgoingRequest{
+		// AALEKSEEV TODO fill
+	}
+	_, err := m.am.RegisterOutgoingRequest(ctx, regOutgoingMsg)
+	if err != nil {
+		return err
+	}
+
+	// Step 2. Actually make a call.
+
+	reqRecord := routeCallRequestRecord(ctx, current, req)
+	callMsg := &message.CallMethod{IncomingRequest: reqRecord}
+	res, err := m.cr.CallMethod(ctx, callMsg)
 	current.AddOutgoingRequest(ctx, reqRecord, rep.Result, nil, err)
 	if err != nil {
 		return err
@@ -543,4 +558,3 @@ func saveAsDelegateRequestRecord(
 
 	return reqRecord
 }
-
