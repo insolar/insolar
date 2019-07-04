@@ -37,10 +37,10 @@ func TestMigrationCreateMember(t *testing.T) {
 	require.NotEqual(t, "", ref)
 	burnAddress, ok := result["burnAddress"]
 	require.True(t, ok)
-	require.NotEqual(t, "fake_ba", burnAddress)
+	require.Equal(t, "fake_ba", burnAddress)
 }
 
-func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
+func TestMigrationCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 	member1.ref = root.ref

@@ -108,7 +108,7 @@ func TestCrazyJSON(t *testing.T) {
 }
 
 func TestIncorrectSign(t *testing.T) {
-	testMember := createMember(t)
+	testMember := contractCreateMember(t)
 	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(

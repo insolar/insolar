@@ -19,13 +19,13 @@
 package functest
 
 import (
-	"encoding/hex"
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSingleContract(t *testing.T) {
@@ -58,29 +58,23 @@ func (c *One) Dec() (map[string]interface {}, error) {
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objectRef, "Get")
 	require.Empty(t, result.Error)
-	s, err := hex.DecodeString(string(result.Reply.Result))
-	fmt.Println(result)
-	fmt.Println(string(result.Reply.Result))
-	fmt.Println("DecodeString")
-	fmt.Println(err)
-	fmt.Println(string(s))
 	require.Equal(t, float64(0), result.ExtractedReply["result"])
 
 	result = callMethod(t, objectRef, "Inc")
 	require.Empty(t, result.Error)
-	require.Equal(t, float64(1), result.ExtractedReply)
+	require.Equal(t, float64(1), result.ExtractedReply["result"])
 
 	result = callMethod(t, objectRef, "Get")
 	require.Empty(t, result.Error)
-	require.Equal(t, float64(1), result.ExtractedReply)
+	require.Equal(t, float64(1), result.ExtractedReply["result"])
 
 	result = callMethod(t, objectRef, "Dec")
 	require.Empty(t, result.Error)
-	require.Equal(t, float64(0), result.ExtractedReply)
+	require.Equal(t, float64(0), result.ExtractedReply["result"])
 
 	result = callMethod(t, objectRef, "Get")
 	require.Empty(t, result.Error)
-	require.Equal(t, float64(0), result.ExtractedReply)
+	require.Equal(t, float64(0), result.ExtractedReply["result"])
 }
 
 func TestContractCallingContract(t *testing.T) {
@@ -239,25 +233,25 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Hello(s string) (string, error) {
+func (r *One) Hello(s string) (map[string]interface {}, error) {
 	holder := two.New()
 	friend, err := holder.AsDelegate(r.GetReference())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	res, err := friend.Hello(s)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return "Hi, " + s + "! Two said: " + res, nil
+	return map[string]interface {}{"message": "Hi, " + s + "! Two said: " + res["message"].(string)}, nil
 }
 
-func (r *One) HelloFromDelegate(s string) (string, error) {
+func (r *One) HelloFromDelegate(s string) (map[string]interface {}, error) {
 	friend, err := two.GetImplementationFrom(r.GetReference())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return friend.Hello(s)
@@ -282,9 +276,9 @@ func New() (*Two, error) {
 	return &Two{X:322}, nil
 }
 
-func (r *Two) Hello(s string) (string, error) {
+func (r *Two) Hello(s string) (map[string]interface {}, error) {
 	r.X *= 2
-	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
+	return map[string]interface {}{"message": fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)}, nil
 }
 `
 
@@ -293,11 +287,11 @@ func (r *Two) Hello(s string) (string, error) {
 
 	resp := callMethod(t, obj, "Hello", "ins")
 	require.Empty(t, resp.Error)
-	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resp.ExtractedReply)
+	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resp.ExtractedReply["message"].(string))
 
 	resp = callMethod(t, obj, "HelloFromDelegate", "ins")
 	require.Empty(t, resp.Error)
-	require.Equal(t, "Hello you too, ins. 1288 times!", resp.ExtractedReply)
+	require.Equal(t, "Hello you too, ins. 1288 times!", resp.ExtractedReply["message"].(string))
 }
 
 func TestBasicNotificationCall(t *testing.T) {
@@ -327,10 +321,10 @@ func (r *One) Hello() error {
 	return nil
 }
 
-func (r *One) Value() (int, error) {
+func (r *One) Value() (map[string]interface {}, error) {
 	friend, err := two.GetImplementationFrom(r.GetReference())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	return friend.Value()
@@ -355,13 +349,13 @@ func New() (*Two, error) {
 	return &Two{X:322}, nil
 }
 
-func (r *Two) Hello() (string, error) {
+func (r *Two) Hello() (map[string]interface {}, error) {
 	r.X *= 2
-	return fmt.Sprintf("Hello %d times!", r.X), nil
+	return map[string]interface {}{"message": fmt.Sprintf("Hello %d times!", r.X)}, nil
 }
 
-func (r *Two) Value() (int, error) {
-	return r.X, nil
+func (r *Two) Value() (map[string]interface {}, error) {
+	return map[string]interface {}{"value": r.X}, nil
 }
 `
 	uploadContractOnce(t, "basic_notification_call_two", contractTwoCode)
@@ -372,7 +366,7 @@ func (r *Two) Value() (int, error) {
 
 	resp = callMethod(t, obj, "Value")
 	require.Empty(t, resp.Error)
-	require.Equal(t, float64(644), resp.ExtractedReply)
+	require.Equal(t, float64(644), resp.ExtractedReply["value"].(float64))
 }
 
 func TestContextPassing(t *testing.T) {
@@ -385,8 +379,8 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Hello() (string, error) {
-	return r.GetPrototype().String(), nil
+func (r *One) Hello() (map[string]interface {}, error) {
+	return map[string]interface {}{"proto": r.GetPrototype().String()}, nil
 }
 `
 	prototype := uploadContractOnce(t, "context_passing", contractOneCode)
@@ -394,7 +388,7 @@ func (r *One) Hello() (string, error) {
 
 	resp := callMethod(t, obj, "Hello")
 	require.Empty(t, resp.Error)
-	require.Equal(t, prototype.String(), resp.ExtractedReply)
+	require.Equal(t, prototype.String(), resp.ExtractedReply["proto"].(string))
 }
 
 func TestDeactivation(t *testing.T) {
@@ -606,7 +600,7 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Hello() (*string, error) {
+func (r *One) Hello() (map[string]interface {}, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
@@ -630,7 +624,7 @@ type Two struct {
 func New() (*Two, error) {
 	return &Two{}, nil
 }
-func (r *Two) Hello() (*string, error) {
+func (r *Two) Hello() (map[string]interface {}, error) {
 	return nil, nil
 }
 `
@@ -656,13 +650,13 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Hello() (*string, error) {
+func (r *One) Hello() (*map[string]interface {}, error) {
 	holder := two.New()
 	_, err := holder.AsChild(r.GetReference())
 	if err != nil {
 		return nil, err
 	}
-	ok := "all was well"
+	ok := map[string]interface {}{"message": "all was well"}
 	return &ok, nil
 }
 `
@@ -752,7 +746,7 @@ func (r *One) CreateAllowance(member string) (error) {
 }
 `
 	obj := callConstructor(t, uploadContractOnce(t, "new_allowance_not_from_wallet", contractOneCode))
-	member := createMember(t)
+	member := contractCreateMember(t)
 
 	resp := callMethod(t, obj, "CreateAllowance", member.ref)
 	require.NotEmpty(t, resp.Error)
@@ -772,11 +766,11 @@ func TestGetParent(t *testing.T) {
 	foundation.BaseContract
  }
 
- func (r *One) AddChildAndReturnMyselfAsParent() (string, error) {
+ func (r *One) AddChildAndReturnMyselfAsParent() (map[string]interface {}, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return insolar.Reference{}.String(), err
+		return map[string]interface {}{"reference": insolar.Reference{}.String()}, err
 	}
 
  	return friend.GetParent()
@@ -796,8 +790,8 @@ func TestGetParent(t *testing.T) {
 	return &Two{}, nil
  }
 
- func (r *Two) GetParent() (string, error) {
-	return r.GetContext().Parent.String(), nil
+ func (r *Two) GetParent() (map[string]interface {}, error) {
+	return map[string]interface {}{"reference": r.GetContext().Parent.String()}, nil
  }
 `
 
@@ -806,7 +800,7 @@ func TestGetParent(t *testing.T) {
 
 	resp := callMethod(t, obj, "AddChildAndReturnMyselfAsParent")
 	require.Empty(t, resp.Error)
-	require.Equal(t, obj.String(), resp.ExtractedReply)
+	require.Equal(t, obj.String(), resp.ExtractedReply["reference"].(string))
 }
 
 // TODO need to move it into jepsen tests
@@ -864,11 +858,11 @@ func TestNoLoopsWhileNotificationCall(t *testing.T) {
  type One struct {
 	foundation.BaseContract 
  }
- func (r *One) IncrementBy100() (int, error) {
+ func (r *One) IncrementBy100() (map[string]interface {}, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	for i := 0; i < 100; i++ {
@@ -896,8 +890,8 @@ func TestNoLoopsWhileNotificationCall(t *testing.T) {
 	return nil
  }
 
- func (r *Two) GetCounter() (int, error) {
-	return r.Counter, nil
+ func (r *Two) GetCounter() (map[string]interface {}, error) {
+	return map[string]interface {}{"counter": r.Counter}, nil
  }
 
 `
@@ -922,7 +916,7 @@ type Contract struct {
 	foundation.BaseContract
 }
 
-func (c *Contract) Test(firstRef *insolar.Reference) (string, error) {
+func (c *Contract) Test(firstRef *insolar.Reference) (map[string]interface {}, error) {
 	return first.GetObject(*firstRef).GetName()
 }
 `
@@ -936,8 +930,8 @@ type First struct {
 	foundation.BaseContract
 }
 
-func (c *First) GetName() (string, error) {
-	return "first", nil
+func (c *First) GetName() (map[string]interface {}, error) {
+	return map[string]interface {}{"test": "first"}, nil
 }
 `
 
@@ -950,8 +944,8 @@ type First struct {
 	foundation.BaseContract
 }
 
-func (c *First) GetName() (string, error) {
-	return "YOU ARE ROBBED!", nil
+func (c *First) GetName() (map[string]interface {}, error) {
+	return map[string]interface {}{"test": "YOU ARE ROBBED!"}, nil
 }
 `
 
@@ -979,11 +973,11 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) ExternalImmutableCall() (int, error) {
+func (r *One) ExternalImmutableCall() (map[string]interface {}, error) {
 	holder := two.New()
 	objTwo, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	return objTwo.ReturnNumberAsImmutable()
 }
@@ -1012,8 +1006,8 @@ func New() (*Two, error) {
 	return &Two{}, nil
 }
 
-func (r *Two) ReturnNumber() (int, error) {
-	return 42, nil
+func (r *Two) ReturnNumber() (map[string]interface {}, error) {
+	return map[string]interface {}{"result": 42}, nil
 }
 
 //ins:immutable
@@ -1053,7 +1047,7 @@ func (r *Three) DoNothing() (error) {
 
 	resp := callMethod(t, obj, "ExternalImmutableCall")
 	require.Empty(t, resp.Error)
-	require.Equal(t, float64(42), resp.ExtractedReply)
+	require.Equal(t, float64(42), resp.ExtractedReply["result"].(float64))
 
 	resp = callMethod(t, obj, "ExternalImmutableCallMakesExternalCall")
 	require.Contains(

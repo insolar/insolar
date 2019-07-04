@@ -343,14 +343,14 @@ func (r *Member) GetPublicKeyAsImmutable() (string, error) {
 }
 
 // Call is proxy generated method
-func (r *Member) Call(signedRequest []byte) (interface{}, error) {
+func (r *Member) Call(signedRequest []byte) (map[string]interface{}, error) {
 	var args [1]interface{}
 	args[0] = signedRequest
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -397,14 +397,14 @@ func (r *Member) CallNoWait(signedRequest []byte) error {
 }
 
 // CallAsImmutable is proxy generated method
-func (r *Member) CallAsImmutable(signedRequest []byte) (interface{}, error) {
+func (r *Member) CallAsImmutable(signedRequest []byte) (map[string]interface{}, error) {
 	var args [1]interface{}
 	args[0] = signedRequest
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 map[string]interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

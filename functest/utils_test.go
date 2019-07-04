@@ -96,17 +96,33 @@ type rpcStatusResponse struct {
 	Result statusResponse `json:"result"`
 }
 
-func createMember(t *testing.T) *user {
+func contractCreateMember(t *testing.T) *user {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+
+	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	require.NoError(t, err)
+	ref, ok := result["reference"].(string)
+	require.True(t, ok)
+	member.ref = ref
+	return member
+}
+
+func migrationCreateMember(t *testing.T) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
 	addBurnAddress(t)
 
-	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	result, err := retryableCreateMember(member, "migration.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 	ref, ok := result["reference"].(string)
 	require.True(t, ok)
+	burnAddress, ok := result["burnAddress"]
+	require.True(t, ok)
+	require.Equal(t, "fake_ba", burnAddress)
 	member.ref = ref
 	return member
 }
@@ -156,13 +172,9 @@ func getBalance(caller *user, reference string) (*big.Int, []map[string]string, 
 func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
-	fmt.Println("postResp")
-	fmt.Println(postResp)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
-	fmt.Println("body")
-	fmt.Println(string(body))
 	require.NoError(t, err)
 	return body
 }

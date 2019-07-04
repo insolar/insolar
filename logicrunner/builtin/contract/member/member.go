@@ -133,7 +133,7 @@ func (m *Member) Call(signedRequest []byte) (map[string]interface{}, error) {
 	case "contract.createMember":
 		return m.createContractMember(request.Params.PublicKey)
 	case "migration.createMember":
-		return m.createMigrationMember(request.Params.PublicKey)
+		return m.migrationCreateMember(request.Params.PublicKey)
 	case "migration.addBurnAddresses":
 		return m.addBurnAddressesCall(params)
 	case "wallet.getBalance":
@@ -329,7 +329,7 @@ func (m *Member) getNodeRef(publicKey string) (map[string]interface{}, error) {
 }
 
 // Create member methods.
-func (m *Member) createMigrationMember(key string) (map[string]interface{}, error) {
+func (m *Member) migrationCreateMember(key string) (map[string]interface{}, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 	burnAddress, err := rootDomain.GetBurnAddress()
