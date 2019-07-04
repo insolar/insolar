@@ -71,9 +71,13 @@ func TestNewNodeAppearanceAsSelf(t *testing.T) {
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	require.Equal(t, r.state, packets.NodeStateLocalActive)
+
 	require.Equal(t, r.trust, packets.SelfTrust)
+
 	require.Equal(t, r.profile, lp)
+
 	require.Equal(t, r.callback, callback)
+
 	require.NotEqual(t, r.announceHandler, nil)
 }
 
@@ -83,10 +87,14 @@ func TestInit(t *testing.T) {
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	require.Panics(t, func() { r.init(nil, callback, 0) })
+
 	r.init(lp, callback, 0)
 	require.Equal(t, r.state, packets.NodeStateLocalActive)
+
 	require.Equal(t, r.trust, packets.SelfTrust)
+
 	require.Equal(t, r.profile, lp)
+
 	require.Equal(t, r.callback, callback)
 }
 
@@ -107,7 +115,9 @@ func TestLessByNeighbourWeightForNodeAppearance(t *testing.T) {
 	r1.neighbourWeight = 0
 	r2.neighbourWeight = 1
 	require.True(t, LessByNeighbourWeightForNodeAppearance(r1, r2))
+
 	require.False(t, LessByNeighbourWeightForNodeAppearance(r2, r1))
+
 	r2.neighbourWeight = 0
 	require.False(t, LessByNeighbourWeightForNodeAppearance(r2, r1))
 }
@@ -134,9 +144,13 @@ func TestCopySelfTo(t *testing.T) {
 	target.copySelfTo(source)
 
 	require.Equal(t, source.stateEvidence, target.stateEvidence)
+
 	require.Equal(t, source.announceSignature, target.announceSignature)
+
 	require.Equal(t, source.requestedPower, target.requestedPower)
+
 	require.Equal(t, source.state, target.state)
+
 	require.Equal(t, source.trust, target.trust)
 }
 
@@ -205,12 +219,15 @@ func TestVerifyPacketAuthenticity(t *testing.T) {
 	strictFrom := true
 	isAcceptable = false
 	require.NotEqual(t, r.VerifyPacketAuthenticity(packet, from, strictFrom), nil)
+
 	strictFrom = false
 	isSignOfSignatureMethodSupported = false
 	require.NotEqual(t, r.VerifyPacketAuthenticity(packet, from, strictFrom), nil)
+
 	isSignOfSignatureMethodSupported = true
 	isValidDigestSignature = false
 	require.NotEqual(t, r.VerifyPacketAuthenticity(packet, from, strictFrom), nil)
+
 	isValidDigestSignature = true
 	require.Equal(t, r.VerifyPacketAuthenticity(packet, from, strictFrom), nil)
 }
@@ -221,6 +238,7 @@ func TestSetReceivedPhase(t *testing.T) {
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	require.True(t, r.SetReceivedPhase(packets.Phase1))
+
 	require.False(t, r.SetReceivedPhase(packets.Phase1))
 }
 
@@ -230,7 +248,9 @@ func TestSetReceivedByPacketType(t *testing.T) {
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	require.True(t, r.SetReceivedByPacketType(packets.PacketPhase1))
+
 	require.False(t, r.SetReceivedByPacketType(packets.PacketPhase1))
+
 	require.False(t, r.SetReceivedByPacketType(packets.MaxPacketType))
 }
 
@@ -240,6 +260,7 @@ func TestSetSentPhase(t *testing.T) {
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	require.True(t, r.SetSentPhase(packets.Phase1))
+
 	require.False(t, r.SetSentPhase(packets.Phase1))
 }
 
@@ -249,7 +270,9 @@ func TestSetSentByPacketType(t *testing.T) {
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	require.True(t, r.SetSentByPacketType(packets.PacketPhase1))
+
 	require.True(t, r.SetSentByPacketType(packets.PacketPhase1))
+
 	require.False(t, r.SetSentByPacketType(packets.MaxPacketType))
 }
 
@@ -259,7 +282,9 @@ func TestSetReceivedWithDupCheck(t *testing.T) {
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	require.Equal(t, r.SetReceivedWithDupCheck(packets.PacketPhase1), nil)
+
 	require.Equal(t, r.SetReceivedWithDupCheck(packets.PacketPhase1), errors.ErrRepeatedPhasePacket)
+
 	require.Equal(t, r.SetReceivedWithDupCheck(packets.MaxPacketType), errors.ErrRepeatedPhasePacket)
 }
 
@@ -275,6 +300,7 @@ func TestGetSignatureVerifier(t *testing.T) {
 	sv2 := ctestutils.NewSignatureVerifierMock(t)
 	svf.GetSignatureVerifierWithPKSMock.Set(func(common.PublicKeyStore) common.SignatureVerifier { return sv2 })
 	require.Equal(t, r.GetSignatureVerifier(svf), sv1)
+
 	lp.GetSignatureVerifierMock.Set(func() common.SignatureVerifier { return nil })
 	require.Equal(t, r.GetSignatureVerifier(svf), sv2)
 }

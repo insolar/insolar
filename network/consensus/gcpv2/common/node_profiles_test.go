@@ -58,30 +58,42 @@ import (
 
 func TestMemberPowerOf(t *testing.T) {
 	require.Equal(t, MemberPowerOf(1), MemberPower(1))
+
 	require.Equal(t, MemberPowerOf(0x1F), MemberPower(0x1F))
+
 	require.Equal(t, MemberPowerOf(MaxLinearMemberPower), MemberPower(0xFF))
+
 	require.Equal(t, MemberPowerOf(MaxLinearMemberPower+1), MemberPower(0xFF))
+
 	require.Equal(t, MemberPowerOf(0x1F+1), MemberPower(0x1F+1))
+
 	require.Equal(t, MemberPowerOf(0x1F<<1), MemberPower(0x2F))
 }
 
 func TestToLinearValue(t *testing.T) {
 	require.Equal(t, MemberPowerOf(0).ToLinearValue(), uint16(0))
+
 	require.Equal(t, MemberPowerOf(0x1F).ToLinearValue(), uint16(0x1F))
+
 	require.Equal(t, MemberPowerOf(0x1F+1).ToLinearValue(), uint16(0x1F+1))
+
 	require.Equal(t, MemberPowerOf(0x1F<<1).ToLinearValue(), uint16(0x3e))
 }
 
 func TestPercentAndMin(t *testing.T) {
 	require.Equal(t, MemberPowerOf(MaxLinearMemberPower).PercentAndMin(100, MemberPowerOf(0)), ^MemberPower(0))
+
 	require.Equal(t, MemberPowerOf(3).PercentAndMin(1, MemberPowerOf(2)), MemberPower(2))
+
 	require.Equal(t, MemberPowerOf(3).PercentAndMin(80, MemberPowerOf(1)), MemberPower(2))
 }
 
 func TestNormalize(t *testing.T) {
 	zero := MemberPowerSet([...]MemberPower{0, 0, 0, 0})
 	require.Equal(t, zero.Normalize(), zero)
+
 	require.Equal(t, MemberPowerSet([...]MemberPower{1, 0, 0, 0}).Normalize(), zero)
+
 	m := MemberPowerSet([...]MemberPower{1, 1, 1, 1})
 	require.Equal(t, m.Normalize(), m)
 }
@@ -93,14 +105,24 @@ func TestNormalize(t *testing.T) {
 // And cases from the function logic.
 func TestIsValid(t *testing.T) {
 	require.True(t, MemberPowerSet([...]MemberPower{0, 0, 0, 0}).IsValid())
+
 	require.False(t, MemberPowerSet([...]MemberPower{1, 0, 0, 0}).IsValid())
+
 	require.False(t, MemberPowerSet([...]MemberPower{0, 1, 0, 0}).IsValid())
+
 	require.False(t, MemberPowerSet([...]MemberPower{0, 0, 1, 0}).IsValid())
+
 	require.False(t, MemberPowerSet([...]MemberPower{0, 1, 0, 1}).IsValid())
+
 	require.False(t, MemberPowerSet([...]MemberPower{2, 1, 2, 2}).IsValid())
+
 	require.True(t, MemberPowerSet([...]MemberPower{1, 0, 0, 1}).IsValid())
+
 	require.True(t, MemberPowerSet([...]MemberPower{1, 1, 0, 1}).IsValid())
+
 	require.False(t, MemberPowerSet([...]MemberPower{1, 1, 2, 1}).IsValid())
+
 	require.True(t, MemberPowerSet([...]MemberPower{1, 0, 2, 2}).IsValid())
+
 	require.True(t, MemberPowerSet([...]MemberPower{1, 1, 2, 2}).IsValid())
 }

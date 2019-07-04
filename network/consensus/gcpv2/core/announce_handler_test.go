@@ -66,5 +66,6 @@ func TestCaptureAnnouncement(t *testing.T) {
 	p := newNoAnnouncementsHandler()
 	cp, err := p.CaptureAnnouncement(common.MembershipProfile{})
 	require.Equal(t, cp, p)
+
 	require.Equal(t, err, nil)
 }
