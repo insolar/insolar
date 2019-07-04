@@ -108,7 +108,7 @@ func TestLogicExecutor_ExecuteMethod_ValidateMethodCall(t *testing.T) {
 					nil,
 				),
 			res: &RequestResult{
-				Result:    []byte{3, 2, 1},
+				Result: []byte{3, 2, 1},
 			},
 		},
 		{
@@ -141,7 +141,7 @@ func TestLogicExecutor_ExecuteMethod_ValidateMethodCall(t *testing.T) {
 					nil,
 				),
 			res: &RequestResult{
-				Result:    []byte{3, 2, 1},
+				Result: []byte{3, 2, 1},
 			},
 		},
 		{

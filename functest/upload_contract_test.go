@@ -42,7 +42,7 @@ func TestCallUploadedContract(t *testing.T) {
 
 	// if we running this test with count we need to get unique names
 	prototypeRef := uploadContract(t, testutils.RandStringBytes(16), contractCode)
-	objectRef := callConstructor(t, prototypeRef)
+	objectRef := callConstructor(t, prototypeRef, "New")
 
 	testParam := "test"
 	methodResult := callMethod(t, objectRef, "Hello", testParam)

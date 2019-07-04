@@ -125,7 +125,10 @@ func (s *RealContractsSuite) TestCompiling() {
 	}
 
 	am := goplugintestutils.NewTestArtifactManager()
-	cb := goplugintestutils.NewContractBuilder(am, s.icc)
+
+	// We do not need pulse accessor in ContractBuilder because we use TestArtifactManager
+	// In TestArtifactManager there is no case with flow cancelled error and no need to retry registering of request
+	cb := goplugintestutils.NewContractBuilder(am, s.icc, nil)
 
 	err := cb.Build(context.Background(), contracts)
 	s.NoError(err)

@@ -111,7 +111,7 @@ func (le *logicExecutor) ExecuteConstructor(
 
 	request := transcript.Request
 
-	if transcript.LogicContext.Caller.IsEmpty() {
+	if request.Caller.IsEmpty() {
 		return nil, errors.New("Call constructor from nowhere")
 	}
 

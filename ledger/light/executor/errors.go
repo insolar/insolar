@@ -14,30 +14,13 @@
 // limitations under the License.
 //
 
-package logicrunner
+package executor
 
-type RequestResult struct {
-	Result       []byte
-	NewMemory    []byte
-	Activation   bool
-	Deactivation bool
-}
+import (
+	"github.com/pkg/errors"
+)
 
-func NewRequestResult(res []byte) *RequestResult {
-	return &RequestResult{
-		Result: res,
-	}
-}
-
-func (rr *RequestResult) Activate(mem []byte) {
-	rr.Activation = true
-	rr.NewMemory = mem
-}
-
-func (rr *RequestResult) Update(mem []byte) {
-	rr.NewMemory = mem
-}
-
-func (rr *RequestResult) Deactivate() {
-	rr.Deactivation = true
-}
+var (
+	// ErrEmptyReason is returned when blob-record not found.
+	ErrEmptyReason = errors.New("reason is empty")
+)
