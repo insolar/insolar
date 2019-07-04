@@ -197,6 +197,12 @@ func (t *TestArtifactManager) RegisterIncomingRequest(ctx context.Context, req r
 	return &nonce, nil
 }
 
+// RegisterOutgoingRequest implementation for tests
+func (t *TestArtifactManager) RegisterOutgoingRequest(ctx context.Context, req record.OutgoingRequest) (*insolar.ID, error) {
+	nonce := testutils.RandomID()
+	return &nonce, nil
+}
+
 // RegisterResult saves VM method call result.
 func (t *TestArtifactManager) RegisterResult(
 	ctx context.Context, object, request insolar.Reference, payload []byte,
