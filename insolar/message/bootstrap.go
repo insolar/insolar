@@ -23,7 +23,7 @@ import (
 // GenesisRequest is used for genesis records generation.
 // this is fake message that never passed to messageBus
 // it implements Message Interface for ability to be converted
-// to Parcel and than be passed to RegisterRequest method
+// to Parcel and than be passed to RegisterIncomingRequest method
 type GenesisRequest struct {
 	// Name should be unique for each genesis record.
 	Name string

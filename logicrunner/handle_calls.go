@@ -42,7 +42,7 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 	// 1. It's possible that we started to execute ClarifyPendingState, the pulse has
 	// changed and the execution queue was sent to the next executor in OnPulse method.
 	// This means that the next executor already has the last queue element, it's OK.
-	// 2. It's also possible that the pulse has changed after RegisterRequest but
+	// 2. It's also possible that the pulse has changed after RegisterIncomingRequest but
 	// before adding an item to the execution queue. In this case the queue was sent to the
 	// next executor without the last item. We could just return ErrCanceled to make the
 	// caller to resend the request. However this will cause a slow request deduplication
@@ -123,10 +123,10 @@ func (h *HandleCall) handleActual(
 	}
 	es.Unlock()
 
-	// RegisterRequest is an external, slow call to the LME thus we have to
+	// RegisterIncomingRequest is an external, slow call to the LME thus we have to
 	// unlock ExecutionState during the call.
 
-	procRegisterRequest := NewRegisterRequest(parcel, h.dep)
+	procRegisterRequest := NewRegisterIncomingRequest(parcel, h.dep)
 
 	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
 		if err == flow.ErrCancelled {
@@ -153,7 +153,7 @@ func (h *HandleCall) handleActual(
 		} else {
 			inslogger.FromContext(ctx).Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
 		}
-		// and return RegisterRequest as usual
+		// and return RegisterIncomingRequest as usual
 	} else {
 		// it's 'fast' operation, so we don't need to check that pulse ends
 		es.Broker.StartProcessorIfNeeded(ctx)

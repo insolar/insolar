@@ -145,7 +145,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 
 	r, ok := res.(*reply.RegisterRequest)
 	if !ok {
-		return nil, errors.New("Got not reply.RegisterRequest in reply for CallMethod")
+		return nil, errors.New("Got not reply.RegisterIncomingRequest in reply for CallMethod")
 	}
 
 	if async {

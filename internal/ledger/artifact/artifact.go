@@ -36,7 +36,7 @@ type Manager interface {
 	// If provided state is nil, the latest state will be returned (w/o deactivation check).
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
-	// RegisterRequest creates request record in storage.
+	// RegisterIncomingRequest creates request record in storage.
 	RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error)
 
 	// RegisterResult saves payload result in storage (emulates of save call result by VM).
@@ -123,7 +123,7 @@ func (m *Scope) GetObject(
 	return desc, nil
 }
 
-// RegisterRequest creates request record in storage.
+// RegisterIncomingRequest creates request record in storage.
 func (m *Scope) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
 	virtRec := record.Wrap(req)
 	return m.setRecord(ctx, virtRec)
