@@ -62,39 +62,29 @@ func TestGetPower(t *testing.T) {
 }
 
 func TestGetIndex(t *testing.T) {
-	mr1 := MembershipRank((1 << 8) - 1)
-	require.Equal(t, mr1.GetIndex(), uint16(0))
-	mr2 := MembershipRank(1 << 8)
-	require.Equal(t, mr2.GetIndex(), uint16(1))
+	require.Equal(t, MembershipRank((1<<8)-1).GetIndex(), uint16(0))
+	require.Equal(t, MembershipRank(1<<8).GetIndex(), uint16(1))
 }
 
 func TestGetTotalCount(t *testing.T) {
-	mr1 := MembershipRank((1 << 18) - 1)
-	require.Equal(t, mr1.GetTotalCount(), uint16(0))
-	mr2 := MembershipRank(1 << 18)
-	require.Equal(t, mr2.GetTotalCount(), uint16(1))
+	require.Equal(t, MembershipRank((1<<18)-1).GetTotalCount(), uint16(0))
+	require.Equal(t, MembershipRank(1<<18).GetTotalCount(), uint16(1))
 }
 
 func TestGetNodeCondition(t *testing.T) {
-	mr1 := MembershipRank((1 << 28) - 1)
-	require.Equal(t, mr1.GetNodeCondition(), MemberCondition(0))
-	mr2 := MembershipRank(1 << 28)
-	require.Equal(t, mr2.GetNodeCondition(), MemberCondition(1))
+	require.Equal(t, MembershipRank((1<<28)-1).GetNodeCondition(), MemberCondition(0))
+	require.Equal(t, MembershipRank(1<<28).GetNodeCondition(), MemberCondition(1))
 }
 
 func TestIsJoiner(t *testing.T) {
-	mr1 := MembershipRank(1)
-	require.False(t, mr1.IsJoiner())
-	mr2 := JoinerMembershipRank
-	require.True(t, mr2.IsJoiner())
+	require.False(t, MembershipRank(1).IsJoiner())
+	require.True(t, JoinerMembershipRank.IsJoiner())
 }
 
 func TestString(t *testing.T) {
 	joiner := "{joiner}"
-	mr1 := JoinerMembershipRank
-	require.Equal(t, mr1.String(), joiner)
-	mr2 := MembershipRank(1)
-	require.NotEqual(t, mr2.String(), joiner)
+	require.Equal(t, JoinerMembershipRank.String(), joiner)
+	require.NotEqual(t, MembershipRank(1).String(), joiner)
 }
 
 func TestNewMembershipRank(t *testing.T) {
