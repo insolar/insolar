@@ -919,7 +919,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	suite.am.HasPendingRequestsMock.Return(false, nil)
 
-	suite.am.RegisterRequestMock.Set(func(ctx context.Context, r record.IncomingRequest) (*insolar.ID, error) {
+	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r record.IncomingRequest) (*insolar.ID, error) {
 		reqId := testutils.RandomID()
 		return &reqId, nil
 	})
@@ -1006,7 +1006,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			flowCanceledExpected: true,
 		},
 		{
-			name:                 "pulse change in RegisterRequest",
+			name:                 "pulse change in RegisterIncomingRequest",
 			when:                 whenRegisterRequest,
 			flowCanceledExpected: true,
 		},
@@ -1069,12 +1069,12 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			if test.when > whenIsAuthorized {
-				suite.am.RegisterRequestFunc = func(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
+				suite.am.RegisterIncomingRequestFunc = func(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
 					if test.when == whenRegisterRequest {
 						changePulse()
 						// Due to specific implementation of HandleCall.handleActual
 						// for this particular test we have to explicitly return
-						// ErrCancelled. Otherwise it's possible that RegisterRequest
+						// ErrCancelled. Otherwise it's possible that RegisterIncomingRequest
 						// Procedure will return normally before Flow cancels it.
 						return nil, flow.ErrCancelled
 					}
