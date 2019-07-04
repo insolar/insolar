@@ -84,7 +84,8 @@ func (m CallMode) String() string {
 }
 
 // LogicCallContext is a context of contract execution. Everything
-// that is required to implement foundation functions
+// that is required to implement foundation functions. This struct
+// shouldn't be used in core components.
 type LogicCallContext struct {
 	Mode            CallMode   // either "execution" or "validation"
 	Callee          *Reference // Contract that was called
