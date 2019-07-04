@@ -96,12 +96,12 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}
 
-	res, err := ar.ContractRequester.SendRequest(
+	res, err := ar.ContractRequester.SendRequestWithPulse(
 		ctx,
 		reference,
 		"Call",
 		[]interface{}{requestArgs},
-		// seedPulse,
+		seedPulse,
 	)
 
 	if err != nil {
