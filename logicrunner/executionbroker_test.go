@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 // wait is Exponential retries waiting function
@@ -187,7 +188,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
 	methodsMock.CheckMock.Return(nil)
 	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) error {
-		if !t.LogicContext.Immutable {
+		if !t.Request.Immutable {
 			waitChannel <- struct{}{}
 		}
 		return nil
@@ -202,8 +203,9 @@ func (s *ExecutionBrokerSuite) TestPut() {
 
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef1,
+		Request:      &record.IncomingRequest{},
 	}
 
 	b.Put(ctx, false, tr)
@@ -211,8 +213,9 @@ func (s *ExecutionBrokerSuite) TestPut() {
 
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef2,
+		Request:      &record.IncomingRequest{},
 	}
 
 	b.Put(ctx, true, tr)
@@ -238,7 +241,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
 	methodsMock.CheckMock.Return(nil)
 	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) error {
-		if !t.LogicContext.Immutable {
+		if !t.Request.Immutable {
 			waitChannel <- struct{}{}
 		}
 		return nil
@@ -253,16 +256,18 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef1,
+		Request:      &record.IncomingRequest{},
 	}
 	b.Prepend(ctx, false, tr)
 	s.Len(b.mutable.queue, 1)
 
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef2,
+		Request:      &record.IncomingRequest{},
 	}
 	b.Prepend(ctx, true, tr)
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
@@ -289,7 +294,7 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
 	methodsMock.CheckMock.Return(nil)
 	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) error {
-		if !t.LogicContext.Immutable {
+		if !t.Request.Immutable {
 			waitMutableChannel <- struct{}{}
 		} else {
 			waitImmutableChannel <- struct{}{}
@@ -306,8 +311,9 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: true},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef1,
+		Request:      &record.IncomingRequest{Immutable: true},
 	}
 
 	b.Prepend(ctx, false, tr)
@@ -317,8 +323,9 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: true},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef2,
+		Request:      &record.IncomingRequest{Immutable: true},
 	}
 
 	b.Prepend(ctx, true, tr)
@@ -328,8 +335,9 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	reqRef3 := gen.Reference()
 	tr = &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: true},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef3,
+		Request:      &record.IncomingRequest{Immutable: true},
 	}
 
 	// we can't process messages, do not do it
@@ -341,8 +349,9 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	reqRef4 := gen.Reference()
 	tr = &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: true},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef4,
+		Request:      &record.IncomingRequest{Immutable: true},
 	}
 
 	b.Prepend(ctx, true, tr)
@@ -433,14 +442,16 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 
 	reqRef1 := gen.Reference()
 	b.Put(ctx, false, &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef1,
+		Request:      &record.IncomingRequest{},
 	}) // no duplication
 	s.Len(b.mutable.queue, 1)
 
 	b.Put(ctx, false, &Transcript{
-		LogicContext: &insolar.LogicCallContext{Immutable: false},
+		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef1,
+		Request:      &record.IncomingRequest{},
 	}) // duplication
 	s.Len(b.mutable.queue, 1)
 }

@@ -83,7 +83,8 @@ func (m CallMode) String() string {
 	}
 }
 
-// LogicCallContext is a context of contract execution
+// LogicCallContext is a context of contract execution. Everything
+// that is required to implement foundation functions
 type LogicCallContext struct {
 	Mode            CallMode   // either "execution" or "validation"
 	Callee          *Reference // Contract that was called
@@ -95,7 +96,6 @@ type LogicCallContext struct {
 	Caller          *Reference // Contract that made the call
 	Time            time.Time  // Time when call was made
 	Pulse           Pulse      // Number of the pulse
-	Immutable       bool
 	TraceID         string
 }
 

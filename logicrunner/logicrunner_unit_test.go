@@ -1654,9 +1654,10 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 	reqRef := gen.Reference()
 	es.Broker.Put(s.ctx, false, &Transcript{
 		FromLedger:   true,
-		LogicContext: &insolar.LogicCallContext{Immutable: false},
-		RequestRef:   &reqRef},
-	)
+		LogicContext: &insolar.LogicCallContext{},
+		RequestRef:   &reqRef,
+		Request:      &record.IncomingRequest{},
+	})
 
 	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
