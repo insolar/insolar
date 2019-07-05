@@ -91,6 +91,11 @@ type ClientMock struct {
 	RegisterIncomingRequestPreCounter uint64
 	RegisterIncomingRequestMock       mClientMockRegisterIncomingRequest
 
+	RegisterOutgoingRequestFunc       func(p context.Context, p1 record.OutgoingRequest) (r *insolar.ID, r1 error)
+	RegisterOutgoingRequestCounter    uint64
+	RegisterOutgoingRequestPreCounter uint64
+	RegisterOutgoingRequestMock       mClientMockRegisterOutgoingRequest
+
 	RegisterResultFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)
 	RegisterResultCounter    uint64
 	RegisterResultPreCounter uint64
@@ -134,6 +139,7 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.InjectFinishMock = mClientMockInjectFinish{mock: m}
 	m.InjectObjectDescriptorMock = mClientMockInjectObjectDescriptor{mock: m}
 	m.RegisterIncomingRequestMock = mClientMockRegisterIncomingRequest{mock: m}
+	m.RegisterOutgoingRequestMock = mClientMockRegisterOutgoingRequest{mock: m}
 	m.RegisterResultMock = mClientMockRegisterResult{mock: m}
 	m.RegisterValidationMock = mClientMockRegisterValidation{mock: m}
 	m.StateMock = mClientMockState{mock: m}
@@ -2169,6 +2175,157 @@ func (m *ClientMock) RegisterIncomingRequestFinished() bool {
 	return true
 }
 
+type mClientMockRegisterOutgoingRequest struct {
+	mock              *ClientMock
+	mainExpectation   *ClientMockRegisterOutgoingRequestExpectation
+	expectationSeries []*ClientMockRegisterOutgoingRequestExpectation
+}
+
+type ClientMockRegisterOutgoingRequestExpectation struct {
+	input  *ClientMockRegisterOutgoingRequestInput
+	result *ClientMockRegisterOutgoingRequestResult
+}
+
+type ClientMockRegisterOutgoingRequestInput struct {
+	p  context.Context
+	p1 record.OutgoingRequest
+}
+
+type ClientMockRegisterOutgoingRequestResult struct {
+	r  *insolar.ID
+	r1 error
+}
+
+//Expect specifies that invocation of Client.RegisterOutgoingRequest is expected from 1 to Infinity times
+func (m *mClientMockRegisterOutgoingRequest) Expect(p context.Context, p1 record.OutgoingRequest) *mClientMockRegisterOutgoingRequest {
+	m.mock.RegisterOutgoingRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockRegisterOutgoingRequestExpectation{}
+	}
+	m.mainExpectation.input = &ClientMockRegisterOutgoingRequestInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of Client.RegisterOutgoingRequest
+func (m *mClientMockRegisterOutgoingRequest) Return(r *insolar.ID, r1 error) *ClientMock {
+	m.mock.RegisterOutgoingRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockRegisterOutgoingRequestExpectation{}
+	}
+	m.mainExpectation.result = &ClientMockRegisterOutgoingRequestResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Client.RegisterOutgoingRequest is expected once
+func (m *mClientMockRegisterOutgoingRequest) ExpectOnce(p context.Context, p1 record.OutgoingRequest) *ClientMockRegisterOutgoingRequestExpectation {
+	m.mock.RegisterOutgoingRequestFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ClientMockRegisterOutgoingRequestExpectation{}
+	expectation.input = &ClientMockRegisterOutgoingRequestInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ClientMockRegisterOutgoingRequestExpectation) Return(r *insolar.ID, r1 error) {
+	e.result = &ClientMockRegisterOutgoingRequestResult{r, r1}
+}
+
+//Set uses given function f as a mock of Client.RegisterOutgoingRequest method
+func (m *mClientMockRegisterOutgoingRequest) Set(f func(p context.Context, p1 record.OutgoingRequest) (r *insolar.ID, r1 error)) *ClientMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.RegisterOutgoingRequestFunc = f
+	return m.mock
+}
+
+//RegisterOutgoingRequest implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) RegisterOutgoingRequest(p context.Context, p1 record.OutgoingRequest) (r *insolar.ID, r1 error) {
+	counter := atomic.AddUint64(&m.RegisterOutgoingRequestPreCounter, 1)
+	defer atomic.AddUint64(&m.RegisterOutgoingRequestCounter, 1)
+
+	if len(m.RegisterOutgoingRequestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RegisterOutgoingRequestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.RegisterOutgoingRequest. %v %v", p, p1)
+			return
+		}
+
+		input := m.RegisterOutgoingRequestMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClientMockRegisterOutgoingRequestInput{p, p1}, "Client.RegisterOutgoingRequest got unexpected parameters")
+
+		result := m.RegisterOutgoingRequestMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ClientMock.RegisterOutgoingRequest")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.RegisterOutgoingRequestMock.mainExpectation != nil {
+
+		input := m.RegisterOutgoingRequestMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ClientMockRegisterOutgoingRequestInput{p, p1}, "Client.RegisterOutgoingRequest got unexpected parameters")
+		}
+
+		result := m.RegisterOutgoingRequestMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ClientMock.RegisterOutgoingRequest")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.RegisterOutgoingRequestFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.RegisterOutgoingRequest. %v %v", p, p1)
+		return
+	}
+
+	return m.RegisterOutgoingRequestFunc(p, p1)
+}
+
+//RegisterOutgoingRequestMinimockCounter returns a count of ClientMock.RegisterOutgoingRequestFunc invocations
+func (m *ClientMock) RegisterOutgoingRequestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RegisterOutgoingRequestCounter)
+}
+
+//RegisterOutgoingRequestMinimockPreCounter returns the value of ClientMock.RegisterOutgoingRequest invocations
+func (m *ClientMock) RegisterOutgoingRequestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RegisterOutgoingRequestPreCounter)
+}
+
+//RegisterOutgoingRequestFinished returns true if mock invocations count is ok
+func (m *ClientMock) RegisterOutgoingRequestFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.RegisterOutgoingRequestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RegisterOutgoingRequestCounter) == uint64(len(m.RegisterOutgoingRequestMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.RegisterOutgoingRequestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RegisterOutgoingRequestCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.RegisterOutgoingRequestFunc != nil {
+		return atomic.LoadUint64(&m.RegisterOutgoingRequestCounter) > 0
+	}
+
+	return true
+}
+
 type mClientMockRegisterResult struct {
 	mock              *ClientMock
 	mainExpectation   *ClientMockRegisterResultExpectation
@@ -2818,6 +2975,10 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.RegisterIncomingRequest")
 	}
 
+	if !m.RegisterOutgoingRequestFinished() {
+		m.t.Fatal("Expected call to ClientMock.RegisterOutgoingRequest")
+	}
+
 	if !m.RegisterResultFinished() {
 		m.t.Fatal("Expected call to ClientMock.RegisterResult")
 	}
@@ -2907,6 +3068,10 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.RegisterIncomingRequest")
 	}
 
+	if !m.RegisterOutgoingRequestFinished() {
+		m.t.Fatal("Expected call to ClientMock.RegisterOutgoingRequest")
+	}
+
 	if !m.RegisterResultFinished() {
 		m.t.Fatal("Expected call to ClientMock.RegisterResult")
 	}
@@ -2951,6 +3116,7 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.InjectFinishFinished()
 		ok = ok && m.InjectObjectDescriptorFinished()
 		ok = ok && m.RegisterIncomingRequestFinished()
+		ok = ok && m.RegisterOutgoingRequestFinished()
 		ok = ok && m.RegisterResultFinished()
 		ok = ok && m.RegisterValidationFinished()
 		ok = ok && m.StateFinished()
@@ -3017,6 +3183,10 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 
 			if !m.RegisterIncomingRequestFinished() {
 				m.t.Error("Expected call to ClientMock.RegisterIncomingRequest")
+			}
+
+			if !m.RegisterOutgoingRequestFinished() {
+				m.t.Error("Expected call to ClientMock.RegisterOutgoingRequest")
 			}
 
 			if !m.RegisterResultFinished() {
@@ -3100,6 +3270,10 @@ func (m *ClientMock) AllMocksCalled() bool {
 	}
 
 	if !m.RegisterIncomingRequestFinished() {
+		return false
+	}
+
+	if !m.RegisterOutgoingRequestFinished() {
 		return false
 	}
 

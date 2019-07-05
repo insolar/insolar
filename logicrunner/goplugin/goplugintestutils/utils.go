@@ -197,6 +197,12 @@ func (t *TestArtifactManager) RegisterIncomingRequest(ctx context.Context, req r
 	return &nonce, nil
 }
 
+// RegisterOutgoingRequest implementation for tests
+func (t *TestArtifactManager) RegisterOutgoingRequest(ctx context.Context, req record.OutgoingRequest) (*insolar.ID, error) {
+	nonce := testutils.RandomID()
+	return &nonce, nil
+}
+
 // RegisterResult saves VM method call result.
 func (t *TestArtifactManager) RegisterResult(
 	ctx context.Context, object, request insolar.Reference, payload []byte,
@@ -431,16 +437,16 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
+
 		nonce := testutils.RandomRef()
-		codeReq, err := cb.ArtifactManager.RegisterIncomingRequest(
-			ctx,
-			record.IncomingRequest{
-				CallType:  record.CTSaveAsChild,
-				Prototype: &nonce,
-			},
-		)
+		req := record.IncomingRequest{
+			CallType:  record.CTSaveAsChild,
+			Prototype: &nonce,
+		}
+
+		codeReq, err := cb.registerRequest(ctx, req)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterIncomingRequest")
+			return errors.Wrap(err, "[ Build ] Can't register request")
 		}
 
 		log.Debugf("Deploying code for contract %q", name)

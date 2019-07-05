@@ -128,7 +128,7 @@ func TestSetOutgoingRequest_EmptyRequestObject(t *testing.T) {
 	handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
-	assert.EqualError(t, err, "object is nil")
+	assert.EqualError(t, err, "SetOutgoingRequest.Present: object is nil")
 }
 
 func TestSetOutgoingRequest_FlowWithPassedFlag(t *testing.T) {

@@ -205,11 +205,23 @@ func (m *executionProxyImplementation) RouteCall(
 		return errors.New("Try to call route from immutable method")
 	}
 
-	reqRecord := routeCallRequestRecord(ctx, current, req)
+	incoming, outgoing := buildIncomingAndOutgoingRequests(ctx, current, req)
 
-	msg := &message.CallMethod{IncomingRequest: reqRecord}
-	res, err := m.cr.CallMethod(ctx, msg)
-	current.AddOutgoingRequest(ctx, reqRecord, rep.Result, nil, err)
+	// Step 1. Register outgoing request.
+
+	// If pulse changes during registering of OutgoingRequest we don't care because
+	// we _already_ are processing the request. We should continue to execute and
+	// the next executor will wait for us in pending state. For this reason Flow is not
+	// used for registering the outgoing request.
+	_, err := m.am.RegisterOutgoingRequest(ctx, *outgoing)
+	if err != nil {
+		return err
+	}
+
+	// Step 2. Actually make a call.
+	callMsg := &message.CallMethod{IncomingRequest: *incoming}
+	res, err := m.cr.CallMethod(ctx, callMsg)
+	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	if err != nil {
 		return err
 	}
@@ -392,9 +404,9 @@ func (m *validationProxyImplementation) RouteCall(
 		return errors.New("immutable method can't make calls")
 	}
 
-	reqRecord := routeCallRequestRecord(ctx, current, req)
+	incoming, _ := buildIncomingAndOutgoingRequests(ctx, current, req)
 
-	reqRes := current.HasOutgoingRequest(ctx, reqRecord)
+	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
 		return errors.New("unexpected outgoing call during validation")
 	}
@@ -468,13 +480,35 @@ func (m *validationProxyImplementation) DeactivateObject(
 	return nil
 }
 
-func routeCallRequestRecord(
+func buildIncomingAndOutgoingRequests(
 	_ context.Context, current *Transcript, req rpctypes.UpRouteReq,
-) record.IncomingRequest {
+) (*record.IncomingRequest, *record.OutgoingRequest) {
 
 	current.Nonce++
 
-	reqRecord := record.IncomingRequest{
+	incoming := record.IncomingRequest{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           current.Nonce,
+
+		Immutable: req.Immutable,
+
+		Object:    &req.Object,
+		Prototype: &req.Prototype,
+		Method:    req.Method,
+		Arguments: req.Arguments,
+
+		APIRequestID: current.Request.APIRequestID,
+		Reason:       *current.RequestRef,
+	}
+
+	// Currently IncomingRequest and OutgoingRequest are exact copies of each other
+	// thus the following code is a bit ugly. However this will change when we'll
+	// figure out which fields are actually needed in OutgoingRequest and which are
+	// not. Thus please keep the code the way it is for now, dont't introduce any
+	// CommonRequestData structures or something like this.
+
+	outgoing := record.OutgoingRequest{
 		Caller:          req.Callee,
 		CallerPrototype: req.CalleePrototype,
 		Nonce:           current.Nonce,
@@ -491,10 +525,11 @@ func routeCallRequestRecord(
 	}
 
 	if !req.Wait {
-		reqRecord.ReturnMode = record.ReturnNoWait
+		incoming.ReturnMode = record.ReturnNoWait
+		outgoing.ReturnMode = record.ReturnNoWait
 	}
 
-	return reqRecord
+	return &incoming, &outgoing
 }
 
 func saveAsChildRequestRecord(
@@ -543,4 +578,3 @@ func saveAsDelegateRequestRecord(
 
 	return reqRecord
 }
-
