@@ -61,17 +61,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SerializerTo interface {
-	SerializeTo(writer io.Writer, signer common.DataSigner) error
-}
-
-var defaultByteOrder = binary.BigEndian
-
-const (
-	fieldBufSize  = 2048
-	packetBufSize = 2048
-)
-
 func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) error {
 	var fieldInternalBuffer [fieldBufSize]byte
 
