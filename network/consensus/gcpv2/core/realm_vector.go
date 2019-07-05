@@ -301,67 +301,67 @@ func NewDualVectorBuilder(helper *RealmVectorHelper, baseBuilder VectorBuilder, 
 	}
 }
 
-func (p *DualVectorBuilder) smth() {
-	for _, se := range p.helper.sorted {
-		ve := &p.helper.indexed[se.index]
-
-		var (
-			n        *NodeAppearance
-			power    common.MemberPower
-			role     common.NodePrimaryRole
-			nodeData *common.NodeAnnouncedState
-		)
-		if se.id == ve.rank.id {
-			// member
-			n = ve.node
-			power = ve.rank.GetPower()
-			role = ve.role
-			nodeData = &ve.nodeData
-		} else {
-			// joiner
-			if !ve.HasJoiner() {
-				panic("illegal state")
-			}
-			n = ve.joiner
-			power = se.GetPower()
-			nas := n.GetNodeMembershipProfileOrEmpty().NodeAnnouncedState
-			role = ve.joinerRole
-			nodeData = &nas
-		}
-
-		for i := range p.builders {
-			b := &p.builders[i]
-			b.LastFilter = b.FilterMask&ve.filter == b.FilterRes
-
-		}
-
-		//if len(p.lazyBuilders) > 0 {
-		//	j := 0
-		//	for i, b := range p.lazyBuilders {
-		//		base := &p.builders[b.ReuseBuilder]
-		//		if b.LastFilter != base.LastFilter {
-		//			b.Builder = base.Builder.Fork()
-		//			for k := 0; k < i; k++ {
-		//				bb := p.lazyBuilders[k]
-		//				if bb.ReuseBuilder == b.ReuseBuilder && bb.LastFilter == b.LastFilter {
-		//					bb.ReuseBuilder =
-		//				}
-		//				if
-		//			}
-		//		}
-		//
-		//		//if b.LastFilter !=
-		//	}
-		//
-		//
-		//} else {
-		//	for i := range p.builders {
-		//		b := &p.builders[i]
-		//		if b.FilterMask & ve.filter == 0 { continue }
-		//		b.Cursor.BeforeNext(role)
-		//		b.Builder.AddEntry(n, power, b.Cursor, nodeData)
-		//		b.Cursor.AfterNext(power)
-		//	}
-		//}
-	}
-}
+//func (p *DualVectorBuilder) smth() {
+//	for _, se := range p.helper.sorted {
+//		ve := &p.helper.indexed[se.index]
+//
+//		var (
+//			n        *NodeAppearance
+//			power    common.MemberPower
+//			role     common.NodePrimaryRole
+//			nodeData *common.NodeAnnouncedState
+//		)
+//		if se.id == ve.rank.id {
+//			// member
+//			n = ve.node
+//			power = ve.rank.GetPower()
+//			role = ve.role
+//			nodeData = &ve.nodeData
+//		} else {
+//			// joiner
+//			if !ve.HasJoiner() {
+//				panic("illegal state")
+//			}
+//			n = ve.joiner
+//			power = se.GetPower()
+//			nas := n.GetNodeMembershipProfileOrEmpty().NodeAnnouncedState
+//			role = ve.joinerRole
+//			nodeData = &nas
+//		}
+//
+//		for i := range p.builders {
+//			b := &p.builders[i]
+//			b.LastFilter = b.FilterMask&ve.filter == b.FilterRes
+//
+//		}
+//
+//		if len(p.lazyBuilders) > 0 {
+//			j := 0
+//			for i, b := range p.lazyBuilders {
+//				base := &p.builders[b.ReuseBuilder]
+//				if b.LastFilter != base.LastFilter {
+//					b.Builder = base.Builder.Fork()
+//					for k := 0; k < i; k++ {
+//						bb := p.lazyBuilders[k]
+//						if bb.ReuseBuilder == b.ReuseBuilder && bb.LastFilter == b.LastFilter {
+//							bb.ReuseBuilder =
+//						}
+//						if
+//					}
+//				}
+//
+//				//if b.LastFilter !=
+//			}
+//
+//
+//		} else {
+//			for i := range p.builders {
+//				b := &p.builders[i]
+//				if b.FilterMask & ve.filter == 0 { continue }
+//				b.Cursor.BeforeNext(role)
+//				b.Builder.AddEntry(n, power, b.Cursor, nodeData)
+//				b.Cursor.AfterNext(power)
+//			}
+//		}
+//	}
+//}
