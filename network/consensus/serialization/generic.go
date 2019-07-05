@@ -84,20 +84,17 @@ func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) e
 			continue
 		}
 
-		if shouldGenerateSignature(fvt) /* TODO: */ && signer != nil {
+		writingValue := fv
+
+		if shouldGenerateSignature(fvt) {
 			sd := signer.GetSignOfData(checksumBuffer)
 			sigBytes := sd.GetSignature().AsBytes()
 			bits := *common.NewBits512FromBytes(sigBytes)
 
-			bs := [64]byte(bits)
-
-			reflect.Copy(fv, reflect.ValueOf(bs))
-			// signPtr := fv.Interface()
-			// signBits := signPtr.(common.Bits512)
-			// fv.Set(sigBytes)
+			writingValue = reflect.ValueOf(bits)
 		}
 
-		err := writeValue(fv, fieldBuf, signer)
+		err := writeValue(writingValue, fieldBuf, signer)
 		if err != nil {
 			return err
 		}

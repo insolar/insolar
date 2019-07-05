@@ -53,13 +53,23 @@ package serialization
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
+
+var signer = func() *adapters.ECDSADataSigner {
+	processor := platformpolicy.NewKeyProcessor()
+	key, _ := processor.GeneratePrivateKey()
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	signer := adapters.NewECDSADataSigner(
+		adapters.NewSha3512Digester(scheme),
+		adapters.NewECDSADigestSigner(key.(*ecdsa.PrivateKey), scheme),
+	)
+	return signer
+}()
 
 func TestNewUnifiedProtocolPacketHeader_SerializeTo(t *testing.T) {
 	header := UnifiedProtocolPacketHeader{
@@ -68,11 +78,10 @@ func TestNewUnifiedProtocolPacketHeader_SerializeTo(t *testing.T) {
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	err := header.SerializeTo(buf, nil)
+	err := header.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
 	bs := buf.Bytes()
-	fmt.Println(bs)
 	require.EqualValues(t, 16, len(bs))
 }
 
@@ -80,11 +89,10 @@ func TestJoinAnnouncement_SerializeTo(t *testing.T) {
 	joinAnnouncement := JoinAnnouncement{}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	err := joinAnnouncement.SerializeTo(buf, nil)
+	err := joinAnnouncement.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
 	bs := buf.Bytes()
-	fmt.Println(bs)
 	require.EqualValues(t, 137, len(bs))
 }
 
@@ -92,11 +100,10 @@ func TestLeaveAnnouncement_SerializeTo(t *testing.T) {
 	leaveAnnouncement := LeaveAnnouncement{}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	err := leaveAnnouncement.SerializeTo(buf, nil)
+	err := leaveAnnouncement.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
 	bs := buf.Bytes()
-	fmt.Println(bs)
 	require.EqualValues(t, 4, len(bs))
 }
 
@@ -104,30 +111,20 @@ func TestNodeBriefIntro_SerializeTo(t *testing.T) {
 	nodeBriefIntro := NodeBriefIntro{}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	err := nodeBriefIntro.SerializeTo(buf, nil)
+	err := nodeBriefIntro.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
 	bs := buf.Bytes()
-	fmt.Println(bs)
 	require.EqualValues(t, 137, len(bs))
 }
 
 func TestGlobulaConsensusProtocolV2Packet_SerializeTo(t *testing.T) {
 	packet := GlobulaConsensusProtocolV2Packet{}
 
-	processor := platformpolicy.NewKeyProcessor()
-	key, _ := processor.GeneratePrivateKey()
-	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	signer := adapters.NewECDSADataSigner(
-		adapters.NewSha3512Digester(scheme),
-		adapters.NewECDSADigestSigner(key.(*ecdsa.PrivateKey), scheme),
-	)
-
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
 	err := packet.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
 	bs := buf.Bytes()
-	fmt.Println(bs)
 	require.EqualValues(t, 137, len(bs))
 }

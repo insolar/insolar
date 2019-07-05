@@ -51,8 +51,6 @@
 package serialization
 
 import (
-	"context"
-	"encoding/binary"
 	"io"
 	"math/bits"
 
@@ -103,10 +101,6 @@ type UnifiedProtocolPacketHeader struct {
 
 func (p UnifiedProtocolPacketHeader) SerializeTo(writer io.Writer, signer common.DataSigner) error {
 	return serializeTo(writer, signer, p)
-}
-
-func (p *UnifiedProtocolPacketHeader) GetPacketType() packets.PacketType {
-	return packets.PacketType(p.ProtocolAndPacketType & packetTypeMask)
 }
 
 func (p UnifiedProtocolPacketHeader) GetPacketType() packets.PacketType {
