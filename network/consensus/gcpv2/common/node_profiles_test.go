@@ -48,65 +48,81 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package serialization
+package common
 
 import (
-	"io"
+	"testing"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/stretchr/testify/require"
 )
 
-type NodeBriefIntro struct {
-	// ByteSize= 135, 137, 147
-	// ByteSize= 135 + (0, 2, 12)
+func TestMemberPowerOf(t *testing.T) {
+	require.Equal(t, MemberPowerOf(1), MemberPower(1))
 
-	/*
-		This field MUST be excluded from the packet, but considered for signature calculation.
-		Value of this field equals SourceID or AnnounceID.
-	*/
-	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
+	require.Equal(t, MemberPowerOf(0x1F), MemberPower(0x1F))
 
-	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
-	SpecialRoles        common2.NodeSpecialRole
-	StartPower          common2.MemberPower
+	require.Equal(t, MemberPowerOf(MaxLinearMemberPower), MemberPower(0xFF))
 
-	// 4 | 6 | 18 bytes
-	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
-	BasePort    uint16 `insolar-transport:"AddrMode=0,1"`
-	PrimaryIPv4 uint32 `insolar-transport:"AddrMode=0"`
-	// PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
+	require.Equal(t, MemberPowerOf(MaxLinearMemberPower+1), MemberPower(0xFF))
 
-	// 128 bytes
-	NodePK          common.Bits512 // works as a unique node identity
-	JoinerSignature common.Bits512 // ByteSize=64
+	require.Equal(t, MemberPowerOf(0x1F+1), MemberPower(0x1F+1))
+
+	require.Equal(t, MemberPowerOf(0x1F<<1), MemberPower(0x2F))
 }
 
-func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestToLinearValue(t *testing.T) {
+	require.Equal(t, MemberPowerOf(0).ToLinearValue(), uint16(0))
+
+	require.Equal(t, MemberPowerOf(0x1F).ToLinearValue(), uint16(0x1F))
+
+	require.Equal(t, MemberPowerOf(0x1F+1).ToLinearValue(), uint16(0x1F+1))
+
+	require.Equal(t, MemberPowerOf(0x1F<<1).ToLinearValue(), uint16(0x3e))
 }
 
-type NodeFullIntro struct {
-	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
+func TestPercentAndMin(t *testing.T) {
+	require.Equal(t, MemberPowerOf(MaxLinearMemberPower).PercentAndMin(100, MemberPowerOf(0)), ^MemberPower(0))
 
-	NodeBriefIntro // ByteSize= 135, 137, 147
+	require.Equal(t, MemberPowerOf(3).PercentAndMin(1, MemberPowerOf(2)), MemberPower(2))
 
-	// ByteSize>=86
-	IssuedAtPulse common.PulseNumber // =0 when a node was connected during zeronet
-	IssuedAtTime  uint64
-
-	PowerLevels common2.MemberPowerSet // ByteSize=4
-
-	EndpointLen    uint8
-	ExtraEndpoints []uint16
-
-	ProofLen     uint8
-	NodeRefProof []common.Bits512
-
-	DiscoveryIssuerNodeId common.ShortNodeID
-	IssuerSignature       common.Bits512
+	require.Equal(t, MemberPowerOf(3).PercentAndMin(80, MemberPowerOf(1)), MemberPower(2))
 }
 
-func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestNormalize(t *testing.T) {
+	zero := MemberPowerSet([...]MemberPower{0, 0, 0, 0})
+	require.Equal(t, zero.Normalize(), zero)
+
+	require.Equal(t, MemberPowerSet([...]MemberPower{1, 0, 0, 0}).Normalize(), zero)
+
+	m := MemberPowerSet([...]MemberPower{1, 1, 1, 1})
+	require.Equal(t, m.Normalize(), m)
+}
+
+// Illegal cases:
+// [ x,  y,  z,  0] - when any !=0 value of x, y, z
+// [ 0,  x,  0,  y] - when x != 0 and y != 0
+// any combination of non-zero x, y such that x > y and y > 0 and position(x) < position(y)
+// And cases from the function logic.
+func TestIsValid(t *testing.T) {
+	require.True(t, MemberPowerSet([...]MemberPower{0, 0, 0, 0}).IsValid())
+
+	require.False(t, MemberPowerSet([...]MemberPower{1, 0, 0, 0}).IsValid())
+
+	require.False(t, MemberPowerSet([...]MemberPower{0, 1, 0, 0}).IsValid())
+
+	require.False(t, MemberPowerSet([...]MemberPower{0, 0, 1, 0}).IsValid())
+
+	require.False(t, MemberPowerSet([...]MemberPower{0, 1, 0, 1}).IsValid())
+
+	require.False(t, MemberPowerSet([...]MemberPower{2, 1, 2, 2}).IsValid())
+
+	require.True(t, MemberPowerSet([...]MemberPower{1, 0, 0, 1}).IsValid())
+
+	require.True(t, MemberPowerSet([...]MemberPower{1, 1, 0, 1}).IsValid())
+
+	require.False(t, MemberPowerSet([...]MemberPower{1, 1, 2, 1}).IsValid())
+
+	require.True(t, MemberPowerSet([...]MemberPower{1, 0, 2, 2}).IsValid())
+
+	require.True(t, MemberPowerSet([...]MemberPower{1, 1, 2, 2}).IsValid())
 }

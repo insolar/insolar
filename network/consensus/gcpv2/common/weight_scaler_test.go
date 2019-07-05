@@ -48,65 +48,63 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package serialization
+package common
 
 import (
-	"io"
+	"math"
+	"testing"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/stretchr/testify/require"
 )
 
-type NodeBriefIntro struct {
-	// ByteSize= 135, 137, 147
-	// ByteSize= 135 + (0, 2, 12)
+func TestNewNeighbourWeightScalerInt64(t *testing.T) {
+	require.Panics(t, func() { NewNeighbourWeightScalerInt64(-1) })
 
-	/*
-		This field MUST be excluded from the packet, but considered for signature calculation.
-		Value of this field equals SourceID or AnnounceID.
-	*/
-	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
+	fullRange := int64(0)
+	n1 := NewNeighbourWeightScalerInt64(fullRange)
+	require.Equal(t, n1.max, uint32(fullRange))
 
-	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
-	SpecialRoles        common2.NodeSpecialRole
-	StartPower          common2.MemberPower
+	require.Equal(t, n1.shift, uint8(0))
 
-	// 4 | 6 | 18 bytes
-	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
-	BasePort    uint16 `insolar-transport:"AddrMode=0,1"`
-	PrimaryIPv4 uint32 `insolar-transport:"AddrMode=0"`
-	// PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
+	fullRange = int64(1 << 32)
+	n2 := NewNeighbourWeightScalerInt64(fullRange)
+	require.Equal(t, n2.shift, uint8(1))
 
-	// 128 bytes
-	NodePK          common.Bits512 // works as a unique node identity
-	JoinerSignature common.Bits512 // ByteSize=64
+	require.Equal(t, n2.max, uint32(fullRange>>1))
 }
 
-func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestNewNeighbourWeightScalerUint64(t *testing.T) {
+	fullRange := uint64(0)
+	n1 := NewNeighbourWeightScalerUint64(fullRange)
+	require.Equal(t, n1.max, uint32(fullRange))
+
+	require.Equal(t, n1.shift, uint8(0))
+
+	fullRange = uint64(1 << 32)
+	n2 := NewNeighbourWeightScalerUint64(fullRange)
+	require.Equal(t, n2.shift, uint8(1))
+
+	require.Equal(t, n2.max, uint32(fullRange>>1))
 }
 
-type NodeFullIntro struct {
-	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
+func TestScaleInt64(t *testing.T) {
+	n1 := NewNeighbourWeightScalerInt64(0)
+	require.Equal(t, n1.ScaleInt64(-1), uint32(0))
 
-	NodeBriefIntro // ByteSize= 135, 137, 147
+	require.Equal(t, n1.ScaleInt64(0), uint32(math.MaxUint32))
 
-	// ByteSize>=86
-	IssuedAtPulse common.PulseNumber // =0 when a node was connected during zeronet
-	IssuedAtTime  uint64
+	n2 := NewNeighbourWeightScalerInt64(1 << 32)
+	require.Equal(t, n2.ScaleInt64(1<<32), uint32(math.MaxUint32))
 
-	PowerLevels common2.MemberPowerSet // ByteSize=4
-
-	EndpointLen    uint8
-	ExtraEndpoints []uint16
-
-	ProofLen     uint8
-	NodeRefProof []common.Bits512
-
-	DiscoveryIssuerNodeId common.ShortNodeID
-	IssuerSignature       common.Bits512
+	require.Equal(t, n2.ScaleInt64(1<<30), uint32(0x3fffffff))
 }
 
-func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestScaleUint64(t *testing.T) {
+	n1 := NewNeighbourWeightScalerUint64(0)
+	require.Equal(t, n1.ScaleUint64(0), uint32(math.MaxUint32))
+
+	n2 := NewNeighbourWeightScalerUint64(1 << 32)
+	require.Equal(t, n2.ScaleUint64(1<<32), uint32(math.MaxUint32))
+
+	require.Equal(t, n2.ScaleUint64(1<<30), uint32(0x3fffffff))
 }

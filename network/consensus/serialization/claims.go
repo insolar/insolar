@@ -50,9 +50,19 @@
 
 package serialization
 
+import (
+	"io"
+
+	"github.com/insolar/insolar/network/consensus/common"
+)
+
 type ClaimHeader struct {
 	TypeAndLength uint16 `insolar-transport:"header;[0-9]=length;[10-15]=header:ClaimType;group=Claims"` // [00-09] ByteLength [10-15] ClaimClass
 	// actual payload
+}
+
+func (p ClaimHeader) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
+	return serializeTo(writer, signer, p)
 }
 
 type GenericClaim struct {
@@ -61,13 +71,25 @@ type GenericClaim struct {
 	Payload []byte
 }
 
+func (p GenericClaim) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
+	return serializeTo(writer, signer, p)
+}
+
 type EmptyClaim struct {
 	// ByteSize=1
 	ClaimHeader `insolar-transport:"delimiter;ClaimType=0;length=header"`
+}
+
+func (p EmptyClaim) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
+	return serializeTo(writer, signer, p)
 }
 
 type ClaimList struct {
 	// ByteSize>=1
 	Claims      []GenericClaim
 	EndOfClaims EmptyClaim // ByteSize=1 - indicates end of claims
+}
+
+func (p ClaimList) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
+	return serializeTo(writer, signer, p)
 }

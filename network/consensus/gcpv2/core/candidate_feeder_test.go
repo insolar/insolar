@@ -48,65 +48,57 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package serialization
+package core
 
 import (
-	"io"
+	"testing"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	ccommon "github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/testutils"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/stretchr/testify/require"
 )
 
-type NodeBriefIntro struct {
-	// ByteSize= 135, 137, 147
-	// ByteSize= 135 + (0, 2, 12)
+func TestPickNextJoinCandidate(t *testing.T) {
+	require.Equal(t, (&SequencialCandidateFeeder{}).PickNextJoinCandidate(), nil)
 
-	/*
-		This field MUST be excluded from the packet, but considered for signature calculation.
-		Value of this field equals SourceID or AnnounceID.
-	*/
-	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
-
-	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
-	SpecialRoles        common2.NodeSpecialRole
-	StartPower          common2.MemberPower
-
-	// 4 | 6 | 18 bytes
-	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
-	BasePort    uint16 `insolar-transport:"AddrMode=0,1"`
-	PrimaryIPv4 uint32 `insolar-transport:"AddrMode=0"`
-	// PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
-
-	// 128 bytes
-	NodePK          common.Bits512 // works as a unique node identity
-	JoinerSignature common.Bits512 // ByteSize=64
+	s := &SequencialCandidateFeeder{buf: make([]common.CandidateProfile, 1)}
+	c := testutils.NewCandidateProfileMock(t)
+	s.buf[0] = c
+	require.Equal(t, s.PickNextJoinCandidate(), c)
 }
 
-func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestRemoveJoinCandidate(t *testing.T) {
+	require.False(t, (&SequencialCandidateFeeder{}).RemoveJoinCandidate(false, ccommon.ShortNodeID(0)))
+
+	s := &SequencialCandidateFeeder{buf: make([]common.CandidateProfile, 1)}
+	c := testutils.NewCandidateProfileMock(t)
+	s.buf[0] = c
+	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
+	require.False(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(2)))
+
+	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
+	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
+
+	require.Equal(t, s.buf, []common.CandidateProfile(nil))
+
+	s.buf = make([]common.CandidateProfile, 2)
+	s.buf[0] = c
+	c2 := testutils.NewCandidateProfileMock(t)
+	s.buf[1] = c2
+	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
+
+	require.Equal(t, len(s.buf), 1)
+
+	require.True(t, len(s.buf) > 0 && s.buf[0] == c2)
 }
 
-type NodeFullIntro struct {
-	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
+func TestAddJoinCandidate(t *testing.T) {
+	require.Panics(t, func() { (&SequencialCandidateFeeder{}).AddJoinCandidate(nil) })
 
-	NodeBriefIntro // ByteSize= 135, 137, 147
-
-	// ByteSize>=86
-	IssuedAtPulse common.PulseNumber // =0 when a node was connected during zeronet
-	IssuedAtTime  uint64
-
-	PowerLevels common2.MemberPowerSet // ByteSize=4
-
-	EndpointLen    uint8
-	ExtraEndpoints []uint16
-
-	ProofLen     uint8
-	NodeRefProof []common.Bits512
-
-	DiscoveryIssuerNodeId common.ShortNodeID
-	IssuerSignature       common.Bits512
-}
-
-func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+	f := testutils.NewFullIntroductionReaderMock(t)
+	s := &SequencialCandidateFeeder{}
+	s.AddJoinCandidate(f)
+	require.True(t, len(s.buf) == 1 && s.buf[0] == f)
 }

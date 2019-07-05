@@ -56,6 +56,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser -o ../testutils -s _mock.go
+
 type PacketParser interface {
 	GetPacketType() PacketType
 
@@ -174,6 +176,7 @@ type BriefIntroductionReader interface {
 	common2.BriefCandidateProfile
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader -o ../testutils -s _mock.go
 type FullIntroductionReader interface {
 	common2.CandidateProfile
 }

@@ -52,11 +52,10 @@ package serialization
 
 import (
 	"encoding/binary"
-	"github.com/pkg/errors"
 	"io"
-)
 
-var defaultByteOrder = binary.BigEndian
+	"github.com/pkg/errors"
+)
 
 func (h *UnifiedProtocolPacketHeader) Deserialize(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &h.ReceiverID)
@@ -154,13 +153,22 @@ func (m *MembershipAnnouncement) Deserialize(data io.Reader) error {
 	}
 
 	if m.CurrentRank != 0 {
-		err := binary.Read(data, defaultByteOrder, &m.RequestedPower)
+		err := m.NonJoinerMembershipAnnouncement.Deserialize(data)
 		if err != nil {
-			return errors.Wrap(err, "[ MembershipAnnouncement.Deserialize ] Can't read RequestedPower")
+			return err
 		}
-		// todo: Member
-		// todo: AnnounceSignature
 	}
+
+	panic("implement me")
+}
+
+func (m *NonJoinerMembershipAnnouncement) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &m.RequestedPower)
+	if err != nil {
+		return errors.Wrap(err, "[ MembershipAnnouncement.Deserialize ] Can't read RequestedPower")
+	}
+	// todo: Member
+	// todo: AnnounceSignature
 
 	panic("implement me")
 }

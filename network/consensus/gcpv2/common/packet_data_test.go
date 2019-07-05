@@ -48,65 +48,77 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package serialization
+package common
 
 import (
-	"io"
+	"testing"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/stretchr/testify/require"
 )
 
-type NodeBriefIntro struct {
-	// ByteSize= 135, 137, 147
-	// ByteSize= 135 + (0, 2, 12)
-
-	/*
-		This field MUST be excluded from the packet, but considered for signature calculation.
-		Value of this field equals SourceID or AnnounceID.
-	*/
-	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
-
-	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
-	SpecialRoles        common2.NodeSpecialRole
-	StartPower          common2.MemberPower
-
-	// 4 | 6 | 18 bytes
-	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
-	BasePort    uint16 `insolar-transport:"AddrMode=0,1"`
-	PrimaryIPv4 uint32 `insolar-transport:"AddrMode=0"`
-	// PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
-
-	// 128 bytes
-	NodePK          common.Bits512 // works as a unique node identity
-	JoinerSignature common.Bits512 // ByteSize=64
+func TestGetPower(t *testing.T) {
+	require.Equal(t, MembershipRank(1).GetPower(), MemberPower(1))
 }
 
-func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestGetIndex(t *testing.T) {
+	require.Equal(t, MembershipRank((1<<8)-1).GetIndex(), uint16(0))
+
+	require.Equal(t, MembershipRank(1<<8).GetIndex(), uint16(1))
 }
 
-type NodeFullIntro struct {
-	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
+func TestGetTotalCount(t *testing.T) {
+	require.Equal(t, MembershipRank((1<<18)-1).GetTotalCount(), uint16(0))
 
-	NodeBriefIntro // ByteSize= 135, 137, 147
-
-	// ByteSize>=86
-	IssuedAtPulse common.PulseNumber // =0 when a node was connected during zeronet
-	IssuedAtTime  uint64
-
-	PowerLevels common2.MemberPowerSet // ByteSize=4
-
-	EndpointLen    uint8
-	ExtraEndpoints []uint16
-
-	ProofLen     uint8
-	NodeRefProof []common.Bits512
-
-	DiscoveryIssuerNodeId common.ShortNodeID
-	IssuerSignature       common.Bits512
+	require.Equal(t, MembershipRank(1<<18).GetTotalCount(), uint16(1))
 }
 
-func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestGetNodeCondition(t *testing.T) {
+	require.Equal(t, MembershipRank((1<<28)-1).GetNodeCondition(), MemberCondition(0))
+
+	require.Equal(t, MembershipRank(1<<28).GetNodeCondition(), MemberCondition(1))
+}
+
+func TestIsJoiner(t *testing.T) {
+	require.False(t, MembershipRank(1).IsJoiner())
+
+	require.True(t, JoinerMembershipRank.IsJoiner())
+}
+
+func TestString(t *testing.T) {
+	joiner := "{joiner}"
+	require.Equal(t, JoinerMembershipRank.String(), joiner)
+
+	require.NotEqual(t, MembershipRank(1).String(), joiner)
+}
+
+func TestNewMembershipRank(t *testing.T) {
+	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 1, 1, MemberCondition(1)) })
+
+	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 0x03FF+1, 1, MemberCondition(1)) })
+
+	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 1, 0x03FF+1, MemberCondition(1)) })
+
+	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 1, 0x03FF+1, MemberCondition(4)) })
+
+	require.Equal(t, NewMembershipRank(MemberPower(1), 1, 2, MemberCondition(1)), MembershipRank(0x10080101))
+}
+
+func TestEnsureNodeIndex(t *testing.T) {
+	require.Panics(t, func() { ensureNodeIndex(0x03FF + 1) })
+
+	require.Equal(t, ensureNodeIndex(2), uint32(2))
+}
+
+func TestAsUnit32(t *testing.T) {
+	require.Panics(t, func() { MemberCondition(4).asUnit32() })
+
+	require.Equal(t, MemberNormalOps.asUnit32(), uint32(MemberNormalOps))
+}
+
+func TestMemberConditionString(t *testing.T) {
+	require.Equal(t, MemberNormalOps.String(), "norm")
+
+	require.Equal(t, MemberRecentlyJoined.String(), "recent")
+
+	require.NotPanics(t, func() { MemberCondition(8).String() })
 }

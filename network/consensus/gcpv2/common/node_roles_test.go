@@ -48,65 +48,88 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package serialization
+package common
 
 import (
-	"io"
+	"testing"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/stretchr/testify/require"
 )
 
-type NodeBriefIntro struct {
-	// ByteSize= 135, 137, 147
-	// ByteSize= 135 + (0, 2, 12)
+func TestIsMaterial(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsMaterial())
 
-	/*
-		This field MUST be excluded from the packet, but considered for signature calculation.
-		Value of this field equals SourceID or AnnounceID.
-	*/
-	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
+	require.False(t, PrimaryRoleNeutral.IsMaterial())
 
-	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
-	SpecialRoles        common2.NodeSpecialRole
-	StartPower          common2.MemberPower
+	require.True(t, PrimaryRoleHeavyMaterial.IsMaterial())
 
-	// 4 | 6 | 18 bytes
-	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
-	BasePort    uint16 `insolar-transport:"AddrMode=0,1"`
-	PrimaryIPv4 uint32 `insolar-transport:"AddrMode=0"`
-	// PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
+	require.True(t, PrimaryRoleLightMaterial.IsMaterial())
 
-	// 128 bytes
-	NodePK          common.Bits512 // works as a unique node identity
-	JoinerSignature common.Bits512 // ByteSize=64
+	require.False(t, PrimaryRoleVirtual.IsMaterial())
 }
 
-func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestIsHeavyMaterial(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsHeavyMaterial())
+
+	require.False(t, PrimaryRoleNeutral.IsHeavyMaterial())
+
+	require.True(t, PrimaryRoleHeavyMaterial.IsHeavyMaterial())
+
+	require.False(t, PrimaryRoleLightMaterial.IsHeavyMaterial())
+
+	require.False(t, PrimaryRoleVirtual.IsHeavyMaterial())
 }
 
-type NodeFullIntro struct {
-	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
+func TestIsLightMaterial(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsLightMaterial())
 
-	NodeBriefIntro // ByteSize= 135, 137, 147
+	require.False(t, PrimaryRoleNeutral.IsLightMaterial())
 
-	// ByteSize>=86
-	IssuedAtPulse common.PulseNumber // =0 when a node was connected during zeronet
-	IssuedAtTime  uint64
+	require.False(t, PrimaryRoleHeavyMaterial.IsLightMaterial())
 
-	PowerLevels common2.MemberPowerSet // ByteSize=4
+	require.True(t, PrimaryRoleLightMaterial.IsLightMaterial())
 
-	EndpointLen    uint8
-	ExtraEndpoints []uint16
-
-	ProofLen     uint8
-	NodeRefProof []common.Bits512
-
-	DiscoveryIssuerNodeId common.ShortNodeID
-	IssuerSignature       common.Bits512
+	require.False(t, PrimaryRoleVirtual.IsLightMaterial())
 }
 
-func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestIsVirtual(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsVirtual())
+
+	require.False(t, PrimaryRoleNeutral.IsVirtual())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsVirtual())
+
+	require.False(t, PrimaryRoleLightMaterial.IsVirtual())
+
+	require.True(t, PrimaryRoleVirtual.IsVirtual())
+}
+
+func TestIsNeutral(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsNeutral())
+
+	require.True(t, PrimaryRoleNeutral.IsNeutral())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsNeutral())
+
+	require.False(t, PrimaryRoleLightMaterial.IsNeutral())
+
+	require.False(t, PrimaryRoleVirtual.IsNeutral())
+}
+
+func TestIsInactive(t *testing.T) {
+	require.True(t, PrimaryRoleInactive.IsInactive())
+
+	require.False(t, PrimaryRoleNeutral.IsInactive())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsInactive())
+
+	require.False(t, PrimaryRoleLightMaterial.IsInactive())
+
+	require.False(t, PrimaryRoleVirtual.IsInactive())
+}
+
+func TestIsDiscovery(t *testing.T) {
+	require.False(t, SpecialRoleNone.IsDiscovery())
+
+	require.True(t, SpecialRoleDiscovery.IsDiscovery())
 }

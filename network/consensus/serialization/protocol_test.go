@@ -51,62 +51,75 @@
 package serialization
 
 import (
-	"io"
+	"bytes"
+	"crypto/ecdsa"
+	"testing"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/require"
 )
 
-type NodeBriefIntro struct {
-	// ByteSize= 135, 137, 147
-	// ByteSize= 135 + (0, 2, 12)
+var signer = func() *adapters.ECDSADataSigner {
+	processor := platformpolicy.NewKeyProcessor()
+	key, _ := processor.GeneratePrivateKey()
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	signer := adapters.NewECDSADataSigner(
+		adapters.NewSha3512Digester(scheme),
+		adapters.NewECDSADigestSigner(key.(*ecdsa.PrivateKey), scheme),
+	)
+	return signer
+}()
 
-	/*
-		This field MUST be excluded from the packet, but considered for signature calculation.
-		Value of this field equals SourceID or AnnounceID.
-	*/
-	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
+func TestNewUnifiedProtocolPacketHeader_SerializeTo(t *testing.T) {
+	header := UnifiedProtocolPacketHeader{
+		SourceID:   132,
+		ReceiverID: 321,
+	}
 
-	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
-	SpecialRoles        common2.NodeSpecialRole
-	StartPower          common2.MemberPower
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	s, err := header.SerializeTo(buf, signer)
+	require.NoError(t, err)
 
-	// 4 | 6 | 18 bytes
-	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
-	BasePort    uint16 `insolar-transport:"AddrMode=0,1"`
-	PrimaryIPv4 uint32 `insolar-transport:"AddrMode=0"`
-	// PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
-
-	// 128 bytes
-	NodePK          common.Bits512 // works as a unique node identity
-	JoinerSignature common.Bits512 // ByteSize=64
+	require.EqualValues(t, 16, s)
 }
 
-func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestJoinAnnouncement_SerializeTo(t *testing.T) {
+	joinAnnouncement := JoinAnnouncement{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	s, err := joinAnnouncement.SerializeTo(buf, signer)
+	require.NoError(t, err)
+
+	require.EqualValues(t, 137, s)
 }
 
-type NodeFullIntro struct {
-	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
+func TestLeaveAnnouncement_SerializeTo(t *testing.T) {
+	leaveAnnouncement := LeaveAnnouncement{}
 
-	NodeBriefIntro // ByteSize= 135, 137, 147
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	s, err := leaveAnnouncement.SerializeTo(buf, signer)
+	require.NoError(t, err)
 
-	// ByteSize>=86
-	IssuedAtPulse common.PulseNumber // =0 when a node was connected during zeronet
-	IssuedAtTime  uint64
-
-	PowerLevels common2.MemberPowerSet // ByteSize=4
-
-	EndpointLen    uint8
-	ExtraEndpoints []uint16
-
-	ProofLen     uint8
-	NodeRefProof []common.Bits512
-
-	DiscoveryIssuerNodeId common.ShortNodeID
-	IssuerSignature       common.Bits512
+	require.EqualValues(t, 4, s)
 }
 
-func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func TestNodeBriefIntro_SerializeTo(t *testing.T) {
+	nodeBriefIntro := NodeBriefIntro{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	s, err := nodeBriefIntro.SerializeTo(buf, signer)
+	require.NoError(t, err)
+
+	require.EqualValues(t, 137, s)
+}
+
+func TestGlobulaConsensusProtocolV2Packet_SerializeTo(t *testing.T) {
+	packet := GlobulaConsensusProtocolV2Packet{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
+	s, err := packet.SerializeTo(buf, signer)
+	require.NoError(t, err)
+
+	require.EqualValues(t, 84, s)
 }

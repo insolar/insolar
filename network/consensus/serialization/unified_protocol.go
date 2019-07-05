@@ -52,23 +52,35 @@ package serialization
 
 import (
 	"io"
+	"math/bits"
 
+	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 const (
-	packetTypeMask = 15 // 0b00001111
-	protocolShift  = 4
+	packetTypeMask      = 15 // 0b00001111
+	packetTypeBitSize   = 4
+	protocolTypeShift   = 4
+	protocolTypeBitSize = 4
 
-	payloadLengthMask = 16383 // 0b0011111111111111
-	headerShift       = 14
+	payloadLengthMask    = 16383 // 0b0011111111111111
+	payloadLengthBitSize = 14
+	headerShift          = 14
+	headerBitSize        = 2
 )
 
 type FlagType uint8
 
 const (
-	IsRelayRestricted = iota
-	IsBodyEncrypted
+	IsRelayRestricted = FlagType(0)
+	IsBodyEncrypted   = FlagType(1)
+)
+
+type ProtocolType uint8
+
+const (
+	GlobulaConsensus = ProtocolType(1)
 )
 
 /*
@@ -87,34 +99,94 @@ type UnifiedProtocolPacketHeader struct {
 	TargetID               uint32 // indicates final destination, if =0 then there is no relay allowed by sender and receiver MUST decline a packet if actual sender != source
 }
 
-func NewUnifiedProtocolPacketHeader() UnifiedProtocolPacketHeader {
-	return UnifiedProtocolPacketHeader{}
+func (p UnifiedProtocolPacketHeader) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
+	return serializeTo(writer, signer, p)
 }
 
-func (h *UnifiedProtocolPacketHeader) WriteTo(w io.Writer) (int64, error) {
-	return serializeTo(w, h)
+func (p UnifiedProtocolPacketHeader) GetPacketType() packets.PacketType {
+	return packets.PacketType(p.ProtocolAndPacketType) & packetTypeMask
 }
 
-func (h *UnifiedProtocolPacketHeader) GetPacketType() packets.PacketType {
-	return packets.PacketType(h.ProtocolAndPacketType & packetTypeMask)
+func (p *UnifiedProtocolPacketHeader) SetPacketType(packetType packets.PacketType) {
+	if bits.Len(uint(packetType)) > packetTypeBitSize {
+		panic("invalid packet type")
+	}
+
+	p.ProtocolAndPacketType |= uint8(packetType)
 }
 
-func (h *UnifiedProtocolPacketHeader) GetProtocol() uint8 {
-	return h.ProtocolAndPacketType >> protocolShift
+func (p UnifiedProtocolPacketHeader) GetProtocolType() ProtocolType {
+	return ProtocolType(p.ProtocolAndPacketType) >> protocolTypeShift
 }
 
-func (h *UnifiedProtocolPacketHeader) GetPayloadLength() uint16 {
-	return h.HeaderAndPayloadLength & payloadLengthMask
+func (p *UnifiedProtocolPacketHeader) SetProtocolType(protocolType ProtocolType) {
+	if bits.Len(uint(protocolType)) > protocolTypeBitSize {
+		panic("invalid protocol type")
+	}
+
+	p.ProtocolAndPacketType |= uint8(protocolType << protocolTypeShift)
 }
 
-func (h *UnifiedProtocolPacketHeader) GetHeader() uint16 {
-	return h.HeaderAndPayloadLength >> headerShift
+func (p UnifiedProtocolPacketHeader) GetPayloadLength() uint16 {
+	return p.HeaderAndPayloadLength & payloadLengthMask
 }
 
-func (h *UnifiedProtocolPacketHeader) GetFlag(i FlagType) bool {
-	if i > 7 {
+func (p UnifiedProtocolPacketHeader) SetPayloadLength(payloadLength uint16) {
+	if bits.Len(uint(payloadLength)) > payloadLengthBitSize {
+		panic("invalid payload length")
+	}
+
+	p.HeaderAndPayloadLength |= payloadLength
+}
+
+func (p *UnifiedProtocolPacketHeader) GetHeader() uint8 {
+	return uint8(p.HeaderAndPayloadLength >> headerShift)
+}
+
+func (p *UnifiedProtocolPacketHeader) SetHeader(header uint8) {
+	if bits.Len(uint(header)) > headerBitSize {
+		panic("invalid header")
+	}
+
+	p.HeaderAndPayloadLength |= uint16(header << headerShift)
+}
+
+func (p *UnifiedProtocolPacketHeader) GetFlag(f FlagType) bool {
+	if f > 5 {
 		panic("invalid flag index")
 	}
 
-	return (h.PacketFlags & (0x1 << i)) > 0
+	return p.getFlag(f + 2)
+}
+
+func (p *UnifiedProtocolPacketHeader) SetFlag(f FlagType) {
+	if f > 5 {
+		panic("invalid flag index")
+	}
+
+	p.setFlag(f + 2)
+}
+
+func (p *UnifiedProtocolPacketHeader) IsRelayRestricted() bool {
+	return p.getFlag(IsRelayRestricted)
+}
+
+func (p *UnifiedProtocolPacketHeader) SetIsRelayRestricted() {
+	p.setFlag(IsRelayRestricted)
+}
+
+func (p *UnifiedProtocolPacketHeader) IsBodyEncrypted() bool {
+	return p.getFlag(IsBodyEncrypted)
+}
+
+func (p *UnifiedProtocolPacketHeader) SetIsBodyEncrypted() {
+	p.setFlag(IsBodyEncrypted)
+}
+
+func (p *UnifiedProtocolPacketHeader) getFlag(f FlagType) bool {
+	return hasBit(uint(p.PacketFlags), uint(f))
+}
+
+func (p *UnifiedProtocolPacketHeader) setFlag(f FlagType) {
+	p.PacketFlags = uint8(setBit(uint(p.PacketFlags), uint(f)))
 }
