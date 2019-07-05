@@ -191,10 +191,19 @@ func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript)
 	q.mutableLock.RLock()
 	defer q.mutableLock.RUnlock()
 
+	if q.finished.Has(*transcript.RequestRef) {
+		return
+	}
+
 	queue := q.mutable
 	if transcript.Request.Immutable {
 		queue = q.immutable
 	}
+
+	if queue.Has(*transcript.RequestRef) {
+		return
+	}
+
 	queue.Prepend(transcript)
 }
 
@@ -208,14 +217,12 @@ func (q *ExecutionBroker) finishTask(_ context.Context, transcript *Transcript) 
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) bool {
 	defer q.releaseTask(ctx, transcript)
 
-	if readyToExecute := q.Check(ctx); readyToExecute {
+	if readyToExecute := q.Check(ctx); !readyToExecute {
 		return false
 	}
 
 	q.Execute(ctx, transcript)
-
 	q.finishTask(ctx, transcript)
-
 	return true
 }
 
@@ -337,6 +344,7 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 		go q.startProcessor(ctx)
 	}
 	q.processLock.Unlock()
+
 }
 
 // TODO: locking system (mutableLock) should be reconsidered
@@ -397,7 +405,7 @@ func (q *ExecutionBroker) checkLedgerPendingRequestsBase(ctx context.Context) {
 
 	wmMessage := makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg)
 	if err := pub.Publish(InnerMsgTopic, wmMessage); err != nil {
-		logger.Warnf("can't send processExecutionQueueMsg: ", err)
+		logger.Warnf("can't send getLedgerPendingRequestMsg: ", err)
 	}
 }
 
@@ -485,6 +493,8 @@ func NewExecutionBroker(es *ExecutionState) *ExecutionBroker {
 		finished:    NewTranscriptDequeue(),
 
 		executionState: es,
+
+		ledgerChecked: sync.Once{},
 
 		deduplicationLock:  sync.Mutex{},
 		deduplicationTable: make(map[insolar.Reference]bool),
