@@ -956,25 +956,14 @@ func (m *client) activateObject(
 		return errors.Wrap(err, "ActivateObject: can't serialize record")
 	}
 
-	msg, err := payload.NewMessage(&payload.Activate{
+	pa := &payload.Activate{
 		Record: activateBuf,
 		Result: resultBuf,
-	})
-
-	if err != nil {
-		return errors.Wrap(err, "ActivateObject: failed to create message")
 	}
 
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
-	defer done()
-
-	rep, ok := <-reps
-	if !ok {
-		return errors.New("ActivateObject: no reply")
-	}
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	pl, err := m.retryer(ctx, pa, insolar.DynamicRoleLightExecutor, obj, 3)
 	if err != nil {
-		return errors.Wrap(err, "ActivateObject: failed to unmarshal reply")
+		return errors.Wrap(err, "can't send activation and result records")
 	}
 
 	switch p := pl.(type) {
