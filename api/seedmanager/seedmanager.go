@@ -19,6 +19,7 @@ package seedmanager
 import (
 	"sync"
 	"time"
+
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -33,7 +34,7 @@ const DefaultCleanPeriod = 5 * time.Second
 
 type storedSeed struct {
 	expire Expiration
-	pulse insolar.PulseNumber
+	pulse  insolar.PulseNumber
 }
 
 // SeedManager manages working with seed pool
@@ -80,7 +81,7 @@ func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 	sm.mutex.Lock()
 	sm.seedPool[seed] = storedSeed{
 		expire: expTime,
-		pulse: pulse,
+		pulse:  pulse,
 	}
 	sm.mutex.Unlock()
 
@@ -104,20 +105,6 @@ func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
 	}
 
 	return 0, false
-}
-func (sm *SeedManager) Exists(seed Seed) bool {
-	sm.mutex.RLock()
-	stored, ok := sm.seedPool[seed]
-	sm.mutex.RUnlock()
-
-	isSeedOk := ok && !sm.isExpired(stored.expire)
-	if isSeedOk {
-		sm.mutex.Lock()
-		delete(sm.seedPool, seed)
-		sm.mutex.Unlock()
-	}
-
-	return isSeedOk
 }
 
 func (sm *SeedManager) deleteExpired() {
