@@ -46,6 +46,14 @@ func (hw *HelloWorld) Count() (interface{}, error) {
 	return hw.Greeted, nil
 }
 
+type HwMessage struct {
+	Message string `json:"message"`
+}
+
+func (hw *HelloWorld) ReturnObj() (interface{}, error) {
+	return hwProxy.HwMessage{Message: "Hello world"}, nil
+}
+
 func (hw *HelloWorld) Errored() (interface{}, error) {
 	return nil, errors.New("TestError")
 }
@@ -134,6 +142,8 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return hw.CreateChild()
 	case "CountChild":
 		return hw.CountChild()
+	case "ReturnObj":
+		return hw.ReturnObj()
 	default:
 		return nil, errors.New("Unknown method " + request.Params.CallSite)
 	}

@@ -30,6 +30,7 @@ import (
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
 )
 
 type HelloWorldInstance struct {
@@ -210,6 +211,38 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 	return int(rv), nil
 }
 
+func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (*helloworld.HwMessage, error) {
+	seed, err := requester.GetSeed(TestAPIURL)
+	if err != nil {
+		return nil, err
+	}
+
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "call.api",
+		Params:  requester.Params{CallSite: "ReturnObj", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+	}, seed)
+	if err != nil {
+		return nil, err
+	}
+
+	var result requester.ContractAnswer
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return nil, err
+	} else if result.Error != nil {
+		return nil, errors.Errorf("[ CountChild ] Failed to execute: %s", result.Error.Message)
+	}
+
+	rv, ok := result.Result.ContractResult.(helloworld.HwMessage)
+	if !ok {
+		return nil, errors.Errorf("[ CountChild ] Failed to decode result: expected float64, got %T", result.Result)
+	}
+	return &rv, nil
+}
+
 func TestCallHelloWorld(t *testing.T) {
 	a, r := assert.New(t), require.New(t)
 	ctx := context.TODO()
@@ -269,4 +302,17 @@ func TestCallHelloWorldChild(t *testing.T) {
 	countOverall, err := hw.CountChild(ctx)
 	r.NoError(err)
 	a.Equal(countOverall, childrenCnt)
+}
+
+func TestCallHelloWorldReturnObj(t *testing.T) {
+	a, r := assert.New(t), require.New(t)
+	ctx := context.TODO()
+
+	hw, err := NewHelloWorld(ctx)
+	r.NoError(err, "Unexpected error")
+	a.NotEmpty(hw.Ref, "Ref doesn't exists")
+
+	val, err := hw.ReturnObj(ctx)
+	r.NoError(err)
+	r.NotNil(val)
 }
