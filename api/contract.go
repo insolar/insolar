@@ -193,6 +193,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	callMethodReply, err := s.runner.ContractRequester.Call(ctx, msg)
 	if err != nil {
+		inslogger.FromContext(ctx).Error("failed to call: ", err.Error())
 		return errors.Wrap(err, "CallMethod failed with error")
 	}
 

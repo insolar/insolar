@@ -389,7 +389,21 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference, method strin
 	return objectRef
 }
 
+type callRes struct {
+	Version string              `json:"jsonrpc"`
+	ID      string              `json:"id"`
+	Result  api.CallMethodReply `json:"result"`
+	Error   json2.Error         `json:"error"`
+}
+
 func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
+	callRes := callMethodNoChecks(t, objectRef, method, args...)
+	require.Empty(t, callRes.Error)
+
+	return callRes.Result
+}
+
+func callMethodNoChecks(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) callRes {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
@@ -414,7 +428,6 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args 
 
 	err = json.Unmarshal(callMethodBody, &callRes)
 	require.NoError(t, err)
-	require.Empty(t, callRes.Error)
 
-	return callRes.Result
+	return callRes
 }
