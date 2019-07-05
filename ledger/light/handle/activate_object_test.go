@@ -14,11 +14,10 @@
 // limitations under the License.
 //
 
-package handle
+package handle_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -27,12 +26,14 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetRequest_BadMsgPayload(t *testing.T) {
+func TestActivateObject_BadMsgPayload(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -40,33 +41,22 @@ func TestSetRequest_BadMsgPayload(t *testing.T) {
 		Payload: []byte{1, 2, 3, 4, 5},
 	}
 
-	handler := NewSetRequest(nil, msg, false)
+	handler := handle.NewActivateObject(nil, msg, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
 	require.Error(t, err)
 }
 
-func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
+func TestActivateObject_BadWrappedVirtualRecord(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
-	request := payload.SetRequest{
-		Request: []byte{1, 2, 3, 4, 5},
+	activate := payload.Activate{
+		Record: []byte{1, 2, 3, 4, 5},
 	}
-	buf, err := request.Marshal()
+	buf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
@@ -74,28 +64,17 @@ func TestSetRequest_BadWrappedVirtualRecord(t *testing.T) {
 		Payload: buf,
 	}
 
-	handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
-func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
+func TestActivateObject_IncorrectActivateRecordInVirtual(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
 	// Incorrect record in virtual.
 	virtual := record.Virtual{
@@ -108,23 +87,23 @@ func TestSetRequest_IncorrectRecordInVirtual(t *testing.T) {
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	activate := payload.Activate{
+		Record: virtualBuf,
 	}
-	requestBuf, err := request.Marshal()
+	activateBuf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: requestBuf,
+		Payload: activateBuf,
 	}
 
-	handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
-func TestSetRequest_EmptyRequestObject(t *testing.T) {
+func TestActivateObject_EmptyActivateRequestField(t *testing.T) {
 	t.Parallel()
 
 	ctx := flow.TestContextWithPulse(
@@ -141,41 +120,142 @@ func TestSetRequest_EmptyRequestObject(t *testing.T) {
 		}
 	})
 
-	// IncomingRequest object is nil
+	// Activate.Request object is nil.
 	virtual := record.Virtual{
-		Union: &record.Virtual_IncomingRequest{
-			IncomingRequest: &record.IncomingRequest{
-				Object: nil,
+		Union: &record.Virtual_Activate{
+			Activate: &record.Activate{
+				Request: insolar.Reference{},
 			},
 		},
 	}
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	activate := payload.Activate{
+		Record: virtualBuf,
 	}
-	requestBuf, err := request.Marshal()
+	activateBuf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: requestBuf,
+		Payload: activateBuf,
 	}
 
-	handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
-	assert.EqualError(t, err, "object is nil")
+	assert.EqualError(t, err, "request is nil")
 }
 
-func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
+func TestActivateObject_IncorrectActivateResultPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+	f := flow.NewFlowMock(t)
+	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+		switch p.(type) {
+		case *proc.CalculateID:
+			return nil
+		default:
+			panic("unknown procedure")
+		}
+	})
+
+	// Activate.Request is ok.
+	virtualActivate := record.Virtual{
+		Union: &record.Virtual_Activate{
+			Activate: &record.Activate{
+				Request: gen.Reference(),
+			},
+		},
+	}
+	virtualActivateBuf, err := virtualActivate.Marshal()
+	require.NoError(t, err)
+
+	activate := payload.Activate{
+		Record: virtualActivateBuf,
+		Result: []byte{1, 2, 3, 4, 5},
+	}
+	activateBuf, err := activate.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Payload: activateBuf,
+	}
+
+	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
+
+	err = handler.Present(ctx, f)
+	require.Error(t, err)
+}
+
+func TestActivateObject_WrongTypeActivateResultInVirtual(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+	f := flow.NewFlowMock(t)
+	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+		switch p.(type) {
+		case *proc.CalculateID:
+			return nil
+		default:
+			panic("unknown procedure")
+		}
+	})
+
+	// Activate.Request is ok.
+	virtualActivate := record.Virtual{
+		Union: &record.Virtual_Activate{
+			Activate: &record.Activate{
+				Request: gen.Reference(),
+			},
+		},
+	}
+	virtualActivateBuf, err := virtualActivate.Marshal()
+	require.NoError(t, err)
+
+	// Incorrect record in virtual.
+	virtualResult := record.Virtual{
+		Union: &record.Virtual_Genesis{
+			Genesis: &record.Genesis{
+				Hash: []byte{1, 2, 3, 4, 5},
+			},
+		},
+	}
+	virtualResultBuf, err := virtualResult.Marshal()
+	require.NoError(t, err)
+
+	activate := payload.Activate{
+		Record: virtualActivateBuf,
+		Result: virtualResultBuf,
+	}
+	activateBuf, err := activate.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Payload: activateBuf,
+	}
+
+	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
+
+	err = handler.Present(ctx, f)
+	require.Error(t, err)
+}
+
+func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaActivateMsg(t)
 
 	t.Run("checkjet procedure returns unknown err", func(t *testing.T) {
 		t.Parallel()
@@ -191,7 +271,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "something strange from checkjet")
 	})
@@ -210,7 +290,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -231,21 +311,21 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, true)
+		handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, true)
 		err := handler.Present(ctx, f)
 		require.Error(t, err)
 		assert.Equal(t, proc.ErrNotExecutor, err)
 	})
 }
 
-func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
+func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaActivateMsg(t)
 
 	t.Run("waithot procedure returns err", func(t *testing.T) {
 		t.Parallel()
@@ -263,7 +343,7 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from waithot")
 	})
@@ -279,31 +359,29 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
-				return nil
-			case *proc.SetRequest:
+			case *proc.ActivateObject:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
+func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 
-	msg := metaRequestMsg(t)
+	msg := metaActivateMsg(t)
 
-	t.Run("getindex procedure returns err", func(t *testing.T) {
+	t.Run("activateobject procedure returns err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -314,19 +392,19 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
-				return errors.New("can't get index: error from getindex")
+			case *proc.ActivateObject:
+				return errors.New("error from activateobject")
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "can't get index: error from getindex")
+		assert.EqualError(t, err, "error from activateobject")
 	})
 
-	t.Run("getindex procedure returns nil err", func(t *testing.T) {
+	t.Run("activateobject procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -337,103 +415,51 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
-				return nil
-			case *proc.SetRequest:
+			case *proc.ActivateObject:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
-	t.Parallel()
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-
-	msg := metaRequestMsg(t)
-
-	t.Run("setrequest procedure returns err", func(t *testing.T) {
-		t.Parallel()
-		f := flow.NewFlowMock(t)
-		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
-			case *proc.CheckJet:
-				return nil
-			case *proc.WaitHotWM:
-				return nil
-			case *proc.SetRequest:
-				return errors.New("error from setrequest")
-			case *proc.EnsureIndexWM:
-				return nil
-			default:
-				panic("unknown procedure")
-			}
-		})
-
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
-		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "error from setrequest")
-	})
-
-	t.Run("setrequest procedure returns nil err", func(t *testing.T) {
-		t.Parallel()
-		f := flow.NewFlowMock(t)
-		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
-			case *proc.CheckJet:
-				return nil
-			case *proc.WaitHotWM:
-				return nil
-			case *proc.EnsureIndexWM:
-				return nil
-			case *proc.SetRequest:
-				return nil
-			default:
-				panic("unknown procedure")
-			}
-		})
-
-		handler := NewSetRequest(proc.NewDependenciesMock(), msg, false)
-		err := handler.Present(ctx, f)
-		require.NoError(t, err)
-	})
-}
-
-func metaRequestMsg(t *testing.T) payload.Meta {
-	ref := gen.Reference()
-
-	virtual := record.Virtual{
-		Union: &record.Virtual_IncomingRequest{
-			IncomingRequest: &record.IncomingRequest{
-				Object: &ref,
+func metaActivateMsg(t *testing.T) payload.Meta {
+	// Activate.Request is ok.
+	virtualActivate := record.Virtual{
+		Union: &record.Virtual_Activate{
+			Activate: &record.Activate{
+				Request: gen.Reference(),
 			},
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
+	virtualActivateBuf, err := virtualActivate.Marshal()
 	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	// Activate.Result is ok.
+	virtualResult := record.Virtual{
+		Union: &record.Virtual_Result{
+			Result: &record.Result{
+				Object: gen.ID(),
+			},
+		},
 	}
-	requestBuf, err := request.Marshal()
+	virtualResultBuf, err := virtualResult.Marshal()
+	require.NoError(t, err)
+
+	activate := payload.Activate{
+		Record: virtualActivateBuf,
+		Result: virtualResultBuf,
+	}
+	activateBuf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: requestBuf,
+		Payload: activateBuf,
 	}
-
 	return msg
 }

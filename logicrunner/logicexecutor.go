@@ -27,6 +27,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.LogicExecutor -o ./ -s _mock.go
+
 type LogicExecutor interface {
 	Execute(ctx context.Context, transcript *Transcript) (*RequestResult, error)
 	ExecuteMethod(ctx context.Context, transcript *Transcript) (*RequestResult, error)
@@ -109,7 +111,7 @@ func (le *logicExecutor) ExecuteConstructor(
 
 	request := transcript.Request
 
-	if transcript.LogicContext.Caller.IsEmpty() {
+	if request.Caller.IsEmpty() {
 		return nil, errors.New("Call constructor from nowhere")
 	}
 

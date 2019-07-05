@@ -66,7 +66,7 @@ func TestJetStorage_SplitJetTree(t *testing.T) {
 	require.Equal(t, "[JET 1 1]", right.DebugString())
 
 	tree, _ := treeForPulse(s, 100)
-	require.Equal(t, "root (level=0 actual=false)\n 0 (level=1 actual=false)\n 1 (level=1 actual=false)\n", tree.String())
+	require.Equal(t, "root (level=0 actual=false)\n 0 (level=1 actual=true)\n 1 (level=1 actual=true)\n", tree.String())
 }
 
 func TestJetStorage_CloneJetTree(t *testing.T) {

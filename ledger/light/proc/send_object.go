@@ -79,21 +79,13 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return nil
 		}
 
-		var memory []byte
-		if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
-			b, err := p.Dep.Blobs.ForID(ctx, *state.GetMemory())
-			if err != nil {
-				return errors.Wrap(err, "failed to fetch blob")
-			}
-			memory = b.Value
-		}
 		buf, err := rec.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal state record")
 		}
 		msg, err := payload.NewMessage(&payload.State{
 			Record: buf,
-			Memory: memory,
+			Memory: state.GetMemory(),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")

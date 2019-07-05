@@ -134,26 +134,26 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 		request insolar.Reference,
 		obj artifact.ObjectDescriptor,
 		memory []byte,
-	) (artifact.ObjectDescriptor, error) {
+	) error {
 		if domain != genesisrefs.ContractRootDomain {
-			return nil, errors.Errorf("domain should be the contract root domain ref")
+			return errors.Errorf("domain should be the contract root domain ref")
 		}
 		if request != genesisrefs.ContractNodeDomain {
-			return nil, errors.Errorf("request should be the contract node domain ref")
+			return errors.Errorf("request should be the contract node domain ref")
 		}
 		var rec nodedomain.NodeDomain
 		insolar.MustDeserialize(memory, &rec)
 		indexMap = rec.NodeIndexPublicKey
-		return nil, nil
+		return nil
 	}
 	amMock.ActivateObjectFunc = func(
 		_ context.Context,
 		domain, obj, parent, prototype insolar.Reference,
 		asDelegate bool,
 		memory []byte,
-	) (artifact.ObjectDescriptor, error) {
+	) error {
 		activatedMemory[obj] = memory
-		return nil, nil
+		return nil
 	}
 
 	amMock.RegisterResultMock.Return(nil, nil)

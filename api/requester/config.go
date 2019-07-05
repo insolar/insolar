@@ -55,11 +55,15 @@ type ContractAnswer struct {
 type Error struct {
 	Code    int    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
+	Data    Data   `json:"data,omitempty"`
+}
+
+type Data struct {
 	TraceID string `json:"traceID,omitempty"`
 }
 
 type Result struct {
-	ContractResult interface{} `json:"payload,omitempty"`
+	ContractResult interface{} `json:"callResult,omitempty"`
 	TraceID        string      `json:"traceID,omitempty"`
 }
 
