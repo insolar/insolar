@@ -127,9 +127,6 @@ func main() {
 		response, err := execute(apiURL, *keys, *request)
 		check("[ simpleRequester ] failed to execute", err)
 		fmt.Println("Execute result: \n", response)
-	} else {
-		fmt.Println("Private key cannot be null", err)
-		os.Exit(1)
 	}
 }
 
