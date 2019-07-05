@@ -191,8 +191,14 @@ func NewTestArtifactManager() *TestArtifactManager {
 	}
 }
 
-// RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
+// RegisterIncomingRequest implementation for tests
+func (t *TestArtifactManager) RegisterIncomingRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
+	nonce := testutils.RandomID()
+	return &nonce, nil
+}
+
+// RegisterOutgoingRequest implementation for tests
+func (t *TestArtifactManager) RegisterOutgoingRequest(ctx context.Context, req record.OutgoingRequest) (*insolar.ID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
@@ -393,7 +399,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		protoID, err := cb.registerRequest(ctx, request)
 
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+			return errors.Wrap(err, "[ Build ] Can't RegisterIncomingRequest")
 		}
 
 		protoRef := insolar.Reference{}
@@ -431,16 +437,16 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
+
 		nonce := testutils.RandomRef()
-		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx,
-			record.IncomingRequest{
-				CallType:  record.CTSaveAsChild,
-				Prototype: &nonce,
-			},
-		)
+		req := record.IncomingRequest{
+			CallType:  record.CTSaveAsChild,
+			Prototype: &nonce,
+		}
+
+		codeReq, err := cb.registerRequest(ctx, req)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+			return errors.Wrap(err, "[ Build ] Can't register request")
 		}
 
 		log.Debugf("Deploying code for contract %q", name)
@@ -486,7 +492,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request record.
 
 	if cb.pulseAccessor == nil {
 		logger.Warnf("[ registerRequest ] No pulse accessor passed: no retries for register request")
-		return cb.ArtifactManager.RegisterRequest(ctx, request)
+		return cb.ArtifactManager.RegisterIncomingRequest(ctx, request)
 	}
 
 	for current := 1; current <= retries; current++ {
@@ -502,7 +508,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request record.
 		}
 		lastPulse = currentPulse.PulseNumber
 
-		contractID, err := cb.ArtifactManager.RegisterRequest(ctx, request)
+		contractID, err := cb.ArtifactManager.RegisterIncomingRequest(ctx, request)
 		if err == nil || !strings.Contains(err.Error(), flow.ErrCancelled.Error()) {
 			return contractID, err
 		}

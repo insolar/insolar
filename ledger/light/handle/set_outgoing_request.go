@@ -45,13 +45,13 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 	msg := payload.SetOutgoingRequest{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal SetIncomingRequest message")
+		return errors.Wrap(err, "SetOutgoingRequest.Present: failed to unmarshal SetIncomingRequest message")
 	}
 
 	rec := record.Unwrap(&msg.Request)
 	request, ok := rec.(*record.OutgoingRequest)
 	if !ok {
-		return fmt.Errorf("wrong request type: %T", rec)
+		return fmt.Errorf("SetOutgoingRequest.Present: wrong request type: %T", rec)
 	}
 
 	var create = request.CallType == record.CTSaveAsChild || request.CallType == record.CTSaveAsDelegate
@@ -61,7 +61,7 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	if request.Object == nil {
-		return errors.New("object is nil")
+		return errors.New("SetOutgoingRequest.Present: object is nil")
 	}
 
 	buf, err := msg.Request.Marshal()

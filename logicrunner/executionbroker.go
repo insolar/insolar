@@ -200,7 +200,7 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 			continue
 		}
 
-		if transcript.LogicContext.Immutable {
+		if transcript.Request.Immutable {
 			go q.processImmutable(ctx, transcript)
 		} else {
 			q.mutableLock.RLock()
@@ -220,7 +220,7 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 			continue
 		}
 
-		if transcript.LogicContext.Immutable {
+		if transcript.Request.Immutable {
 			go q.processImmutable(ctx, transcript)
 		} else {
 			q.mutableLock.RLock()

@@ -20,7 +20,6 @@ import (
 	"context"
 	"reflect"
 	"sync"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -56,11 +55,8 @@ func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insol
 		Caller:          msg.GetCaller(),
 		Callee:          &callee,
 		Request:         requestRef,
-		Time:            time.Now(), // TODO: probably we should take it earlier
-		Pulse:           *pulse,
 		TraceID:         inslogger.TraceID(ctx),
 		CallerPrototype: &msg.CallerPrototype,
-		Immutable:       msg.Immutable,
 	}
 	sender := parcel.GetSender()
 
@@ -146,7 +142,7 @@ func (ces *CurrentExecutionList) GetByTraceID(traceid string) *Transcript {
 func (ces *CurrentExecutionList) GetMutable() *Transcript {
 	ces.lock.RLock()
 	for _, ce := range ces.executions {
-		if !ce.LogicContext.Immutable {
+		if !ce.Request.Immutable {
 			ces.lock.RUnlock()
 			return ce
 		}
