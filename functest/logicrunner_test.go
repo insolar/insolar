@@ -21,6 +21,7 @@ package functest
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
@@ -305,7 +306,10 @@ func (r *Two) Hello(s string) (string, error) {
 	require.Equal(t, "Hello you too, ins. 1288 times!", resp.ExtractedReply)
 }
 
-func TestBasicNotificationCall(t *testing.T) {
+// this test only checks that we can call methods
+// as NoWait. It doesn't checks, that NoWait has another
+// execution queue.
+func TestNoWaitCall(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -379,9 +383,18 @@ func (r *Two) Value() (int, error) {
 	resp := callMethod(t, obj, "Hello")
 	require.Empty(t, resp.Error)
 
-	resp = callMethod(t, obj, "Value")
-	require.Empty(t, resp.Error)
-	require.Equal(t, float64(644), resp.ExtractedReply)
+	testPassed := false
+	for i := 0; i < 1000; i++ {
+		resp = callMethod(t, obj, "Value")
+		require.Empty(t, resp.Error)
+		if float64(644) == resp.ExtractedReply {
+			testPassed = true
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+
+	require.Equal(t, true, testPassed)
 }
 
 func TestContextPassing(t *testing.T) {
