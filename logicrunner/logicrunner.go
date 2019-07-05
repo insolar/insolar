@@ -365,35 +365,6 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	return true
 }
 
-// finishPendingIfNeeded checks whether last execution was a pending one.
-// If this is true as a side effect the function sends a PendingFinished
-// message to the current executor
-func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState) {
-	es.Lock()
-	defer es.Unlock()
-
-	if es.pending != message.InPending {
-		return
-	}
-
-	es.pending = message.NotPending
-	es.PendingConfirmed = false
-
-	pulseObj := lr.pulse(ctx)
-	meCurrent, _ := lr.JetCoordinator.IsAuthorized(
-		ctx, insolar.DynamicRoleVirtualExecutor, *es.Ref.Record(), pulseObj.PulseNumber, lr.JetCoordinator.Me(),
-	)
-	if !meCurrent {
-		go func() {
-			msg := message.PendingFinished{Reference: es.Ref}
-			_, err := lr.MessageBus.Send(ctx, &msg, nil)
-			if err != nil {
-				inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
-			}
-		}()
-	}
-}
-
 func (lr *LogicRunner) startGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
 	err := lr.publisher.Publish(InnerMsgTopic, makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg))
 	if err != nil {

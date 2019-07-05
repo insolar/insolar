@@ -140,24 +140,25 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	es := NewExecutionState(objectRef)
 	es.CurrentList.Set(objectRef, &Transcript{})
 	es.pending = message.NotPending
+	es.RegisterLogicRunner(suite.lr)
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
 	// doesn't send PendingFinished message and doesn't change ExecutionState.pending
-	suite.lr.finishPendingIfNeeded(suite.ctx, es)
+	es.Broker.finishPendingIfNeeded(suite.ctx)
 	suite.Require().Zero(suite.mb.SendCounter)
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.pending = message.InPending
 	suite.mb.SendMock.ExpectOnce(suite.ctx, &message.PendingFinished{Reference: objectRef}, nil).Return(&reply.ID{}, nil)
 	suite.jc.IsAuthorizedMock.Return(false, nil)
-	suite.lr.finishPendingIfNeeded(suite.ctx, es)
+	es.Broker.finishPendingIfNeeded(suite.ctx)
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	suite.mc.Wait(time.Minute) // message bus' send is called in a goroutine
 
 	es.pending = message.InPending
 	suite.jc.IsAuthorizedMock.Return(true, nil)
-	suite.lr.finishPendingIfNeeded(suite.ctx, es)
+	es.Broker.finishPendingIfNeeded(suite.ctx)
 	suite.Require().Equal(message.NotPending, es.pending)
 }
 
@@ -683,6 +684,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	suite.Equal(true, es.PendingConfirmed)
 }
 
+// TODO: move this test to EB tests (TestRotate)
 func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 	tests := map[string]struct {
 		QueueLength     int
@@ -699,7 +701,8 @@ func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 			a := assert.New(t)
 
 			es := NewExecutionState(testutils.RandomRef())
-			es.Broker = NewBroker(t, suite.ctx, tc.QueueLength)
+			es.RegisterLogicRunner(suite.lr)
+			InitBroker(t, suite.ctx, tc.QueueLength, es, false)
 
 			rotationResults := es.Broker.Rotate(maxQueueLength)
 			a.Equal(tc.ExpectedLength, len(rotationResults.Requests))
@@ -1471,7 +1474,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
 	st.ExecutionState = es
 	es.CurrentList.Set(s.objectRef, &Transcript{})
-	es.Broker = NewBroker(s.T(), s.ctx, 0)
+	es.RegisterLogicRunner(s.lr)
+	InitBroker(s.T(), s.ctx, 0, es, false)
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
@@ -1572,15 +1576,15 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 	s.jc.MeMock.Return(insolar.Reference{})
 
 	var testCases = map[string]struct {
-		Broker          *ExecutionBroker
+		Count           int
 		hasMoreRequests bool
 	}{
 		"Has": {
-			NewBroker(s.T(), s.ctx, maxQueueLength+1),
+			maxQueueLength + 1,
 			true,
 		},
 		"Don't": {
-			NewBroker(s.T(), s.ctx, maxQueueLength),
+			maxQueueLength,
 			false,
 		},
 	}
@@ -1589,7 +1593,11 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 		s.T().Run(name, func(t *testing.T) {
 			a := assert.New(t)
 
-			messagesQueue := convertQueueToMessageQueue(s.ctx, test.Broker.mutable.queue[:maxQueueLength])
+			es := NewExecutionState(s.objectRef)
+			es.RegisterLogicRunner(s.lr)
+			InitBroker(t, s.ctx, test.Count, es, false)
+
+			messagesQueue := convertQueueToMessageQueue(s.ctx, es.Broker.mutable.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
 				RecordRef:             s.objectRef,
@@ -1604,9 +1612,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 				wg.Done()
 				return nil, nil
 			})
-
-			es := NewExecutionState(s.objectRef)
-			es.Broker = test.Broker
 
 			st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
 			st.ExecutionState = es
