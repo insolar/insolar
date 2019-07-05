@@ -50,102 +50,12 @@ func NewExecutionState(ref insolar.Reference) *ExecutionState {
 		CurrentList: NewCurrentExecutionList(),
 		pending:     message.PendingUnknown,
 	}
-	es.Broker = NewExecutionBroker(es, nil)
+	es.Broker = NewExecutionBroker(es)
 
 	return es
 }
 
-type ExecutionStateMethods struct {
-	ledgerChecked sync.Once
-	lr            *LogicRunner
-	es            *ExecutionState
-}
-
-func NewExecutionStateMethods(lr *LogicRunner, es *ExecutionState) *ExecutionStateMethods {
-	return &ExecutionStateMethods{
-		ledgerChecked: sync.Once{},
-		lr:            lr,
-		es:            es,
-	}
-}
-
-func (m *ExecutionStateMethods) Check(ctx context.Context) error {
-	es := m.es
-	logger := inslogger.FromContext(ctx)
-
-	// check pending state of execution (whether we can process task or not)
-	es.Lock()
-	if es.pending == message.PendingUnknown {
-		logger.Debug("One shouldn't call ExecuteTranscript in case when pending state is unknown")
-		es.Unlock()
-		return ErrRetryLater
-	} else if es.pending == message.InPending {
-		logger.Debug("Object in pending, wont start queue processor")
-		es.Unlock()
-		return ErrRetryLater
-	}
-	es.Unlock()
-
-	return nil
-}
-func (m *ExecutionStateMethods) Execute(ctx context.Context, t *Transcript) error {
-	es := m.es
-
-	logger := inslogger.FromContext(ctx)
-
-	pub := m.lr.publisher
-
-	if err := m.Check(ctx); err != nil {
-		// we can get only "ErrRetryLater" here, so we'll pass it up and our
-		// caller will find some way to process it
-		return err
-	}
-
-	// Ask ledger kindly to give us next pending task and continue execution
-	// note: should be done only once
-	m.ledgerChecked.Do(func() {
-		wmMessage := makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg)
-		if err := pub.Publish(InnerMsgTopic, wmMessage); err != nil {
-			logger.Warnf("can't send processExecutionQueueMsg: ", err)
-		}
-	})
-
-	es.Lock()
-	es.CurrentList.Set(*t.RequestRef, t)
-	es.Unlock()
-
-	re, err := m.lr.RequestsExecutor.ExecuteAndSave(ctx, t)
-	if err != nil {
-		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
-	}
-
-	es.Lock()
-	es.CurrentList.Delete(*t.RequestRef)
-	es.Unlock()
-
-	go m.lr.RequestsExecutor.SendReply(t.Context, t, re, err)
-
-	if t.FromLedger {
-		// we've already told ledger that we've processed it's task;
-		// trying to take another one
-		wmMessage := makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg)
-		if err := pub.Publish(InnerMsgTopic, wmMessage); err != nil {
-			logger.Warnf("can't send processExecutionQueueMsg: ", err)
-		}
-	}
-
-	// we're checking here that pulse was changed and we should send
-	// a message that we've finished processing task
-	// note: ideally we should tell here that we've stopped executing
-	//       but we only hoped that OnPulse had already told us that
-	//       pulse changed and we should stop execution
-	m.lr.finishPendingIfNeeded(ctx, es)
-
-	return nil
-}
-
 func (es *ExecutionState) RegisterLogicRunner(lr *LogicRunner) {
-	es.Broker.methods = NewExecutionStateMethods(lr, es)
 	es.Broker.logicRunner = lr
 }
 
