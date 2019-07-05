@@ -51,8 +51,6 @@
 package serialization
 
 import (
-	"io"
-
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
@@ -73,10 +71,6 @@ type NodeVectors struct {
 	AdditionalStateVectors []GlobulaStateVector `insolar-transport:"count=PacketFlags[1:2]"` // ByteSize=count * 132
 }
 
-func (p NodeVectors) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
-}
-
 type NodeAppearanceBitset struct {
 	// ByteSize=1..335
 	FlagsAndLoLength uint8 // [00-05] LoByteLength, [06] Compressed, [07] HasHiLength (to be compatible with Protobuf VarInt)
@@ -84,17 +78,9 @@ type NodeAppearanceBitset struct {
 	Bytes            []byte
 }
 
-func (p NodeAppearanceBitset) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
-}
-
 type GlobulaStateVector struct {
 	// ByteSize=132
 	ExpectedRank           common2.MembershipRank // ByteSize=4
 	VectorHash             common.Bits512         // ByteSize=64
 	SignedGlobulaStateHash common.Bits512         // ByteSize=64
-}
-
-func (p GlobulaStateVector) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
 }

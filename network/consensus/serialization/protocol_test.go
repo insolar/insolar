@@ -52,6 +52,7 @@ package serialization
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"testing"
 
@@ -71,55 +72,28 @@ var signer = func() *adapters.ECDSADataSigner {
 	return signer
 }()
 
-func TestNewUnifiedProtocolPacketHeader_SerializeTo(t *testing.T) {
-	header := UnifiedProtocolPacketHeader{
-		SourceID:   132,
-		ReceiverID: 321,
+func TestGlobulaConsensusProtocolV2Packet_SerializeTo(t *testing.T) {
+	packet1 := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &GlobulaConsensusPacketBody{},
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	s, err := header.SerializeTo(buf, signer)
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	s, err := packet1.SerializeTo(context.Background(), buf, signer)
 	require.NoError(t, err)
-
-	require.EqualValues(t, 16, s)
-}
-
-func TestJoinAnnouncement_SerializeTo(t *testing.T) {
-	joinAnnouncement := JoinAnnouncement{}
-
-	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	s, err := joinAnnouncement.SerializeTo(buf, signer)
-	require.NoError(t, err)
-
-	require.EqualValues(t, 137, s)
-}
-
-func TestLeaveAnnouncement_SerializeTo(t *testing.T) {
-	leaveAnnouncement := LeaveAnnouncement{}
-
-	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	s, err := leaveAnnouncement.SerializeTo(buf, signer)
-	require.NoError(t, err)
-
-	require.EqualValues(t, 4, s)
-}
-
-func TestNodeBriefIntro_SerializeTo(t *testing.T) {
-	nodeBriefIntro := NodeBriefIntro{}
-
-	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	s, err := nodeBriefIntro.SerializeTo(buf, signer)
-	require.NoError(t, err)
-
-	require.EqualValues(t, 137, s)
-}
-
-func TestGlobulaConsensusProtocolV2Packet_SerializeTo(t *testing.T) {
-	packet := GlobulaConsensusProtocolV2Packet{}
-
-	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	s, err := packet.SerializeTo(buf, signer)
-	require.NoError(t, err)
-
 	require.EqualValues(t, 84, s)
+
+	packet2 := Packet{
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+
+	s, err = packet2.DeserializeFrom(context.Background(), buf)
+	require.NoError(t, err)
+	require.EqualValues(t, 84, s)
+
+	require.Equal(t, packet1, packet2)
 }

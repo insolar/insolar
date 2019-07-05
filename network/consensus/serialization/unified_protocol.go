@@ -51,6 +51,8 @@
 package serialization
 
 import (
+	"context"
+	"encoding/binary"
 	"io"
 	"math/bits"
 
@@ -70,23 +72,24 @@ const (
 	headerBitSize        = 2
 )
 
-type FlagType uint8
+type Flag uint8
 
 const (
-	IsRelayRestricted = FlagType(0)
-	IsBodyEncrypted   = FlagType(1)
+	FlagIsRelayRestricted = Flag(0)
+	FlagIsBodyEncrypted   = Flag(1)
 )
 
 type ProtocolType uint8
 
 const (
-	GlobulaConsensus = ProtocolType(1)
+	ProtocolTypePulsar           = ProtocolType(0)
+	ProtocolTypeGlobulaConsensus = ProtocolType(1)
 )
 
 /*
 	ByteSize=16
 */
-type UnifiedProtocolPacketHeader struct {
+type Header struct {
 	/*
 		Functions of TargetID, SourceID and RelayId depends on ProtocolType
 	*/
@@ -99,94 +102,157 @@ type UnifiedProtocolPacketHeader struct {
 	TargetID               uint32 // indicates final destination, if =0 then there is no relay allowed by sender and receiver MUST decline a packet if actual sender != source
 }
 
-func (p UnifiedProtocolPacketHeader) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func (h *Header) SerializeTo(_ SerializeContext, writer io.Writer) error {
+	return binary.Write(writer, defaultByteOrder, h)
 }
 
-func (p UnifiedProtocolPacketHeader) GetPacketType() packets.PacketType {
-	return packets.PacketType(p.ProtocolAndPacketType) & packetTypeMask
+func (h *Header) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
+	return binary.Read(reader, defaultByteOrder, h)
 }
 
-func (p *UnifiedProtocolPacketHeader) SetPacketType(packetType packets.PacketType) {
+func (h Header) GetPacketType() packets.PacketType {
+	return packets.PacketType(h.ProtocolAndPacketType) & packetTypeMask
+}
+
+func (h *Header) setPacketType(packetType packets.PacketType) {
 	if bits.Len(uint(packetType)) > packetTypeBitSize {
 		panic("invalid packet type")
 	}
 
-	p.ProtocolAndPacketType |= uint8(packetType)
+	h.ProtocolAndPacketType |= uint8(packetType)
 }
 
-func (p UnifiedProtocolPacketHeader) GetProtocolType() ProtocolType {
-	return ProtocolType(p.ProtocolAndPacketType) >> protocolTypeShift
+func (h Header) GetProtocolType() ProtocolType {
+	return ProtocolType(h.ProtocolAndPacketType) >> protocolTypeShift
 }
 
-func (p *UnifiedProtocolPacketHeader) SetProtocolType(protocolType ProtocolType) {
+func (h *Header) setProtocolType(protocolType ProtocolType) {
 	if bits.Len(uint(protocolType)) > protocolTypeBitSize {
 		panic("invalid protocol type")
 	}
 
-	p.ProtocolAndPacketType |= uint8(protocolType << protocolTypeShift)
+	h.ProtocolAndPacketType |= uint8(protocolType << protocolTypeShift)
 }
 
-func (p UnifiedProtocolPacketHeader) GetPayloadLength() uint16 {
-	return p.HeaderAndPayloadLength & payloadLengthMask
+func (h Header) getPayloadLength() uint16 {
+	return h.HeaderAndPayloadLength & payloadLengthMask
 }
 
-func (p UnifiedProtocolPacketHeader) SetPayloadLength(payloadLength uint16) {
+func (h *Header) setPayloadLength(payloadLength uint16) {
 	if bits.Len(uint(payloadLength)) > payloadLengthBitSize {
 		panic("invalid payload length")
 	}
 
-	p.HeaderAndPayloadLength |= payloadLength
+	h.HeaderAndPayloadLength |= payloadLength
 }
 
-func (p *UnifiedProtocolPacketHeader) GetHeader() uint8 {
-	return uint8(p.HeaderAndPayloadLength >> headerShift)
+func (h Header) GetHeader() uint8 {
+	return uint8(h.HeaderAndPayloadLength >> headerShift)
 }
 
-func (p *UnifiedProtocolPacketHeader) SetHeader(header uint8) {
+func (h *Header) setHeader(header uint8) {
 	if bits.Len(uint(header)) > headerBitSize {
 		panic("invalid header")
 	}
 
-	p.HeaderAndPayloadLength |= uint16(header << headerShift)
+	h.HeaderAndPayloadLength |= uint16(header) << headerShift
 }
 
-func (p *UnifiedProtocolPacketHeader) GetFlag(f FlagType) bool {
+func (h Header) HasFlag(f Flag) bool {
 	if f > 5 {
 		panic("invalid flag index")
 	}
 
-	return p.getFlag(f + 2)
+	return h.getFlag(f + 2)
 }
 
-func (p *UnifiedProtocolPacketHeader) SetFlag(f FlagType) {
+func (h *Header) SetFlag(f Flag) {
 	if f > 5 {
 		panic("invalid flag index")
 	}
 
-	p.setFlag(f + 2)
+	h.setFlag(f + 2)
 }
 
-func (p *UnifiedProtocolPacketHeader) IsRelayRestricted() bool {
-	return p.getFlag(IsRelayRestricted)
+func (h *Header) IsRelayRestricted() bool {
+	return h.getFlag(FlagIsRelayRestricted)
 }
 
-func (p *UnifiedProtocolPacketHeader) SetIsRelayRestricted() {
-	p.setFlag(IsRelayRestricted)
+func (h *Header) setIsRelayRestricted() {
+	h.setFlag(FlagIsRelayRestricted)
 }
 
-func (p *UnifiedProtocolPacketHeader) IsBodyEncrypted() bool {
-	return p.getFlag(IsBodyEncrypted)
+func (h *Header) IsBodyEncrypted() bool {
+	return h.getFlag(FlagIsBodyEncrypted)
 }
 
-func (p *UnifiedProtocolPacketHeader) SetIsBodyEncrypted() {
-	p.setFlag(IsBodyEncrypted)
+func (h *Header) setIsBodyEncrypted() {
+	h.setFlag(FlagIsBodyEncrypted)
 }
 
-func (p *UnifiedProtocolPacketHeader) getFlag(f FlagType) bool {
-	return hasBit(uint(p.PacketFlags), uint(f))
+func (h *Header) getFlag(f Flag) bool {
+	return hasBit(uint(h.PacketFlags), uint(f))
 }
 
-func (p *UnifiedProtocolPacketHeader) setFlag(f FlagType) {
-	p.PacketFlags = uint8(setBit(uint(p.PacketFlags), uint(f)))
+func (h *Header) setFlag(f Flag) {
+	h.PacketFlags = uint8(setBit(uint(h.PacketFlags), uint(f)))
+}
+
+type Packet struct {
+	Header      Header             `insolar-transport:"Protocol=0x01;Packet=0-4"` // ByteSize=16
+	PulseNumber common.PulseNumber `insolar-transport:"[30-31]=0"`                // [30-31] MUST ==0, ByteSize=4
+
+	EncryptableBody PacketBody
+	EncryptionData  []byte
+
+	PacketSignature common.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
+}
+
+func (p *Packet) setSignature(signature common.SignatureHolder) {
+	copy(p.PacketSignature[:], signature.AsBytes())
+}
+
+func (p *Packet) setPayloadLength(payloadLength uint16) {
+	p.Header.setPayloadLength(payloadLength)
+}
+
+func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, signer common.DataSigner) (int64, error) {
+	w := newTrackableWriter(writer)
+	pctx := newPacketContext(ctx, &p.Header)
+	sctx := newSerializeContext(pctx, w, signer, p)
+
+	if err := binary.Write(sctx, defaultByteOrder, &p.PulseNumber); err != nil {
+		return 0, ErrMalformedPulseNumber(err)
+	}
+
+	if err := p.EncryptableBody.SerializeTo(sctx, sctx); err != nil {
+		return 0, ErrMalformedPacketBody(err)
+	}
+
+	return sctx.Finalize()
+}
+
+func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, error) {
+	r := newTrackableReader(reader)
+
+	if err := p.Header.DeserializeFrom(nil, r); err != nil {
+		return r.totalRead, ErrMalformedHeader(err)
+	}
+
+	pctx := newPacketContext(ctx, &p.Header)
+	dctx := newDeserializeContext(pctx, r, &p.Header)
+
+	if err := binary.Read(dctx, defaultByteOrder, &p.PulseNumber); err != nil {
+		return r.totalRead, ErrMalformedPulseNumber(err)
+	}
+
+	if err := p.EncryptableBody.DeserializeFrom(dctx, dctx); err != nil {
+		return r.totalRead, ErrMalformedPacketBody(err)
+	}
+
+	if err := binary.Read(dctx, defaultByteOrder, &p.PacketSignature); err != nil {
+		return r.totalRead, ErrMalformedPacketSignature(err)
+	}
+
+	return dctx.Finalize()
 }

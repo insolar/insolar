@@ -57,103 +57,51 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (h *UnifiedProtocolPacketHeader) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &h.ReceiverID)
-	if err != nil {
-		return errors.Wrap(err, "[ UnifiedProtocolPacketHeader.Deserialize ] Can't read ReceiverID")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &h.ProtocolAndPacketType)
-	if err != nil {
-		return errors.Wrap(err, "[ UnifiedProtocolPacketHeader.Deserialize ] Can't read ProtocolAndPacketType")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &h.PacketFlags)
-	if err != nil {
-		return errors.Wrap(err, "[ UnifiedProtocolPacketHeader.Deserialize ] Can't read PacketFlags")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &h.HeaderAndPayloadLength)
-	if err != nil {
-		return errors.Wrap(err, "[ UnifiedProtocolPacketHeader.Deserialize ] Can't read HeaderAndPayloadLength")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &h.SourceID)
-	if err != nil {
-		return errors.Wrap(err, "[ UnifiedProtocolPacketHeader.Deserialize ] Can't read SourceID")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &h.TargetID)
-	if err != nil {
-		return errors.Wrap(err, "[ UnifiedProtocolPacketHeader.Deserialize ] Can't read TargetID")
-	}
-	return nil
-}
-
-func (p *GlobulaConsensusProtocolV2Packet) Deserialize(data io.Reader) error {
-	err := p.Header.Deserialize(data)
-	if err != nil {
-		return errors.Wrap(err, "[ GlobulaConsensusProtocolV2Packet.Deserialize ] Can't deserialize Header")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &p.PulseNumber)
-	if err != nil {
-		return errors.Wrap(err, "[ GlobulaConsensusProtocolV2Packet.Deserialize ] Can't deserialize PulseNumber")
-	}
-
-	err = p.EncryptableBody.Deserialize(data, &p.Header)
-	if err != nil {
-		return errors.Wrap(err, "[ GlobulaConsensusProtocolV2Packet.Deserialize ] Can't deserialize EncryptableBody")
-	}
-
-	return nil
-}
-
-func (b *PacketBody) Deserialize(data io.Reader, header *UnifiedProtocolPacketHeader) error {
+func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
 	// todo: check packet type
-	if header.GetFlag(0) {
+	if ctx.HasFlag(0) {
 		var pulsarData EmbeddedPulsarData
-		err := pulsarData.Deserialize(data)
+		err := pulsarData.DeserializeFrom(ctx, data)
 		if err != nil {
-			return errors.Wrap(err, "[ PacketBody.Deserialize ] Can't deserialize EmbeddedPulsarData")
+			return errors.Wrap(err, "[ GlobulaConsensusPacketBody.Deserialize ] Can't deserialize EmbeddedPulsarData")
 		}
 	}
 
 	// todo: check packet type
 	var announcement MembershipAnnouncement
-	err := announcement.Deserialize(data)
+	err := announcement.DeserializeFrom(ctx, data)
 	if err != nil {
-		return errors.Wrap(err, "[ PacketBody.Deserialize ] Can't read Announcement")
+		return errors.Wrap(err, "[ GlobulaConsensusPacketBody.Deserialize ] Can't read Announcement")
 	}
 	b.Announcement = &announcement
 
 	panic("implement me")
 }
 
-func (p *EmbeddedPulsarData) Deserialize(data io.Reader) error {
-	err := p.Header.Deserialize(data)
+func (p *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
+	err := p.Header.DeserializeFrom(nil, data)
 	if err != nil {
 		return errors.Wrap(err, "[ EmbeddedPulsarData.Deserialize ] Can't deserialize Header")
 	}
 
-	// todo: PulsarPulsePacketExt
+	// todo: PulsarPacketBody
 
 	err = binary.Read(data, defaultByteOrder, &p.PulsarSignature)
 	if err != nil {
-		return errors.Wrap(err, "[ UnifiedProtocolPacketHeader.Deserialize ] Can't read ReceiverID")
+		return errors.Wrap(err, "[ Header.Deserialize ] Can't read ReceiverID")
 	}
 
 	panic("implement me")
 }
 
-func (m *MembershipAnnouncement) Deserialize(data io.Reader) error {
+func (m *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &m.CurrentRank)
 	if err != nil {
 		return errors.Wrap(err, "[ MembershipAnnouncement.Deserialize ] Can't read CurrentRank")
 	}
 
 	if m.CurrentRank != 0 {
-		err := m.NonJoinerMembershipAnnouncement.Deserialize(data)
+		err := m.NonJoinerMembershipAnnouncement.DeserializeFrom(ctx, data)
 		if err != nil {
 			return err
 		}
@@ -162,7 +110,7 @@ func (m *MembershipAnnouncement) Deserialize(data io.Reader) error {
 	panic("implement me")
 }
 
-func (m *NonJoinerMembershipAnnouncement) Deserialize(data io.Reader) error {
+func (m *NonJoinerMembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &m.RequestedPower)
 	if err != nil {
 		return errors.Wrap(err, "[ MembershipAnnouncement.Deserialize ] Can't read RequestedPower")

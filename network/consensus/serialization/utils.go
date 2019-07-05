@@ -51,11 +51,9 @@
 package serialization
 
 func setBit(n uint, pos uint) uint {
-	n |= 1 << pos
-	return n
+	return n | (1 << pos)
 }
 
 func hasBit(n uint, pos uint) bool {
-	val := n & (1 << pos)
-	return val > 0
+	return (n & (1 << pos)) > 0
 }
