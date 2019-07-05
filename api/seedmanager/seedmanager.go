@@ -33,8 +33,8 @@ const DefaultTTL = 5 * time.Second
 const DefaultCleanPeriod = 5 * time.Second
 
 type storedSeed struct {
-	expire Expiration
-	pulse  insolar.PulseNumber
+	expiration Expiration
+	pulse      insolar.PulseNumber
 }
 
 // SeedManager manages working with seed pool
@@ -80,8 +80,8 @@ func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 
 	sm.mutex.Lock()
 	sm.seedPool[seed] = storedSeed{
-		expire: expTime,
-		pulse:  pulse,
+		expiration: expTime,
+		pulse:      pulse,
 	}
 	sm.mutex.Unlock()
 
@@ -97,7 +97,7 @@ func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
 	stored, ok := sm.seedPool[seed]
 	sm.mutex.RUnlock()
 
-	if ok && !sm.isExpired(stored.expire) {
+	if ok && !sm.isExpired(stored.expiration) {
 		sm.mutex.Lock()
 		delete(sm.seedPool, seed)
 		sm.mutex.Unlock()
@@ -112,7 +112,7 @@ func (sm *SeedManager) deleteExpired() {
 	defer sm.mutex.Unlock()
 
 	for seed, stored := range sm.seedPool {
-		if sm.isExpired(stored.expire) {
+		if sm.isExpired(stored.expiration) {
 			delete(sm.seedPool, seed)
 		}
 	}

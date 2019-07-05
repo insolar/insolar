@@ -203,7 +203,6 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		}
 
 		seedPulse, err := ar.checkSeed(contractRequest.Params.Seed)
-		_ = seedPulse
 		if err != nil {
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
