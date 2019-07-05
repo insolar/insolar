@@ -49,8 +49,9 @@ func NewExecutionState(ref insolar.Reference) *ExecutionState {
 		Ref:         ref,
 		CurrentList: NewCurrentExecutionList(),
 		pending:     message.PendingUnknown,
-		Broker:      NewExecutionBroker(nil),
 	}
+	es.Broker = NewExecutionBroker(es, nil)
+
 	return es
 }
 
@@ -145,6 +146,7 @@ func (m *ExecutionStateMethods) Execute(ctx context.Context, t *Transcript) erro
 
 func (es *ExecutionState) RegisterLogicRunner(lr *LogicRunner) {
 	es.Broker.methods = NewExecutionStateMethods(lr, es)
+	es.Broker.logicRunner = lr
 }
 
 func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Message {

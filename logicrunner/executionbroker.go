@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -145,7 +146,14 @@ type ExecutionBroker struct {
 	immutable   *TranscriptDequeue
 	finished    *TranscriptDequeue
 
-	methods ExecutionBrokerMethods
+	methods        ExecutionBrokerMethods
+	logicRunner    *LogicRunner
+	executionState *ExecutionState
+	// currently we need to store ES inside, so it looks like circular dependency
+	// and it is circular dependency. it will be removed, once Broker will be
+	// moved out of ES.
+
+	ledgerChecked sync.Once
 
 	processActive bool
 	processLock   sync.Mutex
@@ -341,14 +349,122 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 	return rv
 }
 
-func NewExecutionBroker(methods ExecutionBrokerMethods) *ExecutionBroker {
+func (q *ExecutionBroker) Check(ctx context.Context, transcript *Transcript) bool {
+	logger := inslogger.FromContext(ctx)
+	es := q.executionState
+
+	// check pending state of execution (whether we can process task or not)
+	es.Lock()
+	if es.pending == message.PendingUnknown {
+		logger.Debug("One shouldn't call ExecuteTranscript in case when pending state is unknown")
+		es.Unlock()
+		return false
+	} else if es.pending == message.InPending {
+		logger.Debug("Object in pending, wont start queue processor")
+		es.Unlock()
+		return false
+	}
+	es.Unlock()
+
+	return true
+}
+
+func (q *ExecutionBroker) checkLedgerPendingRequestsBase(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	es := q.executionState
+	pub := q.logicRunner.publisher
+
+	wmMessage := makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg)
+	if err := pub.Publish(InnerMsgTopic, wmMessage); err != nil {
+		logger.Warnf("can't send processExecutionQueueMsg: ", err)
+	}
+}
+
+func (q *ExecutionBroker) checkLedgerPendingRequests(ctx context.Context, transcript *Transcript) {
+	if transcript == nil {
+		// Ask ledger kindly to give us next pending task and continue execution
+		// note: should be done only once
+		q.ledgerChecked.Do(func() { q.checkLedgerPendingRequestsBase(ctx) })
+	} else if transcript.FromLedger {
+		// we've already told ledger that we've processed it's task;
+		// trying to take another one
+		q.checkLedgerPendingRequestsBase(ctx)
+	}
+}
+
+func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
+	q.checkLedgerPendingRequests(ctx, nil)
+
+	q.executionState.Lock()
+	q.executionState.CurrentList.Set(*transcript.RequestRef, transcript)
+	q.executionState.Unlock()
+
+	reply, err := q.logicRunner.RequestsExecutor.ExecuteAndSave(ctx, transcript)
+	if err != nil {
+		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
+	}
+
+	q.executionState.Lock()
+	q.executionState.CurrentList.Delete(*transcript.RequestRef)
+	q.executionState.Unlock()
+
+	go q.logicRunner.RequestsExecutor.SendReply(transcript.Context, transcript, reply, err)
+
+	q.checkLedgerPendingRequests(ctx, transcript)
+
+	// we're checking here that pulse was changed and we should send
+	// a message that we've finished processing task
+	// note: ideally we should tell here that we've stopped executing
+	//       but we only hoped that OnPulse had already told us that
+	//       pulse changed and we should stop execution
+	q.finishPendingIfNeeded(ctx)
+}
+
+func (q *ExecutionBroker) finishPending(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+
+	msg := message.PendingFinished{Reference: q.executionState.Ref}
+	_, err := q.logicRunner.MessageBus.Send(ctx, &msg, nil)
+	if err != nil {
+		logger.Error("Unable to send PendingFinished message:", err)
+	}
+}
+
+// finishPendingIfNeeded checks whether last execution was a pending one.
+// If this is true as a side effect the function sends a PendingFinished
+// message to the current executor
+func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
+	es := q.executionState
+	lr := q.logicRunner
+
+	es.Lock()
+	defer es.Unlock()
+
+	if es.pending != message.InPending {
+		return
+	}
+
+	es.pending = message.NotPending
+	es.PendingConfirmed = false
+
+	pulseObj := lr.pulse(ctx)
+	meCurrent, _ := lr.JetCoordinator.IsAuthorized(
+		ctx, insolar.DynamicRoleVirtualExecutor, *es.Ref.Record(), pulseObj.PulseNumber, lr.JetCoordinator.Me(),
+	)
+	if !meCurrent {
+		go q.finishPending(ctx)
+	}
+}
+
+func NewExecutionBroker(es *ExecutionState, methods ExecutionBrokerMethods) *ExecutionBroker {
 	return &ExecutionBroker{
 		mutableLock: sync.RWMutex{},
 		mutable:     NewTranscriptDequeue(),
 		immutable:   NewTranscriptDequeue(),
 		finished:    NewTranscriptDequeue(),
 
-		methods: methods,
+		methods:        methods,
+		executionState: es,
 
 		deduplicationLock:  sync.Mutex{},
 		deduplicationTable: make(map[insolar.Reference]bool),
