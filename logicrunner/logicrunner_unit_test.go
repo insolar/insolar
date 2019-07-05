@@ -102,7 +102,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(2 * time.Second)
+	suite.mc.Wait(2 * time.Minute)
 	suite.mc.Finish()
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
@@ -140,24 +140,25 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	es := NewExecutionState(objectRef)
 	es.CurrentList.Set(objectRef, &Transcript{})
 	es.pending = message.NotPending
+	es.RegisterLogicRunner(suite.lr)
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
 	// doesn't send PendingFinished message and doesn't change ExecutionState.pending
-	suite.lr.finishPendingIfNeeded(suite.ctx, es)
+	es.Broker.finishPendingIfNeeded(suite.ctx)
 	suite.Require().Zero(suite.mb.SendCounter)
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.pending = message.InPending
 	suite.mb.SendMock.ExpectOnce(suite.ctx, &message.PendingFinished{Reference: objectRef}, nil).Return(&reply.ID{}, nil)
 	suite.jc.IsAuthorizedMock.Return(false, nil)
-	suite.lr.finishPendingIfNeeded(suite.ctx, es)
+	es.Broker.finishPendingIfNeeded(suite.ctx)
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	suite.mc.Wait(time.Minute) // message bus' send is called in a goroutine
 
 	es.pending = message.InPending
 	suite.jc.IsAuthorizedMock.Return(true, nil)
-	suite.lr.finishPendingIfNeeded(suite.ctx, es)
+	es.Broker.finishPendingIfNeeded(suite.ctx)
 	suite.Require().Equal(message.NotPending, es.pending)
 }
 

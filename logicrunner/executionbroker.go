@@ -20,8 +20,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -154,8 +152,6 @@ type ExecutionBroker struct {
 	deduplicationTable map[insolar.Reference]bool
 	deduplicationLock  sync.Mutex
 }
-
-var ErrRetryLater = errors.New("Failed to start task, retry next time")
 
 type ExecutionBrokerRotationResult struct {
 	Requests              []*Transcript
