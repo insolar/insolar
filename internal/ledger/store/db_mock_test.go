@@ -23,7 +23,7 @@ import (
 	"sort"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
+	"github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -93,6 +93,32 @@ func TestMockDB_Set(t *testing.T) {
 
 	value := db.backend[string(append(key.Scope().Bytes(), key.ID()...))]
 	assert.Equal(t, expectedValue, value)
+}
+
+func TestMockDB_Delete(t *testing.T) {
+	t.Parallel()
+
+	db := NewMemoryMockDB()
+
+	var (
+		key           testMockKey
+		expectedValue []byte
+	)
+	f := fuzz.New().NilChance(0)
+	f.Fuzz(&key)
+	f.Fuzz(&expectedValue)
+	err := db.Set(key, expectedValue)
+	assert.NoError(t, err)
+
+	value, err := db.Get(key)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedValue, value)
+
+	err = db.Delete(key)
+	assert.NoError(t, err)
+
+	_, err = db.Get(key)
+	assert.EqualError(t, err, ErrNotFound.Error())
 }
 
 func TestMockDB_NewIterator(t *testing.T) {

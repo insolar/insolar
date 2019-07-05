@@ -63,10 +63,18 @@ func (b *MockDB) Set(key Key, value []byte) error {
 	return nil
 }
 
+// Delete deletes value for a key in memory storage.
+func (b *MockDB) Delete(key Key) error {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	delete(b.backend, string(fullKey))
+	return nil
+}
+
 // NewIterator returns new Iterator over the memory storage.
 func (b *MockDB) NewIterator(pivot Key, reverse bool) Iterator {
 	mi := memoryIterator{pivot: pivot, reverse: reverse, db: b}
-	b.lock.RLock()
 	return &mi
 }
 
