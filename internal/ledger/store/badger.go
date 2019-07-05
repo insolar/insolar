@@ -197,6 +197,24 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 	return nil
 }
 
+// Delete deletes value for a key.
+func (b *BadgerDB) Delete(key Key) error {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	err := b.backend.Update(func(txn *badger.Txn) error {
+		err := txn.Delete(fullKey)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // NewIterator returns new Iterator over the store.
 func (b *BadgerDB) NewIterator(pivot Key, reverse bool) Iterator {
 	bi := badgerIterator{pivot: pivot, reverse: reverse}
