@@ -20,6 +20,7 @@ import (
 	"sync"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go
 type StateStorage interface {
 	sync.Locker
 

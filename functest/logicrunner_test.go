@@ -674,50 +674,6 @@ func (r *One) Recursive() (error) {
 	require.Contains(t, resp.ExtractedError, "loop detected")
 }
 
-func TestNewAllowanceNotFromWallet(t *testing.T) {
-	t.Skip("INS-2706 Unskip after fixing `can't open plugin` error ")
-	var contractOneCode = `
-package main
-
-import (
-	"fmt"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/application/proxy/allowance"
-	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/insolar"
-)
-
-type One struct {
-	foundation.BaseContract
-}
-
-func New() (*One, error) {
-	return &One{}, nil
-}
-
-func (r *One) CreateAllowance(member string) (error) {
-	memberRef, refErr := insolar.NewReferenceFromBase58(member)
-	if refErr != nil {
-		return refErr
-	}
-	w, _ := wallet.GetImplementationFrom(*memberRef)
-	walletRef := w.GetReference()
-	ah := allowance.New(&walletRef, 111, r.GetContext().Time.Unix()+10)
-	_, err := ah.AsChild(walletRef)
-	if err != nil {
-		return fmt.Errorf("Error:", err.Error())
-	}
-	return nil
-}
-`
-	obj := callConstructor(t, uploadContractOnce(t, "new_allowance_not_from_wallet", contractOneCode), "New")
-	member := createMember(t)
-
-	resp := callMethod(t, obj, "CreateAllowance", member.ref)
-	require.NotEmpty(t, resp.Error)
-	require.Contains(t, resp.Error.Error(), "[ New Allowance ] : Can't create allowance from not wallet contract")
-}
-
 func TestGetParent(t *testing.T) {
 	var contractOneCode = `
  package main

@@ -147,7 +147,6 @@ func (e *requestsExecutor) SendReply(
 	}
 
 	target := *transcript.RequesterNode
-	seq := transcript.Request.Sequence
 
 	errstr := ""
 	if err != nil {
@@ -156,10 +155,10 @@ func (e *requestsExecutor) SendReply(
 	_, err = e.MessageBus.Send(
 		ctx,
 		&message.ReturnResults{
-			Target:   target,
-			Sequence: seq,
-			Reply:    re,
-			Error:    errstr,
+			Target:     target,
+			RequestRef: *transcript.RequestRef,
+			Reply:      re,
+			Error:      errstr,
 		},
 		&insolar.MessageSendOptions{
 			Receiver: &target,
