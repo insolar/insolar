@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/gofuzz"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -28,6 +29,17 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 )
+
+func TestDropDBKey(t *testing.T) {
+	testPulseNumber := insolar.GenesisPulse.PulseNumber
+	expectedKey := dropDbKey{jetPrefix: []byte("HelloWorld"), pn: testPulseNumber}
+
+	rawID := expectedKey.ID()
+
+	actualKey := dropDbKey{}
+	actualKey.SetFromBytes(rawID)
+	require.Equal(t, expectedKey, actualKey)
+}
 
 func TestNewStorageDB(t *testing.T) {
 	dbStore := NewDB(store.NewMemoryMockDB())
@@ -39,7 +51,42 @@ type setInput struct {
 	dr    Drop
 }
 
+func TestDropStorageDB_TruncateHead(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	dbMock := store.NewMemoryMockDB()
+
+	dropStore := NewDB(dbMock)
+
+	numElements := 400
+	startPulseNumber := insolar.GenesisPulse.PulseNumber
+	jets := make([]insolar.JetID, numElements)
+	for i := 0; i < numElements; i++ {
+		drop := Drop{}
+		drop.Pulse = startPulseNumber + insolar.PulseNumber(i)
+		jets[i] = *insolar.NewJetID(uint8(rand.Int()%30), testutils.RandomID().Bytes())
+
+		drop.JetID = jets[i]
+		err := dropStore.Set(ctx, drop)
+		require.NoError(t, err)
+	}
+
+	numLeftElements := numElements / 2
+	err := dropStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements-1))
+	require.NoError(t, err)
+
+	for i := 0; i < numLeftElements; i++ {
+		_, err := dropStore.ForPulse(ctx, jets[i], startPulseNumber+insolar.PulseNumber(i))
+		require.NoError(t, err)
+	}
+
+	for i := numElements - 1; i >= numLeftElements; i-- {
+		_, err := dropStore.ForPulse(ctx, jets[i], startPulseNumber+insolar.PulseNumber(i))
+		require.NoError(t, err)
+	}
+}
+
 func TestDropStorageDB_Set(t *testing.T) {
+
 	ctx := inslogger.TestContext(t)
 	var inputs []setInput
 	encodedDrops := map[string]struct{}{}

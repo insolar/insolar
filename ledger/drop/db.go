@@ -19,9 +19,11 @@ package drop
 import (
 	"bytes"
 	"context"
+	"math"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/pkg/errors"
 )
 
 type DB struct {
@@ -43,7 +45,13 @@ func (dk *dropDbKey) Scope() store.Scope {
 }
 
 func (dk *dropDbKey) ID() []byte {
+	// order ( pn + jetPrefix ) is important: we use this logic for removing not finalized drops
 	return bytes.Join([][]byte{dk.pn.Bytes(), dk.jetPrefix}, nil)
+}
+
+func (dk *dropDbKey) SetFromBytes(raw []byte) {
+	dk.pn = insolar.NewPulseNumber(raw)
+	dk.jetPrefix = raw[dk.pn.Size():]
 }
 
 // ForPulse returns a Drop for a provided pulse, that is stored in a db.
@@ -72,4 +80,20 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 
 	encoded := MustEncode(&drop)
 	return ds.db.Set(&k, encoded)
+}
+
+func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
+	it := ds.db.NewIterator(&dropDbKey{jetPrefix: make([]byte, 0), pn: math.MaxUint32}, true)
+	for it.Next() {
+		key := &dropDbKey{}
+		key.SetFromBytes(it.Key())
+		if key.pn.Equal(lastPulse) {
+			break
+		}
+		err := ds.db.Delete(key)
+		if err != nil {
+			return errors.Wrapf(err, "[ DB.TruncateHead ] Can't Delete key: %+v", key)
+		}
+	}
+	return nil
 }
