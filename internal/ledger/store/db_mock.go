@@ -75,6 +75,7 @@ func (b *MockDB) Delete(key Key) error {
 // NewIterator returns new Iterator over the memory storage.
 func (b *MockDB) NewIterator(pivot Key, reverse bool) Iterator {
 	mi := memoryIterator{pivot: pivot, reverse: reverse, db: b}
+	b.lock.RLock()
 	return &mi
 }
 

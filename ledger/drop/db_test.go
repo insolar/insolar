@@ -17,11 +17,15 @@
 package drop
 
 import (
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -31,6 +35,8 @@ import (
 )
 
 func TestDropDBKey(t *testing.T) {
+	t.Parallel()
+
 	testPulseNumber := insolar.GenesisPulse.PulseNumber
 	expectedKey := dropDbKey{jetPrefix: []byte("HelloWorld"), pn: testPulseNumber}
 
@@ -52,26 +58,48 @@ type setInput struct {
 }
 
 func TestDropStorageDB_TruncateHead(t *testing.T) {
+	t.Parallel()
+
 	ctx := inslogger.TestContext(t)
-	dbMock := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	dbMock, err := store.NewBadgerDB(tmpdir)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
 
 	dropStore := NewDB(dbMock)
 
 	numElements := 400
+
+	// it's used for writing pulses in random order to db
+	indexes := make([]int, numElements)
+	for i := 0; i < numElements; i++ {
+		indexes[i] = i
+	}
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(indexes), func(i, j int) { indexes[i], indexes[j] = indexes[j], indexes[i] })
+
 	startPulseNumber := insolar.GenesisPulse.PulseNumber
 	jets := make([]insolar.JetID, numElements)
-	for i := 0; i < numElements; i++ {
+	for _, idx := range indexes {
 		drop := Drop{}
-		drop.Pulse = startPulseNumber + insolar.PulseNumber(i)
-		jets[i] = *insolar.NewJetID(uint8(rand.Int()%30), testutils.RandomID().Bytes())
+		drop.Pulse = startPulseNumber + insolar.PulseNumber(idx)
+		jets[idx] = *insolar.NewJetID(uint8(rand.Int()), testutils.RandomID().Bytes())
 
-		drop.JetID = jets[i]
+		drop.JetID = jets[idx]
 		err := dropStore.Set(ctx, drop)
 		require.NoError(t, err)
 	}
 
+	for i := 0; i < numElements; i++ {
+		_, err := dropStore.ForPulse(ctx, jets[i], startPulseNumber+insolar.PulseNumber(i))
+		require.NoError(t, err)
+	}
+
 	numLeftElements := numElements / 2
-	err := dropStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements-1))
+	err = dropStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements-1))
 	require.NoError(t, err)
 
 	for i := 0; i < numLeftElements; i++ {
@@ -81,7 +109,7 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 
 	for i := numElements - 1; i >= numLeftElements; i-- {
 		_, err := dropStore.ForPulse(ctx, jets[i], startPulseNumber+insolar.PulseNumber(i))
-		require.NoError(t, err)
+		require.EqualError(t, err, ErrNotFound.Error())
 	}
 }
 
