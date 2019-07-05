@@ -8,7 +8,7 @@ import (
 )
 
 type SerializerTo interface {
-	SerializeTo(writer io.Writer, signer common.DataSigner) error
+	SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error)
 }
 
 const (

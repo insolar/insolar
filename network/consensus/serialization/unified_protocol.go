@@ -99,7 +99,7 @@ type UnifiedProtocolPacketHeader struct {
 	TargetID               uint32 // indicates final destination, if =0 then there is no relay allowed by sender and receiver MUST decline a packet if actual sender != source
 }
 
-func (p UnifiedProtocolPacketHeader) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p UnifiedProtocolPacketHeader) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 

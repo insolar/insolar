@@ -61,8 +61,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) error {
-	var fieldInternalBuffer [fieldBufSize]byte
+func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) (int64, error) {
+	var (
+		total               int64
+		fieldInternalBuffer [fieldBufSize]byte
+	)
 
 	checksumBuffer := &bytes.Buffer{}
 	fieldBuf := bytes.NewBuffer(fieldInternalBuffer[0:0:fieldBufSize])
@@ -78,7 +81,7 @@ func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) e
 		// Skip nil pointer fields since it's optional
 		if fv.Kind() == reflect.Ptr && fv.IsNil() {
 			if !isOptional(fvt) {
-				return errors.Errorf("Invalid nil field: %s.%s", vt.Name(), fvt.Name)
+				return total, errors.Errorf("Invalid nil field: %s.%s", vt.Name(), fvt.Name)
 			}
 
 			continue
@@ -94,33 +97,37 @@ func serializeTo(writer io.Writer, signer common.DataSigner, data interface{}) e
 			writingValue = reflect.ValueOf(bits)
 		}
 
-		err := writeValue(writingValue, fieldBuf, signer)
+		_, err := writeValue(writingValue, fieldBuf, signer)
 		if err != nil {
-			return err
+			return 0, err // We didn't flush buffer yer
 		}
 
 		b := fieldBuf.Bytes()
 
 		_, err = checksumBuffer.Write(b)
 		if err != nil {
-			return err
+			return 0, err // We didn't flush buffer yer
 		}
 
 		if !shouldIgnoreInSerialization(fvt) {
-			_, err := writer.Write(b)
+			n, err := writer.Write(b)
+			total += int64(n)
 			if err != nil {
-				return err
+				return total, err
 			}
 		}
 
 		fieldBuf.Reset()
 	}
 
-	return nil
+	return total, nil
 }
 
-func writeValue(fv reflect.Value, writer io.Writer, signer common.DataSigner) error {
-	var err error
+func writeValue(fv reflect.Value, writer io.Writer, signer common.DataSigner) (int64, error) {
+	var (
+		total int64
+		err   error
+	)
 
 	if fv.Kind() == reflect.Slice {
 		return writeSlice(fv, writer, signer)
@@ -129,25 +136,31 @@ func writeValue(fv reflect.Value, writer io.Writer, signer common.DataSigner) er
 	val := fv.Interface()
 	switch v := val.(type) {
 	case SerializerTo:
-		err = v.SerializeTo(writer, signer)
+		total, err = v.SerializeTo(writer, signer)
 	default:
 		err = binary.Write(writer, defaultByteOrder, val)
-	}
-
-	return err
-}
-
-func writeSlice(fv reflect.Value, writer io.Writer, signer common.DataSigner) error {
-	for i := 0; i < fv.Len(); i++ {
-		v := fv.Index(i)
-
-		err := writeValue(v, writer, signer)
 		if err != nil {
-			return err
+			total += int64(binary.Size(val))
 		}
 	}
 
-	return nil
+	return total, err
+}
+
+func writeSlice(fv reflect.Value, writer io.Writer, signer common.DataSigner) (int64, error) {
+	var total int64
+
+	for i := 0; i < fv.Len(); i++ {
+		v := fv.Index(i)
+
+		n, err := writeValue(v, writer, signer)
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
+
+	return total, nil
 }
 
 func shouldIgnoreInSerialization(field reflect.StructField) bool {

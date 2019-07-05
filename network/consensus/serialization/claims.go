@@ -61,7 +61,7 @@ type ClaimHeader struct {
 	// actual payload
 }
 
-func (p ClaimHeader) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p ClaimHeader) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -71,7 +71,7 @@ type GenericClaim struct {
 	Payload []byte
 }
 
-func (p GenericClaim) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p GenericClaim) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -80,7 +80,7 @@ type EmptyClaim struct {
 	ClaimHeader `insolar-transport:"delimiter;ClaimType=0;length=header"`
 }
 
-func (p EmptyClaim) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p EmptyClaim) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -90,6 +90,6 @@ type ClaimList struct {
 	EndOfClaims EmptyClaim // ByteSize=1 - indicates end of claims
 }
 
-func (p ClaimList) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p ClaimList) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }

@@ -78,53 +78,48 @@ func TestNewUnifiedProtocolPacketHeader_SerializeTo(t *testing.T) {
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	err := header.SerializeTo(buf, signer)
+	s, err := header.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
-	bs := buf.Bytes()
-	require.EqualValues(t, 16, len(bs))
+	require.EqualValues(t, 16, s)
 }
 
 func TestJoinAnnouncement_SerializeTo(t *testing.T) {
 	joinAnnouncement := JoinAnnouncement{}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	err := joinAnnouncement.SerializeTo(buf, signer)
+	s, err := joinAnnouncement.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
-	bs := buf.Bytes()
-	require.EqualValues(t, 137, len(bs))
+	require.EqualValues(t, 137, s)
 }
 
 func TestLeaveAnnouncement_SerializeTo(t *testing.T) {
 	leaveAnnouncement := LeaveAnnouncement{}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	err := leaveAnnouncement.SerializeTo(buf, signer)
+	s, err := leaveAnnouncement.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
-	bs := buf.Bytes()
-	require.EqualValues(t, 4, len(bs))
+	require.EqualValues(t, 4, s)
 }
 
 func TestNodeBriefIntro_SerializeTo(t *testing.T) {
 	nodeBriefIntro := NodeBriefIntro{}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	err := nodeBriefIntro.SerializeTo(buf, signer)
+	s, err := nodeBriefIntro.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
-	bs := buf.Bytes()
-	require.EqualValues(t, 137, len(bs))
+	require.EqualValues(t, 137, s)
 }
 
 func TestGlobulaConsensusProtocolV2Packet_SerializeTo(t *testing.T) {
 	packet := GlobulaConsensusProtocolV2Packet{}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetBufSize))
-	err := packet.SerializeTo(buf, signer)
+	s, err := packet.SerializeTo(buf, signer)
 	require.NoError(t, err)
 
-	bs := buf.Bytes()
-	require.EqualValues(t, 137, len(bs))
+	require.EqualValues(t, 84, s)
 }

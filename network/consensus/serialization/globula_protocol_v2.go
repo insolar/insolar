@@ -67,7 +67,7 @@ type GlobulaConsensusProtocolV2Packet struct {
 	PacketSignature common.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
 }
 
-func (p GlobulaConsensusProtocolV2Packet) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p GlobulaConsensusProtocolV2Packet) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -99,13 +99,13 @@ type PacketBody struct {
 	CloudIntro     *CloudIntro     `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=2,3"` // ByteSize= 128
 	JoinerSecret   *common.Bits512 `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=3"`   // ByteSize= 64
 
-	Neighbourhood Neighbourhood `insolar-transport:"Packet=2"` // ByteSize= 1 + N * (205 .. 220)
-	Vectors       NodeVectors   `insolar-transport:"Packet=3"` // ByteSize=133..599
+	Neighbourhood *Neighbourhood `insolar-transport:"Packet=2"` // ByteSize= 1 + N * (205 .. 220)
+	Vectors       *NodeVectors   `insolar-transport:"Packet=3"` // ByteSize=133..599
 
-	Claims ClaimList `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
+	Claims *ClaimList `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
 }
 
-func (p PacketBody) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p PacketBody) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -136,7 +136,7 @@ type EmbeddedPulsarData struct {
 	PulsarSignature      common.Bits512 // ByteSize=64
 }
 
-func (p EmbeddedPulsarData) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p EmbeddedPulsarData) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -147,7 +147,7 @@ type CloudIntro struct {
 	LastCloudStateHash common.Bits512
 }
 
-func (p CloudIntro) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p CloudIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -157,7 +157,7 @@ type Neighbourhood struct {
 	Neighbours     []NeighbourAnnouncement
 }
 
-func (p Neighbourhood) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p Neighbourhood) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -184,7 +184,7 @@ type NeighbourAnnouncement struct {
 	AnnounceSignature *common.Bits512 `insolar-transport:"optional"` // ByteSize = 64
 }
 
-func (p NeighbourAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p NeighbourAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -196,7 +196,7 @@ type NonJoinerMembershipAnnouncement struct {
 	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
 }
 
-func (p NonJoinerMembershipAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p NonJoinerMembershipAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -219,7 +219,7 @@ type MembershipAnnouncement struct {
 	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
 }
 
-func (p MembershipAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p MembershipAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -245,7 +245,7 @@ type NodeAnnouncement struct {
 	Joiner *JoinAnnouncement `insolar-transport:"optional"` // ByteSize = 135, 137, 147
 }
 
-func (p NodeAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p NodeAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -254,7 +254,7 @@ type JoinAnnouncement struct {
 	NodeBriefIntro
 }
 
-func (p JoinAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p JoinAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -263,6 +263,6 @@ type LeaveAnnouncement struct {
 	LeaveReason uint32
 }
 
-func (p LeaveAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p LeaveAnnouncement) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }

@@ -82,7 +82,7 @@ type NodeBriefIntro struct {
 	JoinerSignature common.Bits512 // ByteSize=64
 }
 
-func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
 
@@ -107,6 +107,6 @@ type NodeFullIntro struct {
 	IssuerSignature       common.Bits512
 }
 
-func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) error {
+func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
 	return serializeTo(writer, signer, p)
 }
