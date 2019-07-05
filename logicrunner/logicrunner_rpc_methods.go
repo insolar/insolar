@@ -213,7 +213,7 @@ func (m *executionProxyImplementation) RouteCall(
 	// we _already_ are processing the request. We should continue to execute and
 	// the next executor will wait for us in pending state. For this reason Flow is not
 	// used for registering the outgoing request.
-	_, err := m.am.RegisterOutgoingRequest(ctx, *outgoing)
+	_, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
 	}

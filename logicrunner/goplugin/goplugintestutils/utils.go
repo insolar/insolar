@@ -192,13 +192,13 @@ func NewTestArtifactManager() *TestArtifactManager {
 }
 
 // RegisterIncomingRequest implementation for tests
-func (t *TestArtifactManager) RegisterIncomingRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
+func (t *TestArtifactManager) RegisterIncomingRequest(ctx context.Context, req *record.IncomingRequest) (*insolar.ID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
 
 // RegisterOutgoingRequest implementation for tests
-func (t *TestArtifactManager) RegisterOutgoingRequest(ctx context.Context, req record.OutgoingRequest) (*insolar.ID, error) {
+func (t *TestArtifactManager) RegisterOutgoingRequest(ctx context.Context, req *record.OutgoingRequest) (*insolar.ID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
@@ -396,7 +396,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
 		}
-		protoID, err := cb.registerRequest(ctx, request)
+		protoID, err := cb.registerRequest(ctx, &request)
 
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterIncomingRequest")
@@ -444,7 +444,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			Prototype: &nonce,
 		}
 
-		codeReq, err := cb.registerRequest(ctx, req)
+		codeReq, err := cb.registerRequest(ctx, &req)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't register request")
 		}
@@ -483,7 +483,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 
 // Using registerRequest without VM is a tmp solution while there is no logic of contract uploading in VM
 // Because of this we need copy some logic in test code
-func (cb *ContractsBuilder) registerRequest(ctx context.Context, request record.IncomingRequest) (*insolar.ID, error) {
+func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record.IncomingRequest) (*insolar.ID, error) {
 	var err error
 	var lastPulse insolar.PulseNumber
 
