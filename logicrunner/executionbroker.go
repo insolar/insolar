@@ -185,27 +185,26 @@ func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Tran
 	if err != nil {
 		logger.Error("[ processImmutable ] Failed to process immutable Transcript:", err)
 	}
-	return
 }
 
-func (q *ExecutionBroker) processMutable(ctx context.Context, transcript *Transcript) {
+func (q *ExecutionBroker) processMutable(ctx context.Context, transcript *Transcript) bool {
 	defer q.releaseTask(ctx, transcript)
 
 	logger := inslogger.FromContext(ctx).WithField("RequestReference", transcript.RequestRef)
 
 	err := q.methods.Execute(ctx, transcript)
 	if err == ErrRetryLater {
-		return
+		return false
 	}
 
 	q.finishTask(ctx, transcript, err != nil)
 	if err != nil {
 		logger.Error("[ processMutable ] Failed to process immutable Transcript:", err)
 	}
-	return
+	return true
 }
 
-func (q *ExecutionBroker) isDuplicate(_ context.Context, transcript *Transcript) bool {
+func (q *ExecutionBroker) storeWithoutDuplication(_ context.Context, transcript *Transcript) bool {
 	q.deduplicationLock.Lock()
 	defer q.deduplicationLock.Unlock()
 
@@ -218,7 +217,7 @@ func (q *ExecutionBroker) isDuplicate(_ context.Context, transcript *Transcript)
 
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.isDuplicate(ctx, transcript) {
+		if q.storeWithoutDuplication(ctx, transcript) {
 			continue
 		}
 
@@ -239,7 +238,7 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 // One shouldn't mix immutable calls and mutable ones
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.isDuplicate(ctx, transcript) {
+		if q.storeWithoutDuplication(ctx, transcript) {
 			continue
 		}
 
@@ -305,7 +304,7 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript
 	}
 }
 
-func (q *ExecutionBroker) releaseTask(ctx context.Context, transcript *Transcript) {
+func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -321,7 +320,7 @@ func (q *ExecutionBroker) releaseTask(ctx context.Context, transcript *Transcrip
 	queue.Prepend(transcript)
 }
 
-func (q *ExecutionBroker) storeCurrent(ctx context.Context, transcript *Transcript) {
+func (q *ExecutionBroker) storeCurrent(_ context.Context, transcript *Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -370,17 +369,8 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 	// processing mutable queue
 	for transcript := q.getMutableTask(ctx); transcript != nil; transcript = q.getMutableTask(ctx) {
-		logger := logger.WithField("RequestReference", transcript.RequestRef)
-
-		err := q.methods.Execute(ctx, transcript)
-		if err == ErrRetryLater {
-			q.releaseTask(ctx, transcript)
+		if !q.processMutable(ctx, transcript) {
 			break
-		}
-
-		q.finishTask(ctx, transcript, err != nil)
-		if err != nil {
-			logger.Error("[ StartProcessorIfNeeded ] Failed to process transcript:", err)
 		}
 	}
 }

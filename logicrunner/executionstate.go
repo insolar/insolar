@@ -162,7 +162,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 	if !meNext {
 		sendExecResults := false
 
-		if !es.Broker.currentList.Empty() {
+		if !es.Broker.currentList.Empty() { // nolint: gocritics
 			es.pending = message.InPending
 			sendExecResults = true
 
