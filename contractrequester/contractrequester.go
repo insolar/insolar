@@ -99,12 +99,19 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
 	}
 
+	h := cr.PCS.ReferenceHasher()
+	_, err = h.Write(args)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Failed to calculate hash")
+	}
+
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Object:       ref,
 			Method:       method,
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
+			Reason:       *insolar.NewReference(*insolar.NewID(pulse, h.Sum(nil))),
 		},
 	}
 
