@@ -102,7 +102,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(2 * time.Minute)
+	suite.mc.Wait(2 * time.Second)
 	suite.mc.Finish()
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
@@ -683,6 +683,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	suite.Equal(true, es.PendingConfirmed)
 }
 
+// TODO: move this test to EB tests (TestRotate)
 func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 	tests := map[string]struct {
 		QueueLength     int
@@ -699,7 +700,8 @@ func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 			a := assert.New(t)
 
 			es := NewExecutionState(testutils.RandomRef())
-			es.Broker = NewBroker(t, suite.ctx, tc.QueueLength)
+			es.RegisterLogicRunner(suite.lr)
+			InitBroker(t, suite.ctx, tc.QueueLength, es, false)
 
 			rotationResults := es.Broker.Rotate(maxQueueLength)
 			a.Equal(tc.ExpectedLength, len(rotationResults.Requests))
@@ -1471,7 +1473,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
 	st.ExecutionState = es
 	es.CurrentList.Set(s.objectRef, &Transcript{})
-	es.Broker = NewBroker(s.T(), s.ctx, 0)
+	es.RegisterLogicRunner(s.lr)
+	InitBroker(s.T(), s.ctx, 0, es, false)
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
@@ -1572,15 +1575,15 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 	s.jc.MeMock.Return(insolar.Reference{})
 
 	var testCases = map[string]struct {
-		Broker          *ExecutionBroker
+		Count           int
 		hasMoreRequests bool
 	}{
 		"Has": {
-			NewBroker(s.T(), s.ctx, maxQueueLength+1),
+			maxQueueLength + 1,
 			true,
 		},
 		"Don't": {
-			NewBroker(s.T(), s.ctx, maxQueueLength),
+			maxQueueLength,
 			false,
 		},
 	}
@@ -1589,7 +1592,11 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 		s.T().Run(name, func(t *testing.T) {
 			a := assert.New(t)
 
-			messagesQueue := convertQueueToMessageQueue(s.ctx, test.Broker.mutable.queue[:maxQueueLength])
+			es := NewExecutionState(s.objectRef)
+			es.RegisterLogicRunner(s.lr)
+			InitBroker(t, s.ctx, test.Count, es, false)
+
+			messagesQueue := convertQueueToMessageQueue(s.ctx, es.Broker.mutable.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
 				RecordRef:             s.objectRef,
@@ -1604,9 +1611,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 				wg.Done()
 				return nil, nil
 			})
-
-			es := NewExecutionState(s.objectRef)
-			es.Broker = test.Broker
 
 			st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
 			st.ExecutionState = es
