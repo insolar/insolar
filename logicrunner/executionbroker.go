@@ -245,7 +245,7 @@ func (q *ExecutionBroker) getImmutableTask(_ context.Context) *Transcript {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	transcript := q.mutable.Pop()
+	transcript := q.immutable.Pop()
 	if transcript == nil {
 		return nil
 	}

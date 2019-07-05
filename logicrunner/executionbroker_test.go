@@ -237,7 +237,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 func (s *ExecutionBrokerSuite) TestPrepend() {
 	ctx := context.TODO()
 
-	waitChannel := make(chan struct{})
+	waitChannel := make(chan struct{}, 0)
 	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
 	methodsMock.CheckMock.Return(true)
 	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) bool {
@@ -248,6 +248,11 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	})
 
 	b := NewExecutionBroker(methodsMock)
+	processGoroutineStarts := func() bool {
+		b.processLock.Lock()
+		defer b.processLock.Unlock()
+		return b.processActive == true
+	}
 	processGoroutineExits := func() bool {
 		b.processLock.Lock()
 		defer b.processLock.Unlock()
@@ -270,6 +275,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 		Request:      &record.IncomingRequest{},
 	}
 	b.Prepend(ctx, true, tr)
+	s.Require().True(wait(processGoroutineStarts))
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until queue processor'll finish processing")
 	s.Require().True(wait(processGoroutineExits))
