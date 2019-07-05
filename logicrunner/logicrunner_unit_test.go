@@ -919,7 +919,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	suite.am.HasPendingRequestsMock.Return(false, nil)
 
-	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r record.IncomingRequest) (*insolar.ID, error) {
+	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*insolar.ID, error) {
 		reqId := testutils.RandomID()
 		return &reqId, nil
 	})
@@ -1069,7 +1069,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			if test.when > whenIsAuthorized {
-				suite.am.RegisterIncomingRequestFunc = func(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
+				suite.am.RegisterIncomingRequestFunc = func(ctx context.Context, req *record.IncomingRequest) (*insolar.ID, error) {
 					if test.when == whenRegisterRequest {
 						changePulse()
 						// Due to specific implementation of HandleCall.handleActual

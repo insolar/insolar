@@ -90,7 +90,7 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 	defer span.End()
 
 	msg := r.parcel.Message().(*message.CallMethod)
-	id, err := r.ArtifactManager.RegisterIncomingRequest(ctx, msg.IncomingRequest)
+	id, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &msg.IncomingRequest)
 	if err != nil {
 		return err
 	}

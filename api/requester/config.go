@@ -35,6 +35,7 @@ type Request struct {
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
+	Test     string `json:"test,omitempty"`
 }
 
 type Params struct {
