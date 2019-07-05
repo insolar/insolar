@@ -517,21 +517,22 @@ func LessForNodeProfile(c NodeProfile, o NodeProfile) bool {
 }
 
 type MembershipProfile struct {
-	Index             uint16
-	Power             MemberPower
-	RequestedPower    MemberPower
-	StateEvidence     NodeStateHashEvidence
-	AnnounceSignature MemberAnnouncementSignature
+	Index          uint16
+	Power          MemberPower
+	RequestedPower MemberPower
+	NodeAnnouncedState
 }
 
 func NewMembershipProfile(index uint16, power MemberPower, nsh NodeStateHashEvidence, nas MemberAnnouncementSignature,
 	ep MemberPower) MembershipProfile {
 	return MembershipProfile{
-		Index:             index,
-		Power:             power,
-		RequestedPower:    ep,
-		StateEvidence:     nsh,
-		AnnounceSignature: nas,
+		Index:          index,
+		Power:          power,
+		RequestedPower: ep,
+		NodeAnnouncedState: NodeAnnouncedState{
+			StateEvidence:     nsh,
+			AnnounceSignature: nas,
+		},
 	}
 }
 

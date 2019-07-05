@@ -48,42 +48,13 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package common
 
-import (
-	"context"
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-)
-
-type RealmPopulation interface {
-	GetNodeCount() int
-	GetOthersCount() int
-	GetJoinersCount() int
-	GetBftMajorityCount() int
-	IsComplete() bool
-
-	GetNodeAppearance(id common.ShortNodeID) *NodeAppearance
-	GetActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance
-	GetJoinerNodeAppearance(id common.ShortNodeID) *NodeAppearance
-	GetNodeAppearanceByIndex(idx int) *NodeAppearance
-
-	GetShuffledOtherNodes() []*NodeAppearance
-	GetIndexedNodes() []*NodeAppearance
-
-	GetSelf() *NodeAppearance
-
-	CreateNodeAppearance(ctx context.Context, inp common2.NodeProfile) *NodeAppearance
-
-	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
-	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)
-
-	CreateOrUpdateVectorHelper(v *RealmVectorHelper) *RealmVectorHelper
+type NodeAnnouncedState struct {
+	StateEvidence     NodeStateHashEvidence
+	AnnounceSignature MemberAnnouncementSignature
+	//
+	//NodeInternalState common.Digest
+	//NodeStateSignature common.Signature
+	//AnnounceSignature *common.Signature
 }
-
-type PurgatoryNodeState int
-
-const PurgatoryDuplicatePK PurgatoryNodeState = -1
-const PurgatoryExistingMember PurgatoryNodeState = -2
-
-type NodeInitFunc func(ctx context.Context, n *NodeAppearance)

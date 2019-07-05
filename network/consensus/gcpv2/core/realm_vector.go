@@ -50,7 +50,12 @@
 
 package core
 
-import "github.com/insolar/insolar/network/consensus/gcpv2/common"
+import (
+	common2 "github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"sort"
+)
 
 type RealmVectorHelper struct {
 	populationVersion uint32
@@ -59,22 +64,304 @@ type RealmVectorHelper struct {
 	sorted  []sortedEntry
 }
 
-type sortedEntry struct {
-	rank  common.MembershipRank
-	entry *VectorEntry
+/*
+Contains copy of NodeAppearance fields that could be changed to avoid possible racing
+*/
+type VectorEntry struct {
+	rank       entryRank
+	role       common.NodePrimaryRole
+	joinerRole common.NodePrimaryRole
+	//joinerRank entryRank
+	trustLevel packets.NodeTrustLevel
+
+	filter uint8
+
+	node   *NodeAppearance
+	joiner *NodeAppearance //if joiner == node then this node is leaving
+
+	nodeData common.NodeAnnouncedState
 }
 
-type VectorEntry struct {
-	rank common.MembershipRank
-	node *NodeAppearance
+func NewRealmVectorHelper() *RealmVectorHelper {
+	return &RealmVectorHelper{}
+}
 
-	//	RequestedPower    common.MemberPower
-	StateEvidence     common.NodeStateHashEvidence
-	AnnounceSignature common.MemberAnnouncementSignature
+func (v *RealmVectorHelper) setNodes(nodeIndex []*NodeAppearance, joinerCount int, populationVersion uint32) {
 
-	//cancel
-	//trust
+	indCount := len(nodeIndex)
+	if joinerCount < 0 {
+		joinerCount = indCount
+	}
 
-	joinerRank common.MembershipRank
-	joiner     *NodeAppearance
+	v.populationVersion = populationVersion
+	v.indexed = make([]VectorEntry, indCount)
+	v.sorted = make([]sortedEntry, indCount+indCount+1) //avoid hitting the bound
+
+	sortedCount := indCount
+	for i, n := range nodeIndex {
+		ve := &v.indexed[i]
+		se := &v.sorted[i]
+		se.index = uint16(i)
+
+		if ve.setValues(n, uint16(i), &v.sorted[sortedCount]) {
+			sortedCount++
+		}
+	}
+
+	v.sorted = v.sorted[:sortedCount]
+	sort.Sort(&vectorSorter{values: v.sorted})
+}
+
+func (*RealmVectorHelper) updateNodes(nodeIndex []*NodeAppearance, joinerCount int, populationVersion uint32) *RealmVectorHelper {
+	//TODO rescan and update existing entries for possible reuse of hashing data?
+	v := NewRealmVectorHelper()
+	v.setNodes(nodeIndex, joinerCount, populationVersion)
+	return v
+}
+
+func (p *VectorEntry) setValues(n *NodeAppearance, index uint16, se *sortedEntry) bool {
+
+	p.node = n
+
+	if n == nil {
+		p.role = 0
+		p.rank.powerRole = 0
+		return false
+	}
+
+	p.role = n.profile.GetPrimaryRole()
+	leaving, _, joiner, membership, trust := n.GetRequestedState()
+
+	p.nodeData.StateEvidence = membership.StateEvidence
+	p.nodeData.AnnounceSignature = membership.AnnounceSignature
+
+	p.trustLevel = trust
+	if leaving {
+		p.rank.id = 0
+		p.rank.powerRole = 0
+		p.joiner = n //indication of leaving
+	} else {
+		p.rank.id = n.profile.GetShortNodeID()
+		if p.nodeData.StateEvidence == nil {
+			p.rank.powerRole = 0
+		} else {
+			p.rank.powerRole = powerRoleOf(p.role, membership.RequestedPower)
+		}
+		p.joiner = joiner
+	}
+
+	if joiner == nil {
+		return false
+	}
+
+	p.joinerRole = joiner.profile.GetPrimaryRole()
+	se.id = joiner.profile.GetShortNodeID()
+	_, _, _, membership, _ = n.GetRequestedState()
+	se.powerRole = powerRoleOf(p.joinerRole, membership.RequestedPower)
+	se.index = index
+	return true
+}
+
+func (p *VectorEntry) HasJoiner() bool {
+	return p.joiner != nil && p.joiner != p.node
+}
+
+func (p *VectorEntry) IsLeaving() bool {
+	return p.joiner == p.node
+}
+
+type entryRank struct {
+	id        common2.ShortNodeID
+	powerRole uint16
+}
+
+func powerRoleOf(role common.NodePrimaryRole, power common.MemberPower) uint16 {
+	if power == 0 {
+		return 0
+	}
+	return uint16(power) | uint16(role)<<8
+}
+
+func (p *entryRank) GetPower() common.MemberPower {
+	return common.MemberPower(p.powerRole & 0xFF)
+}
+
+type sortedEntry struct {
+	entryRank
+	index uint16 //points to the same for both member and joiner, but joiner has different id in the entryRank
+}
+
+func (v sortedEntry) GetEntryIndex() int {
+	return int(v.index &^ 0x8000)
+}
+
+//role of zero-power nodes is ignored for sorting
+//sorting is REVERSED - it makes the most powerful nodes of a role to be first in the list
+//nodeID are also reversed to put leaving nodes (id = 0) at the very end
+func (v entryRank) less(o entryRank) bool {
+	if v.powerRole < o.powerRole {
+		return false
+	}
+	if v.powerRole > o.powerRole {
+		return true
+	}
+	return v.id > o.id
+}
+
+type vectorSorter struct {
+	values []sortedEntry
+}
+
+func (c *vectorSorter) Len() int {
+	return len(c.values)
+}
+
+func (c *vectorSorter) Less(i, j int) bool {
+	return c.values[i].less(c.values[j].entryRank)
+}
+
+func (c *vectorSorter) Swap(i, j int) {
+	c.values[i], c.values[j] = c.values[j], c.values[i]
+}
+
+type VectorCursor struct {
+	NodeIndex uint16
+	RoleIndex uint16
+	PowIndex  uint16
+
+	LastRole common.NodePrimaryRole
+}
+
+func (p *VectorCursor) BeforeNext(role common.NodePrimaryRole) {
+	if p.LastRole == role {
+		return
+	}
+	p.RoleIndex = 0
+	p.PowIndex = 0
+	p.LastRole = role
+}
+
+func (p *VectorCursor) AfterNext(power common.MemberPower) {
+	p.RoleIndex++
+	p.PowIndex += power.ToLinearValue()
+	p.NodeIndex++
+}
+
+type VectorBuilder interface {
+	AddEntry(n *NodeAppearance, power common.MemberPower, cursor VectorCursor, nodeData *common.NodeAnnouncedState)
+	Fork() VectorBuilder
+}
+
+type filteredVectorBuilder struct {
+	Cursor       VectorCursor
+	Builder      VectorBuilder
+	Index        uint8
+	ReuseBuilder int8
+	FilterMask   uint8
+	FilterRes    uint8
+	LastFilter   bool
+}
+
+type DualVectorBuilder struct {
+	helper   *RealmVectorHelper
+	builders [2]filteredVectorBuilder
+	//lazyBuilders []*filteredVectorBuilder
+	//bitVectors []byte
+}
+
+func newFilteredVectorBuilders(baseBuilder VectorBuilder, masks []uint8) ([]filteredVectorBuilder, []*filteredVectorBuilder) {
+	if len(masks) == 0 || len(masks)%2 != 0 {
+		panic("illegal value")
+	}
+
+	builders := make([]filteredVectorBuilder, len(masks)/2)
+	builders[0].Builder = baseBuilder
+	for i := range builders {
+		builders[i].FilterMask = masks[i*2]
+		builders[i].FilterRes = masks[i*2+1]
+		builders[i].Index = uint8(i)
+	}
+	if len(masks) == 1 {
+		return builders, nil
+	}
+
+	lazyBuilders := make([]*filteredVectorBuilder, len(masks)-1)
+	for i := range lazyBuilders {
+		lazyBuilders[i] = &builders[i+1]
+	}
+	return builders, lazyBuilders
+}
+
+func NewDualVectorBuilder(helper *RealmVectorHelper, baseBuilder VectorBuilder, masks ...uint8) DualVectorBuilder {
+	builders, _ := newFilteredVectorBuilders(baseBuilder, masks)
+	return DualVectorBuilder{
+		helper:   helper,
+		builders: [...]filteredVectorBuilder{builders[0], builders[1]},
+		//lazyBuilders: lazyBuilders,
+	}
+}
+
+func (p *DualVectorBuilder) smth() {
+	for _, se := range p.helper.sorted {
+		ve := &p.helper.indexed[se.index]
+
+		var (
+			n        *NodeAppearance
+			power    common.MemberPower
+			role     common.NodePrimaryRole
+			nodeData *common.NodeAnnouncedState
+		)
+		if se.id == ve.rank.id {
+			// member
+			n = ve.node
+			power = ve.rank.GetPower()
+			role = ve.role
+			nodeData = &ve.nodeData
+		} else {
+			// joiner
+			if !ve.HasJoiner() {
+				panic("illegal state")
+			}
+			n = ve.joiner
+			power = se.GetPower()
+			nas := n.GetNodeMembershipProfileOrEmpty().NodeAnnouncedState
+			role = ve.joinerRole
+			nodeData = &nas
+		}
+
+		for i := range p.builders {
+			b := &p.builders[i]
+			b.LastFilter = b.FilterMask&ve.filter == b.FilterRes
+
+		}
+
+		//if len(p.lazyBuilders) > 0 {
+		//	j := 0
+		//	for i, b := range p.lazyBuilders {
+		//		base := &p.builders[b.ReuseBuilder]
+		//		if b.LastFilter != base.LastFilter {
+		//			b.Builder = base.Builder.Fork()
+		//			for k := 0; k < i; k++ {
+		//				bb := p.lazyBuilders[k]
+		//				if bb.ReuseBuilder == b.ReuseBuilder && bb.LastFilter == b.LastFilter {
+		//					bb.ReuseBuilder =
+		//				}
+		//				if
+		//			}
+		//		}
+		//
+		//		//if b.LastFilter !=
+		//	}
+		//
+		//
+		//} else {
+		//	for i := range p.builders {
+		//		b := &p.builders[i]
+		//		if b.FilterMask & ve.filter == 0 { continue }
+		//		b.Cursor.BeforeNext(role)
+		//		b.Builder.AddEntry(n, power, b.Cursor, nodeData)
+		//		b.Cursor.AfterNext(power)
+		//	}
+		//}
+	}
 }

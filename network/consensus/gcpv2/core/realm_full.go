@@ -344,13 +344,17 @@ func (r *FullRealm) prepareRegularMembers(pop census.OnlinePopulationBuilder) {
 		p.SetState(ns)
 
 		idx := p.GetIndex()
+		var na *NodeAppearance
 		if idx >= 0 {
-			na := r.population.GetNodeAppearanceByIndex(idx)
-			p.SetPower(na.requestedPower)
+			na = r.population.GetNodeAppearanceByIndex(idx)
 		} else {
-			na := r.population.GetJoinerNodeAppearance(p.GetShortNodeID())
-			p.SetPower(na.requestedPower)
+			na = r.population.GetJoinerNodeAppearance(p.GetShortNodeID())
 		}
+		leave, _, _, m, _ := na.GetRequestedState()
+		if leave {
+			panic("node must be removed as leaving")
+		}
+		p.SetPower(m.RequestedPower)
 	}
 }
 
