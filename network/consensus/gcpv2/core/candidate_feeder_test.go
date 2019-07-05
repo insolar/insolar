@@ -48,47 +48,57 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package core
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"testing"
+
+	ccommon "github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/testutils"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/stretchr/testify/require"
 )
 
-type NodeStateHash interface {
-	common.DigestHolder
+func TestPickNextJoinCandidate(t *testing.T) {
+	require.Equal(t, (&SequencialCandidateFeeder{}).PickNextJoinCandidate(), nil)
+
+	s := &SequencialCandidateFeeder{buf: make([]common.CandidateProfile, 1)}
+	c := testutils.NewCandidateProfileMock(t)
+	s.buf[0] = c
+	require.Equal(t, s.PickNextJoinCandidate(), c)
 }
 
-type GlobulaStateHash interface {
-	common.DigestHolder
+func TestRemoveJoinCandidate(t *testing.T) {
+	require.False(t, (&SequencialCandidateFeeder{}).RemoveJoinCandidate(false, ccommon.ShortNodeID(0)))
+
+	s := &SequencialCandidateFeeder{buf: make([]common.CandidateProfile, 1)}
+	c := testutils.NewCandidateProfileMock(t)
+	s.buf[0] = c
+	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
+	require.False(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(2)))
+
+	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
+	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
+
+	require.Equal(t, s.buf, []common.CandidateProfile(nil))
+
+	s.buf = make([]common.CandidateProfile, 2)
+	s.buf[0] = c
+	c2 := testutils.NewCandidateProfileMock(t)
+	s.buf[1] = c2
+	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
+
+	require.Equal(t, len(s.buf), 1)
+
+	require.True(t, len(s.buf) > 0 && s.buf[0] == c2)
 }
 
-type CloudStateHash interface {
-	common.DigestHolder
-}
+func TestAddJoinCandidate(t *testing.T) {
+	require.Panics(t, func() { (&SequencialCandidateFeeder{}).AddJoinCandidate(nil) })
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../testutils -s _mock.go
-
-type MemberAnnouncementSignature interface {
-	common.SignatureHolder
-}
-
-type OriginalPulsarPacket interface {
-	common.FixedReader
-	OriginalPulsarPacket()
-}
-
-func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
-
-type nodeStateHashEvidence struct {
-	common.SignedDigest
-}
-
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
-
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() common.SignatureHolder {
-	return c.GetSignatureHolder()
+	f := testutils.NewFullIntroductionReaderMock(t)
+	s := &SequencialCandidateFeeder{}
+	s.AddJoinCandidate(f)
+	require.True(t, len(s.buf) == 1 && s.buf[0] == f)
 }
