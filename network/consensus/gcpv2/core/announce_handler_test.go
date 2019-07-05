@@ -48,47 +48,24 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package core
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"testing"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+
+	"github.com/stretchr/testify/require"
 )
 
-type NodeStateHash interface {
-	common.DigestHolder
+func TestNewNoAnnouncementsHandler(t *testing.T) {
+	require.Equal(t, newNoAnnouncementsHandler(), &noAnnounceHandler)
 }
 
-type GlobulaStateHash interface {
-	common.DigestHolder
-}
+func TestCaptureAnnouncement(t *testing.T) {
+	p := newNoAnnouncementsHandler()
+	cp, err := p.CaptureAnnouncement(common.MembershipProfile{})
+	require.Equal(t, cp, p)
 
-type CloudStateHash interface {
-	common.DigestHolder
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../testutils -s _mock.go
-
-type MemberAnnouncementSignature interface {
-	common.SignatureHolder
-}
-
-type OriginalPulsarPacket interface {
-	common.FixedReader
-	OriginalPulsarPacket()
-}
-
-func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
-
-type nodeStateHashEvidence struct {
-	common.SignedDigest
-}
-
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
-
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() common.SignatureHolder {
-	return c.GetSignatureHolder()
+	require.Equal(t, err, nil)
 }

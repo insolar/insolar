@@ -51,44 +51,40 @@
 package common
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"math"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-type NodeStateHash interface {
-	common.DigestHolder
-}
+func TestVerifySizes(t *testing.T) {
+	ns := &NeighbourhoodSizes{}
+	ns.NeighbourhoodSize = 1
+	require.Panics(t, ns.VerifySizes)
 
-type GlobulaStateHash interface {
-	common.DigestHolder
-}
+	ns.NeighbourhoodSize = 5
+	ns.NeighbourhoodTrustThreshold = 0
+	require.Panics(t, ns.VerifySizes)
 
-type CloudStateHash interface {
-	common.DigestHolder
-}
+	ns.NeighbourhoodTrustThreshold = math.MaxUint8 + 1
+	require.Panics(t, ns.VerifySizes)
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../testutils -s _mock.go
+	ns.NeighbourhoodTrustThreshold = 1
+	ns.JoinersPerNeighbourhood = 0
+	require.Panics(t, ns.VerifySizes)
 
-type MemberAnnouncementSignature interface {
-	common.SignatureHolder
-}
+	ns.JoinersPerNeighbourhood = 1
+	require.Panics(t, ns.VerifySizes)
 
-type OriginalPulsarPacket interface {
-	common.FixedReader
-	OriginalPulsarPacket()
-}
+	ns.JoinersPerNeighbourhood = 2
+	ns.JoinersBoost = -1
+	require.Panics(t, ns.VerifySizes)
 
-func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
+	ns.JoinersBoost = 0
+	ns.NeighbourhoodSize = 0
+	require.Panics(t, ns.VerifySizes)
 
-type nodeStateHashEvidence struct {
-	common.SignedDigest
-}
+	ns.NeighbourhoodSize = 5
+	require.NotPanics(t, ns.VerifySizes)
 
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
-
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() common.SignatureHolder {
-	return c.GetSignatureHolder()
 }

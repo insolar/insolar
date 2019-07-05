@@ -159,6 +159,8 @@ type SignedGlobulaNodeState struct {
 	Signature        common.Bits512
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHashEvidence -o ../testutils -s _mock.go
+
 type NodeStateHashEvidence interface {
 	GetNodeStateHash() NodeStateHash
 	GetGlobulaNodeStateSignature() common.SignatureHolder

@@ -51,44 +51,60 @@
 package common
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"math"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-type NodeStateHash interface {
-	common.DigestHolder
+func TestNewNeighbourWeightScalerInt64(t *testing.T) {
+	require.Panics(t, func() { NewNeighbourWeightScalerInt64(-1) })
+
+	fullRange := int64(0)
+	n1 := NewNeighbourWeightScalerInt64(fullRange)
+	require.Equal(t, n1.max, uint32(fullRange))
+
+	require.Equal(t, n1.shift, uint8(0))
+
+	fullRange = int64(1 << 32)
+	n2 := NewNeighbourWeightScalerInt64(fullRange)
+	require.Equal(t, n2.shift, uint8(1))
+
+	require.Equal(t, n2.max, uint32(fullRange>>1))
 }
 
-type GlobulaStateHash interface {
-	common.DigestHolder
+func TestNewNeighbourWeightScalerUint64(t *testing.T) {
+	fullRange := uint64(0)
+	n1 := NewNeighbourWeightScalerUint64(fullRange)
+	require.Equal(t, n1.max, uint32(fullRange))
+
+	require.Equal(t, n1.shift, uint8(0))
+
+	fullRange = uint64(1 << 32)
+	n2 := NewNeighbourWeightScalerUint64(fullRange)
+	require.Equal(t, n2.shift, uint8(1))
+
+	require.Equal(t, n2.max, uint32(fullRange>>1))
 }
 
-type CloudStateHash interface {
-	common.DigestHolder
+func TestScaleInt64(t *testing.T) {
+	n1 := NewNeighbourWeightScalerInt64(0)
+	require.Equal(t, n1.ScaleInt64(-1), uint32(0))
+
+	require.Equal(t, n1.ScaleInt64(0), uint32(math.MaxUint32))
+
+	n2 := NewNeighbourWeightScalerInt64(1 << 32)
+	require.Equal(t, n2.ScaleInt64(1<<32), uint32(math.MaxUint32))
+
+	require.Equal(t, n2.ScaleInt64(1<<30), uint32(0x3fffffff))
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../testutils -s _mock.go
+func TestScaleUint64(t *testing.T) {
+	n1 := NewNeighbourWeightScalerUint64(0)
+	require.Equal(t, n1.ScaleUint64(0), uint32(math.MaxUint32))
 
-type MemberAnnouncementSignature interface {
-	common.SignatureHolder
-}
+	n2 := NewNeighbourWeightScalerUint64(1 << 32)
+	require.Equal(t, n2.ScaleUint64(1<<32), uint32(math.MaxUint32))
 
-type OriginalPulsarPacket interface {
-	common.FixedReader
-	OriginalPulsarPacket()
-}
-
-func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
-
-type nodeStateHashEvidence struct {
-	common.SignedDigest
-}
-
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
-
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() common.SignatureHolder {
-	return c.GetSignatureHolder()
+	require.Equal(t, n2.ScaleUint64(1<<30), uint32(0x3fffffff))
 }

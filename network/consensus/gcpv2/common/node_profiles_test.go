@@ -51,44 +51,78 @@
 package common
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-type NodeStateHash interface {
-	common.DigestHolder
+func TestMemberPowerOf(t *testing.T) {
+	require.Equal(t, MemberPowerOf(1), MemberPower(1))
+
+	require.Equal(t, MemberPowerOf(0x1F), MemberPower(0x1F))
+
+	require.Equal(t, MemberPowerOf(MaxLinearMemberPower), MemberPower(0xFF))
+
+	require.Equal(t, MemberPowerOf(MaxLinearMemberPower+1), MemberPower(0xFF))
+
+	require.Equal(t, MemberPowerOf(0x1F+1), MemberPower(0x1F+1))
+
+	require.Equal(t, MemberPowerOf(0x1F<<1), MemberPower(0x2F))
 }
 
-type GlobulaStateHash interface {
-	common.DigestHolder
+func TestToLinearValue(t *testing.T) {
+	require.Equal(t, MemberPowerOf(0).ToLinearValue(), uint16(0))
+
+	require.Equal(t, MemberPowerOf(0x1F).ToLinearValue(), uint16(0x1F))
+
+	require.Equal(t, MemberPowerOf(0x1F+1).ToLinearValue(), uint16(0x1F+1))
+
+	require.Equal(t, MemberPowerOf(0x1F<<1).ToLinearValue(), uint16(0x3e))
 }
 
-type CloudStateHash interface {
-	common.DigestHolder
+func TestPercentAndMin(t *testing.T) {
+	require.Equal(t, MemberPowerOf(MaxLinearMemberPower).PercentAndMin(100, MemberPowerOf(0)), ^MemberPower(0))
+
+	require.Equal(t, MemberPowerOf(3).PercentAndMin(1, MemberPowerOf(2)), MemberPower(2))
+
+	require.Equal(t, MemberPowerOf(3).PercentAndMin(80, MemberPowerOf(1)), MemberPower(2))
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../testutils -s _mock.go
+func TestNormalize(t *testing.T) {
+	zero := MemberPowerSet([...]MemberPower{0, 0, 0, 0})
+	require.Equal(t, zero.Normalize(), zero)
 
-type MemberAnnouncementSignature interface {
-	common.SignatureHolder
+	require.Equal(t, MemberPowerSet([...]MemberPower{1, 0, 0, 0}).Normalize(), zero)
+
+	m := MemberPowerSet([...]MemberPower{1, 1, 1, 1})
+	require.Equal(t, m.Normalize(), m)
 }
 
-type OriginalPulsarPacket interface {
-	common.FixedReader
-	OriginalPulsarPacket()
-}
+// Illegal cases:
+// [ x,  y,  z,  0] - when any !=0 value of x, y, z
+// [ 0,  x,  0,  y] - when x != 0 and y != 0
+// any combination of non-zero x, y such that x > y and y > 0 and position(x) < position(y)
+// And cases from the function logic.
+func TestIsValid(t *testing.T) {
+	require.True(t, MemberPowerSet([...]MemberPower{0, 0, 0, 0}).IsValid())
 
-func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
+	require.False(t, MemberPowerSet([...]MemberPower{1, 0, 0, 0}).IsValid())
 
-type nodeStateHashEvidence struct {
-	common.SignedDigest
-}
+	require.False(t, MemberPowerSet([...]MemberPower{0, 1, 0, 0}).IsValid())
 
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
+	require.False(t, MemberPowerSet([...]MemberPower{0, 0, 1, 0}).IsValid())
 
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() common.SignatureHolder {
-	return c.GetSignatureHolder()
+	require.False(t, MemberPowerSet([...]MemberPower{0, 1, 0, 1}).IsValid())
+
+	require.False(t, MemberPowerSet([...]MemberPower{2, 1, 2, 2}).IsValid())
+
+	require.True(t, MemberPowerSet([...]MemberPower{1, 0, 0, 1}).IsValid())
+
+	require.True(t, MemberPowerSet([...]MemberPower{1, 1, 0, 1}).IsValid())
+
+	require.False(t, MemberPowerSet([...]MemberPower{1, 1, 2, 1}).IsValid())
+
+	require.True(t, MemberPowerSet([...]MemberPower{1, 0, 2, 2}).IsValid())
+
+	require.True(t, MemberPowerSet([...]MemberPower{1, 1, 2, 2}).IsValid())
 }

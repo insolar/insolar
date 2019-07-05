@@ -51,44 +51,74 @@
 package common
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-type NodeStateHash interface {
-	common.DigestHolder
+func TestGetPower(t *testing.T) {
+	require.Equal(t, MembershipRank(1).GetPower(), MemberPower(1))
 }
 
-type GlobulaStateHash interface {
-	common.DigestHolder
+func TestGetIndex(t *testing.T) {
+	require.Equal(t, MembershipRank((1<<8)-1).GetIndex(), uint16(0))
+
+	require.Equal(t, MembershipRank(1<<8).GetIndex(), uint16(1))
 }
 
-type CloudStateHash interface {
-	common.DigestHolder
+func TestGetTotalCount(t *testing.T) {
+	require.Equal(t, MembershipRank((1<<18)-1).GetTotalCount(), uint16(0))
+
+	require.Equal(t, MembershipRank(1<<18).GetTotalCount(), uint16(1))
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../testutils -s _mock.go
+func TestGetNodeCondition(t *testing.T) {
+	require.Equal(t, MembershipRank((1<<28)-1).GetNodeCondition(), MemberCondition(0))
 
-type MemberAnnouncementSignature interface {
-	common.SignatureHolder
+	require.Equal(t, MembershipRank(1<<28).GetNodeCondition(), MemberCondition(1))
 }
 
-type OriginalPulsarPacket interface {
-	common.FixedReader
-	OriginalPulsarPacket()
+func TestIsJoiner(t *testing.T) {
+	require.False(t, MembershipRank(1).IsJoiner())
+
+	require.True(t, JoinerMembershipRank.IsJoiner())
 }
 
-func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
+func TestString(t *testing.T) {
+	joiner := "{joiner}"
+	require.Equal(t, JoinerMembershipRank.String(), joiner)
+
+	require.NotEqual(t, MembershipRank(1).String(), joiner)
 }
 
-type nodeStateHashEvidence struct {
-	common.SignedDigest
+func TestNewMembershipRank(t *testing.T) {
+	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 1, 1, MemberCondition(1)) })
+
+	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 0x03FF+1, 1, MemberCondition(1)) })
+
+	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 1, 0x03FF+1, MemberCondition(1)) })
+
+	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 1, 0x03FF+1, MemberCondition(4)) })
+
+	require.Equal(t, NewMembershipRank(MemberPower(1), 1, 2, MemberCondition(1)), MembershipRank(0x10080101))
 }
 
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
+func TestEnsureNodeIndex(t *testing.T) {
+	require.Panics(t, func() { ensureNodeIndex(0x03FF + 1) })
+
+	require.Equal(t, ensureNodeIndex(2), uint32(2))
 }
 
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() common.SignatureHolder {
-	return c.GetSignatureHolder()
+func TestAsUnit32(t *testing.T) {
+	require.Panics(t, func() { MemberCondition(4).asUnit32() })
+
+	require.Equal(t, MemberNormalOps.asUnit32(), uint32(MemberNormalOps))
+}
+
+func TestMemberConditionString(t *testing.T) {
+	require.Equal(t, MemberNormalOps.String(), "norm")
+
+	require.Equal(t, MemberRecentlyJoined.String(), "recent")
+
+	require.NotPanics(t, func() { MemberCondition(8).String() })
 }
