@@ -87,7 +87,7 @@ type Params struct {
 	CallSite   string      `json:"callSite"`
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"memberPubKey"`
+	PublicKey  string      `json:"memberPublicKey"`
 }
 
 // Call returns response on request. Method for authorized calls.
