@@ -26,8 +26,6 @@ var (
 	// ErrOverride is returned when trying to update existing record with the same id.
 	ErrOverride = errors.New("record override is forbidden")
 
-	// ErrLifelineNotFound is returned when an index not found.
-	ErrLifelineNotFound = errors.New("lifeline not found")
-	// ErrIndexBucketNotFound is returned when an index not found.
-	ErrIndexBucketNotFound = errors.New("index bucket not found")
+	// ErrIndexNotFound is returned when an index not found.
+	ErrIndexNotFound = errors.New("index not found")
 )

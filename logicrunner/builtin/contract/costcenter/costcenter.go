@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
+// CostCenter provides access to tariffs and wallet for commission.
 type CostCenter struct {
 	foundation.BaseContract
 	CommissionWallet insolar.Reference
@@ -28,6 +29,7 @@ type CostCenter struct {
 	Tariffs          []insolar.Reference
 }
 
+// New creates new cost center.
 func New(commissionWallet insolar.Reference, currentTariff insolar.Reference) (*CostCenter, error) {
 	return &CostCenter{
 		CommissionWallet: commissionWallet,
@@ -35,20 +37,24 @@ func New(commissionWallet insolar.Reference, currentTariff insolar.Reference) (*
 	}, nil
 }
 
+// SetTariffs sets tariffs.
 func (cc CostCenter) SetTariffs(tariffs []insolar.Reference) error {
 	cc.Tariffs = tariffs
 	return nil
 }
 
+// GetTariffs gets tariffs.
 func (cc CostCenter) GetTariffs() ([]insolar.Reference, error) {
 	return cc.Tariffs, nil
 }
 
+// SetCurrentTariff sets current tariff.
 func (cc CostCenter) SetCurrentTariff(currentTariff insolar.Reference) error {
 	cc.CurrentTariff = currentTariff
 	return nil
 }
 
+// GetCurrentTariff gets current tariff.
 func (cc CostCenter) GetCurrentTariff() (insolar.Reference, error) {
 	return cc.CurrentTariff, nil
 }

@@ -82,8 +82,8 @@ func NewPulseManager(
 	pm := &PulseManager{
 		JetSplitter:     jetSplitter,
 		LightReplicator: lightToHeavySyncer,
-		HotSender:       hotSender,
 		WriteManager:    writeManager,
+		HotSender:       hotSender,
 	}
 	return pm
 }
@@ -251,18 +251,12 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
 }
 
-// Start starts pulse manager
+// Start starts pulse manager.
 func (m *PulseManager) Start(ctx context.Context) error {
-	origin := m.NodeNet.GetOrigin()
-	err := m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
-	if err != nil && err != node.ErrOverride {
-		return err
-	}
-
 	return nil
 }
 
-// Stop stops PulseManager
+// Stop stops PulseManager.
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
 	m.setLock.Lock()

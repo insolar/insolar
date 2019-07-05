@@ -9,8 +9,9 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[TypeUnknown-0]
-	_ = x[TypeError-1]
-	_ = x[TypeID-2]
+	_ = x[TypeMeta-1]
+	_ = x[TypeError-2]
+	_ = x[TypeID-3]
 	_ = x[TypeState-4]
 	_ = x[TypeGetObject-5]
 	_ = x[TypePassState-6]
@@ -21,28 +22,22 @@ func _() {
 	_ = x[TypeGetCode-11]
 	_ = x[TypeCode-12]
 	_ = x[TypeSetCode-13]
-	_ = x[TypeSetRequest-14]
-	_ = x[TypeSetResult-15]
+	_ = x[TypeSetIncomingRequest-14]
+	_ = x[TypeSetOutgoingRequest-15]
+	_ = x[TypeGetFilament-16]
+	_ = x[TypeFilamentSegment-17]
+	_ = x[TypeSetResult-18]
+	_ = x[TypeActivate-19]
+	_ = x[TypeRequestInfo-20]
 }
 
-const (
-	_Type_name_0 = "TypeUnknownTypeErrorTypeID"
-	_Type_name_1 = "TypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetRequestTypeSetResult"
-)
+const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeGetFilamentTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfo"
 
-var (
-	_Type_index_0 = [...]uint8{0, 11, 20, 26}
-	_Type_index_1 = [...]uint8{0, 9, 22, 35, 47, 59, 68, 76, 87, 95, 106, 120, 133}
-)
+var _Type_index = [...]uint16{0, 11, 19, 28, 34, 43, 56, 69, 81, 93, 102, 110, 121, 129, 140, 162, 184, 199, 218, 231, 243, 258}
 
 func (i Type) String() string {
-	switch {
-	case 0 <= i && i <= 2:
-		return _Type_name_0[_Type_index_0[i]:_Type_index_0[i+1]]
-	case 4 <= i && i <= 15:
-		i -= 4
-		return _Type_name_1[_Type_index_1[i]:_Type_index_1[i+1]]
-	default:
+	if i >= Type(len(_Type_index)-1) {
 		return "Type(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
+	return _Type_name[_Type_index[i]:_Type_index[i+1]]
 }

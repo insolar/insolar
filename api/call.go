@@ -121,7 +121,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 }
 
 func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
-	errResponse := &requester.Error{Message: extraMsg, Code: ResultError, TraceID: traceID}
+	errResponse := &requester.Error{Message: extraMsg, Code: ResultError, Data: requester.Data{TraceID: traceID}}
 	resp.Error = errResponse
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
@@ -191,6 +191,10 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
+		if contractRequest.Test != "" {
+			insLog.Infof("Request related to %s", contractRequest.Test)
+		}
+
 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 		if err != nil {
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
@@ -220,7 +224,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 
 		case <-time.After(ar.timeout):
-			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, TraceID: traceID}
+			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, Data: requester.Data{TraceID: traceID}}
 			contractAnswer.Error = errResponse
 			return
 		}

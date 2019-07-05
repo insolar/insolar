@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package proc
+package proc_test
 
 import (
 	"testing"
@@ -26,8 +26,9 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
@@ -49,44 +50,40 @@ func TestSetRequest_Proceed(t *testing.T) {
 	records := object.NewRecordModifierMock(t)
 	records.SetMock.Return(nil)
 
-	pending := recentstorage.NewPendingStorageMock(t)
-	pending.AddPendingRequestMock.Return()
-	provider := recentstorage.NewProviderMock(t)
-	provider.GetPendingStorageMock.Return(pending)
-	provider.CountMock.Return(recentstorage.PendingRequestsLimit - 1)
+	filaments := executor.NewFilamentModifierMock(t)
+	filaments.SetRequestMock.Return(nil, nil, nil)
 
 	ref := gen.Reference()
 	jetID := gen.JetID()
 	id := gen.ID()
 
+	request := record.IncomingRequest{
+		Object:   &ref,
+		CallType: record.CTMethod,
+	}
 	virtual := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &record.Request{
-				Object:   &ref,
-				CallType: record.CTMethod,
-			},
+		Union: &record.Virtual_IncomingRequest{
+			IncomingRequest: &request,
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	pl := payload.SetIncomingRequest{
+		Request: virtual,
 	}
-	requestBuf, err := request.Marshal()
+	requestBuf, err := pl.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
 		Payload: requestBuf,
 	}
 
-	// Pendings limit not reached.
-	setRequestProc := NewSetRequest(msg, virtual, id, jetID)
-	setRequestProc.dep.writer = writeAccessor
-	setRequestProc.dep.sender = sender
-	setRequestProc.dep.recentStorage = provider
-	setRequestProc.dep.records = records
+	pmm := object.NewPendingModifierMock(t)
+	pmm.SetRequestMock.Return(nil)
 
-	err = setRequestProc.Proceed(ctx)
+	// Pendings limit not reached.
+	p := proc.NewSetRequest(msg, &request, id, jetID)
+	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker())
+
+	err = p.Proceed(ctx)
 	require.NoError(t, err)
 }

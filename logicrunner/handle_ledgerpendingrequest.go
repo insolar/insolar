@@ -38,7 +38,7 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	defer span.End()
 
 	lr := p.dep.lr
-	es := lr.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
+	es := lr.StateStorage.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
 	if es == nil {
 		return nil
 	}
@@ -110,7 +110,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	msg := parcel.Message().(*message.CallMethod)
 
-	parcel.SetSender(msg.Request.Sender)
+	parcel.SetSender(msg.IncomingRequest.Sender)
 
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(
@@ -134,8 +134,8 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	}
 
 	u.hasPending = true
-
 	es.LedgerHasMoreRequests = true
+
 	t := NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
 	t.FromLedger = true
 	es.Broker.Prepend(ctx, true, t)

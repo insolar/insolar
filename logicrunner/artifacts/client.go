@@ -19,22 +19,23 @@ package artifacts
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/messagebus"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -118,14 +119,14 @@ func NewClient(sender bus.Sender) *client { // nolint
 	}
 }
 
-// RegisterRequest sends message for request registration,
-// returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterRequest(
-	ctx context.Context, request record.Request,
+// registerRequest registers incoming or outgoing request.
+func (m *client) registerRequest(
+	ctx context.Context, req record.Record, msgPayload payload.Payload, callType record.CallType,
+	objectRef *insolar.Reference,
 ) (*insolar.ID, error) {
 	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterRequest")
-	instrumenter := instrument(ctx, "RegisterRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.registerRequest")
+	instrumenter := instrument(ctx, "registerRequest").err(&err)
 	defer func() {
 		if err != nil {
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
@@ -134,36 +135,35 @@ func (m *client) RegisterRequest(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	virtRec := record.Wrap(request)
+	virtRec := record.Wrap(req)
 	buf, err := virtRec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterRequest: failed to marshal record")
+		return nil, errors.Wrap(err, "registerRequest: failed to marshal record")
 	}
 
 	h := m.PCS.ReferenceHasher()
 	_, err = h.Write(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterRequest: failed to calculate hash")
+		return nil, errors.Wrap(err, "registerRequest: failed to calculate hash")
 	}
-	recID := *insolar.NewID(currentPN, h.Sum(nil))
 
-	msg, err := payload.NewMessage(&payload.SetRequest{
-		Request: buf,
-	})
+	msg, err := payload.NewMessage(msgPayload)
+	if err != nil {
+		return nil, errors.Wrap(err, "registerRequest: failed to create message")
+	}
 
 	var recRef *insolar.Reference
-	switch request.CallType {
+	switch callType {
 	case record.CTMethod:
-		recRef = request.Object
+		recRef = objectRef
 	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		recRef = insolar.NewReference(recID)
+		recRef, err = m.genReferenceForCallTypeOtherThanCTMethod(ctx)
 	default:
-		return nil, errors.New("RegisterRequest: not supported call type " + request.CallType.String())
+		err = errors.New("registerRequest: not supported call type " + callType.String())
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
@@ -175,17 +175,51 @@ func (m *client) RegisterRequest(
 	}
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterRequest: failed to unmarshal reply")
+		return nil, errors.Wrap(err, "registerRequest: failed to unmarshal reply")
 	}
 
 	switch p := pl.(type) {
-	case *payload.ID:
-		return &p.ID, nil
+	case *payload.RequestInfo:
+		return &p.RequestID, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
 	default:
-		return nil, fmt.Errorf("RegisterRequest: unexpected reply: %#v", p)
+		return nil, fmt.Errorf("registerRequest: unexpected reply: %#v", p)
 	}
+}
+
+func (m *client) genReferenceForCallTypeOtherThanCTMethod(ctx context.Context) (*insolar.Reference, error) {
+	h := m.PCS.ReferenceHasher()
+	currentPN, err := m.pulse(ctx)
+	if err != nil {
+		return nil, err
+	}
+	recID := *insolar.NewID(currentPN, h.Sum(nil))
+	return insolar.NewReference(recID), nil
+}
+
+// RegisterIncomingRequest sends message for incoming request registration,
+// returns request record Ref if request successfully created or already exists.
+func (m *client) RegisterIncomingRequest(
+	ctx context.Context, request *record.IncomingRequest,
+) (*insolar.ID, error) {
+	incomingRequest := &payload.SetIncomingRequest{Request: record.Wrap(request)}
+	id, err := m.registerRequest(ctx, request, incomingRequest, request.CallType, request.GetObject())
+	if err != nil {
+		return id, errors.Wrap(err, "RegisterIncomingRequest")
+	}
+	return id, err
+}
+
+// RegisterOutgoingRequest sends message for outgoing request registration,
+// returns request record Ref if request successfully created or already exists.
+func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error) {
+	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
+	id, err := m.registerRequest(ctx, request, outgoingRequest, request.CallType, request.GetObject())
+	if err != nil {
+		return id, errors.Wrap(err, "RegisterOutgoingRequest")
+	}
+	return id, err
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -442,7 +476,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 			return nil, nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
 		}
 		concrete := record.Unwrap(&rec)
-		castedRecord, ok := concrete.(*record.Request)
+		castedRecord, ok := concrete.(*record.IncomingRequest)
 		if !ok {
 			return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
@@ -453,7 +487,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 			TraceSpanData: instracer.MustSerialize(ctx),
 		}
 		return insolar.NewReference(requestID), &message.Parcel{Msg: &message.CallMethod{
-			Request: *castedRecord}, ServiceData: serviceData}, nil
+			IncomingRequest: *castedRecord}, ServiceData: serviceData}, nil
 	case *reply.Error:
 		return nil, nil, r.Error()
 	default:
@@ -626,7 +660,21 @@ func (m *client) DeployCode(
 }
 
 func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (payload.Payload, error) {
+	var lastPulse insolar.PulseNumber
+
 	for tries > 0 {
+		currentPulse, err := m.PulseAccessor.Latest(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ retryer ] Can't get latest pulse")
+		}
+
+		if currentPulse.PulseNumber == lastPulse {
+			inslogger.FromContext(ctx).Debugf("[ retryer ]  wait for pulse change. Current: %d", currentPulse)
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		lastPulse = currentPulse.PulseNumber
+
 		msg, err := payload.NewMessage(ppl)
 		if err != nil {
 			return nil, err
@@ -641,16 +689,16 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 		}
 		pl, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal reply")
+			return nil, errors.Wrap(err, "[ retryer ] failed to unmarshal reply")
 		}
 
 		if p, ok := pl.(*payload.Error); !ok || p.Code != payload.CodeFlowCanceled {
 			return pl, nil
 		}
-		inslogger.FromContext(ctx).Warn("flow cancelled, retrying")
+		inslogger.FromContext(ctx).Debug("[ retryer ] flow cancelled, retrying")
 		tries--
 	}
-	return nil, fmt.Errorf("flow cancelled, retries exceeded")
+	return nil, fmt.Errorf("[ retryer ] flow cancelled, retries exceeded")
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -838,20 +886,13 @@ func (m *client) RegisterResult(
 		return nil, errors.Wrap(err, "RegisterResult: failed to marshal record")
 	}
 
-	msg, err := payload.NewMessage(&payload.SetResult{
+	psr := &payload.SetResult{
 		Result: buf,
-	})
-
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
-	defer done()
-
-	rep, ok := <-reps
-	if !ok {
-		return nil, errors.New("RegisterResult: no reply")
 	}
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+
+	pl, err := m.retryer(ctx, psr, insolar.DynamicRoleLightExecutor, obj, 3)
 	if err != nil {
-		return nil, errors.Wrap(err, "RegisterResult: failed to unmarshal reply")
+		return nil, err
 	}
 
 	switch p := pl.(type) {
@@ -888,14 +929,10 @@ func (m *client) activateObject(
 	if err != nil {
 		return err
 	}
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return err
-	}
 
 	activate := record.Activate{
 		Request:     obj,
-		Memory:      *object.CalculateIDForBlob(m.PCS, currentPN, memory),
+		Memory:      memory,
 		Image:       prototype,
 		IsPrototype: isPrototype,
 		Parent:      parent,
@@ -907,41 +944,58 @@ func (m *client) activateObject(
 		Request: obj,
 	}
 
-	err = m.sendUpdateObject(
-		ctx,
-		record.Wrap(activate),
-		record.Wrap(result),
-		obj,
-		memory,
-	)
+	virtActivate := record.Wrap(activate)
+	virtResult := record.Wrap(result)
+
+	activateBuf, err := virtActivate.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to activate")
+		return errors.Wrap(err, "ActivateObject: can't serialize record")
 	}
-
-	var (
-		asType *insolar.Reference
-	)
-	child := record.Child{Ref: obj}
-	if parentDesc.ChildPointer() != nil {
-		child.PrevChild = *parentDesc.ChildPointer()
-	}
-	if asDelegate {
-		asType = &prototype
-	}
-	virtChild := record.Wrap(child)
-
-	_, err = m.registerChild(
-		ctx,
-		virtChild,
-		parent,
-		obj,
-		asType,
-	)
+	resultBuf, err := virtResult.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to register as child while activating")
+		return errors.Wrap(err, "ActivateObject: can't serialize record")
 	}
 
-	return nil
+	pa := &payload.Activate{
+		Record: activateBuf,
+		Result: resultBuf,
+	}
+
+	pl, err := m.retryer(ctx, pa, insolar.DynamicRoleLightExecutor, obj, 3)
+	if err != nil {
+		return errors.Wrap(err, "can't send activation and result records")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		var (
+			asType *insolar.Reference
+		)
+		child := record.Child{Ref: obj}
+		if parentDesc.ChildPointer() != nil {
+			child.PrevChild = *parentDesc.ChildPointer()
+		}
+		if asDelegate {
+			asType = &prototype
+		}
+		virtChild := record.Wrap(child)
+
+		err = m.registerChild(
+			ctx,
+			virtChild,
+			parent,
+			obj,
+			asType,
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to register as child while activating")
+		}
+		return nil
+	case *payload.Error:
+		return errors.New(p.Text)
+	default:
+		return fmt.Errorf("ActivateObject: unexpected reply: %#v", p)
+	}
 }
 
 func (m *client) updateObject(
@@ -1071,10 +1125,10 @@ func (m *client) registerChild(
 	parent insolar.Reference,
 	child insolar.Reference,
 	asType *insolar.Reference,
-) (*insolar.ID, error) {
+) error {
 	data, err := rec.Marshal()
 	if err != nil {
-		return nil, errors.Wrap(err, "setRecord: can't serialize record")
+		return errors.Wrap(err, "setRecord: can't serialize record")
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
@@ -1090,16 +1144,16 @@ func (m *client) registerChild(
 	}, nil)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	switch rep := genericReact.(type) {
 	case *reply.ID:
-		return &rep.ID, nil
+		return nil
 	case *reply.Error:
-		return nil, rep.Error()
+		return rep.Error()
 	default:
-		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", rep)
+		return fmt.Errorf("registerChild: unexpected reply: %#v", rep)
 	}
 }
 

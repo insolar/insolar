@@ -52,11 +52,11 @@ type LightReplicatorDefault struct {
 	msgBus          insolar.MessageBus
 	pulseCalculator pulse.Calculator
 
-	dropAccessor        drop.Accessor
-	blobsAccessor       blob.CollectionAccessor
-	recsAccessor        object.RecordCollectionAccessor
-	indexBucketAccessor object.IndexBucketAccessor
-	jetAccessor         jet.Accessor
+	dropAccessor  drop.Accessor
+	blobsAccessor blob.CollectionAccessor
+	recsAccessor  object.RecordCollectionAccessor
+	idxAccessor   object.IndexAccessor
+	jetAccessor   jet.Accessor
 
 	syncWaitingPulses chan insolar.PulseNumber
 }
@@ -70,7 +70,7 @@ func NewReplicatorDefault(
 	dropAccessor drop.Accessor,
 	blobsAccessor blob.CollectionAccessor,
 	recsAccessor object.RecordCollectionAccessor,
-	indexBucketAccessor object.IndexBucketAccessor,
+	idxAccessor object.IndexAccessor,
 	jetAccessor jet.Accessor,
 ) *LightReplicatorDefault {
 	return &LightReplicatorDefault{
@@ -79,11 +79,11 @@ func NewReplicatorDefault(
 		msgBus:          msgBus,
 		pulseCalculator: calculator,
 
-		dropAccessor:        dropAccessor,
-		blobsAccessor:       blobsAccessor,
-		recsAccessor:        recsAccessor,
-		indexBucketAccessor: indexBucketAccessor,
-		jetAccessor:         jetAccessor,
+		dropAccessor:  dropAccessor,
+		blobsAccessor: blobsAccessor,
+		recsAccessor:  recsAccessor,
+		idxAccessor:   idxAccessor,
+		jetAccessor:   jetAccessor,
 
 		syncWaitingPulses: make(chan insolar.PulseNumber),
 	}
@@ -173,7 +173,7 @@ func (lr *LightReplicatorDefault) filterAndGroupIndexes(
 	ctx context.Context, pn insolar.PulseNumber,
 ) map[insolar.JetID][]object.FilamentIndex {
 	byJet := map[insolar.JetID][]object.FilamentIndex{}
-	indexes := lr.indexBucketAccessor.ForPulse(ctx, pn)
+	indexes := lr.idxAccessor.ForPulse(ctx, pn)
 	for _, idx := range indexes {
 		jetID, _ := lr.jetAccessor.ForID(ctx, pn, idx.ObjID)
 		byJet[jetID] = append(byJet[jetID], idx)

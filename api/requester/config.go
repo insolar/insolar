@@ -35,6 +35,7 @@ type Request struct {
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
+	Test     string `json:"test,omitempty"`
 }
 
 type Params struct {
@@ -55,17 +56,22 @@ type ContractAnswer struct {
 type Error struct {
 	Code    int    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
+	Data    Data   `json:"data,omitempty"`
+}
+
+type Data struct {
 	TraceID string `json:"traceID,omitempty"`
 }
 
 type Result struct {
-	ContractResult interface{} `json:"payload,omitempty"`
+	ContractResult interface{} `json:"callResult,omitempty"`
 	TraceID        string      `json:"traceID,omitempty"`
 }
 
 // UserConfigJSON holds info about user
 type UserConfigJSON struct {
 	PrivateKey       string `json:"private_key"`
+	PublicKey        string `json:"public_key"`
 	Caller           string `json:"caller"`
 	privateKeyObject crypto.PrivateKey
 }
@@ -132,8 +138,8 @@ func ReadRequestConfigFromFile(path string) (*Request, error) {
 }
 
 // CreateUserConfig creates user config from arguments
-func CreateUserConfig(caller string, privKey string) (*UserConfigJSON, error) {
-	userConfig := UserConfigJSON{PrivateKey: privKey, Caller: caller}
+func CreateUserConfig(caller string, privKey string, publicKey string) (*UserConfigJSON, error) {
+	userConfig := UserConfigJSON{PrivateKey: privKey, Caller: caller, PublicKey: publicKey}
 	var err error
 
 	ks := platformpolicy.NewKeyProcessor()

@@ -41,4 +41,3 @@ func (rr *RequestResult) Update(mem []byte) {
 func (rr *RequestResult) Deactivate() {
 	rr.Deactivation = true
 }
-

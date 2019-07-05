@@ -49,8 +49,8 @@ func PointsFromDER(der []byte) (*big.Int, *big.Int) {
 	return R, S
 }
 
-// VerifySignature used for checking the signature using rawpublicpem and rawRequest
-// selfSigned flag that need to compare public keys
+// VerifySignature used for checking the signature using rawpublicpem and rawRequest.
+// selfSigned flag need to compare public keys.
 func VerifySignature(rawRequest []byte, signature string, key string, rawpublicpem string, selfSigned bool) error {
 	sig, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
