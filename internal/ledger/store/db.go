@@ -24,6 +24,7 @@ package store
 type DB interface {
 	Get(key Key) (value []byte, err error)
 	Set(key Key, value []byte) error
+	Delete(key Key) error
 	NewIterator(pivot Key, reverse bool) Iterator
 }
 
