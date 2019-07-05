@@ -111,6 +111,8 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	switch request.Params.CallSite {
 	case "contract.createMember":
 		selfSigned = true
+	case "migration.createMember":
+		selfSigned = true
 	case "contract.getReferenceByPublicKey":
 		selfSigned = true
 	}
@@ -130,7 +132,9 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "contract.getNodeRef":
 		return m.getNodeRefCall(params)
 	case "contract.createMember":
-		return m.createMemberByKey(request.Params.PublicKey)
+		return m.contractCreateMember(request.Params.PublicKey)
+	case "migration.createMember":
+		return m.migrationCreateMember(request.Params.PublicKey)
 	case "migration.addBurnAddresses":
 		return m.addBurnAddressesCall(params)
 	case "wallet.getBalance":
@@ -317,16 +321,31 @@ func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
 }
 
 // Create member methods.
-func (m *Member) createMemberByKey(key string) (interface{}, error) {
+func (m *Member) contractCreateMember(key string) (interface{}, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
-	burnAddresses, err := rootDomain.GetBurnAddress()
+
+	created, err := m.createMember("", key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create member: %s", err.Error())
+	}
+
+	if err = rootDomain.AddNewMemberToPublicKeyMap(key, created.Reference); err != nil {
+		return nil, fmt.Errorf("failed to add new member to PublicKey map: %s", err.Error())
+	}
+
+	return map[string]interface{}{"reference": created.Reference.String()}, nil
+}
+func (m *Member) migrationCreateMember(key string) (interface{}, error) {
+
+	rootDomain := rootdomain.GetObject(m.RootDomain)
+	burnAddress, err := rootDomain.GetBurnAddress()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
 	}
 
 	rollBack := func(e error) (interface{}, error) {
-		if err := rootDomain.AddBurnAddress(burnAddresses); err != nil {
+		if err := rootDomain.AddBurnAddress(burnAddress); err != nil {
 			return nil, fmt.Errorf("failed to add burn address back: %s; after error: %s", err.Error(), e.Error())
 		}
 		return nil, fmt.Errorf("failed to create member: %s", e.Error())
@@ -337,11 +356,11 @@ func (m *Member) createMemberByKey(key string) (interface{}, error) {
 		return rollBack(err)
 	}
 
-	if err = rootDomain.AddNewMemberToMaps(key, burnAddresses, created.Reference); err != nil {
+	if err = rootDomain.AddNewMemberToMaps(key, burnAddress, created.Reference); err != nil {
 		return rollBack(err)
 	}
 
-	return created.Reference.String(), nil
+	return map[string]interface{}{"reference": created.Reference.String(), "burnAddress": burnAddress}, nil
 }
 func (m *Member) createMember(name string, key string) (*member.Member, error) {
 	if key == "" {

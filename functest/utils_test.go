@@ -101,14 +101,27 @@ type rpcStatusResponse struct {
 	Result statusResponse `json:"result"`
 }
 
-func createMember(t *testing.T) *user {
+func contractCreateMember(t *testing.T) *user {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+
+	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	require.NoError(t, err)
+	ref, ok := result.(map[string]interface{})["reference"].(string)
+	require.True(t, ok)
+	member.ref = ref
+	return member
+}
+
+func migrationCreateMember(t *testing.T) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
 	addBurnAddress(t)
 
-	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	result, err := retryableCreateMember(member, "migration.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 	ref, ok := result.(string)
 	require.True(t, ok)
@@ -206,7 +219,7 @@ func retryableCreateMember(user *user, method string, params map[string]interfac
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		result, err = signedRequest(user, method, params)
 		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
-			return result, err
+			return result, errors.Wrap(err, "failed to request")
 		}
 		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
 		newUser, nErr := newUserWithKeys()
@@ -238,13 +251,13 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 		})
 
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to send")
 		}
 
 		resp = requester.ContractAnswer{}
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to unmarshal")
 		}
 
 		break

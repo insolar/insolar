@@ -25,58 +25,61 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateMember(t *testing.T) {
+func TestMigrationCreateMember(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 	addBurnAddress(t)
-	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	result, err := retryableCreateMember(member, "migration.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
-	ref, ok := result.(string)
+	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
 	require.NotEqual(t, "", ref)
+	burnAddress, ok := result.(map[string]interface{})["burnAddress"].(string)
+	require.True(t, ok)
+	require.Equal(t, "fake_ba", burnAddress)
 }
 
-func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
+func TestMigrationCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 	member1.ref = root.ref
 	addBurnAddress(t)
-	_, err = retryableCreateMember(member1, "contract.createMember", map[string]interface{}{}, true)
+	_, err = retryableCreateMember(member1, "migration.createMember", map[string]interface{}{}, true)
 	require.Nil(t, err)
 
 	member2, err := newUserWithKeys()
 	require.NoError(t, err)
 	member2.ref = root.ref
 
-	_, err = retryableCreateMember(member2, "contract.createMember", map[string]interface{}{}, true)
+	_, err = retryableCreateMember(member2, "migration.createMember", map[string]interface{}{}, true)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "no more burn addresses left")
 }
 
-func TestCreateMemberWithBadKey(t *testing.T) {
+func TestMigrationCreateMemberWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 	member.pubKey = "fake"
-	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
+	_, err = retryableCreateMember(member, "migration.createMember", map[string]interface{}{}, false)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
 }
 
-func TestCreateMembersWithSameName(t *testing.T) {
+func TestMigrationCreateMembersWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
 	addBurnAddress(t)
 
-	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	_, err = retryableCreateMember(member, "migration.createMember", map[string]interface{}{}, true)
 	require.NoError(t, err)
 
 	addBurnAddress(t)
 
-	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
+	_, err = signedRequest(member, "migration.createMember", map[string]interface{}{})
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "member for this publicKey already exist")
 
@@ -84,5 +87,5 @@ func TestCreateMembersWithSameName(t *testing.T) {
 	require.NoError(t, err)
 	memberForBurn.ref = root.ref
 
-	_, err = retryableCreateMember(memberForBurn, "contract.createMember", map[string]interface{}{}, true)
+	_, err = retryableCreateMember(memberForBurn, "migration.createMember", map[string]interface{}{}, true)
 }

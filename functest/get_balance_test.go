@@ -28,7 +28,7 @@ import (
 )
 
 func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t)
+	firstMember := contractCreateMember(t)
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	r := big.NewInt(1000000000)
 	require.Equal(t, r, firstBalance)
