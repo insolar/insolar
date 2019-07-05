@@ -41,9 +41,9 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 
 	var outreq *record.OutgoingRequest
 
-	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r record.OutgoingRequest) (*insolar.ID, error) {
+	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
 		require.Nil(t, outreq)
-		outreq = &r
+		outreq = r
 		id := gen.ID()
 		return &id, nil
 	}

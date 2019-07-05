@@ -201,7 +201,7 @@ func (m *client) genReferenceForCallTypeOtherThanCTMethod(ctx context.Context) (
 // RegisterIncomingRequest sends message for incoming request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterIncomingRequest(
-	ctx context.Context, request record.IncomingRequest,
+	ctx context.Context, request *record.IncomingRequest,
 ) (*insolar.ID, error) {
 	incomingRequest := &payload.SetIncomingRequest{Request: record.Wrap(request)}
 	id, err := m.registerRequest(ctx, request, incomingRequest, request.CallType, request.GetObject())
@@ -213,7 +213,7 @@ func (m *client) RegisterIncomingRequest(
 
 // RegisterOutgoingRequest sends message for outgoing request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterOutgoingRequest(ctx context.Context, request record.OutgoingRequest) (*insolar.ID, error) {
+func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
 	id, err := m.registerRequest(ctx, request, outgoingRequest, request.CallType, request.GetObject())
 	if err != nil {
