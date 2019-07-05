@@ -139,8 +139,16 @@ func (p UnifiedProtocolPacketHeader) SetPayloadLength(payloadLength uint16) {
 	p.HeaderAndPayloadLength |= payloadLength
 }
 
-func (p *UnifiedProtocolPacketHeader) GetHeader() uint16 {
-	return p.HeaderAndPayloadLength >> headerShift
+func (p *UnifiedProtocolPacketHeader) GetHeader() uint8 {
+	return uint8(p.HeaderAndPayloadLength >> headerShift)
+}
+
+func (p *UnifiedProtocolPacketHeader) SetHeader(header uint8) {
+	if bits.Len(uint(header)) > headerBitSize {
+		panic("invalid header")
+	}
+
+	p.HeaderAndPayloadLength |= uint16(header << headerShift)
 }
 
 func (p *UnifiedProtocolPacketHeader) GetFlag(f FlagType) bool {
@@ -180,5 +188,5 @@ func (p *UnifiedProtocolPacketHeader) getFlag(f FlagType) bool {
 }
 
 func (p *UnifiedProtocolPacketHeader) setFlag(f FlagType) {
-	setBit(uint(p.PacketFlags), uint(f))
+	p.PacketFlags = uint8(setBit(uint(p.PacketFlags), uint(f)))
 }
