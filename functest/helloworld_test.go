@@ -46,7 +46,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
@@ -85,7 +85,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "Greet", CallParams: map[string]interface{}{"name": name}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
@@ -117,7 +117,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "Count", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
@@ -149,7 +149,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
@@ -188,7 +188,7 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {

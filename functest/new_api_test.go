@@ -53,7 +53,7 @@ func TestBadSeed(t *testing.T) {
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
 	}, "MTExMQ==")
 	require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestIncorrectSeed(t *testing.T) {
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
 	}, "z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
