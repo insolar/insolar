@@ -189,13 +189,12 @@ func (m *Jet) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Jet proto.InternalMessageInfo
 
-type Request struct {
+type IncomingRequest struct {
 	Polymorph       int32                                         `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	CallType        CallType                                      `protobuf:"varint,20,opt,name=CallType,proto3,enum=record.CallType" json:"CallType,omitempty"`
 	Caller          github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,21,opt,name=Caller,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Caller"`
 	CallerPrototype github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,22,opt,name=CallerPrototype,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"CallerPrototype"`
 	Nonce           uint64                                        `protobuf:"varint,23,opt,name=Nonce,proto3" json:"Nonce,omitempty"`
-	Sequence        uint64                                        `protobuf:"varint,24,opt,name=Sequence,proto3" json:"Sequence,omitempty"`
 	ReturnMode      ReturnMode                                    `protobuf:"varint,25,opt,name=ReturnMode,proto3,enum=record.ReturnMode" json:"ReturnMode,omitempty"`
 	Immutable       bool                                          `protobuf:"varint,26,opt,name=Immutable,proto3" json:"Immutable,omitempty"`
 	Base            *github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,27,opt,name=Base,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Base,omitempty"`
@@ -205,19 +204,20 @@ type Request struct {
 	Arguments       []byte                                        `protobuf:"bytes,31,opt,name=Arguments,proto3" json:"Arguments,omitempty"`
 	Sender          github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,32,opt,name=Sender,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Sender"`
 	APIRequestID    string                                        `protobuf:"bytes,33,opt,name=APIRequestID,proto3" json:"APIRequestID,omitempty"`
+	Reason          github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,34,opt,name=Reason,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Reason"`
 }
 
-func (m *Request) Reset()      { *m = Request{} }
-func (*Request) ProtoMessage() {}
-func (*Request) Descriptor() ([]byte, []int) {
+func (m *IncomingRequest) Reset()      { *m = IncomingRequest{} }
+func (*IncomingRequest) ProtoMessage() {}
+func (*IncomingRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{3}
 }
-func (m *Request) XXX_Unmarshal(b []byte) error {
+func (m *IncomingRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *IncomingRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Request.Marshal(b, m, deterministic)
+		return xxx_messageInfo_IncomingRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -227,17 +227,17 @@ func (m *Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *Request) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Request.Merge(m, src)
+func (m *IncomingRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IncomingRequest.Merge(m, src)
 }
-func (m *Request) XXX_Size() int {
+func (m *IncomingRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *Request) XXX_DiscardUnknown() {
-	xxx_messageInfo_Request.DiscardUnknown(m)
+func (m *IncomingRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_IncomingRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Request proto.InternalMessageInfo
+var xxx_messageInfo_IncomingRequest proto.InternalMessageInfo
 
 type OutgoingRequest struct {
 	Polymorph       int32                                         `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
@@ -245,7 +245,6 @@ type OutgoingRequest struct {
 	Caller          github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,21,opt,name=Caller,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Caller"`
 	CallerPrototype github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,22,opt,name=CallerPrototype,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"CallerPrototype"`
 	Nonce           uint64                                        `protobuf:"varint,23,opt,name=Nonce,proto3" json:"Nonce,omitempty"`
-	Sequence        uint64                                        `protobuf:"varint,24,opt,name=Sequence,proto3" json:"Sequence,omitempty"`
 	ReturnMode      ReturnMode                                    `protobuf:"varint,25,opt,name=ReturnMode,proto3,enum=record.ReturnMode" json:"ReturnMode,omitempty"`
 	Immutable       bool                                          `protobuf:"varint,26,opt,name=Immutable,proto3" json:"Immutable,omitempty"`
 	Base            *github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,27,opt,name=Base,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Base,omitempty"`
@@ -255,6 +254,7 @@ type OutgoingRequest struct {
 	Arguments       []byte                                        `protobuf:"bytes,31,opt,name=Arguments,proto3" json:"Arguments,omitempty"`
 	Sender          github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,32,opt,name=Sender,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Sender"`
 	APIRequestID    string                                        `protobuf:"bytes,33,opt,name=APIRequestID,proto3" json:"APIRequestID,omitempty"`
+	Reason          github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,34,opt,name=Reason,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Reason"`
 }
 
 func (m *OutgoingRequest) Reset()      { *m = OutgoingRequest{} }
@@ -411,7 +411,7 @@ type Activate struct {
 	Polymorph   int32                                        `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	Domain      github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,20,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
 	Request     github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
-	Memory      github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,22,opt,name=Memory,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Memory"`
+	Memory      []byte                                       `protobuf:"bytes,22,opt,name=Memory,proto3" json:"Memory,omitempty"`
 	Image       github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,23,opt,name=Image,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Image"`
 	IsPrototype bool                                         `protobuf:"varint,24,opt,name=IsPrototype,proto3" json:"IsPrototype,omitempty"`
 	Parent      github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,25,opt,name=Parent,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Parent"`
@@ -454,7 +454,7 @@ type Amend struct {
 	Polymorph   int32                                        `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
 	Domain      github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,20,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
 	Request     github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
-	Memory      github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,22,opt,name=Memory,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Memory"`
+	Memory      []byte                                       `protobuf:"bytes,22,opt,name=Memory,proto3" json:"Memory,omitempty"`
 	Image       github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,23,opt,name=Image,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Image"`
 	IsPrototype bool                                         `protobuf:"varint,24,opt,name=IsPrototype,proto3" json:"IsPrototype,omitempty"`
 	PrevState   github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,25,opt,name=PrevState,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"PrevState"`
@@ -575,7 +575,8 @@ type Virtual struct {
 	//	*Virtual_Genesis
 	//	*Virtual_Child
 	//	*Virtual_Jet
-	//	*Virtual_Request
+	//	*Virtual_IncomingRequest
+	//	*Virtual_OutgoingRequest
 	//	*Virtual_Result
 	//	*Virtual_Type
 	//	*Virtual_Code
@@ -635,35 +636,39 @@ type Virtual_Child struct {
 type Virtual_Jet struct {
 	Jet *Jet `protobuf:"bytes,103,opt,name=Jet,proto3,oneof"`
 }
-type Virtual_Request struct {
-	Request *Request `protobuf:"bytes,104,opt,name=Request,proto3,oneof"`
+type Virtual_IncomingRequest struct {
+	IncomingRequest *IncomingRequest `protobuf:"bytes,104,opt,name=IncomingRequest,proto3,oneof"`
+}
+type Virtual_OutgoingRequest struct {
+	OutgoingRequest *OutgoingRequest `protobuf:"bytes,105,opt,name=OutgoingRequest,proto3,oneof"`
 }
 type Virtual_Result struct {
-	Result *Result `protobuf:"bytes,105,opt,name=Result,proto3,oneof"`
+	Result *Result `protobuf:"bytes,106,opt,name=Result,proto3,oneof"`
 }
 type Virtual_Type struct {
-	Type *Type `protobuf:"bytes,106,opt,name=Type,proto3,oneof"`
+	Type *Type `protobuf:"bytes,107,opt,name=Type,proto3,oneof"`
 }
 type Virtual_Code struct {
-	Code *Code `protobuf:"bytes,107,opt,name=Code,proto3,oneof"`
+	Code *Code `protobuf:"bytes,108,opt,name=Code,proto3,oneof"`
 }
 type Virtual_Activate struct {
-	Activate *Activate `protobuf:"bytes,108,opt,name=Activate,proto3,oneof"`
+	Activate *Activate `protobuf:"bytes,109,opt,name=Activate,proto3,oneof"`
 }
 type Virtual_Amend struct {
-	Amend *Amend `protobuf:"bytes,109,opt,name=Amend,proto3,oneof"`
+	Amend *Amend `protobuf:"bytes,110,opt,name=Amend,proto3,oneof"`
 }
 type Virtual_Deactivate struct {
-	Deactivate *Deactivate `protobuf:"bytes,110,opt,name=Deactivate,proto3,oneof"`
+	Deactivate *Deactivate `protobuf:"bytes,111,opt,name=Deactivate,proto3,oneof"`
 }
 type Virtual_PendingFilament struct {
-	PendingFilament *PendingFilament `protobuf:"bytes,111,opt,name=PendingFilament,proto3,oneof"`
+	PendingFilament *PendingFilament `protobuf:"bytes,112,opt,name=PendingFilament,proto3,oneof"`
 }
 
 func (*Virtual_Genesis) isVirtual_Union()         {}
 func (*Virtual_Child) isVirtual_Union()           {}
 func (*Virtual_Jet) isVirtual_Union()             {}
-func (*Virtual_Request) isVirtual_Union()         {}
+func (*Virtual_IncomingRequest) isVirtual_Union() {}
+func (*Virtual_OutgoingRequest) isVirtual_Union() {}
 func (*Virtual_Result) isVirtual_Union()          {}
 func (*Virtual_Type) isVirtual_Union()            {}
 func (*Virtual_Code) isVirtual_Union()            {}
@@ -700,9 +705,16 @@ func (m *Virtual) GetJet() *Jet {
 	return nil
 }
 
-func (m *Virtual) GetRequest() *Request {
-	if x, ok := m.GetUnion().(*Virtual_Request); ok {
-		return x.Request
+func (m *Virtual) GetIncomingRequest() *IncomingRequest {
+	if x, ok := m.GetUnion().(*Virtual_IncomingRequest); ok {
+		return x.IncomingRequest
+	}
+	return nil
+}
+
+func (m *Virtual) GetOutgoingRequest() *OutgoingRequest {
+	if x, ok := m.GetUnion().(*Virtual_OutgoingRequest); ok {
+		return x.OutgoingRequest
 	}
 	return nil
 }
@@ -762,7 +774,8 @@ func (*Virtual) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error
 		(*Virtual_Genesis)(nil),
 		(*Virtual_Child)(nil),
 		(*Virtual_Jet)(nil),
-		(*Virtual_Request)(nil),
+		(*Virtual_IncomingRequest)(nil),
+		(*Virtual_OutgoingRequest)(nil),
 		(*Virtual_Result)(nil),
 		(*Virtual_Type)(nil),
 		(*Virtual_Code)(nil),
@@ -792,43 +805,48 @@ func _Virtual_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 		if err := b.EncodeMessage(x.Jet); err != nil {
 			return err
 		}
-	case *Virtual_Request:
+	case *Virtual_IncomingRequest:
 		_ = b.EncodeVarint(104<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Request); err != nil {
+		if err := b.EncodeMessage(x.IncomingRequest); err != nil {
+			return err
+		}
+	case *Virtual_OutgoingRequest:
+		_ = b.EncodeVarint(105<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.OutgoingRequest); err != nil {
 			return err
 		}
 	case *Virtual_Result:
-		_ = b.EncodeVarint(105<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(106<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Result); err != nil {
 			return err
 		}
 	case *Virtual_Type:
-		_ = b.EncodeVarint(106<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(107<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Type); err != nil {
 			return err
 		}
 	case *Virtual_Code:
-		_ = b.EncodeVarint(107<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(108<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Code); err != nil {
 			return err
 		}
 	case *Virtual_Activate:
-		_ = b.EncodeVarint(108<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(109<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Activate); err != nil {
 			return err
 		}
 	case *Virtual_Amend:
-		_ = b.EncodeVarint(109<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(110<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Amend); err != nil {
 			return err
 		}
 	case *Virtual_Deactivate:
-		_ = b.EncodeVarint(110<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(111<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Deactivate); err != nil {
 			return err
 		}
 	case *Virtual_PendingFilament:
-		_ = b.EncodeVarint(111<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(112<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.PendingFilament); err != nil {
 			return err
 		}
@@ -866,15 +884,23 @@ func _Virtual_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Jet{msg}
 		return true, err
-	case 104: // union.Request
+	case 104: // union.IncomingRequest
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(Request)
+		msg := new(IncomingRequest)
 		err := b.DecodeMessage(msg)
-		m.Union = &Virtual_Request{msg}
+		m.Union = &Virtual_IncomingRequest{msg}
 		return true, err
-	case 105: // union.Result
+	case 105: // union.OutgoingRequest
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(OutgoingRequest)
+		err := b.DecodeMessage(msg)
+		m.Union = &Virtual_OutgoingRequest{msg}
+		return true, err
+	case 106: // union.Result
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -882,7 +908,7 @@ func _Virtual_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Result{msg}
 		return true, err
-	case 106: // union.Type
+	case 107: // union.Type
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -890,7 +916,7 @@ func _Virtual_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Type{msg}
 		return true, err
-	case 107: // union.Code
+	case 108: // union.Code
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -898,7 +924,7 @@ func _Virtual_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Code{msg}
 		return true, err
-	case 108: // union.Activate
+	case 109: // union.Activate
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -906,7 +932,7 @@ func _Virtual_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Activate{msg}
 		return true, err
-	case 109: // union.Amend
+	case 110: // union.Amend
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -914,7 +940,7 @@ func _Virtual_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Amend{msg}
 		return true, err
-	case 110: // union.Deactivate
+	case 111: // union.Deactivate
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -922,7 +948,7 @@ func _Virtual_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Union = &Virtual_Deactivate{msg}
 		return true, err
-	case 111: // union.PendingFilament
+	case 112: // union.PendingFilament
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -954,8 +980,13 @@ func _Virtual_OneofSizer(msg proto.Message) (n int) {
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Virtual_Request:
-		s := proto.Size(x.Request)
+	case *Virtual_IncomingRequest:
+		s := proto.Size(x.IncomingRequest)
+		n += 2 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Virtual_OutgoingRequest:
+		s := proto.Size(x.OutgoingRequest)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -1086,7 +1117,7 @@ func init() {
 	proto.RegisterType((*Genesis)(nil), "record.Genesis")
 	proto.RegisterType((*Child)(nil), "record.Child")
 	proto.RegisterType((*Jet)(nil), "record.Jet")
-	proto.RegisterType((*Request)(nil), "record.Request")
+	proto.RegisterType((*IncomingRequest)(nil), "record.IncomingRequest")
 	proto.RegisterType((*OutgoingRequest)(nil), "record.OutgoingRequest")
 	proto.RegisterType((*Result)(nil), "record.Result")
 	proto.RegisterType((*Type)(nil), "record.Type")
@@ -1103,86 +1134,87 @@ func init() {
 func init() { proto.RegisterFile("insolar/record/record.proto", fileDescriptor_0c86cc3f6f53fe45) }
 
 var fileDescriptor_0c86cc3f6f53fe45 = []byte{
-	// 1256 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x58, 0x4b, 0x6f, 0xdb, 0xc6,
-	0x13, 0x27, 0x6d, 0x49, 0x96, 0xc7, 0x76, 0xac, 0xff, 0x22, 0xff, 0x64, 0xf3, 0xa2, 0x55, 0x01,
-	0x06, 0x14, 0x27, 0x91, 0x0d, 0x37, 0x28, 0x8a, 0xde, 0xf4, 0x88, 0x2b, 0xb9, 0xb1, 0x23, 0xac,
-	0xdd, 0xc7, 0xa9, 0x00, 0x2d, 0xad, 0x25, 0xa6, 0x14, 0xd7, 0x25, 0x97, 0x06, 0x7c, 0xeb, 0x47,
-	0xe8, 0x25, 0xc7, 0x02, 0xbd, 0x14, 0xc8, 0x17, 0x68, 0x0f, 0x3d, 0xf5, 0x52, 0xc0, 0x47, 0xf7,
-	0x16, 0x14, 0x68, 0x50, 0xcb, 0x97, 0xf6, 0x16, 0xf4, 0x13, 0x14, 0xfb, 0x20, 0x29, 0x39, 0x68,
-	0xe4, 0xc8, 0x45, 0x80, 0x14, 0x3e, 0x91, 0x3b, 0x3b, 0x33, 0xdc, 0xf9, 0xed, 0xfc, 0x76, 0x66,
-	0x09, 0x37, 0x1c, 0x2f, 0x60, 0xae, 0xed, 0x2f, 0xfb, 0xb4, 0xc5, 0xfc, 0xb6, 0x7e, 0x94, 0xf6,
-	0x7c, 0xc6, 0x19, 0xca, 0xa8, 0xd1, 0xf5, 0x7b, 0x1d, 0x87, 0x77, 0xc3, 0x9d, 0x52, 0x8b, 0xf5,
-	0x96, 0x3b, 0xac, 0xc3, 0x96, 0xe5, 0xf4, 0x4e, 0xb8, 0x2b, 0x47, 0x72, 0x20, 0xdf, 0x94, 0x59,
-	0xa1, 0x0c, 0x53, 0x1f, 0x52, 0x8f, 0x06, 0x4e, 0x80, 0x6e, 0xc2, 0xf4, 0x1e, 0x73, 0x0f, 0x7a,
-	0xcc, 0xdf, 0xeb, 0xe2, 0x5c, 0xde, 0x2c, 0xa6, 0x49, 0x22, 0x40, 0x08, 0x52, 0x75, 0x3b, 0xe8,
-	0xe2, 0xcb, 0x79, 0xb3, 0x38, 0x4b, 0xe4, 0xfb, 0x07, 0xa9, 0xa7, 0xdf, 0x2e, 0x98, 0x85, 0x9f,
-	0x4c, 0x48, 0x57, 0xbb, 0x8e, 0xdb, 0x1e, 0xe1, 0xe1, 0x23, 0x98, 0x6e, 0xfa, 0x74, 0x5f, 0xaa,
-	0x2a, 0x37, 0x95, 0x7b, 0x87, 0xcf, 0x17, 0x8c, 0x5f, 0x9f, 0x2f, 0x2c, 0x0e, 0x2c, 0x3a, 0x0a,
-	0xf2, 0xd4, 0xb3, 0xd4, 0xa8, 0x91, 0xc4, 0x1e, 0xad, 0xc1, 0x24, 0xa1, 0xbb, 0xf8, 0xff, 0xd2,
-	0xcd, 0x7d, 0xed, 0xe6, 0xee, 0x19, 0xdc, 0x10, 0xba, 0x4b, 0x7d, 0xea, 0xb5, 0x28, 0x11, 0x0e,
-	0x74, 0x08, 0xb7, 0x61, 0x72, 0x9d, 0xf2, 0x57, 0xaf, 0x5f, 0xab, 0x3e, 0xc9, 0xc0, 0x14, 0xa1,
-	0x5f, 0x86, 0x34, 0x18, 0xa1, 0x8f, 0xee, 0x42, 0xb6, 0x6a, 0xbb, 0xee, 0xf6, 0xc1, 0x1e, 0x95,
-	0xe1, 0x5e, 0x5a, 0xcd, 0x95, 0xf4, 0x96, 0x45, 0x72, 0x12, 0x6b, 0xa0, 0x87, 0x90, 0x11, 0xef,
-	0xd4, 0x3f, 0x57, 0x4c, 0xda, 0x07, 0xfa, 0x1c, 0xe6, 0xd5, 0x5b, 0x53, 0xec, 0x32, 0x17, 0x4b,
-	0xb8, 0x72, 0x0e, 0xb7, 0xa7, 0x9d, 0xa1, 0xcb, 0x90, 0xde, 0x64, 0x5e, 0x8b, 0xe2, 0xab, 0x79,
-	0xb3, 0x98, 0x22, 0x6a, 0x80, 0xae, 0x43, 0x76, 0x4b, 0x40, 0x23, 0x26, 0xb0, 0x9c, 0x88, 0xc7,
-	0x68, 0x15, 0x80, 0x50, 0x1e, 0xfa, 0xde, 0x06, 0x6b, 0x53, 0x7c, 0x4d, 0xe2, 0x81, 0x22, 0x3c,
-	0x92, 0x19, 0x32, 0xa0, 0x25, 0xf0, 0x6d, 0xf4, 0x7a, 0x21, 0xb7, 0x77, 0x5c, 0x8a, 0xaf, 0xe7,
-	0xcd, 0x62, 0x96, 0x24, 0x02, 0x54, 0x83, 0x54, 0xc5, 0x0e, 0x28, 0xbe, 0x21, 0x03, 0x5b, 0x79,
-	0xed, 0xa0, 0xa4, 0x35, 0xaa, 0x43, 0xe6, 0xd1, 0xce, 0x63, 0xda, 0xe2, 0xf8, 0xe6, 0x98, 0x7e,
-	0xb4, 0x3d, 0xda, 0x14, 0xf9, 0x1d, 0xa1, 0x7d, 0x6b, 0x4c, 0x67, 0x89, 0x0b, 0x74, 0x05, 0x32,
-	0x1b, 0x94, 0x77, 0x59, 0x1b, 0x5b, 0x79, 0xb3, 0x38, 0x4d, 0xf4, 0x48, 0xa0, 0x52, 0xf6, 0x3b,
-	0x61, 0x8f, 0x7a, 0x3c, 0xc0, 0x0b, 0x92, 0x8e, 0x89, 0x40, 0xe4, 0xd1, 0x16, 0xf5, 0xda, 0xd4,
-	0xc7, 0xf9, 0xf3, 0xe4, 0x91, 0xf2, 0x81, 0x0a, 0x30, 0x5b, 0x6e, 0x36, 0x74, 0xbe, 0x37, 0x6a,
-	0xf8, 0x1d, 0xb9, 0x92, 0x21, 0x99, 0xe6, 0xc5, 0x37, 0x19, 0x98, 0x7f, 0x14, 0xf2, 0x0e, 0x73,
-	0xbc, 0xce, 0x05, 0x3f, 0x2e, 0xf8, 0x71, 0xc1, 0x8f, 0x61, 0x7e, 0xfc, 0x66, 0x42, 0x86, 0xd0,
-	0x20, 0x74, 0x47, 0xd1, 0xe2, 0x41, 0x0c, 0xf8, 0x58, 0x35, 0x32, 0x41, 0x3b, 0x2a, 0x53, 0xe7,
-	0x22, 0x4c, 0x5c, 0xeb, 0x30, 0x4c, 0x35, 0xed, 0x03, 0x97, 0xd9, 0x6d, 0xc5, 0x14, 0x12, 0x0d,
-	0x75, 0x7c, 0x7f, 0x99, 0x90, 0x92, 0x44, 0x7d, 0x75, 0x74, 0x0f, 0x21, 0x53, 0x63, 0x3d, 0xdb,
-	0xf1, 0x74, 0x74, 0x63, 0xc2, 0xaf, 0x7c, 0xfc, 0xeb, 0x41, 0x16, 0x61, 0x5e, 0xc4, 0x50, 0xa3,
-	0x2d, 0xd7, 0xf6, 0x6d, 0xee, 0x30, 0x4f, 0x07, 0x7b, 0x5a, 0xac, 0x83, 0xfe, 0x61, 0x02, 0x52,
-	0x55, 0xcd, 0xc4, 0xb7, 0x36, 0x68, 0xa4, 0x62, 0xd0, 0x91, 0xaa, 0x78, 0x3e, 0x83, 0x99, 0x0d,
-	0xbb, 0xd5, 0x75, 0x3c, 0x2a, 0x8f, 0x67, 0x71, 0x8a, 0xcd, 0x55, 0xde, 0xd3, 0xdf, 0x29, 0x9d,
-	0xe1, 0x3b, 0x03, 0xd6, 0x64, 0xd0, 0x95, 0x06, 0xee, 0xcf, 0x49, 0xc8, 0x96, 0x5b, 0xdc, 0xd9,
-	0xb7, 0xf9, 0xdb, 0x0d, 0xde, 0x03, 0x71, 0x08, 0xf5, 0x98, 0x7f, 0xa0, 0xeb, 0xc7, 0xeb, 0xb2,
-	0x55, 0x19, 0xa3, 0x75, 0x48, 0x37, 0x7a, 0x76, 0x47, 0x21, 0x3d, 0xee, 0xa2, 0x94, 0x0b, 0x94,
-	0x87, 0x99, 0x46, 0x90, 0x9c, 0xb4, 0x58, 0xd6, 0x85, 0x41, 0x91, 0x80, 0xb4, 0x69, 0xfb, 0xd4,
-	0xe3, 0xb2, 0xce, 0x8c, 0x0d, 0xa9, 0xf2, 0x81, 0x2c, 0x80, 0x46, 0x50, 0xa3, 0x2e, 0xed, 0xd8,
-	0x3c, 0x2a, 0x43, 0x03, 0x92, 0xc2, 0xcf, 0x93, 0x90, 0x2e, 0xf7, 0xa8, 0xd7, 0xbe, 0xd8, 0xe8,
-	0x37, 0xbd, 0xd1, 0xfa, 0xca, 0xb5, 0xc5, 0xc5, 0xce, 0x5c, 0x1b, 0xfb, 0xca, 0x25, 0xed, 0x0b,
-	0x4f, 0x26, 0x00, 0x6a, 0xd4, 0xfe, 0x2f, 0xb0, 0x76, 0x08, 0x97, 0x2b, 0xe7, 0xc4, 0xe5, 0x17,
-	0x13, 0xe6, 0x9b, 0xd4, 0x6b, 0x3b, 0x5e, 0x67, 0xcd, 0x71, 0x6d, 0xd1, 0x66, 0x8c, 0x00, 0xa7,
-	0x01, 0x59, 0x22, 0x1b, 0xbb, 0x46, 0x6d, 0xbc, 0x22, 0x1f, 0x9b, 0xa3, 0x8f, 0xe1, 0x92, 0x58,
-	0x89, 0xc3, 0xc2, 0x40, 0xc9, 0x34, 0x40, 0xc2, 0xa1, 0x79, 0x76, 0x87, 0xa7, 0x9c, 0x14, 0xbe,
-	0x4f, 0xc1, 0xd4, 0x27, 0x8e, 0xcf, 0x43, 0xdb, 0x1d, 0x11, 0xcb, 0x9d, 0xf8, 0x07, 0x02, 0xa6,
-	0x79, 0xb3, 0x38, 0xb3, 0x3a, 0x1f, 0x35, 0xad, 0x5a, 0x5c, 0x37, 0x48, 0xfc, 0x8b, 0x61, 0x51,
-	0xff, 0x29, 0xc0, 0xbb, 0x52, 0x75, 0x2e, 0xee, 0xf7, 0x85, 0xb0, 0x6e, 0x10, 0xfd, 0x1f, 0x61,
-	0x41, 0x5e, 0xc7, 0x71, 0x47, 0x2a, 0xcd, 0x44, 0x4a, 0xeb, 0x94, 0xd7, 0x0d, 0x22, 0x2f, 0xea,
-	0x77, 0x92, 0x7c, 0xe8, 0x0e, 0x7f, 0x54, 0x8b, 0xc5, 0x47, 0x93, 0xa2, 0xae, 0x1b, 0x2f, 0xec,
-	0x48, 0xdd, 0x4b, 0x89, 0xae, 0x90, 0xd6, 0x0d, 0x12, 0x35, 0x66, 0x05, 0xd5, 0xc2, 0xe0, 0xc7,
-	0x52, 0x6f, 0x36, 0xd2, 0x13, 0xb2, 0xba, 0x41, 0x54, 0x7b, 0x53, 0xd0, 0xd5, 0xf2, 0x8b, 0x61,
-	0x1d, 0x21, 0x13, 0x3a, 0xb2, 0x7a, 0x96, 0x92, 0xe2, 0x86, 0x5d, 0xa9, 0x17, 0xdf, 0x6c, 0x22,
-	0x79, 0xdd, 0x20, 0x49, 0x01, 0x5c, 0xd4, 0x07, 0x24, 0xee, 0x0d, 0xc3, 0x22, 0x85, 0x02, 0x16,
-	0x75, 0x7c, 0xde, 0x1f, 0xe4, 0x1f, 0xf6, 0xa4, 0x6e, 0x7c, 0x45, 0x48, 0x66, 0xea, 0x06, 0x19,
-	0xe4, 0x69, 0xf5, 0xa5, 0xec, 0xc4, 0x4c, 0x9a, 0x5e, 0x8d, 0x4c, 0x4f, 0x4d, 0xd7, 0x0d, 0xf2,
-	0x52, 0x3e, 0xdf, 0x82, 0xe9, 0x2d, 0xa7, 0xe3, 0xd9, 0x3c, 0xf4, 0x29, 0x3e, 0x34, 0x55, 0x53,
-	0x1d, 0x4b, 0x2a, 0x53, 0x90, 0x0e, 0x3d, 0x87, 0x79, 0x85, 0x1f, 0x4d, 0xc8, 0x6e, 0xd8, 0x9c,
-	0xfa, 0xce, 0xc8, 0xc4, 0xb9, 0x1d, 0x67, 0x98, 0xe4, 0xc0, 0xc0, 0x1e, 0x6a, 0x31, 0x89, 0x33,
-	0x70, 0x0d, 0xd2, 0xeb, 0x54, 0xb4, 0xd7, 0x2a, 0xb7, 0x57, 0x34, 0x59, 0x8a, 0x67, 0xc8, 0x6d,
-	0x69, 0x47, 0x94, 0xf9, 0x88, 0x28, 0x0a, 0xdf, 0x4d, 0xc0, 0xd5, 0x2a, 0xeb, 0xed, 0xb1, 0xc0,
-	0xe1, 0x34, 0x0a, 0x5d, 0x11, 0xe2, 0xcd, 0x11, 0xba, 0x24, 0xb2, 0x35, 0x26, 0xf2, 0x40, 0xe6,
-	0x44, 0xb0, 0x56, 0x52, 0xc2, 0x35, 0xd1, 0x5a, 0xaa, 0x2e, 0x71, 0xbb, 0x51, 0x1b, 0xbb, 0x2e,
-	0x09, 0x63, 0xb4, 0x04, 0x29, 0xf1, 0x26, 0xcb, 0xd2, 0x3f, 0x7f, 0x54, 0xea, 0x2c, 0x35, 0x93,
-	0x8b, 0x3b, 0x9a, 0x85, 0x6c, 0x75, 0x5b, 0x5d, 0xbc, 0x72, 0x06, 0xfa, 0x1f, 0xcc, 0x55, 0xb7,
-	0xb7, 0xec, 0x7d, 0x5a, 0x0e, 0x24, 0x93, 0x73, 0x26, 0xba, 0x0c, 0xb9, 0x48, 0x14, 0x75, 0x04,
-	0xb9, 0x09, 0x34, 0x07, 0xd3, 0xd5, 0x6d, 0x7d, 0x2a, 0xe4, 0x26, 0x97, 0x56, 0x06, 0x2f, 0xbf,
-	0x28, 0x07, 0xb3, 0x6a, 0xa4, 0x68, 0x99, 0x33, 0x12, 0xc9, 0x26, 0xfb, 0xd4, 0x76, 0x78, 0xce,
-	0xac, 0xbc, 0x7f, 0x78, 0x6c, 0x19, 0x47, 0xc7, 0x96, 0xf1, 0xec, 0xd8, 0x32, 0x5e, 0x1c, 0x5b,
-	0xe6, 0x57, 0x7d, 0xcb, 0x7c, 0xda, 0xb7, 0xcc, 0xc3, 0xbe, 0x65, 0x1e, 0xf5, 0x2d, 0xf3, 0xf7,
-	0xbe, 0x65, 0xfe, 0xd1, 0xb7, 0x8c, 0x17, 0x7d, 0xcb, 0xfc, 0xfa, 0xc4, 0x32, 0x8e, 0x4e, 0x2c,
-	0xe3, 0xd9, 0x89, 0x65, 0xec, 0x64, 0xe4, 0x8f, 0xcf, 0x77, 0xff, 0x0e, 0x00, 0x00, 0xff, 0xff,
-	0x1e, 0x5d, 0x38, 0x16, 0x4e, 0x15, 0x00, 0x00,
+	// 1270 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x58, 0x4b, 0x6f, 0x1b, 0xb7,
+	0x13, 0xdf, 0xb5, 0x25, 0xd9, 0x1e, 0xdb, 0xb1, 0xfe, 0x44, 0xfe, 0x09, 0xf3, 0x5a, 0xab, 0x02,
+	0x02, 0x28, 0x69, 0xa2, 0x04, 0x69, 0x50, 0x14, 0xbd, 0x59, 0x52, 0x53, 0xc9, 0x8d, 0x13, 0x81,
+	0x76, 0x1f, 0xa7, 0x02, 0xb4, 0x44, 0x4b, 0x9b, 0xee, 0x2e, 0xd5, 0x7d, 0x04, 0xf0, 0xad, 0x1f,
+	0xa1, 0x28, 0xd0, 0x9e, 0x7b, 0x29, 0x90, 0x4f, 0xd0, 0x43, 0x4e, 0x3d, 0xfa, 0xd6, 0xf4, 0x16,
+	0x14, 0x68, 0x50, 0xcb, 0x97, 0x1e, 0x83, 0x7e, 0x82, 0x82, 0x8f, 0x7d, 0x48, 0x46, 0x23, 0x57,
+	0x0a, 0x0a, 0xa4, 0xf0, 0x69, 0x97, 0xc3, 0x99, 0x1f, 0x39, 0xc3, 0x99, 0xe1, 0x0c, 0xe1, 0x92,
+	0xed, 0x05, 0xdc, 0xa1, 0xfe, 0x2d, 0x9f, 0x75, 0xb8, 0xdf, 0xd5, 0x9f, 0xea, 0xc0, 0xe7, 0x21,
+	0x47, 0x05, 0x35, 0xba, 0x78, 0xb3, 0x67, 0x87, 0xfd, 0x68, 0xb7, 0xda, 0xe1, 0xee, 0xad, 0x1e,
+	0xef, 0xf1, 0x5b, 0x72, 0x7a, 0x37, 0xda, 0x93, 0x23, 0x39, 0x90, 0x7f, 0x4a, 0xac, 0xbc, 0x01,
+	0x0b, 0x1f, 0x32, 0x8f, 0x05, 0x76, 0x80, 0x2e, 0xc3, 0xd2, 0x80, 0x3b, 0xfb, 0x2e, 0xf7, 0x07,
+	0x7d, 0x5c, 0x2c, 0x99, 0x95, 0x3c, 0x49, 0x09, 0x08, 0x41, 0xae, 0x49, 0x83, 0x3e, 0x3e, 0x5b,
+	0x32, 0x2b, 0x2b, 0x44, 0xfe, 0xbf, 0x9f, 0x7b, 0xf2, 0xfd, 0xba, 0x59, 0xfe, 0xc9, 0x84, 0x7c,
+	0xbd, 0x6f, 0x3b, 0xdd, 0x09, 0x08, 0x1f, 0xc1, 0x52, 0xdb, 0x67, 0x8f, 0x25, 0xab, 0x82, 0xa9,
+	0xdd, 0x3c, 0x78, 0xb1, 0x6e, 0xfc, 0xfa, 0x62, 0xfd, 0x6a, 0x66, 0xd3, 0xb1, 0x92, 0x63, 0xdf,
+	0x6a, 0xab, 0x41, 0x52, 0x79, 0x74, 0x0f, 0xe6, 0x09, 0xdb, 0xc3, 0xff, 0x97, 0x30, 0x77, 0x35,
+	0xcc, 0x8d, 0x13, 0xc0, 0x10, 0xb6, 0xc7, 0x7c, 0xe6, 0x75, 0x18, 0x11, 0x00, 0x5a, 0x85, 0x6b,
+	0x30, 0xbf, 0xc9, 0xc2, 0x57, 0xef, 0x5f, 0xb3, 0xfe, 0x5c, 0x80, 0xb5, 0x96, 0xd7, 0xe1, 0xae,
+	0xed, 0xf5, 0x08, 0xfb, 0x32, 0x62, 0xc1, 0x04, 0x39, 0x74, 0x03, 0x16, 0xeb, 0xd4, 0x71, 0x76,
+	0xf6, 0x07, 0x4c, 0xaa, 0x7d, 0xe6, 0x4e, 0xb1, 0xaa, 0x8f, 0x2e, 0xa6, 0x93, 0x84, 0x03, 0xdd,
+	0x87, 0x82, 0xf8, 0x67, 0xfe, 0x4c, 0xba, 0x69, 0x0c, 0xf4, 0x39, 0xac, 0xa9, 0xbf, 0xb6, 0x38,
+	0xed, 0x50, 0x6c, 0xe1, 0xdc, 0x0c, 0xb0, 0xe3, 0x60, 0xe8, 0x2c, 0xe4, 0x1f, 0x70, 0xaf, 0xc3,
+	0xf0, 0xf9, 0x92, 0x59, 0xc9, 0x11, 0x35, 0x40, 0x77, 0x00, 0x08, 0x0b, 0x23, 0xdf, 0xdb, 0xe2,
+	0x5d, 0x86, 0x2f, 0x48, 0x9d, 0x51, 0xac, 0x73, 0x3a, 0x43, 0x32, 0x5c, 0xc2, 0x86, 0x2d, 0xd7,
+	0x8d, 0x42, 0xba, 0xeb, 0x30, 0x7c, 0xb1, 0x64, 0x56, 0x16, 0x49, 0x4a, 0x40, 0x0d, 0xc8, 0xd5,
+	0x68, 0xc0, 0xf0, 0x25, 0xb9, 0xf9, 0xdb, 0xff, 0x78, 0xe3, 0x52, 0x1a, 0x35, 0xa1, 0xf0, 0x70,
+	0xf7, 0x11, 0xeb, 0x84, 0xf8, 0xf2, 0x94, 0x38, 0x5a, 0x1e, 0x3d, 0x10, 0xbe, 0x1c, 0x5b, 0xf4,
+	0xca, 0x94, 0x60, 0x29, 0x04, 0x3a, 0x07, 0x85, 0x2d, 0x16, 0xf6, 0x79, 0x17, 0x5b, 0x25, 0xb3,
+	0xb2, 0x44, 0xf4, 0x48, 0x58, 0x65, 0xc3, 0xef, 0x45, 0x2e, 0xf3, 0xc2, 0x00, 0xaf, 0xcb, 0xd0,
+	0x4b, 0x09, 0xc2, 0x57, 0xb6, 0x99, 0xd7, 0x65, 0x3e, 0x2e, 0xcd, 0xe2, 0x2b, 0x0a, 0x03, 0x95,
+	0x61, 0x65, 0xa3, 0xdd, 0xd2, 0x3e, 0xdd, 0x6a, 0xe0, 0xb7, 0xe4, 0x4e, 0x46, 0x68, 0x62, 0x45,
+	0xc2, 0x68, 0xc0, 0x3d, 0x5c, 0x9e, 0x65, 0x45, 0x85, 0x91, 0x89, 0xa8, 0x87, 0x51, 0xd8, 0xe3,
+	0xa7, 0x11, 0x75, 0x1a, 0x51, 0xa7, 0x11, 0xf5, 0x1a, 0x22, 0xea, 0x37, 0x53, 0x80, 0x06, 0x91,
+	0x33, 0x29, 0x90, 0x3e, 0x48, 0x8e, 0x6f, 0xaa, 0xfb, 0x38, 0x3d, 0xbb, 0x05, 0xad, 0xd0, 0x4c,
+	0x21, 0x16, 0x83, 0x20, 0x0c, 0x0b, 0x6d, 0xba, 0xef, 0x70, 0xda, 0x55, 0xb1, 0x45, 0xe2, 0xa1,
+	0xd6, 0xef, 0x4f, 0x13, 0x72, 0x32, 0xb4, 0x5f, 0xad, 0xdd, 0x7d, 0x28, 0x34, 0xb8, 0x4b, 0x6d,
+	0x4f, 0x6b, 0x37, 0xa5, 0x69, 0x15, 0xc6, 0x6b, 0x57, 0xb2, 0x02, 0x6b, 0x42, 0x87, 0x06, 0xeb,
+	0x38, 0xd4, 0xa7, 0xa1, 0xcd, 0x3d, 0xad, 0xec, 0x38, 0x59, 0x2b, 0xfd, 0xe3, 0x1c, 0xe4, 0xea,
+	0x3a, 0xae, 0xdf, 0x58, 0xa5, 0x91, 0xd2, 0x41, 0x6b, 0xaa, 0xf4, 0xf9, 0x0c, 0x96, 0xb7, 0x68,
+	0xa7, 0x6f, 0x7b, 0x4c, 0x26, 0x74, 0x91, 0xf7, 0x56, 0x6b, 0xef, 0xea, 0x75, 0xaa, 0x27, 0x58,
+	0x27, 0x23, 0x4d, 0xb2, 0x50, 0xda, 0x70, 0x4f, 0xe7, 0x61, 0x71, 0xa3, 0x13, 0xda, 0x8f, 0x69,
+	0xf8, 0x66, 0x1b, 0x4f, 0xa6, 0x34, 0x97, 0xfb, 0xfb, 0xda, 0x7c, 0x7a, 0x84, 0x36, 0x21, 0xdf,
+	0x72, 0x69, 0x4f, 0x99, 0x6e, 0xda, 0x55, 0x14, 0x04, 0x2a, 0xc1, 0x72, 0x2b, 0x48, 0x13, 0x31,
+	0x96, 0xd7, 0x46, 0x96, 0x24, 0x6c, 0xd4, 0xa6, 0x3e, 0xf3, 0x42, 0x79, 0x0d, 0x4d, 0x6d, 0x23,
+	0x85, 0x81, 0x2c, 0x80, 0x56, 0xd0, 0x60, 0x0e, 0xeb, 0xd1, 0x30, 0xbe, 0xa5, 0x32, 0x94, 0xf2,
+	0x77, 0xf3, 0x90, 0xdf, 0x70, 0x99, 0xd7, 0x3d, 0x3d, 0xb9, 0x99, 0x4f, 0x4e, 0x37, 0x60, 0xdb,
+	0xa1, 0x30, 0xf5, 0x85, 0xa9, 0x1b, 0x30, 0x29, 0x5f, 0xfe, 0x76, 0x0e, 0xa0, 0xc1, 0xe8, 0x7f,
+	0x21, 0xae, 0x46, 0xec, 0x72, 0x6e, 0x46, 0xbb, 0xfc, 0x62, 0xc2, 0x5a, 0x9b, 0x79, 0x5d, 0xdb,
+	0xeb, 0xdd, 0xb3, 0x1d, 0x2a, 0xca, 0x8a, 0x09, 0xc6, 0x69, 0xc1, 0x22, 0x91, 0x85, 0x5c, 0xab,
+	0x31, 0xdd, 0x35, 0x9c, 0x88, 0xa3, 0x8f, 0xe1, 0x8c, 0xd8, 0x89, 0xcd, 0xa3, 0x40, 0xd1, 0xb4,
+	0x81, 0x04, 0xa0, 0x79, 0x72, 0xc0, 0x31, 0x90, 0xf2, 0x37, 0x79, 0x58, 0xf8, 0xc4, 0xf6, 0xc3,
+	0x88, 0x3a, 0x13, 0x74, 0x79, 0x3b, 0x79, 0x4e, 0xc0, 0xac, 0x64, 0x56, 0x96, 0xef, 0xac, 0xc5,
+	0x45, 0xaa, 0x26, 0x37, 0x0d, 0x92, 0x3c, 0x38, 0x5c, 0xd5, 0xef, 0x06, 0x78, 0x4f, 0xb2, 0xae,
+	0x26, 0x35, 0xbc, 0x20, 0x36, 0x0d, 0xa2, 0x5f, 0x15, 0xd6, 0x65, 0x73, 0x8e, 0x7b, 0x92, 0x69,
+	0x39, 0x66, 0xda, 0x64, 0x61, 0xd3, 0x20, 0xb2, 0x6d, 0xaf, 0x1f, 0xeb, 0xc8, 0x71, 0x5f, 0x32,
+	0x9f, 0x8f, 0x99, 0xc7, 0xa6, 0x9b, 0x06, 0x39, 0xd6, 0xc3, 0xd7, 0x8f, 0x35, 0x21, 0xd8, 0x1e,
+	0x05, 0x19, 0x9b, 0x16, 0x20, 0xe3, 0x6d, 0x4b, 0x25, 0xae, 0xbb, 0xf0, 0x23, 0x29, 0x7b, 0x26,
+	0x2d, 0xd1, 0x05, 0xb5, 0x69, 0x90, 0xb8, 0x2e, 0x2b, 0xab, 0x0a, 0x06, 0x7f, 0x21, 0xf9, 0x56,
+	0x62, 0x3e, 0x41, 0x6b, 0x1a, 0x44, 0x55, 0x37, 0x65, 0x7d, 0x59, 0x3a, 0xa3, 0x3c, 0x82, 0x26,
+	0x78, 0xe4, 0xe5, 0x59, 0x4d, 0xef, 0x36, 0xec, 0x4a, 0xbe, 0xa4, 0x15, 0x8a, 0xe9, 0x4d, 0x83,
+	0xa4, 0xf7, 0xdf, 0x55, 0x9d, 0x4e, 0xb1, 0x37, 0x6a, 0x73, 0x49, 0x14, 0x36, 0x57, 0xc9, 0xf6,
+	0x6e, 0x36, 0xb8, 0x31, 0x97, 0xbc, 0x49, 0xbf, 0x91, 0xce, 0x34, 0x0d, 0x92, 0x4d, 0x02, 0xf5,
+	0x63, 0xae, 0x8f, 0x07, 0xa3, 0x36, 0x1c, 0x9b, 0x16, 0x36, 0x1c, 0x0f, 0x96, 0x2b, 0xb0, 0xb4,
+	0x6d, 0xf7, 0x3c, 0x1a, 0x46, 0x3e, 0xc3, 0x07, 0xa6, 0xaa, 0xd0, 0x13, 0x4a, 0x6d, 0x01, 0xf2,
+	0x91, 0x67, 0x73, 0xaf, 0xfc, 0xd4, 0x84, 0xc5, 0x2d, 0x1a, 0x32, 0xdf, 0x9e, 0xe8, 0x95, 0xd7,
+	0x12, 0xf7, 0x95, 0x01, 0x96, 0xf1, 0x4a, 0x4d, 0x26, 0x89, 0x7b, 0xdf, 0x83, 0xfc, 0x26, 0x13,
+	0xb5, 0xba, 0x0a, 0x9c, 0xdb, 0x3a, 0x12, 0x2b, 0x27, 0x08, 0x1c, 0x29, 0x47, 0x94, 0xf8, 0x04,
+	0x2d, 0xca, 0x3f, 0xcc, 0xc1, 0xf9, 0x3a, 0x77, 0x07, 0x3c, 0xb0, 0x43, 0x16, 0xab, 0xae, 0xa2,
+	0xed, 0xdf, 0xcb, 0x16, 0x55, 0xe1, 0xad, 0x49, 0x96, 0xc8, 0x78, 0x4e, 0x6c, 0xd6, 0x5a, 0x4e,
+	0x40, 0x13, 0xcd, 0x25, 0xba, 0x85, 0x2d, 0x16, 0xd2, 0x56, 0x63, 0xba, 0x24, 0xa9, 0x85, 0xd1,
+	0x75, 0xc8, 0x89, 0x3f, 0x79, 0xe7, 0xfd, 0xfd, 0xa2, 0x92, 0xe7, 0x7a, 0x3b, 0xed, 0xf4, 0xd1,
+	0x0a, 0x2c, 0xd6, 0x77, 0x54, 0x17, 0x57, 0x34, 0xd0, 0xff, 0x60, 0xb5, 0xbe, 0xb3, 0x4d, 0x1f,
+	0xb3, 0x8d, 0x40, 0xa6, 0x89, 0xa2, 0x89, 0xce, 0x42, 0x31, 0x26, 0xc5, 0xf5, 0x43, 0x71, 0x0e,
+	0xad, 0xc2, 0x52, 0x7d, 0x47, 0xa7, 0x9c, 0xe2, 0xfc, 0xf5, 0xdb, 0xd9, 0x4e, 0x1a, 0x15, 0x61,
+	0x45, 0x8d, 0x54, 0x58, 0x16, 0x8d, 0x94, 0xf2, 0x80, 0x7f, 0x4a, 0xed, 0xb0, 0x68, 0xd6, 0xde,
+	0x3b, 0x38, 0xb4, 0x8c, 0x67, 0x87, 0x96, 0xf1, 0xfc, 0xd0, 0x32, 0x5e, 0x1e, 0x5a, 0xe6, 0x57,
+	0x43, 0xcb, 0x7c, 0x32, 0xb4, 0xcc, 0x83, 0xa1, 0x65, 0x3e, 0x1b, 0x5a, 0xe6, 0xef, 0x43, 0xcb,
+	0xfc, 0x63, 0x68, 0x19, 0x2f, 0x87, 0x96, 0xf9, 0xf5, 0x91, 0x65, 0x3c, 0x3b, 0xb2, 0x8c, 0xe7,
+	0x47, 0x96, 0xb1, 0x5b, 0x90, 0x6f, 0xac, 0xef, 0xfc, 0x15, 0x00, 0x00, 0xff, 0xff, 0x46, 0x22,
+	0x56, 0x16, 0xb9, 0x15, 0x00, 0x00,
 }
 
 func (x CallType) String() string {
@@ -1280,14 +1312,14 @@ func (this *Jet) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Request) Equal(that interface{}) bool {
+func (this *IncomingRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Request)
+	that1, ok := that.(*IncomingRequest)
 	if !ok {
-		that2, ok := that.(Request)
+		that2, ok := that.(IncomingRequest)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1312,9 +1344,6 @@ func (this *Request) Equal(that interface{}) bool {
 		return false
 	}
 	if this.Nonce != that1.Nonce {
-		return false
-	}
-	if this.Sequence != that1.Sequence {
 		return false
 	}
 	if this.ReturnMode != that1.ReturnMode {
@@ -1354,6 +1383,9 @@ func (this *Request) Equal(that interface{}) bool {
 		return false
 	}
 	if this.APIRequestID != that1.APIRequestID {
+		return false
+	}
+	if !this.Reason.Equal(that1.Reason) {
 		return false
 	}
 	return true
@@ -1392,9 +1424,6 @@ func (this *OutgoingRequest) Equal(that interface{}) bool {
 	if this.Nonce != that1.Nonce {
 		return false
 	}
-	if this.Sequence != that1.Sequence {
-		return false
-	}
 	if this.ReturnMode != that1.ReturnMode {
 		return false
 	}
@@ -1432,6 +1461,9 @@ func (this *OutgoingRequest) Equal(that interface{}) bool {
 		return false
 	}
 	if this.APIRequestID != that1.APIRequestID {
+		return false
+	}
+	if !this.Reason.Equal(that1.Reason) {
 		return false
 	}
 	return true
@@ -1566,7 +1598,7 @@ func (this *Activate) Equal(that interface{}) bool {
 	if !this.Request.Equal(that1.Request) {
 		return false
 	}
-	if !this.Memory.Equal(that1.Memory) {
+	if !bytes.Equal(this.Memory, that1.Memory) {
 		return false
 	}
 	if !this.Image.Equal(that1.Image) {
@@ -1611,7 +1643,7 @@ func (this *Amend) Equal(that interface{}) bool {
 	if !this.Request.Equal(that1.Request) {
 		return false
 	}
-	if !this.Memory.Equal(that1.Memory) {
+	if !bytes.Equal(this.Memory, that1.Memory) {
 		return false
 	}
 	if !this.Image.Equal(that1.Image) {
@@ -1800,14 +1832,14 @@ func (this *Virtual_Jet) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Virtual_Request) Equal(that interface{}) bool {
+func (this *Virtual_IncomingRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Virtual_Request)
+	that1, ok := that.(*Virtual_IncomingRequest)
 	if !ok {
-		that2, ok := that.(Virtual_Request)
+		that2, ok := that.(Virtual_IncomingRequest)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1819,7 +1851,31 @@ func (this *Virtual_Request) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.Request.Equal(that1.Request) {
+	if !this.IncomingRequest.Equal(that1.IncomingRequest) {
+		return false
+	}
+	return true
+}
+func (this *Virtual_OutgoingRequest) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Virtual_OutgoingRequest)
+	if !ok {
+		that2, ok := that.(Virtual_OutgoingRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.OutgoingRequest.Equal(that1.OutgoingRequest) {
 		return false
 	}
 	return true
@@ -2149,14 +2205,13 @@ func NewJetFromFace(that JetFace) *Jet {
 	return this
 }
 
-type RequestFace interface {
+type IncomingRequestFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetPolymorph() int32
 	GetCallType() CallType
 	GetCaller() github_com_insolar_insolar_insolar.Reference
 	GetCallerPrototype() github_com_insolar_insolar_insolar.Reference
 	GetNonce() uint64
-	GetSequence() uint64
 	GetReturnMode() ReturnMode
 	GetImmutable() bool
 	GetBase() *github_com_insolar_insolar_insolar.Reference
@@ -2166,84 +2221,84 @@ type RequestFace interface {
 	GetArguments() []byte
 	GetSender() github_com_insolar_insolar_insolar.Reference
 	GetAPIRequestID() string
+	GetReason() github_com_insolar_insolar_insolar.Reference
 }
 
-func (this *Request) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *IncomingRequest) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *Request) TestProto() github_com_gogo_protobuf_proto.Message {
-	return NewRequestFromFace(this)
+func (this *IncomingRequest) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewIncomingRequestFromFace(this)
 }
 
-func (this *Request) GetPolymorph() int32 {
+func (this *IncomingRequest) GetPolymorph() int32 {
 	return this.Polymorph
 }
 
-func (this *Request) GetCallType() CallType {
+func (this *IncomingRequest) GetCallType() CallType {
 	return this.CallType
 }
 
-func (this *Request) GetCaller() github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetCaller() github_com_insolar_insolar_insolar.Reference {
 	return this.Caller
 }
 
-func (this *Request) GetCallerPrototype() github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetCallerPrototype() github_com_insolar_insolar_insolar.Reference {
 	return this.CallerPrototype
 }
 
-func (this *Request) GetNonce() uint64 {
+func (this *IncomingRequest) GetNonce() uint64 {
 	return this.Nonce
 }
 
-func (this *Request) GetSequence() uint64 {
-	return this.Sequence
-}
-
-func (this *Request) GetReturnMode() ReturnMode {
+func (this *IncomingRequest) GetReturnMode() ReturnMode {
 	return this.ReturnMode
 }
 
-func (this *Request) GetImmutable() bool {
+func (this *IncomingRequest) GetImmutable() bool {
 	return this.Immutable
 }
 
-func (this *Request) GetBase() *github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetBase() *github_com_insolar_insolar_insolar.Reference {
 	return this.Base
 }
 
-func (this *Request) GetObject() *github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetObject() *github_com_insolar_insolar_insolar.Reference {
 	return this.Object
 }
 
-func (this *Request) GetPrototype() *github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetPrototype() *github_com_insolar_insolar_insolar.Reference {
 	return this.Prototype
 }
 
-func (this *Request) GetMethod() string {
+func (this *IncomingRequest) GetMethod() string {
 	return this.Method
 }
 
-func (this *Request) GetArguments() []byte {
+func (this *IncomingRequest) GetArguments() []byte {
 	return this.Arguments
 }
 
-func (this *Request) GetSender() github_com_insolar_insolar_insolar.Reference {
+func (this *IncomingRequest) GetSender() github_com_insolar_insolar_insolar.Reference {
 	return this.Sender
 }
 
-func (this *Request) GetAPIRequestID() string {
+func (this *IncomingRequest) GetAPIRequestID() string {
 	return this.APIRequestID
 }
 
-func NewRequestFromFace(that RequestFace) *Request {
-	this := &Request{}
+func (this *IncomingRequest) GetReason() github_com_insolar_insolar_insolar.Reference {
+	return this.Reason
+}
+
+func NewIncomingRequestFromFace(that IncomingRequestFace) *IncomingRequest {
+	this := &IncomingRequest{}
 	this.Polymorph = that.GetPolymorph()
 	this.CallType = that.GetCallType()
 	this.Caller = that.GetCaller()
 	this.CallerPrototype = that.GetCallerPrototype()
 	this.Nonce = that.GetNonce()
-	this.Sequence = that.GetSequence()
 	this.ReturnMode = that.GetReturnMode()
 	this.Immutable = that.GetImmutable()
 	this.Base = that.GetBase()
@@ -2253,6 +2308,7 @@ func NewRequestFromFace(that RequestFace) *Request {
 	this.Arguments = that.GetArguments()
 	this.Sender = that.GetSender()
 	this.APIRequestID = that.GetAPIRequestID()
+	this.Reason = that.GetReason()
 	return this
 }
 
@@ -2263,7 +2319,6 @@ type OutgoingRequestFace interface {
 	GetCaller() github_com_insolar_insolar_insolar.Reference
 	GetCallerPrototype() github_com_insolar_insolar_insolar.Reference
 	GetNonce() uint64
-	GetSequence() uint64
 	GetReturnMode() ReturnMode
 	GetImmutable() bool
 	GetBase() *github_com_insolar_insolar_insolar.Reference
@@ -2273,6 +2328,7 @@ type OutgoingRequestFace interface {
 	GetArguments() []byte
 	GetSender() github_com_insolar_insolar_insolar.Reference
 	GetAPIRequestID() string
+	GetReason() github_com_insolar_insolar_insolar.Reference
 }
 
 func (this *OutgoingRequest) Proto() github_com_gogo_protobuf_proto.Message {
@@ -2301,10 +2357,6 @@ func (this *OutgoingRequest) GetCallerPrototype() github_com_insolar_insolar_ins
 
 func (this *OutgoingRequest) GetNonce() uint64 {
 	return this.Nonce
-}
-
-func (this *OutgoingRequest) GetSequence() uint64 {
-	return this.Sequence
 }
 
 func (this *OutgoingRequest) GetReturnMode() ReturnMode {
@@ -2343,6 +2395,10 @@ func (this *OutgoingRequest) GetAPIRequestID() string {
 	return this.APIRequestID
 }
 
+func (this *OutgoingRequest) GetReason() github_com_insolar_insolar_insolar.Reference {
+	return this.Reason
+}
+
 func NewOutgoingRequestFromFace(that OutgoingRequestFace) *OutgoingRequest {
 	this := &OutgoingRequest{}
 	this.Polymorph = that.GetPolymorph()
@@ -2350,7 +2406,6 @@ func NewOutgoingRequestFromFace(that OutgoingRequestFace) *OutgoingRequest {
 	this.Caller = that.GetCaller()
 	this.CallerPrototype = that.GetCallerPrototype()
 	this.Nonce = that.GetNonce()
-	this.Sequence = that.GetSequence()
 	this.ReturnMode = that.GetReturnMode()
 	this.Immutable = that.GetImmutable()
 	this.Base = that.GetBase()
@@ -2360,6 +2415,7 @@ func NewOutgoingRequestFromFace(that OutgoingRequestFace) *OutgoingRequest {
 	this.Arguments = that.GetArguments()
 	this.Sender = that.GetSender()
 	this.APIRequestID = that.GetAPIRequestID()
+	this.Reason = that.GetReason()
 	return this
 }
 
@@ -2525,18 +2581,17 @@ func (this *Jet) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Request) GoString() string {
+func (this *IncomingRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 19)
-	s = append(s, "&record.Request{")
+	s = append(s, "&record.IncomingRequest{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "CallType: "+fmt.Sprintf("%#v", this.CallType)+",\n")
 	s = append(s, "Caller: "+fmt.Sprintf("%#v", this.Caller)+",\n")
 	s = append(s, "CallerPrototype: "+fmt.Sprintf("%#v", this.CallerPrototype)+",\n")
 	s = append(s, "Nonce: "+fmt.Sprintf("%#v", this.Nonce)+",\n")
-	s = append(s, "Sequence: "+fmt.Sprintf("%#v", this.Sequence)+",\n")
 	s = append(s, "ReturnMode: "+fmt.Sprintf("%#v", this.ReturnMode)+",\n")
 	s = append(s, "Immutable: "+fmt.Sprintf("%#v", this.Immutable)+",\n")
 	s = append(s, "Base: "+fmt.Sprintf("%#v", this.Base)+",\n")
@@ -2546,6 +2601,7 @@ func (this *Request) GoString() string {
 	s = append(s, "Arguments: "+fmt.Sprintf("%#v", this.Arguments)+",\n")
 	s = append(s, "Sender: "+fmt.Sprintf("%#v", this.Sender)+",\n")
 	s = append(s, "APIRequestID: "+fmt.Sprintf("%#v", this.APIRequestID)+",\n")
+	s = append(s, "Reason: "+fmt.Sprintf("%#v", this.Reason)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2560,7 +2616,6 @@ func (this *OutgoingRequest) GoString() string {
 	s = append(s, "Caller: "+fmt.Sprintf("%#v", this.Caller)+",\n")
 	s = append(s, "CallerPrototype: "+fmt.Sprintf("%#v", this.CallerPrototype)+",\n")
 	s = append(s, "Nonce: "+fmt.Sprintf("%#v", this.Nonce)+",\n")
-	s = append(s, "Sequence: "+fmt.Sprintf("%#v", this.Sequence)+",\n")
 	s = append(s, "ReturnMode: "+fmt.Sprintf("%#v", this.ReturnMode)+",\n")
 	s = append(s, "Immutable: "+fmt.Sprintf("%#v", this.Immutable)+",\n")
 	s = append(s, "Base: "+fmt.Sprintf("%#v", this.Base)+",\n")
@@ -2570,6 +2625,7 @@ func (this *OutgoingRequest) GoString() string {
 	s = append(s, "Arguments: "+fmt.Sprintf("%#v", this.Arguments)+",\n")
 	s = append(s, "Sender: "+fmt.Sprintf("%#v", this.Sender)+",\n")
 	s = append(s, "APIRequestID: "+fmt.Sprintf("%#v", this.APIRequestID)+",\n")
+	s = append(s, "Reason: "+fmt.Sprintf("%#v", this.Reason)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2675,7 +2731,7 @@ func (this *Virtual) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 17)
+	s := make([]string, 0, 18)
 	s = append(s, "&record.Virtual{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	if this.Union != nil {
@@ -2709,12 +2765,20 @@ func (this *Virtual_Jet) GoString() string {
 		`Jet:` + fmt.Sprintf("%#v", this.Jet) + `}`}, ", ")
 	return s
 }
-func (this *Virtual_Request) GoString() string {
+func (this *Virtual_IncomingRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Virtual_Request{` +
-		`Request:` + fmt.Sprintf("%#v", this.Request) + `}`}, ", ")
+	s := strings.Join([]string{`&record.Virtual_IncomingRequest{` +
+		`IncomingRequest:` + fmt.Sprintf("%#v", this.IncomingRequest) + `}`}, ", ")
+	return s
+}
+func (this *Virtual_OutgoingRequest) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&record.Virtual_OutgoingRequest{` +
+		`OutgoingRequest:` + fmt.Sprintf("%#v", this.OutgoingRequest) + `}`}, ", ")
 	return s
 }
 func (this *Virtual_Result) GoString() string {
@@ -2913,7 +2977,7 @@ func (m *Jet) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Request) Marshal() (dAtA []byte, err error) {
+func (m *IncomingRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2923,7 +2987,7 @@ func (m *Request) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Request) MarshalTo(dAtA []byte) (int, error) {
+func (m *IncomingRequest) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2968,13 +3032,6 @@ func (m *Request) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Nonce))
-	}
-	if m.Sequence != 0 {
-		dAtA[i] = 0xc0
-		i++
-		dAtA[i] = 0x1
-		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.Sequence))
 	}
 	if m.ReturnMode != 0 {
 		dAtA[i] = 0xc8
@@ -3065,6 +3122,16 @@ func (m *Request) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintRecord(dAtA, i, uint64(len(m.APIRequestID)))
 		i += copy(dAtA[i:], m.APIRequestID)
 	}
+	dAtA[i] = 0x92
+	i++
+	dAtA[i] = 0x2
+	i++
+	i = encodeVarintRecord(dAtA, i, uint64(m.Reason.Size()))
+	n9, err := m.Reason.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n9
 	return i, nil
 }
 
@@ -3102,34 +3169,27 @@ func (m *OutgoingRequest) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Caller.Size()))
-	n9, err := m.Caller.MarshalTo(dAtA[i:])
+	n10, err := m.Caller.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n9
+	i += n10
 	dAtA[i] = 0xb2
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.CallerPrototype.Size()))
-	n10, err := m.CallerPrototype.MarshalTo(dAtA[i:])
+	n11, err := m.CallerPrototype.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n10
+	i += n11
 	if m.Nonce != 0 {
 		dAtA[i] = 0xb8
 		i++
 		dAtA[i] = 0x1
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Nonce))
-	}
-	if m.Sequence != 0 {
-		dAtA[i] = 0xc0
-		i++
-		dAtA[i] = 0x1
-		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.Sequence))
 	}
 	if m.ReturnMode != 0 {
 		dAtA[i] = 0xc8
@@ -3156,11 +3216,11 @@ func (m *OutgoingRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Base.Size()))
-		n11, err := m.Base.MarshalTo(dAtA[i:])
+		n12, err := m.Base.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n11
+		i += n12
 	}
 	if m.Object != nil {
 		dAtA[i] = 0xe2
@@ -3168,11 +3228,11 @@ func (m *OutgoingRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Object.Size()))
-		n12, err := m.Object.MarshalTo(dAtA[i:])
+		n13, err := m.Object.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n12
+		i += n13
 	}
 	if m.Prototype != nil {
 		dAtA[i] = 0xea
@@ -3180,11 +3240,11 @@ func (m *OutgoingRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Prototype.Size()))
-		n13, err := m.Prototype.MarshalTo(dAtA[i:])
+		n14, err := m.Prototype.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n13
+		i += n14
 	}
 	if len(m.Method) > 0 {
 		dAtA[i] = 0xf2
@@ -3207,11 +3267,11 @@ func (m *OutgoingRequest) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x2
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Sender.Size()))
-	n14, err := m.Sender.MarshalTo(dAtA[i:])
+	n15, err := m.Sender.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n14
+	i += n15
 	if len(m.APIRequestID) > 0 {
 		dAtA[i] = 0x8a
 		i++
@@ -3220,6 +3280,16 @@ func (m *OutgoingRequest) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintRecord(dAtA, i, uint64(len(m.APIRequestID)))
 		i += copy(dAtA[i:], m.APIRequestID)
 	}
+	dAtA[i] = 0x92
+	i++
+	dAtA[i] = 0x2
+	i++
+	i = encodeVarintRecord(dAtA, i, uint64(m.Reason.Size()))
+	n16, err := m.Reason.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n16
 	return i, nil
 }
 
@@ -3250,21 +3320,21 @@ func (m *Result) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Object.Size()))
-	n15, err := m.Object.MarshalTo(dAtA[i:])
+	n17, err := m.Object.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n15
+	i += n17
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n16, err := m.Request.MarshalTo(dAtA[i:])
+	n18, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n16
+	i += n18
 	if len(m.Payload) > 0 {
 		dAtA[i] = 0xb2
 		i++
@@ -3303,21 +3373,21 @@ func (m *Type) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n17, err := m.Domain.MarshalTo(dAtA[i:])
+	n19, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n17
+	i += n19
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n18, err := m.Request.MarshalTo(dAtA[i:])
+	n20, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n18
+	i += n20
 	if len(m.TypeDeclaration) > 0 {
 		dAtA[i] = 0xb2
 		i++
@@ -3356,21 +3426,21 @@ func (m *Code) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n19, err := m.Domain.MarshalTo(dAtA[i:])
+	n21, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n19
+	i += n21
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n20, err := m.Request.MarshalTo(dAtA[i:])
+	n22, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n20
+	i += n22
 	if len(m.Code) > 0 {
 		dAtA[i] = 0xb2
 		i++
@@ -3416,41 +3486,39 @@ func (m *Activate) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n21, err := m.Domain.MarshalTo(dAtA[i:])
+	n23, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n21
+	i += n23
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n22, err := m.Request.MarshalTo(dAtA[i:])
+	n24, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n22
-	dAtA[i] = 0xb2
-	i++
-	dAtA[i] = 0x1
-	i++
-	i = encodeVarintRecord(dAtA, i, uint64(m.Memory.Size()))
-	n23, err := m.Memory.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	i += n24
+	if len(m.Memory) > 0 {
+		dAtA[i] = 0xb2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(len(m.Memory)))
+		i += copy(dAtA[i:], m.Memory)
 	}
-	i += n23
 	dAtA[i] = 0xba
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Image.Size()))
-	n24, err := m.Image.MarshalTo(dAtA[i:])
+	n25, err := m.Image.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n24
+	i += n25
 	if m.IsPrototype {
 		dAtA[i] = 0xc0
 		i++
@@ -3468,11 +3536,11 @@ func (m *Activate) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Parent.Size()))
-	n25, err := m.Parent.MarshalTo(dAtA[i:])
+	n26, err := m.Parent.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n25
+	i += n26
 	if m.IsDelegate {
 		dAtA[i] = 0xd0
 		i++
@@ -3515,31 +3583,29 @@ func (m *Amend) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n26, err := m.Domain.MarshalTo(dAtA[i:])
+	n27, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n26
+	i += n27
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n27, err := m.Request.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n27
-	dAtA[i] = 0xb2
-	i++
-	dAtA[i] = 0x1
-	i++
-	i = encodeVarintRecord(dAtA, i, uint64(m.Memory.Size()))
-	n28, err := m.Memory.MarshalTo(dAtA[i:])
+	n28, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
 	i += n28
+	if len(m.Memory) > 0 {
+		dAtA[i] = 0xb2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(len(m.Memory)))
+		i += copy(dAtA[i:], m.Memory)
+	}
 	dAtA[i] = 0xba
 	i++
 	dAtA[i] = 0x1
@@ -3765,15 +3831,15 @@ func (m *Virtual_Jet) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Virtual_Request) MarshalTo(dAtA []byte) (int, error) {
+func (m *Virtual_IncomingRequest) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Request != nil {
+	if m.IncomingRequest != nil {
 		dAtA[i] = 0xc2
 		i++
 		dAtA[i] = 0x6
 		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-		n40, err := m.Request.MarshalTo(dAtA[i:])
+		i = encodeVarintRecord(dAtA, i, uint64(m.IncomingRequest.Size()))
+		n40, err := m.IncomingRequest.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3781,15 +3847,15 @@ func (m *Virtual_Request) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Virtual_Result) MarshalTo(dAtA []byte) (int, error) {
+func (m *Virtual_OutgoingRequest) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Result != nil {
+	if m.OutgoingRequest != nil {
 		dAtA[i] = 0xca
 		i++
 		dAtA[i] = 0x6
 		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.Result.Size()))
-		n41, err := m.Result.MarshalTo(dAtA[i:])
+		i = encodeVarintRecord(dAtA, i, uint64(m.OutgoingRequest.Size()))
+		n41, err := m.OutgoingRequest.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3797,15 +3863,15 @@ func (m *Virtual_Result) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Virtual_Type) MarshalTo(dAtA []byte) (int, error) {
+func (m *Virtual_Result) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Type != nil {
+	if m.Result != nil {
 		dAtA[i] = 0xd2
 		i++
 		dAtA[i] = 0x6
 		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.Type.Size()))
-		n42, err := m.Type.MarshalTo(dAtA[i:])
+		i = encodeVarintRecord(dAtA, i, uint64(m.Result.Size()))
+		n42, err := m.Result.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3813,15 +3879,15 @@ func (m *Virtual_Type) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Virtual_Code) MarshalTo(dAtA []byte) (int, error) {
+func (m *Virtual_Type) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Code != nil {
+	if m.Type != nil {
 		dAtA[i] = 0xda
 		i++
 		dAtA[i] = 0x6
 		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.Code.Size()))
-		n43, err := m.Code.MarshalTo(dAtA[i:])
+		i = encodeVarintRecord(dAtA, i, uint64(m.Type.Size()))
+		n43, err := m.Type.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3829,15 +3895,15 @@ func (m *Virtual_Code) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Virtual_Activate) MarshalTo(dAtA []byte) (int, error) {
+func (m *Virtual_Code) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Activate != nil {
+	if m.Code != nil {
 		dAtA[i] = 0xe2
 		i++
 		dAtA[i] = 0x6
 		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.Activate.Size()))
-		n44, err := m.Activate.MarshalTo(dAtA[i:])
+		i = encodeVarintRecord(dAtA, i, uint64(m.Code.Size()))
+		n44, err := m.Code.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3845,15 +3911,15 @@ func (m *Virtual_Activate) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Virtual_Amend) MarshalTo(dAtA []byte) (int, error) {
+func (m *Virtual_Activate) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Amend != nil {
+	if m.Activate != nil {
 		dAtA[i] = 0xea
 		i++
 		dAtA[i] = 0x6
 		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.Amend.Size()))
-		n45, err := m.Amend.MarshalTo(dAtA[i:])
+		i = encodeVarintRecord(dAtA, i, uint64(m.Activate.Size()))
+		n45, err := m.Activate.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3861,15 +3927,15 @@ func (m *Virtual_Amend) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Virtual_Deactivate) MarshalTo(dAtA []byte) (int, error) {
+func (m *Virtual_Amend) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Deactivate != nil {
+	if m.Amend != nil {
 		dAtA[i] = 0xf2
 		i++
 		dAtA[i] = 0x6
 		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.Deactivate.Size()))
-		n46, err := m.Deactivate.MarshalTo(dAtA[i:])
+		i = encodeVarintRecord(dAtA, i, uint64(m.Amend.Size()))
+		n46, err := m.Amend.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3877,19 +3943,35 @@ func (m *Virtual_Deactivate) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Virtual_PendingFilament) MarshalTo(dAtA []byte) (int, error) {
+func (m *Virtual_Deactivate) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.PendingFilament != nil {
+	if m.Deactivate != nil {
 		dAtA[i] = 0xfa
 		i++
 		dAtA[i] = 0x6
 		i++
-		i = encodeVarintRecord(dAtA, i, uint64(m.PendingFilament.Size()))
-		n47, err := m.PendingFilament.MarshalTo(dAtA[i:])
+		i = encodeVarintRecord(dAtA, i, uint64(m.Deactivate.Size()))
+		n47, err := m.Deactivate.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n47
+	}
+	return i, nil
+}
+func (m *Virtual_PendingFilament) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.PendingFilament != nil {
+		dAtA[i] = 0x82
+		i++
+		dAtA[i] = 0x7
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.PendingFilament.Size()))
+		n48, err := m.PendingFilament.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n48
 	}
 	return i, nil
 }
@@ -3921,22 +4003,22 @@ func (m *Material) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Virtual.Size()))
-		n48, err := m.Virtual.MarshalTo(dAtA[i:])
+		n49, err := m.Virtual.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n48
+		i += n49
 	}
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.JetID.Size()))
-	n49, err := m.JetID.MarshalTo(dAtA[i:])
+	n50, err := m.JetID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n49
+	i += n50
 	if len(m.Signature) > 0 {
 		dAtA[i] = 0xc2
 		i++
@@ -3975,41 +4057,41 @@ func (m *CompositeFilamentRecord) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.RecordID.Size()))
-	n50, err := m.RecordID.MarshalTo(dAtA[i:])
+	n51, err := m.RecordID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n50
+	i += n51
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Record.Size()))
-	n51, err := m.Record.MarshalTo(dAtA[i:])
+	n52, err := m.Record.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n51
+	i += n52
 	dAtA[i] = 0xb2
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.MetaID.Size()))
-	n52, err := m.MetaID.MarshalTo(dAtA[i:])
+	n53, err := m.MetaID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n52
+	i += n53
 	dAtA[i] = 0xba
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Meta.Size()))
-	n53, err := m.Meta.MarshalTo(dAtA[i:])
+	n54, err := m.Meta.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n53
+	i += n54
 	return i, nil
 }
 
@@ -4066,7 +4148,7 @@ func (m *Jet) Size() (n int) {
 	return n
 }
 
-func (m *Request) Size() (n int) {
+func (m *IncomingRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -4084,9 +4166,6 @@ func (m *Request) Size() (n int) {
 	n += 2 + l + sovRecord(uint64(l))
 	if m.Nonce != 0 {
 		n += 2 + sovRecord(uint64(m.Nonce))
-	}
-	if m.Sequence != 0 {
-		n += 2 + sovRecord(uint64(m.Sequence))
 	}
 	if m.ReturnMode != 0 {
 		n += 2 + sovRecord(uint64(m.ReturnMode))
@@ -4120,6 +4199,8 @@ func (m *Request) Size() (n int) {
 	if l > 0 {
 		n += 2 + l + sovRecord(uint64(l))
 	}
+	l = m.Reason.Size()
+	n += 2 + l + sovRecord(uint64(l))
 	return n
 }
 
@@ -4142,9 +4223,6 @@ func (m *OutgoingRequest) Size() (n int) {
 	if m.Nonce != 0 {
 		n += 2 + sovRecord(uint64(m.Nonce))
 	}
-	if m.Sequence != 0 {
-		n += 2 + sovRecord(uint64(m.Sequence))
-	}
 	if m.ReturnMode != 0 {
 		n += 2 + sovRecord(uint64(m.ReturnMode))
 	}
@@ -4177,6 +4255,8 @@ func (m *OutgoingRequest) Size() (n int) {
 	if l > 0 {
 		n += 2 + l + sovRecord(uint64(l))
 	}
+	l = m.Reason.Size()
+	n += 2 + l + sovRecord(uint64(l))
 	return n
 }
 
@@ -4256,8 +4336,10 @@ func (m *Activate) Size() (n int) {
 	n += 2 + l + sovRecord(uint64(l))
 	l = m.Request.Size()
 	n += 2 + l + sovRecord(uint64(l))
-	l = m.Memory.Size()
-	n += 2 + l + sovRecord(uint64(l))
+	l = len(m.Memory)
+	if l > 0 {
+		n += 2 + l + sovRecord(uint64(l))
+	}
 	l = m.Image.Size()
 	n += 2 + l + sovRecord(uint64(l))
 	if m.IsPrototype {
@@ -4284,8 +4366,10 @@ func (m *Amend) Size() (n int) {
 	n += 2 + l + sovRecord(uint64(l))
 	l = m.Request.Size()
 	n += 2 + l + sovRecord(uint64(l))
-	l = m.Memory.Size()
-	n += 2 + l + sovRecord(uint64(l))
+	l = len(m.Memory)
+	if l > 0 {
+		n += 2 + l + sovRecord(uint64(l))
+	}
 	l = m.Image.Size()
 	n += 2 + l + sovRecord(uint64(l))
 	if m.IsPrototype {
@@ -4387,14 +4471,26 @@ func (m *Virtual_Jet) Size() (n int) {
 	}
 	return n
 }
-func (m *Virtual_Request) Size() (n int) {
+func (m *Virtual_IncomingRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Request != nil {
-		l = m.Request.Size()
+	if m.IncomingRequest != nil {
+		l = m.IncomingRequest.Size()
+		n += 2 + l + sovRecord(uint64(l))
+	}
+	return n
+}
+func (m *Virtual_OutgoingRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.OutgoingRequest != nil {
+		l = m.OutgoingRequest.Size()
 		n += 2 + l + sovRecord(uint64(l))
 	}
 	return n
@@ -4571,17 +4667,16 @@ func (this *Jet) String() string {
 	}, "")
 	return s
 }
-func (this *Request) String() string {
+func (this *IncomingRequest) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Request{`,
+	s := strings.Join([]string{`&IncomingRequest{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`CallType:` + fmt.Sprintf("%v", this.CallType) + `,`,
 		`Caller:` + fmt.Sprintf("%v", this.Caller) + `,`,
 		`CallerPrototype:` + fmt.Sprintf("%v", this.CallerPrototype) + `,`,
 		`Nonce:` + fmt.Sprintf("%v", this.Nonce) + `,`,
-		`Sequence:` + fmt.Sprintf("%v", this.Sequence) + `,`,
 		`ReturnMode:` + fmt.Sprintf("%v", this.ReturnMode) + `,`,
 		`Immutable:` + fmt.Sprintf("%v", this.Immutable) + `,`,
 		`Base:` + fmt.Sprintf("%v", this.Base) + `,`,
@@ -4591,6 +4686,7 @@ func (this *Request) String() string {
 		`Arguments:` + fmt.Sprintf("%v", this.Arguments) + `,`,
 		`Sender:` + fmt.Sprintf("%v", this.Sender) + `,`,
 		`APIRequestID:` + fmt.Sprintf("%v", this.APIRequestID) + `,`,
+		`Reason:` + fmt.Sprintf("%v", this.Reason) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4605,7 +4701,6 @@ func (this *OutgoingRequest) String() string {
 		`Caller:` + fmt.Sprintf("%v", this.Caller) + `,`,
 		`CallerPrototype:` + fmt.Sprintf("%v", this.CallerPrototype) + `,`,
 		`Nonce:` + fmt.Sprintf("%v", this.Nonce) + `,`,
-		`Sequence:` + fmt.Sprintf("%v", this.Sequence) + `,`,
 		`ReturnMode:` + fmt.Sprintf("%v", this.ReturnMode) + `,`,
 		`Immutable:` + fmt.Sprintf("%v", this.Immutable) + `,`,
 		`Base:` + fmt.Sprintf("%v", this.Base) + `,`,
@@ -4615,6 +4710,7 @@ func (this *OutgoingRequest) String() string {
 		`Arguments:` + fmt.Sprintf("%v", this.Arguments) + `,`,
 		`Sender:` + fmt.Sprintf("%v", this.Sender) + `,`,
 		`APIRequestID:` + fmt.Sprintf("%v", this.APIRequestID) + `,`,
+		`Reason:` + fmt.Sprintf("%v", this.Reason) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4759,12 +4855,22 @@ func (this *Virtual_Jet) String() string {
 	}, "")
 	return s
 }
-func (this *Virtual_Request) String() string {
+func (this *Virtual_IncomingRequest) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Virtual_Request{`,
-		`Request:` + strings.Replace(fmt.Sprintf("%v", this.Request), "Request", "Request", 1) + `,`,
+	s := strings.Join([]string{`&Virtual_IncomingRequest{`,
+		`IncomingRequest:` + strings.Replace(fmt.Sprintf("%v", this.IncomingRequest), "IncomingRequest", "IncomingRequest", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Virtual_OutgoingRequest) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Virtual_OutgoingRequest{`,
+		`OutgoingRequest:` + strings.Replace(fmt.Sprintf("%v", this.OutgoingRequest), "OutgoingRequest", "OutgoingRequest", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5190,7 +5296,7 @@ func (m *Jet) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Request) Unmarshal(dAtA []byte) error {
+func (m *IncomingRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -5213,10 +5319,10 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Request: wiretype end group for non-group")
+			return fmt.Errorf("proto: IncomingRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Request: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: IncomingRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 16:
@@ -5338,25 +5444,6 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.Nonce |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 24:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sequence", wireType)
-			}
-			m.Sequence = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Sequence |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -5635,6 +5722,39 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.APIRequestID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 34:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Reason", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Reason.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -5812,25 +5932,6 @@ func (m *OutgoingRequest) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 24:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sequence", wireType)
-			}
-			m.Sequence = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Sequence |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		case 25:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ReturnMode", wireType)
@@ -6105,6 +6206,39 @@ func (m *OutgoingRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.APIRequestID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 34:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Reason", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Reason.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -6808,8 +6942,9 @@ func (m *Activate) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if err := m.Memory.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+			m.Memory = append(m.Memory[:0], dAtA[iNdEx:postIndex]...)
+			if m.Memory == nil {
+				m.Memory = []byte{}
 			}
 			iNdEx = postIndex
 		case 23:
@@ -7085,8 +7220,9 @@ func (m *Amend) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if err := m.Memory.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+			m.Memory = append(m.Memory[:0], dAtA[iNdEx:postIndex]...)
+			if m.Memory == nil {
+				m.Memory = []byte{}
 			}
 			iNdEx = postIndex
 		case 23:
@@ -7665,7 +7801,7 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 104:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field IncomingRequest", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -7692,13 +7828,48 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &Request{}
+			v := &IncomingRequest{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Virtual_Request{v}
+			m.Union = &Virtual_IncomingRequest{v}
 			iNdEx = postIndex
 		case 105:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OutgoingRequest", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &OutgoingRequest{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Union = &Virtual_OutgoingRequest{v}
+			iNdEx = postIndex
+		case 106:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Result", wireType)
 			}
@@ -7733,7 +7904,7 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			}
 			m.Union = &Virtual_Result{v}
 			iNdEx = postIndex
-		case 106:
+		case 107:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Type", wireType)
 			}
@@ -7768,7 +7939,7 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			}
 			m.Union = &Virtual_Type{v}
 			iNdEx = postIndex
-		case 107:
+		case 108:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
 			}
@@ -7803,7 +7974,7 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			}
 			m.Union = &Virtual_Code{v}
 			iNdEx = postIndex
-		case 108:
+		case 109:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Activate", wireType)
 			}
@@ -7838,7 +8009,7 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			}
 			m.Union = &Virtual_Activate{v}
 			iNdEx = postIndex
-		case 109:
+		case 110:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Amend", wireType)
 			}
@@ -7873,7 +8044,7 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			}
 			m.Union = &Virtual_Amend{v}
 			iNdEx = postIndex
-		case 110:
+		case 111:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Deactivate", wireType)
 			}
@@ -7908,7 +8079,7 @@ func (m *Virtual) Unmarshal(dAtA []byte) error {
 			}
 			m.Union = &Virtual_Deactivate{v}
 			iNdEx = postIndex
-		case 111:
+		case 112:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PendingFilament", wireType)
 			}

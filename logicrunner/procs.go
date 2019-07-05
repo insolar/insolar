@@ -31,8 +31,8 @@ import (
 // ------------- CheckOurRole
 
 type CheckOurRole struct {
-	msg  insolar.Message
-	role insolar.DynamicRole
+	msg         insolar.Message
+	role        insolar.DynamicRole
 	pulseNumber insolar.PulseNumber
 
 	lr *LogicRunner
@@ -58,9 +58,9 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	return nil
 }
 
-// ------------- RegisterRequest
+// ------------- RegisterIncomingRequest
 
-type RegisterRequest struct {
+type RegisterIncomingRequest struct {
 	parcel insolar.Parcel
 
 	result chan *Ref
@@ -68,29 +68,29 @@ type RegisterRequest struct {
 	ArtifactManager artifacts.Client
 }
 
-func NewRegisterRequest(parcel insolar.Parcel, dep *Dependencies) *RegisterRequest {
-	return &RegisterRequest{
+func NewRegisterIncomingRequest(parcel insolar.Parcel, dep *Dependencies) *RegisterIncomingRequest {
+	return &RegisterIncomingRequest{
 		parcel:          parcel,
 		ArtifactManager: dep.lr.ArtifactManager,
 		result:          make(chan *Ref, 1),
 	}
 }
 
-func (r *RegisterRequest) setResult(result *Ref) { // nolint
+func (r *RegisterIncomingRequest) setResult(result *Ref) { // nolint
 	r.result <- result
 }
 
 // getResult is blocking
-func (r *RegisterRequest) getResult() *Ref { // nolint
+func (r *RegisterIncomingRequest) getResult() *Ref { // nolint
 	return <-r.result
 }
 
-func (r *RegisterRequest) Proceed(ctx context.Context) error {
-	ctx, span := instracer.StartSpan(ctx, "RegisterRequest.Proceed")
+func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "RegisterIncomingRequest.Proceed")
 	defer span.End()
 
 	msg := r.parcel.Message().(*message.CallMethod)
-	id, err := r.ArtifactManager.RegisterRequest(ctx, msg.Request)
+	id, err := r.ArtifactManager.RegisterIncomingRequest(ctx, msg.IncomingRequest)
 	if err != nil {
 		return err
 	}

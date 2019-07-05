@@ -21,7 +21,7 @@ import (
 type PendingAccessorMock struct {
 	t minimock.Tester
 
-	OpenRequestsForObjIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error)
+	OpenRequestsForObjIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.IncomingRequest, r1 error)
 	OpenRequestsForObjIDCounter    uint64
 	OpenRequestsForObjIDPreCounter uint64
 	OpenRequestsForObjIDMock       mPendingAccessorMockOpenRequestsForObjID
@@ -71,7 +71,7 @@ type PendingAccessorMockOpenRequestsForObjIDInput struct {
 }
 
 type PendingAccessorMockOpenRequestsForObjIDResult struct {
-	r  []record.Request
+	r  []record.IncomingRequest
 	r1 error
 }
 
@@ -88,7 +88,7 @@ func (m *mPendingAccessorMockOpenRequestsForObjID) Expect(p context.Context, p1 
 }
 
 //Return specifies results of invocation of PendingAccessor.OpenRequestsForObjID
-func (m *mPendingAccessorMockOpenRequestsForObjID) Return(r []record.Request, r1 error) *PendingAccessorMock {
+func (m *mPendingAccessorMockOpenRequestsForObjID) Return(r []record.IncomingRequest, r1 error) *PendingAccessorMock {
 	m.mock.OpenRequestsForObjIDFunc = nil
 	m.expectationSeries = nil
 
@@ -110,12 +110,12 @@ func (m *mPendingAccessorMockOpenRequestsForObjID) ExpectOnce(p context.Context,
 	return expectation
 }
 
-func (e *PendingAccessorMockOpenRequestsForObjIDExpectation) Return(r []record.Request, r1 error) {
+func (e *PendingAccessorMockOpenRequestsForObjIDExpectation) Return(r []record.IncomingRequest, r1 error) {
 	e.result = &PendingAccessorMockOpenRequestsForObjIDResult{r, r1}
 }
 
 //Set uses given function f as a mock of PendingAccessor.OpenRequestsForObjID method
-func (m *mPendingAccessorMockOpenRequestsForObjID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error)) *PendingAccessorMock {
+func (m *mPendingAccessorMockOpenRequestsForObjID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.IncomingRequest, r1 error)) *PendingAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -124,7 +124,7 @@ func (m *mPendingAccessorMockOpenRequestsForObjID) Set(f func(p context.Context,
 }
 
 //OpenRequestsForObjID implements github.com/insolar/insolar/ledger/object.PendingAccessor interface
-func (m *PendingAccessorMock) OpenRequestsForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.Request, r1 error) {
+func (m *PendingAccessorMock) OpenRequestsForObjID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 int) (r []record.IncomingRequest, r1 error) {
 	counter := atomic.AddUint64(&m.OpenRequestsForObjIDPreCounter, 1)
 	defer atomic.AddUint64(&m.OpenRequestsForObjIDCounter, 1)
 

@@ -45,7 +45,7 @@ type State interface {
 	// GetIsPrototype returns state code.
 	GetIsPrototype() bool
 	// GetMemory returns state indexStorage.
-	GetMemory() *insolar.ID
+	GetMemory() []byte
 	// PrevStateID returns previous state id.
 	PrevStateID() *insolar.ID
 }
@@ -62,8 +62,8 @@ func (p Activate) GetIsPrototype() bool {
 	return p.IsPrototype
 }
 
-func (p Activate) GetMemory() *insolar.ID {
-	return &p.Memory
+func (p Activate) GetMemory() []byte {
+	return p.Memory
 }
 
 func (Activate) PrevStateID() *insolar.ID {
@@ -82,8 +82,8 @@ func (p Amend) GetIsPrototype() bool {
 	return p.IsPrototype
 }
 
-func (p Amend) GetMemory() *insolar.ID {
-	return &p.Memory
+func (p Amend) GetMemory() []byte {
+	return p.Memory
 }
 
 func (p Amend) PrevStateID() *insolar.ID {
@@ -102,7 +102,7 @@ func (Deactivate) GetIsPrototype() bool {
 	return false
 }
 
-func (Deactivate) GetMemory() *insolar.ID {
+func (Deactivate) GetMemory() []byte {
 	return nil
 }
 
@@ -118,7 +118,7 @@ func (Genesis) ID() StateID {
 	return StateActivation
 }
 
-func (Genesis) GetMemory() *insolar.ID {
+func (Genesis) GetMemory() []byte {
 	return nil
 }
 
@@ -128,4 +128,9 @@ func (Genesis) GetImage() *insolar.Reference {
 
 func (Genesis) GetIsPrototype() bool {
 	return false
+}
+
+type Request interface {
+	GetObject() *insolar.Reference
+	GetReason() insolar.Reference
 }

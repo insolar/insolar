@@ -57,11 +57,13 @@ type UploadArgs struct {
 // UploadReply is reply that Contract.Upload returns
 type UploadReply struct {
 	PrototypeRef string `json:"PrototypeRef"`
+	TraceID      string `json:"TraceID"`
 }
 
 // Upload builds code and return prototype ref
 func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	reply.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
 
@@ -79,7 +81,7 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 			inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
 			return errors.Wrap(err, "can't build preprocessor")
 		}
-		s.cb = goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc)
+		s.cb = goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc, s.runner.PulseAccessor)
 	}
 
 	contractMap := make(map[string]string)
@@ -97,16 +99,20 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 // CallConstructorArgs is arguments that Contract.CallConstructor accepts.
 type CallConstructorArgs struct {
 	PrototypeRefString string
+	Method             string
+	MethodArgs         []byte
 }
 
 // CallConstructorReply is reply that Contract.CallConstructor returns
 type CallConstructorReply struct {
 	ObjectRef string `json:"ObjectRef"`
+	TraceID   string `json:"TraceID"`
 }
 
 // CallConstructor make an object from its prototype
 func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	reply.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ ContractService.CallConstructor ] Incoming request: %s", r.RequestURI)
 
@@ -119,40 +125,26 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		return errors.Wrap(err, "can't get protoRef")
 	}
 
-	base := testutils.RandomRef()
-
-	contractID, err := s.runner.ArtifactManager.RegisterRequest(
-		ctx,
-		record.Request{
-			CallType:     record.CTSaveAsChild,
-			Prototype:    &base,
-			APIRequestID: utils.TraceID(ctx),
+	base := insolar.GenesisRecord.Ref()
+	msg := &message.CallMethod{
+		IncomingRequest: record.IncomingRequest{
+			Method:          args.Method,
+			Arguments:       args.MethodArgs,
+			Base:            &base,
+			Caller:          testutils.RandomRef(),
+			CallerPrototype: testutils.RandomRef(),
+			Prototype:       protoRef,
+			CallType:        record.CTSaveAsChild,
+			APIRequestID:    utils.TraceID(ctx),
 		},
-	)
-
-	if err != nil {
-		return errors.Wrap(err, "can't register request")
 	}
 
-	objectRef := insolar.Reference{}
-	objectRef.SetRecord(*contractID)
-
-	memory, _ := insolar.Serialize(nil)
-
-	err = s.runner.ArtifactManager.ActivateObject(
-		ctx,
-		objectRef,
-		insolar.GenesisRecord.Ref(),
-		*protoRef,
-		false,
-		memory,
-	)
-
+	callConstructorReply, err := s.runner.ContractRequester.CallConstructor(ctx, msg)
 	if err != nil {
-		return errors.Wrap(err, "can't activate object")
+		return errors.Wrap(err, "CallConstructor error")
 	}
 
-	reply.ObjectRef = objectRef.String()
+	reply.ObjectRef = callConstructorReply.String()
 
 	return nil
 }
@@ -170,11 +162,13 @@ type CallMethodReply struct {
 	ExtractedReply interface{}       `json:"ExtractedReply"`
 	Error          *foundation.Error `json:"Error"`
 	ExtractedError string            `json:"ExtractedError"`
+	TraceID        string            `json:"TraceID"`
 }
 
 // CallConstructor make an object from its prototype
 func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *CallMethodReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	re.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ ContractService.CallMethod ] Incoming request: %s", r.RequestURI)
 
@@ -188,7 +182,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	}
 
 	msg := &message.CallMethod{
-		Request: record.Request{
+		IncomingRequest: record.IncomingRequest{
 			Caller:       testutils.RandomRef(),
 			Object:       objectRef,
 			Method:       args.Method,

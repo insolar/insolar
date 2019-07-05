@@ -76,7 +76,7 @@ func (r Record) Ref() insolar.Reference {
 
 // ID returns insolar.ID  to root domain object.
 func (r Record) ID() insolar.ID {
-	req := record.Request{
+	req := record.IncomingRequest{
 		CallType: record.CTGenesis,
 		Method:   insolar.GenesisNameRootDomain,
 	}
@@ -91,7 +91,7 @@ func GenesisRef(name string) insolar.Reference {
 		return ref
 	}
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
-	req := record.Request{
+	req := record.IncomingRequest{
 		CallType: record.CTGenesis,
 		Method:   name,
 	}

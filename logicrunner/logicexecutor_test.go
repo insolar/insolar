@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-func TestValidationState_ValidateMethodCall(t *testing.T) {
+func TestLogicExecutor_ExecuteMethod_ValidateMethodCall(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 	ctx := inslogger.TestContext(t)
@@ -52,12 +52,10 @@ func TestValidationState_ValidateMethodCall(t *testing.T) {
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil),
-				Request: &record.Request{
+				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
-				LogicContext: &insolar.LogicCallContext{
-
-				},
+				LogicContext: &insolar.LogicCallContext{},
 			},
 			mm: NewMachinesManagerMock(mc).
 				GetExecutorMock.
@@ -78,19 +76,82 @@ func TestValidationState_ValidateMethodCall(t *testing.T) {
 				),
 			res: &RequestResult{
 				NewMemory: []byte{1, 2, 3},
+				Result:    []byte{3, 2, 1},
+			},
+		},
+		{
+			name: "success, no memory change",
+			transcript: &Transcript{
+				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
+					ParentMock.Return(nil).
+					MemoryMock.Return([]byte{1, 2, 3}),
+				Request: &record.IncomingRequest{
+					Prototype: &protoRef,
+				},
+				LogicContext: &insolar.LogicCallContext{},
+			},
+			mm: NewMachinesManagerMock(mc).
+				GetExecutorMock.
+				Return(
+					testutils.NewMachineLogicExecutorMock(mc).
+						CallMethodMock.Return([]byte{1, 2, 3}, []byte{3, 2, 1}, nil),
+					nil,
+				),
+			dc: artifacts.NewDescriptorsCacheMock(mc).
+				ByObjectDescriptorMock.
+				Return(
+					artifacts.NewObjectDescriptorMock(mc).
+						HeadRefMock.Return(&protoRef),
+					artifacts.NewCodeDescriptorMock(mc).
+						RefMock.Return(&codeRef).
+						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
+					nil,
+				),
+			res: &RequestResult{
 				Result: []byte{3, 2, 1},
 			},
-			error: false,
+		},
+		{
+			name: "success, immutable call, no change",
+			transcript: &Transcript{
+				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
+					ParentMock.Return(nil).
+					MemoryMock.Return([]byte{1, 2, 3}),
+				Request: &record.IncomingRequest{
+					Prototype: &protoRef,
+					Immutable: true,
+				},
+				LogicContext: &insolar.LogicCallContext{},
+			},
+			mm: NewMachinesManagerMock(mc).
+				GetExecutorMock.
+				Return(
+					testutils.NewMachineLogicExecutorMock(mc).
+						CallMethodMock.Return([]byte{1, 2, 3, 4, 5}, []byte{3, 2, 1}, nil),
+					nil,
+				),
+			dc: artifacts.NewDescriptorsCacheMock(mc).
+				ByObjectDescriptorMock.
+				Return(
+					artifacts.NewObjectDescriptorMock(mc).
+						HeadRefMock.Return(&protoRef),
+					artifacts.NewCodeDescriptorMock(mc).
+						RefMock.Return(&codeRef).
+						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
+					nil,
+				),
+			res: &RequestResult{
+				Result: []byte{3, 2, 1},
+			},
 		},
 		{
 			name: "parent mismatch",
 			transcript: &Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).ParentMock.Return(nil),
-				Request: &record.Request{
+				Request: &record.IncomingRequest{
 					Prototype: &insolar.Reference{},
 				},
-				LogicContext: &insolar.LogicCallContext{
-				},
+				LogicContext: &insolar.LogicCallContext{},
 			},
 			mm: NewMachinesManagerMock(mc),
 			dc: artifacts.NewDescriptorsCacheMock(mc).

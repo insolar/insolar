@@ -267,7 +267,7 @@ func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params 
 	}
 
 	if response.Error != nil {
-		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.TraceID)
+		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.Data.TraceID)
 	}
 
 	return response.Result, nil

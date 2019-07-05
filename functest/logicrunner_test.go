@@ -38,6 +38,10 @@ type One struct {
 	Number int
 }
 
+func New() (*One, error) {
+	return &One{}, nil
+}
+
 func (c *One) Inc() (int, error) {
 	c.Number++
 	return c.Number, nil
@@ -52,7 +56,7 @@ func (c *One) Dec() (int, error) {
 	return c.Number, nil
 }
 `
-	objectRef := callConstructor(t, uploadContractOnce(t, "test", contractCode))
+	objectRef := callConstructor(t, uploadContractOnce(t, "test", contractCode), "New")
 
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objectRef, "Get")
@@ -90,6 +94,10 @@ type One struct {
 	Friend insolar.Reference
 }
 
+func New() (*One, error) {
+	return &One{}, nil
+}
+
 func (r *One) Hello(s string) (string, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
@@ -101,7 +109,7 @@ func (r *One) Hello(s string) (string, error) {
 	if err != nil {
 		return "2", err
 	}
-	
+
 	r.Friend = friend.GetReference()
 	return "Hi, " + s + "! Two said: " + res, nil
 }
@@ -111,7 +119,7 @@ func (r *One) Again(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	return "Hi, " + s + "! Two said: " + res, nil
 }
 
@@ -127,7 +135,7 @@ func (r *One) TestPayload() (two.Payload, error) {
 	p, err := f.GetPayload()
 	if err != nil { return two.Payload{}, err }
 
-	str, err := f.GetPayloadString()	
+	str, err := f.GetPayloadString()
 	if err != nil { return two.Payload{}, err }
 
 	if p.Str != str { return two.Payload{}, errors.New("Oops") }
@@ -159,7 +167,7 @@ type Payload struct {
 }
 
 func New() (*Two, error) {
-	return &Two{X:0}, nil;
+	return &Two{X:0}, nil
 }
 
 func (r *Two) Hello(s string) (string, error) {
@@ -182,7 +190,7 @@ func (r *Two) GetPayloadString() (string, error) {
 `
 
 	uploadContractOnce(t, "two", contractTwoCode)
-	objectRef := callConstructor(t, uploadContractOnce(t, "one", contractOneCode))
+	objectRef := callConstructor(t, uploadContractOnce(t, "one", contractOneCode), "New")
 
 	resp := callMethod(t, objectRef, "Hello", "ins")
 	require.Empty(t, resp.Error)
@@ -230,6 +238,10 @@ import two "github.com/insolar/insolar/application/proxy/injection_delegate_two"
 
 type One struct {
 	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
 }
 
 func (r *One) Hello(s string) (string, error) {
@@ -282,7 +294,7 @@ func (r *Two) Hello(s string) (string, error) {
 `
 
 	uploadContractOnce(t, "injection_delegate_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "injection_delegate_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "injection_delegate_one", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "Hello", "ins")
 	require.Empty(t, resp.Error)
@@ -302,6 +314,10 @@ import two "github.com/insolar/insolar/application/proxy/basic_notification_call
 
 type One struct {
 	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
 }
 
 func (r *One) Hello() error {
@@ -358,7 +374,7 @@ func (r *Two) Value() (int, error) {
 }
 `
 	uploadContractOnce(t, "basic_notification_call_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "basic_notification_call_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "basic_notification_call_one", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "Hello")
 	require.Empty(t, resp.Error)
@@ -378,12 +394,16 @@ type One struct {
 	foundation.BaseContract
 }
 
+func New() (*One, error) {
+	return &One{}, nil
+}
+
 func (r *One) Hello() (string, error) {
 	return r.GetPrototype().String(), nil
 }
 `
 	prototype := uploadContractOnce(t, "context_passing", contractOneCode)
-	obj := callConstructor(t, prototype)
+	obj := callConstructor(t, prototype, "New")
 
 	resp := callMethod(t, obj, "Hello")
 	require.Empty(t, resp.Error)
@@ -400,13 +420,17 @@ type One struct {
 	foundation.BaseContract
 }
 
+func New() (*One, error) {
+	return &One{}, nil
+}
+
 func (r *One) Kill() error {
 	r.SelfDestruct()
 	return nil
 }
 `
 
-	obj := callConstructor(t, uploadContractOnce(t, "deactivation", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "deactivation", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "Kill")
 	require.Empty(t, resp.Error)
@@ -423,6 +447,10 @@ type One struct {
 	foundation.BaseContract
 }
 
+func New() (*One, error) {
+	return &One{}, nil
+}
+
 func (r *One) Panic() error {
 	return errors.New("test")
 }
@@ -430,94 +458,13 @@ func (r *One) NotPanic() error {
 	return nil
 }
 `
-	obj := callConstructor(t, uploadContractOnce(t, "panic", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "panic", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "Panic") // need to check error
 	require.Equal(t, "test", resp.ExtractedError)
 
 	resp = callMethod(t, obj, "NotPanic") // no error
 	require.Empty(t, resp.ExtractedError)
-}
-
-func TestGetChildren(t *testing.T) {
-	goContract := `
-package main
-
-import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	child "github.com/insolar/insolar/application/proxy/get_children_child"
-)
-
-type Contract struct {
-	foundation.BaseContract
-}
-
-func (c *Contract) NewChilds(cnt int) (int, error) {
-	s := 0
-	for i := 1; i < cnt; i++ {
-        child.New(i).AsChild(c.GetReference())
-		s += i
-	} 
-	return s, nil
-}
-
-func (c *Contract) SumChildsByIterator() (int, error) {
-	s := 0
-	iterator, err := c.NewChildrenTypedIterator(child.GetPrototype())
-	if err != nil {
-		return 0, err
-	}
-
-	for iterator.HasNext() {
-		chref, err := iterator.Next()
-		if err != nil {
-			return 0, err
-		}
-
-		o := child.GetObject(chref)
-		n, err := o.GetNum()
-		if err != nil {
-			return 0, err
-		}
-		s += n
-	}
-	return s, nil
-}
-
-`
-	goChild := `
-package main
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-
-type Child struct {
-	foundation.BaseContract
-	Num int
-}
-
-func (c *Child) GetNum() (int, error) {
-	return c.Num, nil
-}
-
-
-func New(n int) (*Child, error) {
-	return &Child{Num: n}, nil
-}
-`
-
-	uploadContractOnce(t, "get_children_child", goChild)
-	obj := callConstructor(t, uploadContractOnce(t, "get_children_one", goContract))
-
-	resp := callMethod(t, obj, "SumChildsByIterator")
-	require.Empty(t, resp.Error, "empty children")
-	require.Equal(t, float64(0), resp.ExtractedReply)
-
-	resp = callMethod(t, obj, "NewChilds", 10)
-	require.Empty(t, resp.Error, "add children")
-	require.Equal(t, float64(45), resp.ExtractedReply)
-
-	resp = callMethod(t, obj, "SumChildsByIterator")
-	require.Empty(t, resp.Error, "sum real children")
-	require.Equal(t, float64(45), resp.ExtractedReply)
 }
 
 func TestErrorInterface(t *testing.T) {
@@ -531,6 +478,10 @@ import (
 
 type One struct {
 	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
 }
 
 func (r *One) AnError() error {
@@ -577,7 +528,7 @@ func (r *Two) NoError() error {
 }
 `
 	uploadContractOnce(t, "error_interface_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "error_interface_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "error_interface_one", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "AnError")
 	require.Equal(t, "an error", resp.ExtractedError)
@@ -597,6 +548,10 @@ import (
 
 type One struct {
 	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
 }
 
 func (r *One) Hello() (*string, error) {
@@ -629,7 +584,7 @@ func (r *Two) Hello() (*string, error) {
 `
 
 	uploadContractOnce(t, "nil_result_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "nil_result_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "nil_result_one", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "Hello")
 	require.Empty(t, resp.Error)
@@ -647,6 +602,10 @@ import (
 
 type One struct {
 	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
 }
 
 func (r *One) Hello() (*string, error) {
@@ -675,7 +634,7 @@ func New() (*Two, error) {
 }
 `
 	uploadContractOnce(t, "constructor_return_nil_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_nil_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_nil_one", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "Hello")
 	require.NotEmpty(t, resp.Reply)
@@ -710,62 +669,31 @@ func (r *One) Recursive() (error) {
 }
 
 `
-	obj := callConstructor(t, uploadContractOnce(t, "recursive_call_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "recursive_call_one", contractOneCode), "New")
 	resp := callMethod(t, obj, "Recursive")
 	require.Contains(t, resp.ExtractedError, "loop detected")
-}
-
-func TestNewAllowanceNotFromWallet(t *testing.T) {
-	t.Skip("INS-2706 Unskip after fixing `can't open plugin` error ")
-	var contractOneCode = `
-package main
-import (
-	"fmt"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/application/proxy/allowance"
-	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/insolar"
-)
-type One struct {
-	foundation.BaseContract
-}
-func (r *One) CreateAllowance(member string) (error) {
-	memberRef, refErr := insolar.NewReferenceFromBase58(member)
-	if refErr != nil {
-		return refErr
-	}
-	w, _ := wallet.GetImplementationFrom(*memberRef)
-	walletRef := w.GetReference()
-	ah := allowance.New(&walletRef, 111, r.GetContext().Time.Unix()+10)
-	_, err := ah.AsChild(walletRef)
-	if err != nil {
-		return fmt.Errorf("Error:", err.Error())
-	}
-	return nil
-}
-`
-	obj := callConstructor(t, uploadContractOnce(t, "new_allowance_not_from_wallet", contractOneCode))
-	member := createMember(t)
-
-	resp := callMethod(t, obj, "CreateAllowance", member.ref)
-	require.NotEmpty(t, resp.Error)
-	require.Contains(t, resp.Error.Error(), "[ New Allowance ] : Can't create allowance from not wallet contract")
 }
 
 func TestGetParent(t *testing.T) {
 	var contractOneCode = `
  package main
- import ( 
+
+ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
  	"github.com/insolar/insolar/insolar"
 	two "github.com/insolar/insolar/application/proxy/get_parent_two"
  )
- 
+
  type One struct {
 	foundation.BaseContract
  }
 
- func (r *One) AddChildAndReturnMyselfAsParent() (string, error) {
+
+func New() (*One, error) {
+	return &One{}, nil
+}
+
+func (r *One) AddChildAndReturnMyselfAsParent() (string, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
@@ -776,26 +704,27 @@ func TestGetParent(t *testing.T) {
 }
 `
 	var contractTwoCode = `
- package main
- import (
+package main
+
+import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
- )
+)
 
- type Two struct {
+type Two struct {
 	foundation.BaseContract
- }
+}
 
- func New() (*Two, error) {
+func New() (*Two, error) {
 	return &Two{}, nil
- }
+}
 
- func (r *Two) GetParent() (string, error) {
+func (r *Two) GetParent() (string, error) {
 	return r.GetContext().Parent.String(), nil
- }
+}
 `
 
 	uploadContractOnce(t, "get_parent_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "get_parent_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "get_parent_one", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "AddChildAndReturnMyselfAsParent")
 	require.Empty(t, resp.Error)
@@ -809,15 +738,23 @@ func TestGinsiderMustDieAfterInsolardError(t *testing.T) {
 
 func TestGetRemoteData(t *testing.T) {
 	var contractOneCode = `
- package main
- import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
- import two "github.com/insolar/insolar/application/proxy/get_remote_data_two"
- import "github.com/insolar/insolar/insolar"
- type One struct {
-	foundation.BaseContract
- }
+package main
 
- func (r *One) GetChildPrototype() (string, error) {
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	two "github.com/insolar/insolar/application/proxy/get_remote_data_two"
+	"github.com/insolar/insolar/insolar"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
+}
+
+func (r *One) GetChildPrototype() (string, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
@@ -826,22 +763,25 @@ func TestGetRemoteData(t *testing.T) {
 
 	ref, err := child.GetPrototype()
  	return ref.String(), err
- }
+}
 `
 	var contractTwoCode = `
- package main
- import (
+package main
+
+import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
- )
- type Two struct {
+)
+ 
+type Two struct {
 	foundation.BaseContract
- }
- func New() (*Two, error) {
+}
+
+func New() (*Two, error) {
 	return &Two{}, nil
- }
- `
+}
+`
 	codeTwoRef := uploadContractOnce(t, "get_remote_data_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "get_remote_data_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "get_remote_data_one", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "GetChildPrototype")
 	require.Empty(t, resp.Error)
@@ -850,14 +790,22 @@ func TestGetRemoteData(t *testing.T) {
 
 func TestNoLoopsWhileNotificationCall(t *testing.T) {
 	var contractOneCode = `
- package main
- import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
- import two "github.com/insolar/insolar/application/proxy/no_loops_while_notification_call_two"
+package main
 
- type One struct {
-	foundation.BaseContract 
- }
- func (r *One) IncrementBy100() (int, error) {
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	two "github.com/insolar/insolar/application/proxy/no_loops_while_notification_call_two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
+}
+
+func (r *One) IncrementBy100() (int, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
@@ -869,33 +817,34 @@ func TestNoLoopsWhileNotificationCall(t *testing.T) {
 	}
 
  	return child.GetCounter()
- }
+}
 `
 	var contractTwoCode = `
- package main
- import (
+package main
+
+import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
- )
- type Two struct {
+)
+
+type Two struct {
 	foundation.BaseContract
 	Counter int
- }
- func New() (*Two, error) {
+}
+func New() (*Two, error) {
 	return &Two{}, nil
- }
+}
 
- func (r *Two) Increase() error {
+func (r *Two) Increase() error {
  	r.Counter++
 	return nil
- }
+}
 
- func (r *Two) GetCounter() (int, error) {
+func (r *Two) GetCounter() (int, error) {
 	return r.Counter, nil
- }
-
+}
 `
 	uploadContractOnce(t, "no_loops_while_notification_call_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "no_loops_while_notification_call_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "no_loops_while_notification_call_one", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "IncrementBy100")
 	require.Empty(t, resp.Error)
@@ -911,6 +860,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+func New() (*Contract, error) {
+	return &Contract{}, nil
+}
+
 type Contract struct {
 	foundation.BaseContract
 }
@@ -923,7 +876,10 @@ func (c *Contract) Test(firstRef *insolar.Reference) (string, error) {
 	// right contract
 	firstContract := `
 package main
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
 
 type First struct {
 	foundation.BaseContract
@@ -937,10 +893,17 @@ func (c *First) GetName() (string, error) {
 	// malicious contract with same method signature and another behaviour
 	secondContract := `
 package main
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
 
 type First struct {
 	foundation.BaseContract
+}
+
+func New() (*First, error) {
+	return &First{}, nil
 }
 
 func (c *First) GetName() (string, error) {
@@ -949,8 +912,8 @@ func (c *First) GetName() (string, error) {
 `
 
 	uploadContractOnce(t, "prototype_mismatch_first", firstContract)
-	secondObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_second", secondContract))
-	testObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_test", testContract))
+	secondObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_second", secondContract), "New")
+	testObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_test", testContract), "New")
 
 	resp := callMethod(t, testObj, "Test", *secondObj)
 
@@ -965,11 +928,17 @@ func TestImmutableAnnotation(t *testing.T) {
 	var contractOneCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import two "github.com/insolar/insolar/application/proxy/immutable_annotation_two"
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	two "github.com/insolar/insolar/application/proxy/immutable_annotation_two"
+)
 
 type One struct {
 	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
 }
 
 func (r *One) ExternalImmutableCall() (int, error) {
@@ -994,8 +963,10 @@ func (r *One) ExternalImmutableCallMakesExternalCall() (error) {
 	var contractTwoCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import three "github.com/insolar/insolar/application/proxy/immutable_annotation_three"
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	three "github.com/insolar/insolar/application/proxy/immutable_annotation_three"
+)
 
 type Two struct {
 	foundation.BaseContract
@@ -1042,7 +1013,7 @@ func (r *Three) DoNothing() (error) {
 
 	uploadContractOnce(t, "immutable_annotation_three", contractThreeCode)
 	uploadContractOnce(t, "immutable_annotation_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "immutable_annotation_one", contractOneCode))
+	obj := callConstructor(t, uploadContractOnce(t, "immutable_annotation_one", contractOneCode), "New")
 
 	resp := callMethod(t, obj, "ExternalImmutableCall")
 	require.Empty(t, resp.Error)
@@ -1054,4 +1025,45 @@ func (r *Three) DoNothing() (error) {
 		"[ RouteCall ] on calling main API: Try to call route from immutable method",
 		resp.ExtractedError,
 	)
+}
+
+func TestMultipleConstructorsCall(t *testing.T) {
+	var contractCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+	Number int
+}
+
+func New() (*One, error) {
+	return &One{Number: 0}, nil
+}
+
+func NewWithNumber(num int) (*One, error) {
+	return &One{Number: num}, nil
+}
+
+func (c *One) Get() (int, error) {
+	return c.Number, nil
+}
+`
+
+	prototypeRef := uploadContractOnce(t, "test_multiple_constructor", contractCode)
+
+	objRef := callConstructor(t, prototypeRef, "New")
+
+	// be careful - jsonUnmarshal convert json numbers to float64
+	result := callMethod(t, objRef, "Get")
+	require.Empty(t, result.Error)
+	require.Equal(t, float64(0), result.ExtractedReply)
+
+	objRef = callConstructor(t, prototypeRef, "NewWithNumber", 12)
+
+	// be careful - jsonUnmarshal convert json numbers to float64
+	result = callMethod(t, objRef, "Get")
+	require.Empty(t, result.Error)
+	require.Equal(t, float64(12), result.ExtractedReply)
 }

@@ -26,10 +26,20 @@ type FilamentCalculatorMock struct {
 	PendingRequestsPreCounter uint64
 	PendingRequestsMock       mFilamentCalculatorMockPendingRequests
 
+	RequestDuplicateFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error)
+	RequestDuplicateCounter    uint64
+	RequestDuplicatePreCounter uint64
+	RequestDuplicateMock       mFilamentCalculatorMockRequestDuplicate
+
 	RequestsFunc       func(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.PulseNumber) (r []record.CompositeFilamentRecord, r1 error)
 	RequestsCounter    uint64
 	RequestsPreCounter uint64
 	RequestsMock       mFilamentCalculatorMockRequests
+
+	ResultDuplicateFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) (r *record.CompositeFilamentRecord, r1 error)
+	ResultDuplicateCounter    uint64
+	ResultDuplicatePreCounter uint64
+	ResultDuplicateMock       mFilamentCalculatorMockResultDuplicate
 }
 
 //NewFilamentCalculatorMock returns a mock for github.com/insolar/insolar/ledger/light/executor.FilamentCalculator
@@ -41,7 +51,9 @@ func NewFilamentCalculatorMock(t minimock.Tester) *FilamentCalculatorMock {
 	}
 
 	m.PendingRequestsMock = mFilamentCalculatorMockPendingRequests{mock: m}
+	m.RequestDuplicateMock = mFilamentCalculatorMockRequestDuplicate{mock: m}
 	m.RequestsMock = mFilamentCalculatorMockRequests{mock: m}
+	m.ResultDuplicateMock = mFilamentCalculatorMockResultDuplicate{mock: m}
 
 	return m
 }
@@ -193,6 +205,163 @@ func (m *FilamentCalculatorMock) PendingRequestsFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.PendingRequestsFunc != nil {
 		return atomic.LoadUint64(&m.PendingRequestsCounter) > 0
+	}
+
+	return true
+}
+
+type mFilamentCalculatorMockRequestDuplicate struct {
+	mock              *FilamentCalculatorMock
+	mainExpectation   *FilamentCalculatorMockRequestDuplicateExpectation
+	expectationSeries []*FilamentCalculatorMockRequestDuplicateExpectation
+}
+
+type FilamentCalculatorMockRequestDuplicateExpectation struct {
+	input  *FilamentCalculatorMockRequestDuplicateInput
+	result *FilamentCalculatorMockRequestDuplicateResult
+}
+
+type FilamentCalculatorMockRequestDuplicateInput struct {
+	p  context.Context
+	p1 insolar.PulseNumber
+	p2 insolar.ID
+	p3 insolar.ID
+	p4 record.Request
+}
+
+type FilamentCalculatorMockRequestDuplicateResult struct {
+	r  *record.CompositeFilamentRecord
+	r1 *record.CompositeFilamentRecord
+	r2 error
+}
+
+//Expect specifies that invocation of FilamentCalculator.RequestDuplicate is expected from 1 to Infinity times
+func (m *mFilamentCalculatorMockRequestDuplicate) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) *mFilamentCalculatorMockRequestDuplicate {
+	m.mock.RequestDuplicateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &FilamentCalculatorMockRequestDuplicateExpectation{}
+	}
+	m.mainExpectation.input = &FilamentCalculatorMockRequestDuplicateInput{p, p1, p2, p3, p4}
+	return m
+}
+
+//Return specifies results of invocation of FilamentCalculator.RequestDuplicate
+func (m *mFilamentCalculatorMockRequestDuplicate) Return(r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) *FilamentCalculatorMock {
+	m.mock.RequestDuplicateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &FilamentCalculatorMockRequestDuplicateExpectation{}
+	}
+	m.mainExpectation.result = &FilamentCalculatorMockRequestDuplicateResult{r, r1, r2}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of FilamentCalculator.RequestDuplicate is expected once
+func (m *mFilamentCalculatorMockRequestDuplicate) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) *FilamentCalculatorMockRequestDuplicateExpectation {
+	m.mock.RequestDuplicateFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &FilamentCalculatorMockRequestDuplicateExpectation{}
+	expectation.input = &FilamentCalculatorMockRequestDuplicateInput{p, p1, p2, p3, p4}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *FilamentCalculatorMockRequestDuplicateExpectation) Return(r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
+	e.result = &FilamentCalculatorMockRequestDuplicateResult{r, r1, r2}
+}
+
+//Set uses given function f as a mock of FilamentCalculator.RequestDuplicate method
+func (m *mFilamentCalculatorMockRequestDuplicate) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error)) *FilamentCalculatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.RequestDuplicateFunc = f
+	return m.mock
+}
+
+//RequestDuplicate implements github.com/insolar/insolar/ledger/light/executor.FilamentCalculator interface
+func (m *FilamentCalculatorMock) RequestDuplicate(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
+	counter := atomic.AddUint64(&m.RequestDuplicatePreCounter, 1)
+	defer atomic.AddUint64(&m.RequestDuplicateCounter, 1)
+
+	if len(m.RequestDuplicateMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RequestDuplicateMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to FilamentCalculatorMock.RequestDuplicate. %v %v %v %v %v", p, p1, p2, p3, p4)
+			return
+		}
+
+		input := m.RequestDuplicateMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, FilamentCalculatorMockRequestDuplicateInput{p, p1, p2, p3, p4}, "FilamentCalculator.RequestDuplicate got unexpected parameters")
+
+		result := m.RequestDuplicateMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the FilamentCalculatorMock.RequestDuplicate")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
+	}
+
+	if m.RequestDuplicateMock.mainExpectation != nil {
+
+		input := m.RequestDuplicateMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, FilamentCalculatorMockRequestDuplicateInput{p, p1, p2, p3, p4}, "FilamentCalculator.RequestDuplicate got unexpected parameters")
+		}
+
+		result := m.RequestDuplicateMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the FilamentCalculatorMock.RequestDuplicate")
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
+	}
+
+	if m.RequestDuplicateFunc == nil {
+		m.t.Fatalf("Unexpected call to FilamentCalculatorMock.RequestDuplicate. %v %v %v %v %v", p, p1, p2, p3, p4)
+		return
+	}
+
+	return m.RequestDuplicateFunc(p, p1, p2, p3, p4)
+}
+
+//RequestDuplicateMinimockCounter returns a count of FilamentCalculatorMock.RequestDuplicateFunc invocations
+func (m *FilamentCalculatorMock) RequestDuplicateMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RequestDuplicateCounter)
+}
+
+//RequestDuplicateMinimockPreCounter returns the value of FilamentCalculatorMock.RequestDuplicate invocations
+func (m *FilamentCalculatorMock) RequestDuplicateMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RequestDuplicatePreCounter)
+}
+
+//RequestDuplicateFinished returns true if mock invocations count is ok
+func (m *FilamentCalculatorMock) RequestDuplicateFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.RequestDuplicateMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RequestDuplicateCounter) == uint64(len(m.RequestDuplicateMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.RequestDuplicateMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RequestDuplicateCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.RequestDuplicateFunc != nil {
+		return atomic.LoadUint64(&m.RequestDuplicateCounter) > 0
 	}
 
 	return true
@@ -352,6 +521,160 @@ func (m *FilamentCalculatorMock) RequestsFinished() bool {
 	return true
 }
 
+type mFilamentCalculatorMockResultDuplicate struct {
+	mock              *FilamentCalculatorMock
+	mainExpectation   *FilamentCalculatorMockResultDuplicateExpectation
+	expectationSeries []*FilamentCalculatorMockResultDuplicateExpectation
+}
+
+type FilamentCalculatorMockResultDuplicateExpectation struct {
+	input  *FilamentCalculatorMockResultDuplicateInput
+	result *FilamentCalculatorMockResultDuplicateResult
+}
+
+type FilamentCalculatorMockResultDuplicateInput struct {
+	p  context.Context
+	p1 insolar.PulseNumber
+	p2 insolar.ID
+	p3 insolar.ID
+	p4 record.Result
+}
+
+type FilamentCalculatorMockResultDuplicateResult struct {
+	r  *record.CompositeFilamentRecord
+	r1 error
+}
+
+//Expect specifies that invocation of FilamentCalculator.ResultDuplicate is expected from 1 to Infinity times
+func (m *mFilamentCalculatorMockResultDuplicate) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) *mFilamentCalculatorMockResultDuplicate {
+	m.mock.ResultDuplicateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &FilamentCalculatorMockResultDuplicateExpectation{}
+	}
+	m.mainExpectation.input = &FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3, p4}
+	return m
+}
+
+//Return specifies results of invocation of FilamentCalculator.ResultDuplicate
+func (m *mFilamentCalculatorMockResultDuplicate) Return(r *record.CompositeFilamentRecord, r1 error) *FilamentCalculatorMock {
+	m.mock.ResultDuplicateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &FilamentCalculatorMockResultDuplicateExpectation{}
+	}
+	m.mainExpectation.result = &FilamentCalculatorMockResultDuplicateResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of FilamentCalculator.ResultDuplicate is expected once
+func (m *mFilamentCalculatorMockResultDuplicate) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) *FilamentCalculatorMockResultDuplicateExpectation {
+	m.mock.ResultDuplicateFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &FilamentCalculatorMockResultDuplicateExpectation{}
+	expectation.input = &FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3, p4}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *FilamentCalculatorMockResultDuplicateExpectation) Return(r *record.CompositeFilamentRecord, r1 error) {
+	e.result = &FilamentCalculatorMockResultDuplicateResult{r, r1}
+}
+
+//Set uses given function f as a mock of FilamentCalculator.ResultDuplicate method
+func (m *mFilamentCalculatorMockResultDuplicate) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) (r *record.CompositeFilamentRecord, r1 error)) *FilamentCalculatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ResultDuplicateFunc = f
+	return m.mock
+}
+
+//ResultDuplicate implements github.com/insolar/insolar/ledger/light/executor.FilamentCalculator interface
+func (m *FilamentCalculatorMock) ResultDuplicate(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) (r *record.CompositeFilamentRecord, r1 error) {
+	counter := atomic.AddUint64(&m.ResultDuplicatePreCounter, 1)
+	defer atomic.AddUint64(&m.ResultDuplicateCounter, 1)
+
+	if len(m.ResultDuplicateMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ResultDuplicateMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to FilamentCalculatorMock.ResultDuplicate. %v %v %v %v %v", p, p1, p2, p3, p4)
+			return
+		}
+
+		input := m.ResultDuplicateMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3, p4}, "FilamentCalculator.ResultDuplicate got unexpected parameters")
+
+		result := m.ResultDuplicateMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the FilamentCalculatorMock.ResultDuplicate")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ResultDuplicateMock.mainExpectation != nil {
+
+		input := m.ResultDuplicateMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3, p4}, "FilamentCalculator.ResultDuplicate got unexpected parameters")
+		}
+
+		result := m.ResultDuplicateMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the FilamentCalculatorMock.ResultDuplicate")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ResultDuplicateFunc == nil {
+		m.t.Fatalf("Unexpected call to FilamentCalculatorMock.ResultDuplicate. %v %v %v %v %v", p, p1, p2, p3, p4)
+		return
+	}
+
+	return m.ResultDuplicateFunc(p, p1, p2, p3, p4)
+}
+
+//ResultDuplicateMinimockCounter returns a count of FilamentCalculatorMock.ResultDuplicateFunc invocations
+func (m *FilamentCalculatorMock) ResultDuplicateMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ResultDuplicateCounter)
+}
+
+//ResultDuplicateMinimockPreCounter returns the value of FilamentCalculatorMock.ResultDuplicate invocations
+func (m *FilamentCalculatorMock) ResultDuplicateMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ResultDuplicatePreCounter)
+}
+
+//ResultDuplicateFinished returns true if mock invocations count is ok
+func (m *FilamentCalculatorMock) ResultDuplicateFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ResultDuplicateMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ResultDuplicateCounter) == uint64(len(m.ResultDuplicateMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ResultDuplicateMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ResultDuplicateCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ResultDuplicateFunc != nil {
+		return atomic.LoadUint64(&m.ResultDuplicateCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *FilamentCalculatorMock) ValidateCallCounters() {
@@ -360,8 +683,16 @@ func (m *FilamentCalculatorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to FilamentCalculatorMock.PendingRequests")
 	}
 
+	if !m.RequestDuplicateFinished() {
+		m.t.Fatal("Expected call to FilamentCalculatorMock.RequestDuplicate")
+	}
+
 	if !m.RequestsFinished() {
 		m.t.Fatal("Expected call to FilamentCalculatorMock.Requests")
+	}
+
+	if !m.ResultDuplicateFinished() {
+		m.t.Fatal("Expected call to FilamentCalculatorMock.ResultDuplicate")
 	}
 
 }
@@ -385,8 +716,16 @@ func (m *FilamentCalculatorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to FilamentCalculatorMock.PendingRequests")
 	}
 
+	if !m.RequestDuplicateFinished() {
+		m.t.Fatal("Expected call to FilamentCalculatorMock.RequestDuplicate")
+	}
+
 	if !m.RequestsFinished() {
 		m.t.Fatal("Expected call to FilamentCalculatorMock.Requests")
+	}
+
+	if !m.ResultDuplicateFinished() {
+		m.t.Fatal("Expected call to FilamentCalculatorMock.ResultDuplicate")
 	}
 
 }
@@ -404,7 +743,9 @@ func (m *FilamentCalculatorMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.PendingRequestsFinished()
+		ok = ok && m.RequestDuplicateFinished()
 		ok = ok && m.RequestsFinished()
+		ok = ok && m.ResultDuplicateFinished()
 
 		if ok {
 			return
@@ -417,8 +758,16 @@ func (m *FilamentCalculatorMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to FilamentCalculatorMock.PendingRequests")
 			}
 
+			if !m.RequestDuplicateFinished() {
+				m.t.Error("Expected call to FilamentCalculatorMock.RequestDuplicate")
+			}
+
 			if !m.RequestsFinished() {
 				m.t.Error("Expected call to FilamentCalculatorMock.Requests")
+			}
+
+			if !m.ResultDuplicateFinished() {
+				m.t.Error("Expected call to FilamentCalculatorMock.ResultDuplicate")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -437,7 +786,15 @@ func (m *FilamentCalculatorMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.RequestDuplicateFinished() {
+		return false
+	}
+
 	if !m.RequestsFinished() {
+		return false
+	}
+
+	if !m.ResultDuplicateFinished() {
 		return false
 	}
 
