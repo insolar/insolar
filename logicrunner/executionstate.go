@@ -67,7 +67,7 @@ func NewExecutionStateMethods(lr *LogicRunner, es *ExecutionState) *ExecutionSta
 	}
 }
 
-func (m *ExecutionStateMethods) Check(ctx context.Context) error {
+func (m *ExecutionStateMethods) Check(ctx context.Context) bool {
 	es := m.es
 	logger := inslogger.FromContext(ctx)
 
@@ -76,27 +76,27 @@ func (m *ExecutionStateMethods) Check(ctx context.Context) error {
 	if es.pending == message.PendingUnknown {
 		logger.Debug("One shouldn't call ExecuteTranscript in case when pending state is unknown")
 		es.Unlock()
-		return ErrRetryLater
+		return false
 	} else if es.pending == message.InPending {
 		logger.Debug("Object in pending, wont start queue processor")
 		es.Unlock()
-		return ErrRetryLater
+		return false
 	}
 	es.Unlock()
 
-	return nil
+	return true
 }
-func (m *ExecutionStateMethods) Execute(ctx context.Context, t *Transcript) error {
+func (m *ExecutionStateMethods) Execute(ctx context.Context, t *Transcript) bool {
 	es := m.es
 
 	logger := inslogger.FromContext(ctx)
 
 	pub := m.lr.publisher
 
-	if err := m.Check(ctx); err != nil {
+	if readyToExecute := m.Check(ctx); !readyToExecute {
 		// we can get only "ErrRetryLater" here, so we'll pass it up and our
 		// caller will find some way to process it
-		return err
+		return false
 	}
 
 	// Ask ledger kindly to give us next pending task and continue execution
@@ -131,7 +131,7 @@ func (m *ExecutionStateMethods) Execute(ctx context.Context, t *Transcript) erro
 	//       pulse changed and we should stop execution
 	m.lr.finishPendingIfNeeded(ctx, es)
 
-	return nil
+	return true
 }
 
 func (es *ExecutionState) RegisterLogicRunner(lr *LogicRunner) {

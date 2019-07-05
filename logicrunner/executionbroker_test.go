@@ -186,12 +186,12 @@ func (s *ExecutionBrokerSuite) TestPut() {
 
 	waitChannel := make(chan struct{})
 	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
-	methodsMock.CheckMock.Return(nil)
-	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) error {
+	methodsMock.CheckMock.Return(true)
+	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) bool {
 		if !t.Request.Immutable {
 			waitChannel <- struct{}{}
 		}
-		return nil
+		return true
 	})
 
 	b := NewExecutionBroker(methodsMock)
@@ -239,12 +239,12 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 
 	waitChannel := make(chan struct{})
 	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
-	methodsMock.CheckMock.Return(nil)
-	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) error {
+	methodsMock.CheckMock.Return(true)
+	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) bool {
 		if !t.Request.Immutable {
 			waitChannel <- struct{}{}
 		}
-		return nil
+		return true
 	})
 
 	b := NewExecutionBroker(methodsMock)
@@ -292,14 +292,14 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	waitImmutableChannel := make(chan struct{})
 
 	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
-	methodsMock.CheckMock.Return(nil)
-	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) error {
+	methodsMock.CheckMock.Return(true)
+	methodsMock.ExecuteMock.Set(func(_ context.Context, t *Transcript) bool {
 		if !t.Request.Immutable {
 			waitMutableChannel <- struct{}{}
 		} else {
 			waitImmutableChannel <- struct{}{}
 		}
-		return nil
+		return true
 	})
 
 	b := NewExecutionBroker(methodsMock)
@@ -341,7 +341,7 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	}
 
 	// we can't process messages, do not do it
-	methodsMock.CheckMock.Return(ErrRetryLater)
+	methodsMock.CheckMock.Return(false)
 
 	b.Prepend(ctx, false, tr)
 	s.Require().True(wait(func() bool { return b.immutable.Len() == 1 }), "failed to wait until immutable was put")
@@ -373,8 +373,8 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 func (s *ExecutionBrokerSuite) TestRotate() {
 	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
-	methodsMock.CheckMock.Return(nil)
-	methodsMock.ExecuteMock.Return(nil)
+	methodsMock.CheckMock.Return(true)
+	methodsMock.ExecuteMock.Return(true)
 	b := NewExecutionBroker(methodsMock)
 
 	for i := 0; i < 4; i++ {
@@ -437,7 +437,7 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 	ctx := context.TODO()
 
 	methodsMock := NewExecutionBrokerMethodsMock(s.Controller)
-	methodsMock.CheckMock.Return(ErrRetryLater)
+	methodsMock.CheckMock.Return(false)
 	b := NewExecutionBroker(methodsMock)
 
 	reqRef1 := gen.Reference()

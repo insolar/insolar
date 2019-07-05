@@ -32,8 +32,8 @@ import (
 
 func NewBroker(t *testing.T, ctx context.Context, count int) *ExecutionBroker {
 	mock := NewExecutionBrokerMethodsMock(t)
-	mock.CheckMock.Return(nil)
-	mock.ExecuteMock.Return(nil)
+	mock.CheckMock.Return(true)
+	mock.ExecuteMock.Return(true)
 	br := NewExecutionBroker(mock)
 	for i := 0; i < count; i++ {
 		reqRef := gen.Reference()

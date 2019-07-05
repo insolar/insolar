@@ -135,8 +135,8 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerMethods -o ./ -s _mock.go
 type ExecutionBrokerMethods interface {
-	Check(context.Context) error
-	Execute(context.Context, *Transcript) error
+	Check(context.Context) bool
+	Execute(context.Context, *Transcript) bool
 }
 
 type ExecutionBroker struct {
@@ -167,40 +167,25 @@ type ExecutionBrokerRotationResult struct {
 func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Transcript) {
 	defer q.releaseTask(ctx, transcript)
 
-	logger := inslogger.FromContext(ctx).WithField("RequestReference", transcript.RequestRef)
-
-	if err := q.methods.Check(ctx); err == ErrRetryLater {
-		return
-	} else if err != nil {
-		logger.Error("[ processImmutable ] check function returned error:", err)
+	if readyToExecute := q.methods.Check(ctx); !readyToExecute {
 		return
 	}
 
-	err := q.methods.Execute(ctx, transcript)
-	if err == ErrRetryLater {
+	if wasExecuted := q.methods.Execute(ctx, transcript); !wasExecuted {
 		return
 	}
 
-	q.finishTask(ctx, transcript, err != nil)
-	if err != nil {
-		logger.Error("[ processImmutable ] Failed to process immutable Transcript:", err)
-	}
+	q.finishTask(ctx, transcript)
 }
 
 func (q *ExecutionBroker) processMutable(ctx context.Context, transcript *Transcript) bool {
 	defer q.releaseTask(ctx, transcript)
 
-	logger := inslogger.FromContext(ctx).WithField("RequestReference", transcript.RequestRef)
-
-	err := q.methods.Execute(ctx, transcript)
-	if err == ErrRetryLater {
+	if wasExecuted := q.methods.Execute(ctx, transcript); !wasExecuted {
 		return false
 	}
 
-	q.finishTask(ctx, transcript, err != nil)
-	if err != nil {
-		logger.Error("[ processMutable ] Failed to process immutable Transcript:", err)
-	}
+	q.finishTask(ctx, transcript)
 	return true
 }
 
@@ -256,7 +241,7 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 	}
 }
 
-func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *Transcript {
+func (q *ExecutionBroker) getImmutableTask(_ context.Context) *Transcript {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -264,13 +249,12 @@ func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *Transcript {
 	if transcript == nil {
 		return nil
 	}
-	inslogger.FromContext(ctx).Error("put immutable: ", transcript.RequestRef.String())
 	q.currentList.Set(*transcript.RequestRef, transcript)
 
 	return transcript
 }
 
-func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
+func (q *ExecutionBroker) getMutableTask(_ context.Context) *Transcript {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -278,27 +262,21 @@ func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
 	if transcript == nil {
 		return nil
 	}
-	inslogger.FromContext(ctx).Error("put mutable: ", transcript.RequestRef.String())
 	q.currentList.Set(*transcript.RequestRef, transcript)
 
 	return transcript
 }
 
-func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript, isErrored bool) {
+func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript) {
 	logger := inslogger.FromContext(ctx)
 
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	if !isErrored {
-		q.finished.Push(transcript)
-	} else {
-		q.errored.Push(transcript)
-	}
+	q.finished.Push(transcript)
 
 	if !q.currentList.Has(*transcript.RequestRef) {
-		logger.Error(transcript.RequestRef.String())
-		logger.Error("[ ExecutionBroker.FinishTask ] task is not in current")
+		logger.Error("[ ExecutionBroker.FinishTask ] task '%s' is not in current", transcript.RequestRef.String())
 	} else {
 		q.currentList.Delete(*transcript.RequestRef)
 	}
@@ -345,8 +323,6 @@ func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference
 }
 
 func (q *ExecutionBroker) startProcessor(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-
 	defer func() {
 		q.processLock.Lock()
 		q.processActive = false
@@ -354,10 +330,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	}()
 
 	// сhecking we're eligible to execute contracts
-	if err := q.methods.Check(ctx); err == ErrRetryLater {
-		return
-	} else if err != nil {
-		logger.Error("[ processImmutable ] check function returned error:", err)
+	if readyToExecute := q.methods.Check(ctx); !readyToExecute {
 		return
 	}
 

@@ -19,12 +19,12 @@ import (
 type ExecutionBrokerMethodsMock struct {
 	t minimock.Tester
 
-	CheckFunc       func(p context.Context) (r error)
+	CheckFunc       func(p context.Context) (r bool)
 	CheckCounter    uint64
 	CheckPreCounter uint64
 	CheckMock       mExecutionBrokerMethodsMockCheck
 
-	ExecuteFunc       func(p context.Context, p1 *Transcript) (r error)
+	ExecuteFunc       func(p context.Context, p1 *Transcript) (r bool)
 	ExecuteCounter    uint64
 	ExecutePreCounter uint64
 	ExecuteMock       mExecutionBrokerMethodsMockExecute
@@ -60,7 +60,7 @@ type ExecutionBrokerMethodsMockCheckInput struct {
 }
 
 type ExecutionBrokerMethodsMockCheckResult struct {
-	r error
+	r bool
 }
 
 //Expect specifies that invocation of ExecutionBrokerMethods.Check is expected from 1 to Infinity times
@@ -76,7 +76,7 @@ func (m *mExecutionBrokerMethodsMockCheck) Expect(p context.Context) *mExecution
 }
 
 //Return specifies results of invocation of ExecutionBrokerMethods.Check
-func (m *mExecutionBrokerMethodsMockCheck) Return(r error) *ExecutionBrokerMethodsMock {
+func (m *mExecutionBrokerMethodsMockCheck) Return(r bool) *ExecutionBrokerMethodsMock {
 	m.mock.CheckFunc = nil
 	m.expectationSeries = nil
 
@@ -98,12 +98,12 @@ func (m *mExecutionBrokerMethodsMockCheck) ExpectOnce(p context.Context) *Execut
 	return expectation
 }
 
-func (e *ExecutionBrokerMethodsMockCheckExpectation) Return(r error) {
+func (e *ExecutionBrokerMethodsMockCheckExpectation) Return(r bool) {
 	e.result = &ExecutionBrokerMethodsMockCheckResult{r}
 }
 
 //Set uses given function f as a mock of ExecutionBrokerMethods.Check method
-func (m *mExecutionBrokerMethodsMockCheck) Set(f func(p context.Context) (r error)) *ExecutionBrokerMethodsMock {
+func (m *mExecutionBrokerMethodsMockCheck) Set(f func(p context.Context) (r bool)) *ExecutionBrokerMethodsMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -112,7 +112,7 @@ func (m *mExecutionBrokerMethodsMockCheck) Set(f func(p context.Context) (r erro
 }
 
 //Check implements github.com/insolar/insolar/logicrunner.ExecutionBrokerMethods interface
-func (m *ExecutionBrokerMethodsMock) Check(p context.Context) (r error) {
+func (m *ExecutionBrokerMethodsMock) Check(p context.Context) (r bool) {
 	counter := atomic.AddUint64(&m.CheckPreCounter, 1)
 	defer atomic.AddUint64(&m.CheckCounter, 1)
 
@@ -208,7 +208,7 @@ type ExecutionBrokerMethodsMockExecuteInput struct {
 }
 
 type ExecutionBrokerMethodsMockExecuteResult struct {
-	r error
+	r bool
 }
 
 //Expect specifies that invocation of ExecutionBrokerMethods.Execute is expected from 1 to Infinity times
@@ -224,7 +224,7 @@ func (m *mExecutionBrokerMethodsMockExecute) Expect(p context.Context, p1 *Trans
 }
 
 //Return specifies results of invocation of ExecutionBrokerMethods.Execute
-func (m *mExecutionBrokerMethodsMockExecute) Return(r error) *ExecutionBrokerMethodsMock {
+func (m *mExecutionBrokerMethodsMockExecute) Return(r bool) *ExecutionBrokerMethodsMock {
 	m.mock.ExecuteFunc = nil
 	m.expectationSeries = nil
 
@@ -246,12 +246,12 @@ func (m *mExecutionBrokerMethodsMockExecute) ExpectOnce(p context.Context, p1 *T
 	return expectation
 }
 
-func (e *ExecutionBrokerMethodsMockExecuteExpectation) Return(r error) {
+func (e *ExecutionBrokerMethodsMockExecuteExpectation) Return(r bool) {
 	e.result = &ExecutionBrokerMethodsMockExecuteResult{r}
 }
 
 //Set uses given function f as a mock of ExecutionBrokerMethods.Execute method
-func (m *mExecutionBrokerMethodsMockExecute) Set(f func(p context.Context, p1 *Transcript) (r error)) *ExecutionBrokerMethodsMock {
+func (m *mExecutionBrokerMethodsMockExecute) Set(f func(p context.Context, p1 *Transcript) (r bool)) *ExecutionBrokerMethodsMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -260,7 +260,7 @@ func (m *mExecutionBrokerMethodsMockExecute) Set(f func(p context.Context, p1 *T
 }
 
 //Execute implements github.com/insolar/insolar/logicrunner.ExecutionBrokerMethods interface
-func (m *ExecutionBrokerMethodsMock) Execute(p context.Context, p1 *Transcript) (r error) {
+func (m *ExecutionBrokerMethodsMock) Execute(p context.Context, p1 *Transcript) (r bool) {
 	counter := atomic.AddUint64(&m.ExecutePreCounter, 1)
 	defer atomic.AddUint64(&m.ExecuteCounter, 1)
 
