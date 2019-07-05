@@ -99,6 +99,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 
 func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
 	var (
+		err      error
 		oldPulse *insolar.Pulse
 	)
 
@@ -131,6 +132,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if err != nil {
 		return errors.Wrap(err, "failed to apply new active node list")
 	}
+
 	if persist {
 		if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 			return errors.Wrap(err, "call of AddPulse failed")
@@ -144,12 +146,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		if err != nil {
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
-
-		futurePulse := newPulse.NextPulseNumber
-		err = m.JetModifier.Clone(ctx, newPulse.PulseNumber, futurePulse)
-		if err != nil {
-			return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", newPulse.PulseNumber, futurePulse)
-		}
 	}
 
 	if persist && oldPulse != nil {
@@ -161,11 +157,18 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree.
 			futurePulse := newPulse.NextPulseNumber
-			err := m.JetModifier.Update(ctx, futurePulse, false, insolar.ZeroJetID)
+			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
 			if err != nil {
 				return errors.Wrapf(err, "failed to update zeroJet")
 			}
 			logger.Infof("[PulseManager] activate zeroJet pulse=%v", futurePulse)
+		}
+
+		futurePulse := newPulse.NextPulseNumber
+		logger.Warnf("CLONE %v -> %v", newPulse.PulseNumber, futurePulse)
+		err = m.JetModifier.Clone(ctx, newPulse.PulseNumber, futurePulse)
+		if err != nil {
+			return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", newPulse.PulseNumber, futurePulse)
 		}
 	}
 

@@ -55,11 +55,12 @@ type Handler struct {
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
 
-	DropModifier  drop.Modifier
-	PulseAccessor pulse.Accessor
-	JetModifier   jet.Modifier
-	JetKeeper     replica.JetKeeper
-	Sender        bus.Sender
+	DropModifier    drop.Modifier
+	PulseAccessor   pulse.Accessor
+	PulseCalculator pulse.Calculator
+	JetModifier     jet.Modifier
+	JetKeeper       replica.JetKeeper
+	Sender          bus.Sender
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -364,24 +365,32 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 
-	pulse, err := h.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-	futurePulse := pulse.NextPulseNumber
 	drop, err := storeDrop(ctx, h.DropModifier, msg.Drop)
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to store drop"))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-	if drop.Split {
-		_, _, err = h.JetModifier.Split(ctx, futurePulse, drop.JetID)
+	pulse := drop.Pulse
 
-	} else {
-		err = h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
+	// We can't to use PulseCalculator here because split pulse may exceed latest pulse.
+	whenSplit := pulse + 20
+
+	if drop.Split {
+		err = h.JetModifier.Update(ctx, whenSplit, true, drop.JetID)
+		if err != nil {
+			logger.Error(errors.Wrapf(err, "failed to update jet=%v pulse=%v", drop.JetID.DebugString(), pulse))
+			return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
+		}
+		_, _, err = h.JetModifier.Split(ctx, whenSplit, drop.JetID)
+		if err == nil {
+			// We should clone the jet tree after the split
+			// in case the drop split comes late
+			// and thus the jet tree will not be cloned in the pulsemanager in a timely manner.
+			h.cloneUpToLatest(ctx, whenSplit)
+		}
 	}
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", drop.JetID.DebugString(), futurePulse))
+		logger.Error(errors.Wrapf(err, "failed to split jet=%v pulse=%v", drop.JetID.DebugString(), whenSplit))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 
@@ -397,4 +406,38 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	)
 
 	return &reply.OK{}, nil
+}
+
+func (h *Handler) cloneUpToLatest(ctx context.Context, from insolar.PulseNumber) {
+	logger := inslogger.FromContext(ctx)
+	latest, err := h.PulseAccessor.Latest(ctx)
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to get latest pulse"))
+		return
+	}
+	next, err := h.PulseCalculator.Forwards(ctx, from, 1)
+	if err == pulse.ErrNotFound {
+		return
+	}
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to get next pulse number"))
+		return
+	}
+	for to := next.PulseNumber; to <= latest.PulseNumber; {
+		err := h.JetModifier.Clone(ctx, from, to)
+		if err != nil {
+			logger.Error(errors.Wrapf(err, "failed to clone jet tree from %v to %v", from, to))
+			return
+		}
+
+		next, err = h.PulseCalculator.Forwards(ctx, to, 1)
+		if err == pulse.ErrNotFound {
+			return
+		}
+		if err != nil {
+			logger.Error(errors.Wrapf(err, "failed to get next pulse number"))
+			return
+		}
+		to = next.PulseNumber
+	}
 }

@@ -87,7 +87,7 @@ func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber) error
 	defer s.Unlock()
 
 	tree := s.get(from)
-	newTree := tree.Clone(false)
+	newTree := tree.Clone(true)
 	err := s.set(to, newTree)
 	if err != nil {
 		return errors.Wrapf(err, "failed to clone jet.Tree")

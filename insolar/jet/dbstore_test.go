@@ -107,7 +107,6 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 
 	var (
 		expectedZero = []insolar.JetID{insolar.ZeroJetID}
-		expectedNil  []insolar.JetID
 	)
 
 	err := s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
@@ -120,7 +119,7 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 	require.NoError(t, err)
 
 	tree = dbTreeForPulse(s, 101)
-	assert.Equal(t, expectedNil, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
+	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 
 	tree = dbTreeForPulse(s, 100)
 	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())

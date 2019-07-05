@@ -233,7 +233,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		blobs := blob.NewDB(DB)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
-		jetKeeper := replica.NewJetKeeper(jets, DB)
+		jetKeeper := replica.NewJetKeeper(jets, DB, Pulses)
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
@@ -256,6 +256,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
+		h.PulseCalculator = Pulses
 		h.JetModifier = jets
 		h.JetKeeper = jetKeeper
 		h.Sender = WmBus
