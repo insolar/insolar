@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -148,35 +149,22 @@ type ExecutionBroker struct {
 
 	ledgerChecked sync.Once
 
-	processActive bool
-	processLock   sync.Mutex
+	processorActive uint32
 
 	deduplicationTable map[insolar.Reference]bool
 	deduplicationLock  sync.Mutex
 }
 
 func (q *ExecutionBroker) tryTakeProcessor(_ context.Context) bool {
-	q.processLock.Lock()
-	defer q.processLock.Unlock()
-
-	taken := !q.processActive
-	q.processActive = true
-
-	return taken
+	return atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
 }
 
 func (q *ExecutionBroker) releaseProcessor(_ context.Context) {
-	q.processLock.Lock()
-	defer q.processLock.Unlock()
-
-	q.processActive = false
+	atomic.SwapUint32(&q.processorActive, 0)
 }
 
 func (q *ExecutionBroker) isActiveProcessor() bool {
-	q.processLock.Lock()
-	defer q.processLock.Unlock()
-
-	return q.processActive
+	return atomic.LoadUint32(&q.processorActive) == 1
 }
 
 type ExecutionBrokerRotationResult struct {
