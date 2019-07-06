@@ -34,7 +34,6 @@ type ExecutionState struct {
 	ObjectDescriptor artifacts.ObjectDescriptor
 
 	Broker                *ExecutionBroker
-	CurrentList           *CurrentExecutionList
 	LedgerHasMoreRequests bool
 	getLedgerPendingMutex sync.Mutex
 
@@ -46,9 +45,8 @@ type ExecutionState struct {
 
 func NewExecutionState(ref insolar.Reference) *ExecutionState {
 	es := &ExecutionState{
-		Ref:         ref,
-		CurrentList: NewCurrentExecutionList(),
-		pending:     message.PendingUnknown,
+		Ref:     ref,
+		pending: message.PendingUnknown,
 	}
 	es.Broker = NewExecutionBroker(es)
 
@@ -72,7 +70,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 	if !meNext {
 		sendExecResults := false
 
-		if !es.CurrentList.Empty() {
+		if !es.Broker.currentList.Empty() {
 			es.pending = message.InPending
 			sendExecResults = true
 
@@ -117,7 +115,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			)
 		}
 	} else {
-		if !es.CurrentList.Empty() {
+		if !es.Broker.currentList.Empty() {
 			// no pending should be as we are executing
 			if es.pending == message.InPending {
 				inslogger.FromContext(ctx).Warn(

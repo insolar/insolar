@@ -82,7 +82,7 @@ func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
 	if err != nil {
 		panic(err)
 	}
-	if res.CurrentList.Empty() {
+	if res.Broker.currentList.Empty() {
 		panic("object " + res.Ref.String() + " has no Current")
 	}
 	return res
@@ -348,7 +348,7 @@ func noLoopCheckerPredicate(current *Transcript, args interface{}) bool {
 
 func (lr *LogicRunner) CheckExecutionLoop(
 	ctx context.Context, es *ExecutionState, parcel insolar.Parcel) bool {
-	if es.CurrentList.Empty() {
+	if es.Broker.currentList.Empty() {
 		return false
 	}
 
@@ -357,7 +357,7 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if es.CurrentList.Check(noLoopCheckerPredicate, msg.APIRequestID) {
+	if es.Broker.currentList.Check(noLoopCheckerPredicate, msg.APIRequestID) {
 		return false
 	}
 
@@ -396,7 +396,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 			messages = append(messages, toSend...)
 
 			if !meNext {
-				if es.CurrentList.Empty() {
+				if es.Broker.currentList.Empty() {
 					state.ExecutionState = nil
 				}
 			} else {

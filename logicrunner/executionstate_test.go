@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils"
 )
 
 func InitBroker(_ *testing.T, ctx context.Context, count int, state *ExecutionState, withMocks bool) {
@@ -57,7 +56,7 @@ func newExecutionStateLength(t *testing.T, ctx context.Context, count int, list 
 	es.Broker.logicRunner.RequestsExecutor = NewRequestsExecutorMock(t)
 	InitBroker(t, ctx, count, es, true)
 	if list != nil {
-		es.CurrentList = list
+		es.Broker.currentList = list
 	}
 	if pending != nil {
 		es.pending = *pending
@@ -69,7 +68,8 @@ func TestExecutionState_OnPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	list := NewCurrentExecutionList()
-	list.Set(testutils.RandomRef(), &Transcript{})
+	requestRef := gen.Reference()
+	list.SetTranscript(&Transcript{RequestRef: &requestRef})
 
 	inPending := message.InPending
 
