@@ -835,7 +835,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 		}
 
 		es := NewExecutionState(ref)
-		es.Broker.processActive = true
+		es.Broker.tryTakeProcessor(suite.ctx)
 		es.LedgerHasMoreRequests = test.objectStateStatus
 		st := suite.lr.StateStorage.UpsertObjectState(ref)
 		st.ExecutionState = es
@@ -1288,7 +1288,6 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	})
 
 	es.Broker.Put(s.ctx, true, mutableTranscript)
-	s.True(es.Broker.processActive)
 	es.Broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
 
 	s.True(wait(finishedCount, es.Broker, 3))

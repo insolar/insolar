@@ -155,6 +155,30 @@ type ExecutionBroker struct {
 	deduplicationLock  sync.Mutex
 }
 
+func (q *ExecutionBroker) tryTakeProcessor(_ context.Context) bool {
+	q.processLock.Lock()
+	defer q.processLock.Unlock()
+
+	taken := !q.processActive
+	q.processActive = true
+
+	return taken
+}
+
+func (q *ExecutionBroker) releaseProcessor(_ context.Context) {
+	q.processLock.Lock()
+	defer q.processLock.Unlock()
+
+	q.processActive = false
+}
+
+func (q *ExecutionBroker) isActiveProcessor() bool {
+	q.processLock.Lock()
+	defer q.processLock.Unlock()
+
+	return q.processActive
+}
+
 type ExecutionBrokerRotationResult struct {
 	Requests              []*Transcript
 	Finished              []*Transcript
@@ -317,11 +341,7 @@ func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference
 }
 
 func (q *ExecutionBroker) startProcessor(ctx context.Context) {
-	defer func() {
-		q.processLock.Lock()
-		q.processActive = false
-		q.processLock.Unlock()
-	}()
+	defer q.releaseProcessor(ctx)
 
 	// сhecking we're eligible to execute contracts
 	if readyToExecute := q.Check(ctx); !readyToExecute {
@@ -347,19 +367,15 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
-	q.processLock.Lock()
 	// i've removed "if we have tasks here"; we can be there in two cases:
 	// 1) we've put a task into queue and automatically start processor
 	// 2) we've explicitly ask broker to be here
 	// both cases means we knew what we are doing and so it's just an
 	// unneeded optimisation
-	if !q.processActive {
+	if q.tryTakeProcessor(ctx) {
 		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
-
-		q.processActive = true
 		go q.startProcessor(ctx)
 	}
-	q.processLock.Unlock()
 
 }
 

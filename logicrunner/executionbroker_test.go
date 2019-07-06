@@ -235,10 +235,7 @@ func processorStatus(args ...interface{}) bool {
 	broker := args[0].(*ExecutionBroker)
 	status := args[1].(bool)
 
-	broker.processLock.Lock()
-	defer broker.processLock.Unlock()
-
-	return broker.processActive == status
+	return broker.isActiveProcessor() == status
 }
 
 func (s *ExecutionBrokerSuite) TestPut() {
