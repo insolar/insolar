@@ -40,10 +40,10 @@ import (
 
 // wait is Exponential retries waiting function
 // example usage: require.True(wait(func))
-func wait(check func() bool) bool {
+func wait(check func(...interface{}) bool, args ...interface{}) bool {
 	for i := 0; i < 16; i++ {
 		time.Sleep(time.Millisecond * time.Duration(math.Pow(2, float64(i))))
-		if check() {
+		if check(args...) {
 			return true
 		}
 	}
@@ -217,6 +217,30 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	return lr
 }
 
+func immutableCount(args ...interface{}) bool {
+	broker := args[0].(*ExecutionBroker)
+	count := args[1].(int)
+
+	return broker.immutable.Len() >= count
+}
+
+func finishedCount(args ...interface{}) bool {
+	broker := args[0].(*ExecutionBroker)
+	count := args[1].(int)
+
+	return broker.finished.Len() >= count
+}
+
+func processorStatus(args ...interface{}) bool {
+	broker := args[0].(*ExecutionBroker)
+	status := args[1].(bool)
+
+	broker.processLock.Lock()
+	defer broker.processLock.Unlock()
+
+	return broker.processActive == status
+}
+
 func (s *ExecutionBrokerSuite) TestPut() {
 	lr := s.prepareLogicRunner(s.T())
 
@@ -234,12 +258,6 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	es.RegisterLogicRunner(lr)
 	b := es.Broker
 	es.pending = message.NotPending
-
-	processGoroutineExits := func() bool {
-		b.processLock.Lock()
-		defer b.processLock.Unlock()
-		return b.processActive == false
-	}
 
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
@@ -261,7 +279,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	b.Put(s.Context, true, tr)
 	s.True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
 	s.True(waitOnChannel(waitChannel), "failed to wait until queue processor'll finish processing")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Empty(waitChannel)
 
 	s.Len(b.mutable.queue, 0)
@@ -292,12 +310,6 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	b := es.Broker
 	es.pending = message.NotPending
 
-	processGoroutineExits := func() bool {
-		b.processLock.Lock()
-		defer b.processLock.Unlock()
-		return b.processActive == false
-	}
-
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
@@ -316,7 +328,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	b.Prepend(s.Context, true, tr)
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until queue processor'll finish processing")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitChannel)
 
 	s.Len(b.mutable.queue, 0)
@@ -351,12 +363,6 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	b := es.Broker
 	es.pending = message.NotPending
 
-	processGoroutineExits := func() bool {
-		b.processLock.Lock()
-		defer b.processLock.Unlock()
-		return b.processActive == false
-	}
-
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
@@ -366,7 +372,7 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	b.Prepend(s.Context, false, tr)
 	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
 	reqRef2 := gen.Reference()
@@ -378,7 +384,7 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	b.Prepend(s.Context, true, tr)
 	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
 	reqRef3 := gen.Reference()
@@ -394,8 +400,8 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	es.Unlock()
 
 	b.Prepend(s.Context, false, tr)
-	s.Require().True(wait(func() bool { return b.immutable.Len() == 1 }), "failed to wait until immutable was put")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(immutableCount, b, 1), "failed to wait until immutable was put")
+	s.Require().True(wait(processorStatus, b, false))
 
 	reqRef4 := gen.Reference()
 	tr = &Transcript{
@@ -406,12 +412,12 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	b.Prepend(s.Context, true, tr)
 
-	s.Require().True(wait(func() bool { return b.immutable.Len() == 2 }), "failed to wait until immutable was put")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(immutableCount, b, 2), "failed to wait until immutable was put")
+	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
 	b.StartProcessorIfNeeded(s.Context)
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Empty(waitMutableChannel)
 	s.Empty(waitImmutableChannel)
 

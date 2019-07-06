@@ -1291,8 +1291,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	s.True(es.Broker.processActive)
 	es.Broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
 
-	checkFinished := func() bool { return es.Broker.finished.Len() >= 3 }
-	s.True(wait(checkFinished))
+	s.True(wait(finishedCount, es.Broker, 3))
 }
 
 func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
@@ -1327,8 +1326,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 
 	es.Broker.Put(s.ctx, true, immutableTranscript1)
 
-	checkFinished := func() bool { return es.Broker.finished.Len() >= 1 }
-	s.True(wait(checkFinished))
+	s.True(wait(finishedCount, es.Broker, 1))
 }
 
 func TestLogicRunner(t *testing.T) {
