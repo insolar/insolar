@@ -88,7 +88,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 			es:               newExecutionStateLength(t, ctx, 1, nil, nil),
 			numberOfMessages: 1,
 			checkES: func(t *testing.T, es *ExecutionState) {
-				require.Len(t, es.Broker.mutable.queue, 0)
+				require.Equal(t, es.Broker.mutable.Length(), 0)
 			},
 		},
 		{
@@ -97,7 +97,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 			es:               newExecutionStateLength(t, ctx, 1, nil, nil),
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
-				require.Len(t, es.Broker.mutable.queue, 1)
+				require.Equal(t, es.Broker.mutable.Length(), 1)
 			},
 		},
 		{
@@ -105,7 +105,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 			es:               newExecutionStateLength(t, ctx, 0, list, nil),
 			numberOfMessages: 2,
 			checkES: func(t *testing.T, es *ExecutionState) {
-				require.Len(t, es.Broker.mutable.queue, 0)
+				require.Equal(t, es.Broker.mutable.Length(), 0)
 				require.Equal(t, message.InPending, es.pending)
 			},
 		},
@@ -115,7 +115,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 			meNext:           true,
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState) {
-				require.Len(t, es.Broker.mutable.queue, 0)
+				require.Equal(t, es.Broker.mutable.Length(), 0)
 			},
 		},
 		{
