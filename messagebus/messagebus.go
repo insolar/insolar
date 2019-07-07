@@ -536,11 +536,8 @@ func (mb *MessageBus) checkParcel(_ context.Context, parcel insolar.Parcel) erro
 }
 
 func readBarrier(ctx context.Context, mutex *sync.RWMutex) {
-	inslogger.FromContext(ctx).Debug("Locking readBarrier")
 	mutex.RLock()
-	inslogger.FromContext(ctx).Debug("readBarrier locked")
 	mutex.RUnlock()
-	inslogger.FromContext(ctx).Debug("readBarrier unlocked")
 }
 
 func init() {
