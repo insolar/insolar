@@ -264,6 +264,8 @@ func (mb *MessageBus) SendParcel(
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, parcelType)
 	defer span.End()
 
+	inslogger.FromContext(ctx).Debug("About to send message ", parcelType)
+
 	readBarrier(ctx, &mb.globalLock)
 
 	nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, options)
