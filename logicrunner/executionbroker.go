@@ -313,6 +313,10 @@ func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
+	q.deduplicationLock.Lock()
+	defer q.deduplicationLock.Unlock()
+
+	delete(q.deduplicationTable, *r)
 	return q.mutable.PopByReference(r)
 }
 
