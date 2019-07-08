@@ -154,10 +154,6 @@ func processRequest(ctx context.Context,
 		return ctx, nil, errors.Wrap(err, "failed to unmarshal request")
 	}
 
-	if contractRequest.Method != "api.call" {
-		return ctx, nil, errors.Wrap(err, "RPC method does not exist.")
-	}
-
 	contractAnswer.JSONRPC = contractRequest.JSONRPC
 	contractAnswer.ID = contractRequest.ID
 
@@ -197,6 +193,13 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		if contractRequest.Test != "" {
 			insLog.Infof("Request related to %s", contractRequest.Test)
+		}
+
+		if contractRequest.Method != "api.call" {
+			err := errors.New("RPC method does not exist.")
+			processError(err, err.Error(), contractAnswer, insLog, traceID)
+			return
+			//return ctx, nil, errors.Wrap(err, "RPC method does not exist.")
 		}
 
 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
