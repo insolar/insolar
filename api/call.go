@@ -154,6 +154,10 @@ func processRequest(ctx context.Context,
 		return ctx, nil, errors.Wrap(err, "failed to unmarshal request")
 	}
 
+	if contractRequest.Method != "api.call" {
+		return ctx, nil, errors.Wrap(err, "RPC method does not exist.")
+	}
+
 	contractAnswer.JSONRPC = contractRequest.JSONRPC
 	contractAnswer.ID = contractRequest.ID
 

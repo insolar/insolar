@@ -1,7 +1,7 @@
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "api.Call",
+  "method": "api.call",
   "params": {
     "callSite": "wallet.CreateMember",
     "callParams": {
