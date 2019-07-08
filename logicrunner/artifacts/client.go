@@ -648,7 +648,9 @@ func (m *client) DeployCode(
 
 // sendWithRetry sends given Payload to the specified DynamicRole with provided `retriesNumber`.
 // If retriesNumber is zero or less the methods sends the message only once.
-func (m *client) sendWithRetry(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, retriesNumber int) (payload.Payload, error) {
+func (m *client) sendWithRetry(
+	ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, // nolint: unparam
+	ref insolar.Reference, retriesNumber int) (payload.Payload, error) {
 	var lastPulse insolar.PulseNumber
 
 	for {
