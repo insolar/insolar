@@ -55,6 +55,7 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/pkg/errors"
 )
 
 type NodeVectors struct {
@@ -74,12 +75,41 @@ type NodeVectors struct {
 }
 
 func (nv *NodeVectors) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	// TODO
+	if err := nv.StateVectorMask.SerializeTo(ctx, writer); err != nil {
+		return errors.Wrap(err, "failed to serialize StateVectorMask")
+	}
+
+	if err := nv.MainStateVector.SerializeTo(ctx, writer); err != nil {
+		return errors.Wrap(err, "failed to serialize MainStateVector")
+	}
+
+	l := 3 // TODO
+	for i := 0; i < l; i++ {
+		if err := nv.AdditionalStateVectors[i].SerializeTo(ctx, writer); err != nil {
+			return errors.Wrapf(err, "failed to serialize AdditionalStateVectors[%d]", i)
+		}
+	}
+
 	return nil
 }
 
 func (nv *NodeVectors) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	// TODO
+	if err := nv.StateVectorMask.DeserializeFrom(ctx, reader); err != nil {
+		return errors.Wrap(err, "failed to deserialize StateVectorMask")
+	}
+
+	if err := nv.MainStateVector.DeserializeFrom(ctx, reader); err != nil {
+		return errors.Wrap(err, "failed to deserialize MainStateVector")
+	}
+
+	l := 3 // TODO
+	nv.AdditionalStateVectors = make([]GlobulaStateVector, l)
+	for i := 0; i < l; i++ {
+		if err := nv.AdditionalStateVectors[i].DeserializeFrom(ctx, reader); err != nil {
+			return errors.Wrapf(err, "failed to deserialize AdditionalStateVectors[%d]", i)
+		}
+	}
+
 	return nil
 }
 
@@ -88,6 +118,16 @@ type NodeAppearanceBitset struct {
 	FlagsAndLoLength uint8 // [00-05] LoByteLength, [06] Compressed, [07] HasHiLength (to be compatible with Protobuf VarInt)
 	HiLength         uint8 // [00-06] HiByteLength, [07] MUST = 0 (to be compatible with Protobuf VarInt)
 	Bytes            []byte
+}
+
+func (nab *NodeAppearanceBitset) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	// TODO
+	return nil
+}
+
+func (nab *NodeAppearanceBitset) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	// TODO
+	return nil
 }
 
 type GlobulaStateVector struct {

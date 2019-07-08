@@ -69,6 +69,9 @@ const (
 	payloadLengthBitSize = 14
 	headerShift          = 14
 	headerBitSize        = 2
+
+	pulseNumberMask    = 1073741823 // 0b00111111111111111111111111111111
+	pulseNumberBitSize = 30
 )
 
 type Flag uint8
@@ -217,6 +220,18 @@ func (p *Packet) setSignature(signature common.SignatureHolder) {
 
 func (p *Packet) setPayloadLength(payloadLength uint16) {
 	p.Header.setPayloadLength(payloadLength)
+}
+
+func (p *Packet) GetPulseNumber() common.PulseNumber {
+	return p.PulseNumber & pulseNumberMask
+}
+
+func (p *Packet) SetPulseNumber(pulseNumber common.PulseNumber) {
+	if bits.Len(uint(pulseNumber)) > pulseNumberBitSize {
+		panic("invalid pulse number")
+	}
+
+	p.PulseNumber |= pulseNumber
 }
 
 func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, signer common.DataSigner) (int64, error) {

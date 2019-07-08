@@ -56,6 +56,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/pkg/errors"
 )
 
 type GlobulaConsensusPacketBody struct {
@@ -98,21 +99,21 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	if packetType == packets.PacketPhase0 || packetType == packets.PacketPhase1 {
 		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
 			if err := b.PulsarPacket.SerializeTo(ctx, writer); err != nil {
-				return err
+				return errors.Wrap(err, "failed to serialize PulsarPacket")
 			}
 		}
 	}
 
 	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase2 {
 		if err := b.Announcement.SerializeTo(ctx, writer); err != nil {
-			return err
+			return errors.Wrap(err, "failed to serialize Announcement")
 		}
 	}
 
 	if packetType == packets.PacketPhase2 {
 		if ctx.HasFlag(1) && !ctx.HasFlag(2) { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
 			if err := b.BriefSelfIntro.SerializeTo(ctx, writer); err != nil {
-				return err
+				return errors.Wrap(err, "failed to serialize BriefSelfIntro")
 			}
 		}
 	}
@@ -120,16 +121,16 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase2 {
 		if ctx.HasFlag(2) { // [1:2] in (2, 3) - has full intro + cloud intro
 			if err := b.FullSelfIntro.SerializeTo(ctx, writer); err != nil {
-				return err
+				return errors.Wrap(err, "failed to serialize FullSelfIntro")
 			}
 
 			if err := b.CloudIntro.SerializeTo(ctx, writer); err != nil {
-				return err
+				return errors.Wrap(err, "failed to serialize CloudIntro")
 			}
 
 			if ctx.HasFlag(1) { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
 				if err := write(writer, b.JoinerSecret); err != nil {
-					return err
+					return errors.Wrap(err, "failed to serialize JoinerSecret")
 				}
 			}
 		}
@@ -137,19 +138,19 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 
 	if packetType == packets.PacketPhase2 {
 		if err := b.Neighbourhood.SerializeTo(ctx, writer); err != nil {
-			return err
+			return errors.Wrap(err, "failed to serialize Neighbourhood")
 		}
 	}
 
 	if packetType == packets.PacketPhase3 {
 		if err := b.Vectors.SerializeTo(ctx, writer); err != nil {
-			return err
+			return errors.Wrap(err, "failed to serialize Vectors")
 		}
 	}
 
 	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase3 {
 		if err := b.Claims.SerializeTo(ctx, writer); err != nil {
-			return err
+			return errors.Wrap(err, "failed to serialize Claims")
 		}
 	}
 
@@ -162,21 +163,21 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	if packetType == packets.PacketPhase0 || packetType == packets.PacketPhase1 {
 		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
 			if err := b.PulsarPacket.DeserializeFrom(ctx, reader); err != nil {
-				return err
+				return errors.Wrap(err, "failed to deserialize PulsarPacket")
 			}
 		}
 	}
 
 	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase2 {
 		if err := b.Announcement.DeserializeFrom(ctx, reader); err != nil {
-			return err
+			return errors.Wrap(err, "failed to deserialize Announcement")
 		}
 	}
 
 	if packetType == packets.PacketPhase2 {
 		if ctx.HasFlag(1) && !ctx.HasFlag(2) { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
 			if err := b.BriefSelfIntro.DeserializeFrom(ctx, reader); err != nil {
-				return err
+				return errors.Wrap(err, "failed to deserialize BriefSelfIntro")
 			}
 		}
 	}
@@ -184,16 +185,16 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase2 {
 		if ctx.HasFlag(2) { // [1:2] in (2, 3) - has full intro + cloud intro
 			if err := b.FullSelfIntro.DeserializeFrom(ctx, reader); err != nil {
-				return err
+				return errors.Wrap(err, "failed to deserialize FullSelfIntro")
 			}
 
 			if err := b.CloudIntro.DeserializeFrom(ctx, reader); err != nil {
-				return err
+				return errors.Wrap(err, "failed to deserialize CloudIntro")
 			}
 
 			if ctx.HasFlag(1) { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
-				if err := read(reader, b.JoinerSecret); err != nil {
-					return err
+				if err := read(reader, &b.JoinerSecret); err != nil {
+					return errors.Wrap(err, "failed to deserialize JoinerSecret")
 				}
 			}
 		}
@@ -201,19 +202,19 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 
 	if packetType == packets.PacketPhase2 {
 		if err := b.Neighbourhood.DeserializeFrom(ctx, reader); err != nil {
-			return err
+			return errors.Wrap(err, "failed to deserialize Neighbourhood")
 		}
 	}
 
 	if packetType == packets.PacketPhase3 {
 		if err := b.Vectors.DeserializeFrom(ctx, reader); err != nil {
-			return err
+			return errors.Wrap(err, "failed to deserialize Vectors")
 		}
 	}
 
 	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase3 {
 		if err := b.Claims.DeserializeFrom(ctx, reader); err != nil {
-			return err
+			return errors.Wrap(err, "failed to deserialize Claims")
 		}
 	}
 
@@ -248,12 +249,34 @@ type EmbeddedPulsarData struct {
 }
 
 func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	// TODO
+	if err := pd.Header.SerializeTo(ctx, writer); err != nil {
+		return errors.Wrap(err, "failed to serialize Header")
+	}
+
+	if err := pd.PulsarPacketBody.SerializeTo(ctx, writer); err != nil {
+		return errors.Wrap(err, "failed to serialize PulsarPacketBody")
+	}
+
+	if err := write(writer, pd.PulsarSignature); err != nil {
+		return errors.Wrap(err, "failed to serialize PulsarSignature")
+	}
+
 	return nil
 }
 
 func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	// TODO
+	if err := pd.Header.DeserializeFrom(ctx, reader); err != nil {
+		return errors.Wrap(err, "failed to deserialize Header")
+	}
+
+	if err := pd.PulsarPacketBody.DeserializeFrom(ctx, reader); err != nil {
+		return errors.Wrap(err, "failed to deserialize PulsarPacketBody")
+	}
+
+	if err := read(reader, &pd.PulsarSignature); err != nil {
+		return errors.Wrap(err, "failed to deserialize PulsarSignature")
+	}
+
 	return nil
 }
 
@@ -280,12 +303,12 @@ type Neighbourhood struct {
 
 func (n *Neighbourhood) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	if err := write(writer, n.NeighbourCount); err != nil {
-		return err
+		return errors.Wrap(err, "failed to serialize NeighbourCount")
 	}
 
 	for i := 0; i < int(n.NeighbourCount); i++ {
 		if err := n.Neighbours[i].SerializeTo(ctx, writer); err != nil {
-			return err
+			return errors.Wrapf(err, "failed to serialize Neighbours[%d]", i)
 		}
 	}
 
@@ -294,12 +317,13 @@ func (n *Neighbourhood) SerializeTo(ctx SerializeContext, writer io.Writer) erro
 
 func (n *Neighbourhood) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
 	if err := read(reader, &n.NeighbourCount); err != nil {
-		return err
+		return errors.Wrap(err, "failed to deserialize NeighbourCount")
 	}
 
+	n.Neighbours = make([]NeighbourAnnouncement, n.NeighbourCount)
 	for i := 0; i < int(n.NeighbourCount); i++ {
 		if err := n.Neighbours[i].DeserializeFrom(ctx, reader); err != nil {
-			return err
+			return errors.Wrapf(err, "failed to serialize Neighbours[%d]", i)
 		}
 	}
 
@@ -331,21 +355,21 @@ type NeighbourAnnouncement struct {
 
 func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	if err := write(writer, na.NeighbourNodeID); err != nil {
-		return err
+		return errors.Wrap(err, "failed to serialize NeighbourNodeID")
 	}
 
 	if err := write(writer, na.CurrentRank); err != nil {
-		return err
+		return errors.Wrap(err, "failed to serialize CurrentRank")
 	}
 
 	if err := write(writer, na.RequestedPower); err != nil {
-		return err
+		return errors.Wrap(err, "failed to serialize RequestedPower")
 	}
 
 	if na.CurrentRank == 0 {
 		if na.NeighbourNodeID != ctx.GetAnnouncedJoinerNodeID() {
 			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
-				return err
+				return errors.Wrap(err, "failed to serialize Joiner")
 			}
 		}
 	} else {
@@ -355,12 +379,12 @@ func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wri
 		defer ctx.SetNeighbourNodeID(0)
 
 		if err := na.Member.SerializeTo(ctx, writer); err != nil {
-			return err
+			return errors.Wrap(err, "failed to serialize Member")
 		}
 	}
 
 	if err := write(writer, na.AnnounceSignature); err != nil {
-		return err
+		return errors.Wrap(err, "failed to serialize AnnounceSignature")
 	}
 
 	return nil
@@ -368,21 +392,21 @@ func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wri
 
 func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
 	if err := read(reader, &na.NeighbourNodeID); err != nil {
-		return err
+		return errors.Wrap(err, "failed to deserialize NeighbourNodeID")
 	}
 
 	if err := read(reader, &na.CurrentRank); err != nil {
-		return err
+		return errors.Wrap(err, "failed to deserialize CurrentRank")
 	}
 
 	if err := read(reader, &na.RequestedPower); err != nil {
-		return err
+		return errors.Wrap(err, "failed to deserialize RequestedPower")
 	}
 
 	if na.CurrentRank == 0 {
 		if na.NeighbourNodeID != ctx.GetAnnouncedJoinerNodeID() {
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
-				return err
+				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
 		}
 	} else {
@@ -392,12 +416,12 @@ func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader 
 		defer ctx.SetNeighbourNodeID(0)
 
 		if err := na.Member.DeserializeFrom(ctx, reader); err != nil {
-			return err
+			return errors.Wrap(err, "failed to deserialize Member")
 		}
 	}
 
-	if err := read(reader, na.AnnounceSignature); err != nil {
-		return err
+	if err := read(reader, &na.AnnounceSignature); err != nil {
+		return errors.Wrap(err, "failed to deserialize AnnounceSignature")
 	}
 
 	return nil
@@ -425,7 +449,7 @@ type MembershipAnnouncement struct {
 
 func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	if err := write(writer, ma.CurrentRank); err != nil {
-		return err
+		return errors.Wrap(err, "failed to serialize CurrentRank")
 	}
 
 	if ma.CurrentRank != 0 {
@@ -433,15 +457,15 @@ func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wr
 		defer ctx.SetInContext(NoContext)
 
 		if err := write(writer, ma.RequestedPower); err != nil {
-			return err
+			return errors.Wrap(err, "failed to serialize RequestedPower")
 		}
 
 		if err := ma.Member.SerializeTo(ctx, writer); err != nil {
-			return err
+			return errors.Wrap(err, "failed to serialize Member")
 		}
 
 		if err := write(writer, ma.AnnounceSignature); err != nil {
-			return err
+			return errors.Wrap(err, "failed to serialize AnnounceSignature")
 		}
 	}
 
@@ -450,20 +474,20 @@ func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wr
 
 func (ma *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
 	if err := read(reader, &ma.CurrentRank); err != nil {
-		return err
+		return errors.Wrap(err, "failed to deserialize CurrentRank")
 	}
 
 	if ma.CurrentRank != 0 {
 		if err := read(reader, &ma.RequestedPower); err != nil {
-			return err
+			return errors.Wrap(err, "failed to deserialize RequestedPower")
 		}
 
 		if err := ma.Member.DeserializeFrom(ctx, reader); err != nil {
-			return err
+			return errors.Wrap(err, "failed to deserialize Member")
 		}
 
 		if err := read(reader, &ma.AnnounceSignature); err != nil {
-			return err
+			return errors.Wrap(err, "failed to deserialize AnnounceSignature")
 		}
 	}
 
@@ -512,21 +536,21 @@ type NodeAnnouncement struct {
 
 func (na *NodeAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	if err := na.NodeState.SerializeTo(ctx, writer); err != nil {
-		return err
+		return errors.Wrap(err, "failed to serialize NodeState")
 	}
 
 	if err := write(writer, na.AnnounceID); err != nil {
-		return err
+		return errors.Wrap(err, "failed to serialize AnnounceID")
 	}
 
 	if ctx.InContext(ContextMembershipAnnouncement) {
 		if na.AnnounceID == ctx.GetSourceID() {
 			if err := na.Leaver.SerializeTo(ctx, writer); err != nil {
-				return err
+				return errors.Wrap(err, "failed to serialize Leaver")
 			}
 		} else if na.AnnounceID != 0 {
 			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
-				return err
+				return errors.Wrap(err, "failed to serialize Joiner")
 			}
 			ctx.SetAnnouncedJoinerNodeID(na.AnnounceID)
 		}
@@ -535,7 +559,7 @@ func (na *NodeAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) 
 	if ctx.InContext(ContextNeighbourAnnouncement) {
 		if na.AnnounceID == ctx.GetNeighbourNodeID() {
 			if err := na.Leaver.SerializeTo(ctx, writer); err != nil {
-				return err
+				return errors.Wrap(err, "failed to serialize Leaver")
 			}
 		}
 	}
@@ -545,21 +569,21 @@ func (na *NodeAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) 
 
 func (na *NodeAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
 	if err := na.NodeState.DeserializeFrom(ctx, reader); err != nil {
-		return err
+		return errors.Wrap(err, "failed to deserialize NodeState")
 	}
 
 	if err := read(reader, &na.AnnounceID); err != nil {
-		return err
+		return errors.Wrap(err, "failed to deserialize AnnounceID")
 	}
 
 	if ctx.InContext(ContextMembershipAnnouncement) {
 		if na.AnnounceID == ctx.GetSourceID() {
 			if err := na.Leaver.DeserializeFrom(ctx, reader); err != nil {
-				return err
+				return errors.Wrap(err, "failed to deserialize Leaver")
 			}
 		} else if na.AnnounceID != 0 {
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
-				return err
+				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
 			ctx.SetAnnouncedJoinerNodeID(na.Joiner.ShortID)
 		}
@@ -568,7 +592,7 @@ func (na *NodeAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Re
 	if ctx.InContext(ContextNeighbourAnnouncement) {
 		if na.AnnounceID == ctx.GetNeighbourNodeID() {
 			if err := na.Leaver.DeserializeFrom(ctx, reader); err != nil {
-				return err
+				return errors.Wrap(err, "failed to deserialize Leaver")
 			}
 		}
 	}

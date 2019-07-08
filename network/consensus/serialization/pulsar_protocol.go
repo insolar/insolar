@@ -50,10 +50,34 @@
 
 package serialization
 
-import "github.com/insolar/insolar/network/consensus/common"
+import (
+	"io"
+
+	"github.com/insolar/insolar/network/consensus/common"
+)
 
 type PulsarPacketBody struct {
 	// ByteSize>=108
 	PulseDataExt          common.PulseDataExt // ByteSize=44
 	PulsarConsensusProofs []byte              // variable lengths >=0
+}
+
+func (b *PulsarPacketBody) SerializeTo(_ SerializeContext, writer io.Writer) error {
+	if err := write(writer, b.PulseDataExt); err != nil {
+		return err
+	}
+
+	// TODO: proofs
+
+	return nil
+}
+
+func (b *PulsarPacketBody) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
+	if err := read(reader, &b.PulseDataExt); err != nil {
+		return err
+	}
+
+	// TODO: proofs
+
+	return nil
 }

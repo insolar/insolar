@@ -58,18 +58,18 @@ type ClaimHeader struct {
 }
 
 type GenericClaim struct {
-	// ByteSize>=1
+	// ByteSize>=2
 	ClaimHeader
 	Payload []byte
 }
 
 type EmptyClaim struct {
-	// ByteSize=1
+	// ByteSize=2
 	ClaimHeader `insolar-transport:"delimiter;ClaimType=0;length=header"`
 }
 
 type ClaimList struct {
-	// ByteSize>=1
+	// ByteSize>=2
 	Claims      []GenericClaim
 	EndOfClaims EmptyClaim // ByteSize=1 - indicates end of claims
 }
