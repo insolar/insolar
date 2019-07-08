@@ -83,8 +83,7 @@ func (nv *NodeVectors) SerializeTo(ctx SerializeContext, writer io.Writer) error
 		return errors.Wrap(err, "failed to serialize MainStateVector")
 	}
 
-	l := 3 // TODO
-	for i := 0; i < l; i++ {
+	for i := 0; i < int(ctx.GetFlagRangeInt(1, 2)); i++ {
 		if err := nv.AdditionalStateVectors[i].SerializeTo(ctx, writer); err != nil {
 			return errors.Wrapf(err, "failed to serialize AdditionalStateVectors[%d]", i)
 		}
@@ -102,9 +101,8 @@ func (nv *NodeVectors) DeserializeFrom(ctx DeserializeContext, reader io.Reader)
 		return errors.Wrap(err, "failed to deserialize MainStateVector")
 	}
 
-	l := 3 // TODO
-	nv.AdditionalStateVectors = make([]GlobulaStateVector, l)
-	for i := 0; i < l; i++ {
+	nv.AdditionalStateVectors = make([]GlobulaStateVector, ctx.GetFlagRangeInt(1, 2))
+	for i := 0; i < int(ctx.GetFlagRangeInt(1, 2)); i++ {
 		if err := nv.AdditionalStateVectors[i].DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrapf(err, "failed to deserialize AdditionalStateVectors[%d]", i)
 		}

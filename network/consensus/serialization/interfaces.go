@@ -18,6 +18,7 @@ type PacketHeaderAccessor interface {
 	GetPacketType() packets.PacketType
 	GetSourceID() common.ShortNodeID
 	HasFlag(flag Flag) bool
+	GetFlagRangeInt(from, to uint8) uint8
 	IsRelayRestricted() bool
 	IsBodyEncrypted() bool
 }

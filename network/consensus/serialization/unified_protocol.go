@@ -81,6 +81,11 @@ const (
 	FlagIsBodyEncrypted   = Flag(1)
 )
 
+const (
+	reservedFlagSize = 2
+	maxFlagIndex     = 5
+)
+
 type ProtocolType uint8
 
 const (
@@ -165,22 +170,34 @@ func (h *Header) setHeader(header uint8) {
 }
 
 func (h Header) HasFlag(f Flag) bool {
-	if f > 5 {
+	if f > maxFlagIndex {
 		panic("invalid flag index")
 	}
 
-	return h.getFlag(f + 2)
+	return h.getFlag(f + reservedFlagSize)
+}
+
+func (h Header) GetFlagRangeInt(from, to uint8) uint8 {
+	if from >= to {
+		panic("invalid from range")
+	}
+
+	if to > maxFlagIndex {
+		panic("invalid to range")
+	}
+
+	return h.getFlagRangeInt(from+reservedFlagSize, to+reservedFlagSize)
 }
 
 func (h *Header) SetFlag(f Flag) {
-	if f > 5 {
+	if f > maxFlagIndex {
 		panic("invalid flag index")
 	}
 
-	h.setFlag(f + 2)
+	h.setFlag(f + reservedFlagSize)
 }
 
-func (h *Header) IsRelayRestricted() bool {
+func (h Header) IsRelayRestricted() bool {
 	return h.getFlag(FlagIsRelayRestricted)
 }
 
@@ -188,7 +205,7 @@ func (h *Header) setIsRelayRestricted() {
 	h.setFlag(FlagIsRelayRestricted)
 }
 
-func (h *Header) IsBodyEncrypted() bool {
+func (h Header) IsBodyEncrypted() bool {
 	return h.getFlag(FlagIsBodyEncrypted)
 }
 
@@ -196,7 +213,7 @@ func (h *Header) setIsBodyEncrypted() {
 	h.setFlag(FlagIsBodyEncrypted)
 }
 
-func (h *Header) getFlag(f Flag) bool {
+func (h Header) getFlag(f Flag) bool {
 	return hasBit(uint(h.PacketFlags), uint(f))
 }
 
@@ -204,13 +221,8 @@ func (h *Header) setFlag(f Flag) {
 	h.PacketFlags = uint8(setBit(uint(h.PacketFlags), uint(f)))
 }
 
-func (h *Header) getFlagRangeInt(from, to uint8) uint8 {
-	var i, mask, result uint8
-	for i = 0; i <= to; i++ {
-		mask = mask | (1 << i)
-	}
-	result = h.PacketFlags & mask
-	return result >> from
+func (h Header) getFlagRangeInt(from, to uint8) uint8 {
+	return (h.PacketFlags & (1 << to)) >> from
 }
 
 type Packet struct {

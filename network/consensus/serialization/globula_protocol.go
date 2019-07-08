@@ -111,7 +111,7 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	}
 
 	if packetType == packets.PacketPhase2 {
-		if ctx.HasFlag(1) && !ctx.HasFlag(2) { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
+		if ctx.GetFlagRangeInt(1, 2) == 1 { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
 			if err := b.BriefSelfIntro.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize BriefSelfIntro")
 			}
@@ -119,7 +119,7 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	}
 
 	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase2 {
-		if ctx.HasFlag(2) { // [1:2] in (2, 3) - has full intro + cloud intro
+		if ctx.GetFlagRangeInt(1, 2) == 2 || ctx.GetFlagRangeInt(1, 2) == 3 { // [1:2] in (2, 3) - has full intro + cloud intro
 			if err := b.FullSelfIntro.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize FullSelfIntro")
 			}
@@ -127,11 +127,11 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 			if err := b.CloudIntro.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize CloudIntro")
 			}
+		}
 
-			if ctx.HasFlag(1) { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
-				if err := write(writer, b.JoinerSecret); err != nil {
-					return errors.Wrap(err, "failed to serialize JoinerSecret")
-				}
+		if ctx.GetFlagRangeInt(1, 2) == 3 { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
+			if err := write(writer, b.JoinerSecret); err != nil {
+				return errors.Wrap(err, "failed to serialize JoinerSecret")
 			}
 		}
 	}
