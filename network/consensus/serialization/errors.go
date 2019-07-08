@@ -50,36 +50,26 @@
 
 package serialization
 
-import "io"
+import (
+	"github.com/pkg/errors"
+)
 
-type ClaimHeader struct {
-	TypeAndLength uint16 `insolar-transport:"header;[0-9]=length;[10-15]=header:ClaimType;group=Claims"` // [00-09] ByteLength [10-15] ClaimClass
-	// actual payload
+func ErrPayloadLengthMissmatch(expected, actual int64) error {
+	return errors.Errorf("payload length missmatch expected: %d, actual: %d", expected, actual)
 }
 
-type GenericClaim struct {
-	// ByteSize>=1
-	ClaimHeader
-	Payload []byte
+func ErrMalformedPulseNumber(err error) error {
+	return errors.Wrap(err, "malformed pulse number")
 }
 
-type EmptyClaim struct {
-	// ByteSize=1
-	ClaimHeader `insolar-transport:"delimiter;ClaimType=0;length=header"`
+func ErrMalformedHeader(err error) error {
+	return errors.Wrap(err, "malformed header")
 }
 
-type ClaimList struct {
-	// ByteSize>=1
-	Claims      []GenericClaim
-	EndOfClaims EmptyClaim // ByteSize=1 - indicates end of claims
+func ErrMalformedPacketBody(err error) error {
+	return errors.Wrap(err, "malformed packet body")
 }
 
-func (cl *ClaimList) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	// TODO
-	return nil
-}
-
-func (cl *ClaimList) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	// TODO
-	return nil
+func ErrMalformedPacketSignature(err error) error {
+	return errors.Wrap(err, "invalid packet signature")
 }

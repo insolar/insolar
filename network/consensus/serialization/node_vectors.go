@@ -73,8 +73,14 @@ type NodeVectors struct {
 	AdditionalStateVectors []GlobulaStateVector `insolar-transport:"count=PacketFlags[1:2]"` // ByteSize=count * 132
 }
 
-func (p NodeVectors) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func (nv *NodeVectors) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	// TODO
+	return nil
+}
+
+func (nv *NodeVectors) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	// TODO
+	return nil
 }
 
 type NodeAppearanceBitset struct {
@@ -84,10 +90,6 @@ type NodeAppearanceBitset struct {
 	Bytes            []byte
 }
 
-func (p NodeAppearanceBitset) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
-}
-
 type GlobulaStateVector struct {
 	// ByteSize=132
 	ExpectedRank           common2.MembershipRank // ByteSize=4
@@ -95,6 +97,10 @@ type GlobulaStateVector struct {
 	SignedGlobulaStateHash common.Bits512         // ByteSize=64
 }
 
-func (p GlobulaStateVector) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func (gsv *GlobulaStateVector) SerializeTo(_ SerializeContext, writer io.Writer) error {
+	return write(writer, gsv)
+}
+
+func (gsv *GlobulaStateVector) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
+	return read(reader, gsv)
 }

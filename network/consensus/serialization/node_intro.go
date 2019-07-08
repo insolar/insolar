@@ -82,8 +82,14 @@ type NodeBriefIntro struct {
 	JoinerSignature common.Bits512 // ByteSize=64
 }
 
-func (p NodeBriefIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
+func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	// TODO
+	return nil
+}
+
+func (bi *NodeBriefIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	// TODO
+	return nil
 }
 
 type NodeFullIntro struct {
@@ -105,8 +111,4 @@ type NodeFullIntro struct {
 
 	DiscoveryIssuerNodeId common.ShortNodeID
 	IssuerSignature       common.Bits512
-}
-
-func (p NodeFullIntro) SerializeTo(writer io.Writer, signer common.DataSigner) (int64, error) {
-	return serializeTo(writer, signer, p)
 }
