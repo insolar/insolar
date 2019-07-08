@@ -310,3 +310,52 @@ func TestNodeProfileOrdering(t *testing.T) {
 
 	require.Equal(t, id, shortNodeID)
 }
+
+func TestLessForNodeProfile(t *testing.T) {
+	np1 := NewNodeProfileMock(t)
+	power1 := MemberPower(1)
+	np1.GetDeclaredPowerMock.Set(func() MemberPower { return *(&power1) })
+	role1 := PrimaryRoleHeavyMaterial
+	np1.GetPrimaryRoleMock.Set(func() NodePrimaryRole { return *(&role1) })
+	shortNodeID1 := common.ShortNodeID(1)
+	np1.GetShortNodeIDMock.Set(func() common.ShortNodeID { return *(&shortNodeID1) })
+	state1 := Working
+	np1.GetStateMock.Set(func() MembershipState { return *(&state1) })
+
+	require.False(t, LessForNodeProfile(np1, np1))
+
+	np2 := NewNodeProfileMock(t)
+	power2 := MemberPower(1)
+	np2.GetDeclaredPowerMock.Set(func() MemberPower { return *(&power2) })
+	role2 := PrimaryRoleHeavyMaterial
+	np2.GetPrimaryRoleMock.Set(func() NodePrimaryRole { return *(&role2) })
+	shortNodeID2 := common.ShortNodeID(1)
+	np2.GetShortNodeIDMock.Set(func() common.ShortNodeID { return *(&shortNodeID2) })
+	state2 := Working
+	np2.GetStateMock.Set(func() MembershipState { return *(&state2) })
+
+	require.False(t, LessForNodeProfile(np1, np2))
+
+	role1 = PrimaryRoleNeutral
+	require.False(t, LessForNodeProfile(np1, np2))
+
+	role1 = PrimaryRoleHeavyMaterial
+	role2 = PrimaryRoleNeutral
+	require.True(t, LessForNodeProfile(np1, np2))
+
+	role1 = role2
+	power2 = MemberPower(2)
+	require.True(t, LessForNodeProfile(np1, np2))
+
+	power1 = MemberPower(2)
+	power2 = MemberPower(1)
+	require.False(t, LessForNodeProfile(np1, np2))
+
+	power1 = power2
+	shortNodeID2 = common.ShortNodeID(2)
+	require.True(t, LessForNodeProfile(np1, np2))
+
+	shortNodeID1 = common.ShortNodeID(2)
+	shortNodeID2 = common.ShortNodeID(1)
+	require.False(t, LessForNodeProfile(np1, np2))
+}
