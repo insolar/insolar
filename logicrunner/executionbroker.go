@@ -163,7 +163,7 @@ func (q *ExecutionBroker) releaseProcessor(_ context.Context) {
 	atomic.SwapUint32(&q.processorActive, 0)
 }
 
-func (q *ExecutionBroker) isActiveProcessor() bool {
+func (q *ExecutionBroker) isActiveProcessor() bool { //nolint: unused
 	return atomic.LoadUint32(&q.processorActive) == 1
 }
 
