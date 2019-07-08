@@ -27,33 +27,36 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils"
 )
 
-func NewBroker(t *testing.T, ctx context.Context, count int) *ExecutionBroker {
-	mock := NewExecutionBrokerMethodsMock(t)
-	mock.CheckMock.Return(nil)
-	mock.ExecuteMock.Return(nil)
-	br := NewExecutionBroker(mock)
+func InitBroker(_ *testing.T, ctx context.Context, count int, state *ExecutionState, withMocks bool) {
+	if withMocks {
+		rem := state.Broker.logicRunner.RequestsExecutor.(*RequestsExecutorMock)
+		rem.ExecuteAndSaveMock.Return(nil, nil)
+		rem.SendReplyMock.Return()
+	}
+
 	for i := 0; i < count; i++ {
 		reqRef := gen.Reference()
-		br.Put(ctx, false, &Transcript{
+		state.Broker.Put(ctx, false, &Transcript{
 			LogicContext: &insolar.LogicCallContext{},
 			Context:      ctx,
 			RequestRef:   &reqRef,
 			Request:      &record.IncomingRequest{},
 		})
 	}
-	return br
+
 }
 
 func newExecutionStateLength(t *testing.T, ctx context.Context, count int, list *CurrentExecutionList,
 	pending *message.PendingState) *ExecutionState {
 
 	es := NewExecutionState(gen.Reference())
-	es.Broker = NewBroker(t, ctx, count)
+	es.Broker.logicRunner = &LogicRunner{}
+	es.Broker.logicRunner.RequestsExecutor = NewRequestsExecutorMock(t)
+	InitBroker(t, ctx, count, es, true)
 	if list != nil {
-		es.CurrentList = list
+		es.Broker.currentList = list
 	}
 	if pending != nil {
 		es.pending = *pending
@@ -65,7 +68,8 @@ func TestExecutionState_OnPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	list := NewCurrentExecutionList()
-	list.Set(testutils.RandomRef(), &Transcript{})
+	requestRef := gen.Reference()
+	list.SetTranscript(&Transcript{RequestRef: &requestRef})
 
 	inPending := message.InPending
 

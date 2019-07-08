@@ -73,7 +73,12 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, reply *SeedReply)
 	if err != nil {
 		return errors.Wrap(err, "failed to get next seed")
 	}
-	s.runner.SeedManager.Add(*seed)
+
+	pulse, err := s.runner.PulseAccessor.Latest(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "[ NodeService::GetSeed ] Couldn't receive pulse")
+	}
+	s.runner.SeedManager.Add(*seed, pulse.PulseNumber)
 
 	reply.Seed = seed[:]
 	reply.TraceID = traceID
