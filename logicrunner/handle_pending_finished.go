@@ -42,7 +42,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 
 	msg := parcel.Message().(*message.PendingFinished)
 	ref := msg.DefaultTarget()
-	os := lr.UpsertObjectState(*ref)
+	os := lr.StateStorage.UpsertObjectState(*ref)
 
 	os.Lock()
 	if os.ExecutionState == nil {
@@ -60,7 +60,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 
 	es.Lock()
 	es.pending = message.NotPending
-	if !es.CurrentList.Empty() {
+	if !es.Broker.currentList.Empty() {
 		es.Unlock()
 		return errors.New("[ HandlePendingFinished ] received PendingFinished when we are already executing")
 	}

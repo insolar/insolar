@@ -44,7 +44,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	ref := p.msg.GetReference()
 
-	state := p.LR.UpsertObjectState(ref)
+	state := p.LR.StateStorage.UpsertObjectState(ref)
 
 	state.Lock()
 	if state.ExecutionState == nil {
@@ -59,7 +59,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 
 	es.Lock()
 	if es.pending == message.InPending {
-		if !es.CurrentList.Empty() {
+		if !es.Broker.currentList.Empty() {
 			logger.Debug("execution returned to node that is still executing pending")
 
 			es.pending = message.NotPending

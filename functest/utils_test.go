@@ -24,6 +24,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"regexp"
+	"runtime"
 	"strings"
 
 	"io/ioutil"
@@ -44,7 +46,12 @@ import (
 
 const sendRetryCount = 5
 
-var contracts map[string]*insolar.Reference
+type contractInfo struct {
+	reference *insolar.Reference
+	testName  string
+}
+
+var contracts map[string]*contractInfo
 
 type postParams map[string]interface{}
 
@@ -222,6 +229,20 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 	if err != nil {
 		return nil, err
 	}
+
+	var caller string
+	fpcs := make([]uintptr, 1)
+	for i := 2; i < 10; i++ {
+		if n := runtime.Callers(i, fpcs); n == 0 {
+			break
+		}
+		caller = runtime.FuncForPC(fpcs[0] - 1).Name()
+		if ok, _ := regexp.MatchString(`\.Test`, caller); ok {
+			break
+		}
+		caller = ""
+	}
+
 	var resp requester.ContractAnswer
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
@@ -230,6 +251,7 @@ func signedRequest(user *user, method string, params map[string]interface{}) (in
 			ID:      1,
 			Method:  "call.api",
 			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
+			Test:    caller,
 		})
 
 		if err != nil {
@@ -283,12 +305,21 @@ func newUserWithKeys() (*user, error) {
 	}, nil
 }
 
-// this is needed for running tests with count
+// uploadContractOnce is needed for running tests with count
+// use unique names when uploading contracts otherwise your contract won't be uploaded
 func uploadContractOnce(t *testing.T, name string, code string) *insolar.Reference {
 	if _, ok := contracts[name]; !ok {
-		contracts[name] = uploadContract(t, name, code)
+		ref := uploadContract(t, name, code)
+		contracts[name] = &contractInfo{
+			reference: ref,
+			testName:  t.Name(),
+		}
 	}
-	return contracts[name]
+	require.Equal(
+		t, contracts[name].testName, t.Name(),
+		"[ uploadContractOnce ] You cant use name of contract multiple times: "+contracts[name].testName,
+	)
+	return contracts[name].reference
 }
 
 func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
@@ -323,13 +354,18 @@ func uploadContract(t *testing.T, contractName string, contractCode string) *ins
 	return prototypeRef
 }
 
-func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Reference {
+func callConstructor(t *testing.T, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
+	argsSerialized, err := insolar.Serialize(args)
+	require.NoError(t, err)
+
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.callConstructor",
 		"id":      "",
-		"params": map[string]string{
+		"params": map[string]interface{}{
 			"PrototypeRefString": prototypeRef.String(),
+			"Method":             method,
+			"MethodArgs":         argsSerialized,
 		},
 	})
 	require.NotEmpty(t, objectBody)
@@ -341,7 +377,7 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 		Error   json2.Error              `json:"error"`
 	}{}
 
-	err := json.Unmarshal(objectBody, &callConstructorRes)
+	err = json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
 	require.Empty(t, callConstructorRes.Error)
 
@@ -353,7 +389,21 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 	return objectRef
 }
 
+type callRes struct {
+	Version string              `json:"jsonrpc"`
+	ID      string              `json:"id"`
+	Result  api.CallMethodReply `json:"result"`
+	Error   json2.Error         `json:"error"`
+}
+
 func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
+	callRes := callMethodNoChecks(t, objectRef, method, args...)
+	require.Empty(t, callRes.Error)
+
+	return callRes.Result
+}
+
+func callMethodNoChecks(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) callRes {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
@@ -378,7 +428,6 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args 
 
 	err = json.Unmarshal(callMethodBody, &callRes)
 	require.NoError(t, err)
-	require.Empty(t, callRes.Error)
 
-	return callRes.Result
+	return callRes
 }

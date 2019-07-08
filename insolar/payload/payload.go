@@ -41,11 +41,13 @@ const (
 	TypeGetCode
 	TypeCode
 	TypeSetCode
+	TypeSetIncomingRequest
+	TypeSetOutgoingRequest
 	TypeGetFilament
 	TypeFilamentSegment
-	TypeSetRequest
 	TypeSetResult
 	TypeActivate
+	TypeRequestInfo
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -151,14 +153,20 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *FilamentSegment:
 		pl.Polymorph = uint32(TypeFilamentSegment)
 		return pl.Marshal()
-	case *SetRequest:
-		pl.Polymorph = uint32(TypeSetRequest)
+	case *SetIncomingRequest:
+		pl.Polymorph = uint32(TypeSetIncomingRequest)
+		return pl.Marshal()
+	case *SetOutgoingRequest:
+		pl.Polymorph = uint32(TypeSetOutgoingRequest)
 		return pl.Marshal()
 	case *SetResult:
 		pl.Polymorph = uint32(TypeSetResult)
 		return pl.Marshal()
 	case *Activate:
 		pl.Polymorph = uint32(TypeActivate)
+		return pl.Marshal()
+	case *RequestInfo:
+		pl.Polymorph = uint32(TypeRequestInfo)
 		return pl.Marshal()
 	}
 
@@ -223,8 +231,12 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := FilamentSegment{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypeSetRequest:
-		pl := SetRequest{}
+	case TypeSetIncomingRequest:
+		pl := SetIncomingRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSetOutgoingRequest:
+		pl := SetOutgoingRequest{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeSetResult:
@@ -233,6 +245,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeActivate:
 		pl := Activate{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeRequestInfo:
+		pl := RequestInfo{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

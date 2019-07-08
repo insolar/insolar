@@ -51,7 +51,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	records.SetMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetRequestMock.Return(nil)
+	filaments.SetRequestMock.Return(nil, nil, nil)
 
 	ref := gen.Reference()
 	jetID := gen.JetID()
@@ -66,11 +66,9 @@ func TestSetRequest_Proceed(t *testing.T) {
 			IncomingRequest: &request,
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
-	pl := payload.SetRequest{
-		Request: virtualBuf,
+	pl := payload.SetIncomingRequest{
+		Request: virtual,
 	}
 	requestBuf, err := pl.Marshal()
 	require.NoError(t, err)
@@ -83,7 +81,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	pmm.SetRequestMock.Return(nil)
 
 	// Pendings limit not reached.
-	p := proc.NewSetRequest(msg, request, id, jetID)
+	p := proc.NewSetRequest(msg, &request, id, jetID)
 	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker())
 
 	err = p.Proceed(ctx)

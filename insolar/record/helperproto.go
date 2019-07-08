@@ -46,6 +46,24 @@ func Wrap(record Record) Virtual {
 				IncomingRequest: &generic,
 			},
 		}
+	case *IncomingRequest:
+		return Virtual{
+			Union: &Virtual_IncomingRequest{
+				IncomingRequest: generic,
+			},
+		}
+	case OutgoingRequest:
+		return Virtual{
+			Union: &Virtual_OutgoingRequest{
+				OutgoingRequest: &generic,
+			},
+		}
+	case *OutgoingRequest:
+		return Virtual{
+			Union: &Virtual_OutgoingRequest{
+				OutgoingRequest: generic,
+			},
+		}
 	case Result:
 		return Virtual{
 			Union: &Virtual_Result{
@@ -106,6 +124,8 @@ func Unwrap(v *Virtual) Record {
 		return r.Jet
 	case *Virtual_IncomingRequest:
 		return r.IncomingRequest
+	case *Virtual_OutgoingRequest:
+		return r.OutgoingRequest
 	case *Virtual_Result:
 		return r.Result
 	case *Virtual_Type:
