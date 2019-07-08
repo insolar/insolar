@@ -89,6 +89,48 @@ func TestSetOutgoingRequest_IncorrectRecordInVirtual(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestSetOutgoingRequest_EmptyRequestObject(t *testing.T) {
+	t.Skip("Currently this test doesn't make any sense - SetOutgoingRequest.AffinityRef can't return `nil`")
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+	f := flow.NewFlowMock(t)
+	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+		switch p.(type) {
+		case *proc.CalculateID:
+			return nil
+		default:
+			panic("unknown procedure")
+		}
+	})
+
+	// IncomingRequest object is nil
+	virtual := record.Virtual{
+		Union: &record.Virtual_OutgoingRequest{
+			OutgoingRequest: &record.OutgoingRequest{
+				// Object: nil, // this is NOT a reference used in AffinityRef() method!
+			},
+		},
+	}
+
+	request := payload.SetOutgoingRequest{
+		Request: virtual,
+	}
+	requestBuf, err := request.Marshal()
+	require.NoError(t, err)
+	msg := payload.Meta{
+		Payload: requestBuf,
+	}
+
+	handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
+
+	err = handler.Present(ctx, f)
+	assert.EqualError(t, err, "SetOutgoingRequest.Present: object is nil")
+}
+
 func TestSetOutgoingRequest_FlowWithPassedFlag(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(

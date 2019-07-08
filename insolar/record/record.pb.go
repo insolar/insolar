@@ -6,16 +6,15 @@ package record
 import (
 	bytes "bytes"
 	fmt "fmt"
+	_ "github.com/gogo/protobuf/gogoproto"
+	github_com_gogo_protobuf_proto "github.com/gogo/protobuf/proto"
+	proto "github.com/gogo/protobuf/proto"
+	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 	io "io"
 	math "math"
 	reflect "reflect"
 	strconv "strconv"
 	strings "strings"
-
-	_ "github.com/gogo/protobuf/gogoproto"
-	github_com_gogo_protobuf_proto "github.com/gogo/protobuf/proto"
-	proto "github.com/gogo/protobuf/proto"
-	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -2373,9 +2372,7 @@ func (this *OutgoingRequest) GetBase() *github_com_insolar_insolar_insolar.Refer
 }
 
 func (this *OutgoingRequest) GetObject() *github_com_insolar_insolar_insolar.Reference {
-	// OutgoingRequests'a are affined to the Caller, not the Object on which the
-	// request is going to be executed.
-	return &this.Caller
+	return this.Object
 }
 
 func (this *OutgoingRequest) GetPrototype() *github_com_insolar_insolar_insolar.Reference {
