@@ -269,7 +269,6 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 		h.PCS,
 		h.filamentCalculator,
 		h.PulseCalculator,
-		h.JetCoordinator,
 	)
 	h.setHandlersForLight()
 

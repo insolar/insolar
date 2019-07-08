@@ -80,25 +80,21 @@ func NewFilamentModifier(
 	pcs insolar.PlatformCryptographyScheme,
 	calculator FilamentCalculator,
 	pulses pulse.Calculator,
-	coordinator jet.Coordinator,
 ) *FilamentModifierDefault {
 	return &FilamentModifierDefault{
-		calculator:  calculator,
-		indexes:     indexes,
-		records:     recordStorage,
-		pcs:         pcs,
-		pulses:      pulses,
-		coordinator: coordinator,
+		calculator: calculator,
+		indexes:    indexes,
+		records:    recordStorage,
+		pcs:        pcs,
 	}
 }
 
 type FilamentModifierDefault struct {
-	calculator  FilamentCalculator
-	indexes     object.IndexStorage
-	records     object.RecordModifier
-	pcs         insolar.PlatformCryptographyScheme
-	pulses      pulse.Calculator
-	coordinator jet.Coordinator
+	calculator FilamentCalculator
+	indexes    object.IndexStorage
+	records    object.RecordModifier
+	pcs        insolar.PlatformCryptographyScheme
+	pulses     pulse.Calculator
 }
 
 func (m *FilamentModifierDefault) checkObject(ctx context.Context, currentPN insolar.PulseNumber, untilPN insolar.PulseNumber, requestID insolar.ID) (object.FilamentIndex, error) {
@@ -146,52 +142,33 @@ func (m *FilamentModifierDefault) SetActivationRequest(
 	reason := request.GetReason()
 	untilPN := reason.Record().Pulse()
 
-	isBeyond, err := m.coordinator.IsBeyondLimit(ctx, currentPN, untilPN)
+	idx, err := m.checkObject(ctx, currentPN, untilPN, requestID)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to check a pulse's limit")
-	}
-	if isBeyond {
-		err := m.indexes.SetIndex(ctx, requestID.Pulse(), object.FilamentIndex{
-			ObjID:            requestID,
-			PendingRecords:   []insolar.ID{},
-			LifelineLastUsed: requestID.Pulse(),
-		})
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to create an object")
-		}
-	} else {
-		idx, err := m.checkObject(ctx, currentPN, untilPN, requestID)
-		if err != nil {
-			if err == object.ErrIndexNotFound {
-				err := m.indexes.SetIndex(ctx, requestID.Pulse(), object.FilamentIndex{
-					ObjID:            requestID,
-					PendingRecords:   []insolar.ID{},
-					LifelineLastUsed: requestID.Pulse(),
-				})
-				if err != nil {
-					return nil, nil, errors.Wrap(err, "failed to create an object")
-				}
-			} else {
+		if err == object.ErrIndexNotFound {
+			idx = object.FilamentIndex{
+				ObjID:            requestID,
+				PendingRecords:   []insolar.ID{},
+				LifelineLastUsed: requestID.Pulse(),
+			}
+			err := m.indexes.SetIndex(ctx, requestID.Pulse(), idx)
+			if err != nil {
 				return nil, nil, errors.Wrap(err, "failed to create an object")
 			}
 		} else {
-			if idx.Lifeline.PendingPointer != nil && requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
-				return nil, nil, errors.New("request from the past")
-			}
-
-			foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), requestID, requestID, request)
-			if err != nil && err != ErrEmptyReason {
-				return nil, nil, err
-			}
-			if foundRequest != nil || foundResult != nil {
-				return foundRequest, foundResult, err
-			}
+			return nil, nil, errors.Wrap(err, "failed to create an object")
 		}
-	}
+	} else {
+		if idx.Lifeline.PendingPointer != nil && requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
+			return nil, nil, errors.New("request from the past")
+		}
 
-	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), requestID)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to fetch index")
+		foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), requestID, requestID, request)
+		if err != nil && err != ErrEmptyReason {
+			return nil, nil, err
+		}
+		if foundRequest != nil || foundResult != nil {
+			return foundRequest, foundResult, err
+		}
 	}
 
 	// Save request record to storage.
