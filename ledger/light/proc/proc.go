@@ -39,6 +39,7 @@ type Dependencies struct {
 	SetResult            func(*SetResult)
 	SetActivationRequest func(*SetActivationRequest)
 	ActivateObject       func(*ActivateObject)
+	DeactivateObject     func(*DeactivateObject)
 	RegisterChild        func(*RegisterChild)
 	GetPendingRequests   func(*GetPendingRequests)
 	GetPendingRequestID  func(*GetPendingRequestID)
@@ -86,6 +87,7 @@ func NewDependenciesMock() *Dependencies {
 		SetResult:            func(*SetResult) {},
 		SetActivationRequest: func(*SetActivationRequest) {},
 		ActivateObject:       func(*ActivateObject) {},
+		DeactivateObject:     func(*DeactivateObject) {},
 		RegisterChild:        func(*RegisterChild) {},
 		GetPendingRequests:   func(*GetPendingRequests) {},
 		GetPendingRequestID:  func(*GetPendingRequestID) {},
