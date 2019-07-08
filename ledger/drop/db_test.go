@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/google/gofuzz"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -86,7 +85,7 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 	for _, idx := range indexes {
 		drop := Drop{}
 		drop.Pulse = startPulseNumber + insolar.PulseNumber(idx)
-		jets[idx] = *insolar.NewJetID(uint8(rand.Int()), testutils.RandomID().Bytes())
+		jets[idx] = gen.JetID()
 
 		drop.JetID = jets[idx]
 		err := dropStore.Set(ctx, drop)

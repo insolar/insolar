@@ -22,7 +22,9 @@ import (
 	"math"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -83,7 +85,8 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 }
 
 func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
-	it := ds.db.NewIterator(&dropDbKey{jetPrefix: make([]byte, 0), pn: math.MaxUint32}, true)
+	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: math.MaxUint32}, true)
+	var erasedKeys string
 	for it.Next() {
 		key := &dropDbKey{}
 		key.SetFromBytes(it.Key())
@@ -94,6 +97,12 @@ func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) e
 		if err != nil {
 			return errors.Wrapf(err, "[ DB.TruncateHead ] Can't Delete key: %+v", key)
 		}
+
+		erasedKeys += "[ Pulse number: " + key.pn.String() + ", jet prefix: " + base58.Encode(key.jetPrefix) + " ]; "
+	}
+
+	if len(erasedKeys) != 0 {
+		inslogger.FromContext(ctx).Debug("[ DB.TruncateHead ] erased keys: ", erasedKeys)
 	}
 	return nil
 }
