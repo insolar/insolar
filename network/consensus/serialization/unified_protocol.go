@@ -109,6 +109,10 @@ func (h *Header) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
 	return read(reader, h)
 }
 
+func (h Header) GetSourceID() common.ShortNodeID {
+	return common.ShortNodeID(h.SourceID)
+}
+
 func (h Header) GetPacketType() packets.PacketType {
 	return packets.PacketType(h.ProtocolAndPacketType) & packetTypeMask
 }

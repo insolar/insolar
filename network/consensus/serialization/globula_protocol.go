@@ -56,7 +56,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-	"github.com/pkg/errors"
 )
 
 type GlobulaConsensusPacketBody struct {
@@ -74,23 +73,23 @@ type GlobulaConsensusPacketBody struct {
 
 	// Phases 0-2
 	// - Phase0 is not sent to joiners and suspects, and PulsarPacket field must not be sent by joiners
-	PulsarPacket *EmbeddedPulsarData     `insolar-transport:"Packet=0,1;optional=PacketFlags[0]"` // ByteSize>=124
-	Announcement *MembershipAnnouncement `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 5, (MEMBER) 201, 205 (MEMBER+JOINER) 196, 198, 208
+	PulsarPacket EmbeddedPulsarData     `insolar-transport:"Packet=0,1;optional=PacketFlags[0]"` // ByteSize>=124
+	Announcement MembershipAnnouncement `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 5, (MEMBER) 201, 205 (MEMBER+JOINER) 196, 198, 208
 
 	/*
 		FullSelfIntro MUST be included when any of the following are true
 			1. sender or receiver is a joiner
 			2. sender or receiver is suspect and the other node was joined after this node became suspect
 	*/
-	BriefSelfIntro *NodeBriefIntro `insolar-transport:"Packet=  2;optional=PacketFlags[1:2]=1"`   // ByteSize= 135, 137, 147
-	FullSelfIntro  *NodeFullIntro  `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=2,3"` // ByteSize>= 221, 223, 233
-	CloudIntro     *CloudIntro     `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=2,3"` // ByteSize= 128
-	JoinerSecret   *common.Bits512 `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=3"`   // ByteSize= 64
+	BriefSelfIntro NodeBriefIntro `insolar-transport:"Packet=  2;optional=PacketFlags[1:2]=1"`   // ByteSize= 135, 137, 147
+	FullSelfIntro  NodeFullIntro  `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=2,3"` // ByteSize>= 221, 223, 233
+	CloudIntro     CloudIntro     `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=2,3"` // ByteSize= 128
+	JoinerSecret   common.Bits512 `insolar-transport:"Packet=1,2;optional=PacketFlags[1:2]=3"`   // ByteSize= 64
 
-	Neighbourhood *Neighbourhood `insolar-transport:"Packet=2"` // ByteSize= 1 + N * (205 .. 220)
-	Vectors       *NodeVectors   `insolar-transport:"Packet=3"` // ByteSize=133..599
+	Neighbourhood Neighbourhood `insolar-transport:"Packet=2"` // ByteSize= 1 + N * (205 .. 220)
+	Vectors       NodeVectors   `insolar-transport:"Packet=3"` // ByteSize=133..599
 
-	Claims *ClaimList `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
+	Claims ClaimList `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
 }
 
 func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io.Writer) error {
@@ -157,23 +156,68 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	return nil
 }
 
-func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
-	// todo: check packet type
-	if ctx.HasFlag(0) {
-		var pulsarData EmbeddedPulsarData
-		err := pulsarData.DeserializeFrom(ctx, data)
-		if err != nil {
-			return errors.Wrap(err, "[ GlobulaConsensusPacketBody.Deserialize ] Can't deserialize EmbeddedPulsarData")
+func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	packetType := ctx.GetPacketType()
+
+	if packetType == packets.PacketPhase0 || packetType == packets.PacketPhase1 {
+		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
+			if err := b.PulsarPacket.DeserializeFrom(ctx, reader); err != nil {
+				return err
+			}
 		}
 	}
 
-	// todo: check packet type
-	err := b.Announcement.DeserializeFrom(ctx, data)
-	if err != nil {
-		return errors.Wrap(err, "[ GlobulaConsensusPacketBody.Deserialize ] Can't read Announcement")
+	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase2 {
+		if err := b.Announcement.DeserializeFrom(ctx, reader); err != nil {
+			return err
+		}
 	}
 
-	panic("implement me")
+	if packetType == packets.PacketPhase2 {
+		if ctx.HasFlag(1) && !ctx.HasFlag(2) { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
+			if err := b.BriefSelfIntro.DeserializeFrom(ctx, reader); err != nil {
+				return err
+			}
+		}
+	}
+
+	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase2 {
+		if ctx.HasFlag(2) { // [1:2] in (2, 3) - has full intro + cloud intro
+			if err := b.FullSelfIntro.DeserializeFrom(ctx, reader); err != nil {
+				return err
+			}
+
+			if err := b.CloudIntro.DeserializeFrom(ctx, reader); err != nil {
+				return err
+			}
+
+			if ctx.HasFlag(1) { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
+				if err := read(reader, b.JoinerSecret); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	if packetType == packets.PacketPhase2 {
+		if err := b.Neighbourhood.DeserializeFrom(ctx, reader); err != nil {
+			return err
+		}
+	}
+
+	if packetType == packets.PacketPhase3 {
+		if err := b.Vectors.DeserializeFrom(ctx, reader); err != nil {
+			return err
+		}
+	}
+
+	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase3 {
+		if err := b.Claims.DeserializeFrom(ctx, reader); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /*
@@ -209,19 +253,8 @@ func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer
 }
 
 func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	err := pd.Header.DeserializeFrom(nil, reader)
-	if err != nil {
-		return errors.Wrap(err, "[ EmbeddedPulsarData.Deserialize ] Can't deserialize Header")
-	}
-
-	// todo: PulsarPacketBody
-
-	err = read(reader, &pd.PulsarSignature)
-	if err != nil {
-		return errors.Wrap(err, "[ Header.Deserialize ] Can't read ReceiverID")
-	}
-
-	panic("implement me")
+	// TODO
+	return nil
 }
 
 type CloudIntro struct {
@@ -246,12 +279,30 @@ type Neighbourhood struct {
 }
 
 func (n *Neighbourhood) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	// TODO
+	if err := write(writer, n.NeighbourCount); err != nil {
+		return err
+	}
+
+	for i := 0; i < int(n.NeighbourCount); i++ {
+		if err := n.Neighbours[i].SerializeTo(ctx, writer); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (n *Neighbourhood) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	// TODO
+	if err := read(reader, &n.NeighbourCount); err != nil {
+		return err
+	}
+
+	for i := 0; i < int(n.NeighbourCount); i++ {
+		if err := n.Neighbours[i].DeserializeFrom(ctx, reader); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -269,31 +320,87 @@ type NeighbourAnnouncement struct {
 
 		The field "Joiner" MUST BE OMITTED when	this joiner is introduced by the sending node
 	*/
-	Joiner *JoinAnnouncement `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
+	Joiner JoinAnnouncement `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
 
 	/* For non-joiner */
-	Member *NodeAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136
+	Member NodeAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136
 
 	/* AnnounceSignature is copied from the original Phase1 */
-	AnnounceSignature *common.Bits512 `insolar-transport:"optional"` // ByteSize = 64
+	AnnounceSignature common.Bits512 // ByteSize = 64
 }
 
-type NonJoinerMembershipAnnouncement struct {
-	RequestedPower    common2.MemberPower // ByteSize=1
-	Member            NodeAnnouncement    // ByteSize = 132, 136, 267, 269, 279
-	AnnounceSignature common.Bits512      // ByteSize = 64
-	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
-}
-
-func (m *NonJoinerMembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
-	err := read(data, &m.RequestedPower)
-	if err != nil {
-		return errors.Wrap(err, "[ MembershipAnnouncement.Deserialize ] Can't read RequestedPower")
+func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	if err := write(writer, na.NeighbourNodeID); err != nil {
+		return err
 	}
-	// todo: Member
-	// todo: AnnounceSignature
 
-	panic("implement me")
+	if err := write(writer, na.CurrentRank); err != nil {
+		return err
+	}
+
+	if err := write(writer, na.RequestedPower); err != nil {
+		return err
+	}
+
+	if na.CurrentRank == 0 {
+		if na.NeighbourNodeID != ctx.GetAnnouncedJoinerNodeID() {
+			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
+				return err
+			}
+		}
+	} else {
+		ctx.SetInContext(ContextNeighbourAnnouncement)
+		ctx.SetNeighbourNodeID(na.NeighbourNodeID)
+		defer ctx.SetInContext(NoContext)
+		defer ctx.SetNeighbourNodeID(0)
+
+		if err := na.Member.SerializeTo(ctx, writer); err != nil {
+			return err
+		}
+	}
+
+	if err := write(writer, na.AnnounceSignature); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	if err := read(reader, &na.NeighbourNodeID); err != nil {
+		return err
+	}
+
+	if err := read(reader, &na.CurrentRank); err != nil {
+		return err
+	}
+
+	if err := read(reader, &na.RequestedPower); err != nil {
+		return err
+	}
+
+	if na.CurrentRank == 0 {
+		if na.NeighbourNodeID != ctx.GetAnnouncedJoinerNodeID() {
+			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
+				return err
+			}
+		}
+	} else {
+		ctx.SetInContext(ContextNeighbourAnnouncement)
+		ctx.SetNeighbourNodeID(na.NeighbourNodeID)
+		defer ctx.SetInContext(NoContext)
+		defer ctx.SetNeighbourNodeID(0)
+
+		if err := na.Member.DeserializeFrom(ctx, reader); err != nil {
+			return err
+		}
+	}
+
+	if err := read(reader, na.AnnounceSignature); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type MembershipAnnouncement struct {
@@ -310,49 +417,163 @@ type MembershipAnnouncement struct {
 	CurrentRank common2.MembershipRank // ByteSize=4
 
 	/* For non-joiner ONLY */
-	NonJoinerMembershipAnnouncement NonJoinerMembershipAnnouncement `insolar-transport:"optional=CurrentRank!=0"`
+	RequestedPower    common2.MemberPower `insolar-transport:"optional=CurrentRank!=0"` // ByteSize=1
+	Member            NodeAnnouncement    `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136, 267, 269, 279
+	AnnounceSignature common.Bits512      `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 64
+	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
 }
 
 func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	return nil
-}
-
-func (ma *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
-	err := read(data, &ma.CurrentRank)
-	if err != nil {
-		return errors.Wrap(err, "[ MembershipAnnouncement.Deserialize ] Can't read CurrentRank")
+	if err := write(writer, ma.CurrentRank); err != nil {
+		return err
 	}
 
 	if ma.CurrentRank != 0 {
-		err := ma.NonJoinerMembershipAnnouncement.DeserializeFrom(ctx, data)
-		if err != nil {
+		ctx.SetInContext(ContextMembershipAnnouncement)
+		defer ctx.SetInContext(NoContext)
+
+		if err := write(writer, ma.RequestedPower); err != nil {
+			return err
+		}
+
+		if err := ma.Member.SerializeTo(ctx, writer); err != nil {
+			return err
+		}
+
+		if err := write(writer, ma.AnnounceSignature); err != nil {
 			return err
 		}
 	}
 
-	panic("implement me")
+	return nil
+}
+
+func (ma *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	if err := read(reader, &ma.CurrentRank); err != nil {
+		return err
+	}
+
+	if ma.CurrentRank != 0 {
+		if err := read(reader, &ma.RequestedPower); err != nil {
+			return err
+		}
+
+		if err := ma.Member.DeserializeFrom(ctx, reader); err != nil {
+			return err
+		}
+
+		if err := read(reader, &ma.AnnounceSignature); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type CompactGlobulaNodeState struct {
+	// ByteSize=128
+	// PulseDataHash            common.Bits256 //available externally
+	// FoldedLastCloudStateHash common.Bits224 //available externally
+	// NodeRank                 MembershipRank //available externally
+
+	NodeStateHash             common.Bits512 // ByteSize=64
+	GlobulaNodeStateSignature common.Bits512 // ByteSize=64, :=Sign(NodePK, Merkle512(NodeStateHash, (LastCloudStateHash.FoldTo224() << 32 | MembershipRank)))
+}
+
+func (gns *CompactGlobulaNodeState) SerializeTo(_ SerializeContext, writer io.Writer) error {
+	return write(writer, gns)
+}
+
+func (gns *CompactGlobulaNodeState) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
+	return read(reader, gns)
 }
 
 type NodeAnnouncement struct {
 	// ByteSize(MembershipAnnouncement) = 132, 136, 267, 269, 279
 	// ByteSize(NeighbourAnnouncement) = 132, 136
 
-	NodeState  common2.CompactGlobulaNodeState // ByteSize=128
-	AnnounceID common.ShortNodeID              // ByteSize=4 // =0 - no announcement, =self - is leaver, else has joiner
+	NodeState  CompactGlobulaNodeState // ByteSize=128
+	AnnounceID common.ShortNodeID      // ByteSize=4 // =0 - no announcement, =self - is leaver, else has joiner
 	/*
 		1. When is in MembershipAnnouncement
 			"Leaver" is present when AnnounceID = Header.SourceID (sender is leaving)
 		2. When is in NeighbourAnnouncement
 			"Leaver" is present when AnnounceID = NeighbourNodeID (neighbour is leaving)
 	*/
-	Leaver *LeaveAnnouncement `insolar-transport:"optional"` // ByteSize = 4
+	Leaver LeaveAnnouncement `insolar-transport:"optional"` // ByteSize = 4
 	/*
 		1. "Joiner" is NEVER present when "Leaver" is present
 		2. when AnnounceID != 0 (sender/neighbour has introduced a joiner with AnnounceID)
 			a. "Joiner" is present when is in MembershipAnnouncement
 			b. "Joiner" is NEVER present when is in NeighbourAnnouncement
 	*/
-	Joiner *JoinAnnouncement `insolar-transport:"optional"` // ByteSize = 135, 137, 147
+	Joiner JoinAnnouncement `insolar-transport:"optional"` // ByteSize = 135, 137, 147
+}
+
+func (na *NodeAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	if err := na.NodeState.SerializeTo(ctx, writer); err != nil {
+		return err
+	}
+
+	if err := write(writer, na.AnnounceID); err != nil {
+		return err
+	}
+
+	if ctx.InContext(ContextMembershipAnnouncement) {
+		if na.AnnounceID == ctx.GetSourceID() {
+			if err := na.Leaver.SerializeTo(ctx, writer); err != nil {
+				return err
+			}
+		} else if na.AnnounceID != 0 {
+			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
+				return err
+			}
+			ctx.SetAnnouncedJoinerNodeID(na.AnnounceID)
+		}
+	}
+
+	if ctx.InContext(ContextNeighbourAnnouncement) {
+		if na.AnnounceID == ctx.GetNeighbourNodeID() {
+			if err := na.Leaver.SerializeTo(ctx, writer); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (na *NodeAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	if err := na.NodeState.DeserializeFrom(ctx, reader); err != nil {
+		return err
+	}
+
+	if err := read(reader, &na.AnnounceID); err != nil {
+		return err
+	}
+
+	if ctx.InContext(ContextMembershipAnnouncement) {
+		if na.AnnounceID == ctx.GetSourceID() {
+			if err := na.Leaver.DeserializeFrom(ctx, reader); err != nil {
+				return err
+			}
+		} else if na.AnnounceID != 0 {
+			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
+				return err
+			}
+			ctx.SetAnnouncedJoinerNodeID(na.Joiner.ShortID)
+		}
+	}
+
+	if ctx.InContext(ContextNeighbourAnnouncement) {
+		if na.AnnounceID == ctx.GetNeighbourNodeID() {
+			if err := na.Leaver.DeserializeFrom(ctx, reader); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 type JoinAnnouncement struct {
@@ -365,10 +586,10 @@ type LeaveAnnouncement struct {
 	LeaveReason uint32
 }
 
-func (la *LeaveAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+func (la *LeaveAnnouncement) SerializeTo(_ SerializeContext, writer io.Writer) error {
 	return write(writer, la)
 }
 
-func (la *LeaveAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+func (la *LeaveAnnouncement) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
 	return read(reader, la)
 }

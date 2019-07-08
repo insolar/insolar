@@ -16,6 +16,7 @@ var (
 type PacketHeaderAccessor interface {
 	GetProtocolType() ProtocolType
 	GetPacketType() packets.PacketType
+	GetSourceID() common.ShortNodeID
 	HasFlag(flag Flag) bool
 	IsRelayRestricted() bool
 	IsBodyEncrypted() bool
@@ -30,9 +31,24 @@ type PacketBody interface {
 	ContextDeserializerFrom
 }
 
+type FieldContext uint
+
+const (
+	NoContext = FieldContext(iota)
+	ContextMembershipAnnouncement
+	ContextNeighbourAnnouncement
+)
+
 type PacketContext interface {
 	PacketHeaderAccessor
 	context.Context
+
+	InContext(ctx FieldContext) bool
+	SetInContext(ctx FieldContext)
+	GetNeighbourNodeID() common.ShortNodeID
+	SetNeighbourNodeID(nodeID common.ShortNodeID)
+	GetAnnouncedJoinerNodeID() common.ShortNodeID
+	SetAnnouncedJoinerNodeID(nodeID common.ShortNodeID)
 }
 
 type SerializeContext interface {

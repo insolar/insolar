@@ -96,3 +96,11 @@ type GlobulaStateVector struct {
 	VectorHash             common.Bits512         // ByteSize=64
 	SignedGlobulaStateHash common.Bits512         // ByteSize=64
 }
+
+func (gsv *GlobulaStateVector) SerializeTo(_ SerializeContext, writer io.Writer) error {
+	return write(writer, gsv)
+}
+
+func (gsv *GlobulaStateVector) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
+	return read(reader, gsv)
+}

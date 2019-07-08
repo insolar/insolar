@@ -143,16 +143,6 @@ func (v MemberCondition) String() string {
 	}
 }
 
-type CompactGlobulaNodeState struct {
-	// ByteSize=128
-	// PulseDataHash            common.Bits256 //available externally
-	// FoldedLastCloudStateHash common.Bits224 //available externally
-	// NodeRank                 MembershipRank //available externally
-
-	NodeStateHash             common.Bits512 // ByteSize=64
-	GlobulaNodeStateSignature common.Bits512 // ByteSize=64, :=Sign(NodePK, Merkle512(NodeStateHash, (LastCloudStateHash.FoldTo224() << 32 | MembershipRank)))
-}
-
 type GlobulaNodeState struct {
 	NodeStateHash      common.Bits512
 	PulseDataHash      common.Bits256

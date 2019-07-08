@@ -80,6 +80,10 @@ type packetContext struct {
 	PacketHeaderAccessor
 
 	header *Header
+
+	fieldContext    FieldContext
+	neighbourNodeID common.ShortNodeID
+	joinerNodeID    common.ShortNodeID
 }
 
 func newPacketContext(ctx context.Context, header *Header) packetContext {
@@ -88,6 +92,30 @@ func newPacketContext(ctx context.Context, header *Header) packetContext {
 		PacketHeaderAccessor: header,
 		header:               header,
 	}
+}
+
+func (pc *packetContext) InContext(ctx FieldContext) bool {
+	return pc.fieldContext == ctx
+}
+
+func (pc *packetContext) SetInContext(ctx FieldContext) {
+	pc.fieldContext = ctx
+}
+
+func (pc *packetContext) GetNeighbourNodeID() common.ShortNodeID {
+	return pc.neighbourNodeID
+}
+
+func (pc *packetContext) SetNeighbourNodeID(nodeID common.ShortNodeID) {
+	pc.neighbourNodeID = nodeID
+}
+
+func (pc *packetContext) GetAnnouncedJoinerNodeID() common.ShortNodeID {
+	return pc.joinerNodeID
+}
+
+func (pc *packetContext) SetAnnouncedJoinerNodeID(nodeID common.ShortNodeID) {
+	pc.joinerNodeID = nodeID
 }
 
 type trackableWriter struct {
@@ -169,6 +197,7 @@ func (ctx *serializeContext) Finalize() (int64, error) {
 	}
 	ctx.setter.setPayloadLength(uint16(payloadLength))
 
+	// TODO: receiverid =0
 	if err := ctx.header.SerializeTo(ctx, ctx.packetBuffer); err != nil {
 		return totalWrite, ErrMalformedHeader(err)
 	}
