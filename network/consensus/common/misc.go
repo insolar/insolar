@@ -75,6 +75,8 @@ func (addr HostAddress) String() string {
 	return string(addr)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.NodeEndpoint -o ../common -s _mock.go
+
 type NodeEndpoint interface {
 	GetEndpointType() NodeEndpointType
 	GetRelayID() ShortNodeID

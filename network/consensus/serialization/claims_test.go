@@ -48,49 +48,34 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package serialization
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"bytes"
+	"context"
+	"fmt"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash -o ../common -s _mock.go
+func TestClaimList_SerializeDeserialize(t *testing.T) {
+	list := ClaimList{EndOfClaims: EmptyClaim{ClaimHeader{TypeAndLength: 22}}}
+	list2 := ClaimList{}
 
-type NodeStateHash interface {
-	common.DigestHolder
-}
+	buf := make([]byte, 0)
+	rw := bytes.NewBuffer(buf)
+	w := newTrackableWriter(rw)
+	pctx := newPacketContext(context.Background(), nil)
+	sctx := newSerializeContext(pctx, w, signer, nil)
 
-type GlobulaStateHash interface {
-	common.DigestHolder
-}
+	err := list.SerializeTo(sctx, rw)
+	assert.NoError(t, err)
+	fmt.Printf("%#v", buf)
 
-type CloudStateHash interface {
-	common.DigestHolder
-}
+	r := newTrackableReader(rw)
+	dctx := newDeserializeContext(pctx, r, nil)
+	err = list2.DeserializeFrom(dctx, rw)
+	assert.NoError(t, err)
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../common -s _mock.go
-
-type MemberAnnouncementSignature interface {
-	common.SignatureHolder
-}
-
-type OriginalPulsarPacket interface {
-	common.FixedReader
-	OriginalPulsarPacket()
-}
-
-func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
-
-type nodeStateHashEvidence struct {
-	common.SignedDigest
-}
-
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
-
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() common.SignatureHolder {
-	return c.GetSignatureHolder()
+	assert.Equal(t, list, list2)
 }

@@ -204,6 +204,15 @@ func (h *Header) setFlag(f Flag) {
 	h.PacketFlags = uint8(setBit(uint(h.PacketFlags), uint(f)))
 }
 
+func (h *Header) getFlagRangeInt(from, to uint8) uint8 {
+	var i, mask, result uint8
+	for i = 0; i <= to; i++ {
+		mask = mask | (1 << i)
+	}
+	result = h.PacketFlags & mask
+	return result >> from
+}
+
 type Packet struct {
 	Header      Header             `insolar-transport:"Protocol=0x01;Packet=0-4"` // ByteSize=16
 	PulseNumber common.PulseNumber `insolar-transport:"[30-31]=0"`                // [30-31] MUST ==0, ByteSize=4

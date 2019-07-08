@@ -78,7 +78,7 @@ type RealmPopulation interface {
 	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
 	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)
 
-	CreateOrUpdateVectorHelper(v *RealmVectorHelper) *RealmVectorHelper
+	SetOrUpdateVectorHelper(v *RealmVectorHelper) *RealmVectorHelper
 }
 
 type PurgatoryNodeState int

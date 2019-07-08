@@ -58,3 +58,7 @@ type NodeAnnouncedState struct {
 	//NodeStateSignature common.Signature
 	//AnnounceSignature *common.Signature
 }
+
+func (p *NodeAnnouncedState) IsEmpty() bool {
+	return p.StateEvidence == nil
+}

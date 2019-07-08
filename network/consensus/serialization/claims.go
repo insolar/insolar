@@ -75,11 +75,24 @@ type ClaimList struct {
 }
 
 func (cl *ClaimList) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	// TODO
-	return nil
+	for _, c := range cl.Claims {
+		err := c.SerializeTo(ctx, writer)
+		if err != nil {
+			return err
+		}
+	}
+	return write(writer, cl.EndOfClaims)
 }
 
 func (cl *ClaimList) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
 	// TODO
 	return nil
+}
+
+func (c *ClaimHeader) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	return write(writer, c)
+}
+
+func (c *GenericClaim) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	return write(writer, c)
 }
