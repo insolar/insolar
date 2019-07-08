@@ -254,11 +254,6 @@ func (m *FilamentModifierDefault) SetRequest(
 
 	objectID := *request.GetObject().Record()
 
-	// New object
-	if request.GetCallType() == record.CTSaveAsChild || request.GetCallType() == record.CTSaveAsDelegate {
-
-	}
-
 	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to fetch index")

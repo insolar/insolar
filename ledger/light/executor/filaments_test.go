@@ -38,7 +38,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
 		calculator = executor.NewFilamentCalculatorMock(t)
-		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator)
+		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator, nil, nil)
 	}
 
 	objRef := gen.Reference()
@@ -159,7 +159,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
 		calculator = executor.NewFilamentCalculatorMock(mc)
-		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator)
+		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator, nil, nil)
 	}
 
 	validResult := record.Result{Object: gen.ID()}
