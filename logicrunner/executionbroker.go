@@ -261,6 +261,10 @@ func (q *ExecutionBroker) storeWithoutDuplication(_ context.Context, transcript 
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
 		if q.storeWithoutDuplication(ctx, transcript) {
+			inslogger.FromContext(ctx).Info(
+				"Already know about request ",
+				transcript.RequestRef.String(), ", skipping",
+			)
 			continue
 		}
 
@@ -282,6 +286,10 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
 		if q.storeWithoutDuplication(ctx, transcript) {
+			inslogger.FromContext(ctx).Info(
+				"Already know about request ",
+				transcript.RequestRef.String(), ", skipping",
+			)
 			continue
 		}
 
@@ -313,6 +321,10 @@ func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
+	q.deduplicationLock.Lock()
+	defer q.deduplicationLock.Unlock()
+
+	delete(q.deduplicationTable, *r)
 	return q.mutable.PopByReference(r)
 }
 

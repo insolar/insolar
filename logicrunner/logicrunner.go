@@ -383,7 +383,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 	messages := make([]insolar.Message, 0)
 
-	for ref, state := range *lr.StateStorage.StateMap() {
+	objects := lr.StateStorage.StateMap()
+	inslogger.FromContext(ctx).Debug("Processing ", len(*objects), " on pulse change")
+	for ref, state := range *objects {
 		meNext, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
 		)
