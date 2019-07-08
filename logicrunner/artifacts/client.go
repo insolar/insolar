@@ -161,6 +161,9 @@ func (m *client) registerRequest(
 	}
 
 	pl, err := m.sendWithRetry(ctx, msgPayload, insolar.DynamicRoleLightExecutor, *recRef, retriesNumber)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't register request")
+	}
 
 	switch p := pl.(type) {
 	case *payload.RequestInfo:
