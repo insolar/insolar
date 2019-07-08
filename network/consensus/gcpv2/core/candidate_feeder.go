@@ -83,7 +83,8 @@ func (p *SequencialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nod
 	if len(p.buf) == 1 {
 		p.buf = nil
 	} else {
-		p.buf = p.buf[1:] //possible memory leak under constant addition of candidates
+		p.buf[0] = nil
+		p.buf = p.buf[1:]
 	}
 	return true
 }
