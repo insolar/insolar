@@ -647,13 +647,13 @@ func (m *client) DeployCode(
 }
 
 // sendWithRetry sends given Payload to the specified DynamicRole with provided `retriesNumber`.
-// If retriesNumber is zero or less the methods sends the message only once.
+// If retriesNumber is zero the methods sends the message only once.
 func (m *client) sendWithRetry(
 	ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, // nolint: unparam
 	ref insolar.Reference, retriesNumber int) (payload.Payload, error) {
 	var lastPulse insolar.PulseNumber
 
-	for {
+	for retriesNumber >= 0 {
 		currentPulse, err := m.PulseAccessor.Latest(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ sendWithRetry ] Can't get latest pulse")
@@ -688,9 +688,6 @@ func (m *client) sendWithRetry(
 		}
 		inslogger.FromContext(ctx).Debug("[ sendWithRetry ] flow cancelled, retrying")
 		retriesNumber--
-		if retriesNumber < 0 {
-			break
-		}
 	}
 	return nil, fmt.Errorf("[ sendWithRetry ] flow cancelled, retries exceeded")
 }
