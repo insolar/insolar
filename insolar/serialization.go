@@ -17,6 +17,8 @@
 package insolar
 
 import (
+	"reflect"
+
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -32,6 +34,7 @@ func Serialize(o interface{}) ([]byte, error) {
 // Deserialize deserializes data to specific interface
 func Deserialize(data []byte, to interface{}) error {
 	ch := new(codec.CborHandle)
+	ch.MapType = reflect.TypeOf(map[string]interface{}(nil))
 	err := codec.NewDecoderBytes(data, ch).Decode(&to)
 	return errors.Wrap(err, "[ Deserialize ]")
 }

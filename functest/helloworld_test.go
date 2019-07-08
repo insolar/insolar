@@ -30,7 +30,6 @@ import (
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
 )
 
 type HelloWorldInstance struct {
@@ -211,7 +210,7 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 	return int(rv), nil
 }
 
-func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (*helloworld.HwMessage, error) {
+func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interface{}, error) {
 	seed, err := requester.GetSeed(TestAPIURL)
 	if err != nil {
 		return nil, err
@@ -236,11 +235,11 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (*helloworld.HwMessa
 		return nil, errors.Errorf("[ CountChild ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(helloworld.HwMessage)
+	rv, ok := result.Result.ContractResult.(map[string]interface{})
 	if !ok {
-		return nil, errors.Errorf("[ CountChild ] Failed to decode result: expected float64, got %T", result.Result)
+		return nil, errors.Errorf("[ CountChild ] Failed to decode result: expected HwMessage, got %T", result.Result.ContractResult)
 	}
-	return &rv, nil
+	return rv, nil
 }
 
 func TestCallHelloWorld(t *testing.T) {
@@ -314,5 +313,5 @@ func TestCallHelloWorldReturnObj(t *testing.T) {
 
 	val, err := hw.ReturnObj(ctx)
 	r.NoError(err)
-	r.NotNil(val)
+	r.Equal(val["message"], "Hello world")
 }
