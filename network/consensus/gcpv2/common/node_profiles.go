@@ -61,7 +61,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile -o ../common -s _mock.go
 
 type HostProfile interface {
 	GetDefaultEndpoint() common.NodeEndpoint
@@ -90,6 +90,7 @@ type NodeIntroProfile interface { //brief intro
 	GetIntroduction() NodeIntroduction //not null, full intro, will panic when HasIntroduction() == false
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeProfile -o ../common -s _mock.go
 type NodeProfile interface {
 	NodeIntroProfile
 	GetIndex() int
@@ -109,7 +110,7 @@ type BriefCandidateProfile interface {
 	GetJoinerSignature() common.SignatureHolder
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.CandidateProfile -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.CandidateProfile -o ../common -s _mock.go
 type CandidateProfile interface {
 	BriefCandidateProfile
 
@@ -133,7 +134,7 @@ type NodeProfileFactory interface {
 	CreateFullIntroProfile(candidate CandidateProfile) NodeIntroProfile
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile -o ../common -s _mock.go
 
 type LocalNodeProfile interface {
 	NodeProfile

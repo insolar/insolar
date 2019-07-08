@@ -86,5 +86,4 @@ func TestVerifySizes(t *testing.T) {
 
 	ns.NeighbourhoodSize = 5
 	require.NotPanics(t, ns.VerifySizes)
-
 }

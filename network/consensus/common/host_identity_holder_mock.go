@@ -1,4 +1,4 @@
-package testutils
+package common
 
 /*
 DO NOT EDIT!
@@ -10,24 +10,23 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	common "github.com/insolar/insolar/network/consensus/common"
 )
 
 //HostIdentityHolderMock implements github.com/insolar/insolar/network/consensus/common.HostIdentityHolder
 type HostIdentityHolderMock struct {
 	t minimock.Tester
 
-	GetHostAddressFunc       func() (r common.HostAddress)
+	GetHostAddressFunc       func() (r HostAddress)
 	GetHostAddressCounter    uint64
 	GetHostAddressPreCounter uint64
 	GetHostAddressMock       mHostIdentityHolderMockGetHostAddress
 
-	GetTransportCertFunc       func() (r common.CertificateHolder)
+	GetTransportCertFunc       func() (r CertificateHolder)
 	GetTransportCertCounter    uint64
 	GetTransportCertPreCounter uint64
 	GetTransportCertMock       mHostIdentityHolderMockGetTransportCert
 
-	GetTransportKeyFunc       func() (r common.SignatureKeyHolder)
+	GetTransportKeyFunc       func() (r SignatureKeyHolder)
 	GetTransportKeyCounter    uint64
 	GetTransportKeyPreCounter uint64
 	GetTransportKeyMock       mHostIdentityHolderMockGetTransportKey
@@ -59,7 +58,7 @@ type HostIdentityHolderMockGetHostAddressExpectation struct {
 }
 
 type HostIdentityHolderMockGetHostAddressResult struct {
-	r common.HostAddress
+	r HostAddress
 }
 
 //Expect specifies that invocation of HostIdentityHolder.GetHostAddress is expected from 1 to Infinity times
@@ -75,7 +74,7 @@ func (m *mHostIdentityHolderMockGetHostAddress) Expect() *mHostIdentityHolderMoc
 }
 
 //Return specifies results of invocation of HostIdentityHolder.GetHostAddress
-func (m *mHostIdentityHolderMockGetHostAddress) Return(r common.HostAddress) *HostIdentityHolderMock {
+func (m *mHostIdentityHolderMockGetHostAddress) Return(r HostAddress) *HostIdentityHolderMock {
 	m.mock.GetHostAddressFunc = nil
 	m.expectationSeries = nil
 
@@ -97,12 +96,12 @@ func (m *mHostIdentityHolderMockGetHostAddress) ExpectOnce() *HostIdentityHolder
 	return expectation
 }
 
-func (e *HostIdentityHolderMockGetHostAddressExpectation) Return(r common.HostAddress) {
+func (e *HostIdentityHolderMockGetHostAddressExpectation) Return(r HostAddress) {
 	e.result = &HostIdentityHolderMockGetHostAddressResult{r}
 }
 
 //Set uses given function f as a mock of HostIdentityHolder.GetHostAddress method
-func (m *mHostIdentityHolderMockGetHostAddress) Set(f func() (r common.HostAddress)) *HostIdentityHolderMock {
+func (m *mHostIdentityHolderMockGetHostAddress) Set(f func() (r HostAddress)) *HostIdentityHolderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -111,7 +110,7 @@ func (m *mHostIdentityHolderMockGetHostAddress) Set(f func() (r common.HostAddre
 }
 
 //GetHostAddress implements github.com/insolar/insolar/network/consensus/common.HostIdentityHolder interface
-func (m *HostIdentityHolderMock) GetHostAddress() (r common.HostAddress) {
+func (m *HostIdentityHolderMock) GetHostAddress() (r HostAddress) {
 	counter := atomic.AddUint64(&m.GetHostAddressPreCounter, 1)
 	defer atomic.AddUint64(&m.GetHostAddressCounter, 1)
 
@@ -193,7 +192,7 @@ type HostIdentityHolderMockGetTransportCertExpectation struct {
 }
 
 type HostIdentityHolderMockGetTransportCertResult struct {
-	r common.CertificateHolder
+	r CertificateHolder
 }
 
 //Expect specifies that invocation of HostIdentityHolder.GetTransportCert is expected from 1 to Infinity times
@@ -209,7 +208,7 @@ func (m *mHostIdentityHolderMockGetTransportCert) Expect() *mHostIdentityHolderM
 }
 
 //Return specifies results of invocation of HostIdentityHolder.GetTransportCert
-func (m *mHostIdentityHolderMockGetTransportCert) Return(r common.CertificateHolder) *HostIdentityHolderMock {
+func (m *mHostIdentityHolderMockGetTransportCert) Return(r CertificateHolder) *HostIdentityHolderMock {
 	m.mock.GetTransportCertFunc = nil
 	m.expectationSeries = nil
 
@@ -231,12 +230,12 @@ func (m *mHostIdentityHolderMockGetTransportCert) ExpectOnce() *HostIdentityHold
 	return expectation
 }
 
-func (e *HostIdentityHolderMockGetTransportCertExpectation) Return(r common.CertificateHolder) {
+func (e *HostIdentityHolderMockGetTransportCertExpectation) Return(r CertificateHolder) {
 	e.result = &HostIdentityHolderMockGetTransportCertResult{r}
 }
 
 //Set uses given function f as a mock of HostIdentityHolder.GetTransportCert method
-func (m *mHostIdentityHolderMockGetTransportCert) Set(f func() (r common.CertificateHolder)) *HostIdentityHolderMock {
+func (m *mHostIdentityHolderMockGetTransportCert) Set(f func() (r CertificateHolder)) *HostIdentityHolderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -245,7 +244,7 @@ func (m *mHostIdentityHolderMockGetTransportCert) Set(f func() (r common.Certifi
 }
 
 //GetTransportCert implements github.com/insolar/insolar/network/consensus/common.HostIdentityHolder interface
-func (m *HostIdentityHolderMock) GetTransportCert() (r common.CertificateHolder) {
+func (m *HostIdentityHolderMock) GetTransportCert() (r CertificateHolder) {
 	counter := atomic.AddUint64(&m.GetTransportCertPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransportCertCounter, 1)
 
@@ -327,7 +326,7 @@ type HostIdentityHolderMockGetTransportKeyExpectation struct {
 }
 
 type HostIdentityHolderMockGetTransportKeyResult struct {
-	r common.SignatureKeyHolder
+	r SignatureKeyHolder
 }
 
 //Expect specifies that invocation of HostIdentityHolder.GetTransportKey is expected from 1 to Infinity times
@@ -343,7 +342,7 @@ func (m *mHostIdentityHolderMockGetTransportKey) Expect() *mHostIdentityHolderMo
 }
 
 //Return specifies results of invocation of HostIdentityHolder.GetTransportKey
-func (m *mHostIdentityHolderMockGetTransportKey) Return(r common.SignatureKeyHolder) *HostIdentityHolderMock {
+func (m *mHostIdentityHolderMockGetTransportKey) Return(r SignatureKeyHolder) *HostIdentityHolderMock {
 	m.mock.GetTransportKeyFunc = nil
 	m.expectationSeries = nil
 
@@ -365,12 +364,12 @@ func (m *mHostIdentityHolderMockGetTransportKey) ExpectOnce() *HostIdentityHolde
 	return expectation
 }
 
-func (e *HostIdentityHolderMockGetTransportKeyExpectation) Return(r common.SignatureKeyHolder) {
+func (e *HostIdentityHolderMockGetTransportKeyExpectation) Return(r SignatureKeyHolder) {
 	e.result = &HostIdentityHolderMockGetTransportKeyResult{r}
 }
 
 //Set uses given function f as a mock of HostIdentityHolder.GetTransportKey method
-func (m *mHostIdentityHolderMockGetTransportKey) Set(f func() (r common.SignatureKeyHolder)) *HostIdentityHolderMock {
+func (m *mHostIdentityHolderMockGetTransportKey) Set(f func() (r SignatureKeyHolder)) *HostIdentityHolderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -379,7 +378,7 @@ func (m *mHostIdentityHolderMockGetTransportKey) Set(f func() (r common.Signatur
 }
 
 //GetTransportKey implements github.com/insolar/insolar/network/consensus/common.HostIdentityHolder interface
-func (m *HostIdentityHolderMock) GetTransportKey() (r common.SignatureKeyHolder) {
+func (m *HostIdentityHolderMock) GetTransportKey() (r SignatureKeyHolder) {
 	counter := atomic.AddUint64(&m.GetTransportKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransportKeyCounter, 1)
 

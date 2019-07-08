@@ -1,4 +1,4 @@
-package testutils
+package packets
 
 /*
 DO NOT EDIT!
@@ -11,14 +11,13 @@ import (
 
 	"github.com/gojuno/minimock"
 	common "github.com/insolar/insolar/network/consensus/common"
-	packets "github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 //PacketParserMock implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser
 type PacketParserMock struct {
 	t minimock.Tester
 
-	GetMemberPacketFunc       func() (r packets.MemberPacketReader)
+	GetMemberPacketFunc       func() (r MemberPacketReader)
 	GetMemberPacketCounter    uint64
 	GetMemberPacketPreCounter uint64
 	GetMemberPacketMock       mPacketParserMockGetMemberPacket
@@ -28,7 +27,7 @@ type PacketParserMock struct {
 	GetPacketSignaturePreCounter uint64
 	GetPacketSignatureMock       mPacketParserMockGetPacketSignature
 
-	GetPacketTypeFunc       func() (r packets.PacketType)
+	GetPacketTypeFunc       func() (r PacketType)
 	GetPacketTypeCounter    uint64
 	GetPacketTypePreCounter uint64
 	GetPacketTypeMock       mPacketParserMockGetPacketType
@@ -38,7 +37,7 @@ type PacketParserMock struct {
 	GetPulseNumberPreCounter uint64
 	GetPulseNumberMock       mPacketParserMockGetPulseNumber
 
-	GetPulsePacketFunc       func() (r packets.PulsePacketReader)
+	GetPulsePacketFunc       func() (r PulsePacketReader)
 	GetPulsePacketCounter    uint64
 	GetPulsePacketPreCounter uint64
 	GetPulsePacketMock       mPacketParserMockGetPulsePacket
@@ -90,7 +89,7 @@ type PacketParserMockGetMemberPacketExpectation struct {
 }
 
 type PacketParserMockGetMemberPacketResult struct {
-	r packets.MemberPacketReader
+	r MemberPacketReader
 }
 
 //Expect specifies that invocation of PacketParser.GetMemberPacket is expected from 1 to Infinity times
@@ -106,7 +105,7 @@ func (m *mPacketParserMockGetMemberPacket) Expect() *mPacketParserMockGetMemberP
 }
 
 //Return specifies results of invocation of PacketParser.GetMemberPacket
-func (m *mPacketParserMockGetMemberPacket) Return(r packets.MemberPacketReader) *PacketParserMock {
+func (m *mPacketParserMockGetMemberPacket) Return(r MemberPacketReader) *PacketParserMock {
 	m.mock.GetMemberPacketFunc = nil
 	m.expectationSeries = nil
 
@@ -128,12 +127,12 @@ func (m *mPacketParserMockGetMemberPacket) ExpectOnce() *PacketParserMockGetMemb
 	return expectation
 }
 
-func (e *PacketParserMockGetMemberPacketExpectation) Return(r packets.MemberPacketReader) {
+func (e *PacketParserMockGetMemberPacketExpectation) Return(r MemberPacketReader) {
 	e.result = &PacketParserMockGetMemberPacketResult{r}
 }
 
 //Set uses given function f as a mock of PacketParser.GetMemberPacket method
-func (m *mPacketParserMockGetMemberPacket) Set(f func() (r packets.MemberPacketReader)) *PacketParserMock {
+func (m *mPacketParserMockGetMemberPacket) Set(f func() (r MemberPacketReader)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -142,7 +141,7 @@ func (m *mPacketParserMockGetMemberPacket) Set(f func() (r packets.MemberPacketR
 }
 
 //GetMemberPacket implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
-func (m *PacketParserMock) GetMemberPacket() (r packets.MemberPacketReader) {
+func (m *PacketParserMock) GetMemberPacket() (r MemberPacketReader) {
 	counter := atomic.AddUint64(&m.GetMemberPacketPreCounter, 1)
 	defer atomic.AddUint64(&m.GetMemberPacketCounter, 1)
 
@@ -358,7 +357,7 @@ type PacketParserMockGetPacketTypeExpectation struct {
 }
 
 type PacketParserMockGetPacketTypeResult struct {
-	r packets.PacketType
+	r PacketType
 }
 
 //Expect specifies that invocation of PacketParser.GetPacketType is expected from 1 to Infinity times
@@ -374,7 +373,7 @@ func (m *mPacketParserMockGetPacketType) Expect() *mPacketParserMockGetPacketTyp
 }
 
 //Return specifies results of invocation of PacketParser.GetPacketType
-func (m *mPacketParserMockGetPacketType) Return(r packets.PacketType) *PacketParserMock {
+func (m *mPacketParserMockGetPacketType) Return(r PacketType) *PacketParserMock {
 	m.mock.GetPacketTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -396,12 +395,12 @@ func (m *mPacketParserMockGetPacketType) ExpectOnce() *PacketParserMockGetPacket
 	return expectation
 }
 
-func (e *PacketParserMockGetPacketTypeExpectation) Return(r packets.PacketType) {
+func (e *PacketParserMockGetPacketTypeExpectation) Return(r PacketType) {
 	e.result = &PacketParserMockGetPacketTypeResult{r}
 }
 
 //Set uses given function f as a mock of PacketParser.GetPacketType method
-func (m *mPacketParserMockGetPacketType) Set(f func() (r packets.PacketType)) *PacketParserMock {
+func (m *mPacketParserMockGetPacketType) Set(f func() (r PacketType)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -410,7 +409,7 @@ func (m *mPacketParserMockGetPacketType) Set(f func() (r packets.PacketType)) *P
 }
 
 //GetPacketType implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
-func (m *PacketParserMock) GetPacketType() (r packets.PacketType) {
+func (m *PacketParserMock) GetPacketType() (r PacketType) {
 	counter := atomic.AddUint64(&m.GetPacketTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPacketTypeCounter, 1)
 
@@ -626,7 +625,7 @@ type PacketParserMockGetPulsePacketExpectation struct {
 }
 
 type PacketParserMockGetPulsePacketResult struct {
-	r packets.PulsePacketReader
+	r PulsePacketReader
 }
 
 //Expect specifies that invocation of PacketParser.GetPulsePacket is expected from 1 to Infinity times
@@ -642,7 +641,7 @@ func (m *mPacketParserMockGetPulsePacket) Expect() *mPacketParserMockGetPulsePac
 }
 
 //Return specifies results of invocation of PacketParser.GetPulsePacket
-func (m *mPacketParserMockGetPulsePacket) Return(r packets.PulsePacketReader) *PacketParserMock {
+func (m *mPacketParserMockGetPulsePacket) Return(r PulsePacketReader) *PacketParserMock {
 	m.mock.GetPulsePacketFunc = nil
 	m.expectationSeries = nil
 
@@ -664,12 +663,12 @@ func (m *mPacketParserMockGetPulsePacket) ExpectOnce() *PacketParserMockGetPulse
 	return expectation
 }
 
-func (e *PacketParserMockGetPulsePacketExpectation) Return(r packets.PulsePacketReader) {
+func (e *PacketParserMockGetPulsePacketExpectation) Return(r PulsePacketReader) {
 	e.result = &PacketParserMockGetPulsePacketResult{r}
 }
 
 //Set uses given function f as a mock of PacketParser.GetPulsePacket method
-func (m *mPacketParserMockGetPulsePacket) Set(f func() (r packets.PulsePacketReader)) *PacketParserMock {
+func (m *mPacketParserMockGetPulsePacket) Set(f func() (r PulsePacketReader)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -678,7 +677,7 @@ func (m *mPacketParserMockGetPulsePacket) Set(f func() (r packets.PulsePacketRea
 }
 
 //GetPulsePacket implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
-func (m *PacketParserMock) GetPulsePacket() (r packets.PulsePacketReader) {
+func (m *PacketParserMock) GetPulsePacket() (r PulsePacketReader) {
 	counter := atomic.AddUint64(&m.GetPulsePacketPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulsePacketCounter, 1)
 

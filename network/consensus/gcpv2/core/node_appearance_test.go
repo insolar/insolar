@@ -60,13 +60,11 @@ import (
 	gcommon "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-	"github.com/insolar/insolar/network/consensus/gcpv2/testutils"
-	ctestutils "github.com/insolar/insolar/network/consensus/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewNodeAppearanceAsSelf(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -82,7 +80,7 @@ func TestNewNodeAppearanceAsSelf(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -99,7 +97,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -107,7 +105,7 @@ func TestString(t *testing.T) {
 }
 
 func TestLessByNeighbourWeightForNodeAppearance(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r1 := NewNodeAppearanceAsSelf(lp, callback)
@@ -123,20 +121,20 @@ func TestLessByNeighbourWeightForNodeAppearance(t *testing.T) {
 }
 
 func TestCopySelfTo(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 
 	source := NewNodeAppearanceAsSelf(lp, callback)
-	source.stateEvidence = testutils.NewNodeStateHashEvidenceMock(t)
-	source.announceSignature = testutils.NewMemberAnnouncementSignatureMock(t)
+	source.stateEvidence = gcommon.NewNodeStateHashEvidenceMock(t)
+	source.announceSignature = gcommon.NewMemberAnnouncementSignatureMock(t)
 	source.requestedPower = 1
 	source.state = packets.NodeStateLocalActive
 	source.trust = packets.TrustBySome
 
 	target := NewNodeAppearanceAsSelf(lp, callback)
-	target.stateEvidence = testutils.NewNodeStateHashEvidenceMock(t)
-	target.announceSignature = testutils.NewMemberAnnouncementSignatureMock(t)
+	target.stateEvidence = gcommon.NewNodeStateHashEvidenceMock(t)
+	target.announceSignature = gcommon.NewMemberAnnouncementSignatureMock(t)
 	target.requestedPower = 2
 	target.state = packets.NodeStateReceivedPhases
 	target.trust = packets.TrustByNeighbors
@@ -155,7 +153,7 @@ func TestCopySelfTo(t *testing.T) {
 }
 
 func TestIsJoiner(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	lp.GetStateMock.Set(func() gcommon.MembershipState { return gcommon.Undefined })
 	callback := &nodeContext{}
@@ -165,7 +163,7 @@ func TestIsJoiner(t *testing.T) {
 }
 
 func TestGetIndex(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	index := 1
 	lp.GetIndexMock.Set(func() int { return index })
@@ -175,7 +173,7 @@ func TestGetIndex(t *testing.T) {
 }
 
 func TestGetShortNodeID(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	lp.GetShortNodeIDMock.Set(func() common.ShortNodeID { return common.AbsentShortNodeID })
 	callback := &nodeContext{}
@@ -184,7 +182,7 @@ func TestGetShortNodeID(t *testing.T) {
 }
 
 func TestGetTrustLevel(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -193,7 +191,7 @@ func TestGetTrustLevel(t *testing.T) {
 }
 
 func TestGetProfile(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -201,11 +199,11 @@ func TestGetProfile(t *testing.T) {
 }
 
 func TestVerifyPacketAuthenticity(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	var isAcceptable bool
 	lp.IsAcceptableHostMock.Set(func(common.HostIdentityHolder) bool { return *(&isAcceptable) })
-	sv := ctestutils.NewSignatureVerifierMock(t)
+	sv := common.NewSignatureVerifierMock(t)
 	var isSignOfSignatureMethodSupported bool
 	sv.IsSignOfSignatureMethodSupportedMock.Set(func(common.SignatureMethod) bool { return *(&isSignOfSignatureMethodSupported) })
 	var isValidDigestSignature bool
@@ -213,9 +211,9 @@ func TestVerifyPacketAuthenticity(t *testing.T) {
 	lp.GetSignatureVerifierMock.Set(func() common.SignatureVerifier { return sv })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	packet := testutils.NewPacketParserMock(t)
+	packet := packets.NewPacketParserMock(t)
 	packet.GetPacketSignatureMock.Set(func() common.SignedDigest { return common.SignedDigest{} })
-	from := ctestutils.NewHostIdentityHolderMock(t)
+	from := common.NewHostIdentityHolderMock(t)
 	strictFrom := true
 	isAcceptable = false
 	require.NotEqual(t, r.VerifyPacketAuthenticity(packet, from, strictFrom), nil)
@@ -233,7 +231,7 @@ func TestVerifyPacketAuthenticity(t *testing.T) {
 }
 
 func TestSetReceivedPhase(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -243,7 +241,7 @@ func TestSetReceivedPhase(t *testing.T) {
 }
 
 func TestSetReceivedByPacketType(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -255,7 +253,7 @@ func TestSetReceivedByPacketType(t *testing.T) {
 }
 
 func TestSetSentPhase(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -265,7 +263,7 @@ func TestSetSentPhase(t *testing.T) {
 }
 
 func TestSetSentByPacketType(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -277,7 +275,7 @@ func TestSetSentByPacketType(t *testing.T) {
 }
 
 func TestSetReceivedWithDupCheck(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
@@ -289,15 +287,15 @@ func TestSetReceivedWithDupCheck(t *testing.T) {
 }
 
 func TestGetSignatureVerifier(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
-	sv1 := ctestutils.NewSignatureVerifierMock(t)
+	sv1 := common.NewSignatureVerifierMock(t)
 	lp.GetSignatureVerifierMock.Set(func() common.SignatureVerifier { return sv1 })
 	lp.GetNodePublicKeyStoreMock.Set(func() common.PublicKeyStore { return nil })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	svf := ctestutils.NewSignatureVerifierFactoryMock(t)
-	sv2 := ctestutils.NewSignatureVerifierMock(t)
+	svf := common.NewSignatureVerifierFactoryMock(t)
+	sv2 := common.NewSignatureVerifierMock(t)
 	svf.GetSignatureVerifierWithPKSMock.Set(func(common.PublicKeyStore) common.SignatureVerifier { return sv2 })
 	require.Equal(t, r.GetSignatureVerifier(svf), sv1)
 
@@ -306,13 +304,13 @@ func TestGetSignatureVerifier(t *testing.T) {
 }
 
 func TestCreateSignatureVerifier(t *testing.T) {
-	lp := testutils.NewLocalNodeProfileMock(t)
+	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	lp.GetNodePublicKeyStoreMock.Set(func() common.PublicKeyStore { return nil })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	svf := ctestutils.NewSignatureVerifierFactoryMock(t)
-	sv := ctestutils.NewSignatureVerifierMock(t)
+	svf := common.NewSignatureVerifierFactoryMock(t)
+	sv := common.NewSignatureVerifierMock(t)
 	svf.GetSignatureVerifierWithPKSMock.Set(func(common.PublicKeyStore) common.SignatureVerifier { return sv })
 	require.Equal(t, r.CreateSignatureVerifier(svf), sv)
 }

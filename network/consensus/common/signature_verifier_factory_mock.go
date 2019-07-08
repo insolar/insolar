@@ -1,4 +1,4 @@
-package testutils
+package common
 
 /*
 DO NOT EDIT!
@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	common "github.com/insolar/insolar/network/consensus/common"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +17,7 @@ import (
 type SignatureVerifierFactoryMock struct {
 	t minimock.Tester
 
-	GetSignatureVerifierWithPKSFunc       func(p common.PublicKeyStore) (r common.SignatureVerifier)
+	GetSignatureVerifierWithPKSFunc       func(p PublicKeyStore) (r SignatureVerifier)
 	GetSignatureVerifierWithPKSCounter    uint64
 	GetSignatureVerifierWithPKSPreCounter uint64
 	GetSignatureVerifierWithPKSMock       mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS
@@ -50,15 +48,15 @@ type SignatureVerifierFactoryMockGetSignatureVerifierWithPKSExpectation struct {
 }
 
 type SignatureVerifierFactoryMockGetSignatureVerifierWithPKSInput struct {
-	p common.PublicKeyStore
+	p PublicKeyStore
 }
 
 type SignatureVerifierFactoryMockGetSignatureVerifierWithPKSResult struct {
-	r common.SignatureVerifier
+	r SignatureVerifier
 }
 
 //Expect specifies that invocation of SignatureVerifierFactory.GetSignatureVerifierWithPKS is expected from 1 to Infinity times
-func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Expect(p common.PublicKeyStore) *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS {
+func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Expect(p PublicKeyStore) *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS {
 	m.mock.GetSignatureVerifierWithPKSFunc = nil
 	m.expectationSeries = nil
 
@@ -70,7 +68,7 @@ func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Expect(p comm
 }
 
 //Return specifies results of invocation of SignatureVerifierFactory.GetSignatureVerifierWithPKS
-func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Return(r common.SignatureVerifier) *SignatureVerifierFactoryMock {
+func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Return(r SignatureVerifier) *SignatureVerifierFactoryMock {
 	m.mock.GetSignatureVerifierWithPKSFunc = nil
 	m.expectationSeries = nil
 
@@ -82,7 +80,7 @@ func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Return(r comm
 }
 
 //ExpectOnce specifies that invocation of SignatureVerifierFactory.GetSignatureVerifierWithPKS is expected once
-func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) ExpectOnce(p common.PublicKeyStore) *SignatureVerifierFactoryMockGetSignatureVerifierWithPKSExpectation {
+func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) ExpectOnce(p PublicKeyStore) *SignatureVerifierFactoryMockGetSignatureVerifierWithPKSExpectation {
 	m.mock.GetSignatureVerifierWithPKSFunc = nil
 	m.mainExpectation = nil
 
@@ -92,12 +90,12 @@ func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) ExpectOnce(p 
 	return expectation
 }
 
-func (e *SignatureVerifierFactoryMockGetSignatureVerifierWithPKSExpectation) Return(r common.SignatureVerifier) {
+func (e *SignatureVerifierFactoryMockGetSignatureVerifierWithPKSExpectation) Return(r SignatureVerifier) {
 	e.result = &SignatureVerifierFactoryMockGetSignatureVerifierWithPKSResult{r}
 }
 
 //Set uses given function f as a mock of SignatureVerifierFactory.GetSignatureVerifierWithPKS method
-func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Set(f func(p common.PublicKeyStore) (r common.SignatureVerifier)) *SignatureVerifierFactoryMock {
+func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Set(f func(p PublicKeyStore) (r SignatureVerifier)) *SignatureVerifierFactoryMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -106,7 +104,7 @@ func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Set(f func(p 
 }
 
 //GetSignatureVerifierWithPKS implements github.com/insolar/insolar/network/consensus/common.SignatureVerifierFactory interface
-func (m *SignatureVerifierFactoryMock) GetSignatureVerifierWithPKS(p common.PublicKeyStore) (r common.SignatureVerifier) {
+func (m *SignatureVerifierFactoryMock) GetSignatureVerifierWithPKS(p PublicKeyStore) (r SignatureVerifier) {
 	counter := atomic.AddUint64(&m.GetSignatureVerifierWithPKSPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignatureVerifierWithPKSCounter, 1)
 

@@ -1,4 +1,4 @@
-package testutils
+package common
 
 /*
 DO NOT EDIT!
@@ -11,7 +11,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	common "github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
 //NodeStateHashEvidenceMock implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHashEvidence
@@ -23,7 +22,7 @@ type NodeStateHashEvidenceMock struct {
 	GetGlobulaNodeStateSignaturePreCounter uint64
 	GetGlobulaNodeStateSignatureMock       mNodeStateHashEvidenceMockGetGlobulaNodeStateSignature
 
-	GetNodeStateHashFunc       func() (r common2.NodeStateHash)
+	GetNodeStateHashFunc       func() (r NodeStateHash)
 	GetNodeStateHashCounter    uint64
 	GetNodeStateHashPreCounter uint64
 	GetNodeStateHashMock       mNodeStateHashEvidenceMockGetNodeStateHash
@@ -188,7 +187,7 @@ type NodeStateHashEvidenceMockGetNodeStateHashExpectation struct {
 }
 
 type NodeStateHashEvidenceMockGetNodeStateHashResult struct {
-	r common2.NodeStateHash
+	r NodeStateHash
 }
 
 //Expect specifies that invocation of NodeStateHashEvidence.GetNodeStateHash is expected from 1 to Infinity times
@@ -204,7 +203,7 @@ func (m *mNodeStateHashEvidenceMockGetNodeStateHash) Expect() *mNodeStateHashEvi
 }
 
 //Return specifies results of invocation of NodeStateHashEvidence.GetNodeStateHash
-func (m *mNodeStateHashEvidenceMockGetNodeStateHash) Return(r common2.NodeStateHash) *NodeStateHashEvidenceMock {
+func (m *mNodeStateHashEvidenceMockGetNodeStateHash) Return(r NodeStateHash) *NodeStateHashEvidenceMock {
 	m.mock.GetNodeStateHashFunc = nil
 	m.expectationSeries = nil
 
@@ -226,12 +225,12 @@ func (m *mNodeStateHashEvidenceMockGetNodeStateHash) ExpectOnce() *NodeStateHash
 	return expectation
 }
 
-func (e *NodeStateHashEvidenceMockGetNodeStateHashExpectation) Return(r common2.NodeStateHash) {
+func (e *NodeStateHashEvidenceMockGetNodeStateHashExpectation) Return(r NodeStateHash) {
 	e.result = &NodeStateHashEvidenceMockGetNodeStateHashResult{r}
 }
 
 //Set uses given function f as a mock of NodeStateHashEvidence.GetNodeStateHash method
-func (m *mNodeStateHashEvidenceMockGetNodeStateHash) Set(f func() (r common2.NodeStateHash)) *NodeStateHashEvidenceMock {
+func (m *mNodeStateHashEvidenceMockGetNodeStateHash) Set(f func() (r NodeStateHash)) *NodeStateHashEvidenceMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -240,7 +239,7 @@ func (m *mNodeStateHashEvidenceMockGetNodeStateHash) Set(f func() (r common2.Nod
 }
 
 //GetNodeStateHash implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHashEvidence interface
-func (m *NodeStateHashEvidenceMock) GetNodeStateHash() (r common2.NodeStateHash) {
+func (m *NodeStateHashEvidenceMock) GetNodeStateHash() (r NodeStateHash) {
 	counter := atomic.AddUint64(&m.GetNodeStateHashPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeStateHashCounter, 1)
 

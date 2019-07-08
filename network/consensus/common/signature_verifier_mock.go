@@ -1,4 +1,4 @@
-package testutils
+package common
 
 /*
 DO NOT EDIT!
@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	common "github.com/insolar/insolar/network/consensus/common"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,32 +19,32 @@ import (
 type SignatureVerifierMock struct {
 	t minimock.Tester
 
-	IsDigestMethodSupportedFunc       func(p common.DigestMethod) (r bool)
+	IsDigestMethodSupportedFunc       func(p DigestMethod) (r bool)
 	IsDigestMethodSupportedCounter    uint64
 	IsDigestMethodSupportedPreCounter uint64
 	IsDigestMethodSupportedMock       mSignatureVerifierMockIsDigestMethodSupported
 
-	IsDigestOfSignatureMethodSupportedFunc       func(p common.SignatureMethod) (r bool)
+	IsDigestOfSignatureMethodSupportedFunc       func(p SignatureMethod) (r bool)
 	IsDigestOfSignatureMethodSupportedCounter    uint64
 	IsDigestOfSignatureMethodSupportedPreCounter uint64
 	IsDigestOfSignatureMethodSupportedMock       mSignatureVerifierMockIsDigestOfSignatureMethodSupported
 
-	IsSignMethodSupportedFunc       func(p common.SignMethod) (r bool)
+	IsSignMethodSupportedFunc       func(p SignMethod) (r bool)
 	IsSignMethodSupportedCounter    uint64
 	IsSignMethodSupportedPreCounter uint64
 	IsSignMethodSupportedMock       mSignatureVerifierMockIsSignMethodSupported
 
-	IsSignOfSignatureMethodSupportedFunc       func(p common.SignatureMethod) (r bool)
+	IsSignOfSignatureMethodSupportedFunc       func(p SignatureMethod) (r bool)
 	IsSignOfSignatureMethodSupportedCounter    uint64
 	IsSignOfSignatureMethodSupportedPreCounter uint64
 	IsSignOfSignatureMethodSupportedMock       mSignatureVerifierMockIsSignOfSignatureMethodSupported
 
-	IsValidDataSignatureFunc       func(p io.Reader, p1 common.SignatureHolder) (r bool)
+	IsValidDataSignatureFunc       func(p io.Reader, p1 SignatureHolder) (r bool)
 	IsValidDataSignatureCounter    uint64
 	IsValidDataSignaturePreCounter uint64
 	IsValidDataSignatureMock       mSignatureVerifierMockIsValidDataSignature
 
-	IsValidDigestSignatureFunc       func(p common.DigestHolder, p1 common.SignatureHolder) (r bool)
+	IsValidDigestSignatureFunc       func(p DigestHolder, p1 SignatureHolder) (r bool)
 	IsValidDigestSignatureCounter    uint64
 	IsValidDigestSignaturePreCounter uint64
 	IsValidDigestSignatureMock       mSignatureVerifierMockIsValidDigestSignature
@@ -81,7 +80,7 @@ type SignatureVerifierMockIsDigestMethodSupportedExpectation struct {
 }
 
 type SignatureVerifierMockIsDigestMethodSupportedInput struct {
-	p common.DigestMethod
+	p DigestMethod
 }
 
 type SignatureVerifierMockIsDigestMethodSupportedResult struct {
@@ -89,7 +88,7 @@ type SignatureVerifierMockIsDigestMethodSupportedResult struct {
 }
 
 //Expect specifies that invocation of SignatureVerifier.IsDigestMethodSupported is expected from 1 to Infinity times
-func (m *mSignatureVerifierMockIsDigestMethodSupported) Expect(p common.DigestMethod) *mSignatureVerifierMockIsDigestMethodSupported {
+func (m *mSignatureVerifierMockIsDigestMethodSupported) Expect(p DigestMethod) *mSignatureVerifierMockIsDigestMethodSupported {
 	m.mock.IsDigestMethodSupportedFunc = nil
 	m.expectationSeries = nil
 
@@ -113,7 +112,7 @@ func (m *mSignatureVerifierMockIsDigestMethodSupported) Return(r bool) *Signatur
 }
 
 //ExpectOnce specifies that invocation of SignatureVerifier.IsDigestMethodSupported is expected once
-func (m *mSignatureVerifierMockIsDigestMethodSupported) ExpectOnce(p common.DigestMethod) *SignatureVerifierMockIsDigestMethodSupportedExpectation {
+func (m *mSignatureVerifierMockIsDigestMethodSupported) ExpectOnce(p DigestMethod) *SignatureVerifierMockIsDigestMethodSupportedExpectation {
 	m.mock.IsDigestMethodSupportedFunc = nil
 	m.mainExpectation = nil
 
@@ -128,7 +127,7 @@ func (e *SignatureVerifierMockIsDigestMethodSupportedExpectation) Return(r bool)
 }
 
 //Set uses given function f as a mock of SignatureVerifier.IsDigestMethodSupported method
-func (m *mSignatureVerifierMockIsDigestMethodSupported) Set(f func(p common.DigestMethod) (r bool)) *SignatureVerifierMock {
+func (m *mSignatureVerifierMockIsDigestMethodSupported) Set(f func(p DigestMethod) (r bool)) *SignatureVerifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -137,7 +136,7 @@ func (m *mSignatureVerifierMockIsDigestMethodSupported) Set(f func(p common.Dige
 }
 
 //IsDigestMethodSupported implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
-func (m *SignatureVerifierMock) IsDigestMethodSupported(p common.DigestMethod) (r bool) {
+func (m *SignatureVerifierMock) IsDigestMethodSupported(p DigestMethod) (r bool) {
 	counter := atomic.AddUint64(&m.IsDigestMethodSupportedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsDigestMethodSupportedCounter, 1)
 
@@ -228,7 +227,7 @@ type SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation struct {
 }
 
 type SignatureVerifierMockIsDigestOfSignatureMethodSupportedInput struct {
-	p common.SignatureMethod
+	p SignatureMethod
 }
 
 type SignatureVerifierMockIsDigestOfSignatureMethodSupportedResult struct {
@@ -236,7 +235,7 @@ type SignatureVerifierMockIsDigestOfSignatureMethodSupportedResult struct {
 }
 
 //Expect specifies that invocation of SignatureVerifier.IsDigestOfSignatureMethodSupported is expected from 1 to Infinity times
-func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) Expect(p common.SignatureMethod) *mSignatureVerifierMockIsDigestOfSignatureMethodSupported {
+func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) Expect(p SignatureMethod) *mSignatureVerifierMockIsDigestOfSignatureMethodSupported {
 	m.mock.IsDigestOfSignatureMethodSupportedFunc = nil
 	m.expectationSeries = nil
 
@@ -260,7 +259,7 @@ func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) Return(r bool
 }
 
 //ExpectOnce specifies that invocation of SignatureVerifier.IsDigestOfSignatureMethodSupported is expected once
-func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) ExpectOnce(p common.SignatureMethod) *SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation {
+func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) ExpectOnce(p SignatureMethod) *SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation {
 	m.mock.IsDigestOfSignatureMethodSupportedFunc = nil
 	m.mainExpectation = nil
 
@@ -275,7 +274,7 @@ func (e *SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation) Ret
 }
 
 //Set uses given function f as a mock of SignatureVerifier.IsDigestOfSignatureMethodSupported method
-func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) Set(f func(p common.SignatureMethod) (r bool)) *SignatureVerifierMock {
+func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) Set(f func(p SignatureMethod) (r bool)) *SignatureVerifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -284,7 +283,7 @@ func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) Set(f func(p 
 }
 
 //IsDigestOfSignatureMethodSupported implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
-func (m *SignatureVerifierMock) IsDigestOfSignatureMethodSupported(p common.SignatureMethod) (r bool) {
+func (m *SignatureVerifierMock) IsDigestOfSignatureMethodSupported(p SignatureMethod) (r bool) {
 	counter := atomic.AddUint64(&m.IsDigestOfSignatureMethodSupportedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsDigestOfSignatureMethodSupportedCounter, 1)
 
@@ -375,7 +374,7 @@ type SignatureVerifierMockIsSignMethodSupportedExpectation struct {
 }
 
 type SignatureVerifierMockIsSignMethodSupportedInput struct {
-	p common.SignMethod
+	p SignMethod
 }
 
 type SignatureVerifierMockIsSignMethodSupportedResult struct {
@@ -383,7 +382,7 @@ type SignatureVerifierMockIsSignMethodSupportedResult struct {
 }
 
 //Expect specifies that invocation of SignatureVerifier.IsSignMethodSupported is expected from 1 to Infinity times
-func (m *mSignatureVerifierMockIsSignMethodSupported) Expect(p common.SignMethod) *mSignatureVerifierMockIsSignMethodSupported {
+func (m *mSignatureVerifierMockIsSignMethodSupported) Expect(p SignMethod) *mSignatureVerifierMockIsSignMethodSupported {
 	m.mock.IsSignMethodSupportedFunc = nil
 	m.expectationSeries = nil
 
@@ -407,7 +406,7 @@ func (m *mSignatureVerifierMockIsSignMethodSupported) Return(r bool) *SignatureV
 }
 
 //ExpectOnce specifies that invocation of SignatureVerifier.IsSignMethodSupported is expected once
-func (m *mSignatureVerifierMockIsSignMethodSupported) ExpectOnce(p common.SignMethod) *SignatureVerifierMockIsSignMethodSupportedExpectation {
+func (m *mSignatureVerifierMockIsSignMethodSupported) ExpectOnce(p SignMethod) *SignatureVerifierMockIsSignMethodSupportedExpectation {
 	m.mock.IsSignMethodSupportedFunc = nil
 	m.mainExpectation = nil
 
@@ -422,7 +421,7 @@ func (e *SignatureVerifierMockIsSignMethodSupportedExpectation) Return(r bool) {
 }
 
 //Set uses given function f as a mock of SignatureVerifier.IsSignMethodSupported method
-func (m *mSignatureVerifierMockIsSignMethodSupported) Set(f func(p common.SignMethod) (r bool)) *SignatureVerifierMock {
+func (m *mSignatureVerifierMockIsSignMethodSupported) Set(f func(p SignMethod) (r bool)) *SignatureVerifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -431,7 +430,7 @@ func (m *mSignatureVerifierMockIsSignMethodSupported) Set(f func(p common.SignMe
 }
 
 //IsSignMethodSupported implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
-func (m *SignatureVerifierMock) IsSignMethodSupported(p common.SignMethod) (r bool) {
+func (m *SignatureVerifierMock) IsSignMethodSupported(p SignMethod) (r bool) {
 	counter := atomic.AddUint64(&m.IsSignMethodSupportedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsSignMethodSupportedCounter, 1)
 
@@ -522,7 +521,7 @@ type SignatureVerifierMockIsSignOfSignatureMethodSupportedExpectation struct {
 }
 
 type SignatureVerifierMockIsSignOfSignatureMethodSupportedInput struct {
-	p common.SignatureMethod
+	p SignatureMethod
 }
 
 type SignatureVerifierMockIsSignOfSignatureMethodSupportedResult struct {
@@ -530,7 +529,7 @@ type SignatureVerifierMockIsSignOfSignatureMethodSupportedResult struct {
 }
 
 //Expect specifies that invocation of SignatureVerifier.IsSignOfSignatureMethodSupported is expected from 1 to Infinity times
-func (m *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Expect(p common.SignatureMethod) *mSignatureVerifierMockIsSignOfSignatureMethodSupported {
+func (m *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Expect(p SignatureMethod) *mSignatureVerifierMockIsSignOfSignatureMethodSupported {
 	m.mock.IsSignOfSignatureMethodSupportedFunc = nil
 	m.expectationSeries = nil
 
@@ -554,7 +553,7 @@ func (m *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Return(r bool) 
 }
 
 //ExpectOnce specifies that invocation of SignatureVerifier.IsSignOfSignatureMethodSupported is expected once
-func (m *mSignatureVerifierMockIsSignOfSignatureMethodSupported) ExpectOnce(p common.SignatureMethod) *SignatureVerifierMockIsSignOfSignatureMethodSupportedExpectation {
+func (m *mSignatureVerifierMockIsSignOfSignatureMethodSupported) ExpectOnce(p SignatureMethod) *SignatureVerifierMockIsSignOfSignatureMethodSupportedExpectation {
 	m.mock.IsSignOfSignatureMethodSupportedFunc = nil
 	m.mainExpectation = nil
 
@@ -569,7 +568,7 @@ func (e *SignatureVerifierMockIsSignOfSignatureMethodSupportedExpectation) Retur
 }
 
 //Set uses given function f as a mock of SignatureVerifier.IsSignOfSignatureMethodSupported method
-func (m *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Set(f func(p common.SignatureMethod) (r bool)) *SignatureVerifierMock {
+func (m *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Set(f func(p SignatureMethod) (r bool)) *SignatureVerifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -578,7 +577,7 @@ func (m *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Set(f func(p co
 }
 
 //IsSignOfSignatureMethodSupported implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
-func (m *SignatureVerifierMock) IsSignOfSignatureMethodSupported(p common.SignatureMethod) (r bool) {
+func (m *SignatureVerifierMock) IsSignOfSignatureMethodSupported(p SignatureMethod) (r bool) {
 	counter := atomic.AddUint64(&m.IsSignOfSignatureMethodSupportedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsSignOfSignatureMethodSupportedCounter, 1)
 
@@ -670,7 +669,7 @@ type SignatureVerifierMockIsValidDataSignatureExpectation struct {
 
 type SignatureVerifierMockIsValidDataSignatureInput struct {
 	p  io.Reader
-	p1 common.SignatureHolder
+	p1 SignatureHolder
 }
 
 type SignatureVerifierMockIsValidDataSignatureResult struct {
@@ -678,7 +677,7 @@ type SignatureVerifierMockIsValidDataSignatureResult struct {
 }
 
 //Expect specifies that invocation of SignatureVerifier.IsValidDataSignature is expected from 1 to Infinity times
-func (m *mSignatureVerifierMockIsValidDataSignature) Expect(p io.Reader, p1 common.SignatureHolder) *mSignatureVerifierMockIsValidDataSignature {
+func (m *mSignatureVerifierMockIsValidDataSignature) Expect(p io.Reader, p1 SignatureHolder) *mSignatureVerifierMockIsValidDataSignature {
 	m.mock.IsValidDataSignatureFunc = nil
 	m.expectationSeries = nil
 
@@ -702,7 +701,7 @@ func (m *mSignatureVerifierMockIsValidDataSignature) Return(r bool) *SignatureVe
 }
 
 //ExpectOnce specifies that invocation of SignatureVerifier.IsValidDataSignature is expected once
-func (m *mSignatureVerifierMockIsValidDataSignature) ExpectOnce(p io.Reader, p1 common.SignatureHolder) *SignatureVerifierMockIsValidDataSignatureExpectation {
+func (m *mSignatureVerifierMockIsValidDataSignature) ExpectOnce(p io.Reader, p1 SignatureHolder) *SignatureVerifierMockIsValidDataSignatureExpectation {
 	m.mock.IsValidDataSignatureFunc = nil
 	m.mainExpectation = nil
 
@@ -717,7 +716,7 @@ func (e *SignatureVerifierMockIsValidDataSignatureExpectation) Return(r bool) {
 }
 
 //Set uses given function f as a mock of SignatureVerifier.IsValidDataSignature method
-func (m *mSignatureVerifierMockIsValidDataSignature) Set(f func(p io.Reader, p1 common.SignatureHolder) (r bool)) *SignatureVerifierMock {
+func (m *mSignatureVerifierMockIsValidDataSignature) Set(f func(p io.Reader, p1 SignatureHolder) (r bool)) *SignatureVerifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -726,7 +725,7 @@ func (m *mSignatureVerifierMockIsValidDataSignature) Set(f func(p io.Reader, p1 
 }
 
 //IsValidDataSignature implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
-func (m *SignatureVerifierMock) IsValidDataSignature(p io.Reader, p1 common.SignatureHolder) (r bool) {
+func (m *SignatureVerifierMock) IsValidDataSignature(p io.Reader, p1 SignatureHolder) (r bool) {
 	counter := atomic.AddUint64(&m.IsValidDataSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.IsValidDataSignatureCounter, 1)
 
@@ -817,8 +816,8 @@ type SignatureVerifierMockIsValidDigestSignatureExpectation struct {
 }
 
 type SignatureVerifierMockIsValidDigestSignatureInput struct {
-	p  common.DigestHolder
-	p1 common.SignatureHolder
+	p  DigestHolder
+	p1 SignatureHolder
 }
 
 type SignatureVerifierMockIsValidDigestSignatureResult struct {
@@ -826,7 +825,7 @@ type SignatureVerifierMockIsValidDigestSignatureResult struct {
 }
 
 //Expect specifies that invocation of SignatureVerifier.IsValidDigestSignature is expected from 1 to Infinity times
-func (m *mSignatureVerifierMockIsValidDigestSignature) Expect(p common.DigestHolder, p1 common.SignatureHolder) *mSignatureVerifierMockIsValidDigestSignature {
+func (m *mSignatureVerifierMockIsValidDigestSignature) Expect(p DigestHolder, p1 SignatureHolder) *mSignatureVerifierMockIsValidDigestSignature {
 	m.mock.IsValidDigestSignatureFunc = nil
 	m.expectationSeries = nil
 
@@ -850,7 +849,7 @@ func (m *mSignatureVerifierMockIsValidDigestSignature) Return(r bool) *Signature
 }
 
 //ExpectOnce specifies that invocation of SignatureVerifier.IsValidDigestSignature is expected once
-func (m *mSignatureVerifierMockIsValidDigestSignature) ExpectOnce(p common.DigestHolder, p1 common.SignatureHolder) *SignatureVerifierMockIsValidDigestSignatureExpectation {
+func (m *mSignatureVerifierMockIsValidDigestSignature) ExpectOnce(p DigestHolder, p1 SignatureHolder) *SignatureVerifierMockIsValidDigestSignatureExpectation {
 	m.mock.IsValidDigestSignatureFunc = nil
 	m.mainExpectation = nil
 
@@ -865,7 +864,7 @@ func (e *SignatureVerifierMockIsValidDigestSignatureExpectation) Return(r bool) 
 }
 
 //Set uses given function f as a mock of SignatureVerifier.IsValidDigestSignature method
-func (m *mSignatureVerifierMockIsValidDigestSignature) Set(f func(p common.DigestHolder, p1 common.SignatureHolder) (r bool)) *SignatureVerifierMock {
+func (m *mSignatureVerifierMockIsValidDigestSignature) Set(f func(p DigestHolder, p1 SignatureHolder) (r bool)) *SignatureVerifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -874,7 +873,7 @@ func (m *mSignatureVerifierMockIsValidDigestSignature) Set(f func(p common.Diges
 }
 
 //IsValidDigestSignature implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
-func (m *SignatureVerifierMock) IsValidDigestSignature(p common.DigestHolder, p1 common.SignatureHolder) (r bool) {
+func (m *SignatureVerifierMock) IsValidDigestSignature(p DigestHolder, p1 SignatureHolder) (r bool) {
 	counter := atomic.AddUint64(&m.IsValidDigestSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.IsValidDigestSignatureCounter, 1)
 
