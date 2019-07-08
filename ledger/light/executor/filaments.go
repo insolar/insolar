@@ -132,7 +132,7 @@ func (m *FilamentModifierDefault) SetActivationRequest(
 	if !jetID.IsValid() {
 		return nil, nil, errors.New("jet is not valid")
 	}
-	if request.GetReason().IsEmpty() {
+	if request.ReasonRef().IsEmpty() {
 		return nil, nil, ErrEmptyReason
 	}
 	if request.GetCallType() != record.CTSaveAsChild && request.GetCallType() != record.CTSaveAsDelegate {
@@ -140,7 +140,7 @@ func (m *FilamentModifierDefault) SetActivationRequest(
 	}
 
 	currentPN := requestID.Pulse()
-	reason := request.GetReason()
+	reason := request.ReasonRef()
 	untilPN := reason.Record().Pulse()
 
 	idx, err := m.checkObject(ctx, currentPN, untilPN, requestID)
@@ -164,7 +164,7 @@ func (m *FilamentModifierDefault) SetActivationRequest(
 		}
 
 		foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), requestID, requestID, request)
-		if err != nil && err != ErrEmptyReason {
+		if err != nil {
 			return nil, nil, err
 		}
 		if foundRequest != nil || foundResult != nil {
@@ -242,7 +242,7 @@ func (m *FilamentModifierDefault) SetRequest(
 	}
 
 	foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), objectID, requestID, request)
-	if err != nil && err != ErrEmptyReason {
+	if err != nil {
 		return nil, nil, err
 	}
 	if foundRequest != nil || foundResult != nil {
