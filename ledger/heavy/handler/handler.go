@@ -62,6 +62,8 @@ type Handler struct {
 	JetKeeper       replica.JetKeeper
 	Sender          bus.Sender
 
+	PulseDelta insolar.PulseNumber
+
 	jetID insolar.JetID
 	dep   *proc.Dependencies
 }
@@ -373,7 +375,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	pulse := drop.Pulse
 
 	// We can't to use PulseCalculator here because split pulse may exceed latest pulse.
-	whenSplit := pulse + 20
+	whenSplit := pulse + 2*h.PulseDelta
 
 	if drop.Split {
 		err = h.JetModifier.Update(ctx, whenSplit, true, drop.JetID)

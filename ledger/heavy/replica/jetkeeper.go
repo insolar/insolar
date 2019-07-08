@@ -17,7 +17,6 @@
 package replica
 
 import (
-	"bytes"
 	"context"
 	"reflect"
 	"sync"
@@ -186,15 +185,14 @@ func (jk *dbJetKeeper) set(pn insolar.PulseNumber, jets []insolar.JetID) error {
 }
 
 func (jk *dbJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
-	err := jk.db.Set(syncPulseKey(pn), []byte{})
+	err := jk.db.Set(syncPulseKey(insolar.GenesisPulse.PulseNumber), pn.Bytes())
 	return errors.Wrapf(err, "failed to set up new sync pulse")
 }
 
 func (jk *dbJetKeeper) topSyncPulse() insolar.PulseNumber {
-	it := jk.db.NewIterator(syncPulseKey(0xFFFFFFFF), true)
-	defer it.Close()
-	if it.Next() && bytes.HasPrefix(it.Key(), []byte{0x02}) {
-		return insolar.NewPulseNumber(it.Key()[1:])
+	val, err := jk.db.Get(syncPulseKey(insolar.GenesisPulse.PulseNumber))
+	if err != nil {
+		return insolar.GenesisPulse.PulseNumber
 	}
-	return insolar.GenesisPulse.PulseNumber
+	return insolar.NewPulseNumber(val)
 }

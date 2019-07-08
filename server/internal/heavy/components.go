@@ -260,6 +260,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetModifier = jets
 		h.JetKeeper = jetKeeper
 		h.Sender = WmBus
+		h.PulseDelta = insolar.PulseNumber(cfg.Pulsar.NumberDelta)
 
 		PulseManager = pm
 		Handler = h
