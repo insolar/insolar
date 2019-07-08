@@ -299,13 +299,6 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 	}
 }
 
-func (q *ExecutionBroker) get(_ context.Context) *Transcript {
-	q.stateLock.Lock()
-	defer q.stateLock.Unlock()
-
-	return q.mutable.Pop()
-}
-
 func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
 	if obj := q.mutable.HasFromLedger(); obj != nil {
 		return obj
