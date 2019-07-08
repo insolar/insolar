@@ -359,3 +359,209 @@ func TestLessForNodeProfile(t *testing.T) {
 	shortNodeID2 = common.ShortNodeID(1)
 	require.False(t, LessForNodeProfile(np1, np2))
 }
+
+func TestNewMembershipProfile(t *testing.T) {
+	nsh := NewNodeStateHashEvidenceMock(t)
+	nas := NewMemberAnnouncementSignatureMock(t)
+	index := uint16(1)
+	power := MemberPower(2)
+	ep := MemberPower(3)
+	mp := NewMembershipProfile(index, power, nsh, nas, ep)
+	require.Equal(t, mp.Index, index)
+
+	require.Equal(t, mp.Power, power)
+
+	require.Equal(t, mp.RequestedPower, ep)
+
+	require.Equal(t, mp.StateEvidence, nsh)
+
+	require.Equal(t, mp.AnnounceSignature, nas)
+}
+
+func TestNewMembershipProfileByNode(t *testing.T) {
+	np := NewNodeProfileMock(t)
+	index := 1
+	np.GetIndexMock.Set(func() int { return index })
+	power := MemberPower(2)
+	np.GetDeclaredPowerMock.Set(func() MemberPower { return power })
+	nsh := NewNodeStateHashEvidenceMock(t)
+	nas := NewMemberAnnouncementSignatureMock(t)
+	ep := MemberPower(3)
+	mp := NewMembershipProfileByNode(np, nsh, nas, ep)
+	require.Equal(t, mp.Index, uint16(index))
+
+	require.Equal(t, mp.Power, power)
+
+	require.Equal(t, mp.RequestedPower, ep)
+
+	require.Equal(t, mp.StateEvidence, nsh)
+
+	require.Equal(t, mp.AnnounceSignature, nas)
+}
+
+func TestIsEmpty(t *testing.T) {
+	mp := MembershipProfile{}
+	require.True(t, mp.IsEmpty())
+
+	se := NewNodeStateHashEvidenceMock(t)
+	mp.StateEvidence = se
+	require.True(t, mp.IsEmpty())
+
+	mp.StateEvidence = nil
+	mp.AnnounceSignature = NewMemberAnnouncementSignatureMock(t)
+	require.True(t, mp.IsEmpty())
+
+	mp.StateEvidence = se
+	require.False(t, mp.IsEmpty())
+}
+
+func TestEquals(t *testing.T) {
+	mp1 := MembershipProfile{}
+	mp2 := MembershipProfile{}
+	require.False(t, mp1.Equals(mp2))
+
+	mp1.Index = uint16(1)
+	mp1.Power = MemberPower(2)
+	mp1.RequestedPower = MemberPower(3)
+	she1 := NewNodeStateHashEvidenceMock(t)
+	mas1 := NewMemberAnnouncementSignatureMock(t)
+	mp1.StateEvidence = she1
+	mp1.AnnounceSignature = mas1
+
+	mp2.Index = uint16(2)
+	mp2.Power = mp1.Power
+	mp2.RequestedPower = mp1.RequestedPower
+	mp2.StateEvidence = mp1.StateEvidence
+	mp2.AnnounceSignature = mp1.AnnounceSignature
+
+	require.False(t, mp1.Equals(mp2))
+
+	mp2.Index = mp1.Index
+	mp2.Power = MemberPower(3)
+	require.False(t, mp1.Equals(mp2))
+
+	mp2.Power = mp1.Power
+	mp2.StateEvidence = nil
+	require.False(t, mp1.Equals(mp2))
+
+	mp2.StateEvidence = mp1.StateEvidence
+	mp2.AnnounceSignature = nil
+	require.False(t, mp1.Equals(mp2))
+
+	mp2.AnnounceSignature = mp1.AnnounceSignature
+	mp1.StateEvidence = nil
+	require.False(t, mp1.Equals(mp2))
+
+	mp1.StateEvidence = mp2.StateEvidence
+	mp1.AnnounceSignature = nil
+	require.False(t, mp1.Equals(mp2))
+
+	mp1.AnnounceSignature = mp2.AnnounceSignature
+	mp2.RequestedPower = MemberPower(4)
+	require.False(t, mp1.Equals(mp2))
+
+	mp2.RequestedPower = mp1.RequestedPower
+	she2 := NewNodeStateHashEvidenceMock(t)
+	mp2.StateEvidence = she2
+	nsh := NewNodeStateHashMock(t)
+	she1.GetNodeStateHashMock.Set(func() NodeStateHash { return nsh })
+	she2.GetNodeStateHashMock.Set(func() NodeStateHash { return nsh })
+	nsh.EqualsMock.Set(func(common.DigestHolder) bool { return false })
+	require.False(t, mp1.Equals(mp2))
+
+	nsh.EqualsMock.Set(func(common.DigestHolder) bool { return true })
+	sh := common.NewSignatureHolderMock(t)
+	sh.EqualsMock.Set(func(common.SignatureHolder) bool { return false })
+	she1.GetGlobulaNodeStateSignatureMock.Set(func() common.SignatureHolder { return sh })
+	she2.GetGlobulaNodeStateSignatureMock.Set(func() common.SignatureHolder { return sh })
+	require.False(t, mp1.Equals(mp2))
+
+	sh.EqualsMock.Set(func(common.SignatureHolder) bool { return true })
+	require.True(t, mp1.Equals(mp2))
+
+	mp2.StateEvidence = she1
+	mas2 := NewMemberAnnouncementSignatureMock(t)
+	mp2.AnnounceSignature = mas2
+	mas1.EqualsMock.Set(func(common.SignatureHolder) bool { return false })
+	require.False(t, mp1.Equals(mp2))
+
+	mas1.EqualsMock.Set(func(common.SignatureHolder) bool { return true })
+	require.True(t, mp1.Equals(mp2))
+}
+
+func TestStringParts(t *testing.T) {
+	mp := MembershipProfile{}
+	require.True(t, len(mp.StringParts()) > 0)
+	mp.Power = MemberPower(1)
+	require.True(t, len(mp.StringParts()) > 0)
+}
+
+func TestMembershipProfileString(t *testing.T) {
+	mp := MembershipProfile{}
+	require.True(t, len(mp.String()) > 0)
+}
+
+func TestEqualIntroProfiles(t *testing.T) {
+	require.False(t, EqualIntroProfiles(nil, nil))
+	p := NewNodeIntroProfileMock(t)
+	require.False(t, EqualIntroProfiles(p, nil))
+
+	require.False(t, EqualIntroProfiles(nil, p))
+
+	require.True(t, EqualIntroProfiles(p, p))
+
+	snID1 := common.ShortNodeID(1)
+	p.GetShortNodeIDMock.Set(func() common.ShortNodeID { return *(&snID1) })
+	primaryRole1 := PrimaryRoleNeutral
+	p.GetPrimaryRoleMock.Set(func() NodePrimaryRole { return *(&primaryRole1) })
+	specialRole1 := SpecialRoleDiscovery
+	p.GetSpecialRolesMock.Set(func() NodeSpecialRole { return *(&specialRole1) })
+	power1 := MemberPower(1)
+	p.GetStartPowerMock.Set(func() MemberPower { return *(&power1) })
+	skh := common.NewSignatureKeyHolderMock(t)
+	signHoldEq := true
+	skh.EqualsMock.Set(func(common.SignatureKeyHolder) bool { return *(&signHoldEq) })
+	p.GetNodePublicKeyMock.Set(func() common.SignatureKeyHolder { return skh })
+
+	o := NewNodeIntroProfileMock(t)
+	snID2 := common.ShortNodeID(2)
+	o.GetShortNodeIDMock.Set(func() common.ShortNodeID { return *(&snID2) })
+	primaryRole2 := primaryRole1
+	o.GetPrimaryRoleMock.Set(func() NodePrimaryRole { return *(&primaryRole2) })
+	specialRole2 := specialRole1
+	o.GetSpecialRolesMock.Set(func() NodeSpecialRole { return *(&specialRole2) })
+	power2 := power1
+	o.GetStartPowerMock.Set(func() MemberPower { return *(&power2) })
+	o.GetNodePublicKeyMock.Set(func() common.SignatureKeyHolder { return skh })
+	require.False(t, EqualIntroProfiles(p, o))
+
+	snID2 = snID1
+	primaryRole2 = PrimaryRoleHeavyMaterial
+	require.False(t, EqualIntroProfiles(p, o))
+
+	primaryRole2 = primaryRole1
+	specialRole2 = SpecialRoleNone
+	require.False(t, EqualIntroProfiles(p, o))
+
+	specialRole2 = specialRole1
+	power2 = MemberPower(2)
+	require.False(t, EqualIntroProfiles(p, o))
+
+	power1 = power2
+	signHoldEq = false
+	require.False(t, EqualIntroProfiles(p, o))
+
+	signHoldEq = true
+	ne1 := common.NewNodeEndpointMock(t)
+	ne1.GetEndpointTypeMock.Set(func() common.NodeEndpointType { return common.NameEndpoint })
+	ne1.GetNameAddressMock.Set(func() common.HostAddress { return common.HostAddress("test1") })
+	p.GetDefaultEndpointMock.Set(func() common.NodeEndpoint { return ne1 })
+	ne2 := common.NewNodeEndpointMock(t)
+	ne2.GetEndpointTypeMock.Set(func() common.NodeEndpointType { return common.NameEndpoint })
+	ne2.GetNameAddressMock.Set(func() common.HostAddress { return common.HostAddress("test2") })
+	o.GetDefaultEndpointMock.Set(func() common.NodeEndpoint { return ne2 })
+	require.False(t, EqualIntroProfiles(p, o))
+
+	o.GetDefaultEndpointMock.Set(func() common.NodeEndpoint { return ne1 })
+	require.True(t, EqualIntroProfiles(p, o))
+}

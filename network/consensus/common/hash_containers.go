@@ -86,12 +86,16 @@ type DigestHolder interface {
 	Equals(other DigestHolder) bool
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureHolder -o ../common -s _mock.go
+
 type SignatureHolder interface {
 	FoldableReader
 	CopyOfSignature() Signature
 	GetSignatureMethod() SignatureMethod
 	Equals(other SignatureHolder) bool
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureKeyHolder -o ../common -s _mock.go
 
 type SignatureKeyHolder interface {
 	FoldableReader

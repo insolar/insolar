@@ -77,6 +77,8 @@ type NodeIntroduction interface { //full intro
 	ConvertPowerRequest(request PowerRequest) MemberPower
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeIntroProfile -o ../common -s _mock.go
+
 type NodeIntroProfile interface { //brief intro
 	HostProfile
 	GetShortNodeID() common.ShortNodeID
@@ -91,6 +93,7 @@ type NodeIntroProfile interface { //brief intro
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeProfile -o ../common -s _mock.go
+
 type NodeProfile interface {
 	NodeIntroProfile
 	GetIndex() int
@@ -111,6 +114,7 @@ type BriefCandidateProfile interface {
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.CandidateProfile -o ../common -s _mock.go
+
 type CandidateProfile interface {
 	BriefCandidateProfile
 

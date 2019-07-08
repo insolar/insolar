@@ -54,6 +54,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash -o ../common -s _mock.go
+
 type NodeStateHash interface {
 	common.DigestHolder
 }
