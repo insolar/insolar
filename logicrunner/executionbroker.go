@@ -148,7 +148,7 @@ func (d *TranscriptDequeue) commonPeek(count int) (*TranscriptDequeueElement, []
 		count = d.length
 	}
 
-	rv := make([]*Transcript, count, count)
+	rv := make([]*Transcript, count)
 
 	var lastElement *TranscriptDequeueElement
 	for i := 0; i < count; i++ {
