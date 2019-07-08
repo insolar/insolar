@@ -98,7 +98,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 
 	require.Equal(t, pulse, jetKeeper.TopSyncPulse())
 
-	err = jets.Clone(ctx, pulse, futurePulse)
+	err = jets.Clone(ctx, pulse, futurePulse, true)
 	require.NoError(t, err)
 	left, right, err := jets.Split(ctx, futurePulse, jet)
 	require.NoError(t, err)
@@ -151,9 +151,9 @@ func TestDbJetKeeper_OvertakePulse(t *testing.T) {
 	require.Equal(t, P1, jetKeeper.TopSyncPulse())
 
 	// P1 try to overtake P2
-	err = jets.Clone(ctx, P1, P2)
+	err = jets.Clone(ctx, P1, P2, true)
 	require.NoError(t, err)
-	err = jets.Clone(ctx, P2, P3)
+	err = jets.Clone(ctx, P2, P3, true)
 	require.NoError(t, err)
 	err = jetKeeper.Add(ctx, P3, jet)
 	require.NoError(t, err)

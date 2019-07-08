@@ -87,7 +87,7 @@ func (js *JetSplitterDefault) Do(
 	inslog := inslogger.FromContext(ctx).WithField("split_for_pulse", newPulse.String())
 
 	// copy current jets for new pulse, for further jets modification in new pulse.
-	err := js.jetModifier.Clone(ctx, currentPulse, newPulse)
+	err := js.jetModifier.Clone(ctx, currentPulse, newPulse, false)
 	if err != nil {
 		panic("Failed to clone jets")
 	}

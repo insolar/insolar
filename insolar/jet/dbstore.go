@@ -82,12 +82,12 @@ func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insol
 	}
 	return left, right, nil
 }
-func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber) error {
+func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keep bool) error {
 	s.Lock()
 	defer s.Unlock()
 
 	tree := s.get(from)
-	newTree := tree.Clone(true)
+	newTree := tree.Clone(keep)
 	err := s.set(to, newTree)
 	if err != nil {
 		return errors.Wrapf(err, "failed to clone jet.Tree")

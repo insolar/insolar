@@ -426,7 +426,7 @@ func (h *Handler) cloneUpToLatest(ctx context.Context, from insolar.PulseNumber)
 		return
 	}
 	for to := next.PulseNumber; to <= latest.PulseNumber; {
-		err := h.JetModifier.Clone(ctx, from, to)
+		err := h.JetModifier.Clone(ctx, from, to, true)
 		if err != nil {
 			logger.Error(errors.Wrapf(err, "failed to clone jet tree from %v to %v", from, to))
 			return
