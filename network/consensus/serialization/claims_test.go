@@ -50,49 +50,32 @@
 
 package serialization
 
-import "io"
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
-type ClaimHeader struct {
-	TypeAndLength uint16 `insolar-transport:"header;[0-9]=length;[10-15]=header:ClaimType;group=Claims"` // [00-09] ByteLength [10-15] ClaimClass
-	// actual payload
-}
+func TestClaimList_SerializeDeserialize(t *testing.T) {
+	list := ClaimList{EndOfClaims: EmptyClaim{ClaimHeader{TypeAndLength: 22}}}
+	list2 := ClaimList{}
 
-type GenericClaim struct {
-	// ByteSize>=1
-	ClaimHeader
-	Payload []byte
-}
+	buf := make([]byte, 0)
+	rw := bytes.NewBuffer(buf)
+	w := newTrackableWriter(rw)
+	pctx := newPacketContext(context.Background(), nil)
+	sctx := newSerializeContext(pctx, w, signer, nil)
 
-type EmptyClaim struct {
-	// ByteSize=1
-	ClaimHeader `insolar-transport:"delimiter;ClaimType=0;length=header"`
-}
+	err := list.SerializeTo(sctx, rw)
+	assert.NoError(t, err)
+	fmt.Printf("%#v", buf)
 
-type ClaimList struct {
-	// ByteSize>=1
-	Claims      []GenericClaim
-	EndOfClaims EmptyClaim // ByteSize=1 - indicates end of claims
-}
+	r := newTrackableReader(rw)
+	dctx := newDeserializeContext(pctx, r, nil)
+	err = list2.DeserializeFrom(dctx, rw)
+	assert.NoError(t, err)
 
-func (cl *ClaimList) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	for _, c := range cl.Claims {
-		err := c.SerializeTo(ctx, writer)
-		if err != nil {
-			return err
-		}
-	}
-	return write(writer, cl.EndOfClaims)
-}
-
-func (cl *ClaimList) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	// TODO
-	return nil
-}
-
-func (c *ClaimHeader) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	return write(writer, c)
-}
-
-func (c *GenericClaim) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	return write(writer, c)
+	assert.Equal(t, list, list2)
 }
