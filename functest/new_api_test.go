@@ -141,5 +141,5 @@ func TestIncorrectMethodName(t *testing.T) {
 		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
 	}, seed)
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "RPC method does not exist.")
+	require.EqualError(t, contractError(res), "rpc method does not exist.")
 }

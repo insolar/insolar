@@ -196,10 +196,9 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		}
 
 		if contractRequest.Method != "api.call" {
-			err := errors.New("RPC method does not exist.")
+			err := errors.New("rpc method does not exist.")
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
-			//return ctx, nil, errors.Wrap(err, "RPC method does not exist.")
 		}
 
 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
