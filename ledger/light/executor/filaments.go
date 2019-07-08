@@ -105,11 +105,11 @@ func (m *FilamentModifierDefault) SetRequest(
 	if !jetID.IsValid() {
 		return nil, nil, errors.New("jet is not valid")
 	}
-	if request.GetObject() == nil && request.GetObject().Record().IsEmpty() {
+	if request.AffinityRef() == nil && request.AffinityRef().Record().IsEmpty() {
 		return nil, nil, errors.New("request object id is empty")
 	}
 
-	objectID := *request.GetObject().Record()
+	objectID := *request.AffinityRef().Record()
 
 	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {
@@ -420,10 +420,10 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	logger.Debug("started to search duplicated requests")
 	defer logger.Debug("finished to search duplicated requests")
 
-	if request.GetReason().IsEmpty() {
+	if request.ReasonRef().IsEmpty() {
 		return nil, nil, ErrEmptyReason
 	}
-	reason := request.GetReason()
+	reason := request.ReasonRef()
 
 	idx, err := c.indexes.ForID(ctx, startFrom, objectID)
 	if err != nil {
