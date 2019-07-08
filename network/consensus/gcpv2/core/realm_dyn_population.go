@@ -295,19 +295,13 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 }
 
 //
-func (r *DynamicRealmPopulation) CreateOrUpdateVectorHelper(v *RealmVectorHelper) *RealmVectorHelper {
-	if v != nil && v.populationVersion == r.self.callback.GetPopulationVersion() {
+func (r *DynamicRealmPopulation) SetOrUpdateVectorHelper(v *RealmVectorHelper) *RealmVectorHelper {
+	if v.HasSameVersion(r.self.callback.GetPopulationVersion()) {
 		return v
 	}
 
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	if v != nil {
-		return v.updateNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
-	}
-
-	v = NewRealmVectorHelper()
-	v.setNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
-	return v
+	return v.setOrUpdateNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
 }

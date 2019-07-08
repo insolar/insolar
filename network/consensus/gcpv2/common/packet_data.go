@@ -60,8 +60,7 @@ import (
 	Power      common2.MemberPower // serialized to [00-07]
 	Index      uint16              // serialized to [08-17]
 	TotalCount uint16              // serialized to [18-27]
-	Condition  MemberCondition     //serialized to [28-29]
-	//[30-31] Reserved
+	Condition  MemberCondition     //serialized to [28-31]
 */
 type MembershipRank uint32
 
@@ -80,7 +79,7 @@ func (v MembershipRank) GetTotalCount() uint16 {
 }
 
 func (v MembershipRank) GetNodeCondition() MemberCondition {
-	return MemberCondition(v>>28) & 0x03
+	return MemberCondition(v >> 28)
 }
 
 func (v MembershipRank) IsJoiner() bool {
@@ -113,7 +112,72 @@ func ensureNodeIndex(v uint16) uint32 {
 	return uint32(v & 0x03FF)
 }
 
-type MemberCondition uint8 //MUST BE 2bit value
+type MemberMode uint8 //4-bit value
+const (
+	MemberModeFlagRestrictedBehavior MemberMode = 4
+	MemberModeFlagValidationWarning  MemberMode = 2
+	MemberModeFlagSuspendedOps       MemberMode = 1
+
+	MemberModeNormal                    = 0
+	MemberModeSuspected                 = /* 0x01 */ MemberModeFlagSuspendedOps
+	MemberModePossibleFraud             = /* 0x02 */ MemberModeFlagValidationWarning
+	MemberModePossibleFraudAndSuspected = /* 0x03 */ MemberModeFlagSuspendedOps | MemberModeFlagValidationWarning
+	MemberModeRestrictedAnnouncement    = /* 0x04 */ MemberModeFlagRestrictedBehavior
+	MemberModeEvictedGracefully         = /* 0x05 */ MemberModeFlagRestrictedBehavior | MemberModeFlagSuspendedOps
+	MemberModeEvictedAsFraud            = /* 0x06 */ MemberModeFlagRestrictedBehavior | MemberModeFlagValidationWarning
+	MemberModeEvictedAsSuspected        = /* 0x07 */ MemberModeFlagRestrictedBehavior | MemberModeFlagValidationWarning | MemberModeFlagSuspendedOps
+)
+
+func (v MemberMode) IsRestricted() bool {
+	return v&MemberModeFlagRestrictedBehavior != 0
+}
+
+func (v MemberMode) IsMistrustful() bool {
+	return v&MemberModeFlagValidationWarning != 0
+}
+
+func (v MemberMode) IsSuspended() bool {
+	return v&MemberModeFlagSuspendedOps != 0
+}
+
+func (v MemberMode) IsPowerful() bool {
+	return v&(MemberModeFlagRestrictedBehavior|MemberModeFlagSuspendedOps) == 0
+}
+
+func (v MemberMode) asUnit32() uint32 {
+	if v > 0x0F {
+		panic("illegal value")
+	}
+	return uint32(v)
+}
+
+func (v MemberMode) String() string {
+	switch v {
+	case MemberModeNormal:
+		return "mode:norm"
+	case MemberModeSuspected:
+		return "mode:susp"
+	case MemberModePossibleFraud:
+		return "mode:warn"
+	case MemberModePossibleFraudAndSuspected:
+		return "mode:warn+susp"
+	case MemberModeRestrictedAnnouncement:
+		return "mode:joiner"
+	case MemberModeEvictedGracefully:
+		return "exit:norm"
+	case MemberModeEvictedAsFraud:
+		return "exit:fraud"
+	case MemberModeEvictedAsSuspected:
+		return "exit:susp"
+	default:
+		return fmt.Sprintf("?%d?", v)
+	}
+}
+
+/* deprecated
+MUST be removed. Replaced with MemberMode
+*/
+type MemberCondition uint8 //MUST BE 4bit value
 const (
 	MemberJustJoined MemberCondition = iota
 	MemberNormal

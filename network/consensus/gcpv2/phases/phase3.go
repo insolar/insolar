@@ -156,11 +156,18 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 		// c.R.StopRoundByTimeout()
 		return
 	}
-	d := c.calcGshPair()
+	d0 := c.calcGshPair()
+	//d0 := c.calcGshPairNew()
+	//if !d0.TrustedVector.Equals(d1.TrustedVector) || d0.DoubtedVector != nil && !d0.DoubtedVector.Equals(d1.DoubtedVector) {
+	//	for {
+	//		d0 = c.calcGshPair()
+	//		d1 = c.calcGshPairNew()
+	//	}
+	//}
 
-	go c.workerSendPhase3(ctx, d)
+	go c.workerSendPhase3(ctx, d0)
 
-	if !c.workerRecvPhase3(ctx, d) {
+	if !c.workerRecvPhase3(ctx, d0) {
 		// context was stopped in a hard way, we are dead in terms of consensus
 		// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
 		// c.R.StopRoundByTimeout()
@@ -274,6 +281,67 @@ outer:
 		}
 	}
 	return true
+}
+
+type ph3VectorBuilder struct {
+	digester common.SequenceDigester
+}
+
+func (p *ph3VectorBuilder) AddEntry(n *core.NodeAppearance, power common2.MemberPower, cursor core.VectorCursor, nodeData *common2.NodeAnnouncedState) {
+	p.digester.AddNext(nodeData.StateEvidence.GetNodeStateHash())
+}
+
+func (p *ph3VectorBuilder) Fork() core.VectorBuilder {
+	return &ph3VectorBuilder{p.digester.ForkSequence()}
+}
+
+//func (c *Phase3Controller) calcGshPairNew() nodeset.HashedNodeVector {
+//
+//	coreDigester := c.R.GetDigestFactory().GetGshDigester()
+//	vBuilder := core.NewDualVectorBuilder(&ph3VectorBuilder{ coreDigester },
+//		0x04, 0x04,
+//		0x02, 0x02,
+//	)
+//
+//	pop := c.R.GetPopulation()
+//	res := nodeset.HashedNodeVector{ Bitset: make(nodeset.NodeBitset, pop.GetNodeCount()) }
+//	vectorHelper := core.NewRealmVectorHelper(func (index int, nodeData core.VectorEntryData) uint16 {
+//		nsv := mapVectorEntryDataToNodesetEntry(nodeData)
+//		res.Bitset[index] = nsv
+//		if nsv == nodeset.NbsTimeout {
+//			return 0
+//		}
+//		if nsv.IsTrusted() {
+//			return 0x06
+//		}
+//		return 0x03
+//	})
+//	vectorHelper = pop.SetOrUpdateVectorHelper(vectorHelper)
+//	vBuilder.ScanVector(vectorHelper)
+//	_, b0, _ := vBuilder.Get(0)
+//	_, b1, _ := vBuilder.Get(1)
+//
+//	res.TrustedVector = b0.(*ph3VectorBuilder).digester.FinishSequence().AsDigestHolder()
+//	if b1 != nil {
+//		res.DoubtedVector = b1.(*ph3VectorBuilder).digester.FinishSequence().AsDigestHolder()
+//	}
+//
+//	return res
+//}
+
+func mapVectorEntryDataToNodesetEntry(nodeData core.VectorEntryData) nodeset.NodeBitsetEntry {
+	switch {
+	case nodeData.IsEmpty():
+		return nodeset.NbsTimeout
+	case nodeData.TrustLevel.IsNegative():
+		return nodeset.NbsFraud
+	case nodeData.TrustLevel == packets.UnknownTrust:
+		return nodeset.NbsBaselineTrust
+	case nodeData.TrustLevel < packets.TrustByNeighbors:
+		return nodeset.NbsLimitedTrust
+	default:
+		return nodeset.NbsHighTrust
+	}
 }
 
 func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
