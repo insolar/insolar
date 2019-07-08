@@ -32,7 +32,6 @@ import (
 
 // This is a workaround. VM should not register requests without object.
 // But it does. This procedure simulate invalid behaviour.
-// TODO: remove it after INS-1939
 type SetActivationRequest struct {
 	message   payload.Meta
 	request   record.Virtual
