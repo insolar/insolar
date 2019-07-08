@@ -307,11 +307,13 @@ func TestRequestInterface_IncomingRequest(t *testing.T) {
 func TestRequestInterface_OutgoingRequest(t *testing.T) {
 	t.Parallel()
 	objref := gen.Reference()
+	callerref := gen.Reference()
 	req := &OutgoingRequest{
+		Caller: callerref,
 		Object: &objref,
 		Reason: gen.Reference(),
 	}
 	iface := Request(req)
-	require.Equal(t, req.Object, iface.GetObject())
+	require.Equal(t, &req.Caller, iface.GetObject())
 	require.Equal(t, req.Reason, iface.GetReason())
 }
