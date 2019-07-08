@@ -58,26 +58,33 @@ func (s *TranscriptDequeueSuite) TestBasic() {
 	d := NewTranscriptDequeue()
 	s.Require().NotNil(d)
 
+	// [] + [1, 2]
 	d.Push(&Transcript{Nonce: 1}, &Transcript{Nonce: 2})
 
+	// 1, [2]
 	tr := d.Pop()
 	s.Require().NotNil(tr)
 	s.Equal(uint64(1), tr.Nonce)
 
+	// [3, 4] + [2]
 	d.Prepend(&Transcript{Nonce: 3}, &Transcript{Nonce: 4})
 
+	// 3, [4, 2]
 	tr = d.Pop()
 	s.Require().NotNil(tr)
 	s.Equal(uint64(3), tr.Nonce)
 
+	// 4, [2]
 	tr = d.Pop()
 	s.Require().NotNil(tr)
 	s.Equal(uint64(4), tr.Nonce)
 
+	// 2, []
 	tr = d.Pop()
 	s.Require().NotNil(tr)
 	s.Equal(uint64(2), tr.Nonce)
 
+	// nil, []
 	s.Nil(d.Pop())
 }
 
@@ -125,14 +132,14 @@ func (s *TranscriptDequeueSuite) TestPopByReference() {
 		&Transcript{Nonce: 5, RequestRef: &badRef},
 	)
 
-	tr := d.PopByReference(&ref)
+	tr := d.PopByReference(ref)
 	s.Require().NotNil(tr)
 	s.Require().Equal(tr.RequestRef.Bytes(), ref.Bytes())
 
-	tr = d.PopByReference(&ref)
+	tr = d.PopByReference(ref)
 	s.Nil(tr)
 
-	s.Equal(d.Len(), 2)
+	s.Equal(d.Length(), 2)
 }
 
 func (s *TranscriptDequeueSuite) TestTake() {
@@ -221,14 +228,14 @@ func immutableCount(args ...interface{}) bool {
 	broker := args[0].(*ExecutionBroker)
 	count := args[1].(int)
 
-	return broker.immutable.Len() >= count
+	return broker.immutable.Length() >= count
 }
 
 func finishedCount(args ...interface{}) bool {
 	broker := args[0].(*ExecutionBroker)
 	count := args[1].(int)
 
-	return broker.finished.Len() >= count
+	return broker.finished.Length() >= count
 }
 
 func processorStatus(args ...interface{}) bool {
@@ -264,7 +271,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	}
 
 	b.Put(s.Context, false, tr)
-	s.Len(b.mutable.queue, 1)
+	s.Equal(b.mutable.Length(), 1)
 
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
@@ -279,9 +286,9 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	s.Require().True(wait(processorStatus, b, false))
 	s.Empty(waitChannel)
 
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.finished.queue, 2)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.finished.Length(), 2)
 
 	rotationResults := b.Rotate(10)
 	s.Len(rotationResults.Requests, 0)
@@ -314,7 +321,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 		Request:      &record.IncomingRequest{},
 	}
 	b.Prepend(s.Context, false, tr)
-	s.Len(b.mutable.queue, 1)
+	s.Equal(b.mutable.Length(), 1)
 
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
@@ -328,9 +335,9 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitChannel)
 
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.finished.queue, 2)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.finished.Length(), 2)
 
 	rotationResults := b.Rotate(10)
 	s.Len(rotationResults.Requests, 0)
@@ -444,9 +451,9 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	}
 
 	rotationResults := b.Rotate(10)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.finished.queue, 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.finished.Length(), 0)
 	s.Len(rotationResults.Requests, 8)
 	s.Len(rotationResults.Finished, 0)
 	s.False(rotationResults.LedgerHasMoreRequests)
@@ -458,9 +465,9 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	}
 
 	rotationResults = b.Rotate(10)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.finished.queue, 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.finished.Length(), 0)
 	s.Len(rotationResults.Requests, 4)
 	s.Len(rotationResults.Finished, 0)
 	s.False(rotationResults.LedgerHasMoreRequests)
@@ -471,9 +478,9 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	}
 
 	rotationResults = b.Rotate(10)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.finished.queue, 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.finished.Length(), 0)
 	s.Len(rotationResults.Requests, 10)
 	s.Len(rotationResults.Finished, 0)
 	s.False(rotationResults.LedgerHasMoreRequests)
@@ -484,9 +491,9 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	}
 
 	rotationResults = b.Rotate(10)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.finished.queue, 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.finished.Length(), 0)
 	s.Len(rotationResults.Requests, 10)
 	s.Len(rotationResults.Finished, 0)
 	s.True(rotationResults.LedgerHasMoreRequests)
@@ -510,12 +517,12 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 		RequestRef:   &reqRef1,
 		Request:      &record.IncomingRequest{},
 	}) // no duplication
-	s.Len(b.mutable.queue, 1)
+	s.Equal(b.mutable.Length(), 1)
 
 	b.Put(s.Context, false, &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef1,
 		Request:      &record.IncomingRequest{},
 	}) // duplication
-	s.Len(b.mutable.queue, 1)
+	s.Equal(b.mutable.Length(), 1)
 }

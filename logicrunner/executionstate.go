@@ -98,7 +98,7 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			es.pending = message.NotPending
 			sendExecResults = true
 			es.LedgerHasMoreRequests = true
-		case es.Broker.finished.Len() > 0:
+		case es.Broker.finished.Length() > 0:
 			sendExecResults = true
 
 		}

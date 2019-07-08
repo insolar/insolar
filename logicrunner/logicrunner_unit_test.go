@@ -538,7 +538,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			suite.Require().NoError(err)
 			st := suite.lr.StateStorage.GetExecutionState(object)
 			suite.Require().Equal(test.expected.pending, st.pending)
-			suite.Require().Equal(test.expected.queueLen, st.Broker.mutable.Len())
+			suite.Require().Equal(test.expected.queueLen, st.Broker.mutable.Length())
 		})
 	}
 }
@@ -1594,7 +1594,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			es.RegisterLogicRunner(s.lr)
 			InitBroker(t, s.ctx, test.Count, es, false)
 
-			messagesQueue := convertQueueToMessageQueue(s.ctx, es.Broker.mutable.queue[:maxQueueLength])
+			messagesQueue := convertQueueToMessageQueue(s.ctx, es.Broker.mutable.Peek(maxQueueLength))
 
 			expectedMessage := &message.ExecutorResults{
 				RecordRef:             s.objectRef,
