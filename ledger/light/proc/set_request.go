@@ -86,9 +86,19 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	p.dep.locker.Lock(p.request.GetObject().Record())
 	defer p.dep.locker.Unlock(p.request.GetObject().Record())
 
-	req, res, err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
-	if err != nil {
-		return errors.Wrap(err, "failed to store record")
+	var req *record.CompositeFilamentRecord
+	var res *record.CompositeFilamentRecord
+
+	if p.request.GetCallType() == record.CTSaveAsChild || p.request.GetCallType() == record.CTSaveAsDelegate {
+		req, res, err = p.dep.filament.SetActivationRequest(ctx, p.requestID, p.jetID, p.request)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
+	} else {
+		req, res, err = p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
 	}
 
 	var reqBuf []byte

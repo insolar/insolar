@@ -133,4 +133,5 @@ func (Genesis) GetIsPrototype() bool {
 type Request interface {
 	GetObject() *insolar.Reference
 	GetReason() insolar.Reference
+	GetCallType() CallType
 }

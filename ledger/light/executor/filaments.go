@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -38,6 +39,7 @@ import (
 
 type FilamentModifier interface {
 	SetRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.Request) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)
+	SetActivationRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.Request) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) error
 }
 
@@ -77,20 +79,161 @@ func NewFilamentModifier(
 	recordStorage object.RecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	calculator FilamentCalculator,
+	pulses pulse.Calculator,
+	coordinator jet.Coordinator,
 ) *FilamentModifierDefault {
 	return &FilamentModifierDefault{
-		calculator: calculator,
-		indexes:    indexes,
-		records:    recordStorage,
-		pcs:        pcs,
+		calculator:  calculator,
+		indexes:     indexes,
+		records:     recordStorage,
+		pcs:         pcs,
+		pulses:      pulses,
+		coordinator: coordinator,
 	}
 }
 
 type FilamentModifierDefault struct {
-	calculator FilamentCalculator
-	indexes    object.IndexStorage
-	records    object.RecordModifier
-	pcs        insolar.PlatformCryptographyScheme
+	calculator  FilamentCalculator
+	indexes     object.IndexStorage
+	records     object.RecordModifier
+	pcs         insolar.PlatformCryptographyScheme
+	pulses      pulse.Calculator
+	coordinator jet.Coordinator
+}
+
+func (m *FilamentModifierDefault) checkObject(ctx context.Context, currentPN insolar.PulseNumber, untilPN insolar.PulseNumber, requestID insolar.ID) (object.FilamentIndex, error) {
+	for {
+		idx, err := m.indexes.ForID(ctx, currentPN, requestID)
+		if err != nil && err != object.ErrIndexNotFound {
+			return idx, errors.Wrap(err, "failed to fetch index")
+		}
+		if err == nil {
+			return idx, nil
+		}
+
+		tmpPN, err := m.pulses.Backwards(ctx, currentPN, 1)
+		if err != nil {
+			return object.FilamentIndex{}, object.ErrIndexNotFound
+		}
+
+		currentPN = tmpPN.PulseNumber
+		if currentPN > untilPN {
+			return object.FilamentIndex{}, object.ErrIndexNotFound
+		}
+	}
+}
+
+func (m *FilamentModifierDefault) SetActivationRequest(
+	ctx context.Context,
+	requestID insolar.ID,
+	jetID insolar.JetID,
+	request record.Request,
+) (*record.CompositeFilamentRecord, *record.CompositeFilamentRecord, error) {
+	if requestID.IsEmpty() {
+		return nil, nil, errors.New("request id is empty")
+	}
+	if !jetID.IsValid() {
+		return nil, nil, errors.New("jet is not valid")
+	}
+	if request.GetObject() != nil {
+		return nil, nil, errors.New("request object id isn't empty")
+	}
+	if request.GetCallType() != record.CTSaveAsChild || request.GetCallType() != record.CTSaveAsDelegate {
+		return nil, nil, errors.New("request isn't an activation one")
+	}
+
+	currentPN := requestID.Pulse()
+	reason := request.GetReason()
+	untilPN := reason.Record().Pulse()
+
+	isBeyond, err := m.coordinator.IsBeyondLimit(ctx, currentPN, untilPN)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to check a pulse's limit")
+	}
+	if isBeyond {
+		err := m.indexes.SetIndex(ctx, requestID.Pulse(), object.FilamentIndex{
+			ObjID:            requestID,
+			PendingRecords:   []insolar.ID{},
+			LifelineLastUsed: requestID.Pulse(),
+		})
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to create an object")
+		}
+	} else {
+		idx, err := m.checkObject(ctx, currentPN, untilPN, requestID)
+		if err != nil {
+			if err == object.ErrIndexNotFound {
+				err := m.indexes.SetIndex(ctx, requestID.Pulse(), object.FilamentIndex{
+					ObjID:            requestID,
+					PendingRecords:   []insolar.ID{},
+					LifelineLastUsed: requestID.Pulse(),
+				})
+				if err != nil {
+					return nil, nil, errors.Wrap(err, "failed to create an object")
+				}
+			} else {
+				return nil, nil, errors.Wrap(err, "failed to create an object")
+			}
+		} else {
+			if idx.Lifeline.PendingPointer != nil && requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
+				return nil, nil, errors.New("request from the past")
+			}
+
+			foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), requestID, requestID, request)
+			if err != nil && err != ErrEmptyReason {
+				return nil, nil, err
+			}
+			if foundRequest != nil || foundResult != nil {
+				return foundRequest, foundResult, err
+			}
+		}
+	}
+
+	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), requestID)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to fetch index")
+	}
+
+	// Save request record to storage.
+	{
+		virtual := record.Wrap(request)
+		material := record.Material{Virtual: &virtual, JetID: jetID}
+		err := m.records.Set(ctx, requestID, material)
+		if err != nil && err != object.ErrOverride {
+			return nil, nil, errors.Wrap(err, "failed to save a request record")
+		}
+	}
+
+	var filamentID insolar.ID
+	// Save filament record to storage.
+	{
+		rec := record.PendingFilament{
+			RecordID:       requestID,
+			PreviousRecord: idx.Lifeline.PendingPointer,
+		}
+		virtual := record.Wrap(rec)
+		hash := record.HashVirtual(m.pcs.ReferenceHasher(), virtual)
+		id := *insolar.NewID(requestID.Pulse(), hash)
+		material := record.Material{Virtual: &virtual, JetID: jetID}
+		err := m.records.Set(ctx, id, material)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to save filament record")
+		}
+		filamentID = id
+	}
+
+	idx.Lifeline.PendingPointer = &filamentID
+	if idx.Lifeline.EarliestOpenRequest == nil {
+		pn := requestID.Pulse()
+		idx.Lifeline.EarliestOpenRequest = &pn
+	}
+
+	err = m.indexes.SetIndex(ctx, requestID.Pulse(), idx)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to update index")
+	}
+
+	return nil, nil, nil
 }
 
 func (m *FilamentModifierDefault) SetRequest(
@@ -110,6 +253,11 @@ func (m *FilamentModifierDefault) SetRequest(
 	}
 
 	objectID := *request.GetObject().Record()
+
+	// New object
+	if request.GetCallType() == record.CTSaveAsChild || request.GetCallType() == record.CTSaveAsDelegate {
+
+	}
 
 	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {
