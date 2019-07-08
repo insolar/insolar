@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -148,11 +149,22 @@ type ExecutionBroker struct {
 
 	ledgerChecked sync.Once
 
-	processActive bool
-	processLock   sync.Mutex
+	processorActive uint32
 
 	deduplicationTable map[insolar.Reference]bool
 	deduplicationLock  sync.Mutex
+}
+
+func (q *ExecutionBroker) tryTakeProcessor(_ context.Context) bool {
+	return atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
+}
+
+func (q *ExecutionBroker) releaseProcessor(_ context.Context) {
+	atomic.SwapUint32(&q.processorActive, 0)
+}
+
+func (q *ExecutionBroker) isActiveProcessor() bool { //nolint: unused
+	return atomic.LoadUint32(&q.processorActive) == 1
 }
 
 type ExecutionBrokerRotationResult struct {
@@ -329,11 +341,7 @@ func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference
 }
 
 func (q *ExecutionBroker) startProcessor(ctx context.Context) {
-	defer func() {
-		q.processLock.Lock()
-		q.processActive = false
-		q.processLock.Unlock()
-	}()
+	defer q.releaseProcessor(ctx)
 
 	// сhecking we're eligible to execute contracts
 	if readyToExecute := q.Check(ctx); !readyToExecute {
@@ -359,19 +367,15 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
-	q.processLock.Lock()
 	// i've removed "if we have tasks here"; we can be there in two cases:
 	// 1) we've put a task into queue and automatically start processor
 	// 2) we've explicitly ask broker to be here
 	// both cases means we knew what we are doing and so it's just an
 	// unneeded optimisation
-	if !q.processActive {
+	if q.tryTakeProcessor(ctx) {
 		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
-
-		q.processActive = true
 		go q.startProcessor(ctx)
 	}
-	q.processLock.Unlock()
 
 }
 
