@@ -83,7 +83,7 @@ func truncateNotFinalizedData(ctx context.Context, jetKeeper replica.JetKeeper, 
 
 	err := drops.TruncateHead(ctx, pn)
 	if err != nil {
-		return errors.Wrapf(err, "can't truncate db to pulse: ", pn)
+		return errors.Wrapf(err, "can't truncate db to pulse: %d", pn)
 	}
 
 	return nil
