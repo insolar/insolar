@@ -319,6 +319,16 @@ func (c *NodeAppearance) GetNodeMembershipProfile() common2.MembershipProfile {
 	return c.getMembership()
 }
 
+func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (common2.MembershipProfile, packets.NodeTrustLevel) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	//if c.stateEvidence == nil {
+	//	panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
+	//}
+	return c.getMembership(), c.trust
+}
+
 func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() common2.MembershipProfile {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -340,12 +350,6 @@ func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence common2.NodeStat
 	c.stateEvidence = evidence
 	c.announceSignature = announce
 	c.callback.updatePopulationVersion()
-}
-
-func (c *NodeAppearance) GetNodeMembershipAndTrust() (common2.MembershipProfile, packets.NodeTrustLevel) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	return c.getMembership(), c.trust
 }
 
 func (c *NodeAppearance) IsNshRequired() bool {
@@ -396,6 +400,7 @@ func (c *NodeAppearance) RegisterFraud(fraud errors.FraudError) (bool, error) {
 	return c.registerFraud(fraud)
 }
 
+// MUST BE NO LOCK
 func (c *NodeAppearance) getMembership() common2.MembershipProfile {
 	return common2.NewMembershipProfileByNode(c.profile, c.stateEvidence, c.announceSignature, c.requestedPower)
 }
@@ -439,4 +444,11 @@ func (c *NodeAppearance) ResetPacketHandlers(indices ...int) {
 		}
 	}
 	c.handlers = nil
+}
+
+func (c *NodeAppearance) GetRequestedState() (bool, uint32, *NodeAppearance, common2.MembershipProfile, packets.NodeTrustLevel) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.requestedLeave, c.requestedLeaveExitCode, c.requestedJoiner, c.getMembership(), c.trust
 }

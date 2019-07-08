@@ -115,8 +115,10 @@ func ensureNodeIndex(v uint16) uint32 {
 
 type MemberCondition uint8 //MUST BE 2bit value
 const (
-	MemberRecentlyJoined MemberCondition = iota
-	MemberNormalOps
+	MemberJustJoined MemberCondition = iota
+	MemberNormal
+	MemberSuspected
+	MemberPossibleFraud
 )
 
 func (v MemberCondition) asUnit32() uint32 {
@@ -128,10 +130,14 @@ func (v MemberCondition) asUnit32() uint32 {
 
 func (v MemberCondition) String() string {
 	switch v {
-	case MemberNormalOps:
+	case MemberNormal:
 		return "norm"
-	case MemberRecentlyJoined:
+	case MemberJustJoined:
 		return "recent"
+	case MemberSuspected:
+		return "suspect"
+	case MemberPossibleFraud:
+		return "pfraud"
 	default:
 		return fmt.Sprintf("?%d?", v)
 	}
@@ -159,7 +165,7 @@ type SignedGlobulaNodeState struct {
 	Signature        common.Bits512
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHashEvidence -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHashEvidence -o ../common -s _mock.go
 
 type NodeStateHashEvidence interface {
 	GetNodeStateHash() NodeStateHash

@@ -112,13 +112,23 @@ func TestEnsureNodeIndex(t *testing.T) {
 func TestAsUnit32(t *testing.T) {
 	require.Panics(t, func() { MemberCondition(4).asUnit32() })
 
-	require.Equal(t, MemberNormalOps.asUnit32(), uint32(MemberNormalOps))
+	require.Equal(t, MemberJustJoined.asUnit32(), uint32(MemberJustJoined))
+
+	require.Equal(t, MemberNormal.asUnit32(), uint32(MemberNormal))
+
+	require.Equal(t, MemberSuspected.asUnit32(), uint32(MemberSuspected))
+
+	require.Equal(t, MemberPossibleFraud.asUnit32(), uint32(MemberPossibleFraud))
 }
 
 func TestMemberConditionString(t *testing.T) {
-	require.Equal(t, MemberNormalOps.String(), "norm")
+	require.Equal(t, MemberJustJoined.String(), "recent")
 
-	require.Equal(t, MemberRecentlyJoined.String(), "recent")
+	require.Equal(t, MemberNormal.String(), "norm")
+
+	require.Equal(t, MemberSuspected.String(), "suspect")
+
+	require.Equal(t, MemberPossibleFraud.String(), "pfraud")
 
 	require.NotPanics(t, func() { MemberCondition(8).String() })
 }

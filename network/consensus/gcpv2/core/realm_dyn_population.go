@@ -155,7 +155,17 @@ func (r *DynamicRealmPopulation) GetNodeAppearanceByIndex(idx int) *NodeAppearan
 }
 
 func (r *DynamicRealmPopulation) GetShuffledOtherNodes() []*NodeAppearance {
+	r.rw.RLock()
+	defer r.rw.RUnlock()
+
 	return r.nodeShuffle
+}
+
+func (r *DynamicRealmPopulation) IsComplete() bool {
+	r.rw.RLock()
+	defer r.rw.RUnlock()
+
+	return len(r.nodeIndex) == r.indexedCount
 }
 
 func (r *DynamicRealmPopulation) GetIndexedNodes() []*NodeAppearance {
@@ -285,12 +295,19 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 }
 
 //
-//func (r *DynamicRealmPopulation) CreateOrUpdateVectorHelper(prev *RealmVectorHelper) *RealmVectorHelper {
-//	if prev != nil && prev.populationVersion == r.self.callback.GetPopulationVersion() {
-//		return prev
-//	}
-//
-//	dynamicNodes
-//
-//	indexed []VectorEntry
-//}
+func (r *DynamicRealmPopulation) CreateOrUpdateVectorHelper(v *RealmVectorHelper) *RealmVectorHelper {
+	if v != nil && v.populationVersion == r.self.callback.GetPopulationVersion() {
+		return v
+	}
+
+	r.rw.RLock()
+	defer r.rw.RUnlock()
+
+	if v != nil {
+		return v.updateNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
+	}
+
+	v = NewRealmVectorHelper()
+	v.setNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
+	return v
+}

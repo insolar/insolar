@@ -1,4 +1,4 @@
-package testutils
+package common
 
 /*
 DO NOT EDIT!
@@ -11,7 +11,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	common "github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -25,7 +24,7 @@ type LocalNodeProfileMock struct {
 	GetAnnouncementSignaturePreCounter uint64
 	GetAnnouncementSignatureMock       mLocalNodeProfileMockGetAnnouncementSignature
 
-	GetDeclaredPowerFunc       func() (r common2.MemberPower)
+	GetDeclaredPowerFunc       func() (r MemberPower)
 	GetDeclaredPowerCounter    uint64
 	GetDeclaredPowerPreCounter uint64
 	GetDeclaredPowerMock       mLocalNodeProfileMockGetDeclaredPower
@@ -40,7 +39,7 @@ type LocalNodeProfileMock struct {
 	GetIndexPreCounter uint64
 	GetIndexMock       mLocalNodeProfileMockGetIndex
 
-	GetIntroductionFunc       func() (r common2.NodeIntroduction)
+	GetIntroductionFunc       func() (r NodeIntroduction)
 	GetIntroductionCounter    uint64
 	GetIntroductionPreCounter uint64
 	GetIntroductionMock       mLocalNodeProfileMockGetIntroduction
@@ -55,7 +54,7 @@ type LocalNodeProfileMock struct {
 	GetNodePublicKeyStorePreCounter uint64
 	GetNodePublicKeyStoreMock       mLocalNodeProfileMockGetNodePublicKeyStore
 
-	GetPrimaryRoleFunc       func() (r common2.NodePrimaryRole)
+	GetPrimaryRoleFunc       func() (r NodePrimaryRole)
 	GetPrimaryRoleCounter    uint64
 	GetPrimaryRolePreCounter uint64
 	GetPrimaryRoleMock       mLocalNodeProfileMockGetPrimaryRole
@@ -70,17 +69,17 @@ type LocalNodeProfileMock struct {
 	GetSignatureVerifierPreCounter uint64
 	GetSignatureVerifierMock       mLocalNodeProfileMockGetSignatureVerifier
 
-	GetSpecialRolesFunc       func() (r common2.NodeSpecialRole)
+	GetSpecialRolesFunc       func() (r NodeSpecialRole)
 	GetSpecialRolesCounter    uint64
 	GetSpecialRolesPreCounter uint64
 	GetSpecialRolesMock       mLocalNodeProfileMockGetSpecialRoles
 
-	GetStartPowerFunc       func() (r common2.MemberPower)
+	GetStartPowerFunc       func() (r MemberPower)
 	GetStartPowerCounter    uint64
 	GetStartPowerPreCounter uint64
 	GetStartPowerMock       mLocalNodeProfileMockGetStartPower
 
-	GetStateFunc       func() (r common2.MembershipState)
+	GetStateFunc       func() (r MembershipState)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mLocalNodeProfileMockGetState
@@ -274,7 +273,7 @@ type LocalNodeProfileMockGetDeclaredPowerExpectation struct {
 }
 
 type LocalNodeProfileMockGetDeclaredPowerResult struct {
-	r common2.MemberPower
+	r MemberPower
 }
 
 //Expect specifies that invocation of LocalNodeProfile.GetDeclaredPower is expected from 1 to Infinity times
@@ -290,7 +289,7 @@ func (m *mLocalNodeProfileMockGetDeclaredPower) Expect() *mLocalNodeProfileMockG
 }
 
 //Return specifies results of invocation of LocalNodeProfile.GetDeclaredPower
-func (m *mLocalNodeProfileMockGetDeclaredPower) Return(r common2.MemberPower) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetDeclaredPower) Return(r MemberPower) *LocalNodeProfileMock {
 	m.mock.GetDeclaredPowerFunc = nil
 	m.expectationSeries = nil
 
@@ -312,12 +311,12 @@ func (m *mLocalNodeProfileMockGetDeclaredPower) ExpectOnce() *LocalNodeProfileMo
 	return expectation
 }
 
-func (e *LocalNodeProfileMockGetDeclaredPowerExpectation) Return(r common2.MemberPower) {
+func (e *LocalNodeProfileMockGetDeclaredPowerExpectation) Return(r MemberPower) {
 	e.result = &LocalNodeProfileMockGetDeclaredPowerResult{r}
 }
 
 //Set uses given function f as a mock of LocalNodeProfile.GetDeclaredPower method
-func (m *mLocalNodeProfileMockGetDeclaredPower) Set(f func() (r common2.MemberPower)) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetDeclaredPower) Set(f func() (r MemberPower)) *LocalNodeProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -326,7 +325,7 @@ func (m *mLocalNodeProfileMockGetDeclaredPower) Set(f func() (r common2.MemberPo
 }
 
 //GetDeclaredPower implements github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile interface
-func (m *LocalNodeProfileMock) GetDeclaredPower() (r common2.MemberPower) {
+func (m *LocalNodeProfileMock) GetDeclaredPower() (r MemberPower) {
 	counter := atomic.AddUint64(&m.GetDeclaredPowerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDeclaredPowerCounter, 1)
 
@@ -676,7 +675,7 @@ type LocalNodeProfileMockGetIntroductionExpectation struct {
 }
 
 type LocalNodeProfileMockGetIntroductionResult struct {
-	r common2.NodeIntroduction
+	r NodeIntroduction
 }
 
 //Expect specifies that invocation of LocalNodeProfile.GetIntroduction is expected from 1 to Infinity times
@@ -692,7 +691,7 @@ func (m *mLocalNodeProfileMockGetIntroduction) Expect() *mLocalNodeProfileMockGe
 }
 
 //Return specifies results of invocation of LocalNodeProfile.GetIntroduction
-func (m *mLocalNodeProfileMockGetIntroduction) Return(r common2.NodeIntroduction) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetIntroduction) Return(r NodeIntroduction) *LocalNodeProfileMock {
 	m.mock.GetIntroductionFunc = nil
 	m.expectationSeries = nil
 
@@ -714,12 +713,12 @@ func (m *mLocalNodeProfileMockGetIntroduction) ExpectOnce() *LocalNodeProfileMoc
 	return expectation
 }
 
-func (e *LocalNodeProfileMockGetIntroductionExpectation) Return(r common2.NodeIntroduction) {
+func (e *LocalNodeProfileMockGetIntroductionExpectation) Return(r NodeIntroduction) {
 	e.result = &LocalNodeProfileMockGetIntroductionResult{r}
 }
 
 //Set uses given function f as a mock of LocalNodeProfile.GetIntroduction method
-func (m *mLocalNodeProfileMockGetIntroduction) Set(f func() (r common2.NodeIntroduction)) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetIntroduction) Set(f func() (r NodeIntroduction)) *LocalNodeProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -728,7 +727,7 @@ func (m *mLocalNodeProfileMockGetIntroduction) Set(f func() (r common2.NodeIntro
 }
 
 //GetIntroduction implements github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile interface
-func (m *LocalNodeProfileMock) GetIntroduction() (r common2.NodeIntroduction) {
+func (m *LocalNodeProfileMock) GetIntroduction() (r NodeIntroduction) {
 	counter := atomic.AddUint64(&m.GetIntroductionPreCounter, 1)
 	defer atomic.AddUint64(&m.GetIntroductionCounter, 1)
 
@@ -1078,7 +1077,7 @@ type LocalNodeProfileMockGetPrimaryRoleExpectation struct {
 }
 
 type LocalNodeProfileMockGetPrimaryRoleResult struct {
-	r common2.NodePrimaryRole
+	r NodePrimaryRole
 }
 
 //Expect specifies that invocation of LocalNodeProfile.GetPrimaryRole is expected from 1 to Infinity times
@@ -1094,7 +1093,7 @@ func (m *mLocalNodeProfileMockGetPrimaryRole) Expect() *mLocalNodeProfileMockGet
 }
 
 //Return specifies results of invocation of LocalNodeProfile.GetPrimaryRole
-func (m *mLocalNodeProfileMockGetPrimaryRole) Return(r common2.NodePrimaryRole) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetPrimaryRole) Return(r NodePrimaryRole) *LocalNodeProfileMock {
 	m.mock.GetPrimaryRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -1116,12 +1115,12 @@ func (m *mLocalNodeProfileMockGetPrimaryRole) ExpectOnce() *LocalNodeProfileMock
 	return expectation
 }
 
-func (e *LocalNodeProfileMockGetPrimaryRoleExpectation) Return(r common2.NodePrimaryRole) {
+func (e *LocalNodeProfileMockGetPrimaryRoleExpectation) Return(r NodePrimaryRole) {
 	e.result = &LocalNodeProfileMockGetPrimaryRoleResult{r}
 }
 
 //Set uses given function f as a mock of LocalNodeProfile.GetPrimaryRole method
-func (m *mLocalNodeProfileMockGetPrimaryRole) Set(f func() (r common2.NodePrimaryRole)) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetPrimaryRole) Set(f func() (r NodePrimaryRole)) *LocalNodeProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1130,7 +1129,7 @@ func (m *mLocalNodeProfileMockGetPrimaryRole) Set(f func() (r common2.NodePrimar
 }
 
 //GetPrimaryRole implements github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile interface
-func (m *LocalNodeProfileMock) GetPrimaryRole() (r common2.NodePrimaryRole) {
+func (m *LocalNodeProfileMock) GetPrimaryRole() (r NodePrimaryRole) {
 	counter := atomic.AddUint64(&m.GetPrimaryRolePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPrimaryRoleCounter, 1)
 
@@ -1480,7 +1479,7 @@ type LocalNodeProfileMockGetSpecialRolesExpectation struct {
 }
 
 type LocalNodeProfileMockGetSpecialRolesResult struct {
-	r common2.NodeSpecialRole
+	r NodeSpecialRole
 }
 
 //Expect specifies that invocation of LocalNodeProfile.GetSpecialRoles is expected from 1 to Infinity times
@@ -1496,7 +1495,7 @@ func (m *mLocalNodeProfileMockGetSpecialRoles) Expect() *mLocalNodeProfileMockGe
 }
 
 //Return specifies results of invocation of LocalNodeProfile.GetSpecialRoles
-func (m *mLocalNodeProfileMockGetSpecialRoles) Return(r common2.NodeSpecialRole) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetSpecialRoles) Return(r NodeSpecialRole) *LocalNodeProfileMock {
 	m.mock.GetSpecialRolesFunc = nil
 	m.expectationSeries = nil
 
@@ -1518,12 +1517,12 @@ func (m *mLocalNodeProfileMockGetSpecialRoles) ExpectOnce() *LocalNodeProfileMoc
 	return expectation
 }
 
-func (e *LocalNodeProfileMockGetSpecialRolesExpectation) Return(r common2.NodeSpecialRole) {
+func (e *LocalNodeProfileMockGetSpecialRolesExpectation) Return(r NodeSpecialRole) {
 	e.result = &LocalNodeProfileMockGetSpecialRolesResult{r}
 }
 
 //Set uses given function f as a mock of LocalNodeProfile.GetSpecialRoles method
-func (m *mLocalNodeProfileMockGetSpecialRoles) Set(f func() (r common2.NodeSpecialRole)) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetSpecialRoles) Set(f func() (r NodeSpecialRole)) *LocalNodeProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1532,7 +1531,7 @@ func (m *mLocalNodeProfileMockGetSpecialRoles) Set(f func() (r common2.NodeSpeci
 }
 
 //GetSpecialRoles implements github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile interface
-func (m *LocalNodeProfileMock) GetSpecialRoles() (r common2.NodeSpecialRole) {
+func (m *LocalNodeProfileMock) GetSpecialRoles() (r NodeSpecialRole) {
 	counter := atomic.AddUint64(&m.GetSpecialRolesPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSpecialRolesCounter, 1)
 
@@ -1614,7 +1613,7 @@ type LocalNodeProfileMockGetStartPowerExpectation struct {
 }
 
 type LocalNodeProfileMockGetStartPowerResult struct {
-	r common2.MemberPower
+	r MemberPower
 }
 
 //Expect specifies that invocation of LocalNodeProfile.GetStartPower is expected from 1 to Infinity times
@@ -1630,7 +1629,7 @@ func (m *mLocalNodeProfileMockGetStartPower) Expect() *mLocalNodeProfileMockGetS
 }
 
 //Return specifies results of invocation of LocalNodeProfile.GetStartPower
-func (m *mLocalNodeProfileMockGetStartPower) Return(r common2.MemberPower) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetStartPower) Return(r MemberPower) *LocalNodeProfileMock {
 	m.mock.GetStartPowerFunc = nil
 	m.expectationSeries = nil
 
@@ -1652,12 +1651,12 @@ func (m *mLocalNodeProfileMockGetStartPower) ExpectOnce() *LocalNodeProfileMockG
 	return expectation
 }
 
-func (e *LocalNodeProfileMockGetStartPowerExpectation) Return(r common2.MemberPower) {
+func (e *LocalNodeProfileMockGetStartPowerExpectation) Return(r MemberPower) {
 	e.result = &LocalNodeProfileMockGetStartPowerResult{r}
 }
 
 //Set uses given function f as a mock of LocalNodeProfile.GetStartPower method
-func (m *mLocalNodeProfileMockGetStartPower) Set(f func() (r common2.MemberPower)) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetStartPower) Set(f func() (r MemberPower)) *LocalNodeProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1666,7 +1665,7 @@ func (m *mLocalNodeProfileMockGetStartPower) Set(f func() (r common2.MemberPower
 }
 
 //GetStartPower implements github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile interface
-func (m *LocalNodeProfileMock) GetStartPower() (r common2.MemberPower) {
+func (m *LocalNodeProfileMock) GetStartPower() (r MemberPower) {
 	counter := atomic.AddUint64(&m.GetStartPowerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetStartPowerCounter, 1)
 
@@ -1748,7 +1747,7 @@ type LocalNodeProfileMockGetStateExpectation struct {
 }
 
 type LocalNodeProfileMockGetStateResult struct {
-	r common2.MembershipState
+	r MembershipState
 }
 
 //Expect specifies that invocation of LocalNodeProfile.GetState is expected from 1 to Infinity times
@@ -1764,7 +1763,7 @@ func (m *mLocalNodeProfileMockGetState) Expect() *mLocalNodeProfileMockGetState 
 }
 
 //Return specifies results of invocation of LocalNodeProfile.GetState
-func (m *mLocalNodeProfileMockGetState) Return(r common2.MembershipState) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetState) Return(r MembershipState) *LocalNodeProfileMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -1786,12 +1785,12 @@ func (m *mLocalNodeProfileMockGetState) ExpectOnce() *LocalNodeProfileMockGetSta
 	return expectation
 }
 
-func (e *LocalNodeProfileMockGetStateExpectation) Return(r common2.MembershipState) {
+func (e *LocalNodeProfileMockGetStateExpectation) Return(r MembershipState) {
 	e.result = &LocalNodeProfileMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of LocalNodeProfile.GetState method
-func (m *mLocalNodeProfileMockGetState) Set(f func() (r common2.MembershipState)) *LocalNodeProfileMock {
+func (m *mLocalNodeProfileMockGetState) Set(f func() (r MembershipState)) *LocalNodeProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1800,7 +1799,7 @@ func (m *mLocalNodeProfileMockGetState) Set(f func() (r common2.MembershipState)
 }
 
 //GetState implements github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile interface
-func (m *LocalNodeProfileMock) GetState() (r common2.MembershipState) {
+func (m *LocalNodeProfileMock) GetState() (r MembershipState) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 

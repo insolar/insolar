@@ -54,9 +54,9 @@ import (
 	"testing"
 
 	ccommon "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/testutils"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/stretchr/testify/require"
 )
 
@@ -64,7 +64,7 @@ func TestPickNextJoinCandidate(t *testing.T) {
 	require.Equal(t, (&SequencialCandidateFeeder{}).PickNextJoinCandidate(), nil)
 
 	s := &SequencialCandidateFeeder{buf: make([]common.CandidateProfile, 1)}
-	c := testutils.NewCandidateProfileMock(t)
+	c := common.NewCandidateProfileMock(t)
 	s.buf[0] = c
 	require.Equal(t, s.PickNextJoinCandidate(), c)
 }
@@ -73,7 +73,7 @@ func TestRemoveJoinCandidate(t *testing.T) {
 	require.False(t, (&SequencialCandidateFeeder{}).RemoveJoinCandidate(false, ccommon.ShortNodeID(0)))
 
 	s := &SequencialCandidateFeeder{buf: make([]common.CandidateProfile, 1)}
-	c := testutils.NewCandidateProfileMock(t)
+	c := common.NewCandidateProfileMock(t)
 	s.buf[0] = c
 	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
 	require.False(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(2)))
@@ -85,7 +85,7 @@ func TestRemoveJoinCandidate(t *testing.T) {
 
 	s.buf = make([]common.CandidateProfile, 2)
 	s.buf[0] = c
-	c2 := testutils.NewCandidateProfileMock(t)
+	c2 := common.NewCandidateProfileMock(t)
 	s.buf[1] = c2
 	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
 
@@ -97,7 +97,7 @@ func TestRemoveJoinCandidate(t *testing.T) {
 func TestAddJoinCandidate(t *testing.T) {
 	require.Panics(t, func() { (&SequencialCandidateFeeder{}).AddJoinCandidate(nil) })
 
-	f := testutils.NewFullIntroductionReaderMock(t)
+	f := packets.NewFullIntroductionReaderMock(t)
 	s := &SequencialCandidateFeeder{}
 	s.AddJoinCandidate(f)
 	require.True(t, len(s.buf) == 1 && s.buf[0] == f)

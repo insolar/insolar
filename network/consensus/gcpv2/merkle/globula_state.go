@@ -50,20 +50,27 @@
 
 package merkle
 
-import "github.com/insolar/insolar/network/consensus/gcpv2/common"
+import (
+	common2 "github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+)
 
 type GlobulaLeaf struct {
-	NodeGroup common.NodePrimaryRole // ByteSize = 1; =0 for zero-power nodes irrelevant of actual role
-	/*
-		Power      common2.MemberPower // serialized to [00-07]
-		NodeIndex  uint16              // serialized to [08-17]
-		NodeCount uint16               // serialized to [18-27]
-		Condition  MemberCondition     //serialized to [28-29]
-		//[30-31] Reserved
-	*/
-	Rank common.MembershipRank // ByteSize = 4
+	// ByteSize = 16
 
-	PowerBase  uint32 // 23
-	PowerTotal uint32 // 23
+	NodeID common2.ShortNodeID // ByteSize = 4
 
+	// ByteSize = 4
+	NodeRole   common.NodePrimaryRole // 8
+	PowerTotal uint32                 // 23
+
+	// ByteSize = 4
+	NodePower common.MemberPower // 8
+	PowerBase uint32             // 23
+
+	// ByteSize = 4
+	RoleIndex uint16                 //10
+	RoleTotal uint16                 //10
+	NodeTotal uint16                 //10
+	Condition common.MemberCondition //2
 }

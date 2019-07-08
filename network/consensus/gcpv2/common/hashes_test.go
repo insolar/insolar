@@ -55,8 +55,6 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common"
 
-	"github.com/insolar/insolar/network/consensus/testutils"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -67,14 +65,14 @@ func TestNewNodeStateHashEvidence(t *testing.T) {
 }
 
 func TestGetNodeStateHash(t *testing.T) {
-	fr := testutils.NewFoldableReaderMock(t)
+	fr := common.NewFoldableReaderMock(t)
 	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
 	sh := NewNodeStateHashEvidence(sd)
 	require.Equal(t, sh.GetNodeStateHash().GetDigestMethod(), sd.GetDigest().AsDigestHolder().GetDigestMethod())
 }
 
 func TestGetGlobulaNodeStateSignature(t *testing.T) {
-	fr := testutils.NewFoldableReaderMock(t)
+	fr := common.NewFoldableReaderMock(t)
 	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
 	sh := NewNodeStateHashEvidence(sd)
 	require.Equal(t, sh.GetGlobulaNodeStateSignature().GetSignatureMethod(), sd.GetSignature().AsSignatureHolder().GetSignatureMethod())

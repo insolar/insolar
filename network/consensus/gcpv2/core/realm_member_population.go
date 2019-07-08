@@ -67,10 +67,10 @@ func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePo
 		dynPop: dynPop{DynamicRealmPopulation{
 			nodeInit:       fn,
 			baselineWeight: strategy.RandUint32(),
+			indexedCount:   nodeCount,
 			nodeIndex:      make([]*NodeAppearance, nodeCount),
 			nodeShuffle:    make([]*NodeAppearance, nodeCount-1),
 		}},
-		nodeCount:        nodeCount,
 		bftMajorityCount: common.BftMajority(nodeCount),
 	}
 	r.initPopulation()
@@ -87,15 +87,18 @@ type MemberRealmPopulation struct {
 	dynPop
 	population census.OnlinePopulation
 
-	nodeCount        int
 	bftMajorityCount int
+}
+
+func (r *MemberRealmPopulation) IsComplete() bool {
+	return true
 }
 
 func (r *MemberRealmPopulation) initPopulation() {
 	profiles := r.population.GetProfiles()
 	thisNodeID := r.population.GetLocalProfile().GetShortNodeID()
 
-	nodes := make([]NodeAppearance, r.nodeCount)
+	nodes := make([]NodeAppearance, r.indexedCount)
 
 	var j = 0
 	for i, p := range profiles {
@@ -121,11 +124,11 @@ func (r *MemberRealmPopulation) initPopulation() {
 }
 
 func (r *MemberRealmPopulation) GetNodeCount() int {
-	return r.nodeCount
+	return r.indexedCount
 }
 
 func (r *MemberRealmPopulation) GetOthersCount() int {
-	return r.nodeCount - 1
+	return r.indexedCount - 1
 }
 
 func (r *MemberRealmPopulation) GetBftMajorityCount() int {
@@ -166,16 +169,6 @@ func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearanc
 	}
 	return r.dynPop.AddToDynamics(n)
 }
-
-//func (r *MemberRealmPopulation) CreateOrUpdateVectorHelper(prev *RealmVectorHelper) *RealmVectorHelper {
-//	if prev != nil && prev.populationVersion == r.self.callback.GetPopulationVersion() {
-//		return prev
-//	}
-//
-//	dynamicNodes
-//
-//	indexed []VectorEntry
-//}
 
 var _ common2.NodeProfile = &joiningNodeProfile{}
 

@@ -61,6 +61,7 @@ type RealmPopulation interface {
 	GetOthersCount() int
 	GetJoinersCount() int
 	GetBftMajorityCount() int
+	IsComplete() bool
 
 	GetNodeAppearance(id common.ShortNodeID) *NodeAppearance
 	GetActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance
@@ -76,6 +77,8 @@ type RealmPopulation interface {
 
 	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
 	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)
+
+	CreateOrUpdateVectorHelper(v *RealmVectorHelper) *RealmVectorHelper
 }
 
 type PurgatoryNodeState int
