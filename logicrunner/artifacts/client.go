@@ -469,16 +469,13 @@ func (r *retryer) send(ctx context.Context) {
 				}
 				replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
 				if err == nil {
-					switch p := replyPayload.(type) {
-					case *payload.Error:
-						switch p.Code {
-						case payload.CodeFlowCanceled:
-							errText = p.Text
-							inslogger.FromContext(ctx).Warnf("flow cancelled, retrying (error message - %s)", errText)
-							r.tries--
-							retry = true
-							break F
-						}
+					p, ok := replyPayload.(*payload.Error)
+					if ok && (p.Code == payload.CodeFlowCanceled) {
+						errText = p.Text
+						inslogger.FromContext(ctx).Warnf("flow cancelled, retrying (error message - %s)", errText)
+						r.tries--
+						retry = true
+						break F
 					}
 				}
 
