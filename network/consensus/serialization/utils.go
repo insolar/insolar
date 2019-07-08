@@ -50,10 +50,23 @@
 
 package serialization
 
+import (
+	"encoding/binary"
+	"io"
+)
+
 func setBit(n uint, pos uint) uint {
 	return n | (1 << pos)
 }
 
 func hasBit(n uint, pos uint) bool {
 	return (n & (1 << pos)) > 0
+}
+
+func read(reader io.Reader, data interface{}) error {
+	return binary.Read(reader, defaultByteOrder, data)
+}
+
+func write(writer io.Writer, data interface{}) error {
+	return binary.Write(writer, defaultByteOrder, data)
 }

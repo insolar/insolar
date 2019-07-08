@@ -51,6 +51,8 @@
 package serialization
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
@@ -78,6 +80,16 @@ type NodeBriefIntro struct {
 	// 128 bytes
 	NodePK          common.Bits512 // works as a unique node identity
 	JoinerSignature common.Bits512 // ByteSize=64
+}
+
+func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	// TODO
+	return nil
+}
+
+func (bi *NodeBriefIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	// TODO
+	return nil
 }
 
 type NodeFullIntro struct {

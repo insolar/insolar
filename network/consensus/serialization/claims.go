@@ -50,6 +50,8 @@
 
 package serialization
 
+import "io"
+
 type ClaimHeader struct {
 	TypeAndLength uint16 `insolar-transport:"header;[0-9]=length;[10-15]=header:ClaimType;group=Claims"` // [00-09] ByteLength [10-15] ClaimClass
 	// actual payload
@@ -70,4 +72,14 @@ type ClaimList struct {
 	// ByteSize>=1
 	Claims      []GenericClaim
 	EndOfClaims EmptyClaim // ByteSize=1 - indicates end of claims
+}
+
+func (cl *ClaimList) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	// TODO
+	return nil
+}
+
+func (cl *ClaimList) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	// TODO
+	return nil
 }

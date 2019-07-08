@@ -52,7 +52,6 @@ package serialization
 
 import (
 	"context"
-	"encoding/binary"
 	"io"
 	"math/bits"
 
@@ -103,11 +102,11 @@ type Header struct {
 }
 
 func (h *Header) SerializeTo(_ SerializeContext, writer io.Writer) error {
-	return binary.Write(writer, defaultByteOrder, h)
+	return write(writer, h)
 }
 
 func (h *Header) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
-	return binary.Read(reader, defaultByteOrder, h)
+	return read(reader, h)
 }
 
 func (h Header) GetPacketType() packets.PacketType {
@@ -221,7 +220,7 @@ func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, signer commo
 	pctx := newPacketContext(ctx, &p.Header)
 	sctx := newSerializeContext(pctx, w, signer, p)
 
-	if err := binary.Write(sctx, defaultByteOrder, &p.PulseNumber); err != nil {
+	if err := write(sctx, &p.PulseNumber); err != nil {
 		return 0, ErrMalformedPulseNumber(err)
 	}
 
@@ -242,7 +241,7 @@ func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, 
 	pctx := newPacketContext(ctx, &p.Header)
 	dctx := newDeserializeContext(pctx, r, &p.Header)
 
-	if err := binary.Read(dctx, defaultByteOrder, &p.PulseNumber); err != nil {
+	if err := read(dctx, &p.PulseNumber); err != nil {
 		return r.totalRead, ErrMalformedPulseNumber(err)
 	}
 
@@ -250,7 +249,7 @@ func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, 
 		return r.totalRead, ErrMalformedPacketBody(err)
 	}
 
-	if err := binary.Read(dctx, defaultByteOrder, &p.PacketSignature); err != nil {
+	if err := read(dctx, &p.PacketSignature); err != nil {
 		return r.totalRead, ErrMalformedPacketSignature(err)
 	}
 

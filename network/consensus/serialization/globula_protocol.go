@@ -55,6 +55,8 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/pkg/errors"
 )
 
 type GlobulaConsensusPacketBody struct {
@@ -92,7 +94,86 @@ type GlobulaConsensusPacketBody struct {
 }
 
 func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	packetType := ctx.GetPacketType()
+
+	if packetType == packets.PacketPhase0 || packetType == packets.PacketPhase1 {
+		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
+			if err := b.PulsarPacket.SerializeTo(ctx, writer); err != nil {
+				return err
+			}
+		}
+	}
+
+	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase2 {
+		if err := b.Announcement.SerializeTo(ctx, writer); err != nil {
+			return err
+		}
+	}
+
+	if packetType == packets.PacketPhase2 {
+		if ctx.HasFlag(1) && !ctx.HasFlag(2) { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
+			if err := b.BriefSelfIntro.SerializeTo(ctx, writer); err != nil {
+				return err
+			}
+		}
+	}
+
+	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase2 {
+		if ctx.HasFlag(2) { // [1:2] in (2, 3) - has full intro + cloud intro
+			if err := b.FullSelfIntro.SerializeTo(ctx, writer); err != nil {
+				return err
+			}
+
+			if err := b.CloudIntro.SerializeTo(ctx, writer); err != nil {
+				return err
+			}
+
+			if ctx.HasFlag(1) { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
+				if err := write(writer, b.JoinerSecret); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	if packetType == packets.PacketPhase2 {
+		if err := b.Neighbourhood.SerializeTo(ctx, writer); err != nil {
+			return err
+		}
+	}
+
+	if packetType == packets.PacketPhase3 {
+		if err := b.Vectors.SerializeTo(ctx, writer); err != nil {
+			return err
+		}
+	}
+
+	if packetType == packets.PacketPhase1 || packetType == packets.PacketPhase3 {
+		if err := b.Claims.SerializeTo(ctx, writer); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
+	// todo: check packet type
+	if ctx.HasFlag(0) {
+		var pulsarData EmbeddedPulsarData
+		err := pulsarData.DeserializeFrom(ctx, data)
+		if err != nil {
+			return errors.Wrap(err, "[ GlobulaConsensusPacketBody.Deserialize ] Can't deserialize EmbeddedPulsarData")
+		}
+	}
+
+	// todo: check packet type
+	err := b.Announcement.DeserializeFrom(ctx, data)
+	if err != nil {
+		return errors.Wrap(err, "[ GlobulaConsensusPacketBody.Deserialize ] Can't read Announcement")
+	}
+
+	panic("implement me")
 }
 
 /*
@@ -122,6 +203,27 @@ type EmbeddedPulsarData struct {
 	PulsarSignature  common.Bits512 // ByteSize=64
 }
 
+func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	// TODO
+	return nil
+}
+
+func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	err := pd.Header.DeserializeFrom(nil, reader)
+	if err != nil {
+		return errors.Wrap(err, "[ EmbeddedPulsarData.Deserialize ] Can't deserialize Header")
+	}
+
+	// todo: PulsarPacketBody
+
+	err = read(reader, &pd.PulsarSignature)
+	if err != nil {
+		return errors.Wrap(err, "[ Header.Deserialize ] Can't read ReceiverID")
+	}
+
+	panic("implement me")
+}
+
 type CloudIntro struct {
 	// ByteSize=128
 
@@ -129,10 +231,28 @@ type CloudIntro struct {
 	LastCloudStateHash common.Bits512
 }
 
+func (ci *CloudIntro) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	return write(writer, ci)
+}
+
+func (ci *CloudIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	return read(reader, ci)
+}
+
 type Neighbourhood struct {
 	// ByteSize= 1 + N * (205 .. 220)
 	NeighbourCount uint8
 	Neighbours     []NeighbourAnnouncement
+}
+
+func (n *Neighbourhood) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	// TODO
+	return nil
+}
+
+func (n *Neighbourhood) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	// TODO
+	return nil
 }
 
 type NeighbourAnnouncement struct {
@@ -165,6 +285,17 @@ type NonJoinerMembershipAnnouncement struct {
 	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
 }
 
+func (m *NonJoinerMembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
+	err := read(data, &m.RequestedPower)
+	if err != nil {
+		return errors.Wrap(err, "[ MembershipAnnouncement.Deserialize ] Can't read RequestedPower")
+	}
+	// todo: Member
+	// todo: AnnounceSignature
+
+	panic("implement me")
+}
+
 type MembershipAnnouncement struct {
 	// ByteSize(MEMBER) = 69 + (132, 136) = 201, 205
 	// ByteSize(MEMBER + JOINER) = 69 + (167, 169, 181) = 196, 198, 208
@@ -180,6 +311,26 @@ type MembershipAnnouncement struct {
 
 	/* For non-joiner ONLY */
 	NonJoinerMembershipAnnouncement NonJoinerMembershipAnnouncement `insolar-transport:"optional=CurrentRank!=0"`
+}
+
+func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	return nil
+}
+
+func (ma *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, data io.Reader) error {
+	err := read(data, &ma.CurrentRank)
+	if err != nil {
+		return errors.Wrap(err, "[ MembershipAnnouncement.Deserialize ] Can't read CurrentRank")
+	}
+
+	if ma.CurrentRank != 0 {
+		err := ma.NonJoinerMembershipAnnouncement.DeserializeFrom(ctx, data)
+		if err != nil {
+			return err
+		}
+	}
+
+	panic("implement me")
 }
 
 type NodeAnnouncement struct {
@@ -212,4 +363,12 @@ type JoinAnnouncement struct {
 type LeaveAnnouncement struct {
 	// ByteSize = 4
 	LeaveReason uint32
+}
+
+func (la *LeaveAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	return write(writer, la)
+}
+
+func (la *LeaveAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	return read(reader, la)
 }

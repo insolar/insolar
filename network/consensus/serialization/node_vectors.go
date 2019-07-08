@@ -51,6 +51,8 @@
 package serialization
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
@@ -69,6 +71,16 @@ type NodeVectors struct {
 	StateVectorMask        NodeAppearanceBitset // ByteSize=1..335
 	MainStateVector        GlobulaStateVector   // ByteSize=132
 	AdditionalStateVectors []GlobulaStateVector `insolar-transport:"count=PacketFlags[1:2]"` // ByteSize=count * 132
+}
+
+func (nv *NodeVectors) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	// TODO
+	return nil
+}
+
+func (nv *NodeVectors) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	// TODO
+	return nil
 }
 
 type NodeAppearanceBitset struct {
