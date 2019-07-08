@@ -8,6 +8,6 @@
       "name": "memberName"
     },
     "reference": "1tJCbWvMpRjVGSMe2ApfLFKFP42pYRX7PvHrs1VCAA.1tJCbWvMpRjVGSMe2ApfLFKFP42pYRX7PvHrs1VCAA",
-    "memberPubKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMSbA4KvO/jlwY+8WFDEdwhCLlsEC\nF3/GYvu9iTWHwCctx1wTbGGjNLY03EjXyYxaf8coNbSbZeu+jXcWeMHG0A==\n-----END PUBLIC KEY-----"
+    "memberPublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMSbA4KvO/jlwY+8WFDEdwhCLlsEC\nF3/GYvu9iTWHwCctx1wTbGGjNLY03EjXyYxaf8coNbSbZeu+jXcWeMHG0A==\n-----END PUBLIC KEY-----"
   }
 }

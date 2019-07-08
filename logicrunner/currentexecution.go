@@ -122,6 +122,12 @@ func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *Transcrip
 	ces.lock.Unlock()
 }
 
+func (ces *CurrentExecutionList) SetTranscript(t *Transcript) {
+	ces.lock.Lock()
+	ces.executions[*t.RequestRef] = t
+	ces.lock.Unlock()
+}
+
 func (ces *CurrentExecutionList) Delete(requestRef insolar.Reference) {
 	ces.lock.Lock()
 	delete(ces.executions, requestRef)

@@ -138,7 +138,7 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	}
 
 	es := NewExecutionState(objectRef)
-	es.CurrentList.Set(objectRef, &Transcript{})
+	es.Broker.currentList.Set(objectRef, &Transcript{})
 	es.pending = message.NotPending
 	es.RegisterLogicRunner(suite.lr)
 
@@ -538,7 +538,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			suite.Require().NoError(err)
 			st := suite.lr.StateStorage.GetExecutionState(object)
 			suite.Require().Equal(test.expected.pending, st.pending)
-			suite.Require().Equal(test.expected.queueLen, st.Broker.mutable.Len())
+			suite.Require().Equal(test.expected.queueLen, st.Broker.mutable.Length())
 		})
 	}
 }
@@ -564,11 +564,11 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	suite.Require().NotNil(es)
 	suite.Require().Equal(message.NotPending, es.pending)
 
-	es.CurrentList.Set(objectRef, &Transcript{})
+	es.Broker.currentList.Set(objectRef, &Transcript{})
 	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().Error(err)
 
-	es.CurrentList.Cleanup()
+	es.Broker.currentList.Cleanup()
 
 	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
@@ -593,20 +593,20 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 		},
 	}
 	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.CurrentList.Set(msg.GetReference(), &Transcript{
+	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult, APIRequestID: reqIdA},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().True(loop)
 
-	es.CurrentList.Set(msg.GetReference(), &Transcript{
+	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult, APIRequestID: reqIdB},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
 
 	// intermediate env cleanup
-	es.CurrentList.Cleanup()
+	es.Broker.currentList.Cleanup()
 
 	msg = &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
@@ -615,22 +615,22 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 		},
 	}
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.CurrentList.Set(msg.GetReference(), &Transcript{
+	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
-	es.CurrentList.Cleanup()
+	es.Broker.currentList.Cleanup()
 
 	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.CurrentList.Set(msg.GetReference(), &Transcript{
+	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnNoWait},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
 	suite.Require().False(loop)
-	es.CurrentList.Cleanup()
+	es.Broker.currentList.Cleanup()
 
-	es.CurrentList.Set(msg.GetReference(), &Transcript{
+	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnNoWait},
 	})
 	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
@@ -771,7 +771,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 
 	es := NewExecutionState(ref)
 	es.pending = message.InPending
-	es.CurrentList.Set(ref, &Transcript{})
+	es.Broker.currentList.Set(ref, &Transcript{})
 	es.RegisterLogicRunner(suite.lr)
 
 	// we are in pending and come to ourselves again
@@ -835,7 +835,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 		}
 
 		es := NewExecutionState(ref)
-		es.Broker.processActive = true
+		es.Broker.tryTakeProcessor(suite.ctx)
 		es.LedgerHasMoreRequests = test.objectStateStatus
 		st := suite.lr.StateStorage.UpsertObjectState(ref)
 		st.ExecutionState = es
@@ -1288,11 +1288,9 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	})
 
 	es.Broker.Put(s.ctx, true, mutableTranscript)
-	s.True(es.Broker.processActive)
 	es.Broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
 
-	checkFinished := func() bool { return es.Broker.finished.Len() >= 3 }
-	s.True(wait(checkFinished))
+	s.True(wait(finishedCount, es.Broker, 3))
 }
 
 func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
@@ -1327,8 +1325,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 
 	es.Broker.Put(s.ctx, true, immutableTranscript1)
 
-	checkFinished := func() bool { return es.Broker.finished.Len() >= 1 }
-	s.True(wait(checkFinished))
+	s.True(wait(finishedCount, es.Broker, 1))
 }
 
 func TestLogicRunner(t *testing.T) {
@@ -1413,13 +1410,13 @@ func (s *LogicRunnerOnPulseTestSuite) TestESWithValidationCurrent() {
 	st.ExecutionState = es
 	// we should set empty current execution here, since we added new
 	// logic with not empty number of elements in CurrentList
-	es.CurrentList.Set(s.objectRef, &Transcript{})
+	es.Broker.currentList.Set(s.objectRef, &Transcript{})
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
 	es = s.lr.StateStorage.GetExecutionState(s.objectRef)
 	s.Equal(message.InPending, es.pending)
-	es.CurrentList.Cleanup()
+	es.Broker.currentList.Cleanup()
 }
 
 // We aren't next executor but we're currently executing and queue isn't empty.
@@ -1430,7 +1427,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
 	es := NewExecutionState(s.objectRef)
-	es.CurrentList.Set(s.objectRef, &Transcript{})
+	es.Broker.currentList.Set(s.objectRef, &Transcript{})
 	es.Broker.mutable.Push(&Transcript{Context: s.ctx})
 	es.pending = message.NotPending
 
@@ -1451,7 +1448,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithEmptyQueue() {
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
 	es := NewExecutionState(s.objectRef)
-	es.CurrentList.Set(s.objectRef, &Transcript{})
+	es.Broker.currentList.Set(s.objectRef, &Transcript{})
 	es.pending = message.NotPending
 
 	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
@@ -1473,7 +1470,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 	es.pending = message.NotPending
 	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
 	st.ExecutionState = es
-	es.CurrentList.Set(s.objectRef, &Transcript{})
+	es.Broker.currentList.Set(s.objectRef, &Transcript{})
 	es.RegisterLogicRunner(s.lr)
 	InitBroker(s.T(), s.ctx, 0, es, false)
 
@@ -1481,7 +1478,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 	s.Require().NoError(err)
 	es = s.lr.StateStorage.GetExecutionState(s.objectRef)
 	s.Require().Equal(message.NotPending, es.pending)
-	es.CurrentList.Cleanup()
+	es.Broker.currentList.Cleanup()
 }
 
 // We're the next executor, task was currently executing and in InPending.
@@ -1491,7 +1488,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
 	es := NewExecutionState(s.objectRef)
-	es.CurrentList.Set(s.objectRef, &Transcript{})
+	es.Broker.currentList.Set(s.objectRef, &Transcript{})
 	es.pending = message.InPending
 	es.RegisterLogicRunner(s.lr)
 
@@ -1597,7 +1594,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			es.RegisterLogicRunner(s.lr)
 			InitBroker(t, s.ctx, test.Count, es, false)
 
-			messagesQueue := convertQueueToMessageQueue(s.ctx, es.Broker.mutable.queue[:maxQueueLength])
+			messagesQueue := convertQueueToMessageQueue(s.ctx, es.Broker.mutable.Peek(maxQueueLength))
 
 			expectedMessage := &message.ExecutorResults{
 				RecordRef:             s.objectRef,

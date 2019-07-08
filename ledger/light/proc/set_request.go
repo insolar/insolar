@@ -83,8 +83,8 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	p.dep.locker.Lock(p.request.GetObject().Record())
-	defer p.dep.locker.Unlock(p.request.GetObject().Record())
+	p.dep.locker.Lock(p.request.AffinityRef().Record())
+	defer p.dep.locker.Unlock(p.request.AffinityRef().Record())
 
 	var req *record.CompositeFilamentRecord
 	var res *record.CompositeFilamentRecord
@@ -118,7 +118,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 
 	msg, err := payload.NewMessage(&payload.RequestInfo{
-		ObjectID:  *p.request.GetObject().Record(),
+		ObjectID:  *p.request.AffinityRef().Record(),
 		RequestID: p.requestID,
 		Request:   reqBuf,
 		Result:    resBuf,

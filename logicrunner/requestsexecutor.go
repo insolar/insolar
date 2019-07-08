@@ -79,6 +79,8 @@ func (e *requestsExecutor) Execute(
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeLogic")
 	defer span.End()
 
+	inslogger.FromContext(ctx).Debug("Executing request")
+
 	if transcript.Request.CallType == record.CTMethod {
 		objDesc, err := e.ArtifactManager.GetObject(ctx, *transcript.Request.Object)
 		if err != nil {
@@ -100,6 +102,8 @@ func (e *requestsExecutor) Save(
 ) (
 	insolar.Reply, error,
 ) {
+	inslogger.FromContext(ctx).Debug("Saving result")
+
 	am := e.ArtifactManager
 	request := transcript.Request
 
@@ -145,6 +149,8 @@ func (e *requestsExecutor) SendReply(
 	if transcript.Request.ReturnMode != record.ReturnResult {
 		return
 	}
+
+	inslogger.FromContext(ctx).Debug("Returning result")
 
 	target := *transcript.RequesterNode
 
