@@ -19,6 +19,10 @@ package artifacts
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
+	wmmsg "github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
@@ -218,14 +222,9 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	msg, err := payload.NewMessage(&payload.GetCode{
+	reps, done := m.retryerSend(ctx, &payload.GetCode{
 		CodeID: *code.Record(),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal message")
-	}
-
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, code)
+	}, insolar.DynamicRoleLightExecutor, code, 3)
 	defer done()
 
 	rep, ok := <-reps
@@ -294,14 +293,9 @@ func (m *client) GetObject(
 
 	logger := inslogger.FromContext(ctx).WithField("object", head.Record().DebugString())
 
-	msg, err := payload.NewMessage(&payload.GetObject{
+	reps, done := m.retryerSend(ctx, &payload.GetObject{
 		ObjectID: *head.Record(),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal message")
-	}
-
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
+	}, insolar.DynamicRoleLightExecutor, head, 3)
 	defer done()
 
 	var (
@@ -372,6 +366,123 @@ func (m *client) GetObject(
 		parent:       index.Parent,
 	}
 	return desc, err
+}
+
+func (m *client) retryerSend(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (<-chan *wmmsg.Message, func()) {
+	r := retryer{
+		ppl:           ppl,
+		role:          role,
+		ref:           ref,
+		tries:         tries,
+		sender:        m.sender,
+		pulseAccessor: m.PulseAccessor,
+		channelClosed: make(chan interface{}),
+		replyChan:     make(chan *wmmsg.Message),
+		isDone:        false,
+	}
+	r.clientDone = func() {
+		r.once.Do(func() {
+			close(r.channelClosed)
+			r.processingStarted.Lock()
+			close(r.replyChan)
+			r.isDone = true
+			r.processingStarted.Unlock()
+		})
+	}
+	go r.send(ctx)
+	return r.replyChan, r.clientDone
+}
+
+type retryer struct {
+	ppl           payload.Payload
+	role          insolar.DynamicRole
+	ref           insolar.Reference
+	tries         uint
+	sender        bus.Sender
+	pulseAccessor pulse.Accessor
+
+	isDone bool
+
+	replyChan  chan *wmmsg.Message
+	clientDone func()
+
+	processingStarted sync.Mutex
+	once              sync.Once
+	channelClosed     chan interface{}
+}
+
+func (r *retryer) send(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	var errText string
+	retry := true
+	var lastPulse insolar.PulseNumber
+
+	r.processingStarted.Lock()
+	for r.tries > 0 && retry && !r.isDone {
+		currentPulse, err := r.pulseAccessor.Latest(ctx)
+		if err != nil {
+			retry = false
+			logger.Error(errors.Wrap(err, "can't get latest pulse"))
+			break
+		}
+
+		if currentPulse.PulseNumber == lastPulse {
+			inslogger.FromContext(ctx).Debugf("wait for pulse change in retryer. Current: %d", currentPulse)
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		lastPulse = currentPulse.PulseNumber
+
+		retry = false
+
+		msg, err := payload.NewMessage(r.ppl)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "error while create new message from payload"))
+			break
+		}
+
+		reps, done := r.sender.SendRole(ctx, msg, r.role, r.ref)
+		waitingForReply := true
+	F:
+		for waitingForReply {
+			select {
+			case rep, ok := <-reps:
+				if !ok {
+					waitingForReply = false
+					break
+				}
+				replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
+				if err == nil {
+					switch p := replyPayload.(type) {
+					case *payload.Error:
+						switch p.Code {
+						case payload.CodeFlowCanceled:
+							errText = p.Text
+							inslogger.FromContext(ctx).Warnf("flow cancelled, retrying (error message - %s)", errText)
+							r.tries--
+							retry = true
+							break F
+						}
+					}
+				}
+
+				select {
+				case r.replyChan <- rep:
+				case <-r.channelClosed:
+					waitingForReply = false
+				}
+			case <-r.channelClosed:
+				waitingForReply = false
+			}
+		}
+		done()
+	}
+	r.processingStarted.Unlock()
+
+	if r.tries == 0 {
+		logger.Error(errors.Errorf("flow cancelled, retries exceeded (last error - %s)", errText))
+	}
+	r.clientDone()
 }
 
 // GetPendingRequest returns an unclosed pending request
@@ -629,8 +740,24 @@ func (m *client) DeployCode(
 	}
 }
 
-func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (payload.Payload, error) {
-	for tries > 0 {
+func (m *client) retryer(
+	ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, // nolint: unparam
+	ref insolar.Reference, retriesNumber int) (payload.Payload, error) {
+	var lastPulse insolar.PulseNumber
+
+	for retriesNumber >= 0 {
+		currentPulse, err := m.PulseAccessor.Latest(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ sendWithRetry ] Can't get latest pulse")
+		}
+
+		if currentPulse.PulseNumber == lastPulse {
+			inslogger.FromContext(ctx).Debugf("[ sendWithRetry ]  wait for pulse change. Current: %d", currentPulse)
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		lastPulse = currentPulse.PulseNumber
+
 		msg, err := payload.NewMessage(ppl)
 		if err != nil {
 			return nil, err
@@ -645,16 +772,16 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 		}
 		pl, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal reply")
+			return nil, errors.Wrap(err, "[ sendWithRetry ] failed to unmarshal reply")
 		}
 
 		if p, ok := pl.(*payload.Error); !ok || p.Code != payload.CodeFlowCanceled {
 			return pl, nil
 		}
-		inslogger.FromContext(ctx).Warn("flow cancelled, retrying")
-		tries--
+		inslogger.FromContext(ctx).Debug("[ sendWithRetry ] flow cancelled, retrying")
+		retriesNumber--
 	}
-	return nil, fmt.Errorf("flow cancelled, retries exceeded")
+	return nil, fmt.Errorf("[ sendWithRetry ] flow cancelled, retries exceeded")
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -842,15 +969,9 @@ func (m *client) RegisterResult(
 		return nil, errors.Wrap(err, "RegisterResult: failed to marshal record")
 	}
 
-	msg, err := payload.NewMessage(&payload.SetResult{
+	reps, done := m.retryerSend(ctx, &payload.SetResult{
 		Result: buf,
-	})
-
-	if err != nil {
-		return nil, errors.Wrap(err, "RegisterResult: failed to create message")
-	}
-
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
+	}, insolar.DynamicRoleLightExecutor, obj, 3)
 	defer done()
 
 	rep, ok := <-reps
@@ -923,16 +1044,10 @@ func (m *client) activateObject(
 		return errors.Wrap(err, "ActivateObject: can't serialize record")
 	}
 
-	msg, err := payload.NewMessage(&payload.Activate{
+	reps, done := m.retryerSend(ctx, &payload.Activate{
 		Record: activateBuf,
 		Result: resultBuf,
-	})
-
-	if err != nil {
-		return errors.Wrap(err, "ActivateObject: failed to create message")
-	}
-
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, obj)
+	}, insolar.DynamicRoleLightExecutor, obj, 3)
 	defer done()
 
 	rep, ok := <-reps
