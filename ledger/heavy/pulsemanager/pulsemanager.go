@@ -165,7 +165,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 
 		futurePulse := newPulse.NextPulseNumber
-		logger.Warnf("CLONE %v -> %v", newPulse.PulseNumber, futurePulse)
 		err = m.JetModifier.Clone(ctx, newPulse.PulseNumber, futurePulse)
 		if err != nil {
 			return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", newPulse.PulseNumber, futurePulse)
