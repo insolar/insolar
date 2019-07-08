@@ -71,6 +71,24 @@ type components struct {
 	NodeRole string
 }
 
+func truncateNotFinalizedData(ctx context.Context, jetKeeper replica.JetKeeper, drops *drop.DB) error {
+	logger := inslogger.FromContext(ctx)
+	pn := jetKeeper.TopSyncPulse()
+
+	logger.Debug("[ truncateNotFinalizedData ] last finalized pulse number: ", pn)
+	if pn == insolar.GenesisPulse.PulseNumber {
+		logger.Debug("[ truncateNotFinalizedData ] No finalized data. Nothing done")
+		return nil
+	}
+
+	err := drops.TruncateHead(ctx, pn)
+	if err != nil {
+		return errors.Wrapf(err, "can't truncate db to pulse: ", pn)
+	}
+
+	return nil
+}
+
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
 	// Cryptography.
 	var (
@@ -234,6 +252,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
 		jetKeeper := replica.NewJetKeeper(jets, DB)
+		err := truncateNotFinalizedData(ctx, jetKeeper, drops)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't truncateNotFinalizedData")
+		}
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
