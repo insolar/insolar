@@ -12,11 +12,13 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +40,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
 		calculator = executor.NewFilamentCalculatorMock(t)
-		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator, nil, nil)
+		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator, nil)
 	}
 
 	objRef := gen.Reference()
@@ -142,6 +144,137 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 	})
 }
 
+func TestFilamentModifierDefault_SetActivationRequest(t *testing.T) {
+	t.Parallel()
+	mc := minimock.NewController(t)
+	ctx := inslogger.TestContext(t)
+
+	var (
+		pcs        insolar.PlatformCryptographyScheme
+		indexes    object.IndexStorage
+		records    object.RecordStorage
+		manager    *executor.FilamentModifierDefault
+		calculator *executor.FilamentCalculatorMock
+		pulses     *pulse.CalculatorMock
+	)
+	resetComponents := func() {
+		pcs = testutils.NewPlatformCryptographyScheme()
+		indexes = object.NewIndexStorageMemory()
+		records = object.NewRecordMemory()
+		calculator = executor.NewFilamentCalculatorMock(t)
+		pulses = pulse.NewCalculatorMock(t)
+		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator, pulses)
+	}
+
+	resetComponents()
+	t.Run("requestID id is empty", func(t *testing.T) {
+		_, _, err := manager.SetActivationRequest(ctx, insolar.ID{}, gen.JetID(), nil)
+		require.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("jet is not valid", func(t *testing.T) {
+		_, _, err := manager.SetActivationRequest(ctx, gen.ID(), insolar.JetID{}, nil)
+		require.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("reason is empty", func(t *testing.T) {
+		_, _, err := manager.SetActivationRequest(ctx, gen.ID(), gen.JetID(), &record.IncomingRequest{})
+		require.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("request isn't an activation one", func(t *testing.T) {
+		_, _, err := manager.SetActivationRequest(ctx, gen.ID(), gen.JetID(), &record.IncomingRequest{
+			Reason:   gen.Reference(),
+			CallType: record.CTMethod,
+		})
+		require.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("request from the past", func(t *testing.T) {
+		reqID := gen.ID()
+		reqID.SetPulse(insolar.FirstPulseNumber + 1)
+
+		objRef := gen.Reference()
+		validRequest := record.IncomingRequest{
+			Object:   &objRef,
+			Reason:   *insolar.NewReference(reqID),
+			CallType: record.CTSaveAsChild,
+		}
+
+		latestPendingID := gen.ID()
+		latestPendingID.SetPulse(insolar.FirstPulseNumber + 2)
+
+		err := indexes.SetIndex(ctx, reqID.Pulse(), object.FilamentIndex{
+			ObjID: reqID,
+			Lifeline: object.Lifeline{
+				PendingPointer: &latestPendingID,
+			},
+		})
+		require.NoError(t, err)
+
+		_, _, err = manager.SetActivationRequest(ctx, reqID, gen.JetID(), &validRequest)
+		require.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("happy basic. new object", func(t *testing.T) {
+		requestID := gen.ID()
+		requestID.SetPulse(insolar.FirstPulseNumber + 2)
+		jetID := gen.JetID()
+
+		objRef := gen.Reference()
+		validRequest := record.IncomingRequest{
+			Object:   &objRef,
+			Reason:   *insolar.NewReference(requestID),
+			CallType: record.CTSaveAsChild,
+		}
+		pulses.BackwardsMock.Return(*insolar.GenesisPulse, errors.New("stub error"))
+
+		_, _, err := manager.SetActivationRequest(ctx, requestID, jetID, &validRequest)
+		assert.NoError(t, err)
+
+		idx, err := indexes.ForID(ctx, requestID.Pulse(), requestID)
+		require.NoError(t, err)
+
+		expectedFilamentRecord := record.PendingFilament{
+			RecordID: requestID,
+		}
+		virtual := record.Wrap(expectedFilamentRecord)
+		hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
+		expectedFilamentRecordID := *insolar.NewID(requestID.Pulse(), hash)
+
+		assert.Equal(t, expectedFilamentRecordID, *idx.Lifeline.PendingPointer)
+		assert.Equal(t, requestID.Pulse(), *idx.Lifeline.EarliestOpenRequest)
+
+		rec, err := records.ForID(ctx, expectedFilamentRecordID)
+		require.NoError(t, err)
+		virtual = record.Wrap(expectedFilamentRecord)
+		assert.Equal(t, record.Material{Virtual: &virtual, JetID: jetID}, rec)
+
+		rec, err = records.ForID(ctx, requestID)
+		require.NoError(t, err)
+		virtual = record.Wrap(validRequest)
+		assert.Equal(t, record.Material{Virtual: &virtual, JetID: jetID}, rec)
+
+		mc.Finish()
+	})
+
+}
+
 func TestFilamentModifierDefault_SetResult(t *testing.T) {
 	t.Parallel()
 	mc := minimock.NewController(t)
@@ -159,7 +292,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
 		calculator = executor.NewFilamentCalculatorMock(mc)
-		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator, nil, nil)
+		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator, nil)
 	}
 
 	validResult := record.Result{Object: gen.ID()}

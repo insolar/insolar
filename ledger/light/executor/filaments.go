@@ -86,6 +86,7 @@ func NewFilamentModifier(
 		indexes:    indexes,
 		records:    recordStorage,
 		pcs:        pcs,
+		pulses:     pulses,
 	}
 }
 
@@ -131,10 +132,10 @@ func (m *FilamentModifierDefault) SetActivationRequest(
 	if !jetID.IsValid() {
 		return nil, nil, errors.New("jet is not valid")
 	}
-	if request.GetObject() != nil {
-		return nil, nil, errors.New("request object id isn't empty")
+	if request.GetReason().IsEmpty() {
+		return nil, nil, ErrEmptyReason
 	}
-	if request.GetCallType() != record.CTSaveAsChild || request.GetCallType() != record.CTSaveAsDelegate {
+	if request.GetCallType() != record.CTSaveAsChild && request.GetCallType() != record.CTSaveAsDelegate {
 		return nil, nil, errors.New("request isn't an activation one")
 	}
 
