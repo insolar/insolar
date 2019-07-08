@@ -313,5 +313,5 @@ func TestCallHelloWorldReturnObj(t *testing.T) {
 
 	val, err := hw.ReturnObj(ctx)
 	r.NoError(err)
-	r.Equal(val["message"], "Hello world")
+	r.Equal(val["message"].(map[string]interface{})["someText"], "Hello world")
 }

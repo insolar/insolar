@@ -36,12 +36,16 @@ type HelloWorld struct {
 
 var INSATTR_Greet_API = true
 
+type Text struct {
+	SomeText string `json:"someText"`
+}
+
 type HwMessage struct {
-	Message string `json:"message"`
+	Message Text `json:"message"`
 }
 
 func (hw *HelloWorld) ReturnObj() (interface{}, error) {
-	return hwProxy.HwMessage{Message: "Hello world"}, nil
+	return hwProxy.HwMessage{Message: hwProxy.Text{SomeText: "Hello world"}}, nil
 }
 
 // Greet greats the caller

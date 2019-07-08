@@ -23,7 +23,7 @@ import (
 )
 
 type HwMessage struct {
-	Message string `json:"message"`
+	Message Text `json:"message"`
 }
 type Params struct {
 	Seed       string      `json:"seed"`
@@ -38,6 +38,9 @@ type Request struct {
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
+}
+type Text struct {
+	SomeText string `json:"someText"`
 }
 
 // PrototypeReference to prototype of this contract
