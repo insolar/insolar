@@ -21,11 +21,6 @@ import (
 type FilamentModifierMock struct {
 	t minimock.Tester
 
-	SetActivationRequestFunc       func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error)
-	SetActivationRequestCounter    uint64
-	SetActivationRequestPreCounter uint64
-	SetActivationRequestMock       mFilamentModifierMockSetActivationRequest
-
 	SetRequestFunc       func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error)
 	SetRequestCounter    uint64
 	SetRequestPreCounter uint64
@@ -45,167 +40,10 @@ func NewFilamentModifierMock(t minimock.Tester) *FilamentModifierMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.SetActivationRequestMock = mFilamentModifierMockSetActivationRequest{mock: m}
 	m.SetRequestMock = mFilamentModifierMockSetRequest{mock: m}
 	m.SetResultMock = mFilamentModifierMockSetResult{mock: m}
 
 	return m
-}
-
-type mFilamentModifierMockSetActivationRequest struct {
-	mock              *FilamentModifierMock
-	mainExpectation   *FilamentModifierMockSetActivationRequestExpectation
-	expectationSeries []*FilamentModifierMockSetActivationRequestExpectation
-}
-
-type FilamentModifierMockSetActivationRequestExpectation struct {
-	input  *FilamentModifierMockSetActivationRequestInput
-	result *FilamentModifierMockSetActivationRequestResult
-}
-
-type FilamentModifierMockSetActivationRequestInput struct {
-	p  context.Context
-	p1 insolar.ID
-	p2 insolar.JetID
-	p3 record.Request
-}
-
-type FilamentModifierMockSetActivationRequestResult struct {
-	r  *record.CompositeFilamentRecord
-	r1 *record.CompositeFilamentRecord
-	r2 error
-}
-
-// Expect specifies that invocation of FilamentModifier.SetActivationRequest is expected from 1 to Infinity times
-func (m *mFilamentModifierMockSetActivationRequest) Expect(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) *mFilamentModifierMockSetActivationRequest {
-	m.mock.SetActivationRequestFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &FilamentModifierMockSetActivationRequestExpectation{}
-	}
-	m.mainExpectation.input = &FilamentModifierMockSetActivationRequestInput{p, p1, p2, p3}
-	return m
-}
-
-// Return specifies results of invocation of FilamentModifier.SetActivationRequest
-func (m *mFilamentModifierMockSetActivationRequest) Return(r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) *FilamentModifierMock {
-	m.mock.SetActivationRequestFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &FilamentModifierMockSetActivationRequestExpectation{}
-	}
-	m.mainExpectation.result = &FilamentModifierMockSetActivationRequestResult{r, r1, r2}
-	return m.mock
-}
-
-// ExpectOnce specifies that invocation of FilamentModifier.SetActivationRequest is expected once
-func (m *mFilamentModifierMockSetActivationRequest) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) *FilamentModifierMockSetActivationRequestExpectation {
-	m.mock.SetActivationRequestFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &FilamentModifierMockSetActivationRequestExpectation{}
-	expectation.input = &FilamentModifierMockSetActivationRequestInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *FilamentModifierMockSetActivationRequestExpectation) Return(r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
-	e.result = &FilamentModifierMockSetActivationRequestResult{r, r1, r2}
-}
-
-// Set uses given function f as a mock of FilamentModifier.SetActivationRequest method
-func (m *mFilamentModifierMockSetActivationRequest) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error)) *FilamentModifierMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.SetActivationRequestFunc = f
-	return m.mock
-}
-
-// SetActivationRequest implements github.com/insolar/insolar/ledger/light/executor.FilamentModifier interface
-func (m *FilamentModifierMock) SetActivationRequest(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
-	counter := atomic.AddUint64(&m.SetActivationRequestPreCounter, 1)
-	defer atomic.AddUint64(&m.SetActivationRequestCounter, 1)
-
-	if len(m.SetActivationRequestMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetActivationRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to FilamentModifierMock.SetActivationRequest. %v %v %v %v", p, p1, p2, p3)
-			return
-		}
-
-		input := m.SetActivationRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, FilamentModifierMockSetActivationRequestInput{p, p1, p2, p3}, "FilamentModifier.SetActivationRequest got unexpected parameters")
-
-		result := m.SetActivationRequestMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the FilamentModifierMock.SetActivationRequest")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-		r2 = result.r2
-
-		return
-	}
-
-	if m.SetActivationRequestMock.mainExpectation != nil {
-
-		input := m.SetActivationRequestMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, FilamentModifierMockSetActivationRequestInput{p, p1, p2, p3}, "FilamentModifier.SetActivationRequest got unexpected parameters")
-		}
-
-		result := m.SetActivationRequestMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the FilamentModifierMock.SetActivationRequest")
-		}
-
-		r = result.r
-		r1 = result.r1
-		r2 = result.r2
-
-		return
-	}
-
-	if m.SetActivationRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to FilamentModifierMock.SetActivationRequest. %v %v %v %v", p, p1, p2, p3)
-		return
-	}
-
-	return m.SetActivationRequestFunc(p, p1, p2, p3)
-}
-
-// SetActivationRequestMinimockCounter returns a count of FilamentModifierMock.SetActivationRequestFunc invocations
-func (m *FilamentModifierMock) SetActivationRequestMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetActivationRequestCounter)
-}
-
-// SetActivationRequestMinimockPreCounter returns the value of FilamentModifierMock.SetActivationRequest invocations
-func (m *FilamentModifierMock) SetActivationRequestMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetActivationRequestPreCounter)
-}
-
-// SetActivationRequestFinished returns true if mock invocations count is ok
-func (m *FilamentModifierMock) SetActivationRequestFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetActivationRequestMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetActivationRequestCounter) == uint64(len(m.SetActivationRequestMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetActivationRequestMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetActivationRequestCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetActivationRequestFunc != nil {
-		return atomic.LoadUint64(&m.SetActivationRequestCounter) > 0
-	}
-
-	return true
 }
 
 type mFilamentModifierMockSetRequest struct {
@@ -518,10 +356,6 @@ func (m *FilamentModifierMock) SetResultFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *FilamentModifierMock) ValidateCallCounters() {
 
-	if !m.SetActivationRequestFinished() {
-		m.t.Fatal("Expected call to FilamentModifierMock.SetActivationRequest")
-	}
-
 	if !m.SetRequestFinished() {
 		m.t.Fatal("Expected call to FilamentModifierMock.SetRequest")
 	}
@@ -547,10 +381,6 @@ func (m *FilamentModifierMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *FilamentModifierMock) MinimockFinish() {
 
-	if !m.SetActivationRequestFinished() {
-		m.t.Fatal("Expected call to FilamentModifierMock.SetActivationRequest")
-	}
-
 	if !m.SetRequestFinished() {
 		m.t.Fatal("Expected call to FilamentModifierMock.SetRequest")
 	}
@@ -573,7 +403,6 @@ func (m *FilamentModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.SetActivationRequestFinished()
 		ok = ok && m.SetRequestFinished()
 		ok = ok && m.SetResultFinished()
 
@@ -583,10 +412,6 @@ func (m *FilamentModifierMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
-
-			if !m.SetActivationRequestFinished() {
-				m.t.Error("Expected call to FilamentModifierMock.SetActivationRequest")
-			}
 
 			if !m.SetRequestFinished() {
 				m.t.Error("Expected call to FilamentModifierMock.SetRequest")
@@ -607,10 +432,6 @@ func (m *FilamentModifierMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *FilamentModifierMock) AllMocksCalled() bool {
-
-	if !m.SetActivationRequestFinished() {
-		return false
-	}
 
 	if !m.SetRequestFinished() {
 		return false

@@ -39,7 +39,6 @@ import (
 
 type FilamentModifier interface {
 	SetRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.Request) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)
-	SetActivationRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.Request) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) error
 }
 
@@ -120,98 +119,26 @@ func (m *FilamentModifierDefault) checkObject(ctx context.Context, currentPN ins
 	}
 }
 
-func (m *FilamentModifierDefault) SetActivationRequest(
-	ctx context.Context,
-	requestID insolar.ID,
-	jetID insolar.JetID,
-	request record.Request,
-) (*record.CompositeFilamentRecord, *record.CompositeFilamentRecord, error) {
-	if requestID.IsEmpty() {
-		return nil, nil, errors.New("request id is empty")
-	}
-	if !jetID.IsValid() {
-		return nil, nil, errors.New("jet is not valid")
-	}
-	if request.ReasonRef().IsEmpty() {
-		return nil, nil, ErrEmptyReason
-	}
-	if request.GetCallType() != record.CTSaveAsChild && request.GetCallType() != record.CTSaveAsDelegate {
-		return nil, nil, errors.New("request isn't an activation one")
-	}
-
+func (m *FilamentModifierDefault) prepareCreationRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
 	currentPN := requestID.Pulse()
 	reason := request.ReasonRef()
 	untilPN := reason.Record().Pulse()
 
 	idx, err := m.checkObject(ctx, currentPN, untilPN, requestID)
-	if err != nil {
-		if err == object.ErrIndexNotFound {
-			idx = object.FilamentIndex{
-				ObjID:            requestID,
-				PendingRecords:   []insolar.ID{},
-				LifelineLastUsed: requestID.Pulse(),
-			}
-			err := m.indexes.SetIndex(ctx, requestID.Pulse(), idx)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed to create an object")
-			}
-		} else {
-			return nil, nil, errors.Wrap(err, "failed to create an object")
+	if err == object.ErrIndexNotFound {
+		idx = object.FilamentIndex{
+			ObjID:            requestID,
+			PendingRecords:   []insolar.ID{},
+			LifelineLastUsed: requestID.Pulse(),
 		}
-	} else {
-		if idx.Lifeline.PendingPointer != nil && requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
-			return nil, nil, errors.New("request from the past")
-		}
-
-		foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), requestID, requestID, request)
+		err := m.indexes.SetIndex(ctx, requestID.Pulse(), idx)
 		if err != nil {
-			return nil, nil, err
+			return errors.Wrap(err, "failed to create an object")
 		}
-		if foundRequest != nil || foundResult != nil {
-			return foundRequest, foundResult, err
-		}
+		return nil
 	}
 
-	// Save request record to storage.
-	{
-		virtual := record.Wrap(request)
-		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.records.Set(ctx, requestID, material)
-		if err != nil && err != object.ErrOverride {
-			return nil, nil, errors.Wrap(err, "failed to save a request record")
-		}
-	}
-
-	var filamentID insolar.ID
-	// Save filament record to storage.
-	{
-		rec := record.PendingFilament{
-			RecordID:       requestID,
-			PreviousRecord: idx.Lifeline.PendingPointer,
-		}
-		virtual := record.Wrap(rec)
-		hash := record.HashVirtual(m.pcs.ReferenceHasher(), virtual)
-		id := *insolar.NewID(requestID.Pulse(), hash)
-		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.records.Set(ctx, id, material)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to save filament record")
-		}
-		filamentID = id
-	}
-
-	idx.Lifeline.PendingPointer = &filamentID
-	if idx.Lifeline.EarliestOpenRequest == nil {
-		pn := requestID.Pulse()
-		idx.Lifeline.EarliestOpenRequest = &pn
-	}
-
-	err = m.indexes.SetIndex(ctx, requestID.Pulse(), idx)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to update index")
-	}
-
-	return nil, nil, nil
+	return err
 }
 
 func (m *FilamentModifierDefault) SetRequest(
@@ -226,11 +153,26 @@ func (m *FilamentModifierDefault) SetRequest(
 	if !jetID.IsValid() {
 		return nil, nil, errors.New("jet is not valid")
 	}
-	if request.AffinityRef() == nil && request.AffinityRef().Record().IsEmpty() {
-		return nil, nil, errors.New("request object id is empty")
+	if request.ReasonRef().IsEmpty() {
+		return nil, nil, ErrEmptyReason
 	}
 
-	objectID := *request.AffinityRef().Record()
+	var objectID insolar.ID
+
+	if request.GetCallType() == record.CTMethod {
+		if request.AffinityRef() == nil && request.AffinityRef().Record().IsEmpty() {
+			return nil, nil, errors.New("request object id is empty")
+		}
+		objectID = *request.AffinityRef().Record()
+	}
+
+	if request.GetCallType() == record.CTSaveAsChild || request.GetCallType() == record.CTSaveAsDelegate {
+		err := m.prepareCreationRequest(ctx, requestID, request)
+		if err != nil {
+			return nil, nil, err
+		}
+		objectID = requestID
+	}
 
 	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {
