@@ -52,6 +52,14 @@ package serialization
 
 import "io"
 
+const (
+	claimHeaderLengthMask = 0x1F
+	claimHeaderTypeShift  = 10
+)
+
+type ClaimType uint8
+
+//GetClaim
 type ClaimHeader struct {
 	TypeAndLength uint16 `insolar-transport:"header;[0-9]=length;[10-15]=header:ClaimType;group=Claims"` // [00-09] ByteLength [10-15] ClaimClass
 	// actual payload
@@ -74,6 +82,14 @@ type ClaimList struct {
 	EndOfClaims EmptyClaim // ByteSize=1 - indicates end of claims
 }
 
+func (ch *ClaimHeader) ClaimType() ClaimType {
+	return ClaimType(ch.TypeAndLength >> claimHeaderTypeShift)
+}
+
+func (ch *ClaimHeader) Length() uint16 {
+	return ch.TypeAndLength & claimHeaderLengthMask
+}
+
 func (cl *ClaimList) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	for _, c := range cl.Claims {
 		err := c.SerializeTo(ctx, writer)
@@ -85,12 +101,17 @@ func (cl *ClaimList) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 }
 
 func (cl *ClaimList) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+
 	// TODO
 	return nil
 }
 
-func (c *ClaimHeader) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	return write(writer, c)
+func (ch *ClaimHeader) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	return write(writer, ch)
+}
+
+func (ch *ClaimHeader) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
+	return read(reader, ch)
 }
 
 func (c *GenericClaim) SerializeTo(ctx SerializeContext, writer io.Writer) error {
