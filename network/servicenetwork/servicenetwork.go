@@ -244,7 +244,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
-	n.SetGateway(gateway.NewNoNetwork(n, n.NodeKeeper, n.ContractRequester,
+	n.SetGateway(gateway.NewNoNetwork(n, n.NodeKeeper, n.PulseManager, n.ContractRequester,
 		n.CryptographyService, n.HostNetwork, n.CertificateManager))
 
 	logger.Info("Service network started")
@@ -332,12 +332,6 @@ func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse
 
 	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
-	}
-
-	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
-	if err != nil {
-		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 

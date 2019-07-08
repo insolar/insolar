@@ -67,6 +67,7 @@ type Base struct {
 	Network             network.Gatewayer
 	Nodekeeper          network.NodeKeeper
 	HostNetwork         network.HostNetwork
+	PulseManager        insolar.PulseManager
 	ContractRequester   insolar.ContractRequester
 	CryptographyService insolar.CryptographyService
 	CertificateManager  insolar.CertificateManager

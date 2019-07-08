@@ -169,8 +169,8 @@ func TestComplete_GetCert(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
-
-	ge := NewNoNetwork(gatewayer, nodekeeper, cr, cs, hn, cm)
+	pm := testutils.NewPulseManagerMock(t)
+	ge := NewNoNetwork(gatewayer, nodekeeper, pm, cr, cs, hn, cm)
 	ge = ge.NewGateway(insolar.CompleteNetworkState)
 	ctx := context.Background()
 	result, err := ge.Auther().GetCert(ctx, &nodeRef)
@@ -206,8 +206,9 @@ func TestComplete_handler(t *testing.T) {
 	cs := mockCryptographyService(t, true)
 
 	hn := network.NewHostNetworkMock(t)
+	pm := testutils.NewPulseManagerMock(t)
 
-	ge := NewNoNetwork(gatewayer, nodekeeper, cr, cs, hn, cm)
+	ge := NewNoNetwork(gatewayer, nodekeeper, pm, cr, cs, hn, cm)
 	ge = ge.NewGateway(insolar.CompleteNetworkState)
 	ctx := context.Background()
 

@@ -332,9 +332,9 @@ func TestServiceNetwork_SetGateway(t *testing.T) {
 	hn := networkUtils.NewHostNetworkMock(t)
 	hn.RegisterRequestHandlerMock.Return()
 	sn.HostNetwork = hn
-
+	sn.PulseManager = testutils.NewPulseManagerMock(t)
 	// initial set
-	sn.SetGateway(gateway.NewNoNetwork(sn, sn.NodeKeeper, sn.ContractRequester,
+	sn.SetGateway(gateway.NewNoNetwork(sn, sn.NodeKeeper, sn.PulseManager, sn.ContractRequester,
 		sn.CryptographyService, sn.HostNetwork, sn.CertificateManager))
 	assert.Equal(t, 1, tick)
 	assert.False(t, op)
