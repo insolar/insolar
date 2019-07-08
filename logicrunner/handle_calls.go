@@ -19,6 +19,9 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
@@ -27,9 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 type HandleCall struct {
@@ -39,7 +39,10 @@ type HandleCall struct {
 }
 
 func (h *HandleCall) sendToNextExecutor(
-	ctx context.Context, es *ExecutionState, requestRef *Ref,
+	ctx context.Context,
+	es *ExecutionState,
+	broker *ExecutionBroker,
+	requestRef *Ref,
 ) {
 	// If the flow has canceled during ClarifyPendingState there are two possibilities.
 	// 1. It's possible that we started to execute ClarifyPendingState, the pulse has
@@ -60,7 +63,7 @@ func (h *HandleCall) sendToNextExecutor(
 
 	es.Lock()
 	// We want to remove element we have just added to es.Queue to eliminate doubling
-	transcript := es.Broker.GetByReference(ctx, requestRef)
+	transcript := broker.GetByReference(ctx, requestRef)
 	es.Unlock()
 
 	// it might be already collected in OnPulse, that is why it already might not be in es.Queue
@@ -133,17 +136,10 @@ func (h *HandleCall) handleActual(
 	}
 
 	os := lr.StateStorage.UpsertObjectState(*objRef)
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = NewExecutionState(*objRef)
-		os.ExecutionState.RegisterLogicRunner(lr)
-	}
-	es := os.ExecutionState
-	os.Unlock()
+	es, broker := os.InitAndGetExecution(lr, objRef)
 
 	es.Lock()
-	es.Broker.Put(ctx, false, NewTranscript(ctx, requestRef, request))
+	broker.Put(ctx, false, NewTranscript(ctx, requestRef, request))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
@@ -154,14 +150,14 @@ func (h *HandleCall) handleActual(
 
 	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
 		if err == flow.ErrCancelled {
-			h.sendToNextExecutor(ctx, es, requestRef)
+			h.sendToNextExecutor(ctx, es, broker, requestRef)
 		} else {
 			inslogger.FromContext(ctx).Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
 		}
 		// and return the reply as usual
 	} else {
 		// it's 'fast' operation, so we don't need to check that pulse ends
-		es.Broker.StartProcessorIfNeeded(ctx)
+		broker.StartProcessorIfNeeded(ctx)
 	}
 
 	return &reply.RegisterRequest{
@@ -212,22 +208,15 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 ) {
 	lr := h.dep.lr
 	ref := msg.ObjectReference
-
 	os := lr.StateStorage.UpsertObjectState(ref)
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = NewExecutionState(ref)
-		os.ExecutionState.RegisterLogicRunner(lr)
-	}
-	es := os.ExecutionState
-	os.Unlock()
+	es, broker := os.InitAndGetExecution(lr, &ref)
 
 	es.Lock()
 	if msg.Pending == message.NotPending {
 		es.pending = message.NotPending
 	}
-	es.Broker.Put(ctx, false, NewTranscript(ctx, &msg.RequestRef, msg.Request))
+
+	broker.Put(ctx, false, NewTranscript(ctx, &msg.RequestRef, msg.Request))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
@@ -244,7 +233,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	}
 
 	// it's 'fast' operation, so we don't need to check that pulse ends
-	es.Broker.StartProcessorIfNeeded(ctx)
+	broker.StartProcessorIfNeeded(ctx)
 }
 
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {

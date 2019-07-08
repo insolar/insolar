@@ -78,7 +78,7 @@ func (m *RPCMethods) getCurrent(
 			return nil, nil, errors.New("No execution in the state")
 		}
 
-		cur := es.Broker.currentList.Get(reqRef)
+		cur := os.ExecutionBroker.currentList.Get(reqRef)
 		if cur == nil {
 			return nil, nil, errors.New("No current execution in the state for request " + reqRef.String())
 		}

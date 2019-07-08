@@ -593,7 +593,94 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	}
 }
 
-func NewExecutionBroker(es *ExecutionState) *ExecutionBroker {
+func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Message {
+	es := q.executionState
+	logger := inslogger.FromContext(ctx)
+
+	messages := make([]insolar.Message, 0)
+	sendExecResults := false
+
+	switch {
+	case !q.currentList.Empty():
+		es.pending = message.InPending
+		sendExecResults = true
+
+		// TODO: this should return delegation token to continue execution of the pending
+		msg := &message.StillExecuting{Reference: es.Ref}
+		messages = append(messages, msg)
+	case es.InPendingNotConfirmed():
+		logger.Warn("looks like pending executor died, continuing execution on next executor")
+		es.pending = message.NotPending
+		sendExecResults = true
+		es.LedgerHasMoreRequests = true
+	case q.finished.Length() > 0:
+		sendExecResults = true
+	}
+
+	// rotation results also contain finished requests
+	rotationResults := q.Rotate(maxQueueLength)
+	if len(rotationResults.Requests) > 0 || sendExecResults {
+		// TODO: we also should send when executed something for validation
+		// TODO: now validation is disabled
+		messagesQueue := convertQueueToMessageQueue(ctx, rotationResults.Requests)
+
+		// validationMsg := &message.ValidateCaseBind{
+		// 	Reference: ref,
+		// 	Requests:  requests,
+		// 	Pulse:     pulse,
+		// }
+		// messages := append(messages, validationMsg)
+
+		ledgerHasMoreRequests := es.LedgerHasMoreRequests || rotationResults.LedgerHasMoreRequests
+		resultsMsg := &message.ExecutorResults{
+			RecordRef:             es.Ref,
+			Pending:               es.pending,
+			Queue:                 messagesQueue,
+			LedgerHasMoreRequests: ledgerHasMoreRequests,
+		}
+		messages = append(messages, resultsMsg)
+	}
+
+	return messages
+}
+
+func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) []insolar.Message {
+	es := q.executionState
+	logger := inslogger.FromContext(ctx)
+
+	if !q.currentList.Empty() && es.pending == message.InPending {
+		// no pending should be as we are executing
+		logger.Warn("we are executing ATM, but ES marked as pending, shouldn't be")
+		es.pending = message.NotPending
+	} else if es.InPendingNotConfirmed() {
+		logger.Warn("looks like pending executor died, re-starting execution")
+		es.pending = message.NotPending
+		es.LedgerHasMoreRequests = true
+	}
+
+	es.PendingConfirmed = false
+
+	return make([]insolar.Message, 0)
+}
+
+func (q *ExecutionBroker) OnPulse(ctx context.Context, meNext bool) []insolar.Message {
+	var rv []insolar.Message
+	if q == nil {
+		return rv
+	}
+	if meNext {
+		rv = q.onPulseWeNext(ctx)
+	} else {
+		rv = q.onPulseWeNotNext(ctx)
+	}
+	return rv
+}
+
+func (q *ExecutionBroker) ResetLedgerCheck() {
+	q.ledgerChecked = sync.Once{}
+}
+
+func NewExecutionBroker(lr *LogicRunner, es *ExecutionState) *ExecutionBroker {
 	return &ExecutionBroker{
 		stateLock:   &sync.Mutex{},
 		mutable:     NewTranscriptDequeue(),
@@ -601,9 +688,11 @@ func NewExecutionBroker(es *ExecutionState) *ExecutionBroker {
 		finished:    NewTranscriptDequeue(),
 		currentList: NewCurrentExecutionList(),
 
+		logicRunner:    lr,
 		executionState: es,
 
-		ledgerChecked: sync.Once{},
+		ledgerChecked:   sync.Once{},
+		processorActive: 0,
 
 		deduplicationLock:  sync.Mutex{},
 		deduplicationTable: make(map[insolar.Reference]bool),

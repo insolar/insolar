@@ -43,32 +43,18 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 	msg := parcel.Message().(*message.PendingFinished)
 	ref := msg.DefaultTarget()
 	os := lr.StateStorage.UpsertObjectState(*ref)
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = NewExecutionState(*ref)
-		os.ExecutionState.pending = message.NotPending
-		os.ExecutionState.RegisterLogicRunner(lr)
-		os.Unlock()
-
-		h.Message.ReplyTo <- replyOk
-		return nil
-	}
-	es := os.ExecutionState
-	os.Unlock()
+	es, broker := os.InitAndGetExecution(lr, ref)
 
 	es.Lock()
 	es.pending = message.NotPending
-	if !es.Broker.currentList.Empty() {
+	if !broker.currentList.Empty() {
 		es.Unlock()
 		return errors.New("[ HandlePendingFinished ] received PendingFinished when we are already executing")
 	}
 	es.Unlock()
 
-	es.Broker.StartProcessorIfNeeded(ctx)
+	broker.StartProcessorIfNeeded(ctx)
 
 	h.Message.ReplyTo <- replyOk
 	return nil
-
 }

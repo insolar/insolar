@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/configuration"
@@ -40,7 +41,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -57,8 +57,20 @@ type Ref = insolar.Reference
 type ObjectState struct {
 	sync.Mutex
 
-	ExecutionState *ExecutionState
-	Validation     *ExecutionState
+	ExecutionBroker *ExecutionBroker
+	ExecutionState  *ExecutionState
+	Validation      *ExecutionState
+}
+
+func (st *ObjectState) InitAndGetExecution(lr *LogicRunner, ref *insolar.Reference) (*ExecutionState, *ExecutionBroker) {
+	st.Lock()
+	defer st.Unlock()
+
+	if st.ExecutionBroker == nil {
+		st.ExecutionState = NewExecutionState(*ref)
+		st.ExecutionBroker = NewExecutionBroker(lr, st.ExecutionState)
+	}
+	return st.ExecutionState, st.ExecutionBroker
 }
 
 func (st *ObjectState) GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error) {
@@ -82,7 +94,7 @@ func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
 	if err != nil {
 		panic(err)
 	}
-	if res.Broker.currentList.Empty() {
+	if st.ExecutionBroker.currentList.Empty() {
 		panic("object " + res.Ref.String() + " has no Current")
 	}
 	return res
@@ -361,30 +373,26 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	es := lr.StateStorage.GetExecutionState(*request.Object)
-	if es == nil {
+	os := lr.StateStorage.GetObjectState(*request.Object)
+	if os == nil {
 		return false
 	}
+	os.Lock()
+	es, broker := os.ExecutionState, os.ExecutionBroker
+	os.Unlock()
 
 	es.Lock()
 	defer es.Unlock()
 
-	if es.Broker.currentList.Empty() {
+	if broker.currentList.Empty() {
 		return false
 	}
-	if es.Broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
+	if broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
 		return false
 	}
 
 	inslogger.FromContext(ctx).Error("loop detected")
 	return true
-}
-
-func (lr *LogicRunner) startGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
-	err := lr.publisher.Publish(InnerMsgTopic, makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg))
-	if err != nil {
-		inslogger.FromContext(ctx).Warnf("can't send getLedgerPendingRequestMsg: ", err)
-	}
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
@@ -409,20 +417,18 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 		if es := state.ExecutionState; es != nil {
 			es.Lock()
 
-			toSend := es.OnPulse(ctx, meNext)
+			toSend := state.ExecutionBroker.OnPulse(ctx, meNext)
 			messages = append(messages, toSend...)
 
-			if !meNext {
-				if es.Broker.currentList.Empty() {
-					state.ExecutionState = nil
-				}
-			} else {
-				if es.pending == message.NotPending && es.LedgerHasMoreRequests {
-					lr.startGetLedgerPendingRequest(ctx, es)
-				}
-				if es.pending == message.NotPending {
-					es.Broker.StartProcessorIfNeeded(ctx)
-				}
+			if !meNext && state.ExecutionBroker.currentList.Empty() {
+				// we're not executing and we have nothing to process
+				state.ExecutionState = nil
+				state.ExecutionBroker = nil
+			} else if meNext && es.pending == message.NotPending {
+				// we're executing, micro optimization, check pending
+				// status, reset ledger check status and start execution
+				state.ExecutionBroker.ResetLedgerCheck()
+				state.ExecutionBroker.StartProcessorIfNeeded(ctx)
 			}
 
 			es.Unlock()

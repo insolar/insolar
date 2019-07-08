@@ -40,22 +40,15 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 	ref := *p.msg.DefaultTarget()
 
 	state := p.LR.StateStorage.UpsertObjectState(ref)
+	es, _ := state.InitAndGetExecution(p.LR, &ref)
 
-	state.Lock()
-	if state.ExecutionState == nil {
-		state.ExecutionState = NewExecutionState(ref)
-		state.ExecutionState.pending = message.InPending
-		state.ExecutionState.PendingConfirmed = false
-		state.ExecutionState.LedgerHasMoreRequests = true
-		state.ExecutionState.RegisterLogicRunner(p.LR)
-	} else {
-		executionState := state.ExecutionState
-		executionState.Lock()
-		executionState.LedgerHasMoreRequests = true
-		executionState.Unlock()
-
+	es.Lock()
+	if es.pending == message.PendingUnknown {
+		es.pending = message.InPending
+		es.PendingConfirmed = false
 	}
-	state.Unlock()
+	es.LedgerHasMoreRequests = true
+	es.Unlock()
 
 	return nil
 }
