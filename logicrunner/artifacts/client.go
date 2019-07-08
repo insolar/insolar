@@ -437,7 +437,6 @@ func (r *retryer) send(ctx context.Context) {
 	for r.tries > 0 && retry && !r.isDone {
 		currentPulse, err := r.pulseAccessor.Latest(ctx)
 		if err != nil {
-			retry = false
 			logger.Error(errors.Wrap(err, "can't get latest pulse"))
 			break
 		}
