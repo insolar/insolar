@@ -34,6 +34,19 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
+func clientMock(t *testing.T, sender bus.Sender) *client {
+	c := NewClient(sender)
+	p := pulse.NewAccessorMock(t)
+	pulseNumber := 10
+	p.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+		pulseNumber = pulseNumber + 10
+		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pulseNumber)}, nil
+	}
+	c.PulseAccessor = p
+
+	return c
+}
+
 // Send msg, bus.Sender gets error and closes resp chan
 func TestRetryerSend_SendErrored(t *testing.T) {
 	sender := &bus.SenderMock{}
@@ -42,12 +55,7 @@ func TestRetryerSend_SendErrored(t *testing.T) {
 		close(res)
 		return res, func() {}
 	}
-	c := NewClient(sender)
-	p := pulse.NewAccessorMock(t)
-	p.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		return insolar.Pulse{PulseNumber: 10}, nil
-	}
-	c.PulseAccessor = p
+	c := clientMock(t, sender)
 
 	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 	defer done()
@@ -71,12 +79,7 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 		}()
 		return innerReps, done
 	}
-	c := NewClient(sender)
-	p := pulse.NewAccessorMock(t)
-	p.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		return insolar.Pulse{PulseNumber: 10}, nil
-	}
-	c.PulseAccessor = p
+	c := clientMock(t, sender)
 
 	reps, _ := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 	select {
@@ -111,19 +114,23 @@ func sendTestReply(pl payload.Payload, ch chan<- *wmmsg.Message, isDone chan<- i
 	close(isDone)
 }
 
+func isChannelClosed(ch chan *wmmsg.Message) bool {
+	select {
+	case _, ok := <-ch:
+		return ok
+	default:
+		return false
+	}
+}
+
 // Send msg, get one response
 func TestRetryerSend(t *testing.T) {
-	sender := &bus.SenderMock{}
+	sender := bus.NewSenderMock(t)
 	innerReps := make(chan *wmmsg.Message)
 	sender.SendRoleFunc = func(p context.Context, p1 *wmmsg.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *wmmsg.Message, r1 func()) {
 		return innerReps, func() { close(innerReps) }
 	}
-	c := NewClient(sender)
-	p := pulse.NewAccessorMock(t)
-	p.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		return insolar.Pulse{PulseNumber: 10}, nil
-	}
-	c.PulseAccessor = p
+	c := clientMock(t, sender)
 
 	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 
@@ -149,12 +156,7 @@ func TestRetryerSend(t *testing.T) {
 	}
 	done()
 
-	ok := true
-	select {
-	case _, ok = <-innerReps:
-	default:
-	}
-	require.False(t, ok)
+	require.False(t, isChannelClosed(innerReps))
 }
 
 // Send msg, get "flow cancelled" error, than get one response
@@ -170,14 +172,7 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 		}
 		return innerReps, func() { close(innerReps) }
 	}
-	c := NewClient(sender)
-	p := pulse.NewAccessorMock(t)
-	pulseNumber := 10
-	p.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		pulseNumber = pulseNumber + 10
-		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pulseNumber)}, nil
-	}
-	c.PulseAccessor = p
+	c := clientMock(t, sender)
 
 	var success bool
 	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
@@ -196,12 +191,7 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 	}
 	done()
 
-	ok := true
-	select {
-	case _, ok = <-innerReps:
-	default:
-	}
-	require.False(t, ok)
+	require.False(t, isChannelClosed(innerReps))
 }
 
 // Send msg, get "flow cancelled" error, than get two responses
@@ -218,14 +208,7 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 		}
 		return innerReps, func() { close(innerReps) }
 	}
-	c := NewClient(sender)
-	p := pulse.NewAccessorMock(t)
-	pulseNumber := 10
-	p.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		pulseNumber = pulseNumber + 10
-		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pulseNumber)}, nil
-	}
-	c.PulseAccessor = p
+	c := clientMock(t, sender)
 
 	var success int
 	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
@@ -243,12 +226,7 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 	}
 	done()
 
-	ok := true
-	select {
-	case _, ok = <-innerReps:
-	default:
-	}
-	require.False(t, ok)
+	require.False(t, isChannelClosed(innerReps))
 }
 
 // Send msg, get "flow cancelled" error on every tries
@@ -260,14 +238,7 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 		go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		return innerReps, func() { close(innerReps) }
 	}
-	c := NewClient(sender)
-	p := pulse.NewAccessorMock(t)
-	pulseNumber := 10
-	p.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		pulseNumber = pulseNumber + 10
-		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pulseNumber)}, nil
-	}
-	c.PulseAccessor = p
+	c := clientMock(t, sender)
 
 	var success bool
 	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
@@ -279,12 +250,7 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 
 	done()
 
-	ok := true
-	select {
-	case _, ok = <-innerReps:
-	default:
-	}
-	require.False(t, ok)
+	require.False(t, isChannelClosed(innerReps))
 }
 
 // Send msg, get response, than get "flow cancelled" error, than get two responses
@@ -310,14 +276,7 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 		}
 		return innerReps, func() { close(innerReps) }
 	}
-	c := NewClient(sender)
-	p := pulse.NewAccessorMock(t)
-	pulseNumber := 10
-	p.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		pulseNumber = pulseNumber + 10
-		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pulseNumber)}, nil
-	}
-	c.PulseAccessor = p
+	c := clientMock(t, sender)
 
 	var success int
 	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
@@ -337,10 +296,5 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 
 	done()
 
-	ok := true
-	select {
-	case _, ok = <-innerReps:
-	default:
-	}
-	require.False(t, ok)
+	require.False(t, isChannelClosed(innerReps))
 }
