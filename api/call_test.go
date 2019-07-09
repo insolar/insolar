@@ -94,7 +94,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.Request{},
+		&requester.Request{Method: "api.call"},
 		seedString,
 	)
 	suite.NoError(err)
