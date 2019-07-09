@@ -168,7 +168,7 @@ func (ch *ClaimHeader) DeserializeFrom(ctx DeserializeContext, reader io.Reader)
 }
 
 func (c *GenericClaim) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	err := write(writer, c.TypeAndLength)
+	err := c.ClaimHeader.SerializeTo(ctx, writer)
 	if err != nil {
 		return err
 	}
