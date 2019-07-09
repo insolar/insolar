@@ -99,7 +99,7 @@ func (p *SetActivationRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store record")
 	}
 
-	msg, err := payload.NewMessage(&payload.ID{ID: p.requestID})
+	msg, err := payload.NewMessage(&payload.RequestInfo{RequestID: p.requestID})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}

@@ -19,6 +19,8 @@ package seedmanager
 import (
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/insolar"
 )
 
 // Expiration represents time of expiration
@@ -30,11 +32,16 @@ const DefaultTTL = 5 * time.Second
 // DefaultCleanPeriod default time period for launching cleaning goroutine
 const DefaultCleanPeriod = 5 * time.Second
 
+type storedSeed struct {
+	expiration Expiration
+	pulse      insolar.PulseNumber
+}
+
 // SeedManager manages working with seed pool
 // It's thread safe
 type SeedManager struct {
 	mutex    sync.RWMutex
-	seedPool map[Seed]Expiration
+	seedPool map[Seed]storedSeed
 	ttl      time.Duration
 	stopped  bool
 }
@@ -46,7 +53,7 @@ func New() *SeedManager {
 
 // NewSpecified creates new seed manager with custom params
 func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
-	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: ttl, stopped: false}
+	sm := SeedManager{seedPool: make(map[Seed]storedSeed), ttl: ttl, stopped: false}
 	go func() {
 		for range time.Tick(cleanPeriod) {
 			sm.deleteExpired()
@@ -68,11 +75,14 @@ func (sm *SeedManager) Stop() {
 }
 
 // Add adds seed to pool
-func (sm *SeedManager) Add(seed Seed) {
+func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 	expTime := time.Now().Add(sm.ttl).UnixNano()
 
 	sm.mutex.Lock()
-	sm.seedPool[seed] = expTime
+	sm.seedPool[seed] = storedSeed{
+		expiration: expTime,
+		pulse:      pulse,
+	}
 	sm.mutex.Unlock()
 
 }
@@ -82,27 +92,27 @@ func (sm *SeedManager) isExpired(expTime Expiration) bool {
 }
 
 // Exists checks whether seed in the pool
-func (sm *SeedManager) Exists(seed Seed) bool {
+func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
 	sm.mutex.RLock()
-	expTime, ok := sm.seedPool[seed]
+	stored, ok := sm.seedPool[seed]
 	sm.mutex.RUnlock()
 
-	isSeedOk := ok && !sm.isExpired(expTime)
-	if isSeedOk {
+	if ok && !sm.isExpired(stored.expiration) {
 		sm.mutex.Lock()
 		delete(sm.seedPool, seed)
 		sm.mutex.Unlock()
+		return stored.pulse, true
 	}
 
-	return isSeedOk
+	return 0, false
 }
 
 func (sm *SeedManager) deleteExpired() {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 
-	for seed, expTime := range sm.seedPool {
-		if sm.isExpired(expTime) {
+	for seed, stored := range sm.seedPool {
+		if sm.isExpired(stored.expiration) {
 			delete(sm.seedPool, seed)
 		}
 	}
