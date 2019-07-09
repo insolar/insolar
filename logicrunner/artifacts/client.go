@@ -19,7 +19,6 @@ package artifacts
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	wmmsg "github.com/ThreeDotsLabs/watermill/message"
@@ -238,7 +237,7 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	reps, done := m.retryerSend(ctx, &payload.GetCode{
+	reps, done := m.retryableSend(ctx, &payload.GetCode{
 		CodeID: *code.Record(),
 	}, insolar.DynamicRoleLightExecutor, code, 3)
 	defer done()
@@ -309,7 +308,7 @@ func (m *client) GetObject(
 
 	logger := inslogger.FromContext(ctx).WithField("object", head.Record().DebugString())
 
-	reps, done := m.retryerSend(ctx, &payload.GetObject{
+	reps, done := m.retryableSend(ctx, &payload.GetObject{
 		ObjectID: *head.Record(),
 	}, insolar.DynamicRoleLightExecutor, head, 3)
 	defer done()
@@ -384,117 +383,10 @@ func (m *client) GetObject(
 	return desc, err
 }
 
-func (m *client) retryerSend(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (<-chan *wmmsg.Message, func()) {
-	r := retryer{
-		ppl:           ppl,
-		role:          role,
-		ref:           ref,
-		tries:         tries,
-		sender:        m.sender,
-		pulseAccessor: m.PulseAccessor,
-		channelClosed: make(chan interface{}),
-		replyChan:     make(chan *wmmsg.Message),
-		isDone:        false,
-	}
-	r.clientDone = func() {
-		r.once.Do(func() {
-			close(r.channelClosed)
-			r.processingStarted.Lock()
-			close(r.replyChan)
-			r.isDone = true
-			r.processingStarted.Unlock()
-		})
-	}
+func (m *client) retryableSend(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (<-chan *wmmsg.Message, func()) {
+	r := newRetryer(m.sender, m.PulseAccessor, ppl, role, ref, tries)
 	go r.send(ctx)
 	return r.replyChan, r.clientDone
-}
-
-type retryer struct {
-	ppl           payload.Payload
-	role          insolar.DynamicRole
-	ref           insolar.Reference
-	tries         uint
-	sender        bus.Sender
-	pulseAccessor pulse.Accessor
-
-	isDone bool
-
-	replyChan  chan *wmmsg.Message
-	clientDone func()
-
-	processingStarted sync.Mutex
-	once              sync.Once
-	channelClosed     chan interface{}
-}
-
-func (r *retryer) send(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-	var errText string
-	retry := true
-	var lastPulse insolar.PulseNumber
-
-	r.processingStarted.Lock()
-	for r.tries > 0 && retry && !r.isDone {
-		currentPulse, err := r.pulseAccessor.Latest(ctx)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "can't get latest pulse"))
-			break
-		}
-
-		if currentPulse.PulseNumber == lastPulse {
-			inslogger.FromContext(ctx).Debugf("wait for pulse change in retryer. Current: %d", currentPulse)
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
-		lastPulse = currentPulse.PulseNumber
-
-		retry = false
-
-		msg, err := payload.NewMessage(r.ppl)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "error while create new message from payload"))
-			break
-		}
-
-		reps, done := r.sender.SendRole(ctx, msg, r.role, r.ref)
-		waitingForReply := true
-	F:
-		for waitingForReply {
-			select {
-			case rep, ok := <-reps:
-				if !ok {
-					waitingForReply = false
-					break
-				}
-				replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
-				if err == nil {
-					p, ok := replyPayload.(*payload.Error)
-					if ok && (p.Code == payload.CodeFlowCanceled) {
-						errText = p.Text
-						inslogger.FromContext(ctx).Warnf("flow cancelled, retrying (error message - %s)", errText)
-						r.tries--
-						retry = true
-						break F
-					}
-				}
-
-				select {
-				case r.replyChan <- rep:
-				case <-r.channelClosed:
-					waitingForReply = false
-				}
-			case <-r.channelClosed:
-				waitingForReply = false
-			}
-		}
-		done()
-	}
-	r.processingStarted.Unlock()
-
-	if r.tries == 0 {
-		logger.Error(errors.Errorf("flow cancelled, retries exceeded (last error - %s)", errText))
-	}
-	r.clientDone()
 }
 
 // GetPendingRequest returns an unclosed pending request
