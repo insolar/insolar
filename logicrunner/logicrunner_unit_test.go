@@ -566,64 +566,58 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 }
 
 func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
-	es := NewExecutionState(testutils.RandomRef())
+	objectRef := gen.Reference()
+	es := NewExecutionState(objectRef)
+
+	os := suite.lr.StateStorage.UpsertObjectState(objectRef)
+	os.ExecutionState = es
 
 	reqIdA := utils.RandTraceID()
 	reqIdB := utils.RandTraceID()
 
-	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil)
-	suite.Require().False(loop)
-
-	objectRef := testutils.RandomRef()
-	msg := &message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			ReturnMode:   record.ReturnResult,
-			Object:       &objectRef,
-			APIRequestID: reqIdA,
-		},
+	request := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: reqIdA,
 	}
-	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+	executingReqRef := gen.Reference()
+	es.Broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult, APIRequestID: reqIdA},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
+	loop := suite.lr.CheckExecutionLoop(suite.ctx, request)
 	suite.Require().True(loop)
 
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+	es.Broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult, APIRequestID: reqIdB},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, request)
 	suite.Require().False(loop)
 
 	// intermediate env cleanup
 	es.Broker.currentList.Cleanup()
 
-	msg = &message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
+	request =record.IncomingRequest{
 			ReturnMode: record.ReturnNoWait,
 			Object:     &objectRef,
-		},
-	}
-	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+		}
+	es.Broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, request)
 	suite.Require().False(loop)
 	es.Broker.currentList.Cleanup()
 
-	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+	es.Broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnNoWait},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, request)
 	suite.Require().False(loop)
 	es.Broker.currentList.Cleanup()
 
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+	es.Broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnNoWait},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, request)
 	suite.Require().False(loop)
 }
 

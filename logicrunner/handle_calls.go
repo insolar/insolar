@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -88,18 +89,6 @@ func (h *HandleCall) handleActual(
 ) (insolar.Reply, error) {
 
 	lr := h.dep.lr
-	ref := msg.GetReference()
-	os := lr.StateStorage.UpsertObjectState(ref)
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = NewExecutionState(ref)
-		os.ExecutionState.RegisterLogicRunner(lr)
-	}
-	es := os.ExecutionState
-	os.Unlock()
-
-	es.Lock()
 
 	procCheckRole := CheckOurRole{
 		msg:         msg,
@@ -109,7 +98,6 @@ func (h *HandleCall) handleActual(
 	}
 
 	if err := f.Procedure(ctx, &procCheckRole, true); err != nil {
-		es.Unlock()
 		// rewrite "can't execute this object" to "flow cancelled" for force retry message
 		// just temporary fix till mb moved to watermill
 		if err == flow.ErrCancelled || err == ErrCantExecute {
@@ -118,14 +106,11 @@ func (h *HandleCall) handleActual(
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't play role")
 	}
 
-	if lr.CheckExecutionLoop(ctx, es, parcel) {
-		es.Unlock()
+	request := msg.IncomingRequest
+
+	if lr.CheckExecutionLoop(ctx, request) {
 		return nil, errors.New("loop detected")
 	}
-	es.Unlock()
-
-	// RegisterIncomingRequest is an external, slow call to the LME thus we have to
-	// unlock ExecutionState during the call.
 
 	procRegisterRequest := NewRegisterIncomingRequest(parcel, h.dep)
 
@@ -136,10 +121,28 @@ func (h *HandleCall) handleActual(
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
-	request := procRegisterRequest.getResult()
+	requestRef := procRegisterRequest.getResult()
+
+	objRef := request.Object
+	if request.CallType != record.CTMethod {
+		objRef = requestRef
+	}
+	if objRef == nil {
+		return nil, errors.New("can't get object reference")
+	}
+
+	os := lr.StateStorage.UpsertObjectState(*objRef)
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		os.ExecutionState = NewExecutionState(*objRef)
+		os.ExecutionState.RegisterLogicRunner(lr)
+	}
+	es := os.ExecutionState
+	os.Unlock()
 
 	es.Lock()
-	es.Broker.Put(ctx, false, NewTranscript(ctx, parcel, request))
+	es.Broker.Put(ctx, false, NewTranscript(ctx, parcel, requestRef))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
@@ -150,7 +153,7 @@ func (h *HandleCall) handleActual(
 
 	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
 		if err == flow.ErrCancelled {
-			h.sendToNextExecutor(ctx, es, request, parcel)
+			h.sendToNextExecutor(ctx, es, requestRef, parcel)
 		} else {
 			inslogger.FromContext(ctx).Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
 		}
@@ -161,9 +164,8 @@ func (h *HandleCall) handleActual(
 	}
 
 	return &reply.RegisterRequest{
-		Request: *request,
+		Request: *requestRef,
 	}, nil
-
 }
 
 func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
