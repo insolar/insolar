@@ -142,7 +142,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
-			Reason:          *insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
+			Reason:          insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
 		},
 	}
 
@@ -199,7 +199,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
-			Reason:       *insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
+			Reason:       insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
 		},
 	}
 
