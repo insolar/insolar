@@ -90,6 +90,7 @@ func TestSetOutgoingRequest_IncorrectRecordInVirtual(t *testing.T) {
 }
 
 func TestSetOutgoingRequest_EmptyRequestObject(t *testing.T) {
+	t.Skip("Currently this test doesn't make any sense - SetOutgoingRequest.AffinityRef can't return `nil`")
 	t.Parallel()
 
 	ctx := flow.TestContextWithPulse(
@@ -110,7 +111,7 @@ func TestSetOutgoingRequest_EmptyRequestObject(t *testing.T) {
 	virtual := record.Virtual{
 		Union: &record.Virtual_OutgoingRequest{
 			OutgoingRequest: &record.OutgoingRequest{
-				Object: nil,
+				// Object: nil, // this is NOT a reference used in AffinityRef() method!
 			},
 		},
 	}
@@ -120,7 +121,6 @@ func TestSetOutgoingRequest_EmptyRequestObject(t *testing.T) {
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
-
 	msg := payload.Meta{
 		Payload: requestBuf,
 	}

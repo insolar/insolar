@@ -19,6 +19,8 @@ package artifactmanager
 import (
 	"context"
 	"crypto/rand"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -67,6 +69,12 @@ type handlerSuite struct {
 
 	// indexMemoryStor *object.FilamentCacheStorage
 	indexStorageMemory *object.IndexStorageMemory
+
+	tmpDir1 string
+	tmpDir2 string
+
+	badgerDB1 *store.BadgerDB
+	badgerDB2 *store.BadgerDB
 }
 
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
@@ -105,7 +113,17 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 
-	storageDB := store.NewMemoryMockDB()
+	var err error
+	s.tmpDir1, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
+	s.badgerDB1, err = store.NewBadgerDB(s.tmpDir1)
+	if err != nil {
+		s.T().Error("Can't NewBadgerDB", err)
+	}
+	storageDB := s.badgerDB1
+
 	dropStorage := drop.NewDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
@@ -121,10 +139,20 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 
 	s.indexStorageMemory = object.NewIndexStorageMemory()
 
+	s.tmpDir2, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
+
+	s.badgerDB2, err = store.NewBadgerDB(s.tmpDir2)
+	if err != nil {
+		s.T().Error("Can't NewBadgerDB", err)
+	}
+
 	s.cm.Inject(
 		s.scheme,
 		s.indexStorageMemory,
-		store.NewMemoryMockDB(),
+		s.badgerDB2,
 		s.jetStorage,
 		s.nodeStorage,
 		s.dropAccessor,
@@ -133,7 +161,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 		s.recordModifier,
 	)
 
-	err := s.cm.Init(s.ctx)
+	err = s.cm.Init(s.ctx)
 	if err != nil {
 		s.T().Error("ComponentManager init failed", err)
 	}
@@ -148,6 +176,12 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
+
+	os.RemoveAll(s.tmpDir1)
+	os.RemoveAll(s.tmpDir2)
+	s.badgerDB1.Stop(s.ctx)
+	// We don't call it explicitly since it's called by component manager
+	//s.badgerDB2.Stop(s.ctx)
 }
 
 type waiterMock struct {

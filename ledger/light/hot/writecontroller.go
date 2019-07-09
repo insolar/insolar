@@ -92,6 +92,11 @@ func (m *WriteController) Open(ctx context.Context, pulse insolar.PulseNumber) e
 func (m *WriteController) CloseAndWait(ctx context.Context, pulse insolar.PulseNumber) error {
 	m.lock.Lock()
 
+	if m.current == 0 {
+		m.lock.Unlock()
+		return nil
+	}
+
 	if pulse != m.current {
 		m.lock.Unlock()
 		return fmt.Errorf("wrong pulse for closing: opened - %v, requested = %v", m.current, pulse)

@@ -53,7 +53,7 @@ func TestBadgerDB_Get(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := NewBadgerDB(tmpdir)
 	defer db.Stop(ctx)
@@ -82,7 +82,7 @@ func TestBadgerDB_Set(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := NewBadgerDB(tmpdir)
 	defer db.Stop(ctx)
@@ -117,7 +117,7 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := NewBadgerDB(tmpdir)
 	defer db.Stop(ctx)
@@ -217,7 +217,7 @@ func TestBadgerDB_NewReverseIterator(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := NewBadgerDB(tmpdir)
 	defer db.Stop(ctx)
@@ -319,7 +319,7 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := NewBadgerDB(tmpdir)
 	defer db.Stop(ctx)

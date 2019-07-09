@@ -60,7 +60,7 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("SetOutgoingRequest can't be a cretion request")
 	}
 
-	if request.Object == nil {
+	if request.AffinityRef() == nil {
 		return errors.New("SetOutgoingRequest.Present: object is nil")
 	}
 
@@ -77,7 +77,7 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 	reqID := calc.Result.ID
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(*request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewCheckJet(*request.AffinityRef().Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
@@ -95,7 +95,7 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, SetResult fails because it should update light's index state
-	getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
+	getIndex := proc.NewEnsureIndexWM(*request.AffinityRef().Record(), objJetID, s.message)
 	s.dep.GetIndexWM(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err

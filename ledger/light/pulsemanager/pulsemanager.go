@@ -18,7 +18,6 @@ package pulsemanager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -33,6 +32,11 @@ import (
 	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
+)
+
+var (
+	errZeroNodes = errors.New("zero nodes from network")
+	errNoPulse   = errors.New("no previous pulses")
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper -o ../../../testutils -s _mock.go
@@ -68,8 +72,6 @@ type PulseManager struct {
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
-	// saves PM stopping mode
-	stopped bool
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -89,14 +91,18 @@ func NewPulseManager(
 }
 
 // Set set's new pulse and closes current jet drop.
-func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
+func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	logger := inslogger.FromContext(ctx)
 
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
-	if m.stopped {
-		return errors.New("can't call Set method on PulseManager after stop")
-	}
+
+	defer func() {
+		err := m.Bus.OnPulse(ctx, newPulse)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
+		}
+	}()
 
 	ctx, span := instracer.StartSpan(
 		ctx, "pulse.process", trace.WithSampler(trace.AlwaysSample()),
@@ -106,162 +112,99 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	)
 	defer span.End()
 
-	jets, oldPulse, prevPN, err := m.setUnderGilSection(ctx, newPulse, persist)
+	jets, endedPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
-		return err
+		if err == errZeroNodes || err == errNoPulse {
+			return nil
+		}
+		panic(errors.Wrap(err, "under gil error"))
 	}
 
-	if !persist {
-		return nil
+	err = m.WriteManager.CloseAndWait(ctx, endedPulse.PulseNumber)
+	if err != nil {
+		panic(errors.Wrap(err, "can't close pulse for writing"))
 	}
-
-	if oldPulse != nil && prevPN != nil {
-		err = m.WriteManager.CloseAndWait(ctx, oldPulse.PulseNumber)
-		if err != nil {
-			panic(errors.Wrap(err, "can't close pulse for writing"))
-		}
-		err = m.HotSender.SendHot(ctx, oldPulse.PulseNumber, newPulse.PulseNumber, jets)
-		if err != nil {
-			logger.Error("send Hot failed: ", err)
-		}
-		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
-	} else {
-		logger.Debugf("SPLIT> skip send Hots oldPulse=%v, prevPN=%v", oldPulse, prevPN)
+	err = m.HotSender.SendHot(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets)
+	if err != nil {
+		logger.Error("send Hot failed: ", err)
 	}
+	go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 
 	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
 	if err != nil {
-		logger.Error("can't open pulse for writing", err)
+		panic(errors.Wrap(err, "failed to open pulse for writing"))
 	}
 
-	err = m.Bus.OnPulse(ctx, newPulse)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
-	}
-
-	if m.MessageHandler != nil {
-		m.MessageHandler.OnPulse(ctx, newPulse)
-	}
-
+	m.MessageHandler.OnPulse(ctx, newPulse)
 	return nil
 }
 
-func (m *PulseManager) setUnderGilSection(
-	ctx context.Context, newPulse insolar.Pulse, persist bool,
-) (
-	[]insolar.JetID, *insolar.Pulse, *insolar.PulseNumber, error,
+func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse) (
+	[]insolar.JetID, insolar.Pulse, error,
 ) {
-	var (
-		oldPulse *insolar.Pulse
-		prevPN   *insolar.PulseNumber
-	)
-
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
 	defer span.End()
 	defer m.GIL.Release(ctx)
 
-	storagePulse, err := m.PulseAccessor.Latest(ctx)
-	if err != nil && err != pulse.ErrNotFound {
-		return nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
-	}
-
-	if err != pulse.ErrNotFound {
-		oldPulse = &storagePulse
-		pp, err := m.PulseCalculator.Backwards(ctx, oldPulse.PulseNumber, 1)
-		if err == nil {
-			prevPN = &pp.PulseNumber
-		} else {
-			prevPN = &insolar.GenesisPulse.PulseNumber
-		}
-		ctx, _ = inslogger.WithField(ctx, "current_pulse", fmt.Sprintf("%d", oldPulse.PulseNumber))
-	}
-
 	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
 		"new_pulse": newPulse.PulseNumber,
-		"persist":   persist,
 	}).Debugf("received pulse")
 
-	// swap active nodes
-	err = m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to apply new active node list")
-	}
-	if persist {
-		if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-			return nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
+	// Dealing with node lists.
+	{
+		err := m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to apply new active node list"))
 		}
 		fromNetwork := m.NodeNet.GetWorkingNodes()
+		if len(fromNetwork) == 0 {
+			logger.Warnf("received zero nodes for pulse %d", newPulse.PulseNumber)
+			return nil, insolar.Pulse{}, errZeroNodes
+		}
 		toSet := make([]insolar.Node, 0, len(fromNetwork))
-		for _, node := range fromNetwork {
-			toSet = append(toSet, insolar.Node{ID: node.ID(), Role: node.Role()})
+		for _, n := range fromNetwork {
+			toSet = append(toSet, insolar.Node{ID: n.ID(), Role: n.Role()})
 		}
 		err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
+			panic(errors.Wrap(err, "call of SetActiveNodes failed"))
 		}
 	}
 
-	var jets []insolar.JetID
-	if persist && prevPN != nil && oldPulse != nil {
-		jets, err = m.JetSplitter.Do(ctx, *prevPN, oldPulse.PulseNumber, newPulse.PulseNumber)
+	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		panic(errors.Wrap(err, "failed to add pulse"))
+	}
 
-		// We just joined to network
-		if errors.Cause(err) == node.ErrNoNodes {
-			return jets, oldPulse, prevPN, nil
-		}
+	// Updating jet tree if its network start.
+	{
+		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 2)
 		if err != nil {
-			return nil, nil, nil, err
-		}
-	}
-
-	if oldPulse != nil && prevPN != nil {
-		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse)
-	}
-
-	if persist && oldPulse != nil {
-		nodes, err := m.Nodes.All(oldPulse.PulseNumber)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		if len(nodes) == 0 {
-			logger.Debug("activate zero jet for jet tree and unlock jet waiter.")
-			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
-			if err != nil {
-				return nil, nil, nil, errors.Wrapf(err, "failed to update zeroJet")
-			}
-			err = m.JetReleaser.Unlock(ctx, insolar.ID(insolar.ZeroJetID))
-			if err != nil {
-				if err != artifactmanager.ErrWaiterNotLocked {
-					return nil, nil, nil, errors.Wrap(err, "failed to unlock zero jet")
+			if err == pulse.ErrNotFound {
+				err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
+				if err != nil {
+					panic(errors.Wrap(err, "failed tp update jets"))
 				}
-				logger.Error(err)
+			} else {
+				panic(errors.Wrap(err, "failed to calculate previous pulse"))
 			}
 		}
 	}
 
-	return jets, oldPulse, prevPN, nil
-}
+	endedPulse, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
+	if err != nil {
+		if err == pulse.ErrNotFound {
+			return nil, insolar.Pulse{}, errNoPulse
+		}
+		panic(errors.Wrap(err, "failed to calculate ended pulse"))
+	}
 
-func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse insolar.Pulse) {
-	ctx, span := instracer.StartSpan(ctx, "early.close")
-	defer span.End()
+	jets, err := m.JetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to split jets"))
+	}
 
 	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
-}
-
-// Start starts pulse manager.
-func (m *PulseManager) Start(ctx context.Context) error {
-	return nil
-}
-
-// Stop stops PulseManager.
-func (m *PulseManager) Stop(ctx context.Context) error {
-	// There should not to be any Set call after Stop call
-	m.setLock.Lock()
-	m.stopped = true
-	m.setLock.Unlock()
-
-	return nil
+	return jets, endedPulse, nil
 }

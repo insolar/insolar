@@ -196,6 +196,12 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			insLog.Infof("Request related to %s", contractRequest.Test)
 		}
 
+		if contractRequest.Method != "api.call" {
+			err := errors.New("rpc method does not exist")
+			processError(err, err.Error(), contractAnswer, insLog, traceID)
+			return
+		}
+
 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 		if err != nil {
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
