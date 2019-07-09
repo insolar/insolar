@@ -28,6 +28,8 @@ type DB interface {
 	NewIterator(pivot Key, reverse bool) Iterator
 }
 
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.Iterator -o ./ -s _gen_mock.go
+
 // Iterator provides an interface for walking through the storage record sequence (where records are sorted lexicographically).
 type Iterator interface {
 	// Next moves the iterator to the next key-value pair.
