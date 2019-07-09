@@ -125,7 +125,7 @@ func (h Header) GetPacketType() packets.PacketType {
 	return packets.PacketType(h.ProtocolAndPacketType) & packetTypeMask
 }
 
-func (h *Header) setPacketType(packetType packets.PacketType) {
+func (h *Header) SetPacketType(packetType packets.PacketType) {
 	if bits.Len(uint(packetType)) > packetTypeBitSize {
 		panic("invalid packet type")
 	}

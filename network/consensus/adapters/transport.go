@@ -52,6 +52,9 @@ package adapters
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/consensus/serialization"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -61,6 +64,47 @@ import (
 )
 
 type PacketBuilder struct{}
+
+func (p *PacketBuilder) GetNeighbourhoodSize() common2.NeighbourhoodSizes {
+	return common2.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
+}
+
+func (p *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
+	options core.PacketSendOptions) core.PreparedPacketSender {
+
+	wrapper := preparedPacketWrapper{}
+	wrapper.packet.Header.SetPacketType(packets.PacketPhase0)
+	wrapper.packet.PulseNumber = sender.GetPulseNumber()
+	wrapper.packet.EncryptableBody = &serialization.GlobulaConsensusPacketBody{}
+
+	return &wrapper
+}
+
+func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
+	options core.PacketSendOptions) core.PreparedPacketSender {
+	panic("implement me")
+}
+
+func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
+	neighbourhood []packets.MembershipAnnouncementReader, options core.PacketSendOptions) core.PreparedPacketSender {
+	panic("implement me")
+}
+
+func (p *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
+	bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
+	options core.PacketSendOptions) core.PreparedPacketSender {
+	panic("implement me")
+}
+
+type preparedPacketWrapper struct {
+	packet serialization.Packet
+}
+
+func (p *preparedPacketWrapper) SendTo(ctx context.Context, target common2.NodeProfile, sendOptions core.PacketSendOptions, sender core.PacketSender) {
+	p.packet.Header.ReceiverID = uint32(target.GetShortNodeID())
+
+	panic("implement me")
+}
 
 func NewPacketBuilder() *PacketBuilder {
 	return &PacketBuilder{}
