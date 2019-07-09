@@ -63,6 +63,10 @@ func hasBit(n uint, pos uint) bool {
 	return (n & (1 << pos)) > 0
 }
 
+func uintFromBits(bits, start, end uint) uint {
+	return (1<<(end-start+1) - 1) & (bits >> start)
+}
+
 func read(reader io.Reader, data interface{}) error {
 	return binary.Read(reader, defaultByteOrder, data)
 }

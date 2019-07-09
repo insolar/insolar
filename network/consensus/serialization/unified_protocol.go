@@ -52,6 +52,7 @@ package serialization
 
 import (
 	"context"
+	"errors"
 	"io"
 	"math/bits"
 
@@ -67,8 +68,6 @@ const (
 
 	payloadLengthMask    = 16383 // 0b0011111111111111
 	payloadLengthBitSize = 14
-	headerShift          = 14
-	headerBitSize        = 2
 
 	pulseNumberMask    = 1073741823 // 0b00111111111111111111111111111111
 	pulseNumberBitSize = 30
@@ -92,6 +91,8 @@ const (
 	ProtocolTypePulsar           = ProtocolType(0)
 	ProtocolTypeGlobulaConsensus = ProtocolType(1)
 )
+
+var ErrNilBody = errors.New("body is nil")
 
 /*
 	ByteSize=16
@@ -157,18 +158,6 @@ func (h *Header) setPayloadLength(payloadLength uint16) {
 	h.HeaderAndPayloadLength |= payloadLength
 }
 
-func (h Header) GetHeader() uint8 {
-	return uint8(h.HeaderAndPayloadLength >> headerShift)
-}
-
-func (h *Header) setHeader(header uint8) {
-	if bits.Len(uint(header)) > headerBitSize {
-		panic("invalid header")
-	}
-
-	h.HeaderAndPayloadLength |= uint16(header) << headerShift
-}
-
 func (h Header) HasFlag(f Flag) bool {
 	if f > maxFlagIndex {
 		panic("invalid flag index")
@@ -178,7 +167,7 @@ func (h Header) HasFlag(f Flag) bool {
 }
 
 func (h Header) GetFlagRangeInt(from, to uint8) uint8 {
-	if from >= to {
+	if from > to {
 		panic("invalid from range")
 	}
 
@@ -222,7 +211,7 @@ func (h *Header) setFlag(f Flag) {
 }
 
 func (h Header) getFlagRangeInt(from, to uint8) uint8 {
-	return (h.PacketFlags & (1 << to)) >> from
+	return uint8(uintFromBits(uint(h.PacketFlags), uint(from), uint(to)))
 }
 
 type Packet struct {
@@ -256,6 +245,10 @@ func (p *Packet) SetPulseNumber(pulseNumber common.PulseNumber) {
 }
 
 func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, signer common.DataSigner) (int64, error) {
+	if p.EncryptableBody == nil {
+		return 0, ErrMalformedPacketBody(ErrNilBody)
+	}
+
 	w := newTrackableWriter(writer)
 	pctx := newPacketContext(ctx, &p.Header)
 	sctx := newSerializeContext(pctx, w, signer, p)
@@ -272,6 +265,10 @@ func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, signer commo
 }
 
 func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, error) {
+	if p.EncryptableBody == nil {
+		return 0, ErrMalformedPacketBody(ErrNilBody)
+	}
+
 	r := newTrackableReader(reader)
 
 	if err := p.Header.DeserializeFrom(nil, r); err != nil {
