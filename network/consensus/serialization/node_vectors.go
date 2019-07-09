@@ -62,9 +62,11 @@ const (
 	compressedBitIndex = 6
 	hasHiLenBitIndex   = 6
 
-	loByteLengthMask    = 63 // 0b00111111
 	loByteLengthBitSize = 6
-	hiByteLengthMask    = 127 // 0b01111111
+	loByteLengthMask    = 1<<loByteLengthBitSize - 1 // 0b00111111
+
+	hiByteLengthBitSize = 7
+	hiByteLengthMask    = 1<<hiByteLengthBitSize - 1 // 0b01111111
 )
 
 type NodeVectors struct {

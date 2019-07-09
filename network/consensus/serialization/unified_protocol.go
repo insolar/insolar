@@ -54,23 +54,27 @@ import (
 	"context"
 	"errors"
 	"io"
-	"math/bits"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 const (
-	packetTypeMask      = 15 // 0b00001111
-	packetTypeBitSize   = 4
-	protocolTypeShift   = 4
+	packetTypeBitSize = 4
+	packetTypeMask    = 1<<packetTypeBitSize - 1 // 0b00001111
+	packetTypeMax     = packetTypeMask
+
 	protocolTypeBitSize = 4
+	protocolTypeShift   = protocolTypeBitSize
+	protocolTypeMax     = 1<<protocolTypeBitSize - 1
 
-	payloadLengthMask    = 16383 // 0b0011111111111111
 	payloadLengthBitSize = 14
+	payloadLengthMask    = 1<<payloadLengthBitSize - 1 // 0b0011111111111111
+	payloadLengthMax     = payloadLengthMask
 
-	pulseNumberMask    = 1073741823 // 0b00111111111111111111111111111111
 	pulseNumberBitSize = 30
+	pulseNumberMask    = 1<<pulseNumberBitSize - 1 // 0b00111111111111111111111111111111
+	pulseNumberMax     = pulseNumberMask
 )
 
 type Flag uint8
@@ -127,7 +131,7 @@ func (h Header) GetPacketType() packets.PacketType {
 }
 
 func (h *Header) setPacketType(packetType packets.PacketType) {
-	if bits.Len(uint(packetType)) > packetTypeBitSize {
+	if packetType > packetTypeMax {
 		panic("invalid packet type")
 	}
 
@@ -139,7 +143,7 @@ func (h Header) GetProtocolType() ProtocolType {
 }
 
 func (h *Header) setProtocolType(protocolType ProtocolType) {
-	if bits.Len(uint(protocolType)) > protocolTypeBitSize {
+	if protocolType > protocolTypeMax {
 		panic("invalid protocol type")
 	}
 
@@ -151,7 +155,7 @@ func (h Header) getPayloadLength() uint16 {
 }
 
 func (h *Header) setPayloadLength(payloadLength uint16) {
-	if bits.Len(uint(payloadLength)) > payloadLengthBitSize {
+	if payloadLength > payloadLengthMax {
 		panic("invalid payload length")
 	}
 
@@ -237,7 +241,7 @@ func (p *Packet) getPulseNumber() common.PulseNumber {
 }
 
 func (p *Packet) setPulseNumber(pulseNumber common.PulseNumber) {
-	if bits.Len(uint(pulseNumber)) > pulseNumberBitSize {
+	if pulseNumber > pulseNumberMax {
 		panic("invalid pulse number")
 	}
 

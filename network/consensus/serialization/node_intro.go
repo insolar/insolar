@@ -52,7 +52,6 @@ package serialization
 
 import (
 	"io"
-	"math/bits"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -60,11 +59,13 @@ import (
 )
 
 const (
-	primaryRoleMask    = 63 // 0b00111111
 	primaryRoleBitSize = 6
+	primaryRoleMask    = 1<<primaryRoleBitSize - 1 // 0b00111111
+	primaryRoleMax     = primaryRoleMask
 
-	addrModeShift   = 6
 	addrModeBitSize = 2
+	addrModeShift   = primaryRoleBitSize
+	addrModeMax     = 1<<addrModeBitSize - 1
 )
 
 type NodeBriefIntro struct {
@@ -97,7 +98,7 @@ func (bi *NodeBriefIntro) GetPrimaryRole() common2.NodePrimaryRole {
 }
 
 func (bi *NodeBriefIntro) SetPrimaryRole(primaryRole common2.NodePrimaryRole) {
-	if bits.Len(uint(primaryRole)) > primaryRoleBitSize {
+	if primaryRole > primaryRoleMax {
 		panic("invalid primary role")
 	}
 
@@ -108,7 +109,7 @@ func (bi *NodeBriefIntro) GetAddrMode() common.NodeEndpointType {
 }
 
 func (bi *NodeBriefIntro) SetAddrMode(addrMode common.NodeEndpointType) {
-	if bits.Len(uint(addrMode)) > addrModeBitSize {
+	if addrMode > addrModeMax {
 		panic("invalid addr mode")
 	}
 
