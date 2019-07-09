@@ -75,7 +75,7 @@ func (addr HostAddress) String() string {
 	return string(addr)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.NodeEndpoint -o ../common -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.NodeEndpoint -o . -s _mock.go
 
 type NodeEndpoint interface {
 	GetEndpointType() NodeEndpointType
@@ -114,7 +114,7 @@ const (
 	RelayEndpoint
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.HostIdentityHolder -o ../common -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.HostIdentityHolder -o . -s _mock.go
 
 type HostIdentityHolder interface {
 	GetHostAddress() HostAddress
@@ -163,7 +163,7 @@ type FixedReader interface {
 	FixedByteSize() int
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.FoldableReader -o ../common -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.FoldableReader -o . -s _mock.go
 
 type FoldableReader interface {
 	FixedReader
