@@ -49,7 +49,6 @@ func dbTreeForPulse(s *DBStore, pulse insolar.PulseNumber) *Tree {
 func TestDBStorage_Empty(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	//db := store.NewMemoryMockDB()
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
@@ -66,7 +65,6 @@ func TestDBStorage_Empty(t *testing.T) {
 func TestDBStorage_UpdateJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	//db := store.NewMemoryMockDB()
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
@@ -89,7 +87,6 @@ func TestDBStorage_UpdateJetTree(t *testing.T) {
 func TestDBStorage_SplitJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	//db := store.NewMemoryMockDB()
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
@@ -122,7 +119,6 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 func TestDBStorage_CloneJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	//db := store.NewMemoryMockDB()
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
@@ -167,7 +163,6 @@ func TestDBStorage_ForID_Basic(t *testing.T) {
 	copy(searchID[insolar.RecordHashOffset:], hash)
 
 	for _, actuality := range []bool{true, false} {
-		//db := store.NewMemoryMockDB()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		assert.NoError(t, err)
