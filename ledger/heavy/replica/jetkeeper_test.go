@@ -17,9 +17,13 @@
 package replica
 
 import (
+	"context"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -29,7 +33,12 @@ import (
 )
 
 func TestNewJetKeeper(t *testing.T) {
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
 	jetKeeper := NewJetKeeper(jets, db)
 	require.NotNil(t, jetKeeper)
@@ -38,7 +47,12 @@ func TestNewJetKeeper(t *testing.T) {
 func TestDbJetKeeper_Add(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
 	jetKeeper := NewJetKeeper(jets, db)
 
@@ -49,14 +63,19 @@ func TestDbJetKeeper_Add(t *testing.T) {
 	f := fuzz.New()
 	f.Fuzz(&pulse)
 	f.Fuzz(&jet)
-	err := jetKeeper.Add(ctx, pulse, jet)
+	err = jetKeeper.Add(ctx, pulse, jet)
 	require.NoError(t, err)
 }
 
 func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
 	jetKeeper := NewJetKeeper(jets, db)
 
@@ -71,7 +90,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	futurePulse = 20
 	jet = insolar.ZeroJetID
 
-	err := jetKeeper.Add(ctx, pulse, jet)
+	err = jetKeeper.Add(ctx, pulse, jet)
 	require.NoError(t, err)
 
 	err = jets.Update(ctx, pulse, false, jet)

@@ -17,7 +17,10 @@
 package blob
 
 import (
+	"context"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -36,7 +39,13 @@ func TestBlobStorages(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	memStorage := NewStorageMemory()
-	dbStorage := NewDB(store.NewMemoryMockDB())
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(context.Background())
+	dbStorage := NewDB(db)
 	type storage interface {
 		Accessor
 		Modifier

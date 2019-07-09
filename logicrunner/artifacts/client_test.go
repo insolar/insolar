@@ -18,7 +18,9 @@ package artifacts
 
 import (
 	"context"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -55,6 +57,12 @@ type amSuite struct {
 	jetStorage   jet.Storage
 	dropModifier drop.Modifier
 	dropAccessor drop.Accessor
+
+	tmpDir1 string
+	tmpDir2 string
+
+	badgerDB1 *store.BadgerDB
+	badgerDB2 *store.BadgerDB
 }
 
 func NewAmSuite() *amSuite {
@@ -76,14 +84,21 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 
-	dbStore := store.NewMemoryMockDB()
-	dropStorage := drop.NewDB(dbStore)
+	s.tmpDir1, _ = ioutil.TempDir("", "bdb-test-")
+
+	s.badgerDB1, _ = store.NewBadgerDB(s.tmpDir1)
+
+	dropStorage := drop.NewDB(s.badgerDB1)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
+	s.tmpDir2, _ = ioutil.TempDir("", "bdb-test-")
+
+	s.badgerDB2, _ = store.NewBadgerDB(s.tmpDir2)
+
 	s.cm.Inject(
 		s.scheme,
-		store.NewMemoryMockDB(),
+		s.badgerDB2,
 		s.jetStorage,
 		s.nodeStorage,
 		pulse.NewStorageMem(),
@@ -106,6 +121,11 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
+
+	os.RemoveAll(s.tmpDir1)
+	os.RemoveAll(s.tmpDir2)
+	s.badgerDB1.Stop(s.ctx)
+	// s.badgerDB2.Stop(s.ctx)
 }
 
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {

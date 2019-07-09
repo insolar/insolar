@@ -17,6 +17,9 @@
 package object
 
 import (
+	context "context"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -38,10 +41,16 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 	t.Run("returns error when no index-value for id", func(t *testing.T) {
 		t.Parallel()
 
-		storage := NewIndexDB(store.NewMemoryMockDB())
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		assert.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		defer db.Stop(context.Background())
+		storage := NewIndexDB(db)
 		pn := gen.PulseNumber()
 
-		_, err := storage.ForID(ctx, pn, id)
+		_, err = storage.ForID(ctx, pn, id)
 
 		assert.Equal(t, ErrIndexNotFound, err)
 	})
@@ -65,9 +74,15 @@ func TestDBIndex_SetBucket(t *testing.T) {
 
 	t.Run("saves correct bucket", func(t *testing.T) {
 		pn := gen.PulseNumber()
-		index := NewIndexDB(store.NewMemoryMockDB())
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		assert.NoError(t, err)
 
-		err := index.SetIndex(ctx, pn, buck)
+		db, err := store.NewBadgerDB(tmpdir)
+		defer db.Stop(context.Background())
+		index := NewIndexDB(db)
+
+		err = index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
 
 		res, err := index.ForID(ctx, pn, objID)
@@ -81,9 +96,15 @@ func TestDBIndex_SetBucket(t *testing.T) {
 
 	t.Run("re-save works fine", func(t *testing.T) {
 		pn := gen.PulseNumber()
-		index := NewIndexDB(store.NewMemoryMockDB())
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		assert.NoError(t, err)
 
-		err := index.SetIndex(ctx, pn, buck)
+		db, err := store.NewBadgerDB(tmpdir)
+		defer db.Stop(context.Background())
+		index := NewIndexDB(db)
+
+		err = index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
@@ -112,7 +133,12 @@ func TestDBIndex_SetBucket(t *testing.T) {
 
 func TestIndexDB_FetchFilament(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(context.Background())
 	recordStorage := NewRecordDB(db)
 	index := NewIndexDB(db)
 
@@ -160,7 +186,12 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	firstMeta := *insolar.NewID(11, nil)
 
 	t.Run("previous exists", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		assert.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
 		index := NewIndexDB(db)
 
@@ -184,7 +215,12 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	})
 
 	t.Run("previous doesn't exist", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		assert.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
 		index := NewIndexDB(db)
 
@@ -204,7 +240,12 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	})
 
 	t.Run("doesn't exist", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		assert.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
 		fi := &FilamentIndex{
@@ -222,7 +263,12 @@ func TestIndexDB_Records(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	t.Run("returns err, if readUntil > readFrom", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		assert.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
 		res, err := index.Records(ctx, 1, 10, insolar.ID{})
@@ -232,7 +278,12 @@ func TestIndexDB_Records(t *testing.T) {
 	})
 
 	t.Run("works fine", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		assert.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 		rms := NewRecordDB(db)
 
@@ -278,7 +329,7 @@ func TestIndexDB_Records(t *testing.T) {
 		second := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*midS}}
 		first := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*mid}}
 
-		err := index.SetIndex(ctx, pn, first)
+		err = index.SetIndex(ctx, pn, first)
 		require.NoError(t, err)
 		err = index.SetIndex(ctx, pnS, second)
 		require.NoError(t, err)

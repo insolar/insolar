@@ -19,6 +19,8 @@ package artifactmanager
 import (
 	"context"
 	"crypto/rand"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -67,6 +69,12 @@ type handlerSuite struct {
 
 	// indexMemoryStor *object.FilamentCacheStorage
 	indexStorageMemory *object.IndexStorageMemory
+
+	tmpDir1 string
+	tmpDir2 string
+
+	badgerDB1 *store.BadgerDB
+	badgerDB2 *store.BadgerDB
 }
 
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
@@ -105,7 +113,10 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 
-	storageDB := store.NewMemoryMockDB()
+	s.tmpDir1, _ = ioutil.TempDir("", "bdb-test-")
+	s.badgerDB1, _ = store.NewBadgerDB(s.tmpDir1)
+	storageDB := s.badgerDB1
+
 	dropStorage := drop.NewDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
@@ -121,10 +132,14 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 
 	s.indexStorageMemory = object.NewIndexStorageMemory()
 
+	s.tmpDir2, _ = ioutil.TempDir("", "bdb-test-")
+
+	s.badgerDB2, _ = store.NewBadgerDB(s.tmpDir2)
+
 	s.cm.Inject(
 		s.scheme,
 		s.indexStorageMemory,
-		store.NewMemoryMockDB(),
+		s.badgerDB2,
 		s.jetStorage,
 		s.nodeStorage,
 		s.dropAccessor,
@@ -148,6 +163,11 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
+
+	os.RemoveAll(s.tmpDir1)
+	os.RemoveAll(s.tmpDir2)
+	s.badgerDB1.Stop(s.ctx)
+	//s.badgerDB2.Stop(s.ctx)
 }
 
 type waiterMock struct {

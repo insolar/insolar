@@ -18,6 +18,7 @@ package store
 
 import (
 	"context"
+	"log"
 	"path/filepath"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ func NewBadgerDB(dir string) (*BadgerDB, error) {
 	ops := badger.DefaultOptions
 	ops.ValueDir = dir
 	ops.Dir = dir
+	ops.SyncWrites = false
 	bdb, err := badger.Open(ops)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open badger")
@@ -148,7 +150,13 @@ func (b *BadgerDB) Stop(ctx context.Context) error {
 	<-b.doneGC
 
 	logger.Info("BadgerDB: closing database...")
-	return b.backend.Close()
+
+	start := time.Now()
+	err := b.backend.Close()
+	elapsed := time.Since(start)
+	log.Println("\n\nZZZZZZZZZ: ", elapsed)
+
+	return err
 }
 
 // Get returns value for specified key or an error. A copy of a value will be returned (i.e. getting large value can be
