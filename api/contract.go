@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
+	insolarApi "github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -129,10 +130,6 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 	if err != nil {
 		return errors.Wrap(err, "can't get current pulse")
 	}
-	reason, err := insolar.ReasonMaker(pulse, args.MethodArgs)
-	if err != nil {
-		return errors.Wrap(err, "Couldn't make reason")
-	}
 
 	base := insolar.GenesisRecord.Ref()
 	msg := &message.CallMethod{
@@ -145,7 +142,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
-			Reason:          *reason,
+			Reason:          *insolarApi.MakeReason(pulse, args.MethodArgs),
 		},
 	}
 
@@ -195,11 +192,6 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	if err != nil {
 		return errors.Wrap(err, "can't get current pulse")
 	}
-	reason, err := insolar.ReasonMaker(pulse, args.MethodArgs)
-	if err != nil {
-		return errors.Wrap(err, "Couldn't make reason")
-	}
-
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Caller:       testutils.RandomRef(),
@@ -207,7 +199,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
-			Reason:       *reason,
+			Reason:       *insolarApi.MakeReason(pulse, args.MethodArgs),
 		},
 	}
 
