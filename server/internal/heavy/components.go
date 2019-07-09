@@ -25,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/server/internal"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 
@@ -117,6 +118,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	logger := inslogger.FromContext(ctx)
 	wmLogger := log.NewWatermillLogAdapter(logger)
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
 
 	// Network.
 	var (
@@ -210,6 +212,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
+		// TODO: only use wrapped pubSub here?
 		WmBus = bus.NewBus(pubSub, Pulses, Coordinator, CryptoScheme)
 	}
 
