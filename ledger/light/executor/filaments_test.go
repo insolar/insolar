@@ -239,6 +239,48 @@ func TestFilamentModifierDefault_SetRequest_NewObject(t *testing.T) {
 		mc.Finish()
 	})
 
+	resetComponents()
+	t.Run("happy basic. existed object", func(t *testing.T) {
+		requestID := gen.ID()
+		requestID.SetPulse(insolar.FirstPulseNumber + 2)
+		jetID := gen.JetID()
+
+		objRef := gen.Reference()
+		validRequest := record.IncomingRequest{
+			Object:   &objRef,
+			Reason:   *insolar.NewReference(requestID),
+			CallType: record.CTSaveAsChild,
+		}
+		pulses.BackwardsMock.Return(*insolar.GenesisPulse, errors.New("stub error"))
+		calculator.RequestDuplicateFunc = func(_ context.Context, _ insolar.PulseNumber, _ insolar.ID, _ insolar.ID, _ record.Request) (*record.CompositeFilamentRecord, *record.CompositeFilamentRecord, error) {
+			return nil, nil, nil
+		}
+
+		req, res, err := manager.SetRequest(ctx, requestID, jetID, &validRequest)
+		require.NoError(t, err)
+		require.Nil(t, req)
+		require.Nil(t, res)
+		_, err = indexes.ForID(ctx, requestID.Pulse(), requestID)
+		require.NoError(t, err)
+
+		calculator.RequestDuplicateFunc = func(_ context.Context, _ insolar.PulseNumber, objID insolar.ID, reqID insolar.ID, _ record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
+			require.Equal(t, requestID, objID)
+			require.Equal(t, requestID, reqID)
+
+			return &record.CompositeFilamentRecord{
+				RecordID: requestID,
+			}, nil, nil
+		}
+
+		req, res, err = manager.SetRequest(ctx, requestID, jetID, &validRequest)
+		require.NoError(t, err)
+		require.Nil(t, res)
+		require.NotNil(t, req)
+		require.Equal(t, requestID, req.RecordID)
+
+		mc.Finish()
+	})
+
 }
 
 func TestFilamentModifierDefault_SetResult(t *testing.T) {
