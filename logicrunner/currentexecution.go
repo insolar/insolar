@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
@@ -45,24 +44,16 @@ type Transcript struct {
 	FromLedger bool
 }
 
-func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insolar.Reference,
-	pulse *insolar.Pulse, callee insolar.Reference) *Transcript {
+func NewTranscript(
+	ctx context.Context, parcel insolar.Parcel, requestRef *insolar.Reference,
+) *Transcript {
 
 	msg := parcel.Message().(*message.CallMethod)
 
-	logicalContext := &insolar.LogicCallContext{
-		Mode:            insolar.ExecuteCallMode,
-		Caller:          msg.GetCaller(),
-		Callee:          &callee,
-		Request:         requestRef,
-		TraceID:         inslogger.TraceID(ctx),
-		CallerPrototype: &msg.CallerPrototype,
-	}
 	sender := parcel.GetSender()
 
 	return &Transcript{
 		Context:       ctx,
-		LogicContext:  logicalContext,
 		Request:       &msg.IncomingRequest,
 		RequestRef:    requestRef,
 		RequesterNode: &sender,

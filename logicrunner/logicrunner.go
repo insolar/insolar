@@ -347,17 +347,32 @@ func noLoopCheckerPredicate(current *Transcript, args interface{}) bool {
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
-	ctx context.Context, es *ExecutionState, parcel insolar.Parcel) bool {
+	ctx context.Context, request record.IncomingRequest,
+) bool {
+
+	if request.ReturnMode == record.ReturnNoWait {
+		return false
+	}
+	if request.CallType != record.CTMethod {
+		return false
+	}
+	if request.Object == nil {
+		// should be catched by other code
+		return false
+	}
+
+	es := lr.StateStorage.GetExecutionState(*request.Object)
+	if es == nil {
+		return false
+	}
+
+	es.Lock()
+	defer es.Unlock()
+
 	if es.Broker.currentList.Empty() {
 		return false
 	}
-
-	msg, ok := parcel.Message().(*message.CallMethod)
-	if ok && msg.ReturnMode == record.ReturnNoWait {
-		return false
-	}
-
-	if es.Broker.currentList.Check(noLoopCheckerPredicate, msg.APIRequestID) {
+	if es.Broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
 		return false
 	}
 
