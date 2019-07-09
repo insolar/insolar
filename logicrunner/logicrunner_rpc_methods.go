@@ -214,6 +214,7 @@ func (m *executionProxyImplementation) RouteCall(
 	// the next executor will wait for us in pending state. For this reason Flow is not
 	// used for registering the outgoing request.
 	_, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	// outgoingReqId, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
 	}
@@ -221,10 +222,19 @@ func (m *executionProxyImplementation) RouteCall(
 	// Step 2. Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
 	res, err := m.cr.CallMethod(ctx, callMsg)
+
+	//current.AddOutgoingRequest(ctx, *incoming, res.(*reply.CallMethod).Result, nil, err)
 	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	if err != nil {
 		return err
 	}
+
+	// Step 3. Register result of the outgoing method
+	//outgoingReqRef := insolar.NewReference(*outgoingReqId)
+	//_, err = m.am.RegisterResult(ctx, req.Callee, *outgoingReqRef, res.(*reply.CallMethod).Result)
+	//if err != nil {
+	//	return err
+	//}
 
 	if req.Wait {
 		rep.Result = res.(*reply.CallMethod).Result
