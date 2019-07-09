@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package replica
+package executor
 
 import (
 	"context"
@@ -27,6 +27,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 )
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.JetKeeper -o ./ -s _gen_mock.go
 
 // JetKeeper provides a method for adding jet to storage, checking pulse completion and getting access to highest synced pulse.
 type JetKeeper interface {
