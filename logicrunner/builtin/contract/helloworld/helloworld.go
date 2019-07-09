@@ -36,18 +36,6 @@ type HelloWorld struct {
 
 var INSATTR_Greet_API = true
 
-type Text struct {
-	SomeText string `json:"someText"`
-}
-
-type HwMessage struct {
-	Message Text `json:"message"`
-}
-
-func (hw *HelloWorld) ReturnObj() (interface{}, error) {
-	return hwProxy.HwMessage{Message: hwProxy.Text{SomeText: "Hello world"}}, nil
-}
-
 // Greet greats the caller
 func (hw *HelloWorld) Greet(name string) (interface{}, error) {
 	hw.Greeted++
@@ -146,8 +134,6 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return hw.CreateChild()
 	case "CountChild":
 		return hw.CountChild()
-	case "ReturnObj":
-		return hw.ReturnObj()
 	default:
 		return nil, errors.New("Unknown method " + request.Params.CallSite)
 	}
