@@ -161,7 +161,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 		s.recordModifier,
 	)
 
-	err := s.cm.Init(s.ctx)
+	err = s.cm.Init(s.ctx)
 	if err != nil {
 		s.T().Error("ComponentManager init failed", err)
 	}

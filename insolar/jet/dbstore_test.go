@@ -54,6 +54,7 @@ func TestDBStorage_Empty(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
@@ -70,6 +71,7 @@ func TestDBStorage_UpdateJetTree(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
@@ -92,6 +94,7 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
@@ -124,6 +127,7 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 	s := NewDBStore(db)
@@ -165,9 +169,10 @@ func TestDBStorage_ForID_Basic(t *testing.T) {
 	for _, actuality := range []bool{true, false} {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(ctx)
 		s := NewDBStore(db)
 		s.Update(ctx, pn, actuality, expectJetID)

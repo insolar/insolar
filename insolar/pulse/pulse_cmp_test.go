@@ -44,6 +44,7 @@ func TestPulse_Components(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(ctx)
 	dbStorage := pulse.NewDB(db)
 

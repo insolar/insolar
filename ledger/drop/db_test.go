@@ -40,6 +40,7 @@ func TestNewStorageDB(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	dbStore := NewDB(db)
 	require.NotNil(t, dbStore)

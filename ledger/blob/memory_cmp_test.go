@@ -44,6 +44,7 @@ func TestBlobStorages(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	dbStorage := NewDB(db)
 	type storage interface {

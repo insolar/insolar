@@ -38,6 +38,7 @@ func TestNewJetKeeper(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
 	jetKeeper := NewJetKeeper(jets, db)
@@ -52,6 +53,7 @@ func TestDbJetKeeper_Add(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
 	jetKeeper := NewJetKeeper(jets, db)
@@ -75,6 +77,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
 	jetKeeper := NewJetKeeper(jets, db)

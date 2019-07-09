@@ -85,6 +85,7 @@ func TestDropStorageDB(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	ds := NewDB(db)
 
@@ -122,6 +123,7 @@ func TestDropStorageCompare(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	ds := NewDB(db)
 	ms := NewStorageMemory()

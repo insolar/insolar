@@ -59,9 +59,10 @@ func TestRecord_Components(t *testing.T) {
 		memStorage := object.NewRecordMemory()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		dbStorage := object.NewRecordDB(db)
 
@@ -88,9 +89,10 @@ func TestRecord_Components(t *testing.T) {
 		memStorage := object.NewRecordMemory()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		dbStorage := object.NewRecordDB(db)
 

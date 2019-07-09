@@ -43,9 +43,10 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		storage := NewIndexDB(db)
 		pn := gen.PulseNumber()
@@ -76,9 +77,10 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		pn := gen.PulseNumber()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
@@ -98,9 +100,10 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		pn := gen.PulseNumber()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
@@ -138,6 +141,7 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	assert.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	recordStorage := NewRecordDB(db)
 	index := NewIndexDB(db)
@@ -188,9 +192,10 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	t.Run("previous exists", func(t *testing.T) {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
 		index := NewIndexDB(db)
@@ -217,9 +222,10 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	t.Run("previous doesn't exist", func(t *testing.T) {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
 		index := NewIndexDB(db)
@@ -242,9 +248,10 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	t.Run("doesn't exist", func(t *testing.T) {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
@@ -265,9 +272,10 @@ func TestIndexDB_Records(t *testing.T) {
 	t.Run("returns err, if readUntil > readFrom", func(t *testing.T) {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
@@ -280,9 +288,10 @@ func TestIndexDB_Records(t *testing.T) {
 	t.Run("works fine", func(t *testing.T) {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 		rms := NewRecordDB(db)
