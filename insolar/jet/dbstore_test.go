@@ -84,13 +84,9 @@ func TestDBStore_TruncateHead(t *testing.T) {
 	rand.Shuffle(len(indexes), func(i, j int) { indexes[i], indexes[j] = indexes[j], indexes[i] })
 
 	startPulseNumber := insolar.GenesisPulse.PulseNumber
-	jets := make([]insolar.JetID, numElements)
 	for _, idx := range indexes {
 		pulse := startPulseNumber + insolar.PulseNumber(idx)
-		jets[idx] = gen.JetID()
-
 		jetTree := NewTree(true)
-
 		err := dbStore.set(pulse, jetTree)
 		require.NoError(t, err)
 	}
