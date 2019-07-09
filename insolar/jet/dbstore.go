@@ -18,8 +18,10 @@ package jet
 
 import (
 	"context"
+	"math"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -49,6 +51,28 @@ func (s *DBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID
 
 	tree := s.get(pulse)
 	return tree.Find(recordID)
+}
+
+func (s *DBStore) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
+	s.Lock()
+	defer s.Unlock()
+
+	it := s.db.NewIterator(pulseKey(math.MaxUint32), true)
+	defer it.Close()
+
+	for it.Next() {
+		key := newPulseKey(it.Key())
+		if insolar.PulseNumber(key).Equal(lastPulse) {
+			break
+		}
+		err := s.db.Delete(&key)
+		if err != nil {
+			return errors.Wrapf(err, "[ DBStore.DeleteForPN ] Can't Delete key: %+v", key)
+		}
+
+		inslogger.FromContext(ctx).Infof("[ DBStore.DeleteForPN ] erased key. Pulse number: %s", insolar.PulseNumber(key))
+	}
+	return nil
 }
 
 func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error {
@@ -103,6 +127,11 @@ func (k pulseKey) Scope() store.Scope {
 
 func (k pulseKey) ID() []byte {
 	return insolar.PulseNumber(k).Bytes()
+}
+
+func newPulseKey(raw []byte) pulseKey {
+	key := pulseKey(insolar.NewPulseNumber(raw))
+	return key
 }
 
 func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
