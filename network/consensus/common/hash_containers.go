@@ -86,7 +86,7 @@ type DigestHolder interface {
 	Equals(other DigestHolder) bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureHolder -o ../common -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureHolder -o . -s _mock.go
 
 type SignatureHolder interface {
 	FoldableReader
@@ -95,7 +95,7 @@ type SignatureHolder interface {
 	Equals(other SignatureHolder) bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureKeyHolder -o ../common -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureKeyHolder -o . -s _mock.go
 
 type SignatureKeyHolder interface {
 	FoldableReader
@@ -132,7 +132,7 @@ type SecretKeyStore interface {
 	AsPublicKeyStore() PublicKeyStore
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureVerifier -o ../common -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureVerifier -o . -s _mock.go
 
 type SignatureVerifier interface {
 	IsDigestMethodSupported(m DigestMethod) bool
@@ -144,7 +144,7 @@ type SignatureVerifier interface {
 	IsValidDataSignature(data io.Reader, signature SignatureHolder) bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureVerifierFactory -o ../common -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.SignatureVerifierFactory -o . -s _mock.go
 
 type SignatureVerifierFactory interface {
 	GetSignatureVerifierWithPKS(pks PublicKeyStore) SignatureVerifier

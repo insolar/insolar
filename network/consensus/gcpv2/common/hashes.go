@@ -54,7 +54,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash -o ../common -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash -o . -s _mock.go
 
 type NodeStateHash interface {
 	common.DigestHolder
@@ -68,7 +68,7 @@ type CloudStateHash interface {
 	common.DigestHolder
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../common -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o . -s _mock.go
 
 type MemberAnnouncementSignature interface {
 	common.SignatureHolder
