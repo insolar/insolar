@@ -60,11 +60,6 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong deactivate record type: %T", deact)
 	}
 
-	request := deactivate.Request
-	if request.IsEmpty() {
-		return errors.New("request is nil")
-	}
-
 	calcDeact := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
 	s.dep.CalculateID(calcDeact)
 	if err := f.Procedure(ctx, calcDeact, true); err != nil {
@@ -84,6 +79,11 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong result record type: %T", res)
 	}
 
+	obj := result.Object
+	if obj.IsEmpty() {
+		return errors.New("object is nil")
+	}
+
 	calcRes := proc.NewCalculateID(msg.Result, flow.Pulse(ctx))
 	s.dep.CalculateID(calcRes)
 	if err := f.Procedure(ctx, calcRes, true); err != nil {
@@ -92,7 +92,7 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 	resultID := calcRes.Result.ID
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(*request.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewCheckJet(obj, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
@@ -110,7 +110,7 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, SetResult fails because it should update light's index state
-	getIndex := proc.NewEnsureIndexWM(*request.Record(), objJetID, s.message)
+	getIndex := proc.NewEnsureIndexWM(obj, objJetID, s.message)
 	s.dep.GetIndexWM(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err

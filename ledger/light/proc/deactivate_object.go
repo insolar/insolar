@@ -95,8 +95,8 @@ func (a *DeactivateObject) Proceed(ctx context.Context) error {
 
 	logger := inslogger.FromContext(ctx)
 
-	a.dep.indexLocker.Lock(a.deactivate.Request.Record())
-	defer a.dep.indexLocker.Unlock(a.deactivate.Request.Record())
+	a.dep.indexLocker.Lock(&a.result.Object)
+	defer a.dep.indexLocker.Unlock(&a.result.Object)
 
 	deactivateVirt := record.Wrap(a.deactivate)
 	rec := record.Material{
@@ -117,7 +117,7 @@ func (a *DeactivateObject) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "can't save record into storage")
 	}
 
-	idx, err := a.dep.indices.ForID(ctx, flow.Pulse(ctx), *a.deactivate.Request.Record())
+	idx, err := a.dep.indices.ForID(ctx, flow.Pulse(ctx), a.result.Object)
 	if err != nil {
 		return errors.Wrap(err, "can't get index from storage")
 	}
