@@ -6,7 +6,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -23,15 +22,11 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	dc := artifacts.NewDescriptorsCacheMock(t)
 	cr := testutils.NewContractRequesterMock(t)
 
-	parcel := testutils.NewParcelMock(t)
-	parcel.MessageMock.Expect().Return(&message.CallMethod{})
-	parcel.GetSenderMock.Expect().Return(gen.Reference())
-
 	requestRef := gen.Reference()
 
 	rpcm := NewExecutionProxyImplementation(dc, cr, am)
 	ctx := context.Background()
-	transcript := NewTranscript(ctx, parcel, &requestRef)
+	transcript := NewTranscript(ctx, &requestRef, record.IncomingRequest{})
 	reason := gen.Reference()
 	transcript.RequestRef = &reason
 	req := rpctypes.UpRouteReq{}
