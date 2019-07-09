@@ -222,8 +222,9 @@ func (m *executionProxyImplementation) RouteCall(
 	// Step 2. Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
 	res, err := m.cr.CallMethod(ctx, callMsg)
-
-	//current.AddOutgoingRequest(ctx, *incoming, res.(*reply.CallMethod).Result, nil, err)
+	if err == nil && req.Wait {
+		rep.Result = res.(*reply.CallMethod).Result
+	}
 	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	if err != nil {
 		return err
@@ -235,10 +236,6 @@ func (m *executionProxyImplementation) RouteCall(
 	//if err != nil {
 	//	return err
 	//}
-
-	if req.Wait {
-		rep.Result = res.(*reply.CallMethod).Result
-	}
 
 	return nil
 }
