@@ -100,7 +100,8 @@ func (c *LightCleaner) clean(ctx context.Context) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Cleaner][NotifyAboutPulse] start cleaning pulse - %v", pn)
 
-		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, c.lightChainLimit)
+		cleanFrom := c.lightChainLimit + 1 // One more step back to eliminate race conditions on pulse change.
+		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, cleanFrom)
 		if err == pulse.ErrNotFound {
 			logger.Warnf("[Cleaner][NotifyAboutPulse] expiredPn for pn - %v doesn't exist. limit - %v",
 				pn, c.lightChainLimit)
