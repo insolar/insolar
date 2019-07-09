@@ -31,12 +31,12 @@ type InfoArgs struct{}
 
 // InfoReply is reply for Info service requests.
 type InfoReply struct {
-	RootDomain             string   `json:"RootDomain"`
-	RootMember             string   `json:"RootMember"`
-	MigrationAdminMember   string   `json:"MigrationAdminMember"`
-	MigrationDaemonMembers []string `json:"MigrationDaemonMembers"`
-	NodeDomain             string   `json:"NodeDomain"`
-	TraceID                string   `json:"TraceID"`
+	RootDomain             string   `json:"rootDomain"`
+	RootMember             string   `json:"rootMember"`
+	MigrationAdminMember   string   `json:"migrationAdminMember"`
+	MigrationDaemonMembers []string `json:"migrationDaemonMembers"`
+	NodeDomain             string   `json:"nodeDomain"`
+	TraceID                string   `json:"traceID"`
 }
 
 // InfoService is a service that provides API for getting info about genesis objects.
@@ -56,16 +56,23 @@ func NewInfoService(runner *Runner) *InfoService {
 //     "jsonrpc": "2.0",
 //     "method": "network.getInfo",
 //     "id": str|int|null
+//     "params": { }
 //   }
 //
 //     Response structure:
 // 	{
 // 		"jsonrpc": "2.0",
 // 		"result": {
-// 			"RootDomain": str, // reference to RootDomain instance
-// 			"RootMember": str, // reference to RootMember instance
-// 			"NodeDomain": str, // reference to NodeDomain instance
-// 			"TraceID": str // traceID for request
+// 			"rootDomain": str, // reference to RootDomain instance
+// 			"rootMember": str, // reference to RootMember instance
+//			"migrationAdminMember": str, // reference to migrationAdminMember
+//			"migrationDaemonMembers": [ //array string
+//			 str, // reference to migrationDaemon
+//			 str, // reference to migrationDaemon
+//			 str, // reference to migrationDaemon
+//],
+// 			"nodeDomain": str, // reference to NodeDomain instance
+// 			"traceID": str // traceID for request
 // 		},
 // 		"id": str|int|null // same as in request
 // 	}
