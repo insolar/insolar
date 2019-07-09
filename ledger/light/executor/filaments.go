@@ -124,9 +124,9 @@ func (m *FilamentModifierDefault) prepareCreationRequest(ctx context.Context, re
 	reason := request.ReasonRef()
 	untilPN := reason.Record().Pulse()
 
-	idx, err := m.checkObject(ctx, currentPN, untilPN, requestID)
+	_, err := m.checkObject(ctx, currentPN, untilPN, requestID)
 	if err == object.ErrIndexNotFound {
-		idx = object.FilamentIndex{
+		idx := object.FilamentIndex{
 			ObjID:            requestID,
 			PendingRecords:   []insolar.ID{},
 			LifelineLastUsed: requestID.Pulse(),
