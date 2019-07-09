@@ -18,6 +18,9 @@ package insolar
 
 import (
 	"context"
+	"crypto/sha256"
+
+	"github.com/pkg/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.ContractRequester -o ../testutils -s _mock.go
@@ -30,4 +33,13 @@ type ContractRequester interface {
 	// CallMethod - low level calls contract
 	CallMethod(ctx context.Context, msg Message) (Reply, error)
 	CallConstructor(ctx context.Context, msg Message) (*Reference, error)
+}
+
+func ReasonMaker(pulse Pulse, data []byte) (*Reference, error) {
+	hash := sha256.New()
+	_, err := hash.Write(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ReasonMaker ] Cant get hash")
+	}
+	return NewReference(*NewID(pulse.PulseNumber, hash.Sum(nil))), nil
 }

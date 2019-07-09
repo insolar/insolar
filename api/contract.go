@@ -14,13 +14,12 @@
 // limitations under the License.
 //
 
-// +build functest
+// // +build functest
 
 package api
 
 import (
 	"context"
-	"crypto/sha256"
 	"net/http"
 	"reflect"
 
@@ -130,10 +129,9 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 	if err != nil {
 		return errors.Wrap(err, "can't get current pulse")
 	}
-	hash := sha256.New()
-	_, err = hash.Write(args.MethodArgs)
+	reason, err := insolar.ReasonMaker(pulse, args.MethodArgs)
 	if err != nil {
-		return errors.Wrap(err, "Cant get hash")
+		return errors.Wrap(err, "Couldn't make reason")
 	}
 
 	base := insolar.GenesisRecord.Ref()
@@ -147,7 +145,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
-			Reason:          *insolar.NewReference(*insolar.NewID(pulse.PulseNumber, hash.Sum(nil))),
+			Reason:          *reason,
 		},
 	}
 
@@ -197,10 +195,9 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	if err != nil {
 		return errors.Wrap(err, "can't get current pulse")
 	}
-	hash := sha256.New()
-	_, err = hash.Write(args.MethodArgs)
+	reason, err := insolar.ReasonMaker(pulse, args.MethodArgs)
 	if err != nil {
-		return errors.Wrap(err, "Cant get hash")
+		return errors.Wrap(err, "Couldn't make reason")
 	}
 
 	msg := &message.CallMethod{
@@ -210,7 +207,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
-			Reason:       *insolar.NewReference(*insolar.NewID(pulse.PulseNumber, hash.Sum(nil))),
+			Reason:       *reason,
 		},
 	}
 

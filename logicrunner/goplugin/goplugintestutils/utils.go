@@ -392,9 +392,19 @@ func (cb *ContractsBuilder) Clean() {
 func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
+		pulse, err := cb.pulseAccessor.Latest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "can't get current pulse")
+		}
+		reason, err := insolar.ReasonMaker(pulse, []byte(name))
+		if err != nil {
+			return errors.Wrap(err, "Couldn't make reason")
+		}
+
 		request := record.IncomingRequest{
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
+			Reason:    *reason,
 		}
 		protoID, err := cb.registerRequest(ctx, request)
 
@@ -439,9 +449,19 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		}
 
 		nonce := testutils.RandomRef()
+		pulse, err := cb.pulseAccessor.Latest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "can't get current pulse")
+		}
+		reason, err := insolar.ReasonMaker(pulse, []byte(name))
+		if err != nil {
+			return errors.Wrap(err, "Couldn't make reason")
+		}
+
 		req := record.IncomingRequest{
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
+			Reason:    *reason,
 		}
 
 		codeReq, err := cb.registerRequest(ctx, req)
