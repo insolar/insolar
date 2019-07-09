@@ -18,7 +18,9 @@ package artifacts
 
 import (
 	"context"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -55,6 +57,12 @@ type amSuite struct {
 	jetStorage   jet.Storage
 	dropModifier drop.Modifier
 	dropAccessor drop.Accessor
+
+	tmpDir1 string
+	tmpDir2 string
+
+	badgerDB1 *store.BadgerDB
+	badgerDB2 *store.BadgerDB
 }
 
 func NewAmSuite() *amSuite {
@@ -76,14 +84,34 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 
-	dbStore := store.NewMemoryMockDB()
-	dropStorage := drop.NewDB(dbStore)
+	var err error
+	s.tmpDir1, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
+
+	s.badgerDB1, err = store.NewBadgerDB(s.tmpDir1)
+	if err != nil {
+		s.T().Error("Can't NewBadgerDB", err)
+	}
+
+	dropStorage := drop.NewDB(s.badgerDB1)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
+	s.tmpDir2, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
+
+	s.badgerDB2, err = store.NewBadgerDB(s.tmpDir2)
+	if err != nil {
+		s.T().Error("Can't create NewBadgerDB", err)
+	}
+
 	s.cm.Inject(
 		s.scheme,
-		store.NewMemoryMockDB(),
+		s.badgerDB2,
 		s.jetStorage,
 		s.nodeStorage,
 		pulse.NewStorageMem(),
@@ -91,7 +119,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		s.dropModifier,
 	)
 
-	err := s.cm.Init(s.ctx)
+	err = s.cm.Init(s.ctx)
 	if err != nil {
 		s.T().Error("ComponentManager init failed", err)
 	}
@@ -106,6 +134,12 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
+
+	os.RemoveAll(s.tmpDir1)
+	os.RemoveAll(s.tmpDir2)
+	s.badgerDB1.Stop(s.ctx)
+	// We don't call it explicitly since it's called by component manager
+	// s.badgerDB2.Stop(s.ctx)
 }
 
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {

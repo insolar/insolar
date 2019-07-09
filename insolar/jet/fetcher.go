@@ -18,6 +18,7 @@ package jet
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -279,7 +280,10 @@ func (tu *fetcher) fetch(
 				"pulse":  pulse,
 				"object": target.DebugString(),
 			}).Error("all lights for pulse have no actual jet for object")
-			ch <- fetchResult{nil, errors.New("all lights for pulse have no actual jet for object")}
+			ch <- fetchResult{
+				nil,
+				fmt.Errorf("all lights for pulse %d have no actual jet for object", pulse),
+			}
 			close(ch)
 		} else if len(res) > 1 {
 			// We have multiple different opinions on the actual jet.

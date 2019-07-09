@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -66,7 +67,7 @@ import (
 func TestNewPulseStorage(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := inslogger.TestContext(t)
 	cm := component.NewManager(nil)

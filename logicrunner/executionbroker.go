@@ -20,28 +20,73 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+type TranscriptDequeueElement struct {
+	prev  *TranscriptDequeueElement
+	next  *TranscriptDequeueElement
+	value *Transcript
+}
+
 // TODO: probably it's better to rewrite it using linked list
 type TranscriptDequeue struct {
-	lock  sync.Mutex
-	queue []*Transcript
+	lock   sync.Locker
+	first  *TranscriptDequeueElement
+	last   *TranscriptDequeueElement
+	length int
+}
+
+func (d *TranscriptDequeue) pushOne(el *Transcript) {
+	newElement := &TranscriptDequeueElement{value: el}
+	lastElement := d.last
+
+	if lastElement != nil {
+		newElement.prev = lastElement
+		lastElement.next = newElement
+		d.last = newElement
+	} else {
+		d.first, d.last = newElement, newElement
+	}
+
+	d.length++
 }
 
 func (d *TranscriptDequeue) Push(els ...*Transcript) {
 	d.lock.Lock()
-	d.queue = append(d.queue, els...)
-	d.lock.Unlock()
+	defer d.lock.Unlock()
+
+	for _, el := range els {
+		d.pushOne(el)
+	}
+}
+
+func (d *TranscriptDequeue) prependOne(el *Transcript) {
+	newElement := &TranscriptDequeueElement{value: el}
+	firstElement := d.first
+
+	if firstElement != nil {
+		newElement.next = firstElement
+		firstElement.prev = newElement
+		d.first = newElement
+	} else {
+		d.first, d.last = newElement, newElement
+	}
+
+	d.length++
 }
 
 func (d *TranscriptDequeue) Prepend(els ...*Transcript) {
 	d.lock.Lock()
-	d.queue = append(els, d.queue...)
-	d.lock.Unlock()
+	defer d.lock.Unlock()
+
+	for i := len(els) - 1; i >= 0; i-- {
+		d.prependOne(els[i])
+	}
 }
 
 func (d *TranscriptDequeue) Pop() *Transcript {
@@ -56,85 +101,124 @@ func (d *TranscriptDequeue) Has(ref insolar.Reference) bool {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	for pos := len(d.queue) - 1; pos >= 0; pos-- {
-		if d.queue[pos].RequestRef.Compare(ref) == 0 {
+	for elem := d.first; elem != nil; elem = elem.next {
+		if elem.value.RequestRef.Compare(ref) == 0 {
 			return true
 		}
 	}
 	return false
 }
 
-func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
+func (d *TranscriptDequeue) PopByReference(ref insolar.Reference) *Transcript {
 	d.lock.Lock()
-	toDelete := -1
-	for pos := len(d.queue) - 1; pos >= 0; pos-- {
-		if d.queue[pos].RequestRef.Compare(*ref) == 0 {
-			toDelete = pos
-			break
+	defer d.lock.Unlock()
+
+	for elem := d.first; elem != nil; elem = elem.next {
+		if elem.value.RequestRef.Compare(ref) == 0 {
+			if elem.prev != nil {
+				elem.prev.next = elem.next
+			}
+			if elem.next != nil {
+				elem.next.prev = elem.prev
+			}
+
+			d.length--
+
+			return elem.value
 		}
 	}
-	var rv *Transcript
-	if toDelete != -1 {
-		rv = d.queue[toDelete]
-		d.queue = append(d.queue[:toDelete], d.queue[toDelete+1:]...)
-	}
-	d.lock.Unlock()
-	return rv
+
+	return nil
 }
 
 func (d *TranscriptDequeue) HasFromLedger() *Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	for _, t := range d.queue {
-		if t.FromLedger {
-			return t
+	for elem := d.first; elem != nil; elem = elem.next {
+		if elem.value.FromLedger {
+			return elem.value
 		}
 	}
 	return nil
+}
+
+func (d *TranscriptDequeue) commonPeek(count int) (*TranscriptDequeueElement, []*Transcript) {
+	if d.length < count {
+		count = d.length
+	}
+
+	rv := make([]*Transcript, count)
+
+	var lastElement *TranscriptDequeueElement
+	for i := 0; i < count; i++ {
+		if lastElement == nil {
+			lastElement = d.first
+		} else {
+			lastElement = lastElement.next
+		}
+		rv[i] = lastElement.value
+	}
+
+	return lastElement, rv
+}
+
+func (d *TranscriptDequeue) take(count int) []*Transcript {
+	lastElement, rv := d.commonPeek(count)
+	if lastElement != nil {
+		if lastElement.next == nil {
+			d.first, d.last = nil, nil
+		} else {
+			lastElement.next.prev, d.first = nil, lastElement.next
+			lastElement.next = nil
+		}
+
+		d.length -= len(rv)
+	}
+
+	return rv
+}
+
+func (d *TranscriptDequeue) Peek(count int) []*Transcript {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	_, rv := d.commonPeek(count)
+	return rv
 }
 
 func (d *TranscriptDequeue) Take(count int) []*Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	size := len(d.queue)
-	if size < count {
-		count = size
-	}
-
-	elements := d.queue[:count]
-	d.queue = d.queue[count:]
-
-	return elements
+	return d.take(count)
 }
 
 func (d *TranscriptDequeue) Rotate() []*Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	rv := d.queue
-	d.queue = make([]*Transcript, 0)
-
-	return rv
+	return d.take(d.length)
 }
 
-func (d *TranscriptDequeue) Len() int {
+func (d *TranscriptDequeue) Length() int {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	return len(d.queue)
+	return d.length
 }
 
 func NewTranscriptDequeue() *TranscriptDequeue {
 	return &TranscriptDequeue{
-		lock:  sync.Mutex{},
-		queue: make([]*Transcript, 0),
+		lock:   &sync.Mutex{},
+		first:  nil,
+		last:   nil,
+		length: 0,
 	}
 }
 
 type ExecutionBroker struct {
-	stateLock   sync.Mutex
+	stateLock   sync.Locker
 	mutable     *TranscriptDequeue
 	immutable   *TranscriptDequeue
 	finished    *TranscriptDequeue
@@ -148,11 +232,22 @@ type ExecutionBroker struct {
 
 	ledgerChecked sync.Once
 
-	processActive bool
-	processLock   sync.Mutex
+	processorActive uint32
 
 	deduplicationTable map[insolar.Reference]bool
 	deduplicationLock  sync.Mutex
+}
+
+func (q *ExecutionBroker) tryTakeProcessor(_ context.Context) bool {
+	return atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
+}
+
+func (q *ExecutionBroker) releaseProcessor(_ context.Context) {
+	atomic.SwapUint32(&q.processorActive, 0)
+}
+
+func (q *ExecutionBroker) isActiveProcessor() bool { //nolint: unused
+	return atomic.LoadUint32(&q.processorActive) == 1
 }
 
 type ExecutionBrokerRotationResult struct {
@@ -325,15 +420,11 @@ func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference
 	defer q.deduplicationLock.Unlock()
 
 	delete(q.deduplicationTable, *r)
-	return q.mutable.PopByReference(r)
+	return q.mutable.PopByReference(*r)
 }
 
 func (q *ExecutionBroker) startProcessor(ctx context.Context) {
-	defer func() {
-		q.processLock.Lock()
-		q.processActive = false
-		q.processLock.Unlock()
-	}()
+	defer q.releaseProcessor(ctx)
 
 	// сhecking we're eligible to execute contracts
 	if readyToExecute := q.Check(ctx); !readyToExecute {
@@ -359,19 +450,15 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
-	q.processLock.Lock()
 	// i've removed "if we have tasks here"; we can be there in two cases:
 	// 1) we've put a task into queue and automatically start processor
 	// 2) we've explicitly ask broker to be here
 	// both cases means we knew what we are doing and so it's just an
 	// unneeded optimisation
-	if !q.processActive {
+	if q.tryTakeProcessor(ctx) {
 		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
-
-		q.processActive = true
 		go q.startProcessor(ctx)
 	}
-	q.processLock.Unlock()
 
 }
 
@@ -391,7 +478,7 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 		rv.Requests = append(rv.Requests, q.immutable.Take(leftCount)...)
 	}
 
-	if len(rv.Requests) > 0 && (q.mutable.Len() > 0 || q.immutable.Len() > 0) {
+	if len(rv.Requests) > 0 && (q.mutable.Length() > 0 || q.immutable.Length() > 0) {
 		rv.LedgerHasMoreRequests = true
 	}
 
@@ -508,7 +595,7 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 
 func NewExecutionBroker(es *ExecutionState) *ExecutionBroker {
 	return &ExecutionBroker{
-		stateLock:   sync.Mutex{},
+		stateLock:   &sync.Mutex{},
 		mutable:     NewTranscriptDequeue(),
 		immutable:   NewTranscriptDequeue(),
 		finished:    NewTranscriptDequeue(),

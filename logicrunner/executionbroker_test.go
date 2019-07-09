@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
 
@@ -38,12 +39,22 @@ import (
 	"github.com/insolar/insolar/testutils/network"
 )
 
+type publisherMock struct{}
+
+func (p *publisherMock) Publish(topic string, messages ...*wmMessage.Message) error {
+	return nil
+}
+
+func (p *publisherMock) Close() error {
+	return nil
+}
+
 // wait is Exponential retries waiting function
 // example usage: require.True(wait(func))
-func wait(check func() bool) bool {
+func wait(check func(...interface{}) bool, args ...interface{}) bool {
 	for i := 0; i < 16; i++ {
 		time.Sleep(time.Millisecond * time.Duration(math.Pow(2, float64(i))))
-		if check() {
+		if check(args...) {
 			return true
 		}
 	}
@@ -58,26 +69,33 @@ func (s *TranscriptDequeueSuite) TestBasic() {
 	d := NewTranscriptDequeue()
 	s.Require().NotNil(d)
 
+	// [] + [1, 2]
 	d.Push(&Transcript{Nonce: 1}, &Transcript{Nonce: 2})
 
+	// 1, [2]
 	tr := d.Pop()
 	s.Require().NotNil(tr)
 	s.Equal(uint64(1), tr.Nonce)
 
+	// [3, 4] + [2]
 	d.Prepend(&Transcript{Nonce: 3}, &Transcript{Nonce: 4})
 
+	// 3, [4, 2]
 	tr = d.Pop()
 	s.Require().NotNil(tr)
 	s.Equal(uint64(3), tr.Nonce)
 
+	// 4, [2]
 	tr = d.Pop()
 	s.Require().NotNil(tr)
 	s.Equal(uint64(4), tr.Nonce)
 
+	// 2, []
 	tr = d.Pop()
 	s.Require().NotNil(tr)
 	s.Equal(uint64(2), tr.Nonce)
 
+	// nil, []
 	s.Nil(d.Pop())
 }
 
@@ -125,14 +143,14 @@ func (s *TranscriptDequeueSuite) TestPopByReference() {
 		&Transcript{Nonce: 5, RequestRef: &badRef},
 	)
 
-	tr := d.PopByReference(&ref)
+	tr := d.PopByReference(ref)
 	s.Require().NotNil(tr)
 	s.Require().Equal(tr.RequestRef.Bytes(), ref.Bytes())
 
-	tr = d.PopByReference(&ref)
+	tr = d.PopByReference(ref)
 	s.Nil(tr)
 
-	s.Equal(d.Len(), 2)
+	s.Equal(d.Length(), 2)
 }
 
 func (s *TranscriptDequeueSuite) TestTake() {
@@ -203,6 +221,7 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	jc := jet.NewCoordinatorMock(s.Controller)
 	ps := pulse.NewAccessorMock(s.Controller)
 	nn := network.NewNodeNetworkMock(s.Controller)
+	pm := &publisherMock{}
 
 	// initialize lr
 	lr.ArtifactManager = am
@@ -213,8 +232,30 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	lr.PulseAccessor = ps
 	lr.NodeNetwork = nn
 	lr.RequestsExecutor = re
+	lr.publisher = pm
 
 	return lr
+}
+
+func immutableCount(args ...interface{}) bool {
+	broker := args[0].(*ExecutionBroker)
+	count := args[1].(int)
+
+	return broker.immutable.Length() >= count
+}
+
+func finishedCount(args ...interface{}) bool {
+	broker := args[0].(*ExecutionBroker)
+	count := args[1].(int)
+
+	return broker.finished.Length() >= count
+}
+
+func processorStatus(args ...interface{}) bool {
+	broker := args[0].(*ExecutionBroker)
+	status := args[1].(bool)
+
+	return broker.isActiveProcessor() == status
 }
 
 func (s *ExecutionBrokerSuite) TestPut() {
@@ -235,12 +276,6 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	b := es.Broker
 	es.pending = message.NotPending
 
-	processGoroutineExits := func() bool {
-		b.processLock.Lock()
-		defer b.processLock.Unlock()
-		return b.processActive == false
-	}
-
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
@@ -249,7 +284,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	}
 
 	b.Put(s.Context, false, tr)
-	s.Len(b.mutable.queue, 1)
+	s.Equal(b.mutable.Length(), 1)
 
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
@@ -261,17 +296,19 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	b.Put(s.Context, true, tr)
 	s.True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
 	s.True(waitOnChannel(waitChannel), "failed to wait until queue processor'll finish processing")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Empty(waitChannel)
 
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.finished.queue, 2)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.finished.Length(), 2)
 
 	rotationResults := b.Rotate(10)
 	s.Len(rotationResults.Requests, 0)
 	s.Equal(rotationResults.LedgerHasMoreRequests, false)
 	s.Len(rotationResults.Finished, 2)
+
+	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestPrepend() {
@@ -292,12 +329,6 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	b := es.Broker
 	es.pending = message.NotPending
 
-	processGoroutineExits := func() bool {
-		b.processLock.Lock()
-		defer b.processLock.Unlock()
-		return b.processActive == false
-	}
-
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
@@ -305,7 +336,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 		Request:      &record.IncomingRequest{},
 	}
 	b.Prepend(s.Context, false, tr)
-	s.Len(b.mutable.queue, 1)
+	s.Equal(b.mutable.Length(), 1)
 
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
@@ -316,20 +347,22 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	b.Prepend(s.Context, true, tr)
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until queue processor'll finish processing")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitChannel)
 
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.finished.queue, 2)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.finished.Length(), 2)
 
 	rotationResults := b.Rotate(10)
 	s.Len(rotationResults.Requests, 0)
 	s.Equal(rotationResults.LedgerHasMoreRequests, false)
 	s.Len(rotationResults.Finished, 2)
+
+	_ = lr.Stop(s.Context)
 }
 
-func (s *ExecutionBrokerSuite) TestImmutable() {
+func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	lr := s.prepareLogicRunner(s.T())
 
 	waitMutableChannel := make(chan struct{})
@@ -351,12 +384,6 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	b := es.Broker
 	es.pending = message.NotPending
 
-	processGoroutineExits := func() bool {
-		b.processLock.Lock()
-		defer b.processLock.Unlock()
-		return b.processActive == false
-	}
-
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
@@ -366,7 +393,7 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	b.Prepend(s.Context, false, tr)
 	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
 	reqRef2 := gen.Reference()
@@ -378,24 +405,44 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	b.Prepend(s.Context, true, tr)
 	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
+	_ = lr.Stop(s.Context)
+}
+
+func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
+	lr := s.prepareLogicRunner(s.T())
+
+	waitMutableChannel := make(chan struct{})
+	waitImmutableChannel := make(chan struct{})
+
+	rem := lr.RequestsExecutor.(*RequestsExecutorMock)
+	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
+		if !t.Request.Immutable {
+			waitMutableChannel <- struct{}{}
+		} else {
+			waitImmutableChannel <- struct{}{}
+		}
+		return nil, nil
+	})
+	rem.SendReplyMock.Return()
+
+	es := NewExecutionState(gen.Reference())
+	es.RegisterLogicRunner(lr)
+	b := es.Broker
+	es.pending = message.InPending
+
 	reqRef3 := gen.Reference()
-	tr = &Transcript{
+	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef3,
 		Request:      &record.IncomingRequest{Immutable: true},
 	}
 
-	// we can't process messages, do not do it
-	es.Lock()
-	es.pending = message.InPending
-	es.Unlock()
-
 	b.Prepend(s.Context, false, tr)
-	s.Require().True(wait(func() bool { return b.immutable.Len() == 1 }), "failed to wait until immutable was put")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(immutableCount, b, 1), "failed to wait until immutable was put")
+	s.Require().True(wait(processorStatus, b, false))
 
 	reqRef4 := gen.Reference()
 	tr = &Transcript{
@@ -406,19 +453,21 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 
 	b.Prepend(s.Context, true, tr)
 
-	s.Require().True(wait(func() bool { return b.immutable.Len() == 2 }), "failed to wait until immutable was put")
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(immutableCount, b, 2), "failed to wait until immutable was put")
+	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
 	b.StartProcessorIfNeeded(s.Context)
-	s.Require().True(wait(processGoroutineExits))
+	s.Require().True(wait(processorStatus, b, false))
 	s.Empty(waitMutableChannel)
 	s.Empty(waitImmutableChannel)
 
 	rotationResults := b.Rotate(10)
 	s.Len(rotationResults.Requests, 2)
 	s.Equal(rotationResults.LedgerHasMoreRequests, false)
-	s.Len(rotationResults.Finished, 2)
+	s.Len(rotationResults.Finished, 0)
+
+	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestRotate() {
@@ -441,9 +490,9 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	}
 
 	rotationResults := b.Rotate(10)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.finished.queue, 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.finished.Length(), 0)
 	s.Len(rotationResults.Requests, 8)
 	s.Len(rotationResults.Finished, 0)
 	s.False(rotationResults.LedgerHasMoreRequests)
@@ -455,9 +504,9 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	}
 
 	rotationResults = b.Rotate(10)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.finished.queue, 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.finished.Length(), 0)
 	s.Len(rotationResults.Requests, 4)
 	s.Len(rotationResults.Finished, 0)
 	s.False(rotationResults.LedgerHasMoreRequests)
@@ -468,9 +517,9 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	}
 
 	rotationResults = b.Rotate(10)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.finished.queue, 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.finished.Length(), 0)
 	s.Len(rotationResults.Requests, 10)
 	s.Len(rotationResults.Finished, 0)
 	s.False(rotationResults.LedgerHasMoreRequests)
@@ -481,12 +530,14 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	}
 
 	rotationResults = b.Rotate(10)
-	s.Len(b.immutable.queue, 0)
-	s.Len(b.mutable.queue, 0)
-	s.Len(b.finished.queue, 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.finished.Length(), 0)
 	s.Len(rotationResults.Requests, 10)
 	s.Len(rotationResults.Finished, 0)
 	s.True(rotationResults.LedgerHasMoreRequests)
+
+	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestDeduplication() {
@@ -507,12 +558,14 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 		RequestRef:   &reqRef1,
 		Request:      &record.IncomingRequest{},
 	}) // no duplication
-	s.Len(b.mutable.queue, 1)
+	s.Equal(b.mutable.Length(), 1)
 
 	b.Put(s.Context, false, &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef1,
 		Request:      &record.IncomingRequest{},
 	}) // duplication
-	s.Len(b.mutable.queue, 1)
+	s.Equal(b.mutable.Length(), 1)
+
+	_ = lr.Stop(s.Context)
 }
