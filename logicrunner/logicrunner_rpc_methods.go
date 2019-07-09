@@ -213,7 +213,7 @@ func (m *executionProxyImplementation) RouteCall(
 	// we _already_ are processing the request. We should continue to execute and
 	// the next executor will wait for us in pending state. For this reason Flow is not
 	// used for registering the outgoing request.
-	outgoingReqId, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func (m *executionProxyImplementation) RouteCall(
 	}
 
 	// Step 3. Register result of the outgoing method
-	outgoingReqRef := insolar.NewReference(*outgoingReqId)
+	outgoingReqRef := insolar.NewReference(*outgoingReqID)
 	_, err = m.am.RegisterResult(ctx, req.Callee, *outgoingReqRef, rep.Result)
 	return err
 }

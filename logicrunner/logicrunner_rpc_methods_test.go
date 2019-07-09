@@ -40,13 +40,13 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	resp := &rpctypes.UpRouteResp{}
 
 	var outreq *record.OutgoingRequest
-	outgoingReqId := gen.ID()
-	outgoingReqRef := insolar.NewReference(outgoingReqId)
+	outgoingReqID := gen.ID()
+	outgoingReqRef := insolar.NewReference(outgoingReqID)
 	// Make sure an outgoing request is registered
 	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
 		require.Nil(t, outreq)
 		outreq = r
-		id := outgoingReqId
+		id := outgoingReqID
 		return &id, nil
 	}
 
