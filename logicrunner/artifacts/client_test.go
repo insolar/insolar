@@ -125,6 +125,7 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	os.RemoveAll(s.tmpDir1)
 	os.RemoveAll(s.tmpDir2)
 	s.badgerDB1.Stop(s.ctx)
+	// We don't call it explicitly since it's called by component manager
 	// s.badgerDB2.Stop(s.ctx)
 }
 

@@ -18,7 +18,6 @@ package store
 
 import (
 	"context"
-	"log"
 	"path/filepath"
 	"sync"
 	"time"
@@ -48,7 +47,6 @@ func NewBadgerDB(dir string) (*BadgerDB, error) {
 	ops := badger.DefaultOptions
 	ops.ValueDir = dir
 	ops.Dir = dir
-	ops.SyncWrites = false
 	bdb, err := badger.Open(ops)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open badger")
@@ -151,10 +149,7 @@ func (b *BadgerDB) Stop(ctx context.Context) error {
 
 	logger.Info("BadgerDB: closing database...")
 
-	start := time.Now()
 	err := b.backend.Close()
-	elapsed := time.Since(start)
-	log.Println("\n\nZZZZZZZZZ: ", elapsed)
 
 	return err
 }
