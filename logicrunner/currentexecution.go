@@ -44,8 +44,9 @@ type Transcript struct {
 	FromLedger bool
 }
 
-func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insolar.Reference,
-	pulse *insolar.Pulse, callee insolar.Reference) *Transcript {
+func NewTranscript(
+	ctx context.Context, parcel insolar.Parcel, requestRef *insolar.Reference,
+) *Transcript {
 
 	msg := parcel.Message().(*message.CallMethod)
 

@@ -139,7 +139,7 @@ func (h *HandleCall) handleActual(
 	request := procRegisterRequest.getResult()
 
 	es.Lock()
-	es.Broker.Put(ctx, false, NewTranscript(ctx, parcel, request, lr.pulse(ctx), es.Ref))
+	es.Broker.Put(ctx, false, NewTranscript(ctx, parcel, request))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
@@ -225,7 +225,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	if msg.Pending == message.NotPending {
 		es.pending = message.NotPending
 	}
-	es.Broker.Put(ctx, false, NewTranscript(ctx, msg.Parcel, msg.Request, lr.pulse(ctx), es.Ref))
+	es.Broker.Put(ctx, false, NewTranscript(ctx, msg.Parcel, msg.Request))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
