@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	wmmsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/payload"
 
 	"github.com/insolar/insolar/insolar/bus"
@@ -50,8 +50,8 @@ func clientMock(t *testing.T, sender bus.Sender) *client {
 // Send msg, bus.Sender gets error and closes resp chan
 func TestRetryerSend_SendErrored(t *testing.T) {
 	sender := &bus.SenderMock{}
-	sender.SendRoleFunc = func(p context.Context, p1 *wmmsg.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *wmmsg.Message, r1 func()) {
-		res := make(chan *wmmsg.Message)
+	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+		res := make(chan *message.Message)
 		close(res)
 		return res, func() {}
 	}
@@ -68,8 +68,8 @@ func TestRetryerSend_SendErrored(t *testing.T) {
 func TestRetryerSend_Send_Timeout(t *testing.T) {
 	once := sync.Once{}
 	sender := &bus.SenderMock{}
-	innerReps := make(chan *wmmsg.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *wmmsg.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *wmmsg.Message, r1 func()) {
+	innerReps := make(chan *message.Message)
+	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		done := func() {
 			once.Do(func() { close(innerReps) })
 		}
@@ -103,7 +103,7 @@ func TestRetryerSend_Send_ClientDone(t *testing.T) {
 	}
 }
 
-func sendTestReply(pl payload.Payload, ch chan<- *wmmsg.Message, isDone chan<- interface{}) {
+func sendTestReply(pl payload.Payload, ch chan<- *message.Message, isDone chan<- interface{}) {
 	msg, _ := payload.NewMessage(pl)
 	meta := payload.Meta{
 		Payload: msg.Payload,
@@ -117,8 +117,8 @@ func sendTestReply(pl payload.Payload, ch chan<- *wmmsg.Message, isDone chan<- i
 // Send msg, get one response
 func TestRetryerSend(t *testing.T) {
 	sender := bus.NewSenderMock(t)
-	innerReps := make(chan *wmmsg.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *wmmsg.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *wmmsg.Message, r1 func()) {
+	innerReps := make(chan *message.Message)
+	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		return innerReps, func() { close(innerReps) }
 	}
 	c := clientMock(t, sender)
@@ -153,9 +153,9 @@ func TestRetryerSend(t *testing.T) {
 // Send msg, get "flow cancelled" error, than get one response
 func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 	sender := bus.NewSenderMock(t)
-	innerReps := make(chan *wmmsg.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *wmmsg.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *wmmsg.Message, r1 func()) {
-		innerReps = make(chan *wmmsg.Message)
+	innerReps := make(chan *message.Message)
+	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+		innerReps = make(chan *message.Message)
 		if sender.SendRoleCounter == 0 {
 			go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		} else {
@@ -188,9 +188,9 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 // Send msg, get "flow cancelled" error, than get two responses
 func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 	sender := bus.NewSenderMock(t)
-	innerReps := make(chan *wmmsg.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *wmmsg.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *wmmsg.Message, r1 func()) {
-		innerReps = make(chan *wmmsg.Message)
+	innerReps := make(chan *message.Message)
+	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+		innerReps = make(chan *message.Message)
 		if sender.SendRoleCounter == 0 {
 			go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		} else {
@@ -223,9 +223,9 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 // Send msg, get "flow cancelled" error on every tries
 func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 	sender := bus.NewSenderMock(t)
-	innerReps := make(chan *wmmsg.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *wmmsg.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *wmmsg.Message, r1 func()) {
-		innerReps = make(chan *wmmsg.Message)
+	innerReps := make(chan *message.Message)
+	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+		innerReps = make(chan *message.Message)
 		go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		return innerReps, func() { close(innerReps) }
 	}
@@ -247,9 +247,9 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 // Send msg, get response, than get "flow cancelled" error, than get two responses
 func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 	sender := bus.NewSenderMock(t)
-	innerReps := make(chan *wmmsg.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *wmmsg.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *wmmsg.Message, r1 func()) {
-		innerReps = make(chan *wmmsg.Message)
+	innerReps := make(chan *message.Message)
+	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+		innerReps = make(chan *message.Message)
 		if sender.SendRoleCounter == 0 {
 			go func() {
 				isDone := make(chan interface{})
