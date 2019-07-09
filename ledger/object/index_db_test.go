@@ -138,7 +138,7 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)

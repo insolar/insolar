@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/google/gofuzz"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -37,7 +36,7 @@ import (
 func TestNewStorageDB(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)

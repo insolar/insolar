@@ -22,8 +22,7 @@ import (
 	"os"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
-	"github.com/stretchr/testify/assert"
+	"github.com/google/gofuzz"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -35,7 +34,7 @@ import (
 func TestNewJetKeeper(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)
@@ -50,7 +49,7 @@ func TestDbJetKeeper_Add(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)
@@ -74,7 +73,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)

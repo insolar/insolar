@@ -112,7 +112,7 @@ func TestRecord_Components(t *testing.T) {
 		memStorage := object.NewRecordMemory()
 		tmpdir1, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		db1, err := store.NewBadgerDB(tmpdir1)
 		defer db1.Stop(context.Background())

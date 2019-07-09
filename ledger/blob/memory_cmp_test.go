@@ -41,7 +41,7 @@ func TestBlobStorages(t *testing.T) {
 	memStorage := NewStorageMemory()
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)
