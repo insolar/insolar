@@ -53,7 +53,6 @@ package serialization
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -87,7 +86,6 @@ func TestClaimList_SerializeDeserialize(t *testing.T) {
 
 	err := list.SerializeTo(sctx, rw)
 	assert.NoError(t, err)
-	fmt.Printf("%#v", buf)
 
 	r := newTrackableReader(rw)
 	dctx := newDeserializeContext(pctx, r, nil)

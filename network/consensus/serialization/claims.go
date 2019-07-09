@@ -134,13 +134,13 @@ func (cl *ClaimList) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 
 func (cl *ClaimList) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
 	cl.Claims = make([]GenericClaim, 0)
+	cl.EndOfClaims = EmptyClaim{newClaimHeader(claimTypeEmpty, 0)}
 	for {
 		header := ClaimHeader{}
 		err := header.DeserializeFrom(ctx, reader)
 		if err != nil {
 			return ErrMalformedHeader(err)
 		}
-		cl.EndOfClaims = EmptyClaim{header}
 		switch header.ClaimType() {
 		case claimTypeEmpty:
 			return nil
@@ -168,5 +168,9 @@ func (ch *ClaimHeader) DeserializeFrom(ctx DeserializeContext, reader io.Reader)
 }
 
 func (c *GenericClaim) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	return write(writer, c)
+	err := write(writer, c.TypeAndLength)
+	if err != nil {
+		return err
+	}
+	return write(writer, c.Payload)
 }
