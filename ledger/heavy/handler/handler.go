@@ -19,7 +19,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"math/rand"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
@@ -384,12 +383,6 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", drop.JetID.DebugString(), futurePulse))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-
-	if !drop.Split {
-		if rand.Int()%100 > 60 {
-			panic("TROLOLOLO")
-		}
 	}
 
 	if err := h.JetKeeper.Add(ctx, drop.Pulse, drop.JetID); err != nil {
