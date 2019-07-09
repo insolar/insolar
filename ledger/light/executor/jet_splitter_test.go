@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/pkg/errors"
@@ -38,7 +39,8 @@ func TestJetSplitter(t *testing.T) {
 	js := jet.NewStore()
 	da := drop.NewAccessorMock(t)
 	dm := drop.NewModifierMock(t)
-	splitter := NewJetSplitter(jc, js, js, da, dm)
+	pc := pulse.NewCalculatorMock(t)
+	splitter := NewJetSplitter(jc, js, js, da, dm, pc)
 	require.NotNil(t, splitter, "jet splitter created")
 
 	splitter.splitsLimit = 0
@@ -53,6 +55,8 @@ func TestJetSplitter(t *testing.T) {
 		current  = pn + 1
 		newpulse = pn + 2
 	)
+
+	pc.BackwardsMock.Return(insolar.Pulse{PulseNumber: previous}, nil)
 
 	// beware splitID is a shared variable (check code below)
 	var splitID insolar.JetID
@@ -91,7 +95,7 @@ func TestJetSplitter(t *testing.T) {
 	require.NoError(t, err, "jet store update")
 
 	t.Run("no_split", func(t *testing.T) {
-		gotJets, err := splitter.Do(ctx, previous, current, newpulse)
+		gotJets, err := splitter.Do(ctx, current, newpulse)
 		require.NoError(t, err, "splitter method Do error check")
 		require.Equal(t, len(jets), len(gotJets), "compare jets count")
 		require.Equal(t, jsort(jets), jsort(gotJets), "no splits")
@@ -100,7 +104,7 @@ func TestJetSplitter(t *testing.T) {
 	t.Run("with_split_intent", func(t *testing.T) {
 		splitID = jet.NewIDFromString("11")
 
-		gotJets, err := splitter.Do(ctx, previous, current, newpulse)
+		gotJets, err := splitter.Do(ctx, current, newpulse)
 		require.NoError(t, err, "splitter method Do error check")
 		require.Equal(t, len(jets)+1, len(gotJets), "compare jets count, expect one split")
 		expectJets := make([]insolar.JetID, 0, len(jets))
