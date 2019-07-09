@@ -78,6 +78,8 @@ type DigestFactory interface {
 	GetGshDigester() SequenceDigester
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.DigestHolder -o . -s _mock.go
+
 type DigestHolder interface {
 	FoldableReader
 	SignWith(signer DigestSigner) SignedDigest
@@ -117,6 +119,8 @@ type CertificateHolder interface {
 	GetPublicKey() SignatureKeyHolder
 	IsValidForHostAddress(HostAddress string) bool
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.DigestSigner -o . -s _mock.go
 
 type DigestSigner interface {
 	SignDigest(digest Digest) Signature
