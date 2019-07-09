@@ -19,6 +19,7 @@ package object
 import (
 	"bytes"
 	"context"
+	"math"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -40,6 +41,14 @@ type IndexDB struct {
 type indexKey struct {
 	pn    insolar.PulseNumber
 	objID insolar.ID
+}
+
+func newIndexKey(raw []byte) indexKey {
+	ik := indexKey{}
+	ik.pn = insolar.NewPulseNumber(raw)
+	ik.objID = *insolar.NewIDFromBytes(raw[ik.pn.Size():])
+
+	return ik
 }
 
 func (k indexKey) Scope() store.Scope {
@@ -84,6 +93,28 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket F
 
 	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
 	return i.setLastKnownPN(pn, bucket.ObjID)
+}
+
+func (i *IndexDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	it := i.db.NewIterator(&indexKey{objID: insolar.ID{}, pn: math.MaxUint32}, true)
+	defer it.Close()
+
+	for it.Next() {
+		key := newIndexKey(it.Key())
+		if key.pn.Equal(lastPulse) {
+			break
+		}
+		err := i.db.Delete(&key)
+		if err != nil {
+			return errors.Wrapf(err, "[ IndexDB.DeleteForPN ] Can't Delete key: %+v", key)
+		}
+
+		inslogger.FromContext(ctx).Infof("[ IndexDB.DeleteForPN ] erased key. Pulse number: %s. ObjectID: %s", key.pn.String(), key.objID.String())
+	}
+	return nil
 }
 
 // ForID returns a lifeline from a bucket with provided PN and ObjID
