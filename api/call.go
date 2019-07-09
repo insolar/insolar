@@ -21,6 +21,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -130,7 +131,12 @@ func processError(err error, extraMsg string, resp *requester.ContractAnswer, in
 func writeResponse(insLog assert.TestingT, response http.ResponseWriter, contractAnswer *requester.ContractAnswer) {
 	res, err := json.MarshalIndent(*contractAnswer, "", "    ")
 	if err != nil {
-		res = []byte(`{"error": "can't marshal ContractAnswer to json'"}`)
+		hcContractAnswer := requester.ContractAnswer{
+			JSONRPC: "2.0",
+			ID:      contractAnswer.ID,
+			Error:   &requester.Error{Message: fmt.Sprintf("can't marshal ContractAnswer to json; error: '%v'", err.Error())},
+		}
+		res, _ = json.MarshalIndent(hcContractAnswer, "", "    ")
 	}
 	response.Header().Add("Content-Type", "application/json")
 	_, err = response.Write(res)
