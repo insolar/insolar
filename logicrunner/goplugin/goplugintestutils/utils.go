@@ -400,7 +400,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		request := record.IncomingRequest{
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
-			Reason:    *api.MakeReason(pulse, []byte(name)),
+			Reason:    *api.MakeReason(pulse.PulseNumber, []byte(name)),
 		}
 		protoID, err := cb.registerRequest(ctx, request)
 
@@ -453,7 +453,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		req := record.IncomingRequest{
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
-			Reason:    *api.MakeReason(pulse, []byte(name)),
+			Reason:    *api.MakeReason(pulse.PulseNumber, []byte(name)),
 		}
 
 		codeReq, err := cb.registerRequest(ctx, req)
