@@ -20,6 +20,7 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"net/http"
 	"reflect"
 
@@ -125,6 +126,16 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		return errors.Wrap(err, "can't get protoRef")
 	}
 
+	pulse, err := s.runner.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "can't get current pulse")
+	}
+	hash := sha256.New()
+	_, err = hash.Write(args.MethodArgs)
+	if err != nil {
+		return errors.Wrap(err, "Cant get hash")
+	}
+
 	base := insolar.GenesisRecord.Ref()
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
@@ -136,6 +147,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
+			Reason:          *insolar.NewReference(*insolar.NewID(pulse.PulseNumber, hash.Sum(nil))),
 		},
 	}
 
@@ -181,6 +193,16 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 		return errors.Wrap(err, "can't get objectRef")
 	}
 
+	pulse, err := s.runner.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "can't get current pulse")
+	}
+	hash := sha256.New()
+	_, err = hash.Write(args.MethodArgs)
+	if err != nil {
+		return errors.Wrap(err, "Cant get hash")
+	}
+
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Caller:       testutils.RandomRef(),
@@ -188,6 +210,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
+			Reason:       *insolar.NewReference(*insolar.NewID(pulse.PulseNumber, hash.Sum(nil))),
 		},
 	}
 
