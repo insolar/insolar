@@ -48,47 +48,59 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package adapters
+package serialization
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-type PacketSender struct {
-	datagramTransport transport.DatagramTransport
+type PacketBuilder struct{}
+
+func (p *PacketBuilder) GetNeighbourhoodSize() common.NeighbourhoodSizes {
+	return common.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
 }
 
-func NewPacketSender(datagramTransport transport.DatagramTransport) *PacketSender {
-	return &PacketSender{
-		datagramTransport: datagramTransport,
-	}
+func (p *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common.OriginalPulsarPacket,
+	options core.PacketSendOptions) core.PreparedPacketSender {
+
+	wrapper := preparedPacketWrapper{}
+	wrapper.packet.Header.SetPacketType(packets.PacketPhase0)
+	wrapper.packet.PulseNumber = sender.GetPulseNumber()
+	wrapper.packet.EncryptableBody = &GlobulaConsensusPacketBody{}
+
+	return &wrapper
 }
 
-type payloadWrapper struct {
-	Payload interface{}
+func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common.OriginalPulsarPacket,
+	options core.PacketSendOptions) core.PreparedPacketSender {
+	panic("implement me")
 }
 
-func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
-	addr := to.GetDefaultEndpoint().GetNameAddress().String()
+func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
+	neighbourhood []packets.MembershipAnnouncementReader, options core.PacketSendOptions) core.PreparedPacketSender {
+	panic("implement me")
+}
 
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"receiver_addr":    addr,
-		"receiver_node_id": to.GetShortNodeID(),
-		"options":          sendOptions,
-	})
+func (p *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
+	bitset nodeset.NodeBitset, gshTrusted common.GlobulaStateHash, gshDoubted common.GlobulaStateHash,
+	options core.PacketSendOptions) core.PreparedPacketSender {
+	panic("implement me")
+}
 
-	bs, err := insolar.Serialize(payload)
-	if err != nil {
-		logger.Error("Failed to serialize payload")
-	}
+type preparedPacketWrapper struct {
+	packet Packet
+}
 
-	err = ps.datagramTransport.SendDatagram(ctx, addr, bs)
-	if err != nil {
-		logger.Error("Failed to send datagram")
-	}
+func (p *preparedPacketWrapper) SendTo(ctx context.Context, target common.NodeProfile, sendOptions core.PacketSendOptions, sender core.PacketSender) {
+	p.packet.Header.ReceiverID = uint32(target.GetShortNodeID())
+
+	panic("implement me")
+}
+
+func NewPacketBuilder() *PacketBuilder {
+	return &PacketBuilder{}
 }

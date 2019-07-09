@@ -214,14 +214,14 @@ func TestHeader_setPacketType(t *testing.T) {
 
 	require.Equal(t, packets.PacketPhase0, h.GetPacketType())
 
-	h.setPacketType(packets.PacketPhase3)
+	h.SetPacketType(packets.PacketPhase3)
 	require.Equal(t, packets.PacketPhase3, h.GetPacketType())
 }
 
 func TestHeader_setPacketType_Panic(t *testing.T) {
 	h := Header{}
 
-	require.Panics(t, func() { h.setPacketType(16) })
+	require.Panics(t, func() { h.SetPacketType(16) })
 }
 
 func TestHeader_getPayloadLength(t *testing.T) {
@@ -257,7 +257,7 @@ func TestHeader_SerializeTo(t *testing.T) {
 	h.setIsBodyEncrypted()
 	h.setIsRelayRestricted()
 	h.setProtocolType(ProtocolTypeGlobulaConsensus)
-	h.setPacketType(packets.PacketPhase3)
+	h.SetPacketType(packets.PacketPhase3)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 
@@ -275,7 +275,7 @@ func TestHeader_DeserializeFrom(t *testing.T) {
 	h1.setIsBodyEncrypted()
 	h1.setIsRelayRestricted()
 	h1.setProtocolType(ProtocolTypeGlobulaConsensus)
-	h1.setPacketType(packets.PacketPhase3)
+	h1.SetPacketType(packets.PacketPhase3)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	err := h1.SerializeTo(nil, buf)
