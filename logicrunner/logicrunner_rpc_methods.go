@@ -213,7 +213,7 @@ func (m *executionProxyImplementation) RouteCall(
 	// we _already_ are processing the request. We should continue to execute and
 	// the next executor will wait for us in pending state. For this reason Flow is not
 	// used for registering the outgoing request.
-	_, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
 	}
@@ -221,16 +221,18 @@ func (m *executionProxyImplementation) RouteCall(
 	// Step 2. Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
 	res, err := m.cr.CallMethod(ctx, callMsg)
+	if err == nil && req.Wait {
+		rep.Result = res.(*reply.CallMethod).Result
+	}
 	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	if err != nil {
 		return err
 	}
 
-	if req.Wait {
-		rep.Result = res.(*reply.CallMethod).Result
-	}
-
-	return nil
+	// Step 3. Register result of the outgoing method
+	outgoingReqRef := insolar.NewReference(*outgoingReqID)
+	_, err = m.am.RegisterResult(ctx, req.Callee, *outgoingReqRef, rep.Result)
+	return err
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent

@@ -53,7 +53,7 @@ func TestBadSeed(t *testing.T) {
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
 	}, "MTExMQ==")
 	require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestIncorrectSeed(t *testing.T) {
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
 	}, "z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
@@ -126,4 +126,20 @@ func TestIncorrectSign(t *testing.T) {
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
 	require.Contains(t, res.Error.Message, "invalid signature")
+}
+
+func TestIncorrectMethodName(t *testing.T) {
+	ctx := context.TODO()
+	seed, err := requester.GetSeed(TestAPIURL)
+	require.NoError(t, err)
+	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
+	require.NoError(t, err)
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "foo.bar",
+		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
+	}, seed)
+	require.NoError(t, err)
+	require.EqualError(t, contractError(res), "rpc method does not exist")
 }
