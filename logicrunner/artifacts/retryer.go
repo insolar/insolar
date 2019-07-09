@@ -39,13 +39,10 @@ type retryer struct {
 	sender        bus.Sender
 	pulseAccessor pulse.Accessor
 
-	isDone bool
-
-	replyChan chan *wmmsg.Message
-
 	processingStarted sync.Mutex
 	once              sync.Once
-	channelClosed     chan interface{}
+	done              chan struct{}
+	replyChan         chan *wmmsg.Message
 }
 
 func newRetryer(sender bus.Sender, pulseAccessor pulse.Accessor, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) *retryer {
@@ -56,21 +53,29 @@ func newRetryer(sender bus.Sender, pulseAccessor pulse.Accessor, ppl payload.Pay
 		tries:         tries,
 		sender:        sender,
 		pulseAccessor: pulseAccessor,
-		channelClosed: make(chan interface{}),
+		done:          make(chan struct{}),
 		replyChan:     make(chan *wmmsg.Message),
-		isDone:        false,
 	}
 	return r
 }
 
 func (r *retryer) clientDone() {
 	r.once.Do(func() {
-		close(r.channelClosed)
+		close(r.done)
+
 		r.processingStarted.Lock()
 		close(r.replyChan)
-		r.isDone = true
 		r.processingStarted.Unlock()
 	})
+}
+
+func isChannelClosed(ch chan *wmmsg.Message) bool {
+	select {
+	case _, ok := <-ch:
+		return !ok
+	default:
+		return false
+	}
 }
 
 func (r *retryer) send(ctx context.Context) {
@@ -80,7 +85,10 @@ func (r *retryer) send(ctx context.Context) {
 	var lastPulse insolar.PulseNumber
 
 	r.processingStarted.Lock()
-	for r.tries > 0 && retry && !r.isDone {
+	if isChannelClosed(r.replyChan) {
+		return
+	}
+	for r.tries > 0 && retry {
 		currentPulse, err := r.pulseAccessor.Latest(ctx)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "can't get latest pulse"))
@@ -94,8 +102,6 @@ func (r *retryer) send(ctx context.Context) {
 		}
 		lastPulse = currentPulse.PulseNumber
 
-		retry = false
-
 		msg, err := payload.NewMessage(r.ppl)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "error while create new message from payload"))
@@ -103,14 +109,14 @@ func (r *retryer) send(ctx context.Context) {
 		}
 
 		reps, done := r.sender.SendRole(ctx, msg, r.role, r.ref)
-		waitingForReply := true
+
+		retry = false
 	F:
-		for waitingForReply {
+		for {
 			select {
 			case rep, ok := <-reps:
 				if !ok {
-					waitingForReply = false
-					break
+					break F
 				}
 				replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
 				if err == nil {
@@ -126,11 +132,11 @@ func (r *retryer) send(ctx context.Context) {
 
 				select {
 				case r.replyChan <- rep:
-				case <-r.channelClosed:
-					waitingForReply = false
+				case <-r.done:
+					break F
 				}
-			case <-r.channelClosed:
-				waitingForReply = false
+			case <-r.done:
+				break F
 			}
 		}
 		done()

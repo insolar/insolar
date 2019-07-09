@@ -114,15 +114,6 @@ func sendTestReply(pl payload.Payload, ch chan<- *wmmsg.Message, isDone chan<- i
 	close(isDone)
 }
 
-func isChannelClosed(ch chan *wmmsg.Message) bool {
-	select {
-	case _, ok := <-ch:
-		return ok
-	default:
-		return false
-	}
-}
-
 // Send msg, get one response
 func TestRetryerSend(t *testing.T) {
 	sender := bus.NewSenderMock(t)
@@ -156,7 +147,7 @@ func TestRetryerSend(t *testing.T) {
 	}
 	done()
 
-	require.False(t, isChannelClosed(innerReps))
+	require.True(t, isChannelClosed(innerReps))
 }
 
 // Send msg, get "flow cancelled" error, than get one response
@@ -191,7 +182,7 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 	}
 	done()
 
-	require.False(t, isChannelClosed(innerReps))
+	require.True(t, isChannelClosed(innerReps))
 }
 
 // Send msg, get "flow cancelled" error, than get two responses
@@ -226,7 +217,7 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 	}
 	done()
 
-	require.False(t, isChannelClosed(innerReps))
+	require.True(t, isChannelClosed(innerReps))
 }
 
 // Send msg, get "flow cancelled" error on every tries
@@ -250,7 +241,7 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 
 	done()
 
-	require.False(t, isChannelClosed(innerReps))
+	require.True(t, isChannelClosed(innerReps))
 }
 
 // Send msg, get response, than get "flow cancelled" error, than get two responses
@@ -296,5 +287,5 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 
 	done()
 
-	require.False(t, isChannelClosed(innerReps))
+	require.True(t, isChannelClosed(innerReps))
 }
