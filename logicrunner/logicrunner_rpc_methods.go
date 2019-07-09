@@ -507,6 +507,8 @@ func buildIncomingAndOutgoingRequests(
 	// figure out which fields are actually needed in OutgoingRequest and which are
 	// not. Thus please keep the code the way it is for now, dont't introduce any
 	// CommonRequestData structures or something like this.
+	// This being said the implementation of Request interface differs for Incoming and
+	// OutgoingRequest. See corresponding implementation of the interface methods.
 
 	outgoing := record.OutgoingRequest{
 		Caller:          req.Callee,
