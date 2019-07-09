@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	wmmsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -42,7 +42,7 @@ type retryer struct {
 	processingStarted sync.Mutex
 	once              sync.Once
 	done              chan struct{}
-	replyChan         chan *wmmsg.Message
+	replyChan         chan *message.Message
 }
 
 func newRetryer(sender bus.Sender, pulseAccessor pulse.Accessor, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) *retryer {
@@ -54,7 +54,7 @@ func newRetryer(sender bus.Sender, pulseAccessor pulse.Accessor, ppl payload.Pay
 		sender:        sender,
 		pulseAccessor: pulseAccessor,
 		done:          make(chan struct{}),
-		replyChan:     make(chan *wmmsg.Message),
+		replyChan:     make(chan *message.Message),
 	}
 	return r
 }
@@ -69,13 +69,67 @@ func (r *retryer) clientDone() {
 	})
 }
 
-func isChannelClosed(ch chan *wmmsg.Message) bool {
+func isChannelClosed(ch chan *message.Message) bool {
 	select {
 	case _, ok := <-ch:
 		return !ok
 	default:
 		return false
 	}
+}
+
+func (r *retryer) waitForPulseChange(ctx context.Context, lastPulse insolar.PulseNumber) (insolar.PulseNumber, error) {
+	logger := inslogger.FromContext(ctx)
+	for {
+		currentPulse, err := r.pulseAccessor.Latest(ctx)
+		if err != nil {
+			return lastPulse, errors.Wrap(err, "can't get latest pulse")
+		}
+
+		if currentPulse.PulseNumber == lastPulse {
+			logger.Debugf("wait for pulse change in retryer. Current: %d", currentPulse)
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		return currentPulse.PulseNumber, nil
+	}
+}
+
+// return params tells, if request must be resend
+func (r *retryer) proxyReply(ctx context.Context, reps <-chan *message.Message) bool {
+	for {
+		select {
+		case <-r.done:
+			return false
+		case rep, ok := <-reps:
+			if !ok {
+				return false
+			}
+			if r.isRetryableError(ctx, rep) {
+				return true
+			}
+
+			select {
+			case <-r.done:
+				return false
+			case r.replyChan <- rep:
+			}
+		}
+	}
+}
+
+func (r *retryer) isRetryableError(ctx context.Context, rep *message.Message) bool {
+	replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return false
+	}
+	p, ok := replyPayload.(*payload.Error)
+	if ok && (p.Code == payload.CodeFlowCanceled) {
+		inslogger.FromContext(ctx).Warnf("flow cancelled, retrying (error message - %s)", p.Text)
+		r.tries--
+		return true
+	}
+	return false
 }
 
 func (r *retryer) send(ctx context.Context) {
@@ -89,18 +143,12 @@ func (r *retryer) send(ctx context.Context) {
 		return
 	}
 	for r.tries > 0 && retry {
-		currentPulse, err := r.pulseAccessor.Latest(ctx)
+		var err error
+		lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
 		if err != nil {
-			logger.Error(errors.Wrap(err, "can't get latest pulse"))
+			logger.Error(errors.Wrap(err, "can't wait for pulse change"))
 			break
 		}
-
-		if currentPulse.PulseNumber == lastPulse {
-			inslogger.FromContext(ctx).Debugf("wait for pulse change in retryer. Current: %d", currentPulse)
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
-		lastPulse = currentPulse.PulseNumber
 
 		msg, err := payload.NewMessage(r.ppl)
 		if err != nil {
@@ -109,36 +157,7 @@ func (r *retryer) send(ctx context.Context) {
 		}
 
 		reps, done := r.sender.SendRole(ctx, msg, r.role, r.ref)
-
-		retry = false
-	F:
-		for {
-			select {
-			case rep, ok := <-reps:
-				if !ok {
-					break F
-				}
-				replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
-				if err == nil {
-					p, ok := replyPayload.(*payload.Error)
-					if ok && (p.Code == payload.CodeFlowCanceled) {
-						errText = p.Text
-						inslogger.FromContext(ctx).Warnf("flow cancelled, retrying (error message - %s)", errText)
-						r.tries--
-						retry = true
-						break F
-					}
-				}
-
-				select {
-				case r.replyChan <- rep:
-				case <-r.done:
-					break F
-				}
-			case <-r.done:
-				break F
-			}
-		}
+		retry = r.proxyReply(ctx, reps)
 		done()
 	}
 	r.processingStarted.Unlock()
