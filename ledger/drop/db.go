@@ -51,9 +51,12 @@ func (dk *dropDbKey) ID() []byte {
 	return bytes.Join([][]byte{dk.pn.Bytes(), dk.jetPrefix}, nil)
 }
 
-func (dk *dropDbKey) SetFromBytes(raw []byte) {
+func NewDropDbKey(raw []byte) dropDbKey {
+	dk := dropDbKey{}
 	dk.pn = insolar.NewPulseNumber(raw)
 	dk.jetPrefix = raw[dk.pn.Size():]
+
+	return dk
 }
 
 // ForPulse returns a Drop for a provided pulse, that is stored in a db.
@@ -88,23 +91,17 @@ func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) e
 	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: math.MaxUint32}, true)
 	defer it.Close()
 
-	var erasedKeys string
 	for it.Next() {
-		key := &dropDbKey{}
-		key.SetFromBytes(it.Key())
+		key := NewDropDbKey(it.Key())
 		if key.pn.Equal(lastPulse) {
 			break
 		}
-		err := ds.db.Delete(key)
+		err := ds.db.Delete(&key)
 		if err != nil {
 			return errors.Wrapf(err, "[ DB.TruncateHead ] Can't Delete key: %+v", key)
 		}
 
-		erasedKeys += "[ Pulse number: " + key.pn.String() + ", jet prefix: " + base58.Encode(key.jetPrefix) + " ]; "
-	}
-
-	if len(erasedKeys) != 0 {
-		inslogger.FromContext(ctx).Debug("[ DB.TruncateHead ] erased keys: ", erasedKeys)
+		inslogger.FromContext(ctx).Infof("[ DB.TruncateHead ] erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
 	}
 	return nil
 }
