@@ -122,7 +122,7 @@ func NewClient(sender bus.Sender) *client { // nolint
 // registerRequest registers incoming or outgoing request.
 func (m *client) registerRequest(
 	ctx context.Context, req record.Record, msgPayload payload.Payload, callType record.CallType,
-	objectRef *insolar.Reference,
+	objectRef *insolar.Reference, retriesNumber int,
 ) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.registerRequest")
@@ -147,11 +147,6 @@ func (m *client) registerRequest(
 		return nil, errors.Wrap(err, "registerRequest: failed to calculate hash")
 	}
 
-	msg, err := payload.NewMessage(msgPayload)
-	if err != nil {
-		return nil, errors.Wrap(err, "registerRequest: failed to create message")
-	}
-
 	var recRef *insolar.Reference
 	switch callType {
 	case record.CTMethod:
@@ -161,21 +156,13 @@ func (m *client) registerRequest(
 	default:
 		err = errors.New("registerRequest: not supported call type " + callType.String())
 	}
-
 	if err != nil {
 		return nil, err
 	}
 
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *recRef)
-	defer done()
-
-	rep, ok := <-reps
-	if !ok {
-		return nil, ErrNoReply
-	}
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	pl, err := m.sendWithRetry(ctx, msgPayload, insolar.DynamicRoleLightExecutor, *recRef, retriesNumber)
 	if err != nil {
-		return nil, errors.Wrap(err, "registerRequest: failed to unmarshal reply")
+		return nil, errors.Wrap(err, "couldn't register request")
 	}
 
 	switch p := pl.(type) {
@@ -204,7 +191,10 @@ func (m *client) RegisterIncomingRequest(
 	ctx context.Context, request *record.IncomingRequest,
 ) (*insolar.ID, error) {
 	incomingRequest := &payload.SetIncomingRequest{Request: record.Wrap(request)}
-	id, err := m.registerRequest(ctx, request, incomingRequest, request.CallType, request.GetObject())
+
+	// retriesNumber is zero, because we don't retry registering of incoming requests - the caller should
+	// re-send the request instead.
+	id, err := m.registerRequest(ctx, request, incomingRequest, request.CallType, request.AffinityRef(), 0)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterIncomingRequest")
 	}
@@ -215,7 +205,7 @@ func (m *client) RegisterIncomingRequest(
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	id, err := m.registerRequest(ctx, request, outgoingRequest, request.CallType, request.GetObject())
+	id, err := m.registerRequest(ctx, request, outgoingRequest, request.CallType, request.AffinityRef(), 3)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
@@ -645,7 +635,7 @@ func (m *client) DeployCode(
 		Code:   code,
 	}
 
-	pl, err := m.retryer(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
+	pl, err := m.sendWithRetry(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
 	if err != nil {
 		return nil, err
 	}
@@ -659,17 +649,21 @@ func (m *client) DeployCode(
 	}
 }
 
-func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (payload.Payload, error) {
+// sendWithRetry sends given Payload to the specified DynamicRole with provided `retriesNumber`.
+// If retriesNumber is zero the methods sends the message only once.
+func (m *client) sendWithRetry(
+	ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, // nolint: unparam
+	ref insolar.Reference, retriesNumber int) (payload.Payload, error) {
 	var lastPulse insolar.PulseNumber
 
-	for tries > 0 {
+	for retriesNumber >= 0 {
 		currentPulse, err := m.PulseAccessor.Latest(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ retryer ] Can't get latest pulse")
+			return nil, errors.Wrap(err, "[ sendWithRetry ] Can't get latest pulse")
 		}
 
 		if currentPulse.PulseNumber == lastPulse {
-			inslogger.FromContext(ctx).Debugf("[ retryer ]  wait for pulse change. Current: %d", currentPulse)
+			inslogger.FromContext(ctx).Debugf("[ sendWithRetry ]  wait for pulse change. Current: %d", currentPulse)
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
@@ -689,16 +683,16 @@ func (m *client) retryer(ctx context.Context, ppl payload.Payload, role insolar.
 		}
 		pl, err := payload.UnmarshalFromMeta(rep.Payload)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ retryer ] failed to unmarshal reply")
+			return nil, errors.Wrap(err, "[ sendWithRetry ] failed to unmarshal reply")
 		}
 
 		if p, ok := pl.(*payload.Error); !ok || p.Code != payload.CodeFlowCanceled {
 			return pl, nil
 		}
-		inslogger.FromContext(ctx).Debug("[ retryer ] flow cancelled, retrying")
-		tries--
+		inslogger.FromContext(ctx).Debug("[ sendWithRetry ] flow cancelled, retrying")
+		retriesNumber--
 	}
-	return nil, fmt.Errorf("[ retryer ] flow cancelled, retries exceeded")
+	return nil, fmt.Errorf("[ sendWithRetry ] flow cancelled, retries exceeded")
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -912,7 +906,7 @@ func (m *client) RegisterResult(
 		Result: buf,
 	}
 
-	pl, err := m.retryer(ctx, psr, insolar.DynamicRoleLightExecutor, obj, 3)
+	pl, err := m.sendWithRetry(ctx, psr, insolar.DynamicRoleLightExecutor, obj, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -983,7 +977,7 @@ func (m *client) activateObject(
 		Result: resultBuf,
 	}
 
-	pl, err := m.retryer(ctx, pa, insolar.DynamicRoleLightExecutor, obj, 3)
+	pl, err := m.sendWithRetry(ctx, pa, insolar.DynamicRoleLightExecutor, obj, 3)
 	if err != nil {
 		return errors.Wrap(err, "can't send activation and result records")
 	}

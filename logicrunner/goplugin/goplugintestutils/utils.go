@@ -35,6 +35,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -392,9 +393,14 @@ func (cb *ContractsBuilder) Clean() {
 func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
+		pulse, err := cb.pulseAccessor.Latest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "can't get current pulse")
+		}
 		request := record.IncomingRequest{
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
+			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
 		}
 		protoID, err := cb.registerRequest(ctx, &request)
 
@@ -439,9 +445,15 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		}
 
 		nonce := testutils.RandomRef()
+		pulse, err := cb.pulseAccessor.Latest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "can't get current pulse")
+		}
+
 		req := record.IncomingRequest{
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
+			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
 		}
 
 		codeReq, err := cb.registerRequest(ctx, &req)

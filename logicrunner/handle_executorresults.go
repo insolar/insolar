@@ -59,7 +59,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 
 	es.Lock()
 	if es.pending == message.InPending {
-		if !es.CurrentList.Empty() {
+		if !es.Broker.currentList.Empty() {
 			logger.Debug("execution returned to node that is still executing pending")
 
 			es.pending = message.NotPending
@@ -87,7 +87,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	if p.msg.Queue != nil {
 		for _, qe := range p.msg.Queue {
 			ctxToSent := qe.Parcel.Context(context.Background())
-			transcript := NewTranscript(ctxToSent, qe.Parcel, qe.Request, p.LR.pulse(ctx), es.Ref)
+			transcript := NewTranscript(ctxToSent, qe.Parcel, qe.Request)
 
 			es.Broker.Prepend(ctx, false, transcript)
 		}

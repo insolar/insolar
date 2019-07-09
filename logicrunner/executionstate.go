@@ -34,7 +34,6 @@ type ExecutionState struct {
 	ObjectDescriptor artifacts.ObjectDescriptor
 
 	Broker                *ExecutionBroker
-	CurrentList           *CurrentExecutionList
 	LedgerHasMoreRequests bool
 	getLedgerPendingMutex sync.Mutex
 
@@ -46,9 +45,8 @@ type ExecutionState struct {
 
 func NewExecutionState(ref insolar.Reference) *ExecutionState {
 	es := &ExecutionState{
-		Ref:         ref,
-		CurrentList: NewCurrentExecutionList(),
-		pending:     message.PendingUnknown,
+		Ref:     ref,
+		pending: message.PendingUnknown,
 	}
 	es.Broker = NewExecutionBroker(es)
 
@@ -59,10 +57,21 @@ func (es *ExecutionState) RegisterLogicRunner(lr *LogicRunner) {
 	es.Broker.logicRunner = lr
 }
 
+// PendingNotConfirmed checks that we were in pending and waiting
+// for previous executor to notify us that he still executes it
+//
+// Used in OnPulse to tell next executor, that it's time to continue
+// work on this object
+func (es *ExecutionState) InPendingNotConfirmed() bool {
+	return es.pending == message.InPending && !es.PendingConfirmed
+}
+
 func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Message {
 	if es == nil {
 		return nil
 	}
+
+	logger := inslogger.FromContext(ctx)
 
 	messages := make([]insolar.Message, 0)
 	ref := es.Ref
@@ -72,7 +81,8 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 	if !meNext {
 		sendExecResults := false
 
-		if !es.CurrentList.Empty() {
+		switch {
+		case !es.Broker.currentList.Empty():
 			es.pending = message.InPending
 			sendExecResults = true
 
@@ -83,15 +93,14 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 					Reference: ref,
 				},
 			)
-		} else if es.pending == message.InPending && !es.PendingConfirmed {
-			inslogger.FromContext(ctx).Warn(
-				"looks like pending executor died, continuing execution on next executor",
-			)
+		case es.InPendingNotConfirmed():
+			logger.Warn("looks like pending executor died, continuing execution on next executor")
 			es.pending = message.NotPending
 			sendExecResults = true
 			es.LedgerHasMoreRequests = true
-		} else if es.Broker.finished.Len() > 0 {
+		case es.Broker.finished.Length() > 0:
 			sendExecResults = true
+
 		}
 
 		// rotation results also contain finished requests
@@ -117,18 +126,14 @@ func (es *ExecutionState) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 			)
 		}
 	} else {
-		if !es.CurrentList.Empty() {
+		if !es.Broker.currentList.Empty() {
 			// no pending should be as we are executing
 			if es.pending == message.InPending {
-				inslogger.FromContext(ctx).Warn(
-					"we are executing ATM, but ES marked as pending, shouldn't be",
-				)
+				logger.Warn("we are executing ATM, but ES marked as pending, shouldn't be")
 				es.pending = message.NotPending
 			}
-		} else if es.pending == message.InPending && !es.PendingConfirmed {
-			inslogger.FromContext(ctx).Warn(
-				"looks like pending executor died, re-starting execution",
-			)
+		} else if es.InPendingNotConfirmed() {
+			logger.Warn("looks like pending executor died, re-starting execution")
 			es.pending = message.NotPending
 			es.LedgerHasMoreRequests = true
 		}

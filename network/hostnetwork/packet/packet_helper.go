@@ -166,12 +166,10 @@ func DeserializePacket(logger insolar.Logger, conn io.Reader) (*Packet, error) {
 		return nil, io.ErrUnexpectedEOF
 	}
 
-	logger.Debugf("[ DeserializePacket ] packet length %d", length)
 	buf := make([]byte, length)
 	if _, err := io.ReadFull(conn, buf); err != nil {
 		return nil, errors.Wrap(err, "failed to read packet")
 	}
-	logger.Debugf("[ DeserializePacket ] read packet")
 
 	msg := &Packet{}
 	err = msg.Unmarshal(buf)

@@ -28,27 +28,33 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	parcel.GetSenderMock.Expect().Return(gen.Reference())
 
 	requestRef := gen.Reference()
-	pulse := insolar.Pulse{}
-	callee := gen.Reference()
 
 	rpcm := NewExecutionProxyImplementation(dc, cr, am)
 	ctx := context.Background()
-	transcript := NewTranscript(ctx, parcel, &requestRef, &pulse, callee)
+	transcript := NewTranscript(ctx, parcel, &requestRef)
 	reason := gen.Reference()
 	transcript.RequestRef = &reason
 	req := rpctypes.UpRouteReq{}
 	resp := &rpctypes.UpRouteResp{}
 
 	var outreq *record.OutgoingRequest
-
+	outgoingReqID := gen.ID()
+	outgoingReqRef := insolar.NewReference(outgoingReqID)
+	// Make sure an outgoing request is registered
 	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
 		require.Nil(t, outreq)
 		outreq = r
-		id := gen.ID()
+		id := outgoingReqID
 		return &id, nil
 	}
 
 	cr.CallMethodMock.Return(&reply.OK{}, nil)
+	// Make sure the result of the outgoing request is registered as well
+	am.RegisterResultFunc = func(ctx context.Context, objref insolar.Reference, reqref insolar.Reference, result []byte) (r *insolar.ID, r1 error) {
+		require.Equal(t, outgoingReqRef, &reqref)
+		id := gen.ID()
+		return &id, nil
+	}
 
 	err := rpcm.RouteCall(ctx, transcript, req, resp)
 	require.NoError(t, err)

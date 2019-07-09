@@ -18,29 +18,75 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+type TranscriptDequeueElement struct {
+	prev  *TranscriptDequeueElement
+	next  *TranscriptDequeueElement
+	value *Transcript
+}
+
 // TODO: probably it's better to rewrite it using linked list
 type TranscriptDequeue struct {
-	lock  sync.Mutex
-	queue []*Transcript
+	lock   sync.Locker
+	first  *TranscriptDequeueElement
+	last   *TranscriptDequeueElement
+	length int
+}
+
+func (d *TranscriptDequeue) pushOne(el *Transcript) {
+	newElement := &TranscriptDequeueElement{value: el}
+	lastElement := d.last
+
+	if lastElement != nil {
+		newElement.prev = lastElement
+		lastElement.next = newElement
+		d.last = newElement
+	} else {
+		d.first, d.last = newElement, newElement
+	}
+
+	d.length++
 }
 
 func (d *TranscriptDequeue) Push(els ...*Transcript) {
 	d.lock.Lock()
-	d.queue = append(d.queue, els...)
-	d.lock.Unlock()
+	defer d.lock.Unlock()
+
+	for _, el := range els {
+		d.pushOne(el)
+	}
+}
+
+func (d *TranscriptDequeue) prependOne(el *Transcript) {
+	newElement := &TranscriptDequeueElement{value: el}
+	firstElement := d.first
+
+	if firstElement != nil {
+		newElement.next = firstElement
+		firstElement.prev = newElement
+		d.first = newElement
+	} else {
+		d.first, d.last = newElement, newElement
+	}
+
+	d.length++
 }
 
 func (d *TranscriptDequeue) Prepend(els ...*Transcript) {
 	d.lock.Lock()
-	d.queue = append(els, d.queue...)
-	d.lock.Unlock()
+	defer d.lock.Unlock()
+
+	for i := len(els) - 1; i >= 0; i-- {
+		d.prependOne(els[i])
+	}
 }
 
 func (d *TranscriptDequeue) Pop() *Transcript {
@@ -55,88 +101,128 @@ func (d *TranscriptDequeue) Has(ref insolar.Reference) bool {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	for pos := len(d.queue) - 1; pos >= 0; pos-- {
-		if d.queue[pos].RequestRef.Compare(ref) == 0 {
+	for elem := d.first; elem != nil; elem = elem.next {
+		if elem.value.RequestRef.Compare(ref) == 0 {
 			return true
 		}
 	}
 	return false
 }
 
-func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
+func (d *TranscriptDequeue) PopByReference(ref insolar.Reference) *Transcript {
 	d.lock.Lock()
-	toDelete := -1
-	for pos := len(d.queue) - 1; pos >= 0; pos-- {
-		if d.queue[pos].RequestRef.Compare(*ref) == 0 {
-			toDelete = pos
-			break
+	defer d.lock.Unlock()
+
+	for elem := d.first; elem != nil; elem = elem.next {
+		if elem.value.RequestRef.Compare(ref) == 0 {
+			if elem.prev != nil {
+				elem.prev.next = elem.next
+			}
+			if elem.next != nil {
+				elem.next.prev = elem.prev
+			}
+
+			d.length--
+
+			return elem.value
 		}
 	}
-	var rv *Transcript
-	if toDelete != -1 {
-		rv = d.queue[toDelete]
-		d.queue = append(d.queue[:toDelete], d.queue[toDelete+1:]...)
-	}
-	d.lock.Unlock()
-	return rv
+
+	return nil
 }
 
 func (d *TranscriptDequeue) HasFromLedger() *Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	for _, t := range d.queue {
-		if t.FromLedger {
-			return t
+	for elem := d.first; elem != nil; elem = elem.next {
+		if elem.value.FromLedger {
+			return elem.value
 		}
 	}
 	return nil
+}
+
+func (d *TranscriptDequeue) commonPeek(count int) (*TranscriptDequeueElement, []*Transcript) {
+	if d.length < count {
+		count = d.length
+	}
+
+	rv := make([]*Transcript, count)
+
+	var lastElement *TranscriptDequeueElement
+	for i := 0; i < count; i++ {
+		if lastElement == nil {
+			lastElement = d.first
+		} else {
+			lastElement = lastElement.next
+		}
+		rv[i] = lastElement.value
+	}
+
+	return lastElement, rv
+}
+
+func (d *TranscriptDequeue) take(count int) []*Transcript {
+	lastElement, rv := d.commonPeek(count)
+	if lastElement != nil {
+		if lastElement.next == nil {
+			d.first, d.last = nil, nil
+		} else {
+			lastElement.next.prev, d.first = nil, lastElement.next
+			lastElement.next = nil
+		}
+
+		d.length -= len(rv)
+	}
+
+	return rv
+}
+
+func (d *TranscriptDequeue) Peek(count int) []*Transcript {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	_, rv := d.commonPeek(count)
+	return rv
 }
 
 func (d *TranscriptDequeue) Take(count int) []*Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	size := len(d.queue)
-	if size < count {
-		count = size
-	}
-
-	elements := d.queue[:count]
-	d.queue = d.queue[count:]
-
-	return elements
+	return d.take(count)
 }
 
 func (d *TranscriptDequeue) Rotate() []*Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	rv := d.queue
-	d.queue = make([]*Transcript, 0)
-
-	return rv
+	return d.take(d.length)
 }
 
-func (d *TranscriptDequeue) Len() int {
+func (d *TranscriptDequeue) Length() int {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	return len(d.queue)
+	return d.length
 }
 
 func NewTranscriptDequeue() *TranscriptDequeue {
 	return &TranscriptDequeue{
-		lock:  sync.Mutex{},
-		queue: make([]*Transcript, 0),
+		lock:   &sync.Mutex{},
+		first:  nil,
+		last:   nil,
+		length: 0,
 	}
 }
 
 type ExecutionBroker struct {
-	mutableLock sync.RWMutex
+	stateLock   sync.Locker
 	mutable     *TranscriptDequeue
 	immutable   *TranscriptDequeue
 	finished    *TranscriptDequeue
+	currentList *CurrentExecutionList
 
 	logicRunner    *LogicRunner
 	executionState *ExecutionState
@@ -146,11 +232,22 @@ type ExecutionBroker struct {
 
 	ledgerChecked sync.Once
 
-	processActive bool
-	processLock   sync.Mutex
+	processorActive uint32
 
 	deduplicationTable map[insolar.Reference]bool
 	deduplicationLock  sync.Mutex
+}
+
+func (q *ExecutionBroker) tryTakeProcessor(_ context.Context) bool {
+	return atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
+}
+
+func (q *ExecutionBroker) releaseProcessor(_ context.Context) {
+	atomic.SwapUint32(&q.processorActive, 0)
+}
+
+func (q *ExecutionBroker) isActiveProcessor() bool { //nolint: unused
+	return atomic.LoadUint32(&q.processorActive) == 1
 }
 
 type ExecutionBrokerRotationResult struct {
@@ -159,55 +256,78 @@ type ExecutionBrokerRotationResult struct {
 	LedgerHasMoreRequests bool
 }
 
-func (q *ExecutionBroker) getImmutableTask(_ context.Context) *Transcript {
-	q.mutableLock.RLock()
-	defer q.mutableLock.RUnlock()
+func (q *ExecutionBroker) checkCurrent(_ context.Context, transcript *Transcript) {
+	if q.currentList.Has(*transcript.RequestRef) {
+		panic(fmt.Sprintf("requestRef %s is already in currentList", transcript.RequestRef.String()))
+	}
+}
+
+func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *Transcript {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
 
 	transcript := q.immutable.Pop()
 	if transcript == nil {
 		return nil
 	}
 
+	q.checkCurrent(ctx, transcript)
+	q.currentList.SetTranscript(transcript)
 	return transcript
 }
 
-func (q *ExecutionBroker) getMutableTask(_ context.Context) *Transcript {
-	q.mutableLock.RLock()
-	defer q.mutableLock.RUnlock()
+func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
 
 	transcript := q.mutable.Pop()
 	if transcript == nil {
 		return nil
 	}
 
+	q.checkCurrent(ctx, transcript)
+	q.currentList.SetTranscript(transcript)
 	return transcript
 }
 
-func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript) {
-	q.mutableLock.RLock()
-	defer q.mutableLock.RUnlock()
+func (q *ExecutionBroker) storeCurrent(ctx context.Context, transcript *Transcript) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
 
-	if q.finished.Has(*transcript.RequestRef) {
+	q.checkCurrent(ctx, transcript)
+	q.currentList.SetTranscript(transcript)
+}
+
+func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	if !q.currentList.Has(*transcript.RequestRef) {
 		return
 	}
+	q.currentList.Delete(*transcript.RequestRef)
 
 	queue := q.mutable
 	if transcript.Request.Immutable {
 		queue = q.immutable
 	}
 
-	if queue.Has(*transcript.RequestRef) {
-		return
-	}
-
 	queue.Prepend(transcript)
 }
 
-func (q *ExecutionBroker) finishTask(_ context.Context, transcript *Transcript) {
-	q.mutableLock.RLock()
-	defer q.mutableLock.RUnlock()
+func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	logger := inslogger.FromContext(ctx)
 
 	q.finished.Push(transcript)
+
+	if !q.currentList.Has(*transcript.RequestRef) {
+		logger.Error("[ ExecutionBroker.FinishTask ] task '%s' is not in current", transcript.RequestRef.String())
+	} else {
+		q.currentList.Delete(*transcript.RequestRef)
+	}
 }
 
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) bool {
@@ -218,11 +338,11 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	}
 
 	q.Execute(ctx, transcript)
-	q.finishTask(ctx, transcript)
+	// q.finishTask(ctx, transcript)
 	return true
 }
 
-func (q *ExecutionBroker) isDuplicate(_ context.Context, transcript *Transcript) bool {
+func (q *ExecutionBroker) storeWithoutDuplication(_ context.Context, transcript *Transcript) bool {
 	q.deduplicationLock.Lock()
 	defer q.deduplicationLock.Unlock()
 
@@ -235,16 +355,21 @@ func (q *ExecutionBroker) isDuplicate(_ context.Context, transcript *Transcript)
 
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.isDuplicate(ctx, transcript) {
+		if q.storeWithoutDuplication(ctx, transcript) {
+			inslogger.FromContext(ctx).Info(
+				"Already know about request ",
+				transcript.RequestRef.String(), ", skipping",
+			)
 			continue
 		}
 
 		if transcript.Request.Immutable {
+			q.storeCurrent(ctx, transcript)
 			go q.processTranscript(ctx, transcript)
 		} else {
-			q.mutableLock.RLock()
+			q.stateLock.Lock()
 			q.mutable.Prepend(transcript)
-			q.mutableLock.RUnlock()
+			q.stateLock.Unlock()
 		}
 	}
 	if start {
@@ -255,28 +380,26 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 // One shouldn't mix immutable calls and mutable ones
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.isDuplicate(ctx, transcript) {
+		if q.storeWithoutDuplication(ctx, transcript) {
+			inslogger.FromContext(ctx).Info(
+				"Already know about request ",
+				transcript.RequestRef.String(), ", skipping",
+			)
 			continue
 		}
 
 		if transcript.Request.Immutable {
+			q.storeCurrent(ctx, transcript)
 			go q.processTranscript(ctx, transcript)
 		} else {
-			q.mutableLock.RLock()
+			q.stateLock.Lock()
 			q.mutable.Push(transcript)
-			q.mutableLock.RUnlock()
+			q.stateLock.Unlock()
 		}
 	}
 	if start {
 		q.StartProcessorIfNeeded(ctx)
 	}
-}
-
-func (q *ExecutionBroker) get(_ context.Context) *Transcript {
-	q.mutableLock.RLock()
-	defer q.mutableLock.RUnlock()
-
-	return q.mutable.Pop()
 }
 
 func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
@@ -290,18 +413,18 @@ func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
 }
 
 func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference) *Transcript {
-	q.mutableLock.RLock()
-	defer q.mutableLock.RUnlock()
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
 
-	return q.mutable.PopByReference(r)
+	q.deduplicationLock.Lock()
+	defer q.deduplicationLock.Unlock()
+
+	delete(q.deduplicationTable, *r)
+	return q.mutable.PopByReference(*r)
 }
 
 func (q *ExecutionBroker) startProcessor(ctx context.Context) {
-	defer func() {
-		q.processLock.Lock()
-		q.processActive = false
-		q.processLock.Unlock()
-	}()
+	defer q.releaseProcessor(ctx)
 
 	// сhecking we're eligible to execute contracts
 	if readyToExecute := q.Check(ctx); !readyToExecute {
@@ -327,27 +450,24 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
-	q.processLock.Lock()
 	// i've removed "if we have tasks here"; we can be there in two cases:
 	// 1) we've put a task into queue and automatically start processor
 	// 2) we've explicitly ask broker to be here
 	// both cases means we knew what we are doing and so it's just an
 	// unneeded optimisation
-	if !q.processActive {
+	if q.tryTakeProcessor(ctx) {
 		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
-
-		q.processActive = true
 		go q.startProcessor(ctx)
 	}
-	q.processLock.Unlock()
 
 }
 
-// TODO: locking system (mutableLock) should be reconsidered
 // TODO: probably rotation should wait till processActive == false (??)
 func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 	// take mutables, then, if we can, take immutables, if something was left -
-	q.mutableLock.Lock()
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
 	rv := &ExecutionBrokerRotationResult{
 		Requests:              q.mutable.Take(count),
 		Finished:              q.finished.Rotate(),
@@ -358,7 +478,7 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 		rv.Requests = append(rv.Requests, q.immutable.Take(leftCount)...)
 	}
 
-	if len(rv.Requests) > 0 && (q.mutable.Len() > 0 || q.immutable.Len() > 0) {
+	if len(rv.Requests) > 0 && (q.mutable.Length() > 0 || q.immutable.Length() > 0) {
 		rv.LedgerHasMoreRequests = true
 	}
 
@@ -368,8 +488,6 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 	q.deduplicationLock.Lock()
 	q.deduplicationTable = make(map[insolar.Reference]bool)
 	q.deduplicationLock.Unlock()
-
-	q.mutableLock.Unlock()
 
 	return rv
 }
@@ -420,18 +538,12 @@ func (q *ExecutionBroker) checkLedgerPendingRequests(ctx context.Context, transc
 func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
 	q.checkLedgerPendingRequests(ctx, nil)
 
-	q.executionState.Lock()
-	q.executionState.CurrentList.Set(*transcript.RequestRef, transcript)
-	q.executionState.Unlock()
-
 	reply, err := q.logicRunner.RequestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
 		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
 	}
 
-	q.executionState.Lock()
-	q.executionState.CurrentList.Delete(*transcript.RequestRef)
-	q.executionState.Unlock()
+	q.finishTask(ctx, transcript) // TODO: hack for now, later that function need to be splitted
 
 	go q.logicRunner.RequestsExecutor.SendReply(transcript.Context, transcript, reply, err)
 
@@ -483,10 +595,11 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 
 func NewExecutionBroker(es *ExecutionState) *ExecutionBroker {
 	return &ExecutionBroker{
-		mutableLock: sync.RWMutex{},
+		stateLock:   &sync.Mutex{},
 		mutable:     NewTranscriptDequeue(),
 		immutable:   NewTranscriptDequeue(),
 		finished:    NewTranscriptDequeue(),
+		currentList: NewCurrentExecutionList(),
 
 		executionState: es,
 

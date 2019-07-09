@@ -60,7 +60,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 
 	es.Lock()
 	es.pending = message.NotPending
-	if !es.CurrentList.Empty() {
+	if !es.Broker.currentList.Empty() {
 		es.Unlock()
 		return errors.New("[ HandlePendingFinished ] received PendingFinished when we are already executing")
 	}

@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
@@ -45,24 +44,16 @@ type Transcript struct {
 	FromLedger bool
 }
 
-func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insolar.Reference,
-	pulse *insolar.Pulse, callee insolar.Reference) *Transcript {
+func NewTranscript(
+	ctx context.Context, parcel insolar.Parcel, requestRef *insolar.Reference,
+) *Transcript {
 
 	msg := parcel.Message().(*message.CallMethod)
 
-	logicalContext := &insolar.LogicCallContext{
-		Mode:            insolar.ExecuteCallMode,
-		Caller:          msg.GetCaller(),
-		Callee:          &callee,
-		Request:         requestRef,
-		TraceID:         inslogger.TraceID(ctx),
-		CallerPrototype: &msg.CallerPrototype,
-	}
 	sender := parcel.GetSender()
 
 	return &Transcript{
 		Context:       ctx,
-		LogicContext:  logicalContext,
 		Request:       &msg.IncomingRequest,
 		RequestRef:    requestRef,
 		RequesterNode: &sender,
@@ -119,6 +110,12 @@ func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *Transcript {
 func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *Transcript) {
 	ces.lock.Lock()
 	ces.executions[requestRef] = ce
+	ces.lock.Unlock()
+}
+
+func (ces *CurrentExecutionList) SetTranscript(t *Transcript) {
+	ces.lock.Lock()
+	ces.executions[*t.RequestRef] = t
 	ces.lock.Unlock()
 }
 
