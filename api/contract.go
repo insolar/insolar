@@ -208,8 +208,8 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	// TODO need to understand why sometimes errors goes to reply
 	// see tests TestConstructorReturnNil, TestContractCallingContract, TestPrototypeMismatch
 	switch extractedReply.(type) {
-	case map[string]interface{}:
-		replyMap := extractedReply.(map[string]interface{})
+	case map[interface{}]interface{}:
+		replyMap := extractedReply.(map[interface{}]interface{})
 		if len(replyMap) == 1 {
 			for k, v := range replyMap {
 				if reflect.ValueOf(k).String() == "S" && len(reflect.TypeOf(v).String()) > 0 {
