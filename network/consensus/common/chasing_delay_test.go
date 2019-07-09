@@ -48,47 +48,62 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package adapters
+package common
 
 import (
-	"context"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/transport"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
-type PacketSender struct {
-	datagramTransport transport.DatagramTransport
+func TestNewChasingTimer(t *testing.T) {
+	chasingDelay := time.Second
+	ct := NewChasingTimer(chasingDelay)
+	require.Equal(t, ct.chasingDelay, chasingDelay)
 }
 
-func NewPacketSender(datagramTransport transport.DatagramTransport) *PacketSender {
-	return &PacketSender{
-		datagramTransport: datagramTransport,
-	}
+func TestIsEnabled(t *testing.T) {
+	ct := NewChasingTimer(time.Second)
+	require.True(t, ct.IsEnabled())
+
+	ct = NewChasingTimer(0)
+	require.False(t, ct.IsEnabled())
+
+	ct = NewChasingTimer(-time.Second)
+	require.False(t, ct.IsEnabled())
 }
 
-type payloadWrapper struct {
-	Payload interface{}
+func TestWasStarted(t *testing.T) {
+	ct := NewChasingTimer(time.Second)
+	require.False(t, ct.WasStarted())
+
+	ct.timer = time.NewTimer(time.Second)
+	require.True(t, ct.WasStarted())
 }
 
-func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
-	addr := to.GetDefaultEndpoint().GetNameAddress().String()
+func TestRestartChase(t *testing.T) {
+	ct := NewChasingTimer(-time.Second)
+	ct.RestartChase()
+	require.True(t, ct.timer == nil)
 
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"receiver_addr":    addr,
-		"receiver_node_id": to.GetShortNodeID(),
-		"options":          sendOptions,
-	})
+	ct = NewChasingTimer(0)
+	ct.RestartChase()
+	require.True(t, ct.timer == nil)
 
-	bs, err := insolar.Serialize(payload)
-	if err != nil {
-		logger.Error("Failed to serialize payload")
-	}
+	ct = NewChasingTimer(time.Microsecond)
+	ct.RestartChase()
+	require.True(t, ct.timer != nil)
 
-	err = ps.datagramTransport.SendDatagram(ctx, addr, bs)
-	if err != nil {
-		logger.Error("Failed to send datagram")
-	}
+	ct.RestartChase()
+	require.True(t, ct.timer != nil)
+}
+
+func TestChannel(t *testing.T) {
+	ct := NewChasingTimer(0)
+	require.True(t, ct.Channel() == nil)
+
+	ct = NewChasingTimer(time.Microsecond)
+	ct.RestartChase()
+	require.True(t, ct.Channel() != nil)
 }
