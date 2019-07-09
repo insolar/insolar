@@ -113,8 +113,15 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 
-	s.tmpDir1, _ = ioutil.TempDir("", "bdb-test-")
-	s.badgerDB1, _ = store.NewBadgerDB(s.tmpDir1)
+	var err error
+	s.tmpDir1, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
+	s.badgerDB1, err = store.NewBadgerDB(s.tmpDir1)
+	if err != nil {
+		s.T().Error("Can't NewBadgerDB", err)
+	}
 	storageDB := s.badgerDB1
 
 	dropStorage := drop.NewDB(storageDB)
@@ -132,9 +139,15 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 
 	s.indexStorageMemory = object.NewIndexStorageMemory()
 
-	s.tmpDir2, _ = ioutil.TempDir("", "bdb-test-")
+	s.tmpDir2, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
 
-	s.badgerDB2, _ = store.NewBadgerDB(s.tmpDir2)
+	s.badgerDB2, err = store.NewBadgerDB(s.tmpDir2)
+	if err != nil {
+		s.T().Error("Can't NewBadgerDB", err)
+	}
 
 	s.cm.Inject(
 		s.scheme,

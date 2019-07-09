@@ -149,9 +149,7 @@ func (b *BadgerDB) Stop(ctx context.Context) error {
 
 	logger.Info("BadgerDB: closing database...")
 
-	err := b.backend.Close()
-
-	return err
+	return b.backend.Close()
 }
 
 // Get returns value for specified key or an error. A copy of a value will be returned (i.e. getting large value can be

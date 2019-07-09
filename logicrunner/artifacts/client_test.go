@@ -84,17 +84,30 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 
-	s.tmpDir1, _ = ioutil.TempDir("", "bdb-test-")
+	var err error
+	s.tmpDir1, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
 
-	s.badgerDB1, _ = store.NewBadgerDB(s.tmpDir1)
+	s.badgerDB1, err = store.NewBadgerDB(s.tmpDir1)
+	if err != nil {
+		s.T().Error("Can't NewBadgerDB", err)
+	}
 
 	dropStorage := drop.NewDB(s.badgerDB1)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
-	s.tmpDir2, _ = ioutil.TempDir("", "bdb-test-")
+	s.tmpDir2, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
 
-	s.badgerDB2, _ = store.NewBadgerDB(s.tmpDir2)
+	s.badgerDB2, err = store.NewBadgerDB(s.tmpDir2)
+	if err != nil {
+		s.T().Error("Can't create NewBadgerDB", err)
+	}
 
 	s.cm.Inject(
 		s.scheme,
@@ -106,7 +119,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		s.dropModifier,
 	)
 
-	err := s.cm.Init(s.ctx)
+	err = s.cm.Init(s.ctx)
 	if err != nil {
 		s.T().Error("ComponentManager init failed", err)
 	}
