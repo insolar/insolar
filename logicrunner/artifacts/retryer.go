@@ -125,7 +125,7 @@ func (r *retryer) isRetryableError(ctx context.Context, rep *message.Message) bo
 	}
 	p, ok := replyPayload.(*payload.Error)
 	if ok && (p.Code == payload.CodeFlowCanceled) {
-		inslogger.FromContext(ctx).Warnf("flow cancelled, retrying (error message - %s)", p.Text)
+		inslogger.FromContext(ctx).Errorf("flow cancelled, retrying (error message - %s)", p.Text)
 		r.tries--
 		return true
 	}
@@ -134,36 +134,37 @@ func (r *retryer) isRetryableError(ctx context.Context, rep *message.Message) bo
 
 func (r *retryer) send(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
-	var errText string
 	retry := true
 	var lastPulse insolar.PulseNumber
 
-	r.processingStarted.Lock()
-	if isChannelClosed(r.replyChan) {
-		return
-	}
-	for r.tries > 0 && retry {
-		var err error
-		lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "can't wait for pulse change"))
-			break
+	func() {
+		r.processingStarted.Lock()
+		defer r.processingStarted.Unlock()
+		if isChannelClosed(r.replyChan) {
+			return
 		}
+		for r.tries > 0 && retry {
+			var err error
+			lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
+			if err != nil {
+				logger.Error(errors.Wrap(err, "can't wait for pulse change"))
+				break
+			}
 
-		msg, err := payload.NewMessage(r.ppl)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "error while create new message from payload"))
-			break
+			msg, err := payload.NewMessage(r.ppl)
+			if err != nil {
+				logger.Error(errors.Wrap(err, "error while create new message from payload"))
+				break
+			}
+
+			reps, done := r.sender.SendRole(ctx, msg, r.role, r.ref)
+			retry = r.proxyReply(ctx, reps)
+			done()
 		}
-
-		reps, done := r.sender.SendRole(ctx, msg, r.role, r.ref)
-		retry = r.proxyReply(ctx, reps)
-		done()
-	}
-	r.processingStarted.Unlock()
+	}()
 
 	if r.tries == 0 {
-		logger.Error(errors.Errorf("flow cancelled, retries exceeded (last error - %s)", errText))
+		logger.Error(errors.Errorf("flow cancelled, retries exceeded"))
 	}
 	r.clientDone()
 }
