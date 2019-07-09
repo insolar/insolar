@@ -220,7 +220,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
+		Method:  "api.call",
 		Params:  requester.Params{CallSite: "ReturnObj", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
