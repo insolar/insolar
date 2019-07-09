@@ -87,6 +87,7 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 	return ds.db.Set(&k, encoded)
 }
 
+// TruncateHead remove all records after lastPulse
 func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
 	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: math.MaxUint32}, true)
 	defer it.Close()

@@ -95,6 +95,7 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket F
 	return i.setLastKnownPN(pn, bucket.ObjID)
 }
 
+// TruncateHead remove all records after lastPulse
 func (i *IndexDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()

@@ -53,6 +53,7 @@ func (s *DBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID
 	return tree.Find(recordID)
 }
 
+// TruncateHead remove all records after lastPulse
 func (s *DBStore) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
 	s.Lock()
 	defer s.Unlock()

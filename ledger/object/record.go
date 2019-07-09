@@ -19,8 +19,11 @@ package object
 import (
 	"bytes"
 	"context"
+	"math"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
@@ -182,6 +185,13 @@ func (k recordKey) ID() []byte {
 	return bytes.Join([][]byte{id.Pulse().Bytes(), id.Hash()}, nil)
 }
 
+func newRecordKey(raw []byte) recordKey {
+	pulse := insolar.NewPulseNumber(raw)
+	hash := raw[pulse.Size():]
+
+	return recordKey(*insolar.NewID(pulse, hash))
+}
+
 // NewRecordDB creates new DB storage instance.
 func NewRecordDB(db store.DB) *RecordDB {
 	return &RecordDB{db: db}
@@ -193,6 +203,30 @@ func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec record.Material) 
 	defer r.lock.Unlock()
 
 	return r.set(id, rec)
+}
+
+// TruncateHead remove all records after lastPulse
+func (i *RecordDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	it := i.db.NewIterator(recordKey(*insolar.NewID(math.MaxUint32, nil)), true)
+	defer it.Close()
+
+	for it.Next() {
+		key := newRecordKey(it.Key())
+		keyID := insolar.ID(key)
+		if keyID.Pulse().Equal(lastPulse) {
+			break
+		}
+		err := i.db.Delete(&key)
+		if err != nil {
+			return errors.Wrapf(err, "[ RecordDB.DeleteForPN ] Can't Delete key: %+v", key)
+		}
+
+		inslogger.FromContext(ctx).Infof("[ RecordDB.DeleteForPN ] erased key. Pulse number: %s. ID: %s", keyID.Pulse().String(), keyID.String())
+	}
+	return nil
 }
 
 // ForID returns record for provided id.
