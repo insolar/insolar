@@ -20,7 +20,7 @@ import (
 type PulseManagerMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 insolar.Pulse, p2 bool) (r error)
+	SetFunc       func(p context.Context, p1 insolar.Pulse) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mPulseManagerMockSet
@@ -53,7 +53,6 @@ type PulseManagerMockSetExpectation struct {
 type PulseManagerMockSetInput struct {
 	p  context.Context
 	p1 insolar.Pulse
-	p2 bool
 }
 
 type PulseManagerMockSetResult struct {
@@ -61,14 +60,14 @@ type PulseManagerMockSetResult struct {
 }
 
 //Expect specifies that invocation of PulseManager.Set is expected from 1 to Infinity times
-func (m *mPulseManagerMockSet) Expect(p context.Context, p1 insolar.Pulse, p2 bool) *mPulseManagerMockSet {
+func (m *mPulseManagerMockSet) Expect(p context.Context, p1 insolar.Pulse) *mPulseManagerMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &PulseManagerMockSetExpectation{}
 	}
-	m.mainExpectation.input = &PulseManagerMockSetInput{p, p1, p2}
+	m.mainExpectation.input = &PulseManagerMockSetInput{p, p1}
 	return m
 }
 
@@ -85,12 +84,12 @@ func (m *mPulseManagerMockSet) Return(r error) *PulseManagerMock {
 }
 
 //ExpectOnce specifies that invocation of PulseManager.Set is expected once
-func (m *mPulseManagerMockSet) ExpectOnce(p context.Context, p1 insolar.Pulse, p2 bool) *PulseManagerMockSetExpectation {
+func (m *mPulseManagerMockSet) ExpectOnce(p context.Context, p1 insolar.Pulse) *PulseManagerMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &PulseManagerMockSetExpectation{}
-	expectation.input = &PulseManagerMockSetInput{p, p1, p2}
+	expectation.input = &PulseManagerMockSetInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -100,7 +99,7 @@ func (e *PulseManagerMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of PulseManager.Set method
-func (m *mPulseManagerMockSet) Set(f func(p context.Context, p1 insolar.Pulse, p2 bool) (r error)) *PulseManagerMock {
+func (m *mPulseManagerMockSet) Set(f func(p context.Context, p1 insolar.Pulse) (r error)) *PulseManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,18 +108,18 @@ func (m *mPulseManagerMockSet) Set(f func(p context.Context, p1 insolar.Pulse, p
 }
 
 //Set implements github.com/insolar/insolar/insolar.PulseManager interface
-func (m *PulseManagerMock) Set(p context.Context, p1 insolar.Pulse, p2 bool) (r error) {
+func (m *PulseManagerMock) Set(p context.Context, p1 insolar.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 
 	if len(m.SetMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PulseManagerMock.Set. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to PulseManagerMock.Set. %v %v", p, p1)
 			return
 		}
 
 		input := m.SetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PulseManagerMockSetInput{p, p1, p2}, "PulseManager.Set got unexpected parameters")
+		testify_assert.Equal(m.t, *input, PulseManagerMockSetInput{p, p1}, "PulseManager.Set got unexpected parameters")
 
 		result := m.SetMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -137,7 +136,7 @@ func (m *PulseManagerMock) Set(p context.Context, p1 insolar.Pulse, p2 bool) (r 
 
 		input := m.SetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, PulseManagerMockSetInput{p, p1, p2}, "PulseManager.Set got unexpected parameters")
+			testify_assert.Equal(m.t, *input, PulseManagerMockSetInput{p, p1}, "PulseManager.Set got unexpected parameters")
 		}
 
 		result := m.SetMock.mainExpectation.result
@@ -151,11 +150,11 @@ func (m *PulseManagerMock) Set(p context.Context, p1 insolar.Pulse, p2 bool) (r 
 	}
 
 	if m.SetFunc == nil {
-		m.t.Fatalf("Unexpected call to PulseManagerMock.Set. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to PulseManagerMock.Set. %v %v", p, p1)
 		return
 	}
 
-	return m.SetFunc(p, p1, p2)
+	return m.SetFunc(p, p1)
 }
 
 //SetMinimockCounter returns a count of PulseManagerMock.SetFunc invocations
