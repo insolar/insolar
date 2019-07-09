@@ -53,12 +53,26 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
+
+var signer = func() *adapters.ECDSADataSigner {
+	processor := platformpolicy.NewKeyProcessor()
+	key, _ := processor.GeneratePrivateKey()
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	signer := adapters.NewECDSADataSigner(
+		adapters.NewSha3512Digester(scheme),
+		adapters.NewECDSADigestSigner(key.(*ecdsa.PrivateKey), scheme),
+	)
+	return signer
+}()
 
 func TestHeader_IsRelayRestricted(t *testing.T) {
 	h := Header{}
@@ -274,6 +288,73 @@ func TestHeader_DeserializeFrom(t *testing.T) {
 	require.Equal(t, h1, h2)
 }
 
+func TestPacket_getPulseNumber(t *testing.T) {
+	p := Packet{}
+
+	require.EqualValues(t, 0, p.getPulseNumber())
+
+	p.PulseNumber = 123
+	require.EqualValues(t, 123, p.getPulseNumber())
+}
+
+func TestPacket_setPulseNumber(t *testing.T) {
+	p := Packet{}
+
+	require.EqualValues(t, 0, p.getPulseNumber())
+
+	p.setPulseNumber(1000)
+	require.EqualValues(t, 1000, p.getPulseNumber())
+}
+
+func TestPacket_setPulseNumber_Panic(t *testing.T) {
+	p := Packet{}
+
+	require.Panics(t, func() { p.setPulseNumber(1073741824) })
+}
+
+func TestPacket_SerializeTo(t *testing.T) {
+	p := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	s, err := p.SerializeTo(context.Background(), buf, signer)
+	require.NoError(t, err)
+	require.EqualValues(t, 84, s)
+
+	require.NotEmpty(t, p.PacketSignature)
+}
+
+func TestPacket_DeserializeFrom(t *testing.T) {
+	p1 := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	_, err := p1.SerializeTo(context.Background(), buf, signer)
+	require.NoError(t, err)
+
+	p2 := Packet{
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+
+	_, err = p2.DeserializeFrom(context.Background(), buf)
+	require.NoError(t, err)
+
+	require.Equal(t, p1, p2)
+}
+
 func TestPacket_SerializeTo_NilBody(t *testing.T) {
 	p := Packet{}
 
@@ -281,7 +362,7 @@ func TestPacket_SerializeTo_NilBody(t *testing.T) {
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), ErrNilBody.Error())
-	require.Equal(t, int64(0), n)
+	require.EqualValues(t, 0, n)
 }
 
 func TestPacket_DeserializeFrom_NilBody(t *testing.T) {
@@ -291,5 +372,5 @@ func TestPacket_DeserializeFrom_NilBody(t *testing.T) {
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), ErrNilBody.Error())
-	require.Equal(t, int64(0), n)
+	require.EqualValues(t, 0, n)
 }

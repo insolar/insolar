@@ -81,9 +81,9 @@ type packetContext struct {
 
 	header *Header
 
-	fieldContext    FieldContext
-	neighbourNodeID common.ShortNodeID
-	joinerNodeID    common.ShortNodeID
+	fieldContext          FieldContext
+	neighbourNodeID       common.ShortNodeID
+	announcedJoinerNodeID common.ShortNodeID
 }
 
 func newPacketContext(ctx context.Context, header *Header) packetContext {
@@ -111,11 +111,11 @@ func (pc *packetContext) SetNeighbourNodeID(nodeID common.ShortNodeID) {
 }
 
 func (pc *packetContext) GetAnnouncedJoinerNodeID() common.ShortNodeID {
-	return pc.joinerNodeID
+	return pc.announcedJoinerNodeID
 }
 
 func (pc *packetContext) SetAnnouncedJoinerNodeID(nodeID common.ShortNodeID) {
-	pc.joinerNodeID = nodeID
+	pc.announcedJoinerNodeID = nodeID
 }
 
 type trackableWriter struct {

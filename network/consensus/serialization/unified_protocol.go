@@ -232,11 +232,11 @@ func (p *Packet) setPayloadLength(payloadLength uint16) {
 	p.Header.setPayloadLength(payloadLength)
 }
 
-func (p *Packet) GetPulseNumber() common.PulseNumber {
+func (p *Packet) getPulseNumber() common.PulseNumber {
 	return p.PulseNumber & pulseNumberMask
 }
 
-func (p *Packet) SetPulseNumber(pulseNumber common.PulseNumber) {
+func (p *Packet) setPulseNumber(pulseNumber common.PulseNumber) {
 	if bits.Len(uint(pulseNumber)) > pulseNumberBitSize {
 		panic("invalid pulse number")
 	}

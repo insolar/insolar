@@ -51,23 +51,76 @@
 package serialization
 
 import (
-	"io"
+	"bytes"
+	"context"
+	"testing"
 
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/stretchr/testify/require"
 )
 
-type PulsarPacketBody struct {
-	// ByteSize>=108
-	PulseDataExt          common.PulseDataExt // ByteSize=44
-	PulsarConsensusProofs []byte              // variable lengths >=0
+func TestPulsarPacketBody_SerializeTo(t *testing.T) {
+	b := PulsarPacketBody{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	err := b.SerializeTo(nil, buf)
+	require.NoError(t, err)
+	require.Equal(t, 44, buf.Len())
 }
 
-func (b *PulsarPacketBody) SerializeTo(_ SerializeContext, writer io.Writer) error {
-	// TODO: proofs
-	return write(writer, b.PulseDataExt)
+func TestPulsarPacketBody_DeserializeFrom(t *testing.T) {
+	b1 := PulsarPacketBody{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := b1.SerializeTo(nil, buf)
+	require.NoError(t, err)
+
+	b2 := PulsarPacketBody{}
+	err = b2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, b1, b2)
 }
 
-func (b *PulsarPacketBody) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
-	// TODO: proofs
-	return read(reader, &b.PulseDataExt)
+func TestPulsarPacket_SerializeTo(t *testing.T) {
+	p := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &PulsarPacketBody{},
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	s, err := p.SerializeTo(context.Background(), buf, signer)
+	require.NoError(t, err)
+	require.EqualValues(t, 128, s)
+
+	require.NotEmpty(t, p.PacketSignature)
+}
+
+func TestPulsarPacket_DeserializeFrom(t *testing.T) {
+	p1 := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &PulsarPacketBody{},
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	_, err := p1.SerializeTo(context.Background(), buf, signer)
+	require.NoError(t, err)
+
+	p2 := Packet{
+		EncryptableBody: &PulsarPacketBody{},
+	}
+
+	_, err = p2.DeserializeFrom(context.Background(), buf)
+	require.NoError(t, err)
+
+	require.Equal(t, p1, p2)
 }
