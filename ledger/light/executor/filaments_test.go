@@ -114,7 +114,7 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		}
 
 		_, _, err = manager.SetRequest(ctx, requestID, jetID, &validRequest)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		idx, err := indexes.ForID(ctx, requestID.Pulse(), *validRequest.Object.Record())
 		require.NoError(t, err)
@@ -127,8 +127,8 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
 		expectedFilamentRecordID := *insolar.NewID(requestID.Pulse(), hash)
 
-		assert.Equal(t, expectedFilamentRecordID, *idx.Lifeline.PendingPointer)
-		assert.Equal(t, requestID.Pulse(), *idx.Lifeline.EarliestOpenRequest)
+		require.Equal(t, expectedFilamentRecordID, *idx.Lifeline.PendingPointer)
+		require.Equal(t, requestID.Pulse(), *idx.Lifeline.EarliestOpenRequest)
 
 		rec, err := records.ForID(ctx, expectedFilamentRecordID)
 		require.NoError(t, err)

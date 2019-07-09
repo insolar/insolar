@@ -158,20 +158,17 @@ func (m *FilamentModifierDefault) SetRequest(
 	}
 
 	var objectID insolar.ID
-
-	if request.GetCallType() == record.CTMethod {
-		if request.AffinityRef() == nil && request.AffinityRef().Record().IsEmpty() {
-			return nil, nil, errors.New("request object id is empty")
-		}
-		objectID = *request.AffinityRef().Record()
-	}
-
 	if request.GetCallType() == record.CTSaveAsChild || request.GetCallType() == record.CTSaveAsDelegate {
 		err := m.prepareCreationRequest(ctx, requestID, request)
 		if err != nil {
 			return nil, nil, err
 		}
 		objectID = requestID
+	} else {
+		if request.AffinityRef() == nil && request.AffinityRef().Record().IsEmpty() {
+			return nil, nil, errors.New("request object id is empty")
+		}
+		objectID = *request.AffinityRef().Record()
 	}
 
 	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
