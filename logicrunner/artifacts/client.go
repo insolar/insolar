@@ -790,7 +790,7 @@ func (m *client) DeactivateObject(
 		Result: resultBuf,
 	}
 
-	pl, err := m.retryer(ctx, pd, insolar.DynamicRoleLightExecutor, *obj.HeadRef(), 3)
+	pl, err := m.sendWithRetry(ctx, pd, insolar.DynamicRoleLightExecutor, *obj.HeadRef(), 3)
 	if err != nil {
 		return errors.Wrap(err, "DeactivateObject: can't send deactivation and result records")
 	}
