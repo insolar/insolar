@@ -61,6 +61,7 @@ type MachineLogicExecutor interface {
 type LogicRunner interface {
 	LRI()
 	OnPulse(context.Context, Pulse) error
+	AddUnwantedResponse(ctx context.Context, msg Message)
 }
 
 // CallMode indicates whether we execute or validate
@@ -86,19 +87,19 @@ func (m CallMode) String() string {
 // that is required to implement foundation functions. This struct
 // shouldn't be used in core components.
 type LogicCallContext struct {
-	Mode            CallMode   // either "execution" or "validation"
+	Mode CallMode // either "execution" or "validation"
 
-	Request         *Reference // reference of incoming request record
+	Request *Reference // reference of incoming request record
 
-	Callee          *Reference // Contract that is called
-	Parent          *Reference // Parent of the callee
-	Prototype       *Reference // Prototype (base class) of the callee
-	Code            *Reference // Code reference of the callee
+	Callee    *Reference // Contract that is called
+	Parent    *Reference // Parent of the callee
+	Prototype *Reference // Prototype (base class) of the callee
+	Code      *Reference // Code reference of the callee
 
 	Caller          *Reference // Contract that made the call
 	CallerPrototype *Reference // Prototype (base class) of the caller
 
-	TraceID         string     // trace mark for Jaegar and friends
+	TraceID string // trace mark for Jaegar and friends
 }
 
 // ContractConstructor is a typedef for wrapper contract header

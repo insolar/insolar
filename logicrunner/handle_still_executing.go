@@ -52,6 +52,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		os.ExecutionState.pending = message.InPending
 		os.ExecutionState.PendingConfirmed = true
 		os.ExecutionState.RegisterLogicRunner(lr)
+		h.dep.lr.ResultsMarcher.AddStillExecution(ctx, ref, parcel.GetCaller())
 	} else {
 		es := os.ExecutionState
 		es.Lock()
@@ -62,6 +63,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 			)
 		} else {
 			es.PendingConfirmed = true
+			h.dep.lr.ResultsMarcher.AddStillExecution(ctx, ref, parcel.GetCaller())
 		}
 		es.Unlock()
 	}

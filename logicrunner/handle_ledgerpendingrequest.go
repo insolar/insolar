@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/pkg/errors"
 )
 
 type GetLedgerPendingRequest struct {
@@ -110,11 +111,20 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	msg := parcel.Message().(*message.CallMethod)
 
-	parcel.SetSender(msg.IncomingRequest.Sender)
+	pulse, err := u.dep.lr.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "[ UnsafeGetLedgerPendingRequest::Proceed ] Couldn't get current pulse")
+	}
+	caller := msg.IncomingRequest.Caller
+	sender, err := u.dep.lr.JetCoordinator.VirtualExecutorForObject(ctx, *caller.Record(), pulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "[ UnsafeGetLedgerPendingRequest::Proceed ] Couldn't get current VE for object")
+	}
 
-	pulse := lr.pulse(ctx).PulseNumber
+	parcel.SetSender(*sender)
+
 	authorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, insolar.DynamicRoleVirtualExecutor, id, pulse, lr.JetCoordinator.Me(),
+		ctx, insolar.DynamicRoleVirtualExecutor, id, pulse.PulseNumber, lr.JetCoordinator.Me(),
 	)
 	if err != nil {
 		inslogger.FromContext(ctx).Debug("Authorization failed with error in getLedgerPendingRequest")

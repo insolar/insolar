@@ -49,16 +49,18 @@ type ContractRequester struct {
 	ResultMap      map[[insolar.RecordHashSize]byte]chan *message.ReturnResults
 	PulseAccessor  pulse.Accessor  `inject:""`
 	JetCoordinator jet.Coordinator `inject:""`
+	lr             insolar.LogicRunner
 	// callTimeout is mainly needed for unit tests which
 	// sometimes may unpredictably fail on CI with a default timeout
 	callTimeout time.Duration
 }
 
 // New creates new ContractRequester
-func New() (*ContractRequester, error) {
+func New(lr insolar.LogicRunner) (*ContractRequester, error) {
 	return &ContractRequester{
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *message.ReturnResults),
 		callTimeout: 25 * time.Second,
+		lr:          lr,
 	}, nil
 }
 
@@ -232,6 +234,9 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
 		logger.Info("oops unwaited results reqRef=", hex.EncodeToString(reqHash[:]))
+		if cr.lr != nil {
+			cr.lr.AddUnwantedResponse(ctx, parcel.Message())
+		}
 		return &reply.OK{}, nil
 	}
 	logger.Debug("Got wanted results reqRef=", hex.EncodeToString(reqHash[:]))

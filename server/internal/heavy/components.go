@@ -149,7 +149,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		var err error
-		Requester, err = contractrequester.New()
+		Requester, err = contractrequester.New(nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}

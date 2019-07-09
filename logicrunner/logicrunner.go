@@ -118,6 +118,7 @@ type LogicRunner struct {
 	RequestsExecutor           RequestsExecutor                   `inject:""`
 	MachinesManager            MachinesManager                    `inject:""`
 	StateStorage               StateStorage
+	ResultsMarcher             resultsMatcher
 
 	Cfg *configuration.LogicRunner
 
@@ -144,6 +145,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		Cfg:          cfg,
 		StateStorage: NewStateStorage(),
 	}
+	res.ResultsMarcher = NewResultsMatcher(res.MessageBus)
 
 	err := initHandlers(&res)
 	if err != nil {
@@ -500,4 +502,8 @@ func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 		panic(err)
 	}
 	return &p
+}
+
+func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) {
+	lr.ResultsMarcher.AddUnwantedResponse(ctx, msg)
 }
