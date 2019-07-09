@@ -91,20 +91,17 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		p.dep.locker.Lock(&p.requestID)
 		defer p.dep.locker.Unlock(&p.requestID)
 
-		req, res, err = p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
-		if err != nil {
-			return errors.Wrap(err, "failed to store record")
-		}
 		objID = p.requestID
 	} else {
 		p.dep.locker.Lock(p.request.AffinityRef().Record())
 		defer p.dep.locker.Unlock(p.request.AffinityRef().Record())
 
-		req, res, err = p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
-		if err != nil {
-			return errors.Wrap(err, "failed to store record")
-		}
 		objID = *p.request.AffinityRef().Record()
+	}
+
+	req, res, err = p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
+	if err != nil {
+		return errors.Wrap(err, "failed to store record")
 	}
 
 	var reqBuf []byte
