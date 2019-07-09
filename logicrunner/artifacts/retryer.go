@@ -42,7 +42,6 @@ type retryer struct {
 	isDone bool
 
 	replyChan chan *wmmsg.Message
-	// clientDone func()
 
 	processingStarted sync.Mutex
 	once              sync.Once
