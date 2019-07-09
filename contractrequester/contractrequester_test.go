@@ -94,7 +94,6 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	cReq.PulseAccessor = mockPulseAccessor(t)
 
 	cReq.JetCoordinator = mockJetCoordinator(t)
-	cReq.PCS = platformpolicy.NewPlatformCryptographyScheme()
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
@@ -132,7 +131,6 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	cReq.MessageBus = mbm
 	cReq.PulseAccessor = mockPulseAccessor(t)
 	cReq.JetCoordinator = mockJetCoordinator(t)
-	cReq.PCS = platformpolicy.NewPlatformCryptographyScheme()
 
 	mbm.MustRegisterMock.Return()
 	err = cReq.Start(ctx)
@@ -176,7 +174,6 @@ func TestCallMethodCanceled(t *testing.T) {
 	cr.MessageBus = mb
 	cr.PulseAccessor = mockPulseAccessor(t)
 	cr.JetCoordinator = mockJetCoordinator(t)
-	cr.PCS = platformpolicy.NewPlatformCryptographyScheme()
 
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
@@ -223,7 +220,6 @@ func TestCallMethodWaitResults(t *testing.T) {
 	cr.MessageBus = mb
 	cr.PulseAccessor = mockPulseAccessor(t)
 	cr.JetCoordinator = mockJetCoordinator(t)
-	cr.PCS = platformpolicy.NewPlatformCryptographyScheme()
 
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
@@ -270,7 +266,6 @@ func TestReceiveResult(t *testing.T) {
 	defer cancelFunc()
 
 	cr, err := New()
-	cr.PCS = platformpolicy.NewPlatformCryptographyScheme()
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)

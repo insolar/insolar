@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
+	insolarApi "github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -125,6 +126,11 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		return errors.Wrap(err, "can't get protoRef")
 	}
 
+	pulse, err := s.runner.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "can't get current pulse")
+	}
+
 	base := insolar.GenesisRecord.Ref()
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
@@ -136,6 +142,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
+			Reason:          insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
 		},
 	}
 
@@ -181,6 +188,10 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 		return errors.Wrap(err, "can't get objectRef")
 	}
 
+	pulse, err := s.runner.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "can't get current pulse")
+	}
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Caller:       testutils.RandomRef(),
@@ -188,6 +199,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
+			Reason:       insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
 		},
 	}
 
