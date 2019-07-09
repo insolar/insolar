@@ -205,7 +205,7 @@ func (m *executionProxyImplementation) RouteCall(
 		return errors.New("Try to call route from immutable method")
 	}
 
-	incoming, outgoing := buildIncomingAndOutgoingRequests(ctx, current, req)
+	incoming, outgoing := buildIncomingAndOutgoingCallRequests(ctx, current, req)
 
 	// Step 1. Register outgoing request.
 
@@ -243,12 +243,12 @@ func (m *executionProxyImplementation) SaveAsChild(
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
-	reqRecord := saveAsChildRequestRecord(ctx, current, req)
+	incoming, _ := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
 
-	msg := &message.CallMethod{IncomingRequest: reqRecord}
+	msg := &message.CallMethod{IncomingRequest: *incoming}
 
-	ref, err := m.cr.CallConstructor(ctx, msg)
-	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)
+	ref, err := m.cr.CallConstructor(ctx, msg) // AALEKSEEV TODO register outgoing + result
+	current.AddOutgoingRequest(ctx, *incoming, nil, ref, err)
 
 	rep.Reference = ref
 
@@ -263,11 +263,11 @@ func (m *executionProxyImplementation) SaveAsDelegate(
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsDelegate")
 	defer span.End()
 
-	reqRecord := saveAsDelegateRequestRecord(ctx, current, req)
-	msg := &message.CallMethod{IncomingRequest: reqRecord}
+	incoming, _ := buildIncomingAndOutgoingSaveAsDelegateRequests(ctx, current, req)
+	msg := &message.CallMethod{IncomingRequest: *incoming}
 
-	ref, err := m.cr.CallConstructor(ctx, msg)
-	current.AddOutgoingRequest(ctx, reqRecord, nil, ref, err)
+	ref, err := m.cr.CallConstructor(ctx, msg) // AALEKSEEV TODO register outgoing + result
+	current.AddOutgoingRequest(ctx, *incoming, nil, ref, err)
 
 	rep.Reference = ref
 	return err
@@ -406,7 +406,7 @@ func (m *validationProxyImplementation) RouteCall(
 		return errors.New("immutable method can't make calls")
 	}
 
-	incoming, _ := buildIncomingAndOutgoingRequests(ctx, current, req)
+	incoming, _ := buildIncomingAndOutgoingCallRequests(ctx, current, req)
 
 	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
@@ -426,9 +426,9 @@ func (m *validationProxyImplementation) RouteCall(
 func (m *validationProxyImplementation) SaveAsChild(
 	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
-	reqRecord := saveAsChildRequestRecord(ctx, current, req)
+	incoming, _ := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
 
-	reqRes := current.HasOutgoingRequest(ctx, reqRecord)
+	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
 		return errors.New("unexpected outgoing call during validation")
 	}
@@ -444,9 +444,9 @@ func (m *validationProxyImplementation) SaveAsChild(
 func (m *validationProxyImplementation) SaveAsDelegate(
 	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp,
 ) error {
-	reqRecord := saveAsDelegateRequestRecord(ctx, current, req)
+	incoming, _ := buildIncomingAndOutgoingSaveAsDelegateRequests(ctx, current, req)
 
-	reqRes := current.HasOutgoingRequest(ctx, reqRecord)
+	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
 		return errors.New("unexpected outgoing call during validation")
 	}
@@ -482,7 +482,7 @@ func (m *validationProxyImplementation) DeactivateObject(
 	return nil
 }
 
-func buildIncomingAndOutgoingRequests(
+func buildIncomingAndOutgoingCallRequests(
 	_ context.Context, current *Transcript, req rpctypes.UpRouteReq,
 ) (*record.IncomingRequest, *record.OutgoingRequest) {
 
@@ -536,13 +536,13 @@ func buildIncomingAndOutgoingRequests(
 	return &incoming, &outgoing
 }
 
-func saveAsChildRequestRecord(
+func buildIncomingAndOutgoingSaveAsChildRequests(
 	_ context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq,
-) record.IncomingRequest {
+) (*record.IncomingRequest, *record.OutgoingRequest) {
 
 	current.Nonce++
 
-	reqRecord := record.IncomingRequest{
+	incoming := record.IncomingRequest{
 		Caller:          req.Callee,
 		CallerPrototype: req.CalleePrototype,
 		Nonce:           current.Nonce,
@@ -556,16 +556,32 @@ func saveAsChildRequestRecord(
 		APIRequestID: current.Request.APIRequestID,
 		Reason:       *current.RequestRef,
 	}
-	return reqRecord
+
+	outgoing := record.OutgoingRequest{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           current.Nonce,
+
+		CallType:  record.CTSaveAsChild,
+		Base:      &req.Parent,
+		Prototype: &req.Prototype,
+		Method:    req.ConstructorName,
+		Arguments: req.ArgsSerialized,
+
+		APIRequestID: current.Request.APIRequestID,
+		Reason:       *current.RequestRef,
+	}
+
+	return &incoming, &outgoing
 }
 
-func saveAsDelegateRequestRecord(
+func buildIncomingAndOutgoingSaveAsDelegateRequests(
 	_ context.Context, current *Transcript, req rpctypes.UpSaveAsDelegateReq,
-) record.IncomingRequest {
+) (*record.IncomingRequest, *record.OutgoingRequest) {
 
 	current.Nonce++
 
-	reqRecord := record.IncomingRequest{
+	incoming := record.IncomingRequest{
 		Caller:          req.Callee,
 		CallerPrototype: req.CalleePrototype,
 		Nonce:           current.Nonce,
@@ -580,5 +596,20 @@ func saveAsDelegateRequestRecord(
 		Reason:       *current.RequestRef,
 	}
 
-	return reqRecord
+	outgoing := record.OutgoingRequest{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           current.Nonce,
+
+		CallType:  record.CTSaveAsDelegate,
+		Base:      &req.Into,
+		Prototype: &req.Prototype,
+		Method:    req.ConstructorName,
+		Arguments: req.ArgsSerialized,
+
+		APIRequestID: current.Request.APIRequestID,
+		Reason:       *current.RequestRef,
+	}
+
+	return &incoming, &outgoing
 }
