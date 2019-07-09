@@ -17,6 +17,7 @@
 package drop
 
 import (
+	context "context"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -47,7 +48,14 @@ func TestDropDBKey(t *testing.T) {
 }
 
 func TestNewStorageDB(t *testing.T) {
-	dbStore := NewDB(store.NewMemoryMockDB())
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+	dbStore := NewDB(db)
 	require.NotNil(t, dbStore)
 }
 

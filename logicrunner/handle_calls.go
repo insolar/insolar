@@ -62,6 +62,7 @@ func (h *HandleCall) sendToNextExecutor(ctx context.Context, es *ExecutionState,
 
 	// it might be already collected in OnPulse, that is why it already might not be in es.Queue
 	if request != nil {
+		logger.Debug("Sending additional request to next executor")
 		additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
 			ObjectReference: es.Ref,
 			Parcel:          parcel,

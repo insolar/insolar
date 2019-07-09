@@ -148,6 +148,7 @@ func (b *BadgerDB) Stop(ctx context.Context) error {
 	<-b.doneGC
 
 	logger.Info("BadgerDB: closing database...")
+
 	return b.backend.Close()
 }
 

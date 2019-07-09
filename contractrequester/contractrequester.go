@@ -82,6 +82,14 @@ func randomUint64() uint64 {
 
 // SendRequest makes synchronously call to method of contract by its ref without additional information
 func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}) (insolar.Reply, error) {
+	pulse, err := cr.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Couldn't fetch current pulse")
+	}
+	return cr.SendRequestWithPulse(ctx, ref, method, argsIn, pulse.PulseNumber)
+}
+
+func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
@@ -90,12 +98,19 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
 	}
 
+	h := cr.PCS.ReferenceHasher()
+	_, err = h.Write(args)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Failed to calculate hash")
+	}
+
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Object:       ref,
 			Method:       method,
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
+			Reason:       *insolar.NewReference(*insolar.NewID(pulse, h.Sum(nil))),
 		},
 	}
 
