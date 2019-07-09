@@ -86,6 +86,8 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 
 func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
 	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: math.MaxUint32}, true)
+	defer it.Close()
+
 	var erasedKeys string
 	for it.Next() {
 		key := &dropDbKey{}

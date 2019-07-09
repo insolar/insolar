@@ -208,11 +208,7 @@ func (b *BadgerDB) Delete(key Key) error {
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // NewIterator returns new Iterator over the store.
