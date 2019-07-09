@@ -52,9 +52,11 @@ package serialization
 
 import (
 	"io"
+	"math"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/pkg/errors"
 )
 
@@ -64,9 +66,13 @@ const (
 
 	loByteLengthBitSize = 6
 	loByteLengthMask    = 1<<loByteLengthBitSize - 1 // 0b00111111
+	loByteLengthMax     = loByteLengthMask
 
 	hiByteLengthBitSize = 7
 	hiByteLengthMask    = 1<<hiByteLengthBitSize - 1 // 0b01111111
+	hiByteLengthMax     = hiByteLengthMask
+
+	byteLengthMax = (hiByteLengthMax << loByteLengthBitSize) | loByteLengthMax
 )
 
 type NodeVectors struct {
@@ -112,10 +118,13 @@ func (nv *NodeVectors) DeserializeFrom(ctx DeserializeContext, reader io.Reader)
 		return errors.Wrap(err, "failed to deserialize MainStateVector")
 	}
 
-	nv.AdditionalStateVectors = make([]GlobulaStateVector, ctx.GetFlagRangeInt(1, 2))
-	for i := 0; i < int(ctx.GetFlagRangeInt(1, 2)); i++ {
-		if err := nv.AdditionalStateVectors[i].DeserializeFrom(ctx, reader); err != nil {
-			return errors.Wrapf(err, "failed to deserialize AdditionalStateVectors[%d]", i)
+	length := ctx.GetFlagRangeInt(1, 2)
+	if length > 0 {
+		nv.AdditionalStateVectors = make([]GlobulaStateVector, length)
+		for i := 0; i < int(length); i++ {
+			if err := nv.AdditionalStateVectors[i].DeserializeFrom(ctx, reader); err != nil {
+				return errors.Wrapf(err, "failed to deserialize AdditionalStateVectors[%d]", i)
+			}
 		}
 	}
 
@@ -129,7 +138,21 @@ type NodeAppearanceBitset struct {
 	Bytes            []byte
 }
 
-func (nab *NodeAppearanceBitset) IsCompressed() bool {
+func (nab *NodeAppearanceBitset) SetBitset(bitset nodeset.NodeBitset) {
+	length := bitset.Len()
+	if length > math.MaxUint16 {
+		panic("invalid length")
+	}
+
+	nab.setLength(uint16(length))
+
+}
+
+func (nab *NodeAppearanceBitset) GetBitset() nodeset.NodeBitset {
+	return nil
+}
+
+func (nab *NodeAppearanceBitset) isCompressed() bool {
 	return hasBit(uint(nab.FlagsAndLoLength), compressedBitIndex)
 }
 
@@ -145,13 +168,42 @@ func (nab *NodeAppearanceBitset) getHiLength() uint8 {
 	return nab.FlagsAndLoLength & hiByteLengthMask
 }
 
-func (nab *NodeAppearanceBitset) GetLength() uint16 {
+func (nab *NodeAppearanceBitset) setLoLength(length uint8) {
+	if length > loByteLengthMax {
+		panic("invalid length")
+	}
+
+	nab.FlagsAndLoLength |= length
+}
+
+func (nab *NodeAppearanceBitset) setHiLength(length uint8) {
+	if length > hiByteLengthMax {
+		panic("invalid length")
+	}
+
+	nab.HiLength |= length
+}
+
+func (nab *NodeAppearanceBitset) getLength() uint16 {
 	length := uint16(nab.getLoLength())
 	if nab.hasHiLength() {
 		return (uint16(nab.getHiLength()) << loByteLengthBitSize) | length
 	}
 
 	return length
+}
+
+func (nab *NodeAppearanceBitset) setLength(length uint16) {
+	if length > byteLengthMax {
+		panic("invalid length")
+	}
+
+	if length > loByteLengthMax {
+		nab.setLoLength(uint8(length & loByteLengthMask))
+		nab.setHiLength(uint8(length >> loByteLengthBitSize))
+	} else {
+		nab.setLoLength(uint8(length))
+	}
 }
 
 func (nab *NodeAppearanceBitset) SerializeTo(ctx SerializeContext, writer io.Writer) error {
@@ -177,4 +229,13 @@ func (gsv *GlobulaStateVector) SerializeTo(_ SerializeContext, writer io.Writer)
 
 func (gsv *GlobulaStateVector) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
 	return read(reader, gsv)
+}
+
+const (
+	stateBitSize = 3
+	bitsInByte   = 8
+)
+
+func bitsetByteSize(entryLen int) uint16 {
+	return uint16(math.Ceil(float64(entryLen*stateBitSize) / bitsInByte))
 }

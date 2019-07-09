@@ -52,11 +52,52 @@ package serialization
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/stretchr/testify/require"
 )
+
+func TestEmbeddedPulsarData_SerializeTo(t *testing.T) {
+	pd := EmbeddedPulsarData{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	err := pd.SerializeTo(nil, buf)
+	require.NoError(t, err)
+	require.Equal(t, 124, buf.Len())
+}
+
+func TestEmbeddedPulsarData_DeserializeFrom(t *testing.T) {
+	pd1 := EmbeddedPulsarData{
+		Header: Header{
+			ReceiverID: 123,
+			SourceID:   456,
+			TargetID:   789,
+		},
+	}
+	pd1.Header.setIsBodyEncrypted()
+	pd1.Header.setIsRelayRestricted()
+	pd1.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+	pd1.Header.setPacketType(packets.PacketPhase3)
+
+	b := make([]byte, 64)
+	rand.Read(b)
+
+	copy(pd1.PulsarSignature[:], b)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := pd1.SerializeTo(nil, buf)
+	require.NoError(t, err)
+
+	pd2 := EmbeddedPulsarData{}
+	err = pd2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, pd1, pd2)
+}
 
 func TestCloudIntro_SerializeTo(t *testing.T) {
 	ci := CloudIntro{}
@@ -142,4 +183,47 @@ func TestLeaveAnnouncement_DeserializeFrom(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, la1, la2)
+}
+
+func TestGlobulaConsensusPacket_SerializeTo(t *testing.T) {
+	p := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+	p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	s, err := p.SerializeTo(context.Background(), buf, signer)
+	require.NoError(t, err)
+	require.EqualValues(t, 84, s)
+
+	require.NotEmpty(t, p.PacketSignature)
+}
+
+func TestGlobulaConsensusPacket_DeserializeFrom(t *testing.T) {
+	p1 := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+	p1.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	_, err := p1.SerializeTo(context.Background(), buf, signer)
+	require.NoError(t, err)
+
+	p2 := Packet{}
+
+	_, err = p2.DeserializeFrom(context.Background(), buf)
+	require.NoError(t, err)
+
+	require.Equal(t, p1, p2)
 }

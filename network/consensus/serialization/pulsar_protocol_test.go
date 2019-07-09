@@ -91,6 +91,7 @@ func TestPulsarPacket_SerializeTo(t *testing.T) {
 		},
 		EncryptableBody: &PulsarPacketBody{},
 	}
+	p.Header.setProtocolType(ProtocolTypePulsar)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	s, err := p.SerializeTo(context.Background(), buf, signer)
@@ -109,15 +110,14 @@ func TestPulsarPacket_DeserializeFrom(t *testing.T) {
 		},
 		EncryptableBody: &PulsarPacketBody{},
 	}
+	p1.Header.setProtocolType(ProtocolTypePulsar)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 
 	_, err := p1.SerializeTo(context.Background(), buf, signer)
 	require.NoError(t, err)
 
-	p2 := Packet{
-		EncryptableBody: &PulsarPacketBody{},
-	}
+	p2 := Packet{}
 
 	_, err = p2.DeserializeFrom(context.Background(), buf)
 	require.NoError(t, err)

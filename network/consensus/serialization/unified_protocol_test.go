@@ -194,7 +194,7 @@ func TestHeader_setProtocolType(t *testing.T) {
 func TestHeader_setProtocolType_Panic(t *testing.T) {
 	h := Header{}
 
-	require.Panics(t, func() { h.setProtocolType(16) })
+	require.Panics(t, func() { h.setProtocolType(protocolTypeMax + 1) })
 }
 
 func TestHeader_GetPacketType(t *testing.T) {
@@ -221,7 +221,7 @@ func TestHeader_setPacketType(t *testing.T) {
 func TestHeader_setPacketType_Panic(t *testing.T) {
 	h := Header{}
 
-	require.Panics(t, func() { h.setPacketType(16) })
+	require.Panics(t, func() { h.setPacketType(packetTypeMax + 1) })
 }
 
 func TestHeader_getPayloadLength(t *testing.T) {
@@ -245,7 +245,7 @@ func TestHeader_setPayloadLength(t *testing.T) {
 func TestHeader_setPayloadLength_Panic(t *testing.T) {
 	h := Header{}
 
-	require.Panics(t, func() { h.setPayloadLength(16384) })
+	require.Panics(t, func() { h.setPayloadLength(payloadLengthMax + 1) })
 }
 
 func TestHeader_SerializeTo(t *testing.T) {
@@ -309,50 +309,7 @@ func TestPacket_setPulseNumber(t *testing.T) {
 func TestPacket_setPulseNumber_Panic(t *testing.T) {
 	p := Packet{}
 
-	require.Panics(t, func() { p.setPulseNumber(1073741824) })
-}
-
-func TestPacket_SerializeTo(t *testing.T) {
-	p := Packet{
-		Header: Header{
-			SourceID:   123,
-			TargetID:   456,
-			ReceiverID: 789,
-		},
-		EncryptableBody: &GlobulaConsensusPacketBody{},
-	}
-
-	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	s, err := p.SerializeTo(context.Background(), buf, signer)
-	require.NoError(t, err)
-	require.EqualValues(t, 84, s)
-
-	require.NotEmpty(t, p.PacketSignature)
-}
-
-func TestPacket_DeserializeFrom(t *testing.T) {
-	p1 := Packet{
-		Header: Header{
-			SourceID:   123,
-			TargetID:   456,
-			ReceiverID: 789,
-		},
-		EncryptableBody: &GlobulaConsensusPacketBody{},
-	}
-
-	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-
-	_, err := p1.SerializeTo(context.Background(), buf, signer)
-	require.NoError(t, err)
-
-	p2 := Packet{
-		EncryptableBody: &GlobulaConsensusPacketBody{},
-	}
-
-	_, err = p2.DeserializeFrom(context.Background(), buf)
-	require.NoError(t, err)
-
-	require.Equal(t, p1, p2)
+	require.Panics(t, func() { p.setPulseNumber(pulseNumberMax + 1) })
 }
 
 func TestPacket_SerializeTo_NilBody(t *testing.T) {
@@ -366,10 +323,16 @@ func TestPacket_SerializeTo_NilBody(t *testing.T) {
 }
 
 func TestPacket_DeserializeFrom_NilBody(t *testing.T) {
-	p := Packet{}
+	p := Packet{
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+	p.Header.setProtocolType(3) // Unknown protocol
 
-	n, err := p.DeserializeFrom(context.Background(), bytes.NewBuffer(nil))
+	buf := bytes.NewBuffer(nil)
+	_, err := p.SerializeTo(context.Background(), buf, signer)
+	require.NoError(t, err)
 
+	n, err := p.DeserializeFrom(context.Background(), buf)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), ErrNilBody.Error())
 	require.EqualValues(t, 0, n)

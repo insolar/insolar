@@ -93,22 +93,22 @@ type NodeBriefIntro struct {
 	JoinerSignature common.Bits512 // ByteSize=64
 }
 
-func (bi *NodeBriefIntro) GetPrimaryRole() common2.NodePrimaryRole {
+func (bi *NodeBriefIntro) getPrimaryRole() common2.NodePrimaryRole {
 	return common2.NodePrimaryRole(bi.PrimaryRoleAndFlags & primaryRoleMask)
 }
 
-func (bi *NodeBriefIntro) SetPrimaryRole(primaryRole common2.NodePrimaryRole) {
+func (bi *NodeBriefIntro) setPrimaryRole(primaryRole common2.NodePrimaryRole) {
 	if primaryRole > primaryRoleMax {
 		panic("invalid primary role")
 	}
 
 	bi.PrimaryRoleAndFlags |= uint8(primaryRole)
 }
-func (bi *NodeBriefIntro) GetAddrMode() common.NodeEndpointType {
+func (bi *NodeBriefIntro) getAddrMode() common.NodeEndpointType {
 	return common.NodeEndpointType(bi.PrimaryRoleAndFlags >> addrModeShift)
 }
 
-func (bi *NodeBriefIntro) SetAddrMode(addrMode common.NodeEndpointType) {
+func (bi *NodeBriefIntro) setAddrMode(addrMode common.NodeEndpointType) {
 	if addrMode > addrModeMax {
 		panic("invalid addr mode")
 	}
@@ -270,10 +270,12 @@ func (fi *NodeFullIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reade
 		return errors.Wrap(err, "failed to deserialize EndpointLen")
 	}
 
-	fi.ExtraEndpoints = make([]uint16, fi.EndpointLen)
-	for i := 0; i < int(fi.EndpointLen); i++ {
-		if err := read(reader, &fi.ExtraEndpoints[i]); err != nil {
-			return errors.Wrapf(err, "failed to deserialize ExtraEndpoints[%d]", i)
+	if fi.EndpointLen > 0 {
+		fi.ExtraEndpoints = make([]uint16, fi.EndpointLen)
+		for i := 0; i < int(fi.EndpointLen); i++ {
+			if err := read(reader, &fi.ExtraEndpoints[i]); err != nil {
+				return errors.Wrapf(err, "failed to deserialize ExtraEndpoints[%d]", i)
+			}
 		}
 	}
 
@@ -281,10 +283,12 @@ func (fi *NodeFullIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reade
 		return errors.Wrap(err, "failed to deserialize ProofLen")
 	}
 
-	fi.NodeRefProof = make([]common.Bits512, fi.ProofLen)
-	for i := 0; i < int(fi.EndpointLen); i++ {
-		if err := read(reader, &fi.NodeRefProof[i]); err != nil {
-			return errors.Wrapf(err, "failed to deserialize NodeRefProof[%d]", i)
+	if fi.ProofLen > 0 {
+		fi.NodeRefProof = make([]common.Bits512, fi.ProofLen)
+		for i := 0; i < int(fi.EndpointLen); i++ {
+			if err := read(reader, &fi.NodeRefProof[i]); err != nil {
+				return errors.Wrapf(err, "failed to deserialize NodeRefProof[%d]", i)
+			}
 		}
 	}
 

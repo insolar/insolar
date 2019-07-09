@@ -320,10 +320,12 @@ func (n *Neighbourhood) DeserializeFrom(ctx DeserializeContext, reader io.Reader
 		return errors.Wrap(err, "failed to deserialize NeighbourCount")
 	}
 
-	n.Neighbours = make([]NeighbourAnnouncement, n.NeighbourCount)
-	for i := 0; i < int(n.NeighbourCount); i++ {
-		if err := n.Neighbours[i].DeserializeFrom(ctx, reader); err != nil {
-			return errors.Wrapf(err, "failed to serialize Neighbours[%d]", i)
+	if n.NeighbourCount > 0 {
+		n.Neighbours = make([]NeighbourAnnouncement, n.NeighbourCount)
+		for i := 0; i < int(n.NeighbourCount); i++ {
+			if err := n.Neighbours[i].DeserializeFrom(ctx, reader); err != nil {
+				return errors.Wrapf(err, "failed to serialize Neighbours[%d]", i)
+			}
 		}
 	}
 

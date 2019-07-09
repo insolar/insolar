@@ -96,6 +96,17 @@ const (
 	ProtocolTypeGlobulaConsensus = ProtocolType(1)
 )
 
+func (pt ProtocolType) NewBody() PacketBody {
+	switch pt {
+	case ProtocolTypePulsar:
+		return &PulsarPacketBody{}
+	case ProtocolTypeGlobulaConsensus:
+		return &GlobulaConsensusPacketBody{}
+	}
+
+	return nil
+}
+
 var ErrNilBody = errors.New("body is nil")
 
 /*
@@ -122,11 +133,11 @@ func (h *Header) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
 	return read(reader, h)
 }
 
-func (h Header) GetSourceID() common.ShortNodeID {
+func (h *Header) GetSourceID() common.ShortNodeID {
 	return common.ShortNodeID(h.SourceID)
 }
 
-func (h Header) GetPacketType() packets.PacketType {
+func (h *Header) GetPacketType() packets.PacketType {
 	return packets.PacketType(h.ProtocolAndPacketType) & packetTypeMask
 }
 
@@ -138,7 +149,7 @@ func (h *Header) setPacketType(packetType packets.PacketType) {
 	h.ProtocolAndPacketType |= uint8(packetType)
 }
 
-func (h Header) GetProtocolType() ProtocolType {
+func (h *Header) GetProtocolType() ProtocolType {
 	return ProtocolType(h.ProtocolAndPacketType) >> protocolTypeShift
 }
 
@@ -150,7 +161,7 @@ func (h *Header) setProtocolType(protocolType ProtocolType) {
 	h.ProtocolAndPacketType |= uint8(protocolType << protocolTypeShift)
 }
 
-func (h Header) getPayloadLength() uint16 {
+func (h *Header) getPayloadLength() uint16 {
 	return h.HeaderAndPayloadLength & payloadLengthMask
 }
 
@@ -162,7 +173,7 @@ func (h *Header) setPayloadLength(payloadLength uint16) {
 	h.HeaderAndPayloadLength |= payloadLength
 }
 
-func (h Header) HasFlag(f Flag) bool {
+func (h *Header) HasFlag(f Flag) bool {
 	if f > maxFlagIndex {
 		panic("invalid flag index")
 	}
@@ -170,7 +181,7 @@ func (h Header) HasFlag(f Flag) bool {
 	return h.getFlag(f + reservedFlagSize)
 }
 
-func (h Header) GetFlagRangeInt(from, to uint8) uint8 {
+func (h *Header) GetFlagRangeInt(from, to uint8) uint8 {
 	if from > to {
 		panic("invalid from range")
 	}
@@ -190,7 +201,7 @@ func (h *Header) SetFlag(f Flag) {
 	h.setFlag(f + reservedFlagSize)
 }
 
-func (h Header) IsRelayRestricted() bool {
+func (h *Header) IsRelayRestricted() bool {
 	return h.getFlag(FlagIsRelayRestricted)
 }
 
@@ -198,7 +209,7 @@ func (h *Header) setIsRelayRestricted() {
 	h.setFlag(FlagIsRelayRestricted)
 }
 
-func (h Header) IsBodyEncrypted() bool {
+func (h *Header) IsBodyEncrypted() bool {
 	return h.getFlag(FlagIsBodyEncrypted)
 }
 
@@ -206,7 +217,7 @@ func (h *Header) setIsBodyEncrypted() {
 	h.setFlag(FlagIsBodyEncrypted)
 }
 
-func (h Header) getFlag(f Flag) bool {
+func (h *Header) getFlag(f Flag) bool {
 	return hasBit(uint(h.PacketFlags), uint(f))
 }
 
@@ -214,7 +225,7 @@ func (h *Header) setFlag(f Flag) {
 	h.PacketFlags = uint8(setBit(uint(h.PacketFlags), uint(f)))
 }
 
-func (h Header) getFlagRangeInt(from, to uint8) uint8 {
+func (h *Header) getFlagRangeInt(from, to uint8) uint8 {
 	return uint8(uintFromBits(uint(h.PacketFlags), uint(from), uint(to)))
 }
 
@@ -269,10 +280,6 @@ func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, signer commo
 }
 
 func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, error) {
-	if p.EncryptableBody == nil {
-		return 0, ErrMalformedPacketBody(ErrNilBody)
-	}
-
 	r := newTrackableReader(reader)
 
 	if err := p.Header.DeserializeFrom(nil, r); err != nil {
@@ -284,6 +291,11 @@ func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, 
 
 	if err := read(dctx, &p.PulseNumber); err != nil {
 		return r.totalRead, ErrMalformedPulseNumber(err)
+	}
+
+	p.EncryptableBody = pctx.GetProtocolType().NewBody()
+	if p.EncryptableBody == nil {
+		return 0, ErrMalformedPacketBody(ErrNilBody)
 	}
 
 	if err := p.EncryptableBody.DeserializeFrom(dctx, dctx); err != nil {

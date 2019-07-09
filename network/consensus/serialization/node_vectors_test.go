@@ -58,6 +58,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestBitsetByteSize(t *testing.T) {
+	require.EqualValues(t, 6, bitsetByteSize(16))
+	require.EqualValues(t, 5, bitsetByteSize(12))
+	require.EqualValues(t, 1, bitsetByteSize(2))
+	require.EqualValues(t, 2, bitsetByteSize(3))
+}
+
 func TestGlobulaStateVector_SerializeTo(t *testing.T) {
 	v := GlobulaStateVector{}
 
