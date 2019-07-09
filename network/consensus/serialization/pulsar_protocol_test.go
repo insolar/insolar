@@ -55,43 +55,72 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNewClaimList(t *testing.T) {
-	list := NewClaimList()
-	assert.Equal(t, claimTypeEmpty, list.EndOfClaims.ClaimType())
-	assert.Equal(t, 0, list.EndOfClaims.Length())
-	assert.Len(t, list.Claims, 0)
+func TestPulsarPacketBody_SerializeTo(t *testing.T) {
+	b := PulsarPacketBody{}
 
-	payload := []byte{1, 2, 3, 4, 5}
-	claim := NewGenericClaim(payload)
-	assert.Equal(t, claimTypeGeneric, claim.ClaimType())
-	assert.Equal(t, len(claim.Payload), int(claim.Length()))
-	assert.Equal(t, payload, claim.Payload)
-	list.Push(claim)
-	assert.Len(t, list.Claims, 1)
-	assert.Equal(t, claim, list.Claims[0])
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	err := b.SerializeTo(nil, buf)
+	require.NoError(t, err)
+	require.Equal(t, 44, buf.Len())
 }
 
-func TestClaimList_SerializeDeserialize(t *testing.T) {
-	list := NewClaimList()
-	list.Push(NewGenericClaim([]byte{1, 2, 3, 4, 5}))
-	list2 := ClaimList{}
+func TestPulsarPacketBody_DeserializeFrom(t *testing.T) {
+	b1 := PulsarPacketBody{}
 
-	buf := make([]byte, 0)
-	rw := bytes.NewBuffer(buf)
-	w := newTrackableWriter(rw)
-	pctx := newPacketContext(context.Background(), nil)
-	sctx := newSerializeContext(pctx, w, signer, nil)
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := b1.SerializeTo(nil, buf)
+	require.NoError(t, err)
 
-	err := list.SerializeTo(sctx, rw)
-	assert.NoError(t, err)
+	b2 := PulsarPacketBody{}
+	err = b2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
 
-	r := newTrackableReader(rw)
-	dctx := newDeserializeContext(pctx, r, nil)
-	err = list2.DeserializeFrom(dctx, rw)
-	assert.NoError(t, err)
+	require.Equal(t, b1, b2)
+}
 
-	assert.Equal(t, list, list2)
+func TestPulsarPacket_SerializeTo(t *testing.T) {
+	p := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &PulsarPacketBody{},
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	s, err := p.SerializeTo(context.Background(), buf, signer)
+	require.NoError(t, err)
+	require.EqualValues(t, 128, s)
+
+	require.NotEmpty(t, p.PacketSignature)
+}
+
+func TestPulsarPacket_DeserializeFrom(t *testing.T) {
+	p1 := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &PulsarPacketBody{},
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	_, err := p1.SerializeTo(context.Background(), buf, signer)
+	require.NoError(t, err)
+
+	p2 := Packet{
+		EncryptableBody: &PulsarPacketBody{},
+	}
+
+	_, err = p2.DeserializeFrom(context.Background(), buf)
+	require.NoError(t, err)
+
+	require.Equal(t, p1, p2)
 }

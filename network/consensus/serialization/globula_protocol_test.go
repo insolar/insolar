@@ -52,46 +52,94 @@ package serialization
 
 import (
 	"bytes"
-	"context"
+	"crypto/rand"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNewClaimList(t *testing.T) {
-	list := NewClaimList()
-	assert.Equal(t, claimTypeEmpty, list.EndOfClaims.ClaimType())
-	assert.Equal(t, 0, list.EndOfClaims.Length())
-	assert.Len(t, list.Claims, 0)
+func TestCloudIntro_SerializeTo(t *testing.T) {
+	ci := CloudIntro{}
 
-	payload := []byte{1, 2, 3, 4, 5}
-	claim := NewGenericClaim(payload)
-	assert.Equal(t, claimTypeGeneric, claim.ClaimType())
-	assert.Equal(t, len(claim.Payload), int(claim.Length()))
-	assert.Equal(t, payload, claim.Payload)
-	list.Push(claim)
-	assert.Len(t, list.Claims, 1)
-	assert.Equal(t, claim, list.Claims[0])
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	err := ci.SerializeTo(nil, buf)
+	require.NoError(t, err)
+	require.Equal(t, 128, buf.Len())
 }
 
-func TestClaimList_SerializeDeserialize(t *testing.T) {
-	list := NewClaimList()
-	list.Push(NewGenericClaim([]byte{1, 2, 3, 4, 5}))
-	list2 := ClaimList{}
+func TestCloudIntro_DeserializeFrom(t *testing.T) {
+	ci1 := CloudIntro{}
 
-	buf := make([]byte, 0)
-	rw := bytes.NewBuffer(buf)
-	w := newTrackableWriter(rw)
-	pctx := newPacketContext(context.Background(), nil)
-	sctx := newSerializeContext(pctx, w, signer, nil)
+	b := make([]byte, 64)
+	rand.Read(b)
 
-	err := list.SerializeTo(sctx, rw)
-	assert.NoError(t, err)
+	copy(ci1.CloudIdentity[:], b)
+	copy(ci1.LastCloudStateHash[:], b)
 
-	r := newTrackableReader(rw)
-	dctx := newDeserializeContext(pctx, r, nil)
-	err = list2.DeserializeFrom(dctx, rw)
-	assert.NoError(t, err)
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := ci1.SerializeTo(nil, buf)
+	require.NoError(t, err)
 
-	assert.Equal(t, list, list2)
+	ci2 := CloudIntro{}
+	err = ci2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, ci1, ci2)
+}
+
+func TestCompactGlobulaNodeState_SerializeTo(t *testing.T) {
+	s := CompactGlobulaNodeState{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	err := s.SerializeTo(nil, buf)
+	require.NoError(t, err)
+	require.Equal(t, 128, buf.Len())
+}
+
+func TestCompactGlobulaNodeState_DeserializeFrom(t *testing.T) {
+	s1 := CompactGlobulaNodeState{}
+
+	b := make([]byte, 64)
+	rand.Read(b)
+
+	copy(s1.NodeStateHash[:], b)
+	copy(s1.GlobulaNodeStateSignature[:], b)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := s1.SerializeTo(nil, buf)
+	require.NoError(t, err)
+
+	s2 := CompactGlobulaNodeState{}
+	err = s2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, s1, s2)
+}
+
+func TestLeaveAnnouncement_SerializeTo(t *testing.T) {
+	la := LeaveAnnouncement{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	err := la.SerializeTo(nil, buf)
+	require.NoError(t, err)
+	require.Equal(t, 4, buf.Len())
+}
+
+func TestLeaveAnnouncement_DeserializeFrom(t *testing.T) {
+	la1 := LeaveAnnouncement{
+		LeaveReason: 123,
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := la1.SerializeTo(nil, buf)
+	require.NoError(t, err)
+
+	la2 := LeaveAnnouncement{}
+	err = la2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, la1, la2)
 }

@@ -58,6 +58,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	compressedBitIndex = 6
+	hasHiLenBitIndex   = 6
+
+	loByteLengthBitSize = 6
+	loByteLengthMask    = 1<<loByteLengthBitSize - 1 // 0b00111111
+
+	hiByteLengthBitSize = 7
+	hiByteLengthMask    = 1<<hiByteLengthBitSize - 1 // 0b01111111
+)
+
 type NodeVectors struct {
 	// ByteSize=133..599
 	/*
@@ -116,6 +127,31 @@ type NodeAppearanceBitset struct {
 	FlagsAndLoLength uint8 // [00-05] LoByteLength, [06] Compressed, [07] HasHiLength (to be compatible with Protobuf VarInt)
 	HiLength         uint8 // [00-06] HiByteLength, [07] MUST = 0 (to be compatible with Protobuf VarInt)
 	Bytes            []byte
+}
+
+func (nab *NodeAppearanceBitset) IsCompressed() bool {
+	return hasBit(uint(nab.FlagsAndLoLength), compressedBitIndex)
+}
+
+func (nab *NodeAppearanceBitset) hasHiLength() bool {
+	return hasBit(uint(nab.FlagsAndLoLength), hasHiLenBitIndex)
+}
+
+func (nab *NodeAppearanceBitset) getLoLength() uint8 {
+	return nab.FlagsAndLoLength & loByteLengthMask
+}
+
+func (nab *NodeAppearanceBitset) getHiLength() uint8 {
+	return nab.FlagsAndLoLength & hiByteLengthMask
+}
+
+func (nab *NodeAppearanceBitset) GetLength() uint16 {
+	length := uint16(nab.getLoLength())
+	if nab.hasHiLength() {
+		return (uint16(nab.getHiLength()) << loByteLengthBitSize) | length
+	}
+
+	return length
 }
 
 func (nab *NodeAppearanceBitset) SerializeTo(ctx SerializeContext, writer io.Writer) error {

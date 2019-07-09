@@ -52,46 +52,40 @@ package serialization
 
 import (
 	"bytes"
-	"context"
+	"crypto/rand"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNewClaimList(t *testing.T) {
-	list := NewClaimList()
-	assert.Equal(t, claimTypeEmpty, list.EndOfClaims.ClaimType())
-	assert.Equal(t, 0, list.EndOfClaims.Length())
-	assert.Len(t, list.Claims, 0)
+func TestGlobulaStateVector_SerializeTo(t *testing.T) {
+	v := GlobulaStateVector{}
 
-	payload := []byte{1, 2, 3, 4, 5}
-	claim := NewGenericClaim(payload)
-	assert.Equal(t, claimTypeGeneric, claim.ClaimType())
-	assert.Equal(t, len(claim.Payload), int(claim.Length()))
-	assert.Equal(t, payload, claim.Payload)
-	list.Push(claim)
-	assert.Len(t, list.Claims, 1)
-	assert.Equal(t, claim, list.Claims[0])
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+
+	err := v.SerializeTo(nil, buf)
+	require.NoError(t, err)
+	require.Equal(t, 132, buf.Len())
 }
 
-func TestClaimList_SerializeDeserialize(t *testing.T) {
-	list := NewClaimList()
-	list.Push(NewGenericClaim([]byte{1, 2, 3, 4, 5}))
-	list2 := ClaimList{}
+func TestGlobulaStateVector_DeserializeFrom(t *testing.T) {
+	v1 := GlobulaStateVector{
+		ExpectedRank: 2,
+	}
 
-	buf := make([]byte, 0)
-	rw := bytes.NewBuffer(buf)
-	w := newTrackableWriter(rw)
-	pctx := newPacketContext(context.Background(), nil)
-	sctx := newSerializeContext(pctx, w, signer, nil)
+	b := make([]byte, 64)
+	rand.Read(b)
 
-	err := list.SerializeTo(sctx, rw)
-	assert.NoError(t, err)
+	copy(v1.VectorHash[:], b)
+	copy(v1.SignedGlobulaStateHash[:], b)
 
-	r := newTrackableReader(rw)
-	dctx := newDeserializeContext(pctx, r, nil)
-	err = list2.DeserializeFrom(dctx, rw)
-	assert.NoError(t, err)
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := v1.SerializeTo(nil, buf)
+	require.NoError(t, err)
 
-	assert.Equal(t, list, list2)
+	v2 := GlobulaStateVector{}
+	err = v2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, v1, v2)
 }
