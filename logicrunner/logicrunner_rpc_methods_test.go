@@ -40,15 +40,23 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	resp := &rpctypes.UpRouteResp{}
 
 	var outreq *record.OutgoingRequest
-
+	outgoingReqId := gen.ID()
+	outgoingReqRef := insolar.NewReference(outgoingReqId)
+	// Make sure an outgoing request is registered
 	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
 		require.Nil(t, outreq)
 		outreq = r
-		id := gen.ID()
+		id := outgoingReqId
 		return &id, nil
 	}
 
 	cr.CallMethodMock.Return(&reply.OK{}, nil)
+	// Make sure the result of the outgoing request is registered as well
+	am.RegisterResultFunc = func(ctx context.Context, objref insolar.Reference, reqref insolar.Reference, result []byte) (r *insolar.ID, r1 error) {
+		require.Equal(t, outgoingReqRef, &reqref)
+		id := gen.ID()
+		return &id, nil
+	}
 
 	err := rpcm.RouteCall(ctx, transcript, req, resp)
 	require.NoError(t, err)
