@@ -120,8 +120,8 @@ type ExecutorResults struct {
 }
 
 type ExecutionQueueElement struct {
-	Parcel  insolar.Parcel
-	Request *insolar.Reference
+	RequestRef insolar.Reference
+	Request    record.IncomingRequest
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -278,9 +278,9 @@ func (pf *PendingFinished) Type() insolar.MessageType {
 // for more details.
 type AdditionalCallFromPreviousExecutor struct {
 	ObjectReference insolar.Reference
-	Parcel          insolar.Parcel
-	Request         *insolar.Reference
 	Pending         PendingState
+	RequestRef      insolar.Reference
+	Request         record.IncomingRequest
 }
 
 func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {

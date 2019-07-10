@@ -22,7 +22,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -44,6 +46,8 @@ type requestsExecutor struct {
 	NodeNetwork     insolar.NodeNetwork `inject:""`
 	LogicExecutor   LogicExecutor       `inject:""`
 	ArtifactManager artifacts.Client    `inject:""`
+	PulseAccessor   pulse.Accessor      `inject:""`
+	JetCoordinator  jet.Coordinator     `inject:""`
 }
 
 func NewRequestsExecutor() RequestsExecutor {
@@ -152,7 +156,23 @@ func (e *requestsExecutor) SendReply(
 
 	inslogger.FromContext(ctx).Debug("Returning result")
 
-	target := *transcript.RequesterNode
+	pulse, err := e.PulseAccessor.Latest(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("couldn't get current pulse: ", err)
+		return
+	}
+	caller := transcript.Request.Caller
+	var sender *insolar.Reference
+	if caller.IsEmpty() {
+		sender = &transcript.Request.APISender
+	} else {
+		sender, err = e.JetCoordinator.VirtualExecutorForObject(ctx, *caller.Record(), pulse.PulseNumber)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("couldn't get current VE for object: ", err)
+			return
+		}
+	}
+	target := *sender
 
 	errstr := ""
 	if err != nil {

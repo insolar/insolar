@@ -20,12 +20,11 @@ import (
 	"context"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/pkg/errors"
 )
 
 type GetLedgerPendingRequest struct {
@@ -63,7 +62,6 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 		return nil
 	}
 
-	// insolarRef := Ref{}.FromSlice(p.Message.Payload)
 	es.Broker.StartProcessorIfNeeded(ctx)
 	return nil
 }
@@ -87,7 +85,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	id := *es.Ref.Record()
 
-	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	requestRef, request, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
 		if err != insolar.ErrNoPendingRequest {
 			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
@@ -109,26 +107,30 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	es.Lock()
 	defer es.Unlock()
 
-	msg := parcel.Message().(*message.CallMethod)
+	// <<<<<<< HEAD
+	// 	msg := parcel.Message().(*message.CallMethod)
+	//
+	// 	pulse, err := u.dep.lr.PulseAccessor.Latest(ctx)
+	// 	if err != nil {
+	// 		return errors.Wrap(err, "[ UnsafeGetLedgerPendingRequest::Proceed ] Couldn't get current pulse")
+	// 	}
+	// 	caller := msg.IncomingRequest.Caller
+	// 	if caller.IsEmpty() {
+	// 		parcel.SetSender(msg.IncomingRequest.APISender)
+	// 	} else {
+	// 		sender, err := u.dep.lr.JetCoordinator.VirtualExecutorForObject(ctx, *caller.Record(), pulse.PulseNumber)
+	// 		if err != nil {
+	// 			return errors.Wrap(err, "[ UnsafeGetLedgerPendingRequest::Proceed ] Couldn't get current VE for object")
+	// 		}
+	//
+	// 		parcel.SetSender(*sender)
+	// 	}
 
-	pulse, err := u.dep.lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return errors.Wrap(err, "[ UnsafeGetLedgerPendingRequest::Proceed ] Couldn't get current pulse")
-	}
-	caller := msg.IncomingRequest.Caller
-	if caller.IsEmpty() {
-		parcel.SetSender(msg.IncomingRequest.APISender)
-	} else {
-		sender, err := u.dep.lr.JetCoordinator.VirtualExecutorForObject(ctx, *caller.Record(), pulse.PulseNumber)
-		if err != nil {
-			return errors.Wrap(err, "[ UnsafeGetLedgerPendingRequest::Proceed ] Couldn't get current VE for object")
-		}
-
-		parcel.SetSender(*sender)
-	}
-
+	// =======
+	pulse := lr.pulse(ctx).PulseNumber
+	// >>>>>>> 4acd6872dcb731a128b469fe5e2edc0e00faf979
 	authorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, insolar.DynamicRoleVirtualExecutor, id, pulse.PulseNumber, lr.JetCoordinator.Me(),
+		ctx, insolar.DynamicRoleVirtualExecutor, id, pulse, lr.JetCoordinator.Me(),
 	)
 	if err != nil {
 		inslogger.FromContext(ctx).Debug("Authorization failed with error in getLedgerPendingRequest")
@@ -150,7 +152,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	u.hasPending = true
 	es.LedgerHasMoreRequests = true
 
-	t := NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
+	t := NewTranscript(ctx, requestRef, *request)
 	t.FromLedger = true
 	es.Broker.Prepend(ctx, true, t)
 

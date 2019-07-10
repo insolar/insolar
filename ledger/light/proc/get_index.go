@@ -114,7 +114,6 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	lfl.JetID = p.jet
 	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
 		LifelineLastUsed: p.pn,
 		Lifeline:         lfl,
@@ -216,7 +215,6 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	p.Result.Lifeline.JetID = p.jet
 	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
 		LifelineLastUsed: flow.Pulse(ctx),
 		Lifeline:         p.Result.Lifeline,

@@ -27,6 +27,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -299,6 +301,14 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 
 	reqRef := testutils.RandomRef()
 
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestFunc = func(context.Context) (insolar.Pulse, error) { return insolar.Pulse{PulseNumber: 100}, nil }
+	jc := jet.NewCoordinatorMock(t)
+	jc.VirtualExecutorForObjectFunc = func(context.Context, insolar.ID, insolar.PulseNumber) (*insolar.Reference, error) {
+		ref := testutils.RandomRef()
+		return &ref, nil
+	}
+
 	table := []struct {
 		name       string
 		reply      insolar.Reply
@@ -343,7 +353,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 	for _, test := range table {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			re := &requestsExecutor{MessageBus: test.mb}
+			re := &requestsExecutor{MessageBus: test.mb, JetCoordinator: jc, PulseAccessor: pa}
 			re.SendReply(ctx, test.transcript, test.reply, test.err)
 		})
 	}
