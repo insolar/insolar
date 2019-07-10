@@ -243,15 +243,26 @@ func (m *executionProxyImplementation) SaveAsChild(
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
-	incoming, _ := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
+	incoming, outgoing := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
 
+	// Register outgoing request
+	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	if err != nil {
+		return err
+	}
+
+	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
-
 	ref, err := m.cr.CallConstructor(ctx, msg) // AALEKSEEV TODO register outgoing + result
 	current.AddOutgoingRequest(ctx, *incoming, nil, ref, err)
-
+	if err != nil {
+		return err
+	}
 	rep.Reference = ref
 
+	// Register result of the outgoing method
+	outgoingReqRef := insolar.NewReference(*outgoingReqID)
+	_, err = m.am.RegisterResult(ctx, req.Callee, *outgoingReqRef, rep.Reference.Bytes())
 	return err
 }
 
