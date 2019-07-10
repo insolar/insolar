@@ -102,8 +102,12 @@ func TestMessageBus_Send_Publish_Err(t *testing.T) {
 	mapSizeBefore := len(b.replies)
 	results, done := b.SendTarget(ctx, msg, gen.Reference())
 
-	require.Nil(t, results)
-	require.Nil(t, done)
+	select {
+	case <-results:
+	default:
+		done()
+		t.Fatal("results must be closed now")
+	}
 	require.Equal(t, mapSizeBefore, len(b.replies))
 }
 

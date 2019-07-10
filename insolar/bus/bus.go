@@ -158,6 +158,12 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	handleError := func(err error) (<-chan *message.Message, func()) {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
+		res := make(chan *message.Message)
+		close(res)
+		return res, func() {}
+	}
 	logger := inslogger.FromContext(ctx)
 
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
@@ -172,14 +178,12 @@ func (b *Bus) SendTarget(
 	msg.SetContext(ctx)
 	wrapped, err := b.wrapMeta(msg, target, payload.MessageHash{})
 	if err != nil {
-		logger.Error("can't wrap meta message ", err.Error())
-		return nil, nil
+		return handleError(errors.Wrap(err, "can't wrap meta message"))
 	}
 	msgHash := payload.MessageHash{}
 	err = msgHash.Unmarshal(wrapped.ID)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
-		return nil, nil
+		return handleError(errors.Wrap(err, "failed to unmarshal hash"))
 	}
 
 	reply := &lockedReply{
@@ -198,9 +202,8 @@ func (b *Bus) SendTarget(
 	logger.Debugf("sending message %s", msgHash.String())
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
-		logger.Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 		done()
-		return nil, nil
+		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
 
 	go func() {
