@@ -31,7 +31,7 @@ import (
 
 func InitBroker(_ *testing.T, ctx context.Context, count int, broker *ExecutionBroker, withMocks bool) {
 	if withMocks {
-		rem := broker.logicRunner.RequestsExecutor.(*RequestsExecutorMock)
+		rem := broker.requestsExecutor.(*RequestsExecutorMock)
 		rem.ExecuteAndSaveMock.Return(nil, nil)
 		rem.SendReplyMock.Return()
 	}

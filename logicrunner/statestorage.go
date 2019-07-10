@@ -19,14 +19,18 @@ package logicrunner
 import (
 	"sync"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/log"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go
 type StateStorage interface {
 	sync.Locker
 
-	UpsertExecutionState(lr *LogicRunner, ref insolar.Reference) (*ExecutionState, *ExecutionBroker)
+	UpsertExecutionState(ref insolar.Reference) (*ExecutionState, *ExecutionBroker)
 	GetExecutionState(ref insolar.Reference) (*ExecutionState, *ExecutionBroker)
 
 	UpsertValidationState(ref insolar.Reference) *ExecutionState
@@ -39,6 +43,13 @@ type StateStorage interface {
 
 type stateStorage struct {
 	sync.RWMutex
+
+	Publisher        watermillMsg.Publisher `inject:""`
+	RequestsExecutor RequestsExecutor       `inject:""`
+	MessageBus       insolar.MessageBus     `inject:""`
+	JetCoordinator   jet.Coordinator        `inject:""`
+	PulseAccessor    pulse.Accessor         `inject:""`
+
 	state map[insolar.Reference]*ObjectState // if object exists, we are validating or executing it right now
 }
 
@@ -72,7 +83,6 @@ func NewStateStorage() StateStorage {
 }
 
 func (ss *stateStorage) UpsertExecutionState(
-	lr *LogicRunner,
 	ref insolar.Reference,
 ) (*ExecutionState, *ExecutionBroker) {
 	os := ss.upsertObjectState(ref)
@@ -81,8 +91,16 @@ func (ss *stateStorage) UpsertExecutionState(
 	defer os.Unlock()
 
 	if os.ExecutionState == nil {
+		log.Error(ss.Publisher)
 		os.ExecutionState = NewExecutionState(ref)
-		os.ExecutionBroker = NewExecutionBroker(lr, os.ExecutionState)
+		os.ExecutionBroker = NewExecutionBroker(
+			ss.Publisher,
+			ss.RequestsExecutor,
+			ss.MessageBus,
+			ss.JetCoordinator,
+			ss.PulseAccessor,
+			os.ExecutionState,
+		)
 	}
 	return os.ExecutionState, os.ExecutionBroker
 }

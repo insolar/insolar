@@ -22,8 +22,11 @@ import (
 	"sync"
 	"sync/atomic"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -224,7 +227,12 @@ type ExecutionBroker struct {
 	finished    *TranscriptDequeue
 	currentList *CurrentExecutionList
 
-	logicRunner    *LogicRunner
+	publisher        watermillMsg.Publisher
+	requestsExecutor RequestsExecutor
+	messageBus       insolar.MessageBus
+	jetCoordinator   jet.Coordinator
+	pulseAccessor    pulse.Accessor
+
 	executionState *ExecutionState
 	// currently we need to store ES inside, so it looks like circular dependency
 	// and it is circular dependency. it will be removed, once Broker will be
@@ -514,11 +522,10 @@ func (q *ExecutionBroker) Check(ctx context.Context) bool {
 
 func (q *ExecutionBroker) checkLedgerPendingRequestsBase(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
-	es := q.executionState
-	pub := q.logicRunner.publisher
+	objectRefBytes := q.executionState.Ref.Bytes()
 
-	wmMessage := makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg)
-	if err := pub.Publish(InnerMsgTopic, wmMessage); err != nil {
+	wmMessage := makeWMMessage(ctx, objectRefBytes, getLedgerPendingRequestMsg)
+	if err := q.publisher.Publish(InnerMsgTopic, wmMessage); err != nil {
 		logger.Warnf("can't send getLedgerPendingRequestMsg: ", err)
 	}
 }
@@ -538,14 +545,14 @@ func (q *ExecutionBroker) checkLedgerPendingRequests(ctx context.Context, transc
 func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
 	q.checkLedgerPendingRequests(ctx, nil)
 
-	reply, err := q.logicRunner.RequestsExecutor.ExecuteAndSave(ctx, transcript)
+	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
 		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
 	}
 
 	q.finishTask(ctx, transcript) // TODO: hack for now, later that function need to be splitted
 
-	go q.logicRunner.RequestsExecutor.SendReply(transcript.Context, transcript, reply, err)
+	go q.requestsExecutor.SendReply(transcript.Context, transcript, reply, err)
 
 	q.checkLedgerPendingRequests(ctx, transcript)
 
@@ -561,7 +568,7 @@ func (q *ExecutionBroker) finishPending(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
 	msg := message.PendingFinished{Reference: q.executionState.Ref}
-	_, err := q.logicRunner.MessageBus.Send(ctx, &msg, nil)
+	_, err := q.messageBus.Send(ctx, &msg, nil)
 	if err != nil {
 		logger.Error("Unable to send PendingFinished message:", err)
 	}
@@ -572,7 +579,6 @@ func (q *ExecutionBroker) finishPending(ctx context.Context) {
 // message to the current executor
 func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	es := q.executionState
-	lr := q.logicRunner
 
 	es.Lock()
 	defer es.Unlock()
@@ -584,9 +590,13 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	es.pending = message.NotPending
 	es.PendingConfirmed = false
 
-	pulseObj := lr.pulse(ctx)
-	meCurrent, _ := lr.JetCoordinator.IsAuthorized(
-		ctx, insolar.DynamicRoleVirtualExecutor, *es.Ref.Record(), pulseObj.PulseNumber, lr.JetCoordinator.Me(),
+	pulseObj, err := q.pulseAccessor.Latest(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Failed to obtain latest pulse:", err)
+	}
+	me := q.jetCoordinator.Me()
+	meCurrent, _ := q.jetCoordinator.IsAuthorized(
+		ctx, insolar.DynamicRoleVirtualExecutor, *es.Ref.Record(), pulseObj.PulseNumber, me,
 	)
 	if !meCurrent {
 		go q.finishPending(ctx)
@@ -680,7 +690,7 @@ func (q *ExecutionBroker) ResetLedgerCheck() {
 	q.ledgerChecked = sync.Once{}
 }
 
-func NewExecutionBroker(lr *LogicRunner, es *ExecutionState) *ExecutionBroker {
+func NewExecutionBroker(publisher watermillMsg.Publisher, requestExecutor RequestsExecutor, messageBus insolar.MessageBus, jetCoordinator jet.Coordinator, pulseAccessor pulse.Accessor, es *ExecutionState) *ExecutionBroker {
 	return &ExecutionBroker{
 		stateLock:   &sync.Mutex{},
 		mutable:     NewTranscriptDequeue(),
@@ -688,7 +698,12 @@ func NewExecutionBroker(lr *LogicRunner, es *ExecutionState) *ExecutionBroker {
 		finished:    NewTranscriptDequeue(),
 		currentList: NewCurrentExecutionList(),
 
-		logicRunner:    lr,
+		publisher:        publisher,
+		requestsExecutor: requestExecutor,
+		messageBus:       messageBus,
+		jetCoordinator:   jetCoordinator,
+		pulseAccessor:    pulseAccessor,
+
 		executionState: es,
 
 		ledgerChecked:   sync.Once{},
