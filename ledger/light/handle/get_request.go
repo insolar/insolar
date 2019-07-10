@@ -22,7 +22,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 )
 
 type GetRequest struct {
@@ -43,4 +45,29 @@ func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
 	code := proc.NewGetRequest(s.request, s.replyTo)
 	s.dep.GetRequest(code)
 	return f.Procedure(ctx, code, false)
+}
+
+type GetRequestWM struct {
+	dep *proc.Dependencies
+
+	message payload.Meta
+}
+
+func NewGetRequestWM(dep *proc.Dependencies, msg payload.Meta) *GetRequestWM {
+	return &GetRequestWM{
+		dep:     dep,
+		message: msg,
+	}
+}
+
+func (s *GetRequestWM) Present(ctx context.Context, f flow.Flow) error {
+	msg := payload.GetRequest{}
+	err := msg.Unmarshal(s.message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal GetRequest message")
+	}
+
+	req := proc.NewGetRequestWM(s.message, msg.RequestID)
+	s.dep.GetRequestWM(req)
+	return f.Procedure(ctx, req, false)
 }

@@ -132,6 +132,8 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	switch payloadType {
+	case payload.TypeGetRequest:
+		asdfsdfdsf
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
 		h.dep.SendRequests(p)

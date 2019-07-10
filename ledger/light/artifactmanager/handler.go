@@ -175,6 +175,10 @@ func NewMessageHandler(
 		GetRequest: func(p *proc.GetRequest) {
 			p.Dep.RecordAccessor = h.Records
 		},
+		GetRequestWM: func(p *proc.GetRequestWM) {
+			p.Dep.RecordAccessor = h.Records
+			p.Dep.Sender = h.Sender
+		},
 		UpdateObject: func(p *proc.UpdateObject) {
 			p.Dep.RecordModifier = h.Records
 			p.Dep.Bus = h.Bus

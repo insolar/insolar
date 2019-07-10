@@ -20,12 +20,51 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	wmbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
+
+type GetRequestWM struct {
+	message   payload.Meta
+	requestID insolar.ID
+
+	Dep struct {
+		RecordAccessor object.RecordAccessor
+		Sender         wmbus.Sender
+	}
+}
+
+func NewGetRequestWM(msg payload.Meta, requestID insolar.ID) *GetRequestWM {
+	return &GetRequestWM{
+		requestID: requestID,
+		message:   msg,
+	}
+}
+
+func (p *GetRequestWM) Proceed(ctx context.Context) error {
+	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.requestID)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch request")
+	}
+	msg, err := payload.NewMessage(&payload.Request{
+		RequestID: p.requestID,
+		Request:   record.Wrap(rec),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create reply")
+	}
+
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
+	inslogger.FromContext(ctx).Info("sending request")
+
+	return nil
+}
 
 type GetRequest struct {
 	replyTo chan<- bus.Reply

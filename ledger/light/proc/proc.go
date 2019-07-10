@@ -33,6 +33,7 @@ type Dependencies struct {
 	SendObject          func(*SendObject)
 	GetCode             func(*GetCode)
 	GetRequest          func(*GetRequest)
+	GetRequestWM        func(*GetRequestWM)
 	UpdateObject        func(*UpdateObject)
 	SetBlob             func(*SetBlob)
 	SetRequest          func(*SetRequest)
