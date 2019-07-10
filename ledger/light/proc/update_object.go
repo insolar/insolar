@@ -125,7 +125,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
 			// We are updating object. LifelineIndex should be on the heavy executor.
-			heavy, err := p.Dep.Coordinator.Heavy(ctx, p.PulseNumber)
+			heavy, err := p.Dep.Coordinator.Heavy(ctx)
 			if err != nil {
 				return bus.Reply{Err: err}
 			}

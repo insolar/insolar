@@ -434,12 +434,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
 	}
 
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, currentPN, requestID.Pulse())
+	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, requestID.Pulse())
 	if err != nil {
 		return nil, nil, err
 	}
