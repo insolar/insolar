@@ -148,6 +148,8 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		err = h.handlePass(ctx, meta)
 	case payload.TypeError:
 		h.handleError(ctx, meta)
+	case payload.TypeGotHotConfirmation:
+		h.handleGotHotConfirmation(ctx, meta)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -353,6 +355,17 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 	buf := object.EncodeLifeline(idx.Lifeline)
 
 	return &reply.ObjectIndex{Index: buf}, nil
+}
+
+func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Meta) {
+	confirm := payload.GotHotConfirmation{}
+	err := confirm.Unmarshal(meta.Payload)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to unmarshal to GotHotConfirmation"))
+		return
+	}
+
+	inslogger.FromContext(ctx).Debug("[ handleGotHotConfirmation ] Got Confirmation: ", confirm.String())
 }
 
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
