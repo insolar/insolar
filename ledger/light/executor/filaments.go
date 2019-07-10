@@ -182,7 +182,7 @@ func (m *FilamentModifierDefault) SetRequest(
 
 	foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), objectID, requestID, request)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to set request")
 	}
 	if foundRequest != nil || foundResult != nil {
 		return foundRequest, foundResult, err
@@ -302,6 +302,7 @@ type FilamentCalculatorDefault struct {
 	coordinator jet.Coordinator
 	jetFetcher  jet.Fetcher
 	sender      bus.Sender
+	pulse       pulse.Accessor
 }
 
 func NewFilamentCalculator(
@@ -510,6 +511,15 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	)
 
 	_, isOutgoing := request.(*record.OutgoingRequest)
+	if !isOutgoing {
+		exists, err := c.checkReason(ctx, reason)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !exists {
+			return nil, nil, errors.New("request reason is not found")
+		}
+	}
 
 	isReasonFound := false
 	var foundRequest *record.CompositeFilamentRecord
@@ -548,6 +558,66 @@ func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
 	cache.Lock()
 	cache.Clear()
 	cache.Unlock()
+}
+
+func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason insolar.Reference) (bool, error) {
+	currentPulse, err := c.pulse.Latest(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get pulse")
+	}
+
+	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, currentPulse.PulseNumber, reason.Record().Pulse())
+	if err != nil {
+		return false, errors.Wrap(err, "failed to calculate limit")
+	}
+	var node *insolar.Reference
+	if isBeyond {
+		node, err = c.coordinator.Heavy(ctx, reason.Record().Pulse())
+		if err != nil {
+			return false, errors.Wrap(err, "failed to calculate node")
+		}
+	} else {
+		jetID, err := c.jetFetcher.Fetch(ctx, *reason.Record(), reason.Record().Pulse())
+		if err != nil {
+			return false, errors.Wrap(err, "failed to fetch jet")
+		}
+		node, err = c.coordinator.NodeForJet(ctx, *jetID, currentPulse.PulseNumber, reason.Record().Pulse())
+		if err != nil {
+			return false, errors.Wrap(err, "failed to calculate node")
+		}
+	}
+
+	if *node == c.coordinator.Me() {
+		_, err := c.indexes.ForID(ctx, reason.Record().Pulse(), *reason.Record())
+		if err != nil {
+			return false, errors.Wrap(err, "failed to check an object existence")
+		}
+		return true, nil
+	}
+
+	msg, err := payload.NewMessage(&payload.GetObject{
+		ObjectID: *reason.Record(),
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "failed to check an object existence")
+	}
+
+	reps, done := c.sender.SendTarget(ctx, msg, *node)
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return false, errors.New("no reply for filament fetch")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to unmarshal reply")
+	}
+	_, ok = pl.(*payload.State)
+	if !ok {
+		return false, fmt.Errorf("unexpected reply %T", pl)
+	}
+	return true, nil
 }
 
 type fetchingIterator struct {
