@@ -349,7 +349,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 		LatestState:  genRandomID(0),
 		StateID:      record.StateActivation,
 		LatestUpdate: insolar.FirstPulseNumber,
-		JetID:        insolar.JetID(jetID),
 	}
 	childRecord := record.Child{
 		Ref: *genRandomRef(0),

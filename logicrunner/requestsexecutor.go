@@ -152,7 +152,7 @@ func (e *requestsExecutor) SendReply(
 
 	inslogger.FromContext(ctx).Debug("Returning result")
 
-	target := *transcript.RequesterNode
+	target := transcript.Request.Sender
 
 	errstr := ""
 	if err != nil {
