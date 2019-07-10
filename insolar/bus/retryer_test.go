@@ -98,22 +98,6 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 	}
 }
 
-// Send msg, client stops waiting for response before request was actually done
-func TestRetryerSend_Send_ClientDone(t *testing.T) {
-	sender := &SenderMock{}
-
-	msg, err := payload.NewMessage(&payload.State{})
-	require.NoError(t, err)
-	r := NewRetrySender(sender, nil, 3)
-
-	r.clientDone()
-	r.send(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
-
-	for range r.replyChan {
-		require.Fail(t, "we are not expect any replays")
-	}
-}
-
 func sendTestReply(pl payload.Payload, ch chan<- *message.Message, isDone chan<- interface{}) {
 	msg, _ := payload.NewMessage(pl)
 	meta := payload.Meta{

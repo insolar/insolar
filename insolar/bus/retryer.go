@@ -33,12 +33,7 @@ import (
 type RetrySender struct {
 	sender        Sender
 	pulseAccessor pulse.Accessor
-
-	tries uint
-
-	once      sync.Once
-	done      chan struct{}
-	replyChan chan *message.Message
+	tries         uint
 }
 
 // NewRetrySender creates RetrySender instance with provided values.
@@ -47,8 +42,6 @@ func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *Re
 		sender:        sender,
 		pulseAccessor: pulseAccessor,
 		tries:         tries,
-		done:          make(chan struct{}),
-		replyChan:     make(chan *message.Message),
 	}
 	return r
 }
@@ -60,19 +53,24 @@ func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *Re
 func (r *RetrySender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	tries := r.tries
+	once := sync.Once{}
+	done := make(chan struct{})
+	replyChan := make(chan *message.Message)
+
 	go func() {
-		defer close(r.replyChan)
+		defer close(replyChan)
 		logger := inslogger.FromContext(ctx)
 		var lastPulse insolar.PulseNumber
 
 		select {
-		case <-r.done:
+		case <-done:
 			return
 		default:
 		}
 
 		received := false
-		for r.tries > 0 && !received {
+		for tries > 0 && !received {
 			var err error
 			lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
 			if err != nil {
@@ -80,23 +78,23 @@ func (r *RetrySender) SendRole(
 				break
 			}
 
-			reps, done := r.sender.SendRole(ctx, msg, role, ref)
-			received = r.tryReceive(ctx, reps)
-			r.tries--
-			done()
+			reps, d := r.sender.SendRole(ctx, msg, role, ref)
+			received = r.tryReceive(ctx, reps, done, replyChan)
+			tries--
+			d()
 		}
 
-		if r.tries == 0 {
+		if tries == 0 {
 			logger.Error(errors.Errorf("flow cancelled, retries exceeded"))
 		}
 	}()
-	return r.replyChan, r.clientDone
-}
 
-func (r *RetrySender) clientDone() {
-	r.once.Do(func() {
-		close(r.done)
-	})
+	closeDone := func() {
+		once.Do(func() {
+			close(done)
+		})
+	}
+	return replyChan, closeDone
 }
 
 func (r *RetrySender) waitForPulseChange(ctx context.Context, lastPulse insolar.PulseNumber) (insolar.PulseNumber, error) {
@@ -118,10 +116,10 @@ func (r *RetrySender) waitForPulseChange(ctx context.Context, lastPulse insolar.
 
 // tryReceive returns false if we get retryable error,
 // and true if reply was successfully received or client don't want anymore replies
-func (r *RetrySender) tryReceive(ctx context.Context, reps <-chan *message.Message) bool {
+func (r *RetrySender) tryReceive(ctx context.Context, reps <-chan *message.Message, done chan struct{}, replyChan chan<- *message.Message) bool {
 	for {
 		select {
-		case <-r.done:
+		case <-done:
 			return true
 		case rep, ok := <-reps:
 			if !ok {
@@ -132,9 +130,9 @@ func (r *RetrySender) tryReceive(ctx context.Context, reps <-chan *message.Messa
 			}
 
 			select {
-			case <-r.done:
+			case <-done:
 				return true
-			case r.replyChan <- rep:
+			case replyChan <- rep:
 			}
 		}
 	}
