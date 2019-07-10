@@ -129,7 +129,6 @@ func (a *DeactivateObject) Proceed(ctx context.Context) error {
 	idx.Lifeline.LatestState = &a.deactivateID
 	idx.Lifeline.StateID = a.deactivate.ID()
 	idx.Lifeline.LatestUpdate = flow.Pulse(ctx)
-	idx.Lifeline.JetID = a.jetID
 	idx.LifelineLastUsed = flow.Pulse(ctx)
 
 	logger.Debugf("object is deactivated")
