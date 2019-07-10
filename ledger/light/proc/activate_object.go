@@ -123,7 +123,6 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 			StateID:      a.activate.ID(),
 			Parent:       a.activate.Parent,
 			LatestUpdate: flow.Pulse(ctx),
-			JetID:        a.jetID,
 		},
 		LifelineLastUsed: flow.Pulse(ctx),
 		PendingRecords:   []insolar.ID{},

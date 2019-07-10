@@ -17,7 +17,7 @@
 package object
 
 import (
-	context "context"
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -63,12 +63,10 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	objID := gen.ID()
 	lflID := gen.ID()
-	jetID := gen.JetID()
 	buck := FilamentIndex{
 		ObjID: objID,
 		Lifeline: Lifeline{
 			LatestState: &lflID,
-			JetID:       jetID,
 			Delegates:   []LifelineDelegate{},
 		},
 	}
@@ -111,12 +109,10 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
-		sJetID := gen.JetID()
 		sBuck := FilamentIndex{
 			ObjID: objID,
 			Lifeline: Lifeline{
 				LatestState: &sLlflID,
-				JetID:       sJetID,
 				Delegates:   []LifelineDelegate{},
 			},
 		}
