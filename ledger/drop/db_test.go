@@ -75,31 +75,9 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	jets := make([]insolar.JetID, 2)
-
 	dropStore := NewDB(dbMock)
 
-	startPulseNumber := insolar.GenesisPulse.PulseNumber
-	{
-		drop := Drop{}
-		drop.Pulse = startPulseNumber
-		jets[0] = gen.JetID()
-
-		drop.JetID = jets[0]
-		err = dropStore.Set(ctx, drop)
-		require.NoError(t, err)
-	}
-	{
-		drop := Drop{}
-		drop.Pulse = startPulseNumber + 10
-		jets[1] = gen.JetID()
-
-		drop.JetID = jets[1]
-		err = dropStore.Set(ctx, drop)
-		require.NoError(t, err)
-	}
-
-	err = dropStore.TruncateHead(ctx, startPulseNumber+5)
+	err = dropStore.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
 	require.Contains(t, err.Error(), "No required pulse")
 }
 
@@ -149,8 +127,9 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < numLeftElements; i++ {
-		_, err := dropStore.ForPulse(ctx, jets[i], startPulseNumber+insolar.PulseNumber(i))
-		require.NoError(t, err)
+		p := startPulseNumber + insolar.PulseNumber(i)
+		_, err := dropStore.ForPulse(ctx, jets[i], p)
+		require.NoError(t, err, "Pulse: ", p.String())
 	}
 
 	for i := numElements - 1; i >= numLeftElements; i-- {

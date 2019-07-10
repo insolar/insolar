@@ -19,7 +19,6 @@ package object
 import (
 	"bytes"
 	"context"
-	"math"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -100,14 +99,16 @@ func (i *IndexDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumbe
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	it := i.db.NewIterator(&indexKey{objID: insolar.ID{}, pn: math.MaxUint32}, true)
+	it := i.db.NewIterator(&indexKey{objID: insolar.ID{}, pn: lastPulse}, false)
 	defer it.Close()
+
+	if !it.Next() {
+		inslogger.FromContext(ctx).Infof("[ IndexDB.TruncateHead ] No records. Nothing done. Pulse number: %s", lastPulse.String())
+		return nil
+	}
 
 	for it.Next() {
 		key := newIndexKey(it.Key())
-		if key.pn <= lastPulse {
-			break
-		}
 		err := i.db.Delete(&key)
 		if err != nil {
 			return errors.Wrapf(err, "[ IndexDB.TruncateHead ] Can't Delete key: %+v", key)

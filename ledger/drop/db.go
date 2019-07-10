@@ -19,7 +19,6 @@ package drop
 import (
 	"bytes"
 	"context"
-	"math"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -89,17 +88,15 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 
 // TruncateHead remove all records after lastPulse
 func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
-	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: math.MaxUint32}, true)
+	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: lastPulse}, false)
 	defer it.Close()
+
+	if !it.Next() {
+		return errors.New("[ DB.TruncateHead ] No required pulse: " + lastPulse.String())
+	}
 
 	for it.Next() {
 		key := newDropDbKey(it.Key())
-		if key.pn <= lastPulse {
-			if !key.pn.Equal(lastPulse) {
-				return errors.New("[ DB.TruncateHead ] No required pulse: " + lastPulse.String())
-			}
-			break
-		}
 		err := ds.db.Delete(&key)
 		if err != nil {
 			return errors.Wrapf(err, "[ DB.TruncateHead ] Drop. Can't Delete key: %+v", key)
@@ -107,5 +104,6 @@ func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) e
 
 		inslogger.FromContext(ctx).Infof("[ DB.TruncateHead ] Drop. erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
 	}
+
 	return nil
 }
