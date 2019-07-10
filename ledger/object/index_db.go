@@ -105,15 +105,15 @@ func (i *IndexDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumbe
 
 	for it.Next() {
 		key := newIndexKey(it.Key())
-		if key.pn.Equal(lastPulse) {
+		if key.pn <= lastPulse {
 			break
 		}
 		err := i.db.Delete(&key)
 		if err != nil {
-			return errors.Wrapf(err, "[ IndexDB.DeleteForPN ] Can't Delete key: %+v", key)
+			return errors.Wrapf(err, "[ IndexDB.TruncateHead ] Can't Delete key: %+v", key)
 		}
 
-		inslogger.FromContext(ctx).Infof("[ IndexDB.DeleteForPN ] erased key. Pulse number: %s. ObjectID: %s", key.pn.String(), key.objID.String())
+		inslogger.FromContext(ctx).Infof("[ IndexDB.TruncateHead ] erased key. Pulse number: %s. ObjectID: %s", key.pn.String(), key.objID.String())
 	}
 	return nil
 }

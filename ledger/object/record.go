@@ -216,15 +216,15 @@ func (r *RecordDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumb
 	for it.Next() {
 		key := newRecordKey(it.Key())
 		keyID := insolar.ID(key)
-		if keyID.Pulse().Equal(lastPulse) {
+		if keyID.Pulse() <= lastPulse {
 			break
 		}
 		err := r.db.Delete(&key)
 		if err != nil {
-			return errors.Wrapf(err, "[ RecordDB.DeleteForPN ] Can't Delete key: %+v", key)
+			return errors.Wrapf(err, "[ RecordDB.TruncateHead ] Can't Delete key: %+v", key)
 		}
 
-		inslogger.FromContext(ctx).Infof("[ RecordDB.DeleteForPN ] erased key. Pulse number: %s. ID: %s", keyID.Pulse().String(), keyID.String())
+		inslogger.FromContext(ctx).Infof("[ RecordDB.TruncateHead ] erased key. Pulse number: %s. ID: %s", keyID.Pulse().String(), keyID.String())
 	}
 	return nil
 }

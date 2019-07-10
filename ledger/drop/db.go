@@ -89,6 +89,16 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 
 // TruncateHead remove all records after lastPulse
 func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
+
+	checkIt := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: lastPulse}, false)
+	if !checkIt.Next() {
+		return errors.New("[ DB.TruncateHead ] No required pulse: " + lastPulse.String())
+	}
+	key := newDropDbKey(checkIt.Key())
+	if key.pn != lastPulse {
+		return errors.New("[ DB.TruncateHead ] No required pulse: " + lastPulse.String())
+	}
+	checkIt.Close()
 	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: math.MaxUint32}, true)
 	defer it.Close()
 
@@ -102,7 +112,7 @@ func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) e
 			return errors.Wrapf(err, "[ DB.TruncateHead ] Can't Delete key: %+v", key)
 		}
 
-		inslogger.FromContext(ctx).Infof("[ DB.TruncateHead ] erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
+		inslogger.FromContext(ctx).Infof("[ DB.TruncateHead ] Drop. erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
 	}
 	return nil
 }

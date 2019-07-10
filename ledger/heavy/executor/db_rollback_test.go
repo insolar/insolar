@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
@@ -34,7 +35,7 @@ func TestDBRollback_HasOnlyGenesisPulse(t *testing.T) {
 		return insolar.GenesisPulse.PulseNumber
 	}
 
-	rollback := NewDBRollback(nil, nil, nil, nil, jetKeeper)
+	rollback := NewDBRollback(nil, nil, nil, nil, nil, jetKeeper)
 	err := rollback.Start(context.Background())
 	require.NoError(t, err)
 }
@@ -45,17 +46,26 @@ func TestDBRollback_HappyPath(t *testing.T) {
 		return insolar.GenesisPulse.PulseNumber + 1
 	}
 	db := store.NewDBMock(t)
-	hits := make(map[store.Scope]struct{})
+	hits := make(map[store.Scope]int)
 
+	db.DeleteMock.Return(nil)
+	iterNum := 0
 	db.NewIteratorFunc = func(p store.Key, p1 bool) (r store.Iterator) {
-		// check that every 'scope' called once
-		_, exists := hits[p.Scope()]
-		require.False(t, exists)
-		hits[p.Scope()] = struct{}{}
+		num, _ := hits[p.Scope()]
+		hits[p.Scope()] = num + 1
 
 		iterMock := store.NewIteratorMock(t)
-		iterMock.NextMock.Expect().Return(false)
-		iterMock.CloseMock.Expect().Return()
+		if p.Scope() == store.ScopeJetDrop && num == 0 {
+			iterMock.NextMock.Return(true)
+		} else {
+			iterMock.NextFunc = func() (r bool) {
+				iterNum++
+				return iterNum%3 != 0
+			}
+		}
+
+		iterMock.KeyMock.Return(p.ID())
+		iterMock.CloseMock.Return()
 		return iterMock
 	}
 
@@ -63,14 +73,24 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	records := object.NewRecordDB(db)
 	indexes := object.NewIndexDB(db)
 	jets := jet.NewDBStore(db)
+	pulses := pulse.NewDB(db)
 
-	rollback := NewDBRollback(drops, records, indexes, jets, jetKeeper)
+	rollback := NewDBRollback(drops, records, indexes, jets, pulses, jetKeeper)
 	err := rollback.Start(context.Background())
-	require.Len(t, hits, 4) // drops, record, jets, indexes
-	expectedScopes := []store.Scope{store.ScopeJetDrop, store.ScopeRecord, store.ScopeIndex, store.ScopeJetTree}
+	require.Len(t, hits, 5) // drops, record, jets, indexes, pulses
+	expectedScopes := []struct {
+		scope   store.Scope
+		numHits int
+	}{
+		{store.ScopeJetDrop, 2},
+		{store.ScopeRecord, 1},
+		{store.ScopeIndex, 1},
+		{store.ScopeJetTree, 1},
+		{store.ScopePulse, 1}}
 	for _, s := range expectedScopes {
-		_, ok := hits[s]
-		require.True(t, ok)
+		actualNum, ok := hits[s.scope]
+		require.True(t, ok, "Scope: ", s.scope)
+		require.Equal(t, s.numHits, actualNum, "Scope: ", s.scope)
 	}
 
 	require.NoError(t, err)

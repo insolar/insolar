@@ -29,11 +29,14 @@ type headTruncater interface {
 	TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error
 }
 
+// DBRollback is used for rollback all data which is not finalized
+// It removes all data which was added after pulse which we consider as finalized
 type DBRollback struct {
 	drops     headTruncater
 	records   headTruncater
 	indexes   headTruncater
 	jets      headTruncater
+	pulses    headTruncater
 	jetKeeper JetKeeper
 }
 
@@ -42,6 +45,7 @@ func NewDBRollback(
 	records headTruncater,
 	indexes headTruncater,
 	jets headTruncater,
+	pulses headTruncater,
 	jetKeeper JetKeeper) *DBRollback {
 
 	return &DBRollback{
@@ -50,6 +54,7 @@ func NewDBRollback(
 		indexes:   indexes,
 		jets:      jets,
 		jetKeeper: jetKeeper,
+		pulses:    pulses,
 	}
 }
 
@@ -81,6 +86,11 @@ func (d *DBRollback) Start(ctx context.Context) error {
 	err = d.jets.TruncateHead(ctx, pn)
 	if err != nil {
 		return errors.Wrapf(err, "can't truncate jets to pulse: %d", pn)
+	}
+
+	err = d.pulses.TruncateHead(ctx, pn)
+	if err != nil {
+		return errors.Wrapf(err, "can't truncate pulses to pulse: %d", pn)
 	}
 
 	return nil

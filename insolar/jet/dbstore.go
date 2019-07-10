@@ -63,15 +63,15 @@ func (s *DBStore) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumbe
 
 	for it.Next() {
 		key := newPulseKey(it.Key())
-		if insolar.PulseNumber(key).Equal(lastPulse) {
+		if insolar.PulseNumber(key) <= lastPulse {
 			break
 		}
 		err := s.db.Delete(&key)
 		if err != nil {
-			return errors.Wrapf(err, "[ DBStore.DeleteForPN ] Can't Delete key: %+v", key)
+			return errors.Wrapf(err, "[ DBStore.TruncateHead ] Can't Delete key: %+v", key)
 		}
 
-		inslogger.FromContext(ctx).Infof("[ DBStore.DeleteForPN ] erased key. Pulse number: %s", insolar.PulseNumber(key))
+		inslogger.FromContext(ctx).Infof("[ DBStore.TruncateHead ] erased key. Pulse number: %s", insolar.PulseNumber(key))
 	}
 	return nil
 }
