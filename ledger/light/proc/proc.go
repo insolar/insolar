@@ -29,7 +29,7 @@ type Dependencies struct {
 	WaitHot             func(*WaitHot)
 	WaitHotWM           func(*WaitHotWM)
 	GetIndex            func(*EnsureIndex)
-	GetIndexWM          func(*EnsureIndexWM)
+	EnsureIndex         func(*EnsureIndexWM)
 	SendObject          func(*SendObject)
 	GetCode             func(*GetCode)
 	GetRequest          func(*GetRequest)
@@ -38,6 +38,7 @@ type Dependencies struct {
 	SetRequest          func(*SetRequest)
 	SetResult           func(*SetResult)
 	ActivateObject      func(*ActivateObject)
+	DeactivateObject    func(*DeactivateObject)
 	RegisterChild       func(*RegisterChild)
 	GetPendingRequests  func(*GetPendingRequests)
 	GetPendingRequestID func(*GetPendingRequestID)
@@ -75,7 +76,7 @@ func NewDependenciesMock() *Dependencies {
 		WaitHot:             func(*WaitHot) {},
 		WaitHotWM:           func(*WaitHotWM) {},
 		GetIndex:            func(*EnsureIndex) {},
-		GetIndexWM:          func(*EnsureIndexWM) {},
+		EnsureIndex:         func(*EnsureIndexWM) {},
 		SendObject:          func(*SendObject) {},
 		GetCode:             func(*GetCode) {},
 		GetRequest:          func(*GetRequest) {},
@@ -84,6 +85,7 @@ func NewDependenciesMock() *Dependencies {
 		SetRequest:          func(*SetRequest) {},
 		SetResult:           func(*SetResult) {},
 		ActivateObject:      func(*ActivateObject) {},
+		DeactivateObject:    func(*DeactivateObject) {},
 		RegisterChild:       func(*RegisterChild) {},
 		GetPendingRequests:  func(*GetPendingRequests) {},
 		GetPendingRequestID: func(*GetPendingRequestID) {},

@@ -66,6 +66,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		// {tp: payload.TypeSetIncomingRequest, pl: &payload.SetIncomingRequest{}},
 		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
 		{tp: payload.TypeActivate, pl: &payload.Activate{}},
+		{tp: payload.TypeDeactivate, pl: &payload.Deactivate{}},
 	}
 
 	for _, d := range table {
