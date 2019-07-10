@@ -20,9 +20,9 @@ import (
 	"context"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
@@ -62,7 +62,6 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 		return nil
 	}
 
-	// insolarRef := Ref{}.FromSlice(p.Message.Payload)
 	es.Broker.StartProcessorIfNeeded(ctx)
 	return nil
 }
@@ -86,7 +85,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	id := *es.Ref.Record()
 
-	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	requestRef, request, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
 		if err != insolar.ErrNoPendingRequest {
 			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
@@ -107,10 +106,6 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	}
 	es.Lock()
 	defer es.Unlock()
-
-	msg := parcel.Message().(*message.CallMethod)
-
-	parcel.SetSender(msg.IncomingRequest.Sender)
 
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(
@@ -136,7 +131,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	u.hasPending = true
 	es.LedgerHasMoreRequests = true
 
-	t := NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
+	t := NewTranscript(ctx, requestRef, *request)
 	t.FromLedger = true
 	es.Broker.Prepend(ctx, true, t)
 

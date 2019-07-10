@@ -120,7 +120,6 @@ func (p *HotData) process(ctx context.Context) error {
 			continue
 		}
 
-		decodedIndex.JetID = jetID
 		err = p.Dep.IndexModifier.SetIndex(
 			ctx,
 			p.msg.PulseNumber,

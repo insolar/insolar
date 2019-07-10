@@ -193,7 +193,6 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	}
 
 	idx.Lifeline.LatestUpdate = p.PulseNumber
-	idx.Lifeline.JetID = p.JetID
 	idx.LifelineLastUsed = p.PulseNumber
 	err = p.Dep.IndexModifier.SetIndex(ctx, p.PulseNumber, idx)
 	if err != nil {
@@ -229,7 +228,6 @@ func (p *UpdateObject) saveIndexFromHeavy(
 		return object.FilamentIndex{}, errors.Wrap(err, "failed to decode")
 	}
 
-	lfl.JetID = jetID
 	idx := object.FilamentIndex{
 		ObjID:            *obj.Record(),
 		Lifeline:         lfl,

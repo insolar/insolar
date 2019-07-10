@@ -397,7 +397,7 @@ func (m *client) GetObject(
 // GetPendingRequest returns an unclosed pending request
 // It takes an id from current LME
 // Then goes either to a light node or heavy node
-func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, insolar.Parcel, error) {
+func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, *record.IncomingRequest, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetRegisterRequest").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRegisterRequest")
@@ -471,13 +471,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 			return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
 
-		serviceData := message.ServiceData{
-			LogTraceID:    inslogger.TraceID(ctx),
-			LogLevel:      inslogger.GetLoggerLevel(ctx),
-			TraceSpanData: instracer.MustSerialize(ctx),
-		}
-		return insolar.NewReference(requestID), &message.Parcel{Msg: &message.CallMethod{
-			IncomingRequest: *castedRecord}, ServiceData: serviceData}, nil
+		return insolar.NewReference(requestID), castedRecord, nil
 	case *reply.Error:
 		return nil, nil, r.Error()
 	default:

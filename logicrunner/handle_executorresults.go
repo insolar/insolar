@@ -89,8 +89,8 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	// prepare Queue
 	if p.msg.Queue != nil {
 		for _, qe := range p.msg.Queue {
-			ctxToSent := qe.Parcel.Context(context.Background())
-			transcript := NewTranscript(ctxToSent, qe.Parcel, qe.Request, p.LR.pulse(ctx), es.Ref)
+			ctxToSent := context.TODO() //FIXME: !!!!
+			transcript := NewTranscript(ctxToSent, &qe.RequestRef, qe.Request)
 
 			es.Broker.Prepend(ctx, false, transcript)
 		}
@@ -131,7 +131,6 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 	if procInitializeExecutionState.Result.clarifyPending {
 		procClarifyPending := ClarifyPendingState{
 			es:              procInitializeExecutionState.Result.es,
-			parcel:          nil,
 			ArtifactManager: h.dep.lr.ArtifactManager,
 		}
 

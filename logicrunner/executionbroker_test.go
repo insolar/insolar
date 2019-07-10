@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/stretchr/testify/suite"
@@ -38,6 +39,16 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
+
+type publisherMock struct{}
+
+func (p *publisherMock) Publish(topic string, messages ...*wmMessage.Message) error {
+	return nil
+}
+
+func (p *publisherMock) Close() error {
+	return nil
+}
 
 // wait is Exponential retries waiting function
 // example usage: require.True(wait(func))
@@ -215,6 +226,7 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	var err error
 	_, err = InitHandlers(lr, sender)
 	s.Require().NoError(err)
+	pm := &publisherMock{}
 
 	// initialize lr
 	lr.ArtifactManager = am
@@ -225,6 +237,7 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	lr.PulseAccessor = ps
 	lr.NodeNetwork = nn
 	lr.RequestsExecutor = re
+	lr.publisher = pm
 
 	return lr
 }
@@ -299,6 +312,8 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	s.Len(rotationResults.Requests, 0)
 	s.Equal(rotationResults.LedgerHasMoreRequests, false)
 	s.Len(rotationResults.Finished, 2)
+
+	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestPrepend() {
@@ -348,9 +363,11 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	s.Len(rotationResults.Requests, 0)
 	s.Equal(rotationResults.LedgerHasMoreRequests, false)
 	s.Len(rotationResults.Finished, 2)
+
+	_ = lr.Stop(s.Context)
 }
 
-func (s *ExecutionBrokerSuite) TestImmutable() {
+func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	lr := s.prepareLogicRunner(s.T())
 
 	waitMutableChannel := make(chan struct{})
@@ -396,17 +413,37 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
+	_ = lr.Stop(s.Context)
+}
+
+func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
+	lr := s.prepareLogicRunner(s.T())
+
+	waitMutableChannel := make(chan struct{})
+	waitImmutableChannel := make(chan struct{})
+
+	rem := lr.RequestsExecutor.(*RequestsExecutorMock)
+	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
+		if !t.Request.Immutable {
+			waitMutableChannel <- struct{}{}
+		} else {
+			waitImmutableChannel <- struct{}{}
+		}
+		return nil, nil
+	})
+	rem.SendReplyMock.Return()
+
+	es := NewExecutionState(gen.Reference())
+	es.RegisterLogicRunner(lr)
+	b := es.Broker
+	es.pending = message.InPending
+
 	reqRef3 := gen.Reference()
-	tr = &Transcript{
+	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef3,
 		Request:      &record.IncomingRequest{Immutable: true},
 	}
-
-	// we can't process messages, do not do it
-	es.Lock()
-	es.pending = message.InPending
-	es.Unlock()
 
 	b.Prepend(s.Context, false, tr)
 	s.Require().True(wait(immutableCount, b, 1), "failed to wait until immutable was put")
@@ -433,7 +470,9 @@ func (s *ExecutionBrokerSuite) TestImmutable() {
 	rotationResults := b.Rotate(10)
 	s.Len(rotationResults.Requests, 2)
 	s.Equal(rotationResults.LedgerHasMoreRequests, false)
-	s.Len(rotationResults.Finished, 2)
+	s.Len(rotationResults.Finished, 0)
+
+	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestRotate() {
@@ -502,6 +541,8 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	s.Len(rotationResults.Requests, 10)
 	s.Len(rotationResults.Finished, 0)
 	s.True(rotationResults.LedgerHasMoreRequests)
+
+	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestDeduplication() {
@@ -530,4 +571,6 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 		Request:      &record.IncomingRequest{},
 	}) // duplication
 	s.Equal(b.mutable.Length(), 1)
+
+	_ = lr.Stop(s.Context)
 }

@@ -125,7 +125,6 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 			Lifeline: object.Lifeline{
 				LatestState:         &genesisID,
 				LatestStateApproved: &genesisID,
-				JetID:               insolar.ZeroJetID,
 			},
 			PendingRecords: []insolar.ID{},
 		},

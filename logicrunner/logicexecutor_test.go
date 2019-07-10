@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-func TestLogicExecutor_ExecuteMethod_ValidateMethodCall(t *testing.T) {
+func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 	ctx := inslogger.TestContext(t)
@@ -51,7 +51,8 @@ func TestLogicExecutor_ExecuteMethod_ValidateMethodCall(t *testing.T) {
 			transcript: &Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
-					MemoryMock.Return(nil),
+					MemoryMock.Return(nil).
+					HeadRefMock.Return(nil),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
@@ -84,7 +85,8 @@ func TestLogicExecutor_ExecuteMethod_ValidateMethodCall(t *testing.T) {
 			transcript: &Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
-					MemoryMock.Return([]byte{1, 2, 3}),
+					MemoryMock.Return([]byte{1, 2, 3}).
+					HeadRefMock.Return(nil),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
@@ -116,7 +118,8 @@ func TestLogicExecutor_ExecuteMethod_ValidateMethodCall(t *testing.T) {
 			transcript: &Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
-					MemoryMock.Return([]byte{1, 2, 3}),
+					MemoryMock.Return([]byte{1, 2, 3}).
+					HeadRefMock.Return(nil),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 					Immutable: true,
@@ -147,7 +150,7 @@ func TestLogicExecutor_ExecuteMethod_ValidateMethodCall(t *testing.T) {
 		{
 			name: "parent mismatch",
 			transcript: &Transcript{
-				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).ParentMock.Return(nil),
+				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).ParentMock.Return(nil).HeadRefMock.Return(nil),
 				Request: &record.IncomingRequest{
 					Prototype: &insolar.Reference{},
 				},

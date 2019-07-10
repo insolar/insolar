@@ -243,5 +243,5 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 
 	// Assert
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), "test", res.Message().(*message.CallMethod).Method)
+	require.Equal(s.T(), "test", res.Method)
 }
