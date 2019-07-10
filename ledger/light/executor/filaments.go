@@ -586,17 +586,8 @@ func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason inso
 			return false, errors.Wrap(err, "failed to calculate node")
 		}
 	}
-
-	if *node == c.coordinator.Me() {
-		_, err := c.indexes.ForID(ctx, reason.Record().Pulse(), *reason.Record())
-		if err != nil {
-			return false, errors.Wrap(err, "failed to check an object existence")
-		}
-		return true, nil
-	}
-
-	msg, err := payload.NewMessage(&payload.GetObject{
-		ObjectID: *reason.Record(),
+	msg, err := payload.NewMessage(&payload.GetRequest{
+		RequestID: *reason.Record(),
 	})
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check an object existence")
@@ -613,7 +604,7 @@ func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason inso
 	if err != nil {
 		return false, errors.Wrap(err, "failed to unmarshal reply")
 	}
-	_, ok = pl.(*payload.State)
+	_, ok = pl.(*payload.Request)
 	if !ok {
 		return false, fmt.Errorf("unexpected reply %T", pl)
 	}
