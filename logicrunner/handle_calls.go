@@ -135,8 +135,7 @@ func (h *HandleCall) handleActual(
 		return nil, errors.New("can't get object reference")
 	}
 
-	os := lr.StateStorage.UpsertObjectState(*objRef)
-	es, broker := os.InitAndGetExecution(lr, objRef)
+	es, broker := lr.StateStorage.UpsertExecutionState(lr, *objRef)
 
 	es.Lock()
 	broker.Put(ctx, false, NewTranscript(ctx, requestRef, request))
@@ -207,9 +206,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	f flow.Flow,
 ) {
 	lr := h.dep.lr
-	ref := msg.ObjectReference
-	os := lr.StateStorage.UpsertObjectState(ref)
-	es, broker := os.InitAndGetExecution(lr, &ref)
+	es, broker := lr.StateStorage.UpsertExecutionState(lr, msg.ObjectReference)
 
 	es.Lock()
 	if msg.Pending == message.NotPending {

@@ -272,8 +272,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	os := ObjectState{}
-	es, b := os.InitAndGetExecution(lr, &objectRef)
+	es, b := lr.StateStorage.UpsertExecutionState(lr, objectRef)
 	es.pending = message.NotPending
 
 	reqRef1 := gen.Reference()
@@ -325,8 +324,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	os := ObjectState{}
-	es, b := os.InitAndGetExecution(lr, &objectRef)
+	es, b := lr.StateStorage.UpsertExecutionState(lr, objectRef)
 	es.pending = message.NotPending
 
 	reqRef1 := gen.Reference()
@@ -380,8 +378,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	os := ObjectState{}
-	es, b := os.InitAndGetExecution(lr, &objectRef)
+	es, b := lr.StateStorage.UpsertExecutionState(lr, objectRef)
 	es.pending = message.NotPending
 
 	reqRef1 := gen.Reference()
@@ -429,8 +426,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	os := lr.StateStorage.UpsertObjectState(objectRef)
-	es, b := os.InitAndGetExecution(lr, &objectRef)
+	es, b := lr.StateStorage.UpsertExecutionState(lr, objectRef)
 	es.pending = message.InPending
 
 	reqRef3 := gen.Reference()
@@ -478,8 +474,7 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	os := ObjectState{}
-	es, b := os.InitAndGetExecution(lr, &objectRef)
+	es, b := lr.StateStorage.UpsertExecutionState(lr, objectRef)
 	es.pending = message.NotPending
 
 	for i := 0; i < 4; i++ {
@@ -548,8 +543,7 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	os := ObjectState{}
-	es, b := os.InitAndGetExecution(lr, &objectRef)
+	es, b := lr.StateStorage.UpsertExecutionState(lr, objectRef)
 	es.pending = message.InPending
 
 	reqRef1 := gen.Reference()

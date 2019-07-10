@@ -35,7 +35,6 @@ type HandleStillExecuting struct {
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	logger := inslogger.FromContext(ctx)
 	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
 	lr := h.dep.lr
 	replyOk := bus.Reply{Reply: &reply.OK{}, Err: nil}
 
@@ -43,23 +42,21 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 
 	msg := parcel.Message().(*message.StillExecuting)
 	ref := msg.DefaultTarget()
-	os := lr.StateStorage.UpsertObjectState(*ref)
+	es, _ := lr.StateStorage.UpsertExecutionState(lr, *ref)
 
-	logger.Debugf("Got informatlogicrunner/executionstate_test.goion that %s is still executing", ref.String())
-
-	es, _ := os.InitAndGetExecution(lr, ref)
+	logger.Debugf("Got information that %s is still executing", ref.String())
 
 	es.Lock()
-	switch os.ExecutionState.pending {
+	switch es.pending {
 	case message.NotPending:
 		// It might be when StillExecuting comes after PendingFinished
 		logger.Error("got StillExecuting message, but our state says that it's not in pending")
 	case message.InPending:
-		os.ExecutionState.PendingConfirmed = true
+		es.PendingConfirmed = true
 	case message.PendingUnknown:
 		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState.pending = message.InPending
-		os.ExecutionState.PendingConfirmed = true
+		es.pending = message.InPending
+		es.PendingConfirmed = true
 	}
 	es.Unlock()
 

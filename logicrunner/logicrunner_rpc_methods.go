@@ -67,23 +67,19 @@ func (m *RPCMethods) getCurrent(
 ) (
 	ProxyImplementation, *Transcript, error,
 ) {
-	os := m.ss.GetObjectState(obj)
-	if os == nil {
-		return nil, nil, errors.New("Failed to find requested object state. ref: " + obj.String())
-	}
 	switch mode {
 	case insolar.ExecuteCallMode:
-		es := os.ExecutionState
-		if es == nil {
+		_, broker := m.ss.GetExecutionState(obj)
+		if broker == nil {
 			return nil, nil, errors.New("No execution in the state")
 		}
 
-		cur := os.ExecutionBroker.currentList.Get(reqRef)
-		if cur == nil {
-			return nil, nil, errors.New("No current execution in the state for request " + reqRef.String())
+		transcript := broker.currentList.Get(reqRef)
+		if transcript == nil {
+			return nil, nil, errors.Errorf("No current execution in the state for request %s", reqRef.String())
 		}
 
-		return m.execution, cur, nil
+		return m.execution, transcript, nil
 	default:
 		panic("not implemented")
 	}

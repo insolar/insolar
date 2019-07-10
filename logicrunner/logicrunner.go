@@ -62,44 +62,6 @@ type ObjectState struct {
 	Validation      *ExecutionState
 }
 
-func (st *ObjectState) InitAndGetExecution(lr *LogicRunner, ref *insolar.Reference) (*ExecutionState, *ExecutionBroker) {
-	st.Lock()
-	defer st.Unlock()
-
-	if st.ExecutionBroker == nil {
-		st.ExecutionState = NewExecutionState(*ref)
-		st.ExecutionBroker = NewExecutionBroker(lr, st.ExecutionState)
-	}
-	return st.ExecutionState, st.ExecutionBroker
-}
-
-func (st *ObjectState) GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error) {
-	switch mode {
-	case insolar.ExecuteCallMode:
-		rv = st.ExecutionState
-	case insolar.ValidateCallMode:
-		rv = st.Validation
-	default:
-		err = errors.Errorf("'%d' is unknown object processing mode", mode)
-	}
-
-	if rv == nil && err != nil {
-		err = errors.Errorf("object is not in '%s' mode", mode)
-	}
-	return rv, err
-}
-
-func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
-	res, err := st.GetModeState(mode)
-	if err != nil {
-		panic(err)
-	}
-	if st.ExecutionBroker.currentList.Empty() {
-		panic("object " + res.Ref.String() + " has no Current")
-	}
-	return res
-}
-
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
 	wmMsg.Metadata.Set(wmBus.MetaTraceID, inslogger.TraceID(ctx))
@@ -373,13 +335,10 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	os := lr.StateStorage.GetObjectState(*request.Object)
-	if os == nil {
+	es, broker := lr.StateStorage.GetExecutionState(*request.Object)
+	if broker == nil {
 		return false
 	}
-	os.Lock()
-	es, broker := os.ExecutionState, os.ExecutionBroker
-	os.Unlock()
 
 	es.Lock()
 	defer es.Unlock()
@@ -434,11 +393,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 			es.Unlock()
 		}
 
-		if state.ExecutionState == nil && state.Validation == nil {
+		state.Unlock()
+
+		if state.Validation == nil && state.ExecutionState == nil {
 			lr.StateStorage.DeleteObjectState(ref)
 		}
-
-		state.Unlock()
 	}
 
 	lr.StateStorage.Unlock()

@@ -39,15 +39,11 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 
 	lr := p.dep.lr
 	ref := Ref{}.FromSlice(p.Message.Payload)
-	os := lr.StateStorage.UpsertObjectState(ref)
-	os.Lock()
-	if os.ExecutionState == nil {
-		os.Unlock()
+
+	es, broker := lr.StateStorage.GetExecutionState(ref)
+	if es == nil {
 		return nil
 	}
-	es := os.ExecutionState
-	broker := os.ExecutionBroker
-	os.Unlock()
 
 	es.getLedgerPendingMutex.Lock()
 	defer es.getLedgerPendingMutex.Unlock()

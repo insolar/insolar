@@ -42,8 +42,8 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 
 	msg := parcel.Message().(*message.PendingFinished)
 	ref := msg.DefaultTarget()
-	os := lr.StateStorage.UpsertObjectState(*ref)
-	es, broker := os.InitAndGetExecution(lr, ref)
+
+	es, broker := lr.StateStorage.UpsertExecutionState(lr, *ref)
 
 	es.Lock()
 	es.pending = message.NotPending

@@ -54,11 +54,13 @@ func newExecutionBroker(
 	list *CurrentExecutionList,
 	pending *message.PendingState,
 ) *ExecutionBroker {
-	lr := LogicRunner{RequestsExecutor: NewRequestsExecutorMock(t)}
+	lr := LogicRunner{
+		RequestsExecutor: NewRequestsExecutorMock(t),
+		StateStorage:     NewStateStorage(),
+	}
 
 	objectRef := gen.Reference()
-	os := ObjectState{}
-	es, broker := os.InitAndGetExecution(&lr, &objectRef)
+	es, broker := lr.StateStorage.UpsertExecutionState(&lr, objectRef)
 
 	InitBroker(t, ctx, count, broker, true)
 	if list != nil {
