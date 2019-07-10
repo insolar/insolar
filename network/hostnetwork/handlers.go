@@ -120,6 +120,15 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 
 // SendPacket sends packet using connection from pool
 func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet) error {
+
+	if p.TraceSpanData == nil {
+		var err error
+		p.TraceSpanData, err = instracer.Serialize(ctx)
+		if err != nil {
+			inslogger.FromContext(ctx).Warn("Pulse without span")
+		}
+	}
+
 	data, err := packet.SerializePacket(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")

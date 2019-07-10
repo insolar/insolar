@@ -192,6 +192,14 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.Packet) {
 		}
 		return
 	}
+
+	spanData, err := instracer.Deserialize(p.TraceSpanData)
+	if err == nil {
+		ctx = instracer.WithParentSpan(ctx, spanData)
+	} else {
+		inslogger.FromContext(ctx).Warn("Incoming packet without span")
+	}
+
 	ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
 	span.AddAttributes(
 		trace.StringAttribute("msg receiver", p.Receiver.Address.String()),
