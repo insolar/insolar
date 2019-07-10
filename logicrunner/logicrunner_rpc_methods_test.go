@@ -64,15 +64,11 @@ func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	dc := artifacts.NewDescriptorsCacheMock(t)
 	cr := testutils.NewContractRequesterMock(t)
 
-	parcel := testutils.NewParcelMock(t)
-	parcel.MessageMock.Expect().Return(&message.CallMethod{})
-	parcel.GetSenderMock.Expect().Return(gen.Reference())
-
 	requestRef := gen.Reference()
 
 	rpcm := NewExecutionProxyImplementation(dc, cr, am)
 	ctx := context.Background()
-	transcript := NewTranscript(ctx, parcel, &requestRef)
+	transcript := NewTranscript(ctx, &requestRef, record.IncomingRequest{})
 	reason := gen.Reference()
 	transcript.RequestRef = &reason
 	req := rpctypes.UpSaveAsChildReq{}
@@ -113,15 +109,11 @@ func TestSaveAsDelegateRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	dc := artifacts.NewDescriptorsCacheMock(t)
 	cr := testutils.NewContractRequesterMock(t)
 
-	parcel := testutils.NewParcelMock(t)
-	parcel.MessageMock.Expect().Return(&message.CallMethod{})
-	parcel.GetSenderMock.Expect().Return(gen.Reference())
-
 	requestRef := gen.Reference()
 
 	rpcm := NewExecutionProxyImplementation(dc, cr, am)
 	ctx := context.Background()
-	transcript := NewTranscript(ctx, parcel, &requestRef)
+	transcript := NewTranscript(ctx, &requestRef, record.IncomingRequest{})
 	reason := gen.Reference()
 	transcript.RequestRef = &reason
 	req := rpctypes.UpSaveAsDelegateReq{}
