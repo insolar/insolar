@@ -116,12 +116,16 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "[ UnsafeGetLedgerPendingRequest::Proceed ] Couldn't get current pulse")
 	}
 	caller := msg.IncomingRequest.Caller
-	sender, err := u.dep.lr.JetCoordinator.VirtualExecutorForObject(ctx, *caller.Record(), pulse.PulseNumber)
-	if err != nil {
-		return errors.Wrap(err, "[ UnsafeGetLedgerPendingRequest::Proceed ] Couldn't get current VE for object")
-	}
+	if caller.IsEmpty() {
+		parcel.SetSender(msg.IncomingRequest.APISender)
+	} else {
+		sender, err := u.dep.lr.JetCoordinator.VirtualExecutorForObject(ctx, *caller.Record(), pulse.PulseNumber)
+		if err != nil {
+			return errors.Wrap(err, "[ UnsafeGetLedgerPendingRequest::Proceed ] Couldn't get current VE for object")
+		}
 
-	parcel.SetSender(*sender)
+		parcel.SetSender(*sender)
+	}
 
 	authorized, err := lr.JetCoordinator.IsAuthorized(
 		ctx, insolar.DynamicRoleVirtualExecutor, id, pulse.PulseNumber, lr.JetCoordinator.Me(),

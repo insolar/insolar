@@ -142,7 +142,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	if msg.Nonce == 0 {
 		msg.Nonce = randomUint64()
 	}
-	msg.Sender = cr.JetCoordinator.Me()
+	msg.APISender = cr.JetCoordinator.Me()
 
 	var ch chan *message.ReturnResults
 	var reqHash [insolar.RecordHashSize]byte
