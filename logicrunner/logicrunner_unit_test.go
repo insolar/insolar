@@ -647,6 +647,10 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	parcel.DefaultTargetMock.Return(&insolar.Reference{})
 	p := insolar.Pulse{PulseNumber: 100}
 	parcel.PulseFunc = func() insolar.PulseNumber { return p.PulseNumber }
+	parcel.GetCallerFunc = func() *insolar.Reference {
+		ref := testutils.RandomRef()
+		return &ref
+	}
 
 	// check that creation of new execution state is handled (on StillExecuting Message)
 	re, err := suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
