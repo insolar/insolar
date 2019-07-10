@@ -88,7 +88,7 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 	contractMap := make(map[string]string)
 	contractMap[args.Name] = args.Code
 
-	err := s.cb.Build(ctx, s.runner.JetCoordinator.Me(), contractMap)
+	err := s.cb.Build(ctx, contractMap)
 	if err != nil {
 		return errors.Wrap(err, "can't build contract")
 	}
@@ -143,7 +143,6 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
 			Reason:          insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
-			APISender:       s.runner.JetCoordinator.Me(),
 		},
 	}
 
@@ -201,7 +200,6 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
 			Reason:       insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
-			APISender:    s.runner.JetCoordinator.Me(),
 		},
 	}
 
