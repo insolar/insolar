@@ -29,29 +29,11 @@ func TestCreateMember(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
-	addBurnAddress(t)
-	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	result, err := retryableContractCreateMember(member, true)
 	require.NoError(t, err)
-	ref, ok := result.(string)
+	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
-	require.NotEqual(t, "", ref)
-}
-
-func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
-	member1, err := newUserWithKeys()
-	require.NoError(t, err)
-	member1.ref = root.ref
-	addBurnAddress(t)
-	_, err = retryableCreateMember(member1, "contract.createMember", map[string]interface{}{}, true)
-	require.Nil(t, err)
-
-	member2, err := newUserWithKeys()
-	require.NoError(t, err)
-	member2.ref = root.ref
-
-	_, err = retryableCreateMember(member2, "contract.createMember", map[string]interface{}{}, true)
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "no more burn addresses left")
+	require.NotEqual(t, "", output["reference"])
 }
 
 func TestCreateMemberWithBadKey(t *testing.T) {
@@ -59,30 +41,20 @@ func TestCreateMemberWithBadKey(t *testing.T) {
 	require.NoError(t, err)
 	member.ref = root.ref
 	member.pubKey = "fake"
-	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
+	_, err = retryableContractCreateMember(member, false)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
 }
 
-func TestCreateMembersWithSameName(t *testing.T) {
+func TestCreateMembersWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	addBurnAddress(t)
-
-	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	_, err = retryableContractCreateMember(member, true)
 	require.NoError(t, err)
-
-	addBurnAddress(t)
 
 	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "member for this publicKey already exist")
-
-	memberForBurn, err := newUserWithKeys()
-	require.NoError(t, err)
-	memberForBurn.ref = root.ref
-
-	_, err = retryableCreateMember(memberForBurn, "contract.createMember", map[string]interface{}{}, true)
 }
