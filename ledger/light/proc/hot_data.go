@@ -19,7 +19,9 @@ package proc
 import (
 	"context"
 
+	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
@@ -51,6 +53,7 @@ type HotData struct {
 		JetReleaser   hot.JetReleaser
 		Coordinator   jet.Coordinator
 		Calculator    pulse.Calculator
+		Sender        wbus.Sender
 	}
 }
 
@@ -138,7 +141,25 @@ func (p *HotData) process(ctx context.Context) error {
 	p.replyTo <- bus.Reply{Reply: &reply.OK{}}
 
 	p.releaseHotDataWaiters(ctx)
+
+	p.sendConfirmationToHeavy(ctx, jetID, p.msg.PulseNumber)
+
 	return nil
+}
+
+func (p *HotData) sendConfirmationToHeavy(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) {
+	msg, err := payload.NewMessage(&payload.GotHotConfirmation{
+		JetID: jetID,
+		Pulse: pn,
+	})
+
+	if err != nil {
+		inslogger.FromContext(ctx).Warn("[ sendConfirmationToHeavy ] Can't create GotHotConfirmation message: ", err)
+		return
+	}
+
+	_, done := p.Dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(jetID)))
+	defer done()
 }
 
 func (p *HotData) releaseHotDataWaiters(ctx context.Context) {
