@@ -24,19 +24,31 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.dropTruncater -o ./ -s _gen_mock.go
-type dropTruncater interface {
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.headTruncater -o ./ -s _gen_mock.go
+type headTruncater interface {
 	TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error
 }
 
 type DBRollback struct {
-	drops     dropTruncater
+	drops     headTruncater
+	records   headTruncater
+	indexes   headTruncater
+	jets      headTruncater
 	jetKeeper JetKeeper
 }
 
-func NewDBRollback(drops dropTruncater, jetKeeper JetKeeper) *DBRollback {
+func NewDBRollback(
+	drops headTruncater,
+	records headTruncater,
+	indexes headTruncater,
+	jets headTruncater,
+	jetKeeper JetKeeper) *DBRollback {
+
 	return &DBRollback{
 		drops:     drops,
+		records:   records,
+		indexes:   indexes,
+		jets:      jets,
 		jetKeeper: jetKeeper,
 	}
 }
@@ -53,7 +65,22 @@ func (d *DBRollback) Start(ctx context.Context) error {
 
 	err := d.drops.TruncateHead(ctx, pn)
 	if err != nil {
-		return errors.Wrapf(err, "can't truncate db to pulse: %d", pn)
+		return errors.Wrapf(err, "can't truncate drops to pulse: %d", pn)
+	}
+
+	err = d.records.TruncateHead(ctx, pn)
+	if err != nil {
+		return errors.Wrapf(err, "can't truncate records to pulse: %d", pn)
+	}
+
+	err = d.indexes.TruncateHead(ctx, pn)
+	if err != nil {
+		return errors.Wrapf(err, "can't truncate indexes to pulse: %d", pn)
+	}
+
+	err = d.jets.TruncateHead(ctx, pn)
+	if err != nil {
+		return errors.Wrapf(err, "can't truncate jets to pulse: %d", pn)
 	}
 
 	return nil
