@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -353,7 +354,11 @@ func (m *Member) migrationCreateMember(key string) (*MigrationCreateMemberOutput
 	}
 
 	if err = rootDomain.AddNewMemberToMaps(key, burnAddress, created.Reference); err != nil {
-		return rollBack(err)
+		if strings.Contains(err.Error(), "member for this burnAddress already exist") {
+			return nil, fmt.Errorf("failed to create member: %s", err.Error())
+		} else {
+			return rollBack(err)
+		}
 	}
 
 	return &MigrationCreateMemberOutput{Reference: created.Reference.String(), BurnAddress: burnAddress}, nil
