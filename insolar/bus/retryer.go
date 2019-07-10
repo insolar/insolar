@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifacts
+package bus
 
 import (
 	"context"
@@ -22,22 +22,30 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
+// SendWithRetry sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled
+// was received, it retries request after pulse on current node will be changed.
+// Replies will be written to the returned channel. Always read from the channel using multiple assignment
+// (rep, ok := <-ch) because the channel will be closed on timeout.
+func SendRoleWithRetry(
+	ctx context.Context, b Sender, a pulse.Accessor, msg *message.Message, role insolar.DynamicRole, object insolar.Reference, tries uint,
+) (<-chan *message.Message, func()) {
+	r := newRetryer(b, a, tries)
+	go r.send(ctx, msg, role, object)
+	return r.replyChan, r.clientDone
+}
+
 type retryer struct {
-	msg           *message.Message
-	role          insolar.DynamicRole
-	ref           insolar.Reference
-	tries         uint
-	sender        bus.Sender
+	sender        Sender
 	pulseAccessor pulse.Accessor
+
+	tries uint
 
 	processingStarted sync.Mutex
 	once              sync.Once
@@ -45,14 +53,11 @@ type retryer struct {
 	replyChan         chan *message.Message
 }
 
-func newRetryer(sender bus.Sender, pulseAccessor pulse.Accessor, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference, tries uint) *retryer {
+func newRetryer(sender Sender, pulseAccessor pulse.Accessor, tries uint) *retryer {
 	r := &retryer{
-		msg:           msg,
-		role:          role,
-		ref:           ref,
-		tries:         tries,
 		sender:        sender,
 		pulseAccessor: pulseAccessor,
+		tries:         tries,
 		done:          make(chan struct{}),
 		replyChan:     make(chan *message.Message),
 	}
@@ -132,7 +137,7 @@ func (r *retryer) isRetryableError(ctx context.Context, rep *message.Message) bo
 	return false
 }
 
-func (r *retryer) send(ctx context.Context) {
+func (r *retryer) send(ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference) {
 	logger := inslogger.FromContext(ctx)
 	retry := true
 	var lastPulse insolar.PulseNumber
@@ -151,7 +156,7 @@ func (r *retryer) send(ctx context.Context) {
 				break
 			}
 
-			reps, done := r.sender.SendRole(ctx, r.msg, r.role, r.ref)
+			reps, done := r.sender.SendRole(ctx, msg, role, ref)
 			retry = r.proxyReply(ctx, reps)
 			done()
 		}
