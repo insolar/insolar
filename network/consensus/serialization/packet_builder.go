@@ -54,84 +54,127 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-type PacketBuilder struct{}
+type PacketBuilder struct {
+	crypto      core.TransportCryptographyFactory
+	localConfig core.LocalNodeConfiguration
+}
+
+func NewPacketBuilder(crypto core.TransportCryptographyFactory, localConfig core.LocalNodeConfiguration) *PacketBuilder {
+	return &PacketBuilder{
+		crypto:      crypto,
+		localConfig: localConfig,
+	}
+}
 
 func (p *PacketBuilder) GetNeighbourhoodSize() common.NeighbourhoodSizes {
-	return common.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
+	return common.NeighbourhoodSizes{
+		NeighbourhoodSize:           5,
+		NeighbourhoodTrustThreshold: 2,
+		JoinersPerNeighbourhood:     2,
+		JoinersBoost:                1,
+	}
+}
+
+func (p *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, packetType packets.PacketType) *Packet {
+	packet := &Packet{
+		Header: Header{
+			SourceID: uint32(sender.GetNodeID()),
+		},
+	}
+
+	packet.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+	packet.Header.setPacketType(packetType)
+
+	packet.setPulseNumber(sender.GetPulseNumber())
+	packet.EncryptableBody = ProtocolTypeGlobulaConsensus.NewBody()
+
+	return packet
+}
+
+func (p *PacketBuilder) prepareWrapper(packet *Packet) *preparedPacketWrapper {
+	return &preparedPacketWrapper{
+		packet:   packet,
+		digester: p.crypto.GetDigestFactory().GetPacketDigester(),
+		signer:   p.crypto.GetNodeSigner(p.localConfig.GetSecretKeyStore()),
+	}
 }
 
 func (p *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common.OriginalPulsarPacket,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
-	wrapper := preparedPacketWrapper{}
-	wrapper.packet.Header.setPacketType(packets.PacketPhase0)
-	wrapper.packet.PulseNumber = sender.GetPulseNumber()
-	wrapper.packet.EncryptableBody = &GlobulaConsensusPacketBody{}
-	// TODO
+	packet := p.preparePacket(sender, packets.PacketPhase0)
+	if (options & core.SendWithoutPulseData) == 0 {
+		packet.Header.SetFlag(FlagHasPulsePacket)
+	}
 
-	return &wrapper
+	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
+	body.CurrentRank = sender.GetNodeRank()
+	body.PulsarPacket.Data = pulsarPacket.AsBytes()
+
+	return p.prepareWrapper(packet)
 }
 
 func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common.OriginalPulsarPacket,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
-	wrapper := preparedPacketWrapper{}
-	wrapper.packet.Header.setPacketType(packets.PacketPhase1)
-	wrapper.packet.PulseNumber = sender.GetPulseNumber()
-	wrapper.packet.EncryptableBody = &GlobulaConsensusPacketBody{}
-	// TODO
+	packet := p.preparePacket(sender, packets.PacketPhase1)
+	if (options & core.SendWithoutPulseData) == 0 {
+		packet.Header.SetFlag(FlagHasPulsePacket)
+	}
 
-	return &wrapper
+	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
+	body.PulsarPacket.Data = pulsarPacket.AsBytes()
+
+	return p.prepareWrapper(packet)
 }
 
 func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
 	neighbourhood []packets.MembershipAnnouncementReader, options core.PacketSendOptions) core.PreparedPacketSender {
 
-	wrapper := preparedPacketWrapper{}
-	wrapper.packet.Header.setPacketType(packets.PacketPhase2)
-	wrapper.packet.PulseNumber = sender.GetPulseNumber()
-	wrapper.packet.EncryptableBody = &GlobulaConsensusPacketBody{}
-	// TODO
+	packet := p.preparePacket(sender, packets.PacketPhase2)
 
-	return &wrapper
+	return p.prepareWrapper(packet)
 }
 
 func (p *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
 	bitset nodeset.NodeBitset, gshTrusted common.GlobulaStateHash, gshDoubted common.GlobulaStateHash,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
-	wrapper := preparedPacketWrapper{}
-	wrapper.packet.Header.setPacketType(packets.PacketPhase3)
-	wrapper.packet.PulseNumber = sender.GetPulseNumber()
-	wrapper.packet.EncryptableBody = &GlobulaConsensusPacketBody{}
-	// TODO
+	packet := p.preparePacket(sender, packets.PacketPhase3)
 
-	return &wrapper
+	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
+	body.Vectors.StateVectorMask.SetBitset(bitset)
+
+	return p.prepareWrapper(packet)
 }
 
 type preparedPacketWrapper struct {
-	packet Packet
+	packet   *Packet
+	buf      [packetMaxSize]byte
+	digester common2.DataDigester
+	signer   common2.DigestSigner
 }
 
 func (p *preparedPacketWrapper) SendTo(ctx context.Context, target common.NodeProfile, sendOptions core.PacketSendOptions, sender core.PacketSender) {
-	p.packet.Header.ReceiverID = uint32(target.GetShortNodeID())
+	p.packet.Header.TargetID = uint32(target.GetShortNodeID())
 
-	b := make([]byte, 0)
-	buffer := bytes.NewBuffer(b)
-	_, err := p.packet.SerializeTo(ctx, buffer, nil)
-	if err != nil {
-		panic("Failed to serialize packet")
+	if (sendOptions & core.SendWithoutPulseData) != 0 {
+		p.packet.Header.ClearFlag(FlagHasPulsePacket)
 	}
 
-	sender.SendPacketToTransport(ctx, target, sendOptions, b)
-}
+	buf := bytes.NewBuffer(p.buf[0:0:packetMaxSize])
+	_, err := p.packet.SerializeTo(ctx, buf, p.digester, p.signer)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
 
-func NewPacketBuilder() *PacketBuilder {
-	return &PacketBuilder{}
+	sender.SendPacketToTransport(ctx, target, sendOptions, p.buf[:buf.Len()])
 }
