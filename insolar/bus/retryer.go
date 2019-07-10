@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// RetrySender allows to send messaged via provided Sender with retries.
 type RetrySender struct {
 	sender        Sender
 	pulseAccessor pulse.Accessor
@@ -40,6 +41,7 @@ type RetrySender struct {
 	replyChan chan *message.Message
 }
 
+// NewRetrySender creates RetrySender instance with provided values.
 func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *RetrySender {
 	r := &RetrySender{
 		sender:        sender,
@@ -51,7 +53,7 @@ func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *Re
 	return r
 }
 
-// SendWithRetry sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled
+// SendRole sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled
 // was received, it retries request after pulse on current node will be changed.
 // Replies will be written to the returned channel. Always read from the channel using multiple assignment
 // (rep, ok := <-ch) because the channel will be closed on timeout.
