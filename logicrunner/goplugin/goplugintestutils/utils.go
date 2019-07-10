@@ -110,7 +110,7 @@ func (cb *ContractsBuilder) Clean() {
 }
 
 // Build ...
-func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
+func (cb *ContractsBuilder) Build(ctx context.Context, me insolar.Reference, contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		pulse, err := cb.pulseAccessor.Latest(ctx)
@@ -121,6 +121,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
 			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
+			APISender: me,
 		}
 		protoID, err := cb.registerRequest(ctx, &request)
 

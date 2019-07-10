@@ -163,14 +163,14 @@ func (e *requestsExecutor) SendReply(
 	}
 	caller := transcript.Request.Caller
 	var sender *insolar.Reference
-	if caller.IsEmpty() {
-		sender = &transcript.Request.APISender
-	} else {
+	if transcript.Request.APISender.IsEmpty() {
 		sender, err = e.JetCoordinator.VirtualExecutorForObject(ctx, *caller.Record(), pulse.PulseNumber)
 		if err != nil {
 			inslogger.FromContext(ctx).Error("couldn't get current VE for object: ", err)
 			return
 		}
+	} else {
+		sender = &transcript.Request.APISender
 	}
 	target := *sender
 
