@@ -51,7 +51,7 @@ func (dk *dropDbKey) ID() []byte {
 	return bytes.Join([][]byte{dk.pn.Bytes(), dk.jetPrefix}, nil)
 }
 
-func NewDropDbKey(raw []byte) dropDbKey {
+func newDropDbKey(raw []byte) dropDbKey {
 	dk := dropDbKey{}
 	dk.pn = insolar.NewPulseNumber(raw)
 	dk.jetPrefix = raw[dk.pn.Size():]
@@ -93,7 +93,7 @@ func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) e
 	defer it.Close()
 
 	for it.Next() {
-		key := NewDropDbKey(it.Key())
+		key := newDropDbKey(it.Key())
 		if key.pn.Equal(lastPulse) {
 			break
 		}

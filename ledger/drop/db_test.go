@@ -42,7 +42,7 @@ func TestDropDBKey(t *testing.T) {
 
 	rawID := expectedKey.ID()
 
-	actualKey := NewDropDbKey(rawID)
+	actualKey := newDropDbKey(rawID)
 	require.Equal(t, expectedKey, actualKey)
 }
 

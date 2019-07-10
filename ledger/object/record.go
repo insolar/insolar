@@ -206,11 +206,11 @@ func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec record.Material) 
 }
 
 // TruncateHead remove all records after lastPulse
-func (i *RecordDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+func (r *RecordDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 
-	it := i.db.NewIterator(recordKey(*insolar.NewID(math.MaxUint32, nil)), true)
+	it := r.db.NewIterator(recordKey(*insolar.NewID(math.MaxUint32, nil)), true)
 	defer it.Close()
 
 	for it.Next() {
@@ -219,7 +219,7 @@ func (i *RecordDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumb
 		if keyID.Pulse().Equal(lastPulse) {
 			break
 		}
-		err := i.db.Delete(&key)
+		err := r.db.Delete(&key)
 		if err != nil {
 			return errors.Wrapf(err, "[ RecordDB.DeleteForPN ] Can't Delete key: %+v", key)
 		}
