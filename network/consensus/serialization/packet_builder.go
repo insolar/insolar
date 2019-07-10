@@ -51,6 +51,7 @@
 package serialization
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -72,24 +73,46 @@ func (p *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProf
 	wrapper.packet.Header.setPacketType(packets.PacketPhase0)
 	wrapper.packet.PulseNumber = sender.GetPulseNumber()
 	wrapper.packet.EncryptableBody = &GlobulaConsensusPacketBody{}
+	// TODO
 
 	return &wrapper
 }
 
 func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common.OriginalPulsarPacket,
 	options core.PacketSendOptions) core.PreparedPacketSender {
-	panic("implement me")
+
+	wrapper := preparedPacketWrapper{}
+	wrapper.packet.Header.setPacketType(packets.PacketPhase1)
+	wrapper.packet.PulseNumber = sender.GetPulseNumber()
+	wrapper.packet.EncryptableBody = &GlobulaConsensusPacketBody{}
+	// TODO
+
+	return &wrapper
 }
 
 func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
 	neighbourhood []packets.MembershipAnnouncementReader, options core.PacketSendOptions) core.PreparedPacketSender {
-	panic("implement me")
+
+	wrapper := preparedPacketWrapper{}
+	wrapper.packet.Header.setPacketType(packets.PacketPhase2)
+	wrapper.packet.PulseNumber = sender.GetPulseNumber()
+	wrapper.packet.EncryptableBody = &GlobulaConsensusPacketBody{}
+	// TODO
+
+	return &wrapper
 }
 
 func (p *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
 	bitset nodeset.NodeBitset, gshTrusted common.GlobulaStateHash, gshDoubted common.GlobulaStateHash,
 	options core.PacketSendOptions) core.PreparedPacketSender {
-	panic("implement me")
+
+	wrapper := preparedPacketWrapper{}
+	wrapper.packet.Header.setPacketType(packets.PacketPhase3)
+	wrapper.packet.PulseNumber = sender.GetPulseNumber()
+	wrapper.packet.EncryptableBody = &GlobulaConsensusPacketBody{}
+	// TODO
+
+	return &wrapper
 }
 
 type preparedPacketWrapper struct {
@@ -99,7 +122,14 @@ type preparedPacketWrapper struct {
 func (p *preparedPacketWrapper) SendTo(ctx context.Context, target common.NodeProfile, sendOptions core.PacketSendOptions, sender core.PacketSender) {
 	p.packet.Header.ReceiverID = uint32(target.GetShortNodeID())
 
-	panic("implement me")
+	b := make([]byte, 0)
+	buffer := bytes.NewBuffer(b)
+	_, err := p.packet.SerializeTo(ctx, buffer, nil)
+	if err != nil {
+		panic("Failed to serialize packet")
+	}
+
+	sender.SendPacketToTransport(ctx, target, sendOptions, b)
 }
 
 func NewPacketBuilder() *PacketBuilder {
