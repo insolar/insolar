@@ -74,6 +74,7 @@ type GlobulaConsensusPacketBody struct {
 
 	// Phases 0-2
 	// - Phase0 is not sent to joiners and suspects, and PulsarPacket field must not be sent by joiners
+	CurrentRank  common2.MembershipRank `insolar-transport:"Packet=0"`                           // ByteSize=4
 	PulsarPacket EmbeddedPulsarData     `insolar-transport:"Packet=0,1;optional=PacketFlags[0]"` // ByteSize>=124
 	Announcement MembershipAnnouncement `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 5, (MEMBER) 201, 205 (MEMBER+JOINER) 196, 198, 208
 
@@ -95,6 +96,12 @@ type GlobulaConsensusPacketBody struct {
 
 func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	packetType := ctx.GetPacketType()
+
+	if packetType == packets.PacketPhase0 {
+		if err := write(writer, b.CurrentRank); err != nil {
+			return errors.Wrap(err, "failed to serialize CurrentRank")
+		}
+	}
 
 	if packetType == packets.PacketPhase0 || packetType == packets.PacketPhase1 {
 		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
@@ -159,6 +166,12 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 
 func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
 	packetType := ctx.GetPacketType()
+
+	if packetType == packets.PacketPhase0 {
+		if err := read(reader, &b.CurrentRank); err != nil {
+			return errors.Wrap(err, "failed to deserialize CurrentRank")
+		}
+	}
 
 	if packetType == packets.PacketPhase0 || packetType == packets.PacketPhase1 {
 		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
@@ -240,43 +253,45 @@ Network traffic ~1000 nodes:
 */
 
 type EmbeddedPulsarData struct {
+	Data []byte
+
 	// ByteSize>=124
-	Header Header // ByteSize=16
+	Header      Header             `insolar-transport:"ignore=send"`           // ByteSize=16
+	PulseNumber common.PulseNumber `insolar-transport:"[30-31]=0;ignore=send"` // [30-31] MUST ==0, ByteSize=4
 
 	// PulseNumber common.PulseNumber //available externally
-	PulsarPacketBody                // ByteSize>=108
-	PulsarSignature  common.Bits512 // ByteSize=64
+	PulsarPacketBody `insolar-transport:"ignore=send"` // ByteSize>=108
+	PulsarSignature  common.Bits512                    `insolar-transport:"ignore=send"` // ByteSize=64
 }
 
 func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	if err := pd.Header.SerializeTo(ctx, writer); err != nil {
-		return errors.Wrap(err, "failed to serialize Header")
-	}
-
-	if err := pd.PulsarPacketBody.SerializeTo(ctx, writer); err != nil {
-		return errors.Wrap(err, "failed to serialize PulsarPacketBody")
-	}
-
-	if err := write(writer, pd.PulsarSignature); err != nil {
-		return errors.Wrap(err, "failed to serialize PulsarSignature")
+	if err := write(writer, pd.Data); err != nil {
+		return errors.Wrap(err, "failed to serialize Data")
 	}
 
 	return nil
 }
 
 func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	if err := pd.Header.DeserializeFrom(ctx, reader); err != nil {
+	capture := newCapturingReader(reader)
+
+	if err := pd.Header.DeserializeFrom(ctx, capture); err != nil {
 		return errors.Wrap(err, "failed to deserialize Header")
 	}
 
-	if err := pd.PulsarPacketBody.DeserializeFrom(ctx, reader); err != nil {
+	if err := read(capture, &pd.PulseNumber); err != nil {
+		return errors.Wrap(err, "failed to deserialize PulseNumber")
+	}
+
+	if err := pd.PulsarPacketBody.DeserializeFrom(ctx, capture); err != nil {
 		return errors.Wrap(err, "failed to deserialize PulsarPacketBody")
 	}
 
-	if err := read(reader, &pd.PulsarSignature); err != nil {
+	if err := read(capture, &pd.PulsarSignature); err != nil {
 		return errors.Wrap(err, "failed to deserialize PulsarSignature")
 	}
 
+	pd.Data = capture.Captured()
 	return nil
 }
 

@@ -63,14 +63,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var signer = func() *adapters.ECDSADataSigner {
+var digester = func() common.DataDigester {
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	digester := adapters.NewSha3512Digester(scheme)
+	return digester
+}()
+
+var signer = func() common.DigestSigner {
 	processor := platformpolicy.NewKeyProcessor()
 	key, _ := processor.GeneratePrivateKey()
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	signer := adapters.NewECDSADataSigner(
-		adapters.NewSha3512Digester(scheme),
-		adapters.NewECDSADigestSigner(key.(*ecdsa.PrivateKey), scheme),
-	)
+	signer := adapters.NewECDSADigestSigner(key.(*ecdsa.PrivateKey), scheme)
 	return signer
 }()
 
@@ -137,13 +140,31 @@ func TestHeader_SetFlag(t *testing.T) {
 	require.False(t, h.HasFlag(0))
 
 	h.SetFlag(0)
-	require.True(t, h.HasFlag(0)) // 0b00000100
+	require.True(t, h.HasFlag(0))
 }
 
 func TestHeader_SetFlag_Panics(t *testing.T) {
 	h := Header{}
 
 	require.Panics(t, func() { h.SetFlag(maxFlagIndex + 1) })
+}
+
+func TestHeader_ClearFlag(t *testing.T) {
+	h := Header{}
+
+	require.False(t, h.HasFlag(0))
+
+	h.SetFlag(0)
+	require.True(t, h.HasFlag(0))
+
+	h.ClearFlag(0)
+	require.False(t, h.HasFlag(0))
+}
+
+func TestHeader_ClearFlag_Panics(t *testing.T) {
+	h := Header{}
+
+	require.Panics(t, func() { h.ClearFlag(maxFlagIndex + 1) })
 }
 
 func TestHeader_GetFlagRangeInt(t *testing.T) {
@@ -315,7 +336,7 @@ func TestPacket_setPulseNumber_Panic(t *testing.T) {
 func TestPacket_SerializeTo_NilBody(t *testing.T) {
 	p := Packet{}
 
-	n, err := p.SerializeTo(context.Background(), bytes.NewBuffer(nil), signer)
+	n, err := p.SerializeTo(context.Background(), bytes.NewBuffer(nil), digester, signer)
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), ErrNilBody.Error())
@@ -329,7 +350,7 @@ func TestPacket_DeserializeFrom_NilBody(t *testing.T) {
 	p.Header.setProtocolType(3) // Unknown protocol
 
 	buf := bytes.NewBuffer(nil)
-	_, err := p.SerializeTo(context.Background(), buf, signer)
+	_, err := p.SerializeTo(context.Background(), buf, digester, signer)
 	require.NoError(t, err)
 
 	n, err := p.DeserializeFrom(context.Background(), buf)

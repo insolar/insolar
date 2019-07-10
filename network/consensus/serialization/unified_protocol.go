@@ -80,8 +80,10 @@ const (
 type Flag uint8
 
 const (
-	FlagIsRelayRestricted = Flag(0)
-	FlagIsBodyEncrypted   = Flag(1)
+	flagIsRelayRestricted = Flag(0)
+	flagIsBodyEncrypted   = Flag(1)
+
+	FlagHasPulsePacket = Flag(0)
 )
 
 const (
@@ -178,7 +180,15 @@ func (h *Header) HasFlag(f Flag) bool {
 		panic("invalid flag index")
 	}
 
-	return h.getFlag(f + reservedFlagSize)
+	return h.hasFlag(f + reservedFlagSize)
+}
+
+func (h *Header) ClearFlag(f Flag) {
+	if f > maxFlagIndex {
+		panic("invalid flag index")
+	}
+
+	h.clearFlag(f + reservedFlagSize)
 }
 
 func (h *Header) GetFlagRangeInt(from, to uint8) uint8 {
@@ -202,23 +212,27 @@ func (h *Header) SetFlag(f Flag) {
 }
 
 func (h *Header) IsRelayRestricted() bool {
-	return h.getFlag(FlagIsRelayRestricted)
+	return h.hasFlag(flagIsRelayRestricted)
 }
 
 func (h *Header) setIsRelayRestricted() {
-	h.setFlag(FlagIsRelayRestricted)
+	h.setFlag(flagIsRelayRestricted)
 }
 
 func (h *Header) IsBodyEncrypted() bool {
-	return h.getFlag(FlagIsBodyEncrypted)
+	return h.hasFlag(flagIsBodyEncrypted)
 }
 
 func (h *Header) setIsBodyEncrypted() {
-	h.setFlag(FlagIsBodyEncrypted)
+	h.setFlag(flagIsBodyEncrypted)
 }
 
-func (h *Header) getFlag(f Flag) bool {
+func (h *Header) hasFlag(f Flag) bool {
 	return hasBit(uint(h.PacketFlags), uint(f))
+}
+
+func (h *Header) clearFlag(f Flag) {
+	h.PacketFlags = uint8(clearBit(uint(h.PacketFlags), uint(f)))
 }
 
 func (h *Header) setFlag(f Flag) {
@@ -259,14 +273,14 @@ func (p *Packet) setPulseNumber(pulseNumber common.PulseNumber) {
 	p.PulseNumber |= pulseNumber
 }
 
-func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, signer common.DataSigner) (int64, error) {
+func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, digester common.DataDigester, signer common.DigestSigner) (int64, error) {
 	if p.EncryptableBody == nil {
 		return 0, ErrMalformedPacketBody(ErrNilBody)
 	}
 
 	w := newTrackableWriter(writer)
 	pctx := newPacketContext(ctx, &p.Header)
-	sctx := newSerializeContext(pctx, w, signer, p)
+	sctx := newSerializeContext(pctx, w, digester, signer, p)
 
 	if err := write(sctx, &p.PulseNumber); err != nil {
 		return 0, ErrMalformedPulseNumber(err)

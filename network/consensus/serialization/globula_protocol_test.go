@@ -61,42 +61,42 @@ import (
 )
 
 func TestEmbeddedPulsarData_SerializeTo(t *testing.T) {
-	pd := EmbeddedPulsarData{}
+	pd := EmbeddedPulsarData{
+		Data: make([]byte, 10),
+	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 
 	err := pd.SerializeTo(nil, buf)
 	require.NoError(t, err)
-	require.Equal(t, 124, buf.Len())
+	require.Equal(t, 10, buf.Len())
 }
 
 func TestEmbeddedPulsarData_DeserializeFrom(t *testing.T) {
-	pd1 := EmbeddedPulsarData{
+	p := Packet{
 		Header: Header{
-			ReceiverID: 123,
-			SourceID:   456,
-			TargetID:   789,
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
 		},
+		EncryptableBody: ProtocolTypePulsar.NewBody(),
 	}
-	pd1.Header.setIsBodyEncrypted()
-	pd1.Header.setIsRelayRestricted()
-	pd1.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
-	pd1.Header.setPacketType(packets.PacketPhase3)
+	p.Header.setProtocolType(ProtocolTypePulsar)
 
 	b := make([]byte, 64)
 	rand.Read(b)
 
-	copy(pd1.PulsarSignature[:], b)
-
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	err := pd1.SerializeTo(nil, buf)
+	_, err := p.SerializeTo(context.Background(), buf, digester, signer)
 	require.NoError(t, err)
 
-	pd2 := EmbeddedPulsarData{}
-	err = pd2.DeserializeFrom(nil, buf)
+	pd := EmbeddedPulsarData{}
+	err = pd.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
-	require.Equal(t, pd1, pd2)
+	require.Equal(t, p.Header, pd.Header)
+	require.Equal(t, *p.EncryptableBody.(*PulsarPacketBody), pd.PulsarPacketBody)
+	require.Equal(t, p.PacketSignature, pd.PulsarSignature)
 }
 
 func TestCloudIntro_SerializeTo(t *testing.T) {
@@ -185,7 +185,7 @@ func TestLeaveAnnouncement_DeserializeFrom(t *testing.T) {
 	require.Equal(t, la1, la2)
 }
 
-func TestGlobulaConsensusPacket_SerializeTo(t *testing.T) {
+func TestGlobulaConsensusPacket_SerializeTo_EmptyPacket(t *testing.T) {
 	p := Packet{
 		Header: Header{
 			SourceID:   123,
@@ -195,9 +195,10 @@ func TestGlobulaConsensusPacket_SerializeTo(t *testing.T) {
 		EncryptableBody: &GlobulaConsensusPacketBody{},
 	}
 	p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+	p.Header.setPacketType(packets.MaxPacketType) // To emulate empty packet
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	s, err := p.SerializeTo(context.Background(), buf, signer)
+	s, err := p.SerializeTo(context.Background(), buf, digester, signer)
 	require.NoError(t, err)
 	require.EqualValues(t, 84, s)
 
@@ -217,7 +218,7 @@ func TestGlobulaConsensusPacket_DeserializeFrom(t *testing.T) {
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 
-	_, err := p1.SerializeTo(context.Background(), buf, signer)
+	_, err := p1.SerializeTo(context.Background(), buf, digester, signer)
 	require.NoError(t, err)
 
 	p2 := Packet{}
