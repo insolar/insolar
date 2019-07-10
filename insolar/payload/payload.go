@@ -48,6 +48,7 @@ const (
 	TypeSetResult
 	TypeActivate
 	TypeRequestInfo
+	TypeGotHotConfirmation
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -168,6 +169,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *RequestInfo:
 		pl.Polymorph = uint32(TypeRequestInfo)
 		return pl.Marshal()
+	case *GotHotConfirmation:
+		pl.Polymorph = uint32(TypeGotHotConfirmation)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -249,6 +253,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeRequestInfo:
 		pl := RequestInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGotHotConfirmation:
+		pl := GotHotConfirmation{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
