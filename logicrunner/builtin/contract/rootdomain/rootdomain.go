@@ -138,8 +138,6 @@ func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, m
 	}
 	rd.PublicKeyMap[trimPublicKey] = memberRef
 
-	fmt.Println("qwerrty")
-	fmt.Println(burnAddress)
 	trimBurnAddress := trimBurnAddress(burnAddress)
 	if _, ok := rd.BurnAddressMap[trimBurnAddress]; ok {
 		return fmt.Errorf("member for this burnAddress already exist")
