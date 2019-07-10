@@ -28,12 +28,10 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	parcel.GetSenderMock.Expect().Return(gen.Reference())
 
 	requestRef := gen.Reference()
-	pulse := insolar.Pulse{}
-	callee := gen.Reference()
 
 	rpcm := NewExecutionProxyImplementation(dc, cr, am)
 	ctx := context.Background()
-	transcript := NewTranscript(ctx, parcel, &requestRef, &pulse, callee)
+	transcript := NewTranscript(ctx, parcel, &requestRef)
 	reason := gen.Reference()
 	transcript.RequestRef = &reason
 	req := rpctypes.UpRouteReq{}

@@ -87,7 +87,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	if p.msg.Queue != nil {
 		for _, qe := range p.msg.Queue {
 			ctxToSent := qe.Parcel.Context(context.Background())
-			transcript := NewTranscript(ctxToSent, qe.Parcel, qe.Request, p.LR.pulse(ctx), es.Ref)
+			transcript := NewTranscript(ctxToSent, qe.Parcel, qe.Request)
 
 			es.Broker.Prepend(ctx, false, transcript)
 		}
