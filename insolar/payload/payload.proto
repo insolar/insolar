@@ -138,3 +138,9 @@ message RequestInfo {
     bytes Request = 22;
     bytes Result = 23;
 }
+
+message GotHotConfirmation {
+    uint32 Polymorph = 16;
+    bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
