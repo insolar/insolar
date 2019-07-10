@@ -115,7 +115,7 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 			p.Dep.Sender = h.Sender
 		},
-		GetIndexWM: func(p *proc.EnsureIndexWM) {
+		EnsureIndex: func(p *proc.EnsureIndexWM) {
 			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.IndexAccessor = h.IndexStorage
 			p.Dep.IndexLocker = h.IndexLocker
