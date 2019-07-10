@@ -509,6 +509,9 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		c.sender,
 	)
 
+	_, isOutgoing := request.(*record.OutgoingRequest)
+
+	isReasonFound := false
 	var foundRequest *record.CompositeFilamentRecord
 	var foundResult *record.CompositeFilamentRecord
 
@@ -521,6 +524,9 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		if bytes.Equal(rec.RecordID.Hash(), requestID.Hash()) {
 			foundRequest = &rec
 		}
+		if bytes.Equal(rec.RecordID.Bytes(), reason.Record().Bytes()) {
+			isReasonFound = true
+		}
 
 		virtual := record.Unwrap(rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
@@ -528,10 +534,10 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 				foundResult = &rec
 			}
 		}
+	}
 
-		if foundRequest != nil && foundResult != nil {
-			return foundRequest, foundResult, nil
-		}
+	if isOutgoing && !isReasonFound {
+		return nil, nil, errors.New("request reason is not found")
 	}
 
 	return foundRequest, foundResult, nil
