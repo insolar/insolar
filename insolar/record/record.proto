@@ -45,6 +45,9 @@ enum ReturnMode {
     // ReturnNoWait - call method and return without results
     ReturnNoWait = 1;
 
+    // ReturnSaga - call saga method
+    ReturnSaga = 2;
+
     // ReturnValidated (not yet) - return result only when it's validated
 }
 
