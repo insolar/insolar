@@ -165,7 +165,7 @@ func (t *TestArtifactManager) InjectFinish() {
 	panic("implement me")
 }
 
-func (t *TestArtifactManager) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, insolar.Parcel, error) {
+func (t *TestArtifactManager) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, *record.IncomingRequest, error) {
 	panic("implement me")
 }
 
