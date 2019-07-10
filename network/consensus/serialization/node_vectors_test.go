@@ -52,11 +52,316 @@ package serialization
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
+	"math"
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNodeVectors_SerializeTo(t *testing.T) {
+	nv := NodeVectors{}
+
+	header := Header{}
+	pctx := newPacketContext(context.Background(), &header)
+	sctx := newSerializeContext(pctx, nil, nil, nil, nil)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := nv.SerializeTo(sctx, buf)
+	require.NoError(t, err)
+}
+
+func TestNodeVectors_DeserializeFrom(t *testing.T) {
+	nv := NodeVectors{}
+
+	header := Header{}
+	pctx := newPacketContext(context.Background(), &header)
+	sctx := newSerializeContext(pctx, nil, nil, nil, nil)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := nv.SerializeTo(sctx, buf)
+	require.NoError(t, err)
+
+	dcxt := newDeserializeContext(pctx, nil, nil)
+	nv2 := NodeVectors{}
+	err = nv2.DeserializeFrom(dcxt, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, nv, nv2)
+}
+
+func TestNodeVectors_AdditionalVectors(t *testing.T) {
+	nv := NodeVectors{
+		AdditionalStateVectors: make([]GlobulaStateVector, 2),
+	}
+
+	header := Header{}
+
+	// Make bit range = 2 :(
+	header.ClearFlag(1)
+	header.SetFlag(2)
+
+	pctx := newPacketContext(context.Background(), &header)
+	sctx := newSerializeContext(pctx, nil, nil, nil, nil)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := nv.SerializeTo(sctx, buf)
+	require.NoError(t, err)
+
+	dcxt := newDeserializeContext(pctx, nil, nil)
+	nv2 := NodeVectors{}
+	err = nv2.DeserializeFrom(dcxt, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, nv, nv2)
+	require.Equal(t, 2, len(nv2.AdditionalStateVectors))
+}
+
+func TestNodeAppearanceBitset_isCompressed(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.False(t, b.isCompressed())
+
+	b.FlagsAndLoLength = 64 // 0b01000000
+	require.True(t, b.isCompressed())
+}
+
+func TestNodeAppearanceBitset_setIsCompressed(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.False(t, b.isCompressed())
+
+	b.setIsCompressed()
+	require.True(t, b.isCompressed())
+}
+
+func TestNodeAppearanceBitset_hasHiLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.False(t, b.hasHiLength())
+
+	b.FlagsAndLoLength = 128 // 0b10000000
+	require.True(t, b.hasHiLength())
+}
+
+func TestNodeAppearanceBitset_setHasHiLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.False(t, b.hasHiLength())
+
+	b.setHasHiLength(true)
+	require.True(t, b.hasHiLength())
+
+	b.setHasHiLength(false)
+	require.False(t, b.hasHiLength())
+}
+
+func TestNodeAppearanceBitset_getLoLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.EqualValues(t, 0, b.getLoLength())
+
+	b.FlagsAndLoLength = 4 // 0b00000100
+	require.EqualValues(t, 4, b.getLoLength())
+}
+
+func TestNodeAppearanceBitset_setLoLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.EqualValues(t, 0, b.getLoLength())
+
+	b.setLoLength(50)
+	require.EqualValues(t, 50, b.getLoLength())
+}
+
+func TestNodeAppearanceBitset_setLoLength_Panic(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.Panics(t, func() { b.setLoLength(loByteLengthMax + 1) })
+}
+
+func TestNodeAppearanceBitset_clearLoLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	b.setLoLength(50)
+	require.EqualValues(t, 50, b.getLoLength())
+
+	b.clearLoLength()
+	require.EqualValues(t, 0, b.getLoLength())
+}
+
+func TestNodeAppearanceBitset_getHiLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.EqualValues(t, 0, b.getHiLength())
+
+	b.HiLength = 4 // 0b00000100
+	require.EqualValues(t, 4, b.getHiLength())
+}
+
+func TestNodeAppearanceBitset_setHiLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.EqualValues(t, 0, b.getHiLength())
+
+	b.setHiLength(100)
+	require.EqualValues(t, 100, b.getHiLength())
+}
+
+func TestNodeAppearanceBitset_setHiLength_Panic(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.Panics(t, func() { b.setHiLength(hiByteLengthMax + 1) })
+}
+
+func TestNodeAppearanceBitset_clearHiLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	b.setHiLength(50)
+	require.EqualValues(t, 50, b.getHiLength())
+
+	b.clearHiLength()
+	require.EqualValues(t, 0, b.getHiLength())
+}
+
+func TestNodeAppearanceBitset_getLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+	b.FlagsAndLoLength = 4 // 0b00000100
+
+	require.EqualValues(t, 4, b.getLength())
+
+	b.HiLength = 5                           // 0b00000101
+	require.EqualValues(t, 4, b.getLength()) // 0b00000100
+
+	b.setHasHiLength(true)
+	require.EqualValues(t, 164, b.getLength()) // 0b00010100100
+}
+
+func TestNodeAppearanceBitset_setLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+	require.EqualValues(t, 0, b.getLength())
+
+	b.setLength(loByteLengthMax)
+	require.EqualValues(t, loByteLengthMax, b.getLength())
+	require.False(t, b.hasHiLength())
+
+	b.setLength(1000)
+	require.EqualValues(t, 1000, b.getLength())
+	require.True(t, b.hasHiLength())
+}
+
+func TestNodeAppearanceBitset_setLength_Panic(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	require.Panics(t, func() { b.setLength(byteLengthMax + 1) })
+}
+
+func TestNodeAppearanceBitset_SetBitset(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	bitset := nodeset.NodeBitset{
+		nodeset.NbsHighTrust,
+		nodeset.NbsHighTrust,
+		nodeset.NbsTimeout,
+		nodeset.NbsFraud,
+		nodeset.NbsBaselineTrust,
+	}
+
+	b.SetBitset(bitset)
+
+	require.EqualValues(t, 5, b.getLength())
+	require.NotEmpty(t, 5, b.Bytes)
+}
+
+func TestNodeAppearanceBitset_SetBitset_Panic(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	bitset := nodeset.NodeBitset(make([]nodeset.NodeBitsetEntry, math.MaxUint16+1))
+
+	require.Panics(t, func() { b.SetBitset(bitset) })
+}
+
+func TestNodeAppearanceBitset_GetBitset(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	bitset := nodeset.NodeBitset{
+		nodeset.NbsHighTrust,
+		nodeset.NbsHighTrust,
+		nodeset.NbsTimeout,
+		nodeset.NbsFraud,
+		nodeset.NbsBaselineTrust,
+	}
+
+	b.SetBitset(bitset)
+
+	require.Equal(t, bitset, b.GetBitset())
+}
+
+func TestNodeAppearanceBitset_Empty(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := b.SerializeTo(nil, buf)
+	require.NoError(t, err)
+
+	require.EqualValues(t, buf.Len(), 1)
+
+	b2 := NodeAppearanceBitset{}
+	err = b2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, b, b2)
+}
+
+func TestNodeAppearanceBitset_NoHiLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	bitset := nodeset.NodeBitset{
+		nodeset.NbsHighTrust,
+		nodeset.NbsHighTrust,
+		nodeset.NbsTimeout,
+		nodeset.NbsFraud,
+		nodeset.NbsBaselineTrust,
+	}
+
+	b.SetBitset(bitset)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := b.SerializeTo(nil, buf)
+	require.NoError(t, err)
+
+	require.EqualValues(t, buf.Len(), 1+len(bitset))
+
+	b2 := NodeAppearanceBitset{}
+	err = b2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, b, b2)
+	require.Equal(t, bitset, b2.GetBitset())
+}
+
+func TestNodeAppearanceBitset_HasHiLength(t *testing.T) {
+	b := NodeAppearanceBitset{}
+
+	bitset := nodeset.NodeBitset(make([]nodeset.NodeBitsetEntry, loByteLengthMax+1))
+
+	b.SetBitset(bitset)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	err := b.SerializeTo(nil, buf)
+	require.NoError(t, err)
+
+	require.EqualValues(t, buf.Len(), 1+1+len(bitset))
+
+	b2 := NodeAppearanceBitset{}
+	err = b2.DeserializeFrom(nil, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, b, b2)
+	require.Equal(t, bitset, b2.GetBitset())
+}
 
 func TestBitsetByteSize(t *testing.T) {
 	require.EqualValues(t, 6, bitsetByteSize(16))

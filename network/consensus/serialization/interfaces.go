@@ -25,6 +25,7 @@ type PacketHeaderAccessor interface {
 
 type PacketHeaderModifier interface {
 	SetFlag(flag Flag)
+	ClearFlag(flag Flag)
 }
 
 type PacketBody interface {

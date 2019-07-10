@@ -62,7 +62,7 @@ import (
 
 const (
 	compressedBitIndex = 6
-	hasHiLenBitIndex   = 6
+	hasHiLenBitIndex   = 7
 
 	loByteLengthBitSize = 6
 	loByteLengthMask    = 1<<loByteLengthBitSize - 1 // 0b00111111
@@ -71,6 +71,7 @@ const (
 	hiByteLengthBitSize = 7
 	hiByteLengthMask    = 1<<hiByteLengthBitSize - 1 // 0b01111111
 	hiByteLengthMax     = hiByteLengthMask
+	hiByteLengthShift   = loByteLengthBitSize - 1
 
 	byteLengthMax = (hiByteLengthMax << loByteLengthBitSize) | loByteLengthMax
 )
@@ -145,23 +146,57 @@ func (nab *NodeAppearanceBitset) SetBitset(bitset nodeset.NodeBitset) {
 	}
 
 	nab.setLength(uint16(length))
+	nab.Bytes = make([]byte, length)
 
+	// TODO: 1 entry == 1 byte. im too lazy
+	for i, entry := range bitset {
+		nab.Bytes[i] = byte(entry)
+	}
 }
 
 func (nab *NodeAppearanceBitset) GetBitset() nodeset.NodeBitset {
-	return nil
+	length := nab.getLength()
+
+	bitset := make([]nodeset.NodeBitsetEntry, length)
+	for i, b := range nab.Bytes {
+		bitset[i] = nodeset.NodeBitsetEntry(b)
+	}
+
+	return bitset
 }
 
 func (nab *NodeAppearanceBitset) isCompressed() bool {
 	return hasBit(uint(nab.FlagsAndLoLength), compressedBitIndex)
 }
 
+func (nab *NodeAppearanceBitset) setIsCompressed() {
+	nab.FlagsAndLoLength = uint8(setBit(uint(nab.FlagsAndLoLength), compressedBitIndex))
+}
+
 func (nab *NodeAppearanceBitset) hasHiLength() bool {
 	return hasBit(uint(nab.FlagsAndLoLength), hasHiLenBitIndex)
 }
 
+func (nab *NodeAppearanceBitset) setHasHiLength(has bool) {
+	var flags uint8
+	if has {
+		flags = uint8(setBit(uint(nab.FlagsAndLoLength), hasHiLenBitIndex))
+	} else {
+		flags = uint8(clearBit(uint(nab.FlagsAndLoLength), hasHiLenBitIndex))
+	}
+	nab.FlagsAndLoLength = flags
+}
+
 func (nab *NodeAppearanceBitset) getLoLength() uint8 {
 	return nab.FlagsAndLoLength & loByteLengthMask
+}
+
+func (nab *NodeAppearanceBitset) clearLoLength() {
+	nab.FlagsAndLoLength ^= nab.FlagsAndLoLength & loByteLengthMask
+}
+
+func (nab *NodeAppearanceBitset) clearHiLength() {
+	nab.HiLength ^= nab.HiLength & hiByteLengthMask
 }
 
 func (nab *NodeAppearanceBitset) getHiLength() uint8 {
@@ -187,7 +222,7 @@ func (nab *NodeAppearanceBitset) setHiLength(length uint8) {
 func (nab *NodeAppearanceBitset) getLength() uint16 {
 	length := uint16(nab.getLoLength())
 	if nab.hasHiLength() {
-		return (uint16(nab.getHiLength()) << loByteLengthBitSize) | length
+		return (uint16(nab.getHiLength()) << hiByteLengthShift) | length
 	}
 
 	return length
@@ -198,9 +233,13 @@ func (nab *NodeAppearanceBitset) setLength(length uint16) {
 		panic("invalid length")
 	}
 
+	nab.setHasHiLength(length > loByteLengthMax)
+	nab.clearHiLength()
+	nab.clearLoLength()
+
 	if length > loByteLengthMax {
 		nab.setLoLength(uint8(length & loByteLengthMask))
-		nab.setHiLength(uint8(length >> loByteLengthBitSize))
+		nab.setHiLength(uint8(length >> hiByteLengthShift))
 	} else {
 		nab.setLoLength(uint8(length))
 	}
@@ -211,13 +250,18 @@ func (nab *NodeAppearanceBitset) SerializeTo(ctx SerializeContext, writer io.Wri
 		return errors.Wrap(err, "failed to serialize FlagsAndLoLength")
 	}
 
-	if err := write(writer, nab.HiLength); err != nil {
-		return errors.Wrap(err, "failed to serialize HiLength")
+	if nab.hasHiLength() {
+		if err := write(writer, nab.HiLength); err != nil {
+			return errors.Wrap(err, "failed to serialize HiLength")
+		}
 	}
 
-	if err := write(writer, nab.Bytes); err != nil {
-		return errors.Wrap(err, "failed to serialize Bytes")
+	if nab.getLength() > 0 {
+		if err := write(writer, nab.Bytes); err != nil {
+			return errors.Wrap(err, "failed to serialize Bytes")
+		}
 	}
+
 	return nil
 }
 
@@ -226,8 +270,10 @@ func (nab *NodeAppearanceBitset) DeserializeFrom(ctx DeserializeContext, reader 
 		return errors.Wrap(err, "failed to deserialize FlagsAndLoLength")
 	}
 
-	if err := read(reader, &nab.HiLength); err != nil {
-		return errors.Wrap(err, "failed to serialize HiLength")
+	if nab.hasHiLength() {
+		if err := read(reader, &nab.HiLength); err != nil {
+			return errors.Wrap(err, "failed to serialize HiLength")
+		}
 	}
 
 	length := nab.getLength()
