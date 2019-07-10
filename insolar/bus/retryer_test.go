@@ -44,11 +44,11 @@ func accessorMock(t *testing.T) pulse.Accessor {
 	return p
 }
 
-func isChannelClosed(ch chan *message.Message) bool {
+func waitForChannelClosed(ch chan *message.Message) bool {
 	select {
 	case _, ok := <-ch:
 		return !ok
-	default:
+	case <-time.After(1 * time.Minute):
 		return false
 	}
 }
@@ -64,7 +64,8 @@ func TestRetryerSend_SendErrored(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	reps, done := SendRoleWithRetry(context.Background(), sender, accessorMock(t), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	r := NewRetrySender(sender, accessorMock(t), 3)
+	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 	defer done()
 	for range reps {
 		require.Fail(t, "we are not expect any replays")
@@ -89,7 +90,8 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	reps, _ := SendRoleWithRetry(context.Background(), sender, accessorMock(t), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	r := NewRetrySender(sender, accessorMock(t), 3)
+	reps, _ := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 	select {
 	case _, ok := <-reps:
 		require.False(t, ok, "channel with replies must be closed, without any messages received")
@@ -102,10 +104,10 @@ func TestRetryerSend_Send_ClientDone(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	r := newRetryer(sender, nil)
+	r := NewRetrySender(sender, nil, 3)
 
 	r.clientDone()
-	r.send(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	r.send(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 
 	for range r.replyChan {
 		require.Fail(t, "we are not expect any replays")
@@ -133,7 +135,8 @@ func TestRetryerSend(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	reps, done := SendRoleWithRetry(context.Background(), sender, accessorMock(t), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	r := NewRetrySender(sender, accessorMock(t), 3)
+	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 
 	isDone := make(chan<- interface{})
 	go sendTestReply(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown}, innerReps, isDone)
@@ -157,7 +160,7 @@ func TestRetryerSend(t *testing.T) {
 	}
 	done()
 
-	require.True(t, isChannelClosed(innerReps))
+	require.True(t, waitForChannelClosed(innerReps))
 }
 
 // Send msg, get "flow cancelled" error, than get one response
@@ -177,7 +180,8 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 	var success bool
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	reps, done := SendRoleWithRetry(context.Background(), sender, accessorMock(t), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	r := NewRetrySender(sender, accessorMock(t), 3)
+	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 	defer done()
 	for rep := range reps {
 		replyPayload, _ := payload.UnmarshalFromMeta(rep.Payload)
@@ -193,7 +197,7 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 	}
 	done()
 
-	require.True(t, isChannelClosed(innerReps))
+	require.True(t, waitForChannelClosed(innerReps))
 }
 
 // Send msg, get "flow cancelled" error, than get two responses
@@ -214,7 +218,8 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 	var success int
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	reps, done := SendRoleWithRetry(context.Background(), sender, accessorMock(t), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	r := NewRetrySender(sender, accessorMock(t), 3)
+	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 	for rep := range reps {
 		replyPayload, _ := payload.UnmarshalFromMeta(rep.Payload)
 
@@ -229,7 +234,7 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 	}
 	done()
 
-	require.True(t, isChannelClosed(innerReps))
+	require.True(t, waitForChannelClosed(innerReps))
 }
 
 // Send msg, get "flow cancelled" error on every tries
@@ -245,7 +250,8 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 	var success bool
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	reps, done := SendRoleWithRetry(context.Background(), sender, accessorMock(t), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	r := NewRetrySender(sender, accessorMock(t), 3)
+	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 	for range reps {
 		success = true
 		break
@@ -254,7 +260,7 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 
 	done()
 
-	require.True(t, isChannelClosed(innerReps))
+	require.True(t, waitForChannelClosed(innerReps))
 }
 
 // Send msg, get response, than get "flow cancelled" error, than get two responses
@@ -284,7 +290,8 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 	var success int
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	reps, done := SendRoleWithRetry(context.Background(), sender, accessorMock(t), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	r := NewRetrySender(sender, accessorMock(t), 3)
+	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 	for rep := range reps {
 		replyPayload, _ := payload.UnmarshalFromMeta(rep.Payload)
 
@@ -301,5 +308,5 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 
 	done()
 
-	require.True(t, isChannelClosed(innerReps))
+	require.True(t, waitForChannelClosed(innerReps))
 }

@@ -29,53 +29,75 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SendWithRetry sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled
-// was received, it retries request after pulse on current node will be changed.
-// Replies will be written to the returned channel. Always read from the channel using multiple assignment
-// (rep, ok := <-ch) because the channel will be closed on timeout.
-func SendRoleWithRetry(
-	ctx context.Context, b Sender, a pulse.Accessor, msg *message.Message, role insolar.DynamicRole, object insolar.Reference, tries uint,
-) (<-chan *message.Message, func()) {
-	r := newRetryer(b, a)
-	go r.send(ctx, msg, role, object, tries)
-	return r.replyChan, r.clientDone
-}
-
-type retryer struct {
+type RetrySender struct {
 	sender        Sender
 	pulseAccessor pulse.Accessor
 
 	tries uint
 
-	once              sync.Once
-	done              chan struct{}
-	processingStarted sync.Mutex
-	replyChan         chan *message.Message
-	isReplyChanClosed bool
+	once      sync.Once
+	done      chan struct{}
+	replyChan chan *message.Message
 }
 
-func newRetryer(sender Sender, pulseAccessor pulse.Accessor) *retryer {
-	r := &retryer{
+func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *RetrySender {
+	r := &RetrySender{
 		sender:        sender,
 		pulseAccessor: pulseAccessor,
+		tries:         tries,
 		done:          make(chan struct{}),
 		replyChan:     make(chan *message.Message),
 	}
 	return r
 }
 
-func (r *retryer) clientDone() {
+// SendWithRetry sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled
+// was received, it retries request after pulse on current node will be changed.
+// Replies will be written to the returned channel. Always read from the channel using multiple assignment
+// (rep, ok := <-ch) because the channel will be closed on timeout.
+func (r *RetrySender) SendRole(
+	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
+) (<-chan *message.Message, func()) {
+	go func() {
+		defer close(r.replyChan)
+		logger := inslogger.FromContext(ctx)
+		var lastPulse insolar.PulseNumber
+
+		select {
+		case <-r.done:
+			return
+		default:
+		}
+
+		received := false
+		for r.tries > 0 && !received {
+			var err error
+			lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
+			if err != nil {
+				logger.Error(errors.Wrap(err, "can't wait for pulse change"))
+				break
+			}
+
+			reps, done := r.sender.SendRole(ctx, msg, role, ref)
+			received = r.tryReceive(ctx, reps)
+			r.tries--
+			done()
+		}
+
+		if r.tries == 0 {
+			logger.Error(errors.Errorf("flow cancelled, retries exceeded"))
+		}
+	}()
+	return r.replyChan, r.clientDone
+}
+
+func (r *RetrySender) clientDone() {
 	r.once.Do(func() {
 		close(r.done)
-
-		r.processingStarted.Lock()
-		close(r.replyChan)
-		r.isReplyChanClosed = true
-		r.processingStarted.Unlock()
 	})
 }
 
-func (r *retryer) waitForPulseChange(ctx context.Context, lastPulse insolar.PulseNumber) (insolar.PulseNumber, error) {
+func (r *RetrySender) waitForPulseChange(ctx context.Context, lastPulse insolar.PulseNumber) (insolar.PulseNumber, error) {
 	logger := inslogger.FromContext(ctx)
 	for {
 		currentPulse, err := r.pulseAccessor.Latest(ctx)
@@ -84,7 +106,7 @@ func (r *retryer) waitForPulseChange(ctx context.Context, lastPulse insolar.Puls
 		}
 
 		if currentPulse.PulseNumber == lastPulse {
-			logger.Debugf("wait for pulse change in retryer. Current: %d", currentPulse)
+			logger.Debugf("wait for pulse change in RetrySender. Current: %d", currentPulse)
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
@@ -92,29 +114,31 @@ func (r *retryer) waitForPulseChange(ctx context.Context, lastPulse insolar.Puls
 	}
 }
 
-func (r *retryer) shouldRetry(ctx context.Context, reps <-chan *message.Message) bool {
+// tryReceive returns false if we get retryable error,
+// and true if reply was successfully received or client don't want anymore replies
+func (r *RetrySender) tryReceive(ctx context.Context, reps <-chan *message.Message) bool {
 	for {
 		select {
 		case <-r.done:
-			return false
+			return true
 		case rep, ok := <-reps:
 			if !ok {
-				return false
+				return true
 			}
 			if r.isRetryableError(ctx, rep) {
-				return true
+				return false
 			}
 
 			select {
 			case <-r.done:
-				return false
+				return true
 			case r.replyChan <- rep:
 			}
 		}
 	}
 }
 
-func (r *retryer) isRetryableError(ctx context.Context, rep *message.Message) bool {
+func (r *RetrySender) isRetryableError(ctx context.Context, rep *message.Message) bool {
 	replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
 		return false
@@ -125,36 +149,4 @@ func (r *retryer) isRetryableError(ctx context.Context, rep *message.Message) bo
 		return true
 	}
 	return false
-}
-
-func (r *retryer) send(ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference, tries uint) {
-	logger := inslogger.FromContext(ctx)
-	retry := true
-	var lastPulse insolar.PulseNumber
-
-	func() {
-		r.processingStarted.Lock()
-		defer r.processingStarted.Unlock()
-		if r.isReplyChanClosed {
-			return
-		}
-		for tries > 0 && retry {
-			var err error
-			lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
-			if err != nil {
-				logger.Error(errors.Wrap(err, "can't wait for pulse change"))
-				break
-			}
-
-			reps, done := r.sender.SendRole(ctx, msg, role, ref)
-			retry = r.shouldRetry(ctx, reps)
-			tries--
-			done()
-		}
-	}()
-
-	if r.tries == 0 {
-		logger.Error(errors.Errorf("flow cancelled, retries exceeded"))
-	}
-	r.clientDone()
 }
