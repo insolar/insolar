@@ -284,7 +284,7 @@ func (m *executionProxyImplementation) SaveAsDelegate(
 	}
 
 	msg := &message.CallMethod{IncomingRequest: *incoming}
-	ref, err := m.cr.CallConstructor(ctx, msg) // AALEKSEEV TODO register outgoing + result
+	ref, err := m.cr.CallConstructor(ctx, msg)
 	if err != nil {
 		return err
 	}
