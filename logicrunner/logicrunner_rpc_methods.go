@@ -253,7 +253,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
-	ref, err := m.cr.CallConstructor(ctx, msg) // AALEKSEEV TODO register outgoing + result
+	ref, err := m.cr.CallConstructor(ctx, msg)
 	current.AddOutgoingRequest(ctx, *incoming, nil, ref, err)
 	if err != nil {
 		return err
@@ -274,13 +274,26 @@ func (m *executionProxyImplementation) SaveAsDelegate(
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsDelegate")
 	defer span.End()
 
-	incoming, _ := buildIncomingAndOutgoingSaveAsDelegateRequests(ctx, current, req)
+	// Send the request
+	incoming, outgoing := buildIncomingAndOutgoingSaveAsDelegateRequests(ctx, current, req)
+
+	// Register outgoing request
+	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	if err != nil {
+		return err
+	}
+
 	msg := &message.CallMethod{IncomingRequest: *incoming}
-
 	ref, err := m.cr.CallConstructor(ctx, msg) // AALEKSEEV TODO register outgoing + result
+	if err != nil {
+		return err
+	}
 	current.AddOutgoingRequest(ctx, *incoming, nil, ref, err)
-
 	rep.Reference = ref
+
+	// Register result of the outgoing method
+	outgoingReqRef := insolar.NewReference(*outgoingReqID)
+	_, err = m.am.RegisterResult(ctx, req.Callee, *outgoingReqRef, rep.Reference.Bytes())
 	return err
 }
 
