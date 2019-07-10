@@ -18,7 +18,6 @@ package jet
 
 import (
 	"context"
-	"math"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -58,14 +57,16 @@ func (s *DBStore) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumbe
 	s.Lock()
 	defer s.Unlock()
 
-	it := s.db.NewIterator(pulseKey(math.MaxUint32), true)
+	it := s.db.NewIterator(pulseKey(lastPulse), false)
 	defer it.Close()
+
+	if !it.Next() {
+		inslogger.FromContext(ctx).Infof("[ DBStore.TruncateHead ] No records. Nothing done. Pulse number: %s", lastPulse.String())
+		return nil
+	}
 
 	for it.Next() {
 		key := newPulseKey(it.Key())
-		if insolar.PulseNumber(key) <= lastPulse {
-			break
-		}
 		err := s.db.Delete(&key)
 		if err != nil {
 			return errors.Wrapf(err, "[ DBStore.TruncateHead ] Can't Delete key: %+v", key)

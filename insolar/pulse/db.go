@@ -19,7 +19,6 @@ package pulse
 import (
 	"bytes"
 	"context"
-	"math"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -88,17 +87,15 @@ func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 
 // TruncateHead remove all records after lastPulse
 func (s *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
-	it := s.db.NewIterator(pulseKey(math.MaxUint32), true)
+	it := s.db.NewIterator(pulseKey(lastPulse), false)
 	defer it.Close()
+
+	if !it.Next() {
+		return errors.New("[ DB.TruncateHead ] Pulse. No required pulse: " + lastPulse.String())
+	}
 
 	for it.Next() {
 		key := newPulseKey(it.Key())
-		if insolar.PulseNumber(key) <= lastPulse {
-			if !insolar.PulseNumber(key).Equal(lastPulse) {
-				return errors.New("[ DB.TruncateHead ] No required pulse: " + lastPulse.String())
-			}
-			break
-		}
 		err := s.db.Delete(&key)
 		if err != nil {
 			return errors.Wrapf(err, "[ DB.TruncateHead ] Pulse. Can't Delete key: %+v", key)

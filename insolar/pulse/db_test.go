@@ -54,19 +54,8 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	require.NoError(t, err)
 
 	pulseStore := NewDB(dbMock)
-	startPulseNumber := insolar.GenesisPulse.PulseNumber
-	{
-		pulse := *pulsar.NewPulse(0, startPulseNumber, &entropygenerator.StandardEntropyGenerator{})
-		err := pulseStore.Append(ctx, pulse)
-		require.NoError(t, err)
-	}
-	{
-		pulse := *pulsar.NewPulse(0, startPulseNumber+10, &entropygenerator.StandardEntropyGenerator{})
-		err := pulseStore.Append(ctx, pulse)
-		require.NoError(t, err)
-	}
 
-	err = pulseStore.TruncateHead(ctx, startPulseNumber+5)
+	err = pulseStore.TruncateHead(ctx, 77)
 	require.Contains(t, err.Error(), "No required pulse")
 }
 

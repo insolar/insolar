@@ -109,6 +109,10 @@ func TestDBStore_TruncateHead(t *testing.T) {
 		tree := dbStore.get(startPulseNumber + insolar.PulseNumber(i))
 		require.False(t, tree.Head.Actual)
 	}
+
+	// not existing record
+	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements+numElements*2))
+	require.NoError(t, err)
 }
 
 func TestDBStorage_Empty(t *testing.T) {
