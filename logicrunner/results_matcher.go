@@ -30,6 +30,8 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, obj *insolar.Re
 	defer rm.lock.Unlock()
 	if response, ok := rm.unwantedResponses[obj]; ok {
 		response.Target = *node
+		// todo maybe call rm.mb.Send in goroutine
+		// todo check errors? retry?
 		rm.mb.Send(ctx, response, nil)
 		return
 	}
@@ -46,6 +48,8 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg insolar.M
 	defer rm.lock.Unlock()
 	if node, ok := rm.executionNodes[&response.RequestRef]; ok {
 		response.Target = *node
+		// todo maybe call rm.mb.Send in goroutine
+		// todo check errors? retry?
 		rm.mb.Send(ctx, response, nil)
 		return
 	}

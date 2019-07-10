@@ -52,7 +52,7 @@ func TestNew(t *testing.T) {
 	jetCoordinator := jet.NewCoordinatorMock(t)
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	contractRequester, err := New()
+	contractRequester, err := New(nil)
 
 	cm := &component.Manager{}
 	cm.Inject(messageBus, contractRequester, pulseAccessor, jetCoordinator, pcs)
@@ -87,7 +87,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	ref := testutils.RandomRef()
 
 	mbm := mockMessageBus(t, &reply.RegisterRequest{})
-	cReq, err := New()
+	cReq, err := New(nil)
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
 
@@ -126,7 +126,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	ref := testutils.RandomRef()
 
 	mbm := mockMessageBus(t, &reply.CallMethod{})
-	cReq, err := New()
+	cReq, err := New(nil)
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
 	cReq.PulseAccessor = mockPulseAccessor(t)
@@ -164,7 +164,7 @@ func TestCallMethodCanceled(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second)
 	defer cancelFunc()
 
-	cr, err := New()
+	cr, err := New(nil)
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)
@@ -210,7 +210,7 @@ func TestCallMethodWaitResults(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
 	defer cancelFunc()
 
-	cr, err := New()
+	cr, err := New(nil)
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)
@@ -265,7 +265,7 @@ func TestReceiveResult(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
 	defer cancelFunc()
 
-	cr, err := New()
+	cr, err := New(nil)
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)
