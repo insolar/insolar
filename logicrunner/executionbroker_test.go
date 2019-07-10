@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
@@ -210,6 +211,10 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	jc := jet.NewCoordinatorMock(s.Controller)
 	ps := pulse.NewAccessorMock(s.Controller)
 	nn := network.NewNodeNetworkMock(s.Controller)
+	sender := bus.NewSenderMock(s.Controller)
+	var err error
+	_, err = InitHandlers(lr, sender)
+	s.Require().NoError(err)
 
 	// initialize lr
 	lr.ArtifactManager = am

@@ -124,7 +124,7 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal meta")
 	}
-	errMsg, err := payload.NewMessage(&payload.Error{Text: "flow cancelled: get message from past on virtual node", Code: uint32(payload.CodeFlowCanceled)})
+	errMsg, err := payload.NewMessage(&payload.Error{Text: "flow cancelled: Incorrect message pulse, get message from past on virtual node", Code: uint32(payload.CodeFlowCanceled)})
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
