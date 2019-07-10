@@ -93,10 +93,10 @@ func TestRetryerSend_Send_ClientDone(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	r := newRetryer(sender, nil, 3)
+	r := newRetryer(sender, nil)
 
 	r.clientDone()
-	r.send(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	r.send(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 
 	for range r.replyChan {
 		require.Fail(t, "we are not expect any replays")

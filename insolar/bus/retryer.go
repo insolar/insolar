@@ -36,8 +36,8 @@ import (
 func SendRoleWithRetry(
 	ctx context.Context, b Sender, a pulse.Accessor, msg *message.Message, role insolar.DynamicRole, object insolar.Reference, tries uint,
 ) (<-chan *message.Message, func()) {
-	r := newRetryer(b, a, tries)
-	go r.send(ctx, msg, role, object)
+	r := newRetryer(b, a)
+	go r.send(ctx, msg, role, object, tries)
 	return r.replyChan, r.clientDone
 }
 
@@ -53,11 +53,10 @@ type retryer struct {
 	replyChan         chan *message.Message
 }
 
-func newRetryer(sender Sender, pulseAccessor pulse.Accessor, tries uint) *retryer {
+func newRetryer(sender Sender, pulseAccessor pulse.Accessor) *retryer {
 	r := &retryer{
 		sender:        sender,
 		pulseAccessor: pulseAccessor,
-		tries:         tries,
 		done:          make(chan struct{}),
 		replyChan:     make(chan *message.Message),
 	}
@@ -100,8 +99,7 @@ func (r *retryer) waitForPulseChange(ctx context.Context, lastPulse insolar.Puls
 	}
 }
 
-// return params tells, if request must be resend
-func (r *retryer) proxyReply(ctx context.Context, reps <-chan *message.Message) bool {
+func (r *retryer) shouldRetry(ctx context.Context, reps <-chan *message.Message) bool {
 	for {
 		select {
 		case <-r.done:
@@ -131,13 +129,12 @@ func (r *retryer) isRetryableError(ctx context.Context, rep *message.Message) bo
 	p, ok := replyPayload.(*payload.Error)
 	if ok && (p.Code == payload.CodeFlowCanceled) {
 		inslogger.FromContext(ctx).Errorf("flow cancelled, retrying (error message - %s)", p.Text)
-		r.tries--
 		return true
 	}
 	return false
 }
 
-func (r *retryer) send(ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference) {
+func (r *retryer) send(ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference, tries uint) {
 	logger := inslogger.FromContext(ctx)
 	retry := true
 	var lastPulse insolar.PulseNumber
@@ -148,7 +145,7 @@ func (r *retryer) send(ctx context.Context, msg *message.Message, role insolar.D
 		if isChannelClosed(r.replyChan) {
 			return
 		}
-		for r.tries > 0 && retry {
+		for tries > 0 && retry {
 			var err error
 			lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
 			if err != nil {
@@ -157,7 +154,8 @@ func (r *retryer) send(ctx context.Context, msg *message.Message, role insolar.D
 			}
 
 			reps, done := r.sender.SendRole(ctx, msg, role, ref)
-			retry = r.proxyReply(ctx, reps)
+			retry = r.shouldRetry(ctx, reps)
+			tries--
 			done()
 		}
 	}()
