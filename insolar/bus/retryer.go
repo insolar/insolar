@@ -79,12 +79,12 @@ func (r *RetrySender) SendRole(
 			}
 
 			reps, d := r.sender.SendRole(ctx, msg, role, ref)
-			received = r.tryReceive(ctx, reps, done, replyChan)
+			received = tryReceive(ctx, reps, done, replyChan)
 			tries--
 			d()
 		}
 
-		if tries == 0 {
+		if tries == 0 && !received {
 			logger.Error(errors.Errorf("flow cancelled, retries exceeded"))
 		}
 	}()
@@ -116,7 +116,7 @@ func (r *RetrySender) waitForPulseChange(ctx context.Context, lastPulse insolar.
 
 // tryReceive returns false if we get retryable error,
 // and true if reply was successfully received or client don't want anymore replies
-func (r *RetrySender) tryReceive(ctx context.Context, reps <-chan *message.Message, done chan struct{}, replyChan chan<- *message.Message) bool {
+func tryReceive(ctx context.Context, reps <-chan *message.Message, done chan struct{}, receiver chan<- *message.Message) bool {
 	for {
 		select {
 		case <-done:
@@ -125,20 +125,20 @@ func (r *RetrySender) tryReceive(ctx context.Context, reps <-chan *message.Messa
 			if !ok {
 				return true
 			}
-			if r.isRetryableError(ctx, rep) {
+			if isRetryableError(ctx, rep) {
 				return false
 			}
 
 			select {
 			case <-done:
 				return true
-			case replyChan <- rep:
+			case receiver <- rep:
 			}
 		}
 	}
 }
 
-func (r *RetrySender) isRetryableError(ctx context.Context, rep *message.Message) bool {
+func isRetryableError(ctx context.Context, rep *message.Message) bool {
 	replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
 		return false
