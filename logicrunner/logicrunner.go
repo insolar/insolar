@@ -497,8 +497,8 @@ func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []mess
 	var traces string
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			Parcel:  elem.Parcel,
-			Request: elem.RequestRef,
+			RequestRef: *elem.RequestRef,
+			Request:    *elem.Request,
 		})
 
 		traces += inslogger.TraceID(elem.Context) + ", "

@@ -296,8 +296,6 @@ func (m *Scope) registerChild(
 	prevChild *insolar.ID,
 	asType *insolar.Reference,
 ) error {
-
-	var jetID = insolar.ID(insolar.ZeroJetID)
 	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return err
@@ -327,7 +325,6 @@ func (m *Scope) registerChild(
 		idx.Lifeline.SetDelegate(*asType, obj)
 	}
 	idx.Lifeline.LatestUpdate = m.PulseNumber
-	idx.Lifeline.JetID = insolar.JetID(jetID)
 	return m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 }
 
@@ -337,7 +334,6 @@ func (m *Scope) updateStateObject(
 	stateObject record.State,
 	memory []byte,
 ) error {
-	var jetID = insolar.ID(insolar.ZeroJetID)
 	var virtRecord record.Virtual
 
 	switch so := stateObject.(type) {
@@ -380,7 +376,6 @@ func (m *Scope) updateStateObject(
 	if stateObject.ID() == record.StateActivation {
 		idx.Lifeline.Parent = stateObject.(record.Activate).Parent
 	}
-	idx.Lifeline.JetID = insolar.JetID(jetID)
 	err = m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 	if err != nil {
 		return errors.Wrap(err, "fail set index for state object")

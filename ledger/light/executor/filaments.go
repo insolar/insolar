@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -77,12 +78,14 @@ func NewFilamentModifier(
 	recordStorage object.RecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	calculator FilamentCalculator,
+	pulses pulse.Calculator,
 ) *FilamentModifierDefault {
 	return &FilamentModifierDefault{
 		calculator: calculator,
 		indexes:    indexes,
 		records:    recordStorage,
 		pcs:        pcs,
+		pulses:     pulses,
 	}
 }
 
@@ -91,6 +94,51 @@ type FilamentModifierDefault struct {
 	indexes    object.IndexStorage
 	records    object.RecordModifier
 	pcs        insolar.PlatformCryptographyScheme
+	pulses     pulse.Calculator
+}
+
+func (m *FilamentModifierDefault) checkObject(ctx context.Context, currentPN insolar.PulseNumber, untilPN insolar.PulseNumber, requestID insolar.ID) (object.FilamentIndex, error) {
+	for {
+		idx, err := m.indexes.ForID(ctx, currentPN, requestID)
+		if err != nil && err != object.ErrIndexNotFound {
+			return idx, errors.Wrap(err, "failed to fetch index")
+		}
+		if err == nil {
+			return idx, nil
+		}
+
+		tmpPN, err := m.pulses.Backwards(ctx, currentPN, 1)
+		if err != nil {
+			return object.FilamentIndex{}, object.ErrIndexNotFound
+		}
+
+		currentPN = tmpPN.PulseNumber
+		if currentPN > untilPN {
+			return object.FilamentIndex{}, object.ErrIndexNotFound
+		}
+	}
+}
+
+func (m *FilamentModifierDefault) prepareCreationRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
+	currentPN := requestID.Pulse()
+	reason := request.ReasonRef()
+	untilPN := reason.Record().Pulse()
+
+	_, err := m.checkObject(ctx, currentPN, untilPN, requestID)
+	if err == object.ErrIndexNotFound {
+		idx := object.FilamentIndex{
+			ObjID:            requestID,
+			PendingRecords:   []insolar.ID{},
+			LifelineLastUsed: requestID.Pulse(),
+		}
+		err := m.indexes.SetIndex(ctx, requestID.Pulse(), idx)
+		if err != nil {
+			return errors.Wrap(err, "failed to create an object")
+		}
+		return nil
+	}
+
+	return err
 }
 
 func (m *FilamentModifierDefault) SetRequest(
@@ -105,11 +153,23 @@ func (m *FilamentModifierDefault) SetRequest(
 	if !jetID.IsValid() {
 		return nil, nil, errors.New("jet is not valid")
 	}
-	if request.AffinityRef() == nil && request.AffinityRef().Record().IsEmpty() {
-		return nil, nil, errors.New("request object id is empty")
+	if request.ReasonRef().IsEmpty() {
+		return nil, nil, ErrEmptyReason
 	}
 
-	objectID := *request.AffinityRef().Record()
+	var objectID insolar.ID
+	if request.GetCallType() == record.CTSaveAsChild || request.GetCallType() == record.CTSaveAsDelegate {
+		err := m.prepareCreationRequest(ctx, requestID, request)
+		if err != nil {
+			return nil, nil, err
+		}
+		objectID = requestID
+	} else {
+		if request.AffinityRef() == nil && request.AffinityRef().Record().IsEmpty() {
+			return nil, nil, errors.New("request object id is empty")
+		}
+		objectID = *request.AffinityRef().Record()
+	}
 
 	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {
@@ -121,7 +181,7 @@ func (m *FilamentModifierDefault) SetRequest(
 	}
 
 	foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), objectID, requestID, request)
-	if err != nil && err != ErrEmptyReason {
+	if err != nil {
 		return nil, nil, err
 	}
 	if foundRequest != nil || foundResult != nil {

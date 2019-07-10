@@ -59,7 +59,7 @@ func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 	var create = request.CallType == record.CTSaveAsChild || request.CallType == record.CTSaveAsDelegate
 
 	if create {
-		return s.setActivationRequest(ctx, msg, virtual, f)
+		return s.setActivationRequest(ctx, msg, request, f)
 	}
 
 	return s.setRequest(ctx, msg, request, f)
@@ -68,7 +68,7 @@ func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 func (s *SetIncomingRequest) setActivationRequest(
 	ctx context.Context,
 	msg payload.SetIncomingRequest,
-	virtual record.Virtual,
+	request *record.IncomingRequest,
 	f flow.Flow,
 ) error {
 	buf, err := msg.Request.Marshal()
@@ -100,10 +100,9 @@ func (s *SetIncomingRequest) setActivationRequest(
 		return err
 	}
 
-	setActivationRequest := proc.NewSetActivationRequest(s.message, virtual, reqID, reqJetID)
-
-	s.dep.SetActivationRequest(setActivationRequest)
-	return f.Procedure(ctx, setActivationRequest, false)
+	setRequest := proc.NewSetRequest(s.message, request, reqID, reqJetID)
+	s.dep.SetRequest(setRequest)
+	return f.Procedure(ctx, setRequest, false)
 }
 
 func (s *SetIncomingRequest) setRequest(

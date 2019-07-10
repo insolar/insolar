@@ -22,14 +22,11 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 type Transcript struct {
-	State interface{} // Shows current execution status of task
-
 	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
@@ -39,28 +36,22 @@ type Transcript struct {
 	Nonce            uint64
 	Deactivate       bool
 	OutgoingRequests []OutgoingRequest
-
-	Parcel     insolar.Parcel
-	FromLedger bool
+	FromLedger       bool
 }
 
 func NewTranscript(
-	ctx context.Context, parcel insolar.Parcel, requestRef *insolar.Reference,
+	ctx context.Context,
+	requestRef *insolar.Reference,
+	request record.IncomingRequest,
 ) *Transcript {
 
-	msg := parcel.Message().(*message.CallMethod)
-
-	sender := parcel.GetSender()
-
 	return &Transcript{
-		Context:       ctx,
-		Request:       &msg.IncomingRequest,
-		RequestRef:    requestRef,
-		RequesterNode: &sender,
-		Nonce:         0,
-		Deactivate:    false,
+		Context:    ctx,
+		Request:    &request,
+		RequestRef: requestRef,
+		Nonce:      0,
+		Deactivate: false,
 
-		Parcel:     parcel,
 		FromLedger: false,
 	}
 }

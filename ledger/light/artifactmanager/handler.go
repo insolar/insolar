@@ -132,14 +132,6 @@ func NewMessageHandler(
 				h.IndexLocker,
 			)
 		},
-		SetActivationRequest: func(p *proc.SetActivationRequest) {
-			p.Dep(
-				h.PCS,
-				h.WriteAccessor,
-				h.Records,
-				h.Sender,
-			)
-		},
 		SetResult: func(p *proc.SetResult) {
 			p.Dep(
 				h.WriteAccessor,
@@ -286,6 +278,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 		h.Records,
 		h.PCS,
 		h.filamentCalculator,
+		h.PulseCalculator,
 	)
 	h.setHandlersForLight()
 
