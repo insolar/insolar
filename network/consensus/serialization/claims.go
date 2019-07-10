@@ -134,7 +134,6 @@ func (cl *ClaimList) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 }
 
 func (cl *ClaimList) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	cl.Claims = make([]GenericClaim, 0)
 	cl.EndOfClaims = EmptyClaim{newClaimHeader(claimTypeEmpty, 0)}
 	for {
 		header := ClaimHeader{}
@@ -146,6 +145,10 @@ func (cl *ClaimList) DeserializeFrom(ctx DeserializeContext, reader io.Reader) e
 		case claimTypeEmpty:
 			return nil
 		case claimTypeGeneric:
+			if cl.Claims == nil {
+				cl.Claims = make([]GenericClaim, 0)
+			}
+
 			claim := GenericClaim{header, make([]byte, header.Length())}
 			lreader := io.LimitReader(reader, int64(header.Length()))
 			n, err := lreader.Read(claim.Payload)

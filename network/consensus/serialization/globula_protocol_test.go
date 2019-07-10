@@ -228,3 +228,367 @@ func TestGlobulaConsensusPacket_DeserializeFrom(t *testing.T) {
 
 	require.Equal(t, p1, p2)
 }
+
+func TestGlobulaConsensusPacketBody_Phases(t *testing.T) {
+	tests := []struct {
+		name       string
+		packetType packets.PacketType
+		size       int
+	}{
+		{
+			"phase0",
+			packets.PacketPhase0,
+			88,
+		},
+		{
+			"phase1",
+			packets.PacketPhase1,
+			90,
+		},
+		{
+			"phase2",
+			packets.PacketPhase2,
+			89,
+		},
+		{
+			"phase3",
+			packets.PacketPhase3,
+			219,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := Packet{
+				Header: Header{
+					SourceID:   123,
+					TargetID:   456,
+					ReceiverID: 789,
+				},
+				EncryptableBody: &GlobulaConsensusPacketBody{},
+			}
+			p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+			p.Header.setPacketType(test.packetType)
+
+			buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+			s, err := p.SerializeTo(context.Background(), buf, digester, signer)
+			require.NoError(t, err)
+			require.EqualValues(t, test.size, s)
+
+			require.NotEmpty(t, p.PacketSignature)
+
+			p2 := Packet{}
+
+			_, err = p2.DeserializeFrom(context.Background(), buf)
+			require.NoError(t, err)
+
+			require.Equal(t, p, p2)
+		})
+	}
+}
+
+func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
+	pp := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: ProtocolTypePulsar.NewBody(),
+	}
+	pp.Header.setProtocolType(ProtocolTypePulsar)
+
+	b := make([]byte, 64)
+	rand.Read(b)
+
+	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+	_, err := pp.SerializeTo(context.Background(), buf, digester, signer)
+	require.NoError(t, err)
+
+	p := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+	p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+
+	phase1p := p
+	phase1p.EncryptableBody = &GlobulaConsensusPacketBody{
+		PulsarPacket: EmbeddedPulsarData{
+			Data: buf.Bytes(),
+		},
+	}
+
+	tests := []struct {
+		name       string
+		packetType packets.PacketType
+		size       int
+		packet     Packet
+	}{
+		{
+			"phase0",
+			packets.PacketPhase0,
+			216,
+			phase1p,
+		},
+		{
+			"phase1",
+			packets.PacketPhase1,
+			218,
+			phase1p,
+		},
+		{
+			"phase2",
+			packets.PacketPhase2,
+			89,
+			p,
+		},
+		{
+			"phase3",
+			packets.PacketPhase3,
+			219,
+			p,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := test.packet
+
+			p.Header.setPacketType(test.packetType)
+			p.Header.SetFlag(0)
+
+			s, err := p.SerializeTo(context.Background(), buf, digester, signer)
+			require.NoError(t, err)
+			require.EqualValues(t, test.size, s)
+
+			require.NotEmpty(t, p.PacketSignature)
+
+			p2 := Packet{}
+
+			_, err = p2.DeserializeFrom(context.Background(), buf)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestGlobulaConsensusPacketBody_Phases_Flag1(t *testing.T) {
+	p := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+	p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+
+	phase3p := p
+	phase3p.EncryptableBody = &GlobulaConsensusPacketBody{
+		Vectors: NodeVectors{
+			AdditionalStateVectors: make([]GlobulaStateVector, 1),
+		},
+	}
+
+	tests := []struct {
+		name       string
+		packetType packets.PacketType
+		size       int
+		packet     Packet
+	}{
+		{
+			"phase0",
+			packets.PacketPhase0,
+			88,
+			p,
+		},
+		{
+			"phase1",
+			packets.PacketPhase1,
+			90,
+			p,
+		},
+		{
+			"phase2",
+			packets.PacketPhase2,
+			226,
+			p,
+		},
+		{
+			"phase3",
+			packets.PacketPhase3,
+			351,
+			phase3p,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := test.packet
+
+			p.Header.setPacketType(test.packetType)
+			p.Header.SetFlag(1)
+
+			buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+			s, err := p.SerializeTo(context.Background(), buf, digester, signer)
+			require.NoError(t, err)
+			require.EqualValues(t, test.size, s)
+
+			require.NotEmpty(t, p.PacketSignature)
+
+			p2 := Packet{}
+
+			_, err = p2.DeserializeFrom(context.Background(), buf)
+			require.NoError(t, err)
+
+			require.Equal(t, p, p2)
+		})
+	}
+}
+
+func TestGlobulaConsensusPacketBody_Phases_Flag2(t *testing.T) {
+	p := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+	p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+
+	phase3p := p
+	phase3p.EncryptableBody = &GlobulaConsensusPacketBody{
+		Vectors: NodeVectors{
+			AdditionalStateVectors: make([]GlobulaStateVector, 2),
+		},
+	}
+
+	tests := []struct {
+		name       string
+		packetType packets.PacketType
+		size       int
+		packet     Packet
+	}{
+		{
+			"phase0",
+			packets.PacketPhase0,
+			88,
+			p,
+		},
+		{
+			"phase1",
+			packets.PacketPhase1,
+			441,
+			p,
+		},
+		{
+			"phase2",
+			packets.PacketPhase2,
+			440,
+			p,
+		},
+		{
+			"phase3",
+			packets.PacketPhase3,
+			483,
+			phase3p,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := test.packet
+
+			p.Header.setPacketType(test.packetType)
+			p.Header.SetFlag(2)
+
+			buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+			s, err := p.SerializeTo(context.Background(), buf, digester, signer)
+			require.NoError(t, err)
+			require.EqualValues(t, test.size, s)
+
+			require.NotEmpty(t, p.PacketSignature)
+
+			p2 := Packet{}
+
+			_, err = p2.DeserializeFrom(context.Background(), buf)
+			require.NoError(t, err)
+
+			require.Equal(t, p, p2)
+		})
+	}
+}
+
+func TestGlobulaConsensusPacketBody_Phases_Flag12(t *testing.T) {
+	p := Packet{
+		Header: Header{
+			SourceID:   123,
+			TargetID:   456,
+			ReceiverID: 789,
+		},
+		EncryptableBody: &GlobulaConsensusPacketBody{},
+	}
+	p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
+
+	phase3p := p
+	phase3p.EncryptableBody = &GlobulaConsensusPacketBody{
+		Vectors: NodeVectors{
+			AdditionalStateVectors: make([]GlobulaStateVector, 3),
+		},
+	}
+
+	tests := []struct {
+		name       string
+		packetType packets.PacketType
+		size       int
+		packet     Packet
+	}{
+		{
+			"phase0",
+			packets.PacketPhase0,
+			88,
+			p,
+		},
+		{
+			"phase1",
+			packets.PacketPhase1,
+			505,
+			p,
+		},
+		{
+			"phase2",
+			packets.PacketPhase2,
+			504,
+			p,
+		},
+		{
+			"phase3",
+			packets.PacketPhase3,
+			615,
+			phase3p,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := test.packet
+
+			p.Header.setPacketType(test.packetType)
+			p.Header.SetFlag(1)
+			p.Header.SetFlag(2)
+
+			buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
+			s, err := p.SerializeTo(context.Background(), buf, digester, signer)
+			require.NoError(t, err)
+			require.EqualValues(t, test.size, s)
+
+			require.NotEmpty(t, p.PacketSignature)
+
+			p2 := Packet{}
+
+			_, err = p2.DeserializeFrom(context.Background(), buf)
+			require.NoError(t, err)
+
+			require.Equal(t, p, p2)
+		})
+	}
+}
