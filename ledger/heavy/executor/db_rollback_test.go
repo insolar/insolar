@@ -18,12 +18,13 @@ package executor
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,44 +33,26 @@ func TestDBRollback_HasOnlyGenesisPulse(t *testing.T) {
 	jetKeeper.TopSyncPulseFunc = func() (r insolar.PulseNumber) {
 		return insolar.GenesisPulse.PulseNumber
 	}
-	db := store.NewDBMock(t)
-	drops := drop.NewDB(db)
 
-	rollback := NewDBRollback(drops, jetKeeper)
+	rollback := NewDBRollback(nil, nil, nil, nil, jetKeeper)
 	err := rollback.Start(context.Background())
 	require.NoError(t, err)
 }
 
-func TestDBRollback_TruncateHeadError(t *testing.T) {
-	jetKeeper := NewJetKeeperMock(t)
-	testPulseNumber := insolar.GenesisPulse.PulseNumber + 1
-	jetKeeper.TopSyncPulseFunc = func() (r insolar.PulseNumber) {
-		return testPulseNumber
-	}
-	db := store.NewDBMock(t)
-	db.NewIteratorFunc = func(p store.Key, p1 bool) (r store.Iterator) {
-		iterMock := store.NewIteratorMock(t)
-		iterMock.NextMock.Expect().Return(true)
-		iterMock.CloseMock.Expect().Return()
-		iterMock.KeyMock.Return((testPulseNumber + 1).Bytes())
-		return iterMock
-	}
-	db.DeleteMock.Return(errors.New("Test"))
-
-	drops := drop.NewDB(db)
-
-	rollback := NewDBRollback(drops, jetKeeper)
-	err := rollback.Start(context.Background())
-	require.Error(t, err)
-}
-
-func TestDBRollback(t *testing.T) {
+func TestDBRollback_HappyPath(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(t)
 	jetKeeper.TopSyncPulseFunc = func() (r insolar.PulseNumber) {
 		return insolar.GenesisPulse.PulseNumber + 1
 	}
 	db := store.NewDBMock(t)
+	hits := make(map[store.Scope]struct{})
+
 	db.NewIteratorFunc = func(p store.Key, p1 bool) (r store.Iterator) {
+		// check that every 'scope' called once
+		_, exists := hits[p.Scope()]
+		require.False(t, exists)
+		hits[p.Scope()] = struct{}{}
+
 		iterMock := store.NewIteratorMock(t)
 		iterMock.NextMock.Expect().Return(false)
 		iterMock.CloseMock.Expect().Return()
@@ -77,8 +60,18 @@ func TestDBRollback(t *testing.T) {
 	}
 
 	drops := drop.NewDB(db)
+	records := object.NewRecordDB(db)
+	indexes := object.NewIndexDB(db)
+	jets := jet.NewDBStore(db)
 
-	rollback := NewDBRollback(drops, jetKeeper)
+	rollback := NewDBRollback(drops, records, indexes, jets, jetKeeper)
 	err := rollback.Start(context.Background())
+	require.Len(t, hits, 4) // drops, record, jets, indexes
+	expectedScopes := []store.Scope{store.ScopeJetDrop, store.ScopeRecord, store.ScopeIndex, store.ScopeJetTree}
+	for _, s := range expectedScopes {
+		_, ok := hits[s]
+		require.True(t, ok)
+	}
+
 	require.NoError(t, err)
 }

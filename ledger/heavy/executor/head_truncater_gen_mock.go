@@ -16,90 +16,90 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//dropTruncaterMock implements github.com/insolar/insolar/ledger/heavy/executor.headTruncater
-type dropTruncaterMock struct {
+//headTruncaterMock implements github.com/insolar/insolar/ledger/heavy/executor.headTruncater
+type headTruncaterMock struct {
 	t minimock.Tester
 
 	TruncateHeadFunc       func(p context.Context, p1 insolar.PulseNumber) (r error)
 	TruncateHeadCounter    uint64
 	TruncateHeadPreCounter uint64
-	TruncateHeadMock       mdropTruncaterMockTruncateHead
+	TruncateHeadMock       mheadTruncaterMockTruncateHead
 }
 
-//NewdropTruncaterMock returns a mock for github.com/insolar/insolar/ledger/heavy/executor.headTruncater
-func NewdropTruncaterMock(t minimock.Tester) *dropTruncaterMock {
-	m := &dropTruncaterMock{t: t}
+//NewheadTruncaterMock returns a mock for github.com/insolar/insolar/ledger/heavy/executor.headTruncater
+func NewheadTruncaterMock(t minimock.Tester) *headTruncaterMock {
+	m := &headTruncaterMock{t: t}
 
 	if controller, ok := t.(minimock.MockController); ok {
 		controller.RegisterMocker(m)
 	}
 
-	m.TruncateHeadMock = mdropTruncaterMockTruncateHead{mock: m}
+	m.TruncateHeadMock = mheadTruncaterMockTruncateHead{mock: m}
 
 	return m
 }
 
-type mdropTruncaterMockTruncateHead struct {
-	mock              *dropTruncaterMock
-	mainExpectation   *dropTruncaterMockTruncateHeadExpectation
-	expectationSeries []*dropTruncaterMockTruncateHeadExpectation
+type mheadTruncaterMockTruncateHead struct {
+	mock              *headTruncaterMock
+	mainExpectation   *headTruncaterMockTruncateHeadExpectation
+	expectationSeries []*headTruncaterMockTruncateHeadExpectation
 }
 
-type dropTruncaterMockTruncateHeadExpectation struct {
-	input  *dropTruncaterMockTruncateHeadInput
-	result *dropTruncaterMockTruncateHeadResult
+type headTruncaterMockTruncateHeadExpectation struct {
+	input  *headTruncaterMockTruncateHeadInput
+	result *headTruncaterMockTruncateHeadResult
 }
 
-type dropTruncaterMockTruncateHeadInput struct {
+type headTruncaterMockTruncateHeadInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 }
 
-type dropTruncaterMockTruncateHeadResult struct {
+type headTruncaterMockTruncateHeadResult struct {
 	r error
 }
 
 //Expect specifies that invocation of headTruncater.TruncateHead is expected from 1 to Infinity times
-func (m *mdropTruncaterMockTruncateHead) Expect(p context.Context, p1 insolar.PulseNumber) *mdropTruncaterMockTruncateHead {
+func (m *mheadTruncaterMockTruncateHead) Expect(p context.Context, p1 insolar.PulseNumber) *mheadTruncaterMockTruncateHead {
 	m.mock.TruncateHeadFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &dropTruncaterMockTruncateHeadExpectation{}
+		m.mainExpectation = &headTruncaterMockTruncateHeadExpectation{}
 	}
-	m.mainExpectation.input = &dropTruncaterMockTruncateHeadInput{p, p1}
+	m.mainExpectation.input = &headTruncaterMockTruncateHeadInput{p, p1}
 	return m
 }
 
 //Return specifies results of invocation of headTruncater.TruncateHead
-func (m *mdropTruncaterMockTruncateHead) Return(r error) *dropTruncaterMock {
+func (m *mheadTruncaterMockTruncateHead) Return(r error) *headTruncaterMock {
 	m.mock.TruncateHeadFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &dropTruncaterMockTruncateHeadExpectation{}
+		m.mainExpectation = &headTruncaterMockTruncateHeadExpectation{}
 	}
-	m.mainExpectation.result = &dropTruncaterMockTruncateHeadResult{r}
+	m.mainExpectation.result = &headTruncaterMockTruncateHeadResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of headTruncater.TruncateHead is expected once
-func (m *mdropTruncaterMockTruncateHead) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *dropTruncaterMockTruncateHeadExpectation {
+func (m *mheadTruncaterMockTruncateHead) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *headTruncaterMockTruncateHeadExpectation {
 	m.mock.TruncateHeadFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &dropTruncaterMockTruncateHeadExpectation{}
-	expectation.input = &dropTruncaterMockTruncateHeadInput{p, p1}
+	expectation := &headTruncaterMockTruncateHeadExpectation{}
+	expectation.input = &headTruncaterMockTruncateHeadInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *dropTruncaterMockTruncateHeadExpectation) Return(r error) {
-	e.result = &dropTruncaterMockTruncateHeadResult{r}
+func (e *headTruncaterMockTruncateHeadExpectation) Return(r error) {
+	e.result = &headTruncaterMockTruncateHeadResult{r}
 }
 
 //Set uses given function f as a mock of headTruncater.TruncateHead method
-func (m *mdropTruncaterMockTruncateHead) Set(f func(p context.Context, p1 insolar.PulseNumber) (r error)) *dropTruncaterMock {
+func (m *mheadTruncaterMockTruncateHead) Set(f func(p context.Context, p1 insolar.PulseNumber) (r error)) *headTruncaterMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -108,22 +108,22 @@ func (m *mdropTruncaterMockTruncateHead) Set(f func(p context.Context, p1 insola
 }
 
 //TruncateHead implements github.com/insolar/insolar/ledger/heavy/executor.headTruncater interface
-func (m *dropTruncaterMock) TruncateHead(p context.Context, p1 insolar.PulseNumber) (r error) {
+func (m *headTruncaterMock) TruncateHead(p context.Context, p1 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.TruncateHeadPreCounter, 1)
 	defer atomic.AddUint64(&m.TruncateHeadCounter, 1)
 
 	if len(m.TruncateHeadMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.TruncateHeadMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to dropTruncaterMock.TruncateHead. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to headTruncaterMock.TruncateHead. %v %v", p, p1)
 			return
 		}
 
 		input := m.TruncateHeadMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, dropTruncaterMockTruncateHeadInput{p, p1}, "headTruncater.TruncateHead got unexpected parameters")
+		testify_assert.Equal(m.t, *input, headTruncaterMockTruncateHeadInput{p, p1}, "headTruncater.TruncateHead got unexpected parameters")
 
 		result := m.TruncateHeadMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the dropTruncaterMock.TruncateHead")
+			m.t.Fatal("No results are set for the headTruncaterMock.TruncateHead")
 			return
 		}
 
@@ -136,12 +136,12 @@ func (m *dropTruncaterMock) TruncateHead(p context.Context, p1 insolar.PulseNumb
 
 		input := m.TruncateHeadMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, dropTruncaterMockTruncateHeadInput{p, p1}, "headTruncater.TruncateHead got unexpected parameters")
+			testify_assert.Equal(m.t, *input, headTruncaterMockTruncateHeadInput{p, p1}, "headTruncater.TruncateHead got unexpected parameters")
 		}
 
 		result := m.TruncateHeadMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the dropTruncaterMock.TruncateHead")
+			m.t.Fatal("No results are set for the headTruncaterMock.TruncateHead")
 		}
 
 		r = result.r
@@ -150,25 +150,25 @@ func (m *dropTruncaterMock) TruncateHead(p context.Context, p1 insolar.PulseNumb
 	}
 
 	if m.TruncateHeadFunc == nil {
-		m.t.Fatalf("Unexpected call to dropTruncaterMock.TruncateHead. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to headTruncaterMock.TruncateHead. %v %v", p, p1)
 		return
 	}
 
 	return m.TruncateHeadFunc(p, p1)
 }
 
-//TruncateHeadMinimockCounter returns a count of dropTruncaterMock.TruncateHeadFunc invocations
-func (m *dropTruncaterMock) TruncateHeadMinimockCounter() uint64 {
+//TruncateHeadMinimockCounter returns a count of headTruncaterMock.TruncateHeadFunc invocations
+func (m *headTruncaterMock) TruncateHeadMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.TruncateHeadCounter)
 }
 
-//TruncateHeadMinimockPreCounter returns the value of dropTruncaterMock.TruncateHead invocations
-func (m *dropTruncaterMock) TruncateHeadMinimockPreCounter() uint64 {
+//TruncateHeadMinimockPreCounter returns the value of headTruncaterMock.TruncateHead invocations
+func (m *headTruncaterMock) TruncateHeadMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.TruncateHeadPreCounter)
 }
 
 //TruncateHeadFinished returns true if mock invocations count is ok
-func (m *dropTruncaterMock) TruncateHeadFinished() bool {
+func (m *headTruncaterMock) TruncateHeadFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.TruncateHeadMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.TruncateHeadCounter) == uint64(len(m.TruncateHeadMock.expectationSeries))
@@ -189,44 +189,44 @@ func (m *dropTruncaterMock) TruncateHeadFinished() bool {
 
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *dropTruncaterMock) ValidateCallCounters() {
+func (m *headTruncaterMock) ValidateCallCounters() {
 
 	if !m.TruncateHeadFinished() {
-		m.t.Fatal("Expected call to dropTruncaterMock.TruncateHead")
+		m.t.Fatal("Expected call to headTruncaterMock.TruncateHead")
 	}
 
 }
 
 //CheckMocksCalled checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *dropTruncaterMock) CheckMocksCalled() {
+func (m *headTruncaterMock) CheckMocksCalled() {
 	m.Finish()
 }
 
 //Finish checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
-func (m *dropTruncaterMock) Finish() {
+func (m *headTruncaterMock) Finish() {
 	m.MinimockFinish()
 }
 
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
-func (m *dropTruncaterMock) MinimockFinish() {
+func (m *headTruncaterMock) MinimockFinish() {
 
 	if !m.TruncateHeadFinished() {
-		m.t.Fatal("Expected call to dropTruncaterMock.TruncateHead")
+		m.t.Fatal("Expected call to headTruncaterMock.TruncateHead")
 	}
 
 }
 
 //Wait waits for all mocked methods to be called at least once
 //Deprecated: please use MinimockWait or use Wait method of minimock.Controller
-func (m *dropTruncaterMock) Wait(timeout time.Duration) {
+func (m *headTruncaterMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
 //MinimockWait waits for all mocked methods to be called at least once
 //this method is called by minimock.Controller
-func (m *dropTruncaterMock) MinimockWait(timeout time.Duration) {
+func (m *headTruncaterMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
@@ -240,7 +240,7 @@ func (m *dropTruncaterMock) MinimockWait(timeout time.Duration) {
 		case <-timeoutCh:
 
 			if !m.TruncateHeadFinished() {
-				m.t.Error("Expected call to dropTruncaterMock.TruncateHead")
+				m.t.Error("Expected call to headTruncaterMock.TruncateHead")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -253,7 +253,7 @@ func (m *dropTruncaterMock) MinimockWait(timeout time.Duration) {
 
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
-func (m *dropTruncaterMock) AllMocksCalled() bool {
+func (m *headTruncaterMock) AllMocksCalled() bool {
 
 	if !m.TruncateHeadFinished() {
 		return false
