@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	wmmsg "github.com/ThreeDotsLabs/watermill/message"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -240,9 +238,14 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	reps, done := m.retryableSend(ctx, &payload.GetCode{
+	msg, err := payload.NewMessage(&payload.GetCode{
 		CodeID: *code.Record(),
-	}, insolar.DynamicRoleLightExecutor, code, 3)
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal message")
+	}
+
+	reps, done := bus.SendRoleWithRetry(ctx, m.sender, m.PulseAccessor, msg, insolar.DynamicRoleLightExecutor, code, 3)
 	defer done()
 
 	rep, ok := <-reps
@@ -311,9 +314,14 @@ func (m *client) GetObject(
 
 	logger := inslogger.FromContext(ctx).WithField("object", head.Record().DebugString())
 
-	reps, done := m.retryableSend(ctx, &payload.GetObject{
+	msg, err := payload.NewMessage(&payload.GetObject{
 		ObjectID: *head.Record(),
-	}, insolar.DynamicRoleLightExecutor, head, 3)
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal message")
+	}
+
+	reps, done := bus.SendRoleWithRetry(ctx, m.sender, m.PulseAccessor, msg, insolar.DynamicRoleLightExecutor, head, 3)
 	defer done()
 
 	var (
@@ -384,12 +392,6 @@ func (m *client) GetObject(
 		parent:       index.Parent,
 	}
 	return desc, err
-}
-
-func (m *client) retryableSend(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (<-chan *wmmsg.Message, func()) {
-	r := newRetryer(m.sender, m.PulseAccessor, ppl, role, ref, tries)
-	go r.send(ctx)
-	return r.replyChan, r.clientDone
 }
 
 // GetPendingRequest returns an unclosed pending request
