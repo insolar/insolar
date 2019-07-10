@@ -103,7 +103,7 @@ func (i *IndexDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumbe
 	defer it.Close()
 
 	if !it.Next() {
-		inslogger.FromContext(ctx).Infof("[ IndexDB.TruncateHead ] No records. Nothing done. Pulse number: %s", lastPulse.String())
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", lastPulse.String())
 		return nil
 	}
 
@@ -111,10 +111,10 @@ func (i *IndexDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumbe
 		key := newIndexKey(it.Key())
 		err := i.db.Delete(&key)
 		if err != nil {
-			return errors.Wrapf(err, "[ IndexDB.TruncateHead ] Can't Delete key: %+v", key)
+			return errors.Wrapf(err, "can't delete key: %+v", key)
 		}
 
-		inslogger.FromContext(ctx).Infof("[ IndexDB.TruncateHead ] erased key. Pulse number: %s. ObjectID: %s", key.pn.String(), key.objID.String())
+		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. ObjectID: %s", key.pn.String(), key.objID.String())
 	}
 	return nil
 }

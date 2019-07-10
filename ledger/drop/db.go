@@ -92,17 +92,17 @@ func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) e
 	defer it.Close()
 
 	if !it.Next() {
-		return errors.New("[ DB.TruncateHead ] No required pulse: " + lastPulse.String())
+		return errors.New("No required pulse: " + lastPulse.String())
 	}
 
 	for it.Next() {
 		key := newDropDbKey(it.Key())
 		err := ds.db.Delete(&key)
 		if err != nil {
-			return errors.Wrapf(err, "[ DB.TruncateHead ] Drop. Can't Delete key: %+v", key)
+			return errors.Wrapf(err, "can't delete key: %+v", key)
 		}
 
-		inslogger.FromContext(ctx).Infof("[ DB.TruncateHead ] Drop. erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
+		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
 	}
 
 	return nil

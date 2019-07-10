@@ -49,12 +49,16 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	hits := make(map[store.Scope]int)
 
 	db.DeleteMock.Return(nil)
+	iterNum := 0
 	db.NewIteratorFunc = func(p store.Key, p1 bool) (r store.Iterator) {
 		num, _ := hits[p.Scope()]
 		hits[p.Scope()] = num + 1
 
 		iterMock := store.NewIteratorMock(t)
-		iterMock.NextMock.Return(false)
+		iterMock.NextFunc = func() (r bool) {
+			iterNum++
+			return iterNum%2 != 0
+		}
 
 		iterMock.KeyMock.Return(p.ID())
 		iterMock.CloseMock.Return()
