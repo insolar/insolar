@@ -45,7 +45,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	ref := p.msg.GetReference()
 
-	es, broker := p.LR.StateStorage.UpsertExecutionState(p.LR, ref)
+	es, broker := p.LR.StateStorage.UpsertExecutionState(ref)
 	p.Result.es = es
 	p.Result.broker = broker
 

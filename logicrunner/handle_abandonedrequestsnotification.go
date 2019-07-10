@@ -39,7 +39,7 @@ type initializeAbandonedRequestsNotificationExecutionState struct {
 func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx context.Context) error {
 	ref := *p.msg.DefaultTarget()
 
-	es, _ := p.LR.StateStorage.UpsertExecutionState(p.LR, ref)
+	es, _ := p.LR.StateStorage.UpsertExecutionState(ref)
 
 	es.Lock()
 	if es.pending == message.PendingUnknown {

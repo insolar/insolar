@@ -24,9 +24,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 )
 
 func InitBroker(_ *testing.T, ctx context.Context, count int, broker *ExecutionBroker, withMocks bool) {
@@ -54,13 +57,19 @@ func newExecutionBroker(
 	list *CurrentExecutionList,
 	pending *message.PendingState,
 ) *ExecutionBroker {
+	re := NewRequestsExecutorMock(t)
+	mb := testutils.NewMessageBusMock(t)
+	jc := jet.NewCoordinatorMock(t)
+	ps := pulse.NewAccessorMock(t)
+	pm := &publisherMock{}
+
 	lr := LogicRunner{
 		RequestsExecutor: NewRequestsExecutorMock(t),
-		StateStorage:     NewStateStorage(),
+		StateStorage:     NewStateStorage(pm, re, mb, jc, ps),
 	}
 
 	objectRef := gen.Reference()
-	es, broker := lr.StateStorage.UpsertExecutionState(&lr, objectRef)
+	es, broker := lr.StateStorage.UpsertExecutionState(objectRef)
 
 	InitBroker(t, ctx, count, broker, true)
 	if list != nil {

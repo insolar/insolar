@@ -690,7 +690,7 @@ func (q *ExecutionBroker) ResetLedgerCheck() {
 	q.ledgerChecked = sync.Once{}
 }
 
-func NewExecutionBroker(publisher watermillMsg.Publisher, requestExecutor RequestsExecutor, messageBus insolar.MessageBus, jetCoordinator jet.Coordinator, pulseAccessor pulse.Accessor, es *ExecutionState) *ExecutionBroker {
+func NewExecutionBroker(publisher watermillMsg.Publisher, requestsExecutor RequestsExecutor, messageBus insolar.MessageBus, jetCoordinator jet.Coordinator, pulseAccessor pulse.Accessor, es *ExecutionState) *ExecutionBroker {
 	return &ExecutionBroker{
 		stateLock:   &sync.Mutex{},
 		mutable:     NewTranscriptDequeue(),
@@ -699,7 +699,7 @@ func NewExecutionBroker(publisher watermillMsg.Publisher, requestExecutor Reques
 		currentList: NewCurrentExecutionList(),
 
 		publisher:        publisher,
-		requestsExecutor: requestExecutor,
+		requestsExecutor: requestsExecutor,
 		messageBus:       messageBus,
 		jetCoordinator:   jetCoordinator,
 		pulseAccessor:    pulseAccessor,

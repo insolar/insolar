@@ -44,11 +44,11 @@ type StateStorage interface {
 type stateStorage struct {
 	sync.RWMutex
 
-	Publisher        watermillMsg.Publisher `inject:""`
-	RequestsExecutor RequestsExecutor       `inject:""`
-	MessageBus       insolar.MessageBus     `inject:""`
-	JetCoordinator   jet.Coordinator        `inject:""`
-	PulseAccessor    pulse.Accessor         `inject:""`
+	publisher        watermillMsg.Publisher
+	requestsExecutor RequestsExecutor
+	messageBus       insolar.MessageBus
+	jetCoordinator   jet.Coordinator
+	pulseAccessor    pulse.Accessor
 
 	state map[insolar.Reference]*ObjectState // if object exists, we are validating or executing it right now
 }
@@ -75,9 +75,15 @@ func (ss *stateStorage) GetValidationState(ref insolar.Reference) *ExecutionStat
 	return os.Validation
 }
 
-func NewStateStorage() StateStorage {
+func NewStateStorage(publisher watermillMsg.Publisher, requestsExecutor RequestsExecutor, messageBus insolar.MessageBus, jetCoordinator jet.Coordinator, pulseAccessor pulse.Accessor) StateStorage {
 	ss := &stateStorage{
 		state: make(map[insolar.Reference]*ObjectState),
+
+		publisher:        publisher,
+		requestsExecutor: requestsExecutor,
+		messageBus:       messageBus,
+		jetCoordinator:   jetCoordinator,
+		pulseAccessor:    pulseAccessor,
 	}
 	return ss
 }
@@ -91,14 +97,14 @@ func (ss *stateStorage) UpsertExecutionState(
 	defer os.Unlock()
 
 	if os.ExecutionState == nil {
-		log.Error(ss.Publisher)
+		log.Error(ss.publisher)
 		os.ExecutionState = NewExecutionState(ref)
 		os.ExecutionBroker = NewExecutionBroker(
-			ss.Publisher,
-			ss.RequestsExecutor,
-			ss.MessageBus,
-			ss.JetCoordinator,
-			ss.PulseAccessor,
+			ss.publisher,
+			ss.requestsExecutor,
+			ss.messageBus,
+			ss.jetCoordinator,
+			ss.pulseAccessor,
 			os.ExecutionState,
 		)
 	}

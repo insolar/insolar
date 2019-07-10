@@ -115,8 +115,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:          cfg,
-		StateStorage: NewStateStorage(),
+		Cfg: cfg,
 	}
 
 	err := initHandlers(&res)
@@ -220,6 +219,7 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
+	lr.StateStorage = NewStateStorage(lr.publisher, lr.RequestsExecutor, lr.MessageBus, lr.JetCoordinator, lr.PulseAccessor)
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
 		lr.Cfg,
