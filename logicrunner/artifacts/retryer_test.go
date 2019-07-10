@@ -57,7 +57,9 @@ func TestRetryerSend_SendErrored(t *testing.T) {
 	}
 	c := clientMock(t, sender)
 
-	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	msg, err := payload.NewMessage(&payload.State{})
+	require.NoError(t, err)
+	reps, done := c.retryableSend(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 	defer done()
 	for range reps {
 		require.Fail(t, "we are not expect any replays")
@@ -81,7 +83,9 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 	}
 	c := clientMock(t, sender)
 
-	reps, _ := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	msg, err := payload.NewMessage(&payload.State{})
+	require.NoError(t, err)
+	reps, _ := c.retryableSend(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 	select {
 	case _, ok := <-reps:
 		require.False(t, ok, "channel with replies must be closed, without any messages received")
@@ -93,7 +97,9 @@ func TestRetryerSend_Send_ClientDone(t *testing.T) {
 	sender := &bus.SenderMock{}
 	c := NewClient(sender)
 
-	r := newRetryer(c.sender, nil, &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	msg, err := payload.NewMessage(&payload.State{})
+	require.NoError(t, err)
+	r := newRetryer(c.sender, nil, msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 
 	r.clientDone()
 	r.send(context.Background())
@@ -123,7 +129,9 @@ func TestRetryerSend(t *testing.T) {
 	}
 	c := clientMock(t, sender)
 
-	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	msg, err := payload.NewMessage(&payload.State{})
+	require.NoError(t, err)
+	reps, done := c.retryableSend(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 
 	isDone := make(chan<- interface{})
 	go sendTestReply(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown}, innerReps, isDone)
@@ -166,7 +174,9 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 	c := clientMock(t, sender)
 
 	var success bool
-	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	msg, err := payload.NewMessage(&payload.State{})
+	require.NoError(t, err)
+	reps, done := c.retryableSend(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 	defer done()
 	for rep := range reps {
 		replyPayload, _ := payload.UnmarshalFromMeta(rep.Payload)
@@ -202,7 +212,9 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 	c := clientMock(t, sender)
 
 	var success int
-	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	msg, err := payload.NewMessage(&payload.State{})
+	require.NoError(t, err)
+	reps, done := c.retryableSend(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 	for rep := range reps {
 		replyPayload, _ := payload.UnmarshalFromMeta(rep.Payload)
 
@@ -232,7 +244,9 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 	c := clientMock(t, sender)
 
 	var success bool
-	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	msg, err := payload.NewMessage(&payload.State{})
+	require.NoError(t, err)
+	reps, done := c.retryableSend(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 	for range reps {
 		success = true
 		break
@@ -270,7 +284,9 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 	c := clientMock(t, sender)
 
 	var success int
-	reps, done := c.retryableSend(context.Background(), &payload.State{}, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
+	msg, err := payload.NewMessage(&payload.State{})
+	require.NoError(t, err)
+	reps, done := c.retryableSend(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef(), 3)
 	for rep := range reps {
 		replyPayload, _ := payload.UnmarshalFromMeta(rep.Payload)
 

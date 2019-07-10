@@ -240,9 +240,14 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	reps, done := m.retryableSend(ctx, &payload.GetCode{
+	msg, err := payload.NewMessage(&payload.GetCode{
 		CodeID: *code.Record(),
-	}, insolar.DynamicRoleLightExecutor, code, 3)
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal message")
+	}
+
+	reps, done := m.retryableSend(ctx, msg, insolar.DynamicRoleLightExecutor, code, 3)
 	defer done()
 
 	rep, ok := <-reps
@@ -311,9 +316,14 @@ func (m *client) GetObject(
 
 	logger := inslogger.FromContext(ctx).WithField("object", head.Record().DebugString())
 
-	reps, done := m.retryableSend(ctx, &payload.GetObject{
+	msg, err := payload.NewMessage(&payload.GetObject{
 		ObjectID: *head.Record(),
-	}, insolar.DynamicRoleLightExecutor, head, 3)
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal message")
+	}
+
+	reps, done := m.retryableSend(ctx, msg, insolar.DynamicRoleLightExecutor, head, 3)
 	defer done()
 
 	var (
@@ -386,8 +396,8 @@ func (m *client) GetObject(
 	return desc, err
 }
 
-func (m *client) retryableSend(ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) (<-chan *wmmsg.Message, func()) {
-	r := newRetryer(m.sender, m.PulseAccessor, ppl, role, ref, tries)
+func (m *client) retryableSend(ctx context.Context, msg *wmmsg.Message, role insolar.DynamicRole, ref insolar.Reference, tries uint) (<-chan *wmmsg.Message, func()) {
+	r := newRetryer(m.sender, m.PulseAccessor, msg, role, ref, tries)
 	go r.send(ctx)
 	return r.replyChan, r.clientDone
 }

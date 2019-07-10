@@ -32,7 +32,7 @@ import (
 )
 
 type retryer struct {
-	ppl           payload.Payload
+	msg           *message.Message
 	role          insolar.DynamicRole
 	ref           insolar.Reference
 	tries         uint
@@ -45,9 +45,9 @@ type retryer struct {
 	replyChan         chan *message.Message
 }
 
-func newRetryer(sender bus.Sender, pulseAccessor pulse.Accessor, ppl payload.Payload, role insolar.DynamicRole, ref insolar.Reference, tries uint) *retryer {
+func newRetryer(sender bus.Sender, pulseAccessor pulse.Accessor, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference, tries uint) *retryer {
 	r := &retryer{
-		ppl:           ppl,
+		msg:           msg,
 		role:          role,
 		ref:           ref,
 		tries:         tries,
@@ -151,13 +151,7 @@ func (r *retryer) send(ctx context.Context) {
 				break
 			}
 
-			msg, err := payload.NewMessage(r.ppl)
-			if err != nil {
-				logger.Error(errors.Wrap(err, "error while create new message from payload"))
-				break
-			}
-
-			reps, done := r.sender.SendRole(ctx, msg, r.role, r.ref)
+			reps, done := r.sender.SendRole(ctx, r.msg, r.role, r.ref)
 			retry = r.proxyReply(ctx, reps)
 			done()
 		}
