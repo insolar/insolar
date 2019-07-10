@@ -94,11 +94,14 @@ func (s *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) er
 	for it.Next() {
 		key := newPulseKey(it.Key())
 		if insolar.PulseNumber(key) <= lastPulse {
+			if !insolar.PulseNumber(key).Equal(lastPulse) {
+				return errors.New("[ DB.TruncateHead ] No required pulse: " + lastPulse.String())
+			}
 			break
 		}
 		err := s.db.Delete(&key)
 		if err != nil {
-			return errors.Wrapf(err, "[ DB.TruncateHead ] Can't Delete key: %+v", key)
+			return errors.Wrapf(err, "[ DB.TruncateHead ] Pulse. Can't Delete key: %+v", key)
 		}
 
 		inslogger.FromContext(ctx).Infof("[ DB.TruncateHead ] Pulse. erased key. Pulse number: %s", insolar.PulseNumber(key))

@@ -63,6 +63,46 @@ type setInput struct {
 	dr    Drop
 }
 
+func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	dbMock, err := store.NewBadgerDB(tmpdir)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
+
+	jets := make([]insolar.JetID, 2)
+
+	dropStore := NewDB(dbMock)
+
+	startPulseNumber := insolar.GenesisPulse.PulseNumber
+	{
+		drop := Drop{}
+		drop.Pulse = startPulseNumber
+		jets[0] = gen.JetID()
+
+		drop.JetID = jets[0]
+		err = dropStore.Set(ctx, drop)
+		require.NoError(t, err)
+	}
+	{
+		drop := Drop{}
+		drop.Pulse = startPulseNumber + 10
+		jets[1] = gen.JetID()
+
+		drop.JetID = jets[1]
+		err = dropStore.Set(ctx, drop)
+		require.NoError(t, err)
+	}
+
+	err = dropStore.TruncateHead(ctx, startPulseNumber+5)
+	require.Contains(t, err.Error(), "No required pulse")
+}
+
 func TestDropStorageDB_TruncateHead(t *testing.T) {
 	t.Parallel()
 
