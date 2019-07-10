@@ -19,7 +19,6 @@ package message
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -44,7 +43,6 @@ func (rr *ReturnResults) Type() insolar.MessageType {
 }
 
 func (rr *ReturnResults) GetCaller() *insolar.Reference {
-	log.Error("GetCaller shouldn't be called on ReturnResults message")
 	return nil
 }
 
