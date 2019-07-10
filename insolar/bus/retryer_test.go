@@ -44,6 +44,15 @@ func accessorMock(t *testing.T) pulse.Accessor {
 	return p
 }
 
+func isChannelClosed(ch chan *message.Message) bool {
+	select {
+	case _, ok := <-ch:
+		return !ok
+	default:
+		return false
+	}
+}
+
 // Send msg, bus.Sender gets error and closes resp chan
 func TestRetryerSend_SendErrored(t *testing.T) {
 	sender := &SenderMock{}

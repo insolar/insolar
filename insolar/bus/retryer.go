@@ -47,10 +47,11 @@ type retryer struct {
 
 	tries uint
 
-	processingStarted sync.Mutex
 	once              sync.Once
 	done              chan struct{}
+	processingStarted sync.Mutex
 	replyChan         chan *message.Message
+	isReplyChanClosed bool
 }
 
 func newRetryer(sender Sender, pulseAccessor pulse.Accessor) *retryer {
@@ -69,17 +70,9 @@ func (r *retryer) clientDone() {
 
 		r.processingStarted.Lock()
 		close(r.replyChan)
+		r.isReplyChanClosed = true
 		r.processingStarted.Unlock()
 	})
-}
-
-func isChannelClosed(ch chan *message.Message) bool {
-	select {
-	case _, ok := <-ch:
-		return !ok
-	default:
-		return false
-	}
 }
 
 func (r *retryer) waitForPulseChange(ctx context.Context, lastPulse insolar.PulseNumber) (insolar.PulseNumber, error) {
@@ -142,7 +135,7 @@ func (r *retryer) send(ctx context.Context, msg *message.Message, role insolar.D
 	func() {
 		r.processingStarted.Lock()
 		defer r.processingStarted.Unlock()
-		if isChannelClosed(r.replyChan) {
+		if r.isReplyChanClosed {
 			return
 		}
 		for tries > 0 && retry {
