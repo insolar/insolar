@@ -158,6 +158,8 @@ type KeyStoreFactory interface {
 	GetPublicKeyStore(skh SignatureKeyHolder) PublicKeyStore
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.DataSigner -o . -s _mock.go
+
 type DataSigner interface {
 	DigestSigner
 	DataDigester

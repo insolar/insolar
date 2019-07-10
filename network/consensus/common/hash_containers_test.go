@@ -51,6 +51,7 @@
 package common
 
 import (
+	io "io"
 	"strings"
 	"testing"
 
@@ -309,4 +310,76 @@ func TestVerifyWith(t *testing.T) {
 
 func TestSignedDigestString(t *testing.T) {
 	require.True(t, NewSignedDigest(Digest{}, Signature{}).String() != "")
+}
+
+func TestNewSignedData(t *testing.T) {
+	bits := NewBits64(0)
+	d := Digest{digestMethod: "testDigest"}
+	s := Signature{signatureMethod: "testSignature"}
+	sd := NewSignedData(&bits, d, s)
+	require.Equal(t, sd.hReader, &bits)
+
+	require.Equal(t, sd.hSignedDigest.digest, d)
+
+	require.Equal(t, sd.hSignedDigest.signature, s)
+}
+
+func TestSignDataByDataSigner(t *testing.T) {
+	bits := NewBits64(0)
+	ds := NewDataSignerMock(t)
+	td := DigestMethod("testDigest")
+	ts := SignatureMethod("testSign")
+	ds.GetSignOfDataMock.Set(func(io.Reader) SignedDigest {
+		return SignedDigest{digest: Digest{digestMethod: td}, signature: Signature{signatureMethod: ts}}
+	})
+	sd := SignDataByDataSigner(&bits, ds)
+	require.Equal(t, sd.hReader, &bits)
+
+	require.Equal(t, sd.digest.digestMethod, td)
+
+	require.Equal(t, sd.signature.signatureMethod, ts)
+}
+
+func TestGetSignedDigest(t *testing.T) {
+	bits := NewBits64(0)
+	d := Digest{digestMethod: "testDigest"}
+	s := Signature{signatureMethod: "testSignature"}
+	sd := NewSignedData(&bits, d, s)
+	signDig := sd.GetSignedDigest()
+	require.Equal(t, signDig.digest, d)
+
+	require.Equal(t, signDig.signature, s)
+}
+
+func TestWriteTo(t *testing.T) {
+	bits1 := NewBits64(1)
+	d := Digest{digestMethod: "testDigest"}
+	s := Signature{signatureMethod: "testSignature"}
+	sd := NewSignedData(&bits1, d, s)
+	wtc := &writerToComparer{}
+	require.Panics(t, func() { sd.WriteTo(wtc) })
+
+	sd2 := NewSignedData(&bits1, d, s)
+	wtc.other = &sd2
+	n, err := sd.WriteTo(wtc)
+	require.Equal(t, n, int64(8))
+
+	require.Equal(t, err, nil)
+}
+
+func TestSignedDataString(t *testing.T) {
+	bits := NewBits64(0)
+	require.True(t, NewSignedData(&bits, Digest{}, Signature{}).String() != "")
+}
+
+func TestNewSignatureKey(t *testing.T) {
+	fd := NewFoldableReaderMock(t)
+	ts := SignatureMethod("testSign")
+	kt := PublicAsymmetricKey
+	sk := NewSignatureKey(fd, ts, kt)
+	require.Equal(t, sk.hFoldReader, fd)
+
+	require.Equal(t, sk.signatureMethod, ts)
+
+	require.Equal(t, sk.keyType, kt)
 }
