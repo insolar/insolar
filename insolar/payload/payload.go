@@ -49,6 +49,7 @@ const (
 	TypeActivate
 	TypeRequestInfo
 	TypeDeactivate
+	TypeUpdate
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -172,6 +173,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *Deactivate:
 		pl.Polymorph = uint32(TypeDeactivate)
 		return pl.Marshal()
+	case *Update:
+		pl.Polymorph = uint32(TypeUpdate)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -257,6 +261,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeDeactivate:
 		pl := Deactivate{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeUpdate:
+		pl := Update{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
