@@ -52,7 +52,6 @@ package common
 
 import (
 	"fmt"
-	"math"
 	"math/bits"
 	"time"
 
@@ -109,8 +108,6 @@ type /* Active */ NodeProfile interface { //TODO Rename
 	GetIndex() int //0 for joiners
 	IsJoiner() bool
 	GetDeclaredPower() MemberPower
-	/* deprecated */
-	//GetState() MembershipState
 }
 
 type EvictedNodeProfile interface { //TODO Rename
@@ -414,108 +411,6 @@ func (v PowerRequest) AsCapacityLevel() (bool, common.CapacityLevel) {
 
 func (v PowerRequest) AsMemberPower() (bool, MemberPower) {
 	return v >= 0, MemberPower(v)
-}
-
-/* deprecated */
-type MembershipState int8
-
-const (
-	Suspected MembershipState = iota - 1
-	Undefined                 /* node in Purgatory */
-	Joining
-	Working
-	JustJoined
-)
-
-func (v MembershipState) IsSuspect() bool {
-	return v <= Suspected
-}
-
-func (v MembershipState) IsJustJoined() bool {
-	return v >= JustJoined
-}
-
-func (v MembershipState) GetCountInSuspected() int {
-	if !v.IsSuspect() {
-		return 0
-	}
-	return 1 + int(Suspected-v)
-}
-
-func (v MembershipState) AsJustJoinedRemainingCount() int {
-	if !v.IsJustJoined() {
-		return 0
-	}
-	return 1 + int(v-JustJoined)
-}
-
-func (v MembershipState) InSuspectedExceeded(limit int) bool {
-	if limit < 0 || limit > (int(Suspected)-math.MinInt8) {
-		panic("illegal value")
-	}
-	return v.GetCountInSuspected() > limit
-}
-
-func (v MembershipState) SetJustJoined(count int) MembershipState {
-	if count < 1 || count > (math.MaxInt8-int(JustJoined)) {
-		panic("illegal value")
-	}
-	return JustJoined + MembershipState(count) - 1
-}
-
-func (v MembershipState) IncrementSuspected() MembershipState {
-	if v.IsUndefined() {
-		panic("illegal state")
-	}
-	if v.IsSuspect() {
-		if v == math.MinInt8 {
-			panic("underflow")
-		}
-		return v - 1
-	}
-	return Suspected
-}
-
-func (v MembershipState) DecrementJustJoined() MembershipState {
-	if v.IsUndefined() {
-		panic("illegal state")
-	}
-	if v.IsJustJoined() {
-		return v - 1
-	}
-	return v
-}
-
-func (v MembershipState) UpdateOnNextPulse(justJoinedCount int) MembershipState {
-	if v.IsUndefined() {
-		panic("illegal state")
-	}
-	if v.IsJoining() {
-		if justJoinedCount == 0 {
-			return Working
-		}
-		return v.SetJustJoined(justJoinedCount)
-	}
-	if v.IsSuspect() || v.IsJustJoined() {
-		return v - 1
-	}
-	return v
-}
-
-func (v MembershipState) IsUndefined() bool {
-	return v == Undefined
-}
-
-func (v MembershipState) IsActive() bool {
-	return v != Undefined && v != Joining
-}
-
-func (v MembershipState) IsWorking() bool {
-	return v >= Working
-}
-
-func (v MembershipState) IsJoining() bool {
-	return v == Joining
 }
 
 type MembershipProfile struct {

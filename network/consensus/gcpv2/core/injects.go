@@ -189,7 +189,6 @@ type PacketBuilder interface {
 		neighbourhood []packets.MembershipAnnouncementReader, options PacketSendOptions) PreparedPacketSender
 
 	PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors nodeset.HashedNodeVector,
-		//bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
 		options PacketSendOptions) PreparedPacketSender
 }
 
