@@ -528,7 +528,7 @@ func (bc *Bootstrap) nodeShouldReconnectAsJoiner(nodeID insolar.Reference) bool 
 		utils.IsDiscovery(nodeID, bc.Certificate)
 }
 
-func (bc *Bootstrap) processBootstrap(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (bc *Bootstrap) processBootstrap(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
 		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
 	}
@@ -599,7 +599,7 @@ func (bc *Bootstrap) generatePermission(joinerPublicKey []byte) (*packet.Permiss
 	return &result, nil
 }
 
-func (bc *Bootstrap) processGenesis(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (bc *Bootstrap) processGenesis(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetGenesis() == nil {
 		return nil, errors.Errorf("process genesis: got invalid protobuf request message: %s", request)
 	}
@@ -619,7 +619,7 @@ func (bc *Bootstrap) processGenesis(ctx context.Context, request network.Packet)
 func (bc *Bootstrap) Init(ctx context.Context) error {
 	bc.firstPulseTime = time.Now()
 	bc.pinger = pinger.NewPinger(bc.Network)
-	bc.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Packet) (network.Packet, error) {
+	bc.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 		return bc.Network.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	bc.Network.RegisterRequestHandler(types.Bootstrap, bc.processBootstrap)

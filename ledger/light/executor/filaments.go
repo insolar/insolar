@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -77,12 +78,14 @@ func NewFilamentModifier(
 	recordStorage object.RecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	calculator FilamentCalculator,
+	pulses pulse.Calculator,
 ) *FilamentModifierDefault {
 	return &FilamentModifierDefault{
 		calculator: calculator,
 		indexes:    indexes,
 		records:    recordStorage,
 		pcs:        pcs,
+		pulses:     pulses,
 	}
 }
 
@@ -91,6 +94,51 @@ type FilamentModifierDefault struct {
 	indexes    object.IndexStorage
 	records    object.RecordModifier
 	pcs        insolar.PlatformCryptographyScheme
+	pulses     pulse.Calculator
+}
+
+func (m *FilamentModifierDefault) checkObject(ctx context.Context, currentPN insolar.PulseNumber, untilPN insolar.PulseNumber, requestID insolar.ID) (object.FilamentIndex, error) {
+	for {
+		idx, err := m.indexes.ForID(ctx, currentPN, requestID)
+		if err != nil && err != object.ErrIndexNotFound {
+			return idx, errors.Wrap(err, "failed to fetch index")
+		}
+		if err == nil {
+			return idx, nil
+		}
+
+		tmpPN, err := m.pulses.Backwards(ctx, currentPN, 1)
+		if err != nil {
+			return object.FilamentIndex{}, object.ErrIndexNotFound
+		}
+
+		currentPN = tmpPN.PulseNumber
+		if currentPN > untilPN {
+			return object.FilamentIndex{}, object.ErrIndexNotFound
+		}
+	}
+}
+
+func (m *FilamentModifierDefault) prepareCreationRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
+	currentPN := requestID.Pulse()
+	reason := request.ReasonRef()
+	untilPN := reason.Record().Pulse()
+
+	_, err := m.checkObject(ctx, currentPN, untilPN, requestID)
+	if err == object.ErrIndexNotFound {
+		idx := object.FilamentIndex{
+			ObjID:            requestID,
+			PendingRecords:   []insolar.ID{},
+			LifelineLastUsed: requestID.Pulse(),
+		}
+		err := m.indexes.SetIndex(ctx, requestID.Pulse(), idx)
+		if err != nil {
+			return errors.Wrap(err, "failed to create an object")
+		}
+		return nil
+	}
+
+	return err
 }
 
 func (m *FilamentModifierDefault) SetRequest(
@@ -105,11 +153,23 @@ func (m *FilamentModifierDefault) SetRequest(
 	if !jetID.IsValid() {
 		return nil, nil, errors.New("jet is not valid")
 	}
-	if request.AffinityRef() == nil && request.AffinityRef().Record().IsEmpty() {
-		return nil, nil, errors.New("request object id is empty")
+	if request.ReasonRef().IsEmpty() {
+		return nil, nil, ErrEmptyReason
 	}
 
-	objectID := *request.AffinityRef().Record()
+	var objectID insolar.ID
+	if request.GetCallType() == record.CTSaveAsChild || request.GetCallType() == record.CTSaveAsDelegate {
+		err := m.prepareCreationRequest(ctx, requestID, request)
+		if err != nil {
+			return nil, nil, err
+		}
+		objectID = requestID
+	} else {
+		if request.AffinityRef() == nil && request.AffinityRef().Record().IsEmpty() {
+			return nil, nil, errors.New("request object id is empty")
+		}
+		objectID = *request.AffinityRef().Record()
+	}
 
 	idx, err := m.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {
@@ -121,7 +181,7 @@ func (m *FilamentModifierDefault) SetRequest(
 	}
 
 	foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), objectID, requestID, request)
-	if err != nil && err != ErrEmptyReason {
+	if err != nil {
 		return nil, nil, err
 	}
 	if foundRequest != nil || foundResult != nil {
@@ -322,7 +382,6 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 		objectID,
 		*idx.Lifeline.PendingPointer,
 		*idx.Lifeline.EarliestOpenRequest,
-		pulse,
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
@@ -386,7 +445,6 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		objectID,
 		*idx.Lifeline.PendingPointer,
 		result.Request.Record().Pulse(),
-		startFrom,
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
@@ -443,7 +501,6 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		objectID,
 		*idx.Lifeline.PendingPointer,
 		reason.Record().Pulse(),
-		startFrom,
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
@@ -621,7 +678,7 @@ func newFetchingIterator(
 	ctx context.Context,
 	cache *filamentCache,
 	objectID, from insolar.ID,
-	readUntil, calcPulse insolar.PulseNumber,
+	readUntil insolar.PulseNumber,
 	fetcher jet.Fetcher,
 	coordinator jet.Coordinator,
 	sender bus.Sender,
@@ -631,7 +688,6 @@ func newFetchingIterator(
 		cache:       cache,
 		objectID:    objectID,
 		readUntil:   readUntil,
-		calcPulse:   calcPulse,
 		jetFetcher:  fetcher,
 		coordinator: coordinator,
 		sender:      sender,
@@ -658,7 +714,7 @@ func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 		// Update cache from network.
 		logger.Debug("fetching requests from network")
 		defer logger.Debug("received requests from network")
-		recs, err := i.fetchFromNetwork(ctx, *i.PrevID(), i.calcPulse)
+		recs, err := i.fetchFromNetwork(ctx, *i.PrevID())
 		if err != nil {
 			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
 		}
@@ -677,18 +733,18 @@ func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 }
 
 func (i *fetchingIterator) fetchFromNetwork(
-	ctx context.Context, forID insolar.ID, calcPulse insolar.PulseNumber,
+	ctx context.Context, forID insolar.ID,
 ) ([]record.CompositeFilamentRecord, error) {
 	ctx, span := instracer.StartSpan(ctx, "fetchingIterator.fetchFromNetwork")
 	defer span.End()
 
-	isBeyond, err := i.coordinator.IsBeyondLimit(ctx, i.calcPulse, forID.Pulse())
+	isBeyond, err := i.coordinator.IsBeyondLimit(ctx, forID.Pulse())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to calculate limit")
 	}
 	var node *insolar.Reference
 	if isBeyond {
-		node, err = i.coordinator.Heavy(ctx, calcPulse)
+		node, err = i.coordinator.Heavy(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate node")
 		}
@@ -697,7 +753,7 @@ func (i *fetchingIterator) fetchFromNetwork(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch jet")
 		}
-		node, err = i.coordinator.NodeForJet(ctx, *jetID, i.calcPulse, forID.Pulse())
+		node, err = i.coordinator.NodeForJet(ctx, *jetID, forID.Pulse())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate node")
 		}

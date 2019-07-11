@@ -99,6 +99,8 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.PulseAccessor = suite.ps
 	suite.lr.NodeNetwork = suite.nn
 	suite.lr.RequestsExecutor = suite.re
+
+	_ = suite.lr.Init(suite.ctx)
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
@@ -137,28 +139,27 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 		return pulseNum, nil
 	}
 
-	es := NewExecutionState(objectRef)
-	es.Broker.currentList.Set(objectRef, &Transcript{})
+	es, broker := suite.lr.StateStorage.UpsertExecutionState(objectRef)
+	broker.currentList.Set(objectRef, &Transcript{})
 	es.pending = message.NotPending
-	es.RegisterLogicRunner(suite.lr)
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
 	// doesn't send PendingFinished message and doesn't change ExecutionState.pending
-	es.Broker.finishPendingIfNeeded(suite.ctx)
+	broker.finishPendingIfNeeded(suite.ctx)
 	suite.Require().Zero(suite.mb.SendCounter)
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.pending = message.InPending
 	suite.mb.SendMock.ExpectOnce(suite.ctx, &message.PendingFinished{Reference: objectRef}, nil).Return(&reply.ID{}, nil)
 	suite.jc.IsAuthorizedMock.Return(false, nil)
-	es.Broker.finishPendingIfNeeded(suite.ctx)
+	broker.finishPendingIfNeeded(suite.ctx)
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	suite.mc.Wait(time.Minute) // message bus' send is called in a goroutine
 
 	es.pending = message.InPending
 	suite.jc.IsAuthorizedMock.Return(true, nil)
-	es.Broker.finishPendingIfNeeded(suite.ctx)
+	broker.finishPendingIfNeeded(suite.ctx)
 	suite.Require().Equal(message.NotPending, es.pending)
 }
 
@@ -198,25 +199,18 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 	for _, test := range table {
 		test := test
 		suite.T().Run(test.name, func(t *testing.T) {
-			pulseObj := insolar.Pulse{}
-			pulseObj.PulseNumber = insolar.FirstPulseNumber
-			suite.ps.LatestMock.Return(pulseObj, nil)
-
 			h := HandleAdditionalCallFromPreviousExecutor{
 				dep: &Dependencies{
 					lr: suite.lr,
 				},
 			}
 			f := flow.NewFlowMock(suite.T())
-			parcel := testutils.NewParcelMock(suite.T())
-			request := gen.Reference()
+			reqRef := gen.Reference()
 			msg := message.AdditionalCallFromPreviousExecutor{
 				ObjectReference: gen.Reference(),
-				Parcel:          parcel,
-				Request:         &request,
+				RequestRef:      reqRef,
+				Request:         record.IncomingRequest{},
 			}
-			parcel.MessageMock.Return(&message.CallMethod{})
-			parcel.GetSenderMock.Return(gen.Reference())
 
 			var clarifyPendingStateCtr int32
 			f.ProcedureFunc = func(ctx context.Context, proc flow.Procedure, cancelable bool) error {
@@ -246,7 +240,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		name     string
 		inState  message.PendingState
 		outState message.PendingState
-		message  bool
+		request  bool
 		callType record.CallType
 		amReply  *struct {
 			has bool
@@ -267,14 +261,14 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		{
 			name:     "constructor call",
 			inState:  message.PendingUnknown,
-			message:  true,
+			request:  true,
 			callType: record.CTSaveAsChild,
 			outState: message.NotPending,
 		},
 		{
 			name:    "method call, not pending",
 			inState: message.PendingUnknown,
-			message: true,
+			request: true,
 			amReply: &struct {
 				has bool
 				err error
@@ -284,7 +278,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		{
 			name:    "method call, in pending",
 			inState: message.PendingUnknown,
-			message: true,
+			request: true,
 			amReply: &struct {
 				has bool
 				err error
@@ -294,7 +288,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		{
 			name:    "method call, in pending",
 			inState: message.PendingUnknown,
-			message: true,
+			request: true,
 			amReply: &struct {
 				has bool
 				err error
@@ -306,10 +300,9 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 
 	for _, test := range table {
 		suite.T().Run(test.name, func(t *testing.T) {
-			parcel := testutils.NewParcelMock(t)
-			if test.message {
-				parcel.TypeMock.ExpectOnce().Return(insolar.TypeCallMethod)
-				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{IncomingRequest: record.IncomingRequest{CallType: test.callType}})
+			var request *record.IncomingRequest
+			if test.request {
+				request = &record.IncomingRequest{CallType: test.callType}
 			}
 			es := NewExecutionState(objectRef)
 			es.pending = test.inState
@@ -318,7 +311,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			}
 			proc := ClarifyPendingState{
 				es:              es,
-				parcel:          parcel,
+				request:         request,
 				ArtifactManager: suite.lr.ArtifactManager,
 			}
 			err := proc.Proceed(suite.ctx)
@@ -332,9 +325,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	}
 
 	suite.T().Run("method call, AM error", func(t *testing.T) {
-		parcel := testutils.NewParcelMock(t)
-		parcel.TypeMock.Expect().Return(insolar.TypeCallMethod)
-		parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{IncomingRequest: record.IncomingRequest{CallType: record.CTMethod}})
+		request := record.IncomingRequest{CallType: record.CTMethod}
 
 		es := NewExecutionState(objectRef)
 		es.pending = message.PendingUnknown
@@ -343,7 +334,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 
 		proc := ClarifyPendingState{
 			es:              es,
-			parcel:          parcel,
+			request:         &request,
 			ArtifactManager: suite.lr.ArtifactManager,
 		}
 		err := proc.Proceed(suite.ctx)
@@ -396,7 +387,6 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 		object         obj
 		message        msgt
 		expected       exp
-		initPulse      bool
 	}{
 		{
 			name:     "first call, NotPending in message",
@@ -438,7 +428,6 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				pending:  message.InPending,
 				queueLen: 1,
 			},
-			initPulse: true,
 		},
 		{
 			name:           "message has queue and object has queue",
@@ -455,7 +444,6 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				pending:  message.InPending,
 				queueLen: 2,
 			},
-			initPulse: true,
 		},
 		{
 			name: "message has queue, but unknown pending state",
@@ -476,12 +464,9 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 		suite.T().Run(test.name, func(t *testing.T) {
 			pulseObj := insolar.Pulse{}
 			pulseObj.PulseNumber = insolar.FirstPulseNumber
-			if test.initPulse {
-				suite.ps.LatestMock.Return(pulseObj, nil)
-			}
 
 			object := testutils.RandomRef()
-			defer suite.lr.StateStorage.DeleteObjectState(object)
+			defer delete(*suite.lr.StateStorage.StateMap(), object)
 
 			msg := &message.ExecutorResults{
 				Caller:    testutils.RandomRef(),
@@ -493,31 +478,22 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			for test.message.queueLen > 0 {
 				test.message.queueLen--
 
-				parcel := testutils.NewParcelMock(suite.mc)
-				parcel.ContextMock.Expect(context.Background()).Return(context.Background())
 				reqRef := gen.Reference()
 				msg.Queue = append(
 					msg.Queue,
-					message.ExecutionQueueElement{Parcel: parcel, Request: &reqRef},
+					message.ExecutionQueueElement{RequestRef: reqRef, Request: record.IncomingRequest{}},
 				)
-
-				parcel.MessageMock.Return(&message.CallMethod{})
-				parcel.GetSenderMock.Return(gen.Reference())
 			}
 
 			if test.existingObject {
-				es := NewExecutionState(object)
+				es, broker := suite.lr.StateStorage.UpsertExecutionState(object)
 				es.pending = test.object.pending
-				es.RegisterLogicRunner(suite.lr)
-
-				os := suite.lr.StateStorage.UpsertObjectState(object)
-				os.ExecutionState = es
 
 				for test.object.queueLen > 0 {
 					test.object.queueLen--
 
 					reqRef := gen.Reference()
-					os.ExecutionState.Broker.mutable.Push(&Transcript{RequestRef: &reqRef})
+					broker.mutable.Push(&Transcript{RequestRef: &reqRef})
 				}
 			}
 
@@ -534,11 +510,11 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			}
 			err := h.realHandleExecutorState(suite.ctx, flowMock)
 			suite.mc.Wait(time.Minute)
-
 			suite.Require().NoError(err)
-			st := suite.lr.StateStorage.GetExecutionState(object)
-			suite.Require().Equal(test.expected.pending, st.pending)
-			suite.Require().Equal(test.expected.queueLen, st.Broker.mutable.Length())
+
+			es, broker := suite.lr.StateStorage.UpsertExecutionState(object)
+			suite.Require().Equal(test.expected.pending, es.pending)
+			suite.Require().Equal(test.expected.queueLen, broker.mutable.Length())
 		})
 	}
 }
@@ -558,82 +534,76 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
-	st := suite.lr.StateStorage.MustObjectState(objectRef)
-
-	es := st.ExecutionState
+	es, broker := suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Require().NotNil(es)
 	suite.Require().Equal(message.NotPending, es.pending)
 
-	es.Broker.currentList.Set(objectRef, &Transcript{})
+	broker.currentList.Set(objectRef, &Transcript{})
 	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().Error(err)
 
-	es.Broker.currentList.Cleanup()
+	broker.currentList.Cleanup()
 
 	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 }
 
+// TODO: move test to executionBroker package
 func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
-	es := NewExecutionState(testutils.RandomRef())
+	objectRef := gen.Reference()
+	_, broker := suite.lr.StateStorage.UpsertExecutionState(objectRef)
 
 	reqIdA := utils.RandTraceID()
 	reqIdB := utils.RandTraceID()
-
-	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil)
-	suite.Require().False(loop)
-
-	objectRef := testutils.RandomRef()
-	msg := &message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			ReturnMode:   record.ReturnResult,
-			Object:       &objectRef,
-			APIRequestID: reqIdA,
-		},
+	request := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: reqIdA,
 	}
-	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+
+	executingReqRef := gen.Reference()
+	broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult, APIRequestID: reqIdA},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
+	loop := suite.lr.CheckExecutionLoop(suite.ctx, request)
 	suite.Require().True(loop)
 
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+	broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult, APIRequestID: reqIdB},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, request)
+
 	suite.Require().False(loop)
 
 	// intermediate env cleanup
-	es.Broker.currentList.Cleanup()
+	broker.currentList.Cleanup()
 
-	msg = &message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			ReturnMode: record.ReturnNoWait,
-			Object:     &objectRef,
-		},
+	request = record.IncomingRequest{
+		ReturnMode: record.ReturnNoWait,
+		Object:     &objectRef,
 	}
-	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+	broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnResult},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
-	suite.Require().False(loop)
-	es.Broker.currentList.Cleanup()
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, request)
 
-	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(msg)
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+	suite.Require().False(loop)
+	broker.currentList.Cleanup()
+
+	broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnNoWait},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
-	suite.Require().False(loop)
-	es.Broker.currentList.Cleanup()
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, request)
 
-	es.Broker.currentList.Set(msg.GetReference(), &Transcript{
+	suite.Require().False(loop)
+	broker.currentList.Cleanup()
+
+	broker.currentList.Set(executingReqRef, &Transcript{
 		Request: &record.IncomingRequest{ReturnMode: record.ReturnNoWait},
 	})
-	loop = suite.lr.CheckExecutionLoop(suite.ctx, es, parcel)
+	loop = suite.lr.CheckExecutionLoop(suite.ctx, request)
+
 	suite.Require().False(loop)
 }
 
@@ -644,7 +614,6 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 		&message.StillExecuting{Reference: objectRef},
 	)
 
-	parcel.DefaultTargetMock.Return(&insolar.Reference{})
 	p := insolar.Pulse{PulseNumber: 100}
 	parcel.PulseFunc = func() insolar.PulseNumber { return p.PulseNumber }
 
@@ -653,33 +622,34 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
-	st := suite.lr.StateStorage.MustObjectState(objectRef)
-	suite.Require().NotNil(st.ExecutionState)
-	suite.Require().Equal(message.InPending, st.ExecutionState.pending)
-	suite.Require().Equal(true, st.ExecutionState.PendingConfirmed)
+	es, _ := suite.lr.StateStorage.GetExecutionState(objectRef)
+	suite.Require().NotNil(es)
+	suite.Require().Equal(message.InPending, es.pending)
+	suite.Require().Equal(true, es.PendingConfirmed)
 
-	st.ExecutionState.pending = message.NotPending
-	st.ExecutionState.PendingConfirmed = false
+	es.pending = message.NotPending
+	es.PendingConfirmed = false
 
 	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
-	st = suite.lr.StateStorage.MustObjectState(objectRef)
-	suite.Require().NotNil(st.ExecutionState)
-	suite.Require().Equal(message.NotPending, st.ExecutionState.pending)
-	suite.Require().Equal(false, st.ExecutionState.PendingConfirmed)
+	es, _ = suite.lr.StateStorage.GetExecutionState(objectRef)
+	suite.Require().NotNil(es)
+	suite.Require().Equal(message.NotPending, es.pending)
+	suite.Require().Equal(false, es.PendingConfirmed)
 
 	// If we already have task in InPending, but it wasn't confirmed
-	es := NewExecutionState(objectRef)
+	suite.lr.StateStorage.DeleteObjectState(objectRef)
+
+	es, _ = suite.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.pending = message.InPending
 	es.PendingConfirmed = false
 
-	st = suite.lr.StateStorage.UpsertObjectState(objectRef)
-	st.ExecutionState = es
 	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	es = suite.lr.StateStorage.GetExecutionState(objectRef)
+
+	es, _ = suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(message.InPending, es.pending)
 	suite.Equal(true, es.PendingConfirmed)
 }
@@ -700,11 +670,11 @@ func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 		suite.T().Run(name, func(t *testing.T) {
 			a := assert.New(t)
 
-			es := NewExecutionState(testutils.RandomRef())
-			es.RegisterLogicRunner(suite.lr)
-			InitBroker(t, suite.ctx, tc.QueueLength, es, false)
+			objectRef := gen.Reference()
+			_, broker := suite.lr.StateStorage.UpsertExecutionState(objectRef)
+			InitBroker(t, suite.ctx, tc.QueueLength, broker, false)
 
-			rotationResults := es.Broker.Rotate(maxQueueLength)
+			rotationResults := broker.Rotate(maxQueueLength)
 			a.Equal(tc.ExpectedLength, len(rotationResults.Requests))
 			a.Equal(tc.ExpectedHasMore, rotationResults.LedgerHasMoreRequests)
 		})
@@ -721,85 +691,76 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 
 	_, err := suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	es := suite.lr.StateStorage.GetExecutionState(objectRef)
+	es, _ := suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests false
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
-	es = NewExecutionState(objectRef)
-	es.LedgerHasMoreRequests = false
 
-	st := suite.lr.StateStorage.UpsertObjectState(*msg.DefaultTarget())
-	st.ExecutionState = es
+	es, _ = suite.lr.StateStorage.UpsertExecutionState(objectRef)
+	es.LedgerHasMoreRequests = false
 
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	es = suite.lr.StateStorage.GetExecutionState(objectRef)
+	es, _ = suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests already true
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
-	es = NewExecutionState(objectRef)
-	es.LedgerHasMoreRequests = true
 
-	st = suite.lr.StateStorage.UpsertObjectState(*msg.DefaultTarget())
-	st.ExecutionState = es
+	es, _ = suite.lr.StateStorage.UpsertExecutionState(objectRef)
+	es.LedgerHasMoreRequests = true
 
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
-	es = suite.lr.StateStorage.GetExecutionState(objectRef)
+	es, _ = suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 }
 
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
-	ref := testutils.RandomRef()
+	ref1 := testutils.RandomRef()
 
 	flowMock, pubSub := prepareWatermill(suite)
 	var fakeParcel insolar.Parcel
 	var h HandleExecutorResults
 	var err error
 
-	msg := &message.ExecutorResults{RecordRef: ref}
+	msg := &message.ExecutorResults{RecordRef: ref1}
 	fakeParcel = prepareParcel(suite.mc, msg, false, false)
 	h = HandleExecutorResults{
 		dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
 		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
 	}
 
-	es := NewExecutionState(ref)
+	es, broker := suite.lr.StateStorage.UpsertExecutionState(ref1)
+	// st := suite.lr.StateStorage.UpsertObjectState(ref1)
+	// es, broker := st.UpsertExecution(suite.lr, &ref1)
+	broker.currentList.Set(ref1, &Transcript{})
 	es.pending = message.InPending
-	es.Broker.currentList.Set(ref, &Transcript{})
-	es.RegisterLogicRunner(suite.lr)
 
 	// we are in pending and come to ourselves again
-	st := suite.lr.StateStorage.UpsertObjectState(ref)
-	st.ExecutionState = es
 	err = h.realHandleExecutorState(suite.ctx, flowMock)
 	suite.Require().NoError(err)
-	es = suite.lr.StateStorage.GetExecutionState(ref)
 	suite.Equal(message.NotPending, es.pending)
 	suite.Equal(false, es.PendingConfirmed)
 
+	ref2 := testutils.RandomRef()
 	// previous executor decline pending, trust him
-	msg = &message.ExecutorResults{RecordRef: ref, Pending: message.NotPending}
+	msg = &message.ExecutorResults{RecordRef: ref2, Pending: message.NotPending}
 	fakeParcel = prepareParcel(suite.mc, msg, false, false)
 	h = HandleExecutorResults{
 		dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
 		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
 	}
 
-	es = NewExecutionState(ref)
+	es, _ = suite.lr.StateStorage.UpsertExecutionState(ref2)
 	es.pending = message.InPending
-	es.RegisterLogicRunner(suite.lr)
 
-	st = suite.lr.StateStorage.UpsertObjectState(ref)
-	st.ExecutionState = es
 	err = h.realHandleExecutorState(suite.ctx, flowMock)
 	suite.Require().NoError(err)
-	es = suite.lr.StateStorage.GetExecutionState(ref)
 	suite.Equal(message.NotPending, es.pending)
 }
 
@@ -834,15 +795,13 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 			Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
 		}
 
-		es := NewExecutionState(ref)
-		es.Broker.tryTakeProcessor(suite.ctx)
+		es, broker := suite.lr.StateStorage.UpsertExecutionState(ref)
+		broker.tryTakeProcessor(suite.ctx)
 		es.LedgerHasMoreRequests = test.objectStateStatus
-		st := suite.lr.StateStorage.UpsertObjectState(ref)
-		st.ExecutionState = es
 
 		err := h.realHandleExecutorState(suite.ctx, flowMock)
 		suite.Require().NoError(err)
-		es = suite.lr.StateStorage.GetExecutionState(ref)
+		es, _ = suite.lr.StateStorage.GetExecutionState(ref)
 		suite.Equal(test.expectedObjectStateStatue, es.LedgerHasMoreRequests)
 	}
 }
@@ -882,6 +841,22 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 	suite.Require().NoError(err)
 }
 
+func WaitGroup_TimeoutWait(wg *sync.WaitGroup, timeout time.Duration) bool {
+	waitChannel := make(chan struct{}, 0)
+
+	go func() {
+		wg.Wait()
+		waitChannel <- struct{}{}
+	}()
+
+	select {
+	case <-waitChannel:
+		return true
+	case <-time.After(timeout):
+		return false
+	}
+}
+
 func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	objectRef := testutils.RandomRef()
 	parentRef := testutils.RandomRef()
@@ -893,9 +868,6 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.jc.MeMock.Return(meRef)
 
 	pulseNum := insolar.Pulse{PulseNumber: 100}
-	suite.ps.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		return pulseNum, nil
-	}
 
 	suite.jc.IsAuthorizedFunc = func(
 		ctx context.Context, role insolar.DynamicRole, id insolar.ID, pn insolar.PulseNumber, obj insolar.Reference,
@@ -961,7 +933,8 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		}(i)
 	}
 
-	wg.Wait()
+	suite.Require().True(WaitGroup_TimeoutWait(&wg, 2*time.Minute),
+		"Failed to wait for all requests to be processed")
 }
 
 func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
@@ -1179,7 +1152,8 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				require.NoError(t, err)
 			}
 
-			wg.Wait()
+			suite.Require().True(WaitGroup_TimeoutWait(&wg, 2*time.Minute),
+				"Failed to wait for all requests to be processed")
 		})
 	}
 }
@@ -1187,53 +1161,38 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	os := s.lr.StateStorage.UpsertObjectState(objectRef)
-	es := NewExecutionState(objectRef)
-	es.RegisterLogicRunner(s.lr)
+	es, broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.pending = message.NotPending
-	os.ExecutionState = es
 
 	// prepare request objects
-	parentRef := gen.Reference()
 	mutableRequestRef := gen.Reference()
 	immutableRequestRef1 := gen.Reference()
 	immutableRequestRef2 := gen.Reference()
 
-	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
-
 	// prepare all three requests
-	mutableMsg := message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			ReturnMode:   record.ReturnResult,
-			Object:       &objectRef,
-			APIRequestID: utils.RandTraceID(),
-			Immutable:    false,
-		},
+	mutableRequest := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: utils.RandTraceID(),
+		Immutable:    false,
 	}
-	mutableParcel := prepareParcel(s.mc, &mutableMsg, false, true)
-	mutableTranscript := NewTranscript(s.ctx, mutableParcel, &mutableRequestRef, &pulseObject, parentRef)
+	mutableTranscript := NewTranscript(s.ctx, &mutableRequestRef, mutableRequest)
 
-	immutableMsg1 := message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			ReturnMode:   record.ReturnResult,
-			Object:       &objectRef,
-			APIRequestID: utils.RandTraceID(),
-			Immutable:    true,
-		},
+	immutableRequest1 := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: utils.RandTraceID(),
+		Immutable:    true,
 	}
-	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, false, true)
-	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
+	immutableTranscript1 := NewTranscript(s.ctx, &immutableRequestRef1, immutableRequest1)
 
-	immutableMsg2 := message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			ReturnMode:   record.ReturnResult,
-			Object:       &objectRef,
-			APIRequestID: utils.RandTraceID(),
-			Immutable:    true,
-		},
+	immutableRequest2 := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: utils.RandTraceID(),
+		Immutable:    true,
 	}
-	immutableParcel2 := prepareParcel(s.mc, &immutableMsg2, false, true)
-	immutableTranscript2 := NewTranscript(s.ctx, immutableParcel2, &immutableRequestRef2, &pulseObject, parentRef)
+	immutableTranscript2 := NewTranscript(s.ctx, &immutableRequestRef2, immutableRequest2)
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1
@@ -1287,45 +1246,34 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
 	})
 
-	es.Broker.Put(s.ctx, true, mutableTranscript)
-	es.Broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
+	broker.Put(s.ctx, true, mutableTranscript)
+	broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
 
-	s.True(wait(finishedCount, es.Broker, 3))
+	s.True(wait(finishedCount, broker, 3))
 }
 
 func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	os := s.lr.StateStorage.UpsertObjectState(objectRef)
-	es := NewExecutionState(objectRef)
-	es.RegisterLogicRunner(s.lr)
+	es, broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.pending = message.NotPending
-	os.ExecutionState = es
-
-	// prepare request objects
-	parentRef := gen.Reference()
 
 	immutableRequestRef1 := gen.Reference()
 
-	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
-
-	immutableMsg1 := message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			ReturnMode:   record.ReturnResult,
-			Object:       &objectRef,
-			APIRequestID: utils.RandTraceID(),
-			Immutable:    true,
-		},
+	immutableRequest1 := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: utils.RandTraceID(),
+		Immutable:    true,
 	}
-	immutableParcel1 := prepareParcel(s.mc, &immutableMsg1, false, true)
-	immutableTranscript1 := NewTranscript(s.ctx, immutableParcel1, &immutableRequestRef1, &pulseObject, parentRef)
+	immutableTranscript1 := NewTranscript(s.ctx, &immutableRequestRef1, immutableRequest1)
 
 	s.re.ExecuteAndSaveMock.Return(&reply.CallMethod{Result: []byte{1, 2, 3}}, nil)
 	s.re.SendReplyMock.Return()
 
-	es.Broker.Put(s.ctx, true, immutableTranscript1)
+	broker.Put(s.ctx, true, immutableTranscript1)
 
-	s.True(wait(finishedCount, es.Broker, 1))
+	s.True(wait(finishedCount, broker, 1))
 }
 
 func TestLogicRunner(t *testing.T) {
@@ -1372,12 +1320,13 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyES() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
-	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	st.ExecutionState = NewExecutionState(s.objectRef)
+	s.lr.StateStorage.UpsertExecutionState(s.objectRef)
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
-	s.Nil(s.lr.StateStorage.GetObjectState(s.objectRef))
+
+	_, broker := s.lr.StateStorage.GetExecutionState(s.objectRef)
+	s.Nil(broker)
 }
 
 // We aren't next executor and we're not executing it
@@ -1386,15 +1335,14 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyESWithValidation() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
-	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	st.ExecutionState = NewExecutionState(s.objectRef)
-	st.Validation = NewExecutionState(s.objectRef)
+	s.lr.StateStorage.UpsertExecutionState(s.objectRef)
+	s.lr.StateStorage.UpsertValidationState(s.objectRef)
+
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
 
-	st = s.lr.StateStorage.GetObjectState(s.objectRef)
-	s.Require().NotNil(st)
-	s.Nil(st.ExecutionState)
+	_, broker := s.lr.StateStorage.GetExecutionState(s.objectRef)
+	s.Nil(broker)
 }
 
 // We aren't next executor but we're currently executing
@@ -1404,19 +1352,18 @@ func (s *LogicRunnerOnPulseTestSuite) TestESWithValidationCurrent() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
-	es := NewExecutionState(s.objectRef)
+	es, broker := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
 	es.pending = message.NotPending
-	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	st.ExecutionState = es
 	// we should set empty current execution here, since we added new
 	// logic with not empty number of elements in CurrentList
-	es.Broker.currentList.Set(s.objectRef, &Transcript{})
+	broker.currentList.Set(s.objectRef, &Transcript{})
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
-	es = s.lr.StateStorage.GetExecutionState(s.objectRef)
+
+	es, _ = s.lr.StateStorage.GetExecutionState(s.objectRef)
 	s.Equal(message.InPending, es.pending)
-	es.Broker.currentList.Cleanup()
+	broker.currentList.Cleanup()
 }
 
 // We aren't next executor but we're currently executing and queue isn't empty.
@@ -1426,17 +1373,20 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
-	es := NewExecutionState(s.objectRef)
-	es.Broker.currentList.Set(s.objectRef, &Transcript{})
-	es.Broker.mutable.Push(&Transcript{Context: s.ctx})
-	es.pending = message.NotPending
+	es, broker := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
+	broker.currentList.Set(s.objectRef, &Transcript{})
 
-	os := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	os.ExecutionState = es
+	reqRef := gen.Reference()
+	broker.mutable.Push(&Transcript{
+		Context:    s.ctx,
+		RequestRef: &reqRef,
+		Request:    &record.IncomingRequest{},
+	})
+	es.pending = message.NotPending
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
-	es = s.lr.StateStorage.GetExecutionState(s.objectRef)
+	es, _ = s.lr.StateStorage.GetExecutionState(s.objectRef)
 	s.Equal(message.InPending, es.pending)
 }
 
@@ -1447,16 +1397,13 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithEmptyQueue() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
-	es := NewExecutionState(s.objectRef)
-	es.Broker.currentList.Set(s.objectRef, &Transcript{})
+	es, broker := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
+	broker.currentList.Set(s.objectRef, &Transcript{})
 	es.pending = message.NotPending
-
-	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	st.ExecutionState = es
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
-	es = s.lr.StateStorage.GetExecutionState(s.objectRef)
+	es, _ = s.lr.StateStorage.GetExecutionState(s.objectRef)
 	s.Equal(message.InPending, es.pending)
 }
 
@@ -1466,19 +1413,16 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	es := NewExecutionState(s.objectRef)
+	es, broker := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
 	es.pending = message.NotPending
-	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	st.ExecutionState = es
-	es.Broker.currentList.Set(s.objectRef, &Transcript{})
-	es.RegisterLogicRunner(s.lr)
-	InitBroker(s.T(), s.ctx, 0, es, false)
+	broker.currentList.Set(s.objectRef, &Transcript{})
+	InitBroker(s.T(), s.ctx, 0, broker, false)
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
-	es = s.lr.StateStorage.GetExecutionState(s.objectRef)
+	es, _ = s.lr.StateStorage.GetExecutionState(s.objectRef)
 	s.Require().Equal(message.NotPending, es.pending)
-	es.Broker.currentList.Cleanup()
+	broker.currentList.Cleanup()
 }
 
 // We're the next executor, task was currently executing and in InPending.
@@ -1487,17 +1431,13 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	es := NewExecutionState(s.objectRef)
-	es.Broker.currentList.Set(s.objectRef, &Transcript{})
+	es, broker := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
+	broker.currentList.Set(s.objectRef, &Transcript{})
 	es.pending = message.InPending
-	es.RegisterLogicRunner(s.lr)
-
-	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	st.ExecutionState = es
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
-	es = s.lr.StateStorage.GetExecutionState(s.objectRef)
+	es, _ = s.lr.StateStorage.GetExecutionState(s.objectRef)
 	s.Require().Equal(message.NotPending, es.pending)
 }
 
@@ -1507,20 +1447,13 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	s.am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
-
-	es := NewExecutionState(s.objectRef)
+	es, _ := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
 	es.pending = message.InPending
 	es.PendingConfirmed = false
-	es.Ref = s.objectRef
-	es.RegisterLogicRunner(s.lr)
-
-	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	st.ExecutionState = es
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
-	es = s.lr.StateStorage.GetExecutionState(s.objectRef)
+	es, _ = s.lr.StateStorage.GetExecutionState(s.objectRef)
 	s.Require().Equal(message.NotPending, es.pending)
 }
 
@@ -1531,18 +1464,14 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer3() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
-	es := NewExecutionState(s.objectRef)
+	es, _ := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
 	es.pending = message.InPending
 	es.PendingConfirmed = true
-	es.RegisterLogicRunner(s.lr)
-
-	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	st.ExecutionState = es
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
 
-	es = s.lr.StateStorage.GetExecutionState(s.objectRef)
+	es, _ = s.lr.StateStorage.GetExecutionState(s.objectRef)
 	// we still in pending
 	s.Equal(message.InPending, es.pending)
 	// but we expect that previous executor come to us for token
@@ -1555,17 +1484,15 @@ func (s *LogicRunnerOnPulseTestSuite) TestSendTaskToNextExecutor() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
-	es := NewExecutionState(s.objectRef)
+	es, _ := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
 	es.pending = message.InPending
 	es.PendingConfirmed = false
-
-	st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-	st.ExecutionState = es
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
 
-	s.Nil(s.lr.StateStorage.GetObjectState(s.objectRef))
+	_, broker := s.lr.StateStorage.GetExecutionState(s.objectRef)
+	s.Nil(broker)
 }
 
 func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
@@ -1590,11 +1517,10 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 		s.T().Run(name, func(t *testing.T) {
 			a := assert.New(t)
 
-			es := NewExecutionState(s.objectRef)
-			es.RegisterLogicRunner(s.lr)
-			InitBroker(t, s.ctx, test.Count, es, false)
+			_, broker := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
+			InitBroker(t, s.ctx, test.Count, broker, false)
 
-			messagesQueue := convertQueueToMessageQueue(s.ctx, es.Broker.mutable.Peek(maxQueueLength))
+			messagesQueue := convertQueueToMessageQueue(s.ctx, broker.mutable.Peek(maxQueueLength))
 
 			expectedMessage := &message.ExecutorResults{
 				RecordRef:             s.objectRef,
@@ -1609,9 +1535,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 				wg.Done()
 				return nil, nil
 			})
-
-			st := s.lr.StateStorage.UpsertObjectState(s.objectRef)
-			st.ExecutionState = es
 
 			err := s.lr.OnPulse(s.ctx, s.pulse)
 			a.NoError(err)
@@ -1652,16 +1575,18 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) AfterTest(suiteName, testName
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueElement() {
-	es := NewExecutionState(s.ref)
+	objectRef := gen.Reference()
+	es, broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
+
 	reqRef := gen.Reference()
-	es.Broker.Put(s.ctx, false, &Transcript{
+	broker.Put(s.ctx, false, &Transcript{
 		FromLedger:   true,
 		LogicContext: &insolar.LogicCallContext{},
 		RequestRef:   &reqRef,
 		Request:      &record.IncomingRequest{},
 	})
 
-	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	proc := UnsafeGetLedgerPendingRequest{es: es, broker: broker, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
 
@@ -1671,70 +1596,66 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
-	es := NewExecutionState(s.ref)
+	objectRef := gen.Reference()
+	es, broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = false
 
-	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	proc := UnsafeGetLedgerPendingRequest{es: es, broker: broker, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
-	s.Require().Nil(es.Broker.HasLedgerRequest(s.ctx))
+	s.Require().Nil(broker.HasLedgerRequest(s.ctx))
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() {
-	es := NewExecutionState(s.ref)
+	objectRef := gen.Reference()
+	es, broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = true
 
 	am := artifacts.NewClientMock(s.mc)
 	am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
 	s.lr.ArtifactManager = am
-	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	proc := UnsafeGetLedgerPendingRequest{es: es, broker: broker, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
-	es := NewExecutionState(s.ref)
+	objectRef := gen.Reference()
+	es, broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = true
 
-	parcel := &message.Parcel{
-		PulseNumber: s.oldRequestPulseNumber,
-		Msg:         &message.CallMethod{},
-	}
-	s.am.GetPendingRequestMock.Return(nil, parcel, nil)
+	s.am.GetPendingRequestMock.Return(nil, &record.IncomingRequest{}, nil)
 
 	// we doesn't authorized (pulse change in time we process function)
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
 
-	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	proc := UnsafeGetLedgerPendingRequest{es: es, broker: broker, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
-	s.Require().Nil(es.Broker.HasLedgerRequest(s.ctx))
+	s.Require().Nil(broker.HasLedgerRequest(s.ctx))
 }
 
 func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequest() {
-	es := NewExecutionState(s.ref)
+	objectRef := gen.Reference()
+	es, broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = true
-	es.RegisterLogicRunner(s.lr)
 
-	testRequestRef := record.IncomingRequest{Object: &s.ref}
+	testRequestRef := gen.Reference()
+	testRequest := record.IncomingRequest{Object: &s.ref}
 
-	parcel := &message.Parcel{
-		PulseNumber: s.oldRequestPulseNumber,
-		Msg:         &message.CallMethod{IncomingRequest: testRequestRef},
-	}
-	s.am.GetPendingRequestMock.Return(testRequestRef.Object, parcel, nil)
+	s.am.GetPendingRequestMock.Return(&testRequestRef, &testRequest, nil)
 
 	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(true, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
 
-	proc := UnsafeGetLedgerPendingRequest{es: es, dep: &Dependencies{lr: s.lr}}
+	proc := UnsafeGetLedgerPendingRequest{es: es, broker: broker, dep: &Dependencies{lr: s.lr}}
 	err := proc.Proceed(s.ctx)
 	s.Require().NoError(err)
 
 	s.Require().Equal(true, es.LedgerHasMoreRequests)
-	ledgerRequest := es.Broker.HasLedgerRequest(s.ctx)
+	ledgerRequest := broker.HasLedgerRequest(s.ctx)
 	s.Require().NotNil(ledgerRequest)
 }

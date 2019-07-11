@@ -216,7 +216,7 @@ func TestNewHostNetwork(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(count)
 
-	handler := func(ctx context.Context, request network.Packet) (network.Packet, error) {
+	handler := func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 		inslogger.FromContext(ctx).Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, request, &packet.Ping{}), nil
@@ -285,7 +285,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
+	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
 		inslogger.FromContext(ctx).Info("handler triggered")
 		ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
@@ -314,7 +314,7 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
-	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
+	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
 		inslogger.FromContext(ctx).Info("handler triggered")
 		data := r.GetRequest().GetPulse()
 		err := string(data.TraceSpanData) + string(data.TraceSpanData)
@@ -353,7 +353,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	s := newHostSuite(ctx, t)
 	defer s.Stop()
 
-	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
+	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
 		inslogger.FromContext(ctx).Info("handler triggered")
 		time.Sleep(time.Millisecond * 100)
 		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
@@ -385,7 +385,7 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
+	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
 		inslogger.FromContext(ctx).Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, r, nil), nil
@@ -413,7 +413,7 @@ func TestStartStopSend(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
+	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
 		inslogger.FromContext(ctx).Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil

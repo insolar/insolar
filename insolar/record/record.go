@@ -138,6 +138,7 @@ type Request interface {
 	// ReasonRef returns a reference of the Request that caused the creating
 	// of this Request.
 	ReasonRef() insolar.Reference
+	GetCallType() CallType
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {

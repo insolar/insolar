@@ -32,12 +32,14 @@ import (
 	"encoding/hex"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 // ContractRequester helps to call contracts
@@ -45,9 +47,8 @@ type ContractRequester struct {
 	MessageBus     insolar.MessageBus `inject:""`
 	ResultMutex    sync.Mutex
 	ResultMap      map[[insolar.RecordHashSize]byte]chan *message.ReturnResults
-	PulseAccessor  pulse.Accessor                     `inject:""`
-	JetCoordinator jet.Coordinator                    `inject:""`
-	PCS            insolar.PlatformCryptographyScheme `inject:""`
+	PulseAccessor  pulse.Accessor  `inject:""`
+	JetCoordinator jet.Coordinator `inject:""`
 	// callTimeout is mainly needed for unit tests which
 	// sometimes may unpredictably fail on CI with a default timeout
 	callTimeout time.Duration
@@ -98,19 +99,13 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
 	}
 
-	h := cr.PCS.ReferenceHasher()
-	_, err = h.Write(args)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Failed to calculate hash")
-	}
-
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Object:       ref,
 			Method:       method,
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
-			Reason:       *insolar.NewReference(*insolar.NewID(pulse, h.Sum(nil))),
+			Reason:       api.MakeReason(pulse, args),
 		},
 	}
 
@@ -128,13 +123,9 @@ func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest, has
 	if err != nil {
 		return errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to marshal record")
 	}
-	h := cr.PCS.ReferenceHasher()
-	_, err = h.Write(buf)
-	if err != nil {
-		return errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to calculate hash")
-	}
 
-	copy(hash[:], h.Sum(nil)[0:insolar.RecordHashSize])
+	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
+	copy(hash[:], hasher.Hash(buf)[0:insolar.RecordHashSize])
 	return nil
 }
 

@@ -125,7 +125,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
 			// We are updating object. LifelineIndex should be on the heavy executor.
-			heavy, err := p.Dep.Coordinator.Heavy(ctx, p.PulseNumber)
+			heavy, err := p.Dep.Coordinator.Heavy(ctx)
 			if err != nil {
 				return bus.Reply{Err: err}
 			}
@@ -177,7 +177,6 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	}
 
 	idx.Lifeline.LatestUpdate = p.PulseNumber
-	idx.Lifeline.JetID = p.JetID
 	idx.LifelineLastUsed = p.PulseNumber
 	err = p.Dep.IndexModifier.SetIndex(ctx, p.PulseNumber, idx)
 	if err != nil {
@@ -213,7 +212,6 @@ func (p *UpdateObject) saveIndexFromHeavy(
 		return object.FilamentIndex{}, errors.Wrap(err, "failed to decode")
 	}
 
-	lfl.JetID = jetID
 	idx := object.FilamentIndex{
 		ObjID:            *obj.Record(),
 		Lifeline:         lfl,
