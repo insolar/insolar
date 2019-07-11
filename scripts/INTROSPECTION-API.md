@@ -46,6 +46,6 @@ filter only enabled filters with jq:
     * modify `./instrumentation/introspector/introproto/publisher.proto`
     * regenerate files `make generate-introspector-proto`
 2. Add and implement new middleware
-    * add code and test files to `./insolar/bus/pubsubwrap/`
-    * add middleware to `./insolar/bus/pubsubwrap/service.go`
-4. Create and initialize middleware `server/internal/pubsub_introspect.go`
+    * add code and test files to `./instrumentation/introspector/pubsubwrap/`
+    * add middleware to `./instrumentation/introspector/pubsubwrap/service.go`
+4. Create and initialize middleware here: `server/internal/pubsub_introspect.go`

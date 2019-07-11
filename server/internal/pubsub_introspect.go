@@ -22,8 +22,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar/bus/pubsubwrap"
 	"github.com/insolar/insolar/instrumentation/introspector"
+	"github.com/insolar/insolar/instrumentation/introspector/pubsubwrap"
 	"golang.org/x/net/context"
 )
 
