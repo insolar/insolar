@@ -64,7 +64,7 @@ import (
 )
 
 // RequestHandler is callback function for request handling
-type RequestHandler func(ctx context.Context, p *packet.Packet)
+type RequestHandler func(ctx context.Context, p *packet.ReceivedPacket)
 
 // StreamHandler parses packets from data stream and calls request handler or response handler
 type StreamHandler struct {

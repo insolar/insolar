@@ -48,99 +48,20 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package utils
+package packet
 
-import (
-	"bytes"
-	"context"
-	"hash/crc32"
-	"io"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
+type ReceivedPacket struct {
+	*Packet
+	data []byte
+}
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
-)
-
-func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return true // completed normally
-	case <-time.After(timeout):
-		return false // timed out
+func NewReceivedPacket(p *Packet, data []byte) *ReceivedPacket {
+	return &ReceivedPacket{
+		Packet: p,
+		data:   data,
 	}
 }
 
-// GenerateShortID generate short ID for node without checking collisions
-func GenerateShortID(ref insolar.Reference) insolar.ShortNodeID {
-	return insolar.ShortNodeID(GenerateUintShortID(ref))
-}
-
-// GenerateShortID generate short ID for node without checking collisions
-func GenerateUintShortID(ref insolar.Reference) uint32 {
-	return crc32.ChecksumIEEE(ref[:])
-}
-
-func OriginIsDiscovery(cert insolar.Certificate) bool {
-	return IsDiscovery(*cert.GetNodeRef(), cert)
-}
-
-func IsDiscovery(nodeID insolar.Reference, cert insolar.Certificate) bool {
-	bNodes := cert.GetDiscoveryNodes()
-	for _, discoveryNode := range bNodes {
-		if nodeID.Equal(*discoveryNode.GetNodeRef()) {
-			return true
-		}
-	}
-	return false
-}
-
-func CloseVerbose(closer io.Closer) {
-	err := closer.Close()
-	if err != nil {
-		log.Errorf("[ CloseVerbose ] Failed to close: %s", err.Error())
-	}
-}
-
-// IsConnectionClosed checks err for connection closed, workaround for poll.ErrNetClosing https://github.com/golang/go/issues/4373
-func IsConnectionClosed(err error) bool {
-	if err == nil {
-		return false
-	}
-	err = errors.Cause(err)
-	return strings.Contains(err.Error(), "use of closed network connection")
-}
-
-func NewPulseContext(ctx context.Context, pulseNumber uint32) context.Context {
-	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
-	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
-	return ctx
-}
-
-type CapturingReader struct {
-	io.Reader
-	buffer bytes.Buffer
-}
-
-func NewCapturingReader(reader io.Reader) *CapturingReader {
-	return &CapturingReader{Reader: reader}
-}
-
-func (r *CapturingReader) Read(p []byte) (int, error) {
-	n, err := r.Reader.Read(p)
-	r.buffer.Write(p)
-	return n, err
-}
-
-func (r *CapturingReader) Captured() []byte {
-	return r.buffer.Bytes()
+func (p *ReceivedPacket) Bytes() []byte {
+	return p.data
 }
