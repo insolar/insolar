@@ -81,10 +81,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	if p.msg.Queue != nil {
 		for _, qe := range p.msg.Queue {
 			ctxToSent := context.TODO() //FIXME: !!!!
-
-			ref := qe.RequestRef
-			transcript := NewTranscript(ctxToSent, &ref, qe.Request)
-
+			transcript := NewTranscript(ctxToSent, qe.RequestRef, qe.Request)
 			broker.Prepend(ctx, false, transcript)
 		}
 	}

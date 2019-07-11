@@ -138,7 +138,7 @@ func (h *HandleCall) handleActual(
 	es, broker := lr.StateStorage.UpsertExecutionState(*objRef)
 
 	es.Lock()
-	broker.Put(ctx, false, NewTranscript(ctx, requestRef, request))
+	broker.Put(ctx, false, NewTranscript(ctx, *requestRef, request))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
@@ -213,7 +213,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 		es.pending = message.NotPending
 	}
 
-	broker.Put(ctx, false, NewTranscript(ctx, &msg.RequestRef, msg.Request))
+	broker.Put(ctx, false, NewTranscript(ctx, msg.RequestRef, msg.Request))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{

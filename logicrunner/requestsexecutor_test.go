@@ -55,7 +55,7 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 		{
 			name: "success, constructor",
 			transcript: &Transcript{
-				RequestRef: &requestRef,
+				RequestRef: requestRef,
 				Request: &record.IncomingRequest{
 					CallType:  record.CTSaveAsChild,
 					Base:      &baseRef,
@@ -186,7 +186,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		{
 			name: "activation",
 			transcript: &Transcript{
-				RequestRef: &requestRef,
+				RequestRef: requestRef,
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					Prototype: &protoRef,
@@ -199,7 +199,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		{
 			name: "activation error",
 			transcript: &Transcript{
-				RequestRef: &requestRef,
+				RequestRef: requestRef,
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					Prototype: &protoRef,
@@ -212,7 +212,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		{
 			name: "deactivation",
 			transcript: &Transcript{
-				RequestRef: &requestRef,
+				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
 			result: &RequestResult{Deactivation: true, Result: []byte{1, 2, 3}},
@@ -222,7 +222,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		{
 			name: "deactivation error",
 			transcript: &Transcript{
-				RequestRef: &requestRef,
+				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
 			result: &RequestResult{Deactivation: true, Result: []byte{1, 2, 3}},
@@ -232,7 +232,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		{
 			name: "update",
 			transcript: &Transcript{
-				RequestRef: &requestRef,
+				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
 			result: &RequestResult{NewMemory: []byte{3, 2, 1}, Result: []byte{1, 2, 3}},
@@ -242,7 +242,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		{
 			name: "update error",
 			transcript: &Transcript{
-				RequestRef: &requestRef,
+				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
 			result: &RequestResult{NewMemory: []byte{3, 2, 1}, Result: []byte{1, 2, 3}},
@@ -252,7 +252,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		{
 			name: "result without update",
 			transcript: &Transcript{
-				RequestRef: &requestRef,
+				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{Object: &objRef},
 			},
 			result: &RequestResult{Result: []byte{1, 2, 3}},
@@ -262,7 +262,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		{
 			name: "result without update, error",
 			transcript: &Transcript{
-				RequestRef: &requestRef,
+				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{Object: &objRef},
 			},
 			result: &RequestResult{Result: []byte{1, 2, 3}},
@@ -310,7 +310,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			name: "success",
 			transcript: &Transcript{
 				RequesterNode: &nodeRef,
-				RequestRef:    &reqRef,
+				RequestRef:    reqRef,
 				Request:       &record.IncomingRequest{},
 			},
 			reply: &reply.CallConstructor{Object: &requestRef},
@@ -326,7 +326,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			name: "error",
 			transcript: &Transcript{
 				RequesterNode: &nodeRef,
-				RequestRef:    &reqRef,
+				RequestRef:    reqRef,
 				Request:       &record.IncomingRequest{},
 			},
 			reply: &reply.CallConstructor{Object: &requestRef},
