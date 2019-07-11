@@ -18,8 +18,10 @@ package jet
 
 import (
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,6 +46,73 @@ func dbTreeForPulse(s *DBStore, pulse insolar.PulseNumber) *Tree {
 		return nil
 	}
 	return recovered
+}
+
+func TestPulseKey(t *testing.T) {
+	t.Parallel()
+
+	expectedKey := pulseKey(insolar.GenesisPulse.PulseNumber)
+
+	rawID := expectedKey.ID()
+
+	actualKey := newPulseKey(rawID)
+	require.Equal(t, expectedKey, actualKey)
+}
+
+func TestDBStore_TruncateHead(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	dbMock, err := store.NewBadgerDB(tmpdir)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
+
+	dbStore := NewDBStore(dbMock)
+
+	numElements := 400
+
+	// it's used for writing pulses in random order to db
+	indexes := make([]int, numElements)
+	for i := 0; i < numElements; i++ {
+		indexes[i] = i
+	}
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(indexes), func(i, j int) { indexes[i], indexes[j] = indexes[j], indexes[i] })
+
+	startPulseNumber := insolar.GenesisPulse.PulseNumber
+	for _, idx := range indexes {
+		pulse := startPulseNumber + insolar.PulseNumber(idx)
+		jetTree := NewTree(true)
+		err := dbStore.set(pulse, jetTree)
+		require.NoError(t, err)
+	}
+
+	for i := 0; i < numElements; i++ {
+		tree := dbStore.get(startPulseNumber + insolar.PulseNumber(i))
+		require.True(t, tree.Head.Actual)
+	}
+
+	numLeftElements := numElements / 2
+	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
+	require.NoError(t, err)
+
+	for i := 0; i < numLeftElements; i++ {
+		tree := dbStore.get(startPulseNumber + insolar.PulseNumber(i))
+		require.True(t, tree.Head.Actual)
+	}
+
+	for i := numElements - 1; i >= numLeftElements; i-- {
+		tree := dbStore.get(startPulseNumber + insolar.PulseNumber(i))
+		require.False(t, tree.Head.Actual)
+	}
+
+	// not existing record
+	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements+numElements*2))
+	require.NoError(t, err)
 }
 
 func TestDBStorage_Empty(t *testing.T) {

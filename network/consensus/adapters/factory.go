@@ -51,9 +51,12 @@
 package adapters
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phases"
 )
@@ -132,6 +135,12 @@ func (cf *TransportCryptographyFactory) GetNodeSigner(sks common.SecretKeyStore)
 	return NewECDSADigestSigner(isks.privateKey, cf.scheme)
 }
 
+func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh common.SignatureKeyHolder) common.PublicKeyStore {
+	kh := skh.(*ECDSASignatureKeyHolder)
+
+	return NewECDSAPublicKeyStore(kh.publicKey)
+}
+
 type RoundStrategyFactory struct{}
 
 func NewRoundStrategyFactory() *RoundStrategyFactory {
@@ -174,4 +183,45 @@ func (tf *TransportFactory) GetPacketBuilder(signer common.DigestSigner) core.Pa
 
 func (tf *TransportFactory) GetCryptographyFactory() core.TransportCryptographyFactory {
 	return tf.cryptographyFactory
+}
+
+type NodeProfileFactory struct {
+	keyProcessor insolar.KeyProcessor
+}
+
+func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) *NodeProfileFactory {
+	return &NodeProfileFactory{
+		keyProcessor: keyProcessor,
+	}
+}
+
+func (npf *NodeProfileFactory) createProfile(candidate common2.BriefCandidateProfile, signature common.SignatureHolder, intro common2.NodeIntroduction) *NodeIntroProfile {
+	keyHolder := candidate.GetNodePK()
+	pk, err := npf.keyProcessor.ImportPublicKeyBinary(keyHolder.AsBytes())
+	if err != nil {
+		panic(err)
+	}
+
+	store := NewECDSAPublicKeyStore(pk.(*ecdsa.PublicKey))
+
+	return newNodeIntroProfile(
+		candidate.GetNodeID(),
+		candidate.GetNodePrimaryRole(),
+		candidate.GetNodeSpecialRoles(),
+		intro,
+		candidate.GetNodeEndpoint(),
+		store,
+		keyHolder,
+		signature,
+	)
+}
+
+func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate common2.BriefCandidateProfile) common2.NodeIntroProfile {
+	return npf.createProfile(candidate, candidate.GetJoinerSignature(), nil)
+}
+
+func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate common2.CandidateProfile) common2.NodeIntroProfile {
+	intro := newNodeIntroduction(candidate.GetNodeID(), candidate.GetReference())
+
+	return npf.createProfile(candidate, candidate.GetJoinerSignature(), intro)
 }

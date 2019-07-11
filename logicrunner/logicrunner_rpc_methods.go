@@ -214,6 +214,12 @@ func (m *executionProxyImplementation) RouteCall(
 		return err
 	}
 
+	if req.Saga {
+		// Saga methods are not executed right away. LME will send a method
+		// to the VE when current object finishes the execution and validation.
+		return nil
+	}
+
 	// Step 2. Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
 	res, err := m.cr.CallMethod(ctx, callMsg)
@@ -524,7 +530,7 @@ func buildIncomingAndOutgoingCallRequests(
 		Reason:       *current.RequestRef,
 	}
 
-	// Currently IncomingRequest and OutgoingRequest are exact copies of each other
+	// Currently IncomingRequest and OutgoingRequest are almost exact copies of each other
 	// thus the following code is a bit ugly. However this will change when we'll
 	// figure out which fields are actually needed in OutgoingRequest and which are
 	// not. Thus please keep the code the way it is for now, dont't introduce any
@@ -548,7 +554,11 @@ func buildIncomingAndOutgoingCallRequests(
 		Reason:       *current.RequestRef,
 	}
 
-	if !req.Wait {
+	if req.Saga {
+		// OutgoingRequest with ReturnMode = ReturnSaga will be called by LME
+		// when current object finishes the execution and validation.
+		outgoing.ReturnMode = record.ReturnSaga
+	} else if !req.Wait {
 		incoming.ReturnMode = record.ReturnNoWait
 		outgoing.ReturnMode = record.ReturnNoWait
 	}

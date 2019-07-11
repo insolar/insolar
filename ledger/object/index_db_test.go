@@ -19,17 +19,97 @@ package object
 import (
 	"context"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestIndexKey(t *testing.T) {
+	t.Parallel()
+
+	testPulseNumber := insolar.GenesisPulse.PulseNumber
+	expectedKey := indexKey{objID: testutils.RandomID(), pn: testPulseNumber}
+
+	rawID := expectedKey.ID()
+
+	actualKey := newIndexKey(rawID)
+	require.Equal(t, expectedKey, actualKey)
+}
+
+func TestIndexDB_TruncateHead(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	dbMock, err := store.NewBadgerDB(tmpdir)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
+
+	indexStore := NewIndexDB(dbMock)
+
+	numElements := 400
+
+	// it's used for writing pulses in random order to db
+	indexes := make([]int, numElements)
+	for i := 0; i < numElements; i++ {
+		indexes[i] = i
+	}
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(indexes), func(i, j int) { indexes[i], indexes[j] = indexes[j], indexes[i] })
+
+	startPulseNumber := insolar.GenesisPulse.PulseNumber
+	objects := make([]insolar.ID, numElements)
+	for _, idx := range indexes {
+		pulse := startPulseNumber + insolar.PulseNumber(idx)
+		objects[idx] = gen.ID()
+
+		bucket := FilamentIndex{}
+
+		bucket.ObjID = objects[idx]
+		indexStore.SetIndex(ctx, pulse, bucket)
+
+		for i := 0; i < 5; i++ {
+			bucket := FilamentIndex{}
+
+			bucket.ObjID = gen.ID()
+			indexStore.SetIndex(ctx, pulse, bucket)
+		}
+
+		require.NoError(t, err)
+	}
+
+	for i := 0; i < numElements; i++ {
+		_, err := indexStore.ForID(ctx, startPulseNumber+insolar.PulseNumber(i), objects[i])
+		require.NoError(t, err)
+	}
+
+	numLeftElements := numElements / 2
+	err = indexStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
+	require.NoError(t, err)
+
+	for i := 0; i < numLeftElements; i++ {
+		_, err := indexStore.ForID(ctx, startPulseNumber+insolar.PulseNumber(i), objects[i])
+		require.NoError(t, err)
+	}
+
+	for i := numElements - 1; i >= numLeftElements; i-- {
+		_, err := indexStore.ForID(ctx, startPulseNumber+insolar.PulseNumber(i), objects[i])
+		require.EqualError(t, err, ErrIndexNotFound.Error())
+	}
+}
 
 func TestDBIndexStorage_ForID(t *testing.T) {
 	t.Parallel()

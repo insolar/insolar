@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package replica
+package executor
 
 import (
 	"context"

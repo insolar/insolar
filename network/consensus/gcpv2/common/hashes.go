@@ -54,43 +54,37 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash -o . -s _mock.go
+
 type NodeStateHash interface {
 	common.DigestHolder
 }
 
-type NodeClaimSignature interface {
+type GlobulaAnnouncementHash interface {
 	common.DigestHolder
 }
 
-type NodeStateHashEvidence interface {
-	GetNodeStateHash() NodeStateHash
-	GetGlobulaNodeStateSignature() common.SignatureHolder
-}
-
 type GlobulaStateHash interface {
-	NodeStateHash
+	common.DigestHolder
 }
 
 type CloudStateHash interface {
-	NodeStateHash
+	common.DigestHolder
+}
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o . -s _mock.go
+
+type GlobulaStateSignature interface {
+	common.SignatureHolder
+}
+
+type MemberAnnouncementSignature interface {
+	common.SignatureHolder
 }
 
 type OriginalPulsarPacket interface {
-	// common.SignedEvidenceHolder
-	// GetPulsarId() PulsarId
+	common.FixedReader
 	OriginalPulsarPacket()
-}
-
-type NodeRankReader interface {
-	GetNodeIndex() uint16
-	GetNodeCount() uint16
-	GetNodePower() MemberPower
-}
-
-type NodeStateHashReader interface {
-	NodeRankReader
-	GetNodeStateHashEvidence() NodeStateHashEvidence
-	GetNodeClaimsSignature() NodeClaimSignature
 }
 
 func NewNodeStateHashEvidence(sd common.SignedDigest) NodeStateHashEvidence {
