@@ -157,6 +157,9 @@ func (nab *NodeAppearanceBitset) SetBitset(bitset nodeset.NodeBitset) {
 
 func (nab *NodeAppearanceBitset) GetBitset() nodeset.NodeBitset {
 	length := nab.getLength()
+	if nab.isCompressed() {
+		panic("not implemented")
+	}
 
 	bitset := make([]nodeset.NodeBitsetEntry, length)
 	for i, b := range nab.Bytes {
