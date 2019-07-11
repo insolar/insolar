@@ -51,9 +51,10 @@
 package core
 
 import (
+	"sync/atomic"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
-	"sync/atomic"
 )
 
 func (p *nodeContext) initPrep(capture errors.MisbehaviorReportFunc) {

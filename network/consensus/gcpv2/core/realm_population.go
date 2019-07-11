@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
