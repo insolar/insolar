@@ -229,6 +229,8 @@ const (
 	TypeGetJet
 	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
 	TypeAbandonedRequestsNotification
+	// TypeSagaCallAcceptNotification informs virtual node that it's time to call saga Accept method.
+	TypeSagaCallAcceptNotification
 	// TypeGetRequest fetches request from ledger.
 	TypeGetRequest
 	// TypeGetPendingRequestID fetches a pending request id from ledger

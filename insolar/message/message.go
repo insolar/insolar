@@ -207,6 +207,7 @@ func init() {
 	gob.Register(&GetPendingRequests{})
 	gob.Register(&GetJet{})
 	gob.Register(&AbandonedRequestsNotification{})
+	gob.Register(&SagaCallAcceptNotification{})
 	gob.Register(&HotData{})
 	gob.Register(&GetPendingRequestID{})
 	gob.Register(&GetRequest{})

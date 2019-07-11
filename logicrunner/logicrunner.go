@@ -259,6 +259,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(insolar.TypeAdditionalCallFromPreviousExecutor, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.FlowDispatcher.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeSagaCallAcceptNotification, lr.FlowDispatcher.WrapBusHandle)
 }
 
 // Stop stops logic runner component and its executors
@@ -433,6 +434,15 @@ func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
 ) {
 	return lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 }
+
+/** func (lr *LogicRunner) HandleSagaCallAcceptNotification(
+	ctx context.Context, parcel insolar.Parcel,
+) (
+	insolar.Reply, error,
+) {
+	// return lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+	return &reply.OK{}, nil // AALEKSEEV TODO implement
+} **/
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []insolar.Message) {
 	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
