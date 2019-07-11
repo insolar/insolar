@@ -237,10 +237,9 @@ func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppeara
 		nodes = &[]*NodeAppearance{n}
 		r.purgatoryByID[id] = nodes
 		return n, 0
-	} else {
-		*nodes = append(*nodes, n)
-		return n, PurgatoryNodeState(len(*nodes) - 1)
 	}
+	*nodes = append(*nodes, n)
+	return n, PurgatoryNodeState(len(*nodes) - 1)
 }
 
 func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {

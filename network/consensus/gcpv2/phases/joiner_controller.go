@@ -76,8 +76,8 @@ func (c *PhaseControllerWithJoinersTemplate) HandleUnknownMemberPacket(ctx conte
 	return jc.handleUnknownJoinerPacket(ctx, reader, from, c.R)
 }
 
-func (c *PhaseControllerWithJoinersTemplate) createPerNodePacketHandler(ctlIndex int, node *core.NodeAppearance,
-	realm *core.FullRealm, ctx context.Context, fn JoinerControllerPacketFunc) (core.PhasePerNodePacketFunc, context.Context) {
+func (c *PhaseControllerWithJoinersTemplate) createPerNodePacketHandler(ctx context.Context, ctlIndex int, node *core.NodeAppearance,
+	realm *core.FullRealm, fn JoinerControllerPacketFunc) (core.PhasePerNodePacketFunc, context.Context) {
 
 	if !node.IsJoiner() {
 		return nil, ctx

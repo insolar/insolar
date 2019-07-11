@@ -412,19 +412,19 @@ outer:
 				consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, false, c.R)
 				log.Debug("Phase3 done all")
 				break outer
-			} else {
-				consensusSelection = c.consensusStrategy.TrySelectOnAdded(&statTbl, d.np.GetProfile(), nodeStats, c.R)
-				if consensusSelection == nil {
-					continue
-				}
-				if chasingDelayTimer.IsEnabled() && consensusSelection.CanBeImproved() {
-					log.Debug("Phase3 (re)start chasing")
-					chasingDelayTimer.RestartChase()
-				} else {
-					log.Debug("Phase3 done strategy")
-					break outer
-				}
 			}
+
+			consensusSelection = c.consensusStrategy.TrySelectOnAdded(&statTbl, d.np.GetProfile(), nodeStats, c.R)
+			if consensusSelection == nil {
+				continue
+			}
+			if chasingDelayTimer.IsEnabled() && consensusSelection.CanBeImproved() {
+				log.Debug("Phase3 (re)start chasing")
+				chasingDelayTimer.RestartChase()
+				continue
+			}
+			log.Debug("Phase3 done by strategy")
+			break outer
 		}
 	}
 
@@ -463,11 +463,10 @@ outer:
 		b.SealCensus()
 		c.R.FinishRound(b, priming)
 		return true
-	} else {
-		log.Info("Node has left")
-		c.R.FinishRound(b, nil)
-		return false
 	}
+	log.Info("Node has left")
+	c.R.FinishRound(b, nil)
+	return false
 }
 
 func (c *Phase3Controller) buildNextPopulation(pb census.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
