@@ -58,19 +58,19 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:5f5090f05382959db941fa45acbeb7f4c5241aa8ac0f8f4393dec696e5953f53"
+  digest = "1:6be8582a4f52ba2851d8a039eb9c3a3b90334b2820563d71e97de35580da128e"
   name = "github.com/dgraph-io/badger"
   packages = [
     ".",
     "options",
-    "protos",
+    "pb",
     "skl",
     "table",
     "y",
   ]
   pruneopts = "UT"
-  revision = "99233d725dbdd26d156c61b2f42ae1671b794656"
-  version = "v1.5.4"
+  revision = "2fa005c9d4bf695277ab5214c1fbce3735b9562a"
+  version = "v1.6.0"
 
 [[projects]]
   branch = "master"
@@ -79,6 +79,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "2de33835d10275975374b37b2dcfd22c9020a1f5"
+
+[[projects]]
+  digest = "1:6f9339c912bbdda81302633ad7e99a28dfa5a639c864061f1929510a9a64aa74"
+  name = "github.com/dustin/go-humanize"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
