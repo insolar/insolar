@@ -197,7 +197,7 @@ type NodeFullIntro struct {
 	ProofLen     uint8
 	NodeRefProof []common.Bits512
 
-	DiscoveryIssuerNodeId common.ShortNodeID
+	DiscoveryIssuerNodeID common.ShortNodeID
 	IssuerSignature       common.Bits512
 }
 
@@ -238,8 +238,8 @@ func (fi *NodeFullIntro) SerializeTo(ctx SerializeContext, writer io.Writer) err
 		}
 	}
 
-	if err := write(writer, fi.DiscoveryIssuerNodeId); err != nil {
-		return errors.Wrap(err, "failed to serialize DiscoveryIssuerNodeId")
+	if err := write(writer, fi.DiscoveryIssuerNodeID); err != nil {
+		return errors.Wrap(err, "failed to serialize DiscoveryIssuerNodeID")
 	}
 
 	if err := write(writer, fi.IssuerSignature); err != nil {
@@ -292,8 +292,8 @@ func (fi *NodeFullIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reade
 		}
 	}
 
-	if err := read(reader, &fi.DiscoveryIssuerNodeId); err != nil {
-		return errors.Wrap(err, "failed to deserialize DiscoveryIssuerNodeId")
+	if err := read(reader, &fi.DiscoveryIssuerNodeID); err != nil {
+		return errors.Wrap(err, "failed to deserialize DiscoveryIssuerNodeID")
 	}
 
 	if err := read(reader, &fi.IssuerSignature); err != nil {

@@ -241,7 +241,7 @@ func (p *NodeEndpoint) GetNameAddress() common.HostAddress {
 	return p.name
 }
 
-func (p *NodeEndpoint) GetIpAddress() packets.NodeAddress {
+func (p *NodeEndpoint) GetIPAddress() packets.NodeAddress {
 	return p.addr
 }
 

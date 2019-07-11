@@ -81,7 +81,7 @@ type NodeEndpoint interface {
 	GetEndpointType() NodeEndpointType
 	GetRelayID() ShortNodeID
 	GetNameAddress() HostAddress
-	GetIpAddress() packets.NodeAddress
+	GetIPAddress() packets.NodeAddress
 }
 
 func EqualNodeEndpoints(p, o NodeEndpoint) bool {
@@ -99,7 +99,7 @@ func EqualNodeEndpoints(p, o NodeEndpoint) bool {
 	case NameEndpoint:
 		return p.GetNameAddress() == o.GetNameAddress()
 	case IPEndpoint:
-		return p.GetIpAddress() == o.GetIpAddress()
+		return p.GetIPAddress() == o.GetIPAddress()
 	case RelayEndpoint:
 		return p.GetRelayID() == o.GetRelayID()
 	}
