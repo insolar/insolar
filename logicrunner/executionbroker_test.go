@@ -239,6 +239,8 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	lr.RequestsExecutor = re
 	lr.publisher = pm
 
+	_ = lr.Init(s.Context)
+
 	return lr
 }
 
@@ -276,9 +278,8 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	})
 	rem.SendReplyMock.Return()
 
-	es := NewExecutionState(gen.Reference())
-	es.RegisterLogicRunner(lr)
-	b := es.Broker
+	objectRef := gen.Reference()
+	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
 	es.pending = message.NotPending
 
 	reqRef1 := gen.Reference()
@@ -329,9 +330,8 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	})
 	rem.SendReplyMock.Return()
 
-	es := NewExecutionState(gen.Reference())
-	es.RegisterLogicRunner(lr)
-	b := es.Broker
+	objectRef := gen.Reference()
+	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
 	es.pending = message.NotPending
 
 	reqRef1 := gen.Reference()
@@ -384,9 +384,8 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	})
 	rem.SendReplyMock.Return()
 
-	es := NewExecutionState(gen.Reference())
-	es.RegisterLogicRunner(lr)
-	b := es.Broker
+	objectRef := gen.Reference()
+	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
 	es.pending = message.NotPending
 
 	reqRef1 := gen.Reference()
@@ -433,9 +432,8 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	})
 	rem.SendReplyMock.Return()
 
-	es := NewExecutionState(gen.Reference())
-	es.RegisterLogicRunner(lr)
-	b := es.Broker
+	objectRef := gen.Reference()
+	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
 	es.pending = message.InPending
 
 	reqRef3 := gen.Reference()
@@ -482,9 +480,8 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	rem.ExecuteAndSaveMock.Return(nil, nil)
 	rem.SendReplyMock.Return()
 
-	es := NewExecutionState(gen.Reference())
-	es.RegisterLogicRunner(lr)
-	b := es.Broker
+	objectRef := gen.Reference()
+	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
 	es.pending = message.NotPending
 
 	for i := 0; i < 4; i++ {
@@ -552,9 +549,8 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 	rem.ExecuteAndSaveMock.Return(nil, nil)
 	rem.SendReplyMock.Return()
 
-	es := NewExecutionState(gen.Reference())
-	es.RegisterLogicRunner(lr)
-	b := es.Broker
+	objectRef := gen.Reference()
+	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
 	es.pending = message.InPending
 
 	reqRef1 := gen.Reference()

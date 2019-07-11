@@ -93,7 +93,7 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 	}
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
-	heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+	heavy, err := p.Dep.Coordinator.Heavy(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate heavy")
 	}
@@ -194,7 +194,7 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 	}
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
-	heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+	heavy, err := p.Dep.Coordinator.Heavy(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate heavy")
 	}

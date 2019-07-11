@@ -69,7 +69,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	idx := proc.NewEnsureIndexWM(msg.ObjectID, objJetID, s.meta)
-	s.dep.GetIndexWM(idx)
+	s.dep.EnsureIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}

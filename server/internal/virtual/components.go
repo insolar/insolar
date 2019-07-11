@@ -22,6 +22,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -48,8 +49,6 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/version/manager"
 	"github.com/pkg/errors"
 )
@@ -162,10 +161,6 @@ func initComponents(
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "Error while init handlers for logic runner:")
 	}
-
-	// move to logic runner ??
-	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	checkError(ctx, err, "failed init pulse for LogicRunner")
 
 	cm.Register(
 		terminationHandler,

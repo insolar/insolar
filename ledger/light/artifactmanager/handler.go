@@ -120,7 +120,7 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 			p.Dep.Sender = h.Sender
 		},
-		GetIndexWM: func(p *proc.EnsureIndexWM) {
+		EnsureIndex: func(p *proc.EnsureIndexWM) {
 			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.IndexAccessor = h.IndexStorage
 			p.Dep.IndexLocker = h.IndexLocker
@@ -146,6 +146,16 @@ func NewMessageHandler(
 			)
 		},
 		ActivateObject: func(p *proc.ActivateObject) {
+			p.Dep(
+				h.WriteAccessor,
+				h.IndexLocker,
+				h.Records,
+				h.IndexStorage,
+				h.filamentModifier,
+				h.Sender,
+			)
+		},
+		DeactivateObject: func(p *proc.DeactivateObject) {
 			p.Dep(
 				h.WriteAccessor,
 				h.IndexLocker,

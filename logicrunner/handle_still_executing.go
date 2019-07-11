@@ -36,38 +36,32 @@ type HandleStillExecuting struct {
 }
 
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
+	logger := inslogger.FromContext(ctx)
 	lr := h.dep.lr
-	inslogger.FromContext(ctx).Debug("HandleStillExecuting.Present starts ...")
 	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+
+	inslogger.FromContext(ctx).Debug("HandleStillExecuting.Present starts ...")
 
 	msg := h.Parcel.Message().(*message.StillExecuting)
 	ref := msg.DefaultTarget()
-	os := lr.StateStorage.UpsertObjectState(*ref)
+	es, _ := lr.StateStorage.UpsertExecutionState(*ref)
 
-	inslogger.FromContext(ctx).Debug("Got information that ", ref, " is still executing")
+	logger.Debugf("Got information that %s is still executing", ref.String())
 
-	os.Lock()
-	if os.ExecutionState == nil {
+	es.Lock()
+	switch es.pending {
+	case message.NotPending:
+		// It might be when StillExecuting comes after PendingFinished
+		logger.Error("got StillExecuting message, but our state says that it's not in pending")
+	case message.InPending:
+		es.PendingConfirmed = true
+	case message.PendingUnknown:
 		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = NewExecutionState(*ref)
-		os.ExecutionState.pending = message.InPending
-		os.ExecutionState.PendingConfirmed = true
-		os.ExecutionState.RegisterLogicRunner(lr)
-	} else {
-		es := os.ExecutionState
-		es.Lock()
-		if es.pending == message.NotPending {
-			// It might be when StillExecuting comes after PendingFinished
-			inslogger.FromContext(ctx).Error(
-				"got StillExecuting message, but our state says that it's not in pending",
-			)
-		} else {
-			es.PendingConfirmed = true
-		}
-		es.Unlock()
+		es.pending = message.InPending
+		es.PendingConfirmed = true
 	}
-	os.Unlock()
+
+	es.Unlock()
 	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 
 	return nil
