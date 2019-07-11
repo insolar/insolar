@@ -159,8 +159,7 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	}
 
 	vectorHelper := c.R.GetPopulation().SetOrUpdateVectorHelper(&core.RealmVectorHelper{})
-	localVector := nodeset.NewLocalNodeVector(c.R.GetDigestFactory(),
-		c.R.GetSelf().GetSignatureVerifier(c.R.GetVerifierFactory()), vectorHelper)
+	localVector := nodeset.NewLocalNodeVector(c.R.GetDigestFactory(), vectorHelper)
 
 	d0 := c.calcGshPairNew(&localVector)
 
@@ -380,7 +379,8 @@ outer:
 				)
 			}
 
-			vr := nodeset.ClassifyByNodeGsh(selfData, d.vector, nodeStats, localVector)
+			nodeVector := localVector.CreateDerivedVector(d.np.GetSignatureVerifier(c.R.GetVerifierFactory()))
+			vr := nodeset.ClassifyByNodeGsh(selfData, d.vector, nodeStats, &nodeVector)
 
 			logMsg := "add"
 			if nodeStats.HasAllValues(0) {

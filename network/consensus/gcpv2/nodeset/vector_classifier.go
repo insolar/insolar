@@ -69,14 +69,14 @@ type LocalHashedNodeVector struct {
 	DoubtedGlobulaStateVector common2.GlobulaStateHash
 }
 
-func ClassifyByNodeGsh(selfData LocalHashedNodeVector, otherData HashedNodeVector, nodeStats *stats.Row, localVector *NodeVectorHelper) NodeVerificationResult {
+func ClassifyByNodeGsh(selfData LocalHashedNodeVector, otherData HashedNodeVector, nodeStats *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
 
 	if selfData.Bitset.Len() != nodeStats.ColumnCount() {
 		panic("bitset length mismatch")
 	}
 
 	sr := selfData.Bitset.CompareToStatRow(otherData.Bitset)
-	verifyRes := verifyVectorHashes(selfData, otherData, sr, localVector)
+	verifyRes := verifyVectorHashes(selfData, otherData, sr, derivedVector)
 
 	if verifyRes == norNotVerified || verifyRes == NvrSenderFault {
 		return verifyRes
@@ -116,7 +116,7 @@ func initVerify(needed bool) subVectorVerifyMode {
 	return ignore
 }
 
-func verifyVectorHashes(selfData LocalHashedNodeVector, otherData HashedNodeVector, sr *stats.Row, localVector *NodeVectorHelper) NodeVerificationResult {
+func verifyVectorHashes(selfData LocalHashedNodeVector, otherData HashedNodeVector, sr *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
 	// TODO All GSH comparisons should be based on SIGNATURES! not on pure hashes
 
 	verifyRes := norNotVerified
@@ -178,14 +178,16 @@ func verifyVectorHashes(selfData LocalHashedNodeVector, otherData HashedNodeVect
 	}
 
 	gahTrusted, gahDoubted := selfData.TrustedAnnouncementVector, selfData.DoubtedAnnouncementVector
-	var nodeVector NodeVectorHelper
 
 	switch {
 	case trustedPart == verify || doubtedPart == verify:
 		panic("illegal state")
 	case trustedPart == verifyRecalc || doubtedPart == verifyRecalc:
-		nodeVector = localVector.CreateDerivedVector(sr)
-		gahTrusted, gahDoubted = nodeVector.BuildGlobulaAnnouncementHashes(
+
+		//It does remap the original bitset with the given stats
+		derivedVector.PrepareDerivedVector(sr)
+
+		gahTrusted, gahDoubted = derivedVector.BuildGlobulaAnnouncementHashes(
 			trustedPart == verifyRecalc, doubtedPart == verifyRecalc, gahTrusted, gahDoubted)
 	}
 
@@ -207,13 +209,12 @@ func verifyVectorHashes(selfData LocalHashedNodeVector, otherData HashedNodeVect
 
 		gshTrusted, gshDoubted := selfData.TrustedGlobulaStateVector, selfData.DoubtedGlobulaStateVector
 		if recalcTrusted || recalcDoubted {
-			gshTrusted, gshDoubted = nodeVector.BuildGlobulaStateHashes(
+			gshTrusted, gshDoubted = derivedVector.BuildGlobulaStateHashes(
 				recalcTrusted, recalcDoubted, gshTrusted, gshDoubted)
 		}
 
-		//NB! nodeVector may not be initialized here, as it is only used for verifyRecalc states
-		validTrusted = validTrusted && localVector.VerifyGlobulaStateSignature(gshTrusted, otherData.TrustedGlobulaStateVectorSignature)
-		validDoubted = validDoubted && localVector.VerifyGlobulaStateSignature(gshDoubted, otherData.DoubtedGlobulaStateVectorSignature)
+		validTrusted = validTrusted && derivedVector.VerifyGlobulaStateSignature(gshTrusted, otherData.TrustedGlobulaStateVectorSignature)
+		validDoubted = validDoubted && derivedVector.VerifyGlobulaStateSignature(gshDoubted, otherData.DoubtedGlobulaStateVectorSignature)
 	}
 
 	if doubtedPart.IsNeeded() {

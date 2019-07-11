@@ -12,13 +12,15 @@ type NodeVectorHelper struct {
 	signatureVerifier common2.SignatureVerifier
 	entryScanner      VectorEntryScanner
 	bitset            NodeBitset
+	parentBitset      NodeBitset
 }
 
-func NewLocalNodeVector(digestFactory common2.DigestFactory, signatureVerifier common2.SignatureVerifier,
+func NewLocalNodeVector(digestFactory common2.DigestFactory,
 	entryScanner VectorEntryScanner) NodeVectorHelper {
 
-	p := NodeVectorHelper{digestFactory, signatureVerifier,
-		entryScanner, make(NodeBitset, entryScanner.GetIndexedCount())}
+	p := NodeVectorHelper{digestFactory, nil,
+		entryScanner, make(NodeBitset, entryScanner.GetIndexedCount()), nil,
+	}
 
 	entryScanner.ScanIndexed(func(idx int, nodeData VectorEntryData) {
 		p.bitset[idx] = mapVectorEntryDataToNodesetEntry(nodeData)
@@ -41,33 +43,39 @@ func mapVectorEntryDataToNodesetEntry(nodeData VectorEntryData) NodeBitsetEntry 
 	}
 }
 
-func (p *NodeVectorHelper) CreateDerivedVector(statRow *stats.Row) NodeVectorHelper {
-	dv := NodeVectorHelper{p.digestFactory, p.signatureVerifier,
-		p.entryScanner, make(NodeBitset, len(p.bitset))}
+func (p *NodeVectorHelper) CreateDerivedVector(signatureVerifier common2.SignatureVerifier) NodeVectorHelper {
+	return NodeVectorHelper{p.digestFactory, signatureVerifier,
+		p.entryScanner, nil, p.bitset}
+}
 
-	for idx := range p.bitset {
+func (p *NodeVectorHelper) PrepareDerivedVector(statRow *stats.Row) {
+	if p.bitset != nil && p.parentBitset == nil {
+		panic("illegal state")
+	}
+
+	p.bitset = make(NodeBitset, len(p.parentBitset))
+
+	for idx := range p.parentBitset {
 		switch statRow.Get(idx) {
 		case NodeBitMissingHere:
-			dv.bitset[idx] = NbsTimeout // we don't have it
+			p.bitset[idx] = NbsTimeout // we don't have it
 		case NodeBitDoubtedMissingHere:
-			dv.bitset[idx] = NbsTimeout // we don't have it
+			p.bitset[idx] = NbsTimeout // we don't have it
 		case NodeBitSame:
 			// ok, use as-is
-			dv.bitset[idx] = p.bitset[idx]
+			p.bitset[idx] = p.parentBitset[idx]
 		case NodeBitLessTrustedThere:
 			// ok - exclude for trusted
-			dv.bitset[idx] = NbsBaselineTrust
+			p.bitset[idx] = NbsBaselineTrust
 		case NodeBitLessTrustedHere:
 			// ok - use for both
-			dv.bitset[idx] = NbsHighTrust
+			p.bitset[idx] = NbsHighTrust
 		case NodeBitMissingThere:
-			dv.bitset[idx] = NbsTimeout // we have it, but the other's doesn't
+			p.bitset[idx] = NbsTimeout // we have it, but the other's doesn't
 		default:
 			panic("unexpected")
 		}
 	}
-
-	return dv
 }
 
 func (p *NodeVectorHelper) buildGlobulaAnnouncementHash(trusted bool) common.GlobulaAnnouncementHash {
@@ -75,8 +83,11 @@ func (p *NodeVectorHelper) buildGlobulaAnnouncementHash(trusted bool) common.Glo
 	agg := p.digestFactory.GetGshDigester()
 
 	p.entryScanner.ScanIndexed(func(idx int, nodeData VectorEntryData) {
-		filter := p.bitset[idx]
-		if trusted && !filter.IsTrusted() {
+		b := p.bitset[idx]
+		if b.IsTimeout() {
+			return
+		}
+		if trusted && !b.IsTrusted() {
 			return
 		}
 		agg.AddNext(nodeData.StateEvidence.GetNodeStateHash())
@@ -101,6 +112,9 @@ func (p *NodeVectorHelper) buildGlobulaAnnouncementHashes() (common.GlobulaAnnou
 	p.entryScanner.ScanIndexed(
 		func(idx int, nodeData VectorEntryData) {
 			b := p.bitset[idx]
+			if b.IsTimeout() {
+				return
+			}
 			if b.IsTrusted() {
 				aggTrusted.AddNext(nodeData.StateEvidence.GetNodeStateHash())
 				if aggDoubted == nil {
@@ -140,7 +154,11 @@ func (p *NodeVectorHelper) buildGlobulaStateHash(trusted bool) common.GlobulaAnn
 			hasEntries = true
 		},
 		func(idx int, nodeData VectorEntryData) (bool, uint32) {
-			postpone := p.bitset[idx].IsTimeout() || nodeData.RequestedPower == 0
+			b := p.bitset[idx]
+			if b.IsTimeout() {
+				return false, skip
+			}
+			postpone := b.IsTimeout() || nodeData.RequestedPower == 0
 			return postpone, uint32(idx)
 		})
 
@@ -180,7 +198,11 @@ func (p *NodeVectorHelper) buildGlobulaStateHashes() (common.GlobulaAnnouncement
 			aggDoubted.AddNext(digest)
 		},
 		func(idx int, nodeData VectorEntryData) (bool, uint32) {
-			postpone := p.bitset[idx].IsTimeout() || nodeData.RequestedPower == 0
+			b := p.bitset[idx]
+			if b.IsTimeout() {
+				return false, skip
+			}
+			postpone := b.IsTimeout() || nodeData.RequestedPower == 0
 			return postpone, uint32(idx)
 		})
 
@@ -222,6 +244,9 @@ func (p *NodeVectorHelper) BuildGlobulaStateHashes(buildTrusted, buildDoubted bo
 }
 
 func (p *NodeVectorHelper) VerifyGlobulaStateSignature(localHash common.GlobulaStateHash, remoteSignature common2.SignatureHolder) bool {
+	if p.signatureVerifier == nil {
+		panic("illegal state - helper must be initialized as a derived one")
+	}
 	return localHash != nil && p.signatureVerifier.IsValidDigestSignature(localHash, remoteSignature)
 }
 

@@ -237,7 +237,7 @@ func (r *basePacket) GetReceiverID() common.ShortNodeID {
 }
 
 func (r *basePacket) GetTargetID() common.ShortNodeID {
-	return common.AbsentShortNodeID
+	return r.tgt
 }
 
 func (r *basePacket) IsRelayForbidden() bool {
