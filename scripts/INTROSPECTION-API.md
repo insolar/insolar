@@ -8,15 +8,15 @@ build insolard with introspection api and run launchnet:
 
 check is introspector API works on heavy node:
 
-    curl -X POST -d '{}' http://127.0.0.1:55501/getMessagesFilters
-    
+    curl -X POST -d '{}' http://127.0.0.1:55501/getMessagesStat
+
 or:
 
-    http -j POST http://127.0.0.1:55501/getMessagesFilters
+    http -j POST http://127.0.0.1:55501/getMessagesStat
 
 check gRPC endpoint with [grpcurl](https://github.com/fullstorydev/grpcurl):
 
-    grpcurl -plaintext 127.0.0.1:55501 introspector.Publisher.GetMessagesFilters
+    grpcurl -plaintext 127.0.0.1:55501 introproto.Publisher.GetMessagesStat
 
 ### fetch swagger json
 
@@ -28,10 +28,24 @@ check API ports after launchnet's start:
 
     ./scripts/glogs 'started introspection server on'
 
-set lock message publishing by type on node for launchnet:
+lock message type `TypeSetOutgoingRequest` on Virtual nodes:
 
+    http POST http://127.0.0.1:55502/setMessagesFilter Name=TypeSetOutgoingRequest Enable:=true
     
+check is type `TypeSetOutgoingRequest` locked and how much is filtered out:
+
+    http POST http://127.0.0.1:55502/getMessagesFilters
+
+filter only enabled filters with jq:
+
+    http POST http://127.0.0.1:55502/getMessagesFilters | jq '.Filters | to_entries | .[] | select(.value.Enable==true)'
 
 ## How to develop of new APIs
 
-_TODO_
+1. Add types and methods to Publisher service
+    * modify `./instrumentation/introspector/introproto/publisher.proto`
+    * regenerate files `make generate-introspector-proto`
+2. Add and implement new middleware
+    * add code and test files to `./insolar/bus/pubsubwrap/`
+    * add middleware to `./insolar/bus/pubsubwrap/service.go`
+4. Create and initialize middleware `server/internal/pubsub_introspect.go`

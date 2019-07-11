@@ -38,7 +38,7 @@ func PubSubWrapper(ctx context.Context, cm *component.Manager, cfg configuration
 	service := pubsubwrap.NewPublisherService(mLocker, mStat)
 	iSrv := introspector.NewServer(cfg.Addr, service)
 
-	// TODO: do not use component manager for lifecycle
+	// use component manager for lifecycle (component.Manager calls Start/Stop)
 	cm.Register(iSrv)
 
 	return pw
