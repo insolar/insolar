@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
+	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -78,7 +79,7 @@ func getController(t *testing.T) *pulseController {
 	require.NoError(t, err)
 
 	pulseHandler := network.NewPulseHandlerMock(t)
-	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse) {}
+	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse, network2.ReceivedPacket) {}
 	net := network.NewHostNetworkMock(t)
 	net.BuildResponseMock.Return(packet.NewPacket(nil, nil, types.Pulse, 1))
 
@@ -261,7 +262,7 @@ func TestProcessPulseIgnoreCase(t *testing.T) {
 	controller.TerminationHandler = th
 
 	pulseHandler := network.NewPulseHandlerMock(t)
-	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse) {}
+	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse, network2.ReceivedPacket) {}
 	controller.PulseHandler = pulseHandler
 
 	request := newPulsePacket(t)
