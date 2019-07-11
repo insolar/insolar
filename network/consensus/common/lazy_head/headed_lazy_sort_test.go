@@ -200,9 +200,178 @@ func TestSortAll(t *testing.T) {
 	require.Equal(t, Sorted, hl.sorted)
 }
 
-// TODO Tests
-func TestLazyTailSort(t *testing.T) {
-	s := NewHeadedLazySortedList(3, lessTestFn, 0)
+func TestInnerCutOffHeadByLen(t *testing.T) {
+	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
+	inl.Add(2)
+	inl.Add(3)
+	to := inl.cutOffHeadByLen(0, nil)
+	require.Equal(t, 0, len(to))
 
-	t.Logf("%+v", s)
+	require.Equal(t, 2, len(inl.data))
+
+	to = inl.cutOffHeadByLen(1, nil)
+	require.Equal(t, 1, len(to))
+
+	require.Equal(t, 1, inl.len)
+
+	require.Equal(t, nil, inl.data[1])
+
+	inl.Add(4)
+	to2 := make([]interface{}, 1)
+	to = inl.cutOffHeadByLen(2, to2)
+	require.Equal(t, 3, len(to))
+
+	require.Equal(t, 0, inl.len)
+
+	require.Equal(t, nil, inl.data[1])
+}
+
+func TestGetReversedHead(t *testing.T) {
+	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
+	hl.Add(2)
+	require.Panics(t, func() { hl.GetReversedHead(-1) })
+
+	require.Panics(t, func() { hl.GetReversedHead(2) })
+
+	k := hl.GetReversedHead(1)
+	require.Equal(t, 2, k.(int))
+}
+
+func TestCheckHeadLen(t *testing.T) {
+	hl := NewHeadedLazySortedList(3, lessTestFn, 1)
+	hl.Add(2)
+	require.Panics(t, func() { hl.checkHeadLen(-1) })
+
+	require.Panics(t, func() { hl.checkHeadLen(4) })
+
+	hl.Add(3)
+	n := hl.checkHeadLen(1)
+	require.Equal(t, hl.headLen, n)
+
+	n = hl.checkHeadLen(0)
+	require.Equal(t, hl.data.len, n)
+}
+
+func TestCutOffHeadInto(t *testing.T) {
+	hl := NewHeadedLazySortedList(3, lessTestFn, 1)
+	item := 2
+	hl.Add(item)
+	to := hl.CutOffHeadInto(1, nil)
+	require.Equal(t, 1, len(to))
+
+	require.Equal(t, []interface{}{item}, to)
+}
+
+func TestCutOffHeadByLenInto(t *testing.T) {
+	hl := NewHeadedLazySortedList(3, lessTestFn, 1)
+	item1 := 2
+	hl.Add(item1)
+	to := hl.CutOffHeadByLenInto(0, nil)
+	require.Equal(t, []interface{}(nil), to)
+
+	to2 := make([]interface{}, 1)
+	to = hl.CutOffHeadByLenInto(0, to2)
+	require.Equal(t, len(to2), len(to))
+
+	item2 := 3
+	hl.Add(item2)
+	hl.sorted = UnsortedAll
+	to = hl.CutOffHeadByLenInto(1, to2)
+	require.Equal(t, Sorted, hl.sorted)
+
+	require.Equal(t, 1, hl.data.len)
+
+	require.Equal(t, item2, hl.Get(0))
+
+	require.Equal(t, item1, to[1].(int))
+
+	to = hl.CutOffHeadByLenInto(1, to2)
+	require.Equal(t, Sorted, hl.sorted)
+
+	require.Equal(t, item2, to[1].(int))
+
+	hl.Add(3)
+	hl.Add(2)
+	hl.Add(3)
+	hl.Add(5)
+	hl.Add(7)
+	require.Equal(t, UnsortedTail, hl.sorted)
+
+	to = hl.CutOffHeadByLenInto(2, to2)
+	require.Equal(t, UnsortedAll, hl.sorted)
+}
+
+func TestCutOffHead(t *testing.T) {
+	hl := NewHeadedLazySortedList(2, lessTestFn, 1)
+	require.Equal(t, []interface{}{}, hl.CutOffHead(0))
+
+	item1 := 4
+	hl.Add(item1)
+	item2 := 2
+	hl.Add(item2)
+	require.Equal(t, []interface{}{item2, item1}, hl.CutOffHead(2))
+
+	hl.Add(item1)
+	hl.Add(item2)
+	item3 := 3
+	hl.Add(item3)
+	require.Equal(t, []interface{}{item2, item3}, hl.CutOffHead(2))
+
+	require.Panics(t, func() { hl.CutOffHead(3) })
+}
+
+func TestCutOffHeadByLen(t *testing.T) {
+	hl := NewHeadedLazySortedList(2, lessTestFn, 1)
+	require.Equal(t, []interface{}{}, hl.CutOffHeadByLen(0))
+
+	item1 := 4
+	hl.Add(item1)
+	item2 := 2
+	hl.Add(item2)
+	require.Equal(t, []interface{}{item2, item1}, hl.CutOffHeadByLen(2))
+
+	hl.Add(item1)
+	hl.Add(item2)
+	item3 := 3
+	hl.Add(item3)
+	require.Equal(t, []interface{}{item2, item3}, hl.CutOffHeadByLen(2))
+
+	require.Panics(t, func() { hl.CutOffHeadByLen(3) })
+}
+
+func TestFlush(t *testing.T) {
+	hl := NewHeadedLazySortedList(2, lessTestFn, 1)
+	item1 := 4
+	hl.Add(item1)
+	item2 := 2
+	hl.Add(item2)
+	res := hl.Flush()
+	require.Equal(t, []interface{}{item2, item1}, res)
+
+	require.Equal(t, Sorted, hl.sorted)
+}
+
+func TestGetHeadLen(t *testing.T) {
+	headLen := 2
+	hl := NewHeadedLazySortedList(headLen, lessTestFn, 1)
+	require.Equal(t, headLen, hl.GetHeadLen())
+}
+
+func TestGetAvailableHeadLen(t *testing.T) {
+	headLen := 2
+	hl := NewHeadedLazySortedList(headLen, lessTestFn, 1)
+	item1 := 4
+	hl.Add(item1)
+	item2 := 2
+	hl.Add(item2)
+	require.Equal(t, headLen, hl.GetAvailableHeadLen(1))
+
+	require.Panics(t, func() { hl.GetAvailableHeadLen(-1) })
+
+	require.Panics(t, func() { hl.GetAvailableHeadLen(3) })
+
+	headLen = 3
+	hl = NewHeadedLazySortedList(headLen, lessTestFn, 1)
+	hl.Add(item1)
+	require.Equal(t, 1, hl.GetAvailableHeadLen(1))
 }
