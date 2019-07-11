@@ -62,7 +62,7 @@ func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
 	}
 }
 
-func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool, method string, args []byte,
+func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool, saga bool, method string, args []byte,
 	proxyPrototype insolar.Reference) ([]byte, error) {
 
 	res := rpctypes.UpRouteResp{}
@@ -72,6 +72,7 @@ func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool
 		Object:    ref,
 		Wait:      wait,
 		Immutable: immutable,
+		Saga:      saga,
 		Method:    method,
 		Arguments: args,
 		Prototype: proxyPrototype,

@@ -1,7 +1,7 @@
 //
 // Modified BSD 3-Clause Clear License
 //
-// Copyright (config) 2019 Insolar Technologies GmbH
+// Copyright (c) 2019 Insolar Technologies GmbH
 //
 // All rights reserved.
 //
@@ -13,7 +13,7 @@
 //  * Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other materials
 //    provided with the distribution.
-//  * Neither the addr of Insolar Technologies GmbH nor the names of its contributors
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
 //    may be used to endorse or promote products derived from this software without
 //    specific prior written permission.
 //
@@ -35,7 +35,7 @@
 //
 //    (b) prepare modifications and derivative works of this software,
 //
-//    (config) distribute this software (including without limitation in source code, binary or
+//    (c) distribute this software (including without limitation in source code, binary or
 //        object code form), and
 //
 //    (d) reproduce copies of this software
@@ -56,6 +56,7 @@ import (
 	"runtime/debug"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -64,7 +65,7 @@ import (
 )
 
 type EmuHostConsensusAdapter struct {
-	controller core.ConsensusController
+	packetProcessor adapters.PacketProcessor
 
 	hostAddr common.HostAddress
 	inbound  <-chan Packet
@@ -75,8 +76,8 @@ func NewEmuHostConsensusAdapter(hostAddr string) *EmuHostConsensusAdapter {
 	return &EmuHostConsensusAdapter{hostAddr: common.HostAddress(hostAddr)}
 }
 
-func (h *EmuHostConsensusAdapter) SetConsensusController(controller core.ConsensusController) {
-	h.controller = controller
+func (h *EmuHostConsensusAdapter) SetPacketProcessor(packetProcessor adapters.PacketProcessor) {
+	h.packetProcessor = packetProcessor
 }
 
 func (h *EmuHostConsensusAdapter) ConnectTo(network *EmuNetwork) {
@@ -104,7 +105,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 			if err == nil {
 				if packet != nil {
 					hostFrom := common.HostIdentity{Addr: *from}
-					err = h.controller.ProcessPacket(ctx, packet, &hostFrom)
+					err = h.packetProcessor.ProcessPacket(ctx, packet, &hostFrom)
 				}
 			}
 		}
@@ -116,7 +117,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 }
 
 func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
-	h.send(t.GetDefaultEndpoint(), payload)
+	h.send(t.GetDefaultEndpoint().GetNameAddress(), payload)
 }
 
 func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *common.HostAddress, err error) {

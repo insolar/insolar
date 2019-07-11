@@ -23,7 +23,7 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 
-	"github.com/insolar/insolar/ledger/heavy/replica"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/log"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
@@ -69,6 +69,7 @@ type components struct {
 	cmp      component.Manager
 	NodeRef  string
 	NodeRole string
+	rollback *executor.DBRollback
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
@@ -233,7 +234,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		blobs := blob.NewDB(DB)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
-		jetKeeper := replica.NewJetKeeper(jets, DB)
+		jetKeeper := executor.NewJetKeeper(jets, DB)
+		c.rollback = executor.NewDBRollback(jetKeeper, Pulses, drops, records, indexes, jets, Pulses)
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
@@ -331,6 +333,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 }
 
 func (c *components) Start(ctx context.Context) error {
+	err := c.rollback.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "rollback.Start return error: ")
+	}
 	return c.cmp.Start(ctx)
 }
 

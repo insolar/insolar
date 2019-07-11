@@ -29,7 +29,7 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	transcript := NewTranscript(ctx, &requestRef, record.IncomingRequest{})
 	reason := gen.Reference()
 	transcript.RequestRef = &reason
-	req := rpctypes.UpRouteReq{}
+	req := rpctypes.UpRouteReq{Wait: true}
 	resp := &rpctypes.UpRouteResp{}
 
 	var outreq *record.OutgoingRequest
@@ -38,18 +38,55 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	// Make sure an outgoing request is registered
 	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
 		require.Nil(t, outreq)
+		require.Equal(t, record.ReturnResult, r.ReturnMode)
 		outreq = r
 		id := outgoingReqID
 		return &id, nil
 	}
 
-	cr.CallMethodMock.Return(&reply.OK{}, nil)
+	cr.CallMethodMock.Return(&reply.CallMethod{}, nil)
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultFunc = func(ctx context.Context, objref insolar.Reference, reqref insolar.Reference, result []byte) (r *insolar.ID, r1 error) {
 		require.Equal(t, outgoingReqRef, &reqref)
 		id := gen.ID()
 		return &id, nil
 	}
+
+	err := rpcm.RouteCall(ctx, transcript, req, resp)
+	require.NoError(t, err)
+	require.NotNil(t, outreq)
+	require.Equal(t, reason, outreq.Reason)
+}
+
+func TestRouteCallRegistersSaga(t *testing.T) {
+	t.Parallel()
+
+	am := artifacts.NewClientMock(t)
+	dc := artifacts.NewDescriptorsCacheMock(t)
+	cr := testutils.NewContractRequesterMock(t)
+
+	requestRef := gen.Reference()
+
+	rpcm := NewExecutionProxyImplementation(dc, cr, am)
+	ctx := context.Background()
+	transcript := NewTranscript(ctx, &requestRef, record.IncomingRequest{})
+	reason := gen.Reference()
+	transcript.RequestRef = &reason
+	req := rpctypes.UpRouteReq{Saga: true}
+	resp := &rpctypes.UpRouteResp{}
+
+	var outreq *record.OutgoingRequest
+	outgoingReqID := gen.ID()
+	// Make sure an outgoing request is registered
+	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+		require.Nil(t, outreq)
+		require.Equal(t, record.ReturnSaga, r.ReturnMode)
+		outreq = r
+		id := outgoingReqID
+		return &id, nil
+	}
+
+	// cr.CallMethod and am.RegisterResults are NOT called
 
 	err := rpcm.RouteCall(ctx, transcript, req, resp)
 	require.NoError(t, err)

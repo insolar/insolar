@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/heavy/replica"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 
 	"github.com/insolar/insolar/ledger/heavy/proc"
 	"github.com/pkg/errors"
@@ -59,8 +59,9 @@ type Handler struct {
 	PulseAccessor pulse.Accessor
 	JetModifier   jet.Modifier
 	JetAccessor   jet.Accessor
-	JetKeeper     replica.JetKeeper
-	Sender        bus.Sender
+	JetKeeper     executor.JetKeeper
+
+	Sender bus.Sender
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
