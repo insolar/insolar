@@ -110,9 +110,9 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	}
 
 	switch request.Params.CallSite {
-	case "contract.createMember":
+	case "member.create":
 		selfSigned = true
-	case "migration.createMember":
+	case "member.migrationCreate":
 		selfSigned = true
 	case "contract.getReferenceByPublicKey":
 		selfSigned = true
@@ -126,10 +126,10 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	switch request.Params.CallSite {
 	case "CreateHelloWorld":
 		return rootdomain.GetObject(m.RootDomain).CreateHelloWorld()
-	case "contract.createMember":
+	case "member.create":
 		return m.contractCreateMember(request.Params.PublicKey)
-	case "migration.createMember":
-		return m.migrationCreateMember(request.Params.PublicKey)
+	case "member.migrationCreate":
+		return m.memberMigrationCreate(request.Params.PublicKey)
 	case "contract.getReferenceByPublicKey":
 		return m.getReferenceByPublicKey(request.Params.PublicKey)
 	}
@@ -324,16 +324,16 @@ func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
 	return nodeRef, nil
 }
 
-type ContractCreateMemberOutput struct {
+type CreateResponse struct {
 	Reference string `json:"reference"`
 }
-type MigrationCreateMemberOutput struct {
+type MigrationCreateResponse struct {
 	Reference   string `json:"reference"`
-	BurnAddress string `json:"burnAddress"`
+	BurnAddress string `json:"migrationAddress"`
 }
 
 // Create member methods.
-func (m *Member) migrationCreateMember(key string) (*MigrationCreateMemberOutput, error) {
+func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 	burnAddress, err := rootDomain.GetBurnAddress()
@@ -341,7 +341,7 @@ func (m *Member) migrationCreateMember(key string) (*MigrationCreateMemberOutput
 		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
 	}
 
-	rollBack := func(e error) (*MigrationCreateMemberOutput, error) {
+	rollBack := func(e error) (*MigrationCreateResponse, error) {
 		if err := rootDomain.AddBurnAddress(burnAddress); err != nil {
 			return nil, fmt.Errorf("failed to add burn address back: %s; after error: %s", err.Error(), e.Error())
 		}
@@ -361,9 +361,9 @@ func (m *Member) migrationCreateMember(key string) (*MigrationCreateMemberOutput
 		}
 	}
 
-	return &MigrationCreateMemberOutput{Reference: created.Reference.String(), BurnAddress: burnAddress}, nil
+	return &MigrationCreateResponse{Reference: created.Reference.String(), BurnAddress: burnAddress}, nil
 }
-func (m *Member) contractCreateMember(key string) (*ContractCreateMemberOutput, error) {
+func (m *Member) contractCreateMember(key string) (*CreateResponse, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 
@@ -376,7 +376,7 @@ func (m *Member) contractCreateMember(key string) (*ContractCreateMemberOutput, 
 		return nil, fmt.Errorf("failed to add new member to public key map: %s", err.Error())
 	}
 
-	return &ContractCreateMemberOutput{Reference: created.Reference.String()}, nil
+	return &CreateResponse{Reference: created.Reference.String()}, nil
 }
 func (m *Member) createMember(name string, key string) (*member.Member, error) {
 	if key == "" {

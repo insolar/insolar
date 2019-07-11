@@ -38,7 +38,7 @@ func TestMigrationCreateMember(t *testing.T) {
 	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
 	require.NotEqual(t, "", output["reference"])
-	require.Equal(t, ba, output["burnAddress"])
+	require.Equal(t, ba, output["migrationAddress"])
 }
 
 func TestMigrationCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
@@ -80,7 +80,7 @@ func TestMigrationCreateMembersWithSamePublicKey(t *testing.T) {
 
 	addBurnAddress(t)
 
-	_, err = signedRequest(member, "migration.createMember", map[string]interface{}{})
+	_, err = signedRequest(member, "member.migrationCreate", map[string]interface{}{})
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "member for this publicKey already exist")
 

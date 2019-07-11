@@ -23,12 +23,12 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-type ContractCreateMemberOutput struct {
+type CreateResponse struct {
 	Reference string `json:"reference"`
 }
-type MigrationCreateMemberOutput struct {
+type MigrationCreateResponse struct {
 	Reference   string `json:"reference"`
-	BurnAddress string `json:"burnAddress"`
+	BurnAddress string `json:"migrationAddress"`
 }
 type Params struct {
 	Seed       string      `json:"seed"`

@@ -110,7 +110,7 @@ func createMember(t *testing.T) *user {
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	result, err := retryableCreateMember(member, "contract.createMember", true)
+	result, err := retryableCreateMember(member, "member.create", true)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -202,11 +202,11 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 }
 
 func retryableContractCreateMember(user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(user, "contract.createMember", updatePublicKey)
+	return retryableCreateMember(user, "member.create", updatePublicKey)
 }
 
 func retryableMigrationCreateMember(user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(user, "migration.createMember", updatePublicKey)
+	return retryableCreateMember(user, "member.migrationCreate", updatePublicKey)
 }
 
 func retryableCreateMember(user *user, method string, updatePublicKey bool) (interface{}, error) {
