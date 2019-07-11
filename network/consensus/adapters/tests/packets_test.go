@@ -234,6 +234,22 @@ type EmuPhase1NetPacket struct {
 	// packetType uint8 // to reuse this type for Phase1 and Phase1Req
 }
 
+func (r *EmuPhase1NetPacket) HasFullIntro() bool {
+	return false
+}
+
+func (r *EmuPhase1NetPacket) HasCloudIntro() bool {
+	return false
+}
+
+func (r *EmuPhase1NetPacket) HasJoinerSecret() bool {
+	return false
+}
+
+func (r *EmuPhase1NetPacket) GetJoinerSecret() cryptography_containers.SignatureHolder {
+	panic("implement me")
+}
+
 func (r *EmuPhase1NetPacket) GetCloudIntroduction() packets.CloudIntroductionReader {
 	panic("implement me")
 }
@@ -243,11 +259,11 @@ func (r *EmuPhase1NetPacket) GetFullIntroduction() packets.FullIntroductionReade
 }
 
 func (r *EmuPhase1NetPacket) String() string {
-	prefix := ""
+	suffix := ""
 	if r.isRequest {
-		prefix = "rq"
+		suffix = "rq"
 	}
-	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d", prefix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
+	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d", suffix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
 }
 
 func (r *EmuPhase1NetPacket) GetPacketType() gcp_types.PacketType {
@@ -288,6 +304,30 @@ type EmuPhase2NetPacket struct {
 	neighbourhood []packets.MembershipAnnouncementReader
 }
 
+func (r *EmuPhase2NetPacket) HasFullIntro() bool {
+	return false
+}
+
+func (r *EmuPhase2NetPacket) GetFullIntroduction() packets.FullIntroductionReader {
+	panic("implement me")
+}
+
+func (r *EmuPhase2NetPacket) HasCloudIntro() bool {
+	return false
+}
+
+func (r *EmuPhase2NetPacket) GetCloudIntroduction() packets.CloudIntroductionReader {
+	panic("implement me")
+}
+
+func (r *EmuPhase2NetPacket) HasJoinerSecret() bool {
+	return false
+}
+
+func (r *EmuPhase2NetPacket) GetJoinerSecret() cryptography_containers.SignatureHolder {
+	panic("implement me")
+}
+
 func (r *EmuPhase2NetPacket) GetBriefIntroduction() packets.BriefIntroductionReader {
 	panic("implement me")
 }
@@ -324,6 +364,14 @@ type EmuPhase3NetPacket struct {
 	basePacket
 	pulseNumber pulse_data.PulseNumber
 	vectors     gcp_types.HashedNodeVector
+}
+
+func (r *EmuPhase3NetPacket) GetTrustedExpectedRank() gcp_types.MembershipRank {
+	panic("implement me")
+}
+
+func (r *EmuPhase3NetPacket) GetDoubtedExpectedRank() gcp_types.MembershipRank {
+	panic("implement me")
 }
 
 func (r *EmuPhase3NetPacket) GetTrustedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {

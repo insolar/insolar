@@ -125,7 +125,7 @@ func (p *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProf
 }
 
 func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-	options api.PacketSendOptions) api.PreparedPacketSender {
+	welcome *gcp_types.NodeWelcomePackage, options api.PacketSendOptions) api.PreparedPacketSender {
 
 	packet := p.preparePacket(sender, gcp_types.PacketPhase1)
 	if (options & api.SendWithoutPulseData) == 0 {
@@ -142,7 +142,7 @@ func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProf
 	return p.prepareWrapper(packet)
 }
 
-func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
+func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile, welcome *gcp_types.NodeWelcomePackage,
 	neighbourhood []packets.MembershipAnnouncementReader, options api.PacketSendOptions) api.PreparedPacketSender {
 
 	packet := p.preparePacket(sender, gcp_types.PacketPhase2)
