@@ -82,7 +82,6 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 		for _, qe := range p.msg.Queue {
 			requestCtx := contextFromServiceData(qe.ServiceData)
 			transcript := NewTranscript(requestCtx, qe.RequestRef, qe.Request)
-
 			broker.Prepend(ctx, false, transcript)
 		}
 	}
