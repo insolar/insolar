@@ -38,7 +38,7 @@ var fieldsOrder = []string{
 	zerolog.CallerFieldName,
 }
 
-const defaultCallerSkipFrameCount = 3
+const defaultCallerSkipFrameCount = 4
 
 func formatCaller() zerolog.Formatter {
 	return func(i interface{}) string {
