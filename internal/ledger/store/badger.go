@@ -44,9 +44,7 @@ func NewBadgerDB(dir string) (*BadgerDB, error) {
 		return nil, err
 	}
 
-	ops := badger.DefaultOptions
-	ops.ValueDir = dir
-	ops.Dir = dir
+	ops := badger.DefaultOptions(dir)
 	bdb, err := badger.Open(ops)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open badger")
