@@ -54,7 +54,7 @@ import (
 	"fmt"
 )
 
-type MemberOpMode uint8 //4-bit value
+type MemberOpMode uint8 // 4-bit value
 const (
 	MemberModeBits                                = 4
 	MemberModeFlagRestrictedBehavior MemberOpMode = 4
@@ -122,15 +122,15 @@ func (v MemberOpMode) String() string {
 	}
 }
 
-//type GlobulaNodeState struct {
+// type GlobulaNodeState struct {
 //	NodeStateHash      long_bits.Bits512
 //	PulseDataHash      long_bits.Bits256
 //	LastCloudStateHash long_bits.Bits224 // CSH is 512 and is folded down then high 32 bits are discarded
 //	NodeRank           packets.MembershipRank
-//}
+// }
 //
-//type SignedGlobulaNodeState struct {
+// type SignedGlobulaNodeState struct {
 //	GlobulaNodeState GlobulaNodeState
 //	Signature        long_bits.Bits512
-//}
+// }
 //

@@ -70,7 +70,7 @@ type RealmVectorHelper struct {
 type VectorEntry struct {
 	nodeset.VectorEntryData
 	filterBy uint16
-	//joiner 	 *NodeAppearance
+	// joiner 	 *NodeAppearance
 }
 
 func NewRealmVectorHelper() *RealmVectorHelper {
@@ -82,7 +82,7 @@ func (p *RealmVectorHelper) SetOrUpdateNodes(nodeIndex []*NodeAppearance, joiner
 		return p
 	}
 
-	//TODO rescan and update existing entries for possible reuse of hashing data?
+	// TODO rescan and update existing entries for possible reuse of hashing data?
 	v := NewRealmVectorHelper()
 	v.setNodes(nodeIndex, joinerCount, populationVersion)
 	return v
@@ -175,7 +175,7 @@ func (p *RealmVectorHelper) setNodes(nodeIndex []*NodeAppearance, joinerCountHin
 		}
 
 		if joinerCount >= len(p.joiners) {
-			//got more joiners than expected - it is possible
+			// got more joiners than expected - it is possible
 			p.joiners = append(p.joiners, VectorEntry{})
 			p.poweredSorted = append(p.poweredSorted, sortedEntry{})
 		}
@@ -222,7 +222,7 @@ func (p *VectorEntry) setValues(n *NodeAppearance) *NodeAppearance {
 type sortedEntry struct {
 	id        insolar.ShortNodeID
 	powerRole uint16
-	index     int16 //points to the same for both member and joiner, but joiner has different id in the entryRank
+	index     int16 // points to the same for both member and joiner, but joiner has different id in the entryRank
 }
 
 func (v *sortedEntry) isJoiner() bool {
@@ -239,7 +239,7 @@ func (v *sortedEntry) chooseEntry(indexed, joiners []VectorEntry) (bool, *Vector
 func (v *sortedEntry) setValues(ve *VectorEntry, index int16) {
 	v.id = ve.NodeID
 	v.index = index
-	//role of zero-power nodes is ignored for sorting
+	// role of zero-power nodes is ignored for sorting
 	if ve.RequestedPower == 0 {
 		v.powerRole = 0
 	} else {
@@ -265,7 +265,7 @@ func (c *vectorPowerSorter) Len() int {
 	return len(c.values)
 }
 
-//sorting is REVERSED - it makes the most powerful nodes of a role to be first in the list
+// sorting is REVERSED - it makes the most powerful nodes of a role to be first in the list
 func (c *vectorPowerSorter) Less(i, j int) bool {
 	return c.values[j].lessByPowerRole(c.values[i])
 }

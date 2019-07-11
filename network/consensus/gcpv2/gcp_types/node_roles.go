@@ -50,7 +50,7 @@
 
 package gcp_types
 
-type NodePrimaryRole uint8 //MUST BE 6-bit
+type NodePrimaryRole uint8 // MUST BE 6-bit
 
 const (
 	PrimaryRoleInactive NodePrimaryRole = iota
@@ -58,8 +58,8 @@ const (
 	PrimaryRoleHeavyMaterial
 	PrimaryRoleLightMaterial
 	PrimaryRoleVirtual
-	//PrimaryRoleCascade
-	//PrimaryRoleRecrypt
+	// PrimaryRoleCascade
+	// PrimaryRoleRecrypt
 )
 
 func (v NodePrimaryRole) IsMaterial() bool {

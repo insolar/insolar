@@ -85,7 +85,7 @@ func TestSha3512Digester_GetDigestOf(t *testing.T) {
 	digester := NewSha3512Digester(scheme)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
@@ -154,7 +154,7 @@ func TestECDSADigestSigner_SignDigest(t *testing.T) {
 	verifier := scheme.DigestVerifier(publicKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
@@ -219,7 +219,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature(t *testing.T) {
 	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
@@ -239,7 +239,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature_InvalidMethod(t *testing.
 	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
@@ -268,7 +268,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature(t *testing.T) {
 	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
@@ -278,7 +278,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature(t *testing.T) {
 
 	sig := cryptography_containers.NewSignature(long_bits.NewBits512FromBytes(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign))
 
-	reader.Seek(0, io.SeekStart)
+	_, _ = reader.Seek(0, io.SeekStart)
 	require.True(t, dv.IsValidDataSignature(reader, sig.AsSignatureHolder()))
 }
 
@@ -289,7 +289,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature_InvalidMethod(t *testing.T)
 	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
@@ -299,19 +299,19 @@ func TestECDSASignatureVerifier_IsValidDataSignature_InvalidMethod(t *testing.T)
 
 	bits := long_bits.NewBits512FromBytes(signature.Bytes())
 
-	reader.Seek(0, io.SeekStart)
+	_, _ = reader.Seek(0, io.SeekStart)
 	sig1 := cryptography_containers.NewSignature(bits, SHA3512Digest.SignedBy(SECP256r1Sign))
 	require.True(t, dv.IsValidDataSignature(reader, sig1.AsSignatureHolder()))
 
-	reader.Seek(0, io.SeekStart)
+	_, _ = reader.Seek(0, io.SeekStart)
 	sig2 := cryptography_containers.NewSignature(bits, "SOME DIGEST METHOD")
 	require.False(t, dv.IsValidDataSignature(reader, sig2.AsSignatureHolder()))
 
-	reader.Seek(0, io.SeekStart)
+	_, _ = reader.Seek(0, io.SeekStart)
 	sig3 := cryptography_containers.NewSignature(bits, SHA3512Digest.SignedBy("SOME SIGN METHOD"))
 	require.False(t, dv.IsValidDataSignature(reader, sig3.AsSignatureHolder()))
 
-	reader.Seek(0, io.SeekStart)
+	_, _ = reader.Seek(0, io.SeekStart)
 	sig4 := cryptography_containers.NewSignature(bits, cryptography_containers.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign))
 	require.False(t, dv.IsValidDataSignature(reader, sig4.AsSignatureHolder()))
 }

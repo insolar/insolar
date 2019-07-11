@@ -57,5 +57,5 @@ import (
 type NodeWelcomePackage struct {
 	CloudIdentity      cryptography_containers.DigestHolder
 	LastCloudStateHash cryptography_containers.DigestHolder
-	JoinerSecret       cryptography_containers.SignatureHolder //can be nil
+	JoinerSecret       cryptography_containers.SignatureHolder // can be nil
 }

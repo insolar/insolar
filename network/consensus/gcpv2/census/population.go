@@ -161,7 +161,7 @@ func (c *ManyNodePopulation) makeFullCopyOf(slots []updatableSlot, local *updata
 func (c *ManyNodePopulation) makeCopyOfMapAndSeparateEvicts(slots map[insolar.ShortNodeID]*updatableSlot, local *updatableSlot) []*updatableSlot {
 
 	var evicts []*updatableSlot
-	//TODO HACK - must use vector-based ordering
+	// TODO HACK - must use vector-based ordering
 	slotCount := len(slots)
 	index := make([]*updatableSlot, slotCount)
 	c.slots = make([]updatableSlot, slotCount)

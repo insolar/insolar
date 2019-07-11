@@ -146,12 +146,12 @@ func (r *PhasedRoundController) StartConsensusRound(upstream api.UpstreamPulseCo
 			},
 
 			postponedPacketFn: func(packet packets.PacketParser, from endpoints.HostIdentityHolder) {
-				//There is no real context for delayed reprocessing, so we use the round context
+				// There is no real context for delayed reprocessing, so we use the round context
 				_ = r.handlePacket(r.realm.roundContext, packet, from, true)
 			},
 		}
 
-		//r.prepareCancel will be cancelled through r.fullCancel()
+		// r.prepareCancel will be cancelled through r.fullCancel()
 		ctx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
 
 		r.prepR.start(ctx, preps, 10000 /* Should be excessively enough to avoid lockups */)
@@ -168,7 +168,7 @@ func (r *PhasedRoundController) StopConsensusRound() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	r.prevPulseRound = nil //prevents memory leak
+	r.prevPulseRound = nil // prevents memory leak
 
 	if r.fullCancel == nil || !r.isRunning {
 		return
@@ -305,7 +305,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet packets
 		}
 	}
 
-	//TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+	// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
 	hackIgnoreVerification := !packet.GetPacketType().IsMemberPacket()
 
 	if !preVerified && !hackIgnoreVerification {
@@ -340,19 +340,19 @@ func (r *PhasedRoundController) verifyRoute(ctx context.Context, packet packets.
 
 	tid := packet.GetTargetID()
 	if tid != selfID {
-		//Relaying
+		// Relaying
 		if packet.IsRelayForbidden() {
 			return false, fmt.Errorf("sender doesn't allow relaying for targetID(%v)", tid)
 		}
 
-		//TODO relay support
+		// TODO relay support
 		err := fmt.Errorf("unsupported: relay is required for targetID(%v)", tid)
 		inslogger.FromContext(ctx).Errorf(err.Error())
-		//allow sender to be different from source
+		// allow sender to be different from source
 		return false, err
 	}
 
-	//sender must be source
+	// sender must be source
 	return packet.IsRelayForbidden(), nil
 }
 

@@ -101,7 +101,7 @@ func (h *ConsensusMemberController) Abort() {
 
 func (h *ConsensusMemberController) GetActivePowerLimit() (gcp_types.MemberPower, pulse_data.PulseNumber) {
 	actCensus := h.chronicle.GetActiveCensus()
-	//TODO adjust power by state
+	// TODO adjust power by state
 	return actCensus.GetOnlinePopulation().GetLocalProfile().GetDeclaredPower(), actCensus.GetPulseNumber()
 }
 
@@ -145,7 +145,7 @@ func (h *ConsensusMemberController) _discardRound(terminateMember bool, toBeDisc
 
 	round := h.currentRound
 	if round == nil || toBeDiscarded != nil && toBeDiscarded != round {
-		//This round was already discarded
+		// This round was already discarded
 		return nil
 	}
 	h.isRoundRunning = false
@@ -171,7 +171,7 @@ func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload 
 	round, created, isRunning := h.ensureRound()
 
 	if round == nil {
-		//terminated
+		// terminated
 		return nil, false, fmt.Errorf("member controller is terminated")
 	}
 

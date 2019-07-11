@@ -130,9 +130,9 @@ func (cf *TransportCryptographyFactory) GetDigestFactory() cryptography_containe
 }
 
 func (cf *TransportCryptographyFactory) GetNodeSigner(sks cryptography_containers.SecretKeyStore) cryptography_containers.DigestSigner {
-	isks := sks.(*ECDSASecretKeyStore)
+	ks := sks.(*ECDSASecretKeyStore)
 
-	return NewECDSADigestSigner(isks.privateKey, cf.scheme)
+	return NewECDSADigestSigner(ks.privateKey, cf.scheme)
 }
 
 func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh cryptography_containers.SignatureKeyHolder) cryptography_containers.PublicKeyStore {

@@ -54,9 +54,9 @@ type NodeAnnouncedState struct {
 	StateEvidence     NodeStateHashEvidence
 	AnnounceSignature MemberAnnouncementSignature
 	//
-	//NodeInternalState common.Digest
-	//NodeStateSignature common.Signature
-	//AnnounceSignature *common.Signature
+	// NodeInternalState common.Digest
+	// NodeStateSignature common.Signature
+	// AnnounceSignature *common.Signature
 }
 
 func (p *NodeAnnouncedState) IsEmpty() bool {

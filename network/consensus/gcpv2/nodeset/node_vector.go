@@ -306,22 +306,22 @@ func (p *NodeVectorHelper) GetNodeBitset() gcp_types.NodeBitset {
 	return p.bitset
 }
 
-//type vectorSubFilter uint8
+// type vectorSubFilter uint8
 //
-//func (v vectorSubFilter) CanApply(filter NodeBitsetEntry) bool {
+// func (v vectorSubFilter) CanApply(filter NodeBitsetEntry) bool {
 //
-//}
+// }
 //
-//type vectorBuilder struct {
+// type vectorBuilder struct {
 //	empty common2.SequenceDigester
 //	inclusive bool
 //	filters [2]vectorSubFilter
 //	vectors [2]common2.SequenceDigester
 //	extractor func(nodeData VectorEntryData) common2.DigestHolder
 //
-//}
+// }
 //
-//func (p *vectorBuilder) applyExclusive(nodeData VectorEntryData, filter NodeBitsetEntry) {
+// func (p *vectorBuilder) applyExclusive(nodeData VectorEntryData, filter NodeBitsetEntry) {
 //	value := p.extractor(nodeData)
 //	prev := false
 //
@@ -336,9 +336,9 @@ func (p *NodeVectorHelper) GetNodeBitset() gcp_types.NodeBitset {
 //	if p.required[1] {
 //
 //	}
-//}
+// }
 //
-//func (p *NodeVectorHelper) buildHashes() (common.GlobulaAnnouncementHash, common.GlobulaAnnouncementHash) {
+// func (p *NodeVectorHelper) buildHashes() (common.GlobulaAnnouncementHash, common.GlobulaAnnouncementHash) {
 //	/*
 //		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always
 //		have trust level set high enough to get bitset[i].IsTrusted() == true
@@ -373,4 +373,4 @@ func (p *NodeVectorHelper) GetNodeBitset() gcp_types.NodeBitset {
 //		return trustedResult, aggDoubted.FinishSequence().AsDigestHolder()
 //	}
 //	return trustedResult, trustedResult
-//}
+// }

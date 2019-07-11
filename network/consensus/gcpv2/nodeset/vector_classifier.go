@@ -117,14 +117,14 @@ func verifyVectorHashes(selfData LocalHashedNodeVector, otherData gcp_types.Hash
 	doubtedPart := initVerify(otherData.DoubtedAnnouncementVector != nil)
 
 	if !trustedPart.IsNeeded() {
-		//Trusted is always present as there is always at least one node - the sender
+		// Trusted is always present as there is always at least one node - the sender
 		panic("illegal state")
 	}
 	if doubtedPart.IsNeeded() && selfData.DoubtedAnnouncementVector == nil {
-		//special case when all our nodes are in trusted, so other's doubted vector will be matched with the trusted one of ours
+		// special case when all our nodes are in trusted, so other's doubted vector will be matched with the trusted one of ours
 		selfData.DoubtedAnnouncementVector = selfData.TrustedAnnouncementVector
 		selfData.DoubtedGlobulaStateVector = selfData.TrustedGlobulaStateVector
-		//selfData.DoubtedGlobulaStateVectorSignature = selfData.TrustedGlobulaStateVectorSignature
+		// selfData.DoubtedGlobulaStateVectorSignature = selfData.TrustedGlobulaStateVectorSignature
 	}
 
 	if sr.HasValues(NodeBitMissingHere) {
@@ -176,7 +176,7 @@ func verifyVectorHashes(selfData LocalHashedNodeVector, otherData gcp_types.Hash
 		panic("illegal state")
 	case trustedPart == verifyRecalc || doubtedPart == verifyRecalc:
 
-		//It does remap the original bitset with the given stats
+		// It does remap the original bitset with the given stats
 		derivedVector.PrepareDerivedVector(sr)
 
 		gahTrusted, gahDoubted = derivedVector.BuildGlobulaAnnouncementHashes(

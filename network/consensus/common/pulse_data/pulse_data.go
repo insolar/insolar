@@ -156,7 +156,7 @@ func newEphemeralData(pn PulseNumber) *PulseData {
 	return &s
 }
 
-/* This function has a fixed implementation and MUST remain unchanged as some elements of Consesnsus rely on identical behavior of this functions. */
+/* This function has a fixed implementation and MUST remain unchanged as some elements of Consensus rely on identical behavior of this functions. */
 func fixedPulseEntropy(v *long_bits.Bits256, pn PulseNumber) {
 
 	long_bits.FillBitsWithStaticNoise(uint32(pn), (*v)[:])

@@ -171,7 +171,7 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
 	// c.R.StopRoundByTimeout()
 
-	//avoid any links to controllers for this flusher
+	// avoid any links to controllers for this flusher
 	go workerQueueFlusher(ctxRound, c.queuePh3Recv, c.queueTrustUpdated)
 }
 
@@ -228,7 +228,7 @@ outer:
 			break outer
 		case sig := <-c.queueTrustUpdated:
 			if sig.IsPingSignal() { // ping indicates arrival of Phase2 packet, to support chasing
-				//TODO chasing
+				// TODO chasing
 				break
 			}
 			switch {
@@ -325,7 +325,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData gcp_ty
 			return np.GetProfile(), 0
 		})
 
-	//TODO send to shuffled joiners as well?
+	// TODO send to shuffled joiners as well?
 }
 
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodeset.LocalHashedNodeVector,
@@ -346,7 +346,7 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodese
 	// even if we wont have all NSH, we can let to know these nodes on such collision
 	// bitsetMatcher := make(map[gcpv2.NodeBitset])
 
-	//hasher := nodeset.NewFilteredSequenceHasher(c.R.GetDigestFactory(), localVector)
+	// hasher := nodeset.NewFilteredSequenceHasher(c.R.GetDigestFactory(), localVector)
 
 	alteredDoubtedGshCount := 0
 	var consensusSelection ConsensusSelection
@@ -455,7 +455,7 @@ outer:
 
 	b := c.R.CreateNextCensusBuilder()
 	if c.buildNextPopulation(b.GetPopulationBuilder(), selectionSet) {
-		//TODO HACK
+		// TODO HACK
 		priming := c.R.GetPrimingCloudHash()
 		b.SetGlobulaStateHash(priming)
 		b.SealCensus()
@@ -469,32 +469,32 @@ outer:
 
 func (c *Phase3Controller) buildNextPopulation(pb api.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
 
-	//pop := c.R.GetPopulation()
-	//count := 0
-	//for _, na := pop.GetIndexedNodes() {
+	// pop := c.R.GetPopulation()
+	// count := 0
+	// for _, na := pop.GetIndexedNodes() {
 	//
-	//}
+	// }
 	//
-	//for
+	// for
 	//
-	//if isLeaver, leaveReason, _, _, _ := c.R.GetSelf().GetRequestedState(); isLeaver {
+	// if isLeaver, leaveReason, _, _, _ := c.R.GetSelf().GetRequestedState(); isLeaver {
 	//	//we are leaving, no need to build population, but lets make it look nice
 	//	pb.RemoveOthers()
 	//	lp := pb.GetLocalProfile()
 	//	lp.SetIndex(0)
 	//	lp.SetOpModeAndLeaveReason(leaveReason)
 	//	return false
-	//}
+	// }
 	//
 	//
-	////if pb.GetLocalProfile().GetOpMode().IsEvicted() /* TODO and local is still evicted */ {
-	////	//this node was evicted, so we can have a consensus with ourselves
-	////	pb.RemoveOthers()
-	////	return
-	////}
+	// //if pb.GetLocalProfile().GetOpMode().IsEvicted() /* TODO and local is still evicted */ {
+	// //	//this node was evicted, so we can have a consensus with ourselves
+	// //	pb.RemoveOthers()
+	// //	return
+	// //}
 	//
-	//pop := c.R.GetPopulation()
-	//for _, np := range pb.GetUnorderedProfiles() {
+	// pop := c.R.GetPopulation()
+	// for _, np := range pb.GetUnorderedProfiles() {
 	//	opm := np.GetOpMode()
 	//	if np.IsJoiner() || opm.IsEvicted() { panic("illegal state") }
 	//
@@ -507,6 +507,6 @@ func (c *Phase3Controller) buildNextPopulation(pb api.PopulationBuilder, nodeset
 	//	if isLeaver {
 	//		np.SetOpMode(common2.MemberModeEvictedGracefully)
 	//	}
-	//}
+	// }
 	return true
 }

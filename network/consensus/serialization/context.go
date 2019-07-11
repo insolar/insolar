@@ -167,7 +167,7 @@ type serializeContext struct {
 }
 
 func newSerializeContext(ctx packetContext, writer *trackableWriter, digester cryptography_containers.DataDigester, signer cryptography_containers.DigestSigner, callback serializeSetter) *serializeContext {
-	sctx := &serializeContext{
+	serializeCtx := &serializeContext{
 		packetContext:        ctx,
 		PacketHeaderModifier: ctx.header,
 
@@ -177,11 +177,11 @@ func newSerializeContext(ctx packetContext, writer *trackableWriter, digester cr
 		setter:   callback,
 	}
 
-	sctx.bodyBuffer = bytes.NewBuffer(sctx.buf1[0:0:packetMaxSize])
-	sctx.bodyTracker = newTrackableWriter(sctx.bodyBuffer)
-	sctx.packetBuffer = bytes.NewBuffer(sctx.buf2[0:0:packetMaxSize])
+	serializeCtx.bodyBuffer = bytes.NewBuffer(serializeCtx.buf1[0:0:packetMaxSize])
+	serializeCtx.bodyTracker = newTrackableWriter(serializeCtx.bodyBuffer)
+	serializeCtx.packetBuffer = bytes.NewBuffer(serializeCtx.buf2[0:0:packetMaxSize])
 
-	return sctx
+	return serializeCtx
 }
 
 func (ctx *serializeContext) Write(p []byte) (int, error) {
@@ -201,7 +201,7 @@ func (ctx *serializeContext) Finalize() (int64, error) {
 	}
 	ctx.setter.setPayloadLength(uint16(payloadLength))
 
-	// TODO: receiverid =0
+	// TODO: make receiver id = 0 when generate signature
 	if err := ctx.header.SerializeTo(ctx, ctx.packetBuffer); err != nil {
 		return totalWrite, ErrMalformedHeader(err)
 	}
@@ -221,7 +221,7 @@ func (ctx *serializeContext) Finalize() (int64, error) {
 	}
 
 	if totalWrite, err = ctx.packetBuffer.WriteTo(ctx.writer); totalWrite != payloadLength {
-		return totalWrite, ErrPayloadLengthMissmatch(payloadLength, totalWrite)
+		return totalWrite, ErrPayloadLengthMismatch(payloadLength, totalWrite)
 	}
 
 	return totalWrite, err
@@ -235,13 +235,13 @@ type deserializeContext struct {
 }
 
 func newDeserializeContext(ctx packetContext, reader *trackableReader, callback deserializeGetter) *deserializeContext {
-	dctx := &deserializeContext{
+	deserializeCtx := &deserializeContext{
 		packetContext: ctx,
 
 		reader: reader,
 		getter: callback,
 	}
-	return dctx
+	return deserializeCtx
 }
 
 func (ctx *deserializeContext) Read(p []byte) (int, error) {
@@ -250,7 +250,7 @@ func (ctx *deserializeContext) Read(p []byte) (int, error) {
 
 func (ctx *deserializeContext) Finalize() (int64, error) {
 	if payloadLength := int64(ctx.getter.getPayloadLength()); payloadLength != ctx.reader.totalRead {
-		return ctx.reader.totalRead, ErrPayloadLengthMissmatch(payloadLength, ctx.reader.totalRead)
+		return ctx.reader.totalRead, ErrPayloadLengthMismatch(payloadLength, ctx.reader.totalRead)
 	}
 
 	return ctx.reader.totalRead, nil

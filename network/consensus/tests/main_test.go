@@ -85,15 +85,15 @@ func TestConsensusMain(t *testing.T) {
 	nodes := NewEmuNodeIntros(generateNameList(0, 1, 3, 5)...)
 
 	strategyFactory := &EmuRoundStrategyFactory{}
-	candidateFeeder := &core.SequencialCandidateFeeder{}
+	candidateFeeder := &core.SequentialCandidateFeeder{}
 
 	for i, n := range nodes {
 		chronicles := NewEmuChronicles(nodes, i, &primingCloudStateHash)
 		node := NewConsensusHost(n.GetDefaultEndpoint().GetNameAddress())
 		controlFeeder := &EmuControlFeeder{}
-		//if i % 5 == 2 {
+		// if i % 5 == 2 {
 		//	controlFeeder.leaveReason = uint32(i) //simulate leave
-		//}
+		// }
 		node.ConnectTo(chronicles, network, strategyFactory, candidateFeeder, controlFeeder, config)
 	}
 

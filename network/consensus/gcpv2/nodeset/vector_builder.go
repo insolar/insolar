@@ -67,8 +67,8 @@ type VectorEntryData struct {
 	TrustLevel     gcp_types.NodeTrustLevel
 	Mode           gcp_types.MemberOpMode
 
-	//Node *NodeAppearance
-	//common.MembershipAnnouncement
+	// Node *NodeAppearance
+	// common.MembershipAnnouncement
 	gcp_types.NodeAnnouncedState
 }
 
