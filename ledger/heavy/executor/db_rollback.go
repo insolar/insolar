@@ -20,42 +20,54 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.headTruncater -o ./ -s _gen_mock.go
 type headTruncater interface {
-	TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error
+	TruncateHead(ctx context.Context, from insolar.PulseNumber) error
 }
 
 // DBRollback is used for rollback all data which is not finalized
 // It removes all data which was added after pulse which we consider as finalized
 type DBRollback struct {
-	dbs       []headTruncater
-	jetKeeper JetKeeper
+	dbs             []headTruncater
+	jetKeeper       JetKeeper
+	pulseCalculator pulse.Calculator
 }
 
-func NewDBRollback(jetKeeper JetKeeper, dbs ...headTruncater) *DBRollback {
+func NewDBRollback(jetKeeper JetKeeper, pulseCalculator pulse.Calculator, dbs ...headTruncater) *DBRollback {
 
 	return &DBRollback{
-		jetKeeper: jetKeeper,
-		dbs:       dbs,
+		jetKeeper:       jetKeeper,
+		dbs:             dbs,
+		pulseCalculator: pulseCalculator,
 	}
 }
 
 func (d *DBRollback) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-	pn := d.jetKeeper.TopSyncPulse()
+	lastSincPulseNumber := d.jetKeeper.TopSyncPulse()
 
-	logger.Debug("[ DBRollback.Start ] last finalized pulse number: ", pn)
-	if pn == insolar.GenesisPulse.PulseNumber {
+	logger.Debug("[ DBRollback.Start ] last finalized pulse number: ", lastSincPulseNumber)
+	if lastSincPulseNumber == insolar.GenesisPulse.PulseNumber {
 		logger.Debug("[ DBRollback.Start ] No finalized data. Nothing done")
 		return nil
 	}
 
+	pn, err := d.pulseCalculator.Forwards(ctx, lastSincPulseNumber, 1)
+	if err != nil {
+		if err == pulse.ErrNotFound {
+			inslogger.FromContext(ctx).Debug("No pulse after: ", lastSincPulseNumber, ". Nothing done.")
+			return nil
+		}
+		return errors.Wrap(err, "pulseCalculator.Forwards returns error")
+	}
+
 	for idx, db := range d.dbs {
-		err := db.TruncateHead(ctx, pn)
+		err := db.TruncateHead(ctx, pn.PulseNumber)
 		if err != nil {
 			return errors.Wrapf(err, "can't truncate %d db to pulse: %d", idx, pn)
 		}

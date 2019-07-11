@@ -95,19 +95,16 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket F
 }
 
 // TruncateHead remove all records after lastPulse
-func (i *IndexDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
+func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	it := i.db.NewIterator(&indexKey{objID: insolar.ID{}, pn: lastPulse}, false)
+	it := i.db.NewIterator(&indexKey{objID: insolar.ID{}, pn: from}, false)
 	defer it.Close()
 
-	if !it.Next() {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", lastPulse.String())
-		return nil
-	}
-
+	var hasKeys bool
 	for it.Next() {
+		hasKeys = true
 		key := newIndexKey(it.Key())
 		err := i.db.Delete(&key)
 		if err != nil {
@@ -116,6 +113,11 @@ func (i *IndexDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumbe
 
 		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. ObjectID: %s", key.pn.String(), key.objID.String())
 	}
+
+	if !hasKeys {
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
+	}
+
 	return nil
 }
 

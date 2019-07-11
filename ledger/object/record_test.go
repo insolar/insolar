@@ -75,7 +75,11 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 		pulse := startPulseNumber + insolar.PulseNumber(idx)
 		ids[idx] = *insolar.NewID(pulse, []byte(testutils.RandomString()))
 
-		recordStore.Set(ctx, ids[idx], record.Material{})
+		recordStore.Set(ctx, ids[idx], record.Material{JetID: *insolar.NewJetID(uint8(idx), nil)})
+
+		for i := 0; i < 5; i++ {
+			recordStore.Set(ctx, ids[idx], record.Material{JetID: *insolar.NewJetID(uint8(i), nil)})
+		}
 
 		require.NoError(t, err)
 	}
@@ -86,7 +90,7 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 	}
 
 	numLeftElements := numElements / 2
-	err = recordStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements-1))
+	err = recordStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
 	require.NoError(t, err)
 
 	for i := 0; i < numLeftElements; i++ {

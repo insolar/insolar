@@ -205,19 +205,16 @@ func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec record.Material) 
 }
 
 // TruncateHead remove all records after lastPulse
-func (r *RecordDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
+func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	it := r.db.NewIterator(recordKey(*insolar.NewID(lastPulse, nil)), false)
+	it := r.db.NewIterator(recordKey(*insolar.NewID(from, nil)), false)
 	defer it.Close()
 
-	if !it.Next() {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", lastPulse.String())
-		return nil
-	}
-
+	var hasKeys bool
 	for it.Next() {
+		hasKeys = true
 		key := newRecordKey(it.Key())
 		keyID := insolar.ID(key)
 		err := r.db.Delete(&key)
@@ -227,6 +224,11 @@ func (r *RecordDB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumb
 
 		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s. ID: %s", keyID.Pulse().String(), keyID.String())
 	}
+
+	if !hasKeys {
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
+	}
+
 	return nil
 }
 

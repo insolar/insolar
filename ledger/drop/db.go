@@ -87,15 +87,13 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 }
 
 // TruncateHead remove all records after lastPulse
-func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
-	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: lastPulse}, false)
+func (ds *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: from}, false)
 	defer it.Close()
 
-	if !it.Next() {
-		return errors.New("No required pulse: " + lastPulse.String())
-	}
-
+	var hasKeys bool
 	for it.Next() {
+		hasKeys = true
 		key := newDropDbKey(it.Key())
 		err := ds.db.Delete(&key)
 		if err != nil {
@@ -103,6 +101,9 @@ func (ds *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) e
 		}
 
 		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
+	}
+	if !hasKeys {
+		return errors.New("No required pulse: " + from.String())
 	}
 
 	return nil

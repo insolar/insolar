@@ -80,6 +80,14 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 
 		bucket.ObjID = objects[idx]
 		indexStore.SetIndex(ctx, pulse, bucket)
+
+		for i := 0; i < 5; i++ {
+			bucket := FilamentIndex{}
+
+			bucket.ObjID = gen.ID()
+			indexStore.SetIndex(ctx, pulse, bucket)
+		}
+
 		require.NoError(t, err)
 	}
 
@@ -89,7 +97,7 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 	}
 
 	numLeftElements := numElements / 2
-	err = indexStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements-1))
+	err = indexStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
 	require.NoError(t, err)
 
 	for i := 0; i < numLeftElements; i++ {

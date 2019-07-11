@@ -115,6 +115,12 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 		drop.JetID = jets[idx]
 		err := dropStore.Set(ctx, drop)
 		require.NoError(t, err)
+
+		for i := 0; i < 3; i++ {
+			drop.JetID = gen.JetID()
+			err = dropStore.Set(ctx, drop)
+			require.NoError(t, err)
+		}
 	}
 
 	for i := 0; i < numElements; i++ {
@@ -123,7 +129,7 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 	}
 
 	numLeftElements := numElements / 2
-	err = dropStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements-1))
+	err = dropStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
 	require.NoError(t, err)
 
 	for i := 0; i < numLeftElements; i++ {
@@ -133,8 +139,9 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 	}
 
 	for i := numElements - 1; i >= numLeftElements; i-- {
-		_, err := dropStore.ForPulse(ctx, jets[i], startPulseNumber+insolar.PulseNumber(i))
-		require.EqualError(t, err, ErrNotFound.Error())
+		p := startPulseNumber + insolar.PulseNumber(i)
+		_, err := dropStore.ForPulse(ctx, jets[i], p)
+		require.EqualError(t, err, ErrNotFound.Error(), "Pulse: ", p.String())
 	}
 }
 

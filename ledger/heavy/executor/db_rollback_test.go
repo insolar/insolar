@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -35,18 +36,73 @@ func TestDBRollback_HasOnlyGenesisPulse(t *testing.T) {
 		return insolar.GenesisPulse.PulseNumber
 	}
 
-	rollback := NewDBRollback(jetKeeper, nil, nil, nil, nil, nil)
+	rollback := NewDBRollback(jetKeeper, nil, nil)
 	err := rollback.Start(context.Background())
 	require.NoError(t, err)
 }
 
+func TestDBRollback_CalculatorReturnError(t *testing.T) {
+	jetKeeper := NewJetKeeperMock(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 1
+	jetKeeper.TopSyncPulseFunc = func() (r insolar.PulseNumber) {
+		return testPulse
+	}
+	calculator := pulse.NewCalculatorMock(t)
+	testError := errors.New("Hello")
+	calculator.ForwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
+		return *insolar.GenesisPulse, testError
+	}
+
+	rollback := NewDBRollback(jetKeeper, calculator, nil)
+	err := rollback.Start(context.Background())
+	require.Contains(t, err.Error(), testError.Error(), err)
+}
+
+func TestDBRollback_NoNextPulse(t *testing.T) {
+	jetKeeper := NewJetKeeperMock(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 1
+	jetKeeper.TopSyncPulseFunc = func() (r insolar.PulseNumber) {
+		return testPulse
+	}
+	calculator := pulse.NewCalculatorMock(t)
+	calculator.ForwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
+		return *insolar.GenesisPulse, pulse.ErrNotFound
+	}
+
+	rollback := NewDBRollback(jetKeeper, calculator, nil)
+	err := rollback.Start(context.Background())
+	require.NoError(t, err)
+}
+
+func TestDBRollback_TruncateReturnError(t *testing.T) {
+	jetKeeper := NewJetKeeperMock(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 1
+	jetKeeper.TopSyncPulseFunc = func() (r insolar.PulseNumber) {
+		return testPulse
+	}
+
+	calculator := pulse.NewCalculatorMock(t)
+	calculator.ForwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
+		return insolar.Pulse{PulseNumber: p1 + 1}, nil
+	}
+
+	testError := errors.New("Hello")
+	drops := NewdropTruncaterMock(t)
+	drops.TruncateHeadMock.Return(testError)
+	rollback := NewDBRollback(jetKeeper, calculator, drops)
+	err := rollback.Start(context.Background())
+	require.Contains(t, err.Error(), testError.Error(), err)
+}
+
 func TestDBRollback_HappyPath(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 1
 	jetKeeper.TopSyncPulseFunc = func() (r insolar.PulseNumber) {
-		return insolar.GenesisPulse.PulseNumber + 1
+		return testPulse
 	}
 	db := store.NewDBMock(t)
 	hits := make(map[store.Scope]int)
+	db.SetMock.Return(nil)
 
 	db.DeleteMock.Return(nil)
 	iterNum := 0
@@ -71,7 +127,12 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	jets := jet.NewDBStore(db)
 	pulses := pulse.NewDB(db)
 
-	rollback := NewDBRollback(jetKeeper, drops, records, indexes, jets, pulses)
+	calculator := pulse.NewCalculatorMock(t)
+	calculator.ForwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
+		return insolar.Pulse{PulseNumber: p1 + 1}, nil
+	}
+
+	rollback := NewDBRollback(jetKeeper, calculator, drops, records, indexes, jets, pulses)
 	err := rollback.Start(context.Background())
 	require.Len(t, hits, 5) // drops, record, jets, indexes, pulses
 	expectedScopes := []struct {

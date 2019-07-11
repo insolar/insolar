@@ -53,19 +53,16 @@ func (s *DBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID
 }
 
 // TruncateHead remove all records after lastPulse
-func (s *DBStore) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
+func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	s.Lock()
 	defer s.Unlock()
 
-	it := s.db.NewIterator(pulseKey(lastPulse), false)
+	it := s.db.NewIterator(pulseKey(from), false)
 	defer it.Close()
 
-	if !it.Next() {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", lastPulse.String())
-		return nil
-	}
-
+	var hasKeys bool
 	for it.Next() {
+		hasKeys = true
 		key := newPulseKey(it.Key())
 		err := s.db.Delete(&key)
 		if err != nil {
@@ -74,6 +71,11 @@ func (s *DBStore) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumbe
 
 		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
 	}
+
+	if !hasKeys {
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
+	}
+
 	return nil
 }
 

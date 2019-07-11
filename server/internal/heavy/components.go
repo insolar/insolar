@@ -235,7 +235,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
 		jetKeeper := executor.NewJetKeeper(jets, DB)
-		c.rollback = executor.NewDBRollback(jetKeeper, drops, records, indexes, jets, Pulses)
+		c.rollback = executor.NewDBRollback(jetKeeper, Pulses, drops, records, indexes, jets, Pulses)
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus

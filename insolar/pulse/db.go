@@ -86,15 +86,13 @@ func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 }
 
 // TruncateHead remove all records after lastPulse
-func (s *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) error {
-	it := s.db.NewIterator(pulseKey(lastPulse), false)
+func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	it := s.db.NewIterator(pulseKey(from), false)
 	defer it.Close()
 
-	if !it.Next() {
-		return errors.New("No required pulse: " + lastPulse.String())
-	}
-
+	var hasKeys bool
 	for it.Next() {
+		hasKeys = true
 		key := newPulseKey(it.Key())
 		err := s.db.Delete(&key)
 		if err != nil {
@@ -103,6 +101,10 @@ func (s *DB) TruncateHead(ctx context.Context, lastPulse insolar.PulseNumber) er
 
 		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
 	}
+	if !hasKeys {
+		return errors.New("No required pulse: " + from.String())
+	}
+
 	return nil
 }
 

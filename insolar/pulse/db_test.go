@@ -89,7 +89,7 @@ func TestDBStore_TruncateHead(t *testing.T) {
 	}
 
 	numLeftElements := numElements / 2
-	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements-1))
+	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
 	require.NoError(t, err)
 
 	for i := 0; i < numLeftElements; i++ {
