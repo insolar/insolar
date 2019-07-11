@@ -52,8 +52,9 @@ package hostnetwork
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/utils"
 	"io"
+
+	"github.com/insolar/insolar/network/utils"
 
 	"github.com/pkg/errors"
 
@@ -94,7 +95,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 		for {
 			select {
 			case <-ctx.Done():
-				// utils.CloseVerbose(reader)
+				utils.CloseVerbose(reader)
 				return
 			default:
 			}

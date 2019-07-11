@@ -176,7 +176,9 @@ func newHostSuite(t *testing.T) *hostSuite {
 	cm1.Inject(f1, n1, resolver)
 
 	cm2 := component.NewManager(nil)
-	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	cfg2 := configuration.NewHostNetwork().Transport
+	// cfg2.Address = "127.0.0.1:8087"
+	f2 := transport.NewFactory(cfg2)
 	n2, err := NewHostNetwork(id2)
 	require.NoError(t, err)
 	cm2.Inject(f2, n2, resolver)
