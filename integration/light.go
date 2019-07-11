@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"crypto"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -13,9 +14,11 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
@@ -29,15 +32,15 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/messagebus"
-	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
 type LightServer struct {
 	pm      insolar.PulseManager
-	pubsub  *pubSub
+	network *networkMock
 	handler message.HandlerFunc
+	pulse   insolar.Pulse
 }
 
 func DefaultLightConfig() configuration.Configuration {
@@ -76,11 +79,10 @@ func NewLightServer(ctx context.Context, cfg configuration.Configuration) (*Ligh
 
 	// Network.
 	var (
-		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    insolar.NodeNetwork
+		NodeNetwork insolar.NodeNetwork
 	)
 	{
-
+		NodeNetwork = newNodeNetMock()
 	}
 
 	// Role calculations.
@@ -102,6 +104,7 @@ func NewLightServer(ctx context.Context, cfg configuration.Configuration) (*Ligh
 		c.NodeNet = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
+		c.NodeNet = NodeNetwork
 
 		Coordinator = c
 	}
@@ -217,15 +220,21 @@ func NewLightServer(ctx context.Context, cfg configuration.Configuration) (*Ligh
 		pm.PulseAppender = Pulses
 		pm.ActiveListSwapper = &stub{}
 		pm.GIL = &stub{}
-		pm.NodeNet = &stub{}
+		pm.NodeNet = NodeNetwork
 
 		PulseManager = pm
 		Handler = handler
 	}
 
-	startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.FlowDispatcher.Process)
+	netMock := newNetworkMock(Handler.FlowDispatcher.Process, NodeNetwork.GetOrigin().ID())
+	startWatermill(ctx, logger, pubSub, WmBus, netMock.Handle, Handler.FlowDispatcher.Process)
 
-	return &LightServer{pm: PulseManager, handler: Handler.FlowDispatcher.Process}, nil
+	s := &LightServer{
+		pm:      PulseManager,
+		handler: Handler.FlowDispatcher.Process,
+		pulse:   *insolar.GenesisPulse,
+	}
+	return s, nil
 }
 
 func startWatermill(
@@ -276,8 +285,11 @@ func startRouter(ctx context.Context, router *message.Router) {
 	<-router.Running()
 }
 
-func (s *LightServer) Pulse(ctx context.Context, pulse insolar.Pulse) error {
-	return s.pm.Set(ctx, pulse)
+func (s *LightServer) Pulse(ctx context.Context) error {
+	s.pulse = insolar.Pulse{
+		PulseNumber: s.pulse.PulseNumber + 10,
+	}
+	return s.pm.Set(ctx, s.pulse)
 }
 
 func (s *LightServer) Send(msg *message.Message) error {
@@ -286,53 +298,127 @@ func (s *LightServer) Send(msg *message.Message) error {
 }
 
 func (s *LightServer) Receive(h func(*message.Message)) {
-	s.pubsub.outHandler = h
+	s.network.outHandler = h
 }
 
-type pubSub struct {
+type networkMock struct {
 	outHandler func(*message.Message)
+	inHandler  message.HandlerFunc
+	me         insolar.Reference
 }
 
-func (p *pubSub) Publish(topic string, messages ...*message.Message) error {
-	if topic == bus.TopicOutgoing {
-		for _, m := range messages {
-			p.outHandler(m)
-		}
+func newNetworkMock(in message.HandlerFunc, me insolar.Reference) *networkMock {
+	return &networkMock{inHandler: in, me: me}
+}
+
+func (p *networkMock) Handle(msg *message.Message) ([]*message.Message, error) {
+	if p.outHandler != nil {
+		p.outHandler(msg)
 	}
-	return nil
+
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to unmarshal message"))
+	}
+	if meta.Receiver != p.me {
+		return nil, nil
+	}
+
+	return p.inHandler(msg)
 }
 
-func (p *pubSub) Subscribe(ctx context.Context, topic string) (<-chan *message.Message, error) {
+type nodeMock struct {
+	ref  insolar.Reference
+	role insolar.StaticRole
+}
+
+func (n *nodeMock) ID() insolar.Reference {
+	return n.ref
+}
+
+func (n *nodeMock) ShortID() insolar.ShortNodeID {
 	panic("implement me")
 }
 
-func (p *pubSub) Close() error {
-	return nil
+func (n *nodeMock) Role() insolar.StaticRole {
+	return n.role
+}
+
+func (n *nodeMock) PublicKey() crypto.PublicKey {
+	panic("implement me")
+}
+
+func (n *nodeMock) Address() string {
+	panic("implement me")
+}
+
+func (n *nodeMock) GetGlobuleID() insolar.GlobuleID {
+	panic("implement me")
+}
+
+func (n *nodeMock) Version() string {
+	panic("implement me")
+}
+
+func (n *nodeMock) LeavingETA() insolar.PulseNumber {
+	panic("implement me")
+}
+
+func (n *nodeMock) GetState() insolar.NodeState {
+	panic("implement me")
+}
+
+type nodeNetMock struct {
+	nodes []insolar.NetworkNode
+}
+
+func newNodeNetMock() *nodeNetMock {
+	return &nodeNetMock{nodes: []insolar.NetworkNode{
+		&nodeMock{
+			ref:  gen.Reference(),
+			role: insolar.StaticRoleHeavyMaterial,
+		},
+		&nodeMock{
+			ref:  gen.Reference(),
+			role: insolar.StaticRoleVirtual,
+		},
+		&nodeMock{
+			ref:  gen.Reference(),
+			role: insolar.StaticRoleLightMaterial,
+		},
+		&nodeMock{
+			ref:  gen.Reference(),
+			role: insolar.StaticRoleVirtual,
+		},
+		&nodeMock{
+			ref:  gen.Reference(),
+			role: insolar.StaticRoleLightMaterial,
+		},
+	}}
+}
+
+func (n *nodeNetMock) GetOrigin() insolar.NetworkNode {
+	return n.nodes[2]
+}
+
+func (n *nodeNetMock) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
+	panic("implement me")
+}
+
+func (n *nodeNetMock) GetWorkingNodes() []insolar.NetworkNode {
+	return n.nodes
+}
+
+func (n *nodeNetMock) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
+	panic("implement me")
 }
 
 type stub struct{}
 
-func (*stub) GetOrigin() insolar.NetworkNode {
-	panic("implement me")
-}
+func (*stub) Acquire(ctx context.Context) {}
 
-func (*stub) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
-	panic("implement me")
-}
-
-func (*stub) GetWorkingNodes() []insolar.NetworkNode {
-	return []insolar.NetworkNode{}
-}
-
-func (*stub) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
-	panic("implement me")
-}
-
-func (*stub) Acquire(ctx context.Context) {
-}
-
-func (*stub) Release(ctx context.Context) {
-}
+func (*stub) Release(ctx context.Context) {}
 
 func (*stub) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
 	return nil
