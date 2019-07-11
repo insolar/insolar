@@ -63,21 +63,11 @@ type PulsarPacketBody struct {
 }
 
 func (b *PulsarPacketBody) SerializeTo(_ SerializeContext, writer io.Writer) error {
-	if err := write(writer, b.PulseDataExt); err != nil {
-		return err
-	}
-
 	// TODO: proofs
-
-	return nil
+	return write(writer, b.PulseDataExt)
 }
 
 func (b *PulsarPacketBody) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
-	if err := read(reader, &b.PulseDataExt); err != nil {
-		return err
-	}
-
 	// TODO: proofs
-
-	return nil
+	return read(reader, &b.PulseDataExt)
 }

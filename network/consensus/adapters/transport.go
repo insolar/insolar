@@ -52,19 +52,12 @@ package adapters
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/transport"
 )
-
-type PacketBuilder struct{}
-
-func NewPacketBuilder() *PacketBuilder {
-	return &PacketBuilder{}
-}
 
 type PacketSender struct {
 	datagramTransport transport.DatagramTransport

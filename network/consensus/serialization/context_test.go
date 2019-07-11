@@ -51,49 +51,70 @@
 package serialization
 
 import (
-	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"testing"
 
-	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
 
-var signer = func() *adapters.ECDSADataSigner {
-	processor := platformpolicy.NewKeyProcessor()
-	key, _ := processor.GeneratePrivateKey()
-	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	signer := adapters.NewECDSADataSigner(
-		adapters.NewSha3512Digester(scheme),
-		adapters.NewECDSADigestSigner(key.(*ecdsa.PrivateKey), scheme),
-	)
-	return signer
-}()
+func TestPacketContext_InContext(t *testing.T) {
+	ctx := newPacketContext(context.Background(), nil)
 
-func TestGlobulaConsensusProtocolV2Packet_SerializeTo(t *testing.T) {
-	packet1 := Packet{
-		Header: Header{
-			SourceID:   123,
-			TargetID:   456,
-			ReceiverID: 789,
-		},
-		EncryptableBody: &GlobulaConsensusPacketBody{},
-	}
+	require.True(t, ctx.InContext(NoContext))
+	require.False(t, ctx.InContext(ContextMembershipAnnouncement))
+	require.False(t, ctx.InContext(ContextNeighbourAnnouncement))
 
-	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	s, err := packet1.SerializeTo(context.Background(), buf, signer)
-	require.NoError(t, err)
-	require.EqualValues(t, 84, s)
+	ctx.fieldContext = ContextMembershipAnnouncement
+	require.True(t, ctx.InContext(ContextMembershipAnnouncement))
 
-	packet2 := Packet{
-		EncryptableBody: &GlobulaConsensusPacketBody{},
-	}
+	ctx.fieldContext = ContextNeighbourAnnouncement
+	require.True(t, ctx.InContext(ContextNeighbourAnnouncement))
+}
 
-	s, err = packet2.DeserializeFrom(context.Background(), buf)
-	require.NoError(t, err)
-	require.EqualValues(t, 84, s)
+func TestPacketContext_SetInContext(t *testing.T) {
+	ctx := newPacketContext(context.Background(), nil)
 
-	require.Equal(t, packet1, packet2)
+	require.True(t, ctx.InContext(NoContext))
+
+	ctx.SetInContext(ContextMembershipAnnouncement)
+	require.True(t, ctx.InContext(ContextMembershipAnnouncement))
+
+	ctx.SetInContext(ContextNeighbourAnnouncement)
+	require.True(t, ctx.InContext(ContextNeighbourAnnouncement))
+}
+
+func TestPacketContext_GetNeighbourNodeID(t *testing.T) {
+	ctx := newPacketContext(context.Background(), nil)
+
+	require.EqualValues(t, 0, ctx.GetNeighbourNodeID())
+
+	ctx.neighbourNodeID = 123
+	require.EqualValues(t, 123, ctx.GetNeighbourNodeID())
+}
+
+func TestPacketContext_SetNeighbourNodeID(t *testing.T) {
+	ctx := newPacketContext(context.Background(), nil)
+
+	require.EqualValues(t, 0, ctx.GetNeighbourNodeID())
+
+	ctx.SetNeighbourNodeID(123)
+	require.EqualValues(t, 123, ctx.GetNeighbourNodeID())
+}
+
+func TestPacketContext_GetAnnouncedJoinerNodeID(t *testing.T) {
+	ctx := newPacketContext(context.Background(), nil)
+
+	require.EqualValues(t, 0, ctx.GetAnnouncedJoinerNodeID())
+
+	ctx.announcedJoinerNodeID = 123
+	require.EqualValues(t, 123, ctx.GetAnnouncedJoinerNodeID())
+}
+
+func TestPacketContext_SetAnnouncedJoinerNodeID(t *testing.T) {
+	ctx := newPacketContext(context.Background(), nil)
+
+	require.EqualValues(t, 0, ctx.GetAnnouncedJoinerNodeID())
+
+	ctx.SetAnnouncedJoinerNodeID(123)
+	require.EqualValues(t, 123, ctx.GetAnnouncedJoinerNodeID())
 }

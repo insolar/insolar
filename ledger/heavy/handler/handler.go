@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/replica"
@@ -90,6 +91,12 @@ func New() *Handler {
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	if err == nil {
+		ctx = instracer.WithParentSpan(ctx, parentSpan)
+	} else {
+		inslogger.FromContext(ctx).Error(err)
+	}
 
 	for k, v := range msg.Metadata {
 		ctx, _ = inslogger.WithField(ctx, k, v)
@@ -97,7 +104,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	logger := inslogger.FromContext(ctx)
 
 	meta := payload.Meta{}
-	err := meta.Unmarshal(msg.Payload)
+	err = meta.Unmarshal(msg.Payload)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}

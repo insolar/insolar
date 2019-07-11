@@ -81,9 +81,9 @@ type packetContext struct {
 
 	header *Header
 
-	fieldContext    FieldContext
-	neighbourNodeID common.ShortNodeID
-	joinerNodeID    common.ShortNodeID
+	fieldContext          FieldContext
+	neighbourNodeID       common.ShortNodeID
+	announcedJoinerNodeID common.ShortNodeID
 }
 
 func newPacketContext(ctx context.Context, header *Header) packetContext {
@@ -111,11 +111,11 @@ func (pc *packetContext) SetNeighbourNodeID(nodeID common.ShortNodeID) {
 }
 
 func (pc *packetContext) GetAnnouncedJoinerNodeID() common.ShortNodeID {
-	return pc.joinerNodeID
+	return pc.announcedJoinerNodeID
 }
 
 func (pc *packetContext) SetAnnouncedJoinerNodeID(nodeID common.ShortNodeID) {
-	pc.joinerNodeID = nodeID
+	pc.announcedJoinerNodeID = nodeID
 }
 
 type trackableWriter struct {
@@ -148,13 +148,33 @@ func (r *trackableReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+type capturingReader struct {
+	io.Reader
+	buffer bytes.Buffer
+}
+
+func newCapturingReader(reader io.Reader) *capturingReader {
+	return &capturingReader{Reader: reader}
+}
+
+func (r *capturingReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.buffer.Write(p)
+	return n, err
+}
+
+func (r *capturingReader) Captured() []byte {
+	return r.buffer.Bytes()
+}
+
 type serializeContext struct {
 	packetContext
 	PacketHeaderModifier
 
-	writer *trackableWriter
-	signer common.DataSigner
-	setter serializeSetter
+	writer   *trackableWriter
+	digester common.DataDigester
+	signer   common.DigestSigner
+	setter   serializeSetter
 
 	buf1         [packetMaxSize]byte
 	buf2         [packetMaxSize]byte
@@ -163,14 +183,15 @@ type serializeContext struct {
 	packetBuffer *bytes.Buffer
 }
 
-func newSerializeContext(ctx packetContext, writer *trackableWriter, signer common.DataSigner, callback serializeSetter) *serializeContext {
+func newSerializeContext(ctx packetContext, writer *trackableWriter, digester common.DataDigester, signer common.DigestSigner, callback serializeSetter) *serializeContext {
 	sctx := &serializeContext{
 		packetContext:        ctx,
 		PacketHeaderModifier: ctx.header,
 
-		writer: writer,
-		signer: signer,
-		setter: callback,
+		writer:   writer,
+		digester: digester,
+		signer:   signer,
+		setter:   callback,
 	}
 
 	sctx.bodyBuffer = bytes.NewBuffer(sctx.buf1[0:0:packetMaxSize])
@@ -207,7 +228,8 @@ func (ctx *serializeContext) Finalize() (int64, error) {
 	}
 
 	readerForSignature := bytes.NewReader(ctx.packetBuffer.Bytes())
-	signedDigest := ctx.signer.GetSignOfData(readerForSignature)
+	digest := ctx.digester.GetDigestOf(readerForSignature)
+	signedDigest := digest.SignWith(ctx.signer)
 	signature := signedDigest.GetSignature()
 	ctx.setter.setSignature(signature.AsSignatureHolder())
 

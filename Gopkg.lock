@@ -147,14 +147,6 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:0bfbe13936953a98ae3cfe8ed6670d396ad81edf069a806d2f6515d7bb6950df"
-  name = "github.com/google/btree"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306"
-  version = "v1.0.0"
-
-[[projects]]
   branch = "master"
   digest = "1:3ee90c0d94da31b442dde97c99635aaafec68d0b8a3c12ee2075c6bdabeec6bb"
   name = "github.com/google/gofuzz"
@@ -169,17 +161,6 @@
   pruneopts = "UT"
   revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
   version = "v1.1.1"
-
-[[projects]]
-  digest = "1:9fe4b4f866007c9981c6c44c02d5533b1fb78ca408355eb64e767ef416eb9dfb"
-  name = "github.com/gorilla/rpc"
-  packages = [
-    "v2",
-    "v2/json2",
-  ]
-  pruneopts = "UT"
-  revision = "22c016f3df3febe0c1f6727598b6389507e03a18"
-  version = "v1.1.0"
 
 [[projects]]
   digest = "1:0ade334594e69404d80d9d323445d2297ff8161637f9b2d347cc6973d2d6f05b"
@@ -223,6 +204,17 @@
   pruneopts = "UT"
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
+
+[[projects]]
+  digest = "1:d585d1cae389b646325b7ef48032cdc9b58e68cd88c1fdc5da795eabb2114455"
+  name = "github.com/insolar/rpc"
+  packages = [
+    "v2",
+    "v2/json2",
+  ]
+  pruneopts = "UT"
+  revision = "60ccffd3c0df575286752c08ae3d6312f728291d"
+  version = "v1.2.1"
 
 [[projects]]
   digest = "1:9f86b5f5862a8ae44a5e2461619ac8f0fd1c75d670b735e40c4319f61bcb4bd3"
@@ -319,14 +311,6 @@
   pruneopts = "UT"
   revision = "c01d1270ff3e442a8a57cddc1c92dc1138598194"
   version = "v1.2.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:89da0f0574bc94cfd0ac8b59af67bf76cdd110d503df2721006b9f0492394333"
-  name = "github.com/petar/GoLLRB"
-  packages = ["llrb"]
-  pruneopts = "UT"
-  revision = "33fb24c13b99c46c93183c291836c573ac382536"
 
 [[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
@@ -642,10 +626,9 @@
     "github.com/gogo/protobuf/protoc-gen-gogoslick",
     "github.com/gogo/protobuf/sortkeys",
     "github.com/gojuno/minimock",
-    "github.com/google/btree",
     "github.com/google/gofuzz",
-    "github.com/gorilla/rpc/v2",
-    "github.com/gorilla/rpc/v2/json2",
+    "github.com/insolar/rpc/v2",
+    "github.com/insolar/rpc/v2/json2",
     "github.com/insolar/x-crypto/ecdsa",
     "github.com/insolar/x-crypto/sha256",
     "github.com/insolar/x-crypto/x509",

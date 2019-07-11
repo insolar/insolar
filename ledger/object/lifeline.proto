@@ -16,10 +16,9 @@ message Lifeline {
     repeated LifelineDelegate Delegates = 24 [(gogoproto.nullable) = false];
     uint32 StateID = 25 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar/record.StateID", (gogoproto.nullable) = false];
     uint32 LatestUpdate = 26 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes JetID = 27 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
 
-    bytes PendingPointer = 28 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
-    bytes EarliestOpenRequest = 29 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = true];
+    bytes PendingPointer = 27 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    bytes EarliestOpenRequest = 28 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = true];
 }
 
 message LifelineDelegate {

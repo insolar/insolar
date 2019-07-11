@@ -17,6 +17,8 @@
 package jet
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,7 +49,13 @@ func dbTreeForPulse(s *DBStore, pulse insolar.PulseNumber) *Tree {
 func TestDBStorage_Empty(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
 	all := s.All(ctx, insolar.FirstPulseNumber)
@@ -58,14 +66,20 @@ func TestDBStorage_Empty(t *testing.T) {
 func TestDBStorage_UpdateJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
 	var (
 		expected = []insolar.JetID{insolar.ZeroJetID}
 	)
 
-	err := s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
+	err = s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
 	require.NoError(t, err)
 
 	tree := dbTreeForPulse(s, 100)
@@ -75,7 +89,13 @@ func TestDBStorage_UpdateJetTree(t *testing.T) {
 func TestDBStorage_SplitJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
 	var (
@@ -83,8 +103,8 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 		expectedRight = insolar.JetID{0, 0, 0, 1, 1, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		expectedLeafs = Tree{Head: &jet{
 			Actual: false,
-			Left:   &jet{Actual: false},
-			Right:  &jet{Actual: false},
+			Left:   &jet{Actual: true},
+			Right:  &jet{Actual: true},
 		}}
 	)
 
@@ -102,7 +122,14 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 func TestDBStorage_CloneJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(ctx)
+	require.NoError(t, err)
 	s := NewDBStore(db)
 
 	var (
@@ -110,7 +137,7 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 		expectedNil  []insolar.JetID
 	)
 
-	err := s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
+	err = s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
 	require.NoError(t, err)
 
 	tree := dbTreeForPulse(s, 100)
@@ -140,7 +167,13 @@ func TestDBStorage_ForID_Basic(t *testing.T) {
 	copy(searchID[insolar.RecordHashOffset:], hash)
 
 	for _, actuality := range []bool{true, false} {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(ctx)
 		s := NewDBStore(db)
 		s.Update(ctx, pn, actuality, expectJetID)
 		found, ok := s.ForID(ctx, pn, searchID)

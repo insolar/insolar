@@ -25,6 +25,7 @@ type PacketHeaderAccessor interface {
 
 type PacketHeaderModifier interface {
 	SetFlag(flag Flag)
+	ClearFlag(flag Flag)
 }
 
 type PacketBody interface {
@@ -62,7 +63,7 @@ type DeserializeContext interface {
 }
 
 type SerializerTo interface {
-	SerializeTo(ctx context.Context, writer io.Writer, signer common.DataSigner) (int64, error)
+	SerializeTo(ctx context.Context, writer io.Writer, digester common.DataDigester, signer common.DigestSigner) (int64, error)
 }
 
 type ContextSerializerTo interface {

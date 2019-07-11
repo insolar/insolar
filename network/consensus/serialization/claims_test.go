@@ -53,24 +53,40 @@ package serialization
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
+func TestNewClaimList(t *testing.T) {
+	list := NewClaimList()
+	assert.Equal(t, claimTypeEmpty, list.EndOfClaims.ClaimType())
+	assert.Equal(t, 0, list.EndOfClaims.Length())
+	assert.Len(t, list.Claims, 0)
+
+	payload := []byte{1, 2, 3, 4, 5}
+	claim := NewGenericClaim(payload)
+	assert.Equal(t, claimTypeGeneric, claim.ClaimType())
+	assert.Equal(t, len(claim.Payload), int(claim.Length()))
+	assert.Equal(t, payload, claim.Payload)
+	list.Push(claim)
+	assert.Len(t, list.Claims, 1)
+	assert.Equal(t, claim, list.Claims[0])
+}
+
 func TestClaimList_SerializeDeserialize(t *testing.T) {
-	list := ClaimList{EndOfClaims: EmptyClaim{ClaimHeader{TypeAndLength: 22}}}
+	list := NewClaimList()
+	list.Push(NewGenericClaim([]byte{1, 2, 3, 4, 5}))
 	list2 := ClaimList{}
 
 	buf := make([]byte, 0)
 	rw := bytes.NewBuffer(buf)
 	w := newTrackableWriter(rw)
 	pctx := newPacketContext(context.Background(), nil)
-	sctx := newSerializeContext(pctx, w, signer, nil)
+	sctx := newSerializeContext(pctx, w, digester, signer, nil)
 
 	err := list.SerializeTo(sctx, rw)
 	assert.NoError(t, err)
-	fmt.Printf("%#v", buf)
 
 	r := newTrackableReader(rw)
 	dctx := newDeserializeContext(pctx, r, nil)

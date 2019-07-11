@@ -18,14 +18,14 @@ package logicrunner
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/pkg/errors"
 )
 
 // ------------- CheckOurRole
@@ -58,39 +58,38 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	return nil
 }
 
-// ------------- RegisterRequest
+// ------------- RegisterIncomingRequest
 
-type RegisterRequest struct {
-	parcel insolar.Parcel
+type RegisterIncomingRequest struct {
+	request record.IncomingRequest
 
 	result chan *Ref
 
 	ArtifactManager artifacts.Client
 }
 
-func NewRegisterRequest(parcel insolar.Parcel, dep *Dependencies) *RegisterRequest {
-	return &RegisterRequest{
-		parcel:          parcel,
+func NewRegisterIncomingRequest(request record.IncomingRequest, dep *Dependencies) *RegisterIncomingRequest {
+	return &RegisterIncomingRequest{
+		request:         request,
 		ArtifactManager: dep.lr.ArtifactManager,
 		result:          make(chan *Ref, 1),
 	}
 }
 
-func (r *RegisterRequest) setResult(result *Ref) { // nolint
+func (r *RegisterIncomingRequest) setResult(result *Ref) { // nolint
 	r.result <- result
 }
 
 // getResult is blocking
-func (r *RegisterRequest) getResult() *Ref { // nolint
+func (r *RegisterIncomingRequest) getResult() *Ref { // nolint
 	return <-r.result
 }
 
-func (r *RegisterRequest) Proceed(ctx context.Context) error {
-	ctx, span := instracer.StartSpan(ctx, "RegisterRequest.Proceed")
+func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "RegisterIncomingRequest.Proceed")
 	defer span.End()
 
-	msg := r.parcel.Message().(*message.CallMethod)
-	id, err := r.ArtifactManager.RegisterRequest(ctx, msg.IncomingRequest)
+	id, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &r.request)
 	if err != nil {
 		return err
 	}
@@ -102,8 +101,8 @@ func (r *RegisterRequest) Proceed(ctx context.Context) error {
 // ------------- ClarifyPendingState
 
 type ClarifyPendingState struct {
-	es     *ExecutionState
-	parcel insolar.Parcel
+	es      *ExecutionState
+	request *record.IncomingRequest
 
 	ArtifactManager artifacts.Client
 }
@@ -118,15 +117,8 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	if c.parcel != nil {
-		if c.parcel.Type() != insolar.TypeCallMethod {
-			// We expect ONLY CallMethods in LogicRunner.
-			c.es.Unlock()
-			return fmt.Errorf("unexpecxted parcel type during ClarifyPendingState: %v", c.parcel.Type())
-		}
-
-		msg := c.parcel.Message().(*message.CallMethod)
-		if msg.CallType != record.CTMethod {
+	if c.request != nil {
+		if c.request.CallType != record.CTMethod {
 			// It's considered that we are not pending except someone calls a method.
 			c.es.pending = message.NotPending
 			c.es.Unlock()

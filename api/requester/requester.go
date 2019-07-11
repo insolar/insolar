@@ -119,7 +119,7 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 	}
 
 	if postResp == nil {
-		return nil, errors.New("[ GetResponseBodyContract ] Reponse is nil")
+		return nil, errors.New("[ GetResponseBodyContract ] Response is nil")
 	}
 
 	defer postResp.Body.Close()
@@ -153,7 +153,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	}
 
 	if postResp == nil {
-		return nil, errors.New("[ GetResponseBodyPlatform ] Reponse is nil")
+		return nil, errors.New("[ GetResponseBodyPlatform ] Response is nil")
 	}
 
 	defer postResp.Body.Close()
@@ -169,11 +169,11 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	return body, nil
 }
 
-// GetSeed makes rpc request to node.GetSeed method and extracts it
+// GetSeed makes rpc request to node.getSeed method and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
 		JSONRPC: JSONRPCVersion,
-		Method:  "node.GetSeed",
+		Method:  "node.getSeed",
 		ID:      1,
 	})
 	if err != nil {
@@ -296,9 +296,9 @@ func getDefaultRPCParams(method string) PlatformRequest {
 	}
 }
 
-// Info makes rpc request to network.GetInfo method and extracts it
+// Info makes rpc request to network.getInfo method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	params := getDefaultRPCParams("network.GetInfo")
+	params := getDefaultRPCParams("network.getInfo")
 
 	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {
@@ -320,7 +320,7 @@ func Info(url string) (*InfoResponse, error) {
 
 // Status makes rpc request to info.Status method and extracts it
 func Status(url string) (*StatusResponse, error) {
-	params := getDefaultRPCParams("node.GetStatus")
+	params := getDefaultRPCParams("node.getStatus")
 
 	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {

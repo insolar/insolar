@@ -456,7 +456,7 @@ func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
 	return p.pulse, nil
 }
 
-func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist bool) error {
+func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse) error {
 	p.lock.Lock()
 	p.pulse = pulse
 	p.lock.Unlock()

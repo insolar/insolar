@@ -32,7 +32,7 @@ func TestNodeCert(t *testing.T) {
 
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "cert.Get",
+		"method":  "cert.get",
 		"id":      1,
 		"params":  map[string]string{"ref": res.(string)},
 	})
