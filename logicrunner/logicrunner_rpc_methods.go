@@ -214,6 +214,10 @@ func (m *executionProxyImplementation) RouteCall(
 		return err
 	}
 
+	if req.Saga {
+		inslogger.FromContext(ctx).Debug("Saga call - only registering the method") // TODO AALEKSEEV finish implementation
+	}
+
 	// Step 2. Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
 	res, err := m.cr.CallMethod(ctx, callMsg)
