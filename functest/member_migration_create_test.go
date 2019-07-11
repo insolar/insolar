@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
 // +build functest
 
@@ -23,60 +23,64 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/testutils"
 )
 
-func TestCreateMember(t *testing.T) {
+func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
-	addBurnAddress(t)
-	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	ba := testutils.RandomString()
+	_, _ = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	result, err := retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
-	ref, ok := result.(string)
+	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
-	require.NotEqual(t, "", ref)
+	require.NotEqual(t, "", output["reference"])
+	require.Equal(t, ba, output["migrationAddress"])
 }
 
-func TestCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
+func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 	member1.ref = root.ref
 	addBurnAddress(t)
-	_, err = retryableCreateMember(member1, "contract.createMember", map[string]interface{}{}, true)
+	_, err = retryableMemberMigrationCreate(member1, true)
 	require.Nil(t, err)
 
 	member2, err := newUserWithKeys()
 	require.NoError(t, err)
 	member2.ref = root.ref
 
-	_, err = retryableCreateMember(member2, "contract.createMember", map[string]interface{}{}, true)
+	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "no more burn addresses left")
 }
 
-func TestCreateMemberWithBadKey(t *testing.T) {
+func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 	member.pubKey = "fake"
-	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, false)
+	_, err = retryableMemberMigrationCreate(member, false)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
 }
 
-func TestCreateMembersWithSameName(t *testing.T) {
+func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
 	addBurnAddress(t)
 
-	_, err = retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	_, err = retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
 
 	addBurnAddress(t)
 
-	_, err = signedRequest(member, "contract.createMember", map[string]interface{}{})
+	_, err = signedRequest(member, "member.migrationCreate", map[string]interface{}{})
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "member for this publicKey already exist")
 
@@ -84,5 +88,25 @@ func TestCreateMembersWithSameName(t *testing.T) {
 	require.NoError(t, err)
 	memberForBurn.ref = root.ref
 
-	_, err = retryableCreateMember(memberForBurn, "contract.createMember", map[string]interface{}{}, true)
+	_, err = retryableMemberMigrationCreate(memberForBurn, true)
+}
+
+func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
+	member1, err := newUserWithKeys()
+	require.NoError(t, err)
+	member1.ref = root.ref
+
+	ba := testutils.RandomString()
+	_, _ = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba, ba}})
+
+	_, err = retryableMemberMigrationCreate(member1, true)
+	require.NoError(t, err)
+
+	member2, err := newUserWithKeys()
+	require.NoError(t, err)
+	member2.ref = root.ref
+
+	_, err = retryableMemberMigrationCreate(member2, true)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "member for this burnAddress already exist")
 }
