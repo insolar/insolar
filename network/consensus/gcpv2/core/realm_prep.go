@@ -62,7 +62,10 @@ import (
 )
 
 /*
-PrepRealm is a functionally limited and temporary realm that is used when this node doesn't know a complete population (joiner)
+	PrepRealm is a functionally limited and temporary realm that is used when this node doesn't know pulse or last consensus.
+	It can ONLY pre-processed packets, but is disallowed to send them.
+
+	Pre-processed packets as postponed by default and processing will be repeated when FullRealm is activated.
 */
 type PrepRealm struct {
 	/* Provided externally. Don't need mutex */
@@ -111,14 +114,6 @@ func (p *PrepRealm) stop() {
 		/* Do not give out a PrepRealm reference to avoid retention in memory */
 		go flushQueueTo(p.coreRealm.roundContext, p.queueToFull, p.postponedPacketFn)
 	}
-}
-
-func (p *PrepRealm) PostponePacket(packet packets.PacketParser, from common.HostIdentityHolder) bool {
-	if p.queueToFull == nil {
-		return false
-	}
-	p.queueToFull <- postponedPacket{packet: packet, from: from}
-	return true
 }
 
 type postponedPacketFunc func(packet packets.PacketParser, from common.HostIdentityHolder)
@@ -188,4 +183,35 @@ func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool
 
 func (p *PrepRealm) GetExpectedPulseNumber() common.PulseNumber {
 	return p.initialCensus.GetExpectedPulseNumber()
+}
+
+func (p *PrepRealm) handleHostPacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder) error {
+	pt := packet.GetPacketType()
+	h := p.handlers[pt]
+
+	var explicitPostpone = false
+	var err error
+
+	if h != nil {
+		explicitPostpone, err = h(ctx, packet, from)
+		if !explicitPostpone || err != nil {
+			return err
+		}
+	}
+	// if packet is not handled, then we may need to leave it for FullRealm
+	if p.postponePacket(packet, from) {
+		return nil
+	}
+	if explicitPostpone {
+		return fmt.Errorf("unable to postpone packet explicitly: type=%v", pt)
+	}
+	return errPacketIsNotAllowed
+}
+
+func (p *PrepRealm) postponePacket(packet packets.PacketParser, from common.HostIdentityHolder) bool {
+	if p.queueToFull == nil {
+		return false
+	}
+	p.queueToFull <- postponedPacket{packet: packet, from: from}
+	return true
 }

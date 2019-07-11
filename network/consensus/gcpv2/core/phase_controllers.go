@@ -69,94 +69,39 @@ type PrepPhasePacketHandler func(ctx context.Context, reader packets.PacketParse
 
 type PhaseControllerHandlerType uint8
 
+const PacketHandlerTypeHost PhaseControllerHandlerType = 0
 const (
-	HandlerTypeHostPacket PhaseControllerHandlerType = iota
-	HandlerTypeMemberPacket
-	HandlerTypePerNodePacket // This mode allows to attach a custom object(state) to each NodeAppearance
+	PacketHandlerTypeMember PhaseControllerHandlerType = 1 << iota
+	PacketHandlerTypeEnableUnknown
+	PacketHandlerTypePerNode
 )
+
+func (v PhaseControllerHandlerType) IsMemberHandler() bool {
+	return v != PacketHandlerTypeHost
+}
+
+func (v PhaseControllerHandlerType) IsUnknownAllowed() bool {
+	return v&PacketHandlerTypeEnableUnknown != 0
+}
+
+func (v PhaseControllerHandlerType) IsPerNode() bool {
+	return v&PacketHandlerTypePerNode != 0
+}
 
 type PhaseController interface {
 	GetPacketType() packets.PacketType
-	IsPerNode() PhaseControllerHandlerType
-	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error // IsPerNode() == HandlerTypeHostPacket
-	HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error    // IsPerNode() == HandlerTypeMemberPacket
-	CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler                               // IsPerNode() == HandlerTypePerNodePacket
+	GetHandlerType() PhaseControllerHandlerType
+
+	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error                                   // GetHandlerType() == PacketHandlerTypeHost
+	HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error                                      // GetHandlerType() == PacketHandlerTypeMember OR PacketHandlerTypeMemberFromUnknown
+	HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) // GetHandlerType() == PacketHandlerTypeMemberFromUnknown
+
+	CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *NodeAppearance, realm *FullRealm,
+	) (PhasePerNodePacketFunc, context.Context) // GetHandlerType() == PacketHandlerTypePerNode
+
 	BeforeStart(realm *FullRealm)
 	StartWorker(ctx context.Context)
 }
 
-type PhaseHostPacketHandler func(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error
-type PhaseNodePacketHandler func(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance) error
-
 /* realm is provided for this handler to avoid being replicated in individual handlers */
-type PhasePerNodePacketHandler func(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
-
-type PhaseControllerPerMemberTemplate struct {
-	R *FullRealm
-}
-
-func (c *PhaseControllerPerMemberTemplate) BeforeStart(realm *FullRealm) {
-	c.R = realm
-}
-
-func (*PhaseControllerPerMemberTemplate) IsPerNode() PhaseControllerHandlerType {
-	return HandlerTypeMemberPacket
-}
-
-func (*PhaseControllerPerMemberTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerMemberTemplate) CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerMemberTemplate) StartWorker(ctx context.Context) {
-}
-
-// var _ PhaseController = &PhaseControllerPerNodeTemplate{}
-type PhaseControllerPerNodeTemplate struct {
-	R *FullRealm
-}
-
-func (c *PhaseControllerPerNodeTemplate) BeforeStart(realm *FullRealm) {
-	c.R = realm
-}
-
-func (*PhaseControllerPerNodeTemplate) IsPerNode() PhaseControllerHandlerType {
-	return HandlerTypePerNodePacket
-}
-
-func (*PhaseControllerPerNodeTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerNodeTemplate) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerNodeTemplate) StartWorker(ctx context.Context) {
-}
-
-type PhaseControllerPerHostTemplate struct {
-	R *FullRealm
-}
-
-func (c *PhaseControllerPerHostTemplate) BeforeStart(realm *FullRealm) {
-	c.R = realm
-}
-
-func (*PhaseControllerPerHostTemplate) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerHostTemplate) CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerHostTemplate) IsPerNode() PhaseControllerHandlerType {
-	return HandlerTypeHostPacket
-}
-
-func (*PhaseControllerPerHostTemplate) StartWorker(ctx context.Context) {
-}
+type PhasePerNodePacketFunc func(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
