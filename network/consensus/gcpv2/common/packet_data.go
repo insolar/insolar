@@ -180,39 +180,6 @@ func (v MemberOpMode) String() string {
 	}
 }
 
-/* deprecated
-MUST be removed. Replaced with MemberOpMode
-*/
-type MemberCondition uint8 //MUST BE 4bit value
-const (
-	MemberJustJoined MemberCondition = iota
-	MemberNormal
-	MemberSuspected
-	MemberPossibleFraud
-)
-
-func (v MemberCondition) asUnit32() uint32 {
-	if v > 3 {
-		panic("illegal value")
-	}
-	return uint32(v)
-}
-
-func (v MemberCondition) String() string {
-	switch v {
-	case MemberNormal:
-		return "norm"
-	case MemberJustJoined:
-		return "recent"
-	case MemberSuspected:
-		return "suspect"
-	case MemberPossibleFraud:
-		return "pfraud"
-	default:
-		return fmt.Sprintf("?%d?", v)
-	}
-}
-
 type GlobulaNodeState struct {
 	NodeStateHash      common.Bits512
 	PulseDataHash      common.Bits256

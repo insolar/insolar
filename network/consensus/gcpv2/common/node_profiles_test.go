@@ -51,7 +51,6 @@
 package common
 
 import (
-	"math"
 	"testing"
 
 	"github.com/insolar/insolar/network/consensus/common"
@@ -170,203 +169,13 @@ func TestAsMemberPower(t *testing.T) {
 	require.Equal(t, l, MemberPower(0))
 }
 
-func TestIsSuspect(t *testing.T) {
-	require.True(t, MembershipState(-2).IsSuspect())
-	require.True(t, Suspected.IsSuspect())
-	require.False(t, Undefined.IsSuspect())
-	require.False(t, Joining.IsSuspect())
-	require.False(t, Working.IsSuspect())
-	require.False(t, JustJoined.IsSuspect())
-}
-
-func TestIsJustJoined(t *testing.T) {
-	require.False(t, Suspected.IsJustJoined())
-	require.False(t, Undefined.IsJustJoined())
-	require.False(t, Joining.IsJustJoined())
-	require.False(t, Working.IsJustJoined())
-	require.True(t, JustJoined.IsJustJoined())
-	require.True(t, MembershipState(4).IsJustJoined())
-}
-
-func TestGetCountInSuspected(t *testing.T) {
-	require.Equal(t, Joining.GetCountInSuspected(), 0)
-	require.Equal(t, Suspected.GetCountInSuspected(), 1)
-	require.Equal(t, MembershipState(-2).GetCountInSuspected(), 2)
-}
-
-func TestAsJustJoinedRemainingCount(t *testing.T) {
-	require.Equal(t, Working.AsJustJoinedRemainingCount(), 0)
-	require.Equal(t, JustJoined.AsJustJoinedRemainingCount(), 1)
-	require.Equal(t, MembershipState(4).AsJustJoinedRemainingCount(), 2)
-}
-
-func TestInSuspectedExceeded(t *testing.T) {
-	require.Panics(t, func() { Working.InSuspectedExceeded(-1) })
-	require.Panics(t, func() { Working.InSuspectedExceeded(int(Suspected) - math.MinInt8 + 1) })
-	require.False(t, Working.InSuspectedExceeded(0))
-	require.True(t, Suspected.InSuspectedExceeded(0))
-	require.False(t, Suspected.InSuspectedExceeded(1))
-}
-
-func TestSetJustJoined(t *testing.T) {
-	require.Panics(t, func() { Working.SetJustJoined(0) })
-	require.Panics(t, func() { Working.SetJustJoined(math.MaxInt8 - int(JustJoined) + 1) })
-	require.Equal(t, Working.SetJustJoined(1), JustJoined+MembershipState(1)-1)
-}
-
-func TestIncrementSuspected(t *testing.T) {
-	require.Panics(t, func() { Undefined.IncrementSuspected() })
-	require.Panics(t, func() { MembershipState(math.MinInt8).IncrementSuspected() })
-	require.Equal(t, Suspected.IncrementSuspected(), MembershipState(-2))
-	require.Equal(t, Working.IncrementSuspected(), Suspected)
-}
-
-func TestDecrementJustJoined(t *testing.T) {
-	require.Panics(t, func() { Undefined.DecrementJustJoined() })
-	require.Equal(t, JustJoined.DecrementJustJoined(), MembershipState(JustJoined-1))
-	require.Equal(t, Working.DecrementJustJoined(), Working)
-}
-
-func TestUpdateOnNextPulse(t *testing.T) {
-	require.Panics(t, func() { Undefined.UpdateOnNextPulse(0) })
-	require.Equal(t, Joining.UpdateOnNextPulse(0), Working)
-	require.Panics(t, func() { Joining.UpdateOnNextPulse(math.MaxInt8 - int(JustJoined) + 1) })
-	require.Equal(t, Joining.UpdateOnNextPulse(1), JustJoined)
-	require.Equal(t, Suspected.UpdateOnNextPulse(2), Suspected-1)
-	require.Equal(t, JustJoined.UpdateOnNextPulse(2), JustJoined-1)
-	require.Equal(t, Working.UpdateOnNextPulse(2), Working)
-}
-
-func TestIsUndefined(t *testing.T) {
-	require.False(t, MembershipState(Suspected-2).IsUndefined())
-	require.False(t, Suspected.IsUndefined())
-	require.True(t, Undefined.IsUndefined())
-	require.False(t, Joining.IsUndefined())
-	require.False(t, Working.IsUndefined())
-	require.False(t, JustJoined.IsUndefined())
-	require.False(t, MembershipState(JustJoined+2).IsUndefined())
-}
-
-func TestIsActive(t *testing.T) {
-	require.True(t, MembershipState(Suspected-2).IsActive())
-	require.True(t, Suspected.IsActive())
-	require.False(t, Undefined.IsActive())
-	require.False(t, Joining.IsActive())
-	require.True(t, Working.IsActive())
-	require.True(t, JustJoined.IsActive())
-	require.True(t, MembershipState(JustJoined+2).IsActive())
-}
-
-func TestIsWorking(t *testing.T) {
-	require.False(t, MembershipState(Suspected-2).IsWorking())
-	require.False(t, Suspected.IsWorking())
-	require.False(t, Undefined.IsWorking())
-	require.False(t, Joining.IsWorking())
-	require.True(t, Working.IsWorking())
-	require.True(t, JustJoined.IsWorking())
-	require.True(t, MembershipState(JustJoined+2).IsWorking())
-}
-
-func TestIsJoining(t *testing.T) {
-	require.False(t, MembershipState(Suspected-2).IsJoining())
-	require.False(t, Suspected.IsJoining())
-	require.False(t, Undefined.IsJoining())
-	require.True(t, Joining.IsJoining())
-	require.False(t, Working.IsJoining())
-	require.False(t, JustJoined.IsJoining())
-	require.False(t, MembershipState(JustJoined+2).IsJoining())
-}
-
-func TestNodeProfileOrdering(t *testing.T) {
-	np := NewNodeProfileMock(t)
-	power1 := MemberPower(0)
-	np.GetDeclaredPowerMock.Set(func() MemberPower { return power1 })
-	role := PrimaryRoleNeutral
-	np.GetPrimaryRoleMock.Set(func() NodePrimaryRole { return role })
-	shortNodeID := common.ShortNodeID(2)
-	np.GetShortNodeIDMock.Set(func() common.ShortNodeID { return shortNodeID })
-	r, p, id := nodeProfileOrdering(np)
-	require.Equal(t, r, PrimaryRoleInactive)
-
-	require.Equal(t, p, MemberPower(0))
-
-	require.Equal(t, id, shortNodeID)
-
-	power2 := MemberPower(1)
-	np.GetDeclaredPowerMock.Set(func() MemberPower { return power2 })
-	np.GetStateMock.Set(func() MembershipState { return Suspected })
-	r, p, id = nodeProfileOrdering(np)
-	require.Equal(t, r, PrimaryRoleInactive)
-
-	require.Equal(t, p, MemberPower(0))
-
-	require.Equal(t, id, shortNodeID)
-
-	np.GetStateMock.Set(func() MembershipState { return Working })
-	r, p, id = nodeProfileOrdering(np)
-	require.Equal(t, r, role)
-
-	require.Equal(t, p, power2)
-
-	require.Equal(t, id, shortNodeID)
-}
-
-func TestLessForNodeProfile(t *testing.T) {
-	np1 := NewNodeProfileMock(t)
-	power1 := MemberPower(1)
-	np1.GetDeclaredPowerMock.Set(func() MemberPower { return *(&power1) })
-	role1 := PrimaryRoleHeavyMaterial
-	np1.GetPrimaryRoleMock.Set(func() NodePrimaryRole { return *(&role1) })
-	shortNodeID1 := common.ShortNodeID(1)
-	np1.GetShortNodeIDMock.Set(func() common.ShortNodeID { return *(&shortNodeID1) })
-	state1 := Working
-	np1.GetStateMock.Set(func() MembershipState { return *(&state1) })
-
-	require.False(t, LessForNodeProfile(np1, np1))
-
-	np2 := NewNodeProfileMock(t)
-	power2 := MemberPower(1)
-	np2.GetDeclaredPowerMock.Set(func() MemberPower { return *(&power2) })
-	role2 := PrimaryRoleHeavyMaterial
-	np2.GetPrimaryRoleMock.Set(func() NodePrimaryRole { return *(&role2) })
-	shortNodeID2 := common.ShortNodeID(1)
-	np2.GetShortNodeIDMock.Set(func() common.ShortNodeID { return *(&shortNodeID2) })
-	state2 := Working
-	np2.GetStateMock.Set(func() MembershipState { return *(&state2) })
-
-	require.False(t, LessForNodeProfile(np1, np2))
-
-	role1 = PrimaryRoleNeutral
-	require.False(t, LessForNodeProfile(np1, np2))
-
-	role1 = PrimaryRoleHeavyMaterial
-	role2 = PrimaryRoleNeutral
-	require.True(t, LessForNodeProfile(np1, np2))
-
-	role1 = role2
-	power2 = MemberPower(2)
-	require.True(t, LessForNodeProfile(np1, np2))
-
-	power1 = MemberPower(2)
-	power2 = MemberPower(1)
-	require.False(t, LessForNodeProfile(np1, np2))
-
-	power1 = power2
-	shortNodeID2 = common.ShortNodeID(2)
-	require.True(t, LessForNodeProfile(np1, np2))
-
-	shortNodeID1 = common.ShortNodeID(2)
-	shortNodeID2 = common.ShortNodeID(1)
-	require.False(t, LessForNodeProfile(np1, np2))
-}
-
 func TestNewMembershipProfile(t *testing.T) {
 	nsh := NewNodeStateHashEvidenceMock(t)
 	nas := NewMemberAnnouncementSignatureMock(t)
 	index := uint16(1)
 	power := MemberPower(2)
 	ep := MemberPower(3)
-	mp := NewMembershipProfile(index, power, nsh, nas, ep)
+	mp := NewMembershipProfile(MemberModeNormal, power, index, nsh, nas, ep)
 	require.Equal(t, mp.Index, index)
 
 	require.Equal(t, mp.Power, power)
@@ -384,6 +193,10 @@ func TestNewMembershipProfileByNode(t *testing.T) {
 	np.GetIndexMock.Set(func() int { return index })
 	power := MemberPower(2)
 	np.GetDeclaredPowerMock.Set(func() MemberPower { return power })
+	np.GetOpModeMock.Set(func() (r MemberOpMode) {
+		return MemberModeNormal
+	})
+
 	nsh := NewNodeStateHashEvidenceMock(t)
 	nas := NewMemberAnnouncementSignatureMock(t)
 	ep := MemberPower(3)

@@ -52,7 +52,6 @@ package adapters
 
 import (
 	"context"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	common2 "github.com/insolar/insolar/network/consensus/common"
@@ -88,12 +87,20 @@ func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChang
 	}
 }
 
-func (u *UpstreamPulseController) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
-}
+func (u *UpstreamPulseController) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+	// TODO: use nodekeeper in chronicles and remove setting sync list from here
 
-func (u *UpstreamPulseController) PulseDetected() {
-	panic("implement me")
+	ctx := contextFromReport(report)
+
+	population := expectedCensus.GetOnlinePopulation()
+	networkNodes := NewNetworkNodeList(population.GetProfiles())
+
+	u.stateUpdater.UpdateState(
+		ctx,
+		insolar.PulseNumber(report.PulseNumber),
+		networkNodes,
+		expectedCensus.GetCloudStateHash().AsBytes(),
+	)
 }
 
 func (u *UpstreamPulseController) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
@@ -112,38 +119,6 @@ func (u *UpstreamPulseController) CommitPulseChange(report core.MembershipUpstre
 }
 
 func (u *UpstreamPulseController) CancelPulseChange() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	// TODO: use nodekeeper in chronicles and remove setting sync list from here
-
-	ctx := contextFromReport(report)
-
-	population := expectedCensus.GetOnlinePopulation()
-	networkNodes := NewNetworkNodeList(population.GetProfiles())
-
-	u.stateUpdater.UpdateState(
-		ctx,
-		insolar.PulseNumber(report.PulseNumber),
-		networkNodes,
-		expectedCensus.GetCloudStateHash().AsBytes(),
-	)
-}
-
-func (u *UpstreamPulseController) MembershipLost(graceful bool) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipSuspended() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) SuspendTraffic() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) ResumeTraffic() {
 	panic("implement me")
 }
 

@@ -53,9 +53,12 @@ package adapters
 import (
 	"context"
 
+	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	common2 "github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 type ConsensusControlFeeder struct{}
@@ -82,4 +85,22 @@ func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effect
 	ctx := context.TODO()
 
 	inslogger.FromContext(ctx).Info(">>> Graceful leave applied")
+}
+
+func (cf *ConsensusControlFeeder) SetTrafficLimit(level common2.CapacityLevel, duration duration.Duration) {
+	panic("implement me")
+}
+
+func (cf *ConsensusControlFeeder) ResumeTraffic() {
+	panic("implement me")
+}
+
+func (cf *ConsensusControlFeeder) PulseDetected() {
+	panic("implement me")
+}
+
+func (cf *ConsensusControlFeeder) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+	ctx := context.TODO()
+
+	inslogger.FromContext(ctx).Info(">>> ConsensusFinished")
 }

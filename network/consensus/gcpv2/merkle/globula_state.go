@@ -69,8 +69,7 @@ type GlobulaLeaf struct {
 	PowerBase uint32             // 23
 
 	// ByteSize = 4
-	RoleIndex uint16                 //10
-	RoleTotal uint16                 //10
-	NodeTotal uint16                 //10
-	Condition common.MemberCondition //4
+	RoleIndex uint16 //10
+	RoleTotal uint16 //10
+	NodeTotal uint16 //10
 }

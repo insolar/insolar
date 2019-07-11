@@ -269,7 +269,7 @@ func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
 	mutableNode := networkNode.(node.MutableNode)
 
 	mutableNode.SetShortID(insolar.ShortNodeID(profile.GetShortNodeID()))
-	mutableNode.SetState(MembershipStateToNodeState(profile.GetState()))
+	mutableNode.SetState(insolar.NodeReady)
 	mutableNode.SetSignature(insolar.SignatureFromBytes(profile.GetAnnouncementSignature().AsBytes()))
 
 	return networkNode

@@ -54,6 +54,11 @@ type LocalNodeProfileMock struct {
 	GetNodePublicKeyStorePreCounter uint64
 	GetNodePublicKeyStoreMock       mLocalNodeProfileMockGetNodePublicKeyStore
 
+	GetOpModeFunc       func() (r MemberOpMode)
+	GetOpModeCounter    uint64
+	GetOpModePreCounter uint64
+	GetOpModeMock       mLocalNodeProfileMockGetOpMode
+
 	GetPrimaryRoleFunc       func() (r NodePrimaryRole)
 	GetPrimaryRoleCounter    uint64
 	GetPrimaryRolePreCounter uint64
@@ -79,11 +84,6 @@ type LocalNodeProfileMock struct {
 	GetStartPowerPreCounter uint64
 	GetStartPowerMock       mLocalNodeProfileMockGetStartPower
 
-	GetStateFunc       func() (r MembershipState)
-	GetStateCounter    uint64
-	GetStatePreCounter uint64
-	GetStateMock       mLocalNodeProfileMockGetState
-
 	HasIntroductionFunc       func() (r bool)
 	HasIntroductionCounter    uint64
 	HasIntroductionPreCounter uint64
@@ -93,6 +93,11 @@ type LocalNodeProfileMock struct {
 	IsAcceptableHostCounter    uint64
 	IsAcceptableHostPreCounter uint64
 	IsAcceptableHostMock       mLocalNodeProfileMockIsAcceptableHost
+
+	IsJoinerFunc       func() (r bool)
+	IsJoinerCounter    uint64
+	IsJoinerPreCounter uint64
+	IsJoinerMock       mLocalNodeProfileMockIsJoiner
 
 	LocalNodeProfileFunc       func()
 	LocalNodeProfileCounter    uint64
@@ -115,14 +120,15 @@ func NewLocalNodeProfileMock(t minimock.Tester) *LocalNodeProfileMock {
 	m.GetIntroductionMock = mLocalNodeProfileMockGetIntroduction{mock: m}
 	m.GetNodePublicKeyMock = mLocalNodeProfileMockGetNodePublicKey{mock: m}
 	m.GetNodePublicKeyStoreMock = mLocalNodeProfileMockGetNodePublicKeyStore{mock: m}
+	m.GetOpModeMock = mLocalNodeProfileMockGetOpMode{mock: m}
 	m.GetPrimaryRoleMock = mLocalNodeProfileMockGetPrimaryRole{mock: m}
 	m.GetShortNodeIDMock = mLocalNodeProfileMockGetShortNodeID{mock: m}
 	m.GetSignatureVerifierMock = mLocalNodeProfileMockGetSignatureVerifier{mock: m}
 	m.GetSpecialRolesMock = mLocalNodeProfileMockGetSpecialRoles{mock: m}
 	m.GetStartPowerMock = mLocalNodeProfileMockGetStartPower{mock: m}
-	m.GetStateMock = mLocalNodeProfileMockGetState{mock: m}
 	m.HasIntroductionMock = mLocalNodeProfileMockHasIntroduction{mock: m}
 	m.IsAcceptableHostMock = mLocalNodeProfileMockIsAcceptableHost{mock: m}
+	m.IsJoinerMock = mLocalNodeProfileMockIsJoiner{mock: m}
 	m.LocalNodeProfileMock = mLocalNodeProfileMockLocalNodeProfile{mock: m}
 
 	return m
@@ -1066,6 +1072,140 @@ func (m *LocalNodeProfileMock) GetNodePublicKeyStoreFinished() bool {
 	return true
 }
 
+type mLocalNodeProfileMockGetOpMode struct {
+	mock              *LocalNodeProfileMock
+	mainExpectation   *LocalNodeProfileMockGetOpModeExpectation
+	expectationSeries []*LocalNodeProfileMockGetOpModeExpectation
+}
+
+type LocalNodeProfileMockGetOpModeExpectation struct {
+	result *LocalNodeProfileMockGetOpModeResult
+}
+
+type LocalNodeProfileMockGetOpModeResult struct {
+	r MemberOpMode
+}
+
+//Expect specifies that invocation of LocalNodeProfile.GetOpMode is expected from 1 to Infinity times
+func (m *mLocalNodeProfileMockGetOpMode) Expect() *mLocalNodeProfileMockGetOpMode {
+	m.mock.GetOpModeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LocalNodeProfileMockGetOpModeExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of LocalNodeProfile.GetOpMode
+func (m *mLocalNodeProfileMockGetOpMode) Return(r MemberOpMode) *LocalNodeProfileMock {
+	m.mock.GetOpModeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LocalNodeProfileMockGetOpModeExpectation{}
+	}
+	m.mainExpectation.result = &LocalNodeProfileMockGetOpModeResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of LocalNodeProfile.GetOpMode is expected once
+func (m *mLocalNodeProfileMockGetOpMode) ExpectOnce() *LocalNodeProfileMockGetOpModeExpectation {
+	m.mock.GetOpModeFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &LocalNodeProfileMockGetOpModeExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *LocalNodeProfileMockGetOpModeExpectation) Return(r MemberOpMode) {
+	e.result = &LocalNodeProfileMockGetOpModeResult{r}
+}
+
+//Set uses given function f as a mock of LocalNodeProfile.GetOpMode method
+func (m *mLocalNodeProfileMockGetOpMode) Set(f func() (r MemberOpMode)) *LocalNodeProfileMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetOpModeFunc = f
+	return m.mock
+}
+
+//GetOpMode implements github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile interface
+func (m *LocalNodeProfileMock) GetOpMode() (r MemberOpMode) {
+	counter := atomic.AddUint64(&m.GetOpModePreCounter, 1)
+	defer atomic.AddUint64(&m.GetOpModeCounter, 1)
+
+	if len(m.GetOpModeMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetOpModeMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to LocalNodeProfileMock.GetOpMode.")
+			return
+		}
+
+		result := m.GetOpModeMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the LocalNodeProfileMock.GetOpMode")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetOpModeMock.mainExpectation != nil {
+
+		result := m.GetOpModeMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the LocalNodeProfileMock.GetOpMode")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetOpModeFunc == nil {
+		m.t.Fatalf("Unexpected call to LocalNodeProfileMock.GetOpMode.")
+		return
+	}
+
+	return m.GetOpModeFunc()
+}
+
+//GetOpModeMinimockCounter returns a count of LocalNodeProfileMock.GetOpModeFunc invocations
+func (m *LocalNodeProfileMock) GetOpModeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetOpModeCounter)
+}
+
+//GetOpModeMinimockPreCounter returns the value of LocalNodeProfileMock.GetOpMode invocations
+func (m *LocalNodeProfileMock) GetOpModeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetOpModePreCounter)
+}
+
+//GetOpModeFinished returns true if mock invocations count is ok
+func (m *LocalNodeProfileMock) GetOpModeFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetOpModeMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetOpModeCounter) == uint64(len(m.GetOpModeMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetOpModeMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetOpModeCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetOpModeFunc != nil {
+		return atomic.LoadUint64(&m.GetOpModeCounter) > 0
+	}
+
+	return true
+}
+
 type mLocalNodeProfileMockGetPrimaryRole struct {
 	mock              *LocalNodeProfileMock
 	mainExpectation   *LocalNodeProfileMockGetPrimaryRoleExpectation
@@ -1736,140 +1876,6 @@ func (m *LocalNodeProfileMock) GetStartPowerFinished() bool {
 	return true
 }
 
-type mLocalNodeProfileMockGetState struct {
-	mock              *LocalNodeProfileMock
-	mainExpectation   *LocalNodeProfileMockGetStateExpectation
-	expectationSeries []*LocalNodeProfileMockGetStateExpectation
-}
-
-type LocalNodeProfileMockGetStateExpectation struct {
-	result *LocalNodeProfileMockGetStateResult
-}
-
-type LocalNodeProfileMockGetStateResult struct {
-	r MembershipState
-}
-
-//Expect specifies that invocation of LocalNodeProfile.GetState is expected from 1 to Infinity times
-func (m *mLocalNodeProfileMockGetState) Expect() *mLocalNodeProfileMockGetState {
-	m.mock.GetStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LocalNodeProfileMockGetStateExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of LocalNodeProfile.GetState
-func (m *mLocalNodeProfileMockGetState) Return(r MembershipState) *LocalNodeProfileMock {
-	m.mock.GetStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LocalNodeProfileMockGetStateExpectation{}
-	}
-	m.mainExpectation.result = &LocalNodeProfileMockGetStateResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of LocalNodeProfile.GetState is expected once
-func (m *mLocalNodeProfileMockGetState) ExpectOnce() *LocalNodeProfileMockGetStateExpectation {
-	m.mock.GetStateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &LocalNodeProfileMockGetStateExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *LocalNodeProfileMockGetStateExpectation) Return(r MembershipState) {
-	e.result = &LocalNodeProfileMockGetStateResult{r}
-}
-
-//Set uses given function f as a mock of LocalNodeProfile.GetState method
-func (m *mLocalNodeProfileMockGetState) Set(f func() (r MembershipState)) *LocalNodeProfileMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetStateFunc = f
-	return m.mock
-}
-
-//GetState implements github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile interface
-func (m *LocalNodeProfileMock) GetState() (r MembershipState) {
-	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
-	defer atomic.AddUint64(&m.GetStateCounter, 1)
-
-	if len(m.GetStateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetStateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LocalNodeProfileMock.GetState.")
-			return
-		}
-
-		result := m.GetStateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the LocalNodeProfileMock.GetState")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetStateMock.mainExpectation != nil {
-
-		result := m.GetStateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the LocalNodeProfileMock.GetState")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetStateFunc == nil {
-		m.t.Fatalf("Unexpected call to LocalNodeProfileMock.GetState.")
-		return
-	}
-
-	return m.GetStateFunc()
-}
-
-//GetStateMinimockCounter returns a count of LocalNodeProfileMock.GetStateFunc invocations
-func (m *LocalNodeProfileMock) GetStateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetStateCounter)
-}
-
-//GetStateMinimockPreCounter returns the value of LocalNodeProfileMock.GetState invocations
-func (m *LocalNodeProfileMock) GetStateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetStatePreCounter)
-}
-
-//GetStateFinished returns true if mock invocations count is ok
-func (m *LocalNodeProfileMock) GetStateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetStateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetStateCounter) == uint64(len(m.GetStateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetStateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetStateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetStateFunc != nil {
-		return atomic.LoadUint64(&m.GetStateCounter) > 0
-	}
-
-	return true
-}
-
 type mLocalNodeProfileMockHasIntroduction struct {
 	mock              *LocalNodeProfileMock
 	mainExpectation   *LocalNodeProfileMockHasIntroductionExpectation
@@ -2151,6 +2157,140 @@ func (m *LocalNodeProfileMock) IsAcceptableHostFinished() bool {
 	return true
 }
 
+type mLocalNodeProfileMockIsJoiner struct {
+	mock              *LocalNodeProfileMock
+	mainExpectation   *LocalNodeProfileMockIsJoinerExpectation
+	expectationSeries []*LocalNodeProfileMockIsJoinerExpectation
+}
+
+type LocalNodeProfileMockIsJoinerExpectation struct {
+	result *LocalNodeProfileMockIsJoinerResult
+}
+
+type LocalNodeProfileMockIsJoinerResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of LocalNodeProfile.IsJoiner is expected from 1 to Infinity times
+func (m *mLocalNodeProfileMockIsJoiner) Expect() *mLocalNodeProfileMockIsJoiner {
+	m.mock.IsJoinerFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LocalNodeProfileMockIsJoinerExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of LocalNodeProfile.IsJoiner
+func (m *mLocalNodeProfileMockIsJoiner) Return(r bool) *LocalNodeProfileMock {
+	m.mock.IsJoinerFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LocalNodeProfileMockIsJoinerExpectation{}
+	}
+	m.mainExpectation.result = &LocalNodeProfileMockIsJoinerResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of LocalNodeProfile.IsJoiner is expected once
+func (m *mLocalNodeProfileMockIsJoiner) ExpectOnce() *LocalNodeProfileMockIsJoinerExpectation {
+	m.mock.IsJoinerFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &LocalNodeProfileMockIsJoinerExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *LocalNodeProfileMockIsJoinerExpectation) Return(r bool) {
+	e.result = &LocalNodeProfileMockIsJoinerResult{r}
+}
+
+//Set uses given function f as a mock of LocalNodeProfile.IsJoiner method
+func (m *mLocalNodeProfileMockIsJoiner) Set(f func() (r bool)) *LocalNodeProfileMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsJoinerFunc = f
+	return m.mock
+}
+
+//IsJoiner implements github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNodeProfile interface
+func (m *LocalNodeProfileMock) IsJoiner() (r bool) {
+	counter := atomic.AddUint64(&m.IsJoinerPreCounter, 1)
+	defer atomic.AddUint64(&m.IsJoinerCounter, 1)
+
+	if len(m.IsJoinerMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsJoinerMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to LocalNodeProfileMock.IsJoiner.")
+			return
+		}
+
+		result := m.IsJoinerMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the LocalNodeProfileMock.IsJoiner")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsJoinerMock.mainExpectation != nil {
+
+		result := m.IsJoinerMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the LocalNodeProfileMock.IsJoiner")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsJoinerFunc == nil {
+		m.t.Fatalf("Unexpected call to LocalNodeProfileMock.IsJoiner.")
+		return
+	}
+
+	return m.IsJoinerFunc()
+}
+
+//IsJoinerMinimockCounter returns a count of LocalNodeProfileMock.IsJoinerFunc invocations
+func (m *LocalNodeProfileMock) IsJoinerMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsJoinerCounter)
+}
+
+//IsJoinerMinimockPreCounter returns the value of LocalNodeProfileMock.IsJoiner invocations
+func (m *LocalNodeProfileMock) IsJoinerMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsJoinerPreCounter)
+}
+
+//IsJoinerFinished returns true if mock invocations count is ok
+func (m *LocalNodeProfileMock) IsJoinerFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsJoinerMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsJoinerCounter) == uint64(len(m.IsJoinerMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsJoinerMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsJoinerCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsJoinerFunc != nil {
+		return atomic.LoadUint64(&m.IsJoinerCounter) > 0
+	}
+
+	return true
+}
+
 type mLocalNodeProfileMockLocalNodeProfile struct {
 	mock              *LocalNodeProfileMock
 	mainExpectation   *LocalNodeProfileMockLocalNodeProfileExpectation
@@ -2293,6 +2433,10 @@ func (m *LocalNodeProfileMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.GetNodePublicKeyStore")
 	}
 
+	if !m.GetOpModeFinished() {
+		m.t.Fatal("Expected call to LocalNodeProfileMock.GetOpMode")
+	}
+
 	if !m.GetPrimaryRoleFinished() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.GetPrimaryRole")
 	}
@@ -2313,16 +2457,16 @@ func (m *LocalNodeProfileMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.GetStartPower")
 	}
 
-	if !m.GetStateFinished() {
-		m.t.Fatal("Expected call to LocalNodeProfileMock.GetState")
-	}
-
 	if !m.HasIntroductionFinished() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.HasIntroduction")
 	}
 
 	if !m.IsAcceptableHostFinished() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.IsAcceptableHost")
+	}
+
+	if !m.IsJoinerFinished() {
+		m.t.Fatal("Expected call to LocalNodeProfileMock.IsJoiner")
 	}
 
 	if !m.LocalNodeProfileFinished() {
@@ -2374,6 +2518,10 @@ func (m *LocalNodeProfileMock) MinimockFinish() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.GetNodePublicKeyStore")
 	}
 
+	if !m.GetOpModeFinished() {
+		m.t.Fatal("Expected call to LocalNodeProfileMock.GetOpMode")
+	}
+
 	if !m.GetPrimaryRoleFinished() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.GetPrimaryRole")
 	}
@@ -2394,16 +2542,16 @@ func (m *LocalNodeProfileMock) MinimockFinish() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.GetStartPower")
 	}
 
-	if !m.GetStateFinished() {
-		m.t.Fatal("Expected call to LocalNodeProfileMock.GetState")
-	}
-
 	if !m.HasIntroductionFinished() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.HasIntroduction")
 	}
 
 	if !m.IsAcceptableHostFinished() {
 		m.t.Fatal("Expected call to LocalNodeProfileMock.IsAcceptableHost")
+	}
+
+	if !m.IsJoinerFinished() {
+		m.t.Fatal("Expected call to LocalNodeProfileMock.IsJoiner")
 	}
 
 	if !m.LocalNodeProfileFinished() {
@@ -2431,14 +2579,15 @@ func (m *LocalNodeProfileMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetIntroductionFinished()
 		ok = ok && m.GetNodePublicKeyFinished()
 		ok = ok && m.GetNodePublicKeyStoreFinished()
+		ok = ok && m.GetOpModeFinished()
 		ok = ok && m.GetPrimaryRoleFinished()
 		ok = ok && m.GetShortNodeIDFinished()
 		ok = ok && m.GetSignatureVerifierFinished()
 		ok = ok && m.GetSpecialRolesFinished()
 		ok = ok && m.GetStartPowerFinished()
-		ok = ok && m.GetStateFinished()
 		ok = ok && m.HasIntroductionFinished()
 		ok = ok && m.IsAcceptableHostFinished()
+		ok = ok && m.IsJoinerFinished()
 		ok = ok && m.LocalNodeProfileFinished()
 
 		if ok {
@@ -2476,6 +2625,10 @@ func (m *LocalNodeProfileMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to LocalNodeProfileMock.GetNodePublicKeyStore")
 			}
 
+			if !m.GetOpModeFinished() {
+				m.t.Error("Expected call to LocalNodeProfileMock.GetOpMode")
+			}
+
 			if !m.GetPrimaryRoleFinished() {
 				m.t.Error("Expected call to LocalNodeProfileMock.GetPrimaryRole")
 			}
@@ -2496,16 +2649,16 @@ func (m *LocalNodeProfileMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to LocalNodeProfileMock.GetStartPower")
 			}
 
-			if !m.GetStateFinished() {
-				m.t.Error("Expected call to LocalNodeProfileMock.GetState")
-			}
-
 			if !m.HasIntroductionFinished() {
 				m.t.Error("Expected call to LocalNodeProfileMock.HasIntroduction")
 			}
 
 			if !m.IsAcceptableHostFinished() {
 				m.t.Error("Expected call to LocalNodeProfileMock.IsAcceptableHost")
+			}
+
+			if !m.IsJoinerFinished() {
+				m.t.Error("Expected call to LocalNodeProfileMock.IsJoiner")
 			}
 
 			if !m.LocalNodeProfileFinished() {
@@ -2552,6 +2705,10 @@ func (m *LocalNodeProfileMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.GetOpModeFinished() {
+		return false
+	}
+
 	if !m.GetPrimaryRoleFinished() {
 		return false
 	}
@@ -2572,15 +2729,15 @@ func (m *LocalNodeProfileMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetStateFinished() {
-		return false
-	}
-
 	if !m.HasIntroductionFinished() {
 		return false
 	}
 
 	if !m.IsAcceptableHostFinished() {
+		return false
+	}
+
+	if !m.IsJoinerFinished() {
 		return false
 	}
 

@@ -100,7 +100,7 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 	go func() {
 		for i := 0; i < attempts; i++ {
 			handler := p.pulseHandlers[rand.Intn(len(p.pulseHandlers))]
-			go handler.HandlePulse(ctx, adapters.NewPulse(data))
+			go handler.HandlePulse(ctx, adapters.NewPulse(data), nil)
 		}
 	}()
 }

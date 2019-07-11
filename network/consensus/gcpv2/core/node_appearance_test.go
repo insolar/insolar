@@ -70,13 +70,12 @@ func TestNewNodeAppearanceAsSelf(t *testing.T) {
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	require.Equal(t, r.state, packets.NodeStateLocalActive)
 
-	require.Equal(t, r.trust, packets.SelfTrust)
+	require.Equal(t, r.trust, gcommon.SelfTrust)
 
 	require.Equal(t, r.profile, lp)
 
 	require.Equal(t, r.callback, callback)
 
-	require.NotEqual(t, r.announceHandler, nil)
 }
 
 func TestInit(t *testing.T) {
@@ -89,7 +88,7 @@ func TestInit(t *testing.T) {
 	r.init(lp, callback, 0)
 	require.Equal(t, r.state, packets.NodeStateLocalActive)
 
-	require.Equal(t, r.trust, packets.SelfTrust)
+	require.Equal(t, r.trust, gcommon.SelfTrust)
 
 	require.Equal(t, r.profile, lp)
 
@@ -130,14 +129,14 @@ func TestCopySelfTo(t *testing.T) {
 	source.announceSignature = gcommon.NewMemberAnnouncementSignatureMock(t)
 	source.requestedPower = 1
 	source.state = packets.NodeStateLocalActive
-	source.trust = packets.TrustBySome
+	source.trust = gcommon.TrustBySome
 
 	target := NewNodeAppearanceAsSelf(lp, callback)
 	target.stateEvidence = gcommon.NewNodeStateHashEvidenceMock(t)
 	target.announceSignature = gcommon.NewMemberAnnouncementSignatureMock(t)
 	target.requestedPower = 2
 	target.state = packets.NodeStateReceivedPhases
-	target.trust = packets.TrustByNeighbors
+	target.trust = gcommon.TrustByNeighbors
 
 	target.copySelfTo(source)
 
@@ -155,11 +154,13 @@ func TestCopySelfTo(t *testing.T) {
 func TestIsJoiner(t *testing.T) {
 	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
-	lp.GetStateMock.Set(func() gcommon.MembershipState { return gcommon.Undefined })
+	lp.IsJoinerMock.Set(func() (r bool) {
+		return true
+	})
 	callback := &nodeContext{}
 
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.False(t, r.IsJoiner())
+	require.True(t, r.IsJoiner())
 }
 
 func TestGetIndex(t *testing.T) {
@@ -186,8 +187,8 @@ func TestGetTrustLevel(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	r.trust = packets.TrustBySome
-	require.Equal(t, r.GetTrustLevel(), packets.TrustBySome)
+	r.trust = gcommon.TrustBySome
+	require.Equal(t, r.GetTrustLevel(), gcommon.TrustBySome)
 }
 
 func TestGetProfile(t *testing.T) {

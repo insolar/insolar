@@ -84,20 +84,3 @@ func PrimaryRoleToStaticRole(primaryRole common.NodePrimaryRole) insolar.StaticR
 		return insolar.StaticRoleUnknown
 	}
 }
-
-func MembershipStateToNodeState(membershipState common.MembershipState) insolar.NodeState {
-	switch membershipState {
-	case common.Joining:
-		return insolar.NodePending
-	case common.Suspected: // TODO: not sure
-		fallthrough
-	case common.Working:
-		return insolar.NodeReady
-	case common.JustJoined:
-		return insolar.NodeReady
-	case common.Undefined:
-		fallthrough
-	default:
-		return insolar.NodeUndefined
-	}
-}

@@ -72,12 +72,6 @@ func TestGetTotalCount(t *testing.T) {
 	require.Equal(t, MembershipRank(1<<18).GetTotalCount(), uint16(1))
 }
 
-func TestGetNodeCondition(t *testing.T) {
-	require.Equal(t, MembershipRank((1<<28)-1).GetNodeCondition(), MemberCondition(0))
-
-	require.Equal(t, MembershipRank(1<<28).GetNodeCondition(), MemberCondition(1))
-}
-
 func TestIsJoiner(t *testing.T) {
 	require.False(t, MembershipRank(1).IsJoiner())
 
@@ -92,43 +86,19 @@ func TestString(t *testing.T) {
 }
 
 func TestNewMembershipRank(t *testing.T) {
-	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 1, 1, MemberCondition(1)) })
+	require.Panics(t, func() { NewMembershipRank(MemberModeNormal, MemberPower(1), 1, 1) })
 
-	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 0x03FF+1, 1, MemberCondition(1)) })
+	require.Panics(t, func() { NewMembershipRank(MemberModeNormal, MemberPower(1), 0x03FF+1, 1) })
 
-	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 1, 0x03FF+1, MemberCondition(1)) })
+	require.Panics(t, func() { NewMembershipRank(MemberModeNormal, MemberPower(1), 1, 0x03FF+1) })
 
-	require.Panics(t, func() { NewMembershipRank(MemberPower(1), 1, 0x03FF+1, MemberCondition(4)) })
+	require.Panics(t, func() { NewMembershipRank(MemberModeNormal, MemberPower(1), 1, 0x03FF+1) })
 
-	require.Equal(t, NewMembershipRank(MemberPower(1), 1, 2, MemberCondition(1)), MembershipRank(0x10080101))
+	require.Equal(t, MembershipRank(0x80101), NewMembershipRank(MemberModeNormal, MemberPower(1), 1, 2))
 }
 
 func TestEnsureNodeIndex(t *testing.T) {
 	require.Panics(t, func() { ensureNodeIndex(0x03FF + 1) })
 
 	require.Equal(t, ensureNodeIndex(2), uint32(2))
-}
-
-func TestAsUnit32(t *testing.T) {
-	require.Panics(t, func() { MemberCondition(4).asUnit32() })
-
-	require.Equal(t, MemberJustJoined.asUnit32(), uint32(MemberJustJoined))
-
-	require.Equal(t, MemberNormal.asUnit32(), uint32(MemberNormal))
-
-	require.Equal(t, MemberSuspected.asUnit32(), uint32(MemberSuspected))
-
-	require.Equal(t, MemberPossibleFraud.asUnit32(), uint32(MemberPossibleFraud))
-}
-
-func TestMemberConditionString(t *testing.T) {
-	require.Equal(t, MemberJustJoined.String(), "recent")
-
-	require.Equal(t, MemberNormal.String(), "norm")
-
-	require.Equal(t, MemberSuspected.String(), "suspect")
-
-	require.Equal(t, MemberPossibleFraud.String(), "pfraud")
-
-	require.NotPanics(t, func() { MemberCondition(8).String() })
 }
