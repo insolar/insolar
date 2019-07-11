@@ -213,8 +213,8 @@ func verifyVectorHashes(selfData LocalHashedNodeVector, otherData HashedNodeVect
 				recalcTrusted, recalcDoubted, gshTrusted, gshDoubted)
 		}
 
-		validTrusted = validTrusted && derivedVector.VerifyGlobulaStateSignature(gshTrusted, otherData.TrustedGlobulaStateVectorSignature)
-		validDoubted = validDoubted && derivedVector.VerifyGlobulaStateSignature(gshDoubted, otherData.DoubtedGlobulaStateVectorSignature)
+		//validTrusted = validTrusted && derivedVector.VerifyGlobulaStateSignature(gshTrusted, otherData.TrustedGlobulaStateVectorSignature)
+		//validDoubted = validDoubted && derivedVector.VerifyGlobulaStateSignature(gshDoubted, otherData.DoubtedGlobulaStateVectorSignature)
 	}
 
 	if doubtedPart.IsNeeded() {
