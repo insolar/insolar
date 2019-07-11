@@ -53,22 +53,24 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"io"
 
 	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/network/utils"
 )
 
 type PacketParser struct {
 	packetData
-	digester   common.DataDigester
-	signMethod common.SignMethod
+	digester   cryptography_containers.DataDigester
+	signMethod cryptography_containers.SignMethod
 }
 
-func newPacketParser(ctx context.Context, reader io.Reader, digester common.DataDigester, signMethod common.SignMethod) (*PacketParser, error) {
+func newPacketParser(ctx context.Context, reader io.Reader, digester cryptography_containers.DataDigester, signMethod cryptography_containers.SignMethod) (*PacketParser, error) {
 	capture := utils.NewCapturingReader(reader)
 	parser := &PacketParser{
 		packetData: packetData{
@@ -89,11 +91,11 @@ func newPacketParser(ctx context.Context, reader io.Reader, digester common.Data
 }
 
 type PacketParserFactory struct {
-	digester   common.DataDigester
-	signMethod common.SignMethod
+	digester   cryptography_containers.DataDigester
+	signMethod cryptography_containers.SignMethod
 }
 
-func NewPacketParserFactory(digester common.DataDigester, signMethod common.SignMethod) *PacketParserFactory {
+func NewPacketParserFactory(digester cryptography_containers.DataDigester, signMethod cryptography_containers.SignMethod) *PacketParserFactory {
 	return &PacketParserFactory{
 		digester:   digester,
 		signMethod: signMethod,
@@ -131,7 +133,7 @@ func (p *PacketParser) GetTargetID() common.ShortNodeID {
 	return common.ShortNodeID(p.packet.Header.TargetID)
 }
 
-func (p *PacketParser) GetPacketType() packets.PacketType {
+func (p *PacketParser) GetPacketType() api.PacketType {
 	return p.packet.Header.GetPacketType()
 }
 
@@ -139,28 +141,28 @@ func (p *PacketParser) IsRelayForbidden() bool {
 	return p.packet.Header.IsRelayRestricted()
 }
 
-func (p *PacketParser) GetPacketSignature() common.SignedDigest {
-	signature := common.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
+func (p *PacketParser) GetPacketSignature() cryptography_containers.SignedDigest {
+	signature := cryptography_containers.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
 	digest := p.digester.GetDigestOf(bytes.NewReader(p.data))
-	return common.NewSignedDigest(digest, signature)
+	return cryptography_containers.NewSignedDigest(digest, signature)
 }
 
 type PulsePacketReader struct {
 	data        []byte
 	body        *PulsarPacketBody
-	pulseNumber common.PulseNumber
+	pulseNumber pulse_data.PulseNumber
 }
 
-func (r *PulsePacketReader) GetPulseData() common.PulseData {
-	return common.PulseData{
+func (r *PulsePacketReader) GetPulseData() pulse_data.PulseData {
+	return pulse_data.PulseData{
 		PulseNumber:  r.pulseNumber,
 		PulseDataExt: r.body.PulseDataExt,
 	}
 }
 
-func (r *PulsePacketReader) GetPulseDataEvidence() common2.OriginalPulsarPacket {
+func (r *PulsePacketReader) GetPulseDataEvidence() packets.OriginalPulsarPacket {
 	return &originalPulsarPacket{
-		FixedReader: common.NewFixedReader(r.data),
+		FixedReader: long_bits.NewFixedReader(r.data),
 	}
 }
 
@@ -189,7 +191,7 @@ type Phase0PacketReader struct {
 	MemberPacketReader
 }
 
-func (r *Phase0PacketReader) GetNodeRank() common2.MembershipRank {
+func (r *Phase0PacketReader) GetNodeRank() packets.MembershipRank {
 	return r.body.CurrentRank
 }
 
@@ -249,23 +251,23 @@ type Phase3PacketReader struct {
 	MemberPacketReader
 }
 
-func (r *Phase3PacketReader) GetTrustedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash {
+func (r *Phase3PacketReader) GetTrustedGlobulaAnnouncementHash() api.GlobulaAnnouncementHash {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetTrustedGlobulaStateSignature() common2.GlobulaStateSignature {
+func (r *Phase3PacketReader) GetTrustedGlobulaStateSignature() api.GlobulaStateSignature {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetDoubtedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash {
+func (r *Phase3PacketReader) GetDoubtedGlobulaAnnouncementHash() api.GlobulaAnnouncementHash {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetDoubtedGlobulaStateSignature() common2.GlobulaStateSignature {
+func (r *Phase3PacketReader) GetDoubtedGlobulaStateSignature() api.GlobulaStateSignature {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetBitset() nodeset.NodeBitset {
+func (r *Phase3PacketReader) GetBitset() api.NodeBitset {
 	return r.body.Vectors.StateVectorMask.GetBitset()
 }
 
@@ -273,27 +275,27 @@ type CloudIntroductionReader struct {
 	MemberPacketReader
 }
 
-func (r *CloudIntroductionReader) GetLastCloudStateHash() common.DigestHolder {
-	digest := common.NewDigest(&r.body.CloudIntro.LastCloudStateHash, r.digester.GetDigestMethod())
+func (r *CloudIntroductionReader) GetLastCloudStateHash() cryptography_containers.DigestHolder {
+	digest := cryptography_containers.NewDigest(&r.body.CloudIntro.LastCloudStateHash, r.digester.GetDigestMethod())
 	return digest.AsDigestHolder()
 }
 
-func (r *CloudIntroductionReader) GetJoinerSecret() common.DigestHolder {
+func (r *CloudIntroductionReader) GetJoinerSecret() cryptography_containers.DigestHolder {
 	if r.packet.Header.GetFlagRangeInt(1, 2) != 3 {
 		return nil
 	}
 
-	digest := common.NewDigest(&r.body.JoinerSecret, r.digester.GetDigestMethod())
+	digest := cryptography_containers.NewDigest(&r.body.JoinerSecret, r.digester.GetDigestMethod())
 	return digest.AsDigestHolder()
 }
 
-func (r *CloudIntroductionReader) GetCloudIdentity() common.DigestHolder {
-	digest := common.NewDigest(&r.body.CloudIntro.CloudIdentity, r.digester.GetDigestMethod())
+func (r *CloudIntroductionReader) GetCloudIdentity() cryptography_containers.DigestHolder {
+	digest := cryptography_containers.NewDigest(&r.body.CloudIntro.CloudIdentity, r.digester.GetDigestMethod())
 	return digest.AsDigestHolder()
 }
 
 type originalPulsarPacket struct {
-	common.FixedReader
+	long_bits.FixedReader
 }
 
 func (p *originalPulsarPacket) OriginalPulsarPacket() {}
@@ -303,6 +305,6 @@ type packetData struct {
 	packet *Packet
 }
 
-func (p *packetData) GetPulseNumber() common.PulseNumber {
+func (p *packetData) GetPulseNumber() pulse_data.PulseNumber {
 	return p.packet.getPulseNumber()
 }

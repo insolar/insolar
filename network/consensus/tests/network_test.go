@@ -53,14 +53,13 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"math/rand"
 	"sync"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 type NetStrategy interface {
-	GetLinkStrategy(hostAddress common.HostAddress) LinkStrategy
+	GetLinkStrategy(hostAddress endpoints.HostAddress) LinkStrategy
 }
 
 type PacketFunc func(packet *Packet)
@@ -72,11 +71,11 @@ type LinkStrategy interface {
 
 type Packet struct {
 	Payload interface{}
-	Host    common.HostAddress
+	Host    endpoints.HostAddress
 }
 
 type EmuRoute struct {
-	host     common.HostAddress
+	host     endpoints.HostAddress
 	network  *EmuNetwork
 	strategy LinkStrategy
 	toHost   chan<- Packet
@@ -86,7 +85,7 @@ type EmuRoute struct {
 type EmuNetwork struct {
 	hostsSync sync.RWMutex
 	ctx       context.Context
-	hosts     map[common.HostAddress]*EmuRoute
+	hosts     map[endpoints.HostAddress]*EmuRoute
 	strategy  NetStrategy
 	running   bool
 	bufSize   int
@@ -101,7 +100,7 @@ func (e errEmuNetwork) Error() string {
 	return fmt.Sprintf("emu-net error - %s: %v", e.errType, e.details)
 }
 
-func ErrUnknownEmuHost(host common.HostAddress) error {
+func ErrUnknownEmuHost(host endpoints.HostAddress) error {
 	return errEmuNetwork{errType: "Unknown host", details: host}
 }
 
@@ -114,7 +113,7 @@ func NewEmuNetwork(nwStrategy NetStrategy, ctx context.Context) *EmuNetwork {
 	return &EmuNetwork{strategy: nwStrategy, ctx: ctx}
 }
 
-func (emuNet *EmuNetwork) AddHost(ctx context.Context, host common.HostAddress) (toHost <-chan Packet, fromHost chan<- Packet) {
+func (emuNet *EmuNetwork) AddHost(ctx context.Context, host endpoints.HostAddress) (toHost <-chan Packet, fromHost chan<- Packet) {
 	emuNet.hostsSync.Lock()
 	defer emuNet.hostsSync.Unlock()
 
@@ -140,7 +139,7 @@ func (emuNet *EmuNetwork) AddHost(ctx context.Context, host common.HostAddress) 
 	toHostC := make(chan Packet, chanBufSize)
 
 	if emuNet.hosts == nil {
-		emuNet.hosts = make(map[common.HostAddress]*EmuRoute)
+		emuNet.hosts = make(map[endpoints.HostAddress]*EmuRoute)
 	}
 
 	route := EmuRoute{host: host, strategy: routeStrategy, toHost: toHostC, fromHost: fromHostC, network: emuNet}
@@ -153,7 +152,7 @@ func (emuNet *EmuNetwork) AddHost(ctx context.Context, host common.HostAddress) 
 	return toHostC, fromHostC
 }
 
-func (emuNet *EmuNetwork) DropHost(host common.HostAddress) bool {
+func (emuNet *EmuNetwork) DropHost(host endpoints.HostAddress) bool {
 	route := emuNet.getHostRoute(host)
 	if route == nil {
 		return false
@@ -163,7 +162,7 @@ func (emuNet *EmuNetwork) DropHost(host common.HostAddress) bool {
 	return true
 }
 
-func (emuNet *EmuNetwork) SendToHost(host common.HostAddress, payload interface{}, fromHost common.HostAddress) bool {
+func (emuNet *EmuNetwork) SendToHost(host endpoints.HostAddress, payload interface{}, fromHost endpoints.HostAddress) bool {
 	route := emuNet.getHostRoute(host)
 	if route == nil {
 		return false
@@ -174,14 +173,14 @@ func (emuNet *EmuNetwork) SendToHost(host common.HostAddress, payload interface{
 	return true
 }
 
-func (emuNet *EmuNetwork) SendToAll(payload interface{}, fromHost common.HostAddress) {
+func (emuNet *EmuNetwork) SendToAll(payload interface{}, fromHost endpoints.HostAddress) {
 	for _, route := range emuNet.getRoutes() {
 		targetPacket := Packet{Payload: payload, Host: fromHost}
 		route.pushPacket(targetPacket)
 	}
 }
 
-func (emuNet *EmuNetwork) SendRandom(payload interface{}, fromHost common.HostAddress) {
+func (emuNet *EmuNetwork) SendRandom(payload interface{}, fromHost endpoints.HostAddress) {
 	targetPacket := Packet{Payload: payload, Host: fromHost}
 	routes := emuNet.getRoutes()
 	routes[rand.Intn(len(routes))].pushPacket(targetPacket)
@@ -201,7 +200,7 @@ func (emuNet *EmuNetwork) CreateSendToAllChannel() chan<- Packet {
 	return inbound
 }
 
-func (emuNet *EmuNetwork) CreateSendToAllFromOneChannel(sender common.HostAddress) chan<- interface{} {
+func (emuNet *EmuNetwork) CreateSendToAllFromOneChannel(sender endpoints.HostAddress) chan<- interface{} {
 	inbound := make(chan interface{})
 	go func() {
 		for {
@@ -215,7 +214,7 @@ func (emuNet *EmuNetwork) CreateSendToAllFromOneChannel(sender common.HostAddres
 	return inbound
 }
 
-func (emuNet *EmuNetwork) CreateSendToRandomChannel(sender common.HostAddress, attempts int) chan<- interface{} {
+func (emuNet *EmuNetwork) CreateSendToRandomChannel(sender endpoints.HostAddress, attempts int) chan<- interface{} {
 	inbound := make(chan interface{})
 	go func() {
 		for {
@@ -231,11 +230,11 @@ func (emuNet *EmuNetwork) CreateSendToRandomChannel(sender common.HostAddress, a
 	return inbound
 }
 
-func (emuNet *EmuNetwork) GetHosts() []*common.HostAddress {
+func (emuNet *EmuNetwork) GetHosts() []*endpoints.HostAddress {
 	emuNet.hostsSync.RLock()
 	defer emuNet.hostsSync.RUnlock()
 
-	keys := make([]*common.HostAddress, 0, len(emuNet.hosts))
+	keys := make([]*endpoints.HostAddress, 0, len(emuNet.hosts))
 	for k := range emuNet.hosts {
 		keys = append(keys, &k)
 	}
@@ -269,7 +268,7 @@ func (emuNet *EmuNetwork) Start(ctx context.Context) {
 	}
 }
 
-func (emuNet *EmuNetwork) getHostRoute(host common.HostAddress) *EmuRoute {
+func (emuNet *EmuNetwork) getHostRoute(host endpoints.HostAddress) *EmuRoute {
 	emuNet.hostsSync.RLock()
 	defer emuNet.hostsSync.RUnlock()
 

@@ -52,26 +52,25 @@ package adapters
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"math/rand"
 
-	common2 "github.com/insolar/insolar/network/consensus/common"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 type RoundStrategy struct {
 	bundle      core.PhaseControllersBundle
-	chronicle   census.ConsensusChronicles
-	localConfig core.LocalNodeConfiguration
+	chronicle   api_2.ConsensusChronicles
+	localConfig api_2.LocalNodeConfiguration
 }
 
 func NewRoundStrategy(
 	bundle core.PhaseControllersBundle,
-	chronicle census.ConsensusChronicles,
-	localConfig core.LocalNodeConfiguration,
+	chronicle api_2.ConsensusChronicles,
+	localConfig api_2.LocalNodeConfiguration,
 ) *RoundStrategy {
 	return &RoundStrategy{
 		bundle:      bundle,
@@ -80,7 +79,7 @@ func NewRoundStrategy(
 	}
 }
 
-func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common2.PulseNumber, self common.LocalNodeProfile) context.Context {
+func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse_data.PulseNumber, self api.LocalNodeProfile) context.Context {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 		"node_id": self.GetShortNodeID(),
 		"pulse":   expectedPulse,
@@ -109,5 +108,5 @@ func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
 	return false
 }
 
-func (rs *RoundStrategy) AdjustConsensusTimings(timings *common.RoundTimings) {
+func (rs *RoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
 }

@@ -53,12 +53,10 @@ package core
 import (
 	"context"
 	"fmt"
-
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 /*
@@ -88,7 +86,7 @@ func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController
 		p.queueToFull = make(chan postponedPacket, prepToFullQueueSize)
 	}
 
-	p.handlers = make([]PrepPhasePacketHandler, packets.MaxPacketType)
+	p.handlers = make([]PrepPhasePacketHandler, api.MaxPacketType)
 	for _, ctl := range controllers {
 		pt := ctl.GetPacketType()
 		if p.handlers[pt] != nil {
@@ -116,11 +114,11 @@ func (p *PrepRealm) stop() {
 	}
 }
 
-type postponedPacketFunc func(packet packets.PacketParser, from common.HostIdentityHolder)
+type postponedPacketFunc func(packet packets.PacketParser, from endpoints.HostIdentityHolder)
 
 type postponedPacket struct {
 	packet packets.PacketParser
-	from   common.HostIdentityHolder
+	from   endpoints.HostIdentityHolder
 }
 
 func flushQueueTo(ctx context.Context, in chan postponedPacket, out postponedPacketFunc) {
@@ -137,7 +135,7 @@ func flushQueueTo(ctx context.Context, in chan postponedPacket, out postponedPac
 	}
 }
 
-func (p *PrepRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
+func (p *PrepRealm) GetOriginalPulse() packets.OriginalPulsarPacket {
 	p.RLock()
 	defer p.RUnlock()
 
@@ -181,11 +179,11 @@ func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool
 	return nil
 }
 
-func (p *PrepRealm) GetExpectedPulseNumber() common.PulseNumber {
+func (p *PrepRealm) GetExpectedPulseNumber() pulse_data.PulseNumber {
 	return p.initialCensus.GetExpectedPulseNumber()
 }
 
-func (p *PrepRealm) handleHostPacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder) error {
+func (p *PrepRealm) handleHostPacket(ctx context.Context, packet packets.PacketParser, from endpoints.HostIdentityHolder) error {
 	pt := packet.GetPacketType()
 	h := p.handlers[pt]
 
@@ -208,7 +206,7 @@ func (p *PrepRealm) handleHostPacket(ctx context.Context, packet packets.PacketP
 	return errPacketIsNotAllowed
 }
 
-func (p *PrepRealm) postponePacket(packet packets.PacketParser, from common.HostIdentityHolder) bool {
+func (p *PrepRealm) postponePacket(packet packets.PacketParser, from endpoints.HostIdentityHolder) bool {
 	if p.queueToFull == nil {
 		return false
 	}

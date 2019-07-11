@@ -52,16 +52,16 @@ package adapters
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 type PacketProcessor interface {
-	ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error
+	ProcessPacket(ctx context.Context, payload packets.PacketParser, from endpoints.HostIdentityHolder) error
 }
 
 type DatagramHandler struct {
@@ -99,8 +99,8 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 		return
 	}
 
-	hostIdentity := common.HostIdentity{
-		Addr: common.HostAddress(address),
+	hostIdentity := endpoints.HostIdentity{
+		Addr: endpoints.HostAddress(address),
 	}
 	err = dh.packetProcessor.ProcessPacket(ctx, packetParser, &hostIdentity)
 	if err != nil {
@@ -124,7 +124,7 @@ func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
 func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, _ network.ReceivedPacket) {
 	pulsePayload := NewPulsePacketParser(pulse)
 
-	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &common.HostIdentity{
+	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &endpoints.HostIdentity{
 		Addr: "pulsar",
 	})
 	if err != nil {

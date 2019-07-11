@@ -52,10 +52,11 @@ package phases
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
@@ -64,11 +65,11 @@ func NewPhase0Controller() *Phase0Controller {
 	return &Phase0Controller{}
 }
 
-func NewPhase1Controller(packetPrepareOptions core.PacketSendOptions) *Phase1Controller {
+func NewPhase1Controller(packetPrepareOptions api_2.PacketSendOptions) *Phase1Controller {
 	return &Phase1Controller{packetPrepareOptions: packetPrepareOptions}
 }
 
-func NewReqPhase1Controller(packetPrepareOptions core.PacketSendOptions, delegate *Phase1Controller) *ReqPhase1Controller {
+func NewReqPhase1Controller(packetPrepareOptions api_2.PacketSendOptions, delegate *Phase1Controller) *ReqPhase1Controller {
 	return &ReqPhase1Controller{packetPrepareOptions: packetPrepareOptions, delegate: delegate}
 }
 
@@ -78,8 +79,8 @@ type Phase0Controller struct {
 	core.PhaseControllerPerMemberTemplate
 }
 
-func (*Phase0Controller) GetPacketType() packets.PacketType {
-	return packets.PacketPhase0
+func (*Phase0Controller) GetPacketType() api.PacketType {
+	return api.PacketPhase0
 }
 
 func (c *Phase0Controller) HandleMemberPacket(ctx context.Context, p packets.MemberPacketReader, n *core.NodeAppearance) error {
@@ -112,11 +113,11 @@ var _ core.PhaseController = &Phase1Controller{}
 
 type Phase1Controller struct {
 	PhaseControllerWithJoinersTemplate
-	packetPrepareOptions core.PacketSendOptions
+	packetPrepareOptions api_2.PacketSendOptions
 }
 
-func (*Phase1Controller) GetPacketType() packets.PacketType {
-	return packets.PacketPhase1
+func (*Phase1Controller) GetPacketType() api.PacketType {
+	return api.PacketPhase1
 }
 
 func (c *Phase1Controller) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *core.NodeAppearance,
@@ -149,7 +150,7 @@ func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core
 
 	na := p1.GetAnnouncementReader()
 	nr := na.GetNodeRank()
-	mp := common.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(),
+	mp := api.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(),
 		na.GetNodeStateHashEvidence(), na.GetAnnouncementSignature(), na.GetRequestedPower())
 
 	if c.R.GetNodeCount() != int(nr.GetTotalCount()) {
@@ -157,12 +158,12 @@ func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core
 		return err
 	}
 
-	var ma common.MembershipAnnouncement
+	var ma api.MembershipAnnouncement
 	switch {
 	case na.IsLeaving():
-		ma = common.NewMembershipAnnouncementWithLeave(mp, na.GetLeaveReason())
+		ma = api.NewMembershipAnnouncementWithLeave(mp, na.GetLeaveReason())
 	case na.GetJoinerID().IsAbsent():
-		ma = common.NewMembershipAnnouncement(mp)
+		ma = api.NewMembershipAnnouncement(mp)
 	default:
 		panic("not implemented") //TODO implement
 		//jar := na.GetJoinerAnnouncement()
@@ -191,7 +192,7 @@ func (c *Phase1Controller) workerPhase01(ctx context.Context) {
 	c.workerSendPhase1(ctx, startIndex)
 }
 
-func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (common.NodeStateHash, int) {
+func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (api.NodeStateHash, int) {
 
 	nshChannel := c.R.UpstreamPreparePulseChange()
 	// batchSize := c.R.strategy.GetPhase01SendBatching()
@@ -200,7 +201,7 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (common.NodeSta
 		TODO when PulseDataExt is bigger than ~1KB then it is too big for Ph1 and can only be distributed with Ph0 packets, so Ph0 phase should continue to run
 		Also size of Ph1 claims should be considered too.
 	*/
-	var nsh common.NodeStateHash
+	var nsh api.NodeStateHash
 
 	select {
 	case <-ctx.Done():
@@ -222,7 +223,7 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (common.NodeSta
 		//DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
 		//Instead we have a chance to save some traffic.
 		p0.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
-		target.SetSentPhase(packets.Phase0)
+		target.SetSentPhase(api.Phase0)
 
 		select {
 		case <-ctx.Done():
@@ -250,23 +251,23 @@ func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int)
 
 	//first, send to nodes not covered by Phase 0
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (common.NodeProfile, core.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (api.NodeProfile, api_2.PacketSendOptions) {
 			target := otherNodes[targetIdx+startIndex]
 			target.SetSentByPacketType(c.GetPacketType())
 
 			if target.HasReceivedAnyPhase() {
-				return target.GetProfile(), core.SendWithoutPulseData
+				return target.GetProfile(), api_2.SendWithoutPulseData
 			}
 			return target.GetProfile(), 0
 		})
 
 	p1.SendToMany(ctx, startIndex, c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (common.NodeProfile, core.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (api.NodeProfile, api_2.PacketSendOptions) {
 			target := otherNodes[targetIdx]
 			target.SetSentByPacketType(c.GetPacketType())
 
 			if target.HasReceivedAnyPhase() {
-				return target.GetProfile(), core.SendWithoutPulseData
+				return target.GetProfile(), api_2.SendWithoutPulseData
 			}
 			return target.GetProfile(), 0
 		})
@@ -277,11 +278,11 @@ var _ core.PhaseController = &ReqPhase1Controller{}
 type ReqPhase1Controller struct {
 	core.PhaseControllerPerMemberTemplate
 	delegate             *Phase1Controller
-	packetPrepareOptions core.PacketSendOptions
+	packetPrepareOptions api_2.PacketSendOptions
 }
 
-func (c *ReqPhase1Controller) GetPacketType() packets.PacketType {
-	return packets.PacketReqPhase1
+func (c *ReqPhase1Controller) GetPacketType() api.PacketType {
+	return api.PacketReqPhase1
 }
 
 func (c *ReqPhase1Controller) HandleMemberPacket(ctx context.Context, p packets.MemberPacketReader, n *core.NodeAppearance) error {
@@ -301,7 +302,7 @@ func (c *ReqPhase1Controller) HandleMemberPacket(ctx context.Context, p packets.
 func (c *ReqPhase1Controller) sendReqPhase1Reply(ctx context.Context, target *core.NodeAppearance) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), core.SendWithoutPulseData|c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), api_2.SendWithoutPulseData|c.packetPrepareOptions)
 
 	p1.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
 	target.SetSentByPacketType(c.GetPacketType())

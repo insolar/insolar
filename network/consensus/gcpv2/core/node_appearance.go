@@ -52,6 +52,10 @@ package core
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"math"
 	"sync"
 
@@ -64,18 +68,18 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile, callback *nodeContext) *NodeAppearance {
+func NewNodeAppearanceAsSelf(np api.LocalNodeProfile, callback *nodeContext) *NodeAppearance {
 	np.LocalNodeProfile() // to avoid linter's paranoia
 
 	r := &NodeAppearance{
-		state: packets.NodeStateLocalActive,
+		state: api.NodeStateLocalActive,
 		trust: common2.SelfTrust,
 	}
 	r.init(np, callback, 0)
 	return r
 }
 
-func (c *NodeAppearance) init(np common2.NodeProfile, callback NodeContextHolder, baselineWeight uint32) {
+func (c *NodeAppearance) init(np api.NodeProfile, callback NodeContextHolder, baselineWeight uint32) {
 	if np == nil {
 		panic("node profile is nil")
 	}
@@ -88,16 +92,16 @@ type NodeAppearance struct {
 	mutex sync.Mutex
 
 	/* Provided externally at construction. Don't need mutex */
-	profile  common2.NodeProfile // set by construction
+	profile  api.NodeProfile // set by construction
 	callback *nodeContext
 	handlers []PhasePerNodePacketFunc
 
 	/* Other fields - need mutex */
 
 	//membership common2.MembershipProfile // one-time set
-	announceSignature common2.MemberAnnouncementSignature // one-time set
-	stateEvidence     common2.NodeStateHashEvidence       // one-time set
-	requestedPower    common2.MemberPower                 // one-time set
+	announceSignature api.MemberAnnouncementSignature // one-time set
+	stateEvidence     api.NodeStateHashEvidence       // one-time set
+	requestedPower    api.MemberPower                 // one-time set
 
 	requestedJoiner      *NodeAppearance // one-time set
 	requestedLeave       bool            // one-time set
@@ -107,7 +111,7 @@ type NodeAppearance struct {
 
 	neighbourWeight uint32
 
-	state           packets.NodeState
+	state           api.NodeState
 	trust           common2.NodeTrustLevel
 	neighborReports uint8
 }
@@ -127,7 +131,7 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	defer c.mutex.Unlock()
 
 	/* Ensure that the target is LocalNode */
-	target.profile.(common2.LocalNodeProfile).LocalNodeProfile()
+	target.profile.(api.LocalNodeProfile).LocalNodeProfile()
 
 	target.stateEvidence = c.stateEvidence
 	target.announceSignature = c.announceSignature
@@ -160,15 +164,15 @@ func (c *NodeAppearance) GetTrustLevel() common2.NodeTrustLevel {
 	return c.trust
 }
 
-func (c *NodeAppearance) GetProfile() common2.NodeProfile {
+func (c *NodeAppearance) GetProfile() api.NodeProfile {
 	return c.profile
 }
 
-func (c *NodeAppearance) VerifyPacketAuthenticity(packet packets.PacketParser, from common.HostIdentityHolder, strictFrom bool) error {
+func (c *NodeAppearance) VerifyPacketAuthenticity(packet packets.PacketParser, from endpoints.HostIdentityHolder, strictFrom bool) error {
 	return VerifyPacketAuthenticityBy(packet, c.profile, c.profile.GetSignatureVerifier(), from, strictFrom)
 }
 
-func (c *NodeAppearance) SetReceivedPhase(phase packets.PhaseNumber) bool {
+func (c *NodeAppearance) SetReceivedPhase(phase api.PhaseNumber) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -176,7 +180,7 @@ func (c *NodeAppearance) SetReceivedPhase(phase packets.PhaseNumber) bool {
 	return c.state.UpdReceivedPhase(phase)
 }
 
-func (c *NodeAppearance) SetReceivedByPacketType(pt packets.PacketType) bool {
+func (c *NodeAppearance) SetReceivedByPacketType(pt api.PacketType) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -185,7 +189,7 @@ func (c *NodeAppearance) SetReceivedByPacketType(pt packets.PacketType) bool {
 }
 
 /* Explicit use of SetSentPhase is NOT recommended. Please use SetSentByPacketType */
-func (c *NodeAppearance) SetSentPhase(phase packets.PhaseNumber) bool {
+func (c *NodeAppearance) SetSentPhase(phase api.PhaseNumber) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -193,7 +197,7 @@ func (c *NodeAppearance) SetSentPhase(phase packets.PhaseNumber) bool {
 	return c.state.UpdSentPhase(phase)
 }
 
-func (c *NodeAppearance) SetSentByPacketType(pt packets.PacketType) bool {
+func (c *NodeAppearance) SetSentByPacketType(pt api.PacketType) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -201,14 +205,14 @@ func (c *NodeAppearance) SetSentByPacketType(pt packets.PacketType) bool {
 	return c.state.UpdSentPacket(pt)
 }
 
-func (c *NodeAppearance) SetReceivedWithDupCheck(pt packets.PacketType) error {
+func (c *NodeAppearance) SetReceivedWithDupCheck(pt api.PacketType) error {
 	if c.SetReceivedByPacketType(pt) {
 		return nil
 	}
 	return errors.ErrRepeatedPhasePacket
 }
 
-func (c *NodeAppearance) GetSignatureVerifier(vFactory common.SignatureVerifierFactory) common.SignatureVerifier {
+func (c *NodeAppearance) GetSignatureVerifier(vFactory cryptography_containers.SignatureVerifierFactory) cryptography_containers.SignatureVerifier {
 	v := c.profile.GetSignatureVerifier()
 	if v != nil {
 		return v
@@ -216,12 +220,12 @@ func (c *NodeAppearance) GetSignatureVerifier(vFactory common.SignatureVerifierF
 	return c.CreateSignatureVerifier(vFactory)
 }
 
-func (c *NodeAppearance) CreateSignatureVerifier(vFactory common.SignatureVerifierFactory) common.SignatureVerifier {
+func (c *NodeAppearance) CreateSignatureVerifier(vFactory cryptography_containers.SignatureVerifierFactory) cryptography_containers.SignatureVerifier {
 	return vFactory.GetSignatureVerifierWithPKS(c.profile.GetNodePublicKeyStore())
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNodeMembership(mp common2.MembershipAnnouncement) (bool, error) {
+func (c *NodeAppearance) ApplyNodeMembership(mp api.MembershipAnnouncement) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -229,7 +233,7 @@ func (c *NodeAppearance) ApplyNodeMembership(mp common2.MembershipAnnouncement) 
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp common2.MembershipAnnouncement) (bool, error) {
+func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp api.MembershipAnnouncement) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -268,7 +272,7 @@ func (c *NodeAppearance) Blames() errors.BlameFactory {
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) _applyNodeMembership(ma common2.MembershipAnnouncement) (bool, error) {
+func (c *NodeAppearance) _applyNodeMembership(ma api.MembershipAnnouncement) (bool, error) {
 
 	if ma.Membership.IsEmpty() {
 		panic(fmt.Sprintf("membership evidence is nil: for=%v", c.GetShortNodeID()))
@@ -276,24 +280,24 @@ func (c *NodeAppearance) _applyNodeMembership(ma common2.MembershipAnnouncement)
 
 	if c.stateEvidence != nil {
 		lmp := c.getMembership()
-		var lma common2.MembershipAnnouncement
+		var lma api.MembershipAnnouncement
 		if ma.Membership.Equals(lmp) && ma.IsLeaving == c.requestedLeave {
 			switch {
 			case c.requestedLeave:
 				if ma.LeaveReason == c.requestedLeaveReason {
 					return false, nil
 				}
-				lma = common2.NewMembershipAnnouncementWithLeave(lmp, c.requestedLeaveReason)
+				lma = api.NewMembershipAnnouncementWithLeave(lmp, c.requestedLeaveReason)
 			case c.requestedJoiner == nil:
 				if ma.Joiner == nil {
 					return false, nil
 				}
-				lma = common2.NewMembershipAnnouncement(lmp)
+				lma = api.NewMembershipAnnouncement(lmp)
 			default:
-				if common2.EqualIntroProfiles(c.requestedJoiner.GetProfile(), ma.Joiner) {
+				if api.EqualIntroProfiles(c.requestedJoiner.GetProfile(), ma.Joiner) {
 					return false, nil
 				}
-				lma = common2.NewMembershipAnnouncementWithJoiner(lmp, c.requestedJoiner.profile)
+				lma = api.NewMembershipAnnouncementWithJoiner(lmp, c.requestedJoiner.profile)
 			}
 		}
 		return c.registerFraud(c.Frauds().NewInconsistentMembershipAnnouncement(c.GetProfile(), lma, ma))
@@ -308,7 +312,7 @@ func (c *NodeAppearance) _applyNodeMembership(ma common2.MembershipAnnouncement)
 		panic("not implemented") //TODO implement
 	}
 
-	c.neighbourWeight ^= common.FoldUint64(ma.Membership.StateEvidence.GetNodeStateHash().FoldToUint64())
+	c.neighbourWeight ^= long_bits.FoldUint64(ma.Membership.StateEvidence.GetNodeStateHash().FoldToUint64())
 	c.stateEvidence = ma.Membership.StateEvidence
 	c.announceSignature = ma.Membership.AnnounceSignature
 	c.requestedPower = ma.Membership.RequestedPower
@@ -318,7 +322,7 @@ func (c *NodeAppearance) _applyNodeMembership(ma common2.MembershipAnnouncement)
 	return true, nil
 }
 
-func (c *NodeAppearance) GetNodeMembershipProfile() common2.MembershipProfile {
+func (c *NodeAppearance) GetNodeMembershipProfile() api.MembershipProfile {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -328,7 +332,7 @@ func (c *NodeAppearance) GetNodeMembershipProfile() common2.MembershipProfile {
 	return c.getMembership()
 }
 
-func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (common2.MembershipProfile, common2.NodeTrustLevel) {
+func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (api.MembershipProfile, common2.NodeTrustLevel) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -338,13 +342,13 @@ func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (common2.MembershipP
 	return c.getMembership(), c.trust
 }
 
-func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() common2.MembershipProfile {
+func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() api.MembershipProfile {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.getMembership()
 }
 
-func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence common2.NodeStateHashEvidence, announce common2.MemberAnnouncementSignature) {
+func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence api.NodeStateHashEvidence, announce api.MemberAnnouncementSignature) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -355,7 +359,7 @@ func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence common2.NodeStat
 		panic("illegal param")
 	}
 
-	c.neighbourWeight ^= common.FoldUint64(evidence.GetNodeStateHash().FoldToUint64())
+	c.neighbourWeight ^= long_bits.FoldUint64(evidence.GetNodeStateHash().FoldToUint64())
 	c.stateEvidence = evidence
 	c.announceSignature = announce
 	c.callback.updatePopulationVersion()
@@ -410,8 +414,8 @@ func (c *NodeAppearance) RegisterFraud(fraud errors.FraudError) (bool, error) {
 }
 
 // MUST BE NO LOCK
-func (c *NodeAppearance) getMembership() common2.MembershipProfile {
-	return common2.NewMembershipProfileByNode(c.profile, c.stateEvidence, c.announceSignature, c.requestedPower)
+func (c *NodeAppearance) getMembership() api.MembershipProfile {
+	return api.NewMembershipProfileByNode(c.profile, c.stateEvidence, c.announceSignature, c.requestedPower)
 }
 
 func (c *NodeAppearance) GetNeighborTrustThreshold() uint8 {
@@ -455,24 +459,24 @@ func (c *NodeAppearance) ResetPacketHandlers(indices ...int) {
 	c.handlers = nil
 }
 
-func (c *NodeAppearance) GetRequestedState() (bool, uint32, *NodeAppearance, common2.MembershipProfile, common2.NodeTrustLevel) {
+func (c *NodeAppearance) GetRequestedState() (bool, uint32, *NodeAppearance, api.MembershipProfile, common2.NodeTrustLevel) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	return c.requestedLeave, c.requestedLeaveReason, c.requestedJoiner, c.getMembership(), c.trust
 }
 
-func (c *NodeAppearance) GetRequestedAnnouncement() common2.MembershipAnnouncement {
+func (c *NodeAppearance) GetRequestedAnnouncement() api.MembershipAnnouncement {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	mb := c.getMembership()
 	switch {
 	case c.requestedLeave:
-		return common2.NewMembershipAnnouncementWithLeave(mb, c.requestedLeaveReason)
+		return api.NewMembershipAnnouncementWithLeave(mb, c.requestedLeaveReason)
 	case c.requestedJoiner != nil:
-		return common2.NewMembershipAnnouncementWithJoiner(mb, c.requestedJoiner.profile)
+		return api.NewMembershipAnnouncementWithJoiner(mb, c.requestedJoiner.profile)
 	default:
-		return common2.NewMembershipAnnouncement(mb)
+		return api.NewMembershipAnnouncement(mb)
 	}
 }

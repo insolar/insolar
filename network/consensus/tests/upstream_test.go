@@ -52,28 +52,28 @@ package tests
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"math/rand"
 	"time"
-
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 func NewEmuUpstreamPulseController(ctx context.Context, nshDelay time.Duration) *EmuUpstreamPulseController {
 	return &EmuUpstreamPulseController{ctx: ctx, nshDelay: nshDelay}
 }
 
-var _ core.UpstreamPulseController = &EmuUpstreamPulseController{}
+var _ api_2.UpstreamPulseController = &EmuUpstreamPulseController{}
 
 type EmuUpstreamPulseController struct {
 	ctx      context.Context
 	nshDelay time.Duration
 }
 
-func (r *EmuUpstreamPulseController) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	c := make(chan common.NodeStateHash, 1)
+func (r *EmuUpstreamPulseController) PreparePulseChange(report api_2.MembershipUpstreamReport) <-chan api.NodeStateHash {
+	c := make(chan api.NodeStateHash, 1)
 	nsh := NewEmuNodeStateHash(rand.Uint64())
 	if r.nshDelay == 0 {
 		c <- &nsh
@@ -87,38 +87,38 @@ func (r *EmuUpstreamPulseController) PreparePulseChange(report core.MembershipUp
 	return c
 }
 
-func (*EmuUpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, pd common2.PulseData, activeCensus census.OperationalCensus) {
+func (*EmuUpstreamPulseController) CommitPulseChange(report api_2.MembershipUpstreamReport, pd pulse_data.PulseData, activeCensus api_2.OperationalCensus) {
 }
 
 func (*EmuUpstreamPulseController) CancelPulseChange() {
 }
 
-func (*EmuUpstreamPulseController) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+func (*EmuUpstreamPulseController) ConsensusFinished(report api_2.MembershipUpstreamReport, expectedCensus api_2.OperationalCensus) {
 }
 
 func NewEmuNodeStateHash(v uint64) EmuNodeStateHash {
-	return EmuNodeStateHash{Bits64: common2.NewBits64(v)}
+	return EmuNodeStateHash{Bits64: long_bits.NewBits64(v)}
 }
 
-var _ common.NodeStateHash = &EmuNodeStateHash{}
+var _ api.NodeStateHash = &EmuNodeStateHash{}
 
 type EmuNodeStateHash struct {
-	common2.Bits64
+	long_bits.Bits64
 }
 
-func (r *EmuNodeStateHash) CopyOfDigest() common2.Digest {
-	return common2.NewDigest(&r.Bits64, r.GetDigestMethod())
+func (r *EmuNodeStateHash) CopyOfDigest() cryptography_containers.Digest {
+	return cryptography_containers.NewDigest(&r.Bits64, r.GetDigestMethod())
 }
 
-func (r *EmuNodeStateHash) SignWith(signer common2.DigestSigner) common2.SignedDigest {
+func (r *EmuNodeStateHash) SignWith(signer cryptography_containers.DigestSigner) cryptography_containers.SignedDigest {
 	d := r.CopyOfDigest()
 	return d.SignWith(signer)
 }
 
-func (r *EmuNodeStateHash) GetDigestMethod() common2.DigestMethod {
+func (r *EmuNodeStateHash) GetDigestMethod() cryptography_containers.DigestMethod {
 	return "uint64"
 }
 
-func (r *EmuNodeStateHash) Equals(o common2.DigestHolder) bool {
-	return common2.EqualFixedLenWriterTo(r, o)
+func (r *EmuNodeStateHash) Equals(o cryptography_containers.DigestHolder) bool {
+	return long_bits.EqualFixedLenWriterTo(r, o)
 }

@@ -52,12 +52,13 @@ package nodeset
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
 func NewNodeBitsetRow(columnCount int) NodeBitsetRow {
-	return NodeBitsetRow{innerRow{stats.NewStatRow(uint8(maxNodeBitsetEntry)-1, columnCount)}}
+	return NodeBitsetRow{innerRow{stats.NewStatRow(uint8(api.MaxNodeBitsetEntry)-1, columnCount)}}
 }
 
 type innerRow struct {
@@ -68,32 +69,32 @@ type NodeBitsetRow struct {
 	innerRow
 }
 
-func (r *NodeBitsetRow) Get(column int) NodeBitsetEntry {
-	return NodeBitsetEntry(r.innerRow.Get(column))
+func (r *NodeBitsetRow) Get(column int) api.NodeBitsetEntry {
+	return api.NodeBitsetEntry(r.innerRow.Get(column))
 }
 
-func (r *NodeBitsetRow) HasValues(value NodeBitsetEntry) bool {
+func (r *NodeBitsetRow) HasValues(value api.NodeBitsetEntry) bool {
 	return r.innerRow.HasValues(uint8(value))
 }
 
-func (r *NodeBitsetRow) HasAllValues(value NodeBitsetEntry) bool {
+func (r *NodeBitsetRow) HasAllValues(value api.NodeBitsetEntry) bool {
 	return r.innerRow.HasAllValues(uint8(value))
 }
 
-func (r *NodeBitsetRow) HasAllValuesOf(value0, value1 NodeBitsetEntry) bool {
+func (r *NodeBitsetRow) HasAllValuesOf(value0, value1 api.NodeBitsetEntry) bool {
 	return r.innerRow.HasAllValuesOf(uint8(value0), uint8(value1))
 }
 
-func (r *NodeBitsetRow) GetSummaryByValue(value NodeBitsetEntry) uint16 {
+func (r *NodeBitsetRow) GetSummaryByValue(value api.NodeBitsetEntry) uint16 {
 	return r.innerRow.GetSummaryByValue(uint8(value))
 }
 
-func (r *NodeBitsetRow) Set(column int, value NodeBitsetEntry) NodeBitsetEntry {
-	return NodeBitsetEntry(r.innerRow.Set(column, uint8(value)))
+func (r *NodeBitsetRow) Set(column int, value api.NodeBitsetEntry) api.NodeBitsetEntry {
+	return api.NodeBitsetEntry(r.innerRow.Set(column, uint8(value)))
 }
 
 func NewConsensusBitsetRow(columnCount int) ConsensusBitsetRow {
-	return ConsensusBitsetRow{innerRow{stats.NewStatRow(uint8(maxNodeBitsetEntry)-1, columnCount)}}
+	return ConsensusBitsetRow{innerRow{stats.NewStatRow(uint8(api.MaxNodeBitsetEntry)-1, columnCount)}}
 }
 
 type ConsensusBitsetRow struct {

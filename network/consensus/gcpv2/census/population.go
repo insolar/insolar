@@ -52,10 +52,12 @@ package census
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"sort"
 
 	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
 type copyToPopulation interface {
@@ -67,9 +69,9 @@ type copyFromPopulation interface {
 	makeSelfCopyOf(slots []updatableSlot, local *updatableSlot)
 }
 
-var _ OnlinePopulation = &OneNodePopulation{}
+var _ api_2.OnlinePopulation = &OneNodePopulation{}
 
-func NewOneNodePopulation(localNode common.NodeIntroProfile, verifier common2.SignatureVerifier) OneNodePopulation {
+func NewOneNodePopulation(localNode api.NodeIntroProfile, verifier cryptography_containers.SignatureVerifier) OneNodePopulation {
 	localNode.GetShortNodeID()
 	return OneNodePopulation{
 		localNode: updatableSlot{
@@ -78,7 +80,7 @@ func NewOneNodePopulation(localNode common.NodeIntroProfile, verifier common2.Si
 	}
 }
 
-func NewManyNodePopulation(localNode common.NodeIntroProfile, nodes []common.NodeIntroProfile) ManyNodePopulation {
+func NewManyNodePopulation(localNode api.NodeIntroProfile, nodes []api.NodeIntroProfile) ManyNodePopulation {
 	localNode.GetShortNodeID()
 	r := ManyNodePopulation{}
 	r.makeOfProfiles(nodes, localNode)
@@ -104,7 +106,7 @@ func (c *OneNodePopulation) copyTo(p copyFromPopulation, fullCopy bool) {
 	}
 }
 
-func (c *OneNodePopulation) FindProfile(nodeID common2.ShortNodeID) common.NodeProfile {
+func (c *OneNodePopulation) FindProfile(nodeID common2.ShortNodeID) api.NodeProfile {
 	if c.localNode.GetShortNodeID() != nodeID {
 		return nil
 	}
@@ -115,11 +117,11 @@ func (c *OneNodePopulation) GetCount() int {
 	return 1
 }
 
-func (c *OneNodePopulation) GetProfiles() []common.NodeProfile {
-	return []common.NodeProfile{&c.localNode.NodeProfileSlot}
+func (c *OneNodePopulation) GetProfiles() []api.NodeProfile {
+	return []api.NodeProfile{&c.localNode.NodeProfileSlot}
 }
 
-func (c *OneNodePopulation) GetLocalProfile() common.LocalNodeProfile {
+func (c *OneNodePopulation) GetLocalProfile() api.LocalNodeProfile {
 	return &c.localNode.NodeProfileSlot
 }
 
@@ -226,7 +228,7 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSort(slots map[common2.ShortNodeID]
 	}
 }
 
-func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, localNode common.NodeIntroProfile) {
+func (c *ManyNodePopulation) makeOfProfiles(nodes []api.NodeIntroProfile, localNode api.NodeIntroProfile) {
 	buf := make([]updatableSlot, len(nodes)+1) // +1 local node may not be on the list
 	c.slotByID = make(map[common2.ShortNodeID]*updatableSlot, len(nodes)+1)
 
@@ -253,7 +255,7 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []common.NodeIntroProfile, loc
 	c.slots = buf[:slotIndex]
 }
 
-func (c *ManyNodePopulation) FindProfile(nodeID common2.ShortNodeID) common.NodeProfile {
+func (c *ManyNodePopulation) FindProfile(nodeID common2.ShortNodeID) api.NodeProfile {
 	return &c.slotByID[nodeID].NodeProfileSlot
 }
 
@@ -261,15 +263,15 @@ func (c *ManyNodePopulation) GetCount() int {
 	return len(c.slots)
 }
 
-func (c *ManyNodePopulation) GetProfiles() []common.NodeProfile {
-	r := make([]common.NodeProfile, len(c.slots))
+func (c *ManyNodePopulation) GetProfiles() []api.NodeProfile {
+	r := make([]api.NodeProfile, len(c.slots))
 	for i := range c.slots {
 		r[i] = &c.slots[i].NodeProfileSlot
 	}
 	return r
 }
 
-func (c *ManyNodePopulation) GetLocalProfile() common.LocalNodeProfile {
+func (c *ManyNodePopulation) GetLocalProfile() api.LocalNodeProfile {
 	return c.local
 }
 
@@ -323,11 +325,11 @@ func (c *DynamicPopulation) makeSelfCopyOf(slots []updatableSlot, local *updatab
 	c.slotByID[v.GetShortNodeID()] = c.local
 }
 
-func (c *DynamicPopulation) FindProfile(nodeID common2.ShortNodeID) common.NodeProfile {
+func (c *DynamicPopulation) FindProfile(nodeID common2.ShortNodeID) api.NodeProfile {
 	return &c.slotByID[nodeID].NodeProfileSlot
 }
 
-func (c *DynamicPopulation) FindUpdatableProfile(nodeID common2.ShortNodeID) common.UpdatableNodeProfile {
+func (c *DynamicPopulation) FindUpdatableProfile(nodeID common2.ShortNodeID) api.UpdatableNodeProfile {
 	return c.slotByID[nodeID]
 }
 
@@ -335,7 +337,7 @@ func (c *DynamicPopulation) GetCount() int {
 	return len(c.slotByID)
 }
 
-type LessFunc func(c common.NodeProfile, o common.NodeProfile) bool
+type LessFunc func(c api.NodeProfile, o api.NodeProfile) bool
 
 func (c *DynamicPopulation) Sort(lessFn LessFunc) {
 	sorter := slotSorter{values: c.getUnorderedSlots(), lessFn: lessFn}
@@ -345,8 +347,8 @@ func (c *DynamicPopulation) Sort(lessFn LessFunc) {
 	}
 }
 
-func (c *DynamicPopulation) GetProfiles() []common.NodeProfile {
-	r := make([]common.NodeProfile, len(c.slotByID))
+func (c *DynamicPopulation) GetProfiles() []api.NodeProfile {
+	r := make([]api.NodeProfile, len(c.slotByID))
 	for _, v := range c.slotByID {
 		idx := v.GetIndex()
 		if r[idx] != nil {
@@ -357,8 +359,8 @@ func (c *DynamicPopulation) GetProfiles() []common.NodeProfile {
 	return r
 }
 
-func (c *DynamicPopulation) GetUnorderedProfiles() []common.UpdatableNodeProfile {
-	r := make([]common.UpdatableNodeProfile, len(c.slotByID))
+func (c *DynamicPopulation) GetUnorderedProfiles() []api.UpdatableNodeProfile {
+	r := make([]api.UpdatableNodeProfile, len(c.slotByID))
 	idx := 0
 	for _, v := range c.slotByID {
 		r[idx] = v
@@ -377,18 +379,18 @@ func (c *DynamicPopulation) getUnorderedSlots() []*updatableSlot {
 	return r
 }
 
-func (c *DynamicPopulation) GetLocalProfile() common.LocalNodeProfile {
+func (c *DynamicPopulation) GetLocalProfile() api.LocalNodeProfile {
 	return c.local
 }
 
-func (c *DynamicPopulation) CopyAndSeparate() (*ManyNodePopulation, EvictedPopulation) {
+func (c *DynamicPopulation) CopyAndSeparate() (*ManyNodePopulation, api_2.EvictedPopulation) {
 	r := ManyNodePopulation{}
 	evicts := r.makeCopyOfMapAndSeparateEvicts(c.slotByID, c.local)
 	evPop := newEvictedPopulation(evicts)
 	return &r, &evPop
 }
 
-func (c *DynamicPopulation) AddProfile(n common.NodeIntroProfile) common.UpdatableNodeProfile {
+func (c *DynamicPopulation) AddProfile(n api.NodeIntroProfile) api.UpdatableNodeProfile {
 	id := n.GetShortNodeID()
 	if _, ok := c.slotByID[id]; ok {
 		panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))

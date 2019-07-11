@@ -6,13 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "NodeStateHash" can be found in github.com/insolar/insolar/network/consensus/gcpv2/common
 */
 import (
-	io "io"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"io"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	common "github.com/insolar/insolar/network/consensus/common"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -30,12 +29,12 @@ type NodeStateHashMock struct {
 	AsBytesPreCounter uint64
 	AsBytesMock       mNodeStateHashMockAsBytes
 
-	CopyOfDigestFunc       func() (r common.Digest)
+	CopyOfDigestFunc       func() (r cryptography_containers.Digest)
 	CopyOfDigestCounter    uint64
 	CopyOfDigestPreCounter uint64
 	CopyOfDigestMock       mNodeStateHashMockCopyOfDigest
 
-	EqualsFunc       func(p common.DigestHolder) (r bool)
+	EqualsFunc       func(p cryptography_containers.DigestHolder) (r bool)
 	EqualsCounter    uint64
 	EqualsPreCounter uint64
 	EqualsMock       mNodeStateHashMockEquals
@@ -50,7 +49,7 @@ type NodeStateHashMock struct {
 	FoldToUint64PreCounter uint64
 	FoldToUint64Mock       mNodeStateHashMockFoldToUint64
 
-	GetDigestMethodFunc       func() (r common.DigestMethod)
+	GetDigestMethodFunc       func() (r cryptography_containers.DigestMethod)
 	GetDigestMethodCounter    uint64
 	GetDigestMethodPreCounter uint64
 	GetDigestMethodMock       mNodeStateHashMockGetDigestMethod
@@ -60,7 +59,7 @@ type NodeStateHashMock struct {
 	ReadPreCounter uint64
 	ReadMock       mNodeStateHashMockRead
 
-	SignWithFunc       func(p common.DigestSigner) (r common.SignedDigest)
+	SignWithFunc       func(p cryptography_containers.DigestSigner) (r cryptography_containers.SignedDigest)
 	SignWithCounter    uint64
 	SignWithPreCounter uint64
 	SignWithMock       mNodeStateHashMockSignWith
@@ -372,7 +371,7 @@ type NodeStateHashMockCopyOfDigestExpectation struct {
 }
 
 type NodeStateHashMockCopyOfDigestResult struct {
-	r common.Digest
+	r cryptography_containers.Digest
 }
 
 //Expect specifies that invocation of NodeStateHash.CopyOfDigest is expected from 1 to Infinity times
@@ -388,7 +387,7 @@ func (m *mNodeStateHashMockCopyOfDigest) Expect() *mNodeStateHashMockCopyOfDiges
 }
 
 //Return specifies results of invocation of NodeStateHash.CopyOfDigest
-func (m *mNodeStateHashMockCopyOfDigest) Return(r common.Digest) *NodeStateHashMock {
+func (m *mNodeStateHashMockCopyOfDigest) Return(r cryptography_containers.Digest) *NodeStateHashMock {
 	m.mock.CopyOfDigestFunc = nil
 	m.expectationSeries = nil
 
@@ -410,12 +409,12 @@ func (m *mNodeStateHashMockCopyOfDigest) ExpectOnce() *NodeStateHashMockCopyOfDi
 	return expectation
 }
 
-func (e *NodeStateHashMockCopyOfDigestExpectation) Return(r common.Digest) {
+func (e *NodeStateHashMockCopyOfDigestExpectation) Return(r cryptography_containers.Digest) {
 	e.result = &NodeStateHashMockCopyOfDigestResult{r}
 }
 
 //Set uses given function f as a mock of NodeStateHash.CopyOfDigest method
-func (m *mNodeStateHashMockCopyOfDigest) Set(f func() (r common.Digest)) *NodeStateHashMock {
+func (m *mNodeStateHashMockCopyOfDigest) Set(f func() (r cryptography_containers.Digest)) *NodeStateHashMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -424,7 +423,7 @@ func (m *mNodeStateHashMockCopyOfDigest) Set(f func() (r common.Digest)) *NodeSt
 }
 
 //CopyOfDigest implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
-func (m *NodeStateHashMock) CopyOfDigest() (r common.Digest) {
+func (m *NodeStateHashMock) CopyOfDigest() (r cryptography_containers.Digest) {
 	counter := atomic.AddUint64(&m.CopyOfDigestPreCounter, 1)
 	defer atomic.AddUint64(&m.CopyOfDigestCounter, 1)
 
@@ -507,7 +506,7 @@ type NodeStateHashMockEqualsExpectation struct {
 }
 
 type NodeStateHashMockEqualsInput struct {
-	p common.DigestHolder
+	p cryptography_containers.DigestHolder
 }
 
 type NodeStateHashMockEqualsResult struct {
@@ -515,7 +514,7 @@ type NodeStateHashMockEqualsResult struct {
 }
 
 //Expect specifies that invocation of NodeStateHash.Equals is expected from 1 to Infinity times
-func (m *mNodeStateHashMockEquals) Expect(p common.DigestHolder) *mNodeStateHashMockEquals {
+func (m *mNodeStateHashMockEquals) Expect(p cryptography_containers.DigestHolder) *mNodeStateHashMockEquals {
 	m.mock.EqualsFunc = nil
 	m.expectationSeries = nil
 
@@ -539,7 +538,7 @@ func (m *mNodeStateHashMockEquals) Return(r bool) *NodeStateHashMock {
 }
 
 //ExpectOnce specifies that invocation of NodeStateHash.Equals is expected once
-func (m *mNodeStateHashMockEquals) ExpectOnce(p common.DigestHolder) *NodeStateHashMockEqualsExpectation {
+func (m *mNodeStateHashMockEquals) ExpectOnce(p cryptography_containers.DigestHolder) *NodeStateHashMockEqualsExpectation {
 	m.mock.EqualsFunc = nil
 	m.mainExpectation = nil
 
@@ -554,7 +553,7 @@ func (e *NodeStateHashMockEqualsExpectation) Return(r bool) {
 }
 
 //Set uses given function f as a mock of NodeStateHash.Equals method
-func (m *mNodeStateHashMockEquals) Set(f func(p common.DigestHolder) (r bool)) *NodeStateHashMock {
+func (m *mNodeStateHashMockEquals) Set(f func(p cryptography_containers.DigestHolder) (r bool)) *NodeStateHashMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -563,7 +562,7 @@ func (m *mNodeStateHashMockEquals) Set(f func(p common.DigestHolder) (r bool)) *
 }
 
 //Equals implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
-func (m *NodeStateHashMock) Equals(p common.DigestHolder) (r bool) {
+func (m *NodeStateHashMock) Equals(p cryptography_containers.DigestHolder) (r bool) {
 	counter := atomic.AddUint64(&m.EqualsPreCounter, 1)
 	defer atomic.AddUint64(&m.EqualsCounter, 1)
 
@@ -921,7 +920,7 @@ type NodeStateHashMockGetDigestMethodExpectation struct {
 }
 
 type NodeStateHashMockGetDigestMethodResult struct {
-	r common.DigestMethod
+	r cryptography_containers.DigestMethod
 }
 
 //Expect specifies that invocation of NodeStateHash.GetDigestMethod is expected from 1 to Infinity times
@@ -937,7 +936,7 @@ func (m *mNodeStateHashMockGetDigestMethod) Expect() *mNodeStateHashMockGetDiges
 }
 
 //Return specifies results of invocation of NodeStateHash.GetDigestMethod
-func (m *mNodeStateHashMockGetDigestMethod) Return(r common.DigestMethod) *NodeStateHashMock {
+func (m *mNodeStateHashMockGetDigestMethod) Return(r cryptography_containers.DigestMethod) *NodeStateHashMock {
 	m.mock.GetDigestMethodFunc = nil
 	m.expectationSeries = nil
 
@@ -959,12 +958,12 @@ func (m *mNodeStateHashMockGetDigestMethod) ExpectOnce() *NodeStateHashMockGetDi
 	return expectation
 }
 
-func (e *NodeStateHashMockGetDigestMethodExpectation) Return(r common.DigestMethod) {
+func (e *NodeStateHashMockGetDigestMethodExpectation) Return(r cryptography_containers.DigestMethod) {
 	e.result = &NodeStateHashMockGetDigestMethodResult{r}
 }
 
 //Set uses given function f as a mock of NodeStateHash.GetDigestMethod method
-func (m *mNodeStateHashMockGetDigestMethod) Set(f func() (r common.DigestMethod)) *NodeStateHashMock {
+func (m *mNodeStateHashMockGetDigestMethod) Set(f func() (r cryptography_containers.DigestMethod)) *NodeStateHashMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -973,7 +972,7 @@ func (m *mNodeStateHashMockGetDigestMethod) Set(f func() (r common.DigestMethod)
 }
 
 //GetDigestMethod implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
-func (m *NodeStateHashMock) GetDigestMethod() (r common.DigestMethod) {
+func (m *NodeStateHashMock) GetDigestMethod() (r cryptography_containers.DigestMethod) {
 	counter := atomic.AddUint64(&m.GetDigestMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDigestMethodCounter, 1)
 
@@ -1206,15 +1205,15 @@ type NodeStateHashMockSignWithExpectation struct {
 }
 
 type NodeStateHashMockSignWithInput struct {
-	p common.DigestSigner
+	p cryptography_containers.DigestSigner
 }
 
 type NodeStateHashMockSignWithResult struct {
-	r common.SignedDigest
+	r cryptography_containers.SignedDigest
 }
 
 //Expect specifies that invocation of NodeStateHash.SignWith is expected from 1 to Infinity times
-func (m *mNodeStateHashMockSignWith) Expect(p common.DigestSigner) *mNodeStateHashMockSignWith {
+func (m *mNodeStateHashMockSignWith) Expect(p cryptography_containers.DigestSigner) *mNodeStateHashMockSignWith {
 	m.mock.SignWithFunc = nil
 	m.expectationSeries = nil
 
@@ -1226,7 +1225,7 @@ func (m *mNodeStateHashMockSignWith) Expect(p common.DigestSigner) *mNodeStateHa
 }
 
 //Return specifies results of invocation of NodeStateHash.SignWith
-func (m *mNodeStateHashMockSignWith) Return(r common.SignedDigest) *NodeStateHashMock {
+func (m *mNodeStateHashMockSignWith) Return(r cryptography_containers.SignedDigest) *NodeStateHashMock {
 	m.mock.SignWithFunc = nil
 	m.expectationSeries = nil
 
@@ -1238,7 +1237,7 @@ func (m *mNodeStateHashMockSignWith) Return(r common.SignedDigest) *NodeStateHas
 }
 
 //ExpectOnce specifies that invocation of NodeStateHash.SignWith is expected once
-func (m *mNodeStateHashMockSignWith) ExpectOnce(p common.DigestSigner) *NodeStateHashMockSignWithExpectation {
+func (m *mNodeStateHashMockSignWith) ExpectOnce(p cryptography_containers.DigestSigner) *NodeStateHashMockSignWithExpectation {
 	m.mock.SignWithFunc = nil
 	m.mainExpectation = nil
 
@@ -1248,12 +1247,12 @@ func (m *mNodeStateHashMockSignWith) ExpectOnce(p common.DigestSigner) *NodeStat
 	return expectation
 }
 
-func (e *NodeStateHashMockSignWithExpectation) Return(r common.SignedDigest) {
+func (e *NodeStateHashMockSignWithExpectation) Return(r cryptography_containers.SignedDigest) {
 	e.result = &NodeStateHashMockSignWithResult{r}
 }
 
 //Set uses given function f as a mock of NodeStateHash.SignWith method
-func (m *mNodeStateHashMockSignWith) Set(f func(p common.DigestSigner) (r common.SignedDigest)) *NodeStateHashMock {
+func (m *mNodeStateHashMockSignWith) Set(f func(p cryptography_containers.DigestSigner) (r cryptography_containers.SignedDigest)) *NodeStateHashMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1262,7 +1261,7 @@ func (m *mNodeStateHashMockSignWith) Set(f func(p common.DigestSigner) (r common
 }
 
 //SignWith implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
-func (m *NodeStateHashMock) SignWith(p common.DigestSigner) (r common.SignedDigest) {
+func (m *NodeStateHashMock) SignWith(p cryptography_containers.DigestSigner) (r cryptography_containers.SignedDigest) {
 	counter := atomic.AddUint64(&m.SignWithPreCounter, 1)
 	defer atomic.AddUint64(&m.SignWithCounter, 1)
 

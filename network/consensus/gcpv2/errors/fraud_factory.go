@@ -52,18 +52,17 @@ package errors
 
 import (
 	"fmt"
-
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 )
 
-var _ MisbehaviorReport = &FraudError{}
+var _ api.MisbehaviorReport = &FraudError{}
 
 type FraudError struct {
 	fraudType    int
 	msg          string
-	violatorHost common.HostIdentity
-	violatorNode common2.NodeProfile
+	violatorHost endpoints.HostIdentity
+	violatorNode api.NodeProfile
 	details      []interface{}
 	captureMark  interface{}
 }
@@ -72,8 +71,8 @@ func (p *FraudError) IsUnknown() bool {
 	return p.fraudType == 0
 }
 
-func (p *FraudError) MisbehaviorType() MisbehaviorType {
-	return Fraud.Of(p.fraudType)
+func (p *FraudError) MisbehaviorType() api.MisbehaviorType {
+	return api.Fraud.Of(p.fraudType)
 }
 
 func (p *FraudError) CaptureMark() interface{} {
@@ -84,11 +83,11 @@ func (p *FraudError) Details() []interface{} {
 	return p.details
 }
 
-func (p *FraudError) ViolatorNode() common2.NodeProfile {
+func (p *FraudError) ViolatorNode() api.NodeProfile {
 	return p.violatorNode
 }
 
-func (p *FraudError) ViolatorHost() common.HostIdentity {
+func (p *FraudError) ViolatorHost() endpoints.HostIdentity {
 	return p.violatorHost
 }
 
@@ -122,7 +121,7 @@ type FraudFactory struct {
 	capture MisbehaviorReportFunc
 }
 
-func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost common.HostIdentityHolder, violatorNode common2.NodeProfile, details ...interface{}) FraudError {
+func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost endpoints.HostIdentityHolder, violatorNode api.NodeProfile, details ...interface{}) FraudError {
 	err := FraudError{
 		fraudType:    fraudType,
 		msg:          msg,
@@ -130,7 +129,7 @@ func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost common.Ho
 		details:      details,
 	}
 	if violatorHost != nil {
-		err.violatorHost = common.NewHostIdentityFromHolder(violatorHost)
+		err.violatorHost = endpoints.NewHostIdentityFromHolder(violatorHost)
 	}
 	if p.capture != nil {
 		err.captureMark = p.capture(&err)
@@ -138,23 +137,23 @@ func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost common.Ho
 	return err
 }
 
-func (p FraudFactory) NewNodeFraud(fraudType int, msg string, violatorNode common2.NodeProfile, details ...interface{}) FraudError {
+func (p FraudFactory) NewNodeFraud(fraudType int, msg string, violatorNode api.NodeProfile, details ...interface{}) FraudError {
 	return p.NewFraud(fraudType, msg, nil, violatorNode, details...)
 }
 
-func (p FraudFactory) NewHostFraud(fraudType int, msg string, violatorHost common.HostIdentityHolder, details ...interface{}) FraudError {
+func (p FraudFactory) NewHostFraud(fraudType int, msg string, violatorHost endpoints.HostIdentityHolder, details ...interface{}) FraudError {
 	return p.NewFraud(fraudType, msg, violatorHost, nil, details...)
 }
 
-func (p FraudFactory) NewInconsistentMembershipAnnouncement(violator common2.NodeProfile,
-	evidence1 common2.MembershipAnnouncement, evidence2 common2.MembershipAnnouncement) FraudError {
+func (p FraudFactory) NewInconsistentMembershipAnnouncement(violator api.NodeProfile,
+	evidence1 api.MembershipAnnouncement, evidence2 api.MembershipAnnouncement) FraudError {
 	return p.NewNodeFraud(FraudMultipleNsh, "multiple membership profile", violator, evidence1, evidence2)
 }
 
-func (p FraudFactory) NewMismatchedMembershipRank(violator common2.NodeProfile, mp common2.MembershipProfile) FraudError {
+func (p FraudFactory) NewMismatchedMembershipRank(violator api.NodeProfile, mp api.MembershipProfile) FraudError {
 	return p.NewNodeFraud(MismatchedRank, "mismatched membership profile rank", violator, mp)
 }
 
-func (p FraudFactory) NewMismatchedMembershipNodeCount(violator common2.NodeProfile, mp common2.MembershipProfile, nodeCount int) FraudError {
+func (p FraudFactory) NewMismatchedMembershipNodeCount(violator api.NodeProfile, mp api.MembershipProfile, nodeCount int) FraudError {
 	return p.NewNodeFraud(MismatchedRank, "mismatched membership profile node count", violator, mp, nodeCount)
 }

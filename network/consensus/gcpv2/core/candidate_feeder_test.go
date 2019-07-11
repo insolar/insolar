@@ -51,6 +51,7 @@
 package core
 
 import (
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"testing"
 
 	ccommon "github.com/insolar/insolar/network/consensus/common"
@@ -63,7 +64,7 @@ import (
 func TestPickNextJoinCandidate(t *testing.T) {
 	require.Equal(t, (&SequencialCandidateFeeder{}).PickNextJoinCandidate(), nil)
 
-	s := &SequencialCandidateFeeder{buf: make([]common.CandidateProfile, 1)}
+	s := &SequencialCandidateFeeder{buf: make([]api.CandidateProfile, 1)}
 	c := common.NewCandidateProfileMock(t)
 	s.buf[0] = c
 	require.Equal(t, s.PickNextJoinCandidate(), c)
@@ -72,7 +73,7 @@ func TestPickNextJoinCandidate(t *testing.T) {
 func TestRemoveJoinCandidate(t *testing.T) {
 	require.False(t, (&SequencialCandidateFeeder{}).RemoveJoinCandidate(false, ccommon.ShortNodeID(0)))
 
-	s := &SequencialCandidateFeeder{buf: make([]common.CandidateProfile, 1)}
+	s := &SequencialCandidateFeeder{buf: make([]api.CandidateProfile, 1)}
 	c := common.NewCandidateProfileMock(t)
 	s.buf[0] = c
 	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
@@ -81,9 +82,9 @@ func TestRemoveJoinCandidate(t *testing.T) {
 	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
 	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
 
-	require.Equal(t, s.buf, []common.CandidateProfile(nil))
+	require.Equal(t, s.buf, []api.CandidateProfile(nil))
 
-	s.buf = make([]common.CandidateProfile, 2)
+	s.buf = make([]api.CandidateProfile, 2)
 	s.buf[0] = c
 	c2 := common.NewCandidateProfileMock(t)
 	s.buf[1] = c2

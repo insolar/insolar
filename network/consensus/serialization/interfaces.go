@@ -53,10 +53,11 @@ package serialization
 import (
 	"context"
 	"encoding/binary"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"io"
 
 	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 var (
@@ -65,7 +66,7 @@ var (
 
 type PacketHeaderAccessor interface {
 	GetProtocolType() ProtocolType
-	GetPacketType() packets.PacketType
+	GetPacketType() api.PacketType
 	GetSourceID() common.ShortNodeID
 	HasFlag(flag Flag) bool
 	GetFlagRangeInt(from, to uint8) uint8
@@ -113,7 +114,7 @@ type DeserializeContext interface {
 }
 
 type SerializerTo interface {
-	SerializeTo(ctx context.Context, writer io.Writer, digester common.DataDigester, signer common.DigestSigner) (int64, error)
+	SerializeTo(ctx context.Context, writer io.Writer, digester cryptography_containers.DataDigester, signer cryptography_containers.DigestSigner) (int64, error)
 }
 
 type ContextSerializerTo interface {

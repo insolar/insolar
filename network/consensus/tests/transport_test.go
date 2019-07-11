@@ -52,54 +52,54 @@ package tests
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"io"
 	"math/rand"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-var EmuDefaultPacketBuilder core.PacketBuilder = &emuPacketBuilder{}
-var EmuDefaultCryptography core.TransportCryptographyFactory = &emuTransportCryptography{}
+var EmuDefaultPacketBuilder api_2.PacketBuilder = &emuPacketBuilder{}
+var EmuDefaultCryptography api_2.TransportCryptographyFactory = &emuTransportCryptography{}
 
-func NewEmuTransport(sender core.PacketSender) core.TransportFactory {
+func NewEmuTransport(sender api_2.PacketSender) api_2.TransportFactory {
 	return &emuTransport{sender}
 }
 
 type emuTransport struct {
-	sender core.PacketSender
+	sender api_2.PacketSender
 }
 
-func (r *emuTransport) GetPacketSender() core.PacketSender {
+func (r *emuTransport) GetPacketSender() api_2.PacketSender {
 	return r.sender
 }
 
-func (r *emuTransport) GetPacketBuilder(signer common.DigestSigner) core.PacketBuilder {
+func (r *emuTransport) GetPacketBuilder(signer cryptography_containers.DigestSigner) api_2.PacketBuilder {
 	return EmuDefaultPacketBuilder
 }
 
-func (r *emuTransport) GetCryptographyFactory() core.TransportCryptographyFactory {
+func (r *emuTransport) GetCryptographyFactory() api_2.TransportCryptographyFactory {
 	return EmuDefaultCryptography
 }
 
 type emuPackerCloner interface {
-	clonePacketFor(target common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser
+	clonePacketFor(target api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser
 }
 
 type emuPacketSender struct {
 	cloner emuPackerCloner
 }
 
-func (r *emuPacketSender) SendTo(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, s core.PacketSender) {
+func (r *emuPacketSender) SendTo(ctx context.Context, t api.NodeProfile, sendOptions api_2.PacketSendOptions, s api_2.PacketSender) {
 	c := r.cloner.clonePacketFor(t, sendOptions)
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
-func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s core.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (common2.NodeProfile, core.PacketSendOptions)) {
+func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s api_2.PacketSender,
+	filter func(ctx context.Context, targetIndex int) (api.NodeProfile, api_2.PacketSendOptions)) {
 
 	for i := 0; i < targetCount; i++ {
 		sendTo, sendOptions := filter(ctx, i)
@@ -119,12 +119,12 @@ func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s cor
 type emuPacketBuilder struct {
 }
 
-func (r *emuPacketBuilder) GetNeighbourhoodSize() common2.NeighbourhoodSizes {
-	return common2.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
+func (r *emuPacketBuilder) GetNeighbourhoodSize() api.NeighbourhoodSizes {
+	return api.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
 }
 
-func (r *emuPacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
+	options api_2.PacketSendOptions) api_2.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
 		basePacket: basePacket{
 			src:       sender.GetNodeID(),
@@ -135,14 +135,14 @@ func (r *emuPacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementP
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase0NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase0NetPacket) clonePacketFor(t api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
+	options api_2.PacketSendOptions) api_2.PreparedPacketSender {
 
 	pp := pulsarPacket.(*EmuPulsarNetPacket)
 	if pp == nil || !pp.pulseData.IsValidPulseData() {
@@ -161,22 +161,22 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementP
 			pulsePacket: pp},
 	}
 	v.pn = pp.pulseData.PulseNumber
-	v.isRequest = options&core.RequestForPhase1 != 0
-	if v.isRequest || options&core.SendWithoutPulseData != 0 {
+	v.isRequest = options&api_2.RequestForPhase1 != 0
+	if v.isRequest || options&api_2.SendWithoutPulseData != 0 {
 		v.pulsePacket = nil
 	}
 
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase1NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase1NetPacket) clonePacketFor(t api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 
 	//if !t.IsJoiner() {
 	//	c.selfIntro = nil
 	//}
-	if sendOptions&core.SendWithoutPulseData != 0 {
+	if sendOptions&api_2.SendWithoutPulseData != 0 {
 		c.pulsePacket = nil
 	}
 
@@ -185,7 +185,7 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 
 func (r *emuPacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
 	neighbourhood []packets.MembershipAnnouncementReader,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+	options api_2.PacketSendOptions) api_2.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{
 		basePacket: basePacket{
@@ -201,7 +201,7 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementP
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase2NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase2NetPacket) clonePacketFor(t api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 
@@ -219,8 +219,8 @@ func (r *EmuPhase2NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors nodeset.HashedNodeVector,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors api.HashedNodeVector,
+	options api_2.PacketSendOptions) api_2.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
 		basePacket: basePacket{
@@ -234,7 +234,7 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementP
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase3NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase3NetPacket) clonePacketFor(t api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 	return &c
@@ -243,59 +243,59 @@ func (r *EmuPhase3NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 type emuTransportCryptography struct {
 }
 
-func (r *emuTransportCryptography) GetPublicKeyStore(skh common.SignatureKeyHolder) common.PublicKeyStore {
+func (r *emuTransportCryptography) GetPublicKeyStore(skh cryptography_containers.SignatureKeyHolder) cryptography_containers.PublicKeyStore {
 	return nil
 }
 
-func (r *emuTransportCryptography) GetPacketDigester() common.DataDigester {
+func (r *emuTransportCryptography) GetPacketDigester() cryptography_containers.DataDigester {
 	panic("not implemented")
 }
 
-func (r *emuTransportCryptography) GetGshDigester() common.SequenceDigester {
+func (r *emuTransportCryptography) GetGshDigester() cryptography_containers.SequenceDigester {
 	return &gshDigester{}
 }
 
-func (r *emuTransportCryptography) IsDigestMethodSupported(m common.DigestMethod) bool {
+func (r *emuTransportCryptography) IsDigestMethodSupported(m cryptography_containers.DigestMethod) bool {
 	return true
 }
 
-func (r *emuTransportCryptography) IsValidDataSignature(data io.Reader, signature common.SignatureHolder) bool {
+func (r *emuTransportCryptography) IsValidDataSignature(data io.Reader, signature cryptography_containers.SignatureHolder) bool {
 	return true
 }
 
-func (r *emuTransportCryptography) IsSignOfSignatureMethodSupported(m common.SignatureMethod) bool {
+func (r *emuTransportCryptography) IsSignOfSignatureMethodSupported(m cryptography_containers.SignatureMethod) bool {
 	return true
 }
 
-func (r *emuTransportCryptography) IsDigestOfSignatureMethodSupported(m common.SignatureMethod) bool {
+func (r *emuTransportCryptography) IsDigestOfSignatureMethodSupported(m cryptography_containers.SignatureMethod) bool {
 	return true
 }
 
-func (r *emuTransportCryptography) IsSignMethodSupported(m common.SignMethod) bool {
+func (r *emuTransportCryptography) IsSignMethodSupported(m cryptography_containers.SignMethod) bool {
 	return true
 }
 
-func (r *emuTransportCryptography) IsValidDigestSignature(digest common.DigestHolder, signature common.SignatureHolder) bool {
+func (r *emuTransportCryptography) IsValidDigestSignature(digest cryptography_containers.DigestHolder, signature cryptography_containers.SignatureHolder) bool {
 	return true
 }
 
-func (r *emuTransportCryptography) SignDigest(digest common.Digest) common.Signature {
-	return common.NewSignature(digest, digest.GetDigestMethod().SignedBy(r.GetSignMethod()))
+func (r *emuTransportCryptography) SignDigest(digest cryptography_containers.Digest) cryptography_containers.Signature {
+	return cryptography_containers.NewSignature(digest, digest.GetDigestMethod().SignedBy(r.GetSignMethod()))
 }
 
-func (r *emuTransportCryptography) GetSignMethod() common.SignMethod {
+func (r *emuTransportCryptography) GetSignMethod() cryptography_containers.SignMethod {
 	return "emuSing"
 }
 
-func (r *emuTransportCryptography) GetSignatureVerifierWithPKS(pks common.PublicKeyStore) common.SignatureVerifier {
+func (r *emuTransportCryptography) GetSignatureVerifierWithPKS(pks cryptography_containers.PublicKeyStore) cryptography_containers.SignatureVerifier {
 	return r
 }
 
-func (r *emuTransportCryptography) GetDigestFactory() common.DigestFactory {
+func (r *emuTransportCryptography) GetDigestFactory() cryptography_containers.DigestFactory {
 	return r
 }
 
-func (r *emuTransportCryptography) GetNodeSigner(sks common.SecretKeyStore) common.DigestSigner {
+func (r *emuTransportCryptography) GetNodeSigner(sks cryptography_containers.SecretKeyStore) cryptography_containers.DigestSigner {
 	return r
 }
 
@@ -305,7 +305,7 @@ type gshDigester struct {
 	lastSeed int64
 }
 
-func (s *gshDigester) AddNext(digest common.DigestHolder) {
+func (s *gshDigester) AddNext(digest cryptography_containers.DigestHolder) {
 	// it is a dirty emulation of digest
 	if s.rnd == nil {
 		s.rnd = rand.New(rand.NewSource(0))
@@ -314,11 +314,11 @@ func (s *gshDigester) AddNext(digest common.DigestHolder) {
 	s.rnd.Seed(s.lastSeed)
 }
 
-func (s *gshDigester) GetDigestMethod() common.DigestMethod {
+func (s *gshDigester) GetDigestMethod() cryptography_containers.DigestMethod {
 	return "emuDigest64"
 }
 
-func (s *gshDigester) ForkSequence() common.SequenceDigester {
+func (s *gshDigester) ForkSequence() cryptography_containers.SequenceDigester {
 	cp := gshDigester{}
 	if s.rnd != nil {
 		cp.rnd = rand.New(rand.NewSource(s.lastSeed))
@@ -326,11 +326,11 @@ func (s *gshDigester) ForkSequence() common.SequenceDigester {
 	return &cp
 }
 
-func (s *gshDigester) FinishSequence() common.Digest {
+func (s *gshDigester) FinishSequence() cryptography_containers.Digest {
 	if s.rnd == nil {
 		panic("nothing")
 	}
-	bits := common.NewBits64(s.rnd.Uint64())
+	bits := long_bits.NewBits64(s.rnd.Uint64())
 	s.rnd = nil
-	return common.NewDigest(&bits, s.GetDigestMethod())
+	return cryptography_containers.NewDigest(&bits, s.GetDigestMethod())
 }

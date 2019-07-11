@@ -53,14 +53,13 @@ package phases
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/chaser"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"time"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-
-	"github.com/insolar/insolar/network/consensus/common"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 
@@ -72,7 +71,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
-func NewPhase3Controller(packetPrepareOptions core.PacketSendOptions, queueTrustUpdated <-chan TrustUpdateSignal,
+func NewPhase3Controller(packetPrepareOptions api_2.PacketSendOptions, queueTrustUpdated <-chan TrustUpdateSignal,
 	consensusStrategy ConsensusSelectionStrategy) *Phase3Controller {
 	return &Phase3Controller{
 		packetPrepareOptions: packetPrepareOptions,
@@ -91,7 +90,7 @@ type ConsensusSelection interface {
 
 type ConsensusSelectionStrategy interface {
 	/* Result can be nil - it means no-decision */
-	TrySelectOnAdded(globulaStats *stats.StatTable, addedNode common2.NodeProfile,
+	TrySelectOnAdded(globulaStats *stats.StatTable, addedNode api.NodeProfile,
 		nodeStats *stats.Row, realm *core.FullRealm) ConsensusSelection
 	SelectOnStopped(globulaStats *stats.StatTable, timeIsOut bool, realm *core.FullRealm) ConsensusSelection
 }
@@ -100,7 +99,7 @@ var _ core.PhaseController = &Phase3Controller{}
 
 type Phase3Controller struct {
 	core.PhaseControllerPerMemberTemplate
-	packetPrepareOptions core.PacketSendOptions
+	packetPrepareOptions api_2.PacketSendOptions
 	queueTrustUpdated    <-chan TrustUpdateSignal
 	queuePh3Recv         chan ph3Data
 	consensusStrategy    ConsensusSelectionStrategy
@@ -109,11 +108,11 @@ type Phase3Controller struct {
 
 type ph3Data struct {
 	np     *core.NodeAppearance
-	vector nodeset.HashedNodeVector
+	vector api.HashedNodeVector
 }
 
-func (*Phase3Controller) GetPacketType() packets.PacketType {
-	return packets.PacketPhase3
+func (*Phase3Controller) GetPacketType() api.PacketType {
+	return api.PacketPhase3
 }
 
 func (c *Phase3Controller) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, n *core.NodeAppearance) error {
@@ -129,7 +128,7 @@ func (c *Phase3Controller) HandleMemberPacket(ctx context.Context, reader packet
 
 	c.queuePh3Recv <- ph3Data{
 		np: n,
-		vector: nodeset.HashedNodeVector{
+		vector: api.HashedNodeVector{
 			Bitset:                             bs,
 			TrustedAnnouncementVector:          p3.GetTrustedGlobulaAnnouncementHash(),
 			DoubtedAnnouncementVector:          p3.GetDoubtedGlobulaAnnouncementHash(),
@@ -209,7 +208,7 @@ func (c *Phase3Controller) workerPrePhase3(ctx context.Context) bool {
 
 	timings := c.R.GetTimings()
 	startOfPhase3 := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
-	chasingDelayTimer := common.NewChasingTimer(timings.BeforeInPhase2ChasingDelay)
+	chasingDelayTimer := chaser.NewChasingTimer(timings.BeforeInPhase2ChasingDelay)
 
 	var countFraud = 0
 	var countHasNsh = 0
@@ -313,7 +312,7 @@ func (c *Phase3Controller) calcLocalVector(localVector *nodeset.NodeVectorHelper
 	return res
 }
 
-func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodeset.HashedNodeVector) {
+func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData api.HashedNodeVector) {
 
 	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
@@ -321,7 +320,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodese
 		c.packetPrepareOptions)
 
 	p3.SendToMany(ctx, len(otherNodes), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (common2.NodeProfile, core.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (api.NodeProfile, api_2.PacketSendOptions) {
 			np := otherNodes[targetIdx]
 			np.SetSentByPacketType(c.GetPacketType())
 			return np.GetProfile(), 0
@@ -337,10 +336,10 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodese
 
 	timings := c.R.GetTimings()
 	softDeadline := time.After(c.R.AdjustedAfter(timings.EndOfPhase3))
-	chasingDelayTimer := common.NewChasingTimer(timings.BeforeInPhase3ChasingDelay)
+	chasingDelayTimer := chaser.NewChasingTimer(timings.BeforeInPhase3ChasingDelay)
 
 	statTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
-	statTbl.PutRow(c.R.GetSelf().GetIndex(), selfData.Bitset.LocalToConsensusStatRow())
+	statTbl.PutRow(c.R.GetSelf().GetIndex(), nodeset.LocalToConsensusStatRow(selfData.Bitset))
 
 	remainingNodes := c.R.GetPopulation().GetOthersCount()
 
@@ -375,7 +374,7 @@ outer:
 					"\n%v\n%v\n%v\n%v\n",
 					selfData.Bitset,
 					d.vector.Bitset,
-					selfData.Bitset.CompareToStatRow(d.vector.Bitset), // TODO: ugly. pass it to ClassifyByNodeGsh?
+					nodeset.CompareToStatRow(selfData.Bitset, d.vector.Bitset), // TODO: ugly. pass it to ClassifyByNodeGsh?
 					nodeStats,
 				)
 			}
@@ -469,7 +468,7 @@ outer:
 	return false
 }
 
-func (c *Phase3Controller) buildNextPopulation(pb census.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
+func (c *Phase3Controller) buildNextPopulation(pb api_2.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
 
 	//pop := c.R.GetPopulation()
 	//count := 0

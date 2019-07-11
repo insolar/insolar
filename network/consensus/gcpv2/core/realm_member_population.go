@@ -52,13 +52,13 @@ package core
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 )
 
-func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation,
+func NewMemberRealmPopulation(strategy RoundStrategy, population api_2.OnlinePopulation,
 	fn NodeInitFunc) *MemberRealmPopulation {
 
 	nodeCount := population.GetCount()
@@ -86,7 +86,7 @@ type dynPop struct{ DynamicRealmPopulation }
 
 type MemberRealmPopulation struct {
 	dynPop
-	population census.OnlinePopulation
+	population api_2.OnlinePopulation
 
 	bftMajorityCount int
 }
@@ -171,28 +171,28 @@ func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearanc
 	return r.dynPop.AddToDynamics(n)
 }
 
-var _ common2.NodeProfile = &joiningNodeProfile{}
+var _ api.NodeProfile = &joiningNodeProfile{}
 
 type joiningNodeProfile struct {
-	common2.NodeIntroProfile
+	api.NodeIntroProfile
 }
 
 func (p *joiningNodeProfile) IsJoiner() bool {
 	return true
 }
 
-func (p *joiningNodeProfile) GetOpMode() common2.MemberOpMode {
-	return common2.MemberModeNormal
+func (p *joiningNodeProfile) GetOpMode() api.MemberOpMode {
+	return api.MemberModeNormal
 }
 
 func (p *joiningNodeProfile) GetIndex() int {
 	return 0
 }
 
-func (p *joiningNodeProfile) GetDeclaredPower() common2.MemberPower {
+func (p *joiningNodeProfile) GetDeclaredPower() api.MemberPower {
 	return p.GetStartPower()
 }
 
-func (*joiningNodeProfile) GetSignatureVerifier() common.SignatureVerifier {
+func (*joiningNodeProfile) GetSignatureVerifier() cryptography_containers.SignatureVerifier {
 	return nil
 }

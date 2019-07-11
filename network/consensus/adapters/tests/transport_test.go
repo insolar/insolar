@@ -53,25 +53,24 @@ package tests
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 type emuPackerCloner interface {
-	clonePacketFor(target common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser
+	clonePacketFor(target api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser
 }
 
 type emuPacketSender struct {
 	cloner emuPackerCloner
 }
 
-func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, sender core.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (common2.NodeProfile, core.PacketSendOptions)) {
+func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, sender api_2.PacketSender,
+	filter func(ctx context.Context, targetIndex int) (api.NodeProfile, api_2.PacketSendOptions)) {
 	for i := 0; i < targetCount; i++ {
 		sendTo, sendOptions := filter(ctx, i)
 		if sendTo != nil {
@@ -87,33 +86,33 @@ func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, sende
 	}
 }
 
-func (r *emuPacketSender) SendTo(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, s core.PacketSender) {
+func (r *emuPacketSender) SendTo(ctx context.Context, t api.NodeProfile, sendOptions api_2.PacketSendOptions, s api_2.PacketSender) {
 	c := r.cloner.clonePacketFor(t, sendOptions)
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
 type emuPacketBuilder struct {
-	crypto      core.TransportCryptographyFactory
-	localConfig core.LocalNodeConfiguration
+	crypto      api_2.TransportCryptographyFactory
+	localConfig api_2.LocalNodeConfiguration
 }
 
-func NewEmuPacketBuilder(crypto core.TransportCryptographyFactory, localConfig core.LocalNodeConfiguration) core.PacketBuilder {
+func NewEmuPacketBuilder(crypto api_2.TransportCryptographyFactory, localConfig api_2.LocalNodeConfiguration) api_2.PacketBuilder {
 	return &emuPacketBuilder{
 		crypto:      crypto,
 		localConfig: localConfig,
 	}
 }
 
-func (r *emuPacketBuilder) GetNeighbourhoodSize() common2.NeighbourhoodSizes {
-	return common2.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
+func (r *emuPacketBuilder) GetNeighbourhoodSize() api.NeighbourhoodSizes {
+	return api.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
 }
 
-func (r *emuPacketBuilder) defaultSign() common.SignedDigest {
+func (r *emuPacketBuilder) defaultSign() cryptography_containers.SignedDigest {
 	digester := r.crypto.GetDigestFactory().GetPacketDigester()
 	digest := digester.GetDigestOf(bytes.NewReader([]byte{1, 3, 3, 7}))
 	signer := r.crypto.GetNodeSigner(r.localConfig.GetSecretKeyStore())
 	signature := signer.SignDigest(digest)
-	sd := common.NewSignedDigest(digest, signature)
+	sd := cryptography_containers.NewSignedDigest(digest, signature)
 	return sd
 }
 
@@ -128,8 +127,8 @@ func (r *emuPacketBuilder) defaultBasePacket(sender *packets.NodeAnnouncementPro
 	}
 }
 
-func (r *emuPacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
+	options api_2.PacketSendOptions) api_2.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
 		basePacket:  r.defaultBasePacket(sender),
 		pulsePacket: pulsarPacket,
@@ -137,14 +136,14 @@ func (r *emuPacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementP
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase0NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase0NetPacket) clonePacketFor(t api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common2.OriginalPulsarPacket,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
+	options api_2.PacketSendOptions) api_2.PreparedPacketSender {
 
 	pp := pulsarPacket.(*adapters.PulsePacketReader)
 	pulseData := pp.GetPulseData()
@@ -159,19 +158,19 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementP
 		},
 	}
 	v.pn = pulseData.PulseNumber
-	v.isRequest = options&core.RequestForPhase1 != 0
-	if v.isRequest || options&core.SendWithoutPulseData != 0 {
+	v.isRequest = options&api_2.RequestForPhase1 != 0
+	if v.isRequest || options&api_2.SendWithoutPulseData != 0 {
 		v.pulsePacket = nil
 	}
 
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase1NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase1NetPacket) clonePacketFor(t api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 
-	if sendOptions&core.SendWithoutPulseData != 0 {
+	if sendOptions&api_2.SendWithoutPulseData != 0 {
 		c.pulsePacket = nil
 	}
 
@@ -180,7 +179,7 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 
 func (r *emuPacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
 	neighbourhood []packets.MembershipAnnouncementReader,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+	options api_2.PacketSendOptions) api_2.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{
 		basePacket:    r.defaultBasePacket(sender),
@@ -190,15 +189,15 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementP
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase2NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase2NetPacket) clonePacketFor(t api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors nodeset.HashedNodeVector,
+func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors api.HashedNodeVector,
 	// bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+	options api_2.PacketSendOptions) api_2.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
 		basePacket: r.defaultBasePacket(sender),
@@ -207,7 +206,7 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementP
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase3NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions core.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase3NetPacket) clonePacketFor(t api.NodeProfile, sendOptions api_2.PacketSendOptions) packets.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 	return &c

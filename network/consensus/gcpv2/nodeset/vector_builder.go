@@ -52,6 +52,7 @@ package nodeset
 
 import (
 	common2 "github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
@@ -62,14 +63,14 @@ Contains copy of NodeAppearance fields that can be changed, to avoid possible ra
 type VectorEntryData struct {
 	NodeID common2.ShortNodeID
 
-	Role           common.NodePrimaryRole
-	RequestedPower common.MemberPower
+	Role           api.NodePrimaryRole
+	RequestedPower api.MemberPower
 	TrustLevel     common.NodeTrustLevel
-	Mode           common.MemberOpMode
+	Mode           api.MemberOpMode
 
 	//Node *NodeAppearance
 	//common.MembershipAnnouncement
-	common.NodeAnnouncedState
+	api.NodeAnnouncedState
 }
 
 type VectorEntryScanner interface {
@@ -86,10 +87,10 @@ type VectorCursor struct {
 	RoleIndex uint16
 	PowIndex  uint16
 
-	LastRole common.NodePrimaryRole
+	LastRole api.NodePrimaryRole
 }
 
-func (p *VectorCursor) BeforeNext(role common.NodePrimaryRole) {
+func (p *VectorCursor) BeforeNext(role api.NodePrimaryRole) {
 	if p.LastRole == role {
 		return
 	}
@@ -98,7 +99,7 @@ func (p *VectorCursor) BeforeNext(role common.NodePrimaryRole) {
 	p.LastRole = role
 }
 
-func (p *VectorCursor) AfterNext(power common.MemberPower) {
+func (p *VectorCursor) AfterNext(power api.MemberPower) {
 	p.RoleIndex++
 	p.PowIndex += power.ToLinearValue()
 	p.NodeIndex++

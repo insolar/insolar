@@ -51,9 +51,9 @@
 package adapters
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"math/rand"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 type gshDigester struct {
@@ -62,7 +62,7 @@ type gshDigester struct {
 	lastSeed int64
 }
 
-func (s *gshDigester) AddNext(digest common.DigestHolder) {
+func (s *gshDigester) AddNext(digest cryptography_containers.DigestHolder) {
 	// it is a dirty emulation of digest
 	if s.rnd == nil {
 		s.rnd = rand.New(rand.NewSource(0))
@@ -71,11 +71,11 @@ func (s *gshDigester) AddNext(digest common.DigestHolder) {
 	s.rnd.Seed(s.lastSeed)
 }
 
-func (s *gshDigester) GetDigestMethod() common.DigestMethod {
+func (s *gshDigester) GetDigestMethod() cryptography_containers.DigestMethod {
 	return "emuDigest64"
 }
 
-func (s *gshDigester) ForkSequence() common.SequenceDigester {
+func (s *gshDigester) ForkSequence() cryptography_containers.SequenceDigester {
 	cp := gshDigester{}
 	if s.rnd != nil {
 		cp.rnd = rand.New(rand.NewSource(s.lastSeed))
@@ -83,11 +83,11 @@ func (s *gshDigester) ForkSequence() common.SequenceDigester {
 	return &cp
 }
 
-func (s *gshDigester) FinishSequence() common.Digest {
+func (s *gshDigester) FinishSequence() cryptography_containers.Digest {
 	if s.rnd == nil {
 		panic("nothing")
 	}
-	bits := common.NewBits64(s.rnd.Uint64())
+	bits := long_bits.NewBits64(s.rnd.Uint64())
 	s.rnd = nil
-	return common.NewDigest(&bits, s.GetDigestMethod())
+	return cryptography_containers.NewDigest(&bits, s.GetDigestMethod())
 }

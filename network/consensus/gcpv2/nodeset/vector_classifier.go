@@ -51,31 +51,23 @@
 package nodeset
 
 import (
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
-type HashedNodeVector struct {
-	Bitset                             NodeBitset
-	TrustedAnnouncementVector          common2.GlobulaAnnouncementHash
-	DoubtedAnnouncementVector          common2.GlobulaAnnouncementHash
-	TrustedGlobulaStateVectorSignature common2.GlobulaStateSignature
-	DoubtedGlobulaStateVectorSignature common2.GlobulaStateSignature
-}
-
 type LocalHashedNodeVector struct {
-	HashedNodeVector
-	TrustedGlobulaStateVector common2.GlobulaStateHash
-	DoubtedGlobulaStateVector common2.GlobulaStateHash
+	api.HashedNodeVector
+	TrustedGlobulaStateVector api.GlobulaStateHash
+	DoubtedGlobulaStateVector api.GlobulaStateHash
 }
 
-func ClassifyByNodeGsh(selfData LocalHashedNodeVector, otherData HashedNodeVector, nodeStats *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
+func ClassifyByNodeGsh(selfData LocalHashedNodeVector, otherData api.HashedNodeVector, nodeStats *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
 
 	if selfData.Bitset.Len() != nodeStats.ColumnCount() {
 		panic("bitset length mismatch")
 	}
 
-	sr := selfData.Bitset.CompareToStatRow(otherData.Bitset)
+	sr := CompareToStatRow(selfData.Bitset, otherData.Bitset)
 	verifyRes := verifyVectorHashes(selfData, otherData, sr, derivedVector)
 
 	if verifyRes == norNotVerified || verifyRes == NvrSenderFault {
@@ -116,7 +108,7 @@ func initVerify(needed bool) subVectorVerifyMode {
 	return ignore
 }
 
-func verifyVectorHashes(selfData LocalHashedNodeVector, otherData HashedNodeVector, sr *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
+func verifyVectorHashes(selfData LocalHashedNodeVector, otherData api.HashedNodeVector, sr *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
 	// TODO All GSH comparisons should be based on SIGNATURES! not on pure hashes
 
 	verifyRes := norNotVerified
@@ -227,7 +219,7 @@ func verifyVectorHashes(selfData LocalHashedNodeVector, otherData HashedNodeVect
 	return verifyRes
 }
 
-func summarize(otherDataBitset NodeBitset, verifyRes NodeVerificationResult, sr *stats.Row, nodeStats *stats.Row) {
+func summarize(otherDataBitset api.NodeBitset, verifyRes NodeVerificationResult, sr *stats.Row, nodeStats *stats.Row) {
 
 	for i := 0; i < sr.ColumnCount(); i++ {
 		nodeResult := ConsensusStatMissingHere

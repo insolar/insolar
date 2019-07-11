@@ -53,10 +53,9 @@ package core
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 var errPacketIsNotAllowed = errors.New("packet is not allowed")
@@ -93,14 +92,14 @@ func (r *packetDispatcher) dispatchMemberPacket(ctx context.Context, reader pack
 	return r.ctl.HandleMemberPacket(ctx, reader, from)
 }
 
-func (r *packetDispatcher) dispatchUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
+func (r *packetDispatcher) dispatchUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from endpoints.HostIdentityHolder) (*NodeAppearance, error) {
 	if !r.HasUnknownMemberHandler() {
 		return nil, errPacketIsNotAllowed
 	}
 	return r.ctl.HandleUnknownMemberPacket(ctx, reader, from)
 }
 
-func (r *packetDispatcher) dispatchHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
+func (r *packetDispatcher) dispatchHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) error {
 	if r.tp.IsMemberHandler() {
 		return errPacketIsNotAllowed
 	}

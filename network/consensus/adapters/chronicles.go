@@ -51,16 +51,17 @@
 package adapters
 
 import (
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-func NewChronicles(pop census.ManyNodePopulation, pf common.NodeProfileFactory, vc census.VersionedRegistries) census.ConsensusChronicles {
+func NewChronicles(pop census.ManyNodePopulation, pf api.NodeProfileFactory, vc api_2.VersionedRegistries) api_2.ConsensusChronicles {
 	chronicles := census.NewLocalChronicles()
 	census.NewPrimingCensus(&pop, pf, vc).SetAsActiveTo(chronicles)
 	return chronicles
 }
 
-func NewPopulation(localNode common.NodeIntroProfile, nodes []common.NodeIntroProfile) census.ManyNodePopulation {
+func NewPopulation(localNode api.NodeIntroProfile, nodes []api.NodeIntroProfile) census.ManyNodePopulation {
 	return census.NewManyNodePopulation(localNode, nodes)
 }

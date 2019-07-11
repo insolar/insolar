@@ -53,15 +53,17 @@ package consensus
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"reflect"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -81,8 +83,8 @@ type Dep struct {
 	StateUpdater adapters.StateUpdater
 
 	// TODO: remove it from here
-	PacketBuilder func(core.TransportCryptographyFactory, core.LocalNodeConfiguration) core.PacketBuilder
-	PacketSender  core.PacketSender
+	PacketBuilder func(api_2.TransportCryptographyFactory, api_2.LocalNodeConfiguration) api_2.PacketBuilder
+	PacketSender  api_2.PacketSender
 }
 
 func (cd *Dep) verify() {
@@ -90,22 +92,22 @@ func (cd *Dep) verify() {
 }
 
 type Consensus struct {
-	population                   census.ManyNodePopulation     // TODO: there should be interface
-	consensusConfiguration       census.ConsensusConfiguration // TODO: there should be interface
-	mandateRegistry              census.MandateRegistry
-	misbehaviorRegistry          census.MisbehaviorRegistry
-	offlinePopulation            census.OfflinePopulation
-	versionedRegistries          census.VersionedRegistries
-	nodeProfileFactory           common.NodeProfileFactory
-	consensusChronicles          census.ConsensusChronicles
-	localNodeConfiguration       core.LocalNodeConfiguration
-	upstreamPulseController      core.UpstreamPulseController
+	population                   census.ManyNodePopulation    // TODO: there should be interface
+	consensusConfiguration       api_2.ConsensusConfiguration // TODO: there should be interface
+	mandateRegistry              api_2.MandateRegistry
+	misbehaviorRegistry          api_2.MisbehaviorRegistry
+	offlinePopulation            api_2.OfflinePopulation
+	versionedRegistries          api_2.VersionedRegistries
+	nodeProfileFactory           api.NodeProfileFactory
+	consensusChronicles          api_2.ConsensusChronicles
+	localNodeConfiguration       api_2.LocalNodeConfiguration
+	upstreamPulseController      api_2.UpstreamPulseController
 	roundStrategyFactory         core.RoundStrategyFactory
-	transportCryptographyFactory core.TransportCryptographyFactory
-	packetBuilder                core.PacketBuilder
-	packetSender                 core.PacketSender
-	transportFactory             core.TransportFactory
-	consensusController          core.ConsensusController
+	transportCryptographyFactory api_2.TransportCryptographyFactory
+	packetBuilder                api_2.PacketBuilder
+	packetSender                 api_2.PacketSender
+	transportFactory             api_2.TransportFactory
+	consensusController          api_2.ConsensusController
 }
 
 func New(ctx context.Context, dep Dep) Consensus {
@@ -123,8 +125,8 @@ func New(ctx context.Context, dep Dep) Consensus {
 	)
 	consensus.consensusConfiguration = adapters.NewConsensusConfiguration()
 	consensus.mandateRegistry = adapters.NewMandateRegistry(
-		common2.NewDigest(
-			common2.NewBits512FromBytes(
+		cryptography_containers.NewDigest(
+			long_bits.NewBits512FromBytes(
 				dep.PrimingCloudStateHash[:],
 			),
 			adapters.SHA3512Digest,

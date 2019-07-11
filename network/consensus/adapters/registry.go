@@ -52,14 +52,14 @@ package adapters
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 )
 
 type MisbehaviorRegistry struct{}
@@ -68,33 +68,33 @@ func NewMisbehaviorRegistry() *MisbehaviorRegistry {
 	return &MisbehaviorRegistry{}
 }
 
-func (mr *MisbehaviorRegistry) AddReport(report errors.MisbehaviorReport) {
+func (mr *MisbehaviorRegistry) AddReport(report api.MisbehaviorReport) {
 	ctx := context.TODO()
 
 	inslogger.FromContext(ctx).Warnf("Got MisbehaviorReport")
 }
 
 type MandateRegistry struct {
-	cloudHash              common2.CloudStateHash
-	consensusConfiguration census.ConsensusConfiguration
+	cloudHash              api.CloudStateHash
+	consensusConfiguration api_2.ConsensusConfiguration
 }
 
-func NewMandateRegistry(cloudHash common2.CloudStateHash, consensusConfiguration census.ConsensusConfiguration) *MandateRegistry {
+func NewMandateRegistry(cloudHash api.CloudStateHash, consensusConfiguration api_2.ConsensusConfiguration) *MandateRegistry {
 	return &MandateRegistry{
 		cloudHash:              cloudHash,
 		consensusConfiguration: consensusConfiguration,
 	}
 }
 
-func (mr *MandateRegistry) FindRegisteredProfile(host common.HostIdentityHolder) common2.HostProfile {
+func (mr *MandateRegistry) FindRegisteredProfile(host endpoints.HostIdentityHolder) api.HostProfile {
 	panic("implement me")
 }
 
-func (mr *MandateRegistry) GetConsensusConfiguration() census.ConsensusConfiguration {
+func (mr *MandateRegistry) GetConsensusConfiguration() api_2.ConsensusConfiguration {
 	return mr.consensusConfiguration
 }
 
-func (mr *MandateRegistry) GetPrimingCloudHash() common2.CloudStateHash {
+func (mr *MandateRegistry) GetPrimingCloudHash() api.CloudStateHash {
 	return mr.cloudHash
 }
 
@@ -113,7 +113,7 @@ func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.Certifi
 	}
 }
 
-func (op *OfflinePopulation) FindRegisteredProfile(identity common.HostIdentityHolder) common2.HostProfile {
+func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.HostIdentityHolder) api.HostProfile {
 	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetHostAddress().String())
 	cert := op.manager.GetCertificate()
 
@@ -121,17 +121,17 @@ func (op *OfflinePopulation) FindRegisteredProfile(identity common.HostIdentityH
 }
 
 type VersionedRegistries struct {
-	mandateRegistry     census.MandateRegistry
-	misbehaviorRegistry census.MisbehaviorRegistry
-	offlinePopulation   census.OfflinePopulation
+	mandateRegistry     api_2.MandateRegistry
+	misbehaviorRegistry api_2.MisbehaviorRegistry
+	offlinePopulation   api_2.OfflinePopulation
 
-	pulseData common.PulseData
+	pulseData pulse_data.PulseData
 }
 
 func NewVersionedRegistries(
-	mandateRegistry census.MandateRegistry,
-	misbehaviorRegistry census.MisbehaviorRegistry,
-	offlinePopulation census.OfflinePopulation,
+	mandateRegistry api_2.MandateRegistry,
+	misbehaviorRegistry api_2.MisbehaviorRegistry,
+	offlinePopulation api_2.OfflinePopulation,
 ) *VersionedRegistries {
 	return &VersionedRegistries{
 		mandateRegistry:     mandateRegistry,
@@ -140,25 +140,25 @@ func NewVersionedRegistries(
 	}
 }
 
-func (c *VersionedRegistries) CommitNextPulse(pd common.PulseData, population census.OnlinePopulation) census.VersionedRegistries {
+func (c *VersionedRegistries) CommitNextPulse(pd pulse_data.PulseData, population api_2.OnlinePopulation) api_2.VersionedRegistries {
 	pd.EnsurePulseData()
 	cp := *c
 	cp.pulseData = pd
 	return &cp
 }
 
-func (c *VersionedRegistries) GetMisbehaviorRegistry() census.MisbehaviorRegistry {
+func (c *VersionedRegistries) GetMisbehaviorRegistry() api_2.MisbehaviorRegistry {
 	return c.misbehaviorRegistry
 }
 
-func (c *VersionedRegistries) GetMandateRegistry() census.MandateRegistry {
+func (c *VersionedRegistries) GetMandateRegistry() api_2.MandateRegistry {
 	return c.mandateRegistry
 }
 
-func (c *VersionedRegistries) GetOfflinePopulation() census.OfflinePopulation {
+func (c *VersionedRegistries) GetOfflinePopulation() api_2.OfflinePopulation {
 	return c.offlinePopulation
 }
 
-func (c *VersionedRegistries) GetVersionPulseData() common.PulseData {
+func (c *VersionedRegistries) GetVersionPulseData() pulse_data.PulseData {
 	return c.pulseData
 }

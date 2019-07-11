@@ -52,8 +52,9 @@ package phases
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
@@ -70,7 +71,7 @@ func (*PhaseControllerWithJoinersTemplate) GetHandlerType() core.PhaseController
 }
 
 func (c *PhaseControllerWithJoinersTemplate) HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader,
-	from common.HostIdentityHolder) (*core.NodeAppearance, error) {
+	from endpoints.HostIdentityHolder) (*core.NodeAppearance, error) {
 
 	jc := newJoinerController()
 	return jc.handleUnknownJoinerPacket(ctx, reader, from, c.R)
@@ -138,12 +139,12 @@ func (p *JoinerController) createPacketHandler(fn JoinerControllerPacketFunc) co
 }
 
 func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader packets.MemberPacketReader,
-	from common.HostIdentityHolder, r *core.FullRealm) (*core.NodeAppearance, error) {
+	from endpoints.HostIdentityHolder, r *core.FullRealm) (*core.NodeAppearance, error) {
 
 	//all packets will also be processed by main handlers
 
 	switch reader.GetPacketType() {
-	case packets.PacketPhase1:
+	case api.PacketPhase1:
 		p1 := reader.AsPhase1Packet()
 		//r.GetProfileFactory().CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
 		//nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
@@ -158,7 +159,7 @@ func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader
 
 		return p.applyBriefInfo(ctx, p1.GetFullIntroduction(), from, r)
 
-	case packets.PacketPhase2:
+	case api.PacketPhase2:
 		p2 := reader.AsPhase2Packet()
 		intro := p2.GetBriefIntroduction()
 		r.GetProfileFactory().CreateBriefIntroProfile(intro)
@@ -168,7 +169,7 @@ func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader
 }
 
 func (p *JoinerController) applyBriefInfo(ctx context.Context, intro packets.BriefIntroductionReader,
-	from common.HostIdentityHolder, r *core.FullRealm) (*core.NodeAppearance, error) {
+	from endpoints.HostIdentityHolder, r *core.FullRealm) (*core.NodeAppearance, error) {
 
 	ctx = context.WithValue(ctx, contextKeyValue, p)
 	return r.CreatePurgatoryNode(ctx, intro, from)

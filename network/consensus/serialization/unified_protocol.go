@@ -53,10 +53,13 @@ package serialization
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"io"
 
 	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 const (
@@ -139,11 +142,11 @@ func (h *Header) GetSourceID() common.ShortNodeID {
 	return common.ShortNodeID(h.SourceID)
 }
 
-func (h *Header) GetPacketType() packets.PacketType {
-	return packets.PacketType(h.ProtocolAndPacketType) & packetTypeMask
+func (h *Header) GetPacketType() api.PacketType {
+	return api.PacketType(h.ProtocolAndPacketType) & packetTypeMask
 }
 
-func (h *Header) setPacketType(packetType packets.PacketType) {
+func (h *Header) setPacketType(packetType api.PacketType) {
 	if packetType > packetTypeMax {
 		panic("invalid packet type")
 	}
@@ -248,16 +251,16 @@ func (h *Header) getFlagRangeInt(from, to uint8) uint8 {
 }
 
 type Packet struct {
-	Header      Header             `insolar-transport:"Protocol=0x01;Packet=0-4"` // ByteSize=16
-	PulseNumber common.PulseNumber `insolar-transport:"[30-31]=0"`                // [30-31] MUST ==0, ByteSize=4
+	Header      Header                 `insolar-transport:"Protocol=0x01;Packet=0-4"` // ByteSize=16
+	PulseNumber pulse_data.PulseNumber `insolar-transport:"[30-31]=0"`                // [30-31] MUST ==0, ByteSize=4
 
 	EncryptableBody PacketBody
 	EncryptionData  []byte
 
-	PacketSignature common.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
+	PacketSignature long_bits.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
 }
 
-func (p *Packet) setSignature(signature common.SignatureHolder) {
+func (p *Packet) setSignature(signature cryptography_containers.SignatureHolder) {
 	copy(p.PacketSignature[:], signature.AsBytes())
 }
 
@@ -265,11 +268,11 @@ func (p *Packet) setPayloadLength(payloadLength uint16) {
 	p.Header.setPayloadLength(payloadLength)
 }
 
-func (p *Packet) getPulseNumber() common.PulseNumber {
+func (p *Packet) getPulseNumber() pulse_data.PulseNumber {
 	return p.PulseNumber & pulseNumberMask
 }
 
-func (p *Packet) setPulseNumber(pulseNumber common.PulseNumber) {
+func (p *Packet) setPulseNumber(pulseNumber pulse_data.PulseNumber) {
 	if pulseNumber > pulseNumberMax {
 		panic("invalid pulse number")
 	}
@@ -277,7 +280,7 @@ func (p *Packet) setPulseNumber(pulseNumber common.PulseNumber) {
 	p.PulseNumber |= pulseNumber
 }
 
-func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, digester common.DataDigester, signer common.DigestSigner) (int64, error) {
+func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, digester cryptography_containers.DataDigester, signer cryptography_containers.DigestSigner) (int64, error) {
 	if p.EncryptableBody == nil {
 		return 0, ErrMalformedPacketBody(ErrNilBody)
 	}

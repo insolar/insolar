@@ -53,15 +53,15 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/common"
 )
@@ -79,14 +79,14 @@ type coreRealm struct {
 
 	roundContext  context.Context
 	strategy      RoundStrategy
-	config        LocalNodeConfiguration
-	initialCensus census.OperationalCensus
+	config        api_2.LocalNodeConfiguration
+	initialCensus api_2.OperationalCensus
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
-	signer          common.DigestSigner
-	digest          common.DigestFactory
-	verifierFactory TransportCryptographyFactory
-	upstream        UpstreamPulseController
+	signer          cryptography_containers.DigestSigner
+	digest          cryptography_containers.DigestFactory
+	verifierFactory api_2.TransportCryptographyFactory
+	upstream        api_2.UpstreamPulseController
 	roundStartedAt  time.Time
 
 	self *NodeAppearance /* Special case - this field is set twice, by start() of PrepRealm and FullRealm */
@@ -95,12 +95,12 @@ type coreRealm struct {
 		Other fields - need mutex during PrepRealm, unless accessed by start() of PrepRealm
 		FullRealm doesnt need a lock to read them
 	*/
-	pulseData     common.PulseData
-	originalPulse common2.OriginalPulsarPacket
+	pulseData     pulse_data.PulseData
+	originalPulse packets.OriginalPulsarPacket
 }
 
-func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport TransportFactory,
-	config LocalNodeConfiguration, initialCensus census.OperationalCensus, powerRequest common2.PowerRequest) {
+func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport api_2.TransportFactory,
+	config api_2.LocalNodeConfiguration, initialCensus api_2.OperationalCensus, powerRequest api.PowerRequest) {
 
 	r.hLocker = hLocker
 
@@ -133,7 +133,7 @@ func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport Tran
 	r.self.requestedPower = profile.GetIntroduction().ConvertPowerRequest(powerRequest)
 
 	nodeContext.initPrep(
-		func(report errors.MisbehaviorReport) interface{} {
+		func(report api.MisbehaviorReport) interface{} {
 			r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
@@ -143,19 +143,19 @@ func (r *coreRealm) GetStrategy() RoundStrategy {
 	return r.strategy
 }
 
-func (r *coreRealm) GetVerifierFactory() common.SignatureVerifierFactory {
+func (r *coreRealm) GetVerifierFactory() cryptography_containers.SignatureVerifierFactory {
 	return r.verifierFactory
 }
 
-func (r *coreRealm) GetDigestFactory() common.DigestFactory {
+func (r *coreRealm) GetDigestFactory() cryptography_containers.DigestFactory {
 	return r.digest
 }
 
-func (r *coreRealm) GetSigner() common.DigestSigner {
+func (r *coreRealm) GetSigner() cryptography_containers.DigestSigner {
 	return r.signer
 }
 
-func (r *coreRealm) GetSignatureVerifier(pks common.PublicKeyStore) common.SignatureVerifier {
+func (r *coreRealm) GetSignatureVerifier(pks cryptography_containers.PublicKeyStore) cryptography_containers.SignatureVerifier {
 	return r.verifierFactory.GetSignatureVerifierWithPKS(pks)
 }
 
@@ -171,7 +171,7 @@ func (r *coreRealm) GetRoundContext() context.Context {
 	return r.roundContext
 }
 
-func (r *coreRealm) GetLocalConfig() LocalNodeConfiguration {
+func (r *coreRealm) GetLocalConfig() api_2.LocalNodeConfiguration {
 	return r.config
 }
 
@@ -187,11 +187,11 @@ func (r *coreRealm) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-func (r *coreRealm) GetPrimingCloudHash() common2.CloudStateHash {
+func (r *coreRealm) GetPrimingCloudHash() api.CloudStateHash {
 	return r.initialCensus.GetMandateRegistry().GetPrimingCloudHash()
 }
 
-func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from common.HostIdentityHolder, strictFrom bool) error {
+func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from endpoints.HostIdentityHolder, strictFrom bool) error {
 	nr := r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
 	if nr == nil {
 		nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
@@ -203,8 +203,8 @@ func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from c
 	return VerifyPacketAuthenticityBy(packet, nr, sf, from, strictFrom)
 }
 
-func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr common2.HostProfile, sf common.SignatureVerifier,
-	from common.HostIdentityHolder, strictFrom bool) error {
+func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr api.HostProfile, sf cryptography_containers.SignatureVerifier,
+	from endpoints.HostIdentityHolder, strictFrom bool) error {
 
 	if strictFrom && !nr.IsAcceptableHost(from) {
 		return fmt.Errorf("host is not allowed by node registration: node=%v, host=%v", nr, from)

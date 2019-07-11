@@ -51,26 +51,27 @@
 package nodeset
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"math"
 
-	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
 type NodeVectorHelper struct {
-	digestFactory     common2.DigestFactory
-	signatureVerifier common2.SignatureVerifier
+	digestFactory     cryptography_containers.DigestFactory
+	signatureVerifier cryptography_containers.SignatureVerifier
 	entryScanner      VectorEntryScanner
-	bitset            NodeBitset
-	parentBitset      NodeBitset
+	bitset            api.NodeBitset
+	parentBitset      api.NodeBitset
 }
 
-func NewLocalNodeVector(digestFactory common2.DigestFactory,
+func NewLocalNodeVector(digestFactory cryptography_containers.DigestFactory,
 	entryScanner VectorEntryScanner) NodeVectorHelper {
 
 	p := NodeVectorHelper{digestFactory, nil,
-		entryScanner, make(NodeBitset, entryScanner.GetIndexedCount()), nil,
+		entryScanner, make(api.NodeBitset, entryScanner.GetIndexedCount()), nil,
 	}
 
 	entryScanner.ScanIndexed(func(idx int, nodeData VectorEntryData) {
@@ -79,22 +80,22 @@ func NewLocalNodeVector(digestFactory common2.DigestFactory,
 	return p
 }
 
-func mapVectorEntryDataToNodesetEntry(nodeData VectorEntryData) NodeBitsetEntry {
+func mapVectorEntryDataToNodesetEntry(nodeData VectorEntryData) api.NodeBitsetEntry {
 	switch {
 	case nodeData.IsEmpty():
-		return NbsTimeout
+		return api.NbsTimeout
 	case nodeData.TrustLevel.IsNegative():
-		return NbsFraud
+		return api.NbsFraud
 	case nodeData.TrustLevel == common.UnknownTrust:
-		return NbsBaselineTrust
+		return api.NbsBaselineTrust
 	case nodeData.TrustLevel < common.TrustByNeighbors:
-		return NbsLimitedTrust
+		return api.NbsLimitedTrust
 	default:
-		return NbsHighTrust
+		return api.NbsHighTrust
 	}
 }
 
-func (p *NodeVectorHelper) CreateDerivedVector(signatureVerifier common2.SignatureVerifier) NodeVectorHelper {
+func (p *NodeVectorHelper) CreateDerivedVector(signatureVerifier cryptography_containers.SignatureVerifier) NodeVectorHelper {
 	return NodeVectorHelper{p.digestFactory, signatureVerifier,
 		p.entryScanner, nil, p.bitset}
 }
@@ -104,32 +105,32 @@ func (p *NodeVectorHelper) PrepareDerivedVector(statRow *stats.Row) {
 		panic("illegal state")
 	}
 
-	p.bitset = make(NodeBitset, len(p.parentBitset))
+	p.bitset = make(api.NodeBitset, len(p.parentBitset))
 
 	for idx := range p.parentBitset {
 		switch statRow.Get(idx) {
 		case NodeBitMissingHere:
-			p.bitset[idx] = NbsTimeout // we don't have it
+			p.bitset[idx] = api.NbsTimeout // we don't have it
 		case NodeBitDoubtedMissingHere:
-			p.bitset[idx] = NbsTimeout // we don't have it
+			p.bitset[idx] = api.NbsTimeout // we don't have it
 		case NodeBitSame:
 			// ok, use as-is
 			p.bitset[idx] = p.parentBitset[idx]
 		case NodeBitLessTrustedThere:
 			// ok - exclude for trusted
-			p.bitset[idx] = NbsBaselineTrust
+			p.bitset[idx] = api.NbsBaselineTrust
 		case NodeBitLessTrustedHere:
 			// ok - use for both
-			p.bitset[idx] = NbsHighTrust
+			p.bitset[idx] = api.NbsHighTrust
 		case NodeBitMissingThere:
-			p.bitset[idx] = NbsTimeout // we have it, but the other's doesn't
+			p.bitset[idx] = api.NbsTimeout // we have it, but the other's doesn't
 		default:
 			panic("unexpected")
 		}
 	}
 }
 
-func (p *NodeVectorHelper) buildGlobulaAnnouncementHash(trusted bool) common.GlobulaAnnouncementHash {
+func (p *NodeVectorHelper) buildGlobulaAnnouncementHash(trusted bool) api.GlobulaAnnouncementHash {
 	hasEntries := false
 	agg := p.digestFactory.GetGshDigester()
 
@@ -151,14 +152,14 @@ func (p *NodeVectorHelper) buildGlobulaAnnouncementHash(trusted bool) common.Glo
 	return nil
 }
 
-func (p *NodeVectorHelper) buildGlobulaAnnouncementHashes() (common.GlobulaAnnouncementHash, common.GlobulaAnnouncementHash) {
+func (p *NodeVectorHelper) buildGlobulaAnnouncementHashes() (api.GlobulaAnnouncementHash, api.GlobulaAnnouncementHash) {
 	/*
 		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always
 		have trust level set high enough to get bitset[i].IsTrusted() == true
 	*/
 
 	aggTrusted := p.digestFactory.GetGshDigester()
-	var aggDoubted common2.SequenceDigester
+	var aggDoubted cryptography_containers.SequenceDigester
 
 	p.entryScanner.ScanIndexed(
 		func(idx int, nodeData VectorEntryData) {
@@ -184,7 +185,7 @@ func (p *NodeVectorHelper) buildGlobulaAnnouncementHashes() (common.GlobulaAnnou
 	return trustedResult, trustedResult
 }
 
-func (p *NodeVectorHelper) buildGlobulaStateHash(trusted bool) common.GlobulaAnnouncementHash {
+func (p *NodeVectorHelper) buildGlobulaStateHash(trusted bool) api.GlobulaAnnouncementHash {
 	hasEntries := false
 	agg := p.digestFactory.GetGshDigester()
 
@@ -199,7 +200,7 @@ func (p *NodeVectorHelper) buildGlobulaStateHash(trusted bool) common.GlobulaAnn
 			if trusted && !b.IsTrusted() {
 				return
 			}
-			digest := common2.NewDigest(nodeData.AnnounceSignature, "").AsDigestHolder()
+			digest := cryptography_containers.NewDigest(nodeData.AnnounceSignature, "").AsDigestHolder()
 
 			agg.AddNext(digest)
 			hasEntries = true
@@ -219,14 +220,14 @@ func (p *NodeVectorHelper) buildGlobulaStateHash(trusted bool) common.GlobulaAnn
 	return nil
 }
 
-func (p *NodeVectorHelper) buildGlobulaStateHashes() (common.GlobulaAnnouncementHash, common.GlobulaAnnouncementHash) {
+func (p *NodeVectorHelper) buildGlobulaStateHashes() (api.GlobulaAnnouncementHash, api.GlobulaAnnouncementHash) {
 	/*
 		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always
 		have trust level set high enough to get bitset[i].IsTrusted() == true
 	*/
 
 	aggTrusted := p.digestFactory.GetGshDigester()
-	var aggDoubted common2.SequenceDigester
+	var aggDoubted cryptography_containers.SequenceDigester
 
 	const skip = math.MaxUint32
 
@@ -236,7 +237,7 @@ func (p *NodeVectorHelper) buildGlobulaStateHashes() (common.GlobulaAnnouncement
 				return
 			}
 			b := p.bitset[filter]
-			digest := common2.NewDigest(nodeData.AnnounceSignature, "").AsDigestHolder()
+			digest := cryptography_containers.NewDigest(nodeData.AnnounceSignature, "").AsDigestHolder()
 
 			if b.IsTrusted() {
 				aggTrusted.AddNext(digest)
@@ -265,7 +266,7 @@ func (p *NodeVectorHelper) buildGlobulaStateHashes() (common.GlobulaAnnouncement
 }
 
 func (p *NodeVectorHelper) BuildGlobulaAnnouncementHashes(buildTrusted, buildDoubted bool,
-	defaultTrusted, defaultDoubted common.GlobulaAnnouncementHash) (trustedHash, doubtedHash common.GlobulaAnnouncementHash) {
+	defaultTrusted, defaultDoubted api.GlobulaAnnouncementHash) (trustedHash, doubtedHash api.GlobulaAnnouncementHash) {
 
 	if buildTrusted && buildDoubted {
 		return p.buildGlobulaAnnouncementHashes()
@@ -280,7 +281,7 @@ func (p *NodeVectorHelper) BuildGlobulaAnnouncementHashes(buildTrusted, buildDou
 }
 
 func (p *NodeVectorHelper) BuildGlobulaStateHashes(buildTrusted, buildDoubted bool,
-	defaultTrusted, defaultDoubted common.GlobulaStateHash) (trustedHash, doubtedHash common.GlobulaStateHash) {
+	defaultTrusted, defaultDoubted api.GlobulaStateHash) (trustedHash, doubtedHash api.GlobulaStateHash) {
 
 	if buildTrusted && buildDoubted {
 		return p.buildGlobulaStateHashes()
@@ -294,14 +295,14 @@ func (p *NodeVectorHelper) BuildGlobulaStateHashes(buildTrusted, buildDoubted bo
 	return defaultTrusted, defaultDoubted
 }
 
-func (p *NodeVectorHelper) VerifyGlobulaStateSignature(localHash common.GlobulaStateHash, remoteSignature common2.SignatureHolder) bool {
+func (p *NodeVectorHelper) VerifyGlobulaStateSignature(localHash api.GlobulaStateHash, remoteSignature cryptography_containers.SignatureHolder) bool {
 	if p.signatureVerifier == nil {
 		panic("illegal state - helper must be initialized as a derived one")
 	}
 	return localHash != nil && p.signatureVerifier.IsValidDigestSignature(localHash, remoteSignature)
 }
 
-func (p *NodeVectorHelper) GetNodeBitset() NodeBitset {
+func (p *NodeVectorHelper) GetNodeBitset() api.NodeBitset {
 	return p.bitset
 }
 

@@ -52,9 +52,9 @@ package core
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 
 	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
 type RealmPopulation interface {
@@ -74,7 +74,7 @@ type RealmPopulation interface {
 
 	GetSelf() *NodeAppearance
 
-	CreateNodeAppearance(ctx context.Context, inp common2.NodeProfile) *NodeAppearance
+	CreateNodeAppearance(ctx context.Context, inp api.NodeProfile) *NodeAppearance
 
 	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
 	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)

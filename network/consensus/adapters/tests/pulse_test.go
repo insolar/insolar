@@ -52,13 +52,14 @@ package tests
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 const (
@@ -68,7 +69,7 @@ const (
 
 type Pulsar struct {
 	pulseDelta    uint16
-	pulseNumber   common.PulseNumber
+	pulseNumber   pulse_data.PulseNumber
 	pulseHandlers []network.PulseHandler
 
 	mu *sync.Mutex
@@ -94,8 +95,8 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 		prevDelta = 0
 	}
 
-	data := *common.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
-	p.pulseNumber += common.PulseNumber(p.pulseDelta)
+	data := *pulse_data.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
+	p.pulseNumber += pulse_data.PulseNumber(p.pulseDelta)
 
 	go func() {
 		for i := 0; i < attempts; i++ {
@@ -105,8 +106,8 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 	}()
 }
 
-func randBits256() common.Bits256 {
-	v := common.Bits256{}
+func randBits256() long_bits.Bits256 {
+	v := long_bits.Bits256{}
 	_, _ = rand.Read(v[:])
 	return v
 }

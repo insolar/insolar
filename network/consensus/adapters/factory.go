@@ -52,11 +52,10 @@ package adapters
 
 import (
 	"crypto/ecdsa"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phases"
 )
@@ -76,7 +75,7 @@ func NewECDSASignatureVerifierFactory(
 	}
 }
 
-func (vf *ECDSASignatureVerifierFactory) GetSignatureVerifierWithPKS(pks common.PublicKeyStore) common.SignatureVerifier {
+func (vf *ECDSASignatureVerifierFactory) GetSignatureVerifierWithPKS(pks cryptography_containers.PublicKeyStore) cryptography_containers.SignatureVerifier {
 	keyStore := pks.(*ECDSAPublicKeyStore)
 
 	return NewECDSASignatureVerifier(
@@ -96,11 +95,11 @@ func NewDigestFactory(pcs insolar.PlatformCryptographyScheme) *DigestFactory {
 	}
 }
 
-func (df *DigestFactory) GetPacketDigester() common.DataDigester {
+func (df *DigestFactory) GetPacketDigester() cryptography_containers.DataDigester {
 	return NewSha3512Digester(df.pcs)
 }
 
-func (df *DigestFactory) GetGshDigester() common.SequenceDigester {
+func (df *DigestFactory) GetGshDigester() cryptography_containers.SequenceDigester {
 	return &gshDigester{}
 }
 
@@ -121,21 +120,21 @@ func NewTransportCryptographyFactory(scheme insolar.PlatformCryptographyScheme) 
 	}
 }
 
-func (cf *TransportCryptographyFactory) GetSignatureVerifierWithPKS(pks common.PublicKeyStore) common.SignatureVerifier {
+func (cf *TransportCryptographyFactory) GetSignatureVerifierWithPKS(pks cryptography_containers.PublicKeyStore) cryptography_containers.SignatureVerifier {
 	return cf.verifierFactory.GetSignatureVerifierWithPKS(pks)
 }
 
-func (cf *TransportCryptographyFactory) GetDigestFactory() common.DigestFactory {
+func (cf *TransportCryptographyFactory) GetDigestFactory() cryptography_containers.DigestFactory {
 	return cf.digestFactory
 }
 
-func (cf *TransportCryptographyFactory) GetNodeSigner(sks common.SecretKeyStore) common.DigestSigner {
+func (cf *TransportCryptographyFactory) GetNodeSigner(sks cryptography_containers.SecretKeyStore) cryptography_containers.DigestSigner {
 	isks := sks.(*ECDSASecretKeyStore)
 
 	return NewECDSADigestSigner(isks.privateKey, cf.scheme)
 }
 
-func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh common.SignatureKeyHolder) common.PublicKeyStore {
+func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh cryptography_containers.SignatureKeyHolder) cryptography_containers.PublicKeyStore {
 	kh := skh.(*ECDSASignatureKeyHolder)
 
 	return NewECDSAPublicKeyStore(kh.publicKey)
@@ -147,7 +146,7 @@ func NewRoundStrategyFactory() *RoundStrategyFactory {
 	return &RoundStrategyFactory{}
 }
 
-func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle census.ConsensusChronicles, config core.LocalNodeConfiguration) core.RoundStrategy {
+func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api_2.ConsensusChronicles, config api_2.LocalNodeConfiguration) core.RoundStrategy {
 	return NewRoundStrategy(
 		phases.NewRegularPhaseBundleByDefault(),
 		chronicle,
@@ -156,15 +155,15 @@ func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle census.ConsensusC
 }
 
 type TransportFactory struct {
-	cryptographyFactory core.TransportCryptographyFactory
-	packetBuilder       core.PacketBuilder
-	packetSender        core.PacketSender
+	cryptographyFactory api_2.TransportCryptographyFactory
+	packetBuilder       api_2.PacketBuilder
+	packetSender        api_2.PacketSender
 }
 
 func NewTransportFactory(
-	cryptographyFactory core.TransportCryptographyFactory,
-	packetBuilder core.PacketBuilder,
-	packetSender core.PacketSender,
+	cryptographyFactory api_2.TransportCryptographyFactory,
+	packetBuilder api_2.PacketBuilder,
+	packetSender api_2.PacketSender,
 ) *TransportFactory {
 	return &TransportFactory{
 		cryptographyFactory: cryptographyFactory,
@@ -173,15 +172,15 @@ func NewTransportFactory(
 	}
 }
 
-func (tf *TransportFactory) GetPacketSender() core.PacketSender {
+func (tf *TransportFactory) GetPacketSender() api_2.PacketSender {
 	return tf.packetSender
 }
 
-func (tf *TransportFactory) GetPacketBuilder(signer common.DigestSigner) core.PacketBuilder {
+func (tf *TransportFactory) GetPacketBuilder(signer cryptography_containers.DigestSigner) api_2.PacketBuilder {
 	return tf.packetBuilder
 }
 
-func (tf *TransportFactory) GetCryptographyFactory() core.TransportCryptographyFactory {
+func (tf *TransportFactory) GetCryptographyFactory() api_2.TransportCryptographyFactory {
 	return tf.cryptographyFactory
 }
 
@@ -195,7 +194,7 @@ func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) *NodeProfileFactor
 	}
 }
 
-func (npf *NodeProfileFactory) createProfile(candidate common2.BriefCandidateProfile, signature common.SignatureHolder, intro common2.NodeIntroduction) *NodeIntroProfile {
+func (npf *NodeProfileFactory) createProfile(candidate api.BriefCandidateProfile, signature cryptography_containers.SignatureHolder, intro api.NodeIntroduction) *NodeIntroProfile {
 	keyHolder := candidate.GetNodePK()
 	pk, err := npf.keyProcessor.ImportPublicKeyBinary(keyHolder.AsBytes())
 	if err != nil {
@@ -216,11 +215,11 @@ func (npf *NodeProfileFactory) createProfile(candidate common2.BriefCandidatePro
 	)
 }
 
-func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate common2.BriefCandidateProfile) common2.NodeIntroProfile {
+func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate api.BriefCandidateProfile) api.NodeIntroProfile {
 	return npf.createProfile(candidate, candidate.GetJoinerSignature(), nil)
 }
 
-func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate common2.CandidateProfile) common2.NodeIntroProfile {
+func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate api.CandidateProfile) api.NodeIntroProfile {
 	intro := newNodeIntroduction(candidate.GetNodeID(), candidate.GetReference())
 
 	return npf.createProfile(candidate, candidate.GetJoinerSignature(), intro)

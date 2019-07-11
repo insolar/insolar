@@ -52,13 +52,13 @@ package adapters
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 type ConsensusControlFeeder struct{}
@@ -67,11 +67,11 @@ func NewConsensusControlFeeder() *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{}
 }
 
-func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() common.PowerRequest {
-	return common.NewPowerRequestByLevel(common2.LevelNormal)
+func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() api.PowerRequest {
+	return api.NewPowerRequestByLevel(common2.LevelNormal)
 }
 
-func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw common.MemberPower, effectiveSince common2.PulseNumber) {
+func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw api.MemberPower, effectiveSince pulse_data.PulseNumber) {
 	ctx := context.TODO()
 
 	inslogger.FromContext(ctx).Info(">>> Power level applied")
@@ -81,7 +81,7 @@ func (cf *ConsensusControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
 	return false, 0
 }
 
-func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince common2.PulseNumber) {
+func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse_data.PulseNumber) {
 	ctx := context.TODO()
 
 	inslogger.FromContext(ctx).Info(">>> Graceful leave applied")
@@ -99,7 +99,7 @@ func (cf *ConsensusControlFeeder) PulseDetected() {
 	panic("implement me")
 }
 
-func (cf *ConsensusControlFeeder) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+func (cf *ConsensusControlFeeder) ConsensusFinished(report api_2.MembershipUpstreamReport, expectedCensus api_2.OperationalCensus) {
 	ctx := context.TODO()
 
 	inslogger.FromContext(ctx).Info(">>> ConsensusFinished")

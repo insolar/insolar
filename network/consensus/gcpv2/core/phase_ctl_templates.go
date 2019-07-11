@@ -52,8 +52,8 @@ package core
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
@@ -70,7 +70,7 @@ func (*PhaseControllerPerMemberFromUnknownTemplate) GetHandlerType() PhaseContro
 }
 
 func (*PhaseControllerPerMemberFromUnknownTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser,
-	from common.HostIdentityHolder) error {
+	from endpoints.HostIdentityHolder) error {
 
 	return errPacketIsNotAllowed
 }
@@ -93,7 +93,7 @@ func (*PhaseControllerPerMemberTemplate) GetHandlerType() PhaseControllerHandler
 }
 
 func (*PhaseControllerPerMemberTemplate) HandleUnknownMemberPacket(ctx context.Context,
-	reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
+	reader packets.MemberPacketReader, from endpoints.HostIdentityHolder) (*NodeAppearance, error) {
 
 	return nil, errPacketIsNotAllowed
 }
@@ -111,7 +111,7 @@ func (*PhaseControllerPerNodeTemplate) GetHandlerType() PhaseControllerHandlerTy
 	return PacketHandlerTypePerNode
 }
 
-func (*PhaseControllerPerNodeTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
+func (*PhaseControllerPerNodeTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) error {
 	return errPacketIsNotAllowed
 }
 
@@ -119,7 +119,7 @@ func (*PhaseControllerPerNodeTemplate) HandleMemberPacket(ctx context.Context, r
 	return errPacketIsNotAllowed
 }
 
-func (*PhaseControllerPerNodeTemplate) HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
+func (*PhaseControllerPerNodeTemplate) HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from endpoints.HostIdentityHolder) (*NodeAppearance, error) {
 	return nil, errPacketIsNotAllowed
 }
 
@@ -144,7 +144,7 @@ func (*PhaseControllerPerHostTemplate) CreatePerNodePacketHandler(sharedNodeCont
 	return nil, sharedNodeContext
 }
 
-func (*PhaseControllerPerHostTemplate) HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
+func (*PhaseControllerPerHostTemplate) HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from endpoints.HostIdentityHolder) (*NodeAppearance, error) {
 	return nil, errPacketIsNotAllowed
 }
 

@@ -51,18 +51,21 @@
 package adapters
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"io"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 const nanosecondsInSecond = int64(time.Second / time.Nanosecond)
 
-func NewPulse(pulseData common.PulseData) insolar.Pulse {
+func NewPulse(pulseData pulse_data.PulseData) insolar.Pulse {
 	var prev insolar.PulseNumber
 	if !pulseData.IsFirstPulse() {
 		prev = insolar.PulseNumber(pulseData.GetPrevPulseNumber())
@@ -85,12 +88,12 @@ func NewPulse(pulseData common.PulseData) insolar.Pulse {
 	}
 }
 
-func NewPulseData(pulse insolar.Pulse) common.PulseData {
-	data := common.NewPulsarData(
-		common.PulseNumber(pulse.PulseNumber),
+func NewPulseData(pulse insolar.Pulse) pulse_data.PulseData {
+	data := pulse_data.NewPulsarData(
+		pulse_data.PulseNumber(pulse.PulseNumber),
 		uint16(pulse.NextPulseNumber-pulse.PulseNumber),
 		uint16(pulse.PulseNumber-pulse.PrevPulseNumber),
-		common.NewBits512FromBytes(pulse.Entropy[:]).FoldToBits256(),
+		long_bits.NewBits512FromBytes(pulse.Entropy[:]).FoldToBits256(),
 	)
 	data.Timestamp = uint32(pulse.PulseTimestamp / nanosecondsInSecond)
 	return *data
@@ -102,11 +105,11 @@ type PulsePacketReader struct {
 
 func (p *PulsePacketReader) OriginalPulsarPacket() {}
 
-func (p *PulsePacketReader) GetPulseData() common.PulseData {
+func (p *PulsePacketReader) GetPulseData() pulse_data.PulseData {
 	return NewPulseData(p.pulse)
 }
 
-func (p *PulsePacketReader) GetPulseDataEvidence() common2.OriginalPulsarPacket {
+func (p *PulsePacketReader) GetPulseDataEvidence() packets.OriginalPulsarPacket {
 	return p
 }
 
@@ -158,12 +161,12 @@ func (p *PulsePacketParser) GetTargetID() common.ShortNodeID {
 	panic("implement me")
 }
 
-func (p *PulsePacketParser) GetPacketType() packets.PacketType {
-	return packets.PacketPulse
+func (p *PulsePacketParser) GetPacketType() api.PacketType {
+	return api.PacketPulse
 }
 
-func (p *PulsePacketParser) GetPulseNumber() common.PulseNumber {
-	return common.PulseNumber(p.pulse.PulseNumber)
+func (p *PulsePacketParser) GetPulseNumber() pulse_data.PulseNumber {
+	return pulse_data.PulseNumber(p.pulse.PulseNumber)
 }
 
 func (p *PulsePacketParser) GetPulsePacket() packets.PulsePacketReader {
@@ -174,6 +177,6 @@ func (p *PulsePacketParser) GetMemberPacket() packets.MemberPacketReader {
 	return nil
 }
 
-func (p *PulsePacketParser) GetPacketSignature() common.SignedDigest {
-	return common.SignedDigest{}
+func (p *PulsePacketParser) GetPacketSignature() cryptography_containers.SignedDigest {
+	return cryptography_containers.SignedDigest{}
 }

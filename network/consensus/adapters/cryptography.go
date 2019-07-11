@@ -52,15 +52,16 @@ package adapters
 
 import (
 	"crypto/ecdsa"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"io"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 const (
-	SHA3512Digest = common.DigestMethod("sha3-512")
-	SECP256r1Sign = common.SignMethod("secp256r1")
+	SHA3512Digest = cryptography_containers.DigestMethod("sha3-512")
+	SECP256r1Sign = cryptography_containers.SignMethod("secp256r1")
 )
 
 type Sha3512Digester struct {
@@ -73,7 +74,7 @@ func NewSha3512Digester(scheme insolar.PlatformCryptographyScheme) *Sha3512Diges
 	}
 }
 
-func (pd *Sha3512Digester) GetDigestOf(reader io.Reader) common.Digest {
+func (pd *Sha3512Digester) GetDigestOf(reader io.Reader) cryptography_containers.Digest {
 	hasher := pd.scheme.IntegrityHasher()
 
 	_, err := io.Copy(hasher, reader)
@@ -82,12 +83,12 @@ func (pd *Sha3512Digester) GetDigestOf(reader io.Reader) common.Digest {
 	}
 
 	bytes := hasher.Sum(nil)
-	bits := common.NewBits512FromBytes(bytes)
+	bits := long_bits.NewBits512FromBytes(bytes)
 
-	return common.NewDigest(bits, pd.GetDigestMethod())
+	return cryptography_containers.NewDigest(bits, pd.GetDigestMethod())
 }
 
-func (pd *Sha3512Digester) GetDigestMethod() common.DigestMethod {
+func (pd *Sha3512Digester) GetDigestMethod() cryptography_containers.DigestMethod {
 	return SHA3512Digest
 }
 
@@ -115,7 +116,7 @@ func NewECDSASecretKeyStore(privateKey *ecdsa.PrivateKey) *ECDSASecretKeyStore {
 
 func (ks *ECDSASecretKeyStore) PrivateKeyStore() {}
 
-func (ks *ECDSASecretKeyStore) AsPublicKeyStore() common.PublicKeyStore {
+func (ks *ECDSASecretKeyStore) AsPublicKeyStore() cryptography_containers.PublicKeyStore {
 	return NewECDSAPublicKeyStore(&ks.privateKey.PublicKey)
 }
 
@@ -131,7 +132,7 @@ func NewECDSADigestSigner(privateKey *ecdsa.PrivateKey, scheme insolar.PlatformC
 	}
 }
 
-func (ds *ECDSADigestSigner) SignDigest(digest common.Digest) common.Signature {
+func (ds *ECDSADigestSigner) SignDigest(digest cryptography_containers.Digest) cryptography_containers.Signature {
 	digestBytes := digest.AsBytes()
 
 	signer := ds.scheme.DigestSigner(ds.privateKey)
@@ -142,34 +143,34 @@ func (ds *ECDSADigestSigner) SignDigest(digest common.Digest) common.Signature {
 	}
 
 	sigBytes := sig.Bytes()
-	bits := common.NewBits512FromBytes(sigBytes)
+	bits := long_bits.NewBits512FromBytes(sigBytes)
 
-	return common.NewSignature(bits, digest.GetDigestMethod().SignedBy(ds.GetSignMethod()))
+	return cryptography_containers.NewSignature(bits, digest.GetDigestMethod().SignedBy(ds.GetSignMethod()))
 }
 
-func (ds *ECDSADigestSigner) GetSignMethod() common.SignMethod {
+func (ds *ECDSADigestSigner) GetSignMethod() cryptography_containers.SignMethod {
 	return SECP256r1Sign
 }
 
 type ECDSADataSigner struct {
-	common.DataDigester
-	common.DigestSigner
+	cryptography_containers.DataDigester
+	cryptography_containers.DigestSigner
 }
 
-func NewECDSADataSigner(dataDigester common.DataDigester, digestSigner common.DigestSigner) *ECDSADataSigner {
+func NewECDSADataSigner(dataDigester cryptography_containers.DataDigester, digestSigner cryptography_containers.DigestSigner) *ECDSADataSigner {
 	return &ECDSADataSigner{
 		DataDigester: dataDigester,
 		DigestSigner: digestSigner,
 	}
 }
 
-func (ds *ECDSADataSigner) GetSignOfData(reader io.Reader) common.SignedDigest {
+func (ds *ECDSADataSigner) GetSignOfData(reader io.Reader) cryptography_containers.SignedDigest {
 	digest := ds.DataDigester.GetDigestOf(reader)
 	signature := ds.DigestSigner.SignDigest(digest)
-	return common.NewSignedDigest(digest, signature)
+	return cryptography_containers.NewSignedDigest(digest, signature)
 }
 
-func (ds *ECDSADataSigner) GetSignatureMethod() common.SignatureMethod {
+func (ds *ECDSADataSigner) GetSignatureMethod() cryptography_containers.SignatureMethod {
 	return ds.DataDigester.GetDigestMethod().SignedBy(ds.DigestSigner.GetSignMethod())
 }
 
@@ -191,19 +192,19 @@ func NewECDSASignatureVerifier(
 	}
 }
 
-func (sv *ECDSASignatureVerifier) IsDigestMethodSupported(method common.DigestMethod) bool {
+func (sv *ECDSASignatureVerifier) IsDigestMethodSupported(method cryptography_containers.DigestMethod) bool {
 	return method == SHA3512Digest
 }
 
-func (sv *ECDSASignatureVerifier) IsSignMethodSupported(method common.SignMethod) bool {
+func (sv *ECDSASignatureVerifier) IsSignMethodSupported(method cryptography_containers.SignMethod) bool {
 	return method == SECP256r1Sign
 }
 
-func (sv *ECDSASignatureVerifier) IsSignOfSignatureMethodSupported(method common.SignatureMethod) bool {
+func (sv *ECDSASignatureVerifier) IsSignOfSignatureMethodSupported(method cryptography_containers.SignatureMethod) bool {
 	return method.SignMethod() == SECP256r1Sign
 }
 
-func (sv *ECDSASignatureVerifier) IsValidDigestSignature(digest common.DigestHolder, signature common.SignatureHolder) bool {
+func (sv *ECDSASignatureVerifier) IsValidDigestSignature(digest cryptography_containers.DigestHolder, signature cryptography_containers.SignatureHolder) bool {
 	method := signature.GetSignatureMethod()
 	if digest.GetDigestMethod() != method.DigestMethod() || !sv.IsSignOfSignatureMethodSupported(method) {
 		return false
@@ -216,7 +217,7 @@ func (sv *ECDSASignatureVerifier) IsValidDigestSignature(digest common.DigestHol
 	return verifier.Verify(insolar.SignatureFromBytes(signatureBytes), digestBytes)
 }
 
-func (sv *ECDSASignatureVerifier) IsValidDataSignature(data io.Reader, signature common.SignatureHolder) bool {
+func (sv *ECDSASignatureVerifier) IsValidDataSignature(data io.Reader, signature cryptography_containers.SignatureHolder) bool {
 	if sv.digester.GetDigestMethod() != signature.GetSignatureMethod().DigestMethod() {
 		return false
 	}
@@ -227,7 +228,7 @@ func (sv *ECDSASignatureVerifier) IsValidDataSignature(data io.Reader, signature
 }
 
 type ECDSASignatureKeyHolder struct {
-	common.Bits512
+	long_bits.Bits512
 	publicKey *ecdsa.PublicKey
 }
 
@@ -237,26 +238,26 @@ func NewECDSASignatureKeyHolder(publicKey *ecdsa.PublicKey, processor insolar.Ke
 		panic(err)
 	}
 
-	bits := common.NewBits512FromBytes(publicKeyBytes)
+	bits := long_bits.NewBits512FromBytes(publicKeyBytes)
 	return &ECDSASignatureKeyHolder{
 		Bits512:   *bits,
 		publicKey: publicKey,
 	}
 }
 
-func (kh *ECDSASignatureKeyHolder) GetSignMethod() common.SignMethod {
+func (kh *ECDSASignatureKeyHolder) GetSignMethod() cryptography_containers.SignMethod {
 	return SECP256r1Sign
 }
 
-func (kh *ECDSASignatureKeyHolder) GetSignatureKeyMethod() common.SignatureMethod {
+func (kh *ECDSASignatureKeyHolder) GetSignatureKeyMethod() cryptography_containers.SignatureMethod {
 	return SHA3512Digest.SignedBy(SECP256r1Sign)
 }
 
-func (kh *ECDSASignatureKeyHolder) GetSignatureKeyType() common.SignatureKeyType {
-	return common.PublicAsymmetricKey
+func (kh *ECDSASignatureKeyHolder) GetSignatureKeyType() cryptography_containers.SignatureKeyType {
+	return cryptography_containers.PublicAsymmetricKey
 }
 
-func (kh *ECDSASignatureKeyHolder) Equals(other common.SignatureKeyHolder) bool {
+func (kh *ECDSASignatureKeyHolder) Equals(other cryptography_containers.SignatureKeyHolder) bool {
 	okh, ok := other.(*ECDSASignatureKeyHolder)
 	if !ok {
 		return false

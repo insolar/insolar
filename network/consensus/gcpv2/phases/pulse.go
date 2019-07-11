@@ -52,10 +52,11 @@ package phases
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
@@ -81,11 +82,11 @@ func (r *PulsePrepController) BeforeStart(realm *core.PrepRealm) {
 func (r *PulsePrepController) StartWorker(ctx context.Context) {
 }
 
-func (*PulsePrepController) GetPacketType() packets.PacketType {
-	return packets.PacketPulse
+func (*PulsePrepController) GetPacketType() api.PacketType {
+	return api.PacketPulse
 }
 
-func (r *PulsePrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error) {
+func (r *PulsePrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) (postpone bool, err error) {
 	err = r.pulseStrategy.HandlePrepPulsarPacket(ctx, reader.GetPulsePacket(), from, r.realm, true)
 	return err == nil, err
 }
@@ -96,11 +97,11 @@ type PulseController struct {
 	core.PhaseControllerPerHostTemplate
 }
 
-func (*PulseController) GetPacketType() packets.PacketType {
-	return packets.PacketPulse
+func (*PulseController) GetPacketType() api.PacketType {
+	return api.PacketPulse
 }
 
-func (c *PulseController) HandleHostPacket(ctx context.Context, p packets.PacketParser, from common.HostIdentityHolder) error {
+func (c *PulseController) HandleHostPacket(ctx context.Context, p packets.PacketParser, from endpoints.HostIdentityHolder) error {
 	pp := p.GetPulsePacket()
 	// FullRealm already has a pulse data, so can only check it
 	pd := pp.GetPulseData()

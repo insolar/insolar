@@ -6,13 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "MemberAnnouncementSignature" can be found in github.com/insolar/insolar/network/consensus/gcpv2/common
 */
 import (
-	io "io"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"io"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	common "github.com/insolar/insolar/network/consensus/common"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -30,12 +29,12 @@ type MemberAnnouncementSignatureMock struct {
 	AsBytesPreCounter uint64
 	AsBytesMock       mMemberAnnouncementSignatureMockAsBytes
 
-	CopyOfSignatureFunc       func() (r common.Signature)
+	CopyOfSignatureFunc       func() (r cryptography_containers.Signature)
 	CopyOfSignatureCounter    uint64
 	CopyOfSignaturePreCounter uint64
 	CopyOfSignatureMock       mMemberAnnouncementSignatureMockCopyOfSignature
 
-	EqualsFunc       func(p common.SignatureHolder) (r bool)
+	EqualsFunc       func(p cryptography_containers.SignatureHolder) (r bool)
 	EqualsCounter    uint64
 	EqualsPreCounter uint64
 	EqualsMock       mMemberAnnouncementSignatureMockEquals
@@ -50,7 +49,7 @@ type MemberAnnouncementSignatureMock struct {
 	FoldToUint64PreCounter uint64
 	FoldToUint64Mock       mMemberAnnouncementSignatureMockFoldToUint64
 
-	GetSignatureMethodFunc       func() (r common.SignatureMethod)
+	GetSignatureMethodFunc       func() (r cryptography_containers.SignatureMethod)
 	GetSignatureMethodCounter    uint64
 	GetSignatureMethodPreCounter uint64
 	GetSignatureMethodMock       mMemberAnnouncementSignatureMockGetSignatureMethod
@@ -366,7 +365,7 @@ type MemberAnnouncementSignatureMockCopyOfSignatureExpectation struct {
 }
 
 type MemberAnnouncementSignatureMockCopyOfSignatureResult struct {
-	r common.Signature
+	r cryptography_containers.Signature
 }
 
 //Expect specifies that invocation of MemberAnnouncementSignature.CopyOfSignature is expected from 1 to Infinity times
@@ -382,7 +381,7 @@ func (m *mMemberAnnouncementSignatureMockCopyOfSignature) Expect() *mMemberAnnou
 }
 
 //Return specifies results of invocation of MemberAnnouncementSignature.CopyOfSignature
-func (m *mMemberAnnouncementSignatureMockCopyOfSignature) Return(r common.Signature) *MemberAnnouncementSignatureMock {
+func (m *mMemberAnnouncementSignatureMockCopyOfSignature) Return(r cryptography_containers.Signature) *MemberAnnouncementSignatureMock {
 	m.mock.CopyOfSignatureFunc = nil
 	m.expectationSeries = nil
 
@@ -404,12 +403,12 @@ func (m *mMemberAnnouncementSignatureMockCopyOfSignature) ExpectOnce() *MemberAn
 	return expectation
 }
 
-func (e *MemberAnnouncementSignatureMockCopyOfSignatureExpectation) Return(r common.Signature) {
+func (e *MemberAnnouncementSignatureMockCopyOfSignatureExpectation) Return(r cryptography_containers.Signature) {
 	e.result = &MemberAnnouncementSignatureMockCopyOfSignatureResult{r}
 }
 
 //Set uses given function f as a mock of MemberAnnouncementSignature.CopyOfSignature method
-func (m *mMemberAnnouncementSignatureMockCopyOfSignature) Set(f func() (r common.Signature)) *MemberAnnouncementSignatureMock {
+func (m *mMemberAnnouncementSignatureMockCopyOfSignature) Set(f func() (r cryptography_containers.Signature)) *MemberAnnouncementSignatureMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -418,7 +417,7 @@ func (m *mMemberAnnouncementSignatureMockCopyOfSignature) Set(f func() (r common
 }
 
 //CopyOfSignature implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
-func (m *MemberAnnouncementSignatureMock) CopyOfSignature() (r common.Signature) {
+func (m *MemberAnnouncementSignatureMock) CopyOfSignature() (r cryptography_containers.Signature) {
 	counter := atomic.AddUint64(&m.CopyOfSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.CopyOfSignatureCounter, 1)
 
@@ -501,7 +500,7 @@ type MemberAnnouncementSignatureMockEqualsExpectation struct {
 }
 
 type MemberAnnouncementSignatureMockEqualsInput struct {
-	p common.SignatureHolder
+	p cryptography_containers.SignatureHolder
 }
 
 type MemberAnnouncementSignatureMockEqualsResult struct {
@@ -509,7 +508,7 @@ type MemberAnnouncementSignatureMockEqualsResult struct {
 }
 
 //Expect specifies that invocation of MemberAnnouncementSignature.Equals is expected from 1 to Infinity times
-func (m *mMemberAnnouncementSignatureMockEquals) Expect(p common.SignatureHolder) *mMemberAnnouncementSignatureMockEquals {
+func (m *mMemberAnnouncementSignatureMockEquals) Expect(p cryptography_containers.SignatureHolder) *mMemberAnnouncementSignatureMockEquals {
 	m.mock.EqualsFunc = nil
 	m.expectationSeries = nil
 
@@ -533,7 +532,7 @@ func (m *mMemberAnnouncementSignatureMockEquals) Return(r bool) *MemberAnnouncem
 }
 
 //ExpectOnce specifies that invocation of MemberAnnouncementSignature.Equals is expected once
-func (m *mMemberAnnouncementSignatureMockEquals) ExpectOnce(p common.SignatureHolder) *MemberAnnouncementSignatureMockEqualsExpectation {
+func (m *mMemberAnnouncementSignatureMockEquals) ExpectOnce(p cryptography_containers.SignatureHolder) *MemberAnnouncementSignatureMockEqualsExpectation {
 	m.mock.EqualsFunc = nil
 	m.mainExpectation = nil
 
@@ -548,7 +547,7 @@ func (e *MemberAnnouncementSignatureMockEqualsExpectation) Return(r bool) {
 }
 
 //Set uses given function f as a mock of MemberAnnouncementSignature.Equals method
-func (m *mMemberAnnouncementSignatureMockEquals) Set(f func(p common.SignatureHolder) (r bool)) *MemberAnnouncementSignatureMock {
+func (m *mMemberAnnouncementSignatureMockEquals) Set(f func(p cryptography_containers.SignatureHolder) (r bool)) *MemberAnnouncementSignatureMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -557,7 +556,7 @@ func (m *mMemberAnnouncementSignatureMockEquals) Set(f func(p common.SignatureHo
 }
 
 //Equals implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
-func (m *MemberAnnouncementSignatureMock) Equals(p common.SignatureHolder) (r bool) {
+func (m *MemberAnnouncementSignatureMock) Equals(p cryptography_containers.SignatureHolder) (r bool) {
 	counter := atomic.AddUint64(&m.EqualsPreCounter, 1)
 	defer atomic.AddUint64(&m.EqualsCounter, 1)
 
@@ -915,7 +914,7 @@ type MemberAnnouncementSignatureMockGetSignatureMethodExpectation struct {
 }
 
 type MemberAnnouncementSignatureMockGetSignatureMethodResult struct {
-	r common.SignatureMethod
+	r cryptography_containers.SignatureMethod
 }
 
 //Expect specifies that invocation of MemberAnnouncementSignature.GetSignatureMethod is expected from 1 to Infinity times
@@ -931,7 +930,7 @@ func (m *mMemberAnnouncementSignatureMockGetSignatureMethod) Expect() *mMemberAn
 }
 
 //Return specifies results of invocation of MemberAnnouncementSignature.GetSignatureMethod
-func (m *mMemberAnnouncementSignatureMockGetSignatureMethod) Return(r common.SignatureMethod) *MemberAnnouncementSignatureMock {
+func (m *mMemberAnnouncementSignatureMockGetSignatureMethod) Return(r cryptography_containers.SignatureMethod) *MemberAnnouncementSignatureMock {
 	m.mock.GetSignatureMethodFunc = nil
 	m.expectationSeries = nil
 
@@ -953,12 +952,12 @@ func (m *mMemberAnnouncementSignatureMockGetSignatureMethod) ExpectOnce() *Membe
 	return expectation
 }
 
-func (e *MemberAnnouncementSignatureMockGetSignatureMethodExpectation) Return(r common.SignatureMethod) {
+func (e *MemberAnnouncementSignatureMockGetSignatureMethodExpectation) Return(r cryptography_containers.SignatureMethod) {
 	e.result = &MemberAnnouncementSignatureMockGetSignatureMethodResult{r}
 }
 
 //Set uses given function f as a mock of MemberAnnouncementSignature.GetSignatureMethod method
-func (m *mMemberAnnouncementSignatureMockGetSignatureMethod) Set(f func() (r common.SignatureMethod)) *MemberAnnouncementSignatureMock {
+func (m *mMemberAnnouncementSignatureMockGetSignatureMethod) Set(f func() (r cryptography_containers.SignatureMethod)) *MemberAnnouncementSignatureMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -967,7 +966,7 @@ func (m *mMemberAnnouncementSignatureMockGetSignatureMethod) Set(f func() (r com
 }
 
 //GetSignatureMethod implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
-func (m *MemberAnnouncementSignatureMock) GetSignatureMethod() (r common.SignatureMethod) {
+func (m *MemberAnnouncementSignatureMock) GetSignatureMethod() (r cryptography_containers.SignatureMethod) {
 	counter := atomic.AddUint64(&m.GetSignatureMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignatureMethodCounter, 1)
 

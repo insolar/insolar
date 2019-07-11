@@ -52,13 +52,14 @@ package packets
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 
 	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-func NewNodeAnnouncement(np common2.NodeProfile, ma common2.MembershipAnnouncement, nodeCount int,
-	pn common.PulseNumber) *NodeAnnouncementProfile {
+func NewNodeAnnouncement(np api.NodeProfile, ma api.MembershipAnnouncement, nodeCount int,
+	pn pulse_data.PulseNumber) *NodeAnnouncementProfile {
 	return &NodeAnnouncementProfile{
 		nodeID:    np.GetShortNodeID(),
 		nodeCount: uint16(nodeCount),
@@ -89,13 +90,13 @@ func NewNodeAnnouncement(np common2.NodeProfile, ma common2.MembershipAnnounceme
 var _ MembershipAnnouncementReader = &NodeAnnouncementProfile{}
 
 type NodeAnnouncementProfile struct {
-	ma        common2.MembershipAnnouncement
+	ma        api.MembershipAnnouncement
 	nodeID    common.ShortNodeID
-	pn        common.PulseNumber
+	pn        pulse_data.PulseNumber
 	nodeCount uint16
 }
 
-func (c *NodeAnnouncementProfile) GetRequestedPower() common2.MemberPower {
+func (c *NodeAnnouncementProfile) GetRequestedPower() api.MemberPower {
 	return c.ma.Membership.RequestedPower
 }
 
@@ -118,11 +119,11 @@ func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementRead
 	panic("unsupported")
 }
 
-func (c *NodeAnnouncementProfile) GetNodeRank() common2.MembershipRank {
-	return common2.NewMembershipRank(c.ma.Membership.Mode, c.ma.Membership.Power, c.ma.Membership.Index, c.nodeCount)
+func (c *NodeAnnouncementProfile) GetNodeRank() MembershipRank {
+	return NewMembershipRank(c.ma.Membership.Mode, c.ma.Membership.Power, c.ma.Membership.Index, c.nodeCount)
 }
 
-func (c *NodeAnnouncementProfile) GetAnnouncementSignature() common2.MemberAnnouncementSignature {
+func (c *NodeAnnouncementProfile) GetAnnouncementSignature() api.MemberAnnouncementSignature {
 	return c.ma.Membership.AnnounceSignature
 }
 
@@ -134,7 +135,7 @@ func (c *NodeAnnouncementProfile) GetNodeCount() uint16 {
 	return c.nodeCount
 }
 
-func (c *NodeAnnouncementProfile) GetNodeStateHashEvidence() common2.NodeStateHashEvidence {
+func (c *NodeAnnouncementProfile) GetNodeStateHashEvidence() api.NodeStateHashEvidence {
 	return c.ma.Membership.StateEvidence
 }
 
@@ -142,10 +143,10 @@ func (c NodeAnnouncementProfile) String() string {
 	return fmt.Sprintf("{id:%d %03d/%d %s}", c.nodeID, c.ma.Membership.Index, c.nodeCount, c.ma.Membership.StringParts())
 }
 
-func (c *NodeAnnouncementProfile) GetMembershipProfile() common2.MembershipProfile {
+func (c *NodeAnnouncementProfile) GetMembershipProfile() api.MembershipProfile {
 	return c.ma.Membership
 }
 
-func (c *NodeAnnouncementProfile) GetPulseNumber() common.PulseNumber {
+func (c *NodeAnnouncementProfile) GetPulseNumber() pulse_data.PulseNumber {
 	return c.pn
 }

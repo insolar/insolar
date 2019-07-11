@@ -53,18 +53,20 @@ package phases
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/lazy_head"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"math"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-func NewPhase2Controller(packetPrepareOptions core.PacketSendOptions, queueNshReady <-chan *core.NodeAppearance) *Phase2Controller {
+func NewPhase2Controller(packetPrepareOptions api_2.PacketSendOptions, queueNshReady <-chan *core.NodeAppearance) *Phase2Controller {
 	return &Phase2Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueNshReady:        queueNshReady,
@@ -76,7 +78,7 @@ var _ core.PhaseController = &Phase2Controller{}
 
 type Phase2Controller struct {
 	PhaseControllerWithJoinersTemplate
-	packetPrepareOptions core.PacketSendOptions
+	packetPrepareOptions api_2.PacketSendOptions
 	queueNshReady        <-chan *core.NodeAppearance
 	//queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
 }
@@ -92,8 +94,8 @@ func (v *TrustUpdateSignal) IsPingSignal() bool {
 	return v.UpdatedNode == nil
 }
 
-func (*Phase2Controller) GetPacketType() packets.PacketType {
-	return packets.PacketPhase2
+func (*Phase2Controller) GetPacketType() api.PacketType {
+	return api.PacketPhase2
 }
 
 func (c *Phase2Controller) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *core.NodeAppearance,
@@ -129,7 +131,7 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 		}
 
 		nr := nb.GetNodeRank()
-		mp := common2.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(), nb.GetNodeStateHashEvidence(),
+		mp := api.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(), nb.GetNodeStateHashEvidence(),
 			nb.GetAnnouncementSignature(), nb.GetRequestedPower())
 
 		// TODO validate node proof - if fails, then fraud on sender
@@ -139,12 +141,12 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 		//	// TODO register protocol misbehavior - IntroClaim was not expected
 		// }
 
-		var ma common2.MembershipAnnouncement
+		var ma api.MembershipAnnouncement
 		switch {
 		case nb.IsLeaving():
-			ma = common2.NewMembershipAnnouncementWithLeave(mp, nb.GetLeaveReason())
+			ma = api.NewMembershipAnnouncementWithLeave(mp, nb.GetLeaveReason())
 		case nb.GetJoinerID().IsAbsent():
-			ma = common2.NewMembershipAnnouncement(mp)
+			ma = api.NewMembershipAnnouncement(mp)
 		default:
 			panic("not implemented") //TODO implement
 			//jar := na.GetJoinerAnnouncement()
@@ -213,8 +215,8 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 		Is is safe to use an unsafe core.LessByNeighbourWeightForNodeAppearance as all objects have passed
 		through a channel (sync) after neighbourWeight field was modified.
 	*/
-	nodeQueue := common.NewHeadedLazySortedList(neighbourSize-1, core.LessByNeighbourWeightForNodeAppearance, remainingNodes>>1)
-	joinQueue := common.NewHeadedLazySortedList(neighbourJoiners+joinersBoost, core.LessByNeighbourWeightForNodeAppearance, remainingJoiners>>1)
+	nodeQueue := lazy_head.NewHeadedLazySortedList(neighbourSize-1, core.LessByNeighbourWeightForNodeAppearance, remainingNodes>>1)
+	joinQueue := lazy_head.NewHeadedLazySortedList(neighbourJoiners+joinersBoost, core.LessByNeighbourWeightForNodeAppearance, remainingJoiners>>1)
 
 	idleLoop := false
 	softTimeout := false
@@ -294,14 +296,14 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 		neighbourhoodAnnouncements, c.packetPrepareOptions)
 
 	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (common2.NodeProfile, core.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (api.NodeProfile, api_2.PacketSendOptions) {
 			np := neighbourhood[targetIdx]
 			np.SetSentByPacketType(c.GetPacketType())
 			return np.GetProfile(), 0
 		})
 }
 
-func availableInQueue(captured int, queue common.HeadedLazySortedList, remains int, maxWeight uint32) int {
+func availableInQueue(captured int, queue lazy_head.HeadedLazySortedList, remains int, maxWeight uint32) int {
 	if maxWeight == math.MaxUint32 {
 		return queue.GetAvailableHeadLen(captured)
 	}
@@ -350,7 +352,7 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	}
 
 	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), core.RequestForPhase1|c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), api_2.RequestForPhase1|c.packetPrepareOptions)
 
 	for _, v := range c.R.GetPopulation().GetShuffledOtherNodes() {
 		select {

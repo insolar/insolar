@@ -52,7 +52,9 @@ package census
 
 import (
 	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 )
 
 func newEvictedPopulation(evicts []*updatableSlot) evictedPopulation {
@@ -60,7 +62,7 @@ func newEvictedPopulation(evicts []*updatableSlot) evictedPopulation {
 	if len(evicts) == 0 {
 		return evictedPopulation{}
 	}
-	profiles := make(map[common.ShortNodeID]common2.EvictedNodeProfile, len(evicts))
+	profiles := make(map[common.ShortNodeID]api.EvictedNodeProfile, len(evicts))
 
 	for _, s := range evicts {
 		id := s.GetShortNodeID()
@@ -71,13 +73,13 @@ func newEvictedPopulation(evicts []*updatableSlot) evictedPopulation {
 	return evictedPopulation{profiles}
 }
 
-var _ EvictedPopulation = &evictedPopulation{}
+var _ api_2.EvictedPopulation = &evictedPopulation{}
 
 type evictedPopulation struct {
-	profiles map[common.ShortNodeID]common2.EvictedNodeProfile
+	profiles map[common.ShortNodeID]api.EvictedNodeProfile
 }
 
-func (p *evictedPopulation) FindProfile(nodeID common.ShortNodeID) common2.EvictedNodeProfile {
+func (p *evictedPopulation) FindProfile(nodeID common.ShortNodeID) api.EvictedNodeProfile {
 	return p.profiles[nodeID]
 }
 
@@ -85,8 +87,8 @@ func (p *evictedPopulation) GetCount() int {
 	return len(p.profiles)
 }
 
-func (p *evictedPopulation) GetProfiles() []common2.EvictedNodeProfile {
-	r := make([]common2.EvictedNodeProfile, len(p.profiles))
+func (p *evictedPopulation) GetProfiles() []api.EvictedNodeProfile {
+	r := make([]api.EvictedNodeProfile, len(p.profiles))
 	idx := 0
 	for _, v := range p.profiles {
 		r[idx] = v
@@ -95,25 +97,25 @@ func (p *evictedPopulation) GetProfiles() []common2.EvictedNodeProfile {
 	return r
 }
 
-var _ common2.EvictedNodeProfile = &evictedSlot{}
+var _ api.EvictedNodeProfile = &evictedSlot{}
 
 type evictedSlot struct {
-	common2.NodeIntroProfile
-	sf          common.SignatureVerifier
-	mode        common2.MemberOpMode
+	api.NodeIntroProfile
+	sf          cryptography_containers.SignatureVerifier
+	mode        api.MemberOpMode
 	leaveReason uint32
 }
 
-func (p *evictedSlot) GetSignatureVerifier() common.SignatureVerifier {
+func (p *evictedSlot) GetSignatureVerifier() cryptography_containers.SignatureVerifier {
 	return p.sf
 }
 
-func (p *evictedSlot) GetOpMode() common2.MemberOpMode {
+func (p *evictedSlot) GetOpMode() api.MemberOpMode {
 	return p.mode
 }
 
 func (p *evictedSlot) GetLeaveReason() uint32 {
-	if p.mode != common2.MemberModeEvictedGracefully {
+	if p.mode != api.MemberModeEvictedGracefully {
 		return 0
 	}
 	return p.leaveReason

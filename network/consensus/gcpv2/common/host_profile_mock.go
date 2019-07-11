@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "HostProfile" can be found in github.com/insolar/insolar/network/consensus/gcpv2/common
 */
 import (
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	common "github.com/insolar/insolar/network/consensus/common"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -19,17 +19,17 @@ import (
 type HostProfileMock struct {
 	t minimock.Tester
 
-	GetDefaultEndpointFunc       func() (r common.NodeEndpoint)
+	GetDefaultEndpointFunc       func() (r endpoints.NodeEndpoint)
 	GetDefaultEndpointCounter    uint64
 	GetDefaultEndpointPreCounter uint64
 	GetDefaultEndpointMock       mHostProfileMockGetDefaultEndpoint
 
-	GetNodePublicKeyStoreFunc       func() (r common.PublicKeyStore)
+	GetNodePublicKeyStoreFunc       func() (r cryptography_containers.PublicKeyStore)
 	GetNodePublicKeyStoreCounter    uint64
 	GetNodePublicKeyStorePreCounter uint64
 	GetNodePublicKeyStoreMock       mHostProfileMockGetNodePublicKeyStore
 
-	IsAcceptableHostFunc       func(p common.HostIdentityHolder) (r bool)
+	IsAcceptableHostFunc       func(p endpoints.HostIdentityHolder) (r bool)
 	IsAcceptableHostCounter    uint64
 	IsAcceptableHostPreCounter uint64
 	IsAcceptableHostMock       mHostProfileMockIsAcceptableHost
@@ -61,7 +61,7 @@ type HostProfileMockGetDefaultEndpointExpectation struct {
 }
 
 type HostProfileMockGetDefaultEndpointResult struct {
-	r common.NodeEndpoint
+	r endpoints.NodeEndpoint
 }
 
 //Expect specifies that invocation of HostProfile.GetDefaultEndpoint is expected from 1 to Infinity times
@@ -77,7 +77,7 @@ func (m *mHostProfileMockGetDefaultEndpoint) Expect() *mHostProfileMockGetDefaul
 }
 
 //Return specifies results of invocation of HostProfile.GetDefaultEndpoint
-func (m *mHostProfileMockGetDefaultEndpoint) Return(r common.NodeEndpoint) *HostProfileMock {
+func (m *mHostProfileMockGetDefaultEndpoint) Return(r endpoints.NodeEndpoint) *HostProfileMock {
 	m.mock.GetDefaultEndpointFunc = nil
 	m.expectationSeries = nil
 
@@ -99,12 +99,12 @@ func (m *mHostProfileMockGetDefaultEndpoint) ExpectOnce() *HostProfileMockGetDef
 	return expectation
 }
 
-func (e *HostProfileMockGetDefaultEndpointExpectation) Return(r common.NodeEndpoint) {
+func (e *HostProfileMockGetDefaultEndpointExpectation) Return(r endpoints.NodeEndpoint) {
 	e.result = &HostProfileMockGetDefaultEndpointResult{r}
 }
 
 //Set uses given function f as a mock of HostProfile.GetDefaultEndpoint method
-func (m *mHostProfileMockGetDefaultEndpoint) Set(f func() (r common.NodeEndpoint)) *HostProfileMock {
+func (m *mHostProfileMockGetDefaultEndpoint) Set(f func() (r endpoints.NodeEndpoint)) *HostProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -113,7 +113,7 @@ func (m *mHostProfileMockGetDefaultEndpoint) Set(f func() (r common.NodeEndpoint
 }
 
 //GetDefaultEndpoint implements github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile interface
-func (m *HostProfileMock) GetDefaultEndpoint() (r common.NodeEndpoint) {
+func (m *HostProfileMock) GetDefaultEndpoint() (r endpoints.NodeEndpoint) {
 	counter := atomic.AddUint64(&m.GetDefaultEndpointPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDefaultEndpointCounter, 1)
 
@@ -195,7 +195,7 @@ type HostProfileMockGetNodePublicKeyStoreExpectation struct {
 }
 
 type HostProfileMockGetNodePublicKeyStoreResult struct {
-	r common.PublicKeyStore
+	r cryptography_containers.PublicKeyStore
 }
 
 //Expect specifies that invocation of HostProfile.GetNodePublicKeyStore is expected from 1 to Infinity times
@@ -211,7 +211,7 @@ func (m *mHostProfileMockGetNodePublicKeyStore) Expect() *mHostProfileMockGetNod
 }
 
 //Return specifies results of invocation of HostProfile.GetNodePublicKeyStore
-func (m *mHostProfileMockGetNodePublicKeyStore) Return(r common.PublicKeyStore) *HostProfileMock {
+func (m *mHostProfileMockGetNodePublicKeyStore) Return(r cryptography_containers.PublicKeyStore) *HostProfileMock {
 	m.mock.GetNodePublicKeyStoreFunc = nil
 	m.expectationSeries = nil
 
@@ -233,12 +233,12 @@ func (m *mHostProfileMockGetNodePublicKeyStore) ExpectOnce() *HostProfileMockGet
 	return expectation
 }
 
-func (e *HostProfileMockGetNodePublicKeyStoreExpectation) Return(r common.PublicKeyStore) {
+func (e *HostProfileMockGetNodePublicKeyStoreExpectation) Return(r cryptography_containers.PublicKeyStore) {
 	e.result = &HostProfileMockGetNodePublicKeyStoreResult{r}
 }
 
 //Set uses given function f as a mock of HostProfile.GetNodePublicKeyStore method
-func (m *mHostProfileMockGetNodePublicKeyStore) Set(f func() (r common.PublicKeyStore)) *HostProfileMock {
+func (m *mHostProfileMockGetNodePublicKeyStore) Set(f func() (r cryptography_containers.PublicKeyStore)) *HostProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -247,7 +247,7 @@ func (m *mHostProfileMockGetNodePublicKeyStore) Set(f func() (r common.PublicKey
 }
 
 //GetNodePublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile interface
-func (m *HostProfileMock) GetNodePublicKeyStore() (r common.PublicKeyStore) {
+func (m *HostProfileMock) GetNodePublicKeyStore() (r cryptography_containers.PublicKeyStore) {
 	counter := atomic.AddUint64(&m.GetNodePublicKeyStorePreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodePublicKeyStoreCounter, 1)
 
@@ -330,7 +330,7 @@ type HostProfileMockIsAcceptableHostExpectation struct {
 }
 
 type HostProfileMockIsAcceptableHostInput struct {
-	p common.HostIdentityHolder
+	p endpoints.HostIdentityHolder
 }
 
 type HostProfileMockIsAcceptableHostResult struct {
@@ -338,7 +338,7 @@ type HostProfileMockIsAcceptableHostResult struct {
 }
 
 //Expect specifies that invocation of HostProfile.IsAcceptableHost is expected from 1 to Infinity times
-func (m *mHostProfileMockIsAcceptableHost) Expect(p common.HostIdentityHolder) *mHostProfileMockIsAcceptableHost {
+func (m *mHostProfileMockIsAcceptableHost) Expect(p endpoints.HostIdentityHolder) *mHostProfileMockIsAcceptableHost {
 	m.mock.IsAcceptableHostFunc = nil
 	m.expectationSeries = nil
 
@@ -362,7 +362,7 @@ func (m *mHostProfileMockIsAcceptableHost) Return(r bool) *HostProfileMock {
 }
 
 //ExpectOnce specifies that invocation of HostProfile.IsAcceptableHost is expected once
-func (m *mHostProfileMockIsAcceptableHost) ExpectOnce(p common.HostIdentityHolder) *HostProfileMockIsAcceptableHostExpectation {
+func (m *mHostProfileMockIsAcceptableHost) ExpectOnce(p endpoints.HostIdentityHolder) *HostProfileMockIsAcceptableHostExpectation {
 	m.mock.IsAcceptableHostFunc = nil
 	m.mainExpectation = nil
 
@@ -377,7 +377,7 @@ func (e *HostProfileMockIsAcceptableHostExpectation) Return(r bool) {
 }
 
 //Set uses given function f as a mock of HostProfile.IsAcceptableHost method
-func (m *mHostProfileMockIsAcceptableHost) Set(f func(p common.HostIdentityHolder) (r bool)) *HostProfileMock {
+func (m *mHostProfileMockIsAcceptableHost) Set(f func(p endpoints.HostIdentityHolder) (r bool)) *HostProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -386,7 +386,7 @@ func (m *mHostProfileMockIsAcceptableHost) Set(f func(p common.HostIdentityHolde
 }
 
 //IsAcceptableHost implements github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile interface
-func (m *HostProfileMock) IsAcceptableHost(p common.HostIdentityHolder) (r bool) {
+func (m *HostProfileMock) IsAcceptableHost(p endpoints.HostIdentityHolder) (r bool) {
 	counter := atomic.AddUint64(&m.IsAcceptableHostPreCounter, 1)
 	defer atomic.AddUint64(&m.IsAcceptableHostCounter, 1)
 

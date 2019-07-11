@@ -52,10 +52,11 @@ package phases
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
@@ -78,11 +79,11 @@ func (r *Phase0PrepController) BeforeStart(realm *core.PrepRealm) {
 	r.realm = realm
 }
 
-func (*Phase0PrepController) GetPacketType() packets.PacketType {
-	return packets.PacketPhase0
+func (*Phase0PrepController) GetPacketType() api.PacketType {
+	return api.PacketPhase0
 }
 
-func (r *Phase0PrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error) {
+func (r *Phase0PrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) (postpone bool, err error) {
 	p := reader.GetMemberPacket().AsPhase0Packet()
 	err = r.pulseStrategy.HandlePrepPulsarPacket(ctx, p.GetEmbeddedPulsePacket(), from, r.realm, false)
 	return err == nil, err
@@ -102,11 +103,11 @@ func (r *Phase1PrepController) BeforeStart(realm *core.PrepRealm) {
 	r.realm = realm
 }
 
-func (*Phase1PrepController) GetPacketType() packets.PacketType {
-	return packets.PacketPhase1
+func (*Phase1PrepController) GetPacketType() api.PacketType {
+	return api.PacketPhase1
 }
 
-func (r *Phase1PrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error) {
+func (r *Phase1PrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) (postpone bool, err error) {
 	p := reader.GetMemberPacket().AsPhase1Packet()
 	err = r.pulseStrategy.HandlePrepPulsarPacket(ctx, p.GetEmbeddedPulsePacket(), from, r.realm, false)
 	return err == nil, err

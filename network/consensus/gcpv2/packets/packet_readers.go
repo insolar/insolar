@@ -52,17 +52,19 @@ package packets
 
 import (
 	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser -o ../packets -s _mock.go
 
 type PacketParser interface {
-	GetPacketType() PacketType
+	GetPacketType() api.PacketType
 
 	/* Should return UnknownPulseNumber when it is not possible to identify it for a packet */
-	GetPulseNumber() common.PulseNumber
+	GetPulseNumber() pulse_data.PulseNumber
 
 	GetPulsePacket() PulsePacketReader
 	GetMemberPacket() MemberPacketReader
@@ -73,34 +75,34 @@ type PacketParser interface {
 	IsRelayForbidden() bool
 	GetTargetID() common.ShortNodeID
 
-	GetPacketSignature() common.SignedDigest
+	GetPacketSignature() cryptography_containers.SignedDigest
 }
 
 type PulsePacketReader interface {
 	// GetPulsarId() PulsarId
-	GetPulseData() common.PulseData
-	GetPulseDataEvidence() common2.OriginalPulsarPacket
+	GetPulseData() pulse_data.PulseData
+	GetPulseDataEvidence() OriginalPulsarPacket
 }
 
 type MemberPacketReader interface {
-	GetPacketType() PacketType
+	GetPacketType() api.PacketType
 
 	AsPhase0Packet() Phase0PacketReader
 	AsPhase1Packet() Phase1PacketReader
 	AsPhase2Packet() Phase2PacketReader
 	AsPhase3Packet() Phase3PacketReader
 
-	GetPacketSignature() common.SignedDigest
+	GetPacketSignature() cryptography_containers.SignedDigest
 }
 
 type PhasePacketReader interface {
-	GetPulseNumber() common.PulseNumber
+	GetPulseNumber() pulse_data.PulseNumber
 }
 
 type Phase0PacketReader interface {
 	PhasePacketReader
 
-	GetNodeRank() common2.MembershipRank
+	GetNodeRank() MembershipRank
 	GetEmbeddedPulsePacket() PulsePacketReader
 }
 
@@ -133,23 +135,23 @@ type Phase2PacketReader interface {
 type Phase3PacketReader interface {
 	PhasePacketReader
 
-	GetBitset() nodeset.NodeBitset
+	GetBitset() api.NodeBitset
 
 	//GetTrustedExpectedRank() common2.MembershipRank
-	GetTrustedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash
-	GetTrustedGlobulaStateSignature() common2.GlobulaStateSignature
+	GetTrustedGlobulaAnnouncementHash() api.GlobulaAnnouncementHash
+	GetTrustedGlobulaStateSignature() api.GlobulaStateSignature
 
 	//GetDoubtedExpectedRank() common2.MembershipRank
-	GetDoubtedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash
-	GetDoubtedGlobulaStateSignature() common2.GlobulaStateSignature
+	GetDoubtedGlobulaAnnouncementHash() api.GlobulaAnnouncementHash
+	GetDoubtedGlobulaStateSignature() api.GlobulaStateSignature
 }
 
 type MembershipAnnouncementReader interface {
 	GetNodeID() common.ShortNodeID
-	GetNodeRank() common2.MembershipRank
-	GetRequestedPower() common2.MemberPower
-	GetNodeStateHashEvidence() common2.NodeStateHashEvidence
-	GetAnnouncementSignature() common2.MemberAnnouncementSignature
+	GetNodeRank() MembershipRank
+	GetRequestedPower() api.MemberPower
+	GetNodeStateHashEvidence() api.NodeStateHashEvidence
+	GetAnnouncementSignature() api.MemberAnnouncementSignature
 
 	// Methods below are not applicable when GetNodeRank().IsJoiner()
 	IsLeaving() bool
@@ -166,20 +168,25 @@ type MembershipAnnouncementReader interface {
 
 type JoinerAnnouncementReader interface {
 	GetBriefIntro() BriefIntroductionReader
-	GetBriefIntroSignature() common.SignatureHolder
+	GetBriefIntroSignature() cryptography_containers.SignatureHolder
 }
 
 type CloudIntroductionReader interface {
-	GetLastCloudStateHash() common.DigestHolder
-	GetJoinerSecret() common.DigestHolder
-	GetCloudIdentity() common.DigestHolder
+	GetLastCloudStateHash() cryptography_containers.DigestHolder
+	GetJoinerSecret() cryptography_containers.DigestHolder
+	GetCloudIdentity() cryptography_containers.DigestHolder
 }
 
 type BriefIntroductionReader interface {
-	common2.BriefCandidateProfile
+	api.BriefCandidateProfile
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader -o ../packets -s _mock.go
 type FullIntroductionReader interface {
-	common2.CandidateProfile
+	api.CandidateProfile
+}
+
+type OriginalPulsarPacket interface {
+	long_bits.FixedReader
+	OriginalPulsarPacket()
 }

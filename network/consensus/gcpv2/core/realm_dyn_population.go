@@ -53,13 +53,13 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-func NewDynamicRealmPopulation(baselineWeight uint32, local common2.NodeProfile, nodeCountHint int,
+func NewDynamicRealmPopulation(baselineWeight uint32, local api.NodeProfile, nodeCountHint int,
 	fn NodeInitFunc) *DynamicRealmPopulation {
 
 	r := &DynamicRealmPopulation{
@@ -90,7 +90,7 @@ type DynamicRealmPopulation struct {
 	purgatoryByID map[common.ShortNodeID]*[]*NodeAppearance
 }
 
-func (r *DynamicRealmPopulation) initPopulation(local common2.NodeProfile, nodeCountHint int) {
+func (r *DynamicRealmPopulation) initPopulation(local api.NodeProfile, nodeCountHint int) {
 	r.self = r.CreateNodeAppearance(context.Background(), local)
 	r.dynamicNodes = make(map[common.ShortNodeID]*NodeAppearance, nodeCountHint)
 }
@@ -188,7 +188,7 @@ func (r *DynamicRealmPopulation) GetIndexedNodesWithCheck() ([]*NodeAppearance, 
 	return cp, len(r.nodeIndex) == r.indexedCount
 }
 
-func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np common2.NodeProfile) *NodeAppearance {
+func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np api.NodeProfile) *NodeAppearance {
 
 	n := &NodeAppearance{}
 	n.init(np, nil, r.baselineWeight)

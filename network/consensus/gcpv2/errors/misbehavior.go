@@ -51,17 +51,8 @@
 package errors
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 )
-
-type MisbehaviorReport interface {
-	CaptureMark() interface{}
-	Details() []interface{}
-	ViolatorNode() common2.NodeProfile
-	ViolatorHost() common.HostIdentity
-	MisbehaviorType() MisbehaviorType
-}
 
 func NewMisbehaviorFactories(captureMisbehavior MisbehaviorReportFunc) MisbehaviorFactories {
 	r := misbehaviorFactories{
@@ -69,11 +60,6 @@ func NewMisbehaviorFactories(captureMisbehavior MisbehaviorReportFunc) Misbehavi
 		fraudFactory: NewFraudFactory(captureMisbehavior),
 	}
 	return r
-}
-
-type MisbehaviorFactories interface {
-	GetFraudFactory() FraudFactory
-	GetBlameFactory() BlameFactory
 }
 
 type misbehaviorFactories struct {
@@ -89,24 +75,9 @@ func (c misbehaviorFactories) GetBlameFactory() BlameFactory {
 	return c.blameFactory
 }
 
-type MisbehaviorReportFunc func(r MisbehaviorReport) interface{}
-type MisbehaviorType uint64
-type MisbehaviorCategory int
+type MisbehaviorReportFunc func(r api.MisbehaviorReport) interface{}
 
-const (
-	_ MisbehaviorCategory = iota
-	Blame
-	Fraud
-)
-
-func (c MisbehaviorType) Category() MisbehaviorCategory {
-	return MisbehaviorCategory(c >> 32)
-}
-
-func (c MisbehaviorType) Type() int {
-	return int(c & (1<<32 - 1))
-}
-
-func (c MisbehaviorCategory) Of(misbehavior int) MisbehaviorType {
-	return MisbehaviorType(c<<32) | MisbehaviorType(misbehavior&(1<<32-1))
+type MisbehaviorFactories interface {
+	GetFraudFactory() FraudFactory
+	GetBlameFactory() BlameFactory
 }

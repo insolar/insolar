@@ -53,10 +53,13 @@ package adapters
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
@@ -81,9 +84,9 @@ func newNodeIntroduction(shortID common.ShortNodeID, ref insolar.Reference) *Nod
 	}
 }
 
-func (ni *NodeIntroduction) ConvertPowerRequest(request common2.PowerRequest) common2.MemberPower {
+func (ni *NodeIntroduction) ConvertPowerRequest(request api.PowerRequest) api.MemberPower {
 	if ok, cl := request.AsCapacityLevel(); ok {
-		return common2.MemberPowerOf(uint16(cl.DefaultPercent()))
+		return api.MemberPowerOf(uint16(cl.DefaultPercent()))
 	}
 	_, pw := request.AsMemberPower()
 	return pw
@@ -93,7 +96,7 @@ func (ni *NodeIntroduction) GetNodeReference() insolar.Reference {
 	return ni.ref
 }
 
-func (ni *NodeIntroduction) IsAllowedPower(p common2.MemberPower) bool {
+func (ni *NodeIntroduction) IsAllowedPower(p api.MemberPower) bool {
 	// TODO: do something with power
 	return true
 }
@@ -104,20 +107,20 @@ func (ni *NodeIntroduction) GetShortNodeID() common.ShortNodeID {
 
 type NodeIntroProfile struct {
 	shortID     common.ShortNodeID
-	primaryRole common2.NodePrimaryRole
-	specialRole common2.NodeSpecialRole
-	intro       common2.NodeIntroduction
-	endpoint    common.NodeEndpoint
-	store       common.PublicKeyStore
-	keyHolder   common.SignatureKeyHolder
+	primaryRole api.NodePrimaryRole
+	specialRole api.NodeSpecialRole
+	intro       api.NodeIntroduction
+	endpoint    endpoints.NodeEndpoint
+	store       cryptography_containers.PublicKeyStore
+	keyHolder   cryptography_containers.SignatureKeyHolder
 
-	signature common.SignatureHolder
+	signature cryptography_containers.SignatureHolder
 }
 
 func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) *NodeIntroProfile {
-	specialRole := common2.SpecialRoleNone
+	specialRole := api.SpecialRoleNone
 	if utils.IsDiscovery(networkNode.ID(), certificate) {
-		specialRole = common2.SpecialRoleDiscovery
+		specialRole = api.SpecialRoleDiscovery
 	}
 
 	publicKey := networkNode.PublicKey().(*ecdsa.PublicKey)
@@ -132,8 +135,8 @@ func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Ce
 		NewNodeEndpoint(networkNode.Address()),
 		NewECDSAPublicKeyStore(publicKey),
 		NewECDSASignatureKeyHolder(publicKey, keyProcessor),
-		common.NewSignature(
-			common.NewBits512FromBytes(signature.Bytes()),
+		cryptography_containers.NewSignature(
+			long_bits.NewBits512FromBytes(signature.Bytes()),
 			SHA3512Digest.SignedBy(SECP256r1Sign),
 		).AsSignatureHolder(),
 	)
@@ -141,13 +144,13 @@ func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Ce
 
 func newNodeIntroProfile(
 	shortID common.ShortNodeID,
-	primaryRole common2.NodePrimaryRole,
-	specialRole common2.NodeSpecialRole,
-	intro common2.NodeIntroduction,
-	endpoint common.NodeEndpoint,
-	store common.PublicKeyStore,
-	keyHolder common.SignatureKeyHolder,
-	signature common.SignatureHolder,
+	primaryRole api.NodePrimaryRole,
+	specialRole api.NodeSpecialRole,
+	intro api.NodeIntroduction,
+	endpoint endpoints.NodeEndpoint,
+	store cryptography_containers.PublicKeyStore,
+	keyHolder cryptography_containers.SignatureKeyHolder,
+	signature cryptography_containers.SignatureHolder,
 ) *NodeIntroProfile {
 	return &NodeIntroProfile{
 		shortID:     shortID,
@@ -161,11 +164,11 @@ func newNodeIntroProfile(
 	}
 }
 
-func (nip *NodeIntroProfile) GetPrimaryRole() common2.NodePrimaryRole {
+func (nip *NodeIntroProfile) GetPrimaryRole() api.NodePrimaryRole {
 	return nip.primaryRole
 }
 
-func (nip *NodeIntroProfile) GetSpecialRoles() common2.NodeSpecialRole {
+func (nip *NodeIntroProfile) GetSpecialRoles() api.NodeSpecialRole {
 	return nip.specialRole
 }
 
@@ -173,28 +176,28 @@ func (nip *NodeIntroProfile) HasIntroduction() bool {
 	return nip.intro != nil
 }
 
-func (nip *NodeIntroProfile) GetIntroduction() common2.NodeIntroduction {
+func (nip *NodeIntroProfile) GetIntroduction() api.NodeIntroduction {
 	return nip.intro
 }
 
-func (nip *NodeIntroProfile) GetDefaultEndpoint() common.NodeEndpoint {
+func (nip *NodeIntroProfile) GetDefaultEndpoint() endpoints.NodeEndpoint {
 	return nip.endpoint
 }
 
-func (nip *NodeIntroProfile) GetNodePublicKeyStore() common.PublicKeyStore {
+func (nip *NodeIntroProfile) GetNodePublicKeyStore() cryptography_containers.PublicKeyStore {
 	return nip.store
 }
 
-func (nip *NodeIntroProfile) GetNodePublicKey() common.SignatureKeyHolder {
+func (nip *NodeIntroProfile) GetNodePublicKey() cryptography_containers.SignatureKeyHolder {
 	return nip.keyHolder
 }
 
-func (nip *NodeIntroProfile) GetStartPower() common2.MemberPower {
+func (nip *NodeIntroProfile) GetStartPower() api.MemberPower {
 	// TODO: get from certificate
 	return 10
 }
 
-func (nip *NodeIntroProfile) IsAcceptableHost(from common.HostIdentityHolder) bool {
+func (nip *NodeIntroProfile) IsAcceptableHost(from endpoints.HostIdentityHolder) bool {
 	address := nip.endpoint.GetNameAddress()
 	return address.Equals(from.GetHostAddress())
 }
@@ -203,7 +206,7 @@ func (nip *NodeIntroProfile) GetShortNodeID() common.ShortNodeID {
 	return nip.shortID
 }
 
-func (nip *NodeIntroProfile) GetAnnouncementSignature() common.SignatureHolder {
+func (nip *NodeIntroProfile) GetAnnouncementSignature() cryptography_containers.SignatureHolder {
 	return nip.signature
 }
 
@@ -212,7 +215,7 @@ func (nip *NodeIntroProfile) String() string {
 }
 
 type NodeEndpoint struct {
-	name common.HostAddress
+	name endpoints.HostAddress
 	addr packets.NodeAddress
 }
 
@@ -223,20 +226,20 @@ func NewNodeEndpoint(address string) *NodeEndpoint {
 	}
 
 	return &NodeEndpoint{
-		name: common.HostAddress(address),
+		name: endpoints.HostAddress(address),
 		addr: addr,
 	}
 }
 
-func (p *NodeEndpoint) GetEndpointType() common.NodeEndpointType {
-	return common.NameEndpoint
+func (p *NodeEndpoint) GetEndpointType() endpoints.NodeEndpointType {
+	return endpoints.NameEndpoint
 }
 
 func (*NodeEndpoint) GetRelayID() common.ShortNodeID {
 	return 0
 }
 
-func (p *NodeEndpoint) GetNameAddress() common.HostAddress {
+func (p *NodeEndpoint) GetNameAddress() endpoints.HostAddress {
 	return p.name
 }
 
@@ -244,8 +247,8 @@ func (p *NodeEndpoint) GetIPAddress() packets.NodeAddress {
 	return p.addr
 }
 
-func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) []common2.NodeIntroProfile {
-	intros := make([]common2.NodeIntroProfile, len(nodes))
+func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) []api.NodeIntroProfile {
+	intros := make([]api.NodeIntroProfile, len(nodes))
 	for i, n := range nodes {
 		intros[i] = NewNodeIntroProfile(n, certificate, keyProcessor)
 	}
@@ -253,7 +256,7 @@ func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Ce
 	return intros
 }
 
-func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
+func NewNetworkNode(profile api.NodeProfile) insolar.NetworkNode {
 	store := profile.GetNodePublicKeyStore()
 	introduction := profile.GetIntroduction()
 
@@ -274,7 +277,7 @@ func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
 	return networkNode
 }
 
-func NewNetworkNodeList(profiles []common2.NodeProfile) []insolar.NetworkNode {
+func NewNetworkNodeList(profiles []api.NodeProfile) []insolar.NetworkNode {
 	networkNodes := make([]insolar.NetworkNode, len(profiles))
 	for i, p := range profiles {
 		networkNodes[i] = NewNetworkNode(p)

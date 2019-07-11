@@ -53,27 +53,26 @@ package tests
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"runtime/debug"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 type EmuHostConsensusAdapter struct {
 	packetProcessor adapters.PacketProcessor
 
-	hostAddr common.HostAddress
+	hostAddr endpoints.HostAddress
 	inbound  <-chan Packet
 	outbound chan<- Packet
 }
 
 func NewEmuHostConsensusAdapter(hostAddr string) *EmuHostConsensusAdapter {
-	return &EmuHostConsensusAdapter{hostAddr: common.HostAddress(hostAddr)}
+	return &EmuHostConsensusAdapter{hostAddr: endpoints.HostAddress(hostAddr)}
 }
 
 func (h *EmuHostConsensusAdapter) SetPacketProcessor(packetProcessor adapters.PacketProcessor) {
@@ -104,7 +103,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 			packet, err = h.parsePayload(payload)
 			if err == nil {
 				if packet != nil {
-					hostFrom := common.HostIdentity{Addr: *from}
+					hostFrom := endpoints.HostIdentity{Addr: *from}
 					err = h.packetProcessor.ProcessPacket(ctx, packet, &hostFrom)
 				}
 			}
@@ -116,11 +115,11 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	}
 }
 
-func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
+func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t api.NodeProfile, sendOptions api_2.PacketSendOptions, payload interface{}) {
 	h.send(t.GetDefaultEndpoint().GetNameAddress(), payload)
 }
 
-func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *common.HostAddress, err error) {
+func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *endpoints.HostAddress, err error) {
 	packet, ok := <-h.inbound
 	if !ok {
 		panic(errors.New("connection closed"))
@@ -136,7 +135,7 @@ func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interfac
 	return packet.Payload, &packet.Host, nil
 }
 
-func (h *EmuHostConsensusAdapter) send(target common.HostAddress, payload interface{}) {
+func (h *EmuHostConsensusAdapter) send(target endpoints.HostAddress, payload interface{}) {
 	parser := payload.(packets.PacketParser)
 	pkt := Packet{Host: target, Payload: WrapPacketParser(parser)}
 	h.outbound <- pkt

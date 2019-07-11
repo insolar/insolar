@@ -53,32 +53,33 @@ package serialization
 import (
 	"bytes"
 	"crypto/rand"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"testing"
 
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNodeBriefIntro_getPrimaryRole(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, common.PrimaryRoleInactive, ni.getPrimaryRole())
+	require.Equal(t, api.PrimaryRoleInactive, ni.getPrimaryRole())
 
 	ni.PrimaryRoleAndFlags = 1
-	require.Equal(t, common.PrimaryRoleNeutral, ni.getPrimaryRole())
+	require.Equal(t, api.PrimaryRoleNeutral, ni.getPrimaryRole())
 
 	ni.PrimaryRoleAndFlags = 2
-	require.Equal(t, common.PrimaryRoleHeavyMaterial, ni.getPrimaryRole())
+	require.Equal(t, api.PrimaryRoleHeavyMaterial, ni.getPrimaryRole())
 }
 
 func TestNodeBriefIntro_setPrimaryRole(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, common.PrimaryRoleInactive, ni.getPrimaryRole())
+	require.Equal(t, api.PrimaryRoleInactive, ni.getPrimaryRole())
 
-	ni.setPrimaryRole(common.PrimaryRoleVirtual)
-	require.Equal(t, common.PrimaryRoleVirtual, ni.getPrimaryRole())
+	ni.setPrimaryRole(api.PrimaryRoleVirtual)
+	require.Equal(t, api.PrimaryRoleVirtual, ni.getPrimaryRole())
 }
 
 func TestNodeBriefIntro_setPrimaryRole_Panic(t *testing.T) {
@@ -90,19 +91,19 @@ func TestNodeBriefIntro_setPrimaryRole_Panic(t *testing.T) {
 func TestNodeBriefIntro_getAddrMode(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, common2.IPEndpoint, ni.getAddrMode())
+	require.Equal(t, endpoints.IPEndpoint, ni.getAddrMode())
 
 	ni.PrimaryRoleAndFlags = 64 // 0b01000000
-	require.Equal(t, common2.NameEndpoint, ni.getAddrMode())
+	require.Equal(t, endpoints.NameEndpoint, ni.getAddrMode())
 }
 
 func TestNodeBriefIntro_setAddrMode(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, common2.IPEndpoint, ni.getAddrMode())
+	require.Equal(t, endpoints.IPEndpoint, ni.getAddrMode())
 
-	ni.setAddrMode(common2.RelayEndpoint)
-	require.Equal(t, common2.RelayEndpoint, ni.getAddrMode())
+	ni.setAddrMode(endpoints.RelayEndpoint)
+	require.Equal(t, endpoints.RelayEndpoint, ni.getAddrMode())
 }
 
 func TestNodeBriefIntro_setAddrMode_Panic(t *testing.T) {
@@ -124,7 +125,7 @@ func TestNodeBriefIntro_SerializeTo(t *testing.T) {
 func TestNodeBriefIntro_DeserializeFrom(t *testing.T) {
 	ni1 := NodeBriefIntro{
 		PrimaryRoleAndFlags: 64,
-		SpecialRoles:        common.SpecialRoleDiscovery,
+		SpecialRoles:        api.SpecialRoleDiscovery,
 		StartPower:          10,
 		BasePort:            1400,
 		PrimaryIPv4:         123123412,
@@ -151,7 +152,7 @@ func TestNodeBriefIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	ni1 := NodeBriefIntro{
 		ShortID:             123,
 		PrimaryRoleAndFlags: 64,
-		SpecialRoles:        common.SpecialRoleDiscovery,
+		SpecialRoles:        api.SpecialRoleDiscovery,
 		StartPower:          10,
 		BasePort:            1400,
 		PrimaryIPv4:         123123412,
@@ -192,7 +193,7 @@ func TestNodeFullIntro_DeserializeFrom(t *testing.T) {
 	ni1 := NodeFullIntro{
 		NodeBriefIntro: NodeBriefIntro{
 			PrimaryRoleAndFlags: 64,
-			SpecialRoles:        common.SpecialRoleDiscovery,
+			SpecialRoles:        api.SpecialRoleDiscovery,
 			StartPower:          10,
 			BasePort:            1400,
 			PrimaryIPv4:         123123412,
@@ -220,7 +221,7 @@ func TestNodeFullIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	ni1 := NodeFullIntro{
 		NodeBriefIntro: NodeBriefIntro{
 			PrimaryRoleAndFlags: 64,
-			SpecialRoles:        common.SpecialRoleDiscovery,
+			SpecialRoles:        api.SpecialRoleDiscovery,
 			StartPower:          10,
 			BasePort:            1400,
 			PrimaryIPv4:         123123412,
@@ -252,7 +253,7 @@ func TestNodeFullIntro_DeserializeFrom_Slices(t *testing.T) {
 	ni1 := NodeFullIntro{
 		NodeBriefIntro: NodeBriefIntro{
 			PrimaryRoleAndFlags: 64,
-			SpecialRoles:        common.SpecialRoleDiscovery,
+			SpecialRoles:        api.SpecialRoleDiscovery,
 			StartPower:          10,
 			BasePort:            1400,
 			PrimaryIPv4:         123123412,
@@ -260,7 +261,7 @@ func TestNodeFullIntro_DeserializeFrom_Slices(t *testing.T) {
 		EndpointLen:    2,
 		ExtraEndpoints: make([]uint16, 2),
 		ProofLen:       2,
-		NodeRefProof:   make([]common2.Bits512, 2),
+		NodeRefProof:   make([]long_bits.Bits512, 2),
 	}
 
 	b := make([]byte, 64)

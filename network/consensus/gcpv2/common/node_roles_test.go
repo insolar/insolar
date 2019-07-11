@@ -51,85 +51,86 @@
 package common
 
 import (
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestIsMaterial(t *testing.T) {
-	require.False(t, PrimaryRoleInactive.IsMaterial())
+	require.False(t, api.PrimaryRoleInactive.IsMaterial())
 
-	require.False(t, PrimaryRoleNeutral.IsMaterial())
+	require.False(t, api.PrimaryRoleNeutral.IsMaterial())
 
-	require.True(t, PrimaryRoleHeavyMaterial.IsMaterial())
+	require.True(t, api.PrimaryRoleHeavyMaterial.IsMaterial())
 
-	require.True(t, PrimaryRoleLightMaterial.IsMaterial())
+	require.True(t, api.PrimaryRoleLightMaterial.IsMaterial())
 
-	require.False(t, PrimaryRoleVirtual.IsMaterial())
+	require.False(t, api.PrimaryRoleVirtual.IsMaterial())
 }
 
 func TestIsHeavyMaterial(t *testing.T) {
-	require.False(t, PrimaryRoleInactive.IsHeavyMaterial())
+	require.False(t, api.PrimaryRoleInactive.IsHeavyMaterial())
 
-	require.False(t, PrimaryRoleNeutral.IsHeavyMaterial())
+	require.False(t, api.PrimaryRoleNeutral.IsHeavyMaterial())
 
-	require.True(t, PrimaryRoleHeavyMaterial.IsHeavyMaterial())
+	require.True(t, api.PrimaryRoleHeavyMaterial.IsHeavyMaterial())
 
-	require.False(t, PrimaryRoleLightMaterial.IsHeavyMaterial())
+	require.False(t, api.PrimaryRoleLightMaterial.IsHeavyMaterial())
 
-	require.False(t, PrimaryRoleVirtual.IsHeavyMaterial())
+	require.False(t, api.PrimaryRoleVirtual.IsHeavyMaterial())
 }
 
 func TestIsLightMaterial(t *testing.T) {
-	require.False(t, PrimaryRoleInactive.IsLightMaterial())
+	require.False(t, api.PrimaryRoleInactive.IsLightMaterial())
 
-	require.False(t, PrimaryRoleNeutral.IsLightMaterial())
+	require.False(t, api.PrimaryRoleNeutral.IsLightMaterial())
 
-	require.False(t, PrimaryRoleHeavyMaterial.IsLightMaterial())
+	require.False(t, api.PrimaryRoleHeavyMaterial.IsLightMaterial())
 
-	require.True(t, PrimaryRoleLightMaterial.IsLightMaterial())
+	require.True(t, api.PrimaryRoleLightMaterial.IsLightMaterial())
 
-	require.False(t, PrimaryRoleVirtual.IsLightMaterial())
+	require.False(t, api.PrimaryRoleVirtual.IsLightMaterial())
 }
 
 func TestIsVirtual(t *testing.T) {
-	require.False(t, PrimaryRoleInactive.IsVirtual())
+	require.False(t, api.PrimaryRoleInactive.IsVirtual())
 
-	require.False(t, PrimaryRoleNeutral.IsVirtual())
+	require.False(t, api.PrimaryRoleNeutral.IsVirtual())
 
-	require.False(t, PrimaryRoleHeavyMaterial.IsVirtual())
+	require.False(t, api.PrimaryRoleHeavyMaterial.IsVirtual())
 
-	require.False(t, PrimaryRoleLightMaterial.IsVirtual())
+	require.False(t, api.PrimaryRoleLightMaterial.IsVirtual())
 
-	require.True(t, PrimaryRoleVirtual.IsVirtual())
+	require.True(t, api.PrimaryRoleVirtual.IsVirtual())
 }
 
 func TestIsNeutral(t *testing.T) {
-	require.False(t, PrimaryRoleInactive.IsNeutral())
+	require.False(t, api.PrimaryRoleInactive.IsNeutral())
 
-	require.True(t, PrimaryRoleNeutral.IsNeutral())
+	require.True(t, api.PrimaryRoleNeutral.IsNeutral())
 
-	require.False(t, PrimaryRoleHeavyMaterial.IsNeutral())
+	require.False(t, api.PrimaryRoleHeavyMaterial.IsNeutral())
 
-	require.False(t, PrimaryRoleLightMaterial.IsNeutral())
+	require.False(t, api.PrimaryRoleLightMaterial.IsNeutral())
 
-	require.False(t, PrimaryRoleVirtual.IsNeutral())
+	require.False(t, api.PrimaryRoleVirtual.IsNeutral())
 }
 
 func TestIsInactive(t *testing.T) {
-	require.True(t, PrimaryRoleInactive.IsInactive())
+	require.True(t, api.PrimaryRoleInactive.IsInactive())
 
-	require.False(t, PrimaryRoleNeutral.IsInactive())
+	require.False(t, api.PrimaryRoleNeutral.IsInactive())
 
-	require.False(t, PrimaryRoleHeavyMaterial.IsInactive())
+	require.False(t, api.PrimaryRoleHeavyMaterial.IsInactive())
 
-	require.False(t, PrimaryRoleLightMaterial.IsInactive())
+	require.False(t, api.PrimaryRoleLightMaterial.IsInactive())
 
-	require.False(t, PrimaryRoleVirtual.IsInactive())
+	require.False(t, api.PrimaryRoleVirtual.IsInactive())
 }
 
 func TestIsDiscovery(t *testing.T) {
-	require.False(t, SpecialRoleNone.IsDiscovery())
+	require.False(t, api.SpecialRoleNone.IsDiscovery())
 
-	require.True(t, SpecialRoleDiscovery.IsDiscovery())
+	require.True(t, api.SpecialRoleDiscovery.IsDiscovery())
 }

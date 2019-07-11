@@ -51,30 +51,30 @@
 package tests
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"math/rand"
 	"time"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func randBits256() common.Bits256 {
-	v := common.Bits256{}
+func randBits256() long_bits.Bits256 {
+	v := long_bits.Bits256{}
 	_, _ = rand.Read(v[:])
 	return v
 }
 
 func CreateGenerator(pulseCount int, pulseDelta uint16, output chan<- interface{}) {
-	var pulseNum common.PulseNumber = 100000
+	var pulseNum pulse_data.PulseNumber = 100000
 	for i := 0; i < pulseCount; i++ {
 		prevDelta := pulseDelta
 		if i == 0 {
 			prevDelta = 0
 		}
 		output <- WrapPacketParser(&EmuPulsarNetPacket{
-			pulseData: *common.NewPulsarData(pulseNum, pulseDelta, prevDelta, randBits256()),
+			pulseData: *pulse_data.NewPulsarData(pulseNum, pulseDelta, prevDelta, randBits256()),
 		})
 
-		pulseNum += common.PulseNumber(pulseDelta)
+		pulseNum += pulse_data.PulseNumber(pulseDelta)
 		time.Sleep(time.Duration(pulseDelta) * time.Second)
 	}
 }

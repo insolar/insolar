@@ -54,23 +54,39 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	errors2 "github.com/insolar/insolar/network/consensus/gcpv2/errors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
+
+type RoundStrategyFactory interface {
+	CreateRoundStrategy(chronicle api_2.ConsensusChronicles, config api_2.LocalNodeConfiguration) RoundStrategy
+}
+
+type RoundStrategy interface {
+	PhaseControllersBundle
+
+	RandUint32() uint32
+	ShuffleNodeSequence(n int, swap func(i, j int))
+	IsEphemeralPulseAllowed() bool
+	ConfigureRoundContext(ctx context.Context, expectedPulse pulse_data.PulseNumber, self api.LocalNodeProfile) context.Context
+	AdjustConsensusTimings(timings *api.RoundTimings)
+}
 
 type PhasedRoundController struct {
 	rw sync.RWMutex
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
-	chronicle      census.ConsensusChronicles
+	chronicle      api_2.ConsensusChronicles
 	fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
-	prevPulseRound RoundController
+	prevPulseRound api_2.RoundController
 
 	/* Other fields - need mutex */
 	isRunning bool
@@ -78,9 +94,9 @@ type PhasedRoundController struct {
 	realm     FullRealm
 }
 
-func NewPhasedRoundController(strategy RoundStrategy, chronicle census.ConsensusChronicles, transport TransportFactory,
-	config LocalNodeConfiguration, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder,
-	prevPulseRound RoundController) *PhasedRoundController {
+func NewPhasedRoundController(strategy RoundStrategy, chronicle api_2.ConsensusChronicles, transport api_2.TransportFactory,
+	config api_2.LocalNodeConfiguration, controlFeeder api_2.ConsensusControlFeeder, candidateFeeder api_2.CandidateControlFeeder,
+	prevPulseRound api_2.RoundController) *PhasedRoundController {
 
 	r := &PhasedRoundController{chronicle: chronicle}
 
@@ -91,7 +107,7 @@ func NewPhasedRoundController(strategy RoundStrategy, chronicle census.Consensus
 	return r
 }
 
-func (r *PhasedRoundController) StartConsensusRound(upstream UpstreamPulseController) {
+func (r *PhasedRoundController) StartConsensusRound(upstream api_2.UpstreamPulseController) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
@@ -128,7 +144,7 @@ func (r *PhasedRoundController) StartConsensusRound(upstream UpstreamPulseContro
 				r.startFullRealm()
 			},
 
-			postponedPacketFn: func(packet packets.PacketParser, from common.HostIdentityHolder) {
+			postponedPacketFn: func(packet packets.PacketParser, from endpoints.HostIdentityHolder) {
 				//There is no real context for delayed reprocessing, so we use the round context
 				_ = r.handlePacket(r.realm.roundContext, packet, from, true)
 			},
@@ -169,7 +185,7 @@ func (r *PhasedRoundController) IsRunning() bool {
 
 /* Checks if Controller can handle a new packet, and which Realm should do it. If result = nil, then FullRealm is used */
 /* LOCK: simple */
-func (r *PhasedRoundController) beforeHandlePacket() (prep *PrepRealm, current common.PulseNumber, possibleNext common.PulseNumber, err error) {
+func (r *PhasedRoundController) beforeHandlePacket() (prep *PrepRealm, current pulse_data.PulseNumber, possibleNext pulse_data.PulseNumber, err error) {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
@@ -216,11 +232,11 @@ func (r *PhasedRoundController) startFullRealm() {
 	r.realm.start(active, active.GetOnlinePopulation())
 }
 
-func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder) error {
+func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet packets.PacketParser, from endpoints.HostIdentityHolder) error {
 	return r.handlePacket(ctx, packet, from, false)
 }
 
-func (r *PhasedRoundController) handlePacket(ctx context.Context, packet packets.PacketParser, from common.HostIdentityHolder, preVerified bool) error {
+func (r *PhasedRoundController) handlePacket(ctx context.Context, packet packets.PacketParser, from endpoints.HostIdentityHolder, preVerified bool) error {
 
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
 	prep, filterPN, nextPN, err := r.beforeHandlePacket()

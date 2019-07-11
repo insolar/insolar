@@ -51,65 +51,23 @@
 package nodeset
 
 import (
-	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
-type NodeBitsetEntry uint8
-
-const (
-	NbsHighTrust NodeBitsetEntry = iota
-	NbsLimitedTrust
-	NbsBaselineTrust
-	NbsTimeout
-	NbsFraud
-	maxNodeBitsetEntry
-)
-
 /* MUST be based on NodeBitsetEntry to reuse serialization */
-type ConsensusBitsetEntry NodeBitsetEntry
+type ConsensusBitsetEntry api.NodeBitsetEntry
 
 const (
-	CbsIncluded  = ConsensusBitsetEntry(NbsHighTrust)
-	CbsSuspected = ConsensusBitsetEntry(NbsBaselineTrust)
-	CbsExcluded  = ConsensusBitsetEntry(NbsTimeout)
-	CbsFraud     = ConsensusBitsetEntry(NbsFraud)
+	CbsIncluded  = ConsensusBitsetEntry(api.NbsHighTrust)
+	CbsSuspected = ConsensusBitsetEntry(api.NbsBaselineTrust)
+	CbsExcluded  = ConsensusBitsetEntry(api.NbsTimeout)
+	CbsFraud     = ConsensusBitsetEntry(api.NbsFraud)
 )
-
-func (s NodeBitsetEntry) IsTrusted() bool { return s < NbsBaselineTrust }
-func (s NodeBitsetEntry) IsTimeout() bool { return s == NbsTimeout }
-func (s NodeBitsetEntry) IsFraud() bool   { return s == NbsFraud }
-
-func (s NodeBitsetEntry) String() string {
-	return FmtNodeBitsetEntry(uint8(s))
-}
-
-func FmtNodeBitsetEntry(s uint8) string {
-	switch NodeBitsetEntry(s) {
-	case NbsHighTrust:
-		return "H"
-	case NbsLimitedTrust:
-		return "L"
-	case NbsBaselineTrust:
-		return "B"
-	case NbsTimeout:
-		return "Ø"
-	case NbsFraud:
-		return "F"
-	default:
-		return fmt.Sprintf("?%d?", s)
-	}
-}
 
 func (s ConsensusBitsetEntry) String() string {
-	return FmtNodeBitsetEntry(uint8(s))
-}
-
-type NodeBitset []NodeBitsetEntry
-
-func (b NodeBitset) Len() int {
-	return len(b)
+	return api.FmtNodeBitsetEntry(uint8(s))
 }
 
 const (
@@ -122,7 +80,7 @@ const (
 	maxNodeBitClassification
 )
 
-func (b NodeBitset) CompareToStatRow(otherDataBitset NodeBitset) *stats.Row {
+func CompareToStatRow(b api.NodeBitset, otherDataBitset api.NodeBitset) *stats.Row {
 
 	if otherDataBitset.Len() != b.Len() {
 		// TODO handle different bitset size
@@ -165,7 +123,7 @@ func (b NodeBitset) CompareToStatRow(otherDataBitset NodeBitset) *stats.Row {
 	return &bitStats
 }
 
-func (b NodeBitset) LocalToConsensusStatRow() *stats.Row {
+func LocalToConsensusStatRow(b api.NodeBitset) *stats.Row {
 
 	nodeStats := stats.NewStatRow(maxConsensusStat-1, b.Len())
 
@@ -184,7 +142,3 @@ func (b NodeBitset) LocalToConsensusStatRow() *stats.Row {
 
 	return &nodeStats
 }
-
-// func (b NodeBitset) String() string {
-//
-// }

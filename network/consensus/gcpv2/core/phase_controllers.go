@@ -52,20 +52,21 @@ package core
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 type PrepPhaseController interface {
-	GetPacketType() packets.PacketType
-	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error)
+	GetPacketType() api.PacketType
+	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) (postpone bool, err error)
 	BeforeStart(realm *PrepRealm)
 	StartWorker(ctx context.Context)
 }
 
-type PrepPhasePacketHandler func(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error)
+type PrepPhasePacketHandler func(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) (postpone bool, err error)
 
 type PhaseControllerHandlerType uint8
 
@@ -89,12 +90,12 @@ func (v PhaseControllerHandlerType) IsPerNode() bool {
 }
 
 type PhaseController interface {
-	GetPacketType() packets.PacketType
+	GetPacketType() api.PacketType
 	GetHandlerType() PhaseControllerHandlerType
 
-	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error                                   // GetHandlerType() == PacketHandlerTypeHost
-	HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error                                      // GetHandlerType() == PacketHandlerTypeMember OR PacketHandlerTypeMemberFromUnknown
-	HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) // GetHandlerType() == PacketHandlerTypeMemberFromUnknown
+	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) error                                   // GetHandlerType() == PacketHandlerTypeHost
+	HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error                                         // GetHandlerType() == PacketHandlerTypeMember OR PacketHandlerTypeMemberFromUnknown
+	HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from endpoints.HostIdentityHolder) (*NodeAppearance, error) // GetHandlerType() == PacketHandlerTypeMemberFromUnknown
 
 	CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *NodeAppearance, realm *FullRealm,
 	) (PhasePerNodePacketFunc, context.Context) // GetHandlerType() == PacketHandlerTypePerNode
@@ -105,3 +106,14 @@ type PhaseController interface {
 
 /* realm is provided for this handler to avoid being replicated in individual handlers */
 type PhasePerNodePacketFunc func(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
+
+type PhaseControllersBundle interface {
+	GetPrepPhaseControllers() []PrepPhaseController
+	GetFullPhaseControllers(nodeCount int) ([]PhaseController, NodeUpdateCallback)
+}
+
+type NodeUpdateCallback interface {
+	OnTrustUpdated(n *NodeAppearance, before, after common2.NodeTrustLevel)
+	OnNodeStateAssigned(n *NodeAppearance)
+	OnCustomEvent(n *NodeAppearance, event interface{})
+}

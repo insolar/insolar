@@ -52,6 +52,7 @@ package phases
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -64,11 +65,11 @@ var _ core.PhaseControllersBundle = &RegularPhaseBundle{}
 const loopingMinimalDelay = 2 * time.Millisecond
 
 type RegularPhaseBundle struct {
-	packetPrepareOptions core.PacketSendOptions
+	packetPrepareOptions api_2.PacketSendOptions
 	pulseStrategy        PulseSelectionStrategy
 }
 
-func NewRegularPhaseBundle(packetPrepareOptions core.PacketSendOptions, s PulseSelectionStrategy) core.PhaseControllersBundle {
+func NewRegularPhaseBundle(packetPrepareOptions api_2.PacketSendOptions, s PulseSelectionStrategy) core.PhaseControllersBundle {
 	bundle := RegularPhaseBundle{packetPrepareOptions: packetPrepareOptions, pulseStrategy: s}
 
 	return &bundle

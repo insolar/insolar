@@ -51,42 +51,41 @@
 package census
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"math"
-
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-var _ common2.LocalNodeProfile = &NodeProfileSlot{}
+var _ api.LocalNodeProfile = &NodeProfileSlot{}
 
 const joinerIndex = 0x8000
 
 type NodeProfileSlot struct {
-	common2.NodeIntroProfile
-	verifier common.SignatureVerifier
+	api.NodeIntroProfile
+	verifier cryptography_containers.SignatureVerifier
 	index    uint16
-	mode     common2.MemberOpMode
-	power    common2.MemberPower
+	mode     api.MemberOpMode
+	power    api.MemberPower
 }
 
-func NewNodeProfile(index int, p common2.NodeIntroProfile, verifier common.SignatureVerifier, pw common2.MemberPower) NodeProfileSlot {
+func NewNodeProfile(index int, p api.NodeIntroProfile, verifier cryptography_containers.SignatureVerifier, pw api.MemberPower) NodeProfileSlot {
 
-	if index < 0 || index > common2.MaxNodeIndex {
+	if index < 0 || index > api.MaxNodeIndex {
 		panic("illegal value")
 	}
 	return NodeProfileSlot{index: uint16(index), NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
-func NewJoinerProfile(p common2.NodeIntroProfile, verifier common.SignatureVerifier, pw common2.MemberPower) NodeProfileSlot {
+func NewJoinerProfile(p api.NodeIntroProfile, verifier cryptography_containers.SignatureVerifier, pw api.MemberPower) NodeProfileSlot {
 
 	return NodeProfileSlot{index: joinerIndex, NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
-func (c *NodeProfileSlot) GetDeclaredPower() common2.MemberPower {
+func (c *NodeProfileSlot) GetDeclaredPower() api.MemberPower {
 	return c.power
 }
 
-func (c *NodeProfileSlot) GetOpMode() common2.MemberOpMode {
+func (c *NodeProfileSlot) GetOpMode() api.MemberOpMode {
 	return c.mode
 }
 
@@ -94,45 +93,45 @@ func (c *NodeProfileSlot) LocalNodeProfile() {
 }
 
 func (c *NodeProfileSlot) GetIndex() int {
-	return int(c.index & common2.NodeIndexMask)
+	return int(c.index & api.NodeIndexMask)
 }
 
 func (c *NodeProfileSlot) IsJoiner() bool {
 	return c.index == joinerIndex
 }
 
-func (c *NodeProfileSlot) GetSignatureVerifier() common.SignatureVerifier {
+func (c *NodeProfileSlot) GetSignatureVerifier() cryptography_containers.SignatureVerifier {
 	return c.verifier
 }
 
-var _ common2.UpdatableNodeProfile = &updatableSlot{}
+var _ api.UpdatableNodeProfile = &updatableSlot{}
 
 type updatableSlot struct {
 	NodeProfileSlot
 	leaveReason uint32
 }
 
-func (c *updatableSlot) SetRank(index int, m common2.MemberOpMode, power common2.MemberPower) {
+func (c *updatableSlot) SetRank(index int, m api.MemberOpMode, power api.MemberPower) {
 	c.SetIndex(index)
 	c.power = power
 	c.mode = m
 }
 
-func (c *updatableSlot) SetPower(power common2.MemberPower) {
+func (c *updatableSlot) SetPower(power api.MemberPower) {
 	c.power = power
 }
 
-func (c *updatableSlot) SetOpMode(m common2.MemberOpMode) {
+func (c *updatableSlot) SetOpMode(m api.MemberOpMode) {
 	c.mode = m
 }
 
 func (c *updatableSlot) SetOpModeAndLeaveReason(leaveReason uint32) {
-	c.mode = common2.MemberModeEvictedGracefully
+	c.mode = api.MemberModeEvictedGracefully
 	c.leaveReason = leaveReason
 }
 
 func (c *updatableSlot) GetLeaveReason() uint32 {
-	if c.mode != common2.MemberModeEvictedGracefully {
+	if c.mode != api.MemberModeEvictedGracefully {
 		return 0
 	}
 	return c.leaveReason
@@ -145,6 +144,6 @@ func (c *updatableSlot) SetIndex(index int) {
 	c.index = uint16(index)
 }
 
-func (c *updatableSlot) SetSignatureVerifier(verifier common.SignatureVerifier) {
+func (c *updatableSlot) SetSignatureVerifier(verifier cryptography_containers.SignatureVerifier) {
 	c.verifier = verifier
 }

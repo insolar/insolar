@@ -53,17 +53,16 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 type FullRealm struct {
@@ -71,18 +70,18 @@ type FullRealm struct {
 	nodeContext
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
-	packetBuilder   PacketBuilder
-	packetSender    PacketSender
-	controlFeeder   ConsensusControlFeeder
-	candidateFeeder CandidateControlFeeder
-	profileFactory  common2.NodeProfileFactory
+	packetBuilder   api_2.PacketBuilder
+	packetSender    api_2.PacketSender
+	controlFeeder   api_2.ConsensusControlFeeder
+	candidateFeeder api_2.CandidateControlFeeder
+	profileFactory  api.NodeProfileFactory
 
 	handlers []packetDispatcher
 
-	timings  common2.RoundTimings
-	nbhSizes common2.NeighbourhoodSizes
+	timings  api.RoundTimings
+	nbhSizes api.NeighbourhoodSizes
 
-	census     census.ActiveCensus
+	census     api_2.ActiveCensus
 	population RealmPopulation
 
 	/* Other fields - need mutex */
@@ -90,7 +89,7 @@ type FullRealm struct {
 }
 
 /* LOCK - runs under RoundController lock */
-func (r *FullRealm) start(census census.ActiveCensus, population census.OnlinePopulation) {
+func (r *FullRealm) start(census api_2.ActiveCensus, population api_2.OnlinePopulation) {
 	r.initBasics(census)
 	allCtls, perNodeCtls := r.initHandlers(population.GetCount())
 	r.initPopulation(population, perNodeCtls)
@@ -98,14 +97,14 @@ func (r *FullRealm) start(census census.ActiveCensus, population census.OnlinePo
 	r.startWorkers(allCtls)
 }
 
-func (r *FullRealm) init(transport TransportFactory, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder) {
+func (r *FullRealm) init(transport api_2.TransportFactory, controlFeeder api_2.ConsensusControlFeeder, candidateFeeder api_2.CandidateControlFeeder) {
 	r.packetSender = transport.GetPacketSender()
 	r.packetBuilder = transport.GetPacketBuilder(r.signer)
 	r.controlFeeder = controlFeeder
 	r.candidateFeeder = candidateFeeder
 }
 
-func (r *FullRealm) initBasics(census census.ActiveCensus) {
+func (r *FullRealm) initBasics(census api_2.ActiveCensus) {
 
 	r.census = census
 	r.profileFactory = census.GetProfileFactory(r.verifierFactory)
@@ -116,14 +115,14 @@ func (r *FullRealm) initBasics(census census.ActiveCensus) {
 	r.nbhSizes = r.packetBuilder.GetNeighbourhoodSize()
 
 	r.nodeContext.initFull(uint8(r.nbhSizes.NeighbourhoodTrustThreshold),
-		func(report errors.MisbehaviorReport) interface{} {
+		func(report api.MisbehaviorReport) interface{} {
 			r.census.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
 }
 
 func (r *FullRealm) initHandlers(nodeCount int) (allControllers []PhaseController, perNodeControllers []PhaseController) {
-	r.handlers = make([]packetDispatcher, packets.MaxPacketType)
+	r.handlers = make([]packetDispatcher, api.MaxPacketType)
 
 	controllers, nodeCallback := r.strategy.GetFullPhaseControllers(nodeCount)
 
@@ -148,7 +147,7 @@ func (r *FullRealm) initHandlers(nodeCount int) (allControllers []PhaseControlle
 	return controllers, individualHandlers
 }
 
-func (r *FullRealm) initPopulation(population census.OnlinePopulation, individualHandlers []PhaseController) {
+func (r *FullRealm) initPopulation(population api_2.OnlinePopulation, individualHandlers []PhaseController) {
 
 	r.population = NewMemberRealmPopulation(r.strategy, population,
 		func(ctx context.Context, n *NodeAppearance) {
@@ -208,7 +207,7 @@ func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
 		na := r.population.CreateNodeAppearance(r.roundContext, &np)
 		nna, nodes := r.population.AddToDynamics(na)
 
-		if !common2.EqualIntroProfiles(nna.profile, na.profile) {
+		if !api.EqualIntroProfiles(nna.profile, na.profile) {
 			nodes = append(nodes, na)
 			nna = nil
 		}
@@ -231,15 +230,15 @@ func (r *FullRealm) startWorkers(controllers []PhaseController) {
 	}
 }
 
-func (r *FullRealm) GetPacketSender() PacketSender {
+func (r *FullRealm) GetPacketSender() api_2.PacketSender {
 	return r.packetSender
 }
 
-func (r *FullRealm) GetPacketBuilder() PacketBuilder {
+func (r *FullRealm) GetPacketBuilder() api_2.PacketBuilder {
 	return r.packetBuilder
 }
 
-func (r *FullRealm) GetSigner() common.DigestSigner {
+func (r *FullRealm) GetSigner() cryptography_containers.DigestSigner {
 	return r.signer
 }
 
@@ -256,34 +255,34 @@ func (r *FullRealm) GetNodeCount() int {
 	return r.population.GetNodeCount()
 }
 
-func (r *FullRealm) GetPulseNumber() common.PulseNumber {
+func (r *FullRealm) GetPulseNumber() pulse_data.PulseNumber {
 	return r.pulseData.PulseNumber
 }
 
-func (r *FullRealm) GetNextPulseNumber() common.PulseNumber {
+func (r *FullRealm) GetNextPulseNumber() pulse_data.PulseNumber {
 	return r.pulseData.GetNextPulseNumber()
 }
 
-func (r *FullRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
+func (r *FullRealm) GetOriginalPulse() packets.OriginalPulsarPacket {
 	// NB! locks for this field are only needed for PrepRealm
 	return r.coreRealm.originalPulse
 }
 
-func (r *FullRealm) GetPulseData() common.PulseData {
+func (r *FullRealm) GetPulseData() pulse_data.PulseData {
 	return r.pulseData
 }
 
-func (r *FullRealm) GetLastCloudStateHash() common2.CloudStateHash {
+func (r *FullRealm) GetLastCloudStateHash() api.CloudStateHash {
 	return r.census.GetCloudStateHash()
 }
 
-func (r *coreRealm) UpstreamPreparePulseChange() <-chan common2.NodeStateHash {
+func (r *coreRealm) UpstreamPreparePulseChange() <-chan api.NodeStateHash {
 	if !r.pulseData.PulseNumber.IsTimePulse() {
 		panic("pulse number was not set")
 	}
 
 	sp := r.GetSelf().GetProfile()
-	report := MembershipUpstreamReport{
+	report := api_2.MembershipUpstreamReport{
 		r.pulseData.PulseNumber,
 		sp.GetDeclaredPower(),
 		sp.GetOpMode(),
@@ -291,26 +290,26 @@ func (r *coreRealm) UpstreamPreparePulseChange() <-chan common2.NodeStateHash {
 	return r.upstream.PreparePulseChange(report)
 }
 
-func (r *FullRealm) GetTimings() common2.RoundTimings {
+func (r *FullRealm) GetTimings() api.RoundTimings {
 	return r.timings
 }
 
-func (r *FullRealm) GetNeighbourhoodSizes() common2.NeighbourhoodSizes {
+func (r *FullRealm) GetNeighbourhoodSizes() api.NeighbourhoodSizes {
 	return r.nbhSizes
 }
 
-func (r *FullRealm) GetLocalProfile() common2.LocalNodeProfile {
-	return r.self.profile.(common2.LocalNodeProfile)
+func (r *FullRealm) GetLocalProfile() api.LocalNodeProfile {
+	return r.self.profile.(api.LocalNodeProfile)
 }
 
-func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash) {
+func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh api.NodeStateHash) {
 	// TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
 
 	//TODO Hack! MUST provide announcement hash
-	nas := common.NewSignature(nsh, "stubSign")
+	nas := cryptography_containers.NewSignature(nsh, "stubSign")
 
 	v := nsh.SignWith(r.signer)
-	r.self.SetLocalNodeStateHashEvidence(common2.NewNodeStateHashEvidence(v), &nas)
+	r.self.SetLocalNodeStateHashEvidence(api.NewNodeStateHashEvidence(v), &nas)
 }
 
 func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *packets.NodeAnnouncementProfile {
@@ -326,11 +325,11 @@ func (r *FullRealm) CreateLocalAnnouncement() *packets.NodeAnnouncementProfile {
 	return r.CreateAnnouncement(r.self)
 }
 
-func (r *FullRealm) CreateNextCensusBuilder() census.Builder {
+func (r *FullRealm) CreateNextCensusBuilder() api_2.Builder {
 	return r.census.CreateBuilder(r.GetNextPulseNumber(), true)
 }
 
-func (r *FullRealm) preparePrimingMembers(pop census.PopulationBuilder) {
+func (r *FullRealm) preparePrimingMembers(pop api_2.PopulationBuilder) {
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() != nil {
 			continue
@@ -341,7 +340,7 @@ func (r *FullRealm) preparePrimingMembers(pop census.PopulationBuilder) {
 }
 
 /* deprecated */
-func (r *FullRealm) prepareRegularMembers(pop census.PopulationBuilder) {
+func (r *FullRealm) prepareRegularMembers(pop api_2.PopulationBuilder) {
 	//cc := r.census.GetMandateRegistry().GetConsensusConfiguration()
 
 	for _, p := range pop.GetUnorderedProfiles() {
@@ -367,7 +366,7 @@ func (r *FullRealm) prepareRegularMembers(pop census.PopulationBuilder) {
 	}
 }
 
-func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHash) {
+func (r *FullRealm) FinishRound(builder api_2.Builder, csh api.CloudStateHash) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -385,8 +384,8 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHa
 	r.notifyConsensusFinished(expected.GetOnlinePopulation().GetLocalProfile(), expected)
 }
 
-func (r *FullRealm) notifyConsensusFinished(newSelf common2.NodeProfile, expectedCensus census.OperationalCensus) {
-	report := MembershipUpstreamReport{
+func (r *FullRealm) notifyConsensusFinished(newSelf api.NodeProfile, expectedCensus api_2.OperationalCensus) {
+	report := api_2.MembershipUpstreamReport{
 		r.pulseData.PulseNumber,
 		newSelf.GetDeclaredPower(),
 		newSelf.GetOpMode(),
@@ -396,18 +395,18 @@ func (r *FullRealm) notifyConsensusFinished(newSelf common2.NodeProfile, expecte
 	r.upstream.ConsensusFinished(report, expectedCensus)
 }
 
-func (r *FullRealm) getPacketDispatcher(pt packets.PacketType) (*packetDispatcher, error) {
+func (r *FullRealm) getPacketDispatcher(pt api.PacketType) (*packetDispatcher, error) {
 	if int(pt) >= len(r.handlers) || !r.handlers[pt].IsEnabled() {
 		return nil, fmt.Errorf("packet type (%v) has no handler", pt)
 	}
 	return &r.handlers[pt], nil
 }
 
-func (r *FullRealm) GetProfileFactory() common2.NodeProfileFactory {
+func (r *FullRealm) GetProfileFactory() api.NodeProfileFactory {
 	return r.profileFactory
 }
 
-func (r *FullRealm) CreatePurgatoryNode(ctx context.Context, intro packets.BriefIntroductionReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
+func (r *FullRealm) CreatePurgatoryNode(ctx context.Context, intro packets.BriefIntroductionReader, from endpoints.HostIdentityHolder) (*NodeAppearance, error) {
 
 	panic("not implemented")
 	//nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())

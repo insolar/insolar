@@ -53,36 +53,37 @@ package tests
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"math/rand"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phases"
 
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewConsensusHost(hostAddr common.HostAddress) *EmuHostConsensusAdapter {
+func NewConsensusHost(hostAddr endpoints.HostAddress) *EmuHostConsensusAdapter {
 	return &EmuHostConsensusAdapter{hostAddr: hostAddr}
 }
 
 type EmuHostConsensusAdapter struct {
-	controller core.ConsensusController
+	controller api_2.ConsensusController
 
-	hostAddr common.HostAddress
+	hostAddr endpoints.HostAddress
 	inbound  <-chan Packet
 	outbound chan<- Packet
 }
 
-func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicles, network *EmuNetwork,
-	strategyFactory core.RoundStrategyFactory, candidateFeeder core.CandidateControlFeeder,
-	controlFeeder core.ConsensusControlFeeder, config core.LocalNodeConfiguration) {
+func (h *EmuHostConsensusAdapter) ConnectTo(chronicles api_2.ConsensusChronicles, network *EmuNetwork,
+	strategyFactory core.RoundStrategyFactory, candidateFeeder api_2.CandidateControlFeeder,
+	controlFeeder api_2.ConsensusControlFeeder, config api_2.LocalNodeConfiguration) {
 	ctx := network.ctx
 	// &EmuConsensusStrategy{ctx: ctx}
 	upstream := NewEmuUpstreamPulseController(ctx, defaultNshGenerationDelay)
@@ -115,7 +116,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 			packet, err = h.parsePayload(payload)
 			if err == nil {
 				if packet != nil {
-					hostFrom := common.HostIdentity{Addr: *from}
+					hostFrom := endpoints.HostIdentity{Addr: *from}
 					err = h.controller.ProcessPacket(ctx, packet, &hostFrom)
 				}
 			}
@@ -127,11 +128,11 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	}
 }
 
-func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
+func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t api.NodeProfile, sendOptions api_2.PacketSendOptions, payload interface{}) {
 	h.send(t.GetDefaultEndpoint(), payload)
 }
 
-func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *common.HostAddress, err error) {
+func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *endpoints.HostAddress, err error) {
 	packet, ok := <-h.inbound
 	if !ok {
 		panic(errors.New("connection closed"))
@@ -147,7 +148,7 @@ func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interfac
 	return packet.Payload, &packet.Host, nil
 }
 
-func (h *EmuHostConsensusAdapter) send(target common.NodeEndpoint, payload interface{}) {
+func (h *EmuHostConsensusAdapter) send(target endpoints.NodeEndpoint, payload interface{}) {
 	parser := payload.(packets.PacketParser)
 	pkt := Packet{Host: target.GetNameAddress(), Payload: WrapPacketParser(parser)}
 	h.outbound <- pkt
@@ -163,7 +164,7 @@ func (h *EmuHostConsensusAdapter) TransportPacketSender() {
 type EmuRoundStrategyFactory struct {
 }
 
-func (*EmuRoundStrategyFactory) CreateRoundStrategy(chronicle census.ConsensusChronicles, config core.LocalNodeConfiguration) core.RoundStrategy {
+func (*EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api_2.ConsensusChronicles, config api_2.LocalNodeConfiguration) core.RoundStrategy {
 	return &EmuRoundStrategy{bundle: phases.NewRegularPhaseBundleByDefault()}
 }
 
@@ -171,7 +172,7 @@ type EmuRoundStrategy struct {
 	bundle core.PhaseControllersBundle
 }
 
-func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common.PulseNumber, self common2.LocalNodeProfile) context.Context {
+func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse_data.PulseNumber, self api.LocalNodeProfile) context.Context {
 	return ctx
 }
 
@@ -195,10 +196,10 @@ func (*EmuRoundStrategy) IsEphemeralPulseAllowed() bool {
 	return false
 }
 
-func (*EmuRoundStrategy) AdjustConsensusTimings(timings *common2.RoundTimings) {
+func (*EmuRoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
 }
 
-var _ core.ConsensusControlFeeder = &EmuControlFeeder{}
+var _ api_2.ConsensusControlFeeder = &EmuControlFeeder{}
 
 type EmuControlFeeder struct {
 	leaveReason uint32
@@ -213,19 +214,19 @@ func (*EmuControlFeeder) ResumeTraffic() {
 func (*EmuControlFeeder) PulseDetected() {
 }
 
-func (*EmuControlFeeder) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+func (*EmuControlFeeder) ConsensusFinished(report api_2.MembershipUpstreamReport, expectedCensus api_2.OperationalCensus) {
 }
 
-func (*EmuControlFeeder) GetRequiredPowerLevel() common2.PowerRequest {
-	return common2.NewPowerRequestByLevel(common.LevelNormal)
+func (*EmuControlFeeder) GetRequiredPowerLevel() api.PowerRequest {
+	return api.NewPowerRequestByLevel(common.LevelNormal)
 }
 
-func (*EmuControlFeeder) OnAppliedPowerLevel(pw common2.MemberPower, effectiveSince common.PulseNumber) {
+func (*EmuControlFeeder) OnAppliedPowerLevel(pw api.MemberPower, effectiveSince pulse_data.PulseNumber) {
 }
 
 func (p *EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
 	return p.leaveReason != 0, p.leaveReason
 }
 
-func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince common.PulseNumber) {
+func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse_data.PulseNumber) {
 }
