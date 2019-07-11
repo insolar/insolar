@@ -202,6 +202,7 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementP
 
 	v := EmuPhase3NetPacket{
 		basePacket: r.defaultBasePacket(sender),
+		vectors:    vectors,
 	}
 	return &emuPacketSender{&v}
 }
