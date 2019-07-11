@@ -1687,8 +1687,6 @@ func (suite *LogicRunnerTestSuite) TestInitializeExecutionState() {
 		err := proc.Proceed(suite.ctx)
 		require.NoError(t, err)
 
-		fmt.Println(proc.Result.broker.mutable)
-
 		require.Equal(t, &secondRef, proc.Result.broker.mutable.first.value.RequestRef)
 		require.Equal(t, &firstRef, proc.Result.broker.mutable.last.value.RequestRef)
 

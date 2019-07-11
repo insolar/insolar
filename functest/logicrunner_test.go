@@ -308,9 +308,6 @@ func (r *Two) Hello(s string) (string, error) {
 	require.Equal(t, "Hello you too, ins. 1288 times!", resp.ExtractedReply)
 }
 
-// this test only checks that we can call methods
-// as NoWait. It doesn't checks, that NoWait has another
-// execution queue.
 func TestNoWaitCall(t *testing.T) {
 	var contractOneCode = `
 package main
