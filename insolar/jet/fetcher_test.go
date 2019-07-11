@@ -100,121 +100,91 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		require.Empty(t, nodes)
 	})
 
-	t.Run("one active node, it's me (light)", func(t *testing.T) {
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleLightMaterial,
-		).Return(
-			[]insolar.Node{{ID: meRef}}, nil,
-		)
+	ttable := []struct{ name string }{{name: "Light"}, {name: "Heavy"}}
+	getNodes := func(tname string, isFromLight bool, refs ...insolar.Reference) []insolar.Node {
+		res := []insolar.Node{}
+		for _, ref := range refs {
+			res = append(res, insolar.Node{ID: ref})
+		}
+		if tname == "Light" && isFromLight {
+			return res
+		}
+		if tname == "Heavy" && !isFromLight {
+			return res
+		}
+		return []insolar.Node{}
+	}
 
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleHeavyMaterial,
-		).Return(
-			[]insolar.Node{}, nil,
-		)
+	t.Run("one active node, it's me", func(t *testing.T) {
+		for _, tt := range ttable {
+			t.Run(tt.name, func(t *testing.T) {
+				ans.InRoleMock.ExpectOnce(
+					100, insolar.StaticRoleLightMaterial,
+				).Return(
+					getNodes(tt.name, true, meRef), nil,
+				)
 
-		nodes, err := jtu.nodesForPulse(ctx, insolar.PulseNumber(100))
-		require.Error(t, err)
-		require.Empty(t, nodes)
+				ans.InRoleMock.ExpectOnce(
+					100, insolar.StaticRoleHeavyMaterial,
+				).Return(
+					getNodes(tt.name, false, meRef), nil,
+				)
+
+				nodes, err := jtu.nodesForPulse(ctx, insolar.PulseNumber(100))
+				require.Error(t, err)
+				require.Empty(t, nodes)
+			})
+		}
+
 	})
 
-	t.Run("one active node, it's me (heavy)", func(t *testing.T) {
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleLightMaterial,
-		).Return(
-			[]insolar.Node{}, nil,
-		)
-
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleHeavyMaterial,
-		).Return(
-			[]insolar.Node{{ID: meRef}}, nil,
-		)
-
-		nodes, err := jtu.nodesForPulse(ctx, insolar.PulseNumber(100))
-		require.Error(t, err)
-		require.Empty(t, nodes)
-	})
-
-	t.Run("active node ( light )", func(t *testing.T) {
+	t.Run("active node", func(t *testing.T) {
 		someNode := insolar.Node{ID: gen.Reference()}
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleLightMaterial,
-		).Return(
-			[]insolar.Node{someNode}, nil,
-		)
+		for _, tt := range ttable {
+			t.Run(tt.name, func(t *testing.T) {
+				ans.InRoleMock.ExpectOnce(
+					100, insolar.StaticRoleLightMaterial,
+				).Return(
+					getNodes(tt.name, true, someNode.ID), nil,
+				)
 
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleHeavyMaterial,
-		).Return(
-			[]insolar.Node{}, nil,
-		)
+				ans.InRoleMock.ExpectOnce(
+					100, insolar.StaticRoleHeavyMaterial,
+				).Return(
+					getNodes(tt.name, false, someNode.ID), nil,
+				)
 
-		nodes, err := jtu.nodesForPulse(ctx, insolar.PulseNumber(100))
-		require.NoError(t, err)
-		require.Contains(t, nodes, someNode)
+				nodes, err := jtu.nodesForPulse(ctx, insolar.PulseNumber(100))
+				require.NoError(t, err)
+				require.Contains(t, nodes, someNode)
+			})
+		}
 	})
 
-	t.Run("active node ( heavy )", func(t *testing.T) {
-		someNode := insolar.Node{ID: gen.Reference()}
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleLightMaterial,
-		).Return(
-			[]insolar.Node{}, nil,
-		)
-
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleHeavyMaterial,
-		).Return(
-			[]insolar.Node{someNode}, nil,
-		)
-
-		nodes, err := jtu.nodesForPulse(ctx, insolar.PulseNumber(100))
-		require.NoError(t, err)
-		require.Contains(t, nodes, someNode)
-	})
-
-	t.Run("active node and me (light)", func(t *testing.T) {
+	t.Run("active node and me", func(t *testing.T) {
 		meNode := insolar.Node{ID: meRef}
 		someNode := insolar.Node{ID: gen.Reference()}
 
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleLightMaterial,
-		).Return(
-			[]insolar.Node{someNode, meNode}, nil,
-		)
+		for _, tt := range ttable {
+			t.Run(tt.name, func(t *testing.T) {
+				ans.InRoleMock.ExpectOnce(
+					100, insolar.StaticRoleLightMaterial,
+				).Return(
+					getNodes(tt.name, true, meNode.ID, someNode.ID), nil,
+				)
 
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleHeavyMaterial,
-		).Return(
-			[]insolar.Node{}, nil,
-		)
+				ans.InRoleMock.ExpectOnce(
+					100, insolar.StaticRoleHeavyMaterial,
+				).Return(
+					getNodes(tt.name, false, meNode.ID, someNode.ID), nil,
+				)
 
-		nodes, err := jtu.nodesForPulse(ctx, insolar.PulseNumber(100))
-		require.NoError(t, err)
-		require.Contains(t, nodes, someNode)
-		require.NotContains(t, nodes, meNode)
-	})
-
-	t.Run("active node and me (heavy)", func(t *testing.T) {
-		meNode := insolar.Node{ID: meRef}
-		someNode := insolar.Node{ID: gen.Reference()}
-
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleLightMaterial,
-		).Return(
-			[]insolar.Node{}, nil,
-		)
-		ans.InRoleMock.ExpectOnce(
-			100, insolar.StaticRoleHeavyMaterial,
-		).Return(
-			[]insolar.Node{someNode, meNode}, nil,
-		)
-
-		nodes, err := jtu.nodesForPulse(ctx, insolar.PulseNumber(100))
-		require.NoError(t, err)
-		require.Contains(t, nodes, someNode)
-		require.NotContains(t, nodes, meNode)
+				nodes, err := jtu.nodesForPulse(ctx, insolar.PulseNumber(100))
+				require.NoError(t, err)
+				require.Contains(t, nodes, someNode)
+				require.NotContains(t, nodes, meNode)
+			})
+		}
 	})
 
 	t.Run("active nodes (heavy and light)", func(t *testing.T) {
@@ -400,12 +370,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			return []insolar.Node{}
 		}
 
-		ttable := []struct {
-			name string
-		}{
-			{name: "Light"},
-			{name: "Heavy"},
-		}
+		ttable := []struct{ name string }{{name: "Light"}, {name: "Heavy"}}
 
 		for _, tt := range ttable {
 			t.Run(tt.name, func(t *testing.T) {
