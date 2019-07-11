@@ -40,7 +40,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
@@ -59,9 +58,6 @@ type handlerSuite struct {
 
 	dropModifier drop.Modifier
 	dropAccessor drop.Accessor
-
-	blobModifier blob.Modifier
-	blobAccessor blob.Accessor
 
 	recordModifier object.RecordModifier
 	recordAccessor object.RecordAccessor
@@ -127,10 +123,6 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	dropStorage := drop.NewDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
-
-	blobStorage := blob.NewStorageMemory()
-	s.blobAccessor = blobStorage
-	s.blobModifier = blobStorage
 
 	recordStorage := object.NewRecordMemory()
 	s.recordModifier = recordStorage

@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -40,7 +39,6 @@ type GetCode struct {
 	Dep struct {
 		RecordAccessor object.RecordAccessor
 		Coordinator    jet.Coordinator
-		BlobAccessor   blob.Accessor
 		Sender         bus.Sender
 		JetFetcher     jet.Fetcher
 	}

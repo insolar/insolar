@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/handle"
@@ -48,10 +47,6 @@ type MessageHandler struct {
 	JetStorage             jet.Storage                        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
-
-	BlobModifier blob.Modifier `inject:""`
-	BlobAccessor blob.Accessor `inject:""`
-	Blobs        blob.Storage  `inject:""`
 
 	IndexLocker object.IndexLocker `inject:""`
 
@@ -170,15 +165,8 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
-		SetBlob: func(p *proc.SetBlob) {
-			p.Dep.BlobAccessor = h.BlobAccessor
-			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PCS = h.PCS
-			p.Dep.WriteAccessor = h.WriteAccessor
-		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
-			p.Dep.Blobs = h.Blobs
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Bus = h.Bus
@@ -188,7 +176,6 @@ func NewMessageHandler(
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.RecordAccessor = h.Records
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
@@ -234,7 +221,6 @@ func NewMessageHandler(
 			p.Dep(h.Sender, h.filamentCalculator)
 		},
 		PassState: func(p *proc.PassState) {
-			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Sender = h.Sender
 			p.Dep.Records = h.Records
 		},
@@ -242,7 +228,7 @@ func NewMessageHandler(
 			p.Dep(h.PCS)
 		},
 		SetCode: func(p *proc.SetCode) {
-			p.Dep(h.WriteAccessor, h.Records, h.BlobModifier, h.PCS, h.Sender)
+			p.Dep(h.WriteAccessor, h.Records, h.PCS, h.Sender)
 		},
 		GetDelegate: func(p *proc.GetDelegate) {
 			p.Dep.IndexAccessor = h.IndexStorage
