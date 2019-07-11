@@ -126,8 +126,8 @@ func (r *basePacket) GetNodeID() insolar.ShortNodeID {
 	return r.tgt
 }
 
-func (r *basePacket) GetNodeRank() packets.MembershipRank {
-	return packets.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, r.nodeCount)
+func (r *basePacket) GetNodeRank() gcp_types.MembershipRank {
+	return gcp_types.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, r.nodeCount)
 }
 
 func (r *basePacket) GetAnnouncementReader() packets.MembershipAnnouncementReader {

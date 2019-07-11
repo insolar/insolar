@@ -191,7 +191,7 @@ type Phase0PacketReader struct {
 	MemberPacketReader
 }
 
-func (r *Phase0PacketReader) GetNodeRank() packets.MembershipRank {
+func (r *Phase0PacketReader) GetNodeRank() gcp_types.MembershipRank {
 	return r.body.CurrentRank
 }
 

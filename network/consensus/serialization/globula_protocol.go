@@ -57,7 +57,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"io"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
@@ -77,9 +76,9 @@ type GlobulaConsensusPacketBody struct {
 
 	// Phases 0-2
 	// - Phase0 is not sent to joiners and suspects, and PulsarPacket field must not be sent by joiners
-	CurrentRank  packets.MembershipRank `insolar-transport:"Packet=0"`                           // ByteSize=4
-	PulsarPacket EmbeddedPulsarData     `insolar-transport:"Packet=0,1;optional=PacketFlags[0]"` // ByteSize>=124
-	Announcement MembershipAnnouncement `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 5, (MEMBER) 201, 205 (MEMBER+JOINER) 196, 198, 208
+	CurrentRank  gcp_types.MembershipRank `insolar-transport:"Packet=0"`                           // ByteSize=4
+	PulsarPacket EmbeddedPulsarData       `insolar-transport:"Packet=0,1;optional=PacketFlags[0]"` // ByteSize>=124
+	Announcement MembershipAnnouncement   `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 5, (MEMBER) 201, 205 (MEMBER+JOINER) 196, 198, 208
 
 	/*
 		FullSelfIntro MUST be included when any of the following are true
@@ -355,8 +354,8 @@ type NeighbourAnnouncement struct {
 	// ByteSize(MEMBER) = 73 + (132, 136) = 205, 209
 	NeighbourNodeID insolar.ShortNodeID // ByteSize=4 // !=0
 
-	CurrentRank    packets.MembershipRank // ByteSize=4
-	RequestedPower gcp_types.MemberPower  // ByteSize=1
+	CurrentRank    gcp_types.MembershipRank // ByteSize=4
+	RequestedPower gcp_types.MemberPower    // ByteSize=1
 
 	/*
 		As joiner has no state before joining, its announcement and relevant signature are considered equal to
@@ -458,7 +457,7 @@ type MembershipAnnouncement struct {
 	*/
 	ShortID insolar.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
 
-	CurrentRank packets.MembershipRank // ByteSize=4
+	CurrentRank gcp_types.MembershipRank // ByteSize=4
 
 	/* For non-joiner ONLY */
 	RequestedPower    gcp_types.MemberPower `insolar-transport:"optional=CurrentRank!=0"` // ByteSize=1

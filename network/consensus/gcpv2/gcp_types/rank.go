@@ -48,53 +48,63 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api
+package gcp_types
 
 import (
-	"context"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"fmt"
 )
 
-type PreparedPacketSender interface {
-	SendTo(ctx context.Context, target gcp_types.NodeProfile, sendOptions PacketSendOptions, sender PacketSender)
+/*
+	Power      common2.MemberPower // serialized to [00-07]
+	Index      uint16              // serialized to [08-17]
+	TotalCount uint16              // serialized to [18-27]
+	Condition  MemberCondition     //serialized to [28-31]
+*/type MembershipRank uint32
 
-	/* Allows to control parallelism. Can return nil to skip a target */
-	SendToMany(ctx context.Context, targetCount int, sender PacketSender,
-		filter func(ctx context.Context, targetIndex int) (gcp_types.NodeProfile, PacketSendOptions))
+const JoinerMembershipRank MembershipRank = 0
+
+func (v MembershipRank) GetPower() MemberPower {
+	return MemberPower(v)
 }
 
-type PacketBuilder interface {
-	GetNeighbourhoodSize() gcp_types.NeighbourhoodSizes
-
-	//PrepareIntro
-
-	PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-		options PacketSendOptions) PreparedPacketSender
-	PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-		options PacketSendOptions) PreparedPacketSender
-
-	/* Prepare receives all introductions at once, but PreparedSendPacket.SendTo MUST:
-	1. exclude all intros when target is not joiner
-	2. exclude the intro of the target
-	*/
-	PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
-		neighbourhood []packets.MembershipAnnouncementReader, options PacketSendOptions) PreparedPacketSender
-
-	PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors gcp_types.HashedNodeVector,
-		options PacketSendOptions) PreparedPacketSender
+func (v MembershipRank) GetIndex() uint16 {
+	return uint16(v>>8) & 0x03FF
 }
 
-type TransportFactory interface {
-	GetPacketSender() PacketSender
-	GetPacketBuilder(signer cryptography_containers.DigestSigner) PacketBuilder
-	GetCryptographyFactory() TransportCryptographyFactory
+func (v MembershipRank) GetTotalCount() uint16 {
+	return uint16(v>>18) & 0x03FF
 }
 
-type TransportCryptographyFactory interface {
-	cryptography_containers.SignatureVerifierFactory
-	cryptography_containers.KeyStoreFactory
-	GetDigestFactory() cryptography_containers.DigestFactory
-	GetNodeSigner(sks cryptography_containers.SecretKeyStore) cryptography_containers.DigestSigner
+func (v MembershipRank) GetMode() MemberOpMode {
+	return MemberOpMode(v >> 28)
+}
+
+func (v MembershipRank) IsJoiner() bool {
+	return v == JoinerMembershipRank
+}
+
+func (v MembershipRank) String() string {
+	if v.IsJoiner() {
+		return "{joiner}"
+	}
+	return fmt.Sprintf("{%v %d/%d pw:%v}", v.GetMode(), v.GetIndex(), v.GetTotalCount(), v.GetPower())
+}
+
+func NewMembershipRank(mode MemberOpMode, pw MemberPower, idx, count uint16) MembershipRank {
+	if idx >= count {
+		panic("illegal value")
+	}
+
+	r := uint32(pw)
+	r |= ensureNodeIndex(idx) << 8
+	r |= ensureNodeIndex(count) << 18
+	r |= mode.AsUnit32() << 28
+	return MembershipRank(r)
+}
+
+func ensureNodeIndex(v uint16) uint32 {
+	if v > 0x03FF {
+		panic("out of bounds")
+	}
+	return uint32(v & 0x03FF)
 }

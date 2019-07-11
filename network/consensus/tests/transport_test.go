@@ -142,7 +142,7 @@ func (r *EmuPhase0NetPacket) clonePacketFor(t gcp_types.NodeProfile, sendOptions
 }
 
 func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-	options api.PacketSendOptions) api.PreparedPacketSender {
+	welcome *gcp_types.NodeWelcomePackage, options api.PacketSendOptions) api.PreparedPacketSender {
 
 	pp := pulsarPacket.(*EmuPulsarNetPacket)
 	if pp == nil || !pp.pulseData.IsValidPulseData() {
@@ -184,7 +184,7 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t gcp_types.NodeProfile, sendOptions
 }
 
 func (r *emuPacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
-	neighbourhood []packets.MembershipAnnouncementReader,
+	welcome *gcp_types.NodeWelcomePackage, neighbourhood []packets.MembershipAnnouncementReader,
 	options api.PacketSendOptions) api.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{

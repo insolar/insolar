@@ -53,9 +53,12 @@ package gcp_types
 type HashedNodeVector struct {
 	Bitset                             NodeBitset
 	TrustedAnnouncementVector          GlobulaAnnouncementHash
-	DoubtedAnnouncementVector          GlobulaAnnouncementHash
 	TrustedGlobulaStateVectorSignature GlobulaStateSignature
+	TrustedExpectedRank                MembershipRank
+
+	DoubtedAnnouncementVector          GlobulaAnnouncementHash
 	DoubtedGlobulaStateVectorSignature GlobulaStateSignature
+	DoubtedExpectedRank                MembershipRank
 }
 
 type NodeBitset []NodeBitsetEntry
