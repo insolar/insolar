@@ -39,15 +39,15 @@ type Item struct {
 // Sequencer is an interface to work with db entity sequence.
 type Sequencer interface {
 	// Len returns count of records in db scope by the pulse.
-	Len(scope store.Scope, pulse insolar.PulseNumber) int
+	Len(scope byte, pulse insolar.PulseNumber) int
 	// First returns first item in the db scope.
-	First(scope store.Scope) *Item
+	First(scope byte) *Item
 	// Last returns last item in the db scope.
-	Last(scope store.Scope) *Item
+	Last(scope byte) *Item
 	// Slice returns slice of records from provided position with corresponding limit.
-	Slice(scope store.Scope, from insolar.PulseNumber, skip uint32, to insolar.PulseNumber, limit uint32) []Item
+	Slice(scope byte, from insolar.PulseNumber, skip uint32, to insolar.PulseNumber, limit uint32) []Item
 	// Upsert updates or inserts sequence of db records.
-	Upsert(scope store.Scope, sequence []Item)
+	Upsert(scope byte, sequence []Item)
 }
 
 type sequencer struct {
@@ -59,12 +59,12 @@ func NewSequencer(db store.DB) Sequencer {
 	return &sequencer{db: db}
 }
 
-func (s *sequencer) Len(scope store.Scope, pulse insolar.PulseNumber) int {
+func (s *sequencer) Len(scope byte, pulse insolar.PulseNumber) int {
 	s.RLock()
 	defer s.RUnlock()
 
 	result := 0
-	it := s.db.NewIterator(polyKey{[]byte{}, scope}, false)
+	it := s.db.NewIterator(polyKey{id: []byte{}, scope: store.Scope(scope)}, false)
 	defer it.Close()
 	for it.Next() && bytes.HasPrefix(it.Key(), pulse.Bytes()) {
 		result++
@@ -72,8 +72,8 @@ func (s *sequencer) Len(scope store.Scope, pulse insolar.PulseNumber) int {
 	return result
 }
 
-func (s *sequencer) First(scope store.Scope) *Item {
-	it := s.db.NewIterator(polyKey{id: []byte{}, scope: scope}, false)
+func (s *sequencer) First(scope byte) *Item {
+	it := s.db.NewIterator(polyKey{id: []byte{}, scope: store.Scope(scope)}, false)
 	defer it.Close()
 
 	if !it.Next() {
@@ -82,8 +82,8 @@ func (s *sequencer) First(scope store.Scope) *Item {
 	return &Item{Key: it.Key(), Value: it.Value()}
 }
 
-func (s *sequencer) Last(scope store.Scope) *Item {
-	it := s.db.NewIterator(polyKey{id: []byte{0xFF, 0xFF, 0xFF, 0xFF}, scope: scope}, true)
+func (s *sequencer) Last(scope byte) *Item {
+	it := s.db.NewIterator(polyKey{id: []byte{0xFF, 0xFF, 0xFF, 0xFF}, scope: store.Scope(scope)}, true)
 	defer it.Close()
 
 	if !it.Next() {
@@ -92,12 +92,12 @@ func (s *sequencer) Last(scope store.Scope) *Item {
 	return &Item{Key: it.Key(), Value: it.Value()}
 }
 
-func (s *sequencer) Slice(scope store.Scope, from insolar.PulseNumber, skip uint32, to insolar.PulseNumber, limit uint32) []Item {
+func (s *sequencer) Slice(scope byte, from insolar.PulseNumber, skip uint32, to insolar.PulseNumber, limit uint32) []Item {
 	s.RLock()
 	defer s.RUnlock()
 
 	var result []Item
-	it := s.db.NewIterator(polyKey{id: from.Bytes(), scope: scope}, false)
+	it := s.db.NewIterator(polyKey{id: from.Bytes(), scope: store.Scope(scope)}, false)
 	defer it.Close()
 
 	skipped := 0
@@ -114,12 +114,12 @@ func (s *sequencer) Slice(scope store.Scope, from insolar.PulseNumber, skip uint
 	return result
 }
 
-func (s *sequencer) Upsert(scope store.Scope, sequence []Item) {
+func (s *sequencer) Upsert(scope byte, sequence []Item) {
 	s.Lock()
 	defer s.Unlock()
 
 	for _, item := range sequence {
-		err := s.db.Set(polyKey{item.Key, scope}, item.Value)
+		err := s.db.Set(polyKey{id: item.Key, scope: store.Scope(scope)}, item.Value)
 		if err != nil {
 			inslogger.FromContext(context.Background()).Error(errors.Wrapf(err, "failed to save item of sequence"))
 		}
