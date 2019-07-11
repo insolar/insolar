@@ -493,7 +493,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 					test.object.queueLen--
 
 					reqRef := gen.Reference()
-					broker.mutable.Push(&Transcript{RequestRef: &reqRef})
+					broker.mutable.Push(&Transcript{RequestRef: reqRef})
 				}
 			}
 
@@ -1176,7 +1176,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    false,
 	}
-	mutableTranscript := NewTranscript(s.ctx, &mutableRequestRef, mutableRequest)
+	mutableTranscript := NewTranscript(s.ctx, mutableRequestRef, mutableRequest)
 
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -1184,7 +1184,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
 	}
-	immutableTranscript1 := NewTranscript(s.ctx, &immutableRequestRef1, immutableRequest1)
+	immutableTranscript1 := NewTranscript(s.ctx, immutableRequestRef1, immutableRequest1)
 
 	immutableRequest2 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -1192,7 +1192,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
 	}
-	immutableTranscript2 := NewTranscript(s.ctx, &immutableRequestRef2, immutableRequest2)
+	immutableTranscript2 := NewTranscript(s.ctx, immutableRequestRef2, immutableRequest2)
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1
@@ -1266,7 +1266,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
 	}
-	immutableTranscript1 := NewTranscript(s.ctx, &immutableRequestRef1, immutableRequest1)
+	immutableTranscript1 := NewTranscript(s.ctx, immutableRequestRef1, immutableRequest1)
 
 	s.re.ExecuteAndSaveMock.Return(&reply.CallMethod{Result: []byte{1, 2, 3}}, nil)
 	s.re.SendReplyMock.Return()
@@ -1379,7 +1379,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 	reqRef := gen.Reference()
 	broker.mutable.Push(&Transcript{
 		Context:    s.ctx,
-		RequestRef: &reqRef,
+		RequestRef: reqRef,
 		Request:    &record.IncomingRequest{},
 	})
 	es.pending = message.NotPending
@@ -1582,7 +1582,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 	broker.Put(s.ctx, false, &Transcript{
 		FromLedger:   true,
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef,
+		RequestRef:   reqRef,
 		Request:      &record.IncomingRequest{},
 	})
 

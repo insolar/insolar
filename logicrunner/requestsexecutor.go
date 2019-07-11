@@ -106,21 +106,22 @@ func (e *requestsExecutor) Save(
 
 	am := e.ArtifactManager
 	request := transcript.Request
+	reqRef := transcript.RequestRef
 
 	switch {
 	case res.Activation:
 		err := e.ArtifactManager.ActivateObject(
-			ctx, *transcript.RequestRef, *request.Base, *request.Prototype,
+			ctx, reqRef, *request.Base, *request.Prototype,
 			request.CallType == record.CTSaveAsDelegate,
 			res.NewMemory,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't activate object")
 		}
-		return &reply.CallConstructor{Object: transcript.RequestRef}, err
+		return &reply.CallConstructor{Object: &reqRef}, err
 	case res.Deactivation:
 		err := am.DeactivateObject(
-			ctx, *transcript.RequestRef, transcript.ObjectDescriptor, res.Result,
+			ctx, reqRef, transcript.ObjectDescriptor, res.Result,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't deactivate object")
@@ -128,14 +129,14 @@ func (e *requestsExecutor) Save(
 		return &reply.CallMethod{Result: res.Result}, nil
 	case res.NewMemory != nil:
 		err := am.UpdateObject(
-			ctx, *transcript.RequestRef, transcript.ObjectDescriptor, res.NewMemory, res.Result,
+			ctx, reqRef, transcript.ObjectDescriptor, res.NewMemory, res.Result,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
 		return &reply.CallMethod{Result: res.Result}, nil
 	default:
-		_, err := am.RegisterResult(ctx, *request.Object, *transcript.RequestRef, res.Result)
+		_, err := am.RegisterResult(ctx, *request.Object, reqRef, res.Result)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't save results")
 		}
@@ -162,7 +163,7 @@ func (e *requestsExecutor) SendReply(
 		ctx,
 		&message.ReturnResults{
 			Target:     target,
-			RequestRef: *transcript.RequestRef,
+			RequestRef: transcript.RequestRef,
 			Reply:      re,
 			Error:      errstr,
 		},

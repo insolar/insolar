@@ -137,9 +137,9 @@ func (s *TranscriptDequeueSuite) TestPopByReference() {
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
 
 	d.Prepend(
-		&Transcript{Nonce: 3, RequestRef: &ref1},
-		&Transcript{Nonce: 4, RequestRef: &ref2},
-		&Transcript{Nonce: 5, RequestRef: &ref3},
+		&Transcript{Nonce: 3, RequestRef: ref1},
+		&Transcript{Nonce: 4, RequestRef: ref2},
+		&Transcript{Nonce: 5, RequestRef: ref3},
 	)
 
 	tr := d.PopByReference(ref2)
@@ -164,9 +164,9 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceHead() {
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
-	el1 := &Transcript{Nonce: 3, RequestRef: &ref1}
-	el2 := &Transcript{Nonce: 4, RequestRef: &ref2}
-	el3 := &Transcript{Nonce: 5, RequestRef: &ref3}
+	el1 := &Transcript{Nonce: 3, RequestRef: ref1}
+	el2 := &Transcript{Nonce: 4, RequestRef: ref2}
+	el3 := &Transcript{Nonce: 5, RequestRef: ref3}
 	d.Prepend(el1, el2, el3)
 
 	tr := d.PopByReference(ref1)
@@ -188,9 +188,9 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceTail() {
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
-	el1 := &Transcript{Nonce: 3, RequestRef: &ref1}
-	el2 := &Transcript{Nonce: 4, RequestRef: &ref2}
-	el3 := &Transcript{Nonce: 5, RequestRef: &ref3}
+	el1 := &Transcript{Nonce: 3, RequestRef: ref1}
+	el2 := &Transcript{Nonce: 4, RequestRef: ref2}
+	el3 := &Transcript{Nonce: 5, RequestRef: ref3}
 	d.Prepend(el1, el2, el3)
 
 	tr := d.PopByReference(ref3)
@@ -214,7 +214,7 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceOneElement() {
 	ref1 := gen.Reference()
 
 	d.Prepend(
-		&Transcript{Nonce: 3, RequestRef: &ref1},
+		&Transcript{Nonce: 3, RequestRef: ref1},
 	)
 
 	tr := d.PopByReference(ref1)
@@ -353,7 +353,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
+		RequestRef:   reqRef1,
 		Request:      &record.IncomingRequest{},
 	}
 
@@ -363,7 +363,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef2,
+		RequestRef:   reqRef2,
 		Request:      &record.IncomingRequest{},
 	}
 
@@ -405,7 +405,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
+		RequestRef:   reqRef1,
 		Request:      &record.IncomingRequest{},
 	}
 	b.Prepend(s.Context, false, tr)
@@ -414,7 +414,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef2,
+		RequestRef:   reqRef2,
 		Request:      &record.IncomingRequest{},
 	}
 	b.Prepend(s.Context, true, tr)
@@ -459,7 +459,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	reqRef1 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
+		RequestRef:   reqRef1,
 		Request:      &record.IncomingRequest{Immutable: true},
 	}
 
@@ -471,7 +471,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	reqRef2 := gen.Reference()
 	tr = &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef2,
+		RequestRef:   reqRef2,
 		Request:      &record.IncomingRequest{Immutable: true},
 	}
 
@@ -507,7 +507,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	reqRef3 := gen.Reference()
 	tr := &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef3,
+		RequestRef:   reqRef3,
 		Request:      &record.IncomingRequest{Immutable: true},
 	}
 
@@ -518,7 +518,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	reqRef4 := gen.Reference()
 	tr = &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef4,
+		RequestRef:   reqRef4,
 		Request:      &record.IncomingRequest{Immutable: true},
 	}
 
@@ -624,14 +624,14 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 	reqRef1 := gen.Reference()
 	b.Put(s.Context, false, &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
+		RequestRef:   reqRef1,
 		Request:      &record.IncomingRequest{},
 	}) // no duplication
 	s.Equal(b.mutable.Length(), 1)
 
 	b.Put(s.Context, false, &Transcript{
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
+		RequestRef:   reqRef1,
 		Request:      &record.IncomingRequest{},
 	}) // duplication
 	s.Equal(b.mutable.Length(), 1)

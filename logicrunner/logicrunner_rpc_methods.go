@@ -527,7 +527,7 @@ func buildIncomingAndOutgoingCallRequests(
 		Arguments: req.Arguments,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	// Currently IncomingRequest and OutgoingRequest are almost exact copies of each other
@@ -551,7 +551,7 @@ func buildIncomingAndOutgoingCallRequests(
 		Arguments: req.Arguments,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	if req.Saga {
@@ -584,7 +584,7 @@ func buildIncomingAndOutgoingSaveAsChildRequests(
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	outgoing := record.OutgoingRequest{
@@ -599,7 +599,7 @@ func buildIncomingAndOutgoingSaveAsChildRequests(
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	return &incoming, &outgoing
@@ -623,7 +623,7 @@ func buildIncomingAndOutgoingSaveAsDelegateRequests(
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	outgoing := record.OutgoingRequest{
@@ -638,7 +638,7 @@ func buildIncomingAndOutgoingSaveAsDelegateRequests(
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	return &incoming, &outgoing
