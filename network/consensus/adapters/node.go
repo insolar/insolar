@@ -128,7 +128,7 @@ func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Ce
 	signature := mutableNode.GetSignature()
 
 	return newNodeIntroProfile(
-		insolar.ShortNodeID(networkNode.ShortID()),
+		networkNode.ShortID(),
 		StaticRoleToPrimaryRole(networkNode.Role()),
 		specialRole,
 		NewNodeIntroduction(networkNode),
