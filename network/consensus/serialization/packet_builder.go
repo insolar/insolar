@@ -92,6 +92,8 @@ func (p *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, p
 
 	packet.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
 	packet.Header.setPacketType(packetType)
+	packet.Header.setIsRelayRestricted(true)
+	packet.Header.setIsBodyEncrypted(false)
 
 	packet.setPulseNumber(sender.GetPulseNumber())
 	packet.EncryptableBody = ProtocolTypeGlobulaConsensus.NewBody()

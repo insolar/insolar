@@ -146,6 +146,7 @@ func (nab *NodeAppearanceBitset) SetBitset(bitset nodeset.NodeBitset) {
 	}
 
 	nab.setLength(uint16(length))
+	nab.setIsCompressed(false)
 	nab.Bytes = make([]byte, length)
 
 	// TODO: 1 entry == 1 byte. im too lazy
@@ -169,8 +170,8 @@ func (nab *NodeAppearanceBitset) isCompressed() bool {
 	return hasBit(uint(nab.FlagsAndLoLength), compressedBitIndex)
 }
 
-func (nab *NodeAppearanceBitset) setIsCompressed() {
-	nab.FlagsAndLoLength = uint8(setBit(uint(nab.FlagsAndLoLength), compressedBitIndex))
+func (nab *NodeAppearanceBitset) setIsCompressed(compressed bool) {
+	nab.FlagsAndLoLength = uint8(toggleBit(uint(nab.FlagsAndLoLength), compressedBitIndex, compressed))
 }
 
 func (nab *NodeAppearanceBitset) hasHiLength() bool {
@@ -178,13 +179,7 @@ func (nab *NodeAppearanceBitset) hasHiLength() bool {
 }
 
 func (nab *NodeAppearanceBitset) setHasHiLength(has bool) {
-	var flags uint8
-	if has {
-		flags = uint8(setBit(uint(nab.FlagsAndLoLength), hasHiLenBitIndex))
-	} else {
-		flags = uint8(clearBit(uint(nab.FlagsAndLoLength), hasHiLenBitIndex))
-	}
-	nab.FlagsAndLoLength = flags
+	nab.FlagsAndLoLength = uint8(toggleBit(uint(nab.FlagsAndLoLength), hasHiLenBitIndex, has))
 }
 
 func (nab *NodeAppearanceBitset) getLoLength() uint8 {
@@ -303,11 +298,11 @@ func (gsv *GlobulaStateVector) DeserializeFrom(_ DeserializeContext, reader io.R
 	return read(reader, gsv)
 }
 
-const (
-	stateBitSize = 3
-	bitsInByte   = 8
-)
-
-func bitsetByteSize(entryLen int) uint16 {
-	return uint16(math.Ceil(float64(entryLen*stateBitSize) / bitsInByte))
-}
+// const (
+// 	stateBitSize = 3
+// 	bitsInByte   = 8
+// )
+//
+// func bitsetByteSize(entryLen int) uint16 {
+// 	return uint16(math.Ceil(float64(entryLen*stateBitSize) / bitsInByte))
+// }

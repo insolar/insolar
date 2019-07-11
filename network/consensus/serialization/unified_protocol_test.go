@@ -91,8 +91,11 @@ func TestHeader_setIsRelayRestricted(t *testing.T) {
 
 	require.False(t, h.IsRelayRestricted())
 
-	h.setIsRelayRestricted()
+	h.setIsRelayRestricted(true)
 	require.True(t, h.IsRelayRestricted())
+
+	h.setIsRelayRestricted(false)
+	require.False(t, h.IsRelayRestricted())
 }
 
 func TestHeader_IsBodyEncrypted(t *testing.T) {
@@ -114,8 +117,11 @@ func TestHeader_setIsBodyEncrypted(t *testing.T) {
 
 	require.False(t, h.IsBodyEncrypted())
 
-	h.setIsBodyEncrypted()
+	h.setIsBodyEncrypted(true)
 	require.True(t, h.IsBodyEncrypted())
+
+	h.setIsBodyEncrypted(false)
+	require.False(t, h.IsBodyEncrypted())
 }
 
 func TestHeader_HasFlag(t *testing.T) {
@@ -275,8 +281,8 @@ func TestHeader_SerializeTo(t *testing.T) {
 		SourceID:   456,
 		TargetID:   789,
 	}
-	h.setIsBodyEncrypted()
-	h.setIsRelayRestricted()
+	h.setIsBodyEncrypted(true)
+	h.setIsRelayRestricted(true)
 	h.setProtocolType(ProtocolTypeGlobulaConsensus)
 	h.setPacketType(packets.PacketPhase3)
 
@@ -293,8 +299,8 @@ func TestHeader_DeserializeFrom(t *testing.T) {
 		SourceID:   456,
 		TargetID:   789,
 	}
-	h1.setIsBodyEncrypted()
-	h1.setIsRelayRestricted()
+	h1.setIsBodyEncrypted(true)
+	h1.setIsRelayRestricted(true)
 	h1.setProtocolType(ProtocolTypeGlobulaConsensus)
 	h1.setPacketType(packets.PacketPhase3)
 

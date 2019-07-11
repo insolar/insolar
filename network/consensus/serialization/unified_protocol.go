@@ -215,20 +215,24 @@ func (h *Header) IsRelayRestricted() bool {
 	return h.hasFlag(flagIsRelayRestricted)
 }
 
-func (h *Header) setIsRelayRestricted() {
-	h.setFlag(flagIsRelayRestricted)
+func (h *Header) setIsRelayRestricted(restricted bool) {
+	h.toggleFlag(flagIsRelayRestricted, restricted)
 }
 
 func (h *Header) IsBodyEncrypted() bool {
 	return h.hasFlag(flagIsBodyEncrypted)
 }
 
-func (h *Header) setIsBodyEncrypted() {
-	h.setFlag(flagIsBodyEncrypted)
+func (h *Header) setIsBodyEncrypted(encrypted bool) {
+	h.toggleFlag(flagIsBodyEncrypted, encrypted)
 }
 
 func (h *Header) hasFlag(f Flag) bool {
 	return hasBit(uint(h.PacketFlags), uint(f))
+}
+
+func (h *Header) toggleFlag(f Flag, val bool) {
+	h.PacketFlags = uint8(toggleBit(uint(h.PacketFlags), uint(f), val))
 }
 
 func (h *Header) clearFlag(f Flag) {
