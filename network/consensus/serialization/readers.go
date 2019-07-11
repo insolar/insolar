@@ -127,7 +127,7 @@ func (p *PacketParser) GetReceiverID() common.ShortNodeID {
 	return common.ShortNodeID(p.packet.Header.ReceiverID)
 }
 
-func (p *PacketParser) GetRelayTargetID() common.ShortNodeID {
+func (p *PacketParser) GetTargetID() common.ShortNodeID {
 	return common.ShortNodeID(p.packet.Header.TargetID)
 }
 

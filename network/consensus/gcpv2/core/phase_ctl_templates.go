@@ -75,8 +75,8 @@ func (*PhaseControllerPerMemberFromUnknownTemplate) HandleHostPacket(ctx context
 	return errPacketIsNotAllowed
 }
 
-func (*PhaseControllerPerMemberFromUnknownTemplate) CreatePerNodePacketHandler(ctlIndex int, node *NodeAppearance,
-	realm *FullRealm, sharedNodeContext context.Context) (PhasePerNodePacketFunc, context.Context) {
+func (*PhaseControllerPerMemberFromUnknownTemplate) CreatePerNodePacketHandler(sharedNodeContext context.Context,
+	ctlIndex int, node *NodeAppearance, realm *FullRealm) (PhasePerNodePacketFunc, context.Context) {
 
 	return nil, sharedNodeContext
 }
@@ -98,7 +98,7 @@ func (*PhaseControllerPerMemberTemplate) HandleUnknownMemberPacket(ctx context.C
 	return nil, errPacketIsNotAllowed
 }
 
-// var _ PhaseController = &PhaseControllerPerNodeTemplate{}
+//var _ PhaseController = &PhaseControllerPerNodeTemplate{}
 type PhaseControllerPerNodeTemplate struct {
 	R *FullRealm
 }
@@ -138,8 +138,8 @@ func (*PhaseControllerPerHostTemplate) HandleMemberPacket(ctx context.Context, r
 	return errPacketIsNotAllowed
 }
 
-func (*PhaseControllerPerHostTemplate) CreatePerNodePacketHandler(ctlIndex int, node *NodeAppearance,
-	realm *FullRealm, sharedNodeContext context.Context) (PhasePerNodePacketFunc, context.Context) {
+func (*PhaseControllerPerHostTemplate) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *NodeAppearance,
+	realm *FullRealm) (PhasePerNodePacketFunc, context.Context) {
 
 	return nil, sharedNodeContext
 }

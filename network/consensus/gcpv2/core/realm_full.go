@@ -155,7 +155,7 @@ func (r *FullRealm) initPopulation(population census.OnlinePopulation, individua
 			n.callback = &r.nodeContext
 			for k, ctl := range individualHandlers {
 				var ph PhasePerNodePacketFunc
-				ph, ctx = ctl.CreatePerNodePacketHandler(k, n, r, ctx)
+				ph, ctx = ctl.CreatePerNodePacketHandler(ctx, k, n, r)
 				if ph == nil {
 					continue
 				}

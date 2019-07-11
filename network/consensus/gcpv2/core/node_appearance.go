@@ -467,11 +467,12 @@ func (c *NodeAppearance) GetRequestedAnnouncement() common2.MembershipAnnounceme
 	defer c.mutex.Unlock()
 
 	mb := c.getMembership()
-	if c.requestedLeave {
+	switch {
+	case c.requestedLeave:
 		return common2.NewMembershipAnnouncementWithLeave(mb, c.requestedLeaveReason)
-	} else if c.requestedJoiner != nil {
+	case c.requestedJoiner != nil:
 		return common2.NewMembershipAnnouncementWithJoiner(mb, c.requestedJoiner.profile)
-	} else {
+	default:
 		return common2.NewMembershipAnnouncement(mb)
 	}
 }

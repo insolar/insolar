@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"sync"
 	"time"
 
@@ -320,22 +321,22 @@ func (r *PhasedRoundController) verifyRoute(ctx context.Context, packet packets.
 		return false, fmt.Errorf("receiverID(%v) != thisNodeID(%v)", rid, selfID)
 	}
 
-	tid := packet.GetRelayTargetID()
-	if tid != common.AbsentShortNodeID {
-		//Relaying as allowed by sender
-
-		if tid != selfID {
-			//We are a relay
-
-			//TODO relay support
-			panic(fmt.Errorf("unsupported: relay is required for targetID(%v)", tid))
+	tid := packet.GetTargetID()
+	if tid != selfID {
+		//Relaying
+		if packet.IsRelayForbidden() {
+			return false, fmt.Errorf("sender doesn't allow relaying for targetID(%v)", tid)
 		}
+
+		//TODO relay support
+		err := fmt.Errorf("unsupported: relay is required for targetID(%v)", tid)
+		inslogger.FromContext(ctx).Errorf(err.Error())
 		//allow sender to be different from source
-		return false, nil
+		return false, err
 	}
 
 	//sender must be source
-	return true, nil
+	return packet.IsRelayForbidden(), nil
 }
 
 // /* Initiates cancellation of this round */

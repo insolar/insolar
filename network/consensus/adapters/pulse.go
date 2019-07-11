@@ -138,6 +138,10 @@ type PulsePacketParser struct {
 	pulse insolar.Pulse
 }
 
+func (p *PulsePacketParser) IsRelayForbidden() bool {
+	return false
+}
+
 func NewPulsePacketParser(pulse insolar.Pulse) *PulsePacketParser {
 	return &PulsePacketParser{pulse}
 }
@@ -150,7 +154,7 @@ func (p *PulsePacketParser) GetReceiverID() common.ShortNodeID {
 	panic("implement me")
 }
 
-func (p *PulsePacketParser) GetRelayTargetID() common.ShortNodeID {
+func (p *PulsePacketParser) GetTargetID() common.ShortNodeID {
 	panic("implement me")
 }
 

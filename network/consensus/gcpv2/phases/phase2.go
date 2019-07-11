@@ -96,8 +96,8 @@ func (*Phase2Controller) GetPacketType() packets.PacketType {
 	return packets.PacketPhase2
 }
 
-func (c *Phase2Controller) CreatePerNodePacketHandler(ctlIndex int, node *core.NodeAppearance,
-	realm *core.FullRealm, sharedNodeContext context.Context) (core.PhasePerNodePacketFunc, context.Context) {
+func (c *Phase2Controller) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *core.NodeAppearance,
+	realm *core.FullRealm) (core.PhasePerNodePacketFunc, context.Context) {
 
 	return c.createPerNodePacketHandler(ctlIndex, node, realm, sharedNodeContext, c.handleJoinerPacket)
 }
@@ -276,14 +276,14 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 				nh[i] = np.(*core.NodeAppearance)
 			}
 
-			go c.sendPhase2(ctx, nh, takeJoiners)
+			go c.sendPhase2(ctx, nh)
 
 			idleLoop = false
 		}
 	}
 }
 
-func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core.NodeAppearance, joinerCount int) {
+func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core.NodeAppearance) {
 
 	neighbourhoodAnnouncements := make([]packets.MembershipAnnouncementReader, len(neighbourhood))
 	for i, np := range neighbourhood {

@@ -95,9 +95,9 @@ type contextKeyType struct{}
 
 var contextKeyValue = contextKeyType{}
 
-type postponedPacket struct {
-	packet packets.PacketParser
-}
+//type postponedPacket struct {
+//	packet packets.PacketParser
+//}
 
 type JoinerControllerPacketFunc func(ctx context.Context, reader packets.MemberPacketReader, from *JoinerController) error
 
@@ -105,8 +105,8 @@ type JoinerController struct {
 	node *core.NodeAppearance
 	//realm *core.FullRealm
 
-	handlerIndices   []int //to cleanup when joiner is confirmed
-	postponedPackets []postponedPacket
+	handlerIndices []int //to cleanup when joiner is confirmed
+	//postponedPackets []postponedPacket
 }
 
 func newJoinerController() *JoinerController {

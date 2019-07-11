@@ -119,8 +119,8 @@ func (*Phase1Controller) GetPacketType() packets.PacketType {
 	return packets.PacketPhase1
 }
 
-func (c *Phase1Controller) CreatePerNodePacketHandler(ctlIndex int, node *core.NodeAppearance,
-	realm *core.FullRealm, sharedNodeContext context.Context) (core.PhasePerNodePacketFunc, context.Context) {
+func (c *Phase1Controller) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *core.NodeAppearance,
+	realm *core.FullRealm) (core.PhasePerNodePacketFunc, context.Context) {
 
 	return c.createPerNodePacketHandler(ctlIndex, node, realm, sharedNodeContext, c.handleJoinerPacket)
 }
