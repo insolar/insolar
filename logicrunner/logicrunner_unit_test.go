@@ -185,23 +185,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name: "Happy path",
+			name:                           "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "ClarifyPendingState failed",
+			name:                           "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name: "StartQueueProcessorIfNeeded failed",
+			name:                           "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "Both procedures fail",
+			name:                           "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -990,7 +990,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.re.ExecuteAndSaveMock.Return(nil, nil)
 	suite.re.SendReplyMock.Return()
 
-	num := 2
+	num := 100
 	wg := sync.WaitGroup{}
 	wg.Add(num)
 
@@ -1649,8 +1649,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, broker.mutable.Peek(maxQueueLength))
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
