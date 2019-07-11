@@ -29,13 +29,12 @@ import (
 )
 
 type Replicator struct {
-	Sequencer      sequence.Sequencer          `inject:""`
-	CryptoService  insolar.CryptographyService `inject:""`
-	ServiceNetwork insolar.Network             `inject:""`
-	Transport      Transport                   `inject:""`
-	config         configuration.Configuration
-	jetKeeper      JetKeeper
-	target         Target
+	Sequencer     sequence.Sequencer          `inject:""`
+	CryptoService insolar.CryptographyService `inject:""`
+	Transport     Transport                   `inject:""`
+	config        configuration.Configuration
+	jetKeeper     JetKeeper
+	target        Target
 }
 
 func NewReplicator(
