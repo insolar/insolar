@@ -48,43 +48,88 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package gcp_types
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestVerifySizes(t *testing.T) {
-	ns := &gcp_types.NeighbourhoodSizes{}
-	ns.NeighbourhoodSize = 1
-	require.Panics(t, ns.VerifySizes)
+func TestIsMaterial(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsMaterial())
 
-	ns.NeighbourhoodSize = 5
-	ns.NeighbourhoodTrustThreshold = 0
-	require.Panics(t, ns.VerifySizes)
+	require.False(t, PrimaryRoleNeutral.IsMaterial())
 
-	ns.NeighbourhoodTrustThreshold = math.MaxUint8 + 1
-	require.Panics(t, ns.VerifySizes)
+	require.True(t, PrimaryRoleHeavyMaterial.IsMaterial())
 
-	ns.NeighbourhoodTrustThreshold = 1
-	ns.JoinersPerNeighbourhood = 0
-	require.Panics(t, ns.VerifySizes)
+	require.True(t, PrimaryRoleLightMaterial.IsMaterial())
 
-	ns.JoinersPerNeighbourhood = 1
-	require.Panics(t, ns.VerifySizes)
+	require.False(t, PrimaryRoleVirtual.IsMaterial())
+}
 
-	ns.JoinersPerNeighbourhood = 2
-	ns.JoinersBoost = -1
-	require.Panics(t, ns.VerifySizes)
+func TestIsHeavyMaterial(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsHeavyMaterial())
 
-	ns.JoinersBoost = 0
-	ns.NeighbourhoodSize = 0
-	require.Panics(t, ns.VerifySizes)
+	require.False(t, PrimaryRoleNeutral.IsHeavyMaterial())
 
-	ns.NeighbourhoodSize = 5
-	require.NotPanics(t, ns.VerifySizes)
+	require.True(t, PrimaryRoleHeavyMaterial.IsHeavyMaterial())
+
+	require.False(t, PrimaryRoleLightMaterial.IsHeavyMaterial())
+
+	require.False(t, PrimaryRoleVirtual.IsHeavyMaterial())
+}
+
+func TestIsLightMaterial(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsLightMaterial())
+
+	require.False(t, PrimaryRoleNeutral.IsLightMaterial())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsLightMaterial())
+
+	require.True(t, PrimaryRoleLightMaterial.IsLightMaterial())
+
+	require.False(t, PrimaryRoleVirtual.IsLightMaterial())
+}
+
+func TestIsVirtual(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsVirtual())
+
+	require.False(t, PrimaryRoleNeutral.IsVirtual())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsVirtual())
+
+	require.False(t, PrimaryRoleLightMaterial.IsVirtual())
+
+	require.True(t, PrimaryRoleVirtual.IsVirtual())
+}
+
+func TestIsNeutral(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsNeutral())
+
+	require.True(t, PrimaryRoleNeutral.IsNeutral())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsNeutral())
+
+	require.False(t, PrimaryRoleLightMaterial.IsNeutral())
+
+	require.False(t, PrimaryRoleVirtual.IsNeutral())
+}
+
+func TestIsInactive(t *testing.T) {
+	require.True(t, PrimaryRoleInactive.IsInactive())
+
+	require.False(t, PrimaryRoleNeutral.IsInactive())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsInactive())
+
+	require.False(t, PrimaryRoleLightMaterial.IsInactive())
+
+	require.False(t, PrimaryRoleVirtual.IsInactive())
+}
+
+func TestIsDiscovery(t *testing.T) {
+	require.False(t, SpecialRoleNone.IsDiscovery())
+
+	require.True(t, SpecialRoleDiscovery.IsDiscovery())
 }

@@ -54,7 +54,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash -o . -s _mock.go
 
 type NodeStateHash interface {
 	cryptography_containers.DigestHolder
@@ -72,7 +72,7 @@ type CloudStateHash interface {
 	cryptography_containers.DigestHolder
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature -o . -s _mock.go
 
 type GlobulaStateSignature interface {
 	cryptography_containers.SignatureHolder

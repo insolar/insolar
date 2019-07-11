@@ -3,18 +3,18 @@ package endpoints
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "NodeEndpoint" can be found in github.com/insolar/insolar/network/consensus/common
+The original interface "NodeEndpoint" can be found in github.com/insolar/insolar/network/consensus/common/endpoints
 */
 import (
-	"github.com/insolar/insolar/insolar"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/network/consensusv1/packets"
+	insolar "github.com/insolar/insolar/insolar"
+	packets "github.com/insolar/insolar/network/consensusv1/packets"
 )
 
-//NodeEndpointMock implements github.com/insolar/insolar/network/consensus/common.NodeEndpoint
+//NodeEndpointMock implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint
 type NodeEndpointMock struct {
 	t minimock.Tester
 
@@ -39,7 +39,7 @@ type NodeEndpointMock struct {
 	GetRelayIDMock       mNodeEndpointMockGetRelayID
 }
 
-//NewNodeEndpointMock returns a mock for github.com/insolar/insolar/network/consensus/common.NodeEndpoint
+//NewNodeEndpointMock returns a mock for github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint
 func NewNodeEndpointMock(t minimock.Tester) *NodeEndpointMock {
 	m := &NodeEndpointMock{t: t}
 
@@ -117,7 +117,7 @@ func (m *mNodeEndpointMockGetEndpointType) Set(f func() (r NodeEndpointType)) *N
 	return m.mock
 }
 
-//GetEndpointType implements github.com/insolar/insolar/network/consensus/common.NodeEndpoint interface
+//GetEndpointType implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint interface
 func (m *NodeEndpointMock) GetEndpointType() (r NodeEndpointType) {
 	counter := atomic.AddUint64(&m.GetEndpointTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetEndpointTypeCounter, 1)
@@ -251,7 +251,7 @@ func (m *mNodeEndpointMockGetIPAddress) Set(f func() (r packets.NodeAddress)) *N
 	return m.mock
 }
 
-//GetIPAddress implements github.com/insolar/insolar/network/consensus/common.NodeEndpoint interface
+//GetIPAddress implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint interface
 func (m *NodeEndpointMock) GetIPAddress() (r packets.NodeAddress) {
 	counter := atomic.AddUint64(&m.GetIPAddressPreCounter, 1)
 	defer atomic.AddUint64(&m.GetIPAddressCounter, 1)
@@ -385,7 +385,7 @@ func (m *mNodeEndpointMockGetNameAddress) Set(f func() (r HostAddress)) *NodeEnd
 	return m.mock
 }
 
-//GetNameAddress implements github.com/insolar/insolar/network/consensus/common.NodeEndpoint interface
+//GetNameAddress implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint interface
 func (m *NodeEndpointMock) GetNameAddress() (r HostAddress) {
 	counter := atomic.AddUint64(&m.GetNameAddressPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNameAddressCounter, 1)
@@ -519,7 +519,7 @@ func (m *mNodeEndpointMockGetRelayID) Set(f func() (r insolar.ShortNodeID)) *Nod
 	return m.mock
 }
 
-//GetRelayID implements github.com/insolar/insolar/network/consensus/common.NodeEndpoint interface
+//GetRelayID implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint interface
 func (m *NodeEndpointMock) GetRelayID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetRelayIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRelayIDCounter, 1)

@@ -1,21 +1,22 @@
-package common
+package gcp_types
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "HostProfile" can be found in github.com/insolar/insolar/network/consensus/gcpv2/common
+The original interface "HostProfile" can be found in github.com/insolar/insolar/network/consensus/gcpv2/gcp_types
 */
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
+	cryptography_containers "github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	endpoints "github.com/insolar/insolar/network/consensus/common/endpoints"
+
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//HostProfileMock implements github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile
+//HostProfileMock implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.HostProfile
 type HostProfileMock struct {
 	t minimock.Tester
 
@@ -35,7 +36,7 @@ type HostProfileMock struct {
 	IsAcceptableHostMock       mHostProfileMockIsAcceptableHost
 }
 
-//NewHostProfileMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile
+//NewHostProfileMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.HostProfile
 func NewHostProfileMock(t minimock.Tester) *HostProfileMock {
 	m := &HostProfileMock{t: t}
 
@@ -112,7 +113,7 @@ func (m *mHostProfileMockGetDefaultEndpoint) Set(f func() (r endpoints.NodeEndpo
 	return m.mock
 }
 
-//GetDefaultEndpoint implements github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile interface
+//GetDefaultEndpoint implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.HostProfile interface
 func (m *HostProfileMock) GetDefaultEndpoint() (r endpoints.NodeEndpoint) {
 	counter := atomic.AddUint64(&m.GetDefaultEndpointPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDefaultEndpointCounter, 1)
@@ -246,7 +247,7 @@ func (m *mHostProfileMockGetNodePublicKeyStore) Set(f func() (r cryptography_con
 	return m.mock
 }
 
-//GetNodePublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile interface
+//GetNodePublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.HostProfile interface
 func (m *HostProfileMock) GetNodePublicKeyStore() (r cryptography_containers.PublicKeyStore) {
 	counter := atomic.AddUint64(&m.GetNodePublicKeyStorePreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodePublicKeyStoreCounter, 1)
@@ -385,7 +386,7 @@ func (m *mHostProfileMockIsAcceptableHost) Set(f func(p endpoints.HostIdentityHo
 	return m.mock
 }
 
-//IsAcceptableHost implements github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile interface
+//IsAcceptableHost implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.HostProfile interface
 func (m *HostProfileMock) IsAcceptableHost(p endpoints.HostIdentityHolder) (r bool) {
 	counter := atomic.AddUint64(&m.IsAcceptableHostPreCounter, 1)
 	defer atomic.AddUint64(&m.IsAcceptableHostCounter, 1)

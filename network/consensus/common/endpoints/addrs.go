@@ -57,9 +57,6 @@ import (
 	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.NodeEndpoint -o . -s _mock.go
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.HostIdentityHolder -o . -s _mock.go
-
 type HostAddress string
 
 func (addr *HostAddress) IsLocalHost() bool {
@@ -77,6 +74,8 @@ func (addr *HostAddress) EqualsToString(o string) bool {
 func (addr HostAddress) String() string {
 	return string(addr)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint -o . -s _mock.go
 
 type NodeEndpoint interface {
 	GetEndpointType() NodeEndpointType
@@ -114,6 +113,8 @@ const (
 	NameEndpoint
 	RelayEndpoint
 )
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/endpoints.HostIdentityHolder -o . -s _mock.go
 
 type HostIdentityHolder interface {
 	GetHostAddress() HostAddress

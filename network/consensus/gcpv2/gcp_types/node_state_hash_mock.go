@@ -3,19 +3,20 @@ package gcp_types
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "NodeStateHash" can be found in github.com/insolar/insolar/network/consensus/gcpv2/common
+The original interface "NodeStateHash" can be found in github.com/insolar/insolar/network/consensus/gcpv2/gcp_types
 */
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"io"
+	io "io"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
+	cryptography_containers "github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//NodeStateHashMock implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash
+//NodeStateHashMock implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash
 type NodeStateHashMock struct {
 	t minimock.Tester
 
@@ -70,7 +71,7 @@ type NodeStateHashMock struct {
 	WriteToMock       mNodeStateHashMockWriteTo
 }
 
-//NewNodeStateHashMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash
+//NewNodeStateHashMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash
 func NewNodeStateHashMock(t minimock.Tester) *NodeStateHashMock {
 	m := &NodeStateHashMock{t: t}
 
@@ -154,7 +155,7 @@ func (m *mNodeStateHashMockAsByteString) Set(f func() (r string)) *NodeStateHash
 	return m.mock
 }
 
-//AsByteString implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//AsByteString implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) AsByteString() (r string) {
 	counter := atomic.AddUint64(&m.AsByteStringPreCounter, 1)
 	defer atomic.AddUint64(&m.AsByteStringCounter, 1)
@@ -288,7 +289,7 @@ func (m *mNodeStateHashMockAsBytes) Set(f func() (r []byte)) *NodeStateHashMock 
 	return m.mock
 }
 
-//AsBytes implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//AsBytes implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) AsBytes() (r []byte) {
 	counter := atomic.AddUint64(&m.AsBytesPreCounter, 1)
 	defer atomic.AddUint64(&m.AsBytesCounter, 1)
@@ -422,7 +423,7 @@ func (m *mNodeStateHashMockCopyOfDigest) Set(f func() (r cryptography_containers
 	return m.mock
 }
 
-//CopyOfDigest implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//CopyOfDigest implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) CopyOfDigest() (r cryptography_containers.Digest) {
 	counter := atomic.AddUint64(&m.CopyOfDigestPreCounter, 1)
 	defer atomic.AddUint64(&m.CopyOfDigestCounter, 1)
@@ -561,7 +562,7 @@ func (m *mNodeStateHashMockEquals) Set(f func(p cryptography_containers.DigestHo
 	return m.mock
 }
 
-//Equals implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//Equals implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) Equals(p cryptography_containers.DigestHolder) (r bool) {
 	counter := atomic.AddUint64(&m.EqualsPreCounter, 1)
 	defer atomic.AddUint64(&m.EqualsCounter, 1)
@@ -703,7 +704,7 @@ func (m *mNodeStateHashMockFixedByteSize) Set(f func() (r int)) *NodeStateHashMo
 	return m.mock
 }
 
-//FixedByteSize implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//FixedByteSize implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) FixedByteSize() (r int) {
 	counter := atomic.AddUint64(&m.FixedByteSizePreCounter, 1)
 	defer atomic.AddUint64(&m.FixedByteSizeCounter, 1)
@@ -837,7 +838,7 @@ func (m *mNodeStateHashMockFoldToUint64) Set(f func() (r uint64)) *NodeStateHash
 	return m.mock
 }
 
-//FoldToUint64 implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//FoldToUint64 implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) FoldToUint64() (r uint64) {
 	counter := atomic.AddUint64(&m.FoldToUint64PreCounter, 1)
 	defer atomic.AddUint64(&m.FoldToUint64Counter, 1)
@@ -971,7 +972,7 @@ func (m *mNodeStateHashMockGetDigestMethod) Set(f func() (r cryptography_contain
 	return m.mock
 }
 
-//GetDigestMethod implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//GetDigestMethod implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) GetDigestMethod() (r cryptography_containers.DigestMethod) {
 	counter := atomic.AddUint64(&m.GetDigestMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDigestMethodCounter, 1)
@@ -1111,7 +1112,7 @@ func (m *mNodeStateHashMockRead) Set(f func(p []byte) (r int, r1 error)) *NodeSt
 	return m.mock
 }
 
-//Read implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//Read implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) Read(p []byte) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.ReadPreCounter, 1)
 	defer atomic.AddUint64(&m.ReadCounter, 1)
@@ -1260,7 +1261,7 @@ func (m *mNodeStateHashMockSignWith) Set(f func(p cryptography_containers.Digest
 	return m.mock
 }
 
-//SignWith implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//SignWith implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) SignWith(p cryptography_containers.DigestSigner) (r cryptography_containers.SignedDigest) {
 	counter := atomic.AddUint64(&m.SignWithPreCounter, 1)
 	defer atomic.AddUint64(&m.SignWithCounter, 1)
@@ -1408,7 +1409,7 @@ func (m *mNodeStateHashMockWriteTo) Set(f func(p io.Writer) (r int64, r1 error))
 	return m.mock
 }
 
-//WriteTo implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash interface
+//WriteTo implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeStateHash interface
 func (m *NodeStateHashMock) WriteTo(p io.Writer) (r int64, r1 error) {
 	counter := atomic.AddUint64(&m.WriteToPreCounter, 1)
 	defer atomic.AddUint64(&m.WriteToCounter, 1)

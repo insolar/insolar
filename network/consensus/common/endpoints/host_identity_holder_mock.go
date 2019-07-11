@@ -3,17 +3,17 @@ package endpoints
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "HostIdentityHolder" can be found in github.com/insolar/insolar/network/consensus/common
+The original interface "HostIdentityHolder" can be found in github.com/insolar/insolar/network/consensus/common/endpoints
 */
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
+	cryptography_containers "github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 )
 
-//HostIdentityHolderMock implements github.com/insolar/insolar/network/consensus/common.HostIdentityHolder
+//HostIdentityHolderMock implements github.com/insolar/insolar/network/consensus/common/endpoints.HostIdentityHolder
 type HostIdentityHolderMock struct {
 	t minimock.Tester
 
@@ -33,7 +33,7 @@ type HostIdentityHolderMock struct {
 	GetTransportKeyMock       mHostIdentityHolderMockGetTransportKey
 }
 
-//NewHostIdentityHolderMock returns a mock for github.com/insolar/insolar/network/consensus/common.HostIdentityHolder
+//NewHostIdentityHolderMock returns a mock for github.com/insolar/insolar/network/consensus/common/endpoints.HostIdentityHolder
 func NewHostIdentityHolderMock(t minimock.Tester) *HostIdentityHolderMock {
 	m := &HostIdentityHolderMock{t: t}
 
@@ -110,7 +110,7 @@ func (m *mHostIdentityHolderMockGetHostAddress) Set(f func() (r HostAddress)) *H
 	return m.mock
 }
 
-//GetHostAddress implements github.com/insolar/insolar/network/consensus/common.HostIdentityHolder interface
+//GetHostAddress implements github.com/insolar/insolar/network/consensus/common/endpoints.HostIdentityHolder interface
 func (m *HostIdentityHolderMock) GetHostAddress() (r HostAddress) {
 	counter := atomic.AddUint64(&m.GetHostAddressPreCounter, 1)
 	defer atomic.AddUint64(&m.GetHostAddressCounter, 1)
@@ -244,7 +244,7 @@ func (m *mHostIdentityHolderMockGetTransportCert) Set(f func() (r cryptography_c
 	return m.mock
 }
 
-//GetTransportCert implements github.com/insolar/insolar/network/consensus/common.HostIdentityHolder interface
+//GetTransportCert implements github.com/insolar/insolar/network/consensus/common/endpoints.HostIdentityHolder interface
 func (m *HostIdentityHolderMock) GetTransportCert() (r cryptography_containers.CertificateHolder) {
 	counter := atomic.AddUint64(&m.GetTransportCertPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransportCertCounter, 1)
@@ -378,7 +378,7 @@ func (m *mHostIdentityHolderMockGetTransportKey) Set(f func() (r cryptography_co
 	return m.mock
 }
 
-//GetTransportKey implements github.com/insolar/insolar/network/consensus/common.HostIdentityHolder interface
+//GetTransportKey implements github.com/insolar/insolar/network/consensus/common/endpoints.HostIdentityHolder interface
 func (m *HostIdentityHolderMock) GetTransportKey() (r cryptography_containers.SignatureKeyHolder) {
 	counter := atomic.AddUint64(&m.GetTransportKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransportKeyCounter, 1)

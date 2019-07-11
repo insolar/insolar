@@ -6,15 +6,15 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "FullIntroductionReader" can be found in github.com/insolar/insolar/network/consensus/gcpv2/packets
 */
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"sync/atomic"
-	"time"
+	time "time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
+	cryptography_containers "github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	endpoints "github.com/insolar/insolar/network/consensus/common/endpoints"
+	pulse_data "github.com/insolar/insolar/network/consensus/common/pulse_data"
+	gcp_types "github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
 //FullIntroductionReaderMock implements github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader

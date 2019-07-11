@@ -1,21 +1,22 @@
-package common
+package gcp_types
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "MemberAnnouncementSignature" can be found in github.com/insolar/insolar/network/consensus/gcpv2/common
+The original interface "MemberAnnouncementSignature" can be found in github.com/insolar/insolar/network/consensus/gcpv2/gcp_types
 */
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"io"
+	io "io"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
+	cryptography_containers "github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//MemberAnnouncementSignatureMock implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature
+//MemberAnnouncementSignatureMock implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature
 type MemberAnnouncementSignatureMock struct {
 	t minimock.Tester
 
@@ -65,7 +66,7 @@ type MemberAnnouncementSignatureMock struct {
 	WriteToMock       mMemberAnnouncementSignatureMockWriteTo
 }
 
-//NewMemberAnnouncementSignatureMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature
+//NewMemberAnnouncementSignatureMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature
 func NewMemberAnnouncementSignatureMock(t minimock.Tester) *MemberAnnouncementSignatureMock {
 	m := &MemberAnnouncementSignatureMock{t: t}
 
@@ -148,7 +149,7 @@ func (m *mMemberAnnouncementSignatureMockAsByteString) Set(f func() (r string)) 
 	return m.mock
 }
 
-//AsByteString implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
+//AsByteString implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature interface
 func (m *MemberAnnouncementSignatureMock) AsByteString() (r string) {
 	counter := atomic.AddUint64(&m.AsByteStringPreCounter, 1)
 	defer atomic.AddUint64(&m.AsByteStringCounter, 1)
@@ -282,7 +283,7 @@ func (m *mMemberAnnouncementSignatureMockAsBytes) Set(f func() (r []byte)) *Memb
 	return m.mock
 }
 
-//AsBytes implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
+//AsBytes implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature interface
 func (m *MemberAnnouncementSignatureMock) AsBytes() (r []byte) {
 	counter := atomic.AddUint64(&m.AsBytesPreCounter, 1)
 	defer atomic.AddUint64(&m.AsBytesCounter, 1)
@@ -416,7 +417,7 @@ func (m *mMemberAnnouncementSignatureMockCopyOfSignature) Set(f func() (r crypto
 	return m.mock
 }
 
-//CopyOfSignature implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
+//CopyOfSignature implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature interface
 func (m *MemberAnnouncementSignatureMock) CopyOfSignature() (r cryptography_containers.Signature) {
 	counter := atomic.AddUint64(&m.CopyOfSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.CopyOfSignatureCounter, 1)
@@ -555,7 +556,7 @@ func (m *mMemberAnnouncementSignatureMockEquals) Set(f func(p cryptography_conta
 	return m.mock
 }
 
-//Equals implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
+//Equals implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature interface
 func (m *MemberAnnouncementSignatureMock) Equals(p cryptography_containers.SignatureHolder) (r bool) {
 	counter := atomic.AddUint64(&m.EqualsPreCounter, 1)
 	defer atomic.AddUint64(&m.EqualsCounter, 1)
@@ -697,7 +698,7 @@ func (m *mMemberAnnouncementSignatureMockFixedByteSize) Set(f func() (r int)) *M
 	return m.mock
 }
 
-//FixedByteSize implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
+//FixedByteSize implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature interface
 func (m *MemberAnnouncementSignatureMock) FixedByteSize() (r int) {
 	counter := atomic.AddUint64(&m.FixedByteSizePreCounter, 1)
 	defer atomic.AddUint64(&m.FixedByteSizeCounter, 1)
@@ -831,7 +832,7 @@ func (m *mMemberAnnouncementSignatureMockFoldToUint64) Set(f func() (r uint64)) 
 	return m.mock
 }
 
-//FoldToUint64 implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
+//FoldToUint64 implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature interface
 func (m *MemberAnnouncementSignatureMock) FoldToUint64() (r uint64) {
 	counter := atomic.AddUint64(&m.FoldToUint64PreCounter, 1)
 	defer atomic.AddUint64(&m.FoldToUint64Counter, 1)
@@ -965,7 +966,7 @@ func (m *mMemberAnnouncementSignatureMockGetSignatureMethod) Set(f func() (r cry
 	return m.mock
 }
 
-//GetSignatureMethod implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
+//GetSignatureMethod implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature interface
 func (m *MemberAnnouncementSignatureMock) GetSignatureMethod() (r cryptography_containers.SignatureMethod) {
 	counter := atomic.AddUint64(&m.GetSignatureMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignatureMethodCounter, 1)
@@ -1105,7 +1106,7 @@ func (m *mMemberAnnouncementSignatureMockRead) Set(f func(p []byte) (r int, r1 e
 	return m.mock
 }
 
-//Read implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
+//Read implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature interface
 func (m *MemberAnnouncementSignatureMock) Read(p []byte) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.ReadPreCounter, 1)
 	defer atomic.AddUint64(&m.ReadCounter, 1)
@@ -1255,7 +1256,7 @@ func (m *mMemberAnnouncementSignatureMockWriteTo) Set(f func(p io.Writer) (r int
 	return m.mock
 }
 
-//WriteTo implements github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature interface
+//WriteTo implements github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.MemberAnnouncementSignature interface
 func (m *MemberAnnouncementSignatureMock) WriteTo(p io.Writer) (r int64, r1 error) {
 	counter := atomic.AddUint64(&m.WriteToPreCounter, 1)
 	defer atomic.AddUint64(&m.WriteToCounter, 1)

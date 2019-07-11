@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,121 +46,62 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
-package long_bits
+package packets
 
 import (
-	"bytes"
-	"io"
+	"testing"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/stretchr/testify/require"
 )
 
-type Foldable interface {
-	FoldToUint64() uint64
+func TestGetPower(t *testing.T) {
+	require.Equal(t, MembershipRank(1).GetPower(), gcp_types.MemberPower(1))
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/long_bits.FoldableReader -o . -s _mock.go
+func TestGetIndex(t *testing.T) {
+	require.Equal(t, uint16(0), MembershipRank((1<<8)-1).GetIndex())
 
-type FixedReader interface {
-	io.WriterTo
-	io.Reader
-	AsBytes() []byte
-	AsByteString() string
-
-	FixedByteSize() int
+	require.Equal(t, uint16(1), MembershipRank(1<<8).GetIndex())
 }
 
-type FoldableReader interface {
-	FixedReader
-	Foldable
+func TestGetTotalCount(t *testing.T) {
+	require.Equal(t, uint16(0), MembershipRank((1<<18)-1).GetTotalCount())
+
+	require.Equal(t, uint16(1), MembershipRank(1<<18).GetTotalCount())
 }
 
-func FoldUint64(v uint64) uint32 {
-	return uint32(v) ^ uint32(v>>32)
+func TestIsJoiner(t *testing.T) {
+	require.False(t, MembershipRank(1).IsJoiner())
+
+	require.True(t, JoinerMembershipRank.IsJoiner())
 }
 
-// TODO ?NeedFix - current implementation can only work for limited cases
-func EqualFixedLenWriterTo(t, o FixedReader) bool {
-	if t == nil || o == nil {
-		return false
-	}
-	return (&writerToComparer{}).compare(t, o)
+func TestString(t *testing.T) {
+	joiner := "{joiner}"
+
+	require.Equal(t, JoinerMembershipRank.String(), joiner)
+	require.NotEqual(t, MembershipRank(1).String(), joiner)
+	require.Equal(t, joiner, JoinerMembershipRank.String())
+	require.NotEqual(t, joiner, MembershipRank(1).String())
 }
 
-type writerToComparer struct {
-	thisValue *[]byte
-	other     io.WriterTo
-	result    bool
+func TestNewMembershipRank(t *testing.T) {
+	require.Panics(t, func() { NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 1, 1) })
+
+	require.Panics(t, func() { NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 0x03FF+1, 1) })
+
+	require.Panics(t, func() { NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 1, 0x03FF+1) })
+
+	require.Panics(t, func() { NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 1, 0x03FF+1) })
+
+	require.Equal(t, MembershipRank(0x80101), NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 1, 2))
 }
 
-func (c *writerToComparer) compare(this, other FixedReader) bool {
-	c.thisValue = nil
-	if this == nil || other == nil || this.FixedByteSize() != other.FixedByteSize() {
-		return false
-	}
-	c.other = other
-	_, _ = this.WriteTo(c)
-	return c.other == nil && c.result
-}
+func TestEnsureNodeIndex(t *testing.T) {
+	require.Panics(t, func() { ensureNodeIndex(0x03FF + 1) })
 
-func (c *writerToComparer) Write(otherValue []byte) (int, error) {
-	if c.other == nil {
-		panic("content of FixedReader must be read/written all at once")
-	}
-	if c.thisValue == nil {
-		c.thisValue = &otherValue // result of &var is never nil
-		_, err := c.other.WriteTo(c)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		c.other = nil // mark "done"
-		c.result = bytes.Equal(*c.thisValue, otherValue)
-	}
-	return len(otherValue), nil
-}
-
-type fixedSize struct {
-	data []byte
-}
-
-func (c *fixedSize) AsByteString() string {
-	return string(c.data)
-}
-
-func (c *fixedSize) WriteTo(w io.Writer) (n int64, err error) {
-	return io.Copy(w, c)
-}
-
-func (c *fixedSize) Read(p []byte) (n int, err error) {
-	return copy(p, c.data), nil
-}
-
-func (c *fixedSize) FoldToUint64() uint64 {
-	return FoldToUint64(c.data)
-}
-
-func (c *fixedSize) FixedByteSize() int {
-	return len(c.data)
-}
-
-func (c *fixedSize) AsBytes() []byte {
-	return c.data
-}
-
-func NewFixedReader(data []byte) FixedReader {
-	return &fixedSize{data: data}
-}
-
-func CopyFixedSize(v FoldableReader) FoldableReader {
-	r := fixedSize{}
-	r.data = make([]byte, v.FixedByteSize())
-	n, err := v.Read(r.data)
-	if err != nil {
-		panic(err)
-	}
-	if n != len(r.data) {
-		panic("unexpected")
-	}
-	return &r
+	require.Equal(t, uint32(2), ensureNodeIndex(2))
 }

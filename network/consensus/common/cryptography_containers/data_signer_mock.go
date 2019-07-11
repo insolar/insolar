@@ -3,7 +3,7 @@ package cryptography_containers
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DataSigner" can be found in github.com/insolar/insolar/network/consensus/common
+The original interface "DataSigner" can be found in github.com/insolar/insolar/network/consensus/common/cryptography_containers
 */
 import (
 	io "io"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DataSignerMock implements github.com/insolar/insolar/network/consensus/common.DataSigner
+//DataSignerMock implements github.com/insolar/insolar/network/consensus/common/cryptography_containers.DataSigner
 type DataSignerMock struct {
 	t minimock.Tester
 
@@ -50,7 +50,7 @@ type DataSignerMock struct {
 	SignDigestMock       mDataSignerMockSignDigest
 }
 
-//NewDataSignerMock returns a mock for github.com/insolar/insolar/network/consensus/common.DataSigner
+//NewDataSignerMock returns a mock for github.com/insolar/insolar/network/consensus/common/cryptography_containers.DataSigner
 func NewDataSignerMock(t minimock.Tester) *DataSignerMock {
 	m := &DataSignerMock{t: t}
 
@@ -130,7 +130,7 @@ func (m *mDataSignerMockGetDigestMethod) Set(f func() (r DigestMethod)) *DataSig
 	return m.mock
 }
 
-//GetDigestMethod implements github.com/insolar/insolar/network/consensus/common.DataSigner interface
+//GetDigestMethod implements github.com/insolar/insolar/network/consensus/common/cryptography_containers.DataSigner interface
 func (m *DataSignerMock) GetDigestMethod() (r DigestMethod) {
 	counter := atomic.AddUint64(&m.GetDigestMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDigestMethodCounter, 1)
@@ -269,7 +269,7 @@ func (m *mDataSignerMockGetDigestOf) Set(f func(p io.Reader) (r Digest)) *DataSi
 	return m.mock
 }
 
-//GetDigestOf implements github.com/insolar/insolar/network/consensus/common.DataSigner interface
+//GetDigestOf implements github.com/insolar/insolar/network/consensus/common/cryptography_containers.DataSigner interface
 func (m *DataSignerMock) GetDigestOf(p io.Reader) (r Digest) {
 	counter := atomic.AddUint64(&m.GetDigestOfPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDigestOfCounter, 1)
@@ -411,7 +411,7 @@ func (m *mDataSignerMockGetSignMethod) Set(f func() (r SignMethod)) *DataSignerM
 	return m.mock
 }
 
-//GetSignMethod implements github.com/insolar/insolar/network/consensus/common.DataSigner interface
+//GetSignMethod implements github.com/insolar/insolar/network/consensus/common/cryptography_containers.DataSigner interface
 func (m *DataSignerMock) GetSignMethod() (r SignMethod) {
 	counter := atomic.AddUint64(&m.GetSignMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignMethodCounter, 1)
@@ -550,7 +550,7 @@ func (m *mDataSignerMockGetSignOfData) Set(f func(p io.Reader) (r SignedDigest))
 	return m.mock
 }
 
-//GetSignOfData implements github.com/insolar/insolar/network/consensus/common.DataSigner interface
+//GetSignOfData implements github.com/insolar/insolar/network/consensus/common/cryptography_containers.DataSigner interface
 func (m *DataSignerMock) GetSignOfData(p io.Reader) (r SignedDigest) {
 	counter := atomic.AddUint64(&m.GetSignOfDataPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignOfDataCounter, 1)
@@ -692,7 +692,7 @@ func (m *mDataSignerMockGetSignatureMethod) Set(f func() (r SignatureMethod)) *D
 	return m.mock
 }
 
-//GetSignatureMethod implements github.com/insolar/insolar/network/consensus/common.DataSigner interface
+//GetSignatureMethod implements github.com/insolar/insolar/network/consensus/common/cryptography_containers.DataSigner interface
 func (m *DataSignerMock) GetSignatureMethod() (r SignatureMethod) {
 	counter := atomic.AddUint64(&m.GetSignatureMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignatureMethodCounter, 1)
@@ -831,7 +831,7 @@ func (m *mDataSignerMockSignDigest) Set(f func(p Digest) (r Signature)) *DataSig
 	return m.mock
 }
 
-//SignDigest implements github.com/insolar/insolar/network/consensus/common.DataSigner interface
+//SignDigest implements github.com/insolar/insolar/network/consensus/common/cryptography_containers.DataSigner interface
 func (m *DataSignerMock) SignDigest(p Digest) (r Signature) {
 	counter := atomic.AddUint64(&m.SignDigestPreCounter, 1)
 	defer atomic.AddUint64(&m.SignDigestCounter, 1)

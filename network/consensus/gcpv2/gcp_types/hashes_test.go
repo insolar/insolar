@@ -49,39 +49,30 @@
 
 package gcp_types
 
-//func TestNewChasingTimer(t *testing.T) {
-//	chasingDelay := time.Second
-//	ct := NewChasingTimer(chasingDelay)
-//	require.Equal(t, chasingDelay, ct.chasingDelay)
-//}
-//
-//func TestIsEnabled(t *testing.T) {
-//	ct := NewChasingTimer(time.Second)
-//	require.True(t, ct.IsEnabled())
-//
-//	ct = NewChasingTimer(0)
-//	require.False(t, ct.IsEnabled())
-//
-//	ct = NewChasingTimer(-time.Second)
-//	require.False(t, ct.IsEnabled())
-//}
+import (
+	"testing"
 
-//func TestNewNodeStateHashEvidence(t *testing.T) {
-//	sd := cryptography_containers.NewSignedDigest(cryptography_containers.Digest{}, cryptography_containers.Signature{})
-//	sh := NewNodeStateHashEvidence(sd)
-//	require.Equal(t, SignedDigest, sd)
-//}
-//
-//func TestGetNodeStateHash(t *testing.T) {
-//	fr := long_bits.NewFoldableReaderMock(t)
-//	sd := cryptography_containers.NewSignedDigest(cryptography_containers.NewDigest(fr, cryptography_containers.DigestMethod("testDigest")), cryptography_containers.NewSignature(fr, cryptography_containers.SignatureMethod("testSignature")))
-//	sh := NewNodeStateHashEvidence(sd)
-//	require.Equal(t, sh.GetNodeStateHash().GetDigestMethod(), sd.GetDigest().AsDigestHolder().GetDigestMethod())
-//}
-//
-//func TestGetGlobulaNodeStateSignature(t *testing.T) {
-//	fr := long_bits.NewFoldableReaderMock(t)
-//	sd := cryptography_containers.NewSignedDigest(cryptography_containers.NewDigest(fr, cryptography_containers.DigestMethod("testDigest")), cryptography_containers.NewSignature(fr, cryptography_containers.SignatureMethod("testSignature")))
-//	sh := NewNodeStateHashEvidence(sd)
-//	require.Equal(t, sh.GetGlobulaNodeStateSignature().GetSignatureMethod(), sd.GetSignature().AsSignatureHolder().GetSignatureMethod())
-//}
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/stretchr/testify/require"
+)
+
+func TestNewNodeStateHashEvidence(t *testing.T) {
+	sd := cryptography_containers.NewSignedDigest(cryptography_containers.Digest{}, cryptography_containers.Signature{})
+	sh := NewNodeStateHashEvidence(sd)
+	require.Equal(t, sd, sh.(*nodeStateHashEvidence).SignedDigest)
+}
+
+func TestGetNodeStateHash(t *testing.T) {
+	fr := long_bits.NewFoldableReaderMock(t)
+	sd := cryptography_containers.NewSignedDigest(cryptography_containers.NewDigest(fr, cryptography_containers.DigestMethod("testDigest")), cryptography_containers.NewSignature(fr, cryptography_containers.SignatureMethod("testSignature")))
+	sh := NewNodeStateHashEvidence(sd)
+	require.Equal(t, sh.GetNodeStateHash().GetDigestMethod(), sd.GetDigest().AsDigestHolder().GetDigestMethod())
+}
+
+func TestGetGlobulaNodeStateSignature(t *testing.T) {
+	fr := long_bits.NewFoldableReaderMock(t)
+	sd := cryptography_containers.NewSignedDigest(cryptography_containers.NewDigest(fr, cryptography_containers.DigestMethod("testDigest")), cryptography_containers.NewSignature(fr, cryptography_containers.SignatureMethod("testSignature")))
+	sh := NewNodeStateHashEvidence(sd)
+	require.Equal(t, sh.GetGlobulaNodeStateSignature().GetSignatureMethod(), sd.GetSignature().AsSignatureHolder().GetSignatureMethod())
+}
