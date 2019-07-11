@@ -1659,3 +1659,40 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	ledgerRequest := broker.HasLedgerRequest(s.ctx)
 	s.Require().NotNil(ledgerRequest)
 }
+
+func (suite *LogicRunnerTestSuite) TestInitializeExecutionState() {
+	suite.T().Run("InitializeExecutionState copy queue properly", func(t *testing.T) {
+		pulseObj := insolar.Pulse{}
+		pulseObj.PulseNumber = insolar.FirstPulseNumber
+
+		object := testutils.RandomRef()
+		defer delete(*suite.lr.StateStorage.StateMap(), object)
+
+		firstRef := testutils.RandomRef()
+		firstElement := message.ExecutionQueueElement{RequestRef: firstRef, Request: record.IncomingRequest{Immutable: false}}
+
+		secondRef := testutils.RandomRef()
+		secondElement := message.ExecutionQueueElement{RequestRef: secondRef, Request: record.IncomingRequest{Immutable: false}}
+
+		msg := &message.ExecutorResults{
+			Caller:    testutils.RandomRef(),
+			RecordRef: object,
+			Queue:     []message.ExecutionQueueElement{firstElement, secondElement},
+		}
+
+		proc := initializeExecutionState{
+			LR:  suite.lr,
+			msg: msg,
+		}
+		err := proc.Proceed(suite.ctx)
+		require.NoError(t, err)
+
+		fmt.Println(proc.Result.broker.mutable)
+
+		require.Equal(t, &secondRef, proc.Result.broker.mutable.first.value.RequestRef)
+		require.Equal(t, &firstRef, proc.Result.broker.mutable.last.value.RequestRef)
+
+
+	})
+
+}

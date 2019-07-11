@@ -334,7 +334,7 @@ func (r *One) Hello() error {
 		return err
 	}
 
-	err = friend.HelloNoWait()
+	err = friend.MultiplyNoWait()
 	if err != nil {
 		return err
 	}
@@ -348,7 +348,7 @@ func (r *One) Value() (int, error) {
 		return 0, err
 	}
 
-	return friend.Value()
+	return friend.GetValue()
 }
 `
 
@@ -370,12 +370,12 @@ func New() (*Two, error) {
 	return &Two{X:322}, nil
 }
 
-func (r *Two) Hello() (string, error) {
+func (r *Two) Multiply() (string, error) {
 	r.X *= 2
 	return fmt.Sprintf("Hello %d times!", r.X), nil
 }
 
-func (r *Two) Value() (int, error) {
+func (r *Two) GetValue() (int, error) {
 	return r.X, nil
 }
 `
@@ -386,14 +386,15 @@ func (r *Two) Value() (int, error) {
 	require.Empty(t, resp.Error)
 
 	testPassed := false
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 25; i++ {
 		resp = callMethod(t, obj, "Value")
 		require.Empty(t, resp.Error)
+		fmt.Println(">>>> resp.ExtractedReply: ", resp.ExtractedReply)
 		if float64(644) == resp.ExtractedReply {
 			testPassed = true
 			break
 		}
-		time.Sleep(25 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 	}
 
 	require.Equal(t, true, testPassed)
