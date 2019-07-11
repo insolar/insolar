@@ -163,11 +163,7 @@ func (b *BadgerDB) Get(key Key) (value []byte, err error) {
 			return err
 		}
 		value, err = item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return err
 	})
 
 	if err != nil {
@@ -185,17 +181,20 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
 	err := b.backend.Update(func(txn *badger.Txn) error {
-		err := txn.Set(fullKey, value)
-		if err != nil {
-			return err
-		}
-		return nil
+		return txn.Set(fullKey, value)
 	})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
+}
+
+// Delete deletes value for a key.
+func (b *BadgerDB) Delete(key Key) error {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	err := b.backend.Update(func(txn *badger.Txn) error {
+		return txn.Delete(fullKey)
+	})
+
+	return err
 }
 
 // NewIterator returns new Iterator over the store.
