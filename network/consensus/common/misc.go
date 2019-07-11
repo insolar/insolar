@@ -255,6 +255,10 @@ func (c *fixedSize) AsBytes() []byte {
 	return c.data
 }
 
+func NewFixedReader(data []byte) FixedReader {
+	return &fixedSize{data: data}
+}
+
 func CopyFixedSize(v FoldableReader) FoldableReader {
 	r := fixedSize{}
 	r.data = make([]byte, v.FixedByteSize())
