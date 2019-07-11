@@ -102,34 +102,38 @@ type PhasePacketReader interface {
 type Phase0PacketReader interface {
 	PhasePacketReader
 
-	GetNodeRank() MembershipRank
+	GetNodeRank() gcp_types.MembershipRank
 	GetEmbeddedPulsePacket() PulsePacketReader
+}
+
+type ExtendedIntroReader interface {
+	HasFullIntro() bool
+	GetFullIntroduction() FullIntroductionReader
+
+	HasCloudIntro() bool
+	GetCloudIntroduction() CloudIntroductionReader
+
+	HasJoinerSecret() bool
+	GetJoinerSecret() cryptography_containers.SignatureHolder
 }
 
 type Phase1PacketReader interface {
 	PhasePacketReader
+	ExtendedIntroReader
 
 	HasPulseData() bool /* PulseData/PulsarData is optional for Phase1 */
 	GetEmbeddedPulsePacket() PulsePacketReader
 
-	//HasSelfIntro() bool
-	GetCloudIntroduction() CloudIntroductionReader
-	GetFullIntroduction() FullIntroductionReader
-
 	GetAnnouncementReader() MembershipAnnouncementReader
-	//GetNodeBriefIntro()
-	//GetNodeFullIntro()
-	//GetCloudIntro()
 }
 
 type Phase2PacketReader interface {
 	PhasePacketReader
+	ExtendedIntroReader
 
 	GetBriefIntroduction() BriefIntroductionReader
 	GetAnnouncementReader() MembershipAnnouncementReader
 	GetNeighbourhood() []MembershipAnnouncementReader
-
-	//GetNodeBriefIntro()
 }
 
 type Phase3PacketReader interface {
@@ -140,15 +144,17 @@ type Phase3PacketReader interface {
 	//GetTrustedExpectedRank() common2.MembershipRank
 	GetTrustedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash
 	GetTrustedGlobulaStateSignature() gcp_types.GlobulaStateSignature
+	GetTrustedExpectedRank() gcp_types.MembershipRank
 
 	//GetDoubtedExpectedRank() common2.MembershipRank
 	GetDoubtedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash
 	GetDoubtedGlobulaStateSignature() gcp_types.GlobulaStateSignature
+	GetDoubtedExpectedRank() gcp_types.MembershipRank
 }
 
 type MembershipAnnouncementReader interface {
 	GetNodeID() insolar.ShortNodeID
-	GetNodeRank() MembershipRank
+	GetNodeRank() gcp_types.MembershipRank
 	GetRequestedPower() gcp_types.MemberPower
 	GetNodeStateHashEvidence() gcp_types.NodeStateHashEvidence
 	GetAnnouncementSignature() gcp_types.MemberAnnouncementSignature

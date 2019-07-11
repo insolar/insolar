@@ -118,8 +118,8 @@ func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementRead
 	panic("unsupported")
 }
 
-func (c *NodeAnnouncementProfile) GetNodeRank() MembershipRank {
-	return NewMembershipRank(c.ma.Membership.Mode, c.ma.Membership.Power, c.ma.Membership.Index, c.nodeCount)
+func (c *NodeAnnouncementProfile) GetNodeRank() gcp_types.MembershipRank {
+	return gcp_types.NewMembershipRank(c.ma.Membership.Mode, c.ma.Membership.Power, c.ma.Membership.Index, c.nodeCount)
 }
 
 func (c *NodeAnnouncementProfile) GetAnnouncementSignature() gcp_types.MemberAnnouncementSignature {

@@ -53,7 +53,6 @@ package serialization
 import (
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"io"
 	"math"
 
@@ -288,9 +287,9 @@ func (nab *NodeAppearanceBitset) DeserializeFrom(ctx DeserializeContext, reader 
 
 type GlobulaStateVector struct {
 	// ByteSize=132
-	ExpectedRank           packets.MembershipRank // ByteSize=4
-	VectorHash             long_bits.Bits512      // ByteSize=64
-	SignedGlobulaStateHash long_bits.Bits512      // ByteSize=64
+	ExpectedRank           gcp_types.MembershipRank // ByteSize=4
+	VectorHash             long_bits.Bits512        // ByteSize=64
+	SignedGlobulaStateHash long_bits.Bits512        // ByteSize=64
 }
 
 func (gsv *GlobulaStateVector) SerializeTo(_ SerializeContext, writer io.Writer) error {

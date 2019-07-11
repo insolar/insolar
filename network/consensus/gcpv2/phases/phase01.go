@@ -245,7 +245,7 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (gcp_types.Node
 func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), nil, c.packetPrepareOptions)
 
 	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
@@ -302,7 +302,7 @@ func (c *ReqPhase1Controller) HandleMemberPacket(ctx context.Context, p packets.
 func (c *ReqPhase1Controller) sendReqPhase1Reply(ctx context.Context, target *core.NodeAppearance) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), api.SendWithoutPulseData|c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), nil, api.SendWithoutPulseData|c.packetPrepareOptions)
 
 	p1.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
 	target.SetSentByPacketType(c.GetPacketType())

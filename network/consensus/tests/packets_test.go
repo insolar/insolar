@@ -205,8 +205,8 @@ func (r *basePacket) GetNodeID() insolar.ShortNodeID {
 	return r.tgt
 }
 
-func (r *basePacket) GetNodeRank() packets.MembershipRank {
-	return packets.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, r.nodeCount)
+func (r *basePacket) GetNodeRank() gcp_types.MembershipRank {
+	return gcp_types.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, r.nodeCount)
 }
 
 func (r *basePacket) GetAnnouncementReader() packets.MembershipAnnouncementReader {
@@ -316,6 +316,22 @@ type EmuPhase1NetPacket struct {
 	// packetType uint8 // to reuse this type for Phase1 and Phase1Req
 }
 
+func (r *EmuPhase1NetPacket) HasFullIntro() bool {
+	return false
+}
+
+func (r *EmuPhase1NetPacket) HasCloudIntro() bool {
+	return false
+}
+
+func (r *EmuPhase1NetPacket) HasJoinerSecret() bool {
+	return false
+}
+
+func (r *EmuPhase1NetPacket) GetJoinerSecret() cryptography_containers.SignatureHolder {
+	panic("implement me")
+}
+
 func (r *EmuPhase1NetPacket) GetCloudIntroduction() packets.CloudIntroductionReader {
 	panic("implement me")
 }
@@ -370,6 +386,30 @@ type EmuPhase2NetPacket struct {
 	neighbourhood []packets.MembershipAnnouncementReader
 }
 
+func (r *EmuPhase2NetPacket) HasFullIntro() bool {
+	return false
+}
+
+func (r *EmuPhase2NetPacket) GetFullIntroduction() packets.FullIntroductionReader {
+	panic("implement me")
+}
+
+func (r *EmuPhase2NetPacket) HasCloudIntro() bool {
+	return false
+}
+
+func (r *EmuPhase2NetPacket) GetCloudIntroduction() packets.CloudIntroductionReader {
+	panic("implement me")
+}
+
+func (r *EmuPhase2NetPacket) HasJoinerSecret() bool {
+	return false
+}
+
+func (r *EmuPhase2NetPacket) GetJoinerSecret() cryptography_containers.SignatureHolder {
+	panic("implement me")
+}
+
 func (r *EmuPhase2NetPacket) GetBriefIntroduction() packets.BriefIntroductionReader {
 	panic("implement me")
 }
@@ -406,6 +446,14 @@ type EmuPhase3NetPacket struct {
 	basePacket
 	pulseNumber pulse_data.PulseNumber
 	vectors     gcp_types.HashedNodeVector
+}
+
+func (r *EmuPhase3NetPacket) GetTrustedExpectedRank() gcp_types.MembershipRank {
+	panic("implement me")
+}
+
+func (r *EmuPhase3NetPacket) GetDoubtedExpectedRank() gcp_types.MembershipRank {
+	panic("implement me")
 }
 
 func (r *EmuPhase3NetPacket) GetTrustedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {

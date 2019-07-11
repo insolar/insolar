@@ -291,7 +291,7 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np)
 	}
 
-	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(),
+	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(), nil,
 		neighbourhoodAnnouncements, c.packetPrepareOptions)
 
 	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
@@ -351,7 +351,7 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	}
 
 	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), api.RequestForPhase1|c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), nil, api.RequestForPhase1|c.packetPrepareOptions)
 
 	for _, v := range c.R.GetPopulation().GetShuffledOtherNodes() {
 		select {
