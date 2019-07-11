@@ -30,17 +30,18 @@ func _() {
 	_ = x[TypeHotRecords-19]
 	_ = x[TypeGetJet-20]
 	_ = x[TypeAbandonedRequestsNotification-21]
-	_ = x[TypeGetRequest-22]
-	_ = x[TypeGetPendingRequestID-23]
-	_ = x[TypeGetOpenRequests-24]
-	_ = x[TypeHeavyStartStop-25]
-	_ = x[TypeHeavyPayload-26]
-	_ = x[TypeGenesisRequest-27]
+	_ = x[TypeSagaCallAcceptNotification-22]
+	_ = x[TypeGetRequest-23]
+	_ = x[TypeGetPendingRequestID-24]
+	_ = x[TypeGetOpenRequests-25]
+	_ = x[TypeHeavyStartStop-26]
+	_ = x[TypeHeavyPayload-27]
+	_ = x[TypeGenesisRequest-28]
 }
 
-const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeGetRequestTypeGetPendingRequestIDTypeGetOpenRequestsTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
+const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeSagaCallAcceptNotificationTypeGetRequestTypeGetPendingRequestIDTypeGetOpenRequestsTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
 
-var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 177, 190, 205, 220, 236, 253, 266, 284, 295, 313, 335, 349, 359, 392, 406, 429, 448, 466, 482, 500}
+var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 177, 190, 205, 220, 236, 253, 266, 284, 295, 313, 335, 349, 359, 392, 422, 436, 459, 478, 496, 512, 530}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {
