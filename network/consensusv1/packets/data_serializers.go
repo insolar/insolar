@@ -423,7 +423,7 @@ func (npp *NodePulseProof) Deserialize(data io.Reader) error {
 
 	err = binary.Read(data, defaultByteOrder, &npp.NodeSignature)
 	if err != nil {
-		return errors.Wrap(err, "[ NodePulseProof.Deserialize ] Can't read NodeSignature")
+		return errors.Wrap(err, "[ NodePulseProof.Deserialize ] Can't read NodeEvidenceData")
 	}
 
 	return nil
@@ -439,7 +439,7 @@ func (npp *NodePulseProof) Serialize() ([]byte, error) {
 
 	err = binary.Write(result, defaultByteOrder, npp.NodeSignature)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodePulseProof.Serialize ] Can't write NodeSignature")
+		return nil, errors.Wrap(err, "[ NodePulseProof.Serialize ] Can't write NodeEvidenceData")
 	}
 
 	return result.Bytes(), nil

@@ -48,63 +48,42 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package nodeset
+package common
 
 import (
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
+	"math"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func NewFilteredSequenceHasher(digestFactory common2.DigestFactory, sequenceHasherFunc SequenceHasherFunc) FilteredSequenceHasher {
-	return &filteredSequenceHasher{digestFactory: digestFactory, sequenceHasherFunc: sequenceHasherFunc}
-}
+func TestVerifySizes(t *testing.T) {
+	ns := &NeighbourhoodSizes{}
+	ns.NeighbourhoodSize = 1
+	require.Panics(t, ns.VerifySizes)
 
-type SequenceHasherFunc func(index int, digester common2.SequenceDigester)
+	ns.NeighbourhoodSize = 5
+	ns.NeighbourhoodTrustThreshold = 0
+	require.Panics(t, ns.VerifySizes)
 
-type FilteredSequenceHasher interface {
-	BuildHashByFilter(bitset NodeBitset, row *stats.Row, trustedGsh bool) common.GlobulaStateHash
-}
+	ns.NeighbourhoodTrustThreshold = math.MaxUint8 + 1
+	require.Panics(t, ns.VerifySizes)
 
-type filteredSequenceHasher struct {
-	digestFactory      common2.DigestFactory
-	sequenceHasherFunc SequenceHasherFunc
-}
+	ns.NeighbourhoodTrustThreshold = 1
+	ns.JoinersPerNeighbourhood = 0
+	require.Panics(t, ns.VerifySizes)
 
-func (c *filteredSequenceHasher) BuildHashByFilter(bitset NodeBitset, row *stats.Row, trustedGsh bool) common.GlobulaStateHash {
+	ns.JoinersPerNeighbourhood = 1
+	require.Panics(t, ns.VerifySizes)
 
-	var addCount = 0
-	agg := c.digestFactory.GetGshDigester()
-	for i := 0; i < row.ColumnCount(); i++ {
-		switch row.Get(i) {
-		case NodeBitMissingHere:
-			continue // we don't have it anyway
-		case NodeBitDoubtedMissingHere:
-			continue // we don't have it anyway
-		case NodeBitSame:
-			// ok, but filtered
-			b := bitset[i]
-			if b.IsTimeout() || trustedGsh && !b.IsTrusted() {
-				continue
-			}
-		case NodeBitLessTrustedThere:
-			// ok - exclude for trusted
-			if trustedGsh {
-				continue
-			}
-		case NodeBitLessTrustedHere:
-			// ok - use for both
-		case NodeBitMissingThere:
-			continue // skip as other's GSH doesn't have it
-		default:
-			panic("unexpected")
-		}
-		c.sequenceHasherFunc(i, agg)
-		addCount++
-	}
+	ns.JoinersPerNeighbourhood = 2
+	ns.JoinersBoost = -1
+	require.Panics(t, ns.VerifySizes)
 
-	if addCount == 0 {
-		return nil
-	}
-	return agg.FinishSequence().AsDigestHolder()
+	ns.JoinersBoost = 0
+	ns.NeighbourhoodSize = 0
+	require.Panics(t, ns.VerifySizes)
+
+	ns.NeighbourhoodSize = 5
+	require.NotPanics(t, ns.VerifySizes)
 }

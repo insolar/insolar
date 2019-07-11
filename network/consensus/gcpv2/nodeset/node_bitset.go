@@ -98,7 +98,7 @@ func FmtNodeBitsetEntry(s uint8) string {
 	case NbsFraud:
 		return "F"
 	default:
-		return fmt.Sprintf("?%d", s)
+		return fmt.Sprintf("?%d?", s)
 	}
 }
 
@@ -108,11 +108,8 @@ func (s ConsensusBitsetEntry) String() string {
 
 type NodeBitset []NodeBitsetEntry
 
-func (b *NodeBitset) Len() int {
-	if b == nil {
-		return 0
-	}
-	return len(*b)
+func (b NodeBitset) Len() int {
+	return len(b)
 }
 
 const (
@@ -125,7 +122,7 @@ const (
 	maxNodeBitClassification
 )
 
-func (b *NodeBitset) CompareToStatRow(otherDataBitset NodeBitset) *stats.Row {
+func (b NodeBitset) CompareToStatRow(otherDataBitset NodeBitset) *stats.Row {
 
 	if otherDataBitset.Len() != b.Len() {
 		// TODO handle different bitset size
@@ -134,7 +131,7 @@ func (b *NodeBitset) CompareToStatRow(otherDataBitset NodeBitset) *stats.Row {
 
 	bitStats := stats.NewStatRow(maxNodeBitClassification-1, b.Len())
 
-	for i, fHere := range *b {
+	for i, fHere := range b {
 		fThere := otherDataBitset[i]
 		var bitStat uint8
 
@@ -168,11 +165,11 @@ func (b *NodeBitset) CompareToStatRow(otherDataBitset NodeBitset) *stats.Row {
 	return &bitStats
 }
 
-func (b *NodeBitset) LocalToConsensusStatRow() *stats.Row {
+func (b NodeBitset) LocalToConsensusStatRow() *stats.Row {
 
 	nodeStats := stats.NewStatRow(maxConsensusStat-1, b.Len())
 
-	for i, v := range *b {
+	for i, v := range b {
 		switch {
 		case v.IsTimeout():
 			nodeStats.Set(i, ConsensusStatMissingThere)

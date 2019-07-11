@@ -493,7 +493,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 					test.object.queueLen--
 
 					reqRef := gen.Reference()
-					broker.mutable.Push(&Transcript{RequestRef: &reqRef})
+					broker.mutable.Push(&Transcript{RequestRef: reqRef})
 				}
 			}
 
@@ -689,7 +689,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	msg := &message.AbandonedRequestsNotification{Object: objectId}
 	parcel := &message.Parcel{Msg: msg}
 
-	_, err := suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	_, err := suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	es, _ := suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
@@ -701,7 +701,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	es, _ = suite.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = false
 
-	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	_, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	es, _ = suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
@@ -713,7 +713,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	es, _ = suite.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = true
 
-	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	_, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	es, _ = suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
@@ -1176,7 +1176,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    false,
 	}
-	mutableTranscript := NewTranscript(s.ctx, &mutableRequestRef, mutableRequest)
+	mutableTranscript := NewTranscript(s.ctx, mutableRequestRef, mutableRequest)
 
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -1184,7 +1184,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
 	}
-	immutableTranscript1 := NewTranscript(s.ctx, &immutableRequestRef1, immutableRequest1)
+	immutableTranscript1 := NewTranscript(s.ctx, immutableRequestRef1, immutableRequest1)
 
 	immutableRequest2 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -1192,7 +1192,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
 	}
-	immutableTranscript2 := NewTranscript(s.ctx, &immutableRequestRef2, immutableRequest2)
+	immutableTranscript2 := NewTranscript(s.ctx, immutableRequestRef2, immutableRequest2)
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1
@@ -1266,7 +1266,7 @@ func (s *LogicRunnerTestSuite) TestImmutableIsReal() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
 	}
-	immutableTranscript1 := NewTranscript(s.ctx, &immutableRequestRef1, immutableRequest1)
+	immutableTranscript1 := NewTranscript(s.ctx, immutableRequestRef1, immutableRequest1)
 
 	s.re.ExecuteAndSaveMock.Return(&reply.CallMethod{Result: []byte{1, 2, 3}}, nil)
 	s.re.SendReplyMock.Return()
@@ -1379,7 +1379,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 	reqRef := gen.Reference()
 	broker.mutable.Push(&Transcript{
 		Context:    s.ctx,
-		RequestRef: &reqRef,
+		RequestRef: reqRef,
 		Request:    &record.IncomingRequest{},
 	})
 	es.pending = message.NotPending
@@ -1582,7 +1582,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 	broker.Put(s.ctx, false, &Transcript{
 		FromLedger:   true,
 		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef,
+		RequestRef:   reqRef,
 		Request:      &record.IncomingRequest{},
 	})
 
@@ -1658,4 +1658,36 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	s.Require().Equal(true, es.LedgerHasMoreRequests)
 	ledgerRequest := broker.HasLedgerRequest(s.ctx)
 	s.Require().NotNil(ledgerRequest)
+}
+
+func (suite *LogicRunnerTestSuite) TestInitializeExecutionState() {
+	suite.T().Run("InitializeExecutionState copy queue properly", func(t *testing.T) {
+		pulseObj := insolar.Pulse{}
+		pulseObj.PulseNumber = insolar.FirstPulseNumber
+
+		object := testutils.RandomRef()
+		defer delete(*suite.lr.StateStorage.StateMap(), object)
+
+		firstRef := testutils.RandomRef()
+		firstElement := message.ExecutionQueueElement{RequestRef: firstRef, Request: record.IncomingRequest{Immutable: false}}
+
+		secondRef := testutils.RandomRef()
+		secondElement := message.ExecutionQueueElement{RequestRef: secondRef, Request: record.IncomingRequest{Immutable: false}}
+
+		msg := &message.ExecutorResults{
+			Caller:    testutils.RandomRef(),
+			RecordRef: object,
+			Queue:     []message.ExecutionQueueElement{firstElement, secondElement},
+		}
+
+		proc := initializeExecutionState{
+			LR:  suite.lr,
+			msg: msg,
+		}
+		err := proc.Proceed(suite.ctx)
+		require.NoError(t, err)
+
+		require.Equal(t, secondRef, proc.Result.broker.mutable.first.value.RequestRef)
+		require.Equal(t, firstRef, proc.Result.broker.mutable.last.value.RequestRef)
+	})
 }

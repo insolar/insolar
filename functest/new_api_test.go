@@ -54,7 +54,7 @@ func TestBadSeed(t *testing.T) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
 	}, "MTExMQ==")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
@@ -68,7 +68,7 @@ func TestIncorrectSeed(t *testing.T) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
 	}, "z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
@@ -138,7 +138,7 @@ func TestIncorrectMethodName(t *testing.T) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "foo.bar",
-		Params:  requester.Params{CallSite: "contract.createMember", PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
 	}, seed)
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "rpc method does not exist")

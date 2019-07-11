@@ -68,7 +68,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 			JSONRPC: "2.0",
 			ID:      1,
 			Method:  "api.call",
-			Params:  requester.Params{CallSite: "contract.createMember", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
+			Params:  requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
 		},
 		seedString,
 	)

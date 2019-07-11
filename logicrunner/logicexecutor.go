@@ -149,10 +149,11 @@ func (le *logicExecutor) genLogicCallContext(
 	codeDesc artifacts.CodeDescriptor,
 ) *insolar.LogicCallContext {
 	request := transcript.Request
+	reqRef := transcript.RequestRef
 	res := &insolar.LogicCallContext{
 		Mode: insolar.ExecuteCallMode,
 
-		Request: transcript.RequestRef,
+		Request: &reqRef,
 
 		Callee:    nil, // below
 		Prototype: protoDesc.HeadRef(),
@@ -169,7 +170,7 @@ func (le *logicExecutor) genLogicCallContext(
 		// should be the same as request.Object
 		res.Callee = oDesc.HeadRef()
 	} else {
-		res.Callee = transcript.RequestRef
+		res.Callee = &reqRef
 	}
 
 	return res

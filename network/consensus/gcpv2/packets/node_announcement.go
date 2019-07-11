@@ -48,48 +48,104 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package serialization
+package packets
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-type GlobulaNodeState struct {
-	NodeStateHash            common.Bits512
-	PulseDataHash            common.Bits256
-	FoldedLastCloudStateHash common.Bits224 // CSH is 512 and is folded down then high 32 bits are discarded
-	NodeRank                 GlobulaNodeRank
-}
-
-type SignedGlobulaNodeState struct {
-	GlobulaNodeState GlobulaNodeState
-	Signature        common.Bits512
-}
-
-type GlobulaNodeRank struct {
-	Power      uint16 // serialized to [00-07] MemberPower
-	Index      uint16 // serialized to [08-17]
-	TotalCount uint16 // serialized to [18-27]
-	// Flags uint8		  //[28-31] Reserved, [31] is used in neighbourhood claims
-}
-
-type CloudStateHash common.Bits512
-
-// type NodeStateHash Bits512
-
-type SerializedGlobulaNodeRank uint32
-
-func (v GlobulaNodeRank) Serialize() SerializedGlobulaNodeRank {
-	r := uint32(common2.MemberPowerOf(v.Power))
-	r |= ensureNodeIndex(v.Index) << 8
-	r |= ensureNodeIndex(v.TotalCount) << 18
-	return SerializedGlobulaNodeRank(r)
-}
-
-func ensureNodeIndex(v uint16) uint32 {
-	if v > 0x03FF {
-		panic("out of bounds")
+func NewNodeAnnouncement(np common2.NodeProfile, ma common2.MembershipAnnouncement, nodeCount int,
+	pn common.PulseNumber) *NodeAnnouncementProfile {
+	return &NodeAnnouncementProfile{
+		nodeID:    np.GetShortNodeID(),
+		nodeCount: uint16(nodeCount),
+		ma:        ma,
+		pn:        pn,
 	}
-	return uint32(v & 0x03FF)
+}
+
+//func NewNodeAnnouncementOf(na MembershipAnnouncementReader, pn common.PulseNumber) *NodeAnnouncementProfile {
+//	nr := na.GetNodeRank()
+//	return &NodeAnnouncementProfile{
+//		nodeID:    na.GetNodeID(),
+//		nodeCount: nr.GetTotalCount(),
+//		pn:        pn,
+//		isLeaving:  na.IsLeaving(),
+//		leaveReason: na.GetLeaveReason(),
+//		membership: common2.NewMembershipProfile(
+//			nr.GetMode(),
+//			nr.GetPower(),
+//			nr.GetIndex(),
+//			na.GetNodeStateHashEvidence(),
+//			na.GetAnnouncementSignature(),
+//			na.GetRequestedPower(),
+//		),
+//	}
+//}
+
+var _ MembershipAnnouncementReader = &NodeAnnouncementProfile{}
+
+type NodeAnnouncementProfile struct {
+	ma        common2.MembershipAnnouncement
+	nodeID    common.ShortNodeID
+	pn        common.PulseNumber
+	nodeCount uint16
+}
+
+func (c *NodeAnnouncementProfile) GetRequestedPower() common2.MemberPower {
+	return c.ma.Membership.RequestedPower
+}
+
+func (c *NodeAnnouncementProfile) IsLeaving() bool {
+	return c.ma.IsLeaving
+}
+
+func (c *NodeAnnouncementProfile) GetLeaveReason() uint32 {
+	return c.ma.LeaveReason
+}
+
+func (c *NodeAnnouncementProfile) GetJoinerID() common.ShortNodeID {
+	if c.ma.Joiner == nil {
+		return common.AbsentShortNodeID
+	}
+	return c.ma.Joiner.GetShortNodeID()
+}
+
+func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementReader {
+	panic("unsupported")
+}
+
+func (c *NodeAnnouncementProfile) GetNodeRank() common2.MembershipRank {
+	return common2.NewMembershipRank(c.ma.Membership.Mode, c.ma.Membership.Power, c.ma.Membership.Index, c.nodeCount)
+}
+
+func (c *NodeAnnouncementProfile) GetAnnouncementSignature() common2.MemberAnnouncementSignature {
+	return c.ma.Membership.AnnounceSignature
+}
+
+func (c *NodeAnnouncementProfile) GetNodeID() common.ShortNodeID {
+	return c.nodeID
+}
+
+func (c *NodeAnnouncementProfile) GetNodeCount() uint16 {
+	return c.nodeCount
+}
+
+func (c *NodeAnnouncementProfile) GetNodeStateHashEvidence() common2.NodeStateHashEvidence {
+	return c.ma.Membership.StateEvidence
+}
+
+func (c NodeAnnouncementProfile) String() string {
+	return fmt.Sprintf("{id:%d %03d/%d %s}", c.nodeID, c.ma.Membership.Index, c.nodeCount, c.ma.Membership.StringParts())
+}
+
+func (c *NodeAnnouncementProfile) GetMembershipProfile() common2.MembershipProfile {
+	return c.ma.Membership
+}
+
+func (c *NodeAnnouncementProfile) GetPulseNumber() common.PulseNumber {
+	return c.pn
 }

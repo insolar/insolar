@@ -48,56 +48,58 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package adapters
+package nodeset
 
 import (
-	"github.com/insolar/insolar/insolar"
+	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-func StaticRoleToPrimaryRole(staticRole insolar.StaticRole) common.NodePrimaryRole {
-	switch staticRole {
-	case insolar.StaticRoleVirtual:
-		return common.PrimaryRoleVirtual
-	case insolar.StaticRoleLightMaterial:
-		return common.PrimaryRoleLightMaterial
-	case insolar.StaticRoleHeavyMaterial:
-		return common.PrimaryRoleHeavyMaterial
-	case insolar.StaticRoleUnknown:
-		fallthrough
-	default:
-		return common.PrimaryRoleNeutral
-	}
+/*
+Contains copy of NodeAppearance fields that can be changed, to avoid possible racing
+*/
+
+type VectorEntryData struct {
+	NodeID common2.ShortNodeID
+
+	Role           common.NodePrimaryRole
+	RequestedPower common.MemberPower
+	TrustLevel     common.NodeTrustLevel
+	Mode           common.MemberOpMode
+
+	//Node *NodeAppearance
+	//common.MembershipAnnouncement
+	common.NodeAnnouncedState
 }
 
-func PrimaryRoleToStaticRole(primaryRole common.NodePrimaryRole) insolar.StaticRole {
-	switch primaryRole {
-	case common.PrimaryRoleVirtual:
-		return insolar.StaticRoleVirtual
-	case common.PrimaryRoleLightMaterial:
-		return insolar.StaticRoleLightMaterial
-	case common.PrimaryRoleHeavyMaterial:
-		return insolar.StaticRoleHeavyMaterial
-	case common.PrimaryRoleNeutral:
-		fallthrough
-	default:
-		return insolar.StaticRoleUnknown
-	}
+type VectorEntryScanner interface {
+	GetIndexedCount() int
+	GetSortedCount() int
+	ScanIndexed(apply func(index int, nodeData VectorEntryData))
+	ScanSorted(apply func(nodeData VectorEntryData, filter uint32), filterValue uint32)
+	ScanSortedWithFilter(apply func(nodeData VectorEntryData, filter uint32),
+		filter func(index int, nodeData VectorEntryData) (bool, uint32))
 }
 
-func MembershipStateToNodeState(membershipState common.MembershipState) insolar.NodeState {
-	switch membershipState {
-	case common.Joining:
-		return insolar.NodePending
-	case common.SuspectedOnce: // TODO: not sure
-		fallthrough
-	case common.Working:
-		return insolar.NodeReady
-	case common.Leaving:
-		return insolar.NodeLeaving
-	case common.Undefined:
-		fallthrough
-	default:
-		return insolar.NodeUndefined
+type VectorCursor struct {
+	NodeIndex uint16
+	RoleIndex uint16
+	PowIndex  uint16
+
+	LastRole common.NodePrimaryRole
+}
+
+func (p *VectorCursor) BeforeNext(role common.NodePrimaryRole) {
+	if p.LastRole == role {
+		return
 	}
+	p.RoleIndex = 0
+	p.PowIndex = 0
+	p.LastRole = role
+}
+
+func (p *VectorCursor) AfterNext(power common.MemberPower) {
+	p.RoleIndex++
+	p.PowIndex += power.ToLinearValue()
+	p.NodeIndex++
 }
