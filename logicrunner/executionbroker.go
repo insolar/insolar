@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -269,7 +270,7 @@ type ExecutionBrokerRotationResult struct {
 }
 
 func (q *ExecutionBroker) checkCurrent(_ context.Context, transcript *Transcript) {
-	if q.currentList.Has(*transcript.RequestRef) {
+	if q.currentList.Has(transcript.RequestRef) {
 		panic(fmt.Sprintf("requestRef %s is already in currentList", transcript.RequestRef.String()))
 	}
 }
@@ -314,10 +315,10 @@ func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript)
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	if !q.currentList.Has(*transcript.RequestRef) {
+	if !q.currentList.Has(transcript.RequestRef) {
 		return
 	}
-	q.currentList.Delete(*transcript.RequestRef)
+	q.currentList.Delete(transcript.RequestRef)
 
 	queue := q.mutable
 	if transcript.Request.Immutable {
@@ -335,10 +336,10 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript
 
 	q.finished.Push(transcript)
 
-	if !q.currentList.Has(*transcript.RequestRef) {
+	if !q.currentList.Has(transcript.RequestRef) {
 		logger.Error("[ ExecutionBroker.FinishTask ] task '%s' is not in current", transcript.RequestRef.String())
 	} else {
-		q.currentList.Delete(*transcript.RequestRef)
+		q.currentList.Delete(transcript.RequestRef)
 	}
 }
 
@@ -358,10 +359,10 @@ func (q *ExecutionBroker) storeWithoutDuplication(_ context.Context, transcript 
 	q.deduplicationLock.Lock()
 	defer q.deduplicationLock.Unlock()
 
-	if _, ok := q.deduplicationTable[*transcript.RequestRef]; ok {
+	if _, ok := q.deduplicationTable[transcript.RequestRef]; ok {
 		return true
 	}
-	q.deduplicationTable[*transcript.RequestRef] = true
+	q.deduplicationTable[transcript.RequestRef] = true
 	return false
 }
 
