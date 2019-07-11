@@ -344,6 +344,12 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript
 }
 
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) bool {
+	if transcript.Context != nil {
+		ctx = transcript.Context
+	} else {
+		inslogger.FromContext(ctx).Error("context in transcript is nil")
+	}
+
 	defer q.releaseTask(ctx, transcript)
 
 	if readyToExecute := q.Check(ctx); !readyToExecute {
@@ -550,14 +556,16 @@ func (q *ExecutionBroker) checkLedgerPendingRequests(ctx context.Context, transc
 func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
 	q.checkLedgerPendingRequests(ctx, nil)
 
+	logger := inslogger.FromContext(ctx)
+
 	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
-		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
+		logger.Warn("contract execution error: ", err)
 	}
 
 	q.finishTask(ctx, transcript) // TODO: hack for now, later that function need to be splitted
 
-	go q.requestsExecutor.SendReply(transcript.Context, transcript, reply, err)
+	go q.requestsExecutor.SendReply(ctx, transcript, reply, err)
 
 	q.checkLedgerPendingRequests(ctx, transcript)
 
