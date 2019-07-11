@@ -135,6 +135,10 @@ func (p *PacketParser) GetPacketType() packets.PacketType {
 	return p.packet.Header.GetPacketType()
 }
 
+func (p *PacketParser) IsRelayForbidden() bool {
+	return p.packet.Header.IsRelayRestricted()
+}
+
 func (p *PacketParser) GetPacketSignature() common.SignedDigest {
 	signature := common.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
 	digest := p.digester.GetDigestOf(bytes.NewReader(p.data))
