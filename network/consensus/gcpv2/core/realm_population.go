@@ -52,9 +52,8 @@ package core
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
 type RealmPopulation interface {
@@ -64,9 +63,9 @@ type RealmPopulation interface {
 	GetBftMajorityCount() int
 	IsComplete() bool
 
-	GetNodeAppearance(id common.ShortNodeID) *NodeAppearance
-	GetActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance
-	GetJoinerNodeAppearance(id common.ShortNodeID) *NodeAppearance
+	GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
+	GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
+	GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
 	GetNodeAppearanceByIndex(idx int) *NodeAppearance
 
 	GetShuffledOtherNodes() []*NodeAppearance /* no joiners or self included */
@@ -74,7 +73,7 @@ type RealmPopulation interface {
 
 	GetSelf() *NodeAppearance
 
-	CreateNodeAppearance(ctx context.Context, inp api.NodeProfile) *NodeAppearance
+	CreateNodeAppearance(ctx context.Context, inp gcp_types.NodeProfile) *NodeAppearance
 
 	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
 	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)

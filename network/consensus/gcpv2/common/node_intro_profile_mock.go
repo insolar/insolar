@@ -6,15 +6,14 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "NodeIntroProfile" can be found in github.com/insolar/insolar/network/consensus/gcpv2/common
 */
 import (
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/network/consensus/common"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +31,7 @@ type NodeIntroProfileMock struct {
 	GetDefaultEndpointPreCounter uint64
 	GetDefaultEndpointMock       mNodeIntroProfileMockGetDefaultEndpoint
 
-	GetIntroductionFunc       func() (r api.NodeIntroduction)
+	GetIntroductionFunc       func() (r gcp_types.NodeIntroduction)
 	GetIntroductionCounter    uint64
 	GetIntroductionPreCounter uint64
 	GetIntroductionMock       mNodeIntroProfileMockGetIntroduction
@@ -47,22 +46,22 @@ type NodeIntroProfileMock struct {
 	GetNodePublicKeyStorePreCounter uint64
 	GetNodePublicKeyStoreMock       mNodeIntroProfileMockGetNodePublicKeyStore
 
-	GetPrimaryRoleFunc       func() (r api.NodePrimaryRole)
+	GetPrimaryRoleFunc       func() (r gcp_types.NodePrimaryRole)
 	GetPrimaryRoleCounter    uint64
 	GetPrimaryRolePreCounter uint64
 	GetPrimaryRoleMock       mNodeIntroProfileMockGetPrimaryRole
 
-	GetShortNodeIDFunc       func() (r common.ShortNodeID)
+	GetShortNodeIDFunc       func() (r insolar.ShortNodeID)
 	GetShortNodeIDCounter    uint64
 	GetShortNodeIDPreCounter uint64
 	GetShortNodeIDMock       mNodeIntroProfileMockGetShortNodeID
 
-	GetSpecialRolesFunc       func() (r api.NodeSpecialRole)
+	GetSpecialRolesFunc       func() (r gcp_types.NodeSpecialRole)
 	GetSpecialRolesCounter    uint64
 	GetSpecialRolesPreCounter uint64
 	GetSpecialRolesMock       mNodeIntroProfileMockGetSpecialRoles
 
-	GetStartPowerFunc       func() (r api.MemberPower)
+	GetStartPowerFunc       func() (r gcp_types.MemberPower)
 	GetStartPowerCounter    uint64
 	GetStartPowerPreCounter uint64
 	GetStartPowerMock       mNodeIntroProfileMockGetStartPower
@@ -380,7 +379,7 @@ type NodeIntroProfileMockGetIntroductionExpectation struct {
 }
 
 type NodeIntroProfileMockGetIntroductionResult struct {
-	r api.NodeIntroduction
+	r gcp_types.NodeIntroduction
 }
 
 //Expect specifies that invocation of NodeIntroProfile.GetIntroduction is expected from 1 to Infinity times
@@ -396,7 +395,7 @@ func (m *mNodeIntroProfileMockGetIntroduction) Expect() *mNodeIntroProfileMockGe
 }
 
 //Return specifies results of invocation of NodeIntroProfile.GetIntroduction
-func (m *mNodeIntroProfileMockGetIntroduction) Return(r api.NodeIntroduction) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetIntroduction) Return(r gcp_types.NodeIntroduction) *NodeIntroProfileMock {
 	m.mock.GetIntroductionFunc = nil
 	m.expectationSeries = nil
 
@@ -418,12 +417,12 @@ func (m *mNodeIntroProfileMockGetIntroduction) ExpectOnce() *NodeIntroProfileMoc
 	return expectation
 }
 
-func (e *NodeIntroProfileMockGetIntroductionExpectation) Return(r api.NodeIntroduction) {
+func (e *NodeIntroProfileMockGetIntroductionExpectation) Return(r gcp_types.NodeIntroduction) {
 	e.result = &NodeIntroProfileMockGetIntroductionResult{r}
 }
 
 //Set uses given function f as a mock of NodeIntroProfile.GetIntroduction method
-func (m *mNodeIntroProfileMockGetIntroduction) Set(f func() (r api.NodeIntroduction)) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetIntroduction) Set(f func() (r gcp_types.NodeIntroduction)) *NodeIntroProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -432,7 +431,7 @@ func (m *mNodeIntroProfileMockGetIntroduction) Set(f func() (r api.NodeIntroduct
 }
 
 //GetIntroduction implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeIntroProfile interface
-func (m *NodeIntroProfileMock) GetIntroduction() (r api.NodeIntroduction) {
+func (m *NodeIntroProfileMock) GetIntroduction() (r gcp_types.NodeIntroduction) {
 	counter := atomic.AddUint64(&m.GetIntroductionPreCounter, 1)
 	defer atomic.AddUint64(&m.GetIntroductionCounter, 1)
 
@@ -782,7 +781,7 @@ type NodeIntroProfileMockGetPrimaryRoleExpectation struct {
 }
 
 type NodeIntroProfileMockGetPrimaryRoleResult struct {
-	r api.NodePrimaryRole
+	r gcp_types.NodePrimaryRole
 }
 
 //Expect specifies that invocation of NodeIntroProfile.GetPrimaryRole is expected from 1 to Infinity times
@@ -798,7 +797,7 @@ func (m *mNodeIntroProfileMockGetPrimaryRole) Expect() *mNodeIntroProfileMockGet
 }
 
 //Return specifies results of invocation of NodeIntroProfile.GetPrimaryRole
-func (m *mNodeIntroProfileMockGetPrimaryRole) Return(r api.NodePrimaryRole) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetPrimaryRole) Return(r gcp_types.NodePrimaryRole) *NodeIntroProfileMock {
 	m.mock.GetPrimaryRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -820,12 +819,12 @@ func (m *mNodeIntroProfileMockGetPrimaryRole) ExpectOnce() *NodeIntroProfileMock
 	return expectation
 }
 
-func (e *NodeIntroProfileMockGetPrimaryRoleExpectation) Return(r api.NodePrimaryRole) {
+func (e *NodeIntroProfileMockGetPrimaryRoleExpectation) Return(r gcp_types.NodePrimaryRole) {
 	e.result = &NodeIntroProfileMockGetPrimaryRoleResult{r}
 }
 
 //Set uses given function f as a mock of NodeIntroProfile.GetPrimaryRole method
-func (m *mNodeIntroProfileMockGetPrimaryRole) Set(f func() (r api.NodePrimaryRole)) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetPrimaryRole) Set(f func() (r gcp_types.NodePrimaryRole)) *NodeIntroProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -834,7 +833,7 @@ func (m *mNodeIntroProfileMockGetPrimaryRole) Set(f func() (r api.NodePrimaryRol
 }
 
 //GetPrimaryRole implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeIntroProfile interface
-func (m *NodeIntroProfileMock) GetPrimaryRole() (r api.NodePrimaryRole) {
+func (m *NodeIntroProfileMock) GetPrimaryRole() (r gcp_types.NodePrimaryRole) {
 	counter := atomic.AddUint64(&m.GetPrimaryRolePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPrimaryRoleCounter, 1)
 
@@ -916,7 +915,7 @@ type NodeIntroProfileMockGetShortNodeIDExpectation struct {
 }
 
 type NodeIntroProfileMockGetShortNodeIDResult struct {
-	r common.ShortNodeID
+	r insolar.ShortNodeID
 }
 
 //Expect specifies that invocation of NodeIntroProfile.GetShortNodeID is expected from 1 to Infinity times
@@ -932,7 +931,7 @@ func (m *mNodeIntroProfileMockGetShortNodeID) Expect() *mNodeIntroProfileMockGet
 }
 
 //Return specifies results of invocation of NodeIntroProfile.GetShortNodeID
-func (m *mNodeIntroProfileMockGetShortNodeID) Return(r common.ShortNodeID) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetShortNodeID) Return(r insolar.ShortNodeID) *NodeIntroProfileMock {
 	m.mock.GetShortNodeIDFunc = nil
 	m.expectationSeries = nil
 
@@ -954,12 +953,12 @@ func (m *mNodeIntroProfileMockGetShortNodeID) ExpectOnce() *NodeIntroProfileMock
 	return expectation
 }
 
-func (e *NodeIntroProfileMockGetShortNodeIDExpectation) Return(r common.ShortNodeID) {
+func (e *NodeIntroProfileMockGetShortNodeIDExpectation) Return(r insolar.ShortNodeID) {
 	e.result = &NodeIntroProfileMockGetShortNodeIDResult{r}
 }
 
 //Set uses given function f as a mock of NodeIntroProfile.GetShortNodeID method
-func (m *mNodeIntroProfileMockGetShortNodeID) Set(f func() (r common.ShortNodeID)) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetShortNodeID) Set(f func() (r insolar.ShortNodeID)) *NodeIntroProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -968,7 +967,7 @@ func (m *mNodeIntroProfileMockGetShortNodeID) Set(f func() (r common.ShortNodeID
 }
 
 //GetShortNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeIntroProfile interface
-func (m *NodeIntroProfileMock) GetShortNodeID() (r common.ShortNodeID) {
+func (m *NodeIntroProfileMock) GetShortNodeID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetShortNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetShortNodeIDCounter, 1)
 
@@ -1050,7 +1049,7 @@ type NodeIntroProfileMockGetSpecialRolesExpectation struct {
 }
 
 type NodeIntroProfileMockGetSpecialRolesResult struct {
-	r api.NodeSpecialRole
+	r gcp_types.NodeSpecialRole
 }
 
 //Expect specifies that invocation of NodeIntroProfile.GetSpecialRoles is expected from 1 to Infinity times
@@ -1066,7 +1065,7 @@ func (m *mNodeIntroProfileMockGetSpecialRoles) Expect() *mNodeIntroProfileMockGe
 }
 
 //Return specifies results of invocation of NodeIntroProfile.GetSpecialRoles
-func (m *mNodeIntroProfileMockGetSpecialRoles) Return(r api.NodeSpecialRole) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetSpecialRoles) Return(r gcp_types.NodeSpecialRole) *NodeIntroProfileMock {
 	m.mock.GetSpecialRolesFunc = nil
 	m.expectationSeries = nil
 
@@ -1088,12 +1087,12 @@ func (m *mNodeIntroProfileMockGetSpecialRoles) ExpectOnce() *NodeIntroProfileMoc
 	return expectation
 }
 
-func (e *NodeIntroProfileMockGetSpecialRolesExpectation) Return(r api.NodeSpecialRole) {
+func (e *NodeIntroProfileMockGetSpecialRolesExpectation) Return(r gcp_types.NodeSpecialRole) {
 	e.result = &NodeIntroProfileMockGetSpecialRolesResult{r}
 }
 
 //Set uses given function f as a mock of NodeIntroProfile.GetSpecialRoles method
-func (m *mNodeIntroProfileMockGetSpecialRoles) Set(f func() (r api.NodeSpecialRole)) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetSpecialRoles) Set(f func() (r gcp_types.NodeSpecialRole)) *NodeIntroProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1102,7 +1101,7 @@ func (m *mNodeIntroProfileMockGetSpecialRoles) Set(f func() (r api.NodeSpecialRo
 }
 
 //GetSpecialRoles implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeIntroProfile interface
-func (m *NodeIntroProfileMock) GetSpecialRoles() (r api.NodeSpecialRole) {
+func (m *NodeIntroProfileMock) GetSpecialRoles() (r gcp_types.NodeSpecialRole) {
 	counter := atomic.AddUint64(&m.GetSpecialRolesPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSpecialRolesCounter, 1)
 
@@ -1184,7 +1183,7 @@ type NodeIntroProfileMockGetStartPowerExpectation struct {
 }
 
 type NodeIntroProfileMockGetStartPowerResult struct {
-	r api.MemberPower
+	r gcp_types.MemberPower
 }
 
 //Expect specifies that invocation of NodeIntroProfile.GetStartPower is expected from 1 to Infinity times
@@ -1200,7 +1199,7 @@ func (m *mNodeIntroProfileMockGetStartPower) Expect() *mNodeIntroProfileMockGetS
 }
 
 //Return specifies results of invocation of NodeIntroProfile.GetStartPower
-func (m *mNodeIntroProfileMockGetStartPower) Return(r api.MemberPower) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetStartPower) Return(r gcp_types.MemberPower) *NodeIntroProfileMock {
 	m.mock.GetStartPowerFunc = nil
 	m.expectationSeries = nil
 
@@ -1222,12 +1221,12 @@ func (m *mNodeIntroProfileMockGetStartPower) ExpectOnce() *NodeIntroProfileMockG
 	return expectation
 }
 
-func (e *NodeIntroProfileMockGetStartPowerExpectation) Return(r api.MemberPower) {
+func (e *NodeIntroProfileMockGetStartPowerExpectation) Return(r gcp_types.MemberPower) {
 	e.result = &NodeIntroProfileMockGetStartPowerResult{r}
 }
 
 //Set uses given function f as a mock of NodeIntroProfile.GetStartPower method
-func (m *mNodeIntroProfileMockGetStartPower) Set(f func() (r api.MemberPower)) *NodeIntroProfileMock {
+func (m *mNodeIntroProfileMockGetStartPower) Set(f func() (r gcp_types.MemberPower)) *NodeIntroProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1236,7 +1235,7 @@ func (m *mNodeIntroProfileMockGetStartPower) Set(f func() (r api.MemberPower)) *
 }
 
 //GetStartPower implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeIntroProfile interface
-func (m *NodeIntroProfileMock) GetStartPower() (r api.MemberPower) {
+func (m *NodeIntroProfileMock) GetStartPower() (r gcp_types.MemberPower) {
 	counter := atomic.AddUint64(&m.GetStartPowerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetStartPowerCounter, 1)
 

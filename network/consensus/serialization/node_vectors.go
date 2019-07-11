@@ -52,7 +52,7 @@ package serialization
 
 import (
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"io"
 	"math"
@@ -139,7 +139,7 @@ type NodeAppearanceBitset struct {
 	Bytes            []byte
 }
 
-func (nab *NodeAppearanceBitset) SetBitset(bitset api.NodeBitset) {
+func (nab *NodeAppearanceBitset) SetBitset(bitset gcp_types.NodeBitset) {
 	length := bitset.Len()
 	if length > math.MaxUint16 {
 		panic("invalid length")
@@ -155,15 +155,15 @@ func (nab *NodeAppearanceBitset) SetBitset(bitset api.NodeBitset) {
 	}
 }
 
-func (nab *NodeAppearanceBitset) GetBitset() api.NodeBitset {
+func (nab *NodeAppearanceBitset) GetBitset() gcp_types.NodeBitset {
 	length := nab.getLength()
 	if nab.isCompressed() {
 		panic("not implemented")
 	}
 
-	bitset := make([]api.NodeBitsetEntry, length)
+	bitset := make([]gcp_types.NodeBitsetEntry, length)
 	for i, b := range nab.Bytes {
-		bitset[i] = api.NodeBitsetEntry(b)
+		bitset[i] = gcp_types.NodeBitsetEntry(b)
 	}
 
 	return bitset

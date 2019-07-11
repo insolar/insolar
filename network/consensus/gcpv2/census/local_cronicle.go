@@ -53,7 +53,7 @@ package census
 import (
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"sync"
 )
 
@@ -62,26 +62,26 @@ func NewLocalChronicles() LocalConsensusChronicles {
 }
 
 type LocalConsensusChronicles interface {
-	api_2.ConsensusChronicles
-	makeActive(ce api_2.ExpectedCensus, ca localActiveCensus)
+	api.ConsensusChronicles
+	makeActive(ce api.ExpectedCensus, ca localActiveCensus)
 }
 
-var _ api_2.ConsensusChronicles = &localChronicles{}
+var _ api.ConsensusChronicles = &localChronicles{}
 
 type localActiveCensus interface {
-	api_2.ActiveCensus
-	getVersionedRegistries() api_2.VersionedRegistries
-	setVersionedRegistries(vr api_2.VersionedRegistries)
+	api.ActiveCensus
+	getVersionedRegistries() api.VersionedRegistries
+	setVersionedRegistries(vr api.VersionedRegistries)
 }
 
 type localChronicles struct {
 	rw                  sync.RWMutex
 	active              localActiveCensus
-	expected            api_2.ExpectedCensus
+	expected            api.ExpectedCensus
 	expectedPulseNumber pulse_data.PulseNumber
 }
 
-func (c *localChronicles) GetLatestCensus() api_2.OperationalCensus {
+func (c *localChronicles) GetLatestCensus() api.OperationalCensus {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
@@ -91,7 +91,7 @@ func (c *localChronicles) GetLatestCensus() api_2.OperationalCensus {
 	return c.active
 }
 
-func (c *localChronicles) GetRecentCensus(pn pulse_data.PulseNumber) api_2.OperationalCensus {
+func (c *localChronicles) GetRecentCensus(pn pulse_data.PulseNumber) api.OperationalCensus {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
@@ -105,21 +105,21 @@ func (c *localChronicles) GetRecentCensus(pn pulse_data.PulseNumber) api_2.Opera
 	panic(fmt.Sprintf("recent census is missing for pulse (%v)", pn))
 }
 
-func (c *localChronicles) GetActiveCensus() api_2.ActiveCensus {
+func (c *localChronicles) GetActiveCensus() api.ActiveCensus {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
 	return c.active
 }
 
-func (c *localChronicles) GetExpectedCensus() api_2.ExpectedCensus {
+func (c *localChronicles) GetExpectedCensus() api.ExpectedCensus {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
 	return c.expected
 }
 
-func (c *localChronicles) makeActive(ce api_2.ExpectedCensus, ca localActiveCensus) {
+func (c *localChronicles) makeActive(ce api.ExpectedCensus, ca localActiveCensus) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
@@ -153,7 +153,7 @@ func (c *localChronicles) makeActive(ce api_2.ExpectedCensus, ca localActiveCens
 	c.expected = nil
 }
 
-func (c *localChronicles) makeExpected(ce api_2.ExpectedCensus) {
+func (c *localChronicles) makeExpected(ce api.ExpectedCensus) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 

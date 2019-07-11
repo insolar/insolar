@@ -52,13 +52,13 @@ package adapters
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	common2 "github.com/insolar/insolar/network/consensus/common"
 )
 
 type ConsensusControlFeeder struct{}
@@ -67,11 +67,11 @@ func NewConsensusControlFeeder() *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{}
 }
 
-func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() api.PowerRequest {
-	return api.NewPowerRequestByLevel(common2.LevelNormal)
+func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() gcp_types.PowerRequest {
+	return gcp_types.NewPowerRequestByLevel(capacity.LevelNormal)
 }
 
-func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw api.MemberPower, effectiveSince pulse_data.PulseNumber) {
+func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw gcp_types.MemberPower, effectiveSince pulse_data.PulseNumber) {
 	ctx := context.TODO()
 
 	inslogger.FromContext(ctx).Info(">>> Power level applied")
@@ -87,7 +87,7 @@ func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effect
 	inslogger.FromContext(ctx).Info(">>> Graceful leave applied")
 }
 
-func (cf *ConsensusControlFeeder) SetTrafficLimit(level common2.CapacityLevel, duration time.Duration) {
+func (cf *ConsensusControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
 	panic("implement me")
 }
 
@@ -99,7 +99,7 @@ func (cf *ConsensusControlFeeder) PulseDetected() {
 	panic("implement me")
 }
 
-func (cf *ConsensusControlFeeder) ConsensusFinished(report api_2.MembershipUpstreamReport, expectedCensus api_2.OperationalCensus) {
+func (cf *ConsensusControlFeeder) ConsensusFinished(report api.MembershipUpstreamReport, expectedCensus api.OperationalCensus) {
 	ctx := context.TODO()
 
 	inslogger.FromContext(ctx).Info(">>> ConsensusFinished")

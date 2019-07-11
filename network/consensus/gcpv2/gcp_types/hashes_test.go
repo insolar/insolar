@@ -46,20 +46,42 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
 
-package api
+package gcp_types
 
-type HashedNodeVector struct {
-	Bitset                             NodeBitset
-	TrustedAnnouncementVector          GlobulaAnnouncementHash
-	DoubtedAnnouncementVector          GlobulaAnnouncementHash
-	TrustedGlobulaStateVectorSignature GlobulaStateSignature
-	DoubtedGlobulaStateVectorSignature GlobulaStateSignature
-}
+//func TestNewChasingTimer(t *testing.T) {
+//	chasingDelay := time.Second
+//	ct := NewChasingTimer(chasingDelay)
+//	require.Equal(t, chasingDelay, ct.chasingDelay)
+//}
+//
+//func TestIsEnabled(t *testing.T) {
+//	ct := NewChasingTimer(time.Second)
+//	require.True(t, ct.IsEnabled())
+//
+//	ct = NewChasingTimer(0)
+//	require.False(t, ct.IsEnabled())
+//
+//	ct = NewChasingTimer(-time.Second)
+//	require.False(t, ct.IsEnabled())
+//}
 
-type NodeBitset []NodeBitsetEntry
-
-func (b NodeBitset) Len() int {
-	return len(b)
-}
+//func TestNewNodeStateHashEvidence(t *testing.T) {
+//	sd := cryptography_containers.NewSignedDigest(cryptography_containers.Digest{}, cryptography_containers.Signature{})
+//	sh := NewNodeStateHashEvidence(sd)
+//	require.Equal(t, SignedDigest, sd)
+//}
+//
+//func TestGetNodeStateHash(t *testing.T) {
+//	fr := long_bits.NewFoldableReaderMock(t)
+//	sd := cryptography_containers.NewSignedDigest(cryptography_containers.NewDigest(fr, cryptography_containers.DigestMethod("testDigest")), cryptography_containers.NewSignature(fr, cryptography_containers.SignatureMethod("testSignature")))
+//	sh := NewNodeStateHashEvidence(sd)
+//	require.Equal(t, sh.GetNodeStateHash().GetDigestMethod(), sd.GetDigest().AsDigestHolder().GetDigestMethod())
+//}
+//
+//func TestGetGlobulaNodeStateSignature(t *testing.T) {
+//	fr := long_bits.NewFoldableReaderMock(t)
+//	sd := cryptography_containers.NewSignedDigest(cryptography_containers.NewDigest(fr, cryptography_containers.DigestMethod("testDigest")), cryptography_containers.NewSignature(fr, cryptography_containers.SignatureMethod("testSignature")))
+//	sh := NewNodeStateHashEvidence(sd)
+//	require.Equal(t, sh.GetGlobulaNodeStateSignature().GetSignatureMethod(), sd.GetSignature().AsSignatureHolder().GetSignatureMethod())
+//}

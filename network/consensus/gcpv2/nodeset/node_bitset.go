@@ -51,23 +51,23 @@
 package nodeset
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
 /* MUST be based on NodeBitsetEntry to reuse serialization */
-type ConsensusBitsetEntry api.NodeBitsetEntry
+type ConsensusBitsetEntry gcp_types.NodeBitsetEntry
 
 const (
-	CbsIncluded  = ConsensusBitsetEntry(api.NbsHighTrust)
-	CbsSuspected = ConsensusBitsetEntry(api.NbsBaselineTrust)
-	CbsExcluded  = ConsensusBitsetEntry(api.NbsTimeout)
-	CbsFraud     = ConsensusBitsetEntry(api.NbsFraud)
+	CbsIncluded  = ConsensusBitsetEntry(gcp_types.NbsHighTrust)
+	CbsSuspected = ConsensusBitsetEntry(gcp_types.NbsBaselineTrust)
+	CbsExcluded  = ConsensusBitsetEntry(gcp_types.NbsTimeout)
+	CbsFraud     = ConsensusBitsetEntry(gcp_types.NbsFraud)
 )
 
 func (s ConsensusBitsetEntry) String() string {
-	return api.FmtNodeBitsetEntry(uint8(s))
+	return gcp_types.FmtNodeBitsetEntry(uint8(s))
 }
 
 const (
@@ -80,7 +80,7 @@ const (
 	maxNodeBitClassification
 )
 
-func CompareToStatRow(b api.NodeBitset, otherDataBitset api.NodeBitset) *stats.Row {
+func CompareToStatRow(b gcp_types.NodeBitset, otherDataBitset gcp_types.NodeBitset) *stats.Row {
 
 	if otherDataBitset.Len() != b.Len() {
 		// TODO handle different bitset size
@@ -123,7 +123,7 @@ func CompareToStatRow(b api.NodeBitset, otherDataBitset api.NodeBitset) *stats.R
 	return &bitStats
 }
 
-func LocalToConsensusStatRow(b api.NodeBitset) *stats.Row {
+func LocalToConsensusStatRow(b gcp_types.NodeBitset) *stats.Row {
 
 	nodeStats := stats.NewStatRow(maxConsensusStat-1, b.Len())
 

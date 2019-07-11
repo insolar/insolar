@@ -48,10 +48,10 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api
+package gcp_types
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -129,7 +129,7 @@ func TestIsValid(t *testing.T) {
 }
 
 func TestNewPowerRequestByLevel(t *testing.T) {
-	require.Equal(t, -PowerRequest(common.LevelMinimal), NewPowerRequestByLevel(common.LevelMinimal))
+	require.Equal(t, -PowerRequest(capacity.LevelMinimal), NewPowerRequestByLevel(capacity.LevelMinimal))
 }
 
 func TestNewPowerRequest(t *testing.T) {
@@ -139,17 +139,17 @@ func TestNewPowerRequest(t *testing.T) {
 func TestAsCapacityLevel(t *testing.T) {
 	b, l := PowerRequest(-1).AsCapacityLevel()
 	require.True(t, b)
-	require.Equal(t, common.CapacityLevel(1), l)
+	require.Equal(t, capacity.Level(1), l)
 
 	b, l = PowerRequest(1).AsCapacityLevel()
 	require.False(t, b)
 
 	r := PowerRequest(1)
-	require.Equal(t, common.CapacityLevel(-r), l)
+	require.Equal(t, capacity.Level(-r), l)
 
 	b, l = PowerRequest(0).AsCapacityLevel()
 	require.False(t, b)
-	require.Equal(t, common.CapacityLevel(0), l)
+	require.Equal(t, capacity.Level(0), l)
 }
 
 func TestAsMemberPower(t *testing.T) {

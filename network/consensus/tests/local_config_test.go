@@ -54,13 +54,13 @@ import (
 	"context"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"time"
 )
 
 const defaultNshGenerationDelay = time.Millisecond * 0
 
-var RoundTimingsFor1s = api.RoundTimings{
+var RoundTimingsFor1s = gcp_types.RoundTimings{
 	StartPhase0At: 100 * time.Millisecond, // Not scaled
 
 	StartPhase1RetryAt: 00 * time.Millisecond, // 0 for no retries
@@ -72,13 +72,13 @@ var RoundTimingsFor1s = api.RoundTimings{
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
-func NewEmuLocalConfig(ctx context.Context) api_2.LocalNodeConfiguration {
+func NewEmuLocalConfig(ctx context.Context) api.LocalNodeConfiguration {
 	r := emuLocalConfig{timings: RoundTimingsFor1s, ctx: ctx}
 	return &r
 }
 
 type emuLocalConfig struct {
-	timings api.RoundTimings
+	timings gcp_types.RoundTimings
 	ctx     context.Context
 }
 
@@ -96,7 +96,7 @@ func (r *emuLocalConfig) AsPublicKeyStore() cryptography_containers.PublicKeySto
 func (r *emuLocalConfig) PrivateKeyStore() {
 }
 
-func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) api.RoundTimings {
+func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) gcp_types.RoundTimings {
 	if nextPulseDelta == 1 {
 		return r.timings
 	}

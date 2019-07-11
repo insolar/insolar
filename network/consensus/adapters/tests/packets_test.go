@@ -52,15 +52,14 @@ package tests
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 type EmuPacketWrapper struct {
@@ -85,17 +84,17 @@ func (v EmuPacketWrapper) String() string {
 var _ cryptography_containers.SignedEvidenceHolder = &basePacket{}
 
 type basePacket struct {
-	src         common.ShortNodeID
-	tgt         common.ShortNodeID
+	src         insolar.ShortNodeID
+	tgt         insolar.ShortNodeID
 	nodeCount   uint16
-	mp          api.MembershipProfile
+	mp          gcp_types.MembershipProfile
 	isLeaving   bool
 	leaveReason uint32
 
 	sd cryptography_containers.SignedDigest
 }
 
-func (r *basePacket) GetRequestedPower() api.MemberPower {
+func (r *basePacket) GetRequestedPower() gcp_types.MemberPower {
 	return r.mp.RequestedPower
 }
 
@@ -107,7 +106,7 @@ func (r *basePacket) GetLeaveReason() uint32 {
 	return r.leaveReason
 }
 
-func (r *basePacket) GetJoinerID() common.ShortNodeID {
+func (r *basePacket) GetJoinerID() insolar.ShortNodeID {
 	return 0
 }
 
@@ -115,15 +114,15 @@ func (r *basePacket) GetJoinerAnnouncement() packets.JoinerAnnouncementReader {
 	return nil
 }
 
-func (r *basePacket) GetNodeStateHashEvidence() api.NodeStateHashEvidence {
+func (r *basePacket) GetNodeStateHashEvidence() gcp_types.NodeStateHashEvidence {
 	return r.mp.StateEvidence
 }
 
-func (r *basePacket) GetAnnouncementSignature() api.MemberAnnouncementSignature {
+func (r *basePacket) GetAnnouncementSignature() gcp_types.MemberAnnouncementSignature {
 	return r.mp.AnnounceSignature
 }
 
-func (r *basePacket) GetNodeID() common.ShortNodeID {
+func (r *basePacket) GetNodeID() insolar.ShortNodeID {
 	return r.tgt
 }
 
@@ -142,15 +141,15 @@ func (r *basePacket) GetEvidence() cryptography_containers.SignedData {
 	return cryptography_containers.NewSignedData(&v, d, s)
 }
 
-func (r *basePacket) GetSourceID() common.ShortNodeID {
+func (r *basePacket) GetSourceID() insolar.ShortNodeID {
 	return r.src
 }
 
-func (r *basePacket) GetReceiverID() common.ShortNodeID {
+func (r *basePacket) GetReceiverID() insolar.ShortNodeID {
 	return r.tgt
 }
 
-func (r *basePacket) GetTargetID() common.ShortNodeID {
+func (r *basePacket) GetTargetID() insolar.ShortNodeID {
 	return r.tgt
 }
 
@@ -197,8 +196,8 @@ type EmuPhase0NetPacket struct {
 	pn          pulse_data.PulseNumber
 }
 
-func (r *EmuPhase0NetPacket) GetPacketType() api.PacketType {
-	return api.PacketPhase0
+func (r *EmuPhase0NetPacket) GetPacketType() gcp_types.PacketType {
+	return gcp_types.PacketPhase0
 }
 
 func (r *EmuPhase0NetPacket) GetMemberPacket() packets.MemberPacketReader {
@@ -250,11 +249,11 @@ func (r *EmuPhase1NetPacket) String() string {
 	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d", prefix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
 }
 
-func (r *EmuPhase1NetPacket) GetPacketType() api.PacketType {
+func (r *EmuPhase1NetPacket) GetPacketType() gcp_types.PacketType {
 	if r.isRequest {
-		return api.PacketReqPhase1
+		return gcp_types.PacketReqPhase1
 	} else {
-		return api.PacketPhase1
+		return gcp_types.PacketPhase1
 	}
 }
 
@@ -266,7 +265,7 @@ func (r *EmuPhase1NetPacket) AsPhase1Packet() packets.Phase1PacketReader {
 	return r
 }
 
-func (r *EmuPhase1NetPacket) GetNodeStateHashEvidence() api.NodeStateHashEvidence {
+func (r *EmuPhase1NetPacket) GetNodeStateHashEvidence() gcp_types.NodeStateHashEvidence {
 	return r.mp.StateEvidence
 }
 
@@ -300,8 +299,8 @@ func (r *EmuPhase2NetPacket) GetNeighbourhood() []packets.MembershipAnnouncement
 	return r.neighbourhood
 }
 
-func (r *EmuPhase2NetPacket) GetPacketType() api.PacketType {
-	return api.PacketPhase2
+func (r *EmuPhase2NetPacket) GetPacketType() gcp_types.PacketType {
+	return gcp_types.PacketPhase2
 }
 
 func (r *EmuPhase2NetPacket) AsPhase2Packet() packets.Phase2PacketReader {
@@ -323,22 +322,22 @@ var _ packets.PacketParser = &EmuPhase3NetPacket{}
 type EmuPhase3NetPacket struct {
 	basePacket
 	pulseNumber pulse_data.PulseNumber
-	vectors     api.HashedNodeVector
+	vectors     gcp_types.HashedNodeVector
 }
 
-func (r *EmuPhase3NetPacket) GetTrustedGlobulaAnnouncementHash() api.GlobulaAnnouncementHash {
+func (r *EmuPhase3NetPacket) GetTrustedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {
 	return r.vectors.TrustedAnnouncementVector
 }
 
-func (r *EmuPhase3NetPacket) GetTrustedGlobulaStateSignature() api.GlobulaStateSignature {
+func (r *EmuPhase3NetPacket) GetTrustedGlobulaStateSignature() gcp_types.GlobulaStateSignature {
 	return r.vectors.TrustedGlobulaStateVectorSignature
 }
 
-func (r *EmuPhase3NetPacket) GetDoubtedGlobulaAnnouncementHash() api.GlobulaAnnouncementHash {
+func (r *EmuPhase3NetPacket) GetDoubtedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {
 	return r.vectors.DoubtedAnnouncementVector
 }
 
-func (r *EmuPhase3NetPacket) GetDoubtedGlobulaStateSignature() api.GlobulaStateSignature {
+func (r *EmuPhase3NetPacket) GetDoubtedGlobulaStateSignature() gcp_types.GlobulaStateSignature {
 	return r.vectors.DoubtedGlobulaStateVectorSignature
 }
 
@@ -347,12 +346,12 @@ func (r *EmuPhase3NetPacket) String() string {
 		r.vectors.Bitset, r.GetTrustedGlobulaAnnouncementHash(), r.GetDoubtedGlobulaAnnouncementHash())
 }
 
-func (r *EmuPhase3NetPacket) GetBitset() api.NodeBitset {
+func (r *EmuPhase3NetPacket) GetBitset() gcp_types.NodeBitset {
 	return r.vectors.Bitset
 }
 
-func (r *EmuPhase3NetPacket) GetPacketType() api.PacketType {
-	return api.PacketPhase3
+func (r *EmuPhase3NetPacket) GetPacketType() gcp_types.PacketType {
+	return gcp_types.PacketPhase3
 }
 
 func (r *EmuPhase3NetPacket) AsPhase3Packet() packets.Phase3PacketReader {

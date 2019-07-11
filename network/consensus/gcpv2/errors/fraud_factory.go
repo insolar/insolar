@@ -53,16 +53,16 @@ package errors
 import (
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
-var _ api.MisbehaviorReport = &FraudError{}
+var _ gcp_types.MisbehaviorReport = &FraudError{}
 
 type FraudError struct {
 	fraudType    int
 	msg          string
 	violatorHost endpoints.HostIdentity
-	violatorNode api.NodeProfile
+	violatorNode gcp_types.NodeProfile
 	details      []interface{}
 	captureMark  interface{}
 }
@@ -71,8 +71,8 @@ func (p *FraudError) IsUnknown() bool {
 	return p.fraudType == 0
 }
 
-func (p *FraudError) MisbehaviorType() api.MisbehaviorType {
-	return api.Fraud.Of(p.fraudType)
+func (p *FraudError) MisbehaviorType() gcp_types.MisbehaviorType {
+	return gcp_types.Fraud.Of(p.fraudType)
 }
 
 func (p *FraudError) CaptureMark() interface{} {
@@ -83,7 +83,7 @@ func (p *FraudError) Details() []interface{} {
 	return p.details
 }
 
-func (p *FraudError) ViolatorNode() api.NodeProfile {
+func (p *FraudError) ViolatorNode() gcp_types.NodeProfile {
 	return p.violatorNode
 }
 
@@ -121,7 +121,7 @@ type FraudFactory struct {
 	capture MisbehaviorReportFunc
 }
 
-func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost endpoints.HostIdentityHolder, violatorNode api.NodeProfile, details ...interface{}) FraudError {
+func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost endpoints.HostIdentityHolder, violatorNode gcp_types.NodeProfile, details ...interface{}) FraudError {
 	err := FraudError{
 		fraudType:    fraudType,
 		msg:          msg,
@@ -137,7 +137,7 @@ func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost endpoints
 	return err
 }
 
-func (p FraudFactory) NewNodeFraud(fraudType int, msg string, violatorNode api.NodeProfile, details ...interface{}) FraudError {
+func (p FraudFactory) NewNodeFraud(fraudType int, msg string, violatorNode gcp_types.NodeProfile, details ...interface{}) FraudError {
 	return p.NewFraud(fraudType, msg, nil, violatorNode, details...)
 }
 
@@ -145,15 +145,15 @@ func (p FraudFactory) NewHostFraud(fraudType int, msg string, violatorHost endpo
 	return p.NewFraud(fraudType, msg, violatorHost, nil, details...)
 }
 
-func (p FraudFactory) NewInconsistentMembershipAnnouncement(violator api.NodeProfile,
-	evidence1 api.MembershipAnnouncement, evidence2 api.MembershipAnnouncement) FraudError {
+func (p FraudFactory) NewInconsistentMembershipAnnouncement(violator gcp_types.NodeProfile,
+	evidence1 gcp_types.MembershipAnnouncement, evidence2 gcp_types.MembershipAnnouncement) FraudError {
 	return p.NewNodeFraud(FraudMultipleNsh, "multiple membership profile", violator, evidence1, evidence2)
 }
 
-func (p FraudFactory) NewMismatchedMembershipRank(violator api.NodeProfile, mp api.MembershipProfile) FraudError {
+func (p FraudFactory) NewMismatchedMembershipRank(violator gcp_types.NodeProfile, mp gcp_types.MembershipProfile) FraudError {
 	return p.NewNodeFraud(MismatchedRank, "mismatched membership profile rank", violator, mp)
 }
 
-func (p FraudFactory) NewMismatchedMembershipNodeCount(violator api.NodeProfile, mp api.MembershipProfile, nodeCount int) FraudError {
+func (p FraudFactory) NewMismatchedMembershipNodeCount(violator gcp_types.NodeProfile, mp gcp_types.MembershipProfile, nodeCount int) FraudError {
 	return p.NewNodeFraud(MismatchedRank, "mismatched membership profile node count", violator, mp, nodeCount)
 }

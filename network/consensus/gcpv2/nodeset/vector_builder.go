@@ -51,9 +51,8 @@
 package nodeset
 
 import (
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
 /*
@@ -61,16 +60,16 @@ Contains copy of NodeAppearance fields that can be changed, to avoid possible ra
 */
 
 type VectorEntryData struct {
-	NodeID common2.ShortNodeID
+	NodeID insolar.ShortNodeID
 
-	Role           api.NodePrimaryRole
-	RequestedPower api.MemberPower
-	TrustLevel     common.NodeTrustLevel
-	Mode           api.MemberOpMode
+	Role           gcp_types.NodePrimaryRole
+	RequestedPower gcp_types.MemberPower
+	TrustLevel     gcp_types.NodeTrustLevel
+	Mode           gcp_types.MemberOpMode
 
 	//Node *NodeAppearance
 	//common.MembershipAnnouncement
-	api.NodeAnnouncedState
+	gcp_types.NodeAnnouncedState
 }
 
 type VectorEntryScanner interface {
@@ -87,10 +86,10 @@ type VectorCursor struct {
 	RoleIndex uint16
 	PowIndex  uint16
 
-	LastRole api.NodePrimaryRole
+	LastRole gcp_types.NodePrimaryRole
 }
 
-func (p *VectorCursor) BeforeNext(role api.NodePrimaryRole) {
+func (p *VectorCursor) BeforeNext(role gcp_types.NodePrimaryRole) {
 	if p.LastRole == role {
 		return
 	}
@@ -99,7 +98,7 @@ func (p *VectorCursor) BeforeNext(role api.NodePrimaryRole) {
 	p.LastRole = role
 }
 
-func (p *VectorCursor) AfterNext(power api.MemberPower) {
+func (p *VectorCursor) AfterNext(power gcp_types.MemberPower) {
 	p.RoleIndex++
 	p.PowIndex += power.ToLinearValue()
 	p.NodeIndex++

@@ -52,7 +52,7 @@ package packets
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
 /*
@@ -64,8 +64,8 @@ import (
 
 const JoinerMembershipRank MembershipRank = 0
 
-func (v MembershipRank) GetPower() api.MemberPower {
-	return api.MemberPower(v)
+func (v MembershipRank) GetPower() gcp_types.MemberPower {
+	return gcp_types.MemberPower(v)
 }
 
 func (v MembershipRank) GetIndex() uint16 {
@@ -76,8 +76,8 @@ func (v MembershipRank) GetTotalCount() uint16 {
 	return uint16(v>>18) & 0x03FF
 }
 
-func (v MembershipRank) GetMode() api.MemberOpMode {
-	return api.MemberOpMode(v >> 28)
+func (v MembershipRank) GetMode() gcp_types.MemberOpMode {
+	return gcp_types.MemberOpMode(v >> 28)
 }
 
 func (v MembershipRank) IsJoiner() bool {
@@ -91,7 +91,7 @@ func (v MembershipRank) String() string {
 	return fmt.Sprintf("{%v %d/%d pw:%v}", v.GetMode(), v.GetIndex(), v.GetTotalCount(), v.GetPower())
 }
 
-func NewMembershipRank(mode api.MemberOpMode, pw api.MemberPower, idx, count uint16) MembershipRank {
+func NewMembershipRank(mode gcp_types.MemberOpMode, pw gcp_types.MemberPower, idx, count uint16) MembershipRank {
 	if idx >= count {
 		panic("illegal value")
 	}

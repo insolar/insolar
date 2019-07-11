@@ -51,86 +51,86 @@
 package common
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestIsMaterial(t *testing.T) {
-	require.False(t, api.PrimaryRoleInactive.IsMaterial())
+	require.False(t, gcp_types.PrimaryRoleInactive.IsMaterial())
 
-	require.False(t, api.PrimaryRoleNeutral.IsMaterial())
+	require.False(t, gcp_types.PrimaryRoleNeutral.IsMaterial())
 
-	require.True(t, api.PrimaryRoleHeavyMaterial.IsMaterial())
+	require.True(t, gcp_types.PrimaryRoleHeavyMaterial.IsMaterial())
 
-	require.True(t, api.PrimaryRoleLightMaterial.IsMaterial())
+	require.True(t, gcp_types.PrimaryRoleLightMaterial.IsMaterial())
 
-	require.False(t, api.PrimaryRoleVirtual.IsMaterial())
+	require.False(t, gcp_types.PrimaryRoleVirtual.IsMaterial())
 }
 
 func TestIsHeavyMaterial(t *testing.T) {
-	require.False(t, api.PrimaryRoleInactive.IsHeavyMaterial())
+	require.False(t, gcp_types.PrimaryRoleInactive.IsHeavyMaterial())
 
-	require.False(t, api.PrimaryRoleNeutral.IsHeavyMaterial())
+	require.False(t, gcp_types.PrimaryRoleNeutral.IsHeavyMaterial())
 
-	require.True(t, api.PrimaryRoleHeavyMaterial.IsHeavyMaterial())
+	require.True(t, gcp_types.PrimaryRoleHeavyMaterial.IsHeavyMaterial())
 
-	require.False(t, api.PrimaryRoleLightMaterial.IsHeavyMaterial())
+	require.False(t, gcp_types.PrimaryRoleLightMaterial.IsHeavyMaterial())
 
-	require.False(t, api.PrimaryRoleVirtual.IsHeavyMaterial())
+	require.False(t, gcp_types.PrimaryRoleVirtual.IsHeavyMaterial())
 }
 
 func TestIsLightMaterial(t *testing.T) {
-	require.False(t, api.PrimaryRoleInactive.IsLightMaterial())
+	require.False(t, gcp_types.PrimaryRoleInactive.IsLightMaterial())
 
-	require.False(t, api.PrimaryRoleNeutral.IsLightMaterial())
+	require.False(t, gcp_types.PrimaryRoleNeutral.IsLightMaterial())
 
-	require.False(t, api.PrimaryRoleHeavyMaterial.IsLightMaterial())
+	require.False(t, gcp_types.PrimaryRoleHeavyMaterial.IsLightMaterial())
 
-	require.True(t, api.PrimaryRoleLightMaterial.IsLightMaterial())
+	require.True(t, gcp_types.PrimaryRoleLightMaterial.IsLightMaterial())
 
-	require.False(t, api.PrimaryRoleVirtual.IsLightMaterial())
+	require.False(t, gcp_types.PrimaryRoleVirtual.IsLightMaterial())
 }
 
 func TestIsVirtual(t *testing.T) {
-	require.False(t, api.PrimaryRoleInactive.IsVirtual())
+	require.False(t, gcp_types.PrimaryRoleInactive.IsVirtual())
 
-	require.False(t, api.PrimaryRoleNeutral.IsVirtual())
+	require.False(t, gcp_types.PrimaryRoleNeutral.IsVirtual())
 
-	require.False(t, api.PrimaryRoleHeavyMaterial.IsVirtual())
+	require.False(t, gcp_types.PrimaryRoleHeavyMaterial.IsVirtual())
 
-	require.False(t, api.PrimaryRoleLightMaterial.IsVirtual())
+	require.False(t, gcp_types.PrimaryRoleLightMaterial.IsVirtual())
 
-	require.True(t, api.PrimaryRoleVirtual.IsVirtual())
+	require.True(t, gcp_types.PrimaryRoleVirtual.IsVirtual())
 }
 
 func TestIsNeutral(t *testing.T) {
-	require.False(t, api.PrimaryRoleInactive.IsNeutral())
+	require.False(t, gcp_types.PrimaryRoleInactive.IsNeutral())
 
-	require.True(t, api.PrimaryRoleNeutral.IsNeutral())
+	require.True(t, gcp_types.PrimaryRoleNeutral.IsNeutral())
 
-	require.False(t, api.PrimaryRoleHeavyMaterial.IsNeutral())
+	require.False(t, gcp_types.PrimaryRoleHeavyMaterial.IsNeutral())
 
-	require.False(t, api.PrimaryRoleLightMaterial.IsNeutral())
+	require.False(t, gcp_types.PrimaryRoleLightMaterial.IsNeutral())
 
-	require.False(t, api.PrimaryRoleVirtual.IsNeutral())
+	require.False(t, gcp_types.PrimaryRoleVirtual.IsNeutral())
 }
 
 func TestIsInactive(t *testing.T) {
-	require.True(t, api.PrimaryRoleInactive.IsInactive())
+	require.True(t, gcp_types.PrimaryRoleInactive.IsInactive())
 
-	require.False(t, api.PrimaryRoleNeutral.IsInactive())
+	require.False(t, gcp_types.PrimaryRoleNeutral.IsInactive())
 
-	require.False(t, api.PrimaryRoleHeavyMaterial.IsInactive())
+	require.False(t, gcp_types.PrimaryRoleHeavyMaterial.IsInactive())
 
-	require.False(t, api.PrimaryRoleLightMaterial.IsInactive())
+	require.False(t, gcp_types.PrimaryRoleLightMaterial.IsInactive())
 
-	require.False(t, api.PrimaryRoleVirtual.IsInactive())
+	require.False(t, gcp_types.PrimaryRoleVirtual.IsInactive())
 }
 
 func TestIsDiscovery(t *testing.T) {
-	require.False(t, api.SpecialRoleNone.IsDiscovery())
+	require.False(t, gcp_types.SpecialRoleNone.IsDiscovery())
 
-	require.True(t, api.SpecialRoleDiscovery.IsDiscovery())
+	require.True(t, gcp_types.SpecialRoleDiscovery.IsDiscovery())
 }

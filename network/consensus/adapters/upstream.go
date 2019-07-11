@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/utils"
@@ -88,7 +88,7 @@ func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChang
 	}
 }
 
-func (u *UpstreamPulseController) ConsensusFinished(report api_2.MembershipUpstreamReport, expectedCensus api_2.OperationalCensus) {
+func (u *UpstreamPulseController) ConsensusFinished(report api.MembershipUpstreamReport, expectedCensus api.OperationalCensus) {
 	// TODO: use nodekeeper in chronicles and remove setting sync list from here
 
 	ctx := contextFromReport(report)
@@ -104,15 +104,15 @@ func (u *UpstreamPulseController) ConsensusFinished(report api_2.MembershipUpstr
 	)
 }
 
-func (u *UpstreamPulseController) PreparePulseChange(report api_2.MembershipUpstreamReport) <-chan api.NodeStateHash {
-	nshChan := make(chan api.NodeStateHash)
+func (u *UpstreamPulseController) PreparePulseChange(report api.MembershipUpstreamReport) <-chan gcp_types.NodeStateHash {
+	nshChan := make(chan gcp_types.NodeStateHash)
 
 	go awaitState(nshChan, u.stateGetter)
 
 	return nshChan
 }
 
-func (u *UpstreamPulseController) CommitPulseChange(report api_2.MembershipUpstreamReport, pulseData pulse_data.PulseData, activeCensus api_2.OperationalCensus) {
+func (u *UpstreamPulseController) CommitPulseChange(report api.MembershipUpstreamReport, pulseData pulse_data.PulseData, activeCensus api.OperationalCensus) {
 	ctx := contextFromReport(report)
 	pulse := NewPulse(pulseData)
 
@@ -123,10 +123,10 @@ func (u *UpstreamPulseController) CancelPulseChange() {
 	panic("implement me")
 }
 
-func awaitState(c chan<- api.NodeStateHash, stater StateGetter) {
+func awaitState(c chan<- gcp_types.NodeStateHash, stater StateGetter) {
 	c <- cryptography_containers.NewDigest(long_bits.NewBits512FromBytes(stater.State()), SHA3512Digest).AsDigestHolder()
 }
 
-func contextFromReport(report api_2.MembershipUpstreamReport) context.Context {
+func contextFromReport(report api.MembershipUpstreamReport) context.Context {
 	return utils.NewPulseContext(context.Background(), uint32(report.PulseNumber))
 }

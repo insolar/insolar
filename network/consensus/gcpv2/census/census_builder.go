@@ -51,12 +51,11 @@
 package census
 
 import (
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"sync"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 func newLocalCensusBuilder(chronicles *localChronicles, pn pulse_data.PulseNumber, population copyToPopulation,
@@ -73,20 +72,20 @@ func newLocalCensusBuilder(chronicles *localChronicles, pn pulse_data.PulseNumbe
 	return r
 }
 
-var _ api_2.Builder = &LocalCensusBuilder{}
+var _ api.Builder = &LocalCensusBuilder{}
 
 type LocalCensusBuilder struct {
 	mutex             sync.RWMutex
 	chronicles        *localChronicles
 	pulseNumber       pulse_data.PulseNumber
 	population        DynamicPopulation
-	state             api_2.State
+	state             api.State
 	populationBuilder DynamicPopulationBuilder
-	gsh               api.GlobulaStateHash
-	csh               api.CloudStateHash
+	gsh               gcp_types.GlobulaStateHash
+	csh               gcp_types.CloudStateHash
 }
 
-func (c *LocalCensusBuilder) GetCensusState() api_2.State {
+func (c *LocalCensusBuilder) GetCensusState() api.State {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -97,14 +96,14 @@ func (c *LocalCensusBuilder) GetPulseNumber() pulse_data.PulseNumber {
 	return c.pulseNumber
 }
 
-func (c *LocalCensusBuilder) GetGlobulaStateHash() api.GlobulaStateHash {
+func (c *LocalCensusBuilder) GetGlobulaStateHash() gcp_types.GlobulaStateHash {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
 	return c.gsh
 }
 
-func (c *LocalCensusBuilder) SetGlobulaStateHash(gsh api.GlobulaStateHash) {
+func (c *LocalCensusBuilder) SetGlobulaStateHash(gsh gcp_types.GlobulaStateHash) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -125,7 +124,7 @@ func (c *LocalCensusBuilder) SealCensus() {
 	if c.gsh == nil {
 		panic("illegal state: GSH is nil")
 	}
-	c.state = api_2.SealedCensus
+	c.state = api.SealedCensus
 }
 
 func (c *LocalCensusBuilder) IsSealed() bool {
@@ -135,11 +134,11 @@ func (c *LocalCensusBuilder) IsSealed() bool {
 	return c.state.IsSealed()
 }
 
-func (c *LocalCensusBuilder) GetPopulationBuilder() api_2.PopulationBuilder {
+func (c *LocalCensusBuilder) GetPopulationBuilder() api.PopulationBuilder {
 	return &c.populationBuilder
 }
 
-func (c *LocalCensusBuilder) build(csh api.CloudStateHash) (copyToOnlinePopulation, api_2.EvictedPopulation) {
+func (c *LocalCensusBuilder) build(csh gcp_types.CloudStateHash) (copyToOnlinePopulation, api.EvictedPopulation) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -154,13 +153,13 @@ func (c *LocalCensusBuilder) build(csh api.CloudStateHash) (copyToOnlinePopulati
 	if c.state.IsBuilt() {
 		panic("illegal state: was built")
 	}
-	c.state = api_2.BuiltCensus
+	c.state = api.BuiltCensus
 	c.csh = csh
 
 	return c.population.CopyAndSeparate()
 }
 
-func (c *LocalCensusBuilder) BuildAndMakeExpected(csh api.CloudStateHash) api_2.ExpectedCensus {
+func (c *LocalCensusBuilder) BuildAndMakeExpected(csh gcp_types.CloudStateHash) api.ExpectedCensus {
 	pop, evicts := c.build(csh)
 
 	r := &ExpectedCensusTemplate{
@@ -177,7 +176,7 @@ func (c *LocalCensusBuilder) BuildAndMakeExpected(csh api.CloudStateHash) api_2.
 	return r
 }
 
-var _ api_2.PopulationBuilder = &DynamicPopulationBuilder{}
+var _ api.PopulationBuilder = &DynamicPopulationBuilder{}
 
 type DynamicPopulationBuilder struct {
 	census *LocalCensusBuilder
@@ -190,7 +189,7 @@ func (c *DynamicPopulationBuilder) RemoveOthers() {
 	c.census.population.RemoveOthers()
 }
 
-func (c *DynamicPopulationBuilder) GetUnorderedProfiles() []api.UpdatableNodeProfile {
+func (c *DynamicPopulationBuilder) GetUnorderedProfiles() []gcp_types.UpdatableNodeProfile {
 	c.census.mutex.RLock()
 	defer c.census.mutex.RUnlock()
 
@@ -204,18 +203,18 @@ func (c *DynamicPopulationBuilder) GetCount() int {
 	return c.census.population.GetCount()
 }
 
-func (c *DynamicPopulationBuilder) GetLocalProfile() api.UpdatableNodeProfile {
+func (c *DynamicPopulationBuilder) GetLocalProfile() gcp_types.UpdatableNodeProfile {
 	return c.FindProfile(c.census.population.GetLocalProfile().GetShortNodeID())
 }
 
-func (c *DynamicPopulationBuilder) FindProfile(nodeID common.ShortNodeID) api.UpdatableNodeProfile {
+func (c *DynamicPopulationBuilder) FindProfile(nodeID insolar.ShortNodeID) gcp_types.UpdatableNodeProfile {
 	c.census.mutex.RLock()
 	defer c.census.mutex.RUnlock()
 
 	return c.census.population.FindUpdatableProfile(nodeID)
 }
 
-func (c *DynamicPopulationBuilder) AddJoinerProfile(intro api.NodeIntroProfile) api.UpdatableNodeProfile {
+func (c *DynamicPopulationBuilder) AddJoinerProfile(intro gcp_types.NodeIntroProfile) gcp_types.UpdatableNodeProfile {
 	c.census.mutex.Lock()
 	defer c.census.mutex.Unlock()
 
@@ -225,7 +224,7 @@ func (c *DynamicPopulationBuilder) AddJoinerProfile(intro api.NodeIntroProfile) 
 	return c.census.population.AddProfile(intro)
 }
 
-func (c *DynamicPopulationBuilder) RemoveProfile(nodeID common.ShortNodeID) {
+func (c *DynamicPopulationBuilder) RemoveProfile(nodeID insolar.ShortNodeID) {
 	c.census.mutex.Lock()
 	defer c.census.mutex.Unlock()
 

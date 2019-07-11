@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,60 +46,51 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package common
+package phases
 
-type NodeTrustLevel int8
-
-const (
-	FraudByBlacklist NodeTrustLevel = -4 // in the blacklist
-	FraudByNetwork   NodeTrustLevel = -3 // >2/3 of network have indicated fraud
-	FraudByNeighbors NodeTrustLevel = -2 // >50% of neighborhood have indicated fraud
-	FraudBySome      NodeTrustLevel = -1 // some nodes have indicated fraud
-	UnknownTrust     NodeTrustLevel = 0  // initial state
-	TrustBySome      NodeTrustLevel = 1  // some nodes have indicated trust (same NSH)
-	TrustByNeighbors NodeTrustLevel = 2  // >50% of neighborhood have indicated trust
-	TrustByNetwork   NodeTrustLevel = 3  // >2/3 of network have indicated trust
-	TrustByMandate   NodeTrustLevel = 4  // on- or off-network node with a temporary mandate, e.g. pulsar or discovery
-	TrustByCouncil   NodeTrustLevel = 5  // on- or off-network node with a permanent mandate
-
-	SelfTrust       = TrustByNeighbors // MUST be not less than TrustByNeighbors
-	FraudByThisNode = FraudBySome      // fraud is detected by this node
+import (
+	"math"
+	"math/bits"
 )
 
-func (v NodeTrustLevel) abs() int8 {
-	if v >= 0 {
-		return int8(v)
-	}
-	return int8(-v)
+type NeighbourWeightScaler struct {
+	max   uint32
+	shift uint8
 }
 
-// Updates only to better/worse levels. Negative level of the same magnitude prevails.
-func (v *NodeTrustLevel) Update(newLevel NodeTrustLevel) (modified bool) {
-	if newLevel == UnknownTrust || newLevel == *v {
-		return false
+func NewNeighbourWeightScalerInt64(fullRange int64) NeighbourWeightScaler {
+	if fullRange < 0 {
+		panic("negative range")
 	}
-	if newLevel > UnknownTrust {
-		if newLevel.abs() <= v.abs() {
-			return false
-		}
-	} else { // negative prevails hence update on |newLevel| == |v|
-		if newLevel.abs() < v.abs() {
-			return false
-		}
-	}
-	*v = newLevel
-	return true
+	return NewNeighbourWeightScalerUint64(uint64(fullRange))
 }
 
-func (v *NodeTrustLevel) UpdateKeepNegative(newLevel NodeTrustLevel) (modified bool) {
-	if newLevel > UnknownTrust && *v < UnknownTrust {
-		return false
+func NewNeighbourWeightScalerUint64(fullRange uint64) NeighbourWeightScaler {
+	var shift = uint8(bits.Len64(fullRange))
+	if shift > 32 {
+		shift -= 32
+	} else {
+		shift = 0
 	}
-	return v.Update(newLevel)
+	return NeighbourWeightScaler{shift: shift, max: uint32(fullRange >> shift)}
 }
 
-func (v *NodeTrustLevel) IsNegative() bool {
-	return *v < UnknownTrust
+func (r NeighbourWeightScaler) ScaleInt64(v int64) uint32 {
+	if v < 0 {
+		return 0
+	}
+	return r.ScaleUint64(uint64(v))
+}
+
+func (r NeighbourWeightScaler) ScaleUint64(v uint64) uint32 {
+	if r.max == 0 {
+		return math.MaxUint32
+	}
+	v >>= r.shift
+	if v >= uint64(r.max) {
+		return math.MaxUint32
+	}
+	return uint32((v * math.MaxUint32) / uint64(r.max))
 }

@@ -48,65 +48,37 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api
+package gcp_types
 
 import (
-	"math"
-	"time"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 )
 
-type RoundTimings struct {
-	// Time to wait since NSH is requested before starting Phase0.
-	StartPhase0At time.Duration
-
-	// When Phase2 can be finished sooner by number of covered nodes, termination of Phase2 will be delayed
-	// by BeforeInPhase2ChasingDelay after every Phase2 packet. No extra delays when = 0.
-	// Total Phase2 time can NOT exceed EndOfPhase2
-	BeforeInPhase2ChasingDelay time.Duration
-
-	// When Phase3 can be finished sooner by number of covered nodes, termination of Phase2 will be delayed
-	// by BeforeInPhase3ChasingDelay after every Phase3 packet. No extra delays when = 0.
-	// Total Phase3 time can NOT exceed EndOfPhase3
-	BeforeInPhase3ChasingDelay time.Duration
-
-	// Time to finish receiving of Phase1 packets from other nodes and to finish producing Phase2 packets as well
-	// since start of the consensus round
-	EndOfPhase1 time.Duration
-
-	// Time to wait before re-sending Phase1 packets (marked as requests) to missing nodes
-	// since start of the consensus round. No retries when = 0
-	StartPhase1RetryAt time.Duration
-
-	// Time to finish receiving Phase2 packets from other nodes and START producing Phase3 packets
-	// Phase3 can start sooner if there is enough number of nodes covered by Phase2
-	EndOfPhase2 time.Duration
-
-	// Time to finish receiving Phase3 packets from other nodes and stop Consensus
-	EndOfPhase3 time.Duration
+type MisbehaviorReport interface {
+	CaptureMark() interface{}
+	Details() []interface{}
+	ViolatorNode() NodeProfile
+	ViolatorHost() endpoints.HostIdentity
+	MisbehaviorType() MisbehaviorType
 }
 
-type NeighbourhoodSizes struct {
-	NeighbourhoodSize           int
-	NeighbourhoodTrustThreshold int
-	JoinersPerNeighbourhood     int
-	JoinersBoost                int
+type MisbehaviorType uint64
+type MisbehaviorCategory int
+
+const (
+	_ MisbehaviorCategory = iota
+	Blame
+	Fraud
+)
+
+func (c MisbehaviorType) Category() MisbehaviorCategory {
+	return MisbehaviorCategory(c >> 32)
 }
 
-func (sizes *NeighbourhoodSizes) VerifySizes() {
-	if sizes.NeighbourhoodSize < 4 {
-		panic("neighbourSize can not be less than 4")
-	}
-	if sizes.NeighbourhoodTrustThreshold < 1 || sizes.NeighbourhoodTrustThreshold > math.MaxUint8 {
-		panic("neighbourhood trust threshold must be in [1..MaxUint8]")
-	}
-	// if neighbourSize > math.MaxInt8 { panic("neighbourSize can not be more than 127") }
-	if sizes.JoinersPerNeighbourhood < 2 {
-		panic("neighbourJoiners can not be less than 2")
-	}
-	if sizes.JoinersBoost < 0 {
-		panic("joinersBoost can not be less than 0")
-	}
-	if sizes.JoinersBoost+sizes.JoinersPerNeighbourhood > sizes.NeighbourhoodSize-1 {
-		panic("joiners + boost are more than neighbourSize - 1")
-	}
+func (c MisbehaviorType) Type() int {
+	return int(c & (1<<32 - 1))
+}
+
+func (c MisbehaviorCategory) Of(misbehavior int) MisbehaviorType {
+	return MisbehaviorType(c<<32) | MisbehaviorType(misbehavior&(1<<32-1))
 }

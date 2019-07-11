@@ -53,11 +53,11 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"io"
 	"math"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/pkg/errors"
 )
 
@@ -83,8 +83,8 @@ type packetContext struct {
 	header *Header
 
 	fieldContext          FieldContext
-	neighbourNodeID       common.ShortNodeID
-	announcedJoinerNodeID common.ShortNodeID
+	neighbourNodeID       insolar.ShortNodeID
+	announcedJoinerNodeID insolar.ShortNodeID
 }
 
 func newPacketContext(ctx context.Context, header *Header) packetContext {
@@ -103,19 +103,19 @@ func (pc *packetContext) SetInContext(ctx FieldContext) {
 	pc.fieldContext = ctx
 }
 
-func (pc *packetContext) GetNeighbourNodeID() common.ShortNodeID {
+func (pc *packetContext) GetNeighbourNodeID() insolar.ShortNodeID {
 	return pc.neighbourNodeID
 }
 
-func (pc *packetContext) SetNeighbourNodeID(nodeID common.ShortNodeID) {
+func (pc *packetContext) SetNeighbourNodeID(nodeID insolar.ShortNodeID) {
 	pc.neighbourNodeID = nodeID
 }
 
-func (pc *packetContext) GetAnnouncedJoinerNodeID() common.ShortNodeID {
+func (pc *packetContext) GetAnnouncedJoinerNodeID() insolar.ShortNodeID {
 	return pc.announcedJoinerNodeID
 }
 
-func (pc *packetContext) SetAnnouncedJoinerNodeID(nodeID common.ShortNodeID) {
+func (pc *packetContext) SetAnnouncedJoinerNodeID(nodeID insolar.ShortNodeID) {
 	pc.announcedJoinerNodeID = nodeID
 }
 

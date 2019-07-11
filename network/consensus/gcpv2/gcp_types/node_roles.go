@@ -48,78 +48,51 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api
+package gcp_types
 
-import (
-	"math"
-)
-
-type PacketType uint8
+type NodePrimaryRole uint8 //MUST BE 6-bit
 
 const (
-	/* Phased Packets - these are SENT by a node in the given sequence */
-
-	PacketPhase0 PacketType = iota
-	PacketPhase1            /* Namely Phases0 and Phases1 are actually variations of Phase 1 */
-
-	PacketPhase2 /* Phase2 has no phased variations, so =3 is reserved */
-	_
-
-	PacketPhase3 /* Namely Phases3 and Phases4 are actually variations of Phase 3 */
-	PacketPhase4
-
-	/* Off-phase Packets - these packets can be sent at any moment */
-
-	PacketPulse /* Triggers Phase0-1 */
-	PacketFraud /* Delivers fraud proof, by request only */
-
-	PacketReqPhase1 /* Request to resend own NSH - will be replied with PacketPhase1 without PulseData.
-	The reply MUST include all claims presented in the original Phase1 packet.
-	This request MUST be replied not more than 1 time per requesting node per consensus round,
-	otherwise is ignored.
-	*/
-	PacketReqIntro /* Request to resend other's (NSH + intro) - will be replied with PacketPhase2.
-	Only joiners can send this request, and only to anyone in a relevant neighbourhood.
-	Limited by 1 times per requesting node per consensus round per requested intro,
-	otherwise is ignored.
-	*/
-	PacketReqFraud /* Requests fraud proof */
-
-	MaxPacketType
+	PrimaryRoleInactive NodePrimaryRole = iota
+	PrimaryRoleNeutral
+	PrimaryRoleHeavyMaterial
+	PrimaryRoleLightMaterial
+	PrimaryRoleVirtual
+	//PrimaryRoleCascade
+	//PrimaryRoleRecrypt
 )
 
-func (p PacketType) IsPhasedPacket() bool {
-	return p <= PacketPhase4
+func (v NodePrimaryRole) IsMaterial() bool {
+	return v == PrimaryRoleHeavyMaterial || v == PrimaryRoleLightMaterial
 }
 
-func (p PacketType) IsMemberPacket() bool {
-	return p != PacketPulse
+func (v NodePrimaryRole) IsHeavyMaterial() bool {
+	return v == PrimaryRoleHeavyMaterial
 }
 
-func (p PacketType) GetPayloadEquivalent() PacketType {
-	switch p {
-	case PacketReqPhase1:
-		return PacketPhase1
-	case PacketReqIntro:
-		return PacketPhase2
-	default:
-		return p
-	}
+func (v NodePrimaryRole) IsLightMaterial() bool {
+	return v == PrimaryRoleLightMaterial
 }
 
-func (p PacketType) ToPhaseNumber() (PhaseNumber, bool) {
-	switch p {
-	case PacketPhase0:
-		return Phase0, true
-	case PacketPhase1:
-		return Phase1, true
-	case PacketPhase2:
-		return Phase2, true
-	case PacketPhase3:
-		return Phase3, true
-	case PacketPhase4:
-		return Phase4, true
-	default:
-		return math.MaxUint8, false
-	}
+func (v NodePrimaryRole) IsVirtual() bool {
+	return v == PrimaryRoleVirtual
+}
+
+func (v NodePrimaryRole) IsNeutral() bool {
+	return v == PrimaryRoleNeutral
+}
+
+func (v NodePrimaryRole) IsInactive() bool {
+	return v == PrimaryRoleInactive
+}
+
+type NodeSpecialRole uint8
+
+const (
+	SpecialRoleNone      NodeSpecialRole = 0
+	SpecialRoleDiscovery NodeSpecialRole = 1 << iota
+)
+
+func (v NodeSpecialRole) IsDiscovery() bool {
+	return v == SpecialRoleDiscovery
 }

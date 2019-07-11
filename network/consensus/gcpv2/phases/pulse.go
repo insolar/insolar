@@ -53,7 +53,7 @@ package phases
 import (
 	"context"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
@@ -82,8 +82,8 @@ func (r *PulsePrepController) BeforeStart(realm *core.PrepRealm) {
 func (r *PulsePrepController) StartWorker(ctx context.Context) {
 }
 
-func (*PulsePrepController) GetPacketType() api.PacketType {
-	return api.PacketPulse
+func (*PulsePrepController) GetPacketType() gcp_types.PacketType {
+	return gcp_types.PacketPulse
 }
 
 func (r *PulsePrepController) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) (postpone bool, err error) {
@@ -97,8 +97,8 @@ type PulseController struct {
 	core.PhaseControllerPerHostTemplate
 }
 
-func (*PulseController) GetPacketType() api.PacketType {
-	return api.PacketPulse
+func (*PulseController) GetPacketType() gcp_types.PacketType {
+	return gcp_types.PacketPulse
 }
 
 func (c *PulseController) HandleHostPacket(ctx context.Context, p packets.PacketParser, from endpoints.HostIdentityHolder) error {

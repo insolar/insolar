@@ -55,7 +55,7 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
@@ -86,7 +86,7 @@ func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController
 		p.queueToFull = make(chan postponedPacket, prepToFullQueueSize)
 	}
 
-	p.handlers = make([]PrepPhasePacketHandler, api.MaxPacketType)
+	p.handlers = make([]PrepPhasePacketHandler, gcp_types.MaxPacketType)
 	for _, ctl := range controllers {
 		pt := ctl.GetPacketType()
 		if p.handlers[pt] != nil {

@@ -53,11 +53,10 @@ package serialization
 import (
 	"context"
 	"encoding/binary"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"io"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 var (
@@ -66,8 +65,8 @@ var (
 
 type PacketHeaderAccessor interface {
 	GetProtocolType() ProtocolType
-	GetPacketType() api.PacketType
-	GetSourceID() common.ShortNodeID
+	GetPacketType() gcp_types.PacketType
+	GetSourceID() insolar.ShortNodeID
 	HasFlag(flag Flag) bool
 	GetFlagRangeInt(from, to uint8) uint8
 	IsRelayRestricted() bool
@@ -98,10 +97,10 @@ type PacketContext interface {
 
 	InContext(ctx FieldContext) bool
 	SetInContext(ctx FieldContext)
-	GetNeighbourNodeID() common.ShortNodeID
-	SetNeighbourNodeID(nodeID common.ShortNodeID)
-	GetAnnouncedJoinerNodeID() common.ShortNodeID
-	SetAnnouncedJoinerNodeID(nodeID common.ShortNodeID)
+	GetNeighbourNodeID() insolar.ShortNodeID
+	SetNeighbourNodeID(nodeID insolar.ShortNodeID)
+	GetAnnouncedJoinerNodeID() insolar.ShortNodeID
+	SetAnnouncedJoinerNodeID(nodeID insolar.ShortNodeID)
 }
 
 type SerializeContext interface {

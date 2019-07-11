@@ -57,7 +57,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"sync"
 	"time"
 
@@ -66,7 +66,7 @@ import (
 )
 
 type RoundStrategyFactory interface {
-	CreateRoundStrategy(chronicle api_2.ConsensusChronicles, config api_2.LocalNodeConfiguration) RoundStrategy
+	CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) RoundStrategy
 }
 
 type RoundStrategy interface {
@@ -75,18 +75,18 @@ type RoundStrategy interface {
 	RandUint32() uint32
 	ShuffleNodeSequence(n int, swap func(i, j int))
 	IsEphemeralPulseAllowed() bool
-	ConfigureRoundContext(ctx context.Context, expectedPulse pulse_data.PulseNumber, self api.LocalNodeProfile) context.Context
-	AdjustConsensusTimings(timings *api.RoundTimings)
+	ConfigureRoundContext(ctx context.Context, expectedPulse pulse_data.PulseNumber, self gcp_types.LocalNodeProfile) context.Context
+	AdjustConsensusTimings(timings *gcp_types.RoundTimings)
 }
 
 type PhasedRoundController struct {
 	rw sync.RWMutex
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
-	chronicle      api_2.ConsensusChronicles
+	chronicle      api.ConsensusChronicles
 	fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
-	prevPulseRound api_2.RoundController
+	prevPulseRound api.RoundController
 
 	/* Other fields - need mutex */
 	isRunning bool
@@ -94,9 +94,9 @@ type PhasedRoundController struct {
 	realm     FullRealm
 }
 
-func NewPhasedRoundController(strategy RoundStrategy, chronicle api_2.ConsensusChronicles, transport api_2.TransportFactory,
-	config api_2.LocalNodeConfiguration, controlFeeder api_2.ConsensusControlFeeder, candidateFeeder api_2.CandidateControlFeeder,
-	prevPulseRound api_2.RoundController) *PhasedRoundController {
+func NewPhasedRoundController(strategy RoundStrategy, chronicle api.ConsensusChronicles, transport api.TransportFactory,
+	config api.LocalNodeConfiguration, controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder,
+	prevPulseRound api.RoundController) *PhasedRoundController {
 
 	r := &PhasedRoundController{chronicle: chronicle}
 
@@ -107,7 +107,7 @@ func NewPhasedRoundController(strategy RoundStrategy, chronicle api_2.ConsensusC
 	return r
 }
 
-func (r *PhasedRoundController) StartConsensusRound(upstream api_2.UpstreamPulseController) {
+func (r *PhasedRoundController) StartConsensusRound(upstream api.UpstreamPulseController) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 

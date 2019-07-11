@@ -51,46 +51,46 @@
 package census
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
 var _ localActiveCensus = &PrimingCensusTemplate{}
 
 type copyToOnlinePopulation interface {
 	copyToPopulation
-	api_2.OnlinePopulation
+	api.OnlinePopulation
 }
 
 type PrimingCensusTemplate struct {
 	chronicles *localChronicles
 	online     copyToOnlinePopulation
-	evicted    api_2.EvictedPopulation
+	evicted    api.EvictedPopulation
 	pd         pulse_data.PulseData
 
-	registries     api_2.VersionedRegistries
-	profileFactory api.NodeProfileFactory
+	registries     api.VersionedRegistries
+	profileFactory gcp_types.NodeProfileFactory
 }
 
-func (c *PrimingCensusTemplate) GetProfileFactory(ksf cryptography_containers.KeyStoreFactory) api.NodeProfileFactory {
+func (c *PrimingCensusTemplate) GetProfileFactory(ksf cryptography_containers.KeyStoreFactory) gcp_types.NodeProfileFactory {
 	return c.profileFactory
 }
 
-func (c *PrimingCensusTemplate) setVersionedRegistries(vr api_2.VersionedRegistries) {
+func (c *PrimingCensusTemplate) setVersionedRegistries(vr api.VersionedRegistries) {
 	if vr == nil {
 		panic("versioned registries are nil")
 	}
 	c.registries = vr
 }
 
-func (c *PrimingCensusTemplate) getVersionedRegistries() api_2.VersionedRegistries {
+func (c *PrimingCensusTemplate) getVersionedRegistries() api.VersionedRegistries {
 	return c.registries
 }
 
-func NewPrimingCensus(population copyToOnlinePopulation, pf api.NodeProfileFactory, registries api_2.VersionedRegistries) *PrimingCensusTemplate {
+func NewPrimingCensus(population copyToOnlinePopulation, pf gcp_types.NodeProfileFactory, registries api.VersionedRegistries) *PrimingCensusTemplate {
 	//TODO HACK - ugly sorting impl to establish initial node ordering
 	dp := NewDynamicPopulation(population)
 	sortedPopulation := ManyNodePopulation{}
@@ -106,16 +106,16 @@ func NewPrimingCensus(population copyToOnlinePopulation, pf api.NodeProfileFacto
 	return r
 }
 
-func nodeProfileOrdering(np api.NodeProfile) (api.NodePrimaryRole, api.MemberPower, common.ShortNodeID) {
+func nodeProfileOrdering(np gcp_types.NodeProfile) (gcp_types.NodePrimaryRole, gcp_types.MemberPower, insolar.ShortNodeID) {
 	p := np.GetDeclaredPower()
 	r := np.GetPrimaryRole()
 	if p == 0 || !np.GetOpMode().IsPowerful() {
-		return api.PrimaryRoleInactive, 0, np.GetShortNodeID()
+		return gcp_types.PrimaryRoleInactive, 0, np.GetShortNodeID()
 	}
 	return r, p, np.GetShortNodeID()
 }
 
-func lessForNodeProfile(c api.NodeProfile, o api.NodeProfile) bool {
+func lessForNodeProfile(c gcp_types.NodeProfile, o gcp_types.NodeProfile) bool {
 	cR, cP, cI := nodeProfileOrdering(c)
 	oR, oP, oI := nodeProfileOrdering(o)
 
@@ -144,8 +144,8 @@ func (c *PrimingCensusTemplate) SetAsActiveTo(chronicles LocalConsensusChronicle
 	lc.makeActive(nil, c)
 }
 
-func (*PrimingCensusTemplate) GetCensusState() api_2.State {
-	return api_2.PrimingCensus
+func (*PrimingCensusTemplate) GetCensusState() api.State {
+	return api.PrimingCensus
 }
 
 func (c *PrimingCensusTemplate) GetExpectedPulseNumber() pulse_data.PulseNumber {
@@ -166,23 +166,23 @@ func (c *PrimingCensusTemplate) GetPulseData() pulse_data.PulseData {
 	return c.pd
 }
 
-func (*PrimingCensusTemplate) GetGlobulaStateHash() api.GlobulaStateHash {
+func (*PrimingCensusTemplate) GetGlobulaStateHash() gcp_types.GlobulaStateHash {
 	return nil
 }
 
-func (*PrimingCensusTemplate) GetCloudStateHash() api.CloudStateHash {
+func (*PrimingCensusTemplate) GetCloudStateHash() gcp_types.CloudStateHash {
 	return nil
 }
 
-func (c *PrimingCensusTemplate) GetOnlinePopulation() api_2.OnlinePopulation {
+func (c *PrimingCensusTemplate) GetOnlinePopulation() api.OnlinePopulation {
 	return c.online
 }
 
-func (c *PrimingCensusTemplate) GetEvictedPopulation() api_2.EvictedPopulation {
+func (c *PrimingCensusTemplate) GetEvictedPopulation() api.EvictedPopulation {
 	return c.evicted
 }
 
-func (c *PrimingCensusTemplate) GetOfflinePopulation() api_2.OfflinePopulation {
+func (c *PrimingCensusTemplate) GetOfflinePopulation() api.OfflinePopulation {
 	return c.registries.GetOfflinePopulation()
 }
 
@@ -190,32 +190,32 @@ func (c *PrimingCensusTemplate) IsActive() bool {
 	return c.chronicles.GetActiveCensus() == c
 }
 
-func (c *PrimingCensusTemplate) GetMisbehaviorRegistry() api_2.MisbehaviorRegistry {
+func (c *PrimingCensusTemplate) GetMisbehaviorRegistry() api.MisbehaviorRegistry {
 	return c.registries.GetMisbehaviorRegistry()
 }
 
-func (c *PrimingCensusTemplate) GetMandateRegistry() api_2.MandateRegistry {
+func (c *PrimingCensusTemplate) GetMandateRegistry() api.MandateRegistry {
 	return c.registries.GetMandateRegistry()
 }
 
-func (c *PrimingCensusTemplate) CreateBuilder(pn pulse_data.PulseNumber, fullCopy bool) api_2.Builder {
+func (c *PrimingCensusTemplate) CreateBuilder(pn pulse_data.PulseNumber, fullCopy bool) api.Builder {
 	return newLocalCensusBuilder(c.chronicles, pn, c.online, fullCopy)
 }
 
-var _ api_2.ActiveCensus = &ActiveCensusTemplate{}
+var _ api.ActiveCensus = &ActiveCensusTemplate{}
 
 type ActiveCensusTemplate struct {
 	PrimingCensusTemplate
-	gsh api.GlobulaStateHash
-	csh api.CloudStateHash
+	gsh gcp_types.GlobulaStateHash
+	csh gcp_types.CloudStateHash
 }
 
 func (c *ActiveCensusTemplate) GetExpectedPulseNumber() pulse_data.PulseNumber {
 	return c.pd.GetNextPulseNumber()
 }
 
-func (*ActiveCensusTemplate) GetCensusState() api_2.State {
-	return api_2.SealedCensus
+func (*ActiveCensusTemplate) GetCensusState() api.State {
+	return api.SealedCensus
 }
 
 func (c *ActiveCensusTemplate) GetPulseNumber() pulse_data.PulseNumber {
@@ -226,27 +226,27 @@ func (c *ActiveCensusTemplate) GetPulseData() pulse_data.PulseData {
 	return c.pd
 }
 
-func (c *ActiveCensusTemplate) GetGlobulaStateHash() api.GlobulaStateHash {
+func (c *ActiveCensusTemplate) GetGlobulaStateHash() gcp_types.GlobulaStateHash {
 	return c.gsh
 }
 
-func (c *ActiveCensusTemplate) GetCloudStateHash() api.CloudStateHash {
+func (c *ActiveCensusTemplate) GetCloudStateHash() gcp_types.CloudStateHash {
 	return c.csh
 }
 
-var _ api_2.ExpectedCensus = &ExpectedCensusTemplate{}
+var _ api.ExpectedCensus = &ExpectedCensusTemplate{}
 
 type ExpectedCensusTemplate struct {
 	chronicles *localChronicles
 	online     copyToOnlinePopulation
-	evicted    api_2.EvictedPopulation
-	prev       api_2.ActiveCensus
-	gsh        api.GlobulaStateHash
-	csh        api.CloudStateHash
+	evicted    api.EvictedPopulation
+	prev       api.ActiveCensus
+	gsh        gcp_types.GlobulaStateHash
+	csh        gcp_types.CloudStateHash
 	pn         pulse_data.PulseNumber
 }
 
-func (c *ExpectedCensusTemplate) GetEvictedPopulation() api_2.EvictedPopulation {
+func (c *ExpectedCensusTemplate) GetEvictedPopulation() api.EvictedPopulation {
 	return c.evicted
 }
 
@@ -254,50 +254,50 @@ func (c *ExpectedCensusTemplate) GetExpectedPulseNumber() pulse_data.PulseNumber
 	return c.pn
 }
 
-func (c *ExpectedCensusTemplate) GetCensusState() api_2.State {
-	return api_2.BuiltCensus
+func (c *ExpectedCensusTemplate) GetCensusState() api.State {
+	return api.BuiltCensus
 }
 
 func (c *ExpectedCensusTemplate) GetPulseNumber() pulse_data.PulseNumber {
 	return c.pn
 }
 
-func (c *ExpectedCensusTemplate) GetGlobulaStateHash() api.GlobulaStateHash {
+func (c *ExpectedCensusTemplate) GetGlobulaStateHash() gcp_types.GlobulaStateHash {
 	return c.gsh
 }
 
-func (c *ExpectedCensusTemplate) GetCloudStateHash() api.CloudStateHash {
+func (c *ExpectedCensusTemplate) GetCloudStateHash() gcp_types.CloudStateHash {
 	return c.csh
 }
 
-func (c *ExpectedCensusTemplate) GetOnlinePopulation() api_2.OnlinePopulation {
+func (c *ExpectedCensusTemplate) GetOnlinePopulation() api.OnlinePopulation {
 	return c.online
 }
 
-func (c *ExpectedCensusTemplate) GetOfflinePopulation() api_2.OfflinePopulation {
+func (c *ExpectedCensusTemplate) GetOfflinePopulation() api.OfflinePopulation {
 	// TODO Should be provided via relevant builder
 	return c.prev.GetOfflinePopulation()
 }
 
-func (c *ExpectedCensusTemplate) GetMisbehaviorRegistry() api_2.MisbehaviorRegistry {
+func (c *ExpectedCensusTemplate) GetMisbehaviorRegistry() api.MisbehaviorRegistry {
 	// TODO Should be provided via relevant builder
 	return c.prev.GetMisbehaviorRegistry()
 }
 
-func (c *ExpectedCensusTemplate) GetMandateRegistry() api_2.MandateRegistry {
+func (c *ExpectedCensusTemplate) GetMandateRegistry() api.MandateRegistry {
 	// TODO Should be provided via relevant builder
 	return c.prev.GetMandateRegistry()
 }
 
-func (c *ExpectedCensusTemplate) CreateBuilder(pn pulse_data.PulseNumber, fullCopy bool) api_2.Builder {
+func (c *ExpectedCensusTemplate) CreateBuilder(pn pulse_data.PulseNumber, fullCopy bool) api.Builder {
 	return newLocalCensusBuilder(c.chronicles, pn, c.online, fullCopy)
 }
 
-func (c *ExpectedCensusTemplate) GetPrevious() api_2.ActiveCensus {
+func (c *ExpectedCensusTemplate) GetPrevious() api.ActiveCensus {
 	return c.prev
 }
 
-func (c *ExpectedCensusTemplate) MakeActive(pd pulse_data.PulseData) api_2.ActiveCensus {
+func (c *ExpectedCensusTemplate) MakeActive(pd pulse_data.PulseData) api.ActiveCensus {
 
 	a := ActiveCensusTemplate{
 		PrimingCensusTemplate: PrimingCensusTemplate{

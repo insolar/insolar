@@ -52,10 +52,9 @@ package nodeset
 
 import (
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"math"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
@@ -63,15 +62,15 @@ type NodeVectorHelper struct {
 	digestFactory     cryptography_containers.DigestFactory
 	signatureVerifier cryptography_containers.SignatureVerifier
 	entryScanner      VectorEntryScanner
-	bitset            api.NodeBitset
-	parentBitset      api.NodeBitset
+	bitset            gcp_types.NodeBitset
+	parentBitset      gcp_types.NodeBitset
 }
 
 func NewLocalNodeVector(digestFactory cryptography_containers.DigestFactory,
 	entryScanner VectorEntryScanner) NodeVectorHelper {
 
 	p := NodeVectorHelper{digestFactory, nil,
-		entryScanner, make(api.NodeBitset, entryScanner.GetIndexedCount()), nil,
+		entryScanner, make(gcp_types.NodeBitset, entryScanner.GetIndexedCount()), nil,
 	}
 
 	entryScanner.ScanIndexed(func(idx int, nodeData VectorEntryData) {
@@ -80,18 +79,18 @@ func NewLocalNodeVector(digestFactory cryptography_containers.DigestFactory,
 	return p
 }
 
-func mapVectorEntryDataToNodesetEntry(nodeData VectorEntryData) api.NodeBitsetEntry {
+func mapVectorEntryDataToNodesetEntry(nodeData VectorEntryData) gcp_types.NodeBitsetEntry {
 	switch {
 	case nodeData.IsEmpty():
-		return api.NbsTimeout
+		return gcp_types.NbsTimeout
 	case nodeData.TrustLevel.IsNegative():
-		return api.NbsFraud
-	case nodeData.TrustLevel == common.UnknownTrust:
-		return api.NbsBaselineTrust
-	case nodeData.TrustLevel < common.TrustByNeighbors:
-		return api.NbsLimitedTrust
+		return gcp_types.NbsFraud
+	case nodeData.TrustLevel == gcp_types.UnknownTrust:
+		return gcp_types.NbsBaselineTrust
+	case nodeData.TrustLevel < gcp_types.TrustByNeighbors:
+		return gcp_types.NbsLimitedTrust
 	default:
-		return api.NbsHighTrust
+		return gcp_types.NbsHighTrust
 	}
 }
 
@@ -105,32 +104,32 @@ func (p *NodeVectorHelper) PrepareDerivedVector(statRow *stats.Row) {
 		panic("illegal state")
 	}
 
-	p.bitset = make(api.NodeBitset, len(p.parentBitset))
+	p.bitset = make(gcp_types.NodeBitset, len(p.parentBitset))
 
 	for idx := range p.parentBitset {
 		switch statRow.Get(idx) {
 		case NodeBitMissingHere:
-			p.bitset[idx] = api.NbsTimeout // we don't have it
+			p.bitset[idx] = gcp_types.NbsTimeout // we don't have it
 		case NodeBitDoubtedMissingHere:
-			p.bitset[idx] = api.NbsTimeout // we don't have it
+			p.bitset[idx] = gcp_types.NbsTimeout // we don't have it
 		case NodeBitSame:
 			// ok, use as-is
 			p.bitset[idx] = p.parentBitset[idx]
 		case NodeBitLessTrustedThere:
 			// ok - exclude for trusted
-			p.bitset[idx] = api.NbsBaselineTrust
+			p.bitset[idx] = gcp_types.NbsBaselineTrust
 		case NodeBitLessTrustedHere:
 			// ok - use for both
-			p.bitset[idx] = api.NbsHighTrust
+			p.bitset[idx] = gcp_types.NbsHighTrust
 		case NodeBitMissingThere:
-			p.bitset[idx] = api.NbsTimeout // we have it, but the other's doesn't
+			p.bitset[idx] = gcp_types.NbsTimeout // we have it, but the other's doesn't
 		default:
 			panic("unexpected")
 		}
 	}
 }
 
-func (p *NodeVectorHelper) buildGlobulaAnnouncementHash(trusted bool) api.GlobulaAnnouncementHash {
+func (p *NodeVectorHelper) buildGlobulaAnnouncementHash(trusted bool) gcp_types.GlobulaAnnouncementHash {
 	hasEntries := false
 	agg := p.digestFactory.GetGshDigester()
 
@@ -152,7 +151,7 @@ func (p *NodeVectorHelper) buildGlobulaAnnouncementHash(trusted bool) api.Globul
 	return nil
 }
 
-func (p *NodeVectorHelper) buildGlobulaAnnouncementHashes() (api.GlobulaAnnouncementHash, api.GlobulaAnnouncementHash) {
+func (p *NodeVectorHelper) buildGlobulaAnnouncementHashes() (gcp_types.GlobulaAnnouncementHash, gcp_types.GlobulaAnnouncementHash) {
 	/*
 		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always
 		have trust level set high enough to get bitset[i].IsTrusted() == true
@@ -185,7 +184,7 @@ func (p *NodeVectorHelper) buildGlobulaAnnouncementHashes() (api.GlobulaAnnounce
 	return trustedResult, trustedResult
 }
 
-func (p *NodeVectorHelper) buildGlobulaStateHash(trusted bool) api.GlobulaAnnouncementHash {
+func (p *NodeVectorHelper) buildGlobulaStateHash(trusted bool) gcp_types.GlobulaAnnouncementHash {
 	hasEntries := false
 	agg := p.digestFactory.GetGshDigester()
 
@@ -220,7 +219,7 @@ func (p *NodeVectorHelper) buildGlobulaStateHash(trusted bool) api.GlobulaAnnoun
 	return nil
 }
 
-func (p *NodeVectorHelper) buildGlobulaStateHashes() (api.GlobulaAnnouncementHash, api.GlobulaAnnouncementHash) {
+func (p *NodeVectorHelper) buildGlobulaStateHashes() (gcp_types.GlobulaAnnouncementHash, gcp_types.GlobulaAnnouncementHash) {
 	/*
 		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always
 		have trust level set high enough to get bitset[i].IsTrusted() == true
@@ -266,7 +265,7 @@ func (p *NodeVectorHelper) buildGlobulaStateHashes() (api.GlobulaAnnouncementHas
 }
 
 func (p *NodeVectorHelper) BuildGlobulaAnnouncementHashes(buildTrusted, buildDoubted bool,
-	defaultTrusted, defaultDoubted api.GlobulaAnnouncementHash) (trustedHash, doubtedHash api.GlobulaAnnouncementHash) {
+	defaultTrusted, defaultDoubted gcp_types.GlobulaAnnouncementHash) (trustedHash, doubtedHash gcp_types.GlobulaAnnouncementHash) {
 
 	if buildTrusted && buildDoubted {
 		return p.buildGlobulaAnnouncementHashes()
@@ -281,7 +280,7 @@ func (p *NodeVectorHelper) BuildGlobulaAnnouncementHashes(buildTrusted, buildDou
 }
 
 func (p *NodeVectorHelper) BuildGlobulaStateHashes(buildTrusted, buildDoubted bool,
-	defaultTrusted, defaultDoubted api.GlobulaStateHash) (trustedHash, doubtedHash api.GlobulaStateHash) {
+	defaultTrusted, defaultDoubted gcp_types.GlobulaStateHash) (trustedHash, doubtedHash gcp_types.GlobulaStateHash) {
 
 	if buildTrusted && buildDoubted {
 		return p.buildGlobulaStateHashes()
@@ -295,14 +294,14 @@ func (p *NodeVectorHelper) BuildGlobulaStateHashes(buildTrusted, buildDoubted bo
 	return defaultTrusted, defaultDoubted
 }
 
-func (p *NodeVectorHelper) VerifyGlobulaStateSignature(localHash api.GlobulaStateHash, remoteSignature cryptography_containers.SignatureHolder) bool {
+func (p *NodeVectorHelper) VerifyGlobulaStateSignature(localHash gcp_types.GlobulaStateHash, remoteSignature cryptography_containers.SignatureHolder) bool {
 	if p.signatureVerifier == nil {
 		panic("illegal state - helper must be initialized as a derived one")
 	}
 	return localHash != nil && p.signatureVerifier.IsValidDigestSignature(localHash, remoteSignature)
 }
 
-func (p *NodeVectorHelper) GetNodeBitset() api.NodeBitset {
+func (p *NodeVectorHelper) GetNodeBitset() gcp_types.NodeBitset {
 	return p.bitset
 }
 

@@ -53,13 +53,12 @@ package serialization
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"io"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 const (
@@ -138,15 +137,15 @@ func (h *Header) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
 	return read(reader, h)
 }
 
-func (h *Header) GetSourceID() common.ShortNodeID {
-	return common.ShortNodeID(h.SourceID)
+func (h *Header) GetSourceID() insolar.ShortNodeID {
+	return insolar.ShortNodeID(h.SourceID)
 }
 
-func (h *Header) GetPacketType() api.PacketType {
-	return api.PacketType(h.ProtocolAndPacketType) & packetTypeMask
+func (h *Header) GetPacketType() gcp_types.PacketType {
+	return gcp_types.PacketType(h.ProtocolAndPacketType) & packetTypeMask
 }
 
-func (h *Header) setPacketType(packetType api.PacketType) {
+func (h *Header) setPacketType(packetType gcp_types.PacketType) {
 	if packetType > packetTypeMax {
 		panic("invalid packet type")
 	}

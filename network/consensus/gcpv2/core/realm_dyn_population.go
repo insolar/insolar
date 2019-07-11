@@ -53,13 +53,13 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/consensus_tools"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"sync"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewDynamicRealmPopulation(baselineWeight uint32, local api.NodeProfile, nodeCountHint int,
+func NewDynamicRealmPopulation(baselineWeight uint32, local gcp_types.NodeProfile, nodeCountHint int,
 	fn NodeInitFunc) *DynamicRealmPopulation {
 
 	r := &DynamicRealmPopulation{
@@ -85,14 +85,14 @@ type DynamicRealmPopulation struct {
 
 	nodeIndex     []*NodeAppearance
 	nodeShuffle   []*NodeAppearance // excluding self
-	dynamicNodes  map[common.ShortNodeID]*NodeAppearance
+	dynamicNodes  map[insolar.ShortNodeID]*NodeAppearance
 	purgatoryByPK map[string]*NodeAppearance
-	purgatoryByID map[common.ShortNodeID]*[]*NodeAppearance
+	purgatoryByID map[insolar.ShortNodeID]*[]*NodeAppearance
 }
 
-func (r *DynamicRealmPopulation) initPopulation(local api.NodeProfile, nodeCountHint int) {
+func (r *DynamicRealmPopulation) initPopulation(local gcp_types.NodeProfile, nodeCountHint int) {
 	r.self = r.CreateNodeAppearance(context.Background(), local)
-	r.dynamicNodes = make(map[common.ShortNodeID]*NodeAppearance, nodeCountHint)
+	r.dynamicNodes = make(map[insolar.ShortNodeID]*NodeAppearance, nodeCountHint)
 }
 
 func (r *DynamicRealmPopulation) GetSelf() *NodeAppearance {
@@ -116,17 +116,17 @@ func (r *DynamicRealmPopulation) GetOthersCount() int {
 }
 
 func (r *DynamicRealmPopulation) GetBftMajorityCount() int {
-	return common.BftMajority(r.GetNodeCount())
+	return consensus_tools.BftMajority(r.GetNodeCount())
 }
 
-func (r *DynamicRealmPopulation) GetNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+func (r *DynamicRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
 	return r.dynamicNodes[id]
 }
 
-func (r *DynamicRealmPopulation) GetActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+func (r *DynamicRealmPopulation) GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	na := r.GetNodeAppearance(id)
 	if !na.GetProfile().IsJoiner() {
 		return na
@@ -134,7 +134,7 @@ func (r *DynamicRealmPopulation) GetActiveNodeAppearance(id common.ShortNodeID) 
 	return nil
 }
 
-func (r *DynamicRealmPopulation) GetJoinerNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+func (r *DynamicRealmPopulation) GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	na := r.GetNodeAppearance(id)
 	if !na.GetProfile().IsJoiner() {
 		return nil
@@ -188,7 +188,7 @@ func (r *DynamicRealmPopulation) GetIndexedNodesWithCheck() ([]*NodeAppearance, 
 	return cp, len(r.nodeIndex) == r.indexedCount
 }
 
-func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np api.NodeProfile) *NodeAppearance {
+func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np gcp_types.NodeProfile) *NodeAppearance {
 
 	n := &NodeAppearance{}
 	n.init(np, nil, r.baselineWeight)
@@ -218,7 +218,7 @@ func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppeara
 
 	if r.purgatoryByPK == nil {
 		r.purgatoryByPK = make(map[string]*NodeAppearance)
-		r.purgatoryByID = make(map[common.ShortNodeID]*[]*NodeAppearance)
+		r.purgatoryByID = make(map[insolar.ShortNodeID]*[]*NodeAppearance)
 
 		r.purgatoryByPK[n.profile.GetNodePublicKey().AsByteString()] = n
 		r.purgatoryByID[n.profile.GetShortNodeID()] = &[]*NodeAppearance{n}

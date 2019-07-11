@@ -55,18 +55,17 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/lazy_head"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"math"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-func NewPhase2Controller(packetPrepareOptions api_2.PacketSendOptions, queueNshReady <-chan *core.NodeAppearance) *Phase2Controller {
+func NewPhase2Controller(packetPrepareOptions api.PacketSendOptions, queueNshReady <-chan *core.NodeAppearance) *Phase2Controller {
 	return &Phase2Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueNshReady:        queueNshReady,
@@ -78,13 +77,13 @@ var _ core.PhaseController = &Phase2Controller{}
 
 type Phase2Controller struct {
 	PhaseControllerWithJoinersTemplate
-	packetPrepareOptions api_2.PacketSendOptions
+	packetPrepareOptions api.PacketSendOptions
 	queueNshReady        <-chan *core.NodeAppearance
 	//queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
 }
 
 type TrustUpdateSignal struct {
-	NewTrustLevel common2.NodeTrustLevel
+	NewTrustLevel gcp_types.NodeTrustLevel
 	UpdatedNode   *core.NodeAppearance
 }
 
@@ -94,8 +93,8 @@ func (v *TrustUpdateSignal) IsPingSignal() bool {
 	return v.UpdatedNode == nil
 }
 
-func (*Phase2Controller) GetPacketType() api.PacketType {
-	return api.PacketPhase2
+func (*Phase2Controller) GetPacketType() gcp_types.PacketType {
+	return gcp_types.PacketPhase2
 }
 
 func (c *Phase2Controller) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *core.NodeAppearance,
@@ -131,7 +130,7 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 		}
 
 		nr := nb.GetNodeRank()
-		mp := api.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(), nb.GetNodeStateHashEvidence(),
+		mp := gcp_types.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(), nb.GetNodeStateHashEvidence(),
 			nb.GetAnnouncementSignature(), nb.GetRequestedPower())
 
 		// TODO validate node proof - if fails, then fraud on sender
@@ -141,12 +140,12 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 		//	// TODO register protocol misbehavior - IntroClaim was not expected
 		// }
 
-		var ma api.MembershipAnnouncement
+		var ma gcp_types.MembershipAnnouncement
 		switch {
 		case nb.IsLeaving():
-			ma = api.NewMembershipAnnouncementWithLeave(mp, nb.GetLeaveReason())
+			ma = gcp_types.NewMembershipAnnouncementWithLeave(mp, nb.GetLeaveReason())
 		case nb.GetJoinerID().IsAbsent():
-			ma = api.NewMembershipAnnouncement(mp)
+			ma = gcp_types.NewMembershipAnnouncement(mp)
 		default:
 			panic("not implemented") //TODO implement
 			//jar := na.GetJoinerAnnouncement()
@@ -184,7 +183,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 	// This duration is a soft timeout - the worker will attempt to send all data in the queue before stopping.
 	timings := c.R.GetTimings()
 	// endOfPhase := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
-	weightScaler := common2.NewNeighbourWeightScalerInt64(timings.EndOfPhase1.Nanoseconds())
+	weightScaler := NewNeighbourWeightScalerInt64(timings.EndOfPhase1.Nanoseconds())
 
 	if timings.StartPhase1RetryAt > 0 {
 		timer := time.AfterFunc(c.R.AdjustedAfter(timings.StartPhase1RetryAt), func() {
@@ -296,7 +295,7 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 		neighbourhoodAnnouncements, c.packetPrepareOptions)
 
 	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (api.NodeProfile, api_2.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (gcp_types.NodeProfile, api.PacketSendOptions) {
 			np := neighbourhood[targetIdx]
 			np.SetSentByPacketType(c.GetPacketType())
 			return np.GetProfile(), 0
@@ -352,7 +351,7 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	}
 
 	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), api_2.RequestForPhase1|c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), api.RequestForPhase1|c.packetPrepareOptions)
 
 	for _, v := range c.R.GetPopulation().GetShuffledOtherNodes() {
 		select {

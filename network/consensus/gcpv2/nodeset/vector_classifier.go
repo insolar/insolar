@@ -51,17 +51,17 @@
 package nodeset
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
 type LocalHashedNodeVector struct {
-	api.HashedNodeVector
-	TrustedGlobulaStateVector api.GlobulaStateHash
-	DoubtedGlobulaStateVector api.GlobulaStateHash
+	gcp_types.HashedNodeVector
+	TrustedGlobulaStateVector gcp_types.GlobulaStateHash
+	DoubtedGlobulaStateVector gcp_types.GlobulaStateHash
 }
 
-func ClassifyByNodeGsh(selfData LocalHashedNodeVector, otherData api.HashedNodeVector, nodeStats *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
+func ClassifyByNodeGsh(selfData LocalHashedNodeVector, otherData gcp_types.HashedNodeVector, nodeStats *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
 
 	if selfData.Bitset.Len() != nodeStats.ColumnCount() {
 		panic("bitset length mismatch")
@@ -108,7 +108,7 @@ func initVerify(needed bool) subVectorVerifyMode {
 	return ignore
 }
 
-func verifyVectorHashes(selfData LocalHashedNodeVector, otherData api.HashedNodeVector, sr *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
+func verifyVectorHashes(selfData LocalHashedNodeVector, otherData gcp_types.HashedNodeVector, sr *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
 	// TODO All GSH comparisons should be based on SIGNATURES! not on pure hashes
 
 	verifyRes := norNotVerified
@@ -219,7 +219,7 @@ func verifyVectorHashes(selfData LocalHashedNodeVector, otherData api.HashedNode
 	return verifyRes
 }
 
-func summarize(otherDataBitset api.NodeBitset, verifyRes NodeVerificationResult, sr *stats.Row, nodeStats *stats.Row) {
+func summarize(otherDataBitset gcp_types.NodeBitset, verifyRes NodeVerificationResult, sr *stats.Row, nodeStats *stats.Row) {
 
 	for i := 0; i < sr.ColumnCount(); i++ {
 		nodeResult := ConsensusStatMissingHere

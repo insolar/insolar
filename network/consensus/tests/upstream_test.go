@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"math/rand"
 	"time"
 )
@@ -65,15 +65,15 @@ func NewEmuUpstreamPulseController(ctx context.Context, nshDelay time.Duration) 
 	return &EmuUpstreamPulseController{ctx: ctx, nshDelay: nshDelay}
 }
 
-var _ api_2.UpstreamPulseController = &EmuUpstreamPulseController{}
+var _ api.UpstreamPulseController = &EmuUpstreamPulseController{}
 
 type EmuUpstreamPulseController struct {
 	ctx      context.Context
 	nshDelay time.Duration
 }
 
-func (r *EmuUpstreamPulseController) PreparePulseChange(report api_2.MembershipUpstreamReport) <-chan api.NodeStateHash {
-	c := make(chan api.NodeStateHash, 1)
+func (r *EmuUpstreamPulseController) PreparePulseChange(report api.MembershipUpstreamReport) <-chan gcp_types.NodeStateHash {
+	c := make(chan gcp_types.NodeStateHash, 1)
 	nsh := NewEmuNodeStateHash(rand.Uint64())
 	if r.nshDelay == 0 {
 		c <- &nsh
@@ -87,20 +87,20 @@ func (r *EmuUpstreamPulseController) PreparePulseChange(report api_2.MembershipU
 	return c
 }
 
-func (*EmuUpstreamPulseController) CommitPulseChange(report api_2.MembershipUpstreamReport, pd pulse_data.PulseData, activeCensus api_2.OperationalCensus) {
+func (*EmuUpstreamPulseController) CommitPulseChange(report api.MembershipUpstreamReport, pd pulse_data.PulseData, activeCensus api.OperationalCensus) {
 }
 
 func (*EmuUpstreamPulseController) CancelPulseChange() {
 }
 
-func (*EmuUpstreamPulseController) ConsensusFinished(report api_2.MembershipUpstreamReport, expectedCensus api_2.OperationalCensus) {
+func (*EmuUpstreamPulseController) ConsensusFinished(report api.MembershipUpstreamReport, expectedCensus api.OperationalCensus) {
 }
 
 func NewEmuNodeStateHash(v uint64) EmuNodeStateHash {
 	return EmuNodeStateHash{Bits64: long_bits.NewBits64(v)}
 }
 
-var _ api.NodeStateHash = &EmuNodeStateHash{}
+var _ gcp_types.NodeStateHash = &EmuNodeStateHash{}
 
 type EmuNodeStateHash struct {
 	long_bits.Bits64

@@ -48,17 +48,18 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api_2
+package api
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
@@ -71,19 +72,19 @@ type ConsensusController interface {
 	//RequestLeave()
 
 	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
-	GetActivePowerLimit() (api.MemberPower, pulse_data.PulseNumber)
+	GetActivePowerLimit() (gcp_types.MemberPower, pulse_data.PulseNumber)
 }
 
 type CandidateControlFeeder interface {
-	PickNextJoinCandidate() api.CandidateProfile
-	RemoveJoinCandidate(candidateAdded bool, nodeID common.ShortNodeID) bool
+	PickNextJoinCandidate() gcp_types.CandidateProfile
+	RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool
 }
 
 type TrafficControlFeeder interface {
 	/* Application traffic should be stopped or throttled down for the given duration
 	LevelMax and LevelNormal should be considered equal, and duration doesnt apply to them
 	*/
-	SetTrafficLimit(level common.CapacityLevel, duration time.Duration)
+	SetTrafficLimit(level capacity.Level, duration time.Duration)
 
 	/* Application traffic can be resumed at full */
 	ResumeTraffic()
@@ -92,8 +93,8 @@ type TrafficControlFeeder interface {
 type ConsensusControlFeeder interface {
 	TrafficControlFeeder
 
-	GetRequiredPowerLevel() api.PowerRequest
-	OnAppliedPowerLevel(pw api.MemberPower, effectiveSince pulse_data.PulseNumber)
+	GetRequiredPowerLevel() gcp_types.PowerRequest
+	OnAppliedPowerLevel(pw gcp_types.MemberPower, effectiveSince pulse_data.PulseNumber)
 
 	GetRequiredGracefulLeave() (bool, uint32)
 	OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse_data.PulseNumber)
@@ -122,13 +123,13 @@ type RoundControllerFactory interface {
 }
 
 type LocalNodeConfiguration interface {
-	GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) api.RoundTimings
+	GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) gcp_types.RoundTimings
 	GetSecretKeyStore() cryptography_containers.SecretKeyStore
 	GetParentContext() context.Context
 }
 
 type PacketSender interface {
-	SendPacketToTransport(ctx context.Context, t api.NodeProfile, sendOptions PacketSendOptions, payload interface{})
+	SendPacketToTransport(ctx context.Context, t gcp_types.NodeProfile, sendOptions PacketSendOptions, payload interface{})
 }
 
 type PacketSendOptions uint32

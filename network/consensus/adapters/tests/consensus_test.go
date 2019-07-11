@@ -55,7 +55,7 @@ import (
 	"errors"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"runtime/debug"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -115,7 +115,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	}
 }
 
-func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t api.NodeProfile, sendOptions api_2.PacketSendOptions, payload interface{}) {
+func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t gcp_types.NodeProfile, sendOptions api.PacketSendOptions, payload interface{}) {
 	h.send(t.GetDefaultEndpoint().GetNameAddress(), payload)
 }
 

@@ -51,8 +51,8 @@
 package endpoints
 
 import (
-	//	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 )
@@ -80,7 +80,7 @@ func (addr HostAddress) String() string {
 
 type NodeEndpoint interface {
 	GetEndpointType() NodeEndpointType
-	GetRelayID() common.ShortNodeID
+	GetRelayID() insolar.ShortNodeID
 	GetNameAddress() HostAddress
 	GetIPAddress() packets.NodeAddress
 }

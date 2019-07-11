@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,55 +46,58 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
+///
+
+package phases
+
+//func TestNewNeighbourWeightScalerInt64(t *testing.T) {
+//	require.Panics(t, func() { NewNeighbourWeightScalerInt64(-1) })
 //
-
-package core
-
-import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"sync"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-)
-
-type SequencialCandidateFeeder struct {
-	mx  sync.Mutex
-	buf []gcp_types.CandidateProfile
-}
-
-func (p *SequencialCandidateFeeder) PickNextJoinCandidate() gcp_types.CandidateProfile {
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
-	if len(p.buf) == 0 {
-		return nil
-	}
-	return p.buf[0]
-}
-
-func (p *SequencialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool {
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
-	if len(p.buf) == 0 || p.buf[0].GetNodeID() != nodeID {
-		return false
-	}
-	if len(p.buf) == 1 {
-		p.buf = nil
-	} else {
-		p.buf[0] = nil
-		p.buf = p.buf[1:]
-	}
-	return true
-}
-
-func (p *SequencialCandidateFeeder) AddJoinCandidate(candidate packets.FullIntroductionReader) {
-	if candidate == nil {
-		panic("illegal value")
-	}
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
-	p.buf = append(p.buf, candidate)
-}
+//	fullRange := int64(0)
+//	n1 := NewNeighbourWeightScalerInt64(fullRange)
+//	require.Equal(t, uint32(fullRange), max)
+//
+//	require.Equal(t, uint8(0), shift)
+//
+//	fullRange = int64(1 << 32)
+//	n2 := NewNeighbourWeightScalerInt64(fullRange)
+//	require.Equal(t, uint8(1), shift)
+//
+//	require.Equal(t, uint32(fullRange>>1), max)
+//}
+//
+//func TestNewNeighbourWeightScalerUint64(t *testing.T) {
+//	fullRange := uint64(0)
+//	n1 := NewNeighbourWeightScalerUint64(fullRange)
+//	require.Equal(t, uint32(fullRange), max)
+//
+//	require.Equal(t, uint8(0), shift)
+//
+//	fullRange = uint64(1 << 32)
+//	n2 := NewNeighbourWeightScalerUint64(fullRange)
+//	require.Equal(t, uint8(1), shift)
+//
+//	require.Equal(t, uint32(fullRange>>1), max)
+//}
+//
+//func TestScaleInt64(t *testing.T) {
+//	n1 := NewNeighbourWeightScalerInt64(0)
+//	require.Equal(t, uint32(0), ScaleInt64(-1))
+//
+//	require.Equal(t, uint32(math.MaxUint32), ScaleInt64(0))
+//
+//	n2 := NewNeighbourWeightScalerInt64(1 << 32)
+//	require.Equal(t, uint32(math.MaxUint32), ScaleInt64(1<<32))
+//
+//	require.Equal(t, uint32(0x3fffffff), ScaleInt64(1<<30))
+//}
+//
+//func TestScaleUint64(t *testing.T) {
+//	n1 := NewNeighbourWeightScalerUint64(0)
+//	require.Equal(t, uint32(math.MaxUint32), ScaleUint64(0))
+//
+//	n2 := NewNeighbourWeightScalerUint64(1 << 32)
+//	require.Equal(t, uint32(math.MaxUint32), ScaleUint64(1<<32))
+//
+//	require.Equal(t, uint32(0x3fffffff), ScaleUint64(1<<30))
+//}

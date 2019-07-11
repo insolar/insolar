@@ -53,10 +53,11 @@ package tests
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"math/rand"
 	"time"
 
@@ -65,8 +66,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phases"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 func NewConsensusHost(hostAddr endpoints.HostAddress) *EmuHostConsensusAdapter {
@@ -74,16 +73,16 @@ func NewConsensusHost(hostAddr endpoints.HostAddress) *EmuHostConsensusAdapter {
 }
 
 type EmuHostConsensusAdapter struct {
-	controller api_2.ConsensusController
+	controller api.ConsensusController
 
 	hostAddr endpoints.HostAddress
 	inbound  <-chan Packet
 	outbound chan<- Packet
 }
 
-func (h *EmuHostConsensusAdapter) ConnectTo(chronicles api_2.ConsensusChronicles, network *EmuNetwork,
-	strategyFactory core.RoundStrategyFactory, candidateFeeder api_2.CandidateControlFeeder,
-	controlFeeder api_2.ConsensusControlFeeder, config api_2.LocalNodeConfiguration) {
+func (h *EmuHostConsensusAdapter) ConnectTo(chronicles api.ConsensusChronicles, network *EmuNetwork,
+	strategyFactory core.RoundStrategyFactory, candidateFeeder api.CandidateControlFeeder,
+	controlFeeder api.ConsensusControlFeeder, config api.LocalNodeConfiguration) {
 	ctx := network.ctx
 	// &EmuConsensusStrategy{ctx: ctx}
 	upstream := NewEmuUpstreamPulseController(ctx, defaultNshGenerationDelay)
@@ -128,7 +127,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	}
 }
 
-func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t api.NodeProfile, sendOptions api_2.PacketSendOptions, payload interface{}) {
+func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t gcp_types.NodeProfile, sendOptions api.PacketSendOptions, payload interface{}) {
 	h.send(t.GetDefaultEndpoint(), payload)
 }
 
@@ -164,7 +163,7 @@ func (h *EmuHostConsensusAdapter) TransportPacketSender() {
 type EmuRoundStrategyFactory struct {
 }
 
-func (*EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api_2.ConsensusChronicles, config api_2.LocalNodeConfiguration) core.RoundStrategy {
+func (*EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) core.RoundStrategy {
 	return &EmuRoundStrategy{bundle: phases.NewRegularPhaseBundleByDefault()}
 }
 
@@ -172,7 +171,7 @@ type EmuRoundStrategy struct {
 	bundle core.PhaseControllersBundle
 }
 
-func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse_data.PulseNumber, self api.LocalNodeProfile) context.Context {
+func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse_data.PulseNumber, self gcp_types.LocalNodeProfile) context.Context {
 	return ctx
 }
 
@@ -196,16 +195,16 @@ func (*EmuRoundStrategy) IsEphemeralPulseAllowed() bool {
 	return false
 }
 
-func (*EmuRoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
+func (*EmuRoundStrategy) AdjustConsensusTimings(timings *gcp_types.RoundTimings) {
 }
 
-var _ api_2.ConsensusControlFeeder = &EmuControlFeeder{}
+var _ api.ConsensusControlFeeder = &EmuControlFeeder{}
 
 type EmuControlFeeder struct {
 	leaveReason uint32
 }
 
-func (*EmuControlFeeder) SetTrafficLimit(level common.CapacityLevel, duration time.Duration) {
+func (*EmuControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
 }
 
 func (*EmuControlFeeder) ResumeTraffic() {
@@ -214,14 +213,14 @@ func (*EmuControlFeeder) ResumeTraffic() {
 func (*EmuControlFeeder) PulseDetected() {
 }
 
-func (*EmuControlFeeder) ConsensusFinished(report api_2.MembershipUpstreamReport, expectedCensus api_2.OperationalCensus) {
+func (*EmuControlFeeder) ConsensusFinished(report api.MembershipUpstreamReport, expectedCensus api.OperationalCensus) {
 }
 
-func (*EmuControlFeeder) GetRequiredPowerLevel() api.PowerRequest {
-	return api.NewPowerRequestByLevel(common.LevelNormal)
+func (*EmuControlFeeder) GetRequiredPowerLevel() gcp_types.PowerRequest {
+	return gcp_types.NewPowerRequestByLevel(capacity.LevelNormal)
 }
 
-func (*EmuControlFeeder) OnAppliedPowerLevel(pw api.MemberPower, effectiveSince pulse_data.PulseNumber) {
+func (*EmuControlFeeder) OnAppliedPowerLevel(pw gcp_types.MemberPower, effectiveSince pulse_data.PulseNumber) {
 }
 
 func (p *EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {

@@ -48,17 +48,15 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api
+package consensus_tools
 
-type NodeAnnouncedState struct {
-	StateEvidence     NodeStateHashEvidence
-	AnnounceSignature MemberAnnouncementSignature
-	//
-	//NodeInternalState common.Digest
-	//NodeStateSignature common.Signature
-	//AnnounceSignature *common.Signature
+/*
+This function guarantees that
+	(float(bftMajorityCount)/nodeCount > 2.0/3.0)	AND	(float(bftMajorityCount - 1)/nodeCount <= 2.0/3.0)
+*/func BftMajority(nodeCount int) int {
+	return nodeCount - BftMinority(nodeCount)
 }
 
-func (p *NodeAnnouncedState) IsEmpty() bool {
-	return p.StateEvidence == nil
+func BftMinority(nodeCount int) int {
+	return (nodeCount - 1) / 3
 }

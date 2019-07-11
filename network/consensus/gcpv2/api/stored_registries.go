@@ -51,43 +51,35 @@
 package api
 
 import (
-	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
-type NodeBitsetEntry uint8
+type VersionedRegistries interface {
+	// GetVersionId() int
+	CommitNextPulse(pd pulse_data.PulseData, population OnlinePopulation) VersionedRegistries
 
-const (
-	NbsHighTrust NodeBitsetEntry = iota
-	NbsLimitedTrust
-	NbsBaselineTrust
-	NbsTimeout
-	NbsFraud
-	maxNodeBitsetEntry
-)
-
-const MaxNodeBitsetEntry = int(maxNodeBitsetEntry)
-
-func (s NodeBitsetEntry) IsTrusted() bool { return s < NbsBaselineTrust }
-func (s NodeBitsetEntry) IsTimeout() bool { return s == NbsTimeout }
-func (s NodeBitsetEntry) IsFraud() bool   { return s == NbsFraud }
-
-func (s NodeBitsetEntry) String() string {
-	return FmtNodeBitsetEntry(uint8(s))
+	GetMisbehaviorRegistry() MisbehaviorRegistry
+	GetMandateRegistry() MandateRegistry
+	GetOfflinePopulation() OfflinePopulation
+	GetVersionPulseData() pulse_data.PulseData
 }
 
-func FmtNodeBitsetEntry(s uint8) string {
-	switch NodeBitsetEntry(s) {
-	case NbsHighTrust:
-		return "H"
-	case NbsLimitedTrust:
-		return "L"
-	case NbsBaselineTrust:
-		return "B"
-	case NbsTimeout:
-		return "Ø"
-	case NbsFraud:
-		return "F"
-	default:
-		return fmt.Sprintf("?%d?", s)
-	}
+type MisbehaviorRegistry interface {
+	AddReport(report gcp_types.MisbehaviorReport)
+}
+
+type MandateRegistry interface {
+	FindRegisteredProfile(host endpoints.HostIdentityHolder) gcp_types.HostProfile
+	GetPrimingCloudHash() gcp_types.CloudStateHash
+	GetConsensusConfiguration() ConsensusConfiguration
+}
+
+type OfflinePopulation interface {
+	FindRegisteredProfile(identity endpoints.HostIdentityHolder) gcp_types.HostProfile
+	// FindPulsarProfile(pulsarId PulsarId) PulsarProfile
+}
+
+type ConsensusConfiguration interface {
 }

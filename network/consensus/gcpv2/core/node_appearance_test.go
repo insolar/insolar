@@ -52,14 +52,14 @@ package core
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"testing"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	gcommon "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -71,9 +71,9 @@ func TestNewNodeAppearanceAsSelf(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, api.NodeStateLocalActive, r.state)
+	require.Equal(t, gcp_types.NodeStateLocalActive, r.state)
 
-	require.Equal(t, gcommon.SelfTrust, r.trust)
+	require.Equal(t, gcp_types.SelfTrust, r.trust)
 
 	require.Equal(t, lp, r.profile)
 
@@ -89,9 +89,9 @@ func TestInit(t *testing.T) {
 	require.Panics(t, func() { r.init(nil, callback, 0) })
 
 	r.init(lp, callback, 0)
-	require.Equal(t, api.NodeStateLocalActive, r.state)
+	require.Equal(t, gcp_types.NodeStateLocalActive, r.state)
 
-	require.Equal(t, gcommon.SelfTrust, r.trust)
+	require.Equal(t, gcp_types.SelfTrust, r.trust)
 
 	require.Equal(t, lp, r.profile)
 
@@ -128,18 +128,18 @@ func TestCopySelfTo(t *testing.T) {
 	callback := &nodeContext{}
 
 	source := NewNodeAppearanceAsSelf(lp, callback)
-	source.stateEvidence = api.NewNodeStateHashEvidenceMock(t)
+	source.stateEvidence = gcp_types.NewNodeStateHashEvidenceMock(t)
 	source.announceSignature = gcommon.NewMemberAnnouncementSignatureMock(t)
 	source.requestedPower = 1
-	source.state = api.NodeStateLocalActive
-	source.trust = gcommon.TrustBySome
+	source.state = gcp_types.NodeStateLocalActive
+	source.trust = gcp_types.TrustBySome
 
 	target := NewNodeAppearanceAsSelf(lp, callback)
-	target.stateEvidence = api.NewNodeStateHashEvidenceMock(t)
+	target.stateEvidence = gcp_types.NewNodeStateHashEvidenceMock(t)
 	target.announceSignature = gcommon.NewMemberAnnouncementSignatureMock(t)
 	target.requestedPower = 2
-	target.state = api.NodeStateReceivedPhases
-	target.trust = gcommon.TrustByNeighbors
+	target.state = gcp_types.NodeStateReceivedPhases
+	target.trust = gcp_types.TrustByNeighbors
 
 	target.copySelfTo(source)
 
@@ -179,10 +179,10 @@ func TestGetIndex(t *testing.T) {
 func TestGetShortNodeID(t *testing.T) {
 	lp := gcommon.NewLocalNodeProfileMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
-	lp.GetShortNodeIDMock.Set(func() common.ShortNodeID { return common.AbsentShortNodeID })
+	lp.GetShortNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.AbsentShortNodeID })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, common.AbsentShortNodeID, r.GetShortNodeID())
+	require.Equal(t, insolar.AbsentShortNodeID, r.GetShortNodeID())
 }
 
 func TestGetTrustLevel(t *testing.T) {
@@ -190,8 +190,8 @@ func TestGetTrustLevel(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	r.trust = gcommon.TrustBySome
-	require.Equal(t, gcommon.TrustBySome, r.GetTrustLevel())
+	r.trust = gcp_types.TrustBySome
+	require.Equal(t, gcp_types.TrustBySome, r.GetTrustLevel())
 }
 
 func TestGetProfile(t *testing.T) {
@@ -241,9 +241,9 @@ func TestSetReceivedPhase(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.True(t, r.SetReceivedPhase(api.Phase1))
+	require.True(t, r.SetReceivedPhase(gcp_types.Phase1))
 
-	require.False(t, r.SetReceivedPhase(api.Phase1))
+	require.False(t, r.SetReceivedPhase(gcp_types.Phase1))
 }
 
 func TestSetReceivedByPacketType(t *testing.T) {
@@ -251,11 +251,11 @@ func TestSetReceivedByPacketType(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.True(t, r.SetReceivedByPacketType(api.PacketPhase1))
+	require.True(t, r.SetReceivedByPacketType(gcp_types.PacketPhase1))
 
-	require.False(t, r.SetReceivedByPacketType(api.PacketPhase1))
+	require.False(t, r.SetReceivedByPacketType(gcp_types.PacketPhase1))
 
-	require.False(t, r.SetReceivedByPacketType(api.MaxPacketType))
+	require.False(t, r.SetReceivedByPacketType(gcp_types.MaxPacketType))
 }
 
 func TestSetSentPhase(t *testing.T) {
@@ -263,9 +263,9 @@ func TestSetSentPhase(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.True(t, r.SetSentPhase(api.Phase1))
+	require.True(t, r.SetSentPhase(gcp_types.Phase1))
 
-	require.False(t, r.SetSentPhase(api.Phase1))
+	require.False(t, r.SetSentPhase(gcp_types.Phase1))
 }
 
 func TestSetSentByPacketType(t *testing.T) {
@@ -273,11 +273,11 @@ func TestSetSentByPacketType(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.True(t, r.SetSentByPacketType(api.PacketPhase1))
+	require.True(t, r.SetSentByPacketType(gcp_types.PacketPhase1))
 
-	require.True(t, r.SetSentByPacketType(api.PacketPhase1))
+	require.True(t, r.SetSentByPacketType(gcp_types.PacketPhase1))
 
-	require.False(t, r.SetSentByPacketType(api.MaxPacketType))
+	require.False(t, r.SetSentByPacketType(gcp_types.MaxPacketType))
 }
 
 func TestSetReceivedWithDupCheck(t *testing.T) {
@@ -285,11 +285,11 @@ func TestSetReceivedWithDupCheck(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, r.SetReceivedWithDupCheck(api.PacketPhase1), nil)
+	require.Equal(t, r.SetReceivedWithDupCheck(gcp_types.PacketPhase1), nil)
 
-	require.Equal(t, r.SetReceivedWithDupCheck(api.PacketPhase1), errors.ErrRepeatedPhasePacket)
+	require.Equal(t, r.SetReceivedWithDupCheck(gcp_types.PacketPhase1), errors.ErrRepeatedPhasePacket)
 
-	require.Equal(t, r.SetReceivedWithDupCheck(api.MaxPacketType), errors.ErrRepeatedPhasePacket)
+	require.Equal(t, r.SetReceivedWithDupCheck(gcp_types.MaxPacketType), errors.ErrRepeatedPhasePacket)
 }
 
 func TestGetSignatureVerifier(t *testing.T) {

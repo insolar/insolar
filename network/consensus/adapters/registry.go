@@ -55,7 +55,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -68,33 +68,33 @@ func NewMisbehaviorRegistry() *MisbehaviorRegistry {
 	return &MisbehaviorRegistry{}
 }
 
-func (mr *MisbehaviorRegistry) AddReport(report api.MisbehaviorReport) {
+func (mr *MisbehaviorRegistry) AddReport(report gcp_types.MisbehaviorReport) {
 	ctx := context.TODO()
 
 	inslogger.FromContext(ctx).Warnf("Got MisbehaviorReport")
 }
 
 type MandateRegistry struct {
-	cloudHash              api.CloudStateHash
-	consensusConfiguration api_2.ConsensusConfiguration
+	cloudHash              gcp_types.CloudStateHash
+	consensusConfiguration api.ConsensusConfiguration
 }
 
-func NewMandateRegistry(cloudHash api.CloudStateHash, consensusConfiguration api_2.ConsensusConfiguration) *MandateRegistry {
+func NewMandateRegistry(cloudHash gcp_types.CloudStateHash, consensusConfiguration api.ConsensusConfiguration) *MandateRegistry {
 	return &MandateRegistry{
 		cloudHash:              cloudHash,
 		consensusConfiguration: consensusConfiguration,
 	}
 }
 
-func (mr *MandateRegistry) FindRegisteredProfile(host endpoints.HostIdentityHolder) api.HostProfile {
+func (mr *MandateRegistry) FindRegisteredProfile(host endpoints.HostIdentityHolder) gcp_types.HostProfile {
 	panic("implement me")
 }
 
-func (mr *MandateRegistry) GetConsensusConfiguration() api_2.ConsensusConfiguration {
+func (mr *MandateRegistry) GetConsensusConfiguration() api.ConsensusConfiguration {
 	return mr.consensusConfiguration
 }
 
-func (mr *MandateRegistry) GetPrimingCloudHash() api.CloudStateHash {
+func (mr *MandateRegistry) GetPrimingCloudHash() gcp_types.CloudStateHash {
 	return mr.cloudHash
 }
 
@@ -113,7 +113,7 @@ func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.Certifi
 	}
 }
 
-func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.HostIdentityHolder) api.HostProfile {
+func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.HostIdentityHolder) gcp_types.HostProfile {
 	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetHostAddress().String())
 	cert := op.manager.GetCertificate()
 
@@ -121,17 +121,17 @@ func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.HostIdenti
 }
 
 type VersionedRegistries struct {
-	mandateRegistry     api_2.MandateRegistry
-	misbehaviorRegistry api_2.MisbehaviorRegistry
-	offlinePopulation   api_2.OfflinePopulation
+	mandateRegistry     api.MandateRegistry
+	misbehaviorRegistry api.MisbehaviorRegistry
+	offlinePopulation   api.OfflinePopulation
 
 	pulseData pulse_data.PulseData
 }
 
 func NewVersionedRegistries(
-	mandateRegistry api_2.MandateRegistry,
-	misbehaviorRegistry api_2.MisbehaviorRegistry,
-	offlinePopulation api_2.OfflinePopulation,
+	mandateRegistry api.MandateRegistry,
+	misbehaviorRegistry api.MisbehaviorRegistry,
+	offlinePopulation api.OfflinePopulation,
 ) *VersionedRegistries {
 	return &VersionedRegistries{
 		mandateRegistry:     mandateRegistry,
@@ -140,22 +140,22 @@ func NewVersionedRegistries(
 	}
 }
 
-func (c *VersionedRegistries) CommitNextPulse(pd pulse_data.PulseData, population api_2.OnlinePopulation) api_2.VersionedRegistries {
+func (c *VersionedRegistries) CommitNextPulse(pd pulse_data.PulseData, population api.OnlinePopulation) api.VersionedRegistries {
 	pd.EnsurePulseData()
 	cp := *c
 	cp.pulseData = pd
 	return &cp
 }
 
-func (c *VersionedRegistries) GetMisbehaviorRegistry() api_2.MisbehaviorRegistry {
+func (c *VersionedRegistries) GetMisbehaviorRegistry() api.MisbehaviorRegistry {
 	return c.misbehaviorRegistry
 }
 
-func (c *VersionedRegistries) GetMandateRegistry() api_2.MandateRegistry {
+func (c *VersionedRegistries) GetMandateRegistry() api.MandateRegistry {
 	return c.mandateRegistry
 }
 
-func (c *VersionedRegistries) GetOfflinePopulation() api_2.OfflinePopulation {
+func (c *VersionedRegistries) GetOfflinePopulation() api.OfflinePopulation {
 	return c.offlinePopulation
 }
 

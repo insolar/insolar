@@ -53,7 +53,7 @@ package phases
 import (
 	"context"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -144,7 +144,7 @@ func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader
 	//all packets will also be processed by main handlers
 
 	switch reader.GetPacketType() {
-	case api.PacketPhase1:
+	case gcp_types.PacketPhase1:
 		p1 := reader.AsPhase1Packet()
 		//r.GetProfileFactory().CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
 		//nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
@@ -159,7 +159,7 @@ func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader
 
 		return p.applyBriefInfo(ctx, p1.GetFullIntroduction(), from, r)
 
-	case api.PacketPhase2:
+	case gcp_types.PacketPhase2:
 		p2 := reader.AsPhase2Packet()
 		intro := p2.GetBriefIntroduction()
 		r.GetProfileFactory().CreateBriefIntroProfile(intro)

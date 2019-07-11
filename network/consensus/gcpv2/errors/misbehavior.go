@@ -51,7 +51,7 @@
 package errors
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
 func NewMisbehaviorFactories(captureMisbehavior MisbehaviorReportFunc) MisbehaviorFactories {
@@ -75,7 +75,7 @@ func (c misbehaviorFactories) GetBlameFactory() BlameFactory {
 	return c.blameFactory
 }
 
-type MisbehaviorReportFunc func(r api.MisbehaviorReport) interface{}
+type MisbehaviorReportFunc func(r gcp_types.MisbehaviorReport) interface{}
 
 type MisbehaviorFactories interface {
 	GetFraudFactory() FraudFactory

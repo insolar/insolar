@@ -52,13 +52,12 @@ package packets
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
-func NewNodeAnnouncement(np api.NodeProfile, ma api.MembershipAnnouncement, nodeCount int,
+func NewNodeAnnouncement(np gcp_types.NodeProfile, ma gcp_types.MembershipAnnouncement, nodeCount int,
 	pn pulse_data.PulseNumber) *NodeAnnouncementProfile {
 	return &NodeAnnouncementProfile{
 		nodeID:    np.GetShortNodeID(),
@@ -90,13 +89,13 @@ func NewNodeAnnouncement(np api.NodeProfile, ma api.MembershipAnnouncement, node
 var _ MembershipAnnouncementReader = &NodeAnnouncementProfile{}
 
 type NodeAnnouncementProfile struct {
-	ma        api.MembershipAnnouncement
-	nodeID    common.ShortNodeID
+	ma        gcp_types.MembershipAnnouncement
+	nodeID    insolar.ShortNodeID
 	pn        pulse_data.PulseNumber
 	nodeCount uint16
 }
 
-func (c *NodeAnnouncementProfile) GetRequestedPower() api.MemberPower {
+func (c *NodeAnnouncementProfile) GetRequestedPower() gcp_types.MemberPower {
 	return c.ma.Membership.RequestedPower
 }
 
@@ -108,9 +107,9 @@ func (c *NodeAnnouncementProfile) GetLeaveReason() uint32 {
 	return c.ma.LeaveReason
 }
 
-func (c *NodeAnnouncementProfile) GetJoinerID() common.ShortNodeID {
+func (c *NodeAnnouncementProfile) GetJoinerID() insolar.ShortNodeID {
 	if c.ma.Joiner == nil {
-		return common.AbsentShortNodeID
+		return insolar.AbsentShortNodeID
 	}
 	return c.ma.Joiner.GetShortNodeID()
 }
@@ -123,11 +122,11 @@ func (c *NodeAnnouncementProfile) GetNodeRank() MembershipRank {
 	return NewMembershipRank(c.ma.Membership.Mode, c.ma.Membership.Power, c.ma.Membership.Index, c.nodeCount)
 }
 
-func (c *NodeAnnouncementProfile) GetAnnouncementSignature() api.MemberAnnouncementSignature {
+func (c *NodeAnnouncementProfile) GetAnnouncementSignature() gcp_types.MemberAnnouncementSignature {
 	return c.ma.Membership.AnnounceSignature
 }
 
-func (c *NodeAnnouncementProfile) GetNodeID() common.ShortNodeID {
+func (c *NodeAnnouncementProfile) GetNodeID() insolar.ShortNodeID {
 	return c.nodeID
 }
 
@@ -135,7 +134,7 @@ func (c *NodeAnnouncementProfile) GetNodeCount() uint16 {
 	return c.nodeCount
 }
 
-func (c *NodeAnnouncementProfile) GetNodeStateHashEvidence() api.NodeStateHashEvidence {
+func (c *NodeAnnouncementProfile) GetNodeStateHashEvidence() gcp_types.NodeStateHashEvidence {
 	return c.ma.Membership.StateEvidence
 }
 
@@ -143,7 +142,7 @@ func (c NodeAnnouncementProfile) String() string {
 	return fmt.Sprintf("{id:%d %03d/%d %s}", c.nodeID, c.ma.Membership.Index, c.nodeCount, c.ma.Membership.StringParts())
 }
 
-func (c *NodeAnnouncementProfile) GetMembershipProfile() api.MembershipProfile {
+func (c *NodeAnnouncementProfile) GetMembershipProfile() gcp_types.MembershipProfile {
 	return c.ma.Membership
 }
 

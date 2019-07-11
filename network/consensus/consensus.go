@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"reflect"
 
 	"github.com/insolar/insolar/insolar"
@@ -83,8 +83,8 @@ type Dep struct {
 	StateUpdater adapters.StateUpdater
 
 	// TODO: remove it from here
-	PacketBuilder func(api_2.TransportCryptographyFactory, api_2.LocalNodeConfiguration) api_2.PacketBuilder
-	PacketSender  api_2.PacketSender
+	PacketBuilder func(api.TransportCryptographyFactory, api.LocalNodeConfiguration) api.PacketBuilder
+	PacketSender  api.PacketSender
 }
 
 func (cd *Dep) verify() {
@@ -92,22 +92,22 @@ func (cd *Dep) verify() {
 }
 
 type Consensus struct {
-	population                   census.ManyNodePopulation    // TODO: there should be interface
-	consensusConfiguration       api_2.ConsensusConfiguration // TODO: there should be interface
-	mandateRegistry              api_2.MandateRegistry
-	misbehaviorRegistry          api_2.MisbehaviorRegistry
-	offlinePopulation            api_2.OfflinePopulation
-	versionedRegistries          api_2.VersionedRegistries
-	nodeProfileFactory           api.NodeProfileFactory
-	consensusChronicles          api_2.ConsensusChronicles
-	localNodeConfiguration       api_2.LocalNodeConfiguration
-	upstreamPulseController      api_2.UpstreamPulseController
+	population                   census.ManyNodePopulation  // TODO: there should be interface
+	consensusConfiguration       api.ConsensusConfiguration // TODO: there should be interface
+	mandateRegistry              api.MandateRegistry
+	misbehaviorRegistry          api.MisbehaviorRegistry
+	offlinePopulation            api.OfflinePopulation
+	versionedRegistries          api.VersionedRegistries
+	nodeProfileFactory           gcp_types.NodeProfileFactory
+	consensusChronicles          api.ConsensusChronicles
+	localNodeConfiguration       api.LocalNodeConfiguration
+	upstreamPulseController      api.UpstreamPulseController
 	roundStrategyFactory         core.RoundStrategyFactory
-	transportCryptographyFactory api_2.TransportCryptographyFactory
-	packetBuilder                api_2.PacketBuilder
-	packetSender                 api_2.PacketSender
-	transportFactory             api_2.TransportFactory
-	consensusController          api_2.ConsensusController
+	transportCryptographyFactory api.TransportCryptographyFactory
+	packetBuilder                api.PacketBuilder
+	packetSender                 api.PacketSender
+	transportFactory             api.TransportFactory
+	consensusController          api.ConsensusController
 }
 
 func New(ctx context.Context, dep Dep) Consensus {

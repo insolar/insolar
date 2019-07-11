@@ -54,17 +54,17 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-var _ api.MisbehaviorReport = &BlameError{}
+var _ gcp_types.MisbehaviorReport = &BlameError{}
 
 type BlameError struct {
 	blameType    int
 	msg          string
 	violatorHost endpoints.HostIdentity
-	violatorNode api.NodeProfile
+	violatorNode gcp_types.NodeProfile
 	details      []interface{}
 	captureMark  interface{}
 }
@@ -73,8 +73,8 @@ func (p *BlameError) IsUnknown() bool {
 	return p.blameType != 0
 }
 
-func (p *BlameError) MisbehaviorType() api.MisbehaviorType {
-	return api.Blame.Of(p.blameType)
+func (p *BlameError) MisbehaviorType() gcp_types.MisbehaviorType {
+	return gcp_types.Blame.Of(p.blameType)
 }
 
 func (p *BlameError) CaptureMark() interface{} {
@@ -85,7 +85,7 @@ func (p *BlameError) Details() []interface{} {
 	return p.details
 }
 
-func (p *BlameError) ViolatorNode() api.NodeProfile {
+func (p *BlameError) ViolatorNode() gcp_types.NodeProfile {
 	return p.violatorNode
 }
 
@@ -123,7 +123,7 @@ type BlameFactory struct {
 	capture MisbehaviorReportFunc
 }
 
-func (p BlameFactory) NewBlame(fraudType int, msg string, violatorHost endpoints.HostIdentityHolder, violatorNode api.NodeProfile, details ...interface{}) BlameError {
+func (p BlameFactory) NewBlame(fraudType int, msg string, violatorHost endpoints.HostIdentityHolder, violatorNode gcp_types.NodeProfile, details ...interface{}) BlameError {
 	err := BlameError{
 		blameType:    fraudType,
 		msg:          msg,
@@ -138,7 +138,7 @@ func (p BlameFactory) NewBlame(fraudType int, msg string, violatorHost endpoints
 	return err
 }
 
-func (p BlameFactory) NewNodeBlame(fraudType int, msg string, violatorNode api.NodeProfile, details ...interface{}) BlameError {
+func (p BlameFactory) NewNodeBlame(fraudType int, msg string, violatorNode gcp_types.NodeProfile, details ...interface{}) BlameError {
 	return p.NewBlame(fraudType, msg, nil, violatorNode, details...)
 }
 
@@ -146,7 +146,7 @@ func (p BlameFactory) NewHostBlame(fraudType int, msg string, violatorHost endpo
 	return p.NewBlame(fraudType, msg, violatorHost, nil, details...)
 }
 
-func (p BlameFactory) ExcessiveIntro(violator api.NodeProfile, evidence1 cryptography_containers.SignedEvidenceHolder, evidence2 cryptography_containers.SignedEvidenceHolder) BlameError {
+func (p BlameFactory) ExcessiveIntro(violator gcp_types.NodeProfile, evidence1 cryptography_containers.SignedEvidenceHolder, evidence2 cryptography_containers.SignedEvidenceHolder) BlameError {
 	return p.NewNodeBlame(BlameExcessiveIntro, "excessive intro", violator, evidence1, evidence2)
 }
 
@@ -154,6 +154,6 @@ func (p BlameFactory) NewMismatchedPulsarPacket(from endpoints.HostIdentityHolde
 	return p.NewHostBlame(MismatchedPulsarPacket, "mixed pulsar pulses", from, expected, received)
 }
 
-func (p BlameFactory) NewMismatchedPulsePacket(from api.NodeProfile, expected packets.OriginalPulsarPacket, received packets.OriginalPulsarPacket) error {
+func (p BlameFactory) NewMismatchedPulsePacket(from gcp_types.NodeProfile, expected packets.OriginalPulsarPacket, received packets.OriginalPulsarPacket) error {
 	return p.NewNodeBlame(MismatchedPulsarPacket, "mixed pulsar pulses", from, expected, received)
 }

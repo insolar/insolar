@@ -52,40 +52,40 @@ package census
 
 import (
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"math"
 )
 
-var _ api.LocalNodeProfile = &NodeProfileSlot{}
+var _ gcp_types.LocalNodeProfile = &NodeProfileSlot{}
 
 const joinerIndex = 0x8000
 
 type NodeProfileSlot struct {
-	api.NodeIntroProfile
+	gcp_types.NodeIntroProfile
 	verifier cryptography_containers.SignatureVerifier
 	index    uint16
-	mode     api.MemberOpMode
-	power    api.MemberPower
+	mode     gcp_types.MemberOpMode
+	power    gcp_types.MemberPower
 }
 
-func NewNodeProfile(index int, p api.NodeIntroProfile, verifier cryptography_containers.SignatureVerifier, pw api.MemberPower) NodeProfileSlot {
+func NewNodeProfile(index int, p gcp_types.NodeIntroProfile, verifier cryptography_containers.SignatureVerifier, pw gcp_types.MemberPower) NodeProfileSlot {
 
-	if index < 0 || index > api.MaxNodeIndex {
+	if index < 0 || index > gcp_types.MaxNodeIndex {
 		panic("illegal value")
 	}
 	return NodeProfileSlot{index: uint16(index), NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
-func NewJoinerProfile(p api.NodeIntroProfile, verifier cryptography_containers.SignatureVerifier, pw api.MemberPower) NodeProfileSlot {
+func NewJoinerProfile(p gcp_types.NodeIntroProfile, verifier cryptography_containers.SignatureVerifier, pw gcp_types.MemberPower) NodeProfileSlot {
 
 	return NodeProfileSlot{index: joinerIndex, NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
-func (c *NodeProfileSlot) GetDeclaredPower() api.MemberPower {
+func (c *NodeProfileSlot) GetDeclaredPower() gcp_types.MemberPower {
 	return c.power
 }
 
-func (c *NodeProfileSlot) GetOpMode() api.MemberOpMode {
+func (c *NodeProfileSlot) GetOpMode() gcp_types.MemberOpMode {
 	return c.mode
 }
 
@@ -93,7 +93,7 @@ func (c *NodeProfileSlot) LocalNodeProfile() {
 }
 
 func (c *NodeProfileSlot) GetIndex() int {
-	return int(c.index & api.NodeIndexMask)
+	return int(c.index & gcp_types.NodeIndexMask)
 }
 
 func (c *NodeProfileSlot) IsJoiner() bool {
@@ -104,34 +104,34 @@ func (c *NodeProfileSlot) GetSignatureVerifier() cryptography_containers.Signatu
 	return c.verifier
 }
 
-var _ api.UpdatableNodeProfile = &updatableSlot{}
+var _ gcp_types.UpdatableNodeProfile = &updatableSlot{}
 
 type updatableSlot struct {
 	NodeProfileSlot
 	leaveReason uint32
 }
 
-func (c *updatableSlot) SetRank(index int, m api.MemberOpMode, power api.MemberPower) {
+func (c *updatableSlot) SetRank(index int, m gcp_types.MemberOpMode, power gcp_types.MemberPower) {
 	c.SetIndex(index)
 	c.power = power
 	c.mode = m
 }
 
-func (c *updatableSlot) SetPower(power api.MemberPower) {
+func (c *updatableSlot) SetPower(power gcp_types.MemberPower) {
 	c.power = power
 }
 
-func (c *updatableSlot) SetOpMode(m api.MemberOpMode) {
+func (c *updatableSlot) SetOpMode(m gcp_types.MemberOpMode) {
 	c.mode = m
 }
 
 func (c *updatableSlot) SetOpModeAndLeaveReason(leaveReason uint32) {
-	c.mode = api.MemberModeEvictedGracefully
+	c.mode = gcp_types.MemberModeEvictedGracefully
 	c.leaveReason = leaveReason
 }
 
 func (c *updatableSlot) GetLeaveReason() uint32 {
-	if c.mode != api.MemberModeEvictedGracefully {
+	if c.mode != gcp_types.MemberModeEvictedGracefully {
 		return 0
 	}
 	return c.leaveReason

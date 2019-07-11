@@ -9,13 +9,12 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 //FullIntroductionReaderMock implements github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader
@@ -37,7 +36,7 @@ type FullIntroductionReaderMock struct {
 	GetIssuedAtTimePreCounter uint64
 	GetIssuedAtTimeMock       mFullIntroductionReaderMockGetIssuedAtTime
 
-	GetIssuerIDFunc       func() (r common.ShortNodeID)
+	GetIssuerIDFunc       func() (r insolar.ShortNodeID)
 	GetIssuerIDCounter    uint64
 	GetIssuerIDPreCounter uint64
 	GetIssuerIDMock       mFullIntroductionReaderMockGetIssuerID
@@ -57,7 +56,7 @@ type FullIntroductionReaderMock struct {
 	GetNodeEndpointPreCounter uint64
 	GetNodeEndpointMock       mFullIntroductionReaderMockGetNodeEndpoint
 
-	GetNodeIDFunc       func() (r common.ShortNodeID)
+	GetNodeIDFunc       func() (r insolar.ShortNodeID)
 	GetNodeIDCounter    uint64
 	GetNodeIDPreCounter uint64
 	GetNodeIDMock       mFullIntroductionReaderMockGetNodeID
@@ -67,17 +66,17 @@ type FullIntroductionReaderMock struct {
 	GetNodePKPreCounter uint64
 	GetNodePKMock       mFullIntroductionReaderMockGetNodePK
 
-	GetNodePrimaryRoleFunc       func() (r api.NodePrimaryRole)
+	GetNodePrimaryRoleFunc       func() (r gcp_types.NodePrimaryRole)
 	GetNodePrimaryRoleCounter    uint64
 	GetNodePrimaryRolePreCounter uint64
 	GetNodePrimaryRoleMock       mFullIntroductionReaderMockGetNodePrimaryRole
 
-	GetNodeSpecialRolesFunc       func() (r api.NodeSpecialRole)
+	GetNodeSpecialRolesFunc       func() (r gcp_types.NodeSpecialRole)
 	GetNodeSpecialRolesCounter    uint64
 	GetNodeSpecialRolesPreCounter uint64
 	GetNodeSpecialRolesMock       mFullIntroductionReaderMockGetNodeSpecialRoles
 
-	GetPowerLevelsFunc       func() (r api.MemberPowerSet)
+	GetPowerLevelsFunc       func() (r gcp_types.MemberPowerSet)
 	GetPowerLevelsCounter    uint64
 	GetPowerLevelsPreCounter uint64
 	GetPowerLevelsMock       mFullIntroductionReaderMockGetPowerLevels
@@ -87,7 +86,7 @@ type FullIntroductionReaderMock struct {
 	GetReferencePreCounter uint64
 	GetReferenceMock       mFullIntroductionReaderMockGetReference
 
-	GetStartPowerFunc       func() (r api.MemberPower)
+	GetStartPowerFunc       func() (r gcp_types.MemberPower)
 	GetStartPowerCounter    uint64
 	GetStartPowerPreCounter uint64
 	GetStartPowerMock       mFullIntroductionReaderMockGetStartPower
@@ -532,7 +531,7 @@ type FullIntroductionReaderMockGetIssuerIDExpectation struct {
 }
 
 type FullIntroductionReaderMockGetIssuerIDResult struct {
-	r common.ShortNodeID
+	r insolar.ShortNodeID
 }
 
 //Expect specifies that invocation of FullIntroductionReader.GetIssuerID is expected from 1 to Infinity times
@@ -548,7 +547,7 @@ func (m *mFullIntroductionReaderMockGetIssuerID) Expect() *mFullIntroductionRead
 }
 
 //Return specifies results of invocation of FullIntroductionReader.GetIssuerID
-func (m *mFullIntroductionReaderMockGetIssuerID) Return(r common.ShortNodeID) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetIssuerID) Return(r insolar.ShortNodeID) *FullIntroductionReaderMock {
 	m.mock.GetIssuerIDFunc = nil
 	m.expectationSeries = nil
 
@@ -570,12 +569,12 @@ func (m *mFullIntroductionReaderMockGetIssuerID) ExpectOnce() *FullIntroductionR
 	return expectation
 }
 
-func (e *FullIntroductionReaderMockGetIssuerIDExpectation) Return(r common.ShortNodeID) {
+func (e *FullIntroductionReaderMockGetIssuerIDExpectation) Return(r insolar.ShortNodeID) {
 	e.result = &FullIntroductionReaderMockGetIssuerIDResult{r}
 }
 
 //Set uses given function f as a mock of FullIntroductionReader.GetIssuerID method
-func (m *mFullIntroductionReaderMockGetIssuerID) Set(f func() (r common.ShortNodeID)) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetIssuerID) Set(f func() (r insolar.ShortNodeID)) *FullIntroductionReaderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -584,7 +583,7 @@ func (m *mFullIntroductionReaderMockGetIssuerID) Set(f func() (r common.ShortNod
 }
 
 //GetIssuerID implements github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader interface
-func (m *FullIntroductionReaderMock) GetIssuerID() (r common.ShortNodeID) {
+func (m *FullIntroductionReaderMock) GetIssuerID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetIssuerIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetIssuerIDCounter, 1)
 
@@ -1068,7 +1067,7 @@ type FullIntroductionReaderMockGetNodeIDExpectation struct {
 }
 
 type FullIntroductionReaderMockGetNodeIDResult struct {
-	r common.ShortNodeID
+	r insolar.ShortNodeID
 }
 
 //Expect specifies that invocation of FullIntroductionReader.GetNodeID is expected from 1 to Infinity times
@@ -1084,7 +1083,7 @@ func (m *mFullIntroductionReaderMockGetNodeID) Expect() *mFullIntroductionReader
 }
 
 //Return specifies results of invocation of FullIntroductionReader.GetNodeID
-func (m *mFullIntroductionReaderMockGetNodeID) Return(r common.ShortNodeID) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetNodeID) Return(r insolar.ShortNodeID) *FullIntroductionReaderMock {
 	m.mock.GetNodeIDFunc = nil
 	m.expectationSeries = nil
 
@@ -1106,12 +1105,12 @@ func (m *mFullIntroductionReaderMockGetNodeID) ExpectOnce() *FullIntroductionRea
 	return expectation
 }
 
-func (e *FullIntroductionReaderMockGetNodeIDExpectation) Return(r common.ShortNodeID) {
+func (e *FullIntroductionReaderMockGetNodeIDExpectation) Return(r insolar.ShortNodeID) {
 	e.result = &FullIntroductionReaderMockGetNodeIDResult{r}
 }
 
 //Set uses given function f as a mock of FullIntroductionReader.GetNodeID method
-func (m *mFullIntroductionReaderMockGetNodeID) Set(f func() (r common.ShortNodeID)) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetNodeID) Set(f func() (r insolar.ShortNodeID)) *FullIntroductionReaderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1120,7 +1119,7 @@ func (m *mFullIntroductionReaderMockGetNodeID) Set(f func() (r common.ShortNodeI
 }
 
 //GetNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader interface
-func (m *FullIntroductionReaderMock) GetNodeID() (r common.ShortNodeID) {
+func (m *FullIntroductionReaderMock) GetNodeID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
 
@@ -1336,7 +1335,7 @@ type FullIntroductionReaderMockGetNodePrimaryRoleExpectation struct {
 }
 
 type FullIntroductionReaderMockGetNodePrimaryRoleResult struct {
-	r api.NodePrimaryRole
+	r gcp_types.NodePrimaryRole
 }
 
 //Expect specifies that invocation of FullIntroductionReader.GetNodePrimaryRole is expected from 1 to Infinity times
@@ -1352,7 +1351,7 @@ func (m *mFullIntroductionReaderMockGetNodePrimaryRole) Expect() *mFullIntroduct
 }
 
 //Return specifies results of invocation of FullIntroductionReader.GetNodePrimaryRole
-func (m *mFullIntroductionReaderMockGetNodePrimaryRole) Return(r api.NodePrimaryRole) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetNodePrimaryRole) Return(r gcp_types.NodePrimaryRole) *FullIntroductionReaderMock {
 	m.mock.GetNodePrimaryRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -1374,12 +1373,12 @@ func (m *mFullIntroductionReaderMockGetNodePrimaryRole) ExpectOnce() *FullIntrod
 	return expectation
 }
 
-func (e *FullIntroductionReaderMockGetNodePrimaryRoleExpectation) Return(r api.NodePrimaryRole) {
+func (e *FullIntroductionReaderMockGetNodePrimaryRoleExpectation) Return(r gcp_types.NodePrimaryRole) {
 	e.result = &FullIntroductionReaderMockGetNodePrimaryRoleResult{r}
 }
 
 //Set uses given function f as a mock of FullIntroductionReader.GetNodePrimaryRole method
-func (m *mFullIntroductionReaderMockGetNodePrimaryRole) Set(f func() (r api.NodePrimaryRole)) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetNodePrimaryRole) Set(f func() (r gcp_types.NodePrimaryRole)) *FullIntroductionReaderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1388,7 +1387,7 @@ func (m *mFullIntroductionReaderMockGetNodePrimaryRole) Set(f func() (r api.Node
 }
 
 //GetNodePrimaryRole implements github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader interface
-func (m *FullIntroductionReaderMock) GetNodePrimaryRole() (r api.NodePrimaryRole) {
+func (m *FullIntroductionReaderMock) GetNodePrimaryRole() (r gcp_types.NodePrimaryRole) {
 	counter := atomic.AddUint64(&m.GetNodePrimaryRolePreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodePrimaryRoleCounter, 1)
 
@@ -1470,7 +1469,7 @@ type FullIntroductionReaderMockGetNodeSpecialRolesExpectation struct {
 }
 
 type FullIntroductionReaderMockGetNodeSpecialRolesResult struct {
-	r api.NodeSpecialRole
+	r gcp_types.NodeSpecialRole
 }
 
 //Expect specifies that invocation of FullIntroductionReader.GetNodeSpecialRoles is expected from 1 to Infinity times
@@ -1486,7 +1485,7 @@ func (m *mFullIntroductionReaderMockGetNodeSpecialRoles) Expect() *mFullIntroduc
 }
 
 //Return specifies results of invocation of FullIntroductionReader.GetNodeSpecialRoles
-func (m *mFullIntroductionReaderMockGetNodeSpecialRoles) Return(r api.NodeSpecialRole) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetNodeSpecialRoles) Return(r gcp_types.NodeSpecialRole) *FullIntroductionReaderMock {
 	m.mock.GetNodeSpecialRolesFunc = nil
 	m.expectationSeries = nil
 
@@ -1508,12 +1507,12 @@ func (m *mFullIntroductionReaderMockGetNodeSpecialRoles) ExpectOnce() *FullIntro
 	return expectation
 }
 
-func (e *FullIntroductionReaderMockGetNodeSpecialRolesExpectation) Return(r api.NodeSpecialRole) {
+func (e *FullIntroductionReaderMockGetNodeSpecialRolesExpectation) Return(r gcp_types.NodeSpecialRole) {
 	e.result = &FullIntroductionReaderMockGetNodeSpecialRolesResult{r}
 }
 
 //Set uses given function f as a mock of FullIntroductionReader.GetNodeSpecialRoles method
-func (m *mFullIntroductionReaderMockGetNodeSpecialRoles) Set(f func() (r api.NodeSpecialRole)) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetNodeSpecialRoles) Set(f func() (r gcp_types.NodeSpecialRole)) *FullIntroductionReaderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1522,7 +1521,7 @@ func (m *mFullIntroductionReaderMockGetNodeSpecialRoles) Set(f func() (r api.Nod
 }
 
 //GetNodeSpecialRoles implements github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader interface
-func (m *FullIntroductionReaderMock) GetNodeSpecialRoles() (r api.NodeSpecialRole) {
+func (m *FullIntroductionReaderMock) GetNodeSpecialRoles() (r gcp_types.NodeSpecialRole) {
 	counter := atomic.AddUint64(&m.GetNodeSpecialRolesPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeSpecialRolesCounter, 1)
 
@@ -1604,7 +1603,7 @@ type FullIntroductionReaderMockGetPowerLevelsExpectation struct {
 }
 
 type FullIntroductionReaderMockGetPowerLevelsResult struct {
-	r api.MemberPowerSet
+	r gcp_types.MemberPowerSet
 }
 
 //Expect specifies that invocation of FullIntroductionReader.GetPowerLevels is expected from 1 to Infinity times
@@ -1620,7 +1619,7 @@ func (m *mFullIntroductionReaderMockGetPowerLevels) Expect() *mFullIntroductionR
 }
 
 //Return specifies results of invocation of FullIntroductionReader.GetPowerLevels
-func (m *mFullIntroductionReaderMockGetPowerLevels) Return(r api.MemberPowerSet) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetPowerLevels) Return(r gcp_types.MemberPowerSet) *FullIntroductionReaderMock {
 	m.mock.GetPowerLevelsFunc = nil
 	m.expectationSeries = nil
 
@@ -1642,12 +1641,12 @@ func (m *mFullIntroductionReaderMockGetPowerLevels) ExpectOnce() *FullIntroducti
 	return expectation
 }
 
-func (e *FullIntroductionReaderMockGetPowerLevelsExpectation) Return(r api.MemberPowerSet) {
+func (e *FullIntroductionReaderMockGetPowerLevelsExpectation) Return(r gcp_types.MemberPowerSet) {
 	e.result = &FullIntroductionReaderMockGetPowerLevelsResult{r}
 }
 
 //Set uses given function f as a mock of FullIntroductionReader.GetPowerLevels method
-func (m *mFullIntroductionReaderMockGetPowerLevels) Set(f func() (r api.MemberPowerSet)) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetPowerLevels) Set(f func() (r gcp_types.MemberPowerSet)) *FullIntroductionReaderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1656,7 +1655,7 @@ func (m *mFullIntroductionReaderMockGetPowerLevels) Set(f func() (r api.MemberPo
 }
 
 //GetPowerLevels implements github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader interface
-func (m *FullIntroductionReaderMock) GetPowerLevels() (r api.MemberPowerSet) {
+func (m *FullIntroductionReaderMock) GetPowerLevels() (r gcp_types.MemberPowerSet) {
 	counter := atomic.AddUint64(&m.GetPowerLevelsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPowerLevelsCounter, 1)
 
@@ -1872,7 +1871,7 @@ type FullIntroductionReaderMockGetStartPowerExpectation struct {
 }
 
 type FullIntroductionReaderMockGetStartPowerResult struct {
-	r api.MemberPower
+	r gcp_types.MemberPower
 }
 
 //Expect specifies that invocation of FullIntroductionReader.GetStartPower is expected from 1 to Infinity times
@@ -1888,7 +1887,7 @@ func (m *mFullIntroductionReaderMockGetStartPower) Expect() *mFullIntroductionRe
 }
 
 //Return specifies results of invocation of FullIntroductionReader.GetStartPower
-func (m *mFullIntroductionReaderMockGetStartPower) Return(r api.MemberPower) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetStartPower) Return(r gcp_types.MemberPower) *FullIntroductionReaderMock {
 	m.mock.GetStartPowerFunc = nil
 	m.expectationSeries = nil
 
@@ -1910,12 +1909,12 @@ func (m *mFullIntroductionReaderMockGetStartPower) ExpectOnce() *FullIntroductio
 	return expectation
 }
 
-func (e *FullIntroductionReaderMockGetStartPowerExpectation) Return(r api.MemberPower) {
+func (e *FullIntroductionReaderMockGetStartPowerExpectation) Return(r gcp_types.MemberPower) {
 	e.result = &FullIntroductionReaderMockGetStartPowerResult{r}
 }
 
 //Set uses given function f as a mock of FullIntroductionReader.GetStartPower method
-func (m *mFullIntroductionReaderMockGetStartPower) Set(f func() (r api.MemberPower)) *FullIntroductionReaderMock {
+func (m *mFullIntroductionReaderMockGetStartPower) Set(f func() (r gcp_types.MemberPower)) *FullIntroductionReaderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1924,7 +1923,7 @@ func (m *mFullIntroductionReaderMockGetStartPower) Set(f func() (r api.MemberPow
 }
 
 //GetStartPower implements github.com/insolar/insolar/network/consensus/gcpv2/packets.FullIntroductionReader interface
-func (m *FullIntroductionReaderMock) GetStartPower() (r api.MemberPower) {
+func (m *FullIntroductionReaderMock) GetStartPower() (r gcp_types.MemberPower) {
 	counter := atomic.AddUint64(&m.GetStartPowerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetStartPowerCounter, 1)
 

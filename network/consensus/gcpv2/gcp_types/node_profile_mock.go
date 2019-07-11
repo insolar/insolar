@@ -1,4 +1,4 @@
-package api
+package gcp_types
 
 /*
 DO NOT EDIT!
@@ -6,14 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "NodeProfile" can be found in github.com/insolar/insolar/network/consensus/gcpv2/common
 */
 import (
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/network/consensus/common"
-
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -66,7 +65,7 @@ type NodeProfileMock struct {
 	GetPrimaryRolePreCounter uint64
 	GetPrimaryRoleMock       mNodeProfileMockGetPrimaryRole
 
-	GetShortNodeIDFunc       func() (r common.ShortNodeID)
+	GetShortNodeIDFunc       func() (r insolar.ShortNodeID)
 	GetShortNodeIDCounter    uint64
 	GetShortNodeIDPreCounter uint64
 	GetShortNodeIDMock       mNodeProfileMockGetShortNodeID
@@ -1347,7 +1346,7 @@ type NodeProfileMockGetShortNodeIDExpectation struct {
 }
 
 type NodeProfileMockGetShortNodeIDResult struct {
-	r common.ShortNodeID
+	r insolar.ShortNodeID
 }
 
 //Expect specifies that invocation of NodeProfile.GetShortNodeID is expected from 1 to Infinity times
@@ -1363,7 +1362,7 @@ func (m *mNodeProfileMockGetShortNodeID) Expect() *mNodeProfileMockGetShortNodeI
 }
 
 //Return specifies results of invocation of NodeProfile.GetShortNodeID
-func (m *mNodeProfileMockGetShortNodeID) Return(r common.ShortNodeID) *NodeProfileMock {
+func (m *mNodeProfileMockGetShortNodeID) Return(r insolar.ShortNodeID) *NodeProfileMock {
 	m.mock.GetShortNodeIDFunc = nil
 	m.expectationSeries = nil
 
@@ -1385,12 +1384,12 @@ func (m *mNodeProfileMockGetShortNodeID) ExpectOnce() *NodeProfileMockGetShortNo
 	return expectation
 }
 
-func (e *NodeProfileMockGetShortNodeIDExpectation) Return(r common.ShortNodeID) {
+func (e *NodeProfileMockGetShortNodeIDExpectation) Return(r insolar.ShortNodeID) {
 	e.result = &NodeProfileMockGetShortNodeIDResult{r}
 }
 
 //Set uses given function f as a mock of NodeProfile.GetShortNodeID method
-func (m *mNodeProfileMockGetShortNodeID) Set(f func() (r common.ShortNodeID)) *NodeProfileMock {
+func (m *mNodeProfileMockGetShortNodeID) Set(f func() (r insolar.ShortNodeID)) *NodeProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1399,7 +1398,7 @@ func (m *mNodeProfileMockGetShortNodeID) Set(f func() (r common.ShortNodeID)) *N
 }
 
 //GetShortNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/common.NodeProfile interface
-func (m *NodeProfileMock) GetShortNodeID() (r common.ShortNodeID) {
+func (m *NodeProfileMock) GetShortNodeID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetShortNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetShortNodeIDCounter, 1)
 

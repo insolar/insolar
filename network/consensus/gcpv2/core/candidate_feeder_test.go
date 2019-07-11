@@ -51,10 +51,9 @@
 package core
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"testing"
-
-	ccommon "github.com/insolar/insolar/network/consensus/common"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -64,31 +63,31 @@ import (
 func TestPickNextJoinCandidate(t *testing.T) {
 	require.Equal(t, nil, (&SequencialCandidateFeeder{}).PickNextJoinCandidate())
 
-	s := &SequencialCandidateFeeder{buf: make([]api.CandidateProfile, 1)}
+	s := &SequencialCandidateFeeder{buf: make([]gcp_types.CandidateProfile, 1)}
 	c := common.NewCandidateProfileMock(t)
 	s.buf[0] = c
 	require.Equal(t, c, s.PickNextJoinCandidate())
 }
 
 func TestRemoveJoinCandidate(t *testing.T) {
-	require.False(t, (&SequencialCandidateFeeder{}).RemoveJoinCandidate(false, ccommon.ShortNodeID(0)))
+	require.False(t, (&SequencialCandidateFeeder{}).RemoveJoinCandidate(false, insolar.ShortNodeID(0)))
 
-	s := &SequencialCandidateFeeder{buf: make([]api.CandidateProfile, 1)}
+	s := &SequencialCandidateFeeder{buf: make([]gcp_types.CandidateProfile, 1)}
 	c := common.NewCandidateProfileMock(t)
 	s.buf[0] = c
-	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
-	require.False(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(2)))
+	c.GetNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
+	require.False(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(2)))
 
-	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
-	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
+	c.GetNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
+	require.True(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(1)))
 
-	require.Equal(t, []api.CandidateProfile(nil), s.buf)
+	require.Equal(t, []gcp_types.CandidateProfile(nil), s.buf)
 
-	s.buf = make([]api.CandidateProfile, 2)
+	s.buf = make([]gcp_types.CandidateProfile, 2)
 	s.buf[0] = c
 	c2 := common.NewCandidateProfileMock(t)
 	s.buf[1] = c2
-	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
+	require.True(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(1)))
 
 	require.Equal(t, 1, len(s.buf))
 

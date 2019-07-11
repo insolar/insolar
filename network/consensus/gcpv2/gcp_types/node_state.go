@@ -48,51 +48,17 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api
+package gcp_types
 
-type NodePrimaryRole uint8 //MUST BE 6-bit
-
-const (
-	PrimaryRoleInactive NodePrimaryRole = iota
-	PrimaryRoleNeutral
-	PrimaryRoleHeavyMaterial
-	PrimaryRoleLightMaterial
-	PrimaryRoleVirtual
-	//PrimaryRoleCascade
-	//PrimaryRoleRecrypt
-)
-
-func (v NodePrimaryRole) IsMaterial() bool {
-	return v == PrimaryRoleHeavyMaterial || v == PrimaryRoleLightMaterial
+type NodeAnnouncedState struct {
+	StateEvidence     NodeStateHashEvidence
+	AnnounceSignature MemberAnnouncementSignature
+	//
+	//NodeInternalState common.Digest
+	//NodeStateSignature common.Signature
+	//AnnounceSignature *common.Signature
 }
 
-func (v NodePrimaryRole) IsHeavyMaterial() bool {
-	return v == PrimaryRoleHeavyMaterial
-}
-
-func (v NodePrimaryRole) IsLightMaterial() bool {
-	return v == PrimaryRoleLightMaterial
-}
-
-func (v NodePrimaryRole) IsVirtual() bool {
-	return v == PrimaryRoleVirtual
-}
-
-func (v NodePrimaryRole) IsNeutral() bool {
-	return v == PrimaryRoleNeutral
-}
-
-func (v NodePrimaryRole) IsInactive() bool {
-	return v == PrimaryRoleInactive
-}
-
-type NodeSpecialRole uint8
-
-const (
-	SpecialRoleNone      NodeSpecialRole = 0
-	SpecialRoleDiscovery NodeSpecialRole = 1 << iota
-)
-
-func (v NodeSpecialRole) IsDiscovery() bool {
-	return v == SpecialRoleDiscovery
+func (p *NodeAnnouncedState) IsEmpty() bool {
+	return p.StateEvidence == nil
 }

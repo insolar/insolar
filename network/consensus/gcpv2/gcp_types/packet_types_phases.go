@@ -46,42 +46,80 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
+///
 
-package api
+package gcp_types
 
-//func TestNewChasingTimer(t *testing.T) {
-//	chasingDelay := time.Second
-//	ct := NewChasingTimer(chasingDelay)
-//	require.Equal(t, chasingDelay, ct.chasingDelay)
-//}
-//
-//func TestIsEnabled(t *testing.T) {
-//	ct := NewChasingTimer(time.Second)
-//	require.True(t, ct.IsEnabled())
-//
-//	ct = NewChasingTimer(0)
-//	require.False(t, ct.IsEnabled())
-//
-//	ct = NewChasingTimer(-time.Second)
-//	require.False(t, ct.IsEnabled())
-//}
+import (
+	"math"
+)
 
-//func TestNewNodeStateHashEvidence(t *testing.T) {
-//	sd := cryptography_containers.NewSignedDigest(cryptography_containers.Digest{}, cryptography_containers.Signature{})
-//	sh := NewNodeStateHashEvidence(sd)
-//	require.Equal(t, SignedDigest, sd)
-//}
-//
-//func TestGetNodeStateHash(t *testing.T) {
-//	fr := long_bits.NewFoldableReaderMock(t)
-//	sd := cryptography_containers.NewSignedDigest(cryptography_containers.NewDigest(fr, cryptography_containers.DigestMethod("testDigest")), cryptography_containers.NewSignature(fr, cryptography_containers.SignatureMethod("testSignature")))
-//	sh := NewNodeStateHashEvidence(sd)
-//	require.Equal(t, sh.GetNodeStateHash().GetDigestMethod(), sd.GetDigest().AsDigestHolder().GetDigestMethod())
-//}
-//
-//func TestGetGlobulaNodeStateSignature(t *testing.T) {
-//	fr := long_bits.NewFoldableReaderMock(t)
-//	sd := cryptography_containers.NewSignedDigest(cryptography_containers.NewDigest(fr, cryptography_containers.DigestMethod("testDigest")), cryptography_containers.NewSignature(fr, cryptography_containers.SignatureMethod("testSignature")))
-//	sh := NewNodeStateHashEvidence(sd)
-//	require.Equal(t, sh.GetGlobulaNodeStateSignature().GetSignatureMethod(), sd.GetSignature().AsSignatureHolder().GetSignatureMethod())
-//}
+type PacketType uint8
+
+const (
+	/* Phased Packets - these are SENT by a node in the given sequence */
+
+	PacketPhase0 PacketType = iota
+	PacketPhase1            /* Namely Phases0 and Phases1 are actually variations of Phase 1 */
+
+	PacketPhase2 /* Phase2 has no phased variations, so =3 is reserved */
+	_
+
+	PacketPhase3 /* Namely Phases3 and Phases4 are actually variations of Phase 3 */
+	PacketPhase4
+
+	/* Off-phase Packets - these packets can be sent at any moment */
+
+	PacketPulse /* Triggers Phase0-1 */
+	PacketFraud /* Delivers fraud proof, by request only */
+
+	PacketReqPhase1 /* Request to resend own NSH - will be replied with PacketPhase1 without PulseData.
+	The reply MUST include all claims presented in the original Phase1 packet.
+	This request MUST be replied not more than 1 time per requesting node per consensus round,
+	otherwise is ignored.
+	*/
+	PacketReqIntro /* Request to resend other's (NSH + intro) - will be replied with PacketPhase2.
+	Only joiners can send this request, and only to anyone in a relevant neighbourhood.
+	Limited by 1 times per requesting node per consensus round per requested intro,
+	otherwise is ignored.
+	*/
+	PacketReqFraud /* Requests fraud proof */
+
+	MaxPacketType
+)
+
+func (p PacketType) IsPhasedPacket() bool {
+	return p <= PacketPhase4
+}
+
+func (p PacketType) IsMemberPacket() bool {
+	return p != PacketPulse
+}
+
+func (p PacketType) GetPayloadEquivalent() PacketType {
+	switch p {
+	case PacketReqPhase1:
+		return PacketPhase1
+	case PacketReqIntro:
+		return PacketPhase2
+	default:
+		return p
+	}
+}
+
+func (p PacketType) ToPhaseNumber() (PhaseNumber, bool) {
+	switch p {
+	case PacketPhase0:
+		return Phase0, true
+	case PacketPhase1:
+		return Phase1, true
+	case PacketPhase2:
+		return Phase2, true
+	case PacketPhase3:
+		return Phase3, true
+	case PacketPhase4:
+		return Phase4, true
+	default:
+		return math.MaxUint8, false
+	}
+}

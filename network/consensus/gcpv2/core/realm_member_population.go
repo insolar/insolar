@@ -52,13 +52,14 @@ package core
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/consensus_tools"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
-func NewMemberRealmPopulation(strategy RoundStrategy, population api_2.OnlinePopulation,
+func NewMemberRealmPopulation(strategy RoundStrategy, population api.OnlinePopulation,
 	fn NodeInitFunc) *MemberRealmPopulation {
 
 	nodeCount := population.GetCount()
@@ -72,7 +73,7 @@ func NewMemberRealmPopulation(strategy RoundStrategy, population api_2.OnlinePop
 			nodeIndex:      make([]*NodeAppearance, nodeCount),
 			nodeShuffle:    make([]*NodeAppearance, nodeCount-1),
 		}},
-		bftMajorityCount: common.BftMajority(nodeCount),
+		bftMajorityCount: consensus_tools.BftMajority(nodeCount),
 	}
 	r.initPopulation()
 	ShuffleNodeProjections(strategy, r.nodeShuffle)
@@ -86,7 +87,7 @@ type dynPop struct{ DynamicRealmPopulation }
 
 type MemberRealmPopulation struct {
 	dynPop
-	population api_2.OnlinePopulation
+	population api.OnlinePopulation
 
 	bftMajorityCount int
 }
@@ -136,7 +137,7 @@ func (r *MemberRealmPopulation) GetBftMajorityCount() int {
 	return r.bftMajorityCount
 }
 
-func (r *MemberRealmPopulation) GetActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+func (r *MemberRealmPopulation) GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	np := r.population.FindProfile(id)
 	if np != nil && !np.IsJoiner() {
 		return r.GetNodeAppearanceByIndex(np.GetIndex())
@@ -144,7 +145,7 @@ func (r *MemberRealmPopulation) GetActiveNodeAppearance(id common.ShortNodeID) *
 	return nil
 }
 
-func (r *MemberRealmPopulation) GetNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+func (r *MemberRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	na := r.GetActiveNodeAppearance(id)
 	if na != nil {
 		return na
@@ -171,25 +172,25 @@ func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearanc
 	return r.dynPop.AddToDynamics(n)
 }
 
-var _ api.NodeProfile = &joiningNodeProfile{}
+var _ gcp_types.NodeProfile = &joiningNodeProfile{}
 
 type joiningNodeProfile struct {
-	api.NodeIntroProfile
+	gcp_types.NodeIntroProfile
 }
 
 func (p *joiningNodeProfile) IsJoiner() bool {
 	return true
 }
 
-func (p *joiningNodeProfile) GetOpMode() api.MemberOpMode {
-	return api.MemberModeNormal
+func (p *joiningNodeProfile) GetOpMode() gcp_types.MemberOpMode {
+	return gcp_types.MemberModeNormal
 }
 
 func (p *joiningNodeProfile) GetIndex() int {
 	return 0
 }
 
-func (p *joiningNodeProfile) GetDeclaredPower() api.MemberPower {
+func (p *joiningNodeProfile) GetDeclaredPower() gcp_types.MemberPower {
 	return p.GetStartPower()
 }
 

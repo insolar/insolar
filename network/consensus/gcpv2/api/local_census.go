@@ -48,13 +48,13 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api_2
+package api
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
 type ConsensusChronicles interface {
@@ -70,8 +70,8 @@ type PulseCensus interface {
 	GetCensusState() State
 	GetPulseNumber() pulse_data.PulseNumber
 	GetExpectedPulseNumber() pulse_data.PulseNumber
-	GetGlobulaStateHash() api.GlobulaStateHash
-	GetCloudStateHash() api.CloudStateHash
+	GetGlobulaStateHash() gcp_types.GlobulaStateHash
+	GetCloudStateHash() gcp_types.CloudStateHash
 }
 
 type ArchivedCensus interface {
@@ -94,7 +94,7 @@ type OperationalCensus interface {
 type ActiveCensus interface {
 	OperationalCensus
 	GetPulseData() pulse_data.PulseData
-	GetProfileFactory(ksf cryptography_containers.KeyStoreFactory) api.NodeProfileFactory
+	GetProfileFactory(ksf cryptography_containers.KeyStoreFactory) gcp_types.NodeProfileFactory
 }
 
 type ExpectedCensus interface {
@@ -109,13 +109,13 @@ type Builder interface {
 	GetCensusState() State
 	GetPulseNumber() pulse_data.PulseNumber
 
-	GetGlobulaStateHash() api.GlobulaStateHash
-	SetGlobulaStateHash(gsh api.GlobulaStateHash)
+	GetGlobulaStateHash() gcp_types.GlobulaStateHash
+	SetGlobulaStateHash(gsh gcp_types.GlobulaStateHash)
 
 	SealCensus()
 	IsSealed() bool
 
-	BuildAndMakeExpected(csh api.CloudStateHash) ExpectedCensus
+	BuildAndMakeExpected(csh gcp_types.CloudStateHash) ExpectedCensus
 }
 
 // type CensusType uint8
@@ -150,24 +150,24 @@ func (v State) IsBuilt() bool {
 }
 
 type OnlinePopulation interface {
-	FindProfile(nodeID common.ShortNodeID) api.NodeProfile
+	FindProfile(nodeID insolar.ShortNodeID) gcp_types.NodeProfile
 	GetCount() int
-	GetProfiles() []api.NodeProfile
-	GetLocalProfile() api.LocalNodeProfile
+	GetProfiles() []gcp_types.NodeProfile
+	GetLocalProfile() gcp_types.LocalNodeProfile
 }
 
 type EvictedPopulation interface {
-	FindProfile(nodeID common.ShortNodeID) api.EvictedNodeProfile
+	FindProfile(nodeID insolar.ShortNodeID) gcp_types.EvictedNodeProfile
 	GetCount() int
-	GetProfiles() []api.EvictedNodeProfile
+	GetProfiles() []gcp_types.EvictedNodeProfile
 }
 
 type PopulationBuilder interface {
 	GetCount() int
-	AddJoinerProfile(intro api.NodeIntroProfile) api.UpdatableNodeProfile
-	RemoveProfile(nodeID common.ShortNodeID)
-	GetUnorderedProfiles() []api.UpdatableNodeProfile
-	FindProfile(nodeID common.ShortNodeID) api.UpdatableNodeProfile
-	GetLocalProfile() api.UpdatableNodeProfile
+	AddJoinerProfile(intro gcp_types.NodeIntroProfile) gcp_types.UpdatableNodeProfile
+	RemoveProfile(nodeID insolar.ShortNodeID)
+	GetUnorderedProfiles() []gcp_types.UpdatableNodeProfile
+	FindProfile(nodeID insolar.ShortNodeID) gcp_types.UpdatableNodeProfile
+	GetLocalProfile() gcp_types.UpdatableNodeProfile
 	RemoveOthers()
 }

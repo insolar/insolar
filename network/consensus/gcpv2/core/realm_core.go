@@ -53,17 +53,16 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 // hides embedded pointer from external access
@@ -79,14 +78,14 @@ type coreRealm struct {
 
 	roundContext  context.Context
 	strategy      RoundStrategy
-	config        api_2.LocalNodeConfiguration
-	initialCensus api_2.OperationalCensus
+	config        api.LocalNodeConfiguration
+	initialCensus api.OperationalCensus
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
 	signer          cryptography_containers.DigestSigner
 	digest          cryptography_containers.DigestFactory
-	verifierFactory api_2.TransportCryptographyFactory
-	upstream        api_2.UpstreamPulseController
+	verifierFactory api.TransportCryptographyFactory
+	upstream        api.UpstreamPulseController
 	roundStartedAt  time.Time
 
 	self *NodeAppearance /* Special case - this field is set twice, by start() of PrepRealm and FullRealm */
@@ -99,8 +98,8 @@ type coreRealm struct {
 	originalPulse packets.OriginalPulsarPacket
 }
 
-func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport api_2.TransportFactory,
-	config api_2.LocalNodeConfiguration, initialCensus api_2.OperationalCensus, powerRequest api.PowerRequest) {
+func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport api.TransportFactory,
+	config api.LocalNodeConfiguration, initialCensus api.OperationalCensus, powerRequest gcp_types.PowerRequest) {
 
 	r.hLocker = hLocker
 
@@ -133,7 +132,7 @@ func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport api_
 	r.self.requestedPower = profile.GetIntroduction().ConvertPowerRequest(powerRequest)
 
 	nodeContext.initPrep(
-		func(report api.MisbehaviorReport) interface{} {
+		func(report gcp_types.MisbehaviorReport) interface{} {
 			r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
@@ -171,7 +170,7 @@ func (r *coreRealm) GetRoundContext() context.Context {
 	return r.roundContext
 }
 
-func (r *coreRealm) GetLocalConfig() api_2.LocalNodeConfiguration {
+func (r *coreRealm) GetLocalConfig() api.LocalNodeConfiguration {
 	return r.config
 }
 
@@ -179,7 +178,7 @@ func (r *coreRealm) IsJoiner() bool {
 	return r.self.IsJoiner()
 }
 
-func (r *coreRealm) GetSelfNodeID() common.ShortNodeID {
+func (r *coreRealm) GetSelfNodeID() insolar.ShortNodeID {
 	return r.self.profile.GetShortNodeID()
 }
 
@@ -187,7 +186,7 @@ func (r *coreRealm) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-func (r *coreRealm) GetPrimingCloudHash() api.CloudStateHash {
+func (r *coreRealm) GetPrimingCloudHash() gcp_types.CloudStateHash {
 	return r.initialCensus.GetMandateRegistry().GetPrimingCloudHash()
 }
 
@@ -203,7 +202,7 @@ func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from e
 	return VerifyPacketAuthenticityBy(packet, nr, sf, from, strictFrom)
 }
 
-func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr api.HostProfile, sf cryptography_containers.SignatureVerifier,
+func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr gcp_types.HostProfile, sf cryptography_containers.SignatureVerifier,
 	from endpoints.HostIdentityHolder, strictFrom bool) error {
 
 	if strictFrom && !nr.IsAcceptableHost(from) {

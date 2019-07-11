@@ -54,12 +54,11 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"io"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
@@ -149,20 +148,20 @@ func NewPulsePacketParser(pulse insolar.Pulse) *PulsePacketParser {
 	return &PulsePacketParser{pulse}
 }
 
-func (p *PulsePacketParser) GetSourceID() common.ShortNodeID {
+func (p *PulsePacketParser) GetSourceID() insolar.ShortNodeID {
 	panic("implement me")
 }
 
-func (p *PulsePacketParser) GetReceiverID() common.ShortNodeID {
+func (p *PulsePacketParser) GetReceiverID() insolar.ShortNodeID {
 	panic("implement me")
 }
 
-func (p *PulsePacketParser) GetTargetID() common.ShortNodeID {
+func (p *PulsePacketParser) GetTargetID() insolar.ShortNodeID {
 	panic("implement me")
 }
 
-func (p *PulsePacketParser) GetPacketType() api.PacketType {
-	return api.PacketPulse
+func (p *PulsePacketParser) GetPacketType() gcp_types.PacketType {
+	return gcp_types.PacketPulse
 }
 
 func (p *PulsePacketParser) GetPulseNumber() pulse_data.PulseNumber {

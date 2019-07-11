@@ -51,9 +51,9 @@
 package core
 
 import (
+	"github.com/insolar/insolar/insolar"
 	"sort"
 
-	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 )
 
@@ -219,7 +219,7 @@ func (p *VectorEntry) setValues(n *NodeAppearance) *NodeAppearance {
 }
 
 type sortedEntry struct {
-	id        common2.ShortNodeID
+	id        insolar.ShortNodeID
 	powerRole uint16
 	index     int16 //points to the same for both member and joiner, but joiner has different id in the entryRank
 }

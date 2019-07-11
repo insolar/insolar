@@ -51,12 +51,12 @@
 package serialization
 
 import (
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"io"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
@@ -100,13 +100,13 @@ type GlobulaConsensusPacketBody struct {
 func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	packetType := ctx.GetPacketType()
 
-	if packetType == api.PacketPhase0 {
+	if packetType == gcp_types.PacketPhase0 {
 		if err := write(writer, b.CurrentRank); err != nil {
 			return errors.Wrap(err, "failed to serialize CurrentRank")
 		}
 	}
 
-	if packetType == api.PacketPhase0 || packetType == api.PacketPhase1 {
+	if packetType == gcp_types.PacketPhase0 || packetType == gcp_types.PacketPhase1 {
 		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
 			if err := b.PulsarPacket.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize PulsarPacket")
@@ -114,13 +114,13 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 		}
 	}
 
-	if packetType == api.PacketPhase1 || packetType == api.PacketPhase2 {
+	if packetType == gcp_types.PacketPhase1 || packetType == gcp_types.PacketPhase2 {
 		if err := b.Announcement.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Announcement")
 		}
 	}
 
-	if packetType == api.PacketPhase2 {
+	if packetType == gcp_types.PacketPhase2 {
 		if ctx.GetFlagRangeInt(1, 2) == 1 { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
 			if err := b.BriefSelfIntro.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize BriefSelfIntro")
@@ -128,7 +128,7 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 		}
 	}
 
-	if packetType == api.PacketPhase1 || packetType == api.PacketPhase2 {
+	if packetType == gcp_types.PacketPhase1 || packetType == gcp_types.PacketPhase2 {
 		if ctx.GetFlagRangeInt(1, 2) == 2 || ctx.GetFlagRangeInt(1, 2) == 3 { // [1:2] in (2, 3) - has full intro + cloud intro
 			if err := b.FullSelfIntro.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize FullSelfIntro")
@@ -146,19 +146,19 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 		}
 	}
 
-	if packetType == api.PacketPhase2 {
+	if packetType == gcp_types.PacketPhase2 {
 		if err := b.Neighbourhood.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Neighbourhood")
 		}
 	}
 
-	if packetType == api.PacketPhase3 {
+	if packetType == gcp_types.PacketPhase3 {
 		if err := b.Vectors.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Vectors")
 		}
 	}
 
-	if packetType == api.PacketPhase1 || packetType == api.PacketPhase3 {
+	if packetType == gcp_types.PacketPhase1 || packetType == gcp_types.PacketPhase3 {
 		if err := b.Claims.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Claims")
 		}
@@ -170,13 +170,13 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
 	packetType := ctx.GetPacketType()
 
-	if packetType == api.PacketPhase0 {
+	if packetType == gcp_types.PacketPhase0 {
 		if err := read(reader, &b.CurrentRank); err != nil {
 			return errors.Wrap(err, "failed to deserialize CurrentRank")
 		}
 	}
 
-	if packetType == api.PacketPhase0 || packetType == api.PacketPhase1 {
+	if packetType == gcp_types.PacketPhase0 || packetType == gcp_types.PacketPhase1 {
 		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
 			if err := b.PulsarPacket.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize PulsarPacket")
@@ -184,13 +184,13 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 		}
 	}
 
-	if packetType == api.PacketPhase1 || packetType == api.PacketPhase2 {
+	if packetType == gcp_types.PacketPhase1 || packetType == gcp_types.PacketPhase2 {
 		if err := b.Announcement.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Announcement")
 		}
 	}
 
-	if packetType == api.PacketPhase2 {
+	if packetType == gcp_types.PacketPhase2 {
 		if ctx.HasFlag(1) && !ctx.HasFlag(2) { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
 			if err := b.BriefSelfIntro.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize BriefSelfIntro")
@@ -198,7 +198,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 		}
 	}
 
-	if packetType == api.PacketPhase1 || packetType == api.PacketPhase2 {
+	if packetType == gcp_types.PacketPhase1 || packetType == gcp_types.PacketPhase2 {
 		if ctx.HasFlag(2) { // [1:2] in (2, 3) - has full intro + cloud intro
 			if err := b.FullSelfIntro.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize FullSelfIntro")
@@ -216,19 +216,19 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 		}
 	}
 
-	if packetType == api.PacketPhase2 {
+	if packetType == gcp_types.PacketPhase2 {
 		if err := b.Neighbourhood.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Neighbourhood")
 		}
 	}
 
-	if packetType == api.PacketPhase3 {
+	if packetType == gcp_types.PacketPhase3 {
 		if err := b.Vectors.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Vectors")
 		}
 	}
 
-	if packetType == api.PacketPhase1 || packetType == api.PacketPhase3 {
+	if packetType == gcp_types.PacketPhase1 || packetType == gcp_types.PacketPhase3 {
 		if err := b.Claims.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Claims")
 		}
@@ -353,10 +353,10 @@ func (n *Neighbourhood) DeserializeFrom(ctx DeserializeContext, reader io.Reader
 type NeighbourAnnouncement struct {
 	// ByteSize(JOINER) = 73 + (135, 137, 147) = 208, 210, 220
 	// ByteSize(MEMBER) = 73 + (132, 136) = 205, 209
-	NeighbourNodeID common.ShortNodeID // ByteSize=4 // !=0
+	NeighbourNodeID insolar.ShortNodeID // ByteSize=4 // !=0
 
 	CurrentRank    packets.MembershipRank // ByteSize=4
-	RequestedPower api.MemberPower        // ByteSize=1
+	RequestedPower gcp_types.MemberPower  // ByteSize=1
 
 	/*
 		As joiner has no state before joining, its announcement and relevant signature are considered equal to
@@ -456,14 +456,14 @@ type MembershipAnnouncement struct {
 		This field MUST be excluded from the packet, but considered for signature calculation.
 		Value of this field equals SourceID
 	*/
-	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
+	ShortID insolar.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
 
 	CurrentRank packets.MembershipRank // ByteSize=4
 
 	/* For non-joiner ONLY */
-	RequestedPower    api.MemberPower   `insolar-transport:"optional=CurrentRank!=0"` // ByteSize=1
-	Member            NodeAnnouncement  `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136, 267, 269, 279
-	AnnounceSignature long_bits.Bits512 `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 64
+	RequestedPower    gcp_types.MemberPower `insolar-transport:"optional=CurrentRank!=0"` // ByteSize=1
+	Member            NodeAnnouncement      `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136, 267, 269, 279
+	AnnounceSignature long_bits.Bits512     `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 64
 	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
 }
 
@@ -537,7 +537,7 @@ type NodeAnnouncement struct {
 	// ByteSize(NeighbourAnnouncement) = 132, 136
 
 	NodeState  CompactGlobulaNodeState // ByteSize=128
-	AnnounceID common.ShortNodeID      // ByteSize=4 // =0 - no announcement, =self - is leaver, else has joiner
+	AnnounceID insolar.ShortNodeID     // ByteSize=4 // =0 - no announcement, =self - is leaver, else has joiner
 	/*
 		1. When is in MembershipAnnouncement
 			"Leaver" is present when AnnounceID = Header.SourceID (sender is leaving)

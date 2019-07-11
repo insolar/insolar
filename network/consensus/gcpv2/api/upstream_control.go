@@ -48,11 +48,11 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api_2
+package api
 
 import (
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 )
 
 type UpstreamPulseController interface {
@@ -60,7 +60,7 @@ type UpstreamPulseController interface {
 	Application should return immediately and start preparation of NodeStateHash.
 	NodeStateHash should be sent into the channel when ready.
 	*/
-	PreparePulseChange(report MembershipUpstreamReport) <-chan api.NodeStateHash
+	PreparePulseChange(report MembershipUpstreamReport) <-chan gcp_types.NodeStateHash
 
 	/* Called on a confirmed Pulse and indicates final change of Pulse for the application.	*/
 	CommitPulseChange(report MembershipUpstreamReport, pd pulse_data.PulseData, activeCensus OperationalCensus)
@@ -74,6 +74,6 @@ type UpstreamPulseController interface {
 
 type MembershipUpstreamReport struct {
 	PulseNumber pulse_data.PulseNumber
-	MemberPower api.MemberPower
-	MemberMode  api.MemberOpMode
+	MemberPower gcp_types.MemberPower
+	MemberMode  gcp_types.MemberOpMode
 }

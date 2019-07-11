@@ -57,18 +57,17 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"math"
 
 	"github.com/insolar/insolar/network/consensusv1/packets"
 
 	"github.com/insolar/insolar/insolar"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 )
 
-func NewEmuChronicles(intros []api.NodeIntroProfile, localNodeIndex int, primingCloudStateHash api.CloudStateHash) api_2.ConsensusChronicles {
+func NewEmuChronicles(intros []gcp_types.NodeIntroProfile, localNodeIndex int, primingCloudStateHash gcp_types.CloudStateHash) api.ConsensusChronicles {
 	pop := census.NewManyNodePopulation(intros[localNodeIndex], intros)
 	chronicles := census.NewLocalChronicles()
 	census.NewPrimingCensus(
@@ -79,22 +78,22 @@ func NewEmuChronicles(intros []api.NodeIntroProfile, localNodeIndex int, priming
 	return chronicles
 }
 
-func NewEmuNodeIntros(names ...string) []api.NodeIntroProfile {
-	r := make([]api.NodeIntroProfile, len(names))
+func NewEmuNodeIntros(names ...string) []gcp_types.NodeIntroProfile {
+	r := make([]gcp_types.NodeIntroProfile, len(names))
 	for i, n := range names {
-		var sr api.NodeSpecialRole
-		var pr api.NodePrimaryRole
+		var sr gcp_types.NodeSpecialRole
+		var pr gcp_types.NodePrimaryRole
 		switch n[0] {
 		case 'h':
-			pr = api.PrimaryRoleHeavyMaterial
-			sr = api.SpecialRoleDiscovery
+			pr = gcp_types.PrimaryRoleHeavyMaterial
+			sr = gcp_types.SpecialRoleDiscovery
 		case 'l':
-			pr = api.PrimaryRoleLightMaterial
+			pr = gcp_types.PrimaryRoleLightMaterial
 		case 'v':
-			pr = api.PrimaryRoleVirtual
+			pr = gcp_types.PrimaryRoleVirtual
 		default:
-			pr = api.PrimaryRoleNeutral
-			sr = api.SpecialRoleDiscovery
+			pr = gcp_types.PrimaryRoleNeutral
+			sr = gcp_types.SpecialRoleDiscovery
 		}
 		r[i] = NewEmuNodeIntro(i, endpoints.HostAddress(n), pr, sr)
 	}
@@ -103,41 +102,41 @@ func NewEmuNodeIntros(names ...string) []api.NodeIntroProfile {
 
 type EmuVersionedRegistries struct {
 	pd                    pulse_data.PulseData
-	primingCloudStateHash api.CloudStateHash
+	primingCloudStateHash gcp_types.CloudStateHash
 }
 
-func (c *EmuVersionedRegistries) GetConsensusConfiguration() api_2.ConsensusConfiguration {
+func (c *EmuVersionedRegistries) GetConsensusConfiguration() api.ConsensusConfiguration {
 	return c
 }
 
-func (c *EmuVersionedRegistries) GetPrimingCloudHash() api.CloudStateHash {
+func (c *EmuVersionedRegistries) GetPrimingCloudHash() gcp_types.CloudStateHash {
 	return c.primingCloudStateHash
 }
 
-func (c *EmuVersionedRegistries) FindRegisteredProfile(identity endpoints.HostIdentityHolder) api.HostProfile {
+func (c *EmuVersionedRegistries) FindRegisteredProfile(identity endpoints.HostIdentityHolder) gcp_types.HostProfile {
 	return NewEmuNodeIntro(-1, identity.GetHostAddress(),
-		/* unused by HostProfile */ api.NodePrimaryRole(math.MaxUint8), 0)
+		/* unused by HostProfile */ gcp_types.NodePrimaryRole(math.MaxUint8), 0)
 }
 
-func (c *EmuVersionedRegistries) AddReport(report api.MisbehaviorReport) {
+func (c *EmuVersionedRegistries) AddReport(report gcp_types.MisbehaviorReport) {
 }
 
-func (c *EmuVersionedRegistries) CommitNextPulse(pd pulse_data.PulseData, population api_2.OnlinePopulation) api_2.VersionedRegistries {
+func (c *EmuVersionedRegistries) CommitNextPulse(pd pulse_data.PulseData, population api.OnlinePopulation) api.VersionedRegistries {
 	pd.EnsurePulseData()
 	cp := *c
 	cp.pd = pd
 	return &cp
 }
 
-func (c *EmuVersionedRegistries) GetMisbehaviorRegistry() api_2.MisbehaviorRegistry {
+func (c *EmuVersionedRegistries) GetMisbehaviorRegistry() api.MisbehaviorRegistry {
 	return c
 }
 
-func (c *EmuVersionedRegistries) GetMandateRegistry() api_2.MandateRegistry {
+func (c *EmuVersionedRegistries) GetMandateRegistry() api.MandateRegistry {
 	return c
 }
 
-func (c *EmuVersionedRegistries) GetOfflinePopulation() api_2.OfflinePopulation {
+func (c *EmuVersionedRegistries) GetOfflinePopulation() api.OfflinePopulation {
 	return c
 }
 
@@ -147,9 +146,9 @@ func (c *EmuVersionedRegistries) GetVersionPulseData() pulse_data.PulseData {
 
 const ShortNodeIdOffset = 1000
 
-func NewEmuNodeIntro(id int, s endpoints.HostAddress, pr api.NodePrimaryRole, sr api.NodeSpecialRole) api.NodeIntroProfile {
+func NewEmuNodeIntro(id int, s endpoints.HostAddress, pr gcp_types.NodePrimaryRole, sr gcp_types.NodeSpecialRole) gcp_types.NodeIntroProfile {
 	return &emuNodeIntro{
-		id: common.ShortNodeID(ShortNodeIdOffset + id),
+		id: insolar.ShortNodeID(ShortNodeIdOffset + id),
 		n:  &emuEndpoint{name: s},
 		pr: pr,
 		sr: sr,
@@ -170,7 +169,7 @@ func (p *emuEndpoint) GetEndpointType() endpoints.NodeEndpointType {
 	return endpoints.NameEndpoint
 }
 
-func (*emuEndpoint) GetRelayID() common.ShortNodeID {
+func (*emuEndpoint) GetRelayID() insolar.ShortNodeID {
 	return 0
 }
 
@@ -180,9 +179,9 @@ func (p *emuEndpoint) GetNameAddress() endpoints.HostAddress {
 
 type emuNodeIntro struct {
 	n  endpoints.NodeEndpoint
-	id common.ShortNodeID
-	pr api.NodePrimaryRole
-	sr api.NodeSpecialRole
+	id insolar.ShortNodeID
+	pr gcp_types.NodePrimaryRole
+	sr gcp_types.NodeSpecialRole
 }
 
 func (c *emuNodeIntro) GetNodePublicKey() cryptography_containers.SignatureKeyHolder {
@@ -192,7 +191,7 @@ func (c *emuNodeIntro) GetNodePublicKey() cryptography_containers.SignatureKeyHo
 	return &k
 }
 
-func (c *emuNodeIntro) GetStartPower() api.MemberPower {
+func (c *emuNodeIntro) GetStartPower() gcp_types.MemberPower {
 	return 10
 }
 
@@ -204,23 +203,23 @@ func (c *emuNodeIntro) HasIntroduction() bool {
 	return true
 }
 
-func (c *emuNodeIntro) ConvertPowerRequest(request api.PowerRequest) api.MemberPower {
+func (c *emuNodeIntro) ConvertPowerRequest(request gcp_types.PowerRequest) gcp_types.MemberPower {
 	if ok, cl := request.AsCapacityLevel(); ok {
-		return api.MemberPowerOf(uint16(cl.DefaultPercent()))
+		return gcp_types.MemberPowerOf(uint16(cl.DefaultPercent()))
 	}
 	_, pw := request.AsMemberPower()
 	return pw
 }
 
-func (c *emuNodeIntro) GetPrimaryRole() api.NodePrimaryRole {
+func (c *emuNodeIntro) GetPrimaryRole() gcp_types.NodePrimaryRole {
 	return c.pr
 }
 
-func (c *emuNodeIntro) GetSpecialRoles() api.NodeSpecialRole {
+func (c *emuNodeIntro) GetSpecialRoles() gcp_types.NodeSpecialRole {
 	return c.sr
 }
 
-func (*emuNodeIntro) IsAllowedPower(p api.MemberPower) bool {
+func (*emuNodeIntro) IsAllowedPower(p gcp_types.MemberPower) bool {
 	return true
 }
 
@@ -241,11 +240,11 @@ func (c *emuNodeIntro) IsAcceptableHost(from endpoints.HostIdentityHolder) bool 
 	return addr.Equals(from.GetHostAddress())
 }
 
-func (c *emuNodeIntro) GetShortNodeID() common.ShortNodeID {
+func (c *emuNodeIntro) GetShortNodeID() insolar.ShortNodeID {
 	return c.id
 }
 
-func (c *emuNodeIntro) GetIntroduction() api.NodeIntroduction {
+func (c *emuNodeIntro) GetIntroduction() gcp_types.NodeIntroduction {
 	return c
 }
 

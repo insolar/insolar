@@ -55,8 +55,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phases"
 )
 
@@ -146,7 +146,7 @@ func NewRoundStrategyFactory() *RoundStrategyFactory {
 	return &RoundStrategyFactory{}
 }
 
-func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api_2.ConsensusChronicles, config api_2.LocalNodeConfiguration) core.RoundStrategy {
+func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) core.RoundStrategy {
 	return NewRoundStrategy(
 		phases.NewRegularPhaseBundleByDefault(),
 		chronicle,
@@ -155,15 +155,15 @@ func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api_2.ConsensusCh
 }
 
 type TransportFactory struct {
-	cryptographyFactory api_2.TransportCryptographyFactory
-	packetBuilder       api_2.PacketBuilder
-	packetSender        api_2.PacketSender
+	cryptographyFactory api.TransportCryptographyFactory
+	packetBuilder       api.PacketBuilder
+	packetSender        api.PacketSender
 }
 
 func NewTransportFactory(
-	cryptographyFactory api_2.TransportCryptographyFactory,
-	packetBuilder api_2.PacketBuilder,
-	packetSender api_2.PacketSender,
+	cryptographyFactory api.TransportCryptographyFactory,
+	packetBuilder api.PacketBuilder,
+	packetSender api.PacketSender,
 ) *TransportFactory {
 	return &TransportFactory{
 		cryptographyFactory: cryptographyFactory,
@@ -172,15 +172,15 @@ func NewTransportFactory(
 	}
 }
 
-func (tf *TransportFactory) GetPacketSender() api_2.PacketSender {
+func (tf *TransportFactory) GetPacketSender() api.PacketSender {
 	return tf.packetSender
 }
 
-func (tf *TransportFactory) GetPacketBuilder(signer cryptography_containers.DigestSigner) api_2.PacketBuilder {
+func (tf *TransportFactory) GetPacketBuilder(signer cryptography_containers.DigestSigner) api.PacketBuilder {
 	return tf.packetBuilder
 }
 
-func (tf *TransportFactory) GetCryptographyFactory() api_2.TransportCryptographyFactory {
+func (tf *TransportFactory) GetCryptographyFactory() api.TransportCryptographyFactory {
 	return tf.cryptographyFactory
 }
 
@@ -194,7 +194,7 @@ func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) *NodeProfileFactor
 	}
 }
 
-func (npf *NodeProfileFactory) createProfile(candidate api.BriefCandidateProfile, signature cryptography_containers.SignatureHolder, intro api.NodeIntroduction) *NodeIntroProfile {
+func (npf *NodeProfileFactory) createProfile(candidate gcp_types.BriefCandidateProfile, signature cryptography_containers.SignatureHolder, intro gcp_types.NodeIntroduction) *NodeIntroProfile {
 	keyHolder := candidate.GetNodePK()
 	pk, err := npf.keyProcessor.ImportPublicKeyBinary(keyHolder.AsBytes())
 	if err != nil {
@@ -215,11 +215,11 @@ func (npf *NodeProfileFactory) createProfile(candidate api.BriefCandidateProfile
 	)
 }
 
-func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate api.BriefCandidateProfile) api.NodeIntroProfile {
+func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate gcp_types.BriefCandidateProfile) gcp_types.NodeIntroProfile {
 	return npf.createProfile(candidate, candidate.GetJoinerSignature(), nil)
 }
 
-func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate api.CandidateProfile) api.NodeIntroProfile {
+func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate gcp_types.CandidateProfile) gcp_types.NodeIntroProfile {
 	intro := newNodeIntroduction(candidate.GetNodeID(), candidate.GetReference())
 
 	return npf.createProfile(candidate, candidate.GetJoinerSignature(), intro)

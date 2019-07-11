@@ -55,7 +55,7 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/chaser"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -65,13 +65,11 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
-func NewPhase3Controller(packetPrepareOptions api_2.PacketSendOptions, queueTrustUpdated <-chan TrustUpdateSignal,
+func NewPhase3Controller(packetPrepareOptions api.PacketSendOptions, queueTrustUpdated <-chan TrustUpdateSignal,
 	consensusStrategy ConsensusSelectionStrategy) *Phase3Controller {
 	return &Phase3Controller{
 		packetPrepareOptions: packetPrepareOptions,
@@ -90,7 +88,7 @@ type ConsensusSelection interface {
 
 type ConsensusSelectionStrategy interface {
 	/* Result can be nil - it means no-decision */
-	TrySelectOnAdded(globulaStats *stats.StatTable, addedNode api.NodeProfile,
+	TrySelectOnAdded(globulaStats *stats.StatTable, addedNode gcp_types.NodeProfile,
 		nodeStats *stats.Row, realm *core.FullRealm) ConsensusSelection
 	SelectOnStopped(globulaStats *stats.StatTable, timeIsOut bool, realm *core.FullRealm) ConsensusSelection
 }
@@ -99,7 +97,7 @@ var _ core.PhaseController = &Phase3Controller{}
 
 type Phase3Controller struct {
 	core.PhaseControllerPerMemberTemplate
-	packetPrepareOptions api_2.PacketSendOptions
+	packetPrepareOptions api.PacketSendOptions
 	queueTrustUpdated    <-chan TrustUpdateSignal
 	queuePh3Recv         chan ph3Data
 	consensusStrategy    ConsensusSelectionStrategy
@@ -108,11 +106,11 @@ type Phase3Controller struct {
 
 type ph3Data struct {
 	np     *core.NodeAppearance
-	vector api.HashedNodeVector
+	vector gcp_types.HashedNodeVector
 }
 
-func (*Phase3Controller) GetPacketType() api.PacketType {
-	return api.PacketPhase3
+func (*Phase3Controller) GetPacketType() gcp_types.PacketType {
+	return gcp_types.PacketPhase3
 }
 
 func (c *Phase3Controller) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, n *core.NodeAppearance) error {
@@ -128,7 +126,7 @@ func (c *Phase3Controller) HandleMemberPacket(ctx context.Context, reader packet
 
 	c.queuePh3Recv <- ph3Data{
 		np: n,
-		vector: api.HashedNodeVector{
+		vector: gcp_types.HashedNodeVector{
 			Bitset:                             bs,
 			TrustedAnnouncementVector:          p3.GetTrustedGlobulaAnnouncementHash(),
 			DoubtedAnnouncementVector:          p3.GetDoubtedGlobulaAnnouncementHash(),
@@ -236,13 +234,13 @@ outer:
 			case sig.NewTrustLevel < 0:
 				countFraud++
 				continue // no chasing delay on fraud
-			case sig.NewTrustLevel == common2.UnknownTrust:
+			case sig.NewTrustLevel == gcp_types.UnknownTrust:
 				countHasNsh++
 				// if countHasNsh >= R.othersCount {
 				// 	// we have answers from all
 				// 	break outer
 				// }
-			case sig.NewTrustLevel >= common2.TrustByNeighbors:
+			case sig.NewTrustLevel >= gcp_types.TrustByNeighbors:
 				countTrustByNeighbors++
 				fallthrough
 			default:
@@ -312,7 +310,7 @@ func (c *Phase3Controller) calcLocalVector(localVector *nodeset.NodeVectorHelper
 	return res
 }
 
-func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData api.HashedNodeVector) {
+func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData gcp_types.HashedNodeVector) {
 
 	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
@@ -320,7 +318,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData api.Ha
 		c.packetPrepareOptions)
 
 	p3.SendToMany(ctx, len(otherNodes), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (api.NodeProfile, api_2.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (gcp_types.NodeProfile, api.PacketSendOptions) {
 			np := otherNodes[targetIdx]
 			np.SetSentByPacketType(c.GetPacketType())
 			return np.GetProfile(), 0
@@ -468,7 +466,7 @@ outer:
 	return false
 }
 
-func (c *Phase3Controller) buildNextPopulation(pb api_2.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
+func (c *Phase3Controller) buildNextPopulation(pb api.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
 
 	//pop := c.R.GetPopulation()
 	//count := 0

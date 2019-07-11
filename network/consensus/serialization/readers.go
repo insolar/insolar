@@ -53,13 +53,13 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"io"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/network/utils"
 )
@@ -121,19 +121,19 @@ func (p *PacketParser) GetMemberPacket() packets.MemberPacketReader {
 	}
 }
 
-func (p *PacketParser) GetSourceID() common.ShortNodeID {
+func (p *PacketParser) GetSourceID() insolar.ShortNodeID {
 	return p.packet.Header.GetSourceID()
 }
 
-func (p *PacketParser) GetReceiverID() common.ShortNodeID {
-	return common.ShortNodeID(p.packet.Header.ReceiverID)
+func (p *PacketParser) GetReceiverID() insolar.ShortNodeID {
+	return insolar.ShortNodeID(p.packet.Header.ReceiverID)
 }
 
-func (p *PacketParser) GetTargetID() common.ShortNodeID {
-	return common.ShortNodeID(p.packet.Header.TargetID)
+func (p *PacketParser) GetTargetID() insolar.ShortNodeID {
+	return insolar.ShortNodeID(p.packet.Header.TargetID)
 }
 
-func (p *PacketParser) GetPacketType() api.PacketType {
+func (p *PacketParser) GetPacketType() gcp_types.PacketType {
 	return p.packet.Header.GetPacketType()
 }
 
@@ -251,23 +251,23 @@ type Phase3PacketReader struct {
 	MemberPacketReader
 }
 
-func (r *Phase3PacketReader) GetTrustedGlobulaAnnouncementHash() api.GlobulaAnnouncementHash {
+func (r *Phase3PacketReader) GetTrustedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetTrustedGlobulaStateSignature() api.GlobulaStateSignature {
+func (r *Phase3PacketReader) GetTrustedGlobulaStateSignature() gcp_types.GlobulaStateSignature {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetDoubtedGlobulaAnnouncementHash() api.GlobulaAnnouncementHash {
+func (r *Phase3PacketReader) GetDoubtedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetDoubtedGlobulaStateSignature() api.GlobulaStateSignature {
+func (r *Phase3PacketReader) GetDoubtedGlobulaStateSignature() gcp_types.GlobulaStateSignature {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetBitset() api.NodeBitset {
+func (r *Phase3PacketReader) GetBitset() gcp_types.NodeBitset {
 	return r.body.Vectors.StateVectorMask.GetBitset()
 }
 

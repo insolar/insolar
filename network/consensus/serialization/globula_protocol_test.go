@@ -54,7 +54,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -195,7 +195,7 @@ func TestGlobulaConsensusPacket_SerializeTo_EmptyPacket(t *testing.T) {
 		EncryptableBody: &GlobulaConsensusPacketBody{},
 	}
 	p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
-	p.Header.setPacketType(api.MaxPacketType) // To emulate empty packet
+	p.Header.setPacketType(gcp_types.MaxPacketType) // To emulate empty packet
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	s, err := p.SerializeTo(context.Background(), buf, digester, signer)
@@ -232,27 +232,27 @@ func TestGlobulaConsensusPacket_DeserializeFrom(t *testing.T) {
 func TestGlobulaConsensusPacketBody_Phases(t *testing.T) {
 	tests := []struct {
 		name       string
-		packetType api.PacketType
+		packetType gcp_types.PacketType
 		size       int
 	}{
 		{
 			"phase0",
-			api.PacketPhase0,
+			gcp_types.PacketPhase0,
 			88,
 		},
 		{
 			"phase1",
-			api.PacketPhase1,
+			gcp_types.PacketPhase1,
 			90,
 		},
 		{
 			"phase2",
-			api.PacketPhase2,
+			gcp_types.PacketPhase2,
 			89,
 		},
 		{
 			"phase3",
-			api.PacketPhase3,
+			gcp_types.PacketPhase3,
 			219,
 		},
 	}
@@ -323,31 +323,31 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		packetType api.PacketType
+		packetType gcp_types.PacketType
 		size       int
 		packet     Packet
 	}{
 		{
 			"phase0",
-			api.PacketPhase0,
+			gcp_types.PacketPhase0,
 			216,
 			phase1p,
 		},
 		{
 			"phase1",
-			api.PacketPhase1,
+			gcp_types.PacketPhase1,
 			218,
 			phase1p,
 		},
 		{
 			"phase2",
-			api.PacketPhase2,
+			gcp_types.PacketPhase2,
 			89,
 			p,
 		},
 		{
 			"phase3",
-			api.PacketPhase3,
+			gcp_types.PacketPhase3,
 			219,
 			p,
 		},
@@ -393,31 +393,31 @@ func TestGlobulaConsensusPacketBody_Phases_Flag1(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		packetType api.PacketType
+		packetType gcp_types.PacketType
 		size       int
 		packet     Packet
 	}{
 		{
 			"phase0",
-			api.PacketPhase0,
+			gcp_types.PacketPhase0,
 			88,
 			p,
 		},
 		{
 			"phase1",
-			api.PacketPhase1,
+			gcp_types.PacketPhase1,
 			90,
 			p,
 		},
 		{
 			"phase2",
-			api.PacketPhase2,
+			gcp_types.PacketPhase2,
 			226,
 			p,
 		},
 		{
 			"phase3",
-			api.PacketPhase3,
+			gcp_types.PacketPhase3,
 			351,
 			phase3p,
 		},
@@ -466,31 +466,31 @@ func TestGlobulaConsensusPacketBody_Phases_Flag2(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		packetType api.PacketType
+		packetType gcp_types.PacketType
 		size       int
 		packet     Packet
 	}{
 		{
 			"phase0",
-			api.PacketPhase0,
+			gcp_types.PacketPhase0,
 			88,
 			p,
 		},
 		{
 			"phase1",
-			api.PacketPhase1,
+			gcp_types.PacketPhase1,
 			441,
 			p,
 		},
 		{
 			"phase2",
-			api.PacketPhase2,
+			gcp_types.PacketPhase2,
 			440,
 			p,
 		},
 		{
 			"phase3",
-			api.PacketPhase3,
+			gcp_types.PacketPhase3,
 			483,
 			phase3p,
 		},
@@ -539,31 +539,31 @@ func TestGlobulaConsensusPacketBody_Phases_Flag12(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		packetType api.PacketType
+		packetType gcp_types.PacketType
 		size       int
 		packet     Packet
 	}{
 		{
 			"phase0",
-			api.PacketPhase0,
+			gcp_types.PacketPhase0,
 			88,
 			p,
 		},
 		{
 			"phase1",
-			api.PacketPhase1,
+			gcp_types.PacketPhase1,
 			505,
 			p,
 		},
 		{
 			"phase2",
-			api.PacketPhase2,
+			gcp_types.PacketPhase2,
 			504,
 			p,
 		},
 		{
 			"phase3",
-			api.PacketPhase3,
+			gcp_types.PacketPhase3,
 			615,
 			phase3p,
 		},

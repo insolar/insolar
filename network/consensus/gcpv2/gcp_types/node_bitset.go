@@ -48,53 +48,46 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api_2
+package gcp_types
 
 import (
-	"context"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"fmt"
 )
 
-type PreparedPacketSender interface {
-	SendTo(ctx context.Context, target api.NodeProfile, sendOptions PacketSendOptions, sender PacketSender)
+type NodeBitsetEntry uint8
 
-	/* Allows to control parallelism. Can return nil to skip a target */
-	SendToMany(ctx context.Context, targetCount int, sender PacketSender,
-		filter func(ctx context.Context, targetIndex int) (api.NodeProfile, PacketSendOptions))
+const (
+	NbsHighTrust NodeBitsetEntry = iota
+	NbsLimitedTrust
+	NbsBaselineTrust
+	NbsTimeout
+	NbsFraud
+	maxNodeBitsetEntry
+)
+
+const MaxNodeBitsetEntry = int(maxNodeBitsetEntry)
+
+func (s NodeBitsetEntry) IsTrusted() bool { return s < NbsBaselineTrust }
+func (s NodeBitsetEntry) IsTimeout() bool { return s == NbsTimeout }
+func (s NodeBitsetEntry) IsFraud() bool   { return s == NbsFraud }
+
+func (s NodeBitsetEntry) String() string {
+	return FmtNodeBitsetEntry(uint8(s))
 }
 
-type PacketBuilder interface {
-	GetNeighbourhoodSize() api.NeighbourhoodSizes
-
-	//PrepareIntro
-
-	PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-		options PacketSendOptions) PreparedPacketSender
-	PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-		options PacketSendOptions) PreparedPacketSender
-
-	/* Prepare receives all introductions at once, but PreparedSendPacket.SendTo MUST:
-	1. exclude all intros when target is not joiner
-	2. exclude the intro of the target
-	*/
-	PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
-		neighbourhood []packets.MembershipAnnouncementReader, options PacketSendOptions) PreparedPacketSender
-
-	PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors api.HashedNodeVector,
-		options PacketSendOptions) PreparedPacketSender
-}
-
-type TransportFactory interface {
-	GetPacketSender() PacketSender
-	GetPacketBuilder(signer cryptography_containers.DigestSigner) PacketBuilder
-	GetCryptographyFactory() TransportCryptographyFactory
-}
-
-type TransportCryptographyFactory interface {
-	cryptography_containers.SignatureVerifierFactory
-	cryptography_containers.KeyStoreFactory
-	GetDigestFactory() cryptography_containers.DigestFactory
-	GetNodeSigner(sks cryptography_containers.SecretKeyStore) cryptography_containers.DigestSigner
+func FmtNodeBitsetEntry(s uint8) string {
+	switch NodeBitsetEntry(s) {
+	case NbsHighTrust:
+		return "H"
+	case NbsLimitedTrust:
+		return "L"
+	case NbsBaselineTrust:
+		return "B"
+	case NbsTimeout:
+		return "Ø"
+	case NbsFraud:
+		return "F"
+	default:
+		return fmt.Sprintf("?%d?", s)
+	}
 }

@@ -56,37 +56,36 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
 )
 
 type NodeIntroduction struct {
-	shortID common.ShortNodeID
+	shortID insolar.ShortNodeID
 	ref     insolar.Reference
 }
 
 func NewNodeIntroduction(networkNode insolar.NetworkNode) *NodeIntroduction {
 	return newNodeIntroduction(
-		common.ShortNodeID(networkNode.ShortID()),
+		insolar.ShortNodeID(networkNode.ShortID()),
 		networkNode.ID(),
 	)
 }
 
-func newNodeIntroduction(shortID common.ShortNodeID, ref insolar.Reference) *NodeIntroduction {
+func newNodeIntroduction(shortID insolar.ShortNodeID, ref insolar.Reference) *NodeIntroduction {
 	return &NodeIntroduction{
 		shortID: shortID,
 		ref:     ref,
 	}
 }
 
-func (ni *NodeIntroduction) ConvertPowerRequest(request api.PowerRequest) api.MemberPower {
+func (ni *NodeIntroduction) ConvertPowerRequest(request gcp_types.PowerRequest) gcp_types.MemberPower {
 	if ok, cl := request.AsCapacityLevel(); ok {
-		return api.MemberPowerOf(uint16(cl.DefaultPercent()))
+		return gcp_types.MemberPowerOf(uint16(cl.DefaultPercent()))
 	}
 	_, pw := request.AsMemberPower()
 	return pw
@@ -96,20 +95,20 @@ func (ni *NodeIntroduction) GetNodeReference() insolar.Reference {
 	return ni.ref
 }
 
-func (ni *NodeIntroduction) IsAllowedPower(p api.MemberPower) bool {
+func (ni *NodeIntroduction) IsAllowedPower(p gcp_types.MemberPower) bool {
 	// TODO: do something with power
 	return true
 }
 
-func (ni *NodeIntroduction) GetShortNodeID() common.ShortNodeID {
+func (ni *NodeIntroduction) GetShortNodeID() insolar.ShortNodeID {
 	return ni.shortID
 }
 
 type NodeIntroProfile struct {
-	shortID     common.ShortNodeID
-	primaryRole api.NodePrimaryRole
-	specialRole api.NodeSpecialRole
-	intro       api.NodeIntroduction
+	shortID     insolar.ShortNodeID
+	primaryRole gcp_types.NodePrimaryRole
+	specialRole gcp_types.NodeSpecialRole
+	intro       gcp_types.NodeIntroduction
 	endpoint    endpoints.NodeEndpoint
 	store       cryptography_containers.PublicKeyStore
 	keyHolder   cryptography_containers.SignatureKeyHolder
@@ -118,9 +117,9 @@ type NodeIntroProfile struct {
 }
 
 func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) *NodeIntroProfile {
-	specialRole := api.SpecialRoleNone
+	specialRole := gcp_types.SpecialRoleNone
 	if utils.IsDiscovery(networkNode.ID(), certificate) {
-		specialRole = api.SpecialRoleDiscovery
+		specialRole = gcp_types.SpecialRoleDiscovery
 	}
 
 	publicKey := networkNode.PublicKey().(*ecdsa.PublicKey)
@@ -128,7 +127,7 @@ func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Ce
 	signature := mutableNode.GetSignature()
 
 	return newNodeIntroProfile(
-		common.ShortNodeID(networkNode.ShortID()),
+		insolar.ShortNodeID(networkNode.ShortID()),
 		StaticRoleToPrimaryRole(networkNode.Role()),
 		specialRole,
 		NewNodeIntroduction(networkNode),
@@ -143,10 +142,10 @@ func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Ce
 }
 
 func newNodeIntroProfile(
-	shortID common.ShortNodeID,
-	primaryRole api.NodePrimaryRole,
-	specialRole api.NodeSpecialRole,
-	intro api.NodeIntroduction,
+	shortID insolar.ShortNodeID,
+	primaryRole gcp_types.NodePrimaryRole,
+	specialRole gcp_types.NodeSpecialRole,
+	intro gcp_types.NodeIntroduction,
 	endpoint endpoints.NodeEndpoint,
 	store cryptography_containers.PublicKeyStore,
 	keyHolder cryptography_containers.SignatureKeyHolder,
@@ -164,11 +163,11 @@ func newNodeIntroProfile(
 	}
 }
 
-func (nip *NodeIntroProfile) GetPrimaryRole() api.NodePrimaryRole {
+func (nip *NodeIntroProfile) GetPrimaryRole() gcp_types.NodePrimaryRole {
 	return nip.primaryRole
 }
 
-func (nip *NodeIntroProfile) GetSpecialRoles() api.NodeSpecialRole {
+func (nip *NodeIntroProfile) GetSpecialRoles() gcp_types.NodeSpecialRole {
 	return nip.specialRole
 }
 
@@ -176,7 +175,7 @@ func (nip *NodeIntroProfile) HasIntroduction() bool {
 	return nip.intro != nil
 }
 
-func (nip *NodeIntroProfile) GetIntroduction() api.NodeIntroduction {
+func (nip *NodeIntroProfile) GetIntroduction() gcp_types.NodeIntroduction {
 	return nip.intro
 }
 
@@ -192,7 +191,7 @@ func (nip *NodeIntroProfile) GetNodePublicKey() cryptography_containers.Signatur
 	return nip.keyHolder
 }
 
-func (nip *NodeIntroProfile) GetStartPower() api.MemberPower {
+func (nip *NodeIntroProfile) GetStartPower() gcp_types.MemberPower {
 	// TODO: get from certificate
 	return 10
 }
@@ -202,7 +201,7 @@ func (nip *NodeIntroProfile) IsAcceptableHost(from endpoints.HostIdentityHolder)
 	return address.Equals(from.GetHostAddress())
 }
 
-func (nip *NodeIntroProfile) GetShortNodeID() common.ShortNodeID {
+func (nip *NodeIntroProfile) GetShortNodeID() insolar.ShortNodeID {
 	return nip.shortID
 }
 
@@ -235,7 +234,7 @@ func (p *NodeEndpoint) GetEndpointType() endpoints.NodeEndpointType {
 	return endpoints.NameEndpoint
 }
 
-func (*NodeEndpoint) GetRelayID() common.ShortNodeID {
+func (*NodeEndpoint) GetRelayID() insolar.ShortNodeID {
 	return 0
 }
 
@@ -247,8 +246,8 @@ func (p *NodeEndpoint) GetIPAddress() packets.NodeAddress {
 	return p.addr
 }
 
-func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) []api.NodeIntroProfile {
-	intros := make([]api.NodeIntroProfile, len(nodes))
+func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) []gcp_types.NodeIntroProfile {
+	intros := make([]gcp_types.NodeIntroProfile, len(nodes))
 	for i, n := range nodes {
 		intros[i] = NewNodeIntroProfile(n, certificate, keyProcessor)
 	}
@@ -256,7 +255,7 @@ func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Ce
 	return intros
 }
 
-func NewNetworkNode(profile api.NodeProfile) insolar.NetworkNode {
+func NewNetworkNode(profile gcp_types.NodeProfile) insolar.NetworkNode {
 	store := profile.GetNodePublicKeyStore()
 	introduction := profile.GetIntroduction()
 
@@ -277,7 +276,7 @@ func NewNetworkNode(profile api.NodeProfile) insolar.NetworkNode {
 	return networkNode
 }
 
-func NewNetworkNodeList(profiles []api.NodeProfile) []insolar.NetworkNode {
+func NewNetworkNodeList(profiles []gcp_types.NodeProfile) []insolar.NetworkNode {
 	networkNodes := make([]insolar.NetworkNode, len(profiles))
 	for i, p := range profiles {
 		networkNodes[i] = NewNetworkNode(p)

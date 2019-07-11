@@ -1,4 +1,4 @@
-package api
+package gcp_types
 
 /*
 DO NOT EDIT!

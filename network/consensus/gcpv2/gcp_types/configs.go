@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,55 +46,67 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package core
+package gcp_types
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"sync"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"math"
+	"time"
 )
 
-type SequencialCandidateFeeder struct {
-	mx  sync.Mutex
-	buf []gcp_types.CandidateProfile
+type RoundTimings struct {
+	// Time to wait since NSH is requested before starting Phase0.
+	StartPhase0At time.Duration
+
+	// When Phase2 can be finished sooner by number of covered nodes, termination of Phase2 will be delayed
+	// by BeforeInPhase2ChasingDelay after every Phase2 packet. No extra delays when = 0.
+	// Total Phase2 time can NOT exceed EndOfPhase2
+	BeforeInPhase2ChasingDelay time.Duration
+
+	// When Phase3 can be finished sooner by number of covered nodes, termination of Phase2 will be delayed
+	// by BeforeInPhase3ChasingDelay after every Phase3 packet. No extra delays when = 0.
+	// Total Phase3 time can NOT exceed EndOfPhase3
+	BeforeInPhase3ChasingDelay time.Duration
+
+	// Time to finish receiving of Phase1 packets from other nodes and to finish producing Phase2 packets as well
+	// since start of the consensus round
+	EndOfPhase1 time.Duration
+
+	// Time to wait before re-sending Phase1 packets (marked as requests) to missing nodes
+	// since start of the consensus round. No retries when = 0
+	StartPhase1RetryAt time.Duration
+
+	// Time to finish receiving Phase2 packets from other nodes and START producing Phase3 packets
+	// Phase3 can start sooner if there is enough number of nodes covered by Phase2
+	EndOfPhase2 time.Duration
+
+	// Time to finish receiving Phase3 packets from other nodes and stop Consensus
+	EndOfPhase3 time.Duration
 }
 
-func (p *SequencialCandidateFeeder) PickNextJoinCandidate() gcp_types.CandidateProfile {
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
-	if len(p.buf) == 0 {
-		return nil
-	}
-	return p.buf[0]
+type NeighbourhoodSizes struct {
+	NeighbourhoodSize           int
+	NeighbourhoodTrustThreshold int
+	JoinersPerNeighbourhood     int
+	JoinersBoost                int
 }
 
-func (p *SequencialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool {
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
-	if len(p.buf) == 0 || p.buf[0].GetNodeID() != nodeID {
-		return false
+func (sizes *NeighbourhoodSizes) VerifySizes() {
+	if sizes.NeighbourhoodSize < 4 {
+		panic("neighbourSize can not be less than 4")
 	}
-	if len(p.buf) == 1 {
-		p.buf = nil
-	} else {
-		p.buf[0] = nil
-		p.buf = p.buf[1:]
+	if sizes.NeighbourhoodTrustThreshold < 1 || sizes.NeighbourhoodTrustThreshold > math.MaxUint8 {
+		panic("neighbourhood trust threshold must be in [1..MaxUint8]")
 	}
-	return true
-}
-
-func (p *SequencialCandidateFeeder) AddJoinCandidate(candidate packets.FullIntroductionReader) {
-	if candidate == nil {
-		panic("illegal value")
+	// if neighbourSize > math.MaxInt8 { panic("neighbourSize can not be more than 127") }
+	if sizes.JoinersPerNeighbourhood < 2 {
+		panic("neighbourJoiners can not be less than 2")
 	}
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
-	p.buf = append(p.buf, candidate)
+	if sizes.JoinersBoost < 0 {
+		panic("joinersBoost can not be less than 0")
+	}
+	if sizes.JoinersBoost+sizes.JoinersPerNeighbourhood > sizes.NeighbourhoodSize-1 {
+		panic("joiners + boost are more than neighbourSize - 1")
+	}
 }

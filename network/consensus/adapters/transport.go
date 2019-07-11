@@ -53,7 +53,7 @@ package adapters
 import (
 	"context"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api_2"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -74,7 +74,7 @@ type payloadWrapper struct {
 	Payload interface{}
 }
 
-func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to api.NodeProfile, sendOptions api_2.PacketSendOptions, payload interface{}) {
+func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to gcp_types.NodeProfile, sendOptions api.PacketSendOptions, payload interface{}) {
 	addr := to.GetDefaultEndpoint().GetNameAddress().String()
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{

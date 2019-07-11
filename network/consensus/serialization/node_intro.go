@@ -51,13 +51,13 @@
 package serialization
 
 import (
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"io"
 
-	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/pkg/errors"
 )
 
@@ -79,11 +79,11 @@ type NodeBriefIntro struct {
 		This field MUST be excluded from the packet, but considered for signature calculation.
 		Value of this field equals SourceID or AnnounceID.
 	*/
-	ShortID common.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
+	ShortID insolar.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
 
 	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
-	SpecialRoles        api.NodeSpecialRole
-	StartPower          api.MemberPower
+	SpecialRoles        gcp_types.NodeSpecialRole
+	StartPower          gcp_types.MemberPower
 
 	// 4 | 6 | 18 bytes
 	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
@@ -96,11 +96,11 @@ type NodeBriefIntro struct {
 	JoinerSignature long_bits.Bits512 // ByteSize=64
 }
 
-func (bi *NodeBriefIntro) getPrimaryRole() api.NodePrimaryRole {
-	return api.NodePrimaryRole(bi.PrimaryRoleAndFlags & primaryRoleMask)
+func (bi *NodeBriefIntro) getPrimaryRole() gcp_types.NodePrimaryRole {
+	return gcp_types.NodePrimaryRole(bi.PrimaryRoleAndFlags & primaryRoleMask)
 }
 
-func (bi *NodeBriefIntro) setPrimaryRole(primaryRole api.NodePrimaryRole) {
+func (bi *NodeBriefIntro) setPrimaryRole(primaryRole gcp_types.NodePrimaryRole) {
 	if primaryRole > primaryRoleMax {
 		panic("invalid primary role")
 	}
@@ -192,7 +192,7 @@ type NodeFullIntro struct {
 	IssuedAtPulse pulse_data.PulseNumber // =0 when a node was connected during zeronet
 	IssuedAtTime  uint64
 
-	PowerLevels api.MemberPowerSet // ByteSize=4
+	PowerLevels gcp_types.MemberPowerSet // ByteSize=4
 
 	EndpointLen    uint8
 	ExtraEndpoints []uint16
@@ -200,7 +200,7 @@ type NodeFullIntro struct {
 	ProofLen     uint8
 	NodeRefProof []long_bits.Bits512
 
-	DiscoveryIssuerNodeID common.ShortNodeID
+	DiscoveryIssuerNodeID insolar.ShortNodeID
 	IssuerSignature       long_bits.Bits512
 }
 

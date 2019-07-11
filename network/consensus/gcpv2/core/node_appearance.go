@@ -52,34 +52,31 @@ package core
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"math"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewNodeAppearanceAsSelf(np api.LocalNodeProfile, callback *nodeContext) *NodeAppearance {
+func NewNodeAppearanceAsSelf(np gcp_types.LocalNodeProfile, callback *nodeContext) *NodeAppearance {
 	np.LocalNodeProfile() // to avoid linter's paranoia
 
 	r := &NodeAppearance{
-		state: api.NodeStateLocalActive,
-		trust: common2.SelfTrust,
+		state: gcp_types.NodeStateLocalActive,
+		trust: gcp_types.SelfTrust,
 	}
 	r.init(np, callback, 0)
 	return r
 }
 
-func (c *NodeAppearance) init(np api.NodeProfile, callback NodeContextHolder, baselineWeight uint32) {
+func (c *NodeAppearance) init(np gcp_types.NodeProfile, callback NodeContextHolder, baselineWeight uint32) {
 	if np == nil {
 		panic("node profile is nil")
 	}
@@ -92,16 +89,16 @@ type NodeAppearance struct {
 	mutex sync.Mutex
 
 	/* Provided externally at construction. Don't need mutex */
-	profile  api.NodeProfile // set by construction
+	profile  gcp_types.NodeProfile // set by construction
 	callback *nodeContext
 	handlers []PhasePerNodePacketFunc
 
 	/* Other fields - need mutex */
 
 	//membership common2.MembershipProfile // one-time set
-	announceSignature api.MemberAnnouncementSignature // one-time set
-	stateEvidence     api.NodeStateHashEvidence       // one-time set
-	requestedPower    api.MemberPower                 // one-time set
+	announceSignature gcp_types.MemberAnnouncementSignature // one-time set
+	stateEvidence     gcp_types.NodeStateHashEvidence       // one-time set
+	requestedPower    gcp_types.MemberPower                 // one-time set
 
 	requestedJoiner      *NodeAppearance // one-time set
 	requestedLeave       bool            // one-time set
@@ -111,8 +108,8 @@ type NodeAppearance struct {
 
 	neighbourWeight uint32
 
-	state           api.NodeState
-	trust           common2.NodeTrustLevel
+	state           gcp_types.NodeState
+	trust           gcp_types.NodeTrustLevel
 	neighborReports uint8
 }
 
@@ -131,7 +128,7 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	defer c.mutex.Unlock()
 
 	/* Ensure that the target is LocalNode */
-	target.profile.(api.LocalNodeProfile).LocalNodeProfile()
+	target.profile.(gcp_types.LocalNodeProfile).LocalNodeProfile()
 
 	target.stateEvidence = c.stateEvidence
 	target.announceSignature = c.announceSignature
@@ -154,17 +151,17 @@ func (c *NodeAppearance) GetIndex() int {
 	return c.profile.GetIndex()
 }
 
-func (c *NodeAppearance) GetShortNodeID() common.ShortNodeID {
+func (c *NodeAppearance) GetShortNodeID() insolar.ShortNodeID {
 	return c.profile.GetShortNodeID()
 }
 
-func (c *NodeAppearance) GetTrustLevel() common2.NodeTrustLevel {
+func (c *NodeAppearance) GetTrustLevel() gcp_types.NodeTrustLevel {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.trust
 }
 
-func (c *NodeAppearance) GetProfile() api.NodeProfile {
+func (c *NodeAppearance) GetProfile() gcp_types.NodeProfile {
 	return c.profile
 }
 
@@ -172,7 +169,7 @@ func (c *NodeAppearance) VerifyPacketAuthenticity(packet packets.PacketParser, f
 	return VerifyPacketAuthenticityBy(packet, c.profile, c.profile.GetSignatureVerifier(), from, strictFrom)
 }
 
-func (c *NodeAppearance) SetReceivedPhase(phase api.PhaseNumber) bool {
+func (c *NodeAppearance) SetReceivedPhase(phase gcp_types.PhaseNumber) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -180,7 +177,7 @@ func (c *NodeAppearance) SetReceivedPhase(phase api.PhaseNumber) bool {
 	return c.state.UpdReceivedPhase(phase)
 }
 
-func (c *NodeAppearance) SetReceivedByPacketType(pt api.PacketType) bool {
+func (c *NodeAppearance) SetReceivedByPacketType(pt gcp_types.PacketType) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -189,7 +186,7 @@ func (c *NodeAppearance) SetReceivedByPacketType(pt api.PacketType) bool {
 }
 
 /* Explicit use of SetSentPhase is NOT recommended. Please use SetSentByPacketType */
-func (c *NodeAppearance) SetSentPhase(phase api.PhaseNumber) bool {
+func (c *NodeAppearance) SetSentPhase(phase gcp_types.PhaseNumber) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -197,7 +194,7 @@ func (c *NodeAppearance) SetSentPhase(phase api.PhaseNumber) bool {
 	return c.state.UpdSentPhase(phase)
 }
 
-func (c *NodeAppearance) SetSentByPacketType(pt api.PacketType) bool {
+func (c *NodeAppearance) SetSentByPacketType(pt gcp_types.PacketType) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -205,7 +202,7 @@ func (c *NodeAppearance) SetSentByPacketType(pt api.PacketType) bool {
 	return c.state.UpdSentPacket(pt)
 }
 
-func (c *NodeAppearance) SetReceivedWithDupCheck(pt api.PacketType) error {
+func (c *NodeAppearance) SetReceivedWithDupCheck(pt gcp_types.PacketType) error {
 	if c.SetReceivedByPacketType(pt) {
 		return nil
 	}
@@ -225,7 +222,7 @@ func (c *NodeAppearance) CreateSignatureVerifier(vFactory cryptography_container
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNodeMembership(mp api.MembershipAnnouncement) (bool, error) {
+func (c *NodeAppearance) ApplyNodeMembership(mp gcp_types.MembershipAnnouncement) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -233,7 +230,7 @@ func (c *NodeAppearance) ApplyNodeMembership(mp api.MembershipAnnouncement) (boo
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp api.MembershipAnnouncement) (bool, error) {
+func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp gcp_types.MembershipAnnouncement) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -244,13 +241,13 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp api.
 	if err == nil && witness.GetShortNodeID() != c.GetShortNodeID() { // a node can't be a witness to itself
 		switch {
 		case c.neighborReports == 0:
-			c.trust.UpdateKeepNegative(common2.TrustBySome)
+			c.trust.UpdateKeepNegative(gcp_types.TrustBySome)
 		case c.neighborReports == uint8(math.MaxUint8):
 			panic("overflow")
 		case c.neighborReports > c.GetNeighborTrustThreshold():
 			break // to allow the next statement to fire only once
 		case c.neighborReports+1 > c.GetNeighborTrustThreshold():
-			c.trust.UpdateKeepNegative(common2.TrustByNeighbors)
+			c.trust.UpdateKeepNegative(gcp_types.TrustByNeighbors)
 		}
 
 		c.neighborReports++
@@ -272,7 +269,7 @@ func (c *NodeAppearance) Blames() errors.BlameFactory {
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) _applyNodeMembership(ma api.MembershipAnnouncement) (bool, error) {
+func (c *NodeAppearance) _applyNodeMembership(ma gcp_types.MembershipAnnouncement) (bool, error) {
 
 	if ma.Membership.IsEmpty() {
 		panic(fmt.Sprintf("membership evidence is nil: for=%v", c.GetShortNodeID()))
@@ -280,24 +277,24 @@ func (c *NodeAppearance) _applyNodeMembership(ma api.MembershipAnnouncement) (bo
 
 	if c.stateEvidence != nil {
 		lmp := c.getMembership()
-		var lma api.MembershipAnnouncement
+		var lma gcp_types.MembershipAnnouncement
 		if ma.Membership.Equals(lmp) && ma.IsLeaving == c.requestedLeave {
 			switch {
 			case c.requestedLeave:
 				if ma.LeaveReason == c.requestedLeaveReason {
 					return false, nil
 				}
-				lma = api.NewMembershipAnnouncementWithLeave(lmp, c.requestedLeaveReason)
+				lma = gcp_types.NewMembershipAnnouncementWithLeave(lmp, c.requestedLeaveReason)
 			case c.requestedJoiner == nil:
 				if ma.Joiner == nil {
 					return false, nil
 				}
-				lma = api.NewMembershipAnnouncement(lmp)
+				lma = gcp_types.NewMembershipAnnouncement(lmp)
 			default:
-				if api.EqualIntroProfiles(c.requestedJoiner.GetProfile(), ma.Joiner) {
+				if gcp_types.EqualIntroProfiles(c.requestedJoiner.GetProfile(), ma.Joiner) {
 					return false, nil
 				}
-				lma = api.NewMembershipAnnouncementWithJoiner(lmp, c.requestedJoiner.profile)
+				lma = gcp_types.NewMembershipAnnouncementWithJoiner(lmp, c.requestedJoiner.profile)
 			}
 		}
 		return c.registerFraud(c.Frauds().NewInconsistentMembershipAnnouncement(c.GetProfile(), lma, ma))
@@ -322,7 +319,7 @@ func (c *NodeAppearance) _applyNodeMembership(ma api.MembershipAnnouncement) (bo
 	return true, nil
 }
 
-func (c *NodeAppearance) GetNodeMembershipProfile() api.MembershipProfile {
+func (c *NodeAppearance) GetNodeMembershipProfile() gcp_types.MembershipProfile {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -332,7 +329,7 @@ func (c *NodeAppearance) GetNodeMembershipProfile() api.MembershipProfile {
 	return c.getMembership()
 }
 
-func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (api.MembershipProfile, common2.NodeTrustLevel) {
+func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (gcp_types.MembershipProfile, gcp_types.NodeTrustLevel) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -342,13 +339,13 @@ func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (api.MembershipProfi
 	return c.getMembership(), c.trust
 }
 
-func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() api.MembershipProfile {
+func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() gcp_types.MembershipProfile {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.getMembership()
 }
 
-func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence api.NodeStateHashEvidence, announce api.MemberAnnouncementSignature) {
+func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence gcp_types.NodeStateHashEvidence, announce gcp_types.MemberAnnouncementSignature) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -392,7 +389,7 @@ func (c *NodeAppearance) registerFraud(fraud errors.FraudError) (bool, error) {
 	}
 
 	prevTrust := c.trust
-	if c.trust.Update(common2.FraudByThisNode) {
+	if c.trust.Update(gcp_types.FraudByThisNode) {
 		c.firstFraudDetails = &fraud
 		c.callback.updatePopulationVersion()
 		c.callback.onTrustUpdated(c, prevTrust, c.trust)
@@ -414,8 +411,8 @@ func (c *NodeAppearance) RegisterFraud(fraud errors.FraudError) (bool, error) {
 }
 
 // MUST BE NO LOCK
-func (c *NodeAppearance) getMembership() api.MembershipProfile {
-	return api.NewMembershipProfileByNode(c.profile, c.stateEvidence, c.announceSignature, c.requestedPower)
+func (c *NodeAppearance) getMembership() gcp_types.MembershipProfile {
+	return gcp_types.NewMembershipProfileByNode(c.profile, c.stateEvidence, c.announceSignature, c.requestedPower)
 }
 
 func (c *NodeAppearance) GetNeighborTrustThreshold() uint8 {
@@ -459,24 +456,24 @@ func (c *NodeAppearance) ResetPacketHandlers(indices ...int) {
 	c.handlers = nil
 }
 
-func (c *NodeAppearance) GetRequestedState() (bool, uint32, *NodeAppearance, api.MembershipProfile, common2.NodeTrustLevel) {
+func (c *NodeAppearance) GetRequestedState() (bool, uint32, *NodeAppearance, gcp_types.MembershipProfile, gcp_types.NodeTrustLevel) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	return c.requestedLeave, c.requestedLeaveReason, c.requestedJoiner, c.getMembership(), c.trust
 }
 
-func (c *NodeAppearance) GetRequestedAnnouncement() api.MembershipAnnouncement {
+func (c *NodeAppearance) GetRequestedAnnouncement() gcp_types.MembershipAnnouncement {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	mb := c.getMembership()
 	switch {
 	case c.requestedLeave:
-		return api.NewMembershipAnnouncementWithLeave(mb, c.requestedLeaveReason)
+		return gcp_types.NewMembershipAnnouncementWithLeave(mb, c.requestedLeaveReason)
 	case c.requestedJoiner != nil:
-		return api.NewMembershipAnnouncementWithJoiner(mb, c.requestedJoiner.profile)
+		return gcp_types.NewMembershipAnnouncementWithJoiner(mb, c.requestedJoiner.profile)
 	default:
-		return api.NewMembershipAnnouncement(mb)
+		return gcp_types.NewMembershipAnnouncement(mb)
 	}
 }

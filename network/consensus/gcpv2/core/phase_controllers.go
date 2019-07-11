@@ -53,14 +53,12 @@ package core
 import (
 	"context"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 type PrepPhaseController interface {
-	GetPacketType() api.PacketType
+	GetPacketType() gcp_types.PacketType
 	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) (postpone bool, err error)
 	BeforeStart(realm *PrepRealm)
 	StartWorker(ctx context.Context)
@@ -90,7 +88,7 @@ func (v PhaseControllerHandlerType) IsPerNode() bool {
 }
 
 type PhaseController interface {
-	GetPacketType() api.PacketType
+	GetPacketType() gcp_types.PacketType
 	GetHandlerType() PhaseControllerHandlerType
 
 	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from endpoints.HostIdentityHolder) error                                   // GetHandlerType() == PacketHandlerTypeHost
@@ -113,7 +111,7 @@ type PhaseControllersBundle interface {
 }
 
 type NodeUpdateCallback interface {
-	OnTrustUpdated(n *NodeAppearance, before, after common2.NodeTrustLevel)
+	OnTrustUpdated(n *NodeAppearance, before, after gcp_types.NodeTrustLevel)
 	OnNodeStateAssigned(n *NodeAppearance)
 	OnCustomEvent(n *NodeAppearance, event interface{})
 }

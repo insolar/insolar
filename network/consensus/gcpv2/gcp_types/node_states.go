@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api
+package gcp_types
 
 import (
 	"fmt"

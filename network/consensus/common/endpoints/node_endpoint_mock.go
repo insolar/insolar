@@ -6,7 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "NodeEndpoint" can be found in github.com/insolar/insolar/network/consensus/common
 */
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/insolar"
 	"sync/atomic"
 	"time"
 
@@ -33,7 +33,7 @@ type NodeEndpointMock struct {
 	GetNameAddressPreCounter uint64
 	GetNameAddressMock       mNodeEndpointMockGetNameAddress
 
-	GetRelayIDFunc       func() (r common.ShortNodeID)
+	GetRelayIDFunc       func() (r insolar.ShortNodeID)
 	GetRelayIDCounter    uint64
 	GetRelayIDPreCounter uint64
 	GetRelayIDMock       mNodeEndpointMockGetRelayID
@@ -468,7 +468,7 @@ type NodeEndpointMockGetRelayIDExpectation struct {
 }
 
 type NodeEndpointMockGetRelayIDResult struct {
-	r common.ShortNodeID
+	r insolar.ShortNodeID
 }
 
 //Expect specifies that invocation of NodeEndpoint.GetRelayID is expected from 1 to Infinity times
@@ -484,7 +484,7 @@ func (m *mNodeEndpointMockGetRelayID) Expect() *mNodeEndpointMockGetRelayID {
 }
 
 //Return specifies results of invocation of NodeEndpoint.GetRelayID
-func (m *mNodeEndpointMockGetRelayID) Return(r common.ShortNodeID) *NodeEndpointMock {
+func (m *mNodeEndpointMockGetRelayID) Return(r insolar.ShortNodeID) *NodeEndpointMock {
 	m.mock.GetRelayIDFunc = nil
 	m.expectationSeries = nil
 
@@ -506,12 +506,12 @@ func (m *mNodeEndpointMockGetRelayID) ExpectOnce() *NodeEndpointMockGetRelayIDEx
 	return expectation
 }
 
-func (e *NodeEndpointMockGetRelayIDExpectation) Return(r common.ShortNodeID) {
+func (e *NodeEndpointMockGetRelayIDExpectation) Return(r insolar.ShortNodeID) {
 	e.result = &NodeEndpointMockGetRelayIDResult{r}
 }
 
 //Set uses given function f as a mock of NodeEndpoint.GetRelayID method
-func (m *mNodeEndpointMockGetRelayID) Set(f func() (r common.ShortNodeID)) *NodeEndpointMock {
+func (m *mNodeEndpointMockGetRelayID) Set(f func() (r insolar.ShortNodeID)) *NodeEndpointMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -520,7 +520,7 @@ func (m *mNodeEndpointMockGetRelayID) Set(f func() (r common.ShortNodeID)) *Node
 }
 
 //GetRelayID implements github.com/insolar/insolar/network/consensus/common.NodeEndpoint interface
-func (m *NodeEndpointMock) GetRelayID() (r common.ShortNodeID) {
+func (m *NodeEndpointMock) GetRelayID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetRelayIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRelayIDCounter, 1)
 

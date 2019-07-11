@@ -48,38 +48,18 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api_2
+package gcp_types
 
-import (
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-)
-
-type VersionedRegistries interface {
-	// GetVersionId() int
-	CommitNextPulse(pd pulse_data.PulseData, population OnlinePopulation) VersionedRegistries
-
-	GetMisbehaviorRegistry() MisbehaviorRegistry
-	GetMandateRegistry() MandateRegistry
-	GetOfflinePopulation() OfflinePopulation
-	GetVersionPulseData() pulse_data.PulseData
+type HashedNodeVector struct {
+	Bitset                             NodeBitset
+	TrustedAnnouncementVector          GlobulaAnnouncementHash
+	DoubtedAnnouncementVector          GlobulaAnnouncementHash
+	TrustedGlobulaStateVectorSignature GlobulaStateSignature
+	DoubtedGlobulaStateVectorSignature GlobulaStateSignature
 }
 
-type MisbehaviorRegistry interface {
-	AddReport(report api.MisbehaviorReport)
-}
+type NodeBitset []NodeBitsetEntry
 
-type MandateRegistry interface {
-	FindRegisteredProfile(host endpoints.HostIdentityHolder) api.HostProfile
-	GetPrimingCloudHash() api.CloudStateHash
-	GetConsensusConfiguration() ConsensusConfiguration
-}
-
-type OfflinePopulation interface {
-	FindRegisteredProfile(identity endpoints.HostIdentityHolder) api.HostProfile
-	// FindPulsarProfile(pulsarId PulsarId) PulsarProfile
-}
-
-type ConsensusConfiguration interface {
+func (b NodeBitset) Len() int {
+	return len(b)
 }

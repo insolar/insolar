@@ -51,8 +51,8 @@
 package phases
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
@@ -64,7 +64,7 @@ func NewSimpleConsensusSelectionStrategy() ConsensusSelectionStrategy {
 type simpleSimpleConsensusSelectionStrategy struct {
 }
 
-func (*simpleSimpleConsensusSelectionStrategy) TrySelectOnAdded(globulaStats *stats.StatTable, addedNode api.NodeProfile,
+func (*simpleSimpleConsensusSelectionStrategy) TrySelectOnAdded(globulaStats *stats.StatTable, addedNode gcp_types.NodeProfile,
 	nodeStats *stats.Row, realm *core.FullRealm) ConsensusSelection {
 	return nil
 }

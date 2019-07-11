@@ -51,34 +51,50 @@
 package api
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"context"
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-type MisbehaviorReport interface {
-	CaptureMark() interface{}
-	Details() []interface{}
-	ViolatorNode() NodeProfile
-	ViolatorHost() endpoints.HostIdentity
-	MisbehaviorType() MisbehaviorType
+type PreparedPacketSender interface {
+	SendTo(ctx context.Context, target gcp_types.NodeProfile, sendOptions PacketSendOptions, sender PacketSender)
+
+	/* Allows to control parallelism. Can return nil to skip a target */
+	SendToMany(ctx context.Context, targetCount int, sender PacketSender,
+		filter func(ctx context.Context, targetIndex int) (gcp_types.NodeProfile, PacketSendOptions))
 }
 
-type MisbehaviorType uint64
-type MisbehaviorCategory int
+type PacketBuilder interface {
+	GetNeighbourhoodSize() gcp_types.NeighbourhoodSizes
 
-const (
-	_ MisbehaviorCategory = iota
-	Blame
-	Fraud
-)
+	//PrepareIntro
 
-func (c MisbehaviorType) Category() MisbehaviorCategory {
-	return MisbehaviorCategory(c >> 32)
+	PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
+		options PacketSendOptions) PreparedPacketSender
+	PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
+		options PacketSendOptions) PreparedPacketSender
+
+	/* Prepare receives all introductions at once, but PreparedSendPacket.SendTo MUST:
+	1. exclude all intros when target is not joiner
+	2. exclude the intro of the target
+	*/
+	PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
+		neighbourhood []packets.MembershipAnnouncementReader, options PacketSendOptions) PreparedPacketSender
+
+	PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors gcp_types.HashedNodeVector,
+		options PacketSendOptions) PreparedPacketSender
 }
 
-func (c MisbehaviorType) Type() int {
-	return int(c & (1<<32 - 1))
+type TransportFactory interface {
+	GetPacketSender() PacketSender
+	GetPacketBuilder(signer cryptography_containers.DigestSigner) PacketBuilder
+	GetCryptographyFactory() TransportCryptographyFactory
 }
 
-func (c MisbehaviorCategory) Of(misbehavior int) MisbehaviorType {
-	return MisbehaviorType(c<<32) | MisbehaviorType(misbehavior&(1<<32-1))
+type TransportCryptographyFactory interface {
+	cryptography_containers.SignatureVerifierFactory
+	cryptography_containers.KeyStoreFactory
+	GetDigestFactory() cryptography_containers.DigestFactory
+	GetNodeSigner(sks cryptography_containers.SecretKeyStore) cryptography_containers.DigestSigner
 }

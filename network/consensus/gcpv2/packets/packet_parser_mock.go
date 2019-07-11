@@ -6,14 +6,14 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PacketParser" can be found in github.com/insolar/insolar/network/consensus/gcpv2/packets
 */
 import (
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 //PacketParserMock implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser
@@ -30,7 +30,7 @@ type PacketParserMock struct {
 	GetPacketSignaturePreCounter uint64
 	GetPacketSignatureMock       mPacketParserMockGetPacketSignature
 
-	GetPacketTypeFunc       func() (r api.PacketType)
+	GetPacketTypeFunc       func() (r gcp_types.PacketType)
 	GetPacketTypeCounter    uint64
 	GetPacketTypePreCounter uint64
 	GetPacketTypeMock       mPacketParserMockGetPacketType
@@ -45,17 +45,17 @@ type PacketParserMock struct {
 	GetPulsePacketPreCounter uint64
 	GetPulsePacketMock       mPacketParserMockGetPulsePacket
 
-	GetReceiverIDFunc       func() (r common.ShortNodeID)
+	GetReceiverIDFunc       func() (r insolar.ShortNodeID)
 	GetReceiverIDCounter    uint64
 	GetReceiverIDPreCounter uint64
 	GetReceiverIDMock       mPacketParserMockGetReceiverID
 
-	GetSourceIDFunc       func() (r common.ShortNodeID)
+	GetSourceIDFunc       func() (r insolar.ShortNodeID)
 	GetSourceIDCounter    uint64
 	GetSourceIDPreCounter uint64
 	GetSourceIDMock       mPacketParserMockGetSourceID
 
-	GetTargetIDFunc       func() (r common.ShortNodeID)
+	GetTargetIDFunc       func() (r insolar.ShortNodeID)
 	GetTargetIDCounter    uint64
 	GetTargetIDPreCounter uint64
 	GetTargetIDMock       mPacketParserMockGetTargetID
@@ -366,7 +366,7 @@ type PacketParserMockGetPacketTypeExpectation struct {
 }
 
 type PacketParserMockGetPacketTypeResult struct {
-	r api.PacketType
+	r gcp_types.PacketType
 }
 
 //Expect specifies that invocation of PacketParser.GetPacketType is expected from 1 to Infinity times
@@ -382,7 +382,7 @@ func (m *mPacketParserMockGetPacketType) Expect() *mPacketParserMockGetPacketTyp
 }
 
 //Return specifies results of invocation of PacketParser.GetPacketType
-func (m *mPacketParserMockGetPacketType) Return(r api.PacketType) *PacketParserMock {
+func (m *mPacketParserMockGetPacketType) Return(r gcp_types.PacketType) *PacketParserMock {
 	m.mock.GetPacketTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -404,12 +404,12 @@ func (m *mPacketParserMockGetPacketType) ExpectOnce() *PacketParserMockGetPacket
 	return expectation
 }
 
-func (e *PacketParserMockGetPacketTypeExpectation) Return(r api.PacketType) {
+func (e *PacketParserMockGetPacketTypeExpectation) Return(r gcp_types.PacketType) {
 	e.result = &PacketParserMockGetPacketTypeResult{r}
 }
 
 //Set uses given function f as a mock of PacketParser.GetPacketType method
-func (m *mPacketParserMockGetPacketType) Set(f func() (r api.PacketType)) *PacketParserMock {
+func (m *mPacketParserMockGetPacketType) Set(f func() (r gcp_types.PacketType)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -418,7 +418,7 @@ func (m *mPacketParserMockGetPacketType) Set(f func() (r api.PacketType)) *Packe
 }
 
 //GetPacketType implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
-func (m *PacketParserMock) GetPacketType() (r api.PacketType) {
+func (m *PacketParserMock) GetPacketType() (r gcp_types.PacketType) {
 	counter := atomic.AddUint64(&m.GetPacketTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPacketTypeCounter, 1)
 
@@ -768,7 +768,7 @@ type PacketParserMockGetReceiverIDExpectation struct {
 }
 
 type PacketParserMockGetReceiverIDResult struct {
-	r common.ShortNodeID
+	r insolar.ShortNodeID
 }
 
 //Expect specifies that invocation of PacketParser.GetReceiverID is expected from 1 to Infinity times
@@ -784,7 +784,7 @@ func (m *mPacketParserMockGetReceiverID) Expect() *mPacketParserMockGetReceiverI
 }
 
 //Return specifies results of invocation of PacketParser.GetReceiverID
-func (m *mPacketParserMockGetReceiverID) Return(r common.ShortNodeID) *PacketParserMock {
+func (m *mPacketParserMockGetReceiverID) Return(r insolar.ShortNodeID) *PacketParserMock {
 	m.mock.GetReceiverIDFunc = nil
 	m.expectationSeries = nil
 
@@ -806,12 +806,12 @@ func (m *mPacketParserMockGetReceiverID) ExpectOnce() *PacketParserMockGetReceiv
 	return expectation
 }
 
-func (e *PacketParserMockGetReceiverIDExpectation) Return(r common.ShortNodeID) {
+func (e *PacketParserMockGetReceiverIDExpectation) Return(r insolar.ShortNodeID) {
 	e.result = &PacketParserMockGetReceiverIDResult{r}
 }
 
 //Set uses given function f as a mock of PacketParser.GetReceiverID method
-func (m *mPacketParserMockGetReceiverID) Set(f func() (r common.ShortNodeID)) *PacketParserMock {
+func (m *mPacketParserMockGetReceiverID) Set(f func() (r insolar.ShortNodeID)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -820,7 +820,7 @@ func (m *mPacketParserMockGetReceiverID) Set(f func() (r common.ShortNodeID)) *P
 }
 
 //GetReceiverID implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
-func (m *PacketParserMock) GetReceiverID() (r common.ShortNodeID) {
+func (m *PacketParserMock) GetReceiverID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetReceiverIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetReceiverIDCounter, 1)
 
@@ -902,7 +902,7 @@ type PacketParserMockGetSourceIDExpectation struct {
 }
 
 type PacketParserMockGetSourceIDResult struct {
-	r common.ShortNodeID
+	r insolar.ShortNodeID
 }
 
 //Expect specifies that invocation of PacketParser.GetSourceID is expected from 1 to Infinity times
@@ -918,7 +918,7 @@ func (m *mPacketParserMockGetSourceID) Expect() *mPacketParserMockGetSourceID {
 }
 
 //Return specifies results of invocation of PacketParser.GetSourceID
-func (m *mPacketParserMockGetSourceID) Return(r common.ShortNodeID) *PacketParserMock {
+func (m *mPacketParserMockGetSourceID) Return(r insolar.ShortNodeID) *PacketParserMock {
 	m.mock.GetSourceIDFunc = nil
 	m.expectationSeries = nil
 
@@ -940,12 +940,12 @@ func (m *mPacketParserMockGetSourceID) ExpectOnce() *PacketParserMockGetSourceID
 	return expectation
 }
 
-func (e *PacketParserMockGetSourceIDExpectation) Return(r common.ShortNodeID) {
+func (e *PacketParserMockGetSourceIDExpectation) Return(r insolar.ShortNodeID) {
 	e.result = &PacketParserMockGetSourceIDResult{r}
 }
 
 //Set uses given function f as a mock of PacketParser.GetSourceID method
-func (m *mPacketParserMockGetSourceID) Set(f func() (r common.ShortNodeID)) *PacketParserMock {
+func (m *mPacketParserMockGetSourceID) Set(f func() (r insolar.ShortNodeID)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -954,7 +954,7 @@ func (m *mPacketParserMockGetSourceID) Set(f func() (r common.ShortNodeID)) *Pac
 }
 
 //GetSourceID implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
-func (m *PacketParserMock) GetSourceID() (r common.ShortNodeID) {
+func (m *PacketParserMock) GetSourceID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetSourceIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSourceIDCounter, 1)
 
@@ -1036,7 +1036,7 @@ type PacketParserMockGetTargetIDExpectation struct {
 }
 
 type PacketParserMockGetTargetIDResult struct {
-	r common.ShortNodeID
+	r insolar.ShortNodeID
 }
 
 //Expect specifies that invocation of PacketParser.GetTargetID is expected from 1 to Infinity times
@@ -1052,7 +1052,7 @@ func (m *mPacketParserMockGetTargetID) Expect() *mPacketParserMockGetTargetID {
 }
 
 //Return specifies results of invocation of PacketParser.GetTargetID
-func (m *mPacketParserMockGetTargetID) Return(r common.ShortNodeID) *PacketParserMock {
+func (m *mPacketParserMockGetTargetID) Return(r insolar.ShortNodeID) *PacketParserMock {
 	m.mock.GetTargetIDFunc = nil
 	m.expectationSeries = nil
 
@@ -1074,12 +1074,12 @@ func (m *mPacketParserMockGetTargetID) ExpectOnce() *PacketParserMockGetTargetID
 	return expectation
 }
 
-func (e *PacketParserMockGetTargetIDExpectation) Return(r common.ShortNodeID) {
+func (e *PacketParserMockGetTargetIDExpectation) Return(r insolar.ShortNodeID) {
 	e.result = &PacketParserMockGetTargetIDResult{r}
 }
 
 //Set uses given function f as a mock of PacketParser.GetTargetID method
-func (m *mPacketParserMockGetTargetID) Set(f func() (r common.ShortNodeID)) *PacketParserMock {
+func (m *mPacketParserMockGetTargetID) Set(f func() (r insolar.ShortNodeID)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1088,7 +1088,7 @@ func (m *mPacketParserMockGetTargetID) Set(f func() (r common.ShortNodeID)) *Pac
 }
 
 //GetTargetID implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
-func (m *PacketParserMock) GetTargetID() (r common.ShortNodeID) {
+func (m *PacketParserMock) GetTargetID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetTargetIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTargetIDCounter, 1)
 

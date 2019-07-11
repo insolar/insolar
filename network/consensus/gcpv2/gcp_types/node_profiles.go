@@ -48,10 +48,11 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package api
+package gcp_types
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
@@ -59,8 +60,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile -o . -s _mock.go
@@ -73,7 +72,7 @@ type HostProfile interface {
 }
 
 type NodeIntroduction interface { //full intro
-	GetShortNodeID() common.ShortNodeID
+	GetShortNodeID() insolar.ShortNodeID
 	GetNodeReference() insolar.Reference
 	IsAllowedPower(p MemberPower) bool
 	ConvertPowerRequest(request PowerRequest) MemberPower
@@ -83,7 +82,7 @@ type NodeIntroduction interface { //full intro
 
 type NodeIntroProfile interface { //brief intro
 	HostProfile
-	GetShortNodeID() common.ShortNodeID
+	GetShortNodeID() insolar.ShortNodeID
 	GetPrimaryRole() NodePrimaryRole
 	GetSpecialRoles() NodeSpecialRole
 	GetNodePublicKey() cryptography_containers.SignatureKeyHolder
@@ -119,7 +118,7 @@ type EvictedNodeProfile interface { //TODO Rename
 }
 
 type BriefCandidateProfile interface {
-	GetNodeID() common.ShortNodeID
+	GetNodeID() insolar.ShortNodeID
 	GetNodePrimaryRole() NodePrimaryRole
 	GetNodeSpecialRoles() NodeSpecialRole
 	GetStartPower() MemberPower
@@ -144,7 +143,7 @@ type CandidateProfile interface {
 	GetReference() insolar.Reference
 	//NodeRefProof	[]common.Bits512
 
-	GetIssuerID() common.ShortNodeID
+	GetIssuerID() insolar.ShortNodeID
 	GetIssuerSignature() cryptography_containers.SignatureHolder
 }
 
@@ -332,21 +331,21 @@ func (v MemberPowerSet) Min() MemberPower {
 /*
 Only for normalized
 */
-func (v MemberPowerSet) ForLevel(lvl common.CapacityLevel) MemberPower {
+func (v MemberPowerSet) ForLevel(lvl capacity.Level) MemberPower {
 	return v.ForLevelWithPercents(lvl, 20, 60, 80)
 }
 
 /*
 Only for normalized
 */
-func (v MemberPowerSet) ForLevelWithPercents(lvl common.CapacityLevel, pMinimal, pReduced, pNormal int) MemberPower {
+func (v MemberPowerSet) ForLevelWithPercents(lvl capacity.Level, pMinimal, pReduced, pNormal int) MemberPower {
 
-	if lvl == common.LevelZero || v.IsEmpty() {
+	if lvl == capacity.LevelZero || v.IsEmpty() {
 		return 0
 	}
 
 	switch lvl {
-	case common.LevelMinimal:
+	case capacity.LevelMinimal:
 		if v[0] != 0 {
 			return v[0]
 		}
@@ -362,7 +361,7 @@ func (v MemberPowerSet) ForLevelWithPercents(lvl common.CapacityLevel, pMinimal,
 			return v[2]
 		}
 		return vv
-	case common.LevelReduced:
+	case capacity.LevelReduced:
 		if v[1] != 0 {
 			return v[1]
 		}
@@ -375,7 +374,7 @@ func (v MemberPowerSet) ForLevelWithPercents(lvl common.CapacityLevel, pMinimal,
 			return v[0]
 		}
 		return vv
-	case common.LevelNormal:
+	case capacity.LevelNormal:
 		if v[2] != 0 {
 			return v[2]
 		}
@@ -391,7 +390,7 @@ func (v MemberPowerSet) ForLevelWithPercents(lvl common.CapacityLevel, pMinimal,
 			return v[0]
 		}
 		return vv
-	case common.LevelMax:
+	case capacity.LevelMax:
 		return v[3]
 	default:
 		panic("missing")
@@ -400,7 +399,7 @@ func (v MemberPowerSet) ForLevelWithPercents(lvl common.CapacityLevel, pMinimal,
 
 type PowerRequest int16
 
-func NewPowerRequestByLevel(v common.CapacityLevel) PowerRequest {
+func NewPowerRequestByLevel(v capacity.Level) PowerRequest {
 	return -PowerRequest(v)
 }
 
@@ -408,8 +407,8 @@ func NewPowerRequest(v MemberPower) PowerRequest {
 	return PowerRequest(v)
 }
 
-func (v PowerRequest) AsCapacityLevel() (bool, common.CapacityLevel) {
-	return v < 0, common.CapacityLevel(-v)
+func (v PowerRequest) AsCapacityLevel() (bool, capacity.Level) {
+	return v < 0, capacity.Level(-v)
 }
 
 func (v PowerRequest) AsMemberPower() (bool, MemberPower) {
