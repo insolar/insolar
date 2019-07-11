@@ -228,7 +228,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 		res, done := mb.Sender.SendTarget(ctx, wmMsg, nodes[0])
 		repMsg, ok := <-res
 		if !ok {
-			return nil, errors.New("can't get reply: reply channel was closed")
+			return nil, errors.New("can't get reply: timeout while awaiting reply from watermill")
 		}
 		done()
 		return deserializePayload(repMsg)
@@ -261,7 +261,7 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 		return nil, errors.Wrap(err, "failed to unmarshal payload type")
 	}
 	if payloadType != payload.TypeError {
-		return nil, errors.Wrap(err, fmt.Sprintf("message bus recieve unexpected payload type: %s", payloadType))
+		return nil, errors.Errorf("message bus receive unexpected payload type: %s", payloadType)
 	}
 
 	pl, err := payload.UnmarshalFromMeta(msg.Payload)

@@ -21,13 +21,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -38,13 +40,15 @@ func (r *mockReply) Type() insolar.ReplyType {
 	return 88
 }
 
-func makeParcelMock(t *testing.T) insolar.Parcel {
-	parcelMock := testutils.NewParcelMock(t)
-	parcelMock.PulseFunc = func() (r insolar.PulseNumber) {
-		return 33
-	}
+func makeMessage(t *testing.T, ctx context.Context, pn insolar.PulseNumber) *message.Message {
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(bus.MetaPulse, pn.String())
+	sp, err := instracer.Serialize(ctx)
+	require.NoError(t, err)
+	msg.Metadata.Set(bus.MetaSpanData, string(sp))
 
-	return parcelMock
+	return msg
 }
 
 func TestEmptyHandle(t *testing.T) {
@@ -57,8 +61,12 @@ func TestEmptyHandle(t *testing.T) {
 				return nil
 			}
 		}, nil, nil)
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	disp.ChangePulse(ctx, currentPulse)
 
-	msg := &message.Message{}
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
 	_, err := disp.Process(msg)
 	require.NoError(t, err)
 	reply := <-replyChan
@@ -85,7 +93,12 @@ func TestCallEmptyProcedure(t *testing.T) {
 			}
 		}, nil, nil)
 
-	msg := &message.Message{}
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	disp.ChangePulse(ctx, currentPulse)
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
 	_, err := disp.Process(msg)
 	require.NoError(t, err)
 	reply := <-replyChan
@@ -113,7 +126,12 @@ func TestProcedureReturnError(t *testing.T) {
 			}
 		}, nil, nil)
 
-	msg := &message.Message{}
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	disp.ChangePulse(ctx, currentPulse)
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
 	_, err := disp.Process(msg)
 	require.NoError(t, err)
 	reply := <-replyChan
@@ -150,7 +168,12 @@ func TestChangePulse(t *testing.T) {
 
 	handleProcessed := make(chan struct{})
 	go func() {
-		msg := &message.Message{}
+		ctx := context.Background()
+		currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+		disp.ChangePulse(ctx, currentPulse)
+
+		msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
 		_, err := disp.Process(msg)
 		require.NoError(t, err)
 		reply := <-replyChan
@@ -198,7 +221,12 @@ func TestChangePulseAndMigrate(t *testing.T) {
 
 	handleProcessed := make(chan struct{})
 	go func() {
-		msg := &message.Message{}
+		ctx := context.Background()
+		currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+		disp.ChangePulse(ctx, currentPulse)
+
+		msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
 		_, err := disp.Process(msg)
 		require.NoError(t, err)
 		reply := <-replyChan

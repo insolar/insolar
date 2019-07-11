@@ -19,19 +19,31 @@ package dispatcher
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
+
+func makeMessage(t *testing.T, ctx context.Context, pn insolar.PulseNumber) *message.Message {
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(bus.MetaPulse, pn.String())
+	sp, err := instracer.Serialize(ctx)
+	require.NoError(t, err)
+	msg.Metadata.Set(bus.MetaSpanData, string(sp))
+
+	return msg
+}
 
 func TestNewDispatcher(t *testing.T) {
 	t.Parallel()
@@ -44,7 +56,14 @@ func TestNewDispatcher(t *testing.T) {
 
 	d := NewDispatcher(f, f, f)
 	require.NotNil(t, d.controller)
-	handle := d.handles.present(&message.Message{})
+
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	atomic.StoreUint32(&d.currentPulseNumber, uint32(currentPulse.PulseNumber))
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
+	handle := d.handles.present(msg)
 	require.Nil(t, handle)
 	require.True(t, ok)
 }
@@ -70,25 +89,17 @@ func TestDispatcher_Process(t *testing.T) {
 			return nil
 		}
 	}
-	msg := &message.Message{}
+
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	atomic.StoreUint32(&d.currentPulseNumber, uint32(currentPulse.PulseNumber))
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
 	_, err := d.Process(msg)
 	require.NoError(t, err)
 	rep := <-replyChan
 	require.Equal(t, reply, rep)
-}
-
-func TestDispatcher_Process_DeserializeError(t *testing.T) {
-	t.Parallel()
-
-	d := &Dispatcher{
-		controller:         thread.NewController(),
-		currentPulseNumber: insolar.FirstPulseNumber,
-	}
-
-	msg := &message.Message{Payload: []byte{1, 2, 3, 4}}
-	_, err := d.Process(msg)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "can't deserialize meta payload")
 }
 
 func TestDispatcher_Process_ReplyError(t *testing.T) {
@@ -105,11 +116,13 @@ func TestDispatcher_Process_ReplyError(t *testing.T) {
 			return errors.New("test error")
 		}
 	}
-	parcel := &testutils.ParcelMock{}
-	parcel.PulseFunc = func() insolar.PulseNumber {
-		return 42
-	}
-	msg := &message.Message{}
+
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	atomic.StoreUint32(&d.currentPulseNumber, uint32(currentPulse.PulseNumber))
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
 	_, err := d.Process(msg)
 	require.NoError(t, err)
 	rep := <-replyChan
@@ -117,7 +130,7 @@ func TestDispatcher_Process_ReplyError(t *testing.T) {
 	require.Contains(t, rep.Error(), "reply error")
 }
 
-func TestDispatcher_WrapBusHandle_CallFutureDispatcher(t *testing.T) {
+func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 	t.Parallel()
 	d := &Dispatcher{
 		controller:         thread.NewController(),
@@ -132,13 +145,14 @@ func TestDispatcher_WrapBusHandle_CallFutureDispatcher(t *testing.T) {
 			return nil
 		}
 	}
-	meta := payload.Meta{
-		Pulse: insolar.PulseNumber(42),
-	}
-	data, err := meta.Marshal()
-	require.NoError(t, err)
-	msg := &message.Message{Payload: data}
-	_, err = d.Process(msg)
+
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	atomic.StoreUint32(&d.currentPulseNumber, uint32(currentPulse.PulseNumber))
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber+1)
+
+	_, err := d.Process(msg)
 	require.NoError(t, err)
 	rep := <-replyChan
 	require.Equal(t, reply, rep)

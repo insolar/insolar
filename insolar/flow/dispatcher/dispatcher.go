@@ -102,7 +102,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 
 	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get(bus.MetaPulse))
 	if err != nil {
-		logger.Error("failed to handle message", err)
+		logger.Error("failed to handle message: ", err)
 		return nil, nil
 	}
 	ctx = pulse.ContextWith(ctx, pn)
