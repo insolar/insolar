@@ -50,6 +50,12 @@
 
 package chaser
 
+import (
+	"github.com/stretchr/testify/require"
+	"testing"
+)
+
+//<<<<<<< HEAD:network/consensus/common/chaser/chasing_delay_test.go
 //func TestNewChasingTimer(t *testing.T) {
 //	chasingDelay := time.Second
 //	ct := NewChasingTimer(chasingDelay)
@@ -100,3 +106,24 @@ package chaser
 //	RestartChase()
 //	require.True(t, Channel() != nil)
 //}
+//=======
+//func TestNewNodeStateHashEvidence(t *testing.T) {
+//	sd := common.NewSignedDigest(common.Digest{}, common.Signature{})
+//	sh := NewNodeStateHashEvidence(sd)
+//	require.Equal(t, sd, sh.(*nodeStateHashEvidence).SignedDigest)
+//}
+//
+//func TestGetNodeStateHash(t *testing.T) {
+//	fr := common.NewFoldableReaderMock(t)
+//	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
+//	sh := NewNodeStateHashEvidence(sd)
+//	require.Equal(t, sd.GetDigest().AsDigestHolder().GetDigestMethod(), sh.GetNodeStateHash().GetDigestMethod())
+//}
+//
+//func TestGetGlobulaNodeStateSignature(t *testing.T) {
+//	fr := common.NewFoldableReaderMock(t)
+//	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
+//	sh := NewNodeStateHashEvidence(sd)
+//	require.Equal(t, sd.GetSignature().AsSignatureHolder().GetSignatureMethod(), sh.GetGlobulaNodeStateSignature().GetSignatureMethod())
+//}
+//>>>>>>> 57e8ec4518ff891a196423b89dc5b1c0f1a5e1de:network/consensus/gcpv2/common/hashes_test.go

@@ -62,12 +62,12 @@ import (
 )
 
 func TestPickNextJoinCandidate(t *testing.T) {
-	require.Equal(t, (&SequencialCandidateFeeder{}).PickNextJoinCandidate(), nil)
+	require.Equal(t, nil, (&SequencialCandidateFeeder{}).PickNextJoinCandidate())
 
 	s := &SequencialCandidateFeeder{buf: make([]api.CandidateProfile, 1)}
 	c := common.NewCandidateProfileMock(t)
 	s.buf[0] = c
-	require.Equal(t, s.PickNextJoinCandidate(), c)
+	require.Equal(t, c, s.PickNextJoinCandidate())
 }
 
 func TestRemoveJoinCandidate(t *testing.T) {
@@ -82,7 +82,7 @@ func TestRemoveJoinCandidate(t *testing.T) {
 	c.GetNodeIDMock.Set(func() ccommon.ShortNodeID { return ccommon.ShortNodeID(1) })
 	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
 
-	require.Equal(t, s.buf, []api.CandidateProfile(nil))
+	require.Equal(t, []api.CandidateProfile(nil), s.buf)
 
 	s.buf = make([]api.CandidateProfile, 2)
 	s.buf[0] = c
@@ -90,7 +90,7 @@ func TestRemoveJoinCandidate(t *testing.T) {
 	s.buf[1] = c2
 	require.True(t, s.RemoveJoinCandidate(false, ccommon.ShortNodeID(1)))
 
-	require.Equal(t, len(s.buf), 1)
+	require.Equal(t, 1, len(s.buf))
 
 	require.True(t, len(s.buf) > 0 && s.buf[0] == c2)
 }

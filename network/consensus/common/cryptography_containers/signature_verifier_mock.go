@@ -24,11 +24,6 @@ type SignatureVerifierMock struct {
 	IsDigestMethodSupportedPreCounter uint64
 	IsDigestMethodSupportedMock       mSignatureVerifierMockIsDigestMethodSupported
 
-	IsDigestOfSignatureMethodSupportedFunc       func(p SignatureMethod) (r bool)
-	IsDigestOfSignatureMethodSupportedCounter    uint64
-	IsDigestOfSignatureMethodSupportedPreCounter uint64
-	IsDigestOfSignatureMethodSupportedMock       mSignatureVerifierMockIsDigestOfSignatureMethodSupported
-
 	IsSignMethodSupportedFunc       func(p SignMethod) (r bool)
 	IsSignMethodSupportedCounter    uint64
 	IsSignMethodSupportedPreCounter uint64
@@ -59,7 +54,6 @@ func NewSignatureVerifierMock(t minimock.Tester) *SignatureVerifierMock {
 	}
 
 	m.IsDigestMethodSupportedMock = mSignatureVerifierMockIsDigestMethodSupported{mock: m}
-	m.IsDigestOfSignatureMethodSupportedMock = mSignatureVerifierMockIsDigestOfSignatureMethodSupported{mock: m}
 	m.IsSignMethodSupportedMock = mSignatureVerifierMockIsSignMethodSupported{mock: m}
 	m.IsSignOfSignatureMethodSupportedMock = mSignatureVerifierMockIsSignOfSignatureMethodSupported{mock: m}
 	m.IsValidDataSignatureMock = mSignatureVerifierMockIsValidDataSignature{mock: m}
@@ -210,153 +204,6 @@ func (m *SignatureVerifierMock) IsDigestMethodSupportedFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.IsDigestMethodSupportedFunc != nil {
 		return atomic.LoadUint64(&m.IsDigestMethodSupportedCounter) > 0
-	}
-
-	return true
-}
-
-type mSignatureVerifierMockIsDigestOfSignatureMethodSupported struct {
-	mock              *SignatureVerifierMock
-	mainExpectation   *SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation
-	expectationSeries []*SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation
-}
-
-type SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation struct {
-	input  *SignatureVerifierMockIsDigestOfSignatureMethodSupportedInput
-	result *SignatureVerifierMockIsDigestOfSignatureMethodSupportedResult
-}
-
-type SignatureVerifierMockIsDigestOfSignatureMethodSupportedInput struct {
-	p SignatureMethod
-}
-
-type SignatureVerifierMockIsDigestOfSignatureMethodSupportedResult struct {
-	r bool
-}
-
-//Expect specifies that invocation of SignatureVerifier.IsDigestOfSignatureMethodSupported is expected from 1 to Infinity times
-func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) Expect(p SignatureMethod) *mSignatureVerifierMockIsDigestOfSignatureMethodSupported {
-	m.mock.IsDigestOfSignatureMethodSupportedFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation{}
-	}
-	m.mainExpectation.input = &SignatureVerifierMockIsDigestOfSignatureMethodSupportedInput{p}
-	return m
-}
-
-//Return specifies results of invocation of SignatureVerifier.IsDigestOfSignatureMethodSupported
-func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) Return(r bool) *SignatureVerifierMock {
-	m.mock.IsDigestOfSignatureMethodSupportedFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation{}
-	}
-	m.mainExpectation.result = &SignatureVerifierMockIsDigestOfSignatureMethodSupportedResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of SignatureVerifier.IsDigestOfSignatureMethodSupported is expected once
-func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) ExpectOnce(p SignatureMethod) *SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation {
-	m.mock.IsDigestOfSignatureMethodSupportedFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation{}
-	expectation.input = &SignatureVerifierMockIsDigestOfSignatureMethodSupportedInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *SignatureVerifierMockIsDigestOfSignatureMethodSupportedExpectation) Return(r bool) {
-	e.result = &SignatureVerifierMockIsDigestOfSignatureMethodSupportedResult{r}
-}
-
-//Set uses given function f as a mock of SignatureVerifier.IsDigestOfSignatureMethodSupported method
-func (m *mSignatureVerifierMockIsDigestOfSignatureMethodSupported) Set(f func(p SignatureMethod) (r bool)) *SignatureVerifierMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.IsDigestOfSignatureMethodSupportedFunc = f
-	return m.mock
-}
-
-//IsDigestOfSignatureMethodSupported implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
-func (m *SignatureVerifierMock) IsDigestOfSignatureMethodSupported(p SignatureMethod) (r bool) {
-	counter := atomic.AddUint64(&m.IsDigestOfSignatureMethodSupportedPreCounter, 1)
-	defer atomic.AddUint64(&m.IsDigestOfSignatureMethodSupportedCounter, 1)
-
-	if len(m.IsDigestOfSignatureMethodSupportedMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IsDigestOfSignatureMethodSupportedMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to SignatureVerifierMock.IsDigestOfSignatureMethodSupported. %v", p)
-			return
-		}
-
-		input := m.IsDigestOfSignatureMethodSupportedMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, SignatureVerifierMockIsDigestOfSignatureMethodSupportedInput{p}, "SignatureVerifier.IsDigestOfSignatureMethodSupported got unexpected parameters")
-
-		result := m.IsDigestOfSignatureMethodSupportedMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the SignatureVerifierMock.IsDigestOfSignatureMethodSupported")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.IsDigestOfSignatureMethodSupportedMock.mainExpectation != nil {
-
-		input := m.IsDigestOfSignatureMethodSupportedMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, SignatureVerifierMockIsDigestOfSignatureMethodSupportedInput{p}, "SignatureVerifier.IsDigestOfSignatureMethodSupported got unexpected parameters")
-		}
-
-		result := m.IsDigestOfSignatureMethodSupportedMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the SignatureVerifierMock.IsDigestOfSignatureMethodSupported")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.IsDigestOfSignatureMethodSupportedFunc == nil {
-		m.t.Fatalf("Unexpected call to SignatureVerifierMock.IsDigestOfSignatureMethodSupported. %v", p)
-		return
-	}
-
-	return m.IsDigestOfSignatureMethodSupportedFunc(p)
-}
-
-//IsDigestOfSignatureMethodSupportedMinimockCounter returns a count of SignatureVerifierMock.IsDigestOfSignatureMethodSupportedFunc invocations
-func (m *SignatureVerifierMock) IsDigestOfSignatureMethodSupportedMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.IsDigestOfSignatureMethodSupportedCounter)
-}
-
-//IsDigestOfSignatureMethodSupportedMinimockPreCounter returns the value of SignatureVerifierMock.IsDigestOfSignatureMethodSupported invocations
-func (m *SignatureVerifierMock) IsDigestOfSignatureMethodSupportedMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.IsDigestOfSignatureMethodSupportedPreCounter)
-}
-
-//IsDigestOfSignatureMethodSupportedFinished returns true if mock invocations count is ok
-func (m *SignatureVerifierMock) IsDigestOfSignatureMethodSupportedFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IsDigestOfSignatureMethodSupportedMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IsDigestOfSignatureMethodSupportedCounter) == uint64(len(m.IsDigestOfSignatureMethodSupportedMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.IsDigestOfSignatureMethodSupportedMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IsDigestOfSignatureMethodSupportedCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.IsDigestOfSignatureMethodSupportedFunc != nil {
-		return atomic.LoadUint64(&m.IsDigestOfSignatureMethodSupportedCounter) > 0
 	}
 
 	return true
@@ -960,10 +807,6 @@ func (m *SignatureVerifierMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to SignatureVerifierMock.IsDigestMethodSupported")
 	}
 
-	if !m.IsDigestOfSignatureMethodSupportedFinished() {
-		m.t.Fatal("Expected call to SignatureVerifierMock.IsDigestOfSignatureMethodSupported")
-	}
-
 	if !m.IsSignMethodSupportedFinished() {
 		m.t.Fatal("Expected call to SignatureVerifierMock.IsSignMethodSupported")
 	}
@@ -1001,10 +844,6 @@ func (m *SignatureVerifierMock) MinimockFinish() {
 		m.t.Fatal("Expected call to SignatureVerifierMock.IsDigestMethodSupported")
 	}
 
-	if !m.IsDigestOfSignatureMethodSupportedFinished() {
-		m.t.Fatal("Expected call to SignatureVerifierMock.IsDigestOfSignatureMethodSupported")
-	}
-
 	if !m.IsSignMethodSupportedFinished() {
 		m.t.Fatal("Expected call to SignatureVerifierMock.IsSignMethodSupported")
 	}
@@ -1036,7 +875,6 @@ func (m *SignatureVerifierMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.IsDigestMethodSupportedFinished()
-		ok = ok && m.IsDigestOfSignatureMethodSupportedFinished()
 		ok = ok && m.IsSignMethodSupportedFinished()
 		ok = ok && m.IsSignOfSignatureMethodSupportedFinished()
 		ok = ok && m.IsValidDataSignatureFinished()
@@ -1051,10 +889,6 @@ func (m *SignatureVerifierMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IsDigestMethodSupportedFinished() {
 				m.t.Error("Expected call to SignatureVerifierMock.IsDigestMethodSupported")
-			}
-
-			if !m.IsDigestOfSignatureMethodSupportedFinished() {
-				m.t.Error("Expected call to SignatureVerifierMock.IsDigestOfSignatureMethodSupported")
 			}
 
 			if !m.IsSignMethodSupportedFinished() {
@@ -1086,10 +920,6 @@ func (m *SignatureVerifierMock) MinimockWait(timeout time.Duration) {
 func (m *SignatureVerifierMock) AllMocksCalled() bool {
 
 	if !m.IsDigestMethodSupportedFinished() {
-		return false
-	}
-
-	if !m.IsDigestOfSignatureMethodSupportedFinished() {
 		return false
 	}
 

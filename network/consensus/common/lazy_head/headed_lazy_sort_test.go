@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,157 +46,163 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
-package lazy_head
+package common
 
-//func lessTestFn(v1 interface{}, v2 interface{}) bool {
-//	return v1.(int) < v2.(int)
-//}
-//
-//func TestNewHeadedLazySortedList(t *testing.T) {
-//	hl := NewHeadedLazySortedList(1, lessTestFn, -1)
-//	require.Equal(t, len(data), 0)
-//
-//	require.Equal(t, cap(data), 2)
-//
-//	hl = NewHeadedLazySortedList(1, lessTestFn, 0)
-//	require.Equal(t, cap(data), 2)
-//
-//	hl = NewHeadedLazySortedList(3, lessTestFn, 1)
-//	require.Equal(t, cap(data), 3)
-//
-//	hl = NewHeadedLazySortedList(1, lessTestFn, 3)
-//	require.Equal(t, cap(data), 3)
-//}
-//
-//func TestInnerLen(t *testing.T) {
-//	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
-//	Add(1)
-//
-//	require.Equal(t, Len(), 1)
-//}
-//
-//func TestInnerLess(t *testing.T) {
-//	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
-//	Add(1)
-//	Add(2)
-//	require.Equal(t, Less(0, 1), lessTestFn(0, 1))
-//}
-//
-//func TestInnerSwap(t *testing.T) {
-//	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
-//	Add(1)
-//	Add(2)
-//	Swap(0, 1)
-//	require.Equal(t, Get(0), 2)
-//
-//	require.Equal(t, Get(1), 1)
-//}
-//
-//func TestInnerAdd(t *testing.T) {
-//	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
-//	Add(1)
-//	require.Equal(t, Get(0), 1)
-//
-//	require.Equal(t, len, 1)
-//
-//	inl = innerHeadedLazySortedList{data: make([]interface{}, 2), less: lessTestFn}
-//	Add(1)
-//	require.Equal(t, Get(0), 1)
-//
-//	require.Equal(t, len, 1)
-//
-//	Add(3)
-//	require.Equal(t, Get(0), 1)
-//
-//	require.Equal(t, Get(1), 3)
-//
-//	require.Equal(t, len, 2)
-//}
-//
-//func TestInnerGet(t *testing.T) {
-//	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
-//	Add(2)
-//	Add(3)
-//	require.Equal(t, Get(0), 2)
-//
-//	require.Equal(t, Get(1), 3)
-//
-//	require.Panics(t, func() { Get(-1) })
-//
-//	require.Panics(t, func() { Get(2) })
-//}
-//
-//func TestLen(t *testing.T) {
-//	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
-//	require.Equal(t, Len(), 0)
-//
-//	Add(2)
-//	require.Equal(t, Len(), 1)
-//
-//	Add(3)
-//	require.Equal(t, Len(), 2)
-//}
-//
-//func TestGet(t *testing.T) {
-//	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
-//	Add(2)
-//	Add(3)
-//	require.Equal(t, Get(0), 2)
-//
-//	require.Equal(t, Get(1), 3)
-//
-//	require.Panics(t, func() { Get(-1) })
-//
-//	require.Panics(t, func() { Get(2) })
-//}
-//
-//func TestAdd(t *testing.T) {
-//	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
-//	Add(1)
-//	require.Equal(t, sorted, Sorted)
-//
-//	Add(2)
-//	require.Equal(t, sorted, UnsortedTail)
-//
-//	Add(0)
-//	require.Equal(t, sorted, UnsortedTail)
-//
-//	hl = NewHeadedLazySortedList(2, lessTestFn, 2)
-//	Add(1)
-//	sorted = UnsortedAll
-//	Add(2)
-//	require.Equal(t, sorted, Sorted)
-//
-//	Add(1)
-//	require.Equal(t, sorted, Sorted)
-//
-//	hl = NewHeadedLazySortedList(4, lessTestFn, 3)
-//	Add(1)
-//	Add(2)
-//	require.Equal(t, sorted, UnsortedAll)
-//
-//	Add(1)
-//	require.Equal(t, sorted, UnsortedAll)
-//}
-//
-//func TestSortAll(t *testing.T) {
-//	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
-//	Add(2)
-//	SortAll()
-//	require.Equal(t, sorted, Sorted)
-//
-//	Add(3)
-//	require.Equal(t, sorted, UnsortedTail)
-//
-//	SortAll()
-//	require.Equal(t, sorted, Sorted)
-//}
-//
-//// TODO Tests
-//func TestLazyTailSort(t *testing.T) {
-//	s := NewHeadedLazySortedList(3, lessTestFn, 0)
-//
-//	t.Logf("%+v", s)
-//}
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func lessTestFn(v1 interface{}, v2 interface{}) bool {
+	return v1.(int) < v2.(int)
+}
+
+func TestNewHeadedLazySortedList(t *testing.T) {
+	hl := NewHeadedLazySortedList(1, lessTestFn, -1)
+	require.Equal(t, 0, len(hl.data.data))
+
+	require.Equal(t, 2, cap(hl.data.data))
+
+	hl = NewHeadedLazySortedList(1, lessTestFn, 0)
+	require.Equal(t, 2, cap(hl.data.data))
+
+	hl = NewHeadedLazySortedList(3, lessTestFn, 1)
+	require.Equal(t, 3, cap(hl.data.data))
+
+	hl = NewHeadedLazySortedList(1, lessTestFn, 3)
+	require.Equal(t, 3, cap(hl.data.data))
+}
+
+func TestInnerLen(t *testing.T) {
+	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
+	inl.Add(1)
+
+	require.Equal(t, 1, inl.Len())
+}
+
+func TestInnerLess(t *testing.T) {
+	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
+	inl.Add(1)
+	inl.Add(2)
+	require.Equal(t, lessTestFn(0, 1), inl.Less(0, 1))
+}
+
+func TestInnerSwap(t *testing.T) {
+	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
+	inl.Add(1)
+	inl.Add(2)
+	inl.Swap(0, 1)
+	require.Equal(t, 2, inl.Get(0))
+
+	require.Equal(t, 1, inl.Get(1))
+}
+
+func TestInnerAdd(t *testing.T) {
+	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
+	inl.Add(1)
+	require.Equal(t, 1, inl.Get(0))
+
+	require.Equal(t, 1, inl.len)
+
+	inl = innerHeadedLazySortedList{data: make([]interface{}, 2), less: lessTestFn}
+	inl.Add(1)
+	require.Equal(t, 1, inl.Get(0))
+
+	require.Equal(t, 1, inl.len)
+
+	inl.Add(3)
+	require.Equal(t, 1, inl.Get(0))
+
+	require.Equal(t, 3, inl.Get(1))
+
+	require.Equal(t, 2, inl.len)
+}
+
+func TestInnerGet(t *testing.T) {
+	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
+	inl.Add(2)
+	inl.Add(3)
+	require.Equal(t, 2, inl.Get(0))
+
+	require.Equal(t, 3, inl.Get(1))
+
+	require.Panics(t, func() { inl.Get(-1) })
+
+	require.Panics(t, func() { inl.Get(2) })
+}
+
+func TestLen(t *testing.T) {
+	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
+	require.Equal(t, 0, hl.Len())
+
+	hl.Add(2)
+	require.Equal(t, 1, hl.Len())
+
+	hl.Add(3)
+	require.Equal(t, 2, hl.Len())
+}
+
+func TestGet(t *testing.T) {
+	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
+	hl.Add(2)
+	hl.Add(3)
+	require.Equal(t, 2, hl.Get(0))
+
+	require.Equal(t, 3, hl.Get(1))
+
+	require.Panics(t, func() { hl.Get(-1) })
+
+	require.Panics(t, func() { hl.Get(2) })
+}
+
+func TestAdd(t *testing.T) {
+	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
+	hl.Add(1)
+	require.Equal(t, Sorted, hl.sorted)
+
+	hl.Add(2)
+	require.Equal(t, UnsortedTail, hl.sorted)
+
+	hl.Add(0)
+	require.Equal(t, UnsortedTail, hl.sorted)
+
+	hl = NewHeadedLazySortedList(2, lessTestFn, 2)
+	hl.Add(1)
+	hl.sorted = UnsortedAll
+	hl.Add(2)
+	require.Equal(t, Sorted, hl.sorted)
+
+	hl.Add(1)
+	require.Equal(t, Sorted, hl.sorted)
+
+	hl = NewHeadedLazySortedList(4, lessTestFn, 3)
+	hl.Add(1)
+	hl.Add(2)
+	require.Equal(t, UnsortedAll, hl.sorted)
+
+	hl.Add(1)
+	require.Equal(t, UnsortedAll, hl.sorted)
+}
+
+func TestSortAll(t *testing.T) {
+	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
+	hl.Add(2)
+	hl.SortAll()
+	require.Equal(t, Sorted, hl.sorted)
+
+	hl.Add(3)
+	require.Equal(t, UnsortedTail, hl.sorted)
+
+	hl.SortAll()
+	require.Equal(t, Sorted, hl.sorted)
+}
+
+// TODO Tests
+func TestLazyTailSort(t *testing.T) {
+	s := NewHeadedLazySortedList(3, lessTestFn, 0)
+
+	t.Logf("%+v", s)
+}

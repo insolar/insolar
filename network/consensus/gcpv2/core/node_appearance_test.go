@@ -71,13 +71,13 @@ func TestNewNodeAppearanceAsSelf(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, r.state, api.NodeStateLocalActive)
+	require.Equal(t, api.NodeStateLocalActive, r.state)
 
-	require.Equal(t, r.trust, gcommon.SelfTrust)
+	require.Equal(t, gcommon.SelfTrust, r.trust)
 
-	require.Equal(t, r.profile, lp)
+	require.Equal(t, lp, r.profile)
 
-	require.Equal(t, r.callback, callback)
+	require.Equal(t, callback, r.callback)
 
 }
 
@@ -89,13 +89,13 @@ func TestInit(t *testing.T) {
 	require.Panics(t, func() { r.init(nil, callback, 0) })
 
 	r.init(lp, callback, 0)
-	require.Equal(t, r.state, api.NodeStateLocalActive)
+	require.Equal(t, api.NodeStateLocalActive, r.state)
 
-	require.Equal(t, r.trust, gcommon.SelfTrust)
+	require.Equal(t, gcommon.SelfTrust, r.trust)
 
-	require.Equal(t, r.profile, lp)
+	require.Equal(t, lp, r.profile)
 
-	require.Equal(t, r.callback, callback)
+	require.Equal(t, callback, r.callback)
 }
 
 func TestString(t *testing.T) {
@@ -103,7 +103,7 @@ func TestString(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, r.String(), fmt.Sprintf("node:{%v}", lp))
+	require.Equal(t, fmt.Sprintf("node:{%v}", lp), r.String())
 }
 
 func TestLessByNeighbourWeightForNodeAppearance(t *testing.T) {
@@ -143,15 +143,15 @@ func TestCopySelfTo(t *testing.T) {
 
 	target.copySelfTo(source)
 
-	require.Equal(t, source.stateEvidence, target.stateEvidence)
+	require.Equal(t, target.stateEvidence, source.stateEvidence)
 
-	require.Equal(t, source.announceSignature, target.announceSignature)
+	require.Equal(t, target.announceSignature, source.announceSignature)
 
-	require.Equal(t, source.requestedPower, target.requestedPower)
+	require.Equal(t, target.requestedPower, source.requestedPower)
 
-	require.Equal(t, source.state, target.state)
+	require.Equal(t, target.state, source.state)
 
-	require.Equal(t, source.trust, target.trust)
+	require.Equal(t, target.trust, source.trust)
 }
 
 func TestIsJoiner(t *testing.T) {
@@ -173,7 +173,7 @@ func TestGetIndex(t *testing.T) {
 	lp.GetIndexMock.Set(func() int { return index })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, r.GetIndex(), index)
+	require.Equal(t, index, r.GetIndex())
 }
 
 func TestGetShortNodeID(t *testing.T) {
@@ -182,7 +182,7 @@ func TestGetShortNodeID(t *testing.T) {
 	lp.GetShortNodeIDMock.Set(func() common.ShortNodeID { return common.AbsentShortNodeID })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, r.GetShortNodeID(), common.AbsentShortNodeID)
+	require.Equal(t, common.AbsentShortNodeID, r.GetShortNodeID())
 }
 
 func TestGetTrustLevel(t *testing.T) {
@@ -191,7 +191,7 @@ func TestGetTrustLevel(t *testing.T) {
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	r.trust = gcommon.TrustBySome
-	require.Equal(t, r.GetTrustLevel(), gcommon.TrustBySome)
+	require.Equal(t, gcommon.TrustBySome, r.GetTrustLevel())
 }
 
 func TestGetProfile(t *testing.T) {
@@ -199,7 +199,7 @@ func TestGetProfile(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, r.GetProfile(), lp)
+	require.Equal(t, lp, r.GetProfile())
 }
 
 func TestVerifyPacketAuthenticity(t *testing.T) {
@@ -222,18 +222,18 @@ func TestVerifyPacketAuthenticity(t *testing.T) {
 	from := endpoints.NewHostIdentityHolderMock(t)
 	strictFrom := true
 	isAcceptable = false
-	require.NotEqual(t, r.VerifyPacketAuthenticity(packet, from, strictFrom), nil)
+	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, strictFrom))
 
 	strictFrom = false
 	isSignOfSignatureMethodSupported = false
-	require.NotEqual(t, r.VerifyPacketAuthenticity(packet, from, strictFrom), nil)
+	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, strictFrom))
 
 	isSignOfSignatureMethodSupported = true
 	isValidDigestSignature = false
-	require.NotEqual(t, r.VerifyPacketAuthenticity(packet, from, strictFrom), nil)
+	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, strictFrom))
 
 	isValidDigestSignature = true
-	require.Equal(t, r.VerifyPacketAuthenticity(packet, from, strictFrom), nil)
+	require.Equal(t, nil, r.VerifyPacketAuthenticity(packet, from, strictFrom))
 }
 
 func TestSetReceivedPhase(t *testing.T) {
@@ -306,7 +306,7 @@ func TestGetSignatureVerifier(t *testing.T) {
 	require.Equal(t, r.GetSignatureVerifier(svf), sv1)
 
 	lp.GetSignatureVerifierMock.Set(func() cryptography_containers.SignatureVerifier { return nil })
-	require.Equal(t, r.GetSignatureVerifier(svf), sv2)
+	require.Equal(t, sv2, r.GetSignatureVerifier(svf))
 }
 
 func TestCreateSignatureVerifier(t *testing.T) {
@@ -315,8 +315,9 @@ func TestCreateSignatureVerifier(t *testing.T) {
 	lp.GetNodePublicKeyStoreMock.Set(func() cryptography_containers.PublicKeyStore { return nil })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
+
 	svf := cryptography_containers.NewSignatureVerifierFactoryMock(t)
 	sv := cryptography_containers.NewSignatureVerifierMock(t)
 	svf.GetSignatureVerifierWithPKSMock.Set(func(cryptography_containers.PublicKeyStore) cryptography_containers.SignatureVerifier { return sv })
-	require.Equal(t, r.CreateSignatureVerifier(svf), sv)
+	require.Equal(t, sv, r.CreateSignatureVerifier(svf))
 }

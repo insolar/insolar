@@ -46,9 +46,25 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
 
 package api
+
+//func TestNewChasingTimer(t *testing.T) {
+//	chasingDelay := time.Second
+//	ct := NewChasingTimer(chasingDelay)
+//	require.Equal(t, chasingDelay, ct.chasingDelay)
+//}
+//
+//func TestIsEnabled(t *testing.T) {
+//	ct := NewChasingTimer(time.Second)
+//	require.True(t, ct.IsEnabled())
+//
+//	ct = NewChasingTimer(0)
+//	require.False(t, ct.IsEnabled())
+//
+//	ct = NewChasingTimer(-time.Second)
+//	require.False(t, ct.IsEnabled())
+//}
 
 //func TestNewNodeStateHashEvidence(t *testing.T) {
 //	sd := cryptography_containers.NewSignedDigest(cryptography_containers.Digest{}, cryptography_containers.Signature{})
