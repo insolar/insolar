@@ -55,6 +55,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
@@ -120,7 +121,7 @@ func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
 	ph.packetProcessor = packetProcessor
 }
 
-func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse) {
+func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, _ network.ReceivedPacket) {
 	pulsePayload := NewPulsePacketParser(pulse)
 
 	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &common.HostIdentity{
