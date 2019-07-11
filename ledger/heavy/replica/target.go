@@ -36,7 +36,7 @@ var (
 	attempts          = 60
 	delayForAttempt   = 1 * time.Second
 	defaultBatchSize  = uint32(10)
-	scopesToReplicate = []store.Scope{store.ScopePulse, store.ScopeRecord}
+	scopesToReplicate = []byte{byte(store.ScopePulse), byte(store.ScopeRecord)}
 )
 
 type Target interface {
@@ -134,13 +134,13 @@ func (t *localTarget) trySubscribe(at Position) {
 func (t *localTarget) pullNext(highest insolar.PulseNumber) insolar.PulseNumber {
 	logger := inslogger.FromContext(context.Background())
 	from := Position{Skip: 0, Pulse: highest}
-	packet, err := t.parent.Pull(store.ScopePulse, from, 1)
+	packet, err := t.parent.Pull(byte(store.ScopePulse), from, 1)
 	if err != nil {
 		logger.Error(err)
 		go t.trySubscribe(from)
 	}
 	seq := t.validator.UnwrapAndValidate(packet)
-	t.Sequencer.Upsert(store.ScopePulse, seq)
+	t.Sequencer.Upsert(byte(store.ScopePulse), seq)
 	if len(seq) == 0 {
 		go t.trySubscribe(from)
 		return highest
@@ -149,7 +149,7 @@ func (t *localTarget) pullNext(highest insolar.PulseNumber) insolar.PulseNumber 
 	return insolar.NewPulseNumber(seq[0].Key)
 }
 
-func (t *localTarget) pullBatch(scope store.Scope, skip uint32, highest insolar.PulseNumber) {
+func (t *localTarget) pullBatch(scope byte, skip uint32, highest insolar.PulseNumber) {
 	logger := inslogger.FromContext(context.Background())
 	for {
 		at := Position{Skip: skip, Pulse: highest}

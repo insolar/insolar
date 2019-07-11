@@ -20,7 +20,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 type Subscription struct {
@@ -29,7 +28,7 @@ type Subscription struct {
 }
 
 type PullRequest struct {
-	Scope store.Scope
+	Scope byte
 	From  Position
 	Limit uint32
 }
@@ -69,7 +68,7 @@ func (r *parent) Subscribe(child Target, at Position) error {
 	return reply.Error
 }
 
-func (r *parent) Pull(scope store.Scope, from Position, limit uint32) ([]byte, error) {
+func (r *parent) Pull(scope byte, from Position, limit uint32) ([]byte, error) {
 	pr := PullRequest{
 		Scope: scope,
 		From:  from,

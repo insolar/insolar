@@ -23,14 +23,13 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/heavy/replica/intergrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
 type Parent interface {
 	Subscribe(Target, Position) error
-	Pull(store.Scope, Position, uint32) ([]byte, error)
+	Pull(byte, Position, uint32) ([]byte, error)
 }
 
 func NewParent(Sequencer sequence.Sequencer, keeper JetKeeper, cryptoService insolar.CryptographyService) Parent {
@@ -60,7 +59,7 @@ func (p *localParent) Subscribe(child Target, at Position) error {
 	return nil
 }
 
-func (p *localParent) Pull(scope store.Scope, from Position, limit uint32) ([]byte, error) {
+func (p *localParent) Pull(scope byte, from Position, limit uint32) ([]byte, error) {
 	logger := inslogger.FromContext(context.Background())
 	highestPulse := p.jetKeeper.TopSyncPulse()
 	items := p.Sequencer.Slice(scope, from.Pulse, from.Skip, highestPulse, limit)
