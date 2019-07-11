@@ -200,16 +200,6 @@ func TestECDSASignatureVerifier_IsSignMethodSupported(t *testing.T) {
 	require.False(t, dv.IsSignMethodSupported("SOME SIGN METHOD"))
 }
 
-func TestECDSASignatureVerifier_IsDigestOfSignatureMethodSupported(t *testing.T) {
-	digester := NewSha3512Digester(scheme)
-	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
-
-	require.True(t, dv.IsDigestOfSignatureMethodSupported(SHA3512Digest.SignedBy(SECP256r1Sign)))
-	require.False(t, dv.IsDigestOfSignatureMethodSupported("SOME SIGNATURE METHOD"))
-	require.True(t, dv.IsDigestOfSignatureMethodSupported(SHA3512Digest.SignedBy("SOME SIGN METHOD")))
-	require.False(t, dv.IsDigestOfSignatureMethodSupported(common.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign)))
-}
-
 func TestECDSASignatureVerifier_IsSignOfSignatureMethodSupported(t *testing.T) {
 	digester := NewSha3512Digester(scheme)
 	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)

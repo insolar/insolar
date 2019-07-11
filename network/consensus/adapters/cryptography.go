@@ -199,17 +199,13 @@ func (sv *ECDSASignatureVerifier) IsSignMethodSupported(method common.SignMethod
 	return method == SECP256r1Sign
 }
 
-func (sv *ECDSASignatureVerifier) IsDigestOfSignatureMethodSupported(method common.SignatureMethod) bool {
-	return method.DigestMethod() == SHA3512Digest
-}
-
 func (sv *ECDSASignatureVerifier) IsSignOfSignatureMethodSupported(method common.SignatureMethod) bool {
 	return method.SignMethod() == SECP256r1Sign
 }
 
 func (sv *ECDSASignatureVerifier) IsValidDigestSignature(digest common.DigestHolder, signature common.SignatureHolder) bool {
 	method := signature.GetSignatureMethod()
-	if !sv.IsDigestOfSignatureMethodSupported(method) || !sv.IsSignOfSignatureMethodSupported(method) {
+	if digest.GetDigestMethod() != method.DigestMethod() || !sv.IsSignOfSignatureMethodSupported(method) {
 		return false
 	}
 
