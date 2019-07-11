@@ -22,12 +22,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/servicenetwork"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/heavy/replica.Transport -o ./ -s _mock.go
@@ -41,20 +40,28 @@ type Transport interface {
 
 type Handle func(data []byte) ([]byte, error)
 
-func NewInternalTransport(net network.HostNetwork, handlers map[string]Handle) Transport {
-	return &internalTransport{net: net, handlers: handlers}
+func NewTransport(serviceNetwork *servicenetwork.ServiceNetwork) Transport {
+	return &internalTransport{
+		handlers:       make(map[string]Handle),
+		serviceNetwork: serviceNetwork,
+	}
 }
 
 type internalTransport struct {
-	net         network.HostNetwork
-	NodeNetwork insolar.NodeNetwork
-	handlers    map[string]Handle
+	serviceNetwork *servicenetwork.ServiceNetwork
+	net            network.HostNetwork
+	handlers       map[string]Handle
+}
+
+func (t *internalTransport) Init(ctx context.Context) error {
+	t.net = t.serviceNetwork.HostNetwork
+	return nil
 }
 
 func (t *internalTransport) Send(receiver, method string, data []byte) ([]byte, error) {
 	receiverHost, err := t.hostByAddress(receiver)
 	if err != nil || receiverHost == nil {
-		return []byte{}, errors.Wrapf(err, "failed to create host by receiver address")
+		return nil, errors.Wrapf(err, "failed to create host by receiver address")
 	}
 	req := &packet.RPCRequest{
 		Method: method,
@@ -69,12 +76,11 @@ func (t *internalTransport) Send(receiver, method string, data []byte) ([]byte, 
 		return nil, errors.Wrapf(err, "failed to get result from host")
 	}
 	if packet.GetResponse() == nil || packet.GetResponse().GetRPC() == nil {
-		inslogger.FromContext(context.Background()).Warnf("Error getting RPC response from node %s: "+
-			"got invalid response protobuf message: %s", receiver, packet)
+		return nil, errors.Errorf("error getting RPC response from node %s: got invalid response protobuf message: %s", receiver, packet)
 	}
 	resp := packet.GetResponse().GetRPC()
 	if resp.Result == nil {
-		return nil, errors.New("RPC call returned error: " + resp.Error)
+		return nil, errors.Errorf("RPC call returned error: %s", resp.Error)
 	}
 	return resp.Result, nil
 }
@@ -88,13 +94,9 @@ func (t *internalTransport) Me() string {
 }
 
 func (t *internalTransport) hostByAddress(receiver string) (*host.Host, error) {
-	for _, node := range t.NodeNetwork.GetWorkingNodes() {
-		if node.Address() == receiver {
-			host, err := host.NewHostN(receiver, node.ID())
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to create new host by address")
-			}
-			return host, nil
-		}
+	host, err := host.NewHost(receiver)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create new host by address")
 	}
+	return host, nil
 }

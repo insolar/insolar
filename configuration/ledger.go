@@ -52,6 +52,15 @@ type Exporter struct {
 	ExportLag uint32
 }
 
+// TODO: write docs
+type Replica struct {
+	Role          string
+	In            string
+	Out           []string
+	ParentAddress string
+	ParentPubKey  string
+}
+
 // Ledger holds configuration for ledger.
 type Ledger struct {
 	// Storage defines storage configuration.
@@ -69,6 +78,9 @@ type Ledger struct {
 
 	// Exporter holds configuration of Exporter
 	Exporter Exporter
+
+	// TODO: write docs
+	Replica Replica
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -86,6 +98,14 @@ func NewLedger() Ledger {
 
 		Exporter: Exporter{
 			ExportLag: 40, // 40 seconds
+		},
+
+		Replica: Replica{
+			Role:          "root",
+			In:            "in",
+			Out:           []string{"in"},
+			ParentAddress: "127.0.0.1:13831",
+			ParentPubKey:  "",
 		},
 	}
 }

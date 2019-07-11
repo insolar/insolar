@@ -98,5 +98,5 @@ func shouldProcessPacket(future Future, p *packet.Packet) bool {
 	typesShouldBeEqual := p.GetType() == future.Request().GetType()
 	responseIsForRightSender := future.Receiver().Equal(*p.Sender)
 
-	return typesShouldBeEqual && (responseIsForRightSender || p.GetType() == types.Ping)
+	return typesShouldBeEqual && (responseIsForRightSender || p.GetType() == types.Ping || p.GetType() == types.Replication)
 }

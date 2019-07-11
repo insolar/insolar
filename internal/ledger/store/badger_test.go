@@ -19,6 +19,7 @@ package store
 import (
 	"bytes"
 	"crypto/rand"
+	"fmt"
 	"io/ioutil"
 	rand2 "math/rand"
 	"os"
@@ -391,4 +392,54 @@ func fillPrefix(prefix []byte, keyLen int) []byte {
 		filler[i] = 0xFF
 	}
 	return bytes.Join([][]byte{prefix, filler}, nil)
+}
+
+func TestBadgerView(t *testing.T) {
+	printBadgerState()
+}
+
+func printBadgerState() {
+	// logger := inslogger.FromContext(context.Background())
+	const (
+		dbdir = "/Users/yz/go/src/github.com/insolar/insolar/.artifacts/launchnet/discoverynodes/1/data"
+	)
+	var (
+		scopeNames = map[Scope]string{
+			ScopePulse:            "Pulse",
+			ScopeRecord:           "Record",
+			ScopeJetDrop:          "JetDrop",
+			ScopeIndex:            "Index",
+			ScopeLastKnownIndexPN: "LastKnownIndexPN",
+			ScopeBlob:             "Blob",
+			ScopeGenesis:          "Genesis",
+			ScopeJetTree:          "JetTree",
+			ScopeJetKeeper:        "JetKeeper",
+		}
+	)
+	ops := badger.DefaultOptions
+	ops.ValueDir = dbdir
+	ops.Dir = dbdir
+	db, err := badger.Open(ops)
+	if err != nil {
+		return
+	}
+	defer db.Close()
+
+	txn := db.NewTransaction(false)
+	opts := badger.DefaultIteratorOptions
+	it := txn.NewIterator(opts)
+	defer it.Close()
+
+	stat := make(map[string]int)
+
+	it.Rewind()
+	for ; it.Valid(); it.Next() {
+		item := it.Item()
+		key := item.KeyCopy(nil)
+		// value, err := item.ValueCopy(nil)
+		// assert.NoError(t, err)
+		// t.Logf("key: % x", key)
+		stat[scopeNames[Scope(key[0])]]++
+	}
+	fmt.Println(stat)
 }

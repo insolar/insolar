@@ -226,6 +226,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		PulseManager insolar.PulseManager
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
+		Replicator   *replica.Replicator
 	)
 	{
 		records := object.NewRecordDB(DB)
@@ -262,6 +263,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 		PulseManager = pm
 		Handler = h
+
+		r := replica.NewReplicator(cfg, jetKeeper)
+		Replicator = r
 
 		artifactManager := &artifact.Scope{
 			PulseNumber:      insolar.FirstPulseNumber,
@@ -313,6 +317,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		replica.NewTransport(NetworkService),
+		Replicator,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package replica
+package intergrity
 
 import (
 	"context"
@@ -27,30 +27,42 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/heavy/replica.Integrity -o ./ -s _mock.go
 
-// Integrity is an interface to add and validate transferred record integrity.
-type Integrity interface {
+// Provider is an interface to add transferred record integrity.
+type Provider interface {
 	// Wrap returns the serialized sequence of db records signed by node signature.
 	Wrap([]sequence.Item) []byte
+}
+
+// Validator is an interface validate transferred record integrity.
+type Validator interface {
 	// UnwrapAndValidate returns the deserialized sequence of db records if signature is valid or returns empty slice.
 	UnwrapAndValidate([]byte) []sequence.Item
 }
 
-func NewIntegrity(crypto insolar.CryptographyService, parentPubKey crypto.PublicKey) Integrity {
-	return &wrapper{crypto, parentPubKey}
+func NewProvider(crypto insolar.CryptographyService) Provider {
+	return &provider{crypto: crypto}
 }
 
-type wrapper struct {
+func NewValidator(crypto insolar.CryptographyService, parentPubKey crypto.PublicKey) Validator {
+	return &validator{crypto: crypto, parentPubKey: parentPubKey}
+}
+
+type provider struct {
+	crypto insolar.CryptographyService
+}
+
+type validator struct {
 	crypto       insolar.CryptographyService
 	parentPubKey crypto.PublicKey
 }
 
-func (w *wrapper) Wrap(items []sequence.Item) []byte {
+func (p *provider) Wrap(items []sequence.Item) []byte {
 	data, err := insolar.Serialize(items)
 	if err != nil {
 		inslogger.FromContext(context.Background()).Errorf("failed to serialize sequence items")
 		return []byte{}
 	}
-	signature, err := w.crypto.Sign(data)
+	signature, err := p.crypto.Sign(data)
 	if err != nil {
 		inslogger.FromContext(context.Background()).Errorf("failed to sign sequence items")
 		return []byte{}
@@ -64,21 +76,22 @@ func (w *wrapper) Wrap(items []sequence.Item) []byte {
 	return packet
 }
 
-func (w *wrapper) UnwrapAndValidate(rawPacket []byte) []sequence.Item {
+func (v *validator) UnwrapAndValidate(rawPacket []byte) []sequence.Item {
+	logger := inslogger.FromContext(context.Background())
 	var pack Packet
 	err := insolar.Deserialize(rawPacket, &pack)
 	if err != nil {
-		inslogger.FromContext(context.Background()).Errorf("failed to deserialize wrapped packet")
+		logger.Errorf("failed to deserialize wrapped packet")
 		return []sequence.Item{}
 	}
-	if !w.crypto.Verify(w.parentPubKey, insolar.SignatureFromBytes(pack.Signature), pack.Data) {
-		inslogger.FromContext(context.Background()).Errorf("invalid packet signature")
+	if !v.crypto.Verify(v.parentPubKey, insolar.SignatureFromBytes(pack.Signature), pack.Data) {
+		logger.Errorf("invalid packet signature")
 		return []sequence.Item{}
 	}
 	var seq []sequence.Item
 	err = insolar.Deserialize(pack.Data, &seq)
 	if err != nil {
-		inslogger.FromContext(context.Background()).Errorf("failed to deserialize sequence items")
+		logger.Errorf("failed to deserialize sequence items")
 		return []sequence.Item{}
 	}
 	return seq

@@ -17,10 +17,55 @@
 package replica
 
 import (
+	"context"
+
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/heavy/replica/intergrity"
+	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
 type Parent interface {
-	Subscribe(Position) error
+	Subscribe(Target, Position) error
 	Pull(store.Scope, Position, uint32) ([]byte, error)
+}
+
+func NewParent(db store.DB, keeper JetKeeper, cryptoService insolar.CryptographyService) Parent {
+	provider := intergrity.NewProvider(cryptoService)
+	return &localParent{db: db, jetKeeper: keeper, provider: provider}
+}
+
+type localParent struct {
+	db        store.DB
+	jetKeeper JetKeeper
+	provider  intergrity.Provider
+}
+
+func (p *localParent) Subscribe(child Target, at Position) error {
+	logger := inslogger.FromContext(context.Background())
+	current := p.jetKeeper.TopSyncPulse()
+
+	if current < at.Pulse {
+		// TODO: register handler on sync pulse update
+		logger.Warn("I'm replicaroot. Current pulse less than requested position.")
+	}
+	err := child.Notify()
+	if err != nil {
+		// TODO: retry notify
+		return errors.Wrapf(err, "failed to notify child")
+	}
+	return nil
+}
+
+func (p *localParent) Pull(scope store.Scope, from Position, limit uint32) ([]byte, error) {
+	logger := inslogger.FromContext(context.Background())
+	highestPulse := p.jetKeeper.TopSyncPulse()
+	sequencer := sequence.NewSequencer(p.db, scope)
+	items := sequencer.Slice(from.Pulse, from.Skip, highestPulse, limit)
+	logger.Warnf("PULL_BATCH slicing scope: %v len(items): %v from: %v skip: %v highest: %v limit: %v", scope, len(items), from.Pulse, from.Skip, highestPulse, limit)
+	packet := p.provider.Wrap(items)
+	return packet, nil
 }

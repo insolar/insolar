@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package replica
+package intergrity
 
 import (
 	"testing"
@@ -40,9 +40,10 @@ func TestIntegrity_WrapUnwrap(t *testing.T) {
 	require.NoError(t, err)
 	cs := cryptography.NewKeyBoundCryptographyService(keys.Private)
 	parentPubKey, err := cs.GetPublicKey()
-	integrity := NewIntegrity(cs, parentPubKey)
+	provider := NewProvider(cs)
+	validator := NewValidator(cs, parentPubKey)
 
-	packet := integrity.Wrap(expected)
-	actual := integrity.UnwrapAndValidate(packet)
+	packet := Wrap(expected)
+	actual := UnwrapAndValidate(packet)
 	require.Equal(t, expected, actual)
 }

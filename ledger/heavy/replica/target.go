@@ -18,66 +18,111 @@ package replica
 
 import (
 	"context"
+	"crypto"
 	"time"
 
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/heavy/replica/intergrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 var (
 	attempts          = 60
 	delayForAttempt   = 1 * time.Second
 	defaultBatchSize  = uint32(10)
-	scopesToReplicate = []store.Scope{store.ScopeRecord}
+	scopesToReplicate = []store.Scope{store.ScopePulse, store.ScopeRecord}
 )
 
 type Target interface {
 	Notify() error
 }
 
-type localTarget struct {
-	parent    Replica
-	db        store.DB
-	integrity Integrity
-}
-
-func (t *localTarget) Start() {
-	pulses := sequence.NewSequencer(t.db, store.ScopePulse)
-	highestPulse := insolar.GenesisPulse.PulseNumber
-	if pulses.Last() != nil {
-		highestPulse = insolar.NewPulseNumber(pulses.Last().Key)
-	}
-	at := Position{Index: 0, Pulse: highestPulse}
-	go t.trySubscribe(at)
-}
-
-func (t *localTarget) Notify() error {
+func NewTarget(db store.DB, cfg configuration.Replica, parent Parent, cryptoService insolar.CryptographyService) Target {
 	logger := inslogger.FromContext(context.Background())
-	pulses := sequence.NewSequencer(t.db, store.ScopePulse)
-	highest := insolar.GenesisPulse.PulseNumber
-	if pulses.Last() != nil {
-		highest = insolar.NewPulseNumber(pulses.Last().Key)
-	}
-	next := t.pullNext(highest)
-	if next == highest {
-		logger.Debugf("next pulse not pulled")
+	parentIdentity, err := buildParent(cfg)
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to build parent identity"))
 		return nil
 	}
+
+	validator := intergrity.NewValidator(cryptoService, parentIdentity.pubKey)
+	return &localTarget{db: db, parent: parent, validator: validator}
+}
+
+type localTarget struct {
+	db        store.DB
+	parent    Parent
+	validator intergrity.Validator
+}
+
+func (t *localTarget) Start(ctx context.Context) error {
+	minimal := insolar.GenesisPulse.PulseNumber
 	for _, scope := range scopesToReplicate {
-		sequencer := sequence.NewSequencer(t.db, scope)
-		index := uint32(sequencer.Len(highest))
-
-		t.pullBatch(scope, index, highest, sequencer)
+		if last := sequence.NewSequencer(t.db, scope).Last(); last != nil {
+			if pulse := insolar.NewPulseNumber(last.Key[:4]); pulse < minimal {
+				minimal = pulse
+			}
+		}
 	}
-
+	at := Position{Skip: 0, Pulse: minimal}
+	go t.trySubscribe(at)
 	return nil
 }
 
+func (t *localTarget) Notify() error {
+	// logger := inslogger.FromContext(context.Background())
+	// TODO: maybe do it in multiple routines
+	for _, scope := range scopesToReplicate {
+		sequencer := sequence.NewSequencer(t.db, scope)
+		highest := insolar.GenesisPulse.PulseNumber
+		if sequencer.Last() != nil {
+			highest = insolar.NewPulseNumber(sequencer.Last().Key[:4])
+		}
+		skip := uint32(sequencer.Len(highest))
+		// if scope == store.ScopePulse {
+		// 	pulses := sequence.NewSequencer(t.db, store.ScopePulse)
+		// 	seq := pulses.Slice(insolar.GenesisPulse.PulseNumber, 0, highest, 100)
+		// 	for i, item := range seq {
+		// 		logger.Warnf("PULSE highest: %v i: %v [%v]", highest, i, insolar.NewPulseNumber(item.Key))
+		// 	}
+		// }
+
+		t.pullBatch(scope, skip, highest)
+	}
+	t.Start(context.Background()) // TODO: refactor it
+	return nil
+}
+
+type Position struct {
+	Skip  uint32
+	Pulse insolar.PulseNumber
+}
+
+type identity struct {
+	address string
+	pubKey  crypto.PublicKey
+}
+
+func buildParent(cfg configuration.Replica) (identity, error) {
+	kp := platformpolicy.NewKeyProcessor()
+	pubKey, err := kp.ImportPublicKeyPEM([]byte(cfg.ParentPubKey))
+	if err != nil {
+		return identity{}, errors.Wrap(err, "failed to import a public key from PEM")
+	}
+
+	return identity{address: cfg.ParentAddress, pubKey: pubKey}, nil
+}
+
 func (t *localTarget) trySubscribe(at Position) {
+	// TODO: add TTL for subscribe
 	for i := 0; i < attempts; i++ {
-		err := t.parent.Subscribe(at)
+		err := t.parent.Subscribe(t, at)
 		if err != nil {
 			inslogger.FromContext(context.Background()).Error(err)
 			time.Sleep(delayForAttempt)
@@ -90,13 +135,13 @@ func (t *localTarget) trySubscribe(at Position) {
 func (t *localTarget) pullNext(highest insolar.PulseNumber) insolar.PulseNumber {
 	logger := inslogger.FromContext(context.Background())
 	pulses := sequence.NewSequencer(t.db, store.ScopePulse)
-	from := Position{Index: 0, Pulse: highest}
+	from := Position{Skip: 0, Pulse: highest}
 	packet, err := t.parent.Pull(store.ScopePulse, from, 1)
 	if err != nil {
 		logger.Error(err)
 		go t.trySubscribe(from)
 	}
-	seq := t.integrity.UnwrapAndValidate(packet)
+	seq := t.validator.UnwrapAndValidate(packet)
 	pulses.Upsert(seq)
 	if len(seq) == 0 {
 		go t.trySubscribe(from)
@@ -106,19 +151,24 @@ func (t *localTarget) pullNext(highest insolar.PulseNumber) insolar.PulseNumber 
 	return insolar.NewPulseNumber(seq[0].Key)
 }
 
-func (t *localTarget) pullBatch(scope store.Scope, index uint32, highest insolar.PulseNumber, sequencer sequence.Sequencer) {
+func (t *localTarget) pullBatch(scope store.Scope, skip uint32, highest insolar.PulseNumber) {
+	logger := inslogger.FromContext(context.Background())
+	sequencer := sequence.NewSequencer(t.db, scope)
 	for {
-		logger := inslogger.FromContext(context.Background())
-		at := Position{Index: index, Pulse: highest}
+		at := Position{Skip: skip, Pulse: highest}
 		packet, err := t.parent.Pull(scope, at, defaultBatchSize)
+		logger.Warnf("PULL_BATCH pos: %v err: %v packet: %v", at, err, packet)
 		if err != nil {
 			logger.Error(err)
 			t.trySubscribe(at)
 		}
-		seq := t.integrity.UnwrapAndValidate(packet)
+		seq := t.validator.UnwrapAndValidate(packet)
+		for _, item := range seq {
+			logger.Warnf("PULL_BATCH scope: %v key: %v", scope, item.Key)
+		}
 		sequencer.Upsert(seq)
 		if len(seq) > 0 {
-			index += uint32(len(seq))
+			skip += uint32(len(seq))
 			continue
 		}
 		break

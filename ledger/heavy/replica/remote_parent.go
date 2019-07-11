@@ -29,6 +29,7 @@ type Subscription struct {
 }
 
 type PullRequest struct {
+	Scope store.Scope
 	From  Position
 	Limit uint32
 }
@@ -47,7 +48,7 @@ type parent struct {
 	receiver  string
 }
 
-func (r *parent) Subscribe(at Position) error {
+func (r *parent) Subscribe(child Target, at Position) error {
 	sub := Subscription{
 		Target: r.transport.Me(),
 		At:     at,
@@ -70,6 +71,7 @@ func (r *parent) Subscribe(at Position) error {
 
 func (r *parent) Pull(scope store.Scope, from Position, limit uint32) ([]byte, error) {
 	pr := PullRequest{
+		Scope: scope,
 		From:  from,
 		Limit: limit,
 	}
