@@ -276,7 +276,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return n.cm.Stop(ctx)
 }
 
-func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse) {
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse, _ network.ReceivedPacket) {
 	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
 	logger := inslogger.FromContext(ctx)
 

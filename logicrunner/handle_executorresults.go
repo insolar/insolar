@@ -36,6 +36,7 @@ type initializeExecutionState struct {
 
 	Result struct {
 		es             *ExecutionState
+		broker         *ExecutionBroker
 		clarifyPending bool
 	}
 }
@@ -44,22 +45,15 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	ref := p.msg.GetReference()
 
-	state := p.LR.StateStorage.UpsertObjectState(ref)
-
-	state.Lock()
-	if state.ExecutionState == nil {
-		state.ExecutionState = NewExecutionState(ref)
-		state.ExecutionState.RegisterLogicRunner(p.LR)
-	}
-	es := state.ExecutionState
+	es, broker := p.LR.StateStorage.UpsertExecutionState(ref)
 	p.Result.es = es
-	state.Unlock()
+	p.Result.broker = broker
 
 	p.Result.clarifyPending = false
 
 	es.Lock()
 	if es.pending == message.InPending {
-		if !es.Broker.currentList.Empty() {
+		if !broker.currentList.Empty() {
 			logger.Debug("execution returned to node that is still executing pending")
 
 			es.pending = message.NotPending
@@ -87,9 +81,9 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	if p.msg.Queue != nil {
 		for _, qe := range p.msg.Queue {
 			ctxToSent := context.TODO() //FIXME: !!!!
-			transcript := NewTranscript(ctxToSent, &qe.RequestRef, qe.Request)
+			transcript := NewTranscript(ctxToSent, qe.RequestRef, qe.Request)
 
-			es.Broker.Prepend(ctx, false, transcript)
+			broker.Prepend(ctx, false, transcript)
 		}
 	}
 	es.Unlock()
@@ -141,8 +135,8 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 		}
 	}
 
-	es := procInitializeExecutionState.Result.es
-	es.Broker.StartProcessorIfNeeded(ctx)
+	broker := procInitializeExecutionState.Result.broker
+	broker.StartProcessorIfNeeded(ctx)
 	return nil
 }
 

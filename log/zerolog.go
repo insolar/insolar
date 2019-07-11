@@ -54,6 +54,7 @@ type callerHookConfig struct {
 
 type zerologAdapter struct {
 	logger       zerolog.Logger
+	level        zerolog.Level
 	callerConfig callerHookConfig
 }
 
@@ -149,6 +150,7 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()
 	za := &zerologAdapter{
 		logger: logger,
+		level:  zerolog.InfoLevel,
 		callerConfig: callerHookConfig{
 			enabled:        true,
 			skipFrameCount: defaultCallerSkipFrameCount,
@@ -256,6 +258,7 @@ func (z *zerologAdapter) WithLevelNumber(level insolar.LogLevel) (insolar.Logger
 		return nil, err
 	}
 	zCopy := *z
+	zCopy.level = zerologLevel
 	zCopy.logger = z.logger.Level(zerologLevel)
 	return &zCopy, nil
 }
@@ -310,4 +313,13 @@ func (z *zerologAdapter) loggerWithHooks() *zerolog.Logger {
 		l = l.With().CallerWithSkipFrameCount(z.callerConfig.skipFrameCount).Logger()
 	}
 	return &l
+}
+
+func (z *zerologAdapter) Is(level insolar.LogLevel) bool {
+	zerologLevel, err := InternalLevelToZerologLevel(level)
+	if err != nil {
+		panic(err)
+	}
+
+	return zerologLevel >= z.level && zerologLevel >= zerolog.GlobalLevel()
 }

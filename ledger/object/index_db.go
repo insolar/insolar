@@ -42,6 +42,14 @@ type indexKey struct {
 	objID insolar.ID
 }
 
+func newIndexKey(raw []byte) indexKey {
+	ik := indexKey{}
+	ik.pn = insolar.NewPulseNumber(raw)
+	ik.objID = *insolar.NewIDFromBytes(raw[ik.pn.Size():])
+
+	return ik
+}
+
 func (k indexKey) Scope() store.Scope {
 	return store.ScopeIndex
 }
@@ -84,6 +92,33 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket F
 
 	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
 	return i.setLastKnownPN(pn, bucket.ObjID)
+}
+
+// TruncateHead remove all records after lastPulse
+func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	it := i.db.NewIterator(&indexKey{objID: insolar.ID{}, pn: from}, false)
+	defer it.Close()
+
+	var hasKeys bool
+	for it.Next() {
+		hasKeys = true
+		key := newIndexKey(it.Key())
+		err := i.db.Delete(&key)
+		if err != nil {
+			return errors.Wrapf(err, "can't delete key: %+v", key)
+		}
+
+		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. ObjectID: %s", key.pn.String(), key.objID.String())
+	}
+
+	if !hasKeys {
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
+	}
+
+	return nil
 }
 
 // ForID returns a lifeline from a bucket with provided PN and ObjID

@@ -31,7 +31,7 @@ type Transcript struct {
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
 	Request          *record.IncomingRequest
-	RequestRef       *insolar.Reference
+	RequestRef       insolar.Reference
 	RequesterNode    *insolar.Reference
 	Nonce            uint64
 	Deactivate       bool
@@ -41,7 +41,7 @@ type Transcript struct {
 
 func NewTranscript(
 	ctx context.Context,
-	requestRef *insolar.Reference,
+	requestRef insolar.Reference,
 	request record.IncomingRequest,
 ) *Transcript {
 
@@ -106,7 +106,7 @@ func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *Transcrip
 
 func (ces *CurrentExecutionList) SetTranscript(t *Transcript) {
 	ces.lock.Lock()
-	ces.executions[*t.RequestRef] = t
+	ces.executions[t.RequestRef] = t
 	ces.lock.Unlock()
 }
 

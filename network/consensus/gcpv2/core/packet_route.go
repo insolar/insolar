@@ -61,41 +61,64 @@ import (
 
 var errPacketIsNotAllowed = errors.New("packet is not allowed")
 
-type packetRoute struct {
-	handlerHost     PhaseHostPacketHandler
-	handlerMember   PhaseNodePacketHandler
+type packetDispatcher struct {
+	ctl             PhaseController
+	tp              PhaseControllerHandlerType
 	redirectPerNode int
 	realm           *FullRealm
 }
 
-func (r *packetRoute) handleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance) error {
-	if r.handlerMember == nil {
+func (r *packetDispatcher) init(realm *FullRealm, ctl PhaseController) bool {
+	if r.realm != nil {
+		panic("illegal state")
+	}
+
+	r.realm = realm
+	r.ctl = ctl
+	r.tp = ctl.GetHandlerType()
+	r.redirectPerNode = -1
+	return r.tp.IsPerNode()
+}
+
+func (r *packetDispatcher) dispatchMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance) error {
+	if !r.tp.IsMemberHandler() {
 		return errPacketIsNotAllowed
 	}
-	return r.handlerMember(ctx, reader, from)
+	if r.redirectPerNode >= 0 {
+		h := from.getPacketHandler(r.redirectPerNode)
+		if h != nil {
+			return h(ctx, reader, from, r.realm)
+		}
+	}
+	return r.ctl.HandleMemberPacket(ctx, reader, from)
 }
 
-func (r *packetRoute) redirectMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance) error {
-	h := from.handlers[r.redirectPerNode]
-	if h == nil {
+func (r *packetDispatcher) dispatchUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
+	if !r.HasUnknownMemberHandler() {
+		return nil, errPacketIsNotAllowed
+	}
+	return r.ctl.HandleUnknownMemberPacket(ctx, reader, from)
+}
+
+func (r *packetDispatcher) dispatchHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
+	if r.tp.IsMemberHandler() {
 		return errPacketIsNotAllowed
 	}
-	return h(ctx, reader, from, r.realm)
+	return r.ctl.HandleHostPacket(ctx, reader, from)
 }
 
-func (r *packetRoute) handleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
-	return r.handlerHost(ctx, reader, from)
-}
-
-func (r *packetRoute) setRedirectHandler(redirectID int) {
+func (r *packetDispatcher) setRedirectHandler(redirectID int) {
 	r.redirectPerNode = redirectID
-	r.handlerMember = r.redirectMemberPacket
 }
 
-func (r *packetRoute) IsEmpty() bool {
-	return r.handlerMember == nil && r.handlerHost == nil
+func (r *packetDispatcher) HasMemberHandler() bool {
+	return r.tp.IsMemberHandler()
 }
 
-func (r *packetRoute) HasMemberHandler() bool {
-	return r.handlerHost == nil
+func (r *packetDispatcher) HasUnknownMemberHandler() bool {
+	return r.tp.IsUnknownAllowed()
+}
+
+func (r *packetDispatcher) IsEnabled() bool {
+	return r.ctl != nil
 }

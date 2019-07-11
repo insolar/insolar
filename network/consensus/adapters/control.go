@@ -48,58 +48,59 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packets
+package adapters
 
-type NodeTrustLevel int8
+import (
+	"context"
+	"time"
 
-const (
-	FraudByBlacklist NodeTrustLevel = -4 // in the blacklist
-	FraudByNetwork   NodeTrustLevel = -3 // >2/3 of network have indicated fraud
-	FraudByNeighbors NodeTrustLevel = -2 // >50% of neighborhood have indicated fraud
-	FraudBySome      NodeTrustLevel = -1 // some nodes have indicated fraud
-	UnknownTrust     NodeTrustLevel = 0  // initial state
-	TrustBySome      NodeTrustLevel = 1  // some nodes have indicated trust (same NSH)
-	TrustByNeighbors NodeTrustLevel = 2  // >50% of neighborhood have indicated trust
-	TrustByNetwork   NodeTrustLevel = 3  // >2/3 of network have indicated trust
-	TrustByMandate   NodeTrustLevel = 4  // on- or off-network node with a temporary mandate, e.g. pulsar or discovery
-	TrustByCouncil   NodeTrustLevel = 5  // on- or off-network node with a permanent mandate
-
-	SelfTrust       = TrustByNeighbors // MUST be not less than TrustByNeighbors
-	FraudByThisNode = FraudBySome      // fraud is detected by this node
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	common2 "github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-func (v NodeTrustLevel) abs() int8 {
-	if v >= 0 {
-		return int8(v)
-	}
-	return int8(-v)
+type ConsensusControlFeeder struct{}
+
+func NewConsensusControlFeeder() *ConsensusControlFeeder {
+	return &ConsensusControlFeeder{}
 }
 
-// Updates only to better/worse levels. Negative level of the same magnitude prevails.
-func (v *NodeTrustLevel) Update(newLevel NodeTrustLevel) (modified bool) {
-	if newLevel == UnknownTrust || newLevel == *v {
-		return false
-	}
-	if newLevel > UnknownTrust {
-		if newLevel.abs() <= v.abs() {
-			return false
-		}
-	} else { // negative prevails hence update on |newLevel| == |v|
-		if newLevel.abs() < v.abs() {
-			return false
-		}
-	}
-	*v = newLevel
-	return true
+func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() common.PowerRequest {
+	return common.NewPowerRequestByLevel(common2.LevelNormal)
 }
 
-func (v *NodeTrustLevel) UpdateKeepNegative(newLevel NodeTrustLevel) (modified bool) {
-	if newLevel > UnknownTrust && *v < UnknownTrust {
-		return false
-	}
-	return v.Update(newLevel)
+func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw common.MemberPower, effectiveSince common2.PulseNumber) {
+	ctx := context.TODO()
+
+	inslogger.FromContext(ctx).Info(">>> Power level applied")
 }
 
-func (v *NodeTrustLevel) IsNegative() bool {
-	return *v < UnknownTrust
+func (cf *ConsensusControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
+	return false, 0
+}
+
+func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince common2.PulseNumber) {
+	ctx := context.TODO()
+
+	inslogger.FromContext(ctx).Info(">>> Graceful leave applied")
+}
+
+func (cf *ConsensusControlFeeder) SetTrafficLimit(level common2.CapacityLevel, duration time.Duration) {
+	panic("implement me")
+}
+
+func (cf *ConsensusControlFeeder) ResumeTraffic() {
+	panic("implement me")
+}
+
+func (cf *ConsensusControlFeeder) PulseDetected() {
+	panic("implement me")
+}
+
+func (cf *ConsensusControlFeeder) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+	ctx := context.TODO()
+
+	inslogger.FromContext(ctx).Info(">>> ConsensusFinished")
 }

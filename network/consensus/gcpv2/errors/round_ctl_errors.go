@@ -66,7 +66,7 @@ func NewNextPulseArrivedError(pn common.PulseNumber) error {
 }
 
 func NewRoundStateError(msg string) error {
-	return &nextPulseRoundError{s: msg}
+	return errors.New(msg)
 }
 
 func IsNextPulseArrivedError(err error) (bool, common.PulseNumber) {

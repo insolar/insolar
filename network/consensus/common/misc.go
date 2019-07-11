@@ -53,6 +53,8 @@ package common
 import (
 	"bytes"
 	"io"
+
+	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
 type HostAddress string
@@ -72,6 +74,47 @@ func (addr *HostAddress) EqualsToString(o string) bool {
 func (addr HostAddress) String() string {
 	return string(addr)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.NodeEndpoint -o . -s _mock.go
+
+type NodeEndpoint interface {
+	GetEndpointType() NodeEndpointType
+	GetRelayID() ShortNodeID
+	GetNameAddress() HostAddress
+	GetIPAddress() packets.NodeAddress
+}
+
+func EqualNodeEndpoints(p, o NodeEndpoint) bool {
+	if p == nil || o == nil {
+		return false
+	}
+	if p == o {
+		return true
+	}
+
+	if p.GetEndpointType() != o.GetEndpointType() {
+		return false
+	}
+	switch p.GetEndpointType() {
+	case NameEndpoint:
+		return p.GetNameAddress() == o.GetNameAddress()
+	case IPEndpoint:
+		return p.GetIPAddress() == o.GetIPAddress()
+	case RelayEndpoint:
+		return p.GetRelayID() == o.GetRelayID()
+	}
+	panic("missing")
+}
+
+type NodeEndpointType uint8
+
+const (
+	IPEndpoint NodeEndpointType = iota
+	NameEndpoint
+	RelayEndpoint
+)
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.HostIdentityHolder -o . -s _mock.go
 
 type HostIdentityHolder interface {
 	GetHostAddress() HostAddress
@@ -114,9 +157,13 @@ type Foldable interface {
 type FixedReader interface {
 	io.WriterTo
 	io.Reader
-	Bytes() []byte
+	AsBytes() []byte
+	AsByteString() string
+
 	FixedByteSize() int
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.FoldableReader -o . -s _mock.go
 
 type FoldableReader interface {
 	FixedReader
@@ -184,6 +231,10 @@ type fixedSize struct {
 	data []byte
 }
 
+func (c *fixedSize) AsByteString() string {
+	return string(c.data)
+}
+
 func (c *fixedSize) WriteTo(w io.Writer) (n int64, err error) {
 	return io.Copy(w, c)
 }
@@ -200,8 +251,12 @@ func (c *fixedSize) FixedByteSize() int {
 	return len(c.data)
 }
 
-func (c *fixedSize) Bytes() []byte {
+func (c *fixedSize) AsBytes() []byte {
 	return c.data
+}
+
+func NewFixedReader(data []byte) FixedReader {
+	return &fixedSize{data: data}
 }
 
 func CopyFixedSize(v FoldableReader) FoldableReader {
@@ -219,3 +274,26 @@ func CopyFixedSize(v FoldableReader) FoldableReader {
 
 type ShortNodeID uint32 // ZERO is RESERVED
 const AbsentShortNodeID ShortNodeID = 0
+
+func (v ShortNodeID) IsAbsent() bool { return v == AbsentShortNodeID }
+
+type CapacityLevel uint8
+
+const (
+	LevelZero CapacityLevel = iota
+	LevelMinimal
+	LevelReduced
+	LevelNormal
+	LevelMax
+)
+
+const CapacityLevelCount = LevelMax + 1
+
+func (v CapacityLevel) DefaultPercent() int {
+	// 0, 25, 75, 100, 125
+	return v.ChooseInt([...]int{0, 20, 60, 80, 100})
+}
+
+func (v CapacityLevel) ChooseInt(options [CapacityLevelCount]int) int {
+	return options[v]
+}

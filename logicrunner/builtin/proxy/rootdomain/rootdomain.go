@@ -90,7 +90,7 @@ func (r *RootDomain) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -120,7 +120,7 @@ func (r *RootDomain) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -157,7 +157,7 @@ func (r *RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -184,7 +184,7 @@ func (r *RootDomain) GetMigrationAdminMemberRefNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func (r *RootDomain) GetMigrationAdminMemberRefAsImmutable() (*insolar.Reference
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -242,7 +242,7 @@ func (r *RootDomain) GetMigrationWalletRef() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -269,7 +269,7 @@ func (r *RootDomain) GetMigrationWalletRefNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (r *RootDomain) GetMigrationWalletRefAsImmutable() (*insolar.Reference, err
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -327,7 +327,7 @@ func (r *RootDomain) GetMigrationDaemonMembers() ([]insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMigrationDaemonMembers", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMigrationDaemonMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -354,7 +354,7 @@ func (r *RootDomain) GetMigrationDaemonMembersNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMigrationDaemonMembers", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMigrationDaemonMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -379,7 +379,7 @@ func (r *RootDomain) GetMigrationDaemonMembersAsImmutable() ([]insolar.Reference
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMigrationDaemonMembers", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMigrationDaemonMembers", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -412,7 +412,7 @@ func (r *RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetRootMemberRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetRootMemberRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -439,7 +439,7 @@ func (r *RootDomain) GetRootMemberRefNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetRootMemberRef", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetRootMemberRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -464,7 +464,7 @@ func (r *RootDomain) GetRootMemberRefAsImmutable() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetRootMemberRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetRootMemberRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -497,7 +497,7 @@ func (r *RootDomain) GetBurnAddress() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -524,7 +524,7 @@ func (r *RootDomain) GetBurnAddressNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -549,7 +549,7 @@ func (r *RootDomain) GetBurnAddressAsImmutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -583,7 +583,7 @@ func (r *RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, 
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMemberByPublicKey", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMemberByPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -611,7 +611,7 @@ func (r *RootDomain) GetMemberByPublicKeyNoWait(publicKey string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMemberByPublicKey", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMemberByPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -637,7 +637,7 @@ func (r *RootDomain) GetMemberByPublicKeyAsImmutable(publicKey string) (insolar.
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMemberByPublicKey", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMemberByPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -671,7 +671,7 @@ func (r *RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Referen
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -699,7 +699,7 @@ func (r *RootDomain) GetMemberByBurnAddressNoWait(burnAddress string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -725,7 +725,7 @@ func (r *RootDomain) GetMemberByBurnAddressAsImmutable(burnAddress string) (inso
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -758,7 +758,7 @@ func (r *RootDomain) GetCostCenter() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCostCenter", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCostCenter", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -785,7 +785,7 @@ func (r *RootDomain) GetCostCenterNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetCostCenter", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetCostCenter", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -810,7 +810,7 @@ func (r *RootDomain) GetCostCenterAsImmutable() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetCostCenter", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetCostCenter", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -843,7 +843,7 @@ func (r *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetNodeDomainRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetNodeDomainRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -870,7 +870,7 @@ func (r *RootDomain) GetNodeDomainRefNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetNodeDomainRef", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetNodeDomainRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -895,7 +895,7 @@ func (r *RootDomain) GetNodeDomainRefAsImmutable() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetNodeDomainRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetNodeDomainRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -928,7 +928,7 @@ func (r *RootDomain) Info() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Info", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Info", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -955,7 +955,7 @@ func (r *RootDomain) InfoNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Info", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Info", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -980,7 +980,7 @@ func (r *RootDomain) InfoAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Info", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Info", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -1012,7 +1012,7 @@ func (r *RootDomain) AddBurnAddresses(burnAddresses []string) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "AddBurnAddresses", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "AddBurnAddresses", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1040,7 +1040,7 @@ func (r *RootDomain) AddBurnAddressesNoWait(burnAddresses []string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "AddBurnAddresses", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "AddBurnAddresses", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1064,7 +1064,7 @@ func (r *RootDomain) AddBurnAddressesAsImmutable(burnAddresses []string) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "AddBurnAddresses", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "AddBurnAddresses", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1096,7 +1096,7 @@ func (r *RootDomain) AddBurnAddress(burnAddress string) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "AddBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "AddBurnAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1124,7 +1124,7 @@ func (r *RootDomain) AddBurnAddressNoWait(burnAddress string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "AddBurnAddress", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "AddBurnAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1148,7 +1148,7 @@ func (r *RootDomain) AddBurnAddressAsImmutable(burnAddress string) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "AddBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "AddBurnAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1182,7 +1182,7 @@ func (r *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, me
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "AddNewMemberToMaps", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "AddNewMemberToMaps", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1212,7 +1212,7 @@ func (r *RootDomain) AddNewMemberToMapsNoWait(publicKey string, burnAddress stri
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "AddNewMemberToMaps", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "AddNewMemberToMaps", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1238,7 +1238,7 @@ func (r *RootDomain) AddNewMemberToMapsAsImmutable(publicKey string, burnAddress
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "AddNewMemberToMaps", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "AddNewMemberToMaps", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1358,7 +1358,7 @@ func (r *RootDomain) CreateHelloWorld() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "CreateHelloWorld", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "CreateHelloWorld", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -1385,7 +1385,7 @@ func (r *RootDomain) CreateHelloWorldNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "CreateHelloWorld", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "CreateHelloWorld", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1410,7 +1410,7 @@ func (r *RootDomain) CreateHelloWorldAsImmutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "CreateHelloWorld", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "CreateHelloWorld", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

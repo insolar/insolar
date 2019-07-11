@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
+	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -78,7 +79,7 @@ func getController(t *testing.T) *pulseController {
 	require.NoError(t, err)
 
 	pulseHandler := network.NewPulseHandlerMock(t)
-	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse) {}
+	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse, network2.ReceivedPacket) {}
 	net := network.NewHostNetworkMock(t)
 	net.BuildResponseMock.Return(packet.NewPacket(nil, nil, types.Pulse, 1))
 
@@ -181,12 +182,12 @@ func randomEntropy() [64]byte {
 	return buf
 }
 
-func newPulsePacket(t *testing.T) *packet.Packet {
+func newPulsePacket(t *testing.T) *packet.ReceivedPacket {
 	sender, err := host.NewHostN("127.0.0.1:3344", insolar.Reference{0})
 	require.NoError(t, err)
 	receiver, err := host.NewHostN("127.0.0.1:3345", insolar.Reference{1})
 	require.NoError(t, err)
-	return packet.NewPacket(sender, receiver, types.Pulse, 1)
+	return packet.NewReceivedPacket(packet.NewPacket(sender, receiver, types.Pulse, 1), nil)
 }
 
 func TestProcessIncorrectPacket(t *testing.T) {
@@ -261,7 +262,7 @@ func TestProcessPulseIgnoreCase(t *testing.T) {
 	controller.TerminationHandler = th
 
 	pulseHandler := network.NewPulseHandlerMock(t)
-	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse) {}
+	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse, network2.ReceivedPacket) {}
 	controller.PulseHandler = pulseHandler
 
 	request := newPulsePacket(t)

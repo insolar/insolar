@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/configuration"
@@ -40,7 +41,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -57,35 +57,9 @@ type Ref = insolar.Reference
 type ObjectState struct {
 	sync.Mutex
 
-	ExecutionState *ExecutionState
-	Validation     *ExecutionState
-}
-
-func (st *ObjectState) GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error) {
-	switch mode {
-	case insolar.ExecuteCallMode:
-		rv = st.ExecutionState
-	case insolar.ValidateCallMode:
-		rv = st.Validation
-	default:
-		err = errors.Errorf("'%d' is unknown object processing mode", mode)
-	}
-
-	if rv == nil && err != nil {
-		err = errors.Errorf("object is not in '%s' mode", mode)
-	}
-	return rv, err
-}
-
-func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
-	res, err := st.GetModeState(mode)
-	if err != nil {
-		panic(err)
-	}
-	if res.Broker.currentList.Empty() {
-		panic("object " + res.Ref.String() + " has no Current")
-	}
-	return res
+	ExecutionBroker *ExecutionBroker
+	ExecutionState  *ExecutionState
+	Validation      *ExecutionState
 }
 
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
@@ -141,8 +115,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:          cfg,
-		StateStorage: NewStateStorage(),
+		Cfg: cfg,
 	}
 
 	err := initHandlers(&res)
@@ -246,6 +219,7 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
+	lr.StateStorage = NewStateStorage(lr.publisher, lr.RequestsExecutor, lr.MessageBus, lr.JetCoordinator, lr.PulseAccessor)
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
 		lr.Cfg,
@@ -361,30 +335,23 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	es := lr.StateStorage.GetExecutionState(*request.Object)
-	if es == nil {
+	es, broker := lr.StateStorage.GetExecutionState(*request.Object)
+	if broker == nil {
 		return false
 	}
 
 	es.Lock()
 	defer es.Unlock()
 
-	if es.Broker.currentList.Empty() {
+	if broker.currentList.Empty() {
 		return false
 	}
-	if es.Broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
+	if broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
 		return false
 	}
 
 	inslogger.FromContext(ctx).Error("loop detected")
 	return true
-}
-
-func (lr *LogicRunner) startGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
-	err := lr.publisher.Publish(InnerMsgTopic, makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg))
-	if err != nil {
-		inslogger.FromContext(ctx).Warnf("can't send getLedgerPendingRequestMsg: ", err)
-	}
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
@@ -409,26 +376,24 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 		if es := state.ExecutionState; es != nil {
 			es.Lock()
 
-			toSend := es.OnPulse(ctx, meNext)
+			toSend := state.ExecutionBroker.OnPulse(ctx, meNext)
 			messages = append(messages, toSend...)
 
-			if !meNext {
-				if es.Broker.currentList.Empty() {
-					state.ExecutionState = nil
-				}
-			} else {
-				if es.pending == message.NotPending && es.LedgerHasMoreRequests {
-					lr.startGetLedgerPendingRequest(ctx, es)
-				}
-				if es.pending == message.NotPending {
-					es.Broker.StartProcessorIfNeeded(ctx)
-				}
+			if !meNext && state.ExecutionBroker.currentList.Empty() {
+				// we're not executing and we have nothing to process
+				state.ExecutionState = nil
+				state.ExecutionBroker = nil
+			} else if meNext && es.pending == message.NotPending {
+				// we're executing, micro optimization, check pending
+				// status, reset ledger check status and start execution
+				state.ExecutionBroker.ResetLedgerCheck()
+				state.ExecutionBroker.StartProcessorIfNeeded(ctx)
 			}
 
 			es.Unlock()
 		}
 
-		if state.ExecutionState == nil && state.Validation == nil {
+		if state.Validation == nil && state.ExecutionState == nil {
 			lr.StateStorage.DeleteObjectState(ref)
 		}
 
@@ -497,7 +462,7 @@ func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []mess
 	var traces string
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			RequestRef: *elem.RequestRef,
+			RequestRef: elem.RequestRef,
 			Request:    *elem.Request,
 		})
 
