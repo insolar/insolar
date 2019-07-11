@@ -99,7 +99,7 @@ func (*Phase2Controller) GetPacketType() packets.PacketType {
 func (c *Phase2Controller) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *core.NodeAppearance,
 	realm *core.FullRealm) (core.PhasePerNodePacketFunc, context.Context) {
 
-	return c.createPerNodePacketHandler(ctlIndex, node, realm, sharedNodeContext, c.handleJoinerPacket)
+	return c.createPerNodePacketHandler(sharedNodeContext, ctlIndex, node, realm, c.handleJoinerPacket)
 }
 
 func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, n *core.NodeAppearance) error {
