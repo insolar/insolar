@@ -71,13 +71,6 @@ func NewBits64(v uint64) Bits64 {
 	return r
 }
 
-func NewBits128(lo, hi uint64) Bits128 {
-	r := Bits128{}
-	binary.LittleEndian.PutUint64(r[:8], lo)
-	binary.LittleEndian.PutUint64(r[8:], hi)
-	return r
-}
-
 func (v *Bits64) WriteTo(w io.Writer) (int64, error) {
 	n, err := w.Write((*v)[:])
 	return int64(n), err
@@ -100,11 +93,34 @@ func (v *Bits64) AsByteString() string {
 }
 
 func (v Bits64) String() string {
-	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
+	return bitsToStringDefault(&v)
 }
 
-func (v Bits64) AsBytes() []byte {
+func (v *Bits64) AsBytes() []byte {
 	return v[:]
+}
+
+/* Array size must be aligned to 8 bytes */
+func FoldToBits64(v []byte) Bits64 {
+	var folded Bits64
+	for i := 0; i < len(v); i += len(folded) {
+		folded[0] ^= v[i+0]
+		folded[1] ^= v[i+1]
+		folded[2] ^= v[i+2]
+		folded[3] ^= v[i+3]
+		folded[4] ^= v[i+4]
+		folded[5] ^= v[i+5]
+		folded[6] ^= v[i+6]
+		folded[7] ^= v[i+7]
+	}
+	return folded
+}
+
+func NewBits128(lo, hi uint64) Bits128 {
+	r := Bits128{}
+	binary.LittleEndian.PutUint64(r[:8], lo)
+	binary.LittleEndian.PutUint64(r[8:], hi)
+	return r
 }
 
 type Bits128 [16]byte
@@ -119,8 +135,7 @@ func (v *Bits128) Read(p []byte) (n int, err error) {
 }
 
 func (v *Bits128) FoldToUint64() uint64 {
-	return binary.LittleEndian.Uint64(v[:]) ^
-		binary.LittleEndian.Uint64(v[8:])
+	return FoldToUint64(v[:])
 }
 
 func (v *Bits128) FixedByteSize() int {
@@ -128,14 +143,14 @@ func (v *Bits128) FixedByteSize() int {
 }
 
 func (v Bits128) String() string {
-	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
+	return bitsToStringDefault(&v)
 }
 
 func (v *Bits128) AsByteString() string {
 	return string(v[:])
 }
 
-func (v Bits128) AsBytes() []byte {
+func (v *Bits128) AsBytes() []byte {
 	return v[:]
 }
 
@@ -161,10 +176,10 @@ func (v *Bits224) FixedByteSize() int {
 }
 
 func (v Bits224) String() string {
-	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
+	return bitsToStringDefault(&v)
 }
 
-func (v Bits224) AsBytes() []byte {
+func (v *Bits224) AsBytes() []byte {
 	return v[:]
 }
 
@@ -184,10 +199,7 @@ func (v *Bits256) Read(p []byte) (n int, err error) {
 }
 
 func (v *Bits256) FoldToUint64() uint64 {
-	return binary.LittleEndian.Uint64(v[:]) ^
-		binary.LittleEndian.Uint64(v[8:]) ^
-		binary.LittleEndian.Uint64(v[16:]) ^
-		binary.LittleEndian.Uint64(v[24:])
+	return FoldToUint64(v[:])
 }
 
 func (v *Bits256) FoldToBits128() Bits128 {
@@ -211,10 +223,10 @@ func (v *Bits256) FixedByteSize() int {
 }
 
 func (v Bits256) String() string {
-	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
+	return bitsToStringDefault(&v)
 }
 
-func (v Bits256) AsBytes() []byte {
+func (v *Bits256) AsBytes() []byte {
 	return v[:]
 }
 
@@ -234,14 +246,7 @@ func (v *Bits512) Read(p []byte) (n int, err error) {
 }
 
 func (v *Bits512) FoldToUint64() uint64 {
-	return binary.LittleEndian.Uint64(v[:]) ^
-		binary.LittleEndian.Uint64(v[8:]) ^
-		binary.LittleEndian.Uint64(v[16:]) ^
-		binary.LittleEndian.Uint64(v[24:]) ^
-		binary.LittleEndian.Uint64(v[32:]) ^
-		binary.LittleEndian.Uint64(v[40:]) ^
-		binary.LittleEndian.Uint64(v[48:]) ^
-		binary.LittleEndian.Uint64(v[56:])
+	return FoldToUint64(v[:])
 }
 
 func (v *Bits512) FoldToBits256() Bits256 {
@@ -265,10 +270,10 @@ func (v *Bits512) FixedByteSize() int {
 }
 
 func (v Bits512) String() string {
-	return EncodeToString(v[:], BitsStringPrefix, "_", 8)
+	return bitsToStringDefault(&v)
 }
 
-func (v Bits512) AsBytes() []byte {
+func (v *Bits512) AsBytes() []byte {
 	return v[:]
 }
 
@@ -278,11 +283,8 @@ func (v *Bits512) AsByteString() string {
 
 /* Array size must be aligned to 8 bytes */
 func FoldToUint64(v []byte) uint64 {
-	res := binary.LittleEndian.Uint64(v)
-	for i := 8; i < len(v); i += 8 {
-		res ^= binary.LittleEndian.Uint64(v[i:])
-	}
-	return res
+	folded := FoldToBits64(v)
+	return folded.FoldToUint64()
 }
 
 /*
@@ -316,7 +318,16 @@ func readFromArray(d []byte, s []byte) (int, error) {
 	return n, nil
 }
 
-func EncodeToString(s []byte, prefix string, separator string, everyN int) string {
+func bitsToStringDefault(s FoldableReader) string {
+	return BytesToDigestString(s, BitsStringPrefix)
+	//return BytesToGroupedString(s.AsBytes(), BitsStringPrefix, "_", 8)
+}
+
+func BytesToDigestString(s FoldableReader, prefix string) string {
+	return fmt.Sprintf("bits[%d]%s%08x", s.FixedByteSize()*8, prefix, s.FoldToUint64())
+}
+
+func BytesToGroupedString(s []byte, prefix string, separator string, everyN int) string {
 	if everyN == 0 || len(separator) == 0 {
 		return prefix + hex.EncodeToString(s)
 	}
