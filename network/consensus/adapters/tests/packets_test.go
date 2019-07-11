@@ -153,6 +153,10 @@ func (r *basePacket) GetTargetID() common.ShortNodeID {
 	return r.tgt
 }
 
+func (r *basePacket) IsRelayForbidden() bool {
+	return true
+}
+
 func (r *basePacket) GetPacketSignature() common.SignedDigest {
 	return r.sd
 }

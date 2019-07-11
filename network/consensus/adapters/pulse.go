@@ -138,6 +138,10 @@ type PulsePacketParser struct {
 	pulse insolar.Pulse
 }
 
+func (p *PulsePacketParser) IsRelayForbidden() bool {
+	return false
+}
+
 func NewPulsePacketParser(pulse insolar.Pulse) *PulsePacketParser {
 	return &PulsePacketParser{pulse}
 }
