@@ -548,7 +548,7 @@ func getReply(suite *LogicRunnerTestSuite, replyChan chan *message2.Message) (in
 		suite.Require().NoError(err)
 		suite.Require().EqualValues(payload.TypeError, payloadType)
 
-		pl, err := payload.UnmarshalFromMeta(res.Payload)
+		pl, err := payload.Unmarshal(res.Payload)
 		suite.Require().NoError(err)
 		p, ok := pl.(*payload.Error)
 		suite.Require().True(ok)
@@ -946,7 +946,6 @@ func WaitGroup_TimeoutWait(wg *sync.WaitGroup, timeout time.Duration) bool {
 }
 
 func (suite *LogicRunnerTestSuite) TestConcurrency() {
-	suite.T().Skip()
 	objectRef := testutils.RandomRef()
 	parentRef := testutils.RandomRef()
 	protoRef := testutils.RandomRef()
@@ -956,7 +955,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	notMeRef := testutils.RandomRef()
 	suite.jc.MeMock.Return(meRef)
 
-	pulseNum := insolar.Pulse{PulseNumber: 100}
+	pulseNum := insolar.PulseNumber(insolar.FirstPulseNumber)
 
 	suite.jc.IsAuthorizedFunc = func(
 		ctx context.Context, role insolar.DynamicRole, id insolar.ID, pn insolar.PulseNumber, obj insolar.Reference,
@@ -991,22 +990,9 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.re.ExecuteAndSaveMock.Return(nil, nil)
 	suite.re.SendReplyMock.Return()
 
-	num := 100
+	num := 2
 	wg := sync.WaitGroup{}
 	wg.Add(num)
-
-	suite.mb.SendFunc = func(
-		ctx context.Context, msg insolar.Message, opts *insolar.MessageSendOptions,
-	) (insolar.Reply, error) {
-		switch msg.Type() {
-		case insolar.TypeReturnResults:
-			wg.Done()
-			return &reply.OK{}, nil
-		}
-		suite.Require().Fail(fmt.Sprintf("unexpected message send: %#v", msg))
-		return nil, errors.New("unexpected message")
-	}
-	replyChan := mockSender(suite)
 
 	for i := 0; i < num; i++ {
 		go func(i int) {
@@ -1022,32 +1008,31 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 			parcel := &message.Parcel{
 				Sender:      notMeRef,
 				Msg:         msg,
-				PulseNumber: pulseNum.PulseNumber,
+				PulseNumber: pulseNum,
 			}
 
 			wrapper := payload.Meta{
 				Payload: message.ParcelToBytes(parcel),
 				Sender:  notMeRef,
-				Pulse:   pulseNum.PulseNumber,
+				Pulse:   pulseNum,
 			}
 			buf, err := wrapper.Marshal()
 			suite.Require().NoError(err)
 
 			wmMsg := message2.NewMessage(watermill.NewUUID(), buf)
-			wmMsg.Metadata.Set(bus.MetaPulse, pulseNum.PulseNumber.String())
+			wmMsg.Metadata.Set(bus.MetaPulse, pulseNum.String())
 			sp, err := instracer.Serialize(context.Background())
 			suite.Require().NoError(err)
 			wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
 			wmMsg.Metadata.Set(bus.MetaType, fmt.Sprintf("%s", msg.Type()))
 			wmMsg.Metadata.Set(bus.MetaTraceID, "req-"+strconv.Itoa(i))
 
+			suite.sender.ReplyFunc = func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
+				wg.Done()
+			}
+
 			_, err = suite.lr.FlowDispatcher.Process(wmMsg)
-			res := <-replyChan
-
-			_, err = reply.Deserialize(bytes.NewBuffer(res.Payload))
 			suite.Require().NoError(err)
-
-			wg.Done()
 		}(i)
 	}
 
