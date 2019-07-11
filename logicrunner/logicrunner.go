@@ -393,11 +393,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 			es.Unlock()
 		}
 
-		state.Unlock()
-
 		if state.Validation == nil && state.ExecutionState == nil {
 			lr.StateStorage.DeleteObjectState(ref)
 		}
+
+		state.Unlock()
 	}
 
 	lr.StateStorage.Unlock()

@@ -152,10 +152,6 @@ func initComponents(
 	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
-	// move to logic runner ??
-	// err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	// checkError(ctx, err, "failed init pulse for LogicRunner")
-
 	cm.Register(
 		terminationHandler,
 		pcs,

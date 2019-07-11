@@ -104,7 +104,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(2 * time.Second)
+	suite.mc.Wait(2 * time.Minute)
 	suite.mc.Finish()
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
@@ -1152,7 +1152,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				require.NoError(t, err)
 			}
 
-			suite.Require().True(WaitGroup_TimeoutWait(&wg, 2*time.Second),
+			suite.Require().True(WaitGroup_TimeoutWait(&wg, 2*time.Minute),
 				"Failed to wait for all requests to be processed")
 		})
 	}

@@ -19,7 +19,7 @@ import (
 type StateStorageMock struct {
 	t minimock.Tester
 
-	DeleteObjectStateFunc       func(p insolar.Reference) (r *ExecutionState)
+	DeleteObjectStateFunc       func(p insolar.Reference)
 	DeleteObjectStateCounter    uint64
 	DeleteObjectStatePreCounter uint64
 	DeleteObjectStateMock       mStateStorageMockDeleteObjectState
@@ -49,7 +49,7 @@ type StateStorageMock struct {
 	UnlockPreCounter uint64
 	UnlockMock       mStateStorageMockUnlock
 
-	UpsertExecutionStateFunc       func(p *LogicRunner, p1 insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker)
+	UpsertExecutionStateFunc       func(p insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker)
 	UpsertExecutionStateCounter    uint64
 	UpsertExecutionStatePreCounter uint64
 	UpsertExecutionStateMock       mStateStorageMockUpsertExecutionState
@@ -87,16 +87,11 @@ type mStateStorageMockDeleteObjectState struct {
 }
 
 type StateStorageMockDeleteObjectStateExpectation struct {
-	input  *StateStorageMockDeleteObjectStateInput
-	result *StateStorageMockDeleteObjectStateResult
+	input *StateStorageMockDeleteObjectStateInput
 }
 
 type StateStorageMockDeleteObjectStateInput struct {
 	p insolar.Reference
-}
-
-type StateStorageMockDeleteObjectStateResult struct {
-	r *ExecutionState
 }
 
 //Expect specifies that invocation of StateStorage.DeleteObjectState is expected from 1 to Infinity times
@@ -112,14 +107,14 @@ func (m *mStateStorageMockDeleteObjectState) Expect(p insolar.Reference) *mState
 }
 
 //Return specifies results of invocation of StateStorage.DeleteObjectState
-func (m *mStateStorageMockDeleteObjectState) Return(r *ExecutionState) *StateStorageMock {
+func (m *mStateStorageMockDeleteObjectState) Return() *StateStorageMock {
 	m.mock.DeleteObjectStateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &StateStorageMockDeleteObjectStateExpectation{}
 	}
-	m.mainExpectation.result = &StateStorageMockDeleteObjectStateResult{r}
+
 	return m.mock
 }
 
@@ -134,12 +129,8 @@ func (m *mStateStorageMockDeleteObjectState) ExpectOnce(p insolar.Reference) *St
 	return expectation
 }
 
-func (e *StateStorageMockDeleteObjectStateExpectation) Return(r *ExecutionState) {
-	e.result = &StateStorageMockDeleteObjectStateResult{r}
-}
-
 //Set uses given function f as a mock of StateStorage.DeleteObjectState method
-func (m *mStateStorageMockDeleteObjectState) Set(f func(p insolar.Reference) (r *ExecutionState)) *StateStorageMock {
+func (m *mStateStorageMockDeleteObjectState) Set(f func(p insolar.Reference)) *StateStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -148,7 +139,7 @@ func (m *mStateStorageMockDeleteObjectState) Set(f func(p insolar.Reference) (r 
 }
 
 //DeleteObjectState implements github.com/insolar/insolar/logicrunner.StateStorage interface
-func (m *StateStorageMock) DeleteObjectState(p insolar.Reference) (r *ExecutionState) {
+func (m *StateStorageMock) DeleteObjectState(p insolar.Reference) {
 	counter := atomic.AddUint64(&m.DeleteObjectStatePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteObjectStateCounter, 1)
 
@@ -161,14 +152,6 @@ func (m *StateStorageMock) DeleteObjectState(p insolar.Reference) (r *ExecutionS
 		input := m.DeleteObjectStateMock.expectationSeries[counter-1].input
 		testify_assert.Equal(m.t, *input, StateStorageMockDeleteObjectStateInput{p}, "StateStorage.DeleteObjectState got unexpected parameters")
 
-		result := m.DeleteObjectStateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the StateStorageMock.DeleteObjectState")
-			return
-		}
-
-		r = result.r
-
 		return
 	}
 
@@ -179,13 +162,6 @@ func (m *StateStorageMock) DeleteObjectState(p insolar.Reference) (r *ExecutionS
 			testify_assert.Equal(m.t, *input, StateStorageMockDeleteObjectStateInput{p}, "StateStorage.DeleteObjectState got unexpected parameters")
 		}
 
-		result := m.DeleteObjectStateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the StateStorageMock.DeleteObjectState")
-		}
-
-		r = result.r
-
 		return
 	}
 
@@ -194,7 +170,7 @@ func (m *StateStorageMock) DeleteObjectState(p insolar.Reference) (r *ExecutionS
 		return
 	}
 
-	return m.DeleteObjectStateFunc(p)
+	m.DeleteObjectStateFunc(p)
 }
 
 //DeleteObjectStateMinimockCounter returns a count of StateStorageMock.DeleteObjectStateFunc invocations
@@ -890,8 +866,7 @@ type StateStorageMockUpsertExecutionStateExpectation struct {
 }
 
 type StateStorageMockUpsertExecutionStateInput struct {
-	p  *LogicRunner
-	p1 insolar.Reference
+	p insolar.Reference
 }
 
 type StateStorageMockUpsertExecutionStateResult struct {
@@ -900,14 +875,14 @@ type StateStorageMockUpsertExecutionStateResult struct {
 }
 
 //Expect specifies that invocation of StateStorage.UpsertExecutionState is expected from 1 to Infinity times
-func (m *mStateStorageMockUpsertExecutionState) Expect(p *LogicRunner, p1 insolar.Reference) *mStateStorageMockUpsertExecutionState {
+func (m *mStateStorageMockUpsertExecutionState) Expect(p insolar.Reference) *mStateStorageMockUpsertExecutionState {
 	m.mock.UpsertExecutionStateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &StateStorageMockUpsertExecutionStateExpectation{}
 	}
-	m.mainExpectation.input = &StateStorageMockUpsertExecutionStateInput{p, p1}
+	m.mainExpectation.input = &StateStorageMockUpsertExecutionStateInput{p}
 	return m
 }
 
@@ -924,12 +899,12 @@ func (m *mStateStorageMockUpsertExecutionState) Return(r *ExecutionState, r1 *Ex
 }
 
 //ExpectOnce specifies that invocation of StateStorage.UpsertExecutionState is expected once
-func (m *mStateStorageMockUpsertExecutionState) ExpectOnce(p *LogicRunner, p1 insolar.Reference) *StateStorageMockUpsertExecutionStateExpectation {
+func (m *mStateStorageMockUpsertExecutionState) ExpectOnce(p insolar.Reference) *StateStorageMockUpsertExecutionStateExpectation {
 	m.mock.UpsertExecutionStateFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &StateStorageMockUpsertExecutionStateExpectation{}
-	expectation.input = &StateStorageMockUpsertExecutionStateInput{p, p1}
+	expectation.input = &StateStorageMockUpsertExecutionStateInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -939,7 +914,7 @@ func (e *StateStorageMockUpsertExecutionStateExpectation) Return(r *ExecutionSta
 }
 
 //Set uses given function f as a mock of StateStorage.UpsertExecutionState method
-func (m *mStateStorageMockUpsertExecutionState) Set(f func(p *LogicRunner, p1 insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker)) *StateStorageMock {
+func (m *mStateStorageMockUpsertExecutionState) Set(f func(p insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker)) *StateStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -948,18 +923,18 @@ func (m *mStateStorageMockUpsertExecutionState) Set(f func(p *LogicRunner, p1 in
 }
 
 //UpsertExecutionState implements github.com/insolar/insolar/logicrunner.StateStorage interface
-func (m *StateStorageMock) UpsertExecutionState(p *LogicRunner, p1 insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker) {
+func (m *StateStorageMock) UpsertExecutionState(p insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker) {
 	counter := atomic.AddUint64(&m.UpsertExecutionStatePreCounter, 1)
 	defer atomic.AddUint64(&m.UpsertExecutionStateCounter, 1)
 
 	if len(m.UpsertExecutionStateMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.UpsertExecutionStateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateStorageMock.UpsertExecutionState. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to StateStorageMock.UpsertExecutionState. %v", p)
 			return
 		}
 
 		input := m.UpsertExecutionStateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StateStorageMockUpsertExecutionStateInput{p, p1}, "StateStorage.UpsertExecutionState got unexpected parameters")
+		testify_assert.Equal(m.t, *input, StateStorageMockUpsertExecutionStateInput{p}, "StateStorage.UpsertExecutionState got unexpected parameters")
 
 		result := m.UpsertExecutionStateMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -977,7 +952,7 @@ func (m *StateStorageMock) UpsertExecutionState(p *LogicRunner, p1 insolar.Refer
 
 		input := m.UpsertExecutionStateMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, StateStorageMockUpsertExecutionStateInput{p, p1}, "StateStorage.UpsertExecutionState got unexpected parameters")
+			testify_assert.Equal(m.t, *input, StateStorageMockUpsertExecutionStateInput{p}, "StateStorage.UpsertExecutionState got unexpected parameters")
 		}
 
 		result := m.UpsertExecutionStateMock.mainExpectation.result
@@ -992,11 +967,11 @@ func (m *StateStorageMock) UpsertExecutionState(p *LogicRunner, p1 insolar.Refer
 	}
 
 	if m.UpsertExecutionStateFunc == nil {
-		m.t.Fatalf("Unexpected call to StateStorageMock.UpsertExecutionState. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to StateStorageMock.UpsertExecutionState. %v", p)
 		return
 	}
 
-	return m.UpsertExecutionStateFunc(p, p1)
+	return m.UpsertExecutionStateFunc(p)
 }
 
 //UpsertExecutionStateMinimockCounter returns a count of StateStorageMock.UpsertExecutionStateFunc invocations
