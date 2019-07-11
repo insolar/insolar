@@ -385,19 +385,17 @@ func (r *Two) GetValue() (int, error) {
 	resp := callMethod(t, obj, "Hello")
 	require.Empty(t, resp.Error)
 
-	testPassed := false
 	for i := 0; i < 25; i++ {
 		resp = callMethod(t, obj, "Value")
 		require.Empty(t, resp.Error)
-		fmt.Println(">>>> resp.ExtractedReply: ", resp.ExtractedReply)
-		if float64(644) == resp.ExtractedReply {
-			testPassed = true
+
+		if float64(322) != resp.ExtractedReply {
 			break
 		}
 		time.Sleep(1000 * time.Millisecond)
 	}
 
-	require.Equal(t, true, testPassed)
+	require.Equal(t, float64(644), resp.ExtractedReply)
 }
 
 func TestContextPassing(t *testing.T) {
