@@ -142,11 +142,11 @@ func NewPulsePacketParser(pulse insolar.Pulse) *PulsePacketParser {
 	return &PulsePacketParser{pulse}
 }
 
-func (p *PulsePacketParser) GetSourceId() common.ShortNodeID {
+func (p *PulsePacketParser) GetSourceID() common.ShortNodeID {
 	panic("implement me")
 }
 
-func (p *PulsePacketParser) GetReceiverId() common.ShortNodeID {
+func (p *PulsePacketParser) GetReceiverID() common.ShortNodeID {
 	panic("implement me")
 }
 

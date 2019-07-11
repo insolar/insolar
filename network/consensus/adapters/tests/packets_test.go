@@ -141,11 +141,11 @@ func (r *basePacket) GetEvidence() common.SignedData {
 	return common.NewSignedData(&v, d, s)
 }
 
-func (r *basePacket) GetSourceId() common.ShortNodeID {
+func (r *basePacket) GetSourceID() common.ShortNodeID {
 	return r.src
 }
 
-func (r *basePacket) GetReceiverId() common.ShortNodeID {
+func (r *basePacket) GetReceiverID() common.ShortNodeID {
 	return r.tgt
 }
 

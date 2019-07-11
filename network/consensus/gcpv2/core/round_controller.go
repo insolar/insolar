@@ -259,7 +259,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet packets
 			}
 
 			pop := r.realm.GetPopulation()
-			sid := packet.GetSourceId()
+			sid := packet.GetSourceID()
 			src := pop.GetNodeAppearance(sid)
 			if src == nil {
 				if route.HasUnknownMemberHandler() {
@@ -310,12 +310,12 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet packets
 func (r *PhasedRoundController) verifyRoute(ctx context.Context, packet packets.PacketParser) (bool, error) {
 
 	selfID := r.realm.coreRealm.GetSelfNodeID()
-	sid := packet.GetSourceId()
+	sid := packet.GetSourceID()
 	if sid == selfID {
 		return false, fmt.Errorf("loopback, SourceID(%v) == thisNodeID(%v)", sid, selfID)
 	}
 
-	rid := packet.GetReceiverId()
+	rid := packet.GetReceiverID()
 	if rid != selfID {
 		return false, fmt.Errorf("receiverID(%v) != thisNodeID(%v)", rid, selfID)
 	}

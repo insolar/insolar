@@ -109,11 +109,11 @@ func (r *EmuPulsarNetPacket) FixedByteSize() int {
 	panic("implement me")
 }
 
-func (r *EmuPulsarNetPacket) GetSourceId() common.ShortNodeID {
+func (r *EmuPulsarNetPacket) GetSourceID() common.ShortNodeID {
 	return common.AbsentShortNodeID
 }
 
-func (r *EmuPulsarNetPacket) GetReceiverId() common.ShortNodeID {
+func (r *EmuPulsarNetPacket) GetReceiverID() common.ShortNodeID {
 	return common.AbsentShortNodeID
 }
 
@@ -224,11 +224,11 @@ func (r *basePacket) GetEvidence() common.SignedData {
 	return common.NewSignedData(&v, d, s)
 }
 
-func (r *basePacket) GetSourceId() common.ShortNodeID {
+func (r *basePacket) GetSourceID() common.ShortNodeID {
 	return r.src
 }
 
-func (r *basePacket) GetReceiverId() common.ShortNodeID {
+func (r *basePacket) GetReceiverID() common.ShortNodeID {
 	return r.tgt
 }
 

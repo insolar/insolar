@@ -119,11 +119,11 @@ func (p *PacketParser) GetMemberPacket() packets.MemberPacketReader {
 	}
 }
 
-func (p *PacketParser) GetSourceId() common.ShortNodeID {
+func (p *PacketParser) GetSourceID() common.ShortNodeID {
 	return p.packet.Header.GetSourceID()
 }
 
-func (p *PacketParser) GetReceiverId() common.ShortNodeID {
+func (p *PacketParser) GetReceiverID() common.ShortNodeID {
 	return common.ShortNodeID(p.packet.Header.ReceiverID)
 }
 
