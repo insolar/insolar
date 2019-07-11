@@ -50,11 +50,6 @@
 
 package chaser
 
-import (
-	"github.com/stretchr/testify/require"
-	"testing"
-)
-
 //<<<<<<< HEAD:network/consensus/common/chaser/chasing_delay_test.go
 //func TestNewChasingTimer(t *testing.T) {
 //	chasingDelay := time.Second

@@ -128,14 +128,14 @@ func TestCopySelfTo(t *testing.T) {
 	callback := &nodeContext{}
 
 	source := NewNodeAppearanceAsSelf(lp, callback)
-	source.stateEvidence = gcommon.NewNodeStateHashEvidenceMock(t)
+	source.stateEvidence = api.NewNodeStateHashEvidenceMock(t)
 	source.announceSignature = gcommon.NewMemberAnnouncementSignatureMock(t)
 	source.requestedPower = 1
 	source.state = api.NodeStateLocalActive
 	source.trust = gcommon.TrustBySome
 
 	target := NewNodeAppearanceAsSelf(lp, callback)
-	target.stateEvidence = gcommon.NewNodeStateHashEvidenceMock(t)
+	target.stateEvidence = api.NewNodeStateHashEvidenceMock(t)
 	target.announceSignature = gcommon.NewMemberAnnouncementSignatureMock(t)
 	target.requestedPower = 2
 	target.state = api.NodeStateReceivedPhases
