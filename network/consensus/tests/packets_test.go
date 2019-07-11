@@ -140,10 +140,6 @@ func (*EmuPulsarNetPacket) GetMemberPacket() packets.MemberPacketReader {
 	return nil
 }
 
-func (*EmuPulsarNetPacket) GetEvidenceSignature() common.SignedDigest {
-	return common.SignedDigest{}
-}
-
 func (r *EmuPulsarNetPacket) GetPulseData() common.PulseData {
 	return r.pulseData
 }
@@ -154,10 +150,6 @@ func (r *EmuPulsarNetPacket) GetPulseDataEvidence() common2.OriginalPulsarPacket
 
 func (r *EmuPulsarNetPacket) GetPulseNumber() common.PulseNumber {
 	return r.pulseData.PulseNumber
-}
-
-func (*EmuPulsarNetPacket) IsPulsePacket() bool {
-	return true
 }
 
 func (r *EmuPulsarNetPacket) GetPulsePacket() packets.PulsePacketReader {
@@ -248,10 +240,6 @@ func (r *basePacket) GetPacketSignature() common.SignedDigest {
 	return common.SignedDigest{}
 }
 
-func (*basePacket) IsPulsePacket() bool {
-	return false
-}
-
 func (r *basePacket) GetPulsePacket() packets.PulsePacketReader {
 	return nil
 }
@@ -270,14 +258,6 @@ func (r *basePacket) AsPhase2Packet() packets.Phase2PacketReader {
 
 func (r *basePacket) AsPhase3Packet() packets.Phase3PacketReader {
 	return nil
-}
-
-func (r *basePacket) GetEvidenceSignature() common.SignedDigest {
-	return common.SignedDigest{}
-}
-
-func (r *basePacket) GetPulseDataEvidence() common.SignedEvidenceHolder {
-	return r
 }
 
 func (r *basePacket) String() string {
@@ -342,10 +322,6 @@ func (r *EmuPhase1NetPacket) GetCloudIntroduction() packets.CloudIntroductionRea
 
 func (r *EmuPhase1NetPacket) GetFullIntroduction() packets.FullIntroductionReader {
 	panic("implement me")
-}
-
-func (r *EmuPhase1NetPacket) GetNodeClaimsSignature() common2.MemberAnnouncementSignature {
-	return r.mp.AnnounceSignature
 }
 
 func (r *EmuPhase1NetPacket) String() string {
