@@ -51,10 +51,11 @@
 package tests
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"math/rand"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 )
 
 func randBits256() long_bits.Bits256 {

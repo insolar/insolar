@@ -53,10 +53,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/consensus_tools"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"sync"
 )
 
 func NewDynamicRealmPopulation(baselineWeight uint32, local gcp_types.NodeProfile, nodeCountHint int,

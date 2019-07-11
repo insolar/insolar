@@ -51,9 +51,10 @@
 package core
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"sync"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )

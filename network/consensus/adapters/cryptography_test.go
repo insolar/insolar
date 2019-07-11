@@ -54,10 +54,11 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"io"
 	"testing"
+
+	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"

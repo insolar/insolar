@@ -53,13 +53,14 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"sync"
-	"time"
 
 	errors2 "github.com/insolar/insolar/network/consensus/gcpv2/errors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"

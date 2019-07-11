@@ -53,12 +53,13 @@ package serialization
 import (
 	"context"
 	"errors"
+	"io"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"io"
 )
 
 const (

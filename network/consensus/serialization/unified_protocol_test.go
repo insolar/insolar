@@ -54,10 +54,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"testing"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"testing"
 
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/platformpolicy"

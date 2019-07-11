@@ -52,9 +52,10 @@ package adapters
 
 import (
 	"crypto/ecdsa"
+	"io"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"io"
 
 	"github.com/insolar/insolar/insolar"
 )

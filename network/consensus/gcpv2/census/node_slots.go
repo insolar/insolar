@@ -51,9 +51,10 @@
 package census
 
 import (
+	"math"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"math"
 )
 
 var _ gcp_types.LocalNodeProfile = &NodeProfileSlot{}

@@ -52,11 +52,12 @@ package tests
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"

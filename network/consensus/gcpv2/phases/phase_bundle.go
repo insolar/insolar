@@ -52,9 +52,10 @@ package phases
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )

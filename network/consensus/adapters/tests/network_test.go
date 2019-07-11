@@ -53,10 +53,11 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"math/rand"
 	"runtime/debug"
 	"sync"
+
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 )
 
 type NetStrategy interface {

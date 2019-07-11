@@ -53,10 +53,11 @@ package tests
 import (
 	"context"
 	"errors"
+	"runtime/debug"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"runtime/debug"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"

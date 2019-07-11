@@ -51,9 +51,10 @@
 package adapters
 
 import (
+	"math/rand"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"math/rand"
 )
 
 type gshDigester struct {

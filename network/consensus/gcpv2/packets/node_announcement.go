@@ -52,6 +52,7 @@ package packets
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"

@@ -52,13 +52,14 @@ package core
 
 import (
 	"fmt"
+	"math"
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"math"
-	"sync"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 

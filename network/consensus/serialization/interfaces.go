@@ -53,10 +53,11 @@ package serialization
 import (
 	"context"
 	"encoding/binary"
+	"io"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"io"
 )
 
 var (

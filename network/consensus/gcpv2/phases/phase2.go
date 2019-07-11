@@ -53,11 +53,12 @@ package phases
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/lazy_head"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"math"
-	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 

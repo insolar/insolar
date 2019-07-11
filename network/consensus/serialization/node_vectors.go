@@ -51,10 +51,11 @@
 package serialization
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"io"
 	"math"
+
+	"github.com/insolar/insolar/network/consensus/common/long_bits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/pkg/errors"
 )

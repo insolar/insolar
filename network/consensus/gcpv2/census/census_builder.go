@@ -51,11 +51,12 @@
 package census
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"sync"
 )
 
 func newLocalCensusBuilder(chronicles *localChronicles, pn pulse_data.PulseNumber, population copyToPopulation,

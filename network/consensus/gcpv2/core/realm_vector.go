@@ -51,8 +51,9 @@
 package core
 
 import (
-	"github.com/insolar/insolar/insolar"
 	"sort"
+
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 )

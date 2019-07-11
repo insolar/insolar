@@ -53,10 +53,11 @@ package serialization
 import (
 	"bytes"
 	"crypto/rand"
+	"testing"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/long_bits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 )

@@ -52,6 +52,7 @@ package nodeset
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"

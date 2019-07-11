@@ -51,9 +51,10 @@
 package tests
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"math/rand"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 )
 
 type DelayStrategyConf struct {

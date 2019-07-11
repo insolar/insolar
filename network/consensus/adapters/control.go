@@ -52,11 +52,12 @@ package adapters
 
 import (
 	"context"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )

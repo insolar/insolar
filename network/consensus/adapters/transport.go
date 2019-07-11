@@ -52,6 +52,7 @@ package adapters
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 

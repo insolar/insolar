@@ -53,11 +53,12 @@ package gcpv2
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"sync"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"

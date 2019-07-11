@@ -51,8 +51,9 @@
 package serialization
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"io"
+
+	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 )
 
 type PulsarPacketBody struct {

@@ -52,6 +52,7 @@ package phases
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 

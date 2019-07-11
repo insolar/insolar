@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse_data"
 	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
