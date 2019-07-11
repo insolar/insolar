@@ -25,33 +25,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateMember(t *testing.T) {
+func TestMemberCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
-	result, err := retryableContractCreateMember(member, true)
+	result, err := retryableMemberCreate(member, true)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
 	require.NotEqual(t, "", output["reference"])
 }
 
-func TestCreateMemberWithBadKey(t *testing.T) {
+func TestMemberCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 	member.pubKey = "fake"
-	_, err = retryableContractCreateMember(member, false)
+	_, err = retryableMemberCreate(member, false)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
 }
 
-func TestCreateMembersWithSamePublicKey(t *testing.T) {
+func TestMemberCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	_, err = retryableContractCreateMember(member, true)
+	_, err = retryableMemberCreate(member, true)
 	require.NoError(t, err)
 
 	_, err = signedRequest(member, "member.create", map[string]interface{}{})

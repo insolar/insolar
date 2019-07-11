@@ -201,11 +201,11 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func retryableContractCreateMember(user *user, updatePublicKey bool) (interface{}, error) {
+func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
 	return retryableCreateMember(user, "member.create", updatePublicKey)
 }
 
-func retryableMigrationCreateMember(user *user, updatePublicKey bool) (interface{}, error) {
+func retryableMemberMigrationCreate(user *user, updatePublicKey bool) (interface{}, error) {
 	return retryableCreateMember(user, "member.migrationCreate", updatePublicKey)
 }
 

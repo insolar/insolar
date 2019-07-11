@@ -27,13 +27,13 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-func TestMigrationCreateMember(t *testing.T) {
+func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 	ba := testutils.RandomString()
 	_, _ = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
-	result, err := retryableMigrationCreateMember(member, true)
+	result, err := retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
@@ -41,41 +41,41 @@ func TestMigrationCreateMember(t *testing.T) {
 	require.Equal(t, ba, output["migrationAddress"])
 }
 
-func TestMigrationCreateMemberWhenNoBurnAddressesLeft(t *testing.T) {
+func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 	member1.ref = root.ref
 	addBurnAddress(t)
-	_, err = retryableMigrationCreateMember(member1, true)
+	_, err = retryableMemberMigrationCreate(member1, true)
 	require.Nil(t, err)
 
 	member2, err := newUserWithKeys()
 	require.NoError(t, err)
 	member2.ref = root.ref
 
-	_, err = retryableMigrationCreateMember(member2, true)
+	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "no more burn addresses left")
 }
 
-func TestMigrationCreateMemberWithBadKey(t *testing.T) {
+func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 	member.pubKey = "fake"
-	_, err = retryableMigrationCreateMember(member, false)
+	_, err = retryableMemberMigrationCreate(member, false)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
 }
 
-func TestMigrationCreateMembersWithSamePublicKey(t *testing.T) {
+func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
 	addBurnAddress(t)
 
-	_, err = retryableMigrationCreateMember(member, true)
+	_, err = retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
 
 	addBurnAddress(t)
@@ -88,10 +88,10 @@ func TestMigrationCreateMembersWithSamePublicKey(t *testing.T) {
 	require.NoError(t, err)
 	memberForBurn.ref = root.ref
 
-	_, err = retryableMigrationCreateMember(memberForBurn, true)
+	_, err = retryableMemberMigrationCreate(memberForBurn, true)
 }
 
-func TestMigrationCreateMembersWithSameBurnAddress(t *testing.T) {
+func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 	member1.ref = root.ref
@@ -99,20 +99,14 @@ func TestMigrationCreateMembersWithSameBurnAddress(t *testing.T) {
 	ba := testutils.RandomString()
 	_, _ = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba, ba}})
 
-	_, err = retryableMigrationCreateMember(member1, true)
+	_, err = retryableMemberMigrationCreate(member1, true)
 	require.NoError(t, err)
 
 	member2, err := newUserWithKeys()
 	require.NoError(t, err)
 	member2.ref = root.ref
 
-	_, err = retryableMigrationCreateMember(member2, true)
+	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "member for this burnAddress already exist")
-
-	memberForBurn, err := newUserWithKeys()
-	require.NoError(t, err)
-	memberForBurn.ref = root.ref
-
-	_, err = retryableMigrationCreateMember(memberForBurn, true)
 }
