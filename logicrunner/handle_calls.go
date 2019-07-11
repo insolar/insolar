@@ -73,6 +73,7 @@ func (h *HandleCall) sendToNextExecutor(
 			ObjectReference: es.Ref,
 			RequestRef:      *requestRef,
 			Request:         *transcript.Request,
+			ServiceData:     serviceDataFromContext(transcript.Context),
 		}
 		if es.pending == message.PendingUnknown {
 			additionalCallMsg.Pending = message.NotPending
@@ -235,13 +236,12 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
 	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("HandleAdditionalCallFromPreviousExecutor.Present starts ...")
-
 	msg, ok := parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
 	if !ok {
 		return errors.New("is not AdditionalCallFromPreviousExecutor message")
 	}
+
+	ctx = contextFromServiceData(msg.ServiceData)
 
 	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
 	span.AddAttributes(
