@@ -17,7 +17,10 @@
 package object_test
 
 import (
+	"context"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -34,8 +37,6 @@ import (
 
 func TestRecord_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	memStorage := object.NewRecordMemory()
-	dbStorage := object.NewRecordDB(store.NewMemoryMockDB())
 
 	type tempRecord struct {
 		id  insolar.ID
@@ -54,6 +55,16 @@ func TestRecord_Components(t *testing.T) {
 
 	t.Run("saves correct record", func(t *testing.T) {
 		t.Parallel()
+
+		memStorage := object.NewRecordMemory()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		dbStorage := object.NewRecordDB(db)
 
 		for _, r := range records {
 			memErr := memStorage.Set(ctx, r.id, r.rec)
@@ -75,6 +86,15 @@ func TestRecord_Components(t *testing.T) {
 
 	t.Run("returns error when no record for id", func(t *testing.T) {
 		t.Parallel()
+		memStorage := object.NewRecordMemory()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		dbStorage := object.NewRecordDB(db)
 
 		for i := int32(0); i < rand.Int31n(10); i++ {
 			_, memErr := memStorage.ForID(ctx, gen.ID())
@@ -90,7 +110,13 @@ func TestRecord_Components(t *testing.T) {
 		t.Parallel()
 
 		memStorage := object.NewRecordMemory()
-		dbStorage := object.NewRecordDB(store.NewMemoryMockDB())
+		tmpdir1, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir1)
+		require.NoError(t, err)
+
+		db1, err := store.NewBadgerDB(tmpdir1)
+		defer db1.Stop(context.Background())
+		dbStorage := object.NewRecordDB(db1)
 
 		for _, r := range records {
 			memErr := memStorage.Set(ctx, r.id, r.rec)

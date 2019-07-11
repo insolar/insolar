@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package handle
+package handle_test
 
 import (
 	"context"
@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +41,7 @@ func TestSetResult_BadMsgPayload(t *testing.T) {
 		Payload: []byte{1, 2, 3, 4, 5},
 	}
 
-	handler := NewSetResult(nil, msg, false)
+	handler := handle.NewSetResult(nil, msg, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
 	require.Error(t, err)
@@ -74,7 +75,7 @@ func TestSetResult_BadWrappedVirtualRecord(t *testing.T) {
 		Payload: buf,
 	}
 
-	handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
@@ -118,7 +119,7 @@ func TestSetResult_IncorrectRecordInVirtual(t *testing.T) {
 		Payload: resultBuf,
 	}
 
-	handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
@@ -162,7 +163,7 @@ func TestSetResult_EmptyResultObject(t *testing.T) {
 		Payload: resultBuf,
 	}
 
-	handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	assert.EqualError(t, err, "object is nil")
@@ -191,7 +192,7 @@ func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "something strange from checkjet")
 	})
@@ -210,7 +211,7 @@ func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -229,7 +230,7 @@ func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := NewSetResult(proc.NewDependenciesMock(), msg, true)
+		handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, true)
 		err := handler.Present(ctx, f)
 		require.Error(t, err)
 		assert.Equal(t, proc.ErrNotExecutor, err)
@@ -261,7 +262,7 @@ func TestSetResult_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from waithot")
 	})
@@ -286,7 +287,7 @@ func TestSetResult_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -319,7 +320,7 @@ func TestSetResult_ErrorFromGetIndex(t *testing.T) {
 			}
 		})
 
-		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "can't get index: error from getindex")
 	})
@@ -344,7 +345,7 @@ func TestSetResult_ErrorFromGetIndex(t *testing.T) {
 			}
 		})
 
-		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -379,7 +380,7 @@ func TestSetResult_ErrorFromSetResult(t *testing.T) {
 			}
 		})
 
-		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from setresult")
 	})
@@ -404,7 +405,7 @@ func TestSetResult_ErrorFromSetResult(t *testing.T) {
 			}
 		})
 
-		handler := NewSetResult(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})

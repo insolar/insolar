@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
@@ -51,6 +52,9 @@ const (
 
 	// MetaTraceID is key for traceID
 	MetaTraceID = "TraceID"
+
+	// MetaSpanData is key for a span data
+	MetaSpanData = "SpanData"
 )
 
 const (
@@ -154,20 +158,32 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	handleError := func(err error) (<-chan *message.Message, func()) {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
+		res := make(chan *message.Message)
+		close(res)
+		return res, func() {}
+	}
 	logger := inslogger.FromContext(ctx)
 
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+
+	sp, err := instracer.Serialize(ctx)
+	if err == nil {
+		msg.Metadata.Set(MetaSpanData, string(sp))
+	} else {
+		logger.Error(err)
+	}
+
 	msg.SetContext(ctx)
 	wrapped, err := b.wrapMeta(msg, target, payload.MessageHash{})
 	if err != nil {
-		logger.Error("can't wrap meta message ", err.Error())
-		return nil, nil
+		return handleError(errors.Wrap(err, "can't wrap meta message"))
 	}
 	msgHash := payload.MessageHash{}
 	err = msgHash.Unmarshal(wrapped.ID)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
-		return nil, nil
+		return handleError(errors.Wrap(err, "failed to unmarshal hash"))
 	}
 
 	reply := &lockedReply{
@@ -186,9 +202,8 @@ func (b *Bus) SendTarget(
 	logger.Debugf("sending message %s", msgHash.String())
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
-		logger.Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 		done()
-		return nil, nil
+		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
 
 	go func() {
@@ -231,6 +246,14 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	replyHash := wrapped.ID
 
 	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+
+	sp, err := instracer.Serialize(ctx)
+	if err == nil {
+		reply.Metadata.Set(MetaSpanData, string(sp))
+	} else {
+		logger.Error(err)
+	}
+
 	reply.SetContext(ctx)
 
 	logger.Debugf("sending reply %s", base58.Encode(replyHash))
