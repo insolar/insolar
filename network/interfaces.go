@@ -126,11 +126,16 @@ type Packet interface {
 	String() string
 }
 
+type ReceivedPacket interface {
+	Packet
+	Bytes() []byte
+}
+
 // Future allows to handle responses to a previously sent request.
 type Future interface {
 	Request() Packet
-	Response() <-chan Packet
-	WaitResponse(duration time.Duration) (Packet, error)
+	Response() <-chan ReceivedPacket
+	WaitResponse(duration time.Duration) (ReceivedPacket, error)
 	Cancel()
 }
 

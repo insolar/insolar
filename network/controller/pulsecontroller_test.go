@@ -181,12 +181,12 @@ func randomEntropy() [64]byte {
 	return buf
 }
 
-func newPulsePacket(t *testing.T) *packet.Packet {
+func newPulsePacket(t *testing.T) *packet.ReceivedPacket {
 	sender, err := host.NewHostN("127.0.0.1:3344", insolar.Reference{0})
 	require.NoError(t, err)
 	receiver, err := host.NewHostN("127.0.0.1:3345", insolar.Reference{1})
 	require.NoError(t, err)
-	return packet.NewPacket(sender, receiver, types.Pulse, 1)
+	return packet.NewReceivedPacket(packet.NewPacket(sender, receiver, types.Pulse, 1), nil)
 }
 
 func TestProcessIncorrectPacket(t *testing.T) {

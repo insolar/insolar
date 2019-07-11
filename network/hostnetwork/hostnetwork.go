@@ -174,7 +174,7 @@ func (hn *hostNetwork) PublicAddress() string {
 	return hn.getOrigin().Address.String()
 }
 
-func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.Packet) {
+func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPacket) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Got %s request from host %s; RequestID = %d", p.GetType(), p.Sender, p.RequestID)
 	handler, exist := hn.handlers[p.GetType()]
