@@ -253,17 +253,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
-	meta := payload.Meta{}
-	err := meta.Unmarshal(s.message.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal meta")
-	}
-	errMsg, err := payload.NewMessage(&payload.Error{Text: "flow cancelled: Incorrect message pulse, get message from past on light node", Code: uint32(payload.CodeFlowCanceled)})
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
-	}
-	go s.sender.Reply(ctx, meta, errMsg)
-	return nil
+	return s.Present(ctx, f)
 }
 
 func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) {

@@ -119,17 +119,26 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
-	meta := payload.Meta{}
-	err := meta.Unmarshal(s.Message.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal meta")
+	msgType := s.Message.Metadata.Get(bus.MetaType)
+
+	if msgType == insolar.TypeCallMethod.String() {
+		meta := payload.Meta{}
+		err := meta.Unmarshal(s.Message.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal meta")
+		}
+
+		errMsg, err := payload.NewMessage(&payload.Error{Text: "flow cancelled: Incorrect message pulse, get message from past on virtual node", Code: uint32(payload.CodeFlowCanceled)})
+		if err != nil {
+			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
+		}
+
+		go s.dep.Sender.Reply(ctx, meta, errMsg)
+
+		return nil
 	}
-	errMsg, err := payload.NewMessage(&payload.Error{Text: "flow cancelled: Incorrect message pulse, get message from past on virtual node", Code: uint32(payload.CodeFlowCanceled)})
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
-	}
-	go s.dep.Sender.Reply(ctx, meta, errMsg)
-	return nil
+
+	return s.Present(ctx, f)
 }
 
 type InnerInit struct {

@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -150,9 +149,8 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 	if err != nil {
 		h.replyError(ctx, meta, errors.Wrap(err, "error while handle parcel"))
 	} else {
-		resInBytes := reply.ToBytes(rep)
-		resAsMsg := watermillMsg.NewMessage(watermill.NewUUID(), resInBytes)
-		go h.Sender.Reply(ctx, meta, resAsMsg)
+		resAsMsg := bus.ReplyAsMessage(ctx, rep)
+		h.Sender.Reply(ctx, meta, resAsMsg)
 	}
 	return err
 }

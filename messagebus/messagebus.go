@@ -49,10 +49,7 @@ import (
 const deliverRPCMethodName = "MessageBus.Deliver"
 
 var transferredToWatermill = map[insolar.MessageType]struct{}{
-	insolar.TypeGetObject:                          {},
-	insolar.TypeSetRecord:                          {},
 	insolar.TypeSetBlob:                            {},
-	insolar.TypeGetCode:                            {},
 	insolar.TypeGetChildren:                        {},
 	insolar.TypeGetRequest:                         {},
 	insolar.TypeUpdateObject:                       {},
@@ -256,7 +253,6 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload to reply")
 		}
-		fmt.Println("lol kek love, ", rep.Type())
 		return rep, nil
 	}
 
