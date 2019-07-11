@@ -1271,7 +1271,7 @@ func (r *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef inso
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1300,7 +1300,7 @@ func (r *RootDomain) AddNewMemberToPublicKeyMapNoWait(publicKey string, memberRe
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1325,7 +1325,7 @@ func (r *RootDomain) AddNewMemberToPublicKeyMapAsImmutable(publicKey string, mem
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
