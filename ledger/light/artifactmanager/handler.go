@@ -195,18 +195,6 @@ func NewMessageHandler(
 		GetRequest: func(p *proc.GetRequest) {
 			p.Dep.RecordAccessor = h.Records
 		},
-		UpdateObject: func(p *proc.UpdateObject) {
-			p.Dep.RecordModifier = h.Records
-			p.Dep.Bus = h.Bus
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PCS = h.PCS
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.WriteAccessor = h.WriteAccessor
-			p.Dep.Filaments = h.filamentModifier
-		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.IndexLocker = h.IndexLocker
 			p.Dep.IndexAccessor = h.IndexStorage
