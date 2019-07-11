@@ -141,7 +141,6 @@ type SecretKeyStore interface {
 type SignatureVerifier interface {
 	IsDigestMethodSupported(m DigestMethod) bool
 	IsSignMethodSupported(m SignMethod) bool
-	IsDigestOfSignatureMethodSupported(m SignatureMethod) bool
 	IsSignOfSignatureMethodSupported(m SignatureMethod) bool
 
 	IsValidDigestSignature(digest DigestHolder, signature SignatureHolder) bool
@@ -189,6 +188,14 @@ func (d DigestMethod) SignedBy(s SignMethod) SignatureMethod {
 	return SignatureMethod(string(d) + "/" + string(s))
 }
 
+func (d DigestMethod) String() string {
+	return string(d)
+}
+
+func (s SignMethod) String() string {
+	return string(s)
+}
+
 func (s SignatureMethod) DigestMethod() DigestMethod {
 	parts := strings.Split(string(s), "/")
 	if len(parts) != 2 {
@@ -203,6 +210,10 @@ func (s SignatureMethod) SignMethod() SignMethod {
 		return ""
 	}
 	return SignMethod(parts[1])
+}
+
+func (s SignatureMethod) String() string {
+	return string(s)
 }
 
 type hFoldReader FoldableReader
