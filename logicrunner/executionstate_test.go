@@ -69,14 +69,14 @@ func newExecutionBroker(
 	}
 
 	objectRef := gen.Reference()
-	es, broker := lr.StateStorage.UpsertExecutionState(objectRef)
+	broker := lr.StateStorage.UpsertExecutionState(objectRef)
 
 	InitBroker(t, ctx, count, broker, true)
 	if list != nil {
 		broker.currentList = list
 	}
 	if pending != nil {
-		es.pending = *pending
+		broker.executionState.pending = *pending
 	}
 
 	return broker
@@ -160,7 +160,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 			messages := test.broker.OnPulse(ctx, test.meNext)
 			require.Equal(t, test.numberOfMessages, len(messages))
 			if test.checkES != nil {
-				test.checkES(t, test.broker.executionState, test.broker)
+				test.checkES(t, &test.broker.executionState, test.broker)
 			}
 		})
 	}

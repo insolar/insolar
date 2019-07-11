@@ -19,17 +19,11 @@ package logicrunner
 import (
 	"sync"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 type ExecutionState struct {
 	sync.Mutex
-
-	Ref Ref // Object reference
-
-	ObjectDescriptor artifacts.ObjectDescriptor
 
 	LedgerHasMoreRequests bool
 	getLedgerPendingMutex sync.Mutex
@@ -40,9 +34,8 @@ type ExecutionState struct {
 	HasPendingCheckMutex sync.Mutex
 }
 
-func NewExecutionState(ref insolar.Reference) *ExecutionState {
+func NewExecutionState() *ExecutionState {
 	es := &ExecutionState{
-		Ref:     ref,
 		pending: message.PendingUnknown,
 	}
 

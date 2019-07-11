@@ -58,7 +58,6 @@ type ObjectState struct {
 	sync.Mutex
 
 	ExecutionBroker *ExecutionBroker
-	ExecutionState  *ExecutionState
 	Validation      *ExecutionState
 }
 
@@ -335,13 +334,13 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	es, broker := lr.StateStorage.GetExecutionState(*request.Object)
+	broker := lr.StateStorage.GetExecutionState(*request.Object)
 	if broker == nil {
 		return false
 	}
 
-	es.Lock()
-	defer es.Unlock()
+	broker.executionState.Lock()
+	defer broker.executionState.Unlock()
 
 	if broker.currentList.Empty() {
 		return false
@@ -373,27 +372,26 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 		)
 		state.Lock()
 
-		if es := state.ExecutionState; es != nil {
-			es.Lock()
+		if broker := state.ExecutionBroker; broker != nil {
+			broker.executionState.Lock()
 
 			toSend := state.ExecutionBroker.OnPulse(ctx, meNext)
 			messages = append(messages, toSend...)
 
 			if !meNext && state.ExecutionBroker.currentList.Empty() {
 				// we're not executing and we have nothing to process
-				state.ExecutionState = nil
 				state.ExecutionBroker = nil
-			} else if meNext && es.pending == message.NotPending {
+			} else if meNext && broker.executionState.pending == message.NotPending {
 				// we're executing, micro optimization, check pending
 				// status, reset ledger check status and start execution
 				state.ExecutionBroker.ResetLedgerCheck()
 				state.ExecutionBroker.StartProcessorIfNeeded(ctx)
 			}
 
-			es.Unlock()
+			broker.executionState.Unlock()
 		}
 
-		if state.Validation == nil && state.ExecutionState == nil {
+		if state.Validation == nil && state.ExecutionBroker == nil {
 			lr.StateStorage.DeleteObjectState(ref)
 		}
 

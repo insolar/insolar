@@ -40,7 +40,6 @@ type HandleCall struct {
 
 func (h *HandleCall) sendToNextExecutor(
 	ctx context.Context,
-	es *ExecutionState,
 	broker *ExecutionBroker,
 	requestRef *Ref,
 ) {
@@ -61,24 +60,24 @@ func (h *HandleCall) sendToNextExecutor(
 
 	logger := inslogger.FromContext(ctx)
 
-	es.Lock()
+	broker.executionState.Lock()
 	// We want to remove element we have just added to es.Queue to eliminate doubling
 	transcript := broker.GetByReference(ctx, requestRef)
-	es.Unlock()
+	broker.executionState.Unlock()
 
 	// it might be already collected in OnPulse, that is why it already might not be in es.Queue
 	if transcript != nil {
 		logger.Debug("Sending additional request to next executor")
 		additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
-			ObjectReference: es.Ref,
+			ObjectReference: broker.Ref,
 			RequestRef:      *requestRef,
 			Request:         *transcript.Request,
 			ServiceData:     serviceDataFromContext(transcript.Context),
 		}
-		if es.pending == message.PendingUnknown {
+		if broker.executionState.pending == message.PendingUnknown {
 			additionalCallMsg.Pending = message.NotPending
 		} else {
-			additionalCallMsg.Pending = es.pending
+			additionalCallMsg.Pending = broker.executionState.pending
 		}
 
 		if _, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil); err != nil {
@@ -136,21 +135,21 @@ func (h *HandleCall) handleActual(
 		return nil, errors.New("can't get object reference")
 	}
 
-	es, broker := lr.StateStorage.UpsertExecutionState(*objRef)
+	broker := lr.StateStorage.UpsertExecutionState(*objRef)
 
-	es.Lock()
+	broker.executionState.Lock()
 	broker.Put(ctx, false, NewTranscript(ctx, *requestRef, request))
-	es.Unlock()
+	broker.executionState.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
-		es:              es,
+		broker:          broker,
 		request:         &request,
 		ArtifactManager: lr.ArtifactManager,
 	}
 
 	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
 		if err == flow.ErrCancelled {
-			h.sendToNextExecutor(ctx, es, broker, requestRef)
+			h.sendToNextExecutor(ctx, broker, requestRef)
 		} else {
 			inslogger.FromContext(ctx).Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
 		}
@@ -207,18 +206,18 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	f flow.Flow,
 ) {
 	lr := h.dep.lr
-	es, broker := lr.StateStorage.UpsertExecutionState(msg.ObjectReference)
+	broker := lr.StateStorage.UpsertExecutionState(msg.ObjectReference)
 
-	es.Lock()
+	broker.executionState.Lock()
 	if msg.Pending == message.NotPending {
-		es.pending = message.NotPending
+		broker.executionState.pending = message.NotPending
 	}
 
 	broker.Put(ctx, false, NewTranscript(ctx, msg.RequestRef, msg.Request))
-	es.Unlock()
+	broker.executionState.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
-		es:              es,
+		broker:          broker,
 		request:         &msg.Request,
 		ArtifactManager: lr.ArtifactManager,
 	}

@@ -35,7 +35,6 @@ type initializeExecutionState struct {
 	msg *message.ExecutorResults
 
 	Result struct {
-		es             *ExecutionState
 		broker         *ExecutionBroker
 		clarifyPending bool
 	}
@@ -45,8 +44,9 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	ref := p.msg.GetReference()
 
-	es, broker := p.LR.StateStorage.UpsertExecutionState(ref)
-	p.Result.es = es
+	broker := p.LR.StateStorage.UpsertExecutionState(ref)
+	es := &broker.executionState
+
 	p.Result.broker = broker
 
 	p.Result.clarifyPending = false
@@ -120,7 +120,7 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 
 	if procInitializeExecutionState.Result.clarifyPending {
 		procClarifyPending := ClarifyPendingState{
-			es:              procInitializeExecutionState.Result.es,
+			broker:          procInitializeExecutionState.Result.broker,
 			ArtifactManager: h.dep.lr.ArtifactManager,
 		}
 
