@@ -162,7 +162,7 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	vectorHelper := c.R.GetPopulation().SetOrUpdateVectorHelper(&core.RealmVectorHelper{})
 	localVector := nodeset.NewLocalNodeVector(c.R.GetDigestFactory(), vectorHelper)
 
-	d0 := c.calcGshPairNew(&localVector)
+	d0 := c.calcLocalVector(&localVector)
 
 	go c.workerSendPhase3(ctx, d0.HashedNodeVector)
 
@@ -284,7 +284,7 @@ outer:
 	return true
 }
 
-func (c *Phase3Controller) calcGshPairNew(localVector *nodeset.NodeVectorHelper) nodeset.LocalHashedNodeVector {
+func (c *Phase3Controller) calcLocalVector(localVector *nodeset.NodeVectorHelper) nodeset.LocalHashedNodeVector {
 
 	/*
 		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always

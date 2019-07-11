@@ -62,32 +62,32 @@ func lessTestFn(v1 interface{}, v2 interface{}) bool {
 
 func TestNewHeadedLazySortedList(t *testing.T) {
 	hl := NewHeadedLazySortedList(1, lessTestFn, -1)
-	require.Equal(t, len(hl.data.data), 0)
+	require.Equal(t, 0, len(hl.data.data))
 
-	require.Equal(t, cap(hl.data.data), 2)
+	require.Equal(t, 2, cap(hl.data.data))
 
 	hl = NewHeadedLazySortedList(1, lessTestFn, 0)
-	require.Equal(t, cap(hl.data.data), 2)
+	require.Equal(t, 2, cap(hl.data.data))
 
 	hl = NewHeadedLazySortedList(3, lessTestFn, 1)
-	require.Equal(t, cap(hl.data.data), 3)
+	require.Equal(t, 3, cap(hl.data.data))
 
 	hl = NewHeadedLazySortedList(1, lessTestFn, 3)
-	require.Equal(t, cap(hl.data.data), 3)
+	require.Equal(t, 3, cap(hl.data.data))
 }
 
 func TestInnerLen(t *testing.T) {
 	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
 	inl.Add(1)
 
-	require.Equal(t, inl.Len(), 1)
+	require.Equal(t, 1, inl.Len())
 }
 
 func TestInnerLess(t *testing.T) {
 	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
 	inl.Add(1)
 	inl.Add(2)
-	require.Equal(t, inl.Less(0, 1), lessTestFn(0, 1))
+	require.Equal(t, lessTestFn(0, 1), inl.Less(0, 1))
 }
 
 func TestInnerSwap(t *testing.T) {
@@ -95,39 +95,39 @@ func TestInnerSwap(t *testing.T) {
 	inl.Add(1)
 	inl.Add(2)
 	inl.Swap(0, 1)
-	require.Equal(t, inl.Get(0), 2)
+	require.Equal(t, 2, inl.Get(0))
 
-	require.Equal(t, inl.Get(1), 1)
+	require.Equal(t, 1, inl.Get(1))
 }
 
 func TestInnerAdd(t *testing.T) {
 	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
 	inl.Add(1)
-	require.Equal(t, inl.Get(0), 1)
+	require.Equal(t, 1, inl.Get(0))
 
-	require.Equal(t, inl.len, 1)
+	require.Equal(t, 1, inl.len)
 
 	inl = innerHeadedLazySortedList{data: make([]interface{}, 2), less: lessTestFn}
 	inl.Add(1)
-	require.Equal(t, inl.Get(0), 1)
+	require.Equal(t, 1, inl.Get(0))
 
-	require.Equal(t, inl.len, 1)
+	require.Equal(t, 1, inl.len)
 
 	inl.Add(3)
-	require.Equal(t, inl.Get(0), 1)
+	require.Equal(t, 1, inl.Get(0))
 
-	require.Equal(t, inl.Get(1), 3)
+	require.Equal(t, 3, inl.Get(1))
 
-	require.Equal(t, inl.len, 2)
+	require.Equal(t, 2, inl.len)
 }
 
 func TestInnerGet(t *testing.T) {
 	inl := innerHeadedLazySortedList{data: make([]interface{}, 0), less: lessTestFn}
 	inl.Add(2)
 	inl.Add(3)
-	require.Equal(t, inl.Get(0), 2)
+	require.Equal(t, 2, inl.Get(0))
 
-	require.Equal(t, inl.Get(1), 3)
+	require.Equal(t, 3, inl.Get(1))
 
 	require.Panics(t, func() { inl.Get(-1) })
 
@@ -136,22 +136,22 @@ func TestInnerGet(t *testing.T) {
 
 func TestLen(t *testing.T) {
 	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
-	require.Equal(t, hl.Len(), 0)
+	require.Equal(t, 0, hl.Len())
 
 	hl.Add(2)
-	require.Equal(t, hl.Len(), 1)
+	require.Equal(t, 1, hl.Len())
 
 	hl.Add(3)
-	require.Equal(t, hl.Len(), 2)
+	require.Equal(t, 2, hl.Len())
 }
 
 func TestGet(t *testing.T) {
 	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
 	hl.Add(2)
 	hl.Add(3)
-	require.Equal(t, hl.Get(0), 2)
+	require.Equal(t, 2, hl.Get(0))
 
-	require.Equal(t, hl.Get(1), 3)
+	require.Equal(t, 3, hl.Get(1))
 
 	require.Panics(t, func() { hl.Get(-1) })
 
@@ -161,43 +161,43 @@ func TestGet(t *testing.T) {
 func TestAdd(t *testing.T) {
 	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
 	hl.Add(1)
-	require.Equal(t, hl.sorted, Sorted)
+	require.Equal(t, Sorted, hl.sorted)
 
 	hl.Add(2)
-	require.Equal(t, hl.sorted, UnsortedTail)
+	require.Equal(t, UnsortedTail, hl.sorted)
 
 	hl.Add(0)
-	require.Equal(t, hl.sorted, UnsortedTail)
+	require.Equal(t, UnsortedTail, hl.sorted)
 
 	hl = NewHeadedLazySortedList(2, lessTestFn, 2)
 	hl.Add(1)
 	hl.sorted = UnsortedAll
 	hl.Add(2)
-	require.Equal(t, hl.sorted, Sorted)
+	require.Equal(t, Sorted, hl.sorted)
 
 	hl.Add(1)
-	require.Equal(t, hl.sorted, Sorted)
+	require.Equal(t, Sorted, hl.sorted)
 
 	hl = NewHeadedLazySortedList(4, lessTestFn, 3)
 	hl.Add(1)
 	hl.Add(2)
-	require.Equal(t, hl.sorted, UnsortedAll)
+	require.Equal(t, UnsortedAll, hl.sorted)
 
 	hl.Add(1)
-	require.Equal(t, hl.sorted, UnsortedAll)
+	require.Equal(t, UnsortedAll, hl.sorted)
 }
 
 func TestSortAll(t *testing.T) {
 	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
 	hl.Add(2)
 	hl.SortAll()
-	require.Equal(t, hl.sorted, Sorted)
+	require.Equal(t, Sorted, hl.sorted)
 
 	hl.Add(3)
-	require.Equal(t, hl.sorted, UnsortedTail)
+	require.Equal(t, UnsortedTail, hl.sorted)
 
 	hl.SortAll()
-	require.Equal(t, hl.sorted, Sorted)
+	require.Equal(t, Sorted, hl.sorted)
 }
 
 // TODO Tests

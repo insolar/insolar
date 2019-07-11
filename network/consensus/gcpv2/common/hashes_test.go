@@ -61,19 +61,19 @@ import (
 func TestNewNodeStateHashEvidence(t *testing.T) {
 	sd := common.NewSignedDigest(common.Digest{}, common.Signature{})
 	sh := NewNodeStateHashEvidence(sd)
-	require.Equal(t, sh.(*nodeStateHashEvidence).SignedDigest, sd)
+	require.Equal(t, sd, sh.(*nodeStateHashEvidence).SignedDigest)
 }
 
 func TestGetNodeStateHash(t *testing.T) {
 	fr := common.NewFoldableReaderMock(t)
 	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
 	sh := NewNodeStateHashEvidence(sd)
-	require.Equal(t, sh.GetNodeStateHash().GetDigestMethod(), sd.GetDigest().AsDigestHolder().GetDigestMethod())
+	require.Equal(t, sd.GetDigest().AsDigestHolder().GetDigestMethod(), sh.GetNodeStateHash().GetDigestMethod())
 }
 
 func TestGetGlobulaNodeStateSignature(t *testing.T) {
 	fr := common.NewFoldableReaderMock(t)
 	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
 	sh := NewNodeStateHashEvidence(sd)
-	require.Equal(t, sh.GetGlobulaNodeStateSignature().GetSignatureMethod(), sd.GetSignature().AsSignatureHolder().GetSignatureMethod())
+	require.Equal(t, sd.GetSignature().AsSignatureHolder().GetSignatureMethod(), sh.GetGlobulaNodeStateSignature().GetSignatureMethod())
 }

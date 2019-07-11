@@ -57,19 +57,19 @@ import (
 )
 
 func TestGetPower(t *testing.T) {
-	require.Equal(t, MembershipRank(1).GetPower(), MemberPower(1))
+	require.Equal(t, MemberPower(1), MembershipRank(1).GetPower())
 }
 
 func TestGetIndex(t *testing.T) {
-	require.Equal(t, MembershipRank((1<<8)-1).GetIndex(), uint16(0))
+	require.Equal(t, uint16(0), MembershipRank((1<<8)-1).GetIndex())
 
-	require.Equal(t, MembershipRank(1<<8).GetIndex(), uint16(1))
+	require.Equal(t, uint16(1), MembershipRank(1<<8).GetIndex())
 }
 
 func TestGetTotalCount(t *testing.T) {
-	require.Equal(t, MembershipRank((1<<18)-1).GetTotalCount(), uint16(0))
+	require.Equal(t, uint16(0), MembershipRank((1<<18)-1).GetTotalCount())
 
-	require.Equal(t, MembershipRank(1<<18).GetTotalCount(), uint16(1))
+	require.Equal(t, uint16(1), MembershipRank(1<<18).GetTotalCount())
 }
 
 func TestIsJoiner(t *testing.T) {
@@ -80,9 +80,9 @@ func TestIsJoiner(t *testing.T) {
 
 func TestString(t *testing.T) {
 	joiner := "{joiner}"
-	require.Equal(t, JoinerMembershipRank.String(), joiner)
+	require.Equal(t, joiner, JoinerMembershipRank.String())
 
-	require.NotEqual(t, MembershipRank(1).String(), joiner)
+	require.NotEqual(t, joiner, MembershipRank(1).String())
 }
 
 func TestNewMembershipRank(t *testing.T) {
@@ -100,5 +100,5 @@ func TestNewMembershipRank(t *testing.T) {
 func TestEnsureNodeIndex(t *testing.T) {
 	require.Panics(t, func() { ensureNodeIndex(0x03FF + 1) })
 
-	require.Equal(t, ensureNodeIndex(2), uint32(2))
+	require.Equal(t, uint32(2), ensureNodeIndex(2))
 }

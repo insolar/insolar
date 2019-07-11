@@ -73,31 +73,31 @@ func TestIsSecret(t *testing.T) {
 func TestSignedBy(t *testing.T) {
 	td := "testDigest"
 	ts := "testSign"
-	require.Equal(t, DigestMethod(td).SignedBy(SignMethod(ts)), SignatureMethod(strings.Join([]string{td, ts}, "/")))
+	require.Equal(t, SignatureMethod(strings.Join([]string{td, ts}, "/")), DigestMethod(td).SignedBy(SignMethod(ts)))
 }
 
 func TestDigestMethod(t *testing.T) {
 	td := "testDigest"
 	ts := "testSign"
 	sep := "/"
-	require.Equal(t, SignatureMethod(strings.Join([]string{td, ts}, sep)).DigestMethod(), DigestMethod(td))
+	require.Equal(t, DigestMethod(td), SignatureMethod(strings.Join([]string{td, ts}, sep)).DigestMethod())
 
 	emptyDigMeth := DigestMethod("")
-	require.Equal(t, SignatureMethod("testSignature").DigestMethod(), emptyDigMeth)
+	require.Equal(t, emptyDigMeth, SignatureMethod("testSignature").DigestMethod())
 
-	require.Equal(t, SignatureMethod(strings.Join([]string{td, ts, "test"}, sep)).DigestMethod(), emptyDigMeth)
+	require.Equal(t, emptyDigMeth, SignatureMethod(strings.Join([]string{td, ts, "test"}, sep)).DigestMethod())
 }
 
 func TestSignMethod(t *testing.T) {
 	td := "testDigest"
 	ts := "testSign"
 	sep := "/"
-	require.Equal(t, SignatureMethod(strings.Join([]string{td, ts}, sep)).SignMethod(), SignMethod(ts))
+	require.Equal(t, SignMethod(ts), SignatureMethod(strings.Join([]string{td, ts}, sep)).SignMethod())
 
 	emptySignMeth := SignMethod("")
-	require.Equal(t, SignatureMethod("testSignature").SignMethod(), emptySignMeth)
+	require.Equal(t, emptySignMeth, SignatureMethod("testSignature").SignMethod())
 
-	require.Equal(t, SignatureMethod(strings.Join([]string{td, ts, "test"}, sep)).SignMethod(), emptySignMeth)
+	require.Equal(t, emptySignMeth, SignatureMethod(strings.Join([]string{td, ts, "test"}, sep)).SignMethod())
 }
 
 func TestCopyOfDigest(t *testing.T) {
@@ -107,7 +107,7 @@ func TestCopyOfDigest(t *testing.T) {
 	fd.ReadMock.Set(func(p []byte) (n int, err error) { return 0, nil })
 	d.hFoldReader = fd
 	cd := d.CopyOfDigest()
-	require.Equal(t, d.digestMethod, cd.digestMethod)
+	require.Equal(t, cd.digestMethod, d.digestMethod)
 }
 
 func TestDigestEquals(t *testing.T) {
@@ -131,16 +131,16 @@ func TestDigestEquals(t *testing.T) {
 func TestAsDigestHolder(t *testing.T) {
 	d := Digest{digestMethod: "test"}
 	dh := d.AsDigestHolder()
-	require.Equal(t, d.digestMethod, dh.GetDigestMethod())
+	require.Equal(t, dh.GetDigestMethod(), d.digestMethod)
 }
 
 func TestNewDigest(t *testing.T) {
 	fd := NewFoldableReaderMock(t)
 	method := DigestMethod("test")
 	d := NewDigest(fd, method)
-	require.Equal(t, d.hFoldReader, fd)
+	require.Equal(t, fd, d.hFoldReader)
 
-	require.Equal(t, d.digestMethod, method)
+	require.Equal(t, method, d.digestMethod)
 }
 
 func TestSignWith(t *testing.T) {
@@ -149,7 +149,7 @@ func TestSignWith(t *testing.T) {
 	ds.SignDigestMock.Set(func(Digest) Signature { return Signature{signatureMethod: sm} })
 	d := &Digest{}
 	sd := d.SignWith(ds)
-	require.Equal(t, sd.GetSignatureMethod(), sm)
+	require.Equal(t, sm, sd.GetSignatureMethod())
 }
 
 func TestDigestString(t *testing.T) {
@@ -163,16 +163,16 @@ func TestCopyOfSignature(t *testing.T) {
 	fd.ReadMock.Set(func(p []byte) (n int, err error) { return 0, nil })
 	s.hFoldReader = fd
 	cs := s.CopyOfSignature()
-	require.Equal(t, s.signatureMethod, cs.signatureMethod)
+	require.Equal(t, cs.signatureMethod, s.signatureMethod)
 }
 
 func TestNewSignature(t *testing.T) {
 	fd := NewFoldableReaderMock(t)
 	method := SignatureMethod("test")
 	s := NewSignature(fd, method)
-	require.Equal(t, s.hFoldReader, fd)
+	require.Equal(t, fd, s.hFoldReader)
 
-	require.Equal(t, s.signatureMethod, method)
+	require.Equal(t, method, s.signatureMethod)
 }
 
 func TestSignatureEquals(t *testing.T) {
@@ -196,13 +196,13 @@ func TestSignatureEquals(t *testing.T) {
 func TestSignGetSignatureMethod(t *testing.T) {
 	ts := SignatureMethod("test")
 	signature := NewSignature(nil, ts)
-	require.Equal(t, signature.GetSignatureMethod(), ts)
+	require.Equal(t, ts, signature.GetSignatureMethod())
 }
 
 func TestAsSignatureHolder(t *testing.T) {
 	s := Signature{signatureMethod: "test"}
 	sh := s.AsSignatureHolder()
-	require.Equal(t, s.signatureMethod, sh.GetSignatureMethod())
+	require.Equal(t, sh.GetSignatureMethod(), s.signatureMethod)
 }
 
 func TestSignatureString(t *testing.T) {
@@ -213,9 +213,9 @@ func TestNewSignedDigest(t *testing.T) {
 	d := Digest{digestMethod: "testDigest"}
 	s := Signature{signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
-	require.Equal(t, sd.digest.digestMethod, d.digestMethod)
+	require.Equal(t, d.digestMethod, sd.digest.digestMethod)
 
-	require.Equal(t, sd.GetSignatureMethod(), s.signatureMethod)
+	require.Equal(t, s.signatureMethod, sd.GetSignatureMethod())
 }
 
 func TestCopyOfSignedDigest(t *testing.T) {
@@ -232,9 +232,9 @@ func TestCopyOfSignedDigest(t *testing.T) {
 	s.hFoldReader = fd2
 	sd := NewSignedDigest(d, s)
 	sdc := sd.CopyOfSignedDigest()
-	require.Equal(t, sd.digest.digestMethod, sdc.digest.digestMethod)
+	require.Equal(t, sdc.digest.digestMethod, sd.digest.digestMethod)
 
-	require.Equal(t, sd.GetSignatureMethod(), sdc.GetSignatureMethod())
+	require.Equal(t, sdc.GetSignatureMethod(), sd.GetSignatureMethod())
 }
 
 func TestSignedDigestEquals(t *testing.T) {
@@ -258,9 +258,9 @@ func TestGetDigest(t *testing.T) {
 	d := Digest{hFoldReader: fd, digestMethod: "test"}
 	s := Signature{}
 	sd := NewSignedDigest(d, s)
-	require.Equal(t, sd.GetDigest().hFoldReader, fd)
+	require.Equal(t, fd, sd.GetDigest().hFoldReader)
 
-	require.Equal(t, sd.GetDigest().digestMethod, d.digestMethod)
+	require.Equal(t, d.digestMethod, sd.GetDigest().digestMethod)
 }
 
 func TestGetSignature(t *testing.T) {
@@ -268,22 +268,22 @@ func TestGetSignature(t *testing.T) {
 	d := Digest{}
 	s := Signature{hFoldReader: fd, signatureMethod: "test"}
 	sd := NewSignedDigest(d, s)
-	require.Equal(t, sd.GetSignature().hFoldReader, fd)
+	require.Equal(t, fd, sd.GetSignature().hFoldReader)
 
-	require.Equal(t, sd.GetSignature().signatureMethod, s.signatureMethod)
+	require.Equal(t, s.signatureMethod, sd.GetSignature().signatureMethod)
 }
 
 func TestGetDigestHolder(t *testing.T) {
 	d := Digest{digestMethod: "testDigest"}
 	s := Signature{signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
-	require.Equal(t, sd.GetDigestHolder(), d.AsDigestHolder())
+	require.Equal(t, d.AsDigestHolder(), sd.GetDigestHolder())
 }
 
 func TestSignedDigGetSignatureMethod(t *testing.T) {
 	s := Signature{signatureMethod: "test"}
 	sd := NewSignedDigest(Digest{}, s)
-	require.Equal(t, sd.GetSignatureMethod(), s.signatureMethod)
+	require.Equal(t, s.signatureMethod, sd.GetSignatureMethod())
 }
 
 func TestIsVerifiableBy(t *testing.T) {
@@ -317,11 +317,11 @@ func TestNewSignedData(t *testing.T) {
 	d := Digest{digestMethod: "testDigest"}
 	s := Signature{signatureMethod: "testSignature"}
 	sd := NewSignedData(&bits, d, s)
-	require.Equal(t, sd.hReader, &bits)
+	require.Equal(t, &bits, sd.hReader)
 
-	require.Equal(t, sd.hSignedDigest.digest, d)
+	require.Equal(t, d, sd.hSignedDigest.digest)
 
-	require.Equal(t, sd.hSignedDigest.signature, s)
+	require.Equal(t, s, sd.hSignedDigest.signature)
 }
 
 func TestSignDataByDataSigner(t *testing.T) {
@@ -333,11 +333,11 @@ func TestSignDataByDataSigner(t *testing.T) {
 		return SignedDigest{digest: Digest{digestMethod: td}, signature: Signature{signatureMethod: ts}}
 	})
 	sd := SignDataByDataSigner(&bits, ds)
-	require.Equal(t, sd.hReader, &bits)
+	require.Equal(t, &bits, sd.hReader)
 
-	require.Equal(t, sd.digest.digestMethod, td)
+	require.Equal(t, td, sd.digest.digestMethod)
 
-	require.Equal(t, sd.signature.signatureMethod, ts)
+	require.Equal(t, ts, sd.signature.signatureMethod)
 }
 
 func TestGetSignedDigest(t *testing.T) {
@@ -346,9 +346,9 @@ func TestGetSignedDigest(t *testing.T) {
 	s := Signature{signatureMethod: "testSignature"}
 	sd := NewSignedData(&bits, d, s)
 	signDig := sd.GetSignedDigest()
-	require.Equal(t, signDig.digest, d)
+	require.Equal(t, d, signDig.digest)
 
-	require.Equal(t, signDig.signature, s)
+	require.Equal(t, s, signDig.signature)
 }
 
 func TestWriteTo(t *testing.T) {
@@ -362,9 +362,9 @@ func TestWriteTo(t *testing.T) {
 	sd2 := NewSignedData(&bits1, d, s)
 	wtc.other = &sd2
 	n, err := sd.WriteTo(wtc)
-	require.Equal(t, n, int64(8))
+	require.Equal(t, int64(8), n)
 
-	require.Equal(t, err, nil)
+	require.Equal(t, nil, err)
 }
 
 func TestSignedDataString(t *testing.T) {
@@ -377,9 +377,9 @@ func TestNewSignatureKey(t *testing.T) {
 	ts := SignatureMethod("testSign")
 	kt := PublicAsymmetricKey
 	sk := NewSignatureKey(fd, ts, kt)
-	require.Equal(t, sk.hFoldReader, fd)
+	require.Equal(t, fd, sk.hFoldReader)
 
-	require.Equal(t, sk.signatureMethod, ts)
+	require.Equal(t, ts, sk.signatureMethod)
 
-	require.Equal(t, sk.keyType, kt)
+	require.Equal(t, kt, sk.keyType)
 }

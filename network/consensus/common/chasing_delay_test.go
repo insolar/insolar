@@ -60,7 +60,7 @@ import (
 func TestNewChasingTimer(t *testing.T) {
 	chasingDelay := time.Second
 	ct := NewChasingTimer(chasingDelay)
-	require.Equal(t, ct.chasingDelay, chasingDelay)
+	require.Equal(t, chasingDelay, ct.chasingDelay)
 }
 
 func TestIsEnabled(t *testing.T) {
