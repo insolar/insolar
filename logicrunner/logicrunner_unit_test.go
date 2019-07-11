@@ -1689,8 +1689,5 @@ func (suite *LogicRunnerTestSuite) TestInitializeExecutionState() {
 
 		require.Equal(t, &secondRef, proc.Result.broker.mutable.first.value.RequestRef)
 		require.Equal(t, &firstRef, proc.Result.broker.mutable.last.value.RequestRef)
-
-
 	})
-
 }
