@@ -72,7 +72,7 @@ type NodeIntroduction struct {
 
 func NewNodeIntroduction(networkNode insolar.NetworkNode) *NodeIntroduction {
 	return newNodeIntroduction(
-		insolar.ShortNodeID(networkNode.ShortID()),
+		networkNode.ShortID(),
 		networkNode.ID(),
 	)
 }
@@ -270,7 +270,7 @@ func NewNetworkNode(profile gcp_types.NodeProfile) insolar.NetworkNode {
 
 	mutableNode := networkNode.(node.MutableNode)
 
-	mutableNode.SetShortID(insolar.ShortNodeID(profile.GetShortNodeID()))
+	mutableNode.SetShortID(profile.GetShortNodeID())
 	mutableNode.SetState(insolar.NodeReady)
 	mutableNode.SetSignature(insolar.SignatureFromBytes(profile.GetAnnouncementSignature().AsBytes()))
 
