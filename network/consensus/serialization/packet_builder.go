@@ -135,6 +135,10 @@ func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProf
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.PulsarPacket.Data = pulsarPacket.AsBytes()
 
+	// TODO: fixed linter :)
+	body.FullSelfIntro.setAddrMode(body.FullSelfIntro.getAddrMode())
+	body.FullSelfIntro.setPrimaryRole(body.FullSelfIntro.getPrimaryRole())
+
 	return p.prepareWrapper(packet)
 }
 
