@@ -15,10 +15,7 @@ type HandleSagaCallAcceptNotification struct {
 }
 
 func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.Flow) error {
+	// work in progress...
 	h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}, Err: nil}
 	return nil
-
-	// AALEKSEEV TODO implement
-	// msg, ok := parcel.Message().(*message.AbandonedRequestsNotification)
-
 }

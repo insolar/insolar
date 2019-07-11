@@ -18,6 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/drop"
 )
 
@@ -439,7 +440,7 @@ func (m *AbandonedRequestsNotification) DefaultTarget() *insolar.Reference {
 type SagaCallAcceptNotification struct {
 	ledgerMessage
 
-	Object insolar.ID // AALEKSEEV TODO place entire OutgoingRequest here
+	outgoingRequest record.OutgoingRequest
 }
 
 // Type implementation of Message interface.
@@ -459,7 +460,7 @@ func (*SagaCallAcceptNotification) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (m *SagaCallAcceptNotification) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(m.Object)
+	return &m.outgoingRequest.Caller
 }
 
 // GetRequest fetches request from ledger.

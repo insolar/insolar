@@ -681,7 +681,7 @@ func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 	}
 }
 
-func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessage() { // AALEKSEEV TODO use this test as template
+func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessage() {
 	suite.T().Skip("we disabled handling of this notification for now")
 
 	objectId := testutils.RandomID()
