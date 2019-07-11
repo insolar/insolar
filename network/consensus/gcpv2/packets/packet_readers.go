@@ -114,7 +114,7 @@ type ExtendedIntroReader interface {
 	GetCloudIntroduction() CloudIntroductionReader
 
 	HasJoinerSecret() bool
-	GetJoinerSecret() cryptography_containers.SignatureHolder
+	GetJoinerSecret() cryptography_containers.DigestHolder
 }
 
 type Phase1PacketReader interface {

@@ -48,17 +48,16 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packets
+package gcp_types
 
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetPower(t *testing.T) {
-	require.Equal(t, MembershipRank(1).GetPower(), gcp_types.MemberPower(1))
+	require.Equal(t, MembershipRank(1).GetPower(), MemberPower(1))
 }
 
 func TestGetIndex(t *testing.T) {
@@ -89,15 +88,15 @@ func TestString(t *testing.T) {
 }
 
 func TestNewMembershipRank(t *testing.T) {
-	require.Panics(t, func() { NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 1, 1) })
+	require.Panics(t, func() { NewMembershipRank(MemberModeNormal, MemberPower(1), 1, 1) })
 
-	require.Panics(t, func() { NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 0x03FF+1, 1) })
+	require.Panics(t, func() { NewMembershipRank(MemberModeNormal, MemberPower(1), 0x03FF+1, 1) })
 
-	require.Panics(t, func() { NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 1, 0x03FF+1) })
+	require.Panics(t, func() { NewMembershipRank(MemberModeNormal, MemberPower(1), 1, 0x03FF+1) })
 
-	require.Panics(t, func() { NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 1, 0x03FF+1) })
+	require.Panics(t, func() { NewMembershipRank(MemberModeNormal, MemberPower(1), 1, 0x03FF+1) })
 
-	require.Equal(t, MembershipRank(0x80101), NewMembershipRank(gcp_types.MemberModeNormal, gcp_types.MemberPower(1), 1, 2))
+	require.Equal(t, MembershipRank(0x80101), NewMembershipRank(MemberModeNormal, MemberPower(1), 1, 2))
 }
 
 func TestEnsureNodeIndex(t *testing.T) {

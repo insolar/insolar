@@ -52,6 +52,7 @@ package serialization
 
 import (
 	"io"
+	"net"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -118,6 +119,10 @@ func (bi *NodeBriefIntro) setAddrMode(addrMode endpoints.NodeEndpointType) {
 	}
 
 	bi.PrimaryRoleAndFlags |= uint8(addrMode) << addrModeShift
+}
+
+func (bi *NodeBriefIntro) setIP(ip net.IP) {
+	bi.PrimaryIPv4 = ip2int(ip)
 }
 
 func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) error {

@@ -246,7 +246,7 @@ func (r *EmuPhase1NetPacket) HasJoinerSecret() bool {
 	return false
 }
 
-func (r *EmuPhase1NetPacket) GetJoinerSecret() cryptography_containers.SignatureHolder {
+func (r *EmuPhase1NetPacket) GetJoinerSecret() cryptography_containers.DigestHolder {
 	panic("implement me")
 }
 
@@ -324,7 +324,7 @@ func (r *EmuPhase2NetPacket) HasJoinerSecret() bool {
 	return false
 }
 
-func (r *EmuPhase2NetPacket) GetJoinerSecret() cryptography_containers.SignatureHolder {
+func (r *EmuPhase2NetPacket) GetJoinerSecret() cryptography_containers.DigestHolder {
 	panic("implement me")
 }
 

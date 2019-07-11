@@ -158,6 +158,16 @@ func (p *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProf
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.Vectors.StateVectorMask.SetBitset(vectors.Bitset)
 
+	copy(body.Vectors.MainStateVector.VectorHash[:], vectors.TrustedAnnouncementVector.AsBytes())
+	copy(body.Vectors.MainStateVector.SignedGlobulaStateHash[:], vectors.TrustedGlobulaStateVectorSignature.AsBytes())
+	// TODO: set rank
+
+	packet.Header.SetFlag(1)
+	body.Vectors.AdditionalStateVectors = make([]GlobulaStateVector, 1)
+	copy(body.Vectors.AdditionalStateVectors[0].VectorHash[:], vectors.DoubtedAnnouncementVector.AsBytes())
+	copy(body.Vectors.AdditionalStateVectors[0].SignedGlobulaStateHash[:], vectors.DoubtedGlobulaStateVectorSignature.AsBytes())
+	// TODO: set rank
+
 	return p.prepareWrapper(packet)
 }
 

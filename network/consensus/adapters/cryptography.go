@@ -246,6 +246,18 @@ func NewECDSASignatureKeyHolder(publicKey *ecdsa.PublicKey, processor insolar.Ke
 	}
 }
 
+func NewECDSASignatureKeyHolderFromBits(publicKeyBytes long_bits.Bits512, processor insolar.KeyProcessor) *ECDSASignatureKeyHolder {
+	publicKey, err := processor.ImportPublicKeyBinary(publicKeyBytes.AsBytes())
+	if err != nil {
+		panic(err)
+	}
+
+	return &ECDSASignatureKeyHolder{
+		Bits512:   publicKeyBytes,
+		publicKey: publicKey.(*ecdsa.PublicKey),
+	}
+}
+
 func (kh *ECDSASignatureKeyHolder) GetSignMethod() cryptography_containers.SignMethod {
 	return SECP256r1Sign
 }
