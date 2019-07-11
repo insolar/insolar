@@ -110,7 +110,6 @@ type identity struct {
 
 func buildParent(cfg configuration.Replica) (identity, error) {
 	kp := platformpolicy.NewKeyProcessor()
-	inslogger.FromContext(context.Background()).Infof("PARENT_KEY: %v", cfg.ParentPubKey)
 	pubKey, err := kp.ImportPublicKeyPEM([]byte(cfg.ParentPubKey))
 	if err != nil {
 		return identity{}, errors.Wrap(err, "failed to import a public key from PEM")
@@ -155,15 +154,11 @@ func (t *localTarget) pullBatch(scope byte, skip uint32, highest insolar.PulseNu
 	for {
 		at := Position{Skip: skip, Pulse: highest}
 		packet, err := t.parent.Pull(scope, at, defaultBatchSize)
-		logger.Warnf("PULL_BATCH pos: %v err: %v packet: %v", at, err, packet)
 		if err != nil {
 			logger.Error(err)
 			t.trySubscribe(at)
 		}
 		seq := t.validator.UnwrapAndValidate(packet)
-		for _, item := range seq {
-			logger.Warnf("PULL_BATCH scope: %v key: %v", scope, item.Key)
-		}
 		t.Sequencer.Upsert(scope, seq)
 		if len(seq) > 0 {
 			skip += uint32(len(seq))
