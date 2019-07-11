@@ -80,7 +80,7 @@ func TestRouteCallRegistersSaga(t *testing.T) {
 	// Make sure an outgoing request is registered
 	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
 		require.Nil(t, outreq)
-		require.Equal(t, r.ReturnMode, record.ReturnSaga)
+		require.Equal(t, record.ReturnSaga, r.ReturnMode)
 		outreq = r
 		id := outgoingReqID
 		return &id, nil
