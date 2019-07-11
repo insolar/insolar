@@ -24,6 +24,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 
 	"github.com/insolar/insolar/ledger/heavy/replica"
+	"github.com/insolar/insolar/ledger/heavy/sequence"
 	"github.com/insolar/insolar/log"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
@@ -223,10 +224,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	var (
-		PulseManager insolar.PulseManager
-		Handler      *handler.Handler
-		Genesis      *genesis.Genesis
-		Replicator   *replica.Replicator
+		PulseManager    insolar.PulseManager
+		Handler         *handler.Handler
+		Genesis         *genesis.Genesis
+		RecordSequencer sequence.Sequencer
+		Replicator      *replica.Replicator
 	)
 	{
 		records := object.NewRecordDB(DB)
@@ -264,6 +266,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		PulseManager = pm
 		Handler = h
 
+		RecordSequencer = sequence.NewSequencer(DB)
 		r := replica.NewReplicator(cfg, jetKeeper)
 		Replicator = r
 
@@ -317,6 +320,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		RecordSequencer,
 		replica.NewTransport(NetworkService),
 		Replicator,
 	)

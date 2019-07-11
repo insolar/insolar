@@ -25,11 +25,11 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
 type Replicator struct {
-	DB             store.DB                    `inject:""`
+	Sequencer      sequence.Sequencer          `inject:""`
 	CryptoService  insolar.CryptographyService `inject:""`
 	ServiceNetwork insolar.Network             `inject:""`
 	Transport      Transport                   `inject:""`
@@ -51,18 +51,18 @@ func (r *Replicator) Init(ctx context.Context) error {
 	role := RoleBy(replicaConfig.Role)
 	switch role {
 	case Root:
-		parent := NewParent(r.DB, r.jetKeeper, r.CryptoService)
+		parent := NewParent(r.Sequencer, r.jetKeeper, r.CryptoService)
 		registerParent(parent, r.Transport)
 	case Replica:
 		remote := NewRemoteParent(r.Transport, replicaConfig.ParentAddress)
-		r.target = NewTarget(r.DB, replicaConfig, remote, r.CryptoService)
+		r.target = NewTarget(r.Sequencer, replicaConfig, remote, r.CryptoService)
 		registerTarget(r.target, r.Transport)
 
-		parent := NewParent(r.DB, r.jetKeeper, r.CryptoService)
+		parent := NewParent(r.Sequencer, r.jetKeeper, r.CryptoService)
 		registerParent(parent, r.Transport)
 	case Observer:
 		parent := NewRemoteParent(r.Transport, replicaConfig.ParentAddress)
-		r.target = NewTarget(r.DB, replicaConfig, parent, r.CryptoService)
+		r.target = NewTarget(r.Sequencer, replicaConfig, parent, r.CryptoService)
 		registerTarget(r.target, r.Transport)
 	}
 	return nil
@@ -71,7 +71,7 @@ func (r *Replicator) Init(ctx context.Context) error {
 func (r *Replicator) Start(ctx context.Context) error {
 	replicaConfig := r.config.Ledger.Replica
 	role := RoleBy(replicaConfig.Role)
-	inslogger.FromContext(ctx).Warnf("Starting replicator config", replicaConfig)
+	inslogger.FromContext(ctx).Warnf("starting replicator config", replicaConfig)
 	switch role {
 	case Replica, Observer:
 		if cmp, ok := r.target.(component.Starter); ok {

@@ -33,13 +33,13 @@ type Parent interface {
 	Pull(store.Scope, Position, uint32) ([]byte, error)
 }
 
-func NewParent(db store.DB, keeper JetKeeper, cryptoService insolar.CryptographyService) Parent {
+func NewParent(Sequencer sequence.Sequencer, keeper JetKeeper, cryptoService insolar.CryptographyService) Parent {
 	provider := intergrity.NewProvider(cryptoService)
-	return &localParent{db: db, jetKeeper: keeper, provider: provider}
+	return &localParent{Sequencer: Sequencer, jetKeeper: keeper, provider: provider}
 }
 
 type localParent struct {
-	db        store.DB
+	Sequencer sequence.Sequencer
 	jetKeeper JetKeeper
 	provider  intergrity.Provider
 }
@@ -63,8 +63,7 @@ func (p *localParent) Subscribe(child Target, at Position) error {
 func (p *localParent) Pull(scope store.Scope, from Position, limit uint32) ([]byte, error) {
 	logger := inslogger.FromContext(context.Background())
 	highestPulse := p.jetKeeper.TopSyncPulse()
-	sequencer := sequence.NewSequencer(p.db, scope)
-	items := sequencer.Slice(from.Pulse, from.Skip, highestPulse, limit)
+	items := p.Sequencer.Slice(scope, from.Pulse, from.Skip, highestPulse, limit)
 	logger.Warnf("PULL_BATCH slicing scope: %v len(items): %v from: %v skip: %v highest: %v limit: %v", scope, len(items), from.Pulse, from.Skip, highestPulse, limit)
 	packet := p.provider.Wrap(items)
 	return packet, nil

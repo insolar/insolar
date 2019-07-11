@@ -43,7 +43,7 @@ type Target interface {
 	Notify() error
 }
 
-func NewTarget(db store.DB, cfg configuration.Replica, parent Parent, cryptoService insolar.CryptographyService) Target {
+func NewTarget(Sequencer sequence.Sequencer, cfg configuration.Replica, parent Parent, cryptoService insolar.CryptographyService) Target {
 	logger := inslogger.FromContext(context.Background())
 	parentIdentity, err := buildParent(cfg)
 	if err != nil {
@@ -52,11 +52,11 @@ func NewTarget(db store.DB, cfg configuration.Replica, parent Parent, cryptoServ
 	}
 
 	validator := intergrity.NewValidator(cryptoService, parentIdentity.pubKey)
-	return &localTarget{db: db, parent: parent, validator: validator}
+	return &localTarget{Sequencer: Sequencer, parent: parent, validator: validator}
 }
 
 type localTarget struct {
-	db        store.DB
+	Sequencer sequence.Sequencer
 	parent    Parent
 	validator intergrity.Validator
 }
@@ -64,7 +64,7 @@ type localTarget struct {
 func (t *localTarget) Start(ctx context.Context) error {
 	minimal := insolar.GenesisPulse.PulseNumber
 	for _, scope := range scopesToReplicate {
-		if last := sequence.NewSequencer(t.db, scope).Last(); last != nil {
+		if last := t.Sequencer.Last(scope); last != nil {
 			if pulse := insolar.NewPulseNumber(last.Key[:4]); pulse < minimal {
 				minimal = pulse
 			}
@@ -79,12 +79,11 @@ func (t *localTarget) Notify() error {
 	// logger := inslogger.FromContext(context.Background())
 	// TODO: maybe do it in multiple routines
 	for _, scope := range scopesToReplicate {
-		sequencer := sequence.NewSequencer(t.db, scope)
 		highest := insolar.GenesisPulse.PulseNumber
-		if sequencer.Last() != nil {
-			highest = insolar.NewPulseNumber(sequencer.Last().Key[:4])
+		if t.Sequencer.Last(scope) != nil {
+			highest = insolar.NewPulseNumber(t.Sequencer.Last(scope).Key[:4])
 		}
-		skip := uint32(sequencer.Len(highest))
+		skip := uint32(t.Sequencer.Len(scope, highest))
 		// if scope == store.ScopePulse {
 		// 	pulses := sequence.NewSequencer(t.db, store.ScopePulse)
 		// 	seq := pulses.Slice(insolar.GenesisPulse.PulseNumber, 0, highest, 100)
@@ -134,7 +133,6 @@ func (t *localTarget) trySubscribe(at Position) {
 
 func (t *localTarget) pullNext(highest insolar.PulseNumber) insolar.PulseNumber {
 	logger := inslogger.FromContext(context.Background())
-	pulses := sequence.NewSequencer(t.db, store.ScopePulse)
 	from := Position{Skip: 0, Pulse: highest}
 	packet, err := t.parent.Pull(store.ScopePulse, from, 1)
 	if err != nil {
@@ -142,7 +140,7 @@ func (t *localTarget) pullNext(highest insolar.PulseNumber) insolar.PulseNumber 
 		go t.trySubscribe(from)
 	}
 	seq := t.validator.UnwrapAndValidate(packet)
-	pulses.Upsert(seq)
+	t.Sequencer.Upsert(store.ScopePulse, seq)
 	if len(seq) == 0 {
 		go t.trySubscribe(from)
 		return highest
@@ -153,7 +151,6 @@ func (t *localTarget) pullNext(highest insolar.PulseNumber) insolar.PulseNumber 
 
 func (t *localTarget) pullBatch(scope store.Scope, skip uint32, highest insolar.PulseNumber) {
 	logger := inslogger.FromContext(context.Background())
-	sequencer := sequence.NewSequencer(t.db, scope)
 	for {
 		at := Position{Skip: skip, Pulse: highest}
 		packet, err := t.parent.Pull(scope, at, defaultBatchSize)
@@ -166,7 +163,7 @@ func (t *localTarget) pullBatch(scope store.Scope, skip uint32, highest insolar.
 		for _, item := range seq {
 			logger.Warnf("PULL_BATCH scope: %v key: %v", scope, item.Key)
 		}
-		sequencer.Upsert(seq)
+		t.Sequencer.Upsert(scope, seq)
 		if len(seq) > 0 {
 			skip += uint32(len(seq))
 			continue
