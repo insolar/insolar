@@ -52,8 +52,8 @@ package adapters
 
 import (
 	"context"
+	"time"
 
-	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
@@ -87,7 +87,7 @@ func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effect
 	inslogger.FromContext(ctx).Info(">>> Graceful leave applied")
 }
 
-func (cf *ConsensusControlFeeder) SetTrafficLimit(level common2.CapacityLevel, duration duration.Duration) {
+func (cf *ConsensusControlFeeder) SetTrafficLimit(level common2.CapacityLevel, duration time.Duration) {
 	panic("implement me")
 }
 

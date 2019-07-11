@@ -52,8 +52,8 @@ package core
 
 import (
 	"context"
+	"time"
 
-	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -93,7 +93,7 @@ type TrafficControlFeeder interface {
 	/* Application traffic should be stopped or throttled down for the given duration
 	LevelMax and LevelNormal should be considered equal, and duration doesnt apply to them
 	*/
-	SetTrafficLimit(level common.CapacityLevel, duration duration.Duration)
+	SetTrafficLimit(level common.CapacityLevel, duration time.Duration)
 
 	/* Application traffic can be resumed at full */
 	ResumeTraffic()

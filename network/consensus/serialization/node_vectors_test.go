@@ -133,8 +133,11 @@ func TestNodeAppearanceBitset_setIsCompressed(t *testing.T) {
 
 	require.False(t, b.isCompressed())
 
-	b.setIsCompressed()
+	b.setIsCompressed(true)
 	require.True(t, b.isCompressed())
+
+	b.setIsCompressed(false)
+	require.False(t, b.isCompressed())
 }
 
 func TestNodeAppearanceBitset_hasHiLength(t *testing.T) {
@@ -363,13 +366,6 @@ func TestNodeAppearanceBitset_HasHiLength(t *testing.T) {
 	require.Equal(t, bitset, b2.GetBitset())
 }
 
-func TestBitsetByteSize(t *testing.T) {
-	require.EqualValues(t, 6, bitsetByteSize(16))
-	require.EqualValues(t, 5, bitsetByteSize(12))
-	require.EqualValues(t, 1, bitsetByteSize(2))
-	require.EqualValues(t, 2, bitsetByteSize(3))
-}
-
 func TestGlobulaStateVector_SerializeTo(t *testing.T) {
 	v := GlobulaStateVector{}
 
@@ -401,3 +397,10 @@ func TestGlobulaStateVector_DeserializeFrom(t *testing.T) {
 
 	require.Equal(t, v1, v2)
 }
+
+// func TestBitsetByteSize(t *testing.T) {
+// 	require.EqualValues(t, 6, bitsetByteSize(16))
+// 	require.EqualValues(t, 5, bitsetByteSize(12))
+// 	require.EqualValues(t, 1, bitsetByteSize(2))
+// 	require.EqualValues(t, 2, bitsetByteSize(3))
+// }

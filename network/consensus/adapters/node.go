@@ -63,9 +63,8 @@ import (
 )
 
 type NodeIntroduction struct {
-	shortID   common.ShortNodeID
-	ref       insolar.Reference
-	signature common.SignatureHolder
+	shortID common.ShortNodeID
+	ref     insolar.Reference
 }
 
 func NewNodeIntroduction(networkNode insolar.NetworkNode) *NodeIntroduction {

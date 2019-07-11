@@ -54,8 +54,7 @@ import (
 	"context"
 	"errors"
 	"math/rand"
-
-	"github.com/golang/protobuf/ptypes/duration"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
@@ -205,7 +204,7 @@ type EmuControlFeeder struct {
 	leaveReason uint32
 }
 
-func (*EmuControlFeeder) SetTrafficLimit(level common.CapacityLevel, duration duration.Duration) {
+func (*EmuControlFeeder) SetTrafficLimit(level common.CapacityLevel, duration time.Duration) {
 }
 
 func (*EmuControlFeeder) ResumeTraffic() {
