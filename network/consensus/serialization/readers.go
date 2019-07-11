@@ -119,11 +119,11 @@ func (p *PacketParser) GetMemberPacket() packets.MemberPacketReader {
 	}
 }
 
-func (p *PacketParser) GetSourceId() common.ShortNodeID {
+func (p *PacketParser) GetSourceID() common.ShortNodeID {
 	return p.packet.Header.GetSourceID()
 }
 
-func (p *PacketParser) GetReceiverId() common.ShortNodeID {
+func (p *PacketParser) GetReceiverID() common.ShortNodeID {
 	return common.ShortNodeID(p.packet.Header.ReceiverID)
 }
 
@@ -245,24 +245,24 @@ type Phase3PacketReader struct {
 	MemberPacketReader
 }
 
+func (r *Phase3PacketReader) GetTrustedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash {
+	panic("implement me")
+}
+
+func (r *Phase3PacketReader) GetTrustedGlobulaStateSignature() common2.GlobulaStateSignature {
+	panic("implement me")
+}
+
+func (r *Phase3PacketReader) GetDoubtedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash {
+	panic("implement me")
+}
+
+func (r *Phase3PacketReader) GetDoubtedGlobulaStateSignature() common2.GlobulaStateSignature {
+	panic("implement me")
+}
+
 func (r *Phase3PacketReader) GetBitset() nodeset.NodeBitset {
 	return r.body.Vectors.StateVectorMask.GetBitset()
-}
-
-func (r *Phase3PacketReader) GetTrustedGsh() common2.GlobulaStateHash {
-	panic("implement me")
-}
-
-func (r *Phase3PacketReader) GetDoubtedGsh() common2.GlobulaStateHash {
-	panic("implement me")
-}
-
-func (r *Phase3PacketReader) GetTrustedCshEvidence() common.SignedEvidenceHolder {
-	panic("implement me")
-}
-
-func (r *Phase3PacketReader) GetDoubtedCshEvidence() common.SignedEvidenceHolder {
-	panic("implement me")
 }
 
 type CloudIntroductionReader struct {

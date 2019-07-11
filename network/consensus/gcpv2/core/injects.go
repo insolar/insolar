@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"

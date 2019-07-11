@@ -241,7 +241,7 @@ func (p *NodeEndpoint) GetNameAddress() common.HostAddress {
 	return p.name
 }
 
-func (p *NodeEndpoint) GetIpAddress() packets.NodeAddress {
+func (p *NodeEndpoint) GetIPAddress() packets.NodeAddress {
 	return p.addr
 }
 
@@ -269,7 +269,7 @@ func NewNetworkNode(profile common2.NodeProfile) insolar.NetworkNode {
 	mutableNode := networkNode.(node.MutableNode)
 
 	mutableNode.SetShortID(insolar.ShortNodeID(profile.GetShortNodeID()))
-	mutableNode.SetState(MembershipStateToNodeState(profile.GetState()))
+	mutableNode.SetState(insolar.NodeReady)
 	mutableNode.SetSignature(insolar.SignatureFromBytes(profile.GetAnnouncementSignature().AsBytes()))
 
 	return networkNode

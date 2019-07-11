@@ -158,7 +158,7 @@ type emuEndpoint struct {
 	name common.HostAddress
 }
 
-func (p *emuEndpoint) GetIpAddress() packets.NodeAddress {
+func (p *emuEndpoint) GetIPAddress() packets.NodeAddress {
 	panic("implement me")
 }
 

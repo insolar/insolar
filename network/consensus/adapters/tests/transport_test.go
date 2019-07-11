@@ -70,6 +70,23 @@ type emuPacketSender struct {
 	cloner emuPackerCloner
 }
 
+func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, sender core.PacketSender,
+	filter func(ctx context.Context, targetIndex int) (common2.NodeProfile, core.PacketSendOptions)) {
+	for i := 0; i < targetCount; i++ {
+		sendTo, sendOptions := filter(ctx, i)
+		if sendTo != nil {
+			c := r.cloner.clonePacketFor(sendTo, sendOptions)
+			sender.SendPacketToTransport(ctx, sendTo, sendOptions, c)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+	}
+}
+
 func (r *emuPacketSender) SendTo(ctx context.Context, t common2.NodeProfile, sendOptions core.PacketSendOptions, s core.PacketSender) {
 	c := r.cloner.clonePacketFor(t, sendOptions)
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
@@ -179,16 +196,13 @@ func (r *EmuPhase2NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
-	bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
+func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors nodeset.HashedNodeVector,
+	// bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
-		basePacket:  r.defaultBasePacket(sender),
-		bitset:      bitset,
-		pulseNumber: sender.GetPulseNumber(),
-		gshTrusted:  gshTrusted,
-		gshDoubted:  gshDoubted,
+		basePacket: r.defaultBasePacket(sender),
+		vectors:    vectors,
 	}
 	return &emuPacketSender{&v}
 }

@@ -84,10 +84,12 @@ func (v EmuPacketWrapper) String() string {
 var _ common.SignedEvidenceHolder = &basePacket{}
 
 type basePacket struct {
-	src       common.ShortNodeID
-	tgt       common.ShortNodeID
-	nodeCount uint16
-	mp        common2.MembershipProfile
+	src         common.ShortNodeID
+	tgt         common.ShortNodeID
+	nodeCount   uint16
+	mp          common2.MembershipProfile
+	isLeaving   bool
+	leaveReason uint32
 
 	sd common.SignedDigest
 }
@@ -97,11 +99,11 @@ func (r *basePacket) GetRequestedPower() common2.MemberPower {
 }
 
 func (r *basePacket) IsLeaving() bool {
-	return false
+	return r.isLeaving
 }
 
 func (r *basePacket) GetLeaveReason() uint32 {
-	return 0
+	return r.leaveReason
 }
 
 func (r *basePacket) GetJoinerID() common.ShortNodeID {
@@ -125,7 +127,7 @@ func (r *basePacket) GetNodeID() common.ShortNodeID {
 }
 
 func (r *basePacket) GetNodeRank() common2.MembershipRank {
-	return common2.NewMembershipRank(r.mp.Power, r.mp.Index, r.nodeCount, 0)
+	return common2.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, r.nodeCount)
 }
 
 func (r *basePacket) GetAnnouncementReader() packets.MembershipAnnouncementReader {
@@ -139,11 +141,11 @@ func (r *basePacket) GetEvidence() common.SignedData {
 	return common.NewSignedData(&v, d, s)
 }
 
-func (r *basePacket) GetSourceId() common.ShortNodeID {
+func (r *basePacket) GetSourceID() common.ShortNodeID {
 	return r.src
 }
 
-func (r *basePacket) GetReceiverId() common.ShortNodeID {
+func (r *basePacket) GetReceiverID() common.ShortNodeID {
 	return r.tgt
 }
 
@@ -332,34 +334,32 @@ var _ packets.PacketParser = &EmuPhase3NetPacket{}
 type EmuPhase3NetPacket struct {
 	basePacket
 	pulseNumber common.PulseNumber
-	bitset      nodeset.NodeBitset
-	gshTrusted  common2.GlobulaStateHash
-	gshDoubted  common2.GlobulaStateHash
+	vectors     nodeset.HashedNodeVector
+}
+
+func (r *EmuPhase3NetPacket) GetTrustedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash {
+	return r.vectors.TrustedAnnouncementVector
+}
+
+func (r *EmuPhase3NetPacket) GetTrustedGlobulaStateSignature() common2.GlobulaStateSignature {
+	return r.vectors.TrustedGlobulaStateVectorSignature
+}
+
+func (r *EmuPhase3NetPacket) GetDoubtedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash {
+	return r.vectors.DoubtedAnnouncementVector
+}
+
+func (r *EmuPhase3NetPacket) GetDoubtedGlobulaStateSignature() common2.GlobulaStateSignature {
+	return r.vectors.DoubtedGlobulaStateVectorSignature
 }
 
 func (r *EmuPhase3NetPacket) String() string {
-	return fmt.Sprintf("ph:3 %s, pn:%v, set:%v, gshT:%v, gshD:%v", r.basePacket.String(), r.pulseNumber,
-		r.bitset, r.gshTrusted, r.gshDoubted)
+	return fmt.Sprintf("ph:3 %s, pn:%v set:%v gahT:%v gahD:%v", r.basePacket.String(), r.pulseNumber,
+		r.vectors.Bitset, r.GetTrustedGlobulaAnnouncementHash(), r.GetDoubtedGlobulaAnnouncementHash())
 }
 
 func (r *EmuPhase3NetPacket) GetBitset() nodeset.NodeBitset {
-	return r.bitset
-}
-
-func (r *EmuPhase3NetPacket) GetTrustedGsh() common2.GlobulaStateHash {
-	return r.gshTrusted
-}
-
-func (r *EmuPhase3NetPacket) GetDoubtedGsh() common2.GlobulaStateHash {
-	return r.gshDoubted
-}
-
-func (r *EmuPhase3NetPacket) GetTrustedCshEvidence() common.SignedEvidenceHolder {
-	return r
-}
-
-func (r *EmuPhase3NetPacket) GetDoubtedCshEvidence() common.SignedEvidenceHolder {
-	return r
+	return r.vectors.Bitset
 }
 
 func (r *EmuPhase3NetPacket) GetPacketType() packets.PacketType {

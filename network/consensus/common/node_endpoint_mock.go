@@ -22,10 +22,10 @@ type NodeEndpointMock struct {
 	GetEndpointTypePreCounter uint64
 	GetEndpointTypeMock       mNodeEndpointMockGetEndpointType
 
-	GetIpAddressFunc       func() (r packets.NodeAddress)
-	GetIpAddressCounter    uint64
-	GetIpAddressPreCounter uint64
-	GetIpAddressMock       mNodeEndpointMockGetIpAddress
+	GetIPAddressFunc       func() (r packets.NodeAddress)
+	GetIPAddressCounter    uint64
+	GetIPAddressPreCounter uint64
+	GetIPAddressMock       mNodeEndpointMockGetIPAddress
 
 	GetNameAddressFunc       func() (r HostAddress)
 	GetNameAddressCounter    uint64
@@ -47,7 +47,7 @@ func NewNodeEndpointMock(t minimock.Tester) *NodeEndpointMock {
 	}
 
 	m.GetEndpointTypeMock = mNodeEndpointMockGetEndpointType{mock: m}
-	m.GetIpAddressMock = mNodeEndpointMockGetIpAddress{mock: m}
+	m.GetIPAddressMock = mNodeEndpointMockGetIPAddress{mock: m}
 	m.GetNameAddressMock = mNodeEndpointMockGetNameAddress{mock: m}
 	m.GetRelayIDMock = mNodeEndpointMockGetRelayID{mock: m}
 
@@ -188,82 +188,82 @@ func (m *NodeEndpointMock) GetEndpointTypeFinished() bool {
 	return true
 }
 
-type mNodeEndpointMockGetIpAddress struct {
+type mNodeEndpointMockGetIPAddress struct {
 	mock              *NodeEndpointMock
-	mainExpectation   *NodeEndpointMockGetIpAddressExpectation
-	expectationSeries []*NodeEndpointMockGetIpAddressExpectation
+	mainExpectation   *NodeEndpointMockGetIPAddressExpectation
+	expectationSeries []*NodeEndpointMockGetIPAddressExpectation
 }
 
-type NodeEndpointMockGetIpAddressExpectation struct {
-	result *NodeEndpointMockGetIpAddressResult
+type NodeEndpointMockGetIPAddressExpectation struct {
+	result *NodeEndpointMockGetIPAddressResult
 }
 
-type NodeEndpointMockGetIpAddressResult struct {
+type NodeEndpointMockGetIPAddressResult struct {
 	r packets.NodeAddress
 }
 
-//Expect specifies that invocation of NodeEndpoint.GetIpAddress is expected from 1 to Infinity times
-func (m *mNodeEndpointMockGetIpAddress) Expect() *mNodeEndpointMockGetIpAddress {
-	m.mock.GetIpAddressFunc = nil
+//Expect specifies that invocation of NodeEndpoint.GetIPAddress is expected from 1 to Infinity times
+func (m *mNodeEndpointMockGetIPAddress) Expect() *mNodeEndpointMockGetIPAddress {
+	m.mock.GetIPAddressFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeEndpointMockGetIpAddressExpectation{}
+		m.mainExpectation = &NodeEndpointMockGetIPAddressExpectation{}
 	}
 
 	return m
 }
 
-//Return specifies results of invocation of NodeEndpoint.GetIpAddress
-func (m *mNodeEndpointMockGetIpAddress) Return(r packets.NodeAddress) *NodeEndpointMock {
-	m.mock.GetIpAddressFunc = nil
+//Return specifies results of invocation of NodeEndpoint.GetIPAddress
+func (m *mNodeEndpointMockGetIPAddress) Return(r packets.NodeAddress) *NodeEndpointMock {
+	m.mock.GetIPAddressFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeEndpointMockGetIpAddressExpectation{}
+		m.mainExpectation = &NodeEndpointMockGetIPAddressExpectation{}
 	}
-	m.mainExpectation.result = &NodeEndpointMockGetIpAddressResult{r}
+	m.mainExpectation.result = &NodeEndpointMockGetIPAddressResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of NodeEndpoint.GetIpAddress is expected once
-func (m *mNodeEndpointMockGetIpAddress) ExpectOnce() *NodeEndpointMockGetIpAddressExpectation {
-	m.mock.GetIpAddressFunc = nil
+//ExpectOnce specifies that invocation of NodeEndpoint.GetIPAddress is expected once
+func (m *mNodeEndpointMockGetIPAddress) ExpectOnce() *NodeEndpointMockGetIPAddressExpectation {
+	m.mock.GetIPAddressFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &NodeEndpointMockGetIpAddressExpectation{}
+	expectation := &NodeEndpointMockGetIPAddressExpectation{}
 
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *NodeEndpointMockGetIpAddressExpectation) Return(r packets.NodeAddress) {
-	e.result = &NodeEndpointMockGetIpAddressResult{r}
+func (e *NodeEndpointMockGetIPAddressExpectation) Return(r packets.NodeAddress) {
+	e.result = &NodeEndpointMockGetIPAddressResult{r}
 }
 
-//Set uses given function f as a mock of NodeEndpoint.GetIpAddress method
-func (m *mNodeEndpointMockGetIpAddress) Set(f func() (r packets.NodeAddress)) *NodeEndpointMock {
+//Set uses given function f as a mock of NodeEndpoint.GetIPAddress method
+func (m *mNodeEndpointMockGetIPAddress) Set(f func() (r packets.NodeAddress)) *NodeEndpointMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetIpAddressFunc = f
+	m.mock.GetIPAddressFunc = f
 	return m.mock
 }
 
-//GetIpAddress implements github.com/insolar/insolar/network/consensus/common.NodeEndpoint interface
-func (m *NodeEndpointMock) GetIpAddress() (r packets.NodeAddress) {
-	counter := atomic.AddUint64(&m.GetIpAddressPreCounter, 1)
-	defer atomic.AddUint64(&m.GetIpAddressCounter, 1)
+//GetIPAddress implements github.com/insolar/insolar/network/consensus/common.NodeEndpoint interface
+func (m *NodeEndpointMock) GetIPAddress() (r packets.NodeAddress) {
+	counter := atomic.AddUint64(&m.GetIPAddressPreCounter, 1)
+	defer atomic.AddUint64(&m.GetIPAddressCounter, 1)
 
-	if len(m.GetIpAddressMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetIpAddressMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeEndpointMock.GetIpAddress.")
+	if len(m.GetIPAddressMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetIPAddressMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeEndpointMock.GetIPAddress.")
 			return
 		}
 
-		result := m.GetIpAddressMock.expectationSeries[counter-1].result
+		result := m.GetIPAddressMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeEndpointMock.GetIpAddress")
+			m.t.Fatal("No results are set for the NodeEndpointMock.GetIPAddress")
 			return
 		}
 
@@ -272,11 +272,11 @@ func (m *NodeEndpointMock) GetIpAddress() (r packets.NodeAddress) {
 		return
 	}
 
-	if m.GetIpAddressMock.mainExpectation != nil {
+	if m.GetIPAddressMock.mainExpectation != nil {
 
-		result := m.GetIpAddressMock.mainExpectation.result
+		result := m.GetIPAddressMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeEndpointMock.GetIpAddress")
+			m.t.Fatal("No results are set for the NodeEndpointMock.GetIPAddress")
 		}
 
 		r = result.r
@@ -284,39 +284,39 @@ func (m *NodeEndpointMock) GetIpAddress() (r packets.NodeAddress) {
 		return
 	}
 
-	if m.GetIpAddressFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeEndpointMock.GetIpAddress.")
+	if m.GetIPAddressFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeEndpointMock.GetIPAddress.")
 		return
 	}
 
-	return m.GetIpAddressFunc()
+	return m.GetIPAddressFunc()
 }
 
-//GetIpAddressMinimockCounter returns a count of NodeEndpointMock.GetIpAddressFunc invocations
-func (m *NodeEndpointMock) GetIpAddressMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetIpAddressCounter)
+//GetIPAddressMinimockCounter returns a count of NodeEndpointMock.GetIPAddressFunc invocations
+func (m *NodeEndpointMock) GetIPAddressMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetIPAddressCounter)
 }
 
-//GetIpAddressMinimockPreCounter returns the value of NodeEndpointMock.GetIpAddress invocations
-func (m *NodeEndpointMock) GetIpAddressMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetIpAddressPreCounter)
+//GetIPAddressMinimockPreCounter returns the value of NodeEndpointMock.GetIPAddress invocations
+func (m *NodeEndpointMock) GetIPAddressMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetIPAddressPreCounter)
 }
 
-//GetIpAddressFinished returns true if mock invocations count is ok
-func (m *NodeEndpointMock) GetIpAddressFinished() bool {
+//GetIPAddressFinished returns true if mock invocations count is ok
+func (m *NodeEndpointMock) GetIPAddressFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetIpAddressMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetIpAddressCounter) == uint64(len(m.GetIpAddressMock.expectationSeries))
+	if len(m.GetIPAddressMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetIPAddressCounter) == uint64(len(m.GetIPAddressMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetIpAddressMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetIpAddressCounter) > 0
+	if m.GetIPAddressMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetIPAddressCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetIpAddressFunc != nil {
-		return atomic.LoadUint64(&m.GetIpAddressCounter) > 0
+	if m.GetIPAddressFunc != nil {
+		return atomic.LoadUint64(&m.GetIPAddressCounter) > 0
 	}
 
 	return true
@@ -598,8 +598,8 @@ func (m *NodeEndpointMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeEndpointMock.GetEndpointType")
 	}
 
-	if !m.GetIpAddressFinished() {
-		m.t.Fatal("Expected call to NodeEndpointMock.GetIpAddress")
+	if !m.GetIPAddressFinished() {
+		m.t.Fatal("Expected call to NodeEndpointMock.GetIPAddress")
 	}
 
 	if !m.GetNameAddressFinished() {
@@ -631,8 +631,8 @@ func (m *NodeEndpointMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeEndpointMock.GetEndpointType")
 	}
 
-	if !m.GetIpAddressFinished() {
-		m.t.Fatal("Expected call to NodeEndpointMock.GetIpAddress")
+	if !m.GetIPAddressFinished() {
+		m.t.Fatal("Expected call to NodeEndpointMock.GetIPAddress")
 	}
 
 	if !m.GetNameAddressFinished() {
@@ -658,7 +658,7 @@ func (m *NodeEndpointMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetEndpointTypeFinished()
-		ok = ok && m.GetIpAddressFinished()
+		ok = ok && m.GetIPAddressFinished()
 		ok = ok && m.GetNameAddressFinished()
 		ok = ok && m.GetRelayIDFinished()
 
@@ -673,8 +673,8 @@ func (m *NodeEndpointMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NodeEndpointMock.GetEndpointType")
 			}
 
-			if !m.GetIpAddressFinished() {
-				m.t.Error("Expected call to NodeEndpointMock.GetIpAddress")
+			if !m.GetIPAddressFinished() {
+				m.t.Error("Expected call to NodeEndpointMock.GetIPAddress")
 			}
 
 			if !m.GetNameAddressFinished() {
@@ -701,7 +701,7 @@ func (m *NodeEndpointMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetIpAddressFinished() {
+	if !m.GetIPAddressFinished() {
 		return false
 	}
 

@@ -73,5 +73,4 @@ type GlobulaLeaf struct {
 	RoleTotal uint16              //10
 	NodeTotal uint16              //10
 	OpMode    common.MemberOpMode //4
-	//Condition common.MemberCondition //4
 }

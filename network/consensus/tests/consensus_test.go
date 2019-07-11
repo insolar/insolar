@@ -53,8 +53,9 @@ package tests
 import (
 	"context"
 	"errors"
-	"github.com/golang/protobuf/ptypes/duration"
 	"math/rand"
+
+	"github.com/golang/protobuf/ptypes/duration"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2"

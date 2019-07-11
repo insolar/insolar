@@ -145,13 +145,12 @@ func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProf
 }
 
 func (p *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
-	bitset nodeset.NodeBitset, gshTrusted common.GlobulaStateHash, gshDoubted common.GlobulaStateHash,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+	vectors nodeset.HashedNodeVector, options core.PacketSendOptions) core.PreparedPacketSender {
 
 	packet := p.preparePacket(sender, packets.PacketPhase3)
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
-	body.Vectors.StateVectorMask.SetBitset(bitset)
+	body.Vectors.StateVectorMask.SetBitset(vectors.Bitset)
 
 	return p.prepareWrapper(packet)
 }
@@ -177,4 +176,14 @@ func (p *preparedPacketWrapper) SendTo(ctx context.Context, target common.NodePr
 	}
 
 	sender.SendPacketToTransport(ctx, target, sendOptions, p.buf[:buf.Len()])
+}
+
+func (p *preparedPacketWrapper) SendToMany(ctx context.Context, targetCount int, sender core.PacketSender,
+	filter func(ctx context.Context, targetIndex int) (common.NodeProfile, core.PacketSendOptions)) {
+
+	for i := 0; i <= targetCount; i++ {
+		if np, options := filter(ctx, i); np != nil {
+			p.SendTo(ctx, np, options, sender)
+		}
+	}
 }
