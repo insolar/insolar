@@ -73,7 +73,7 @@ func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 	}
 
 	if !hasKeys {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
+		inslogger.FromContext(ctx).Debugf("No records. Nothing done. Pulse number: %s", from.String())
 	}
 
 	return nil
