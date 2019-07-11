@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
@@ -42,9 +43,9 @@ func TestHandleGetJet(t *testing.T) {
 	for _, tt := range ttable {
 		t.Run(tt.name, func(t *testing.T) {
 			testCtx := inslogger.TestContext(t)
-			testPulseNumber := insolar.PulseNumber(998999)
-			testID := testutils.RandomID()
-			testJetID := testutils.RandomID()
+			testPulseNumber := insolar.PulseNumber(insolar.FirstPulseNumber + 797979)
+			testID := gen.ID()
+			testJetID := gen.JetID()
 			h := New()
 			accessorMock := jet.NewAccessorMock(t)
 			accessorMock.ForIDFunc = func(ctx context.Context, pn insolar.PulseNumber, id insolar.ID) (r insolar.JetID, r1 bool) {
@@ -63,7 +64,7 @@ func TestHandleGetJet(t *testing.T) {
 			rawReply, err := h.handleGetJet(testCtx, testParcel)
 			require.NoError(t, err)
 			jetReply := rawReply.(*reply.Jet)
-			require.Equal(t, testJetID, jetReply.ID)
+			require.Equal(t, insolar.ID(testJetID), jetReply.ID)
 			require.Equal(t, tt.actual, jetReply.Actual)
 		})
 	}
