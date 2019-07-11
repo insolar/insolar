@@ -78,8 +78,8 @@ func (v MembershipRank) GetTotalCount() uint16 {
 	return uint16(v>>18) & 0x03FF
 }
 
-func (v MembershipRank) GetNodeCondition() MemberCondition {
-	return MemberCondition(v >> 28)
+func (v MembershipRank) GetMode() MemberOpMode {
+	return MemberOpMode(v >> 28)
 }
 
 func (v MembershipRank) IsJoiner() bool {
@@ -90,10 +90,10 @@ func (v MembershipRank) String() string {
 	if v.IsJoiner() {
 		return "{joiner}"
 	}
-	return fmt.Sprintf("{%v:%d/%d pw:%v}", v.GetNodeCondition(), v.GetIndex(), v.GetTotalCount(), v.GetPower())
+	return fmt.Sprintf("{%v %d/%d pw:%v}", v.GetMode(), v.GetIndex(), v.GetTotalCount(), v.GetPower())
 }
 
-func NewMembershipRank(pw MemberPower, idx, count uint16, cond MemberCondition) MembershipRank {
+func NewMembershipRank(mode MemberOpMode, pw MemberPower, idx, count uint16) MembershipRank {
 	if idx >= count {
 		panic("illegal value")
 	}
@@ -101,7 +101,7 @@ func NewMembershipRank(pw MemberPower, idx, count uint16, cond MemberCondition) 
 	r := uint32(pw)
 	r |= ensureNodeIndex(idx) << 8
 	r |= ensureNodeIndex(count) << 18
-	r |= cond.asUnit32() << 28
+	r |= mode.asUnit32() << 28
 	return MembershipRank(r)
 }
 
@@ -112,11 +112,12 @@ func ensureNodeIndex(v uint16) uint32 {
 	return uint32(v & 0x03FF)
 }
 
-type MemberMode uint8 //4-bit value
+type MemberOpMode uint8 //4-bit value
 const (
-	MemberModeFlagRestrictedBehavior MemberMode = 4
-	MemberModeFlagValidationWarning  MemberMode = 2
-	MemberModeFlagSuspendedOps       MemberMode = 1
+	MemberModeBits                                = 4
+	MemberModeFlagRestrictedBehavior MemberOpMode = 4
+	MemberModeFlagValidationWarning  MemberOpMode = 2
+	MemberModeFlagSuspendedOps       MemberOpMode = 1
 
 	MemberModeNormal                    = 0
 	MemberModeSuspected                 = /* 0x01 */ MemberModeFlagSuspendedOps
@@ -128,30 +129,35 @@ const (
 	MemberModeEvictedAsSuspected        = /* 0x07 */ MemberModeFlagRestrictedBehavior | MemberModeFlagValidationWarning | MemberModeFlagSuspendedOps
 )
 
-func (v MemberMode) IsRestricted() bool {
+func (v MemberOpMode) IsEvicted() bool {
+	return v >= MemberModeEvictedGracefully
+}
+
+func (v MemberOpMode) IsRestricted() bool {
 	return v&MemberModeFlagRestrictedBehavior != 0
 }
 
-func (v MemberMode) IsMistrustful() bool {
+func (v MemberOpMode) IsMistrustful() bool {
 	return v&MemberModeFlagValidationWarning != 0
 }
 
-func (v MemberMode) IsSuspended() bool {
+func (v MemberOpMode) IsSuspended() bool {
 	return v&MemberModeFlagSuspendedOps != 0
 }
 
-func (v MemberMode) IsPowerful() bool {
-	return v&(MemberModeFlagRestrictedBehavior|MemberModeFlagSuspendedOps) == 0
+/* Is allowed to take some work, but needs power >0 to be a working node (to be assigned for some work) */
+func (v MemberOpMode) IsPowerful() bool {
+	return !(v.IsSuspended() || v.IsEvicted())
 }
 
-func (v MemberMode) asUnit32() uint32 {
-	if v > 0x0F {
+func (v MemberOpMode) asUnit32() uint32 {
+	if v >= 1<<MemberModeBits {
 		panic("illegal value")
 	}
 	return uint32(v)
 }
 
-func (v MemberMode) String() string {
+func (v MemberOpMode) String() string {
 	switch v {
 	case MemberModeNormal:
 		return "mode:norm"
@@ -164,18 +170,18 @@ func (v MemberMode) String() string {
 	case MemberModeRestrictedAnnouncement:
 		return "mode:joiner"
 	case MemberModeEvictedGracefully:
-		return "exit:norm"
+		return "evict:norm"
 	case MemberModeEvictedAsFraud:
-		return "exit:fraud"
+		return "evict:fraud"
 	case MemberModeEvictedAsSuspected:
-		return "exit:susp"
+		return "evict:susp"
 	default:
 		return fmt.Sprintf("?%d?", v)
 	}
 }
 
 /* deprecated
-MUST be removed. Replaced with MemberMode
+MUST be removed. Replaced with MemberOpMode
 */
 type MemberCondition uint8 //MUST BE 4bit value
 const (

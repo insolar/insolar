@@ -86,6 +86,8 @@ func (c *Phase0Controller) HandleMemberPacket(ctx context.Context, p packets.Mem
 	p0 := p.AsPhase0Packet()
 	pp := p0.GetEmbeddedPulsePacket()
 
+	//TODO check NodeRank - especially for suspected node
+
 	//TODO when PulseDataExt is bigger than ~1.5KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
 
 	err := n.SetReceivedWithDupCheck(c.GetPacketType())
@@ -147,7 +149,7 @@ func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core
 
 	na := p1.GetAnnouncementReader()
 	nr := na.GetNodeRank()
-	mp := common.NewMembershipProfile(nr.GetIndex(), nr.GetPower(),
+	mp := common.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(),
 		na.GetNodeStateHashEvidence(), na.GetAnnouncementSignature(), na.GetRequestedPower())
 
 	if c.R.GetNodeCount() != int(nr.GetTotalCount()) {
@@ -155,7 +157,19 @@ func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core
 		return err
 	}
 
-	_, err := n.ApplyNodeMembership(mp)
+	var ma common.MembershipAnnouncement
+	switch {
+	case na.IsLeaving():
+		ma = common.NewMembershipAnnouncementWithLeave(mp, na.GetLeaveReason())
+	case na.GetJoinerID().IsAbsent():
+		ma = common.NewMembershipAnnouncement(mp)
+	default:
+		panic("not implemented") //TODO implement
+		//jar := na.GetJoinerAnnouncement()
+		//ma = common.NewMembershipAnnouncementWithJoiner(mp)
+	}
+
+	_, err := n.ApplyNodeMembership(ma)
 
 	if err != nil {
 		return err
@@ -201,10 +215,12 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (common.NodeSta
 		c.packetPrepareOptions)
 
 	for lastIndex, target := range c.R.GetPopulation().GetShuffledOtherNodes() {
-		if target.HasReceivedAnyPhase() || target.GetProfile().GetState().IsSuspect() || target.IsJoiner() {
+		if target.HasReceivedAnyPhase() {
 			continue
 		}
 
+		//DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
+		//Instead we have a chance to save some traffic.
 		p0.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
 		target.SetSentPhase(packets.Phase0)
 
@@ -231,23 +247,29 @@ func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int)
 		c.R.GetOriginalPulse(), c.packetPrepareOptions)
 
 	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
-	for i := range otherNodes {
-		index := (startIndex + i) % len(otherNodes)
-		target := otherNodes[index]
-		var sendOptions core.PacketSendOptions
 
-		if target.HasReceivedAnyPhase() {
-			// if something was received from this node, then we don't need to send a copy of pulse data to it
-			sendOptions |= core.SendWithoutPulseData
-		}
-		p1.SendTo(ctx, target.GetProfile(), sendOptions, c.R.GetPacketSender())
-		target.SetSentByPacketType(c.GetPacketType())
-		select {
-		case <-ctx.Done():
-			return // ctx.Err() ?
-		default:
-		}
-	}
+	//first, send to nodes not covered by Phase 0
+	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (common.NodeProfile, core.PacketSendOptions) {
+			target := otherNodes[targetIdx+startIndex]
+			target.SetSentByPacketType(c.GetPacketType())
+
+			if target.HasReceivedAnyPhase() {
+				return target.GetProfile(), core.SendWithoutPulseData
+			}
+			return target.GetProfile(), 0
+		})
+
+	p1.SendToMany(ctx, startIndex, c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (common.NodeProfile, core.PacketSendOptions) {
+			target := otherNodes[targetIdx]
+			target.SetSentByPacketType(c.GetPacketType())
+
+			if target.HasReceivedAnyPhase() {
+				return target.GetProfile(), core.SendWithoutPulseData
+			}
+			return target.GetProfile(), 0
+		})
 }
 
 var _ core.PhaseController = &ReqPhase1Controller{}

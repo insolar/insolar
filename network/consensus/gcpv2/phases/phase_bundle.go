@@ -52,9 +52,8 @@ package phases
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"time"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
@@ -104,12 +103,12 @@ func (p *regularCallback) OnCustomEvent(n *core.NodeAppearance, event interface{
 	panic(fmt.Sprintf("unknown custom event: %v", event))
 }
 
-func (p *regularCallback) OnTrustUpdated(n *core.NodeAppearance, trustBefore, trustAfter packets.NodeTrustLevel) {
+func (p *regularCallback) OnTrustUpdated(n *core.NodeAppearance, trustBefore, trustAfter common.NodeTrustLevel) {
 	switch {
-	case trustBefore < packets.TrustByNeighbors && trustAfter >= packets.TrustByNeighbors:
-		trustAfter = packets.TrustByNeighbors
-	case trustBefore < packets.TrustBySome && trustAfter >= packets.TrustBySome:
-		trustAfter = packets.TrustBySome
+	case trustBefore < common.TrustByNeighbors && trustAfter >= common.TrustByNeighbors:
+		trustAfter = common.TrustByNeighbors
+	case trustBefore < common.TrustBySome && trustAfter >= common.TrustBySome:
+		trustAfter = common.TrustBySome
 	case !trustBefore.IsNegative() && trustAfter.IsNegative():
 	default:
 		return
@@ -119,7 +118,7 @@ func (p *regularCallback) OnTrustUpdated(n *core.NodeAppearance, trustBefore, tr
 
 func (p *regularCallback) OnNodeStateAssigned(n *core.NodeAppearance) {
 	p.qNshReady <- n
-	p.qTrustLvlUpd <- TrustUpdateSignal{NewTrustLevel: packets.UnknownTrust, UpdatedNode: n}
+	p.qTrustLvlUpd <- TrustUpdateSignal{NewTrustLevel: common.UnknownTrust, UpdatedNode: n}
 }
 
 func (r *RegularPhaseBundle) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {

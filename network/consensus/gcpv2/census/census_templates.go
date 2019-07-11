@@ -57,9 +57,15 @@ import (
 
 var _ localActiveCensus = &PrimingCensusTemplate{}
 
+type copyToOnlinePopulation interface {
+	copyToPopulation
+	OnlinePopulation
+}
+
 type PrimingCensusTemplate struct {
 	chronicles *localChronicles
-	online     copyOnlinePopulationTo
+	online     copyToOnlinePopulation
+	evicted    EvictedPopulation
 	pd         common.PulseData
 
 	registries     VersionedRegistries
@@ -81,14 +87,49 @@ func (c *PrimingCensusTemplate) getVersionedRegistries() VersionedRegistries {
 	return c.registries
 }
 
-func NewPrimingCensus(population copyOnlinePopulationTo, pf common2.NodeProfileFactory, registries VersionedRegistries) *PrimingCensusTemplate {
+func NewPrimingCensus(population copyToOnlinePopulation, pf common2.NodeProfileFactory, registries VersionedRegistries) *PrimingCensusTemplate {
+	//TODO HACK - ugly sorting impl to establish initial node ordering
+	dp := NewDynamicPopulation(population)
+	sortedPopulation := ManyNodePopulation{}
+	sortedPopulation.makeCopyOfMapAndSort(dp.slotByID, dp.local, lessForNodeProfile)
+
 	r := &PrimingCensusTemplate{
 		registries:     registries,
-		online:         population,
+		online:         &sortedPopulation,
+		evicted:        &evictedPopulation{},
 		profileFactory: pf,
 		pd:             registries.GetVersionPulseData(),
 	}
 	return r
+}
+
+func nodeProfileOrdering(np common2.NodeProfile) (common2.NodePrimaryRole, common2.MemberPower, common.ShortNodeID) {
+	p := np.GetDeclaredPower()
+	r := np.GetPrimaryRole()
+	if p == 0 || !np.GetOpMode().IsPowerful() {
+		return common2.PrimaryRoleInactive, 0, np.GetShortNodeID()
+	}
+	return r, p, np.GetShortNodeID()
+}
+
+func lessForNodeProfile(c common2.NodeProfile, o common2.NodeProfile) bool {
+	cR, cP, cI := nodeProfileOrdering(c)
+	oR, oP, oI := nodeProfileOrdering(o)
+
+	/* Reversed order */
+	if cR < oR {
+		return false
+	} else if cR > oR {
+		return true
+	}
+
+	if cP < oP {
+		return true
+	} else if cP > oP {
+		return false
+	}
+
+	return cI < oI
 }
 
 func (c *PrimingCensusTemplate) SetAsActiveTo(chronicles LocalConsensusChronicles) {
@@ -134,6 +175,10 @@ func (c *PrimingCensusTemplate) GetOnlinePopulation() OnlinePopulation {
 	return c.online
 }
 
+func (c *PrimingCensusTemplate) GetEvictedPopulation() EvictedPopulation {
+	return c.evicted
+}
+
 func (c *PrimingCensusTemplate) GetOfflinePopulation() OfflinePopulation {
 	return c.registries.GetOfflinePopulation()
 }
@@ -150,8 +195,8 @@ func (c *PrimingCensusTemplate) GetMandateRegistry() MandateRegistry {
 	return c.registries.GetMandateRegistry()
 }
 
-func (c *PrimingCensusTemplate) CreateBuilder(pn common.PulseNumber) Builder {
-	return newLocalCensusBuilder(c.chronicles, pn, c.online)
+func (c *PrimingCensusTemplate) CreateBuilder(pn common.PulseNumber, fullCopy bool) Builder {
+	return newLocalCensusBuilder(c.chronicles, pn, c.online, fullCopy)
 }
 
 var _ ActiveCensus = &ActiveCensusTemplate{}
@@ -190,11 +235,16 @@ var _ ExpectedCensus = &ExpectedCensusTemplate{}
 
 type ExpectedCensusTemplate struct {
 	chronicles *localChronicles
-	online     copyOnlinePopulationTo
+	online     copyToOnlinePopulation
+	evicted    EvictedPopulation
 	prev       ActiveCensus
 	gsh        common2.GlobulaStateHash
 	csh        common2.CloudStateHash
 	pn         common.PulseNumber
+}
+
+func (c *ExpectedCensusTemplate) GetEvictedPopulation() EvictedPopulation {
+	return c.evicted
 }
 
 func (c *ExpectedCensusTemplate) GetExpectedPulseNumber() common.PulseNumber {
@@ -236,8 +286,8 @@ func (c *ExpectedCensusTemplate) GetMandateRegistry() MandateRegistry {
 	return c.prev.GetMandateRegistry()
 }
 
-func (c *ExpectedCensusTemplate) CreateBuilder(pn common.PulseNumber) Builder {
-	return newLocalCensusBuilder(c.chronicles, pn, c.online)
+func (c *ExpectedCensusTemplate) CreateBuilder(pn common.PulseNumber, fullCopy bool) Builder {
+	return newLocalCensusBuilder(c.chronicles, pn, c.online, fullCopy)
 }
 
 func (c *ExpectedCensusTemplate) GetPrevious() ActiveCensus {
@@ -250,6 +300,7 @@ func (c *ExpectedCensusTemplate) MakeActive(pd common.PulseData) ActiveCensus {
 		PrimingCensusTemplate: PrimingCensusTemplate{
 			chronicles: c.chronicles,
 			online:     c.online,
+			evicted:    c.evicted,
 			pd:         pd,
 		},
 		gsh: c.gsh,

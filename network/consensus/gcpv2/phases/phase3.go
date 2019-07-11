@@ -53,6 +53,7 @@ package phases
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -123,16 +124,16 @@ func (c *Phase3Controller) HandleMemberPacket(ctx context.Context, reader packet
 		return err
 	}
 	bs := p3.GetBitset()
-	gshTrusted := p3.GetTrustedGsh()
-	gshDoubted := p3.GetDoubtedGsh()
 	// TODO ClaimHashes as well
 
 	c.queuePh3Recv <- ph3Data{
 		np: n,
 		vector: nodeset.HashedNodeVector{
-			Bitset:        bs,
-			DoubtedVector: gshDoubted,
-			TrustedVector: gshTrusted,
+			Bitset:                             bs,
+			TrustedAnnouncementVector:          p3.GetTrustedGlobulaAnnouncementHash(),
+			DoubtedAnnouncementVector:          p3.GetDoubtedGlobulaAnnouncementHash(),
+			TrustedGlobulaStateVectorSignature: p3.GetTrustedGlobulaStateSignature(),
+			DoubtedGlobulaStateVectorSignature: p3.GetDoubtedGlobulaStateSignature(),
 		},
 	}
 
@@ -156,24 +157,23 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 		// c.R.StopRoundByTimeout()
 		return
 	}
-	d0 := c.calcGshPair()
-	//d0 := c.calcGshPairNew()
-	//if !d0.TrustedVector.Equals(d1.TrustedVector) || d0.DoubtedVector != nil && !d0.DoubtedVector.Equals(d1.DoubtedVector) {
-	//	for {
-	//		d0 = c.calcGshPair()
-	//		d1 = c.calcGshPairNew()
-	//	}
-	//}
 
-	go c.workerSendPhase3(ctx, d0)
+	vectorHelper := c.R.GetPopulation().SetOrUpdateVectorHelper(&core.RealmVectorHelper{})
+	localVector := nodeset.NewLocalNodeVector(c.R.GetDigestFactory(),
+		c.R.GetSelf().GetSignatureVerifier(c.R.GetVerifierFactory()), vectorHelper)
 
-	if !c.workerRecvPhase3(ctx, d0) {
-		// context was stopped in a hard way, we are dead in terms of consensus
-		// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
-		// c.R.StopRoundByTimeout()
+	d0 := c.calcGshPairNew(&localVector)
+
+	go c.workerSendPhase3(ctx, d0.HashedNodeVector)
+
+	if !c.workerRecvPhase3(ctx, d0, &localVector) {
+		// context was stopped in a hard way or we have left a consensus
 		return
 	}
+	// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
+	// c.R.StopRoundByTimeout()
 
+	//avoid any links to controllers for this flusher
 	go workerQueueFlusher(ctxRound, c.queuePh3Recv, c.queueTrustUpdated)
 }
 
@@ -230,19 +230,20 @@ outer:
 			break outer
 		case sig := <-c.queueTrustUpdated:
 			if sig.IsPingSignal() { // ping indicates arrival of Phase2 packet, to support chasing
+				//TODO chasing
 				break
 			}
 			switch {
 			case sig.NewTrustLevel < 0:
 				countFraud++
 				continue // no chasing delay on fraud
-			case sig.NewTrustLevel == packets.UnknownTrust:
+			case sig.NewTrustLevel == common2.UnknownTrust:
 				countHasNsh++
 				// if countHasNsh >= R.othersCount {
 				// 	// we have answers from all
 				// 	break outer
 				// }
-			case sig.NewTrustLevel >= packets.TrustByNeighbors:
+			case sig.NewTrustLevel >= common2.TrustByNeighbors:
 				countTrustByNeighbors++
 				fallthrough
 			default:
@@ -283,139 +284,55 @@ outer:
 	return true
 }
 
-type ph3VectorBuilder struct {
-	digester common.SequenceDigester
-}
-
-func (p *ph3VectorBuilder) AddEntry(n *core.NodeAppearance, power common2.MemberPower, cursor core.VectorCursor, nodeData *common2.NodeAnnouncedState) {
-	p.digester.AddNext(nodeData.StateEvidence.GetNodeStateHash())
-}
-
-func (p *ph3VectorBuilder) Fork() core.VectorBuilder {
-	return &ph3VectorBuilder{p.digester.ForkSequence()}
-}
-
-//func (c *Phase3Controller) calcGshPairNew() nodeset.HashedNodeVector {
-//
-//	coreDigester := c.R.GetDigestFactory().GetGshDigester()
-//	vBuilder := core.NewDualVectorBuilder(&ph3VectorBuilder{ coreDigester },
-//		0x04, 0x04,
-//		0x02, 0x02,
-//	)
-//
-//	pop := c.R.GetPopulation()
-//	res := nodeset.HashedNodeVector{ Bitset: make(nodeset.NodeBitset, pop.GetNodeCount()) }
-//	vectorHelper := core.NewRealmVectorHelper(func (index int, nodeData core.VectorEntryData) uint16 {
-//		nsv := mapVectorEntryDataToNodesetEntry(nodeData)
-//		res.Bitset[index] = nsv
-//		if nsv == nodeset.NbsTimeout {
-//			return 0
-//		}
-//		if nsv.IsTrusted() {
-//			return 0x06
-//		}
-//		return 0x03
-//	})
-//	vectorHelper = pop.SetOrUpdateVectorHelper(vectorHelper)
-//	vBuilder.ScanVector(vectorHelper)
-//	_, b0, _ := vBuilder.Get(0)
-//	_, b1, _ := vBuilder.Get(1)
-//
-//	res.TrustedVector = b0.(*ph3VectorBuilder).digester.FinishSequence().AsDigestHolder()
-//	if b1 != nil {
-//		res.DoubtedVector = b1.(*ph3VectorBuilder).digester.FinishSequence().AsDigestHolder()
-//	}
-//
-//	return res
-//}
-
-func mapVectorEntryDataToNodesetEntry(nodeData core.VectorEntryData) nodeset.NodeBitsetEntry {
-	switch {
-	case nodeData.IsEmpty():
-		return nodeset.NbsTimeout
-	case nodeData.TrustLevel.IsNegative():
-		return nodeset.NbsFraud
-	case nodeData.TrustLevel == packets.UnknownTrust:
-		return nodeset.NbsBaselineTrust
-	case nodeData.TrustLevel < packets.TrustByNeighbors:
-		return nodeset.NbsLimitedTrust
-	default:
-		return nodeset.NbsHighTrust
-	}
-}
-
-func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
+func (c *Phase3Controller) calcGshPairNew(localVector *nodeset.NodeVectorHelper) nodeset.LocalHashedNodeVector {
 
 	/*
 		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always
 		have trust level set high enough to get bitset[i].IsTrusted() == true
 	*/
-	aggTrusted := c.R.GetDigestFactory().GetGshDigester()
-	var aggDoubted common.SequenceDigester
 
-	pop := c.R.GetPopulation()
+	res := nodeset.LocalHashedNodeVector{}
+	res.Bitset = localVector.GetNodeBitset()
+	res.TrustedAnnouncementVector, res.DoubtedAnnouncementVector =
+		localVector.BuildGlobulaAnnouncementHashes(true, true, nil, nil)
 
-	indexedNodes := pop.GetIndexedNodes()
-	nodeCount := len(indexedNodes)
-	//joiners := make([]*core.NodeAppearance, nodeCount)
-	bitset := make(nodeset.NodeBitset, nodeCount)
-
-	for i, n := range indexedNodes {
-		membership, trust := n.GetNodeTrustAndMembershipOrEmpty()
-		//power, leaving, exitCode, joiner := n.GetRequestedState()
-
-		switch {
-		case membership.IsEmpty():
-			bitset[i] = nodeset.NbsTimeout
-			continue
-		case trust.IsNegative():
-			bitset[i] = nodeset.NbsFraud
-		case trust == packets.UnknownTrust:
-			bitset[i] = nodeset.NbsBaselineTrust
-		case trust < packets.TrustByNeighbors:
-			bitset[i] = nodeset.NbsLimitedTrust
-		default:
-			bitset[i] = nodeset.NbsHighTrust
-		}
-		if bitset[i].IsTrusted() {
-			aggTrusted.AddNext(membership.StateEvidence.GetNodeStateHash())
-			if aggDoubted == nil {
-				continue
-			}
-		} else if aggDoubted == nil {
-			aggDoubted = aggTrusted.ForkSequence()
-		}
-		aggDoubted.AddNext(membership.StateEvidence.GetNodeStateHash())
+	duplicateDoubted := res.TrustedAnnouncementVector != nil && res.TrustedAnnouncementVector.Equals(res.DoubtedAnnouncementVector)
+	if duplicateDoubted {
+		res.DoubtedAnnouncementVector = nil
 	}
 
-	res := nodeset.HashedNodeVector{Bitset: bitset}
-	res.TrustedVector = aggTrusted.FinishSequence().AsDigestHolder()
-	if aggDoubted != nil {
-		res.DoubtedVector = aggDoubted.FinishSequence().AsDigestHolder()
+	res.TrustedGlobulaStateVector, res.DoubtedGlobulaStateVector = localVector.BuildGlobulaStateHashes(
+		true, !duplicateDoubted, nil, nil)
+
+	signer := c.R.GetSigner()
+	res.TrustedGlobulaStateVectorSignature = res.TrustedGlobulaStateVector.SignWith(signer).GetSignatureHolder()
+	if !duplicateDoubted {
+		res.DoubtedGlobulaStateVectorSignature = res.DoubtedGlobulaStateVector.SignWith(signer).GetSignatureHolder()
 	}
+
 	return res
 }
 
 func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodeset.HashedNodeVector) {
 
-	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.CreateLocalAnnouncement(),
-		selfData.Bitset, selfData.TrustedVector, selfData.DoubtedVector, c.packetPrepareOptions)
+	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
-	for _, np := range c.R.GetPopulation().GetShuffledOtherNodes() {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
+	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.CreateLocalAnnouncement(), selfData,
+		c.packetPrepareOptions)
 
-		p3.SendTo(ctx, np.GetProfile(), 0, c.R.GetPacketSender())
-		np.SetSentByPacketType(c.GetPacketType())
-	}
+	p3.SendToMany(ctx, len(otherNodes), c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (common2.NodeProfile, core.PacketSendOptions) {
+			np := otherNodes[targetIdx]
+			np.SetSentByPacketType(c.GetPacketType())
+			return np.GetProfile(), 0
+		})
 
 	//TODO send to shuffled joiners as well?
 }
 
-func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodeset.HashedNodeVector) bool {
+func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodeset.LocalHashedNodeVector,
+	localVector *nodeset.NodeVectorHelper) bool {
+
 	log := inslogger.FromContext(ctx)
 
 	timings := c.R.GetTimings()
@@ -431,9 +348,9 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodese
 	// even if we wont have all NSH, we can let to know these nodes on such collision
 	// bitsetMatcher := make(map[gcpv2.NodeBitset])
 
-	alteredDoubtedGshCount := 0
+	//hasher := nodeset.NewFilteredSequenceHasher(c.R.GetDigestFactory(), localVector)
 
-	hasher := nodeset.NewFilteredSequenceHasher(c.R.GetDigestFactory(), c.handleNodeHashing)
+	alteredDoubtedGshCount := 0
 	var consensusSelection ConsensusSelection
 
 outer:
@@ -463,7 +380,7 @@ outer:
 				)
 			}
 
-			vr := nodeset.ClassifyByNodeGsh(selfData, d.vector, nodeStats, hasher)
+			vr := nodeset.ClassifyByNodeGsh(selfData, d.vector, nodeStats, localVector)
 
 			logMsg := "add"
 			if nodeStats.HasAllValues(0) {
@@ -530,23 +447,68 @@ outer:
 	}
 
 	if sameWithActive {
+		selectionSet = nil
 		log.Info("Consensus is finished as same")
 	} else {
 		log.Infof("Consensus is finished as different, %v", selectionSet)
 		// TODO update population and/or start Phase 4
 	}
 
-	b := c.R.CreateNextPopulationBuilder()
-	priming := c.R.GetPrimingCloudHash()
-	// population is to be updated somewhere here
-	b.SetGlobulaStateHash(priming)
-	b.SealCensus()
-	c.R.FinishRound(b, priming)
-
-	return true
+	b := c.R.CreateNextCensusBuilder()
+	if c.buildNextPopulation(b.GetPopulationBuilder(), selectionSet) {
+		//TODO HACK
+		priming := c.R.GetPrimingCloudHash()
+		b.SetGlobulaStateHash(priming)
+		b.SealCensus()
+		c.R.FinishRound(b, priming)
+		return true
+	} else {
+		log.Info("Node has left")
+		c.R.FinishRound(b, nil)
+		return false
+	}
 }
 
-func (c *Phase3Controller) handleNodeHashing(index int, digester common.SequenceDigester) {
-	nsh := c.R.GetPopulation().GetNodeAppearanceByIndex(index).GetNodeMembershipProfile().StateEvidence.GetNodeStateHash()
-	digester.AddNext(nsh)
+func (c *Phase3Controller) buildNextPopulation(pb census.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
+
+	//pop := c.R.GetPopulation()
+	//count := 0
+	//for _, na := pop.GetIndexedNodes() {
+	//
+	//}
+	//
+	//for
+	//
+	//if isLeaver, leaveReason, _, _, _ := c.R.GetSelf().GetRequestedState(); isLeaver {
+	//	//we are leaving, no need to build population, but lets make it look nice
+	//	pb.RemoveOthers()
+	//	lp := pb.GetLocalProfile()
+	//	lp.SetIndex(0)
+	//	lp.SetOpModeAndLeaveReason(leaveReason)
+	//	return false
+	//}
+	//
+	//
+	////if pb.GetLocalProfile().GetOpMode().IsEvicted() /* TODO and local is still evicted */ {
+	////	//this node was evicted, so we can have a consensus with ourselves
+	////	pb.RemoveOthers()
+	////	return
+	////}
+	//
+	//pop := c.R.GetPopulation()
+	//for _, np := range pb.GetUnorderedProfiles() {
+	//	opm := np.GetOpMode()
+	//	if np.IsJoiner() || opm.IsEvicted() { panic("illegal state") }
+	//
+	//	idx := np.GetIndex()
+	//	//TODO if nodeset.
+	//
+	//	na := pop.GetNodeAppearanceByIndex(idx)
+	//	//TODO MUST use cached vector values
+	//	isLeaver, _, _, _, _ := na.GetRequestedState()
+	//	if isLeaver {
+	//		np.SetOpMode(common2.MemberModeEvictedGracefully)
+	//	}
+	//}
+	return true
 }

@@ -62,5 +62,5 @@ func NewChronicles(pop census.ManyNodePopulation, pf common.NodeProfileFactory, 
 }
 
 func NewPopulation(localNode common.NodeIntroProfile, nodes []common.NodeIntroProfile) census.ManyNodePopulation {
-	return census.NewManyNodePopulation(localNode, nodes, false)
+	return census.NewManyNodePopulation(localNode, nodes)
 }

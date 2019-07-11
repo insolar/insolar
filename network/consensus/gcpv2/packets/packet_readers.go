@@ -134,11 +134,14 @@ type Phase3PacketReader interface {
 	PhasePacketReader
 
 	GetBitset() nodeset.NodeBitset
-	GetTrustedGsh() common2.GlobulaStateHash
-	GetDoubtedGsh() common2.GlobulaStateHash
 
-	GetTrustedCshEvidence() common.SignedEvidenceHolder
-	GetDoubtedCshEvidence() common.SignedEvidenceHolder
+	//GetTrustedExpectedRank() common2.MembershipRank
+	GetTrustedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash
+	GetTrustedGlobulaStateSignature() common2.GlobulaStateSignature
+
+	//GetDoubtedExpectedRank() common2.MembershipRank
+	GetDoubtedGlobulaAnnouncementHash() common2.GlobulaAnnouncementHash
+	GetDoubtedGlobulaStateSignature() common2.GlobulaStateSignature
 }
 
 type MembershipAnnouncementReader interface {

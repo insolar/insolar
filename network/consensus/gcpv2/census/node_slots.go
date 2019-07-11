@@ -59,36 +59,46 @@ import (
 
 var _ common2.LocalNodeProfile = &NodeProfileSlot{}
 
+const joinerIndex = 0x8000
+
 type NodeProfileSlot struct {
 	common2.NodeIntroProfile
 	verifier common.SignatureVerifier
 	index    uint16
-	state    common2.MembershipState
+	mode     common2.MemberOpMode
 	power    common2.MemberPower
 }
 
-func NewNodeProfile(index int, s common2.MembershipState, p common2.NodeIntroProfile, verifier common.SignatureVerifier, pw common2.MemberPower) NodeProfileSlot {
+func NewNodeProfile(index int, p common2.NodeIntroProfile, verifier common.SignatureVerifier, pw common2.MemberPower) NodeProfileSlot {
 
-	return NodeProfileSlot{index: uint16(index), state: s, NodeIntroProfile: p, verifier: verifier, power: pw}
+	if index < 0 || index > common2.MaxNodeIndex {
+		panic("illegal value")
+	}
+	return NodeProfileSlot{index: uint16(index), NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
-func (c *NodeProfileSlot) Less(o common2.NodeProfile) bool {
-	return common2.LessForNodeProfile(c, o)
+func NewJoinerProfile(p common2.NodeIntroProfile, verifier common.SignatureVerifier, pw common2.MemberPower) NodeProfileSlot {
+
+	return NodeProfileSlot{index: joinerIndex, NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
 func (c *NodeProfileSlot) GetDeclaredPower() common2.MemberPower {
 	return c.power
 }
 
-func (c *NodeProfileSlot) GetState() common2.MembershipState {
-	return c.state
+func (c *NodeProfileSlot) GetOpMode() common2.MemberOpMode {
+	return c.mode
 }
 
 func (c *NodeProfileSlot) LocalNodeProfile() {
 }
 
 func (c *NodeProfileSlot) GetIndex() int {
-	return int(c.index)
+	return int(c.index & common2.NodeIndexMask)
+}
+
+func (c *NodeProfileSlot) IsJoiner() bool {
+	return c.index == joinerIndex
 }
 
 func (c *NodeProfileSlot) GetSignatureVerifier() common.SignatureVerifier {
@@ -99,20 +109,33 @@ var _ common2.UpdatableNodeProfile = &updatableSlot{}
 
 type updatableSlot struct {
 	NodeProfileSlot
+	leaveReason uint32
 }
 
-func (c *updatableSlot) SetRank(index int, state common2.MembershipState, power common2.MemberPower) {
+func (c *updatableSlot) SetRank(index int, m common2.MemberOpMode, power common2.MemberPower) {
 	c.SetIndex(index)
-	c.state = state
 	c.power = power
+	c.mode = m
 }
 
 func (c *updatableSlot) SetPower(power common2.MemberPower) {
 	c.power = power
 }
 
-func (c *updatableSlot) SetState(s common2.MembershipState) {
-	c.state = s
+func (c *updatableSlot) SetOpMode(m common2.MemberOpMode) {
+	c.mode = m
+}
+
+func (c *updatableSlot) SetOpModeAndLeaveReason(leaveReason uint32) {
+	c.mode = common2.MemberModeEvictedGracefully
+	c.leaveReason = leaveReason
+}
+
+func (c *updatableSlot) GetLeaveReason() uint32 {
+	if c.mode != common2.MemberModeEvictedGracefully {
+		return 0
+	}
+	return c.leaveReason
 }
 
 func (c *updatableSlot) SetIndex(index int) {
@@ -124,12 +147,4 @@ func (c *updatableSlot) SetIndex(index int) {
 
 func (c *updatableSlot) SetSignatureVerifier(verifier common.SignatureVerifier) {
 	c.verifier = verifier
-}
-
-func (c *updatableSlot) setJoiner(joiner bool) {
-	if joiner {
-		c.state = common2.Joining
-	} else if c.state.IsJoining() || c.state.IsUndefined() {
-		c.state = common2.Working
-	}
 }

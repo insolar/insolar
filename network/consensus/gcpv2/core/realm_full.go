@@ -178,14 +178,24 @@ func (r *FullRealm) initSelf() {
 	prevSelf.copySelfTo(newSelf)
 	r.self = newSelf
 
-	newSelf.requestedLeave, newSelf.requestedLeaveExitCode = r.controlFeeder.GetRequiredGracefulLeave()
+	if !newSelf.profile.IsJoiner() {
+		//joiners are not allowed to request leave
+		newSelf.requestedLeave, newSelf.requestedLeaveReason = r.controlFeeder.GetRequiredGracefulLeave()
+	}
+
 	if !newSelf.requestedLeave {
+		//leaver is not allowed to add new nodes
 		newSelf.requestedJoiner = r.pickNextJoinCandidate()
 	}
 	newSelf.callback.updatePopulationVersion()
 }
 
 func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
+	if r.GetLocalProfile().GetOpMode().IsRestricted() {
+		//this node is not allowed to introduce joiners
+		return nil
+	}
+
 	for {
 		cp := r.candidateFeeder.PickNextJoinCandidate()
 		if cp == nil {
@@ -194,7 +204,7 @@ func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
 
 		nip := r.profileFactory.CreateFullIntroProfile(cp)
 		sv := r.GetSignatureVerifier(nip.GetNodePublicKeyStore())
-		np := census.NewNodeProfile(0, common2.Working, nip, sv, 0)
+		np := census.NewJoinerProfile(nip, sv, nip.GetStartPower())
 		na := r.population.CreateNodeAppearance(r.roundContext, &np)
 		nna, nodes := r.population.AddToDynamics(na)
 
@@ -274,9 +284,9 @@ func (r *coreRealm) UpstreamPreparePulseChange() <-chan common2.NodeStateHash {
 
 	sp := r.GetSelf().GetProfile()
 	report := MembershipUpstreamReport{
-		PulseNumber:     r.pulseData.PulseNumber,
-		MemberPower:     sp.GetDeclaredPower(),
-		MembershipState: sp.GetState(),
+		r.pulseData.PulseNumber,
+		sp.GetDeclaredPower(),
+		sp.GetOpMode(),
 	}
 	return r.upstream.PreparePulseChange(report)
 }
@@ -304,18 +314,23 @@ func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStat
 }
 
 func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *packets.NodeAnnouncementProfile {
-	return packets.NewNodeAnnouncement(n.profile, n.GetNodeMembershipProfile(), r.GetNodeCount(), r.pulseData.PulseNumber)
+	ma := n.GetRequestedAnnouncement()
+	if ma.Membership.IsEmpty() {
+		panic("illegal state")
+	}
+
+	return packets.NewNodeAnnouncement(n.profile, ma, r.GetNodeCount(), r.pulseData.PulseNumber)
 }
 
 func (r *FullRealm) CreateLocalAnnouncement() *packets.NodeAnnouncementProfile {
 	return r.CreateAnnouncement(r.self)
 }
 
-func (r *FullRealm) CreateNextPopulationBuilder() census.Builder {
-	return r.census.CreateBuilder(r.GetNextPulseNumber())
+func (r *FullRealm) CreateNextCensusBuilder() census.Builder {
+	return r.census.CreateBuilder(r.GetNextPulseNumber(), true)
 }
 
-func (r *FullRealm) preparePrimingMembers(pop census.OnlinePopulationBuilder) {
+func (r *FullRealm) preparePrimingMembers(pop census.PopulationBuilder) {
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() != nil {
 			continue
@@ -325,36 +340,30 @@ func (r *FullRealm) preparePrimingMembers(pop census.OnlinePopulationBuilder) {
 	}
 }
 
-func (r *FullRealm) prepareRegularMembers(pop census.OnlinePopulationBuilder) {
-	cc := r.census.GetMandateRegistry().GetConsensusConfiguration()
-
-	pulsesInJustJoined := cc.GetPulsesForJustJoinedState()
-	pulsesInSuspected := cc.GetPulsesForSuspectedState()
+/* deprecated */
+func (r *FullRealm) prepareRegularMembers(pop census.PopulationBuilder) {
+	//cc := r.census.GetMandateRegistry().GetConsensusConfiguration()
 
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() == nil {
 			v := r.GetSignatureVerifier(p.GetNodePublicKeyStore())
 			p.SetSignatureVerifier(v)
 		}
-		ns := p.GetState()
-		if ns.InSuspectedExceeded(int(pulsesInSuspected)) {
-			panic("node must be removed as suspected")
-		}
-		ns = ns.UpdateOnNextPulse(int(pulsesInJustJoined))
-		p.SetState(ns)
 
-		idx := p.GetIndex()
+		if p.GetOpMode().IsEvicted() {
+			continue
+		}
+
 		var na *NodeAppearance
-		if idx >= 0 {
-			na = r.population.GetNodeAppearanceByIndex(idx)
-		} else {
+		if p.IsJoiner() {
 			na = r.population.GetJoinerNodeAppearance(p.GetShortNodeID())
+		} else {
+			na = r.population.GetNodeAppearanceByIndex(p.GetIndex())
 		}
 		leave, _, _, m, _ := na.GetRequestedState()
-		if leave {
-			panic("node must be removed as leaving")
+		if !leave {
+			p.SetPower(m.RequestedPower)
 		}
-		p.SetPower(m.RequestedPower)
 	}
 }
 
@@ -367,21 +376,24 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHa
 	}
 	r.isFinished = true
 
-	r.prepareRegularMembers(builder.GetOnlinePopulationBuilder())
+	if csh == nil {
+		r.notifyConsensusFinished(builder.GetPopulationBuilder().GetLocalProfile(), nil)
+		return
+	}
+	r.prepareRegularMembers(builder.GetPopulationBuilder())
 	expected := builder.BuildAndMakeExpected(csh)
-
-	r.upstreamMembershipConfirmed(expected)
+	r.notifyConsensusFinished(expected.GetOnlinePopulation().GetLocalProfile(), expected)
 }
 
-func (r *FullRealm) upstreamMembershipConfirmed(expectedCensus census.OperationalCensus) {
-	sp := r.GetSelf().GetProfile()
+func (r *FullRealm) notifyConsensusFinished(newSelf common2.NodeProfile, expectedCensus census.OperationalCensus) {
 	report := MembershipUpstreamReport{
-		PulseNumber:     r.pulseData.PulseNumber,
-		MemberPower:     sp.GetDeclaredPower(),
-		MembershipState: sp.GetState(),
+		r.pulseData.PulseNumber,
+		newSelf.GetDeclaredPower(),
+		newSelf.GetOpMode(),
 	}
 
-	r.upstream.MembershipConfirmed(report, expectedCensus)
+	r.controlFeeder.ConsensusFinished(report, expectedCensus)
+	r.upstream.ConsensusFinished(report, expectedCensus)
 }
 
 func (r *FullRealm) getPacketDispatcher(pt packets.PacketType) (*packetDispatcher, error) {

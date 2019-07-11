@@ -126,7 +126,7 @@ func (r *DynamicRealmPopulation) GetNodeAppearance(id common.ShortNodeID) *NodeA
 
 func (r *DynamicRealmPopulation) GetActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance {
 	na := r.GetNodeAppearance(id)
-	if na.GetProfile().GetState().IsActive() {
+	if !na.GetProfile().IsJoiner() {
 		return na
 	}
 	return nil
@@ -134,10 +134,10 @@ func (r *DynamicRealmPopulation) GetActiveNodeAppearance(id common.ShortNodeID) 
 
 func (r *DynamicRealmPopulation) GetJoinerNodeAppearance(id common.ShortNodeID) *NodeAppearance {
 	na := r.GetNodeAppearance(id)
-	if na.GetProfile().GetState().IsJoining() {
-		return na
+	if !na.GetProfile().IsJoiner() {
+		return nil
 	}
-	return nil
+	return na
 }
 
 func (r *DynamicRealmPopulation) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
@@ -196,7 +196,7 @@ func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np co
 }
 
 func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState) {
-	if !n.profile.GetState().IsUndefined() {
+	if n.profile.HasIntroduction() {
 		panic("illegal value")
 	}
 
@@ -243,10 +243,11 @@ func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppeara
 
 func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
 	np := n.profile
-	st := n.profile.GetState()
-	if st.IsUndefined() {
+
+	if !np.HasIntroduction() {
 		panic("illegal value")
 	}
+
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
@@ -270,7 +271,7 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 		return na, *nodes
 	}
 
-	if st.IsJoining() {
+	if np.IsJoiner() {
 		r.joinerCount++
 	} else {
 		ni := np.GetIndex()
@@ -278,9 +279,7 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 		case ni == len(r.nodeIndex):
 			r.nodeIndex = append(r.nodeIndex, n)
 		case ni > len(r.nodeIndex):
-			nn := make([]*NodeAppearance, ni+1)
-			copy(nn, r.nodeIndex)
-			r.nodeIndex = nn
+			r.nodeIndex = append(r.nodeIndex, make([]*NodeAppearance, 1+ni-len(r.nodeIndex))...)
 			r.nodeIndex[ni] = n
 		default:
 			if r.nodeIndex[ni] != nil {
@@ -303,5 +302,5 @@ func (r *DynamicRealmPopulation) SetOrUpdateVectorHelper(v *RealmVectorHelper) *
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	return v.setOrUpdateNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
+	return v.SetOrUpdateNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
 }

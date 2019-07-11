@@ -82,7 +82,7 @@ type Phase2Controller struct {
 }
 
 type TrustUpdateSignal struct {
-	NewTrustLevel packets.NodeTrustLevel
+	NewTrustLevel common2.NodeTrustLevel
 	UpdatedNode   *core.NodeAppearance
 }
 
@@ -129,7 +129,7 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 		}
 
 		nr := nb.GetNodeRank()
-		mp := common2.NewMembershipProfile(nr.GetIndex(), nr.GetPower(), nb.GetNodeStateHashEvidence(),
+		mp := common2.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(), nb.GetNodeStateHashEvidence(),
 			nb.GetAnnouncementSignature(), nb.GetRequestedPower())
 
 		// TODO validate node proof - if fails, then fraud on sender
@@ -139,12 +139,24 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 		//	// TODO register protocol misbehavior - IntroClaim was not expected
 		// }
 
+		var ma common2.MembershipAnnouncement
+		switch {
+		case nb.IsLeaving():
+			ma = common2.NewMembershipAnnouncementWithLeave(mp, nb.GetLeaveReason())
+		case nb.GetJoinerID().IsAbsent():
+			ma = common2.NewMembershipAnnouncement(mp)
+		default:
+			panic("not implemented") //TODO implement
+			//jar := na.GetJoinerAnnouncement()
+			//ma = common.NewMembershipAnnouncementWithJoiner(mp)
+		}
+
 		var modified bool
 		nc := c.R.GetNodeCount()
 		if nc != int(nr.GetTotalCount()) {
 			modified, _ = n.RegisterFraud(n.Frauds().NewMismatchedMembershipNodeCount(n.GetProfile(), mp, nc))
 		} else {
-			modified, _ = neighbour.ApplyNeighbourEvidence(n, mp)
+			modified, _ = neighbour.ApplyNeighbourEvidence(n, ma)
 		}
 		if modified {
 			signalSent = true
@@ -258,10 +270,10 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			remainingJoiners -= takeJoiners
 			remainingNodes -= takeNodes
 
-			nh := make([]*core.NodeAppearance, 1, len(nhBuf)+1)
-			nh[0] = c.R.GetSelf()
-			for _, np := range nhBuf {
-				nh = append(nh, np.(*core.NodeAppearance))
+			nh := make([]*core.NodeAppearance, len(nhBuf))
+			for i, np := range nhBuf {
+				//don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
+				nh[i] = np.(*core.NodeAppearance)
 			}
 
 			go c.sendPhase2(ctx, nh, takeJoiners)
@@ -274,28 +286,19 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core.NodeAppearance, joinerCount int) {
 
 	neighbourhoodAnnouncements := make([]packets.MembershipAnnouncementReader, len(neighbourhood))
-	//introductions := make([]common2.NodeIntroduction, 0, joinerCount)
-
 	for i, np := range neighbourhood {
 		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np)
-		//node := np.GetProfile()
-		//if node.IsJoiner() {
-		//	introductions = append(introductions, node.GetIntroduction())
-		//}
 	}
 
 	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(),
 		neighbourhoodAnnouncements, c.packetPrepareOptions)
 
-	for _, np := range neighbourhood[1:] { // start from 1 to skip sending to self
-		p2.SendTo(ctx, np.GetProfile(), 0, c.R.GetPacketSender())
-		np.SetSentByPacketType(c.GetPacketType())
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-	}
+	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (common2.NodeProfile, core.PacketSendOptions) {
+			np := neighbourhood[targetIdx]
+			np.SetSentByPacketType(c.GetPacketType())
+			return np.GetProfile(), 0
+		})
 }
 
 func availableInQueue(captured int, queue common.HeadedLazySortedList, remains int, maxWeight uint32) int {

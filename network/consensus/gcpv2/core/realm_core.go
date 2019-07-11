@@ -121,6 +121,14 @@ func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport Tran
 	*/
 	nodeContext := &nodeContext{}
 	profile := population.GetLocalProfile()
+
+	if profile.GetOpMode().IsEvicted() {
+		/*
+			Previous round has provided an incorrect population, as eviction of local node must force one-node population of self
+		*/
+		panic("illegal state")
+	}
+
 	r.self = NewNodeAppearanceAsSelf(profile, nodeContext)
 	r.self.requestedPower = profile.GetIntroduction().ConvertPowerRequest(powerRequest)
 

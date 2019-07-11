@@ -98,6 +98,24 @@ func (r *emuPacketSender) SendTo(ctx context.Context, t common2.NodeProfile, sen
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
+func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s core.PacketSender,
+	filter func(ctx context.Context, targetIndex int) (common2.NodeProfile, core.PacketSendOptions)) {
+
+	for i := 0; i < targetCount; i++ {
+		sendTo, sendOptions := filter(ctx, i)
+		if sendTo != nil {
+			c := r.cloner.clonePacketFor(sendTo, sendOptions)
+			s.SendPacketToTransport(ctx, sendTo, sendOptions, c)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+	}
+}
+
 type emuPacketBuilder struct {
 }
 
@@ -134,9 +152,11 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementP
 	v := EmuPhase1NetPacket{
 		EmuPhase0NetPacket: EmuPhase0NetPacket{
 			basePacket: basePacket{
-				src:       sender.GetNodeID(),
-				nodeCount: sender.GetNodeCount(),
-				mp:        sender.GetMembershipProfile(),
+				src:         sender.GetNodeID(),
+				nodeCount:   sender.GetNodeCount(),
+				mp:          sender.GetMembershipProfile(),
+				isLeaving:   sender.IsLeaving(),
+				leaveReason: sender.GetLeaveReason(),
 			},
 			pulsePacket: pp},
 	}
@@ -169,9 +189,11 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementP
 
 	v := EmuPhase2NetPacket{
 		basePacket: basePacket{
-			src:       sender.GetNodeID(),
-			nodeCount: sender.GetNodeCount(),
-			mp:        sender.GetMembershipProfile(),
+			src:         sender.GetNodeID(),
+			nodeCount:   sender.GetNodeCount(),
+			mp:          sender.GetMembershipProfile(),
+			isLeaving:   sender.IsLeaving(),
+			leaveReason: sender.GetLeaveReason(),
 		},
 		pulseNumber:   sender.GetPulseNumber(),
 		neighbourhood: neighbourhood,
@@ -197,8 +219,7 @@ func (r *EmuPhase2NetPacket) clonePacketFor(t common2.NodeProfile, sendOptions c
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
-	bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
+func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors nodeset.HashedNodeVector,
 	options core.PacketSendOptions) core.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
@@ -207,10 +228,9 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementP
 			nodeCount: sender.GetNodeCount(),
 			mp:        sender.GetMembershipProfile(),
 		},
-		bitset:      bitset,
 		pulseNumber: sender.GetPulseNumber(),
-		gshTrusted:  gshTrusted,
-		gshDoubted:  gshDoubted}
+		vectors:     vectors,
+	}
 	return &emuPacketSender{&v}
 }
 

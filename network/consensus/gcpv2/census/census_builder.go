@@ -57,12 +57,17 @@ import (
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-func newLocalCensusBuilder(chronicles *localChronicles, pn common.PulseNumber,
-	population copyOnlinePopulationTo) *LocalCensusBuilder {
+func newLocalCensusBuilder(chronicles *localChronicles, pn common.PulseNumber, population copyToPopulation,
+	fullCopy bool) *LocalCensusBuilder {
 
-	r := &LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn, population: NewDynamicPopulation(population)}
+	r := &LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn}
+	if fullCopy { //TODO remove fullCopy later
+		r.population = NewDynamicPopulation(population)
+	} else {
+		r.population = NewDynamicPopulationCopySelf(population)
+	}
+
 	r.populationBuilder.census = r
-	r.populationView.census = r
 	return r
 }
 
@@ -74,12 +79,9 @@ type LocalCensusBuilder struct {
 	pulseNumber       common.PulseNumber
 	population        DynamicPopulation
 	state             State
-	populationView    LockedPopulation
 	populationBuilder DynamicPopulationBuilder
 	gsh               common2.GlobulaStateHash
 	csh               common2.CloudStateHash
-
-	// content WorkingCensusTemplate
 }
 
 func (c *LocalCensusBuilder) GetCensusState() State {
@@ -131,15 +133,11 @@ func (c *LocalCensusBuilder) IsSealed() bool {
 	return c.state.IsSealed()
 }
 
-func (c *LocalCensusBuilder) GetOnlinePopulationView() OnlinePopulation {
-	return &c.populationView
-}
-
-func (c *LocalCensusBuilder) GetOnlinePopulationBuilder() OnlinePopulationBuilder {
+func (c *LocalCensusBuilder) GetPopulationBuilder() PopulationBuilder {
 	return &c.populationBuilder
 }
 
-func (c *LocalCensusBuilder) build(csh common2.CloudStateHash) copyOnlinePopulationTo {
+func (c *LocalCensusBuilder) build(csh common2.CloudStateHash) (copyToOnlinePopulation, EvictedPopulation) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -157,12 +155,11 @@ func (c *LocalCensusBuilder) build(csh common2.CloudStateHash) copyOnlinePopulat
 	c.state = BuiltCensus
 	c.csh = csh
 
-	r := c.population.CopyAndSortDefault()
-	return &r
+	return c.population.CopyAndSeparate()
 }
 
 func (c *LocalCensusBuilder) BuildAndMakeExpected(csh common2.CloudStateHash) ExpectedCensus {
-	pop := c.build(csh)
+	pop, evicts := c.build(csh)
 
 	r := &ExpectedCensusTemplate{
 		chronicles: c.chronicles,
@@ -171,50 +168,24 @@ func (c *LocalCensusBuilder) BuildAndMakeExpected(csh common2.CloudStateHash) Ex
 		gsh:        c.gsh,
 		pn:         c.pulseNumber,
 		online:     pop,
+		evicted:    evicts,
 	}
 
 	c.chronicles.makeExpected(r)
 	return r
 }
 
-var _ OnlinePopulation = &LockedPopulation{}
-
-type LockedPopulation struct {
-	census *LocalCensusBuilder
-}
-
-func (c *LockedPopulation) FindProfile(nodeID common.ShortNodeID) common2.NodeProfile {
-	c.census.mutex.RLock()
-	defer c.census.mutex.RUnlock()
-
-	return c.census.population.FindProfile(nodeID)
-}
-
-func (c *LockedPopulation) GetProfiles() []common2.NodeProfile {
-	c.census.mutex.RLock()
-	defer c.census.mutex.RUnlock()
-
-	return c.census.population.GetProfiles()
-}
-
-func (c *LockedPopulation) GetCount() int {
-	c.census.mutex.RLock()
-	defer c.census.mutex.RUnlock()
-
-	return c.census.population.GetCount()
-}
-
-func (c *LockedPopulation) GetLocalProfile() common2.LocalNodeProfile {
-	c.census.mutex.RLock()
-	defer c.census.mutex.RUnlock()
-
-	return c.census.population.GetLocalProfile()
-}
-
-var _ OnlinePopulationBuilder = &DynamicPopulationBuilder{}
+var _ PopulationBuilder = &DynamicPopulationBuilder{}
 
 type DynamicPopulationBuilder struct {
 	census *LocalCensusBuilder
+}
+
+func (c *DynamicPopulationBuilder) RemoveOthers() {
+	c.census.mutex.Lock()
+	defer c.census.mutex.Unlock()
+
+	c.census.population.RemoveOthers()
 }
 
 func (c *DynamicPopulationBuilder) GetUnorderedProfiles() []common2.UpdatableNodeProfile {
@@ -249,7 +220,7 @@ func (c *DynamicPopulationBuilder) AddJoinerProfile(intro common2.NodeIntroProfi
 	if c.census.state.IsSealed() {
 		panic("illegal state")
 	}
-	return c.census.population.AddJoinerProfile(intro)
+	return c.census.population.AddProfile(intro)
 }
 
 func (c *DynamicPopulationBuilder) RemoveProfile(nodeID common.ShortNodeID) {

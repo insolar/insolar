@@ -60,6 +60,10 @@ type NodeStateHash interface {
 	common.DigestHolder
 }
 
+type GlobulaAnnouncementHash interface {
+	common.DigestHolder
+}
+
 type GlobulaStateHash interface {
 	common.DigestHolder
 }
@@ -69,6 +73,10 @@ type CloudStateHash interface {
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o ../common -s _mock.go
+
+type GlobulaStateSignature interface {
+	common.SignatureHolder
+}
 
 type MemberAnnouncementSignature interface {
 	common.SignatureHolder

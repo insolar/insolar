@@ -70,8 +70,8 @@ const (
 	headerShift          = 14
 	headerBitSize        = 2
 
-	pulseNumberMask    = 1073741823 // 0b00111111111111111111111111111111
 	pulseNumberBitSize = 30
+	pulseNumberMask    = 1<<pulseNumberBitSize - 1
 )
 
 type Flag uint8
@@ -150,7 +150,7 @@ func (h Header) getPayloadLength() uint16 {
 }
 
 func (h *Header) setPayloadLength(payloadLength uint16) {
-	if bits.Len(uint(payloadLength)) > payloadLengthBitSize {
+	if payloadLength > 1<<(payloadLengthBitSize+1)-1 {
 		panic("invalid payload length")
 	}
 

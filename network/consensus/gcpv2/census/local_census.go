@@ -80,8 +80,9 @@ type ArchivedCensus interface {
 type OperationalCensus interface {
 	PulseCensus
 	GetOnlinePopulation() OnlinePopulation
+	GetEvictedPopulation() EvictedPopulation
 	GetOfflinePopulation() OfflinePopulation
-	CreateBuilder(pn common.PulseNumber) Builder
+	CreateBuilder(pn common.PulseNumber, fullCopy bool) Builder
 	IsActive() bool
 
 	GetMisbehaviorRegistry() MisbehaviorRegistry
@@ -101,8 +102,7 @@ type ExpectedCensus interface {
 }
 
 type Builder interface {
-	GetOnlinePopulationBuilder() OnlinePopulationBuilder
-	GetOnlinePopulationView() OnlinePopulation
+	GetPopulationBuilder() PopulationBuilder
 
 	GetCensusState() State
 	GetPulseNumber() common.PulseNumber
@@ -154,11 +154,18 @@ type OnlinePopulation interface {
 	GetLocalProfile() common2.LocalNodeProfile
 }
 
-type OnlinePopulationBuilder interface {
+type EvictedPopulation interface {
+	FindProfile(nodeID common.ShortNodeID) common2.EvictedNodeProfile
+	GetCount() int
+	GetProfiles() []common2.EvictedNodeProfile
+}
+
+type PopulationBuilder interface {
 	GetCount() int
 	AddJoinerProfile(intro common2.NodeIntroProfile) common2.UpdatableNodeProfile
 	RemoveProfile(nodeID common.ShortNodeID)
 	GetUnorderedProfiles() []common2.UpdatableNodeProfile
 	FindProfile(nodeID common.ShortNodeID) common2.UpdatableNodeProfile
 	GetLocalProfile() common2.UpdatableNodeProfile
+	RemoveOthers()
 }

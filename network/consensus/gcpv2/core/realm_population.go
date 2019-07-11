@@ -68,8 +68,8 @@ type RealmPopulation interface {
 	GetJoinerNodeAppearance(id common.ShortNodeID) *NodeAppearance
 	GetNodeAppearanceByIndex(idx int) *NodeAppearance
 
-	GetShuffledOtherNodes() []*NodeAppearance
-	GetIndexedNodes() []*NodeAppearance
+	GetShuffledOtherNodes() []*NodeAppearance /* no joiners or self included */
+	GetIndexedNodes() []*NodeAppearance       /* no joiners included */
 
 	GetSelf() *NodeAppearance
 

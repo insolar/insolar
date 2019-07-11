@@ -193,8 +193,8 @@ func (r *PhasedRoundController) startFullRealm() {
 
 	if lastCensus.IsActive() && lastCensus.GetPulseNumber().IsUnknown() {
 		/* This is the priming lastCensus */
-		b := chronicle.GetActiveCensus().CreateBuilder(pd.PulseNumber)
-		r.realm.preparePrimingMembers(b.GetOnlinePopulationBuilder())
+		b := chronicle.GetActiveCensus().CreateBuilder(pd.PulseNumber, true)
+		r.realm.preparePrimingMembers(b.GetPopulationBuilder())
 		priming := lastCensus.GetMandateRegistry().GetPrimingCloudHash()
 		b.SetGlobulaStateHash(priming)
 		b.SealCensus()

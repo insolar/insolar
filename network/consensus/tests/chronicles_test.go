@@ -65,7 +65,7 @@ import (
 )
 
 func NewEmuChronicles(intros []common2.NodeIntroProfile, localNodeIndex int, primingCloudStateHash common2.CloudStateHash) census.ConsensusChronicles {
-	pop := census.NewManyNodePopulation(intros[localNodeIndex], intros, false)
+	pop := census.NewManyNodePopulation(intros[localNodeIndex], intros)
 	chronicles := census.NewLocalChronicles()
 	census.NewPrimingCensus(
 		&pop,
@@ -100,14 +100,6 @@ func NewEmuNodeIntros(names ...string) []common2.NodeIntroProfile {
 type EmuVersionedRegistries struct {
 	pd                    common.PulseData
 	primingCloudStateHash common2.CloudStateHash
-}
-
-func (c *EmuVersionedRegistries) GetPulsesForJustJoinedState() uint8 {
-	return 1
-}
-
-func (c *EmuVersionedRegistries) GetPulsesForSuspectedState() uint8 {
-	return 1
 }
 
 func (c *EmuVersionedRegistries) GetConsensusConfiguration() census.ConsensusConfiguration {

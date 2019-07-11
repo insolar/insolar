@@ -94,12 +94,28 @@ type NodeIntroProfile interface { //brief intro
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeProfile -o ../common -s _mock.go
 
-type NodeProfile interface {
+type BaseNodeProfile interface { //TODO Rename
 	NodeIntroProfile
-	GetIndex() int
-	GetDeclaredPower() MemberPower
 	GetSignatureVerifier() common.SignatureVerifier
-	GetState() MembershipState
+	GetOpMode() MemberOpMode
+}
+
+const NodeIndexBits = 10 //DO NOT change it, otherwise nasty consequences will come
+const NodeIndexMask = 1<<NodeIndexBits - 1
+const MaxNodeIndex = NodeIndexMask
+
+type /* Active */ NodeProfile interface { //TODO Rename
+	BaseNodeProfile
+	GetIndex() int //0 for joiners
+	IsJoiner() bool
+	GetDeclaredPower() MemberPower
+	/* deprecated */
+	//GetState() MembershipState
+}
+
+type EvictedNodeProfile interface { //TODO Rename
+	BaseNodeProfile
+	GetLeaveReason() uint32
 }
 
 type BriefCandidateProfile interface {
@@ -147,11 +163,15 @@ type LocalNodeProfile interface {
 
 type UpdatableNodeProfile interface {
 	NodeProfile
-	SetState(s MembershipState)
+	SetOpMode(m MemberOpMode)
 	SetPower(declaredPower MemberPower)
-	SetRank(index int, state MembershipState, declaredPower MemberPower)
+	SetRank(index int, m MemberOpMode, declaredPower MemberPower)
 	SetSignatureVerifier(verifier common.SignatureVerifier)
 	// Update certificate / mandate
+
+	SetOpModeAndLeaveReason(exitCode uint32)
+	GetLeaveReason() uint32
+	SetIndex(index int)
 }
 
 type MemberPower uint8
@@ -396,6 +416,7 @@ func (v PowerRequest) AsMemberPower() (bool, MemberPower) {
 	return v >= 0, MemberPower(v)
 }
 
+/* deprecated */
 type MembershipState int8
 
 const (
@@ -497,47 +518,20 @@ func (v MembershipState) IsJoining() bool {
 	return v == Joining
 }
 
-func nodeProfileOrdering(np NodeProfile) (NodePrimaryRole, MemberPower, common.ShortNodeID) {
-	p := np.GetDeclaredPower()
-	r := np.GetPrimaryRole()
-	if p == 0 || !np.GetState().IsWorking() {
-		return PrimaryRoleInactive, 0, np.GetShortNodeID()
-	}
-	return r, p, np.GetShortNodeID()
-}
-
-func LessForNodeProfile(c NodeProfile, o NodeProfile) bool {
-	cR, cP, cI := nodeProfileOrdering(c)
-	oR, oP, oI := nodeProfileOrdering(o)
-
-	/* Reversed order */
-	if cR < oR {
-		return false
-	} else if cR > oR {
-		return true
-	}
-
-	if cP < oP {
-		return true
-	} else if cP > oP {
-		return false
-	}
-
-	return cI < oI
-}
-
 type MembershipProfile struct {
 	Index          uint16
+	Mode           MemberOpMode
 	Power          MemberPower
 	RequestedPower MemberPower
 	NodeAnnouncedState
 }
 
-func NewMembershipProfile(index uint16, power MemberPower, nsh NodeStateHashEvidence, nas MemberAnnouncementSignature,
+func NewMembershipProfile(mode MemberOpMode, power MemberPower, index uint16, nsh NodeStateHashEvidence, nas MemberAnnouncementSignature,
 	ep MemberPower) MembershipProfile {
 	return MembershipProfile{
 		Index:          index,
 		Power:          power,
+		Mode:           mode,
 		RequestedPower: ep,
 		NodeAnnouncedState: NodeAnnouncedState{
 			StateEvidence:     nsh,
@@ -548,7 +542,9 @@ func NewMembershipProfile(index uint16, power MemberPower, nsh NodeStateHashEvid
 
 func NewMembershipProfileByNode(np NodeProfile, nsh NodeStateHashEvidence, nas MemberAnnouncementSignature,
 	ep MemberPower) MembershipProfile {
-	return NewMembershipProfile(uint16(np.GetIndex()), np.GetDeclaredPower(), nsh, nas, ep)
+
+	return NewMembershipProfile(np.GetOpMode(), np.GetDeclaredPower(),
+		uint16(np.GetIndex()), nsh, nas, ep)
 }
 
 func (p MembershipProfile) IsEmpty() bool {
@@ -582,6 +578,34 @@ func (p MembershipProfile) StringParts() string {
 
 func (p MembershipProfile) String() string {
 	return fmt.Sprintf("idx:%03d %s", p.Index, p.StringParts())
+}
+
+type MembershipAnnouncement struct {
+	Membership  MembershipProfile
+	IsLeaving   bool
+	LeaveReason uint32
+	Joiner      NodeIntroProfile
+}
+
+func NewMembershipAnnouncement(mp MembershipProfile) MembershipAnnouncement {
+	return MembershipAnnouncement{
+		Membership: mp,
+	}
+}
+
+func NewMembershipAnnouncementWithJoiner(mp MembershipProfile, joiner NodeIntroProfile) MembershipAnnouncement {
+	return MembershipAnnouncement{
+		Membership: mp,
+		Joiner:     joiner,
+	}
+}
+
+func NewMembershipAnnouncementWithLeave(mp MembershipProfile, leaveReason uint32) MembershipAnnouncement {
+	return MembershipAnnouncement{
+		Membership:  mp,
+		IsLeaving:   true,
+		LeaveReason: leaveReason,
+	}
 }
 
 func EqualIntroProfiles(p NodeIntroProfile, o NodeIntroProfile) bool {

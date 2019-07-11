@@ -52,10 +52,12 @@ package core
 
 import "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
+/* deprecated */
 type AnnounceHandler interface {
-	CaptureAnnouncement(mp common.MembershipProfile) (AnnounceHandler, error)
+	CaptureAnnouncement(mp common.MembershipAnnouncement) (AnnounceHandler, error)
 }
 
+/* deprecated */
 func newNoAnnouncementsHandler() AnnounceHandler {
 	return &noAnnounceHandler
 }
@@ -65,7 +67,7 @@ var noAnnounceHandler = noAnnouncementsHandler{}
 type noAnnouncementsHandler struct {
 }
 
-func (p *noAnnouncementsHandler) CaptureAnnouncement(mp common.MembershipProfile) (AnnounceHandler, error) {
+func (p *noAnnouncementsHandler) CaptureAnnouncement(mp common.MembershipAnnouncement) (AnnounceHandler, error) {
 	return p, nil
 }
 

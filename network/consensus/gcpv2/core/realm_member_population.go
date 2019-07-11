@@ -137,7 +137,7 @@ func (r *MemberRealmPopulation) GetBftMajorityCount() int {
 
 func (r *MemberRealmPopulation) GetActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance {
 	np := r.population.FindProfile(id)
-	if np != nil {
+	if np != nil && !np.IsJoiner() {
 		return r.GetNodeAppearanceByIndex(np.GetIndex())
 	}
 	return nil
@@ -164,7 +164,7 @@ func (r *MemberRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 }
 
 func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
-	if !n.profile.GetState().IsJoining() {
+	if !n.profile.IsJoiner() {
 		panic("illegal value")
 	}
 	return r.dynPop.AddToDynamics(n)
@@ -174,7 +174,14 @@ var _ common2.NodeProfile = &joiningNodeProfile{}
 
 type joiningNodeProfile struct {
 	common2.NodeIntroProfile
-	membershipState common2.MembershipState
+}
+
+func (p *joiningNodeProfile) IsJoiner() bool {
+	return true
+}
+
+func (p *joiningNodeProfile) GetOpMode() common2.MemberOpMode {
+	return common2.MemberModeNormal
 }
 
 func (p *joiningNodeProfile) GetIndex() int {
@@ -187,8 +194,4 @@ func (p *joiningNodeProfile) GetDeclaredPower() common2.MemberPower {
 
 func (*joiningNodeProfile) GetSignatureVerifier() common.SignatureVerifier {
 	return nil
-}
-
-func (p *joiningNodeProfile) GetState() common2.MembershipState {
-	return p.membershipState
 }

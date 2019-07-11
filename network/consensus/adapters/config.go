@@ -124,11 +124,3 @@ type ConsensusConfiguration struct{}
 func NewConsensusConfiguration() *ConsensusConfiguration {
 	return &ConsensusConfiguration{}
 }
-
-func (c *ConsensusConfiguration) GetPulsesForJustJoinedState() uint8 {
-	return 1
-}
-
-func (c *ConsensusConfiguration) GetPulsesForSuspectedState() uint8 {
-	return 1
-}

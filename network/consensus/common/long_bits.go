@@ -287,7 +287,7 @@ func FoldToUint64(v []byte) uint64 {
 
 /*
 This implementation DOES NOT provide secure random!
-This function has a fixed implementation and MUST remain unchanged as some elements of Consesnsus rely on identical behavior of this functions.
+This function has a fixed implementation and MUST remain unchanged as some elements of Consensus rely on identical behavior of this functions.
 Array size must be aligned to 8 bytes.
 */
 func FillBitsWithStaticNoise(base uint32, v []byte) {

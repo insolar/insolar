@@ -53,6 +53,7 @@ package tests
 import (
 	"context"
 	"errors"
+	"github.com/golang/protobuf/ptypes/duration"
 	"math/rand"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -67,7 +68,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewConsensusNode(hostAddr common.HostAddress) *EmuHostConsensusAdapter {
+func NewConsensusHost(hostAddr common.HostAddress) *EmuHostConsensusAdapter {
 	return &EmuHostConsensusAdapter{hostAddr: hostAddr}
 }
 
@@ -79,13 +80,12 @@ type EmuHostConsensusAdapter struct {
 	outbound chan<- Packet
 }
 
-func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicles, network *EmuNetwork, config core.LocalNodeConfiguration) {
+func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicles, network *EmuNetwork,
+	strategyFactory core.RoundStrategyFactory, candidateFeeder core.CandidateControlFeeder,
+	controlFeeder core.ConsensusControlFeeder, config core.LocalNodeConfiguration) {
 	ctx := network.ctx
 	// &EmuConsensusStrategy{ctx: ctx}
 	upstream := NewEmuUpstreamPulseController(ctx, defaultNshGenerationDelay)
-	strategyFactory := &EmuRoundStrategyFactory{}
-	candidateFeeder := &core.SequencialCandidateFeeder{}
-	controlFeeder := &EmuControlFeeder{}
 
 	h.controller = gcpv2.NewConsensusMemberController(
 		chronicles, upstream,
@@ -200,7 +200,21 @@ func (*EmuRoundStrategy) AdjustConsensusTimings(timings *common2.RoundTimings) {
 
 var _ core.ConsensusControlFeeder = &EmuControlFeeder{}
 
-type EmuControlFeeder struct{}
+type EmuControlFeeder struct {
+	leaveReason uint32
+}
+
+func (*EmuControlFeeder) SetTrafficLimit(level common.CapacityLevel, duration duration.Duration) {
+}
+
+func (*EmuControlFeeder) ResumeTraffic() {
+}
+
+func (*EmuControlFeeder) PulseDetected() {
+}
+
+func (*EmuControlFeeder) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+}
 
 func (*EmuControlFeeder) GetRequiredPowerLevel() common2.PowerRequest {
 	return common2.NewPowerRequestByLevel(common.LevelNormal)
@@ -209,8 +223,8 @@ func (*EmuControlFeeder) GetRequiredPowerLevel() common2.PowerRequest {
 func (*EmuControlFeeder) OnAppliedPowerLevel(pw common2.MemberPower, effectiveSince common.PulseNumber) {
 }
 
-func (*EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
-	return false, 0
+func (p *EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
+	return p.leaveReason != 0, p.leaveReason
 }
 
 func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince common.PulseNumber) {

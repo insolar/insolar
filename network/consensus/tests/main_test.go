@@ -60,6 +60,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 func TestConsensusMain(t *testing.T) {
@@ -83,10 +84,17 @@ func TestConsensusMain(t *testing.T) {
 	primingCloudStateHash := NewEmuNodeStateHash(1234567890)
 	nodes := NewEmuNodeIntros(generateNameList(0, 1, 3, 5)...)
 
+	strategyFactory := &EmuRoundStrategyFactory{}
+	candidateFeeder := &core.SequencialCandidateFeeder{}
+
 	for i, n := range nodes {
 		chronicles := NewEmuChronicles(nodes, i, &primingCloudStateHash)
-		node := NewConsensusNode(n.GetDefaultEndpoint().GetNameAddress())
-		node.ConnectTo(chronicles, network, config)
+		node := NewConsensusHost(n.GetDefaultEndpoint().GetNameAddress())
+		controlFeeder := &EmuControlFeeder{}
+		//if i % 5 == 2 {
+		//	controlFeeder.leaveReason = uint32(i) //simulate leave
+		//}
+		node.ConnectTo(chronicles, network, strategyFactory, candidateFeeder, controlFeeder, config)
 	}
 
 	network.Start(ctx)

@@ -69,7 +69,7 @@ func NewNodeAppearanceAsSelf(np common2.LocalNodeProfile, callback *nodeContext)
 
 	r := &NodeAppearance{
 		state: packets.NodeStateLocalActive,
-		trust: packets.SelfTrust,
+		trust: common2.SelfTrust,
 	}
 	r.init(np, callback, 0)
 	return r
@@ -82,7 +82,6 @@ func (c *NodeAppearance) init(np common2.NodeProfile, callback NodeContextHolder
 	c.profile = np
 	c.callback = callback
 	c.neighbourWeight = baselineWeight
-	c.announceHandler = newNoAnnouncementsHandler()
 }
 
 type NodeAppearance struct {
@@ -100,17 +99,16 @@ type NodeAppearance struct {
 	stateEvidence     common2.NodeStateHashEvidence       // one-time set
 	requestedPower    common2.MemberPower                 // one-time set
 
-	requestedJoiner        *NodeAppearance // one-time set
-	requestedLeave         bool            // one-time set
-	requestedLeaveExitCode uint32          // one-time set
+	requestedJoiner      *NodeAppearance // one-time set
+	requestedLeave       bool            // one-time set
+	requestedLeaveReason uint32          // one-time set
 
-	announceHandler   AnnounceHandler
 	firstFraudDetails *errors.FraudError
 
 	neighbourWeight uint32
 
 	state           packets.NodeState
-	trust           packets.NodeTrustLevel
+	trust           common2.NodeTrustLevel
 	neighborReports uint8
 }
 
@@ -134,7 +132,9 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	target.stateEvidence = c.stateEvidence
 	target.announceSignature = c.announceSignature
 	target.requestedPower = c.requestedPower
-	target.announceHandler = c.announceHandler
+	target.requestedJoiner = c.requestedJoiner
+	target.requestedLeave = c.requestedLeave
+	target.requestedLeaveReason = c.requestedLeaveReason
 	target.firstFraudDetails = c.firstFraudDetails
 
 	target.state = c.state
@@ -143,7 +143,7 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 }
 
 func (c *NodeAppearance) IsJoiner() bool {
-	return c.profile.GetState().IsJoining()
+	return c.profile.IsJoiner()
 }
 
 func (c *NodeAppearance) GetIndex() int {
@@ -154,7 +154,7 @@ func (c *NodeAppearance) GetShortNodeID() common.ShortNodeID {
 	return c.profile.GetShortNodeID()
 }
 
-func (c *NodeAppearance) GetTrustLevel() packets.NodeTrustLevel {
+func (c *NodeAppearance) GetTrustLevel() common2.NodeTrustLevel {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.trust
@@ -221,7 +221,7 @@ func (c *NodeAppearance) CreateSignatureVerifier(vFactory common.SignatureVerifi
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNodeMembership(mp common2.MembershipProfile) (bool, error) {
+func (c *NodeAppearance) ApplyNodeMembership(mp common2.MembershipAnnouncement) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -229,7 +229,7 @@ func (c *NodeAppearance) ApplyNodeMembership(mp common2.MembershipProfile) (bool
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp common2.MembershipProfile) (bool, error) {
+func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp common2.MembershipAnnouncement) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -240,13 +240,13 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp comm
 	if err == nil && witness.GetShortNodeID() != c.GetShortNodeID() { // a node can't be a witness to itself
 		switch {
 		case c.neighborReports == 0:
-			c.trust.UpdateKeepNegative(packets.TrustBySome)
+			c.trust.UpdateKeepNegative(common2.TrustBySome)
 		case c.neighborReports == uint8(math.MaxUint8):
 			panic("overflow")
 		case c.neighborReports > c.GetNeighborTrustThreshold():
 			break // to allow the next statement to fire only once
 		case c.neighborReports+1 > c.GetNeighborTrustThreshold():
-			c.trust.UpdateKeepNegative(packets.TrustByNeighbors)
+			c.trust.UpdateKeepNegative(common2.TrustByNeighbors)
 		}
 
 		c.neighborReports++
@@ -268,45 +268,54 @@ func (c *NodeAppearance) Blames() errors.BlameFactory {
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) _applyNodeMembership(mp common2.MembershipProfile) (bool, error) {
+func (c *NodeAppearance) _applyNodeMembership(ma common2.MembershipAnnouncement) (bool, error) {
 
-	if mp.IsEmpty() {
+	if ma.Membership.IsEmpty() {
 		panic(fmt.Sprintf("membership evidence is nil: for=%v", c.GetShortNodeID()))
 	}
 
 	if c.stateEvidence != nil {
 		lmp := c.getMembership()
-		if mp.Equals(lmp) {
-			return false, nil
+		var lma common2.MembershipAnnouncement
+		if ma.Membership.Equals(lmp) && ma.IsLeaving == c.requestedLeave {
+			switch {
+			case c.requestedLeave:
+				if ma.LeaveReason == c.requestedLeaveReason {
+					return false, nil
+				}
+				lma = common2.NewMembershipAnnouncementWithLeave(lmp, c.requestedLeaveReason)
+			case c.requestedJoiner == nil:
+				if ma.Joiner == nil {
+					return false, nil
+				}
+				lma = common2.NewMembershipAnnouncement(lmp)
+			default:
+				if common2.EqualIntroProfiles(c.requestedJoiner.GetProfile(), ma.Joiner) {
+					return false, nil
+				}
+				lma = common2.NewMembershipAnnouncementWithJoiner(lmp, c.requestedJoiner.profile)
+			}
 		}
-
-		return c.registerFraud(c.Frauds().NewMultipleMembershipProfiles(c.GetProfile(), lmp, mp))
+		return c.registerFraud(c.Frauds().NewInconsistentMembershipAnnouncement(c.GetProfile(), lma, ma))
 	}
 
 	c.callback.updatePopulationVersion()
 
-	err := c._handleAnnouncement(mp)
-	if err != nil {
-		return false, err
+	if ma.IsLeaving {
+		c.requestedLeave = true
+		c.requestedLeaveReason = ma.LeaveReason
+	} else if ma.Joiner != nil {
+		panic("not implemented") //TODO implement
 	}
 
-	c.neighbourWeight ^= common.FoldUint64(mp.StateEvidence.GetNodeStateHash().FoldToUint64())
-	c.stateEvidence = mp.StateEvidence
-	c.announceSignature = mp.AnnounceSignature
-	c.requestedPower = mp.RequestedPower
+	c.neighbourWeight ^= common.FoldUint64(ma.Membership.StateEvidence.GetNodeStateHash().FoldToUint64())
+	c.stateEvidence = ma.Membership.StateEvidence
+	c.announceSignature = ma.Membership.AnnounceSignature
+	c.requestedPower = ma.Membership.RequestedPower
 
 	c.callback.onNodeStateAssigned(c)
 
 	return true, nil
-}
-
-func (c *NodeAppearance) _handleAnnouncement(mp common2.MembershipProfile) error {
-	ah, err := c.announceHandler.CaptureAnnouncement(mp)
-	if err != nil {
-		return err
-	}
-	c.announceHandler = ah
-	return nil
 }
 
 func (c *NodeAppearance) GetNodeMembershipProfile() common2.MembershipProfile {
@@ -319,7 +328,7 @@ func (c *NodeAppearance) GetNodeMembershipProfile() common2.MembershipProfile {
 	return c.getMembership()
 }
 
-func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (common2.MembershipProfile, packets.NodeTrustLevel) {
+func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (common2.MembershipProfile, common2.NodeTrustLevel) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -379,7 +388,7 @@ func (c *NodeAppearance) registerFraud(fraud errors.FraudError) (bool, error) {
 	}
 
 	prevTrust := c.trust
-	if c.trust.Update(packets.FraudByThisNode) {
+	if c.trust.Update(common2.FraudByThisNode) {
 		c.firstFraudDetails = &fraud
 		c.callback.updatePopulationVersion()
 		c.callback.onTrustUpdated(c, prevTrust, c.trust)
@@ -446,9 +455,23 @@ func (c *NodeAppearance) ResetPacketHandlers(indices ...int) {
 	c.handlers = nil
 }
 
-func (c *NodeAppearance) GetRequestedState() (bool, uint32, *NodeAppearance, common2.MembershipProfile, packets.NodeTrustLevel) {
+func (c *NodeAppearance) GetRequestedState() (bool, uint32, *NodeAppearance, common2.MembershipProfile, common2.NodeTrustLevel) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	return c.requestedLeave, c.requestedLeaveExitCode, c.requestedJoiner, c.getMembership(), c.trust
+	return c.requestedLeave, c.requestedLeaveReason, c.requestedJoiner, c.getMembership(), c.trust
+}
+
+func (c *NodeAppearance) GetRequestedAnnouncement() common2.MembershipAnnouncement {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	mb := c.getMembership()
+	if c.requestedLeave {
+		return common2.NewMembershipAnnouncementWithLeave(mb, c.requestedLeaveReason)
+	} else if c.requestedJoiner != nil {
+		return common2.NewMembershipAnnouncementWithJoiner(mb, c.requestedJoiner.profile)
+	} else {
+		return common2.NewMembershipAnnouncement(mb)
+	}
 }

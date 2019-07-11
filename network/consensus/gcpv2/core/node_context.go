@@ -51,8 +51,8 @@
 package core
 
 import (
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"sync/atomic"
 )
 
@@ -107,7 +107,7 @@ func (p *nodeContext) GetBlameFactory() errors.BlameFactory {
 	return p.blameFactory
 }
 
-func (p *nodeContext) onTrustUpdated(n *NodeAppearance, before packets.NodeTrustLevel, after packets.NodeTrustLevel) {
+func (p *nodeContext) onTrustUpdated(n *NodeAppearance, before common.NodeTrustLevel, after common.NodeTrustLevel) {
 	if p.phaseControllerCallback == nil {
 		return
 	}

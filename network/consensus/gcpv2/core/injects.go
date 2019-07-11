@@ -52,7 +52,7 @@ package core
 
 import (
 	"context"
-
+	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -66,7 +66,7 @@ type PhaseControllersBundle interface {
 }
 
 type NodeUpdateCallback interface {
-	OnTrustUpdated(n *NodeAppearance, before, after packets.NodeTrustLevel)
+	OnTrustUpdated(n *NodeAppearance, before, after common2.NodeTrustLevel)
 	OnNodeStateAssigned(n *NodeAppearance)
 	OnCustomEvent(n *NodeAppearance, event interface{})
 }
@@ -88,8 +88,18 @@ type CandidateControlFeeder interface {
 	RemoveJoinCandidate(candidateAdded bool, nodeID common.ShortNodeID) bool
 }
 
+type TrafficControlFeeder interface {
+	/* Application traffic should be stopped or throttled down for the given duration
+	LevelMax and LevelNormal should be considered equal, and duration doesnt apply to them
+	*/
+	SetTrafficLimit(level common.CapacityLevel, duration duration.Duration)
+
+	/* Application traffic can be resumed at full */
+	ResumeTraffic()
+}
+
 type ConsensusControlFeeder interface {
-	//To Be used
+	TrafficControlFeeder
 
 	GetRequiredPowerLevel() common2.PowerRequest
 	OnAppliedPowerLevel(pw common2.MemberPower, effectiveSince common.PulseNumber)
@@ -97,7 +107,15 @@ type ConsensusControlFeeder interface {
 	GetRequiredGracefulLeave() (bool, uint32)
 	OnAppliedGracefulLeave(exitCode uint32, effectiveSince common.PulseNumber)
 
-	//OnAppliedPopulation()
+	/* Called on receiving seem-to-be-valid Pulsar or Phase0 packets. Can be called multiple time in sequence.
+	Application MUST NOT consider it as a new pulse. */
+	PulseDetected()
+
+	/* Consensus is finished. If expectedCensus == 0 then this node was evicted from consensus.	*/
+	ConsensusFinished(report MembershipUpstreamReport, expectedCensus census.OperationalCensus)
+
+	///* Consensus has stopped abnormally	*/
+	//ConsensusFailed(report MembershipUpstreamReport)
 }
 
 type RoundController interface {
@@ -145,6 +163,10 @@ const (
 
 type PreparedPacketSender interface {
 	SendTo(ctx context.Context, target common2.NodeProfile, sendOptions PacketSendOptions, sender PacketSender)
+
+	/* Allows to control parallelism. Can return nil to skip a target */
+	SendToMany(ctx context.Context, targetCount int, sender PacketSender,
+		filter func(ctx context.Context, targetIndex int) (common2.NodeProfile, PacketSendOptions))
 }
 
 //type PreparedIntro interface {}
@@ -166,8 +188,8 @@ type PacketBuilder interface {
 	PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
 		neighbourhood []packets.MembershipAnnouncementReader, options PacketSendOptions) PreparedPacketSender
 
-	PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
-		bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
+	PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors nodeset.HashedNodeVector,
+		//bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
 		options PacketSendOptions) PreparedPacketSender
 }
 

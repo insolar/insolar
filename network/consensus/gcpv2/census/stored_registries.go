@@ -82,6 +82,4 @@ type OfflinePopulation interface {
 }
 
 type ConsensusConfiguration interface {
-	GetPulsesForJustJoinedState() uint8
-	GetPulsesForSuspectedState() uint8
 }

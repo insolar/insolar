@@ -57,66 +57,73 @@ import (
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-func NewNodeAnnouncement(np common2.NodeProfile, membership common2.MembershipProfile, nodeCount int, pn common.PulseNumber) *NodeAnnouncementProfile {
+func NewNodeAnnouncement(np common2.NodeProfile, ma common2.MembershipAnnouncement, nodeCount int,
+	pn common.PulseNumber) *NodeAnnouncementProfile {
 	return &NodeAnnouncementProfile{
-		nodeID:     np.GetShortNodeID(),
-		nodeCount:  uint16(nodeCount),
-		membership: membership,
-		pn:         pn,
+		nodeID:    np.GetShortNodeID(),
+		nodeCount: uint16(nodeCount),
+		ma:        ma,
+		pn:        pn,
 	}
 }
 
-func NewNodeAnnouncementOf(na MembershipAnnouncementReader, pn common.PulseNumber) *NodeAnnouncementProfile {
-	nr := na.GetNodeRank()
-	return &NodeAnnouncementProfile{
-		nodeID:    na.GetNodeID(),
-		nodeCount: nr.GetTotalCount(),
-		pn:        pn,
-		membership: common2.NewMembershipProfile(
-			nr.GetIndex(),
-			nr.GetPower(),
-			na.GetNodeStateHashEvidence(),
-			na.GetAnnouncementSignature(),
-			na.GetRequestedPower(),
-		),
-	}
-}
+//func NewNodeAnnouncementOf(na MembershipAnnouncementReader, pn common.PulseNumber) *NodeAnnouncementProfile {
+//	nr := na.GetNodeRank()
+//	return &NodeAnnouncementProfile{
+//		nodeID:    na.GetNodeID(),
+//		nodeCount: nr.GetTotalCount(),
+//		pn:        pn,
+//		isLeaving:  na.IsLeaving(),
+//		leaveReason: na.GetLeaveReason(),
+//		membership: common2.NewMembershipProfile(
+//			nr.GetMode(),
+//			nr.GetPower(),
+//			nr.GetIndex(),
+//			na.GetNodeStateHashEvidence(),
+//			na.GetAnnouncementSignature(),
+//			na.GetRequestedPower(),
+//		),
+//	}
+//}
 
 var _ MembershipAnnouncementReader = &NodeAnnouncementProfile{}
 
 type NodeAnnouncementProfile struct {
-	nodeID     common.ShortNodeID
-	membership common2.MembershipProfile
-	pn         common.PulseNumber
-	nodeCount  uint16
+	ma        common2.MembershipAnnouncement
+	nodeID    common.ShortNodeID
+	pn        common.PulseNumber
+	nodeCount uint16
 }
 
 func (c *NodeAnnouncementProfile) GetRequestedPower() common2.MemberPower {
-	return c.membership.RequestedPower
+	return c.ma.Membership.RequestedPower
 }
 
 func (c *NodeAnnouncementProfile) IsLeaving() bool {
-	return false
+	return c.ma.IsLeaving
 }
 
 func (c *NodeAnnouncementProfile) GetLeaveReason() uint32 {
-	return 0
+	return c.ma.LeaveReason
 }
 
 func (c *NodeAnnouncementProfile) GetJoinerID() common.ShortNodeID {
-	return common.AbsentShortNodeID
+	if c.ma.Joiner == nil {
+		return common.AbsentShortNodeID
+	}
+	return c.ma.Joiner.GetShortNodeID()
 }
 
 func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementReader {
-	return nil
+	panic("unsupported")
 }
 
 func (c *NodeAnnouncementProfile) GetNodeRank() common2.MembershipRank {
-	return common2.NewMembershipRank(c.membership.Power, c.membership.Index, c.nodeCount, 0)
+	return common2.NewMembershipRank(c.ma.Membership.Mode, c.ma.Membership.Power, c.ma.Membership.Index, c.nodeCount)
 }
 
 func (c *NodeAnnouncementProfile) GetAnnouncementSignature() common2.MemberAnnouncementSignature {
-	return c.membership.AnnounceSignature
+	return c.ma.Membership.AnnounceSignature
 }
 
 func (c *NodeAnnouncementProfile) GetNodeID() common.ShortNodeID {
@@ -128,15 +135,15 @@ func (c *NodeAnnouncementProfile) GetNodeCount() uint16 {
 }
 
 func (c *NodeAnnouncementProfile) GetNodeStateHashEvidence() common2.NodeStateHashEvidence {
-	return c.membership.StateEvidence
+	return c.ma.Membership.StateEvidence
 }
 
 func (c NodeAnnouncementProfile) String() string {
-	return fmt.Sprintf("{id:%d %03d/%d %s}", c.nodeID, c.membership.Index, c.nodeCount, c.membership.StringParts())
+	return fmt.Sprintf("{id:%d %03d/%d %s}", c.nodeID, c.ma.Membership.Index, c.nodeCount, c.ma.Membership.StringParts())
 }
 
 func (c *NodeAnnouncementProfile) GetMembershipProfile() common2.MembershipProfile {
-	return c.membership
+	return c.ma.Membership
 }
 
 func (c *NodeAnnouncementProfile) GetPulseNumber() common.PulseNumber {

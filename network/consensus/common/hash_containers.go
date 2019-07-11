@@ -284,19 +284,19 @@ func (r *SignedDigest) Equals(o *SignedDigest) bool {
 	return EqualFixedLenWriterTo(r.digest, o.digest) && EqualFixedLenWriterTo(r.signature, o.signature)
 }
 
-func (r *SignedDigest) GetDigest() Digest {
+func (r SignedDigest) GetDigest() Digest {
 	return r.digest
 }
 
-func (r *SignedDigest) GetSignature() Signature {
+func (r SignedDigest) GetSignature() Signature {
 	return r.signature
 }
 
-func (r *SignedDigest) GetDigestHolder() DigestHolder {
+func (r SignedDigest) GetDigestHolder() DigestHolder {
 	return &r.digest
 }
 
-func (r *SignedDigest) GetSignatureHolder() SignatureHolder {
+func (r SignedDigest) GetSignatureHolder() SignatureHolder {
 	return &r.signature
 }
 
@@ -308,7 +308,7 @@ func (r *SignedDigest) IsVerifiableBy(v SignatureVerifier) bool {
 	return v.IsSignOfSignatureMethodSupported(r.signature.GetSignatureMethod())
 }
 
-func (r *SignedDigest) VerifyWith(v SignatureVerifier) bool {
+func (r SignedDigest) VerifyWith(v SignatureVerifier) bool {
 	return v.IsValidDigestSignature(&r.digest, &r.signature)
 }
 
