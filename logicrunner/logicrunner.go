@@ -426,14 +426,6 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 	}
 }
 
-func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
-	ctx context.Context, parcel insolar.Parcel,
-) (
-	insolar.Reply, error,
-) {
-	return lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
-}
-
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []insolar.Message) {
 	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
 	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))

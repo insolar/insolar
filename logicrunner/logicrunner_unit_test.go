@@ -689,7 +689,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	msg := &message.AbandonedRequestsNotification{Object: objectId}
 	parcel := &message.Parcel{Msg: msg}
 
-	_, err := suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	_, err := suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	es, _ := suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
@@ -701,7 +701,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	es, _ = suite.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = false
 
-	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	_, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	es, _ = suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
@@ -713,7 +713,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	es, _ = suite.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = true
 
-	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	_, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	es, _ = suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
