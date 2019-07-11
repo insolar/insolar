@@ -148,25 +148,6 @@ func (r *trackableReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-type capturingReader struct {
-	io.Reader
-	buffer bytes.Buffer
-}
-
-func newCapturingReader(reader io.Reader) *capturingReader {
-	return &capturingReader{Reader: reader}
-}
-
-func (r *capturingReader) Read(p []byte) (int, error) {
-	n, err := r.Reader.Read(p)
-	r.buffer.Write(p)
-	return n, err
-}
-
-func (r *capturingReader) Captured() []byte {
-	return r.buffer.Bytes()
-}
-
 type serializeContext struct {
 	packetContext
 	PacketHeaderModifier
