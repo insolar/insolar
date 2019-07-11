@@ -110,6 +110,7 @@ type identity struct {
 
 func buildParent(cfg configuration.Replica) (identity, error) {
 	kp := platformpolicy.NewKeyProcessor()
+	inslogger.FromContext(context.Background()).Infof("PARENT_KEY: %v", cfg.ParentPubKey)
 	pubKey, err := kp.ImportPublicKeyPEM([]byte(cfg.ParentPubKey))
 	if err != nil {
 		return identity{}, errors.Wrap(err, "failed to import a public key from PEM")

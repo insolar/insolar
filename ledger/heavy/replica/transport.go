@@ -18,10 +18,13 @@ package replica
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -55,6 +58,7 @@ type internalTransport struct {
 
 func (t *internalTransport) Init(ctx context.Context) error {
 	t.net = t.serviceNetwork.HostNetwork
+	registerHandlers(t.net, t.handlers)
 	return nil
 }
 
@@ -91,6 +95,31 @@ func (t *internalTransport) Register(method string, handle Handle) {
 
 func (t *internalTransport) Me() string {
 	return t.net.PublicAddress()
+}
+
+func registerHandlers(net network.HostNetwork, handlers map[string]Handle) {
+	net.RegisterRequestHandler(types.Replication, func(ctx context.Context, req network.Packet) (network.Packet, error) {
+		if req.GetRequest() == nil || req.GetRequest().GetRPC() == nil {
+			inslogger.FromContext(ctx).Warnf("process RPC: got invalid request protobuf message: %s", req)
+		}
+
+		method := req.GetRequest().GetRPC().Method
+		data := req.GetRequest().GetRPC().Data
+		if _, ok := handlers[method]; !ok {
+			return net.BuildResponse(ctx, req, &packet.RPCResponse{
+				Error: fmt.Sprintf("handle function: %v not defined", method),
+			}), nil
+		}
+		result, err := handlers[method](data)
+		reply, err := insolar.Serialize(Reply{
+			Data:  result,
+			Error: err,
+		})
+		if err != nil {
+			return net.BuildResponse(ctx, req, &packet.RPCResponse{Error: err.Error()}), nil
+		}
+		return net.BuildResponse(ctx, req, &packet.RPCResponse{Result: reply}), nil
+	})
 }
 
 func (t *internalTransport) hostByAddress(receiver string) (*host.Host, error) {
