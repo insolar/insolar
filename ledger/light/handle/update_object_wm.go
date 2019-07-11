@@ -27,21 +27,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-type UpdateObjectWM struct {
+type UpdateObject struct {
 	dep     *proc.Dependencies
 	message payload.Meta
 	passed  bool
 }
 
-func NewUpdateObjectWM(dep *proc.Dependencies, msg payload.Meta, passed bool) *UpdateObjectWM {
-	return &UpdateObjectWM{
+func NewUpdateObject(dep *proc.Dependencies, msg payload.Meta, passed bool) *UpdateObject {
+	return &UpdateObject{
 		dep:     dep,
 		message: msg,
 		passed:  passed,
 	}
 }
 
-func (s *UpdateObjectWM) Present(ctx context.Context, f flow.Flow) error {
+func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 	msg := payload.Update{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
@@ -109,14 +109,14 @@ func (s *UpdateObjectWM) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
-	// If we don't have it and heavy does, SetResult fails because it should update light's index state
+	// If we don't have it and heavy does, UpdateObject fails because it should update light's index state
 	getIndex := proc.NewEnsureIndexWM(obj, objJetID, s.message)
 	s.dep.EnsureIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err
 	}
 
-	updateObject := proc.NewUpdateObjectWM(s.message, *update, updateID, *result, resultID, objJetID)
-	s.dep.UpdateObjectWM(updateObject)
+	updateObject := proc.NewUpdateObject(s.message, *update, updateID, *result, resultID, objJetID)
+	s.dep.UpdateObject(updateObject)
 	return f.Procedure(ctx, updateObject, false)
 }

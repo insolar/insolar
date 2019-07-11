@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type UpdateObjectWM struct {
+type UpdateObject struct {
 	message  payload.Meta
 	update   record.Amend
 	updateID insolar.ID
@@ -49,15 +49,15 @@ type UpdateObjectWM struct {
 	}
 }
 
-func NewUpdateObjectWM(
+func NewUpdateObject(
 	msg payload.Meta,
 	update record.Amend,
 	updateID insolar.ID,
 	res record.Result,
 	resID insolar.ID,
 	jetID insolar.JetID,
-) *UpdateObjectWM {
-	return &UpdateObjectWM{
+) *UpdateObject {
+	return &UpdateObject{
 		message:  msg,
 		update:   update,
 		updateID: updateID,
@@ -67,7 +67,7 @@ func NewUpdateObjectWM(
 	}
 }
 
-func (a *UpdateObjectWM) Dep(
+func (a *UpdateObject) Dep(
 	w hot.WriteAccessor,
 	il object.IndexLocker,
 	r object.RecordModifier,
@@ -83,7 +83,7 @@ func (a *UpdateObjectWM) Dep(
 	a.dep.sender = s
 }
 
-func (a *UpdateObjectWM) Proceed(ctx context.Context) error {
+func (a *UpdateObject) Proceed(ctx context.Context) error {
 	done, err := a.dep.writeAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err == hot.ErrWriteClosed {
 		return flow.ErrCancelled
@@ -121,10 +121,6 @@ func (a *UpdateObjectWM) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "can't get index from storage")
 	}
-
-	// if idx.Lifeline.StateID == record.StateDeactivation {
-	// 	return ErrObjectDeactivated
-	// }
 
 	idx.Lifeline.LatestState = &a.updateID
 	idx.Lifeline.StateID = a.update.ID()

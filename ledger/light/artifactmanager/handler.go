@@ -160,7 +160,7 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
-		UpdateObjectWM: func(p *proc.UpdateObjectWM) {
+		UpdateObject: func(p *proc.UpdateObject) {
 			p.Dep(
 				h.WriteAccessor,
 				h.IndexLocker,

@@ -41,7 +41,7 @@ func TestUpdateObject_BadMsgPayload(t *testing.T) {
 		Payload: []byte{1, 2, 3, 4, 5},
 	}
 
-	handler := handle.NewUpdateObjectWM(nil, msg, false)
+	handler := handle.NewUpdateObject(nil, msg, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
 	require.Error(t, err)
@@ -64,7 +64,7 @@ func TestUpdateObject_BadWrappedVirtualRecord(t *testing.T) {
 		Payload: buf,
 	}
 
-	handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
@@ -97,7 +97,7 @@ func TestUpdateObject_IncorrectUpdateRecordInVirtual(t *testing.T) {
 		Payload: updateBuf,
 	}
 
-	handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
@@ -139,7 +139,7 @@ func TestUpdateObject_IncorrectUpdateResultPayload(t *testing.T) {
 		Payload: updateBuf,
 	}
 
-	handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
@@ -192,7 +192,7 @@ func TestUpdateObject_EmptyUpdateResultObject(t *testing.T) {
 		Payload: updateBuf,
 	}
 
-	handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	assert.EqualError(t, err, "object is nil")
@@ -245,7 +245,7 @@ func TestUpdateObject_WrongTypeUpdateResultInVirtual(t *testing.T) {
 		Payload: updateBuf,
 	}
 
-	handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+	handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
@@ -274,7 +274,7 @@ func TestUpdateObject_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "something strange from checkjet")
 	})
@@ -293,7 +293,7 @@ func TestUpdateObject_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -312,7 +312,7 @@ func TestUpdateObject_FlowWithPassedFlag(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, true)
+		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, true)
 		err := handler.Present(ctx, f)
 		require.Error(t, err)
 		assert.Equal(t, proc.ErrNotExecutor, err)
@@ -344,7 +344,7 @@ func TestUpdateObject_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from waithot")
 	})
@@ -362,14 +362,14 @@ func TestUpdateObject_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.UpdateObjectWM:
+			case *proc.UpdateObject:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -403,7 +403,7 @@ func TestUpdateObject_ErrorFromEnsureIndex(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from ensureindex")
 	})
@@ -421,14 +421,14 @@ func TestUpdateObject_ErrorFromEnsureIndex(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.UpdateObjectWM:
+			case *proc.UpdateObject:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
@@ -456,14 +456,14 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.UpdateObjectWM:
+			case *proc.UpdateObject:
 				return errors.New("error from updateobject")
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from updateobject")
 	})
@@ -481,14 +481,14 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.UpdateObjectWM:
+			case *proc.UpdateObject:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewUpdateObjectWM(proc.NewDependenciesMock(), msg, false)
+		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})

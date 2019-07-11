@@ -53,7 +53,7 @@ func TestUpdateObject_RecordOverrideErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(object.ErrOverride)
 
-	p := proc.NewUpdateObjectWM(
+	p := proc.NewUpdateObject(
 		payload.Meta{},
 		record.Amend{},
 		gen.ID(),
@@ -96,7 +96,7 @@ func TestUpdateObject_RecordErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(errors.New("something strange from records.Set"))
 
-	p := proc.NewUpdateObjectWM(
+	p := proc.NewUpdateObject(
 		payload.Meta{},
 		record.Amend{},
 		gen.ID(),
@@ -138,7 +138,7 @@ func TestUpdateObject_IndexForIDErr(t *testing.T) {
 	idxStorageMock := object.NewIndexStorageMock(t)
 	idxStorageMock.ForIDMock.Return(object.FilamentIndex{}, errors.New("something strange from index.ForID"))
 
-	p := proc.NewUpdateObjectWM(
+	p := proc.NewUpdateObject(
 		payload.Meta{},
 		record.Amend{},
 		gen.ID(),
@@ -182,7 +182,7 @@ func TestUpdateObject_SetIndexErr(t *testing.T) {
 	idxStorageMock.ForIDMock.Return(object.FilamentIndex{}, nil)
 	idxStorageMock.SetIndexMock.Return(errors.New("something strange from SetIndex"))
 
-	p := proc.NewUpdateObjectWM(
+	p := proc.NewUpdateObject(
 		payload.Meta{},
 		record.Amend{},
 		gen.ID(),
@@ -229,7 +229,7 @@ func TestUpdateObject_FilamentSetResultErr(t *testing.T) {
 	filaments := executor.NewFilamentModifierMock(t)
 	filaments.SetResultMock.Return(errors.New("something strange from filament.SetResult"))
 
-	p := proc.NewUpdateObjectWM(
+	p := proc.NewUpdateObject(
 		payload.Meta{},
 		record.Amend{},
 		gen.ID(),
@@ -279,7 +279,7 @@ func TestUpdateObject_Proceed(t *testing.T) {
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Return()
 
-	p := proc.NewUpdateObjectWM(
+	p := proc.NewUpdateObject(
 		payload.Meta{},
 		record.Amend{},
 		gen.ID(),

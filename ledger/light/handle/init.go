@@ -107,7 +107,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 			h := NewDeactivateObject(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeUpdate:
-			h := NewUpdateObjectWM(s.dep, meta, false)
+			h := NewUpdateObject(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypePass:
 			err = s.handlePass(ctx, f, meta)
@@ -218,7 +218,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		h := NewDeactivateObject(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeUpdate:
-		h := NewUpdateObjectWM(s.dep, originMeta, true)
+		h := NewUpdateObject(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
