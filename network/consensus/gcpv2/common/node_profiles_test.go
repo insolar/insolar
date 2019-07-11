@@ -59,45 +59,45 @@ import (
 )
 
 func TestMemberPowerOf(t *testing.T) {
-	require.Equal(t, MemberPowerOf(1), MemberPower(1))
+	require.Equal(t, MemberPower(1), MemberPowerOf(1))
 
-	require.Equal(t, MemberPowerOf(0x1F), MemberPower(0x1F))
+	require.Equal(t, MemberPower(0x1F), MemberPowerOf(0x1F))
 
-	require.Equal(t, MemberPowerOf(MaxLinearMemberPower), MemberPower(0xFF))
+	require.Equal(t, MemberPower(0xFF), MemberPowerOf(MaxLinearMemberPower))
 
-	require.Equal(t, MemberPowerOf(MaxLinearMemberPower+1), MemberPower(0xFF))
+	require.Equal(t, MemberPower(0xFF), MemberPowerOf(MaxLinearMemberPower+1))
 
-	require.Equal(t, MemberPowerOf(0x1F+1), MemberPower(0x1F+1))
+	require.Equal(t, MemberPower(0x1F+1), MemberPowerOf(0x1F+1))
 
-	require.Equal(t, MemberPowerOf(0x1F<<1), MemberPower(0x2F))
+	require.Equal(t, MemberPower(0x2F), MemberPowerOf(0x1F<<1))
 }
 
 func TestToLinearValue(t *testing.T) {
-	require.Equal(t, MemberPowerOf(0).ToLinearValue(), uint16(0))
+	require.Equal(t, uint16(0), MemberPowerOf(0).ToLinearValue())
 
-	require.Equal(t, MemberPowerOf(0x1F).ToLinearValue(), uint16(0x1F))
+	require.Equal(t, uint16(0x1F), MemberPowerOf(0x1F).ToLinearValue())
 
-	require.Equal(t, MemberPowerOf(0x1F+1).ToLinearValue(), uint16(0x1F+1))
+	require.Equal(t, uint16(0x1F+1), MemberPowerOf(0x1F+1).ToLinearValue())
 
-	require.Equal(t, MemberPowerOf(0x1F<<1).ToLinearValue(), uint16(0x3e))
+	require.Equal(t, uint16(0x3e), MemberPowerOf(0x1F<<1).ToLinearValue())
 }
 
 func TestPercentAndMin(t *testing.T) {
-	require.Equal(t, MemberPowerOf(MaxLinearMemberPower).PercentAndMin(100, MemberPowerOf(0)), ^MemberPower(0))
+	require.Equal(t, ^MemberPower(0), MemberPowerOf(MaxLinearMemberPower).PercentAndMin(100, MemberPowerOf(0)))
 
-	require.Equal(t, MemberPowerOf(3).PercentAndMin(1, MemberPowerOf(2)), MemberPower(2))
+	require.Equal(t, MemberPower(2), MemberPowerOf(3).PercentAndMin(1, MemberPowerOf(2)))
 
-	require.Equal(t, MemberPowerOf(3).PercentAndMin(80, MemberPowerOf(1)), MemberPower(2))
+	require.Equal(t, MemberPower(2), MemberPowerOf(3).PercentAndMin(80, MemberPowerOf(1)))
 }
 
 func TestNormalize(t *testing.T) {
 	zero := MemberPowerSet([...]MemberPower{0, 0, 0, 0})
-	require.Equal(t, zero.Normalize(), zero)
+	require.Equal(t, zero, zero.Normalize())
 
-	require.Equal(t, MemberPowerSet([...]MemberPower{1, 0, 0, 0}).Normalize(), zero)
+	require.Equal(t, zero, MemberPowerSet([...]MemberPower{1, 0, 0, 0}).Normalize())
 
 	m := MemberPowerSet([...]MemberPower{1, 1, 1, 1})
-	require.Equal(t, m.Normalize(), m)
+	require.Equal(t, m, m.Normalize())
 }
 
 // Illegal cases:
@@ -130,43 +130,43 @@ func TestIsValid(t *testing.T) {
 }
 
 func TestNewPowerRequestByLevel(t *testing.T) {
-	require.Equal(t, NewPowerRequestByLevel(common.LevelMinimal), -PowerRequest(common.LevelMinimal))
+	require.Equal(t, -PowerRequest(common.LevelMinimal), NewPowerRequestByLevel(common.LevelMinimal))
 }
 
 func TestNewPowerRequest(t *testing.T) {
-	require.Equal(t, NewPowerRequest(MemberPower(1)), PowerRequest(1))
+	require.Equal(t, PowerRequest(1), NewPowerRequest(MemberPower(1)))
 }
 
 func TestAsCapacityLevel(t *testing.T) {
 	b, l := PowerRequest(-1).AsCapacityLevel()
 	require.True(t, b)
-	require.Equal(t, l, common.CapacityLevel(1))
+	require.Equal(t, common.CapacityLevel(1), l)
 
 	b, l = PowerRequest(1).AsCapacityLevel()
 	require.False(t, b)
 
 	r := PowerRequest(1)
-	require.Equal(t, l, common.CapacityLevel(-r))
+	require.Equal(t, common.CapacityLevel(-r), l)
 
 	b, l = PowerRequest(0).AsCapacityLevel()
 	require.False(t, b)
-	require.Equal(t, l, common.CapacityLevel(0))
+	require.Equal(t, common.CapacityLevel(0), l)
 }
 
 func TestAsMemberPower(t *testing.T) {
 	b, l := PowerRequest(1).AsMemberPower()
 	require.True(t, b)
-	require.Equal(t, l, MemberPower(1))
+	require.Equal(t, MemberPower(1), l)
 
 	b, l = PowerRequest(-1).AsMemberPower()
 	require.False(t, b)
 
 	r := PowerRequest(-1)
-	require.Equal(t, l, MemberPower(r))
+	require.Equal(t, MemberPower(r), l)
 
 	b, l = PowerRequest(0).AsMemberPower()
 	require.True(t, b)
-	require.Equal(t, l, MemberPower(0))
+	require.Equal(t, MemberPower(0), l)
 }
 
 func TestNewMembershipProfile(t *testing.T) {
@@ -176,15 +176,15 @@ func TestNewMembershipProfile(t *testing.T) {
 	power := MemberPower(2)
 	ep := MemberPower(3)
 	mp := NewMembershipProfile(MemberModeNormal, power, index, nsh, nas, ep)
-	require.Equal(t, mp.Index, index)
+	require.Equal(t, index, mp.Index)
 
-	require.Equal(t, mp.Power, power)
+	require.Equal(t, power, mp.Power)
 
-	require.Equal(t, mp.RequestedPower, ep)
+	require.Equal(t, ep, mp.RequestedPower)
 
-	require.Equal(t, mp.StateEvidence, nsh)
+	require.Equal(t, nsh, mp.StateEvidence)
 
-	require.Equal(t, mp.AnnounceSignature, nas)
+	require.Equal(t, nas, mp.AnnounceSignature)
 }
 
 func TestNewMembershipProfileByNode(t *testing.T) {
@@ -201,15 +201,15 @@ func TestNewMembershipProfileByNode(t *testing.T) {
 	nas := NewMemberAnnouncementSignatureMock(t)
 	ep := MemberPower(3)
 	mp := NewMembershipProfileByNode(np, nsh, nas, ep)
-	require.Equal(t, mp.Index, uint16(index))
+	require.Equal(t, uint16(index), mp.Index)
 
-	require.Equal(t, mp.Power, power)
+	require.Equal(t, power, mp.Power)
 
-	require.Equal(t, mp.RequestedPower, ep)
+	require.Equal(t, ep, mp.RequestedPower)
 
-	require.Equal(t, mp.StateEvidence, nsh)
+	require.Equal(t, nsh, mp.StateEvidence)
 
-	require.Equal(t, mp.AnnounceSignature, nas)
+	require.Equal(t, nas, mp.AnnounceSignature)
 }
 
 func TestIsEmpty(t *testing.T) {
