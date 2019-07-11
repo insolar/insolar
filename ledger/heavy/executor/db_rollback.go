@@ -69,7 +69,7 @@ func (d *DBRollback) Start(ctx context.Context) error {
 	for idx, db := range d.dbs {
 		err := db.TruncateHead(ctx, pn.PulseNumber)
 		if err != nil {
-			return errors.Wrapf(err, "can't truncate %d db to pulse: %d", idx, pn)
+			return errors.Wrapf(err, "can't truncate %d db to pulse: %d", idx, pn.PulseNumber)
 		}
 	}
 
