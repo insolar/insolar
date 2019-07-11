@@ -439,7 +439,7 @@ func (m *AbandonedRequestsNotification) DefaultTarget() *insolar.Reference {
 type SagaCallAcceptNotification struct {
 	ledgerMessage
 
-	Object insolar.ID // AALEKSEEV TODO fill
+	Object insolar.ID // AALEKSEEV TODO place entire OutgoingRequest here
 }
 
 // Type implementation of Message interface.
