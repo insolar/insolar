@@ -91,6 +91,7 @@ type DynamicRealmPopulation struct {
 
 func (r *DynamicRealmPopulation) initPopulation(local common2.NodeProfile, nodeCountHint int) {
 	r.self = r.CreateNodeAppearance(context.Background(), local)
+	r.dynamicNodes = make(map[common.ShortNodeID]*NodeAppearance, nodeCountHint)
 }
 
 func (r *DynamicRealmPopulation) GetSelf() *NodeAppearance {

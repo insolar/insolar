@@ -89,6 +89,10 @@ type EmuPulsarNetPacket struct {
 	pulseData common.PulseData
 }
 
+func (r *EmuPulsarNetPacket) IsRelayForbidden() bool {
+	return false
+}
+
 func (r *EmuPulsarNetPacket) AsByteString() string {
 	panic("implement me")
 }
@@ -109,15 +113,15 @@ func (r *EmuPulsarNetPacket) FixedByteSize() int {
 	panic("implement me")
 }
 
-func (r *EmuPulsarNetPacket) GetSourceId() common.ShortNodeID {
+func (r *EmuPulsarNetPacket) GetSourceID() common.ShortNodeID {
 	return common.AbsentShortNodeID
 }
 
-func (r *EmuPulsarNetPacket) GetReceiverId() common.ShortNodeID {
+func (r *EmuPulsarNetPacket) GetReceiverID() common.ShortNodeID {
 	return common.AbsentShortNodeID
 }
 
-func (r *EmuPulsarNetPacket) GetRelayTargetID() common.ShortNodeID {
+func (r *EmuPulsarNetPacket) GetTargetID() common.ShortNodeID {
 	return common.AbsentShortNodeID
 }
 
@@ -224,16 +228,20 @@ func (r *basePacket) GetEvidence() common.SignedData {
 	return common.NewSignedData(&v, d, s)
 }
 
-func (r *basePacket) GetSourceId() common.ShortNodeID {
+func (r *basePacket) GetSourceID() common.ShortNodeID {
 	return r.src
 }
 
-func (r *basePacket) GetReceiverId() common.ShortNodeID {
+func (r *basePacket) GetReceiverID() common.ShortNodeID {
 	return r.tgt
 }
 
-func (r *basePacket) GetRelayTargetID() common.ShortNodeID {
+func (r *basePacket) GetTargetID() common.ShortNodeID {
 	return common.AbsentShortNodeID
+}
+
+func (r *basePacket) IsRelayForbidden() bool {
+	return true
 }
 
 func (r *basePacket) GetPacketSignature() common.SignedDigest {

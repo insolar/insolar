@@ -762,7 +762,7 @@ type PacketParserMockGetReceiverIdResult struct {
 	r common.ShortNodeID
 }
 
-//Expect specifies that invocation of PacketParser.GetReceiverId is expected from 1 to Infinity times
+//Expect specifies that invocation of PacketParser.GetReceiverID is expected from 1 to Infinity times
 func (m *mPacketParserMockGetReceiverId) Expect() *mPacketParserMockGetReceiverId {
 	m.mock.GetReceiverIdFunc = nil
 	m.expectationSeries = nil
@@ -774,7 +774,7 @@ func (m *mPacketParserMockGetReceiverId) Expect() *mPacketParserMockGetReceiverI
 	return m
 }
 
-//Return specifies results of invocation of PacketParser.GetReceiverId
+//Return specifies results of invocation of PacketParser.GetReceiverID
 func (m *mPacketParserMockGetReceiverId) Return(r common.ShortNodeID) *PacketParserMock {
 	m.mock.GetReceiverIdFunc = nil
 	m.expectationSeries = nil
@@ -786,7 +786,7 @@ func (m *mPacketParserMockGetReceiverId) Return(r common.ShortNodeID) *PacketPar
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of PacketParser.GetReceiverId is expected once
+//ExpectOnce specifies that invocation of PacketParser.GetReceiverID is expected once
 func (m *mPacketParserMockGetReceiverId) ExpectOnce() *PacketParserMockGetReceiverIdExpectation {
 	m.mock.GetReceiverIdFunc = nil
 	m.mainExpectation = nil
@@ -801,7 +801,7 @@ func (e *PacketParserMockGetReceiverIdExpectation) Return(r common.ShortNodeID) 
 	e.result = &PacketParserMockGetReceiverIdResult{r}
 }
 
-//Set uses given function f as a mock of PacketParser.GetReceiverId method
+//Set uses given function f as a mock of PacketParser.GetReceiverID method
 func (m *mPacketParserMockGetReceiverId) Set(f func() (r common.ShortNodeID)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -810,20 +810,20 @@ func (m *mPacketParserMockGetReceiverId) Set(f func() (r common.ShortNodeID)) *P
 	return m.mock
 }
 
-//GetReceiverId implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
+//GetReceiverID implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
 func (m *PacketParserMock) GetReceiverId() (r common.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetReceiverIdPreCounter, 1)
 	defer atomic.AddUint64(&m.GetReceiverIdCounter, 1)
 
 	if len(m.GetReceiverIdMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetReceiverIdMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PacketParserMock.GetReceiverId.")
+			m.t.Fatalf("Unexpected call to PacketParserMock.GetReceiverID.")
 			return
 		}
 
 		result := m.GetReceiverIdMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the PacketParserMock.GetReceiverId")
+			m.t.Fatal("No results are set for the PacketParserMock.GetReceiverID")
 			return
 		}
 
@@ -836,7 +836,7 @@ func (m *PacketParserMock) GetReceiverId() (r common.ShortNodeID) {
 
 		result := m.GetReceiverIdMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the PacketParserMock.GetReceiverId")
+			m.t.Fatal("No results are set for the PacketParserMock.GetReceiverID")
 		}
 
 		r = result.r
@@ -845,7 +845,7 @@ func (m *PacketParserMock) GetReceiverId() (r common.ShortNodeID) {
 	}
 
 	if m.GetReceiverIdFunc == nil {
-		m.t.Fatalf("Unexpected call to PacketParserMock.GetReceiverId.")
+		m.t.Fatalf("Unexpected call to PacketParserMock.GetReceiverID.")
 		return
 	}
 
@@ -857,7 +857,7 @@ func (m *PacketParserMock) GetReceiverIdMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetReceiverIdCounter)
 }
 
-//GetReceiverIdMinimockPreCounter returns the value of PacketParserMock.GetReceiverId invocations
+//GetReceiverIdMinimockPreCounter returns the value of PacketParserMock.GetReceiverID invocations
 func (m *PacketParserMock) GetReceiverIdMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetReceiverIdPreCounter)
 }
@@ -896,7 +896,7 @@ type PacketParserMockGetRelayTargetIDResult struct {
 	r common.ShortNodeID
 }
 
-//Expect specifies that invocation of PacketParser.GetRelayTargetID is expected from 1 to Infinity times
+//Expect specifies that invocation of PacketParser.GetTargetID is expected from 1 to Infinity times
 func (m *mPacketParserMockGetRelayTargetID) Expect() *mPacketParserMockGetRelayTargetID {
 	m.mock.GetRelayTargetIDFunc = nil
 	m.expectationSeries = nil
@@ -908,7 +908,7 @@ func (m *mPacketParserMockGetRelayTargetID) Expect() *mPacketParserMockGetRelayT
 	return m
 }
 
-//Return specifies results of invocation of PacketParser.GetRelayTargetID
+//Return specifies results of invocation of PacketParser.GetTargetID
 func (m *mPacketParserMockGetRelayTargetID) Return(r common.ShortNodeID) *PacketParserMock {
 	m.mock.GetRelayTargetIDFunc = nil
 	m.expectationSeries = nil
@@ -920,7 +920,7 @@ func (m *mPacketParserMockGetRelayTargetID) Return(r common.ShortNodeID) *Packet
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of PacketParser.GetRelayTargetID is expected once
+//ExpectOnce specifies that invocation of PacketParser.GetTargetID is expected once
 func (m *mPacketParserMockGetRelayTargetID) ExpectOnce() *PacketParserMockGetRelayTargetIDExpectation {
 	m.mock.GetRelayTargetIDFunc = nil
 	m.mainExpectation = nil
@@ -935,7 +935,7 @@ func (e *PacketParserMockGetRelayTargetIDExpectation) Return(r common.ShortNodeI
 	e.result = &PacketParserMockGetRelayTargetIDResult{r}
 }
 
-//Set uses given function f as a mock of PacketParser.GetRelayTargetID method
+//Set uses given function f as a mock of PacketParser.GetTargetID method
 func (m *mPacketParserMockGetRelayTargetID) Set(f func() (r common.ShortNodeID)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -944,20 +944,20 @@ func (m *mPacketParserMockGetRelayTargetID) Set(f func() (r common.ShortNodeID))
 	return m.mock
 }
 
-//GetRelayTargetID implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
-func (m *PacketParserMock) GetRelayTargetID() (r common.ShortNodeID) {
+//GetTargetID implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
+func (m *PacketParserMock) GetTargetID() (r common.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetRelayTargetIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRelayTargetIDCounter, 1)
 
 	if len(m.GetRelayTargetIDMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetRelayTargetIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PacketParserMock.GetRelayTargetID.")
+			m.t.Fatalf("Unexpected call to PacketParserMock.GetTargetID.")
 			return
 		}
 
 		result := m.GetRelayTargetIDMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the PacketParserMock.GetRelayTargetID")
+			m.t.Fatal("No results are set for the PacketParserMock.GetTargetID")
 			return
 		}
 
@@ -970,7 +970,7 @@ func (m *PacketParserMock) GetRelayTargetID() (r common.ShortNodeID) {
 
 		result := m.GetRelayTargetIDMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the PacketParserMock.GetRelayTargetID")
+			m.t.Fatal("No results are set for the PacketParserMock.GetTargetID")
 		}
 
 		r = result.r
@@ -979,7 +979,7 @@ func (m *PacketParserMock) GetRelayTargetID() (r common.ShortNodeID) {
 	}
 
 	if m.GetRelayTargetIDFunc == nil {
-		m.t.Fatalf("Unexpected call to PacketParserMock.GetRelayTargetID.")
+		m.t.Fatalf("Unexpected call to PacketParserMock.GetTargetID.")
 		return
 	}
 
@@ -991,7 +991,7 @@ func (m *PacketParserMock) GetRelayTargetIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetRelayTargetIDCounter)
 }
 
-//GetRelayTargetIDMinimockPreCounter returns the value of PacketParserMock.GetRelayTargetID invocations
+//GetRelayTargetIDMinimockPreCounter returns the value of PacketParserMock.GetTargetID invocations
 func (m *PacketParserMock) GetRelayTargetIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetRelayTargetIDPreCounter)
 }
@@ -1030,7 +1030,7 @@ type PacketParserMockGetSourceIdResult struct {
 	r common.ShortNodeID
 }
 
-//Expect specifies that invocation of PacketParser.GetSourceId is expected from 1 to Infinity times
+//Expect specifies that invocation of PacketParser.GetSourceID is expected from 1 to Infinity times
 func (m *mPacketParserMockGetSourceId) Expect() *mPacketParserMockGetSourceId {
 	m.mock.GetSourceIdFunc = nil
 	m.expectationSeries = nil
@@ -1042,7 +1042,7 @@ func (m *mPacketParserMockGetSourceId) Expect() *mPacketParserMockGetSourceId {
 	return m
 }
 
-//Return specifies results of invocation of PacketParser.GetSourceId
+//Return specifies results of invocation of PacketParser.GetSourceID
 func (m *mPacketParserMockGetSourceId) Return(r common.ShortNodeID) *PacketParserMock {
 	m.mock.GetSourceIdFunc = nil
 	m.expectationSeries = nil
@@ -1054,7 +1054,7 @@ func (m *mPacketParserMockGetSourceId) Return(r common.ShortNodeID) *PacketParse
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of PacketParser.GetSourceId is expected once
+//ExpectOnce specifies that invocation of PacketParser.GetSourceID is expected once
 func (m *mPacketParserMockGetSourceId) ExpectOnce() *PacketParserMockGetSourceIdExpectation {
 	m.mock.GetSourceIdFunc = nil
 	m.mainExpectation = nil
@@ -1069,7 +1069,7 @@ func (e *PacketParserMockGetSourceIdExpectation) Return(r common.ShortNodeID) {
 	e.result = &PacketParserMockGetSourceIdResult{r}
 }
 
-//Set uses given function f as a mock of PacketParser.GetSourceId method
+//Set uses given function f as a mock of PacketParser.GetSourceID method
 func (m *mPacketParserMockGetSourceId) Set(f func() (r common.ShortNodeID)) *PacketParserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1078,20 +1078,20 @@ func (m *mPacketParserMockGetSourceId) Set(f func() (r common.ShortNodeID)) *Pac
 	return m.mock
 }
 
-//GetSourceId implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
+//GetSourceID implements github.com/insolar/insolar/network/consensus/gcpv2/packets.PacketParser interface
 func (m *PacketParserMock) GetSourceId() (r common.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetSourceIdPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSourceIdCounter, 1)
 
 	if len(m.GetSourceIdMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetSourceIdMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PacketParserMock.GetSourceId.")
+			m.t.Fatalf("Unexpected call to PacketParserMock.GetSourceID.")
 			return
 		}
 
 		result := m.GetSourceIdMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the PacketParserMock.GetSourceId")
+			m.t.Fatal("No results are set for the PacketParserMock.GetSourceID")
 			return
 		}
 
@@ -1104,7 +1104,7 @@ func (m *PacketParserMock) GetSourceId() (r common.ShortNodeID) {
 
 		result := m.GetSourceIdMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the PacketParserMock.GetSourceId")
+			m.t.Fatal("No results are set for the PacketParserMock.GetSourceID")
 		}
 
 		r = result.r
@@ -1113,7 +1113,7 @@ func (m *PacketParserMock) GetSourceId() (r common.ShortNodeID) {
 	}
 
 	if m.GetSourceIdFunc == nil {
-		m.t.Fatalf("Unexpected call to PacketParserMock.GetSourceId.")
+		m.t.Fatalf("Unexpected call to PacketParserMock.GetSourceID.")
 		return
 	}
 
@@ -1125,7 +1125,7 @@ func (m *PacketParserMock) GetSourceIdMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetSourceIdCounter)
 }
 
-//GetSourceIdMinimockPreCounter returns the value of PacketParserMock.GetSourceId invocations
+//GetSourceIdMinimockPreCounter returns the value of PacketParserMock.GetSourceID invocations
 func (m *PacketParserMock) GetSourceIdMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetSourceIdPreCounter)
 }
@@ -1175,15 +1175,15 @@ func (m *PacketParserMock) ValidateCallCounters() {
 	}
 
 	if !m.GetReceiverIdFinished() {
-		m.t.Fatal("Expected call to PacketParserMock.GetReceiverId")
+		m.t.Fatal("Expected call to PacketParserMock.GetReceiverID")
 	}
 
 	if !m.GetRelayTargetIDFinished() {
-		m.t.Fatal("Expected call to PacketParserMock.GetRelayTargetID")
+		m.t.Fatal("Expected call to PacketParserMock.GetTargetID")
 	}
 
 	if !m.GetSourceIdFinished() {
-		m.t.Fatal("Expected call to PacketParserMock.GetSourceId")
+		m.t.Fatal("Expected call to PacketParserMock.GetSourceID")
 	}
 
 }
@@ -1224,15 +1224,15 @@ func (m *PacketParserMock) MinimockFinish() {
 	}
 
 	if !m.GetReceiverIdFinished() {
-		m.t.Fatal("Expected call to PacketParserMock.GetReceiverId")
+		m.t.Fatal("Expected call to PacketParserMock.GetReceiverID")
 	}
 
 	if !m.GetRelayTargetIDFinished() {
-		m.t.Fatal("Expected call to PacketParserMock.GetRelayTargetID")
+		m.t.Fatal("Expected call to PacketParserMock.GetTargetID")
 	}
 
 	if !m.GetSourceIdFinished() {
-		m.t.Fatal("Expected call to PacketParserMock.GetSourceId")
+		m.t.Fatal("Expected call to PacketParserMock.GetSourceID")
 	}
 
 }
@@ -1286,15 +1286,15 @@ func (m *PacketParserMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.GetReceiverIdFinished() {
-				m.t.Error("Expected call to PacketParserMock.GetReceiverId")
+				m.t.Error("Expected call to PacketParserMock.GetReceiverID")
 			}
 
 			if !m.GetRelayTargetIDFinished() {
-				m.t.Error("Expected call to PacketParserMock.GetRelayTargetID")
+				m.t.Error("Expected call to PacketParserMock.GetTargetID")
 			}
 
 			if !m.GetSourceIdFinished() {
-				m.t.Error("Expected call to PacketParserMock.GetSourceId")
+				m.t.Error("Expected call to PacketParserMock.GetSourceID")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)

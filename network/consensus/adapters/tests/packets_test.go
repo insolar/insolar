@@ -147,8 +147,8 @@ func (r *basePacket) GetReceiverId() common.ShortNodeID {
 	return r.tgt
 }
 
-func (r *basePacket) GetRelayTargetID() common.ShortNodeID {
-	return common.AbsentShortNodeID
+func (r *basePacket) GetTargetID() common.ShortNodeID {
+	return r.tgt
 }
 
 func (r *basePacket) GetPacketSignature() common.SignedDigest {

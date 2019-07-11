@@ -69,11 +69,11 @@ type PrepPhasePacketHandler func(ctx context.Context, reader packets.PacketParse
 
 type PhaseControllerHandlerType uint8
 
+const PacketHandlerTypeHost PhaseControllerHandlerType = 0
 const (
-	PacketHandlerTypeHost          PhaseControllerHandlerType = 0
-	PacketHandlerTypeMember                                   = 1
-	PacketHandlerTypeEnableUnknown                            = 2
-	PacketHandlerTypePerNode                                  = 4
+	PacketHandlerTypeMember PhaseControllerHandlerType = 1 << iota
+	PacketHandlerTypeEnableUnknown
+	PacketHandlerTypePerNode
 )
 
 func (v PhaseControllerHandlerType) IsMemberHandler() bool {
@@ -96,8 +96,8 @@ type PhaseController interface {
 	HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error                                      // GetHandlerType() == PacketHandlerTypeMember OR PacketHandlerTypeMemberFromUnknown
 	HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) // GetHandlerType() == PacketHandlerTypeMemberFromUnknown
 
-	CreatePerNodePacketHandler(ctlIndex int, node *NodeAppearance, realm *FullRealm,
-		sharedNodeContext context.Context) (PhasePerNodePacketFunc, context.Context) // GetHandlerType() == PacketHandlerTypePerNode
+	CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *NodeAppearance, realm *FullRealm,
+	) (PhasePerNodePacketFunc, context.Context) // GetHandlerType() == PacketHandlerTypePerNode
 
 	BeforeStart(realm *FullRealm)
 	StartWorker(ctx context.Context)

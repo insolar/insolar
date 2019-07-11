@@ -67,11 +67,11 @@ type PacketParser interface {
 	GetPulsePacket() PulsePacketReader
 	GetMemberPacket() MemberPacketReader
 
-	GetSourceId() common.ShortNodeID
-	GetReceiverId() common.ShortNodeID
+	GetSourceID() common.ShortNodeID
+	GetReceiverID() common.ShortNodeID
 
-	/* Returns zero when no relay */
-	GetRelayTargetID() common.ShortNodeID
+	IsRelayForbidden() bool
+	GetTargetID() common.ShortNodeID
 
 	GetPacketSignature() common.SignedDigest
 }
