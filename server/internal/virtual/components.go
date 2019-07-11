@@ -18,6 +18,7 @@ package virtual
 
 import (
 	"context"
+	"io"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -258,19 +259,13 @@ func startRouter(ctx context.Context, router *message.Router) {
 	<-router.Running()
 }
 
-func stopWatermill(ctx context.Context, innerRouter, inRouter, outRouter *message.Router) func() {
+func stopWatermill(ctx context.Context, routers ...io.Closer) func() {
 	return func() {
-		err := innerRouter.Close()
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Error while closing router", err)
-		}
-		err = inRouter.Close()
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Error while closing router", err)
-		}
-		err = outRouter.Close()
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Error while closing router", err)
+		for _, r := range routers {
+			err := r.Close()
+			if err != nil {
+				inslogger.FromContext(ctx).Error("Error while closing router", err)
+			}
 		}
 	}
 }
