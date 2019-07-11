@@ -124,7 +124,7 @@ func (jc *Coordinator) QueryRole(
 		return ref, nil
 
 	case insolar.DynamicRoleHeavyExecutor:
-		n, err := jc.Heavy(ctx, pulse)
+		n, err := jc.Heavy(ctx)
 		if err != nil {
 			return nil, errors.Wrapf(err, "calc DynamicRoleHeavyExecutor for pulse %v failed", pulse.String())
 		}
@@ -198,21 +198,26 @@ func (jc *Coordinator) LightValidatorsForObject(
 	return jc.LightValidatorsForJet(ctx, insolar.ID(jetID), pulse)
 }
 
-// Heavy returns *insolar.RecorRef to a heavy of specific pulse
-func (jc *Coordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) (*insolar.Reference, error) {
-	candidates, err := jc.Nodes.InRole(pulse, insolar.StaticRoleHeavyMaterial)
+// Heavy returns *insolar.RecorRef to heavy
+func (jc *Coordinator) Heavy(ctx context.Context) (*insolar.Reference, error) {
+	latest, err := jc.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch pulse")
+	}
+
+	candidates, err := jc.Nodes.InRole(latest.PulseNumber, insolar.StaticRoleHeavyMaterial)
 	if err == node.ErrNoNodes {
 		return nil, err
 	}
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch active heavy nodes for pulse %v", pulse)
+		return nil, errors.Wrapf(err, "failed to fetch active heavy nodes for pulse %v", latest.PulseNumber)
 	}
 	if len(candidates) == 0 {
-		return nil, errors.New(fmt.Sprintf("no active heavy nodes for pulse %d", pulse))
+		return nil, errors.New(fmt.Sprintf("no active heavy nodes for pulse %d", latest.PulseNumber))
 	}
-	ent, err := jc.entropy(ctx, pulse)
+	ent, err := jc.entropy(ctx, latest.PulseNumber)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch entropy for pulse %v", pulse)
+		return nil, errors.Wrapf(err, "failed to fetch entropy for pulse %v", latest.PulseNumber)
 	}
 
 	refs, err := getRefs(
@@ -229,20 +234,24 @@ func (jc *Coordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) (*i
 
 // IsBeyondLimit calculates if target pulse is behind clean-up limit
 // or if currentPN|targetPN didn't found in in-memory pulse-storage.
-func (jc *Coordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error) {
+func (jc *Coordinator) IsBeyondLimit(ctx context.Context, targetPN insolar.PulseNumber) (bool, error) {
 	// Genesis case. When there is no any data on a lme
 	if targetPN <= insolar.GenesisPulse.PulseNumber {
 		return true, nil
 	}
 
-	backPN, err := jc.PulseCalculator.Backwards(ctx, currentPN, jc.lightChainLimit)
+	latest, err := jc.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to fetch pulse")
+	}
+	backPN, err := jc.PulseCalculator.Backwards(ctx, latest.PulseNumber, jc.lightChainLimit)
 	// We are not aware of pulses beyond limit. Returning false is the only way when the network is less than limit
 	// pulses old.
 	if err == pulse.ErrNotFound {
 		return false, nil
 	}
 	if err != nil {
-		return false, errors.Wrapf(err, "[PulseCalculator.Backwards] failed, currentPN - %v, lightChainLimit - %v", currentPN, jc.lightChainLimit)
+		return false, errors.Wrap(err, "failed to calculate pulse")
 	}
 
 	if backPN.PulseNumber < targetPN {
@@ -253,27 +262,27 @@ func (jc *Coordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN in
 }
 
 // NodeForJet calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-func (jc *Coordinator) NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
-	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
+func (jc *Coordinator) NodeForJet(ctx context.Context, jetID insolar.ID, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
+	toHeavy, err := jc.IsBeyondLimit(ctx, targetPN)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[IsBeyondLimit] failed, rootPN - %v, targetPN - %v", rootPN, targetPN)
+		return nil, errors.Wrapf(err, "[IsBeyondLimit] failed, targetPN - %v", targetPN)
 	}
 
 	if toHeavy {
-		return jc.Heavy(ctx, rootPN)
+		return jc.Heavy(ctx)
 	}
 	return jc.LightExecutorForJet(ctx, jetID, targetPN)
 }
 
 // NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-func (jc *Coordinator) NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
-	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
+func (jc *Coordinator) NodeForObject(ctx context.Context, objectID insolar.ID, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
+	toHeavy, err := jc.IsBeyondLimit(ctx, targetPN)
 	if err != nil {
 		return nil, err
 	}
 
 	if toHeavy {
-		return jc.Heavy(ctx, rootPN)
+		return jc.Heavy(ctx)
 	}
 	return jc.LightExecutorForObject(ctx, objectID, targetPN)
 }
