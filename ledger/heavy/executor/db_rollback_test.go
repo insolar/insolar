@@ -35,7 +35,7 @@ func TestDBRollback_HasOnlyGenesisPulse(t *testing.T) {
 		return insolar.GenesisPulse.PulseNumber
 	}
 
-	rollback := NewDBRollback(nil, nil, nil, nil, nil, jetKeeper)
+	rollback := NewDBRollback(jetKeeper, nil, nil, nil, nil, nil)
 	err := rollback.Start(context.Background())
 	require.NoError(t, err)
 }
@@ -71,7 +71,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	jets := jet.NewDBStore(db)
 	pulses := pulse.NewDB(db)
 
-	rollback := NewDBRollback(drops, records, indexes, jets, pulses, jetKeeper)
+	rollback := NewDBRollback(jetKeeper, drops, records, indexes, jets, pulses)
 	err := rollback.Start(context.Background())
 	require.Len(t, hits, 5) // drops, record, jets, indexes, pulses
 	expectedScopes := []struct {

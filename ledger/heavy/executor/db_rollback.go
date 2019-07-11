@@ -32,29 +32,15 @@ type headTruncater interface {
 // DBRollback is used for rollback all data which is not finalized
 // It removes all data which was added after pulse which we consider as finalized
 type DBRollback struct {
-	drops     headTruncater
-	records   headTruncater
-	indexes   headTruncater
-	jets      headTruncater
-	pulses    headTruncater
+	dbs       []headTruncater
 	jetKeeper JetKeeper
 }
 
-func NewDBRollback(
-	drops headTruncater,
-	records headTruncater,
-	indexes headTruncater,
-	jets headTruncater,
-	pulses headTruncater,
-	jetKeeper JetKeeper) *DBRollback {
+func NewDBRollback(jetKeeper JetKeeper, dbs ...headTruncater) *DBRollback {
 
 	return &DBRollback{
-		drops:     drops,
-		records:   records,
-		indexes:   indexes,
-		jets:      jets,
 		jetKeeper: jetKeeper,
-		pulses:    pulses,
+		dbs:       dbs,
 	}
 }
 
@@ -68,29 +54,11 @@ func (d *DBRollback) Start(ctx context.Context) error {
 		return nil
 	}
 
-	err := d.drops.TruncateHead(ctx, pn)
-	if err != nil {
-		return errors.Wrapf(err, "can't truncate drops to pulse: %d", pn)
-	}
-
-	err = d.records.TruncateHead(ctx, pn)
-	if err != nil {
-		return errors.Wrapf(err, "can't truncate records to pulse: %d", pn)
-	}
-
-	err = d.indexes.TruncateHead(ctx, pn)
-	if err != nil {
-		return errors.Wrapf(err, "can't truncate indexes to pulse: %d", pn)
-	}
-
-	err = d.jets.TruncateHead(ctx, pn)
-	if err != nil {
-		return errors.Wrapf(err, "can't truncate jets to pulse: %d", pn)
-	}
-
-	err = d.pulses.TruncateHead(ctx, pn)
-	if err != nil {
-		return errors.Wrapf(err, "can't truncate pulses to pulse: %d", pn)
+	for idx, db := range d.dbs {
+		err := db.TruncateHead(ctx, pn)
+		if err != nil {
+			return errors.Wrapf(err, "can't truncate %d db to pulse: %d", idx, pn)
+		}
 	}
 
 	return nil
