@@ -116,7 +116,6 @@ func (p *RegisterChild) process(ctx context.Context) error {
 		idx.Lifeline.SetDelegate(*p.msg.AsType, p.msg.Child)
 	}
 	idx.Lifeline.LatestUpdate = p.pulse
-	idx.Lifeline.JetID = p.jet
 	idx.LifelineLastUsed = p.pulse
 
 	err = p.Dep.IndexModifier.SetIndex(ctx, p.pulse, idx)

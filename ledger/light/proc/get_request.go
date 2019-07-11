@@ -51,7 +51,7 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 
 	virtRec := rec.Virtual
 	concrete := record.Unwrap(virtRec)
-	_, ok := concrete.(*record.Request)
+	_, ok := concrete.(*record.IncomingRequest)
 	if !ok {
 		return errors.New("failed to decode request")
 	}

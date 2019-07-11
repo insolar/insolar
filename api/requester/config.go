@@ -35,6 +35,7 @@ type Request struct {
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
+	Test     string `json:"test,omitempty"`
 }
 
 type Params struct {
@@ -42,7 +43,7 @@ type Params struct {
 	CallSite   string      `json:"callSite"`
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"memberPubKey"`
+	PublicKey  string      `json:"memberPublicKey"`
 }
 
 type ContractAnswer struct {
@@ -55,11 +56,15 @@ type ContractAnswer struct {
 type Error struct {
 	Code    int    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
+	Data    Data   `json:"data,omitempty"`
+}
+
+type Data struct {
 	TraceID string `json:"traceID,omitempty"`
 }
 
 type Result struct {
-	ContractResult interface{} `json:"payload,omitempty"`
+	ContractResult interface{} `json:"callResult,omitempty"`
 	TraceID        string      `json:"traceID,omitempty"`
 }
 

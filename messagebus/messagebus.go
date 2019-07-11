@@ -264,6 +264,8 @@ func (mb *MessageBus) SendParcel(
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, parcelType)
 	defer span.End()
 
+	inslogger.FromContext(ctx).Debug("About to send message ", parcelType)
+
 	readBarrier(ctx, &mb.globalLock)
 
 	nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, options)
@@ -534,11 +536,8 @@ func (mb *MessageBus) checkParcel(_ context.Context, parcel insolar.Parcel) erro
 }
 
 func readBarrier(ctx context.Context, mutex *sync.RWMutex) {
-	inslogger.FromContext(ctx).Debug("Locking readBarrier")
 	mutex.RLock()
-	inslogger.FromContext(ctx).Debug("readBarrier locked")
 	mutex.RUnlock()
-	inslogger.FromContext(ctx).Debug("readBarrier unlocked")
 }
 
 func init() {

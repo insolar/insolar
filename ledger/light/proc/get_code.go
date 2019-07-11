@@ -24,7 +24,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
@@ -92,13 +91,13 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), p.codeID.Pulse())
+		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, p.codeID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to calculate pulse")
 		}
 		var node insolar.Reference
 		if onHeavy {
-			h, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+			h, err := p.Dep.Coordinator.Heavy(ctx)
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate heavy")
 			}

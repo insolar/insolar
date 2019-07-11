@@ -75,7 +75,7 @@ install-build-tools:
 install-deps: install-godep install-build-tools
 
 .PHONY: pre-build
-pre-build: ensure generate
+pre-build: ensure generate regen-builtin
 
 .PHONY: generate
 generate:

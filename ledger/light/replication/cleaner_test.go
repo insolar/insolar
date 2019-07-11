@@ -112,7 +112,7 @@ func TestCleaner_clean(t *testing.T) {
 	pc := pulse.NewCalculatorMock(ctrl)
 	pc.BackwardsFunc = func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, inputPulse.PulseNumber, pn)
-		require.Equal(t, limit, l)
+		require.Equal(t, limit+1, l)
 		return calculatedPulse, nil
 	}
 
@@ -161,7 +161,7 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	pc := pulse.NewCalculatorMock(ctrl)
 	pc.BackwardsFunc = func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, inputPulse.PulseNumber, pn)
-		require.Equal(t, limit, l)
+		require.Equal(t, limit+1, l)
 		return calculatedPulse, nil
 	}
 

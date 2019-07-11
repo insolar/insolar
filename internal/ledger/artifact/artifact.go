@@ -37,7 +37,7 @@ type Manager interface {
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error)
+	RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error)
 
 	// RegisterResult saves payload result in storage (emulates of save call result by VM).
 	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
@@ -51,22 +51,14 @@ type Manager interface {
 		domain, obj, parent, prototype insolar.Reference,
 		asDelegate bool,
 		memory []byte,
-	) (ObjectDescriptor, error)
-
-	// ActivatePrototype creates activate object record in storage.
-	// Provided prototype reference will be used as objects prototype memory as memory of created object.
-	ActivatePrototype(
-		ctx context.Context,
-		domain, obj, parent, code insolar.Reference,
-		memory []byte,
-	) (ObjectDescriptor, error)
+	) error
 
 	// UpdateObject creates amend object record in storage.
 	// Provided reference should be a reference to the head of the object.
 	// Provided memory well be the new object memory.
 	//
 	// Returned descriptor is the latest object state (exact) reference.
-	UpdateObject(ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
+	UpdateObject(ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor, memory []byte) error
 
 	// DeployCode creates new code record in storage (code records are used to activate prototypes).
 	DeployCode(
@@ -126,17 +118,13 @@ func (m *Scope) GetObject(
 		parent:       idx.Lifeline.Parent,
 	}
 	if state.GetMemory() != nil {
-		b, err := m.BlobStorage.ForID(ctx, *state.GetMemory())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch blob")
-		}
-		desc.memory = b.Value
+		desc.memory = state.GetMemory()
 	}
 	return desc, nil
 }
 
 // RegisterRequest creates request record in storage.
-func (m *Scope) RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error) {
+func (m *Scope) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
 	virtRec := record.Wrap(req)
 	return m.setRecord(ctx, virtRec)
 }
@@ -164,18 +152,8 @@ func (m *Scope) ActivateObject(
 	domain, obj, parent, prototype insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (ObjectDescriptor, error) {
+) error {
 	return m.activateObject(ctx, domain, obj, prototype, false, parent, asDelegate, memory)
-}
-
-// ActivatePrototype creates activate object record in storage.
-// Provided prototype reference will be used as objects prototype memory as memory of created object.
-func (m *Scope) ActivatePrototype(
-	ctx context.Context,
-	domain, obj, parent, code insolar.Reference,
-	memory []byte,
-) (ObjectDescriptor, error) {
-	return m.activateObject(ctx, domain, obj, code, true, parent, false, memory)
 }
 
 func (m *Scope) activateObject(
@@ -187,10 +165,10 @@ func (m *Scope) activateObject(
 	parent insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (ObjectDescriptor, error) {
+) error {
 	parentIdx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
-		return nil, errors.Wrapf(err, "not found parent index for activated object: %v", parent.String())
+		return errors.Wrapf(err, "not found parent index for activated object: %v", parent.String())
 	}
 
 	stateRecord := record.Activate{
@@ -201,9 +179,9 @@ func (m *Scope) activateObject(
 		Parent:      parent,
 		IsDelegate:  asDelegate,
 	}
-	stateObj, err := m.updateStateObject(ctx, obj, stateRecord, memory)
+	err = m.updateStateObject(ctx, obj, stateRecord, memory)
 	if err != nil {
-		return nil, errors.Wrap(err, "fail to store activation state")
+		return errors.Wrap(err, "fail to store activation state")
 	}
 
 	asType := &prototype
@@ -218,10 +196,10 @@ func (m *Scope) activateObject(
 		asType,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to activate")
+		return errors.Wrap(err, "failed to activate")
 	}
 
-	return stateObj, nil
+	return nil
 }
 
 // UpdateObject creates amend object record in storage.
@@ -234,9 +212,9 @@ func (m *Scope) UpdateObject(
 	domain, request insolar.Reference,
 	objDesc ObjectDescriptor,
 	memory []byte,
-) (ObjectDescriptor, error) {
+) error {
 	if objDesc.IsPrototype() {
-		return nil, errors.New("object is not an instance")
+		return errors.New("object is not an instance")
 	}
 
 	var (
@@ -249,7 +227,7 @@ func (m *Scope) UpdateObject(
 		image, err = objDesc.Prototype()
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update object")
+		return errors.Wrap(err, "failed to update object")
 	}
 
 	amendRecord := record.Amend{
@@ -318,8 +296,6 @@ func (m *Scope) registerChild(
 	prevChild *insolar.ID,
 	asType *insolar.Reference,
 ) error {
-
-	var jetID = insolar.ID(insolar.ZeroJetID)
 	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return err
@@ -349,7 +325,6 @@ func (m *Scope) registerChild(
 		idx.Lifeline.SetDelegate(*asType, obj)
 	}
 	idx.Lifeline.LatestUpdate = m.PulseNumber
-	idx.Lifeline.JetID = insolar.JetID(jetID)
 	return m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 }
 
@@ -358,20 +333,15 @@ func (m *Scope) updateStateObject(
 	objRef insolar.Reference,
 	stateObject record.State,
 	memory []byte,
-) (ObjectDescriptor, error) {
-	var jetID = insolar.ID(insolar.ZeroJetID)
-	blobID, err := m.setBlob(ctx, memory)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to update blob")
-	}
-
+) error {
 	var virtRecord record.Virtual
+
 	switch so := stateObject.(type) {
 	case record.Activate:
-		so.Memory = *blobID
+		so.Memory = memory
 		virtRecord = record.Wrap(so)
 	case record.Amend:
-		so.Memory = *blobID
+		so.Memory = memory
 		virtRecord = record.Wrap(so)
 	default:
 		panic("unknown state object type")
@@ -381,10 +351,10 @@ func (m *Scope) updateStateObject(
 	// No index on our node.
 	if err != nil {
 		if err != object.ErrIndexNotFound {
-			return nil, errors.Wrap(err, "failed get index for updating state object")
+			return errors.Wrap(err, "failed get index for updating state object")
 		}
 		if stateObject.ID() != record.StateActivation {
-			return nil, errors.Wrap(err, "index not found for updating non Activation state object")
+			return errors.Wrap(err, "index not found for updating non Activation state object")
 		}
 		// We are activating the object. There is no index for it yet.
 		idx = object.FilamentIndex{
@@ -396,7 +366,7 @@ func (m *Scope) updateStateObject(
 
 	id, err := m.setRecord(ctx, virtRecord)
 	if err != nil {
-		return nil, errors.Wrap(err, "fail set record for state object")
+		return errors.Wrap(err, "fail set record for state object")
 	}
 
 	// update index
@@ -406,18 +376,10 @@ func (m *Scope) updateStateObject(
 	if stateObject.ID() == record.StateActivation {
 		idx.Lifeline.Parent = stateObject.(record.Activate).Parent
 	}
-	idx.Lifeline.JetID = insolar.JetID(jetID)
 	err = m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 	if err != nil {
-		return nil, errors.Wrap(err, "fail set index for state object")
+		return errors.Wrap(err, "fail set index for state object")
 	}
 
-	return &objectDescriptor{
-		head:         objRef,
-		state:        *idx.Lifeline.LatestState,
-		prototype:    stateObject.GetImage(),
-		isPrototype:  stateObject.GetIsPrototype(),
-		childPointer: idx.Lifeline.ChildPointer,
-		parent:       idx.Lifeline.Parent,
-	}, nil
+	return nil
 }

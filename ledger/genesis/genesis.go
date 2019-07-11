@@ -125,7 +125,6 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 			Lifeline: object.Lifeline{
 				LatestState:         &genesisID,
 				LatestStateApproved: &genesisID,
-				JetID:               insolar.ZeroJetID,
 			},
 			PendingRecords: []insolar.ID{},
 		},
@@ -220,7 +219,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 
 	_, err := g.ArtifactManager.RegisterRequest(
 		ctx,
-		record.Request{
+		record.IncomingRequest{
 			CallType: record.CTGenesis,
 			Method:   name,
 		},
@@ -234,7 +233,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		parentRef = rootdomain.GenesisRef(state.ParentName)
 	}
 
-	_, err = g.ArtifactManager.ActivateObject(
+	err = g.ArtifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		objRef,

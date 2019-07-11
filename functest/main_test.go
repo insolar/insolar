@@ -398,7 +398,7 @@ func setup() error {
 	root.ref = info.RootMember
 	migrationAdmin.ref = info.MigrationAdminMember
 
-	contracts = make(map[string]*insolar.Reference)
+	contracts = make(map[string]*contractInfo)
 
 	return nil
 }

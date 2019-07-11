@@ -108,7 +108,7 @@ func TestDistributor_Distribute(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 
-	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
+	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
 		if r.GetType() == types.Ping {
 			log.Info("handle Ping")
 			return n1.BuildResponse(ctx, r, &packet.Ping{}), nil
