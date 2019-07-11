@@ -120,9 +120,13 @@ func (d *TranscriptDequeue) PopByReference(ref insolar.Reference) *Transcript {
 		if elem.value.RequestRef.Compare(ref) == 0 {
 			if elem.prev != nil {
 				elem.prev.next = elem.next
+			} else {
+				d.first = elem.next
 			}
 			if elem.next != nil {
 				elem.next.prev = elem.prev
+			} else {
+				d.last = elem.prev
 			}
 
 			d.length--
