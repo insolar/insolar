@@ -35,7 +35,9 @@ import (
 )
 
 type LightServer struct {
-	pm insolar.PulseManager
+	pm      insolar.PulseManager
+	pubsub  *pubSub
+	handler message.HandlerFunc
 }
 
 func DefaultLightConfig() configuration.Configuration {
@@ -223,7 +225,7 @@ func NewLightServer(ctx context.Context, cfg configuration.Configuration) (*Ligh
 
 	startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.FlowDispatcher.Process)
 
-	return &LightServer{pm: PulseManager}, nil
+	return &LightServer{pm: PulseManager, handler: Handler.FlowDispatcher.Process}, nil
 }
 
 func startWatermill(
@@ -274,6 +276,40 @@ func startRouter(ctx context.Context, router *message.Router) {
 	<-router.Running()
 }
 
+func (s *LightServer) Pulse(ctx context.Context, pulse insolar.Pulse) error {
+	return s.pm.Set(ctx, pulse)
+}
+
+func (s *LightServer) Send(msg *message.Message) error {
+	_, err := s.handler(msg)
+	return err
+}
+
+func (s *LightServer) Receive(h func(*message.Message)) {
+	s.pubsub.outHandler = h
+}
+
+type pubSub struct {
+	outHandler func(*message.Message)
+}
+
+func (p *pubSub) Publish(topic string, messages ...*message.Message) error {
+	if topic == bus.TopicOutgoing {
+		for _, m := range messages {
+			p.outHandler(m)
+		}
+	}
+	return nil
+}
+
+func (p *pubSub) Subscribe(ctx context.Context, topic string) (<-chan *message.Message, error) {
+	panic("implement me")
+}
+
+func (p *pubSub) Close() error {
+	return nil
+}
+
 type stub struct{}
 
 func (*stub) GetOrigin() insolar.NetworkNode {
@@ -300,8 +336,4 @@ func (*stub) Release(ctx context.Context) {
 
 func (*stub) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
 	return nil
-}
-
-func (s *LightServer) Pulse(ctx context.Context, pulse insolar.Pulse) error {
-	return s.pm.Set(ctx, pulse)
 }
