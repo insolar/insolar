@@ -128,6 +128,9 @@ func (h *HandleCall) handleActual(
 	}
 	requestRef := procRegisterRequest.getResult()
 
+	ctx, logger := inslogger.WithField(ctx, "request", requestRef.String())
+	logger.Debug("Registered request")
+
 	objRef := request.Object
 	if request.CallType != record.CTMethod {
 		objRef = requestRef
@@ -152,7 +155,7 @@ func (h *HandleCall) handleActual(
 		if err == flow.ErrCancelled {
 			h.sendToNextExecutor(ctx, es, broker, requestRef)
 		} else {
-			inslogger.FromContext(ctx).Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
+			logger.Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
 		}
 		// and return the reply as usual
 	} else {
