@@ -101,7 +101,7 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 // ------------- ClarifyPendingState
 
 type ClarifyPendingState struct {
-	es     *ExecutionState
+	es      *ExecutionState
 	request *record.IncomingRequest
 
 	ArtifactManager artifacts.Client
