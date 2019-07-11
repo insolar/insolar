@@ -18,33 +18,112 @@ package logicrunner
 
 import (
 	"sync"
+
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/log"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go
 type StateStorage interface {
 	sync.Locker
 
-	GetObjectState(ref Ref) *ObjectState
-	UpsertObjectState(ref Ref) *ObjectState
-	MustObjectState(ref Ref) *ObjectState
-	GetExecutionState(ref Ref) *ExecutionState
-	DeleteObjectState(ref Ref)
-	StateMap() *map[Ref]*ObjectState
+	UpsertExecutionState(ref insolar.Reference) (*ExecutionState, *ExecutionBroker)
+	GetExecutionState(ref insolar.Reference) (*ExecutionState, *ExecutionBroker)
+
+	UpsertValidationState(ref insolar.Reference) *ExecutionState
+	GetValidationState(ref insolar.Reference) *ExecutionState
+
+	DeleteObjectState(ref insolar.Reference)
+
+	StateMap() *map[insolar.Reference]*ObjectState
 }
 
 type stateStorage struct {
 	sync.RWMutex
-	state map[Ref]*ObjectState // if object exists, we are validating or executing it right now
+
+	publisher        watermillMsg.Publisher
+	requestsExecutor RequestsExecutor
+	messageBus       insolar.MessageBus
+	jetCoordinator   jet.Coordinator
+	pulseAccessor    pulse.Accessor
+
+	state map[insolar.Reference]*ObjectState // if object exists, we are validating or executing it right now
 }
 
-func NewStateStorage() StateStorage {
+func (ss *stateStorage) UpsertValidationState(ref insolar.Reference) *ExecutionState {
+	os := ss.upsertObjectState(ref)
+
+	os.Lock()
+	defer os.Unlock()
+
+	os.Validation = NewExecutionState(ref)
+	return os.Validation
+}
+
+func (ss *stateStorage) GetValidationState(ref insolar.Reference) *ExecutionState {
+	os := ss.getObjectState(ref)
+	if os == nil {
+		return nil
+	}
+
+	os.Lock()
+	defer os.Unlock()
+
+	return os.Validation
+}
+
+func NewStateStorage(publisher watermillMsg.Publisher, requestsExecutor RequestsExecutor, messageBus insolar.MessageBus, jetCoordinator jet.Coordinator, pulseAccessor pulse.Accessor) StateStorage {
 	ss := &stateStorage{
-		state: make(map[Ref]*ObjectState),
+		state: make(map[insolar.Reference]*ObjectState),
+
+		publisher:        publisher,
+		requestsExecutor: requestsExecutor,
+		messageBus:       messageBus,
+		jetCoordinator:   jetCoordinator,
+		pulseAccessor:    pulseAccessor,
 	}
 	return ss
 }
 
-func (ss *stateStorage) GetObjectState(ref Ref) *ObjectState {
+func (ss *stateStorage) UpsertExecutionState(
+	ref insolar.Reference,
+) (*ExecutionState, *ExecutionBroker) {
+	os := ss.upsertObjectState(ref)
+
+	os.Lock()
+	defer os.Unlock()
+
+	if os.ExecutionState == nil {
+		log.Error(ss.publisher)
+		os.ExecutionState = NewExecutionState(ref)
+		os.ExecutionBroker = NewExecutionBroker(
+			ss.publisher,
+			ss.requestsExecutor,
+			ss.messageBus,
+			ss.jetCoordinator,
+			ss.pulseAccessor,
+			os.ExecutionState,
+		)
+	}
+	return os.ExecutionState, os.ExecutionBroker
+}
+
+func (ss *stateStorage) GetExecutionState(ref insolar.Reference) (*ExecutionState, *ExecutionBroker) {
+	os := ss.getObjectState(ref)
+	if os == nil {
+		return nil, nil
+	}
+
+	os.Lock()
+	defer os.Unlock()
+
+	return os.ExecutionState, os.ExecutionBroker
+}
+
+func (ss *stateStorage) getObjectState(ref insolar.Reference) *ObjectState {
 	ss.RLock()
 	res, ok := ss.state[ref]
 	ss.RUnlock()
@@ -54,7 +133,7 @@ func (ss *stateStorage) GetObjectState(ref Ref) *ObjectState {
 	return res
 }
 
-func (ss *stateStorage) UpsertObjectState(ref Ref) *ObjectState {
+func (ss *stateStorage) upsertObjectState(ref insolar.Reference) *ObjectState {
 	ss.RLock()
 	if res, ok := ss.state[ref]; ok {
 		ss.RUnlock()
@@ -70,29 +149,10 @@ func (ss *stateStorage) UpsertObjectState(ref Ref) *ObjectState {
 	return ss.state[ref]
 }
 
-func (ss *stateStorage) MustObjectState(ref Ref) *ObjectState {
-	res := ss.GetObjectState(ref)
-	if res == nil {
-		panic("No requested object state. ref: " + ref.String())
-	}
-	return res
-}
-
-func (ss *stateStorage) GetExecutionState(ref Ref) *ExecutionState {
-	os := ss.GetObjectState(ref)
-	if os == nil {
-		return nil
-	}
-
-	os.Lock()
-	defer os.Unlock()
-	return os.ExecutionState
-}
-
-func (ss *stateStorage) DeleteObjectState(ref Ref) {
+func (ss *stateStorage) DeleteObjectState(ref insolar.Reference) {
 	delete(ss.state, ref)
 }
 
-func (ss *stateStorage) StateMap() *map[Ref]*ObjectState {
+func (ss *stateStorage) StateMap() *map[insolar.Reference]*ObjectState {
 	return &ss.state
 }

@@ -245,7 +245,8 @@ func (m *client) GetCode(
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, code)
+	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 3)
+	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, code)
 	defer done()
 
 	rep, ok := <-reps
@@ -321,7 +322,8 @@ func (m *client) GetObject(
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
+	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 3)
+	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
 	var (
@@ -432,12 +434,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
 	}
 
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, currentPN, requestID.Pulse())
+	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, requestID.Pulse())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -741,7 +738,10 @@ func (m *client) ActivateObject(
 //
 // Deactivated object cannot be changed.
 func (m *client) DeactivateObject(
-	ctx context.Context, request insolar.Reference, obj ObjectDescriptor, result []byte,
+	ctx context.Context,
+	request insolar.Reference,
+	obj ObjectDescriptor,
+	result []byte,
 ) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
@@ -764,17 +764,36 @@ func (m *client) DeactivateObject(
 		Payload: result,
 	}
 
-	err = m.sendUpdateObject(
-		ctx,
-		record.Wrap(deactivate),
-		record.Wrap(resultRecord),
-		*obj.HeadRef(),
-		nil,
-	)
+	virtDeactivate := record.Wrap(deactivate)
+	virtResult := record.Wrap(resultRecord)
+
+	deactivateBuf, err := virtDeactivate.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to deactivate object")
+		return errors.Wrap(err, "DeactivateObject: can't serialize record")
 	}
-	return nil
+	resultBuf, err := virtResult.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "DeactivateObject: can't serialize record")
+	}
+
+	pd := &payload.Deactivate{
+		Record: deactivateBuf,
+		Result: resultBuf,
+	}
+
+	pl, err := m.sendWithRetry(ctx, pd, insolar.DynamicRoleLightExecutor, *obj.HeadRef(), 3)
+	if err != nil {
+		return errors.Wrap(err, "DeactivateObject: can't send deactivation and result records")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return nil
+	case *payload.Error:
+		return errors.New(p.Text)
+	default:
+		return fmt.Errorf("DeployCode: unexpected reply: %#v", p)
+	}
 }
 
 // UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the

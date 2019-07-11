@@ -20,7 +20,7 @@ import (
 type CoordinatorMock struct {
 	t minimock.Tester
 
-	HeavyFunc       func(p context.Context, p1 insolar.PulseNumber) (r *insolar.Reference, r1 error)
+	HeavyFunc       func(p context.Context) (r *insolar.Reference, r1 error)
 	HeavyCounter    uint64
 	HeavyPreCounter uint64
 	HeavyMock       mCoordinatorMockHeavy
@@ -30,7 +30,7 @@ type CoordinatorMock struct {
 	IsAuthorizedPreCounter uint64
 	IsAuthorizedMock       mCoordinatorMockIsAuthorized
 
-	IsBeyondLimitFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r bool, r1 error)
+	IsBeyondLimitFunc       func(p context.Context, p1 insolar.PulseNumber) (r bool, r1 error)
 	IsBeyondLimitCounter    uint64
 	IsBeyondLimitPreCounter uint64
 	IsBeyondLimitMock       mCoordinatorMockIsBeyondLimit
@@ -60,12 +60,12 @@ type CoordinatorMock struct {
 	MePreCounter uint64
 	MeMock       mCoordinatorMockMe
 
-	NodeForJetFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error)
+	NodeForJetFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)
 	NodeForJetCounter    uint64
 	NodeForJetPreCounter uint64
 	NodeForJetMock       mCoordinatorMockNodeForJet
 
-	NodeForObjectFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error)
+	NodeForObjectFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)
 	NodeForObjectCounter    uint64
 	NodeForObjectPreCounter uint64
 	NodeForObjectMock       mCoordinatorMockNodeForObject
@@ -123,8 +123,7 @@ type CoordinatorMockHeavyExpectation struct {
 }
 
 type CoordinatorMockHeavyInput struct {
-	p  context.Context
-	p1 insolar.PulseNumber
+	p context.Context
 }
 
 type CoordinatorMockHeavyResult struct {
@@ -133,14 +132,14 @@ type CoordinatorMockHeavyResult struct {
 }
 
 //Expect specifies that invocation of Coordinator.Heavy is expected from 1 to Infinity times
-func (m *mCoordinatorMockHeavy) Expect(p context.Context, p1 insolar.PulseNumber) *mCoordinatorMockHeavy {
+func (m *mCoordinatorMockHeavy) Expect(p context.Context) *mCoordinatorMockHeavy {
 	m.mock.HeavyFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &CoordinatorMockHeavyExpectation{}
 	}
-	m.mainExpectation.input = &CoordinatorMockHeavyInput{p, p1}
+	m.mainExpectation.input = &CoordinatorMockHeavyInput{p}
 	return m
 }
 
@@ -157,12 +156,12 @@ func (m *mCoordinatorMockHeavy) Return(r *insolar.Reference, r1 error) *Coordina
 }
 
 //ExpectOnce specifies that invocation of Coordinator.Heavy is expected once
-func (m *mCoordinatorMockHeavy) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *CoordinatorMockHeavyExpectation {
+func (m *mCoordinatorMockHeavy) ExpectOnce(p context.Context) *CoordinatorMockHeavyExpectation {
 	m.mock.HeavyFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &CoordinatorMockHeavyExpectation{}
-	expectation.input = &CoordinatorMockHeavyInput{p, p1}
+	expectation.input = &CoordinatorMockHeavyInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -172,7 +171,7 @@ func (e *CoordinatorMockHeavyExpectation) Return(r *insolar.Reference, r1 error)
 }
 
 //Set uses given function f as a mock of Coordinator.Heavy method
-func (m *mCoordinatorMockHeavy) Set(f func(p context.Context, p1 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *CoordinatorMock {
+func (m *mCoordinatorMockHeavy) Set(f func(p context.Context) (r *insolar.Reference, r1 error)) *CoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -181,18 +180,18 @@ func (m *mCoordinatorMockHeavy) Set(f func(p context.Context, p1 insolar.PulseNu
 }
 
 //Heavy implements github.com/insolar/insolar/insolar/jet.Coordinator interface
-func (m *CoordinatorMock) Heavy(p context.Context, p1 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+func (m *CoordinatorMock) Heavy(p context.Context) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.HeavyPreCounter, 1)
 	defer atomic.AddUint64(&m.HeavyCounter, 1)
 
 	if len(m.HeavyMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.HeavyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CoordinatorMock.Heavy. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to CoordinatorMock.Heavy. %v", p)
 			return
 		}
 
 		input := m.HeavyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CoordinatorMockHeavyInput{p, p1}, "Coordinator.Heavy got unexpected parameters")
+		testify_assert.Equal(m.t, *input, CoordinatorMockHeavyInput{p}, "Coordinator.Heavy got unexpected parameters")
 
 		result := m.HeavyMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -210,7 +209,7 @@ func (m *CoordinatorMock) Heavy(p context.Context, p1 insolar.PulseNumber) (r *i
 
 		input := m.HeavyMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, CoordinatorMockHeavyInput{p, p1}, "Coordinator.Heavy got unexpected parameters")
+			testify_assert.Equal(m.t, *input, CoordinatorMockHeavyInput{p}, "Coordinator.Heavy got unexpected parameters")
 		}
 
 		result := m.HeavyMock.mainExpectation.result
@@ -225,11 +224,11 @@ func (m *CoordinatorMock) Heavy(p context.Context, p1 insolar.PulseNumber) (r *i
 	}
 
 	if m.HeavyFunc == nil {
-		m.t.Fatalf("Unexpected call to CoordinatorMock.Heavy. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to CoordinatorMock.Heavy. %v", p)
 		return
 	}
 
-	return m.HeavyFunc(p, p1)
+	return m.HeavyFunc(p)
 }
 
 //HeavyMinimockCounter returns a count of CoordinatorMock.HeavyFunc invocations
@@ -430,7 +429,6 @@ type CoordinatorMockIsBeyondLimitExpectation struct {
 type CoordinatorMockIsBeyondLimitInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-	p2 insolar.PulseNumber
 }
 
 type CoordinatorMockIsBeyondLimitResult struct {
@@ -439,14 +437,14 @@ type CoordinatorMockIsBeyondLimitResult struct {
 }
 
 //Expect specifies that invocation of Coordinator.IsBeyondLimit is expected from 1 to Infinity times
-func (m *mCoordinatorMockIsBeyondLimit) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *mCoordinatorMockIsBeyondLimit {
+func (m *mCoordinatorMockIsBeyondLimit) Expect(p context.Context, p1 insolar.PulseNumber) *mCoordinatorMockIsBeyondLimit {
 	m.mock.IsBeyondLimitFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &CoordinatorMockIsBeyondLimitExpectation{}
 	}
-	m.mainExpectation.input = &CoordinatorMockIsBeyondLimitInput{p, p1, p2}
+	m.mainExpectation.input = &CoordinatorMockIsBeyondLimitInput{p, p1}
 	return m
 }
 
@@ -463,12 +461,12 @@ func (m *mCoordinatorMockIsBeyondLimit) Return(r bool, r1 error) *CoordinatorMoc
 }
 
 //ExpectOnce specifies that invocation of Coordinator.IsBeyondLimit is expected once
-func (m *mCoordinatorMockIsBeyondLimit) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *CoordinatorMockIsBeyondLimitExpectation {
+func (m *mCoordinatorMockIsBeyondLimit) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *CoordinatorMockIsBeyondLimitExpectation {
 	m.mock.IsBeyondLimitFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &CoordinatorMockIsBeyondLimitExpectation{}
-	expectation.input = &CoordinatorMockIsBeyondLimitInput{p, p1, p2}
+	expectation.input = &CoordinatorMockIsBeyondLimitInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -478,7 +476,7 @@ func (e *CoordinatorMockIsBeyondLimitExpectation) Return(r bool, r1 error) {
 }
 
 //Set uses given function f as a mock of Coordinator.IsBeyondLimit method
-func (m *mCoordinatorMockIsBeyondLimit) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r bool, r1 error)) *CoordinatorMock {
+func (m *mCoordinatorMockIsBeyondLimit) Set(f func(p context.Context, p1 insolar.PulseNumber) (r bool, r1 error)) *CoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -487,18 +485,18 @@ func (m *mCoordinatorMockIsBeyondLimit) Set(f func(p context.Context, p1 insolar
 }
 
 //IsBeyondLimit implements github.com/insolar/insolar/insolar/jet.Coordinator interface
-func (m *CoordinatorMock) IsBeyondLimit(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r bool, r1 error) {
+func (m *CoordinatorMock) IsBeyondLimit(p context.Context, p1 insolar.PulseNumber) (r bool, r1 error) {
 	counter := atomic.AddUint64(&m.IsBeyondLimitPreCounter, 1)
 	defer atomic.AddUint64(&m.IsBeyondLimitCounter, 1)
 
 	if len(m.IsBeyondLimitMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.IsBeyondLimitMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CoordinatorMock.IsBeyondLimit. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to CoordinatorMock.IsBeyondLimit. %v %v", p, p1)
 			return
 		}
 
 		input := m.IsBeyondLimitMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CoordinatorMockIsBeyondLimitInput{p, p1, p2}, "Coordinator.IsBeyondLimit got unexpected parameters")
+		testify_assert.Equal(m.t, *input, CoordinatorMockIsBeyondLimitInput{p, p1}, "Coordinator.IsBeyondLimit got unexpected parameters")
 
 		result := m.IsBeyondLimitMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -516,7 +514,7 @@ func (m *CoordinatorMock) IsBeyondLimit(p context.Context, p1 insolar.PulseNumbe
 
 		input := m.IsBeyondLimitMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, CoordinatorMockIsBeyondLimitInput{p, p1, p2}, "Coordinator.IsBeyondLimit got unexpected parameters")
+			testify_assert.Equal(m.t, *input, CoordinatorMockIsBeyondLimitInput{p, p1}, "Coordinator.IsBeyondLimit got unexpected parameters")
 		}
 
 		result := m.IsBeyondLimitMock.mainExpectation.result
@@ -531,11 +529,11 @@ func (m *CoordinatorMock) IsBeyondLimit(p context.Context, p1 insolar.PulseNumbe
 	}
 
 	if m.IsBeyondLimitFunc == nil {
-		m.t.Fatalf("Unexpected call to CoordinatorMock.IsBeyondLimit. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to CoordinatorMock.IsBeyondLimit. %v %v", p, p1)
 		return
 	}
 
-	return m.IsBeyondLimitFunc(p, p1, p2)
+	return m.IsBeyondLimitFunc(p, p1)
 }
 
 //IsBeyondLimitMinimockCounter returns a count of CoordinatorMock.IsBeyondLimitFunc invocations
@@ -1325,7 +1323,6 @@ type CoordinatorMockNodeForJetInput struct {
 	p  context.Context
 	p1 insolar.ID
 	p2 insolar.PulseNumber
-	p3 insolar.PulseNumber
 }
 
 type CoordinatorMockNodeForJetResult struct {
@@ -1334,14 +1331,14 @@ type CoordinatorMockNodeForJetResult struct {
 }
 
 //Expect specifies that invocation of Coordinator.NodeForJet is expected from 1 to Infinity times
-func (m *mCoordinatorMockNodeForJet) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *mCoordinatorMockNodeForJet {
+func (m *mCoordinatorMockNodeForJet) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mCoordinatorMockNodeForJet {
 	m.mock.NodeForJetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &CoordinatorMockNodeForJetExpectation{}
 	}
-	m.mainExpectation.input = &CoordinatorMockNodeForJetInput{p, p1, p2, p3}
+	m.mainExpectation.input = &CoordinatorMockNodeForJetInput{p, p1, p2}
 	return m
 }
 
@@ -1358,12 +1355,12 @@ func (m *mCoordinatorMockNodeForJet) Return(r *insolar.Reference, r1 error) *Coo
 }
 
 //ExpectOnce specifies that invocation of Coordinator.NodeForJet is expected once
-func (m *mCoordinatorMockNodeForJet) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *CoordinatorMockNodeForJetExpectation {
+func (m *mCoordinatorMockNodeForJet) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *CoordinatorMockNodeForJetExpectation {
 	m.mock.NodeForJetFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &CoordinatorMockNodeForJetExpectation{}
-	expectation.input = &CoordinatorMockNodeForJetInput{p, p1, p2, p3}
+	expectation.input = &CoordinatorMockNodeForJetInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -1373,7 +1370,7 @@ func (e *CoordinatorMockNodeForJetExpectation) Return(r *insolar.Reference, r1 e
 }
 
 //Set uses given function f as a mock of Coordinator.NodeForJet method
-func (m *mCoordinatorMockNodeForJet) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *CoordinatorMock {
+func (m *mCoordinatorMockNodeForJet) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *CoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1382,18 +1379,18 @@ func (m *mCoordinatorMockNodeForJet) Set(f func(p context.Context, p1 insolar.ID
 }
 
 //NodeForJet implements github.com/insolar/insolar/insolar/jet.Coordinator interface
-func (m *CoordinatorMock) NodeForJet(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+func (m *CoordinatorMock) NodeForJet(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.NodeForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.NodeForJetCounter, 1)
 
 	if len(m.NodeForJetMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.NodeForJetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CoordinatorMock.NodeForJet. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to CoordinatorMock.NodeForJet. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.NodeForJetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CoordinatorMockNodeForJetInput{p, p1, p2, p3}, "Coordinator.NodeForJet got unexpected parameters")
+		testify_assert.Equal(m.t, *input, CoordinatorMockNodeForJetInput{p, p1, p2}, "Coordinator.NodeForJet got unexpected parameters")
 
 		result := m.NodeForJetMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -1411,7 +1408,7 @@ func (m *CoordinatorMock) NodeForJet(p context.Context, p1 insolar.ID, p2 insola
 
 		input := m.NodeForJetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, CoordinatorMockNodeForJetInput{p, p1, p2, p3}, "Coordinator.NodeForJet got unexpected parameters")
+			testify_assert.Equal(m.t, *input, CoordinatorMockNodeForJetInput{p, p1, p2}, "Coordinator.NodeForJet got unexpected parameters")
 		}
 
 		result := m.NodeForJetMock.mainExpectation.result
@@ -1426,11 +1423,11 @@ func (m *CoordinatorMock) NodeForJet(p context.Context, p1 insolar.ID, p2 insola
 	}
 
 	if m.NodeForJetFunc == nil {
-		m.t.Fatalf("Unexpected call to CoordinatorMock.NodeForJet. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to CoordinatorMock.NodeForJet. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.NodeForJetFunc(p, p1, p2, p3)
+	return m.NodeForJetFunc(p, p1, p2)
 }
 
 //NodeForJetMinimockCounter returns a count of CoordinatorMock.NodeForJetFunc invocations
@@ -1478,7 +1475,6 @@ type CoordinatorMockNodeForObjectInput struct {
 	p  context.Context
 	p1 insolar.ID
 	p2 insolar.PulseNumber
-	p3 insolar.PulseNumber
 }
 
 type CoordinatorMockNodeForObjectResult struct {
@@ -1487,14 +1483,14 @@ type CoordinatorMockNodeForObjectResult struct {
 }
 
 //Expect specifies that invocation of Coordinator.NodeForObject is expected from 1 to Infinity times
-func (m *mCoordinatorMockNodeForObject) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *mCoordinatorMockNodeForObject {
+func (m *mCoordinatorMockNodeForObject) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mCoordinatorMockNodeForObject {
 	m.mock.NodeForObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &CoordinatorMockNodeForObjectExpectation{}
 	}
-	m.mainExpectation.input = &CoordinatorMockNodeForObjectInput{p, p1, p2, p3}
+	m.mainExpectation.input = &CoordinatorMockNodeForObjectInput{p, p1, p2}
 	return m
 }
 
@@ -1511,12 +1507,12 @@ func (m *mCoordinatorMockNodeForObject) Return(r *insolar.Reference, r1 error) *
 }
 
 //ExpectOnce specifies that invocation of Coordinator.NodeForObject is expected once
-func (m *mCoordinatorMockNodeForObject) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *CoordinatorMockNodeForObjectExpectation {
+func (m *mCoordinatorMockNodeForObject) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *CoordinatorMockNodeForObjectExpectation {
 	m.mock.NodeForObjectFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &CoordinatorMockNodeForObjectExpectation{}
-	expectation.input = &CoordinatorMockNodeForObjectInput{p, p1, p2, p3}
+	expectation.input = &CoordinatorMockNodeForObjectInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -1526,7 +1522,7 @@ func (e *CoordinatorMockNodeForObjectExpectation) Return(r *insolar.Reference, r
 }
 
 //Set uses given function f as a mock of Coordinator.NodeForObject method
-func (m *mCoordinatorMockNodeForObject) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *CoordinatorMock {
+func (m *mCoordinatorMockNodeForObject) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *CoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1535,18 +1531,18 @@ func (m *mCoordinatorMockNodeForObject) Set(f func(p context.Context, p1 insolar
 }
 
 //NodeForObject implements github.com/insolar/insolar/insolar/jet.Coordinator interface
-func (m *CoordinatorMock) NodeForObject(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+func (m *CoordinatorMock) NodeForObject(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.NodeForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.NodeForObjectCounter, 1)
 
 	if len(m.NodeForObjectMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.NodeForObjectMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CoordinatorMock.NodeForObject. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to CoordinatorMock.NodeForObject. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.NodeForObjectMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CoordinatorMockNodeForObjectInput{p, p1, p2, p3}, "Coordinator.NodeForObject got unexpected parameters")
+		testify_assert.Equal(m.t, *input, CoordinatorMockNodeForObjectInput{p, p1, p2}, "Coordinator.NodeForObject got unexpected parameters")
 
 		result := m.NodeForObjectMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -1564,7 +1560,7 @@ func (m *CoordinatorMock) NodeForObject(p context.Context, p1 insolar.ID, p2 ins
 
 		input := m.NodeForObjectMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, CoordinatorMockNodeForObjectInput{p, p1, p2, p3}, "Coordinator.NodeForObject got unexpected parameters")
+			testify_assert.Equal(m.t, *input, CoordinatorMockNodeForObjectInput{p, p1, p2}, "Coordinator.NodeForObject got unexpected parameters")
 		}
 
 		result := m.NodeForObjectMock.mainExpectation.result
@@ -1579,11 +1575,11 @@ func (m *CoordinatorMock) NodeForObject(p context.Context, p1 insolar.ID, p2 ins
 	}
 
 	if m.NodeForObjectFunc == nil {
-		m.t.Fatalf("Unexpected call to CoordinatorMock.NodeForObject. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to CoordinatorMock.NodeForObject. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.NodeForObjectFunc(p, p1, p2, p3)
+	return m.NodeForObjectFunc(p, p1, p2)
 }
 
 //NodeForObjectMinimockCounter returns a count of CoordinatorMock.NodeForObjectFunc invocations
