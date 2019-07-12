@@ -75,7 +75,6 @@ var (
 )
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	// defer leaktest.Check(t)()
 	s := newConsensusSuite(12, 0)
 	suite.Run(t, s)
 }

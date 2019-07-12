@@ -63,7 +63,7 @@ import (
 )
 
 func TestNewStreamHandler(t *testing.T) {
-	defer leaktest.Check(t)
+	defer leaktest.Check(t)()
 
 	requestHandler := func(ctx context.Context, p *packet.ReceivedPacket) {
 		inslogger.FromContext(ctx).Info("requestHandler")

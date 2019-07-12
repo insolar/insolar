@@ -65,10 +65,11 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/network/servicenetwork"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
