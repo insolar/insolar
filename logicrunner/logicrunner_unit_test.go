@@ -186,23 +186,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name: "Happy path",
+			name:                           "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "ClarifyPendingState failed",
+			name:                           "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name: "StartQueueProcessorIfNeeded failed",
+			name:                           "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "Both procedures fail",
+			name:                           "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -995,6 +995,10 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	wg := sync.WaitGroup{}
 	wg.Add(num)
 
+	suite.sender.ReplyFunc = func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
+		wg.Done()
+	}
+
 	for i := 0; i < num; i++ {
 		go func(i int) {
 			msg := &message.CallMethod{
@@ -1027,10 +1031,6 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 			wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
 			wmMsg.Metadata.Set(bus.MetaType, fmt.Sprintf("%s", msg.Type()))
 			wmMsg.Metadata.Set(bus.MetaTraceID, "req-"+strconv.Itoa(i))
-
-			suite.sender.ReplyFunc = func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
-				wg.Done()
-			}
 
 			_, err = suite.lr.FlowDispatcher.Process(wmMsg)
 			suite.Require().NoError(err)
@@ -1648,8 +1648,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, broker.mutable.Peek(maxQueueLength))
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
