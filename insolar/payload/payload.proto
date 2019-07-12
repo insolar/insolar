@@ -102,6 +102,13 @@ message SetOutgoingRequest {
     record.Virtual Request = 20 [(gogoproto.nullable) = false];
 }
 
+message SagaCallAcceptNotification { // AALEKSEEV TODO rename to DetachedReady
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Request  = 21;
+}
+
 message SetResult {
     uint32 Polymorph = 16;
 
