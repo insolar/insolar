@@ -118,8 +118,9 @@ type ExecutorResults struct {
 }
 
 type ExecutionQueueElement struct {
-	RequestRef insolar.Reference
-	Request    record.IncomingRequest
+	RequestRef  insolar.Reference
+	Request     record.IncomingRequest
+	ServiceData ServiceData
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -279,6 +280,7 @@ type AdditionalCallFromPreviousExecutor struct {
 	Pending         PendingState
 	RequestRef      insolar.Reference
 	Request         record.IncomingRequest
+	ServiceData     ServiceData
 }
 
 func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {

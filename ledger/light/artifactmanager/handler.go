@@ -160,6 +160,16 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
+		UpdateObject: func(p *proc.UpdateObject) {
+			p.Dep(
+				h.WriteAccessor,
+				h.IndexLocker,
+				h.Records,
+				h.IndexStorage,
+				h.filamentModifier,
+				h.Sender,
+			)
+		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
@@ -184,18 +194,6 @@ func NewMessageHandler(
 		},
 		GetRequest: func(p *proc.GetRequest) {
 			p.Dep.RecordAccessor = h.Records
-		},
-		UpdateObject: func(p *proc.UpdateObject) {
-			p.Dep.RecordModifier = h.Records
-			p.Dep.Bus = h.Bus
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PCS = h.PCS
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.WriteAccessor = h.WriteAccessor
-			p.Dep.Filaments = h.filamentModifier
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.IndexLocker = h.IndexLocker

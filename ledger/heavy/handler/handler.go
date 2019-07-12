@@ -58,8 +58,10 @@ type Handler struct {
 	DropModifier  drop.Modifier
 	PulseAccessor pulse.Accessor
 	JetModifier   jet.Modifier
+	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
-	Sender        bus.Sender
+
+	Sender bus.Sender
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -215,6 +217,7 @@ func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeGetDelegate, h.handleGetDelegate)
 	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
+	h.Bus.MustRegister(insolar.TypeGetJet, h.handleGetJet)
 	h.Bus.MustRegister(insolar.TypeGetRequest, h.handleGetRequest)
 	return nil
 }
@@ -340,6 +343,13 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 	}
 
 	return &rep, nil
+}
+
+func (h *Handler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	msg := parcel.Message().(*message.GetJet)
+	jet, actual := h.JetAccessor.ForID(ctx, msg.Pulse, msg.Object)
+
+	return &reply.Jet{ID: insolar.ID(jet), Actual: actual}, nil
 }
 
 func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
