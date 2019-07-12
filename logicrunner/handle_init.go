@@ -17,22 +17,22 @@
 package logicrunner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	"github.com/ThreeDotsLabs/watermill/message"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	insolarMsg "github.com/insolar/insolar/insolar/message"
 )
 
 const InnerMsgTopic = "InnerMsg"
-const MessageTypeField = "Type"
 
 const (
 	getLedgerPendingRequestMsg = "GetLedgerPendingRequest"
@@ -41,12 +41,13 @@ const (
 type Dependencies struct {
 	Publisher message.Publisher
 	lr        *LogicRunner
+	Sender    bus.Sender
 }
 
 type Init struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message *message.Message
 }
 
 func (s *Init) Future(ctx context.Context, f flow.Flow) error {
@@ -54,76 +55,122 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
-	if s.Message.WatermillMsg != nil {
-		// Handle new-style Protobuf message
-		var err error
-
-		meta := payload.Meta{}
-		err = meta.Unmarshal(s.Message.WatermillMsg.Payload)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal meta")
-		}
-		payloadType, err := payload.UnmarshalType(meta.Payload)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal payload type")
-		}
-
-		ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
-
-		switch payloadType {
-		case payload.TypeSagaCallAcceptNotification:
-			h := &HandleSagaCallAcceptNotification{
-				dep:     s.dep,
-				Message: s.Message,
-			}
-			return f.Handle(ctx, h.Present)
-		default:
-			return fmt.Errorf("no handler for message type %s", payloadType.String())
-		}
+	msgType := s.Message.Metadata.Get(bus.MetaType)
+	if msgType != "" {
+		return s.handleParcel(ctx, f)
 	}
 
-	// Handle message the old way
+	var err error
 
-	switch s.Message.Parcel.Message().Type() {
-	case insolar.TypeCallMethod:
-		h := &HandleCall{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeAdditionalCallFromPreviousExecutor:
-		h := &HandleAdditionalCallFromPreviousExecutor{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypePendingFinished:
-		h := &HandlePendingFinished{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeStillExecuting:
-		h := &HandleStillExecuting{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeAbandonedRequestsNotification:
-		h := &HandleAbandonedRequestsNotification{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeExecutorResults:
-		h := &HandleExecutorResults{
-			dep:     s.dep,
-			Message: s.Message,
+	meta := payload.Meta{}
+	err = meta.Unmarshal(s.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+	payloadType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload type")
+	}
+
+	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
+	switch payloadType {
+	case payload.TypeSagaCallAcceptNotification:
+		h := &HandleSagaCallAcceptNotification{
+			dep:  s.dep,
+			meta: meta,
 		}
 		return f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("[ Init.Present ] no handler for message type %s", s.Message.Parcel.Message().Type().String())
+		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
+}
+
+func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
+	var err error
+
+	meta := payload.Meta{}
+	err = meta.Unmarshal(s.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+
+	parcel, err := insolarMsg.DeserializeParcel(bytes.NewBuffer(meta.Payload))
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize payload")
+	}
+
+	msgType := s.Message.Metadata.Get(bus.MetaType)
+
+	switch msgType {
+	case insolar.TypeCallMethod.String():
+		h := &HandleCall{
+			dep:     s.dep,
+			Message: meta,
+			Parcel:  parcel,
+		}
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeAdditionalCallFromPreviousExecutor.String():
+		h := &HandleAdditionalCallFromPreviousExecutor{
+			dep:     s.dep,
+			Message: meta,
+			Parcel:  parcel,
+		}
+		return f.Handle(ctx, h.Present)
+	case insolar.TypePendingFinished.String():
+		h := &HandlePendingFinished{
+			dep:     s.dep,
+			Message: meta,
+			Parcel:  parcel,
+		}
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeStillExecuting.String():
+		h := &HandleStillExecuting{
+			dep:     s.dep,
+			Message: meta,
+			Parcel:  parcel,
+		}
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeAbandonedRequestsNotification.String():
+		h := &HandleAbandonedRequestsNotification{
+			dep:     s.dep,
+			Message: meta,
+			Parcel:  parcel,
+		}
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeExecutorResults.String():
+		h := &HandleExecutorResults{
+			dep:     s.dep,
+			Message: meta,
+			Parcel:  parcel,
+		}
+		return f.Handle(ctx, h.Present)
+	default:
+		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", msgType)
+	}
+}
+
+func (s *Init) Past(ctx context.Context, f flow.Flow) error {
+	msgType := s.Message.Metadata.Get(bus.MetaType)
+
+	if msgType == insolar.TypeCallMethod.String() {
+		meta := payload.Meta{}
+		err := meta.Unmarshal(s.Message.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal meta")
+		}
+
+		errMsg, err := payload.NewMessage(&payload.Error{Text: "flow cancelled: Incorrect message pulse, get message from past on virtual node", Code: uint32(payload.CodeFlowCanceled)})
+		if err != nil {
+			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
+		}
+
+		go s.dep.Sender.Reply(ctx, meta, errMsg)
+
+		return nil
+	}
+
+	return s.Present(ctx, f)
 }
 
 type InnerInit struct {
@@ -133,7 +180,7 @@ type InnerInit struct {
 }
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
-	switch s.Message.Metadata.Get(MessageTypeField) {
+	switch s.Message.Metadata.Get(bus.MetaType) {
 	case getLedgerPendingRequestMsg:
 		h := GetLedgerPendingRequest{
 			dep:     s.dep,

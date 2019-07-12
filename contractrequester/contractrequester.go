@@ -29,8 +29,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"encoding/hex"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/message"
@@ -180,11 +178,14 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
 	defer cancel()
 
-	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request, ". Method: ", msg.Method, ". reqRef: ", hex.EncodeToString(reqHash[:]))
+	ctx, _ = inslogger.WithField(ctx, "request", r.Request.String())
+	ctx, logger := inslogger.WithField(ctx, "method", msg.Method)
+
+	logger.Debug("Waiting results of request")
 
 	select {
 	case ret := <-ch:
-		inslogger.FromContext(ctx).Debug("Got Method results. reqRef: ", hex.EncodeToString(reqHash[:]))
+		logger.Debug("Got results of request")
 		if ret.Error != "" {
 			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
@@ -226,15 +227,13 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
 
-	logger := inslogger.FromContext(ctx)
 	var reqHash [insolar.RecordHashSize]byte
 	copy(reqHash[:], msg.RequestRef.Record().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
-		logger.Info("oops unwaited results reqRef=", hex.EncodeToString(reqHash[:]))
+		inslogger.FromContext(ctx).Warn("unwaited results of request ", msg.RequestRef.String())
 		return &reply.OK{}, nil
 	}
-	logger.Debug("Got wanted results reqRef=", hex.EncodeToString(reqHash[:]))
 
 	c <- msg
 	delete(cr.ResultMap, reqHash)

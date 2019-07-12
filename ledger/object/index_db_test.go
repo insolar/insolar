@@ -60,7 +60,7 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 
 	indexStore := NewIndexDB(dbMock)
 
-	numElements := 400
+	numElements := 100
 
 	// it's used for writing pulses in random order to db
 	indexes := make([]int, numElements)
