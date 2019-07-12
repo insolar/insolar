@@ -16,15 +16,6 @@
 
 package proc
 
-import (
-	"context"
-
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
-)
-
 type Dependencies struct {
 	FetchJet            func(*FetchJet)
 	CheckJet            func(*CheckJet)
@@ -51,31 +42,6 @@ type Dependencies struct {
 	SetCode             func(*SetCode)
 	SendRequests        func(*SendRequests)
 	GetDelegate         func(*GetDelegate)
-}
-
-type ReturnReply struct {
-	Message payload.Meta
-	Err     error
-	Reply   insolar.Reply
-	Sender  bus.Sender
-}
-
-func (p *ReturnReply) Proceed(ctx context.Context) error {
-	select {
-	case <-ctx.Done():
-	}
-	var msg *message.Message
-	if p.Err != nil {
-		var err error
-		msg, err = payload.NewMessage(&payload.Error{Text: p.Err.Error()})
-		if err != nil {
-			return err
-		}
-	} else {
-		msg = bus.ReplyAsMessage(ctx, p.Reply)
-	}
-	p.Sender.Reply(ctx, p.Message, msg)
-	return nil
 }
 
 // NewDependenciesMock returns all dependencies for handlers.
