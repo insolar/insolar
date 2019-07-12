@@ -69,7 +69,7 @@ func (m *RPCMethods) getCurrent(
 ) {
 	switch mode {
 	case insolar.ExecuteCallMode:
-		_, broker := m.ss.GetExecutionState(obj)
+		broker := m.ss.GetExecutionState(obj)
 		if broker == nil {
 			return nil, nil, errors.New("No execution in the state")
 		}

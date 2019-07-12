@@ -26,6 +26,13 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
+type OutgoingRequest struct {
+	Request   record.IncomingRequest
+	NewObject *Ref
+	Response  []byte
+	Error     error
+}
+
 type Transcript struct {
 	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
@@ -54,13 +61,6 @@ func NewTranscript(
 
 		FromLedger: false,
 	}
-}
-
-type OutgoingRequest struct {
-	Request   record.IncomingRequest
-	NewObject *Ref
-	Response  []byte
-	Error     error
 }
 
 func (t *Transcript) AddOutgoingRequest(

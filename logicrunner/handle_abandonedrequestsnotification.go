@@ -39,15 +39,15 @@ type initializeAbandonedRequestsNotificationExecutionState struct {
 func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx context.Context) error {
 	ref := *p.msg.DefaultTarget()
 
-	es, _ := p.LR.StateStorage.UpsertExecutionState(ref)
+	broker := p.LR.StateStorage.UpsertExecutionState(ref)
 
-	es.Lock()
-	if es.pending == message.PendingUnknown {
-		es.pending = message.InPending
-		es.PendingConfirmed = false
+	broker.executionState.Lock()
+	if broker.executionState.pending == message.PendingUnknown {
+		broker.executionState.pending = message.InPending
+		broker.executionState.PendingConfirmed = false
 	}
-	es.LedgerHasMoreRequests = true
-	es.Unlock()
+	broker.executionState.LedgerHasMoreRequests = true
+	broker.executionState.Unlock()
 
 	return nil
 }

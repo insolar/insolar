@@ -347,8 +347,8 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.NotPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.NotPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
 
@@ -389,8 +389,8 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.NotPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.NotPending
 
 	reqRef1 := gen.Reference()
 	tr := NewTranscript(s.Context, reqRef1, record.IncomingRequest{})
@@ -435,8 +435,8 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.NotPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.NotPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
@@ -473,8 +473,8 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.InPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.InPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
@@ -511,8 +511,8 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.NotPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.NotPending
 
 	for i := 0; i < 4; i++ {
 		b.stateLock.Lock()
@@ -580,8 +580,8 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.InPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.InPending
 
 	reqRef1 := gen.Reference()
 	b.Put(s.Context, false, NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // no duplication

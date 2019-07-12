@@ -42,7 +42,8 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 
 	msg := parcel.Message().(*message.StillExecuting)
 	ref := msg.DefaultTarget()
-	es, _ := lr.StateStorage.UpsertExecutionState(*ref)
+	broker := lr.StateStorage.UpsertExecutionState(*ref)
+	es := &broker.executionState
 
 	logger.Debugf("Got information that %s is still executing", ref.String())
 
