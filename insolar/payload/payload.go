@@ -50,7 +50,19 @@ const (
 	TypeRequestInfo
 	TypeDeactivate
 	TypeUpdate
+
+	// should be the last (required by TypesMap)
+	_latestType
 )
+
+// TypesMap contains Type name (gen by stringer) to type mapping.
+var TypesMap = func() map[string]Type {
+	m := map[string]Type{}
+	for i := TypeUnknown; i < _latestType; i++ {
+		m[i.String()] = i
+	}
+	return m
+}()
 
 // Payload represents any kind of data that can be encoded in consistent manner.
 type Payload interface {

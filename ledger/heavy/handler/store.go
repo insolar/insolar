@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -67,35 +66,6 @@ func storeDrop(
 	}
 
 	return d, nil
-}
-
-func storeBlobs(
-	ctx context.Context,
-	blobs blob.Modifier,
-	pcs insolar.PlatformCryptographyScheme,
-	pn insolar.PulseNumber,
-	rawBlobs [][]byte,
-) {
-	inslog := inslogger.FromContext(ctx)
-
-	for _, rwb := range rawBlobs {
-		b, err := blob.Decode(rwb)
-		if err != nil {
-			inslog.Error("heavyserver: deserialize blob failed: ", err)
-			continue
-		}
-
-		blobID := object.CalculateIDForBlob(pcs, pn, b.Value)
-		err = blobs.Set(ctx, *blobID, *b)
-		if err != nil {
-			if err == blob.ErrOverride {
-				inslog.Debug("heavyserver: blob storing failed: ", err)
-			} else {
-				inslog.Error("heavyserver: blob storing failed: ", err)
-			}
-			continue
-		}
-	}
 }
 
 func storeRecords(

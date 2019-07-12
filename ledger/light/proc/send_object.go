@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -42,7 +41,6 @@ type SendObject struct {
 		Jets           jet.Storage
 		JetFetcher     jet.Fetcher
 		RecordAccessor object.RecordAccessor
-		Blobs          blob.Accessor
 		Bus            insolar.MessageBus
 		Sender         bus.Sender
 	}

@@ -14,15 +14,25 @@
 // limitations under the License.
 //
 
-package blob
+package pubsubwrap
 
 import (
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/instrumentation/introspector/introproto"
 )
 
-var (
-	// ErrNotFound is returned when blob-record not found.
-	ErrNotFound = errors.New("blob not found")
-	// ErrOverride is returned when trying to update existing record with the same id.
-	ErrOverride = errors.New("blob override is forbidden")
-)
+// PublisherService implements introproto.PublisherServer.
+type PublisherService struct {
+	*MessageLockerByType
+	*MessageStatByType
+}
+
+// programming and compile time check
+var _ introproto.PublisherServer = PublisherService{}
+
+// NewPublisherService creates PublisherService.
+func NewPublisherService(ml *MessageLockerByType, ms *MessageStatByType) PublisherService {
+	return PublisherService{
+		MessageLockerByType: ml,
+		MessageStatByType:   ms,
+	}
+}

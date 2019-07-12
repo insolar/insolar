@@ -632,6 +632,7 @@ func (bc *Bootstrap) Init(ctx context.Context) error {
 	bc.firstPulseTime = time.Now()
 	bc.pinger = pinger.NewPinger(bc.Network)
 	bc.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		inslogger.FromContext(ctx).Infof("[ HandlePing ] response to ping from %s", request.GetSenderHost().String())
 		return bc.Network.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	bc.Network.RegisterRequestHandler(types.Bootstrap, bc.processBootstrap)

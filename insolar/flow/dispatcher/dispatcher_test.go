@@ -19,32 +19,51 @@ package dispatcher
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill"
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
+func makeMessage(t *testing.T, ctx context.Context, pn insolar.PulseNumber) *message.Message {
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(bus.MetaPulse, pn.String())
+	sp, err := instracer.Serialize(ctx)
+	require.NoError(t, err)
+	msg.Metadata.Set(bus.MetaSpanData, string(sp))
+
+	return msg
+}
+
 func TestNewDispatcher(t *testing.T) {
 	t.Parallel()
 	ok := false
-	var f flow.MakeHandle = func(bus.Message) flow.Handle {
+	var f flow.MakeHandle = func(*message.Message) flow.Handle {
 		ok = true
 		return nil
 	}
 	require.False(t, ok)
 
-	d := NewDispatcher(f, f)
+	d := NewDispatcher(f, f, f)
 	require.NotNil(t, d.controller)
-	handle := d.handles.present(bus.Message{})
+
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	atomic.StoreUint32(&d.currentPulseNumber, uint32(currentPulse.PulseNumber))
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
+	handle := d.handles.present(msg)
 	require.Nil(t, handle)
 	require.True(t, ok)
 }
@@ -55,150 +74,92 @@ func (replyMock) Type() insolar.ReplyType {
 	return insolar.ReplyType(42)
 }
 
-func TestDispatcher_WrapBusHandle(t *testing.T) {
+func TestDispatcher_Process(t *testing.T) {
 	t.Parallel()
 
 	d := &Dispatcher{
 		controller:         thread.NewController(),
 		currentPulseNumber: insolar.FirstPulseNumber,
 	}
-	reply := bus.Reply{
-		Reply: replyMock(42),
-	}
-	d.handles.present = func(msg bus.Message) flow.Handle {
+	reply := replyMock(42)
+	replyChan := make(chan insolar.Reply, 1)
+	d.handles.present = func(msg *message.Message) flow.Handle {
 		return func(ctx context.Context, f flow.Flow) error {
-			msg.ReplyTo <- reply
+			replyChan <- reply
 			return nil
 		}
 	}
-	parcel := &testutils.ParcelMock{}
-	parcel.PulseFunc = func() insolar.PulseNumber {
-		return 42
-	}
-	result, err := d.WrapBusHandle(context.Background(), parcel)
+
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	atomic.StoreUint32(&d.currentPulseNumber, uint32(currentPulse.PulseNumber))
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
+	_, err := d.Process(msg)
 	require.NoError(t, err)
-	require.Equal(t, reply.Reply, result)
+	rep := <-replyChan
+	require.Equal(t, reply, rep)
 }
 
-func TestDispatcher_WrapBusHandle_Error(t *testing.T) {
+func TestDispatcher_Process_ReplyError(t *testing.T) {
 	t.Parallel()
 
 	d := &Dispatcher{
 		controller:         thread.NewController(),
 		currentPulseNumber: insolar.FirstPulseNumber,
 	}
-	d.handles.present = func(msg bus.Message) flow.Handle {
+	replyChan := make(chan error, 1)
+	d.handles.present = func(msg *message.Message) flow.Handle {
 		return func(ctx context.Context, f flow.Flow) error {
+			replyChan <- errors.New("reply error")
 			return errors.New("test error")
 		}
 	}
-	parcel := &testutils.ParcelMock{}
-	parcel.PulseFunc = func() insolar.PulseNumber {
-		return 42
-	}
-	result, err := d.WrapBusHandle(context.Background(), parcel)
-	require.EqualError(t, err, "test error")
-	require.Nil(t, result)
-}
 
-func TestDispatcher_WrapBusHandle_ReplyError(t *testing.T) {
-	t.Parallel()
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	atomic.StoreUint32(&d.currentPulseNumber, uint32(currentPulse.PulseNumber))
 
-	d := &Dispatcher{
-		controller:         thread.NewController(),
-		currentPulseNumber: insolar.FirstPulseNumber,
-	}
-	d.handles.present = func(msg bus.Message) flow.Handle {
-		return func(ctx context.Context, f flow.Flow) error {
-			msg.ReplyTo <- bus.Reply{
-				Err: errors.New("reply error"),
-			}
-			return errors.New("test error")
-		}
-	}
-	parcel := &testutils.ParcelMock{}
-	parcel.PulseFunc = func() insolar.PulseNumber {
-		return 42
-	}
-	result, err := d.WrapBusHandle(context.Background(), parcel)
-	require.EqualError(t, err, "reply error")
-	require.Nil(t, result)
-}
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-func TestDispatcher_WrapBusHandle_NoReply(t *testing.T) {
-	t.Parallel()
-
-	d := &Dispatcher{
-		controller:         thread.NewController(),
-		currentPulseNumber: insolar.FirstPulseNumber,
-	}
-	d.handles.present = func(msg bus.Message) flow.Handle {
-		return func(ctx context.Context, f flow.Flow) error {
-			return nil
-		}
-	}
-	parcel := &testutils.ParcelMock{}
-	parcel.PulseFunc = func() insolar.PulseNumber {
-		return 42
-	}
-	result, err := d.WrapBusHandle(context.Background(), parcel)
-	require.EqualError(t, err, "no reply from handler")
-	require.Nil(t, result)
-}
-
-func TestDispatcher_WrapBusHandle_ReplyWithError(t *testing.T) {
-	t.Parallel()
-
-	d := &Dispatcher{
-		controller:         thread.NewController(),
-		currentPulseNumber: insolar.FirstPulseNumber,
-	}
-	reply := bus.Reply{
-		Reply: replyMock(42),
-	}
-	d.handles.present = func(msg bus.Message) flow.Handle {
-		return func(ctx context.Context, f flow.Flow) error {
-			msg.ReplyTo <- reply
-			return errors.New("test error")
-		}
-	}
-	parcel := &testutils.ParcelMock{}
-	parcel.PulseFunc = func() insolar.PulseNumber {
-		return 42
-	}
-	result, err := d.WrapBusHandle(context.Background(), parcel)
+	_, err := d.Process(msg)
 	require.NoError(t, err)
-	require.Equal(t, reply.Reply, result)
+	rep := <-replyChan
+	require.Error(t, rep)
+	require.Contains(t, rep.Error(), "reply error")
 }
 
-func TestDispatcher_WrapBusHandle_CallFutureDispatcher(t *testing.T) {
+func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 	t.Parallel()
 	d := &Dispatcher{
 		controller:         thread.NewController(),
 		currentPulseNumber: 0,
 	}
 
-	reply := bus.Reply{
-		Reply: replyMock(42),
-	}
-
-	d.handles.future = func(msg bus.Message) flow.Handle {
+	reply := replyMock(42)
+	replyChan := make(chan insolar.Reply, 1)
+	d.handles.future = func(msg *message.Message) flow.Handle {
 		return func(ctx context.Context, f flow.Flow) error {
-			msg.ReplyTo <- reply
+			replyChan <- reply
 			return nil
 		}
 	}
-	parcel := &testutils.ParcelMock{}
-	parcel.PulseFunc = func() insolar.PulseNumber {
-		return 42
-	}
-	result, err := d.WrapBusHandle(context.Background(), parcel)
+
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	atomic.StoreUint32(&d.currentPulseNumber, uint32(currentPulse.PulseNumber))
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber+1)
+
+	_, err := d.Process(msg)
 	require.NoError(t, err)
-	require.Equal(t, reply.Reply, result)
+	rep := <-replyChan
+	require.Equal(t, reply, rep)
 }
 
-func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload) *watermillMsg.Message {
-	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
+func makeWMMessage(ctx context.Context, payLoad message.Payload) *message.Message {
+	wmMsg := message.NewMessage(watermill.NewUUID(), payLoad)
 	wmMsg.Metadata.Set("TraceID", inslogger.TraceID(ctx))
 
 	return wmMsg
@@ -214,7 +175,7 @@ func TestDispatcher_InnerSubscriber(t *testing.T) {
 	testResult := 77
 	result := make(chan int)
 
-	d.handles.present = func(msg bus.Message) flow.Handle {
+	d.handles.present = func(msg *message.Message) flow.Handle {
 		return func(ctx context.Context, f flow.Flow) error {
 			result <- testResult
 			return nil
@@ -235,7 +196,7 @@ func TestDispatcher_InnerSubscriber_Error(t *testing.T) {
 	testResult := 77
 	result := make(chan int)
 
-	d.handles.present = func(msg bus.Message) flow.Handle {
+	d.handles.present = func(msg *message.Message) flow.Handle {
 		return func(ctx context.Context, f flow.Flow) error {
 			result <- testResult
 			return errors.New("some error.")

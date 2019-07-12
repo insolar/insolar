@@ -14,5 +14,18 @@
 // limitations under the License.
 //
 
-// Package blob contains blob storage
-package blob
+// +build !introspection
+
+package internal
+
+import (
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/configuration"
+	"golang.org/x/net/context"
+)
+
+// PubSubWrapper stub for message.PubSub introspection wrapper for binaries without introspection API.
+func PubSubWrapper(ctx context.Context, cm *component.Manager, cfg configuration.Introspection, pb message.PubSub) message.PubSub {
+	return pb
+}

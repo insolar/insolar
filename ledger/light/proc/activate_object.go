@@ -105,17 +105,10 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 	}
 
 	err = a.dep.records.Set(ctx, a.activateID, rec)
-
-	if err == object.ErrOverride {
-		// Since there is no deduplication yet it's quite possible that there will be
-		// two writes by the same key. For this reason currently instead of reporting
-		// an error we return OK (nil error). When deduplication will be implemented
-		// we should change `nil` to `ErrOverride` here.
-		logger.Errorf("can't save record into storage: %s", err)
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return errors.Wrap(err, "can't save record into storage")
 	}
+
 	// We are activating the object. There is no index for it anywhere.
 	idx := object.FilamentIndex{
 		Lifeline: object.Lifeline{
