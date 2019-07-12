@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -44,6 +45,8 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
+	cfg configuration.Ledger
+
 	Bus            insolar.MessageBus
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
@@ -66,8 +69,9 @@ type Handler struct {
 }
 
 // New creates a new handler.
-func New() *Handler {
+func New(cfg configuration.Ledger) *Handler {
 	h := &Handler{
+		cfg:   cfg,
 		jetID: insolar.ZeroJetID,
 	}
 	dep := proc.Dependencies{
@@ -419,9 +423,8 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		logger.Error(errors.Wrapf(err, "failed to store drop"))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-	if drop.Split {
+	if drop.SplitThresholdExceeded > h.cfg.JetSplit.ThresholdOverflowCount {
 		_, _, err = h.JetModifier.Split(ctx, futurePulse, drop.JetID)
-
 	} else {
 		err = h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
 	}

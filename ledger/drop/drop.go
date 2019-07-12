@@ -64,8 +64,8 @@ type Drop struct {
 	// JetID represents data about JetID of the current jet.Drop.
 	JetID insolar.JetID
 
-	// Split indicates that current jet was split.
-	Split bool
+	// SplitThresholdExceeded is a counter, which stores how many times in the row jet records count exceeds `ThresholdRecordsCount`.
+	SplitThresholdExceeded int
 }
 
 // MustEncode serializes jet drop.

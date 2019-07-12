@@ -29,12 +29,12 @@ type Storage struct {
 	TxRetriesOnConflict int
 }
 
-// JetSplitter holds configuration for jet splitter.
-type JetSplitter struct {
+// JetSplit holds configuration for jet split.
+type JetSplit struct {
 	// RecordsCountThreshold is a drop threshold in records to perform split for jet.
-	ThresholdRecordsCount int64
+	ThresholdRecordsCount int
 	// ThresholdOverflowCount is a how many times in row ThresholdRecordsCount should be surpassed.
-	ThresholdOverflowCount int64
+	ThresholdOverflowCount int
 }
 
 // Backoff configures retry backoff algorithm
@@ -58,8 +58,8 @@ type Exporter struct {
 type Ledger struct {
 	// Storage defines storage configuration.
 	Storage Storage
-	// JetSpliiter holds jet split configuration.
-	JetSplitter JetSplitter
+	// JetSplit holds jet split configuration.
+	JetSplit JetSplit
 
 	// common/sharable values:
 
@@ -81,8 +81,9 @@ func NewLedger() Ledger {
 			TxRetriesOnConflict: 3,
 		},
 
-		JetSplitter: JetSplitter{
-			ThresholdRecordsCount:  10, // 10 records
+		JetSplit: JetSplit{
+			// TODO: find best default values
+			ThresholdRecordsCount:  100,
 			ThresholdOverflowCount: 3,
 		},
 		LightChainLimit: 5, // 5 pulses
