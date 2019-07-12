@@ -533,7 +533,7 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	suite.Require().Equal(&reply.OK{}, re)
 
 	broker := suite.lr.StateStorage.GetExecutionState(objectRef)
-	suite.Require().NotNil(broker.executionState)
+	suite.Require().NotNil(broker)
 	suite.Require().Equal(message.NotPending, broker.executionState.pending)
 
 	broker.currentList.Set(objectRef, &Transcript{})
@@ -621,7 +621,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	suite.Require().Equal(&reply.OK{}, re)
 
 	broker := suite.lr.StateStorage.GetExecutionState(objectRef)
-	suite.Require().NotNil(broker.executionState)
+	suite.Require().NotNil(broker)
 	suite.Require().Equal(message.InPending, broker.executionState.pending)
 	suite.Require().Equal(true, broker.executionState.PendingConfirmed)
 
@@ -633,7 +633,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	suite.Require().Equal(&reply.OK{}, re)
 
 	broker = suite.lr.StateStorage.GetExecutionState(objectRef)
-	suite.Require().NotNil(broker.executionState)
+	suite.Require().NotNil(broker)
 	suite.Require().Equal(message.NotPending, broker.executionState.pending)
 	suite.Require().Equal(false, broker.executionState.PendingConfirmed)
 
