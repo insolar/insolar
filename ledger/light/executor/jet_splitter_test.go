@@ -70,13 +70,7 @@ var (
 			"right": jet.NewIDFromString("101"),
 		},
 	}
-
-// right for jet10
 )
-
-// map[insolar] children
-
-// var defaultJetID = jet.NewIDFromString("10")
 
 var cases = []splitCase{
 	{
@@ -152,7 +146,7 @@ func TestJetSplitter(t *testing.T) {
 	if pn < 60000 {
 		pn += 60000
 	}
-	previousPulse, currentPulse, newPulse := pn, pn+1, pn+2
+	previousPulse, endedPulse, newPulse := pn, pn+1, pn+2
 
 	initialJets := []insolar.JetID{
 		jet.NewIDFromString("0"),
@@ -161,9 +155,9 @@ func TestJetSplitter(t *testing.T) {
 	}
 
 	checkCase := func(t *testing.T, sc splitCase) {
-		// real compomnents
+		// real components
 		jetStore := jet.NewStore()
-		err := jetStore.Update(ctx, currentPulse, true, initialJets...)
+		err := jetStore.Update(ctx, endedPulse, true, initialJets...)
 		require.NoError(t, err, "jet store updated with initial jets")
 		db := drop.NewStorageMemory()
 		dropAccessor := db
@@ -188,10 +182,10 @@ func TestJetSplitter(t *testing.T) {
 
 		for i, jetsConfig := range sc.pulses {
 			delta := insolar.PulseNumber(i)
-			current, newpulse := currentPulse+delta, newPulse+delta
+			ended, newpulse := endedPulse+delta, newPulse+delta
 			pulseCalc.BackwardsMock.Return(insolar.Pulse{PulseNumber: previousPulse + delta}, nil)
 
-			pulseStartedWithJets := jetStore.All(ctx, current)
+			pulseStartedWithJets := jetStore.All(ctx, ended)
 
 			collectionAccessor.ForPulseFunc = func(_ context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.Material {
 				jConf, ok := jetsConfig[jetID]
@@ -201,11 +195,11 @@ func TestJetSplitter(t *testing.T) {
 				return make([]record.Material, jConf.records)
 			}
 
-			gotJets, err := splitter.Do(ctx, current, newpulse)
+			gotJets, err := splitter.Do(ctx, ended, newpulse)
 			require.NoError(t, err, "splitter.Do performed")
 
 			for jetID, jConf := range jetsConfig {
-				dropThreshold := splitter.getDropThreshold(ctx, jetID, current)
+				dropThreshold := splitter.getDropThreshold(ctx, jetID, ended)
 				require.Equalf(t, jConf.dropThreshold, dropThreshold,
 					"check drop.SplitThresholdExceeded for jet %v in +%v pulse", jetID.DebugString(), i)
 			}

@@ -45,7 +45,7 @@ type JetInfo struct {
 	MustSplit bool
 }
 
-// JetSplitterDefault implements JetSplit.
+// JetSplitterDefault implements JetSplitter.
 type JetSplitterDefault struct {
 	cfg configuration.JetSplit
 
@@ -92,7 +92,7 @@ func (js *JetSplitterDefault) Do(
 	ctx, _ = inslogger.WithField(ctx, "ended_pulse", endedPulse.String())
 	inslog := inslogger.FromContext(ctx).WithField("new_pulse", newPulse.String())
 
-	// copy current jet tree for new pulse, for further modification on jets owned in current pulse.
+	// copy current jet tree for new pulse, for further modification of jets owned in ended pulse.
 	err := js.jetModifier.Clone(ctx, endedPulse, newPulse)
 	if err != nil {
 		panic("Failed to clone jets")
@@ -108,7 +108,7 @@ func (js *JetSplitterDefault) Do(
 		}
 
 		if !exceed {
-			// mark jet as actual for new pulse
+			// no split, just mark jet as actual for new pulse
 			if err := js.jetModifier.Update(ctx, newPulse, true, jetID); err != nil {
 				panic("failed to update jets on LM-node: " + err.Error())
 			}
@@ -116,7 +116,7 @@ func (js *JetSplitterDefault) Do(
 			continue
 		}
 
-		// split jet for new pulse if it got a split intention on previous pulse.
+		// split jet for new pulse
 		leftJetID, rightJetID, err := js.jetModifier.Split(ctx, newPulse, jetID)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to split jet tree")
@@ -140,8 +140,7 @@ func (js *JetSplitterDefault) createDrop(
 		Pulse: pn,
 		JetID: jetID,
 	}
-
-	// skip any thresholds calculation for split if jet depth reached limit.
+	// skip any thresholds calculation for split if jet depth for jetID reached limit.
 	if jetID.Depth() > js.cfg.DepthLimit {
 		return false, js.dropModifier.Set(ctx, block)
 	}
