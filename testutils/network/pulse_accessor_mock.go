@@ -20,7 +20,7 @@ import (
 type PulseAccessorMock struct {
 	t minimock.Tester
 
-	ForPulseNumberFunc       func(p context.Context, p1 insolar.PulseNumber) (r insolar.PulseNumber, r1 error)
+	ForPulseNumberFunc       func(p context.Context, p1 insolar.PulseNumber) (r insolar.Pulse, r1 error)
 	ForPulseNumberCounter    uint64
 	ForPulseNumberPreCounter uint64
 	ForPulseNumberMock       mPulseAccessorMockForPulseNumber
@@ -62,7 +62,7 @@ type PulseAccessorMockForPulseNumberInput struct {
 }
 
 type PulseAccessorMockForPulseNumberResult struct {
-	r  insolar.PulseNumber
+	r  insolar.Pulse
 	r1 error
 }
 
@@ -79,7 +79,7 @@ func (m *mPulseAccessorMockForPulseNumber) Expect(p context.Context, p1 insolar.
 }
 
 //Return specifies results of invocation of PulseAccessor.ForPulseNumber
-func (m *mPulseAccessorMockForPulseNumber) Return(r insolar.PulseNumber, r1 error) *PulseAccessorMock {
+func (m *mPulseAccessorMockForPulseNumber) Return(r insolar.Pulse, r1 error) *PulseAccessorMock {
 	m.mock.ForPulseNumberFunc = nil
 	m.expectationSeries = nil
 
@@ -101,12 +101,12 @@ func (m *mPulseAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 inso
 	return expectation
 }
 
-func (e *PulseAccessorMockForPulseNumberExpectation) Return(r insolar.PulseNumber, r1 error) {
+func (e *PulseAccessorMockForPulseNumberExpectation) Return(r insolar.Pulse, r1 error) {
 	e.result = &PulseAccessorMockForPulseNumberResult{r, r1}
 }
 
 //Set uses given function f as a mock of PulseAccessor.ForPulseNumber method
-func (m *mPulseAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.PulseNumber) (r insolar.PulseNumber, r1 error)) *PulseAccessorMock {
+func (m *mPulseAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.PulseNumber) (r insolar.Pulse, r1 error)) *PulseAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -115,7 +115,7 @@ func (m *mPulseAccessorMockForPulseNumber) Set(f func(p context.Context, p1 inso
 }
 
 //ForPulseNumber implements github.com/insolar/insolar/network/storage.PulseAccessor interface
-func (m *PulseAccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber) (r insolar.PulseNumber, r1 error) {
+func (m *PulseAccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseNumberCounter, 1)
 

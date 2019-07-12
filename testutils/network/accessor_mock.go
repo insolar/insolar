@@ -39,6 +39,11 @@ type AccessorMock struct {
 	GetActiveNodesPreCounter uint64
 	GetActiveNodesMock       mAccessorMockGetActiveNodes
 
+	GetRandomWorkingNodeFunc       func() (r insolar.NetworkNode)
+	GetRandomWorkingNodeCounter    uint64
+	GetRandomWorkingNodePreCounter uint64
+	GetRandomWorkingNodeMock       mAccessorMockGetRandomWorkingNode
+
 	GetWorkingNodeFunc       func(p insolar.Reference) (r insolar.NetworkNode)
 	GetWorkingNodeCounter    uint64
 	GetWorkingNodePreCounter uint64
@@ -67,6 +72,7 @@ func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m.GetActiveNodeByAddrMock = mAccessorMockGetActiveNodeByAddr{mock: m}
 	m.GetActiveNodeByShortIDMock = mAccessorMockGetActiveNodeByShortID{mock: m}
 	m.GetActiveNodesMock = mAccessorMockGetActiveNodes{mock: m}
+	m.GetRandomWorkingNodeMock = mAccessorMockGetRandomWorkingNode{mock: m}
 	m.GetWorkingNodeMock = mAccessorMockGetWorkingNode{mock: m}
 	m.GetWorkingNodesMock = mAccessorMockGetWorkingNodes{mock: m}
 	m.GetWorkingNodesByRoleMock = mAccessorMockGetWorkingNodesByRole{mock: m}
@@ -649,6 +655,140 @@ func (m *AccessorMock) GetActiveNodesFinished() bool {
 	return true
 }
 
+type mAccessorMockGetRandomWorkingNode struct {
+	mock              *AccessorMock
+	mainExpectation   *AccessorMockGetRandomWorkingNodeExpectation
+	expectationSeries []*AccessorMockGetRandomWorkingNodeExpectation
+}
+
+type AccessorMockGetRandomWorkingNodeExpectation struct {
+	result *AccessorMockGetRandomWorkingNodeResult
+}
+
+type AccessorMockGetRandomWorkingNodeResult struct {
+	r insolar.NetworkNode
+}
+
+//Expect specifies that invocation of Accessor.GetRandomWorkingNode is expected from 1 to Infinity times
+func (m *mAccessorMockGetRandomWorkingNode) Expect() *mAccessorMockGetRandomWorkingNode {
+	m.mock.GetRandomWorkingNodeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &AccessorMockGetRandomWorkingNodeExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Accessor.GetRandomWorkingNode
+func (m *mAccessorMockGetRandomWorkingNode) Return(r insolar.NetworkNode) *AccessorMock {
+	m.mock.GetRandomWorkingNodeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &AccessorMockGetRandomWorkingNodeExpectation{}
+	}
+	m.mainExpectation.result = &AccessorMockGetRandomWorkingNodeResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Accessor.GetRandomWorkingNode is expected once
+func (m *mAccessorMockGetRandomWorkingNode) ExpectOnce() *AccessorMockGetRandomWorkingNodeExpectation {
+	m.mock.GetRandomWorkingNodeFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &AccessorMockGetRandomWorkingNodeExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *AccessorMockGetRandomWorkingNodeExpectation) Return(r insolar.NetworkNode) {
+	e.result = &AccessorMockGetRandomWorkingNodeResult{r}
+}
+
+//Set uses given function f as a mock of Accessor.GetRandomWorkingNode method
+func (m *mAccessorMockGetRandomWorkingNode) Set(f func() (r insolar.NetworkNode)) *AccessorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetRandomWorkingNodeFunc = f
+	return m.mock
+}
+
+//GetRandomWorkingNode implements github.com/insolar/insolar/network.Accessor interface
+func (m *AccessorMock) GetRandomWorkingNode() (r insolar.NetworkNode) {
+	counter := atomic.AddUint64(&m.GetRandomWorkingNodePreCounter, 1)
+	defer atomic.AddUint64(&m.GetRandomWorkingNodeCounter, 1)
+
+	if len(m.GetRandomWorkingNodeMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetRandomWorkingNodeMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to AccessorMock.GetRandomWorkingNode.")
+			return
+		}
+
+		result := m.GetRandomWorkingNodeMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the AccessorMock.GetRandomWorkingNode")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRandomWorkingNodeMock.mainExpectation != nil {
+
+		result := m.GetRandomWorkingNodeMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the AccessorMock.GetRandomWorkingNode")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRandomWorkingNodeFunc == nil {
+		m.t.Fatalf("Unexpected call to AccessorMock.GetRandomWorkingNode.")
+		return
+	}
+
+	return m.GetRandomWorkingNodeFunc()
+}
+
+//GetRandomWorkingNodeMinimockCounter returns a count of AccessorMock.GetRandomWorkingNodeFunc invocations
+func (m *AccessorMock) GetRandomWorkingNodeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRandomWorkingNodeCounter)
+}
+
+//GetRandomWorkingNodeMinimockPreCounter returns the value of AccessorMock.GetRandomWorkingNode invocations
+func (m *AccessorMock) GetRandomWorkingNodeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRandomWorkingNodePreCounter)
+}
+
+//GetRandomWorkingNodeFinished returns true if mock invocations count is ok
+func (m *AccessorMock) GetRandomWorkingNodeFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetRandomWorkingNodeMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetRandomWorkingNodeCounter) == uint64(len(m.GetRandomWorkingNodeMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetRandomWorkingNodeMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetRandomWorkingNodeCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetRandomWorkingNodeFunc != nil {
+		return atomic.LoadUint64(&m.GetRandomWorkingNodeCounter) > 0
+	}
+
+	return true
+}
+
 type mAccessorMockGetWorkingNode struct {
 	mock              *AccessorMock
 	mainExpectation   *AccessorMockGetWorkingNodeExpectation
@@ -1097,6 +1237,10 @@ func (m *AccessorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to AccessorMock.GetActiveNodes")
 	}
 
+	if !m.GetRandomWorkingNodeFinished() {
+		m.t.Fatal("Expected call to AccessorMock.GetRandomWorkingNode")
+	}
+
 	if !m.GetWorkingNodeFinished() {
 		m.t.Fatal("Expected call to AccessorMock.GetWorkingNode")
 	}
@@ -1142,6 +1286,10 @@ func (m *AccessorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to AccessorMock.GetActiveNodes")
 	}
 
+	if !m.GetRandomWorkingNodeFinished() {
+		m.t.Fatal("Expected call to AccessorMock.GetRandomWorkingNode")
+	}
+
 	if !m.GetWorkingNodeFinished() {
 		m.t.Fatal("Expected call to AccessorMock.GetWorkingNode")
 	}
@@ -1172,6 +1320,7 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetActiveNodeByAddrFinished()
 		ok = ok && m.GetActiveNodeByShortIDFinished()
 		ok = ok && m.GetActiveNodesFinished()
+		ok = ok && m.GetRandomWorkingNodeFinished()
 		ok = ok && m.GetWorkingNodeFinished()
 		ok = ok && m.GetWorkingNodesFinished()
 		ok = ok && m.GetWorkingNodesByRoleFinished()
@@ -1197,6 +1346,10 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetActiveNodesFinished() {
 				m.t.Error("Expected call to AccessorMock.GetActiveNodes")
+			}
+
+			if !m.GetRandomWorkingNodeFinished() {
+				m.t.Error("Expected call to AccessorMock.GetRandomWorkingNode")
 			}
 
 			if !m.GetWorkingNodeFinished() {
@@ -1236,6 +1389,10 @@ func (m *AccessorMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetActiveNodesFinished() {
+		return false
+	}
+
+	if !m.GetRandomWorkingNodeFinished() {
 		return false
 	}
 
