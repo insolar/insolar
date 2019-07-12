@@ -67,11 +67,11 @@ type fakeConnection struct {
 }
 
 func (fakeConnection) Read(p []byte) (n int, err error) {
-	panic("implement me")
+	return 0, nil
 }
 
 func (fakeConnection) Write(p []byte) (n int, err error) {
-	panic("implement me")
+	return 0, nil
 }
 
 func (fakeConnection) Close() error {

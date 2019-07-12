@@ -79,11 +79,11 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestServiceNetworkManyNodes(t *testing.T) {
-	t.Skip("Long time setup, wait for mock bootstrap")
-	s := newConsensusSuite(5, 10)
-	suite.Run(t, s)
-}
+//func TestServiceNetworkManyNodes(t *testing.T) {
+//	t.Skip("Long time setup, wait for mock bootstrap")
+//	s := newConsensusSuite(5, 10)
+//	suite.Run(t, s)
+//}
 
 // Consensus suite tests
 
