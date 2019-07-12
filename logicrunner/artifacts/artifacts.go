@@ -37,9 +37,6 @@ type Client interface {
 	// When fetching object, validity can be specified.
 	RegisterValidation(ctx context.Context, object insolar.Reference, state insolar.ID, isValid bool, validationMessages []insolar.Message) error
 
-	// RegisterResult saves VM method call result.
-	RegisterResult(ctx context.Context, object, request insolar.Reference, payload []byte) (*insolar.ID, error)
-
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
@@ -83,46 +80,17 @@ type Client interface {
 		memory []byte,
 	) error
 
-	// ActivateObject creates activate object record in storage. If memory is not provided, the prototype default
-	// memory will be used.
-	//
-	// Request reference will be this object's identifier and referred as "object head".
-	ActivateObject(
-		ctx context.Context,
-		request, parent, prototype insolar.Reference,
-		asDelegate bool,
-		memory []byte,
-	) error
-
-	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
-	// object. Provided memory well be the new object memory.
-	//
-	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(
-		ctx context.Context,
-		request insolar.Reference,
-		obj ObjectDescriptor,
-		memory []byte,
-		result []byte,
-	) error
-
-	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
-	// of the object. If object is already deactivated, an error should be returned.
-	//
-	// Deactivated object cannot be changed.
-	DeactivateObject(
-		ctx context.Context,
-		request insolar.Reference,
-		obj ObjectDescriptor,
-		result []byte,
-	) error
-
 	// State returns hash state for artifact manager.
 	State() []byte
 
+	// InjectCodeDescriptor injects code descriptor needed by builtin contracts
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
+	// InjectObjectDescriptor injects object descriptor needed by builtin contracts (to store prototypes)
 	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
+	// InjectFinish finalizes all injects, all next injects will panic
 	InjectFinish()
+
+	RegisterResult(ctx context.Context, request insolar.Reference, result RequestResult) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go
@@ -183,4 +151,40 @@ type DescriptorsCache interface {
 	ByObjectDescriptor(ctx context.Context, obj ObjectDescriptor) (ObjectDescriptor, CodeDescriptor, error)
 	GetPrototype(ctx context.Context, ref insolar.Reference) (ObjectDescriptor, error)
 	GetCode(ctx context.Context, ref insolar.Reference) (CodeDescriptor, error)
+}
+
+type RequestResultType uint8
+
+const (
+	RequestSideEffectUnknown RequestResultType = iota
+	RequestSideEffectNone
+	RequestSideEffectActivate
+	RequestSideEffectAmend
+	RequestSideEffectDeactivate
+)
+
+func (t RequestResultType) String() string {
+	switch t {
+	case RequestSideEffectNone:
+		return "None"
+	case RequestSideEffectActivate:
+		return "Activate"
+	case RequestSideEffectAmend:
+		return "Amend"
+	case RequestSideEffectDeactivate:
+		return "Deactivate"
+	default:
+		return "Unknown"
+	}
+}
+
+type RequestResult interface {
+	Type() RequestResultType
+
+	Activate() (*insolar.Reference, *insolar.Reference, bool, []byte)
+	Amend() (*insolar.ID, *insolar.Reference, []byte)
+	Deactivate() *insolar.ID
+
+	Result() []byte
+	ObjectReference() *insolar.Reference
 }

@@ -16,28 +16,90 @@
 
 package logicrunner
 
-type RequestResult struct {
-	Result       []byte
-	NewMemory    []byte
-	Activation   bool
-	Deactivation bool
+import (
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/artifacts"
+)
+
+type requestResult struct {
+	sideEffectType  artifacts.RequestResultType // every
+	result          []byte                      // every
+	objectReference *insolar.Reference          // every
+
+	asDelegate      bool               // activate
+	parentReference *insolar.Reference // activate
+	objectImage     *insolar.Reference // amend + activate
+	objectStateID   *insolar.ID        // amend + deactivate
+	memory          []byte             // amend + activate
 }
 
-func NewRequestResult(res []byte) *RequestResult {
-	return &RequestResult{
-		Result: res,
+func newRequestResult(result []byte) *requestResult {
+	return &requestResult{result: result}
+}
+
+func (s *requestResult) Result() []byte {
+	return s.result
+}
+
+func (s *requestResult) Activate() (*insolar.Reference, *insolar.Reference, bool, []byte) {
+	return s.parentReference, s.objectImage, s.asDelegate, s.memory
+}
+
+func (s *requestResult) Amend() (*insolar.ID, *insolar.Reference, []byte) {
+	return s.objectStateID, s.objectImage, s.memory
+}
+
+func (s *requestResult) Deactivate() *insolar.ID {
+	return s.objectStateID
+}
+
+func (s *requestResult) SetActivate(parent, image *insolar.Reference, asDelegate bool, memory []byte) {
+	s.sideEffectType = artifacts.RequestSideEffectActivate
+	s.objectReference = parent
+
+	s.asDelegate = asDelegate
+	s.parentReference = parent
+	s.objectImage = image
+	s.memory = memory
+
+}
+
+func (s *requestResult) SetAmend(object artifacts.ObjectDescriptor, memory []byte) error {
+	s.sideEffectType = artifacts.RequestSideEffectAmend
+	s.memory = memory
+	s.objectReference = object.HeadRef()
+	s.objectStateID = object.StateID()
+
+	if object.IsPrototype() {
+		return errors.New("Can't update prototype")
 	}
+
+	prototype, err := object.Prototype()
+	if err != nil {
+		return errors.Wrap(err, "Failed to obtain prototype/code of object")
+	}
+
+	s.objectImage = prototype
+	return nil
 }
 
-func (rr *RequestResult) Activate(mem []byte) {
-	rr.Activation = true
-	rr.NewMemory = mem
+func (s *requestResult) SetDeactivate(object artifacts.ObjectDescriptor) {
+	s.sideEffectType = artifacts.RequestSideEffectDeactivate
+	s.objectReference = object.HeadRef()
+	s.objectStateID = object.StateID()
 }
 
-func (rr *RequestResult) Update(mem []byte) {
-	rr.NewMemory = mem
+func (s *requestResult) SetNone(objectRef *insolar.Reference) {
+	s.sideEffectType = artifacts.RequestSideEffectNone
+	s.objectReference = objectRef
 }
 
-func (rr *RequestResult) Deactivate() {
-	rr.Deactivation = true
+func (s requestResult) Type() artifacts.RequestResultType {
+	return s.sideEffectType
+}
+
+func (s *requestResult) ObjectReference() *insolar.Reference {
+	return s.objectReference
 }

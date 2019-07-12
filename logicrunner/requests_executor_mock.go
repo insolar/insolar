@@ -12,6 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	artifacts "github.com/insolar/insolar/logicrunner/artifacts"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +21,7 @@ import (
 type RequestsExecutorMock struct {
 	t minimock.Tester
 
-	ExecuteFunc       func(p context.Context, p1 *Transcript) (r *RequestResult, r1 error)
+	ExecuteFunc       func(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error)
 	ExecuteCounter    uint64
 	ExecutePreCounter uint64
 	ExecuteMock       mRequestsExecutorMockExecute
@@ -30,7 +31,7 @@ type RequestsExecutorMock struct {
 	ExecuteAndSavePreCounter uint64
 	ExecuteAndSaveMock       mRequestsExecutorMockExecuteAndSave
 
-	SaveFunc       func(p context.Context, p1 *Transcript, p2 *RequestResult) (r insolar.Reply, r1 error)
+	SaveFunc       func(p context.Context, p1 *Transcript, p2 artifacts.RequestResult) (r insolar.Reply, r1 error)
 	SaveCounter    uint64
 	SavePreCounter uint64
 	SaveMock       mRequestsExecutorMockSave
@@ -74,7 +75,7 @@ type RequestsExecutorMockExecuteInput struct {
 }
 
 type RequestsExecutorMockExecuteResult struct {
-	r  *RequestResult
+	r  artifacts.RequestResult
 	r1 error
 }
 
@@ -91,7 +92,7 @@ func (m *mRequestsExecutorMockExecute) Expect(p context.Context, p1 *Transcript)
 }
 
 //Return specifies results of invocation of RequestsExecutor.Execute
-func (m *mRequestsExecutorMockExecute) Return(r *RequestResult, r1 error) *RequestsExecutorMock {
+func (m *mRequestsExecutorMockExecute) Return(r artifacts.RequestResult, r1 error) *RequestsExecutorMock {
 	m.mock.ExecuteFunc = nil
 	m.expectationSeries = nil
 
@@ -113,12 +114,12 @@ func (m *mRequestsExecutorMockExecute) ExpectOnce(p context.Context, p1 *Transcr
 	return expectation
 }
 
-func (e *RequestsExecutorMockExecuteExpectation) Return(r *RequestResult, r1 error) {
+func (e *RequestsExecutorMockExecuteExpectation) Return(r artifacts.RequestResult, r1 error) {
 	e.result = &RequestsExecutorMockExecuteResult{r, r1}
 }
 
 //Set uses given function f as a mock of RequestsExecutor.Execute method
-func (m *mRequestsExecutorMockExecute) Set(f func(p context.Context, p1 *Transcript) (r *RequestResult, r1 error)) *RequestsExecutorMock {
+func (m *mRequestsExecutorMockExecute) Set(f func(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error)) *RequestsExecutorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -127,7 +128,7 @@ func (m *mRequestsExecutorMockExecute) Set(f func(p context.Context, p1 *Transcr
 }
 
 //Execute implements github.com/insolar/insolar/logicrunner.RequestsExecutor interface
-func (m *RequestsExecutorMock) Execute(p context.Context, p1 *Transcript) (r *RequestResult, r1 error) {
+func (m *RequestsExecutorMock) Execute(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error) {
 	counter := atomic.AddUint64(&m.ExecutePreCounter, 1)
 	defer atomic.AddUint64(&m.ExecuteCounter, 1)
 
@@ -373,7 +374,7 @@ type RequestsExecutorMockSaveExpectation struct {
 type RequestsExecutorMockSaveInput struct {
 	p  context.Context
 	p1 *Transcript
-	p2 *RequestResult
+	p2 artifacts.RequestResult
 }
 
 type RequestsExecutorMockSaveResult struct {
@@ -382,7 +383,7 @@ type RequestsExecutorMockSaveResult struct {
 }
 
 //Expect specifies that invocation of RequestsExecutor.Save is expected from 1 to Infinity times
-func (m *mRequestsExecutorMockSave) Expect(p context.Context, p1 *Transcript, p2 *RequestResult) *mRequestsExecutorMockSave {
+func (m *mRequestsExecutorMockSave) Expect(p context.Context, p1 *Transcript, p2 artifacts.RequestResult) *mRequestsExecutorMockSave {
 	m.mock.SaveFunc = nil
 	m.expectationSeries = nil
 
@@ -406,7 +407,7 @@ func (m *mRequestsExecutorMockSave) Return(r insolar.Reply, r1 error) *RequestsE
 }
 
 //ExpectOnce specifies that invocation of RequestsExecutor.Save is expected once
-func (m *mRequestsExecutorMockSave) ExpectOnce(p context.Context, p1 *Transcript, p2 *RequestResult) *RequestsExecutorMockSaveExpectation {
+func (m *mRequestsExecutorMockSave) ExpectOnce(p context.Context, p1 *Transcript, p2 artifacts.RequestResult) *RequestsExecutorMockSaveExpectation {
 	m.mock.SaveFunc = nil
 	m.mainExpectation = nil
 
@@ -421,7 +422,7 @@ func (e *RequestsExecutorMockSaveExpectation) Return(r insolar.Reply, r1 error) 
 }
 
 //Set uses given function f as a mock of RequestsExecutor.Save method
-func (m *mRequestsExecutorMockSave) Set(f func(p context.Context, p1 *Transcript, p2 *RequestResult) (r insolar.Reply, r1 error)) *RequestsExecutorMock {
+func (m *mRequestsExecutorMockSave) Set(f func(p context.Context, p1 *Transcript, p2 artifacts.RequestResult) (r insolar.Reply, r1 error)) *RequestsExecutorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -430,7 +431,7 @@ func (m *mRequestsExecutorMockSave) Set(f func(p context.Context, p1 *Transcript
 }
 
 //Save implements github.com/insolar/insolar/logicrunner.RequestsExecutor interface
-func (m *RequestsExecutorMock) Save(p context.Context, p1 *Transcript, p2 *RequestResult) (r insolar.Reply, r1 error) {
+func (m *RequestsExecutorMock) Save(p context.Context, p1 *Transcript, p2 artifacts.RequestResult) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.SavePreCounter, 1)
 	defer atomic.AddUint64(&m.SaveCounter, 1)
 

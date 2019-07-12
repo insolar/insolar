@@ -33,7 +33,6 @@ import (
 func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
-	ctx := inslogger.TestContext(t)
 
 	protoRef := gen.Reference()
 	codeRef := gen.Reference()
@@ -44,7 +43,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		error      bool
 		dc         artifacts.DescriptorsCache
 		mm         MachinesManager
-		res        *RequestResult
+		res        artifacts.RequestResult
 	}{
 		{
 			name: "success",
@@ -52,7 +51,10 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
-					HeadRefMock.Return(nil),
+					HeadRefMock.Return(nil).
+					StateIDMock.Return(nil).
+					IsPrototypeMock.Return(false).
+					PrototypeMock.Return(nil, nil),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
@@ -75,9 +77,10 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &RequestResult{
-				NewMemory: []byte{1, 2, 3},
-				Result:    []byte{3, 2, 1},
+			res: &requestResult{
+				sideEffectType: artifacts.RequestSideEffectAmend,
+				memory:         []byte{1, 2, 3},
+				result:         []byte{3, 2, 1},
 			},
 		},
 		{
@@ -109,8 +112,9 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &RequestResult{
-				Result: []byte{3, 2, 1},
+			res: &requestResult{
+				sideEffectType: artifacts.RequestSideEffectNone,
+				result:         []byte{3, 2, 1},
 			},
 		},
 		{
@@ -143,8 +147,8 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &RequestResult{
-				Result: []byte{3, 2, 1},
+			res: &requestResult{
+				result: []byte{3, 2, 1},
 			},
 		},
 		{
@@ -166,10 +170,13 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					nil,
 				),
 			error: true,
+			res:   (artifacts.RequestResult)(nil),
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+
 			vs := &logicExecutor{MachinesManager: test.mm, DescriptorsCache: test.dc}
 			res, err := vs.ExecuteMethod(ctx, test.transcript)
 			if test.error {

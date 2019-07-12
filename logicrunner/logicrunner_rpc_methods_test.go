@@ -44,11 +44,10 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 
 	cr.CallMethodMock.Return(&reply.CallMethod{}, nil)
 	// Make sure the result of the outgoing request is registered as well
-	am.RegisterResultFunc = func(ctx context.Context, objref insolar.Reference, reqref insolar.Reference, result []byte) (r *insolar.ID, r1 error) {
+	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
 		require.Equal(t, outgoingReqRef, &reqref)
-		id := gen.ID()
-		return &id, nil
-	}
+		return nil
+	})
 
 	err := rpcm.RouteCall(ctx, transcript, req, resp)
 	require.NoError(t, err)
@@ -120,12 +119,11 @@ func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	cr.CallConstructorMock.Return(&newObjRef, nil)
 
 	// Make sure the result of the outgoing request is registered as well
-	am.RegisterResultFunc = func(ctx context.Context, objref insolar.Reference, reqref insolar.Reference, result []byte) (r *insolar.ID, r1 error) {
+	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
 		require.Equal(t, outgoingReqRef, &reqref)
-		require.Equal(t, newObjRef.Bytes(), result)
-		id := gen.ID()
-		return &id, nil
-	}
+		require.Equal(t, newObjRef.Bytes(), result.Result())
+		return nil
+	})
 
 	err := rpcm.SaveAsChild(ctx, transcript, req, resp)
 	require.NoError(t, err)
@@ -163,12 +161,12 @@ func TestSaveAsDelegateRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	cr.CallConstructorMock.Return(&newObjRef, nil)
 
 	// Make sure the result of the outgoing request is registered as well
-	am.RegisterResultFunc = func(ctx context.Context, objref insolar.Reference, reqref insolar.Reference, result []byte) (r *insolar.ID, r1 error) {
+	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
 		require.Equal(t, outgoingReqRef, &reqref)
-		require.Equal(t, newObjRef.Bytes(), result)
-		id := gen.ID()
-		return &id, nil
-	}
+		require.Equal(t, newObjRef.Bytes(), result.Result())
+
+		return nil
+	})
 
 	err := rpcm.SaveAsDelegate(ctx, transcript, req, resp)
 	require.NoError(t, err)

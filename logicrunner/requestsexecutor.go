@@ -34,8 +34,8 @@ import (
 
 type RequestsExecutor interface {
 	ExecuteAndSave(ctx context.Context, current *Transcript) (insolar.Reply, error)
-	Execute(ctx context.Context, current *Transcript) (*RequestResult, error)
-	Save(ctx context.Context, current *Transcript, res *RequestResult) (insolar.Reply, error)
+	Execute(ctx context.Context, current *Transcript) (artifacts.RequestResult, error)
+	Save(ctx context.Context, current *Transcript, res artifacts.RequestResult) (insolar.Reply, error)
 	SendReply(ctx context.Context, current *Transcript, re insolar.Reply, err error)
 }
 
@@ -74,7 +74,7 @@ func (e *requestsExecutor) ExecuteAndSave(
 func (e *requestsExecutor) Execute(
 	ctx context.Context, transcript *Transcript,
 ) (
-	*RequestResult, error,
+	artifacts.RequestResult, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeLogic")
 	defer span.End()
@@ -98,49 +98,21 @@ func (e *requestsExecutor) Execute(
 }
 
 func (e *requestsExecutor) Save(
-	ctx context.Context, transcript *Transcript, res *RequestResult,
+	ctx context.Context, transcript *Transcript, res artifacts.RequestResult,
 ) (
 	insolar.Reply, error,
 ) {
 	inslogger.FromContext(ctx).Debug("Saving result")
 
-	am := e.ArtifactManager
-	request := transcript.Request
-	reqRef := transcript.RequestRef
+	if err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res); err != nil {
+		return nil, errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
+	}
 
-	switch {
-	case res.Activation:
-		err := e.ArtifactManager.ActivateObject(
-			ctx, reqRef, *request.Base, *request.Prototype,
-			request.CallType == record.CTSaveAsDelegate,
-			res.NewMemory,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't activate object")
-		}
-		return &reply.CallConstructor{Object: &reqRef}, err
-	case res.Deactivation:
-		err := am.DeactivateObject(
-			ctx, reqRef, transcript.ObjectDescriptor, res.Result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't deactivate object")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
-	case res.NewMemory != nil:
-		err := am.UpdateObject(
-			ctx, reqRef, transcript.ObjectDescriptor, res.NewMemory, res.Result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't update object")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
+	switch res.Type() {
+	case artifacts.RequestSideEffectActivate:
+		return &reply.CallConstructor{Object: &transcript.RequestRef}, nil
 	default:
-		_, err := am.RegisterResult(ctx, *request.Object, reqRef, res.Result)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't save results")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
+		return &reply.CallMethod{Result: res.Result()}, nil
 	}
 }
 

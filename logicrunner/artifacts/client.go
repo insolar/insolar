@@ -661,6 +661,7 @@ func (m *client) sendWithRetry(
 		lastPulse = currentPulse.PulseNumber
 
 		msg, err := payload.NewMessage(ppl)
+
 		if err != nil {
 			return nil, err
 		}
@@ -709,167 +710,6 @@ func (m *client) ActivatePrototype(
 	return err
 }
 
-// ActivateObject creates activate object record in storage. Provided prototype reference will be used as objects prototype
-// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
-//
-// Request reference will be this object's identifier and referred as "object head".
-func (m *client) ActivateObject(
-	ctx context.Context,
-	object, parent, prototype insolar.Reference,
-	asDelegate bool,
-	memory []byte,
-) error {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivateObject")
-	instrumenter := instrument(ctx, "ActivateObject").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-	err = m.activateObject(ctx, object, prototype, false, parent, asDelegate, memory)
-	return err
-}
-
-// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
-// of the object. If object is already deactivated, an error should be returned.
-//
-// Deactivated object cannot be changed.
-func (m *client) DeactivateObject(
-	ctx context.Context,
-	request insolar.Reference,
-	obj ObjectDescriptor,
-	result []byte,
-) error {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
-	instrumenter := instrument(ctx, "DeactivateObject").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	deactivate := record.Deactivate{
-		Request:   request,
-		PrevState: *obj.StateID(),
-	}
-	resultRecord := record.Result{
-		Object:  *obj.HeadRef().Record(),
-		Request: request,
-		Payload: result,
-	}
-
-	virtDeactivate := record.Wrap(deactivate)
-	virtResult := record.Wrap(resultRecord)
-
-	deactivateBuf, err := virtDeactivate.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "DeactivateObject: can't serialize record")
-	}
-	resultBuf, err := virtResult.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "DeactivateObject: can't serialize record")
-	}
-
-	pd := &payload.Deactivate{
-		Record: deactivateBuf,
-		Result: resultBuf,
-	}
-
-	pl, err := m.sendWithRetry(ctx, pd, insolar.DynamicRoleLightExecutor, *obj.HeadRef(), 3)
-	if err != nil {
-		return errors.Wrap(err, "DeactivateObject: can't send deactivation and result records")
-	}
-
-	switch p := pl.(type) {
-	case *payload.ID:
-		return nil
-	case *payload.Error:
-		return errors.New(p.Text)
-	default:
-		return fmt.Errorf("DeactivateObject: unexpected reply: %#v", p)
-	}
-}
-
-// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
-// object. Provided memory well be the new object memory.
-//
-// Returned reference will be the latest object state (exact) reference.
-func (m *client) UpdateObject(
-	ctx context.Context,
-	request insolar.Reference,
-	object ObjectDescriptor,
-	memory []byte,
-	result []byte,
-) error {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdateObject")
-	instrumenter := instrument(ctx, "UpdateObject").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	image, err := object.Prototype()
-
-	if err != nil {
-		return errors.Wrap(err, "UpdateObject: failed to get prototype for object")
-	}
-
-	amend := record.Amend{
-		Request:     request,
-		Image:       *image,
-		IsPrototype: object.IsPrototype(),
-		PrevState:   *object.StateID(),
-		Memory:      memory,
-	}
-
-	resultRecord := record.Result{
-		Object:  *object.HeadRef().Record(),
-		Request: request,
-		Payload: result,
-	}
-
-	virtDeactivate := record.Wrap(amend)
-	virtResult := record.Wrap(resultRecord)
-
-	updateBuf, err := virtDeactivate.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "UpdateObject: can't serialize record")
-	}
-	resultBuf, err := virtResult.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "UpdateObject: can't serialize record")
-	}
-
-	pu := &payload.Update{
-		Record: updateBuf,
-		Result: resultBuf,
-	}
-
-	pl, err := m.sendWithRetry(ctx, pu, insolar.DynamicRoleLightExecutor, *object.HeadRef(), 3)
-	if err != nil {
-		return errors.Wrap(err, "UpdateObject: can't send update and result records")
-	}
-
-	switch p := pl.(type) {
-	case *payload.ID:
-		return nil
-	case *payload.Error:
-		return errors.New(p.Text)
-	default:
-		return fmt.Errorf("UpdateObject: unexpected reply: %#v", p)
-	}
-}
-
 // RegisterValidation marks provided object state as approved or disapproved.
 //
 // When fetching object, validity can be specified.
@@ -905,55 +745,6 @@ func (m *client) RegisterValidation(
 	_, err = sender(ctx, &msg, nil)
 
 	return err
-}
-
-// RegisterResult saves VM method call result.
-func (m *client) RegisterResult(
-	ctx context.Context,
-	obj insolar.Reference,
-	request insolar.Reference,
-	data []byte,
-) (*insolar.ID, error) {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
-	instrumenter := instrument(ctx, "RegisterResult").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	res := record.Result{
-		Object:  *obj.Record(),
-		Request: request,
-		Payload: data,
-	}
-	virtRec := record.Wrap(res)
-
-	buf, err := virtRec.Marshal()
-	if err != nil {
-		return nil, errors.Wrap(err, "RegisterResult: failed to marshal record")
-	}
-
-	psr := &payload.SetResult{
-		Result: buf,
-	}
-
-	pl, err := m.sendWithRetry(ctx, psr, insolar.DynamicRoleLightExecutor, obj, 3)
-	if err != nil {
-		return nil, err
-	}
-
-	switch p := pl.(type) {
-	case *payload.ID:
-		return &p.ID, nil
-	case *payload.Error:
-		return nil, errors.New(p.Text)
-	default:
-		return nil, fmt.Errorf("RegisterResult: unexpected reply: %#v", p)
-	}
 }
 
 // pulse returns current PulseNumber for artifact manager
@@ -1049,50 +840,6 @@ func (m *client) activateObject(
 	}
 }
 
-func (m *client) sendUpdateObject(
-	ctx context.Context,
-	objRec record.Virtual,
-	resRec record.Virtual,
-	obj insolar.Reference,
-	memory []byte,
-) error {
-	objRecData, err := objRec.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "setRecord: can't serialize record")
-	}
-	resRecData, err := resRec.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "setRecord: can't serialize record")
-	}
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.RetryJetSender(m.JetStorage),
-		messagebus.RetryFlowCancelled(m.PulseAccessor),
-	)
-	genericReply, err := sender(
-		ctx,
-		&message.UpdateObject{
-			Record:       objRecData,
-			ResultRecord: resRecData,
-			Object:       obj,
-			Memory:       memory,
-		}, nil)
-
-	if err != nil {
-		return errors.Wrap(err, "UpdateObject message failed")
-	}
-
-	switch rep := genericReply.(type) {
-	case *reply.OK:
-		return nil
-	case *reply.Error:
-		return rep.Error()
-	default:
-		return fmt.Errorf("sendUpdateObject: unexpected reply: %#v", rep)
-	}
-}
-
 func (m *client) registerChild(
 	ctx context.Context,
 	rec record.Virtual,
@@ -1141,4 +888,199 @@ func (m *client) InjectObjectDescriptor(reference insolar.Reference, descriptor 
 
 func (m *client) InjectFinish() {
 	m.localStorage.Initialized()
+}
+
+// RegisterResult saves VM method call result with it's side effects
+func (m *client) RegisterResult(
+	ctx context.Context,
+	request insolar.Reference,
+	result RequestResult,
+) error {
+
+	sendResult := func(
+		payloadInput payload.Payload,
+		obj insolar.Reference,
+	) (*insolar.ID, error) {
+
+		payloadOutput, err := m.sendWithRetry(ctx, payloadInput, insolar.DynamicRoleLightExecutor, obj, 3)
+		if err != nil {
+			return nil, err
+		}
+
+		switch p := payloadOutput.(type) {
+		case *payload.ID:
+			return &payloadOutput.(*payload.ID).ID, nil
+		case *payload.Error:
+			return nil, errors.New(p.Text)
+		default:
+			return nil, fmt.Errorf("RegisterResult: unexpected reply: %#v", p)
+		}
+
+	}
+
+	var (
+		pl         payload.Payload
+		parentDesc ObjectDescriptor
+		objectRef  insolar.Reference
+		err        error
+	)
+
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
+	instrumenter := instrument(ctx, "RegisterResult").err(&err)
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+		instrumenter.end()
+	}()
+	span.AddAttributes(trace.StringAttribute("SideEffect", result.Type().String()))
+
+	resultRecord := record.Result{
+		Object:  *result.ObjectReference().Record(),
+		Request: request,
+		Payload: result.Result(),
+	}
+
+	switch result.Type() {
+	// ActivateObject creates activate object record in storage. Provided prototype reference will be used as objects prototype
+	// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
+	//
+	// Request reference will be this object's identifier and referred as "object head".
+	case RequestSideEffectActivate:
+		parentRef, imageRef, asDelegate, memory := result.Activate()
+
+		parentDesc, err = m.GetObject(ctx, *parentRef)
+		if err != nil {
+			return err
+		}
+
+		vResultRecord := record.Wrap(resultRecord)
+		vActivateRecord := record.Wrap(record.Activate{
+			Request:     request,
+			Memory:      memory,
+			Image:       *imageRef,
+			IsPrototype: false,
+			Parent:      *parentRef,
+			IsDelegate:  asDelegate,
+		})
+
+		plTyped := payload.Activate{}
+		plTyped.Record, err = vActivateRecord.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "RegisterResult: can't serialize Activate record")
+		}
+		plTyped.Result, err = vResultRecord.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "RegisterResult: can't serialize Result record")
+		}
+		pl = &plTyped
+
+		objectRef = *result.ObjectReference()
+
+	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
+	// object. Provided memory well be the new object memory.
+	//
+	// Returned reference will be the latest object state (exact) reference.
+	case RequestSideEffectAmend:
+		objectStateID, objectImage, memory := result.Amend()
+
+		vResultRecord := record.Wrap(resultRecord)
+		vAmendRecord := record.Wrap(record.Amend{
+			Request:     request,
+			Image:       *objectImage,
+			IsPrototype: false,
+			PrevState:   *objectStateID,
+			Memory:      memory,
+		})
+
+		plTyped := payload.Update{}
+		plTyped.Record, err = vAmendRecord.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "RegisterResult: can't serialize Amend record")
+		}
+		plTyped.Result, err = vResultRecord.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "RegisterResult: can't serialize Result record")
+		}
+		pl = &plTyped
+
+		objectRef = *result.ObjectReference()
+
+	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
+	// of the object. If object is already deactivated, an error should be returned.
+	//
+	// Deactivated object cannot be changed.
+	case RequestSideEffectDeactivate:
+		objectStateID := result.Deactivate()
+
+		vResultRecord := record.Wrap(resultRecord)
+		vDeactivateRecord := record.Wrap(record.Deactivate{
+			Request:   request,
+			PrevState: *objectStateID,
+		})
+
+		plTyped := payload.Deactivate{}
+		plTyped.Record, err = vDeactivateRecord.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "RegisterResult: can't serialize Deactivate record")
+		}
+		plTyped.Result, err = vResultRecord.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "RegisterResult: can't serialize Result record")
+		}
+		pl = &plTyped
+
+		objectRef = *result.ObjectReference()
+
+	case RequestSideEffectNone:
+		vResultRecord := record.Wrap(resultRecord)
+
+		plTyped := payload.SetResult{}
+		plTyped.Result, err = vResultRecord.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "RegisterResult: can't serialize Result record")
+		}
+		pl = &plTyped
+
+		objectRef = *result.ObjectReference()
+
+	default:
+		return errors.Errorf("RegisterResult: Unknown side effect %d", result.Type())
+	}
+
+	_, err = sendResult(pl, objectRef)
+	if err != nil {
+		return errors.Wrapf(err, "RegisterResult: Failed to send results: %s", result.Type().String())
+	}
+
+	if result.Type() == RequestSideEffectActivate {
+		parentRef, imageRef, asDelegate, _ := result.Activate()
+
+		var asType *insolar.Reference
+
+		child := record.Child{
+			Ref: objectRef,
+		}
+
+		if parentDesc.ChildPointer() != nil {
+			child.PrevChild = *parentDesc.ChildPointer()
+		}
+		if asDelegate {
+			asType = imageRef
+		}
+
+		err = m.registerChild(
+			ctx,
+			record.Wrap(child),
+			*parentRef,
+			objectRef,
+			asType,
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to register as child while activating")
+		}
+	}
+
+	return nil
 }
