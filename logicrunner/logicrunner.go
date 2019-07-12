@@ -31,8 +31,8 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
-
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
