@@ -59,7 +59,7 @@ type Foldable interface {
 	FoldToUint64() uint64
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/long_bits.FoldableReader -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/long_bits.FixedReader -o . -s _mock.go
 
 type FixedReader interface {
 	io.WriterTo
@@ -69,6 +69,8 @@ type FixedReader interface {
 
 	FixedByteSize() int
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/long_bits.FoldableReader -o . -s _mock.go
 
 type FoldableReader interface {
 	FixedReader
