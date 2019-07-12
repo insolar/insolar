@@ -43,6 +43,7 @@ const (
 	TypeSetCode
 	TypeSetIncomingRequest
 	TypeSetOutgoingRequest
+	TypeSagaCallAcceptNotification
 	TypeGetFilament
 	TypeFilamentSegment
 	TypeSetResult
@@ -173,6 +174,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *SetOutgoingRequest:
 		pl.Polymorph = uint32(TypeSetOutgoingRequest)
 		return pl.Marshal()
+	case *SagaCallAcceptNotification:
+		pl.Polymorph = uint32(TypeSagaCallAcceptNotification)
+		return pl.Marshal()
 	case *SetResult:
 		pl.Polymorph = uint32(TypeSetResult)
 		return pl.Marshal()
@@ -257,6 +261,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeSetOutgoingRequest:
 		pl := SetOutgoingRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSagaCallAcceptNotification:
+		pl := SagaCallAcceptNotification{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeSetResult:

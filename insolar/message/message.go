@@ -49,8 +49,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &PendingFinished{}, nil
 	case insolar.TypeAdditionalCallFromPreviousExecutor:
 		return &AdditionalCallFromPreviousExecutor{}, nil
-	case insolar.TypeSagaCallAcceptNotification:
-		return &SagaCallAcceptNotification{}, nil
 	case insolar.TypeStillExecuting:
 		return &StillExecuting{}, nil
 
@@ -209,7 +207,6 @@ func init() {
 	gob.Register(&GetPendingRequests{})
 	gob.Register(&GetJet{})
 	gob.Register(&AbandonedRequestsNotification{})
-	gob.Register(&SagaCallAcceptNotification{})
 	gob.Register(&HotData{})
 	gob.Register(&GetPendingRequestID{})
 	gob.Register(&GetRequest{})

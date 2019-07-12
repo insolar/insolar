@@ -20,11 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 const InnerMsgTopic = "InnerMsg"
@@ -50,6 +54,36 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
+	if s.Message.WatermillMsg != nil {
+		// Handle new-style Protobuf message
+		var err error
+
+		meta := payload.Meta{}
+		err = meta.Unmarshal(s.Message.WatermillMsg.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal meta")
+		}
+		payloadType, err := payload.UnmarshalType(meta.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal payload type")
+		}
+
+		ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
+		switch payloadType {
+		case payload.TypeSagaCallAcceptNotification:
+			h := &HandleSagaCallAcceptNotification{
+				dep:     s.dep,
+				Message: s.Message,
+			}
+			return f.Handle(ctx, h.Present)
+		default:
+			return fmt.Errorf("no handler for message type %s", payloadType.String())
+		}
+	}
+
+	// Handle message the old way
+
 	switch s.Message.Parcel.Message().Type() {
 	case insolar.TypeCallMethod:
 		h := &HandleCall{
@@ -77,12 +111,6 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeAbandonedRequestsNotification:
 		h := &HandleAbandonedRequestsNotification{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeSagaCallAcceptNotification:
-		h := &HandleSagaCallAcceptNotification{
 			dep:     s.dep,
 			Message: s.Message,
 		}

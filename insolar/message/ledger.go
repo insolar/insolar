@@ -18,7 +18,6 @@ package message
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/drop"
 )
 
@@ -434,33 +433,6 @@ func (*AbandonedRequestsNotification) DefaultRole() insolar.DynamicRole {
 // DefaultTarget returns of target of this event.
 func (m *AbandonedRequestsNotification) DefaultTarget() *insolar.Reference {
 	return insolar.NewReference(m.Object)
-}
-
-// SagaCallAcceptNotification informs virtual node that it's time to call saga Accept method.
-type SagaCallAcceptNotification struct {
-	ledgerMessage
-
-	outgoingRequest record.OutgoingRequest
-}
-
-// Type implementation of Message interface.
-func (*SagaCallAcceptNotification) Type() insolar.MessageType {
-	return insolar.TypeSagaCallAcceptNotification
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (m *SagaCallAcceptNotification) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return nil, insolar.DynamicRoleUndefined
-}
-
-// DefaultRole returns role for this event
-func (*SagaCallAcceptNotification) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleVirtualExecutor
-}
-
-// DefaultTarget returns of target of this event.
-func (m *SagaCallAcceptNotification) DefaultTarget() *insolar.Reference {
-	return &m.outgoingRequest.Caller
 }
 
 // GetRequest fetches request from ledger.

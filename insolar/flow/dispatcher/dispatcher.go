@@ -118,7 +118,7 @@ func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.
 }
 
 // Process handles incoming message.
-func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
+func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) { // TODO AALEKSEEV call this in test
 	ctx := context.Background()
 	msgBus := bus.Message{
 		WatermillMsg: msg,
