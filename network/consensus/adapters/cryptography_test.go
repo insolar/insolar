@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package adapters
 
@@ -91,7 +91,7 @@ func TestSha3512Digester_GetDigestOf(t *testing.T) {
 
 	expected := scheme.IntegrityHasher().Hash(b)
 
-	require.Equal(t, expected, digest.Bytes())
+	require.Equal(t, expected, digest.AsBytes())
 }
 
 func TestSha3512Digester_GetDigestMethod(t *testing.T) {
@@ -156,13 +156,13 @@ func TestECDSADigestSigner_SignDigest(t *testing.T) {
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature := ds.SignDigest(digest)
 	require.Equal(t, scheme.SignatureSize(), signature.FixedByteSize())
 	require.Equal(t, signature.GetSignatureMethod(), SHA3512Digest.SignedBy(SECP256r1Sign))
 
-	signatureBytes := signature.Bytes()
+	signatureBytes := signature.AsBytes()
 
 	require.True(t, verifier.Verify(insolar.SignatureFromBytes(signatureBytes), digestBytes))
 }
@@ -200,16 +200,6 @@ func TestECDSASignatureVerifier_IsSignMethodSupported(t *testing.T) {
 	require.False(t, dv.IsSignMethodSupported("SOME SIGN METHOD"))
 }
 
-func TestECDSASignatureVerifier_IsDigestOfSignatureMethodSupported(t *testing.T) {
-	digester := NewSha3512Digester(scheme)
-	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
-
-	require.True(t, dv.IsDigestOfSignatureMethodSupported(SHA3512Digest.SignedBy(SECP256r1Sign)))
-	require.False(t, dv.IsDigestOfSignatureMethodSupported("SOME SIGNATURE METHOD"))
-	require.True(t, dv.IsDigestOfSignatureMethodSupported(SHA3512Digest.SignedBy("SOME SIGN METHOD")))
-	require.False(t, dv.IsDigestOfSignatureMethodSupported(common.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign)))
-}
-
 func TestECDSASignatureVerifier_IsSignOfSignatureMethodSupported(t *testing.T) {
 	digester := NewSha3512Digester(scheme)
 	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
@@ -231,7 +221,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature(t *testing.T) {
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
@@ -251,7 +241,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature_InvalidMethod(t *testing.
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 	bits := common.NewBits512FromBytes(signature.Bytes())
@@ -280,7 +270,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature(t *testing.T) {
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
@@ -301,7 +291,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature_InvalidMethod(t *testing.T)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 

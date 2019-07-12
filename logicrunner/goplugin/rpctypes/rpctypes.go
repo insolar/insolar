@@ -82,6 +82,7 @@ type UpRouteReq struct {
 	UpBaseReq
 	Wait      bool
 	Immutable bool
+	Saga      bool
 	Object    insolar.Reference
 	Method    string
 	Arguments insolar.Arguments

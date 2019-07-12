@@ -51,22 +51,27 @@
 package adapters
 
 import (
+	"io"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-func NewPulseFromPulseData(pulseData common.PulseData) insolar.Pulse {
+const nanosecondsInSecond = int64(time.Second / time.Nanosecond)
+
+func NewPulse(pulseData common.PulseData) insolar.Pulse {
 	var prev insolar.PulseNumber
-	if pulseData.IsFirstPulse() {
+	if !pulseData.IsFirstPulse() {
 		prev = insolar.PulseNumber(pulseData.GetPrevPulseNumber())
 	} else {
 		prev = insolar.PulseNumber(pulseData.PulseNumber)
 	}
 
 	entropy := insolar.Entropy{}
-	bytes := pulseData.PulseEntropy.Bytes()
+	bytes := pulseData.PulseEntropy.AsBytes()
 	copy(entropy[:], bytes)
 	copy(entropy[pulseData.PulseEntropy.FixedByteSize():], bytes)
 
@@ -74,8 +79,101 @@ func NewPulseFromPulseData(pulseData common.PulseData) insolar.Pulse {
 		PulseNumber:      insolar.PulseNumber(pulseData.PulseNumber),
 		NextPulseNumber:  insolar.PulseNumber(pulseData.GetNextPulseNumber()),
 		PrevPulseNumber:  prev,
-		PulseTimestamp:   int64(pulseData.Timestamp) * int64(time.Second/time.Nanosecond),
+		PulseTimestamp:   int64(pulseData.Timestamp) * nanosecondsInSecond,
 		EpochPulseNumber: int(pulseData.PulseEpoch),
 		Entropy:          entropy,
 	}
+}
+
+func NewPulseData(pulse insolar.Pulse) common.PulseData {
+	data := common.NewPulsarData(
+		common.PulseNumber(pulse.PulseNumber),
+		uint16(pulse.NextPulseNumber-pulse.PulseNumber),
+		uint16(pulse.PulseNumber-pulse.PrevPulseNumber),
+		common.NewBits512FromBytes(pulse.Entropy[:]).FoldToBits256(),
+	)
+	data.Timestamp = uint32(pulse.PulseTimestamp / nanosecondsInSecond)
+	return *data
+}
+
+type PulsePacketReader struct {
+	pulse insolar.Pulse
+}
+
+func (p *PulsePacketReader) OriginalPulsarPacket() {}
+
+func (p *PulsePacketReader) GetPulseData() common.PulseData {
+	return NewPulseData(p.pulse)
+}
+
+func (p *PulsePacketReader) GetPulseDataEvidence() common2.OriginalPulsarPacket {
+	return p
+}
+
+func (p *PulsePacketReader) WriteTo(w io.Writer) (n int64, err error) {
+	panic("implement me")
+}
+
+func (p *PulsePacketReader) Read(b []byte) (n int, err error) {
+	panic("implement me")
+}
+
+func (p *PulsePacketReader) AsBytes() []byte {
+	panic("implement me")
+}
+
+func (p *PulsePacketReader) AsByteString() string {
+	panic("implement me")
+}
+
+func (p *PulsePacketReader) FixedByteSize() int {
+	panic("implement me")
+}
+
+func NewPulsePacketReader(pulse insolar.Pulse) *PulsePacketReader {
+	return &PulsePacketReader{pulse}
+}
+
+type PulsePacketParser struct {
+	pulse insolar.Pulse
+}
+
+func (p *PulsePacketParser) IsRelayForbidden() bool {
+	return false
+}
+
+func NewPulsePacketParser(pulse insolar.Pulse) *PulsePacketParser {
+	return &PulsePacketParser{pulse}
+}
+
+func (p *PulsePacketParser) GetSourceID() common.ShortNodeID {
+	panic("implement me")
+}
+
+func (p *PulsePacketParser) GetReceiverID() common.ShortNodeID {
+	panic("implement me")
+}
+
+func (p *PulsePacketParser) GetTargetID() common.ShortNodeID {
+	panic("implement me")
+}
+
+func (p *PulsePacketParser) GetPacketType() packets.PacketType {
+	return packets.PacketPulse
+}
+
+func (p *PulsePacketParser) GetPulseNumber() common.PulseNumber {
+	return common.PulseNumber(p.pulse.PulseNumber)
+}
+
+func (p *PulsePacketParser) GetPulsePacket() packets.PulsePacketReader {
+	return NewPulsePacketReader(p.pulse)
+}
+
+func (p *PulsePacketParser) GetMemberPacket() packets.MemberPacketReader {
+	return nil
+}
+
+func (p *PulsePacketParser) GetPacketSignature() common.SignedDigest {
+	return common.SignedDigest{}
 }

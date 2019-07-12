@@ -24,7 +24,7 @@ type StateStorageMock struct {
 	DeleteObjectStatePreCounter uint64
 	DeleteObjectStateMock       mStateStorageMockDeleteObjectState
 
-	GetExecutionStateFunc       func(p insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker)
+	GetExecutionStateFunc       func(p insolar.Reference) (r *ExecutionBroker)
 	GetExecutionStateCounter    uint64
 	GetExecutionStatePreCounter uint64
 	GetExecutionStateMock       mStateStorageMockGetExecutionState
@@ -49,7 +49,7 @@ type StateStorageMock struct {
 	UnlockPreCounter uint64
 	UnlockMock       mStateStorageMockUnlock
 
-	UpsertExecutionStateFunc       func(p insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker)
+	UpsertExecutionStateFunc       func(p insolar.Reference) (r *ExecutionBroker)
 	UpsertExecutionStateCounter    uint64
 	UpsertExecutionStatePreCounter uint64
 	UpsertExecutionStateMock       mStateStorageMockUpsertExecutionState
@@ -219,8 +219,7 @@ type StateStorageMockGetExecutionStateInput struct {
 }
 
 type StateStorageMockGetExecutionStateResult struct {
-	r  *ExecutionState
-	r1 *ExecutionBroker
+	r *ExecutionBroker
 }
 
 //Expect specifies that invocation of StateStorage.GetExecutionState is expected from 1 to Infinity times
@@ -236,14 +235,14 @@ func (m *mStateStorageMockGetExecutionState) Expect(p insolar.Reference) *mState
 }
 
 //Return specifies results of invocation of StateStorage.GetExecutionState
-func (m *mStateStorageMockGetExecutionState) Return(r *ExecutionState, r1 *ExecutionBroker) *StateStorageMock {
+func (m *mStateStorageMockGetExecutionState) Return(r *ExecutionBroker) *StateStorageMock {
 	m.mock.GetExecutionStateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &StateStorageMockGetExecutionStateExpectation{}
 	}
-	m.mainExpectation.result = &StateStorageMockGetExecutionStateResult{r, r1}
+	m.mainExpectation.result = &StateStorageMockGetExecutionStateResult{r}
 	return m.mock
 }
 
@@ -258,12 +257,12 @@ func (m *mStateStorageMockGetExecutionState) ExpectOnce(p insolar.Reference) *St
 	return expectation
 }
 
-func (e *StateStorageMockGetExecutionStateExpectation) Return(r *ExecutionState, r1 *ExecutionBroker) {
-	e.result = &StateStorageMockGetExecutionStateResult{r, r1}
+func (e *StateStorageMockGetExecutionStateExpectation) Return(r *ExecutionBroker) {
+	e.result = &StateStorageMockGetExecutionStateResult{r}
 }
 
 //Set uses given function f as a mock of StateStorage.GetExecutionState method
-func (m *mStateStorageMockGetExecutionState) Set(f func(p insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker)) *StateStorageMock {
+func (m *mStateStorageMockGetExecutionState) Set(f func(p insolar.Reference) (r *ExecutionBroker)) *StateStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -272,7 +271,7 @@ func (m *mStateStorageMockGetExecutionState) Set(f func(p insolar.Reference) (r 
 }
 
 //GetExecutionState implements github.com/insolar/insolar/logicrunner.StateStorage interface
-func (m *StateStorageMock) GetExecutionState(p insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker) {
+func (m *StateStorageMock) GetExecutionState(p insolar.Reference) (r *ExecutionBroker) {
 	counter := atomic.AddUint64(&m.GetExecutionStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetExecutionStateCounter, 1)
 
@@ -292,7 +291,6 @@ func (m *StateStorageMock) GetExecutionState(p insolar.Reference) (r *ExecutionS
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -310,7 +308,6 @@ func (m *StateStorageMock) GetExecutionState(p insolar.Reference) (r *ExecutionS
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -870,8 +867,7 @@ type StateStorageMockUpsertExecutionStateInput struct {
 }
 
 type StateStorageMockUpsertExecutionStateResult struct {
-	r  *ExecutionState
-	r1 *ExecutionBroker
+	r *ExecutionBroker
 }
 
 //Expect specifies that invocation of StateStorage.UpsertExecutionState is expected from 1 to Infinity times
@@ -887,14 +883,14 @@ func (m *mStateStorageMockUpsertExecutionState) Expect(p insolar.Reference) *mSt
 }
 
 //Return specifies results of invocation of StateStorage.UpsertExecutionState
-func (m *mStateStorageMockUpsertExecutionState) Return(r *ExecutionState, r1 *ExecutionBroker) *StateStorageMock {
+func (m *mStateStorageMockUpsertExecutionState) Return(r *ExecutionBroker) *StateStorageMock {
 	m.mock.UpsertExecutionStateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &StateStorageMockUpsertExecutionStateExpectation{}
 	}
-	m.mainExpectation.result = &StateStorageMockUpsertExecutionStateResult{r, r1}
+	m.mainExpectation.result = &StateStorageMockUpsertExecutionStateResult{r}
 	return m.mock
 }
 
@@ -909,12 +905,12 @@ func (m *mStateStorageMockUpsertExecutionState) ExpectOnce(p insolar.Reference) 
 	return expectation
 }
 
-func (e *StateStorageMockUpsertExecutionStateExpectation) Return(r *ExecutionState, r1 *ExecutionBroker) {
-	e.result = &StateStorageMockUpsertExecutionStateResult{r, r1}
+func (e *StateStorageMockUpsertExecutionStateExpectation) Return(r *ExecutionBroker) {
+	e.result = &StateStorageMockUpsertExecutionStateResult{r}
 }
 
 //Set uses given function f as a mock of StateStorage.UpsertExecutionState method
-func (m *mStateStorageMockUpsertExecutionState) Set(f func(p insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker)) *StateStorageMock {
+func (m *mStateStorageMockUpsertExecutionState) Set(f func(p insolar.Reference) (r *ExecutionBroker)) *StateStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -923,7 +919,7 @@ func (m *mStateStorageMockUpsertExecutionState) Set(f func(p insolar.Reference) 
 }
 
 //UpsertExecutionState implements github.com/insolar/insolar/logicrunner.StateStorage interface
-func (m *StateStorageMock) UpsertExecutionState(p insolar.Reference) (r *ExecutionState, r1 *ExecutionBroker) {
+func (m *StateStorageMock) UpsertExecutionState(p insolar.Reference) (r *ExecutionBroker) {
 	counter := atomic.AddUint64(&m.UpsertExecutionStatePreCounter, 1)
 	defer atomic.AddUint64(&m.UpsertExecutionStateCounter, 1)
 
@@ -943,7 +939,6 @@ func (m *StateStorageMock) UpsertExecutionState(p insolar.Reference) (r *Executi
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -961,7 +956,6 @@ func (m *StateStorageMock) UpsertExecutionState(p insolar.Reference) (r *Executi
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}

@@ -89,7 +89,7 @@ func (s *SagasSuite) TestSagaAdditionalMethodsAreMissingInProxy() {
 }
 
 // Make sure wrapper contains meta information about saga
-func (s *SagasSuite) TestSagaMetaInfoIsPresentInProxy() {
+func (s *SagasSuite) TestSagaMetaInfoIsPresentInWrapper() {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
@@ -101,13 +101,13 @@ func (s *SagasSuite) TestSagaMetaInfoIsPresentInProxy() {
 	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
-	var bufProxy bytes.Buffer
-	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
+	var bufWrapper bytes.Buffer
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
-	proxyCode := bufProxy.String()
-	s.Contains(proxyCode, "INSMETHOD_TheAcceptMethod")
-	s.Contains(proxyCode, "INSMETHOD_TheRollbackMethod")
-	s.Contains(proxyCode, `
+	wrapperCode := bufWrapper.String()
+	s.Contains(wrapperCode, "INSMETHOD_TheAcceptMethod")
+	s.Contains(wrapperCode, "INSMETHOD_TheRollbackMethod")
+	s.Contains(wrapperCode, `
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
 

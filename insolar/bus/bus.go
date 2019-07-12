@@ -21,14 +21,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -58,8 +60,8 @@ const (
 )
 
 const (
-	// TypeError is Type for messages with error in Payload
-	TypeError = "error"
+	// TypeReply is Type for messages with insolar.Reply in Payload
+	TypeReply = "reply"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
@@ -125,6 +127,13 @@ func (b *Bus) removeReplyChannel(ctx context.Context, h payload.MessageHash, rep
 		close(reply.messages)
 		inslogger.FromContext(ctx).Infof("close reply channel for message with hash %s", h.String())
 	})
+}
+
+func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
+	resInBytes := reply.ToBytes(rep)
+	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
+	resAsMsg.Metadata.Set(MetaType, TypeReply)
+	return resAsMsg
 }
 
 // SendRole sends message to specified role. Node will be calculated automatically for the latest pulse. Use this
@@ -266,7 +275,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
 func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		logger := inslogger.FromContext(context.Background())
+		_, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
 
 		meta := payload.Meta{}
 		err := meta.Unmarshal(msg.Payload)

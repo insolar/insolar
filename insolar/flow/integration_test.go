@@ -21,13 +21,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -38,27 +40,36 @@ func (r *mockReply) Type() insolar.ReplyType {
 	return 88
 }
 
-func makeParcelMock(t *testing.T) insolar.Parcel {
-	parcelMock := testutils.NewParcelMock(t)
-	parcelMock.PulseFunc = func() (r insolar.PulseNumber) {
-		return 33
-	}
+func makeMessage(t *testing.T, ctx context.Context, pn insolar.PulseNumber) *message.Message {
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(bus.MetaPulse, pn.String())
+	sp, err := instracer.Serialize(ctx)
+	require.NoError(t, err)
+	msg.Metadata.Set(bus.MetaSpanData, string(sp))
 
-	return parcelMock
+	return msg
 }
 
 func TestEmptyHandle(t *testing.T) {
 	testReply := &mockReply{}
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
-				message.ReplyTo <- bus.Reply{Reply: testReply}
+				replyChan <- testReply
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	disp.ChangePulse(ctx, currentPulse)
 
-	reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
+	_, err := disp.Process(msg)
 	require.NoError(t, err)
+	reply := <-replyChan
 	require.Equal(t, testReply, reply)
 }
 
@@ -71,18 +82,26 @@ func (p *EmptyProcedure) Proceed(context.Context) error {
 func TestCallEmptyProcedure(t *testing.T) {
 	testReply := &mockReply{}
 
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				err := f.Procedure(context, &EmptyProcedure{}, true)
 				require.NoError(t, err)
-				message.ReplyTo <- bus.Reply{Reply: testReply}
+				replyChan <- testReply
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
 
-	reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	disp.ChangePulse(ctx, currentPulse)
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
+	_, err := disp.Process(msg)
 	require.NoError(t, err)
+	reply := <-replyChan
 	require.Equal(t, testReply, reply)
 
 }
@@ -96,18 +115,26 @@ func (p *ErrorProcedure) Proceed(context.Context) error {
 func TestProcedureReturnError(t *testing.T) {
 	testReply := &mockReply{}
 
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				err := f.Procedure(context, &ErrorProcedure{}, true)
 				require.Error(t, err)
-				message.ReplyTo <- bus.Reply{Reply: testReply}
+				replyChan <- testReply
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
 
-	reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	disp.ChangePulse(ctx, currentPulse)
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
+	_, err := disp.Process(msg)
 	require.NoError(t, err)
+	reply := <-replyChan
 	require.Equal(t, testReply, reply)
 }
 
@@ -126,22 +153,30 @@ func TestChangePulse(t *testing.T) {
 
 	procedureStarted := make(chan struct{})
 
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				longProcedure := LongProcedure{}
 				longProcedure.started = procedureStarted
 				err := f.Procedure(context, &longProcedure, true)
 				require.Equal(t, flow.ErrCancelled, err)
-				message.ReplyTo <- bus.Reply{Reply: testReply}
+				replyChan <- testReply
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
 
 	handleProcessed := make(chan struct{})
 	go func() {
-		reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+		ctx := context.Background()
+		currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+		disp.ChangePulse(ctx, currentPulse)
+
+		msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
+		_, err := disp.Process(msg)
 		require.NoError(t, err)
+		reply := <-replyChan
 		require.Equal(t, testReply, reply)
 		handleProcessed <- struct{}{}
 	}()
@@ -160,8 +195,9 @@ func TestChangePulseAndMigrate(t *testing.T) {
 
 	migrateStarted := make(chan struct{})
 
+	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
-		func(message bus.Message) flow.Handle {
+		func(message *message.Message) flow.Handle {
 			return func(ctx context.Context, f1 flow.Flow) error {
 				longProcedure := LongProcedure{}
 				longProcedure.started = firstProcedureStarted
@@ -175,18 +211,25 @@ func TestChangePulseAndMigrate(t *testing.T) {
 					err := f2.Procedure(ctx, &longProcedure, true)
 					require.Equal(t, flow.ErrCancelled, err)
 
-					message.ReplyTo <- bus.Reply{Reply: testReply}
+					replyChan <- testReply
 
 					return nil
 				})
 				return nil
 			}
-		}, nil)
+		}, nil, nil)
 
 	handleProcessed := make(chan struct{})
 	go func() {
-		reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
+		ctx := context.Background()
+		currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+		disp.ChangePulse(ctx, currentPulse)
+
+		msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
+		_, err := disp.Process(msg)
 		require.NoError(t, err)
+		reply := <-replyChan
 		require.Equal(t, testReply, reply)
 		handleProcessed <- struct{}{}
 	}()

@@ -278,7 +278,7 @@ func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg
 	return data.Result, nil
 }
 
-func (rpc *rpcController) processMessage(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (rpc *rpcController) processMessage(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetRPC() == nil {
 		inslogger.FromContext(ctx).Warnf("process RPC: got invalid request protobuf message: %s", request)
 	}
@@ -294,7 +294,7 @@ func (rpc *rpcController) processMessage(ctx context.Context, request network.Pa
 	return rpc.Network.BuildResponse(ctx, request, &packet.RPCResponse{Result: result}), nil
 }
 
-func (rpc *rpcController) processCascade(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (rpc *rpcController) processCascade(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetCascade() == nil {
 		inslogger.FromContext(ctx).Warnf("process cascade: got invalid request protobuf message: %s", request)
 	}

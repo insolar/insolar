@@ -40,6 +40,7 @@ type Configuration struct {
 	KeysPath        string
 	CertificatePath string
 	Tracer          Tracer
+	Introspection   Introspection
 }
 
 // Holder provides methods to manage configuration
@@ -63,6 +64,7 @@ func NewConfiguration() Configuration {
 		KeysPath:        "./",
 		CertificatePath: "",
 		Tracer:          NewTracer(),
+		Introspection:   NewIntrospection(),
 	}
 
 	return cfg

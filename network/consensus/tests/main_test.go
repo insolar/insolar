@@ -60,6 +60,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 func TestConsensusMain(t *testing.T) {
@@ -73,8 +74,8 @@ func TestConsensusMain(t *testing.T) {
 	ctx = inslogger.SetLogger(ctx, logger)
 
 	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         100 * time.Millisecond,
-		MaxDelay:         300 * time.Millisecond,
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
 		Variance:         0.2,
 		SpikeProbability: 0.1,
 	})
@@ -83,15 +84,22 @@ func TestConsensusMain(t *testing.T) {
 	primingCloudStateHash := NewEmuNodeStateHash(1234567890)
 	nodes := NewEmuNodeIntros(generateNameList(0, 1, 3, 5)...)
 
+	strategyFactory := &EmuRoundStrategyFactory{}
+	candidateFeeder := &core.SequencialCandidateFeeder{}
+
 	for i, n := range nodes {
 		chronicles := NewEmuChronicles(nodes, i, &primingCloudStateHash)
-		node := NewConsensusNode(n.GetDefaultEndpoint())
-		node.ConnectTo(chronicles, network, config)
+		node := NewConsensusHost(n.GetDefaultEndpoint().GetNameAddress())
+		controlFeeder := &EmuControlFeeder{}
+		//if i % 5 == 2 {
+		//	controlFeeder.leaveReason = uint32(i) //simulate leave
+		//}
+		node.ConnectTo(chronicles, network, strategyFactory, candidateFeeder, controlFeeder, config)
 	}
 
 	network.Start(ctx)
 
-	go CreateGenerator(2, 10, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
+	go CreateGenerator(10, 2, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")

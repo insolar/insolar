@@ -183,14 +183,24 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 
 	response, err := sdk.DoRequest(
 		userConfig,
-		"contract.createMember",
+		"member.create",
 		map[string]interface{}{},
 	)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "request was failed ")
 	}
 
-	return NewMember(response.ContractResult.(string), privateKeyStr, publicKeyStr), response.TraceID, nil
+	var memberRef string
+	var contractResultCasted map[string]interface{}
+	var ok bool
+	if contractResultCasted, ok = response.ContractResult.(map[string]interface{}); !ok {
+		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.ContractResult)
+	}
+	if memberRef, ok = contractResultCasted["reference"].(string); !ok {
+		return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", contractResultCasted["reference"])
+	}
+
+	return NewMember(memberRef, privateKeyStr, publicKeyStr), response.TraceID, nil
 }
 
 // AddBurnAddresses method add burn addresses

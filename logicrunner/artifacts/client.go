@@ -791,7 +791,7 @@ func (m *client) DeactivateObject(
 	case *payload.Error:
 		return errors.New(p.Text)
 	default:
-		return fmt.Errorf("DeployCode: unexpected reply: %#v", p)
+		return fmt.Errorf("DeactivateObject: unexpected reply: %#v", p)
 	}
 }
 
@@ -817,12 +817,56 @@ func (m *client) UpdateObject(
 		instrumenter.end()
 	}()
 
-	if object.IsPrototype() {
-		err = errors.New("object is not an instance")
-		return err
+	image, err := object.Prototype()
+
+	if err != nil {
+		return errors.Wrap(err, "UpdateObject: failed to get prototype for object")
 	}
-	err = m.updateObject(ctx, request, object, memory, result)
-	return err
+
+	amend := record.Amend{
+		Request:     request,
+		Image:       *image,
+		IsPrototype: object.IsPrototype(),
+		PrevState:   *object.StateID(),
+		Memory:      memory,
+	}
+
+	resultRecord := record.Result{
+		Object:  *object.HeadRef().Record(),
+		Request: request,
+		Payload: result,
+	}
+
+	virtDeactivate := record.Wrap(amend)
+	virtResult := record.Wrap(resultRecord)
+
+	updateBuf, err := virtDeactivate.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "UpdateObject: can't serialize record")
+	}
+	resultBuf, err := virtResult.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "UpdateObject: can't serialize record")
+	}
+
+	pu := &payload.Update{
+		Record: updateBuf,
+		Result: resultBuf,
+	}
+
+	pl, err := m.sendWithRetry(ctx, pu, insolar.DynamicRoleLightExecutor, *object.HeadRef(), 3)
+	if err != nil {
+		return errors.Wrap(err, "UpdateObject: can't send update and result records")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return nil
+	case *payload.Error:
+		return errors.New(p.Text)
+	default:
+		return fmt.Errorf("UpdateObject: unexpected reply: %#v", p)
+	}
 }
 
 // RegisterValidation marks provided object state as approved or disapproved.
@@ -1001,83 +1045,6 @@ func (m *client) activateObject(
 		return errors.New(p.Text)
 	default:
 		return fmt.Errorf("ActivateObject: unexpected reply: %#v", p)
-	}
-}
-
-func (m *client) updateObject(
-	ctx context.Context,
-	request insolar.Reference,
-	obj ObjectDescriptor,
-	memory []byte,
-	result []byte,
-) error {
-	var (
-		image *insolar.Reference
-		err   error
-	)
-	if obj.IsPrototype() {
-		image, err = obj.Code()
-	} else {
-		image, err = obj.Prototype()
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to update object")
-	}
-
-	amend := record.Amend{
-		Request:     request,
-		Image:       *image,
-		IsPrototype: obj.IsPrototype(),
-		PrevState:   *obj.StateID(),
-	}
-
-	resultRecord := record.Result{
-		Object:  *obj.HeadRef().Record(),
-		Request: request,
-		Payload: result,
-	}
-
-	err = m.sendUpdateObject(
-		ctx,
-		record.Wrap(amend),
-		record.Wrap(resultRecord),
-		*obj.HeadRef(),
-		memory,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to update object")
-	}
-
-	return nil
-}
-
-func (m *client) setBlob(
-	ctx context.Context,
-	blob []byte,
-	target insolar.Reference,
-) (*insolar.ID, error) {
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryJetSender(m.JetStorage),
-		messagebus.RetryFlowCancelled(m.PulseAccessor),
-	)
-	genericReact, err := sender(ctx, &message.SetBlob{
-		Memory:    blob,
-		TargetRef: target,
-	}, nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	switch rep := genericReact.(type) {
-	case *reply.ID:
-		return &rep.ID, nil
-	case *reply.Error:
-		return nil, rep.Error()
-	default:
-		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", rep)
 	}
 }
 

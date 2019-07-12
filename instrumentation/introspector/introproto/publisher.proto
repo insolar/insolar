@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package introproto;
+
+import "google/api/annotations.proto";
+
+// Publisher
+service Publisher {
+    // message filter methods:
+
+    // SetMessagesFilter enables/disables messages publishing by type.
+    rpc SetMessagesFilter (MessageFilterByType) returns (MessageFilterByType) {
+        option (google.api.http) = {
+            post: "/setMessagesFilter"
+            body: "*"
+        };
+    }
+    // GetMessagesFilters returns map with filter state for every message type.
+    rpc GetMessagesFilters (EmptyArgs) returns (AllMessageFilterStats) {
+        option (google.api.http) = {
+            post: "/getMessagesFilters"
+            body: "*"
+        };
+    }
+
+    // stat filter methods:
+
+    // GetMessagesStat returns statistic for published messages by type.
+    rpc GetMessagesStat (EmptyArgs) returns (AllMessageStatByType) {
+        option (google.api.http) = {
+            post: "/getMessagesStat"
+            body: "*"
+        };
+    }
+
+}
+
+// EmptyArgs is just a stub for grpc methods without arguments.
+message EmptyArgs {
+}
+
+// AllMessageFilterStats map of MessageFilterWithStat per message type.
+message AllMessageFilterStats {
+    map<string, MessageFilterWithStat> Filters = 1;
+}
+
+// MessageFilterByType represents filter state for message type.
+message MessageFilterByType {
+    string Name = 1;
+    bool Enable = 2;
+}
+
+// MessageFilterWithStat represents filter state and count of filtered messages.
+message MessageFilterWithStat {
+    bool Enable = 2;
+    int64 Filtered = 3;
+}
+
+
+// MessageStatByType is a counter for message type.
+message MessageStatByType {
+    string Name = 1;
+    int64 Count = 2;
+}
+
+// AllMessageStatByType is a list of counters per message type.
+message AllMessageStatByType {
+    repeated MessageStatByType Counters = 1;
+}

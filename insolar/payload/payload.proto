@@ -120,6 +120,13 @@ message Deactivate {
     bytes Result = 21;
 }
 
+message Update {
+    uint32 Polymorph = 16;
+
+    bytes Record = 20;
+    bytes Result = 21;
+}
+
 message GetFilament {
     uint32 Polymorph = 16;
 

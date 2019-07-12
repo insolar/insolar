@@ -19,11 +19,14 @@ package logicrunner
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -35,7 +38,6 @@ type initializeExecutionState struct {
 	msg *message.ExecutorResults
 
 	Result struct {
-		es             *ExecutionState
 		broker         *ExecutionBroker
 		clarifyPending bool
 	}
@@ -45,8 +47,9 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	ref := p.msg.GetReference()
 
-	es, broker := p.LR.StateStorage.UpsertExecutionState(ref)
-	p.Result.es = es
+	broker := p.LR.StateStorage.UpsertExecutionState(ref)
+	es := &broker.executionState
+
 	p.Result.broker = broker
 
 	p.Result.clarifyPending = false
@@ -80,9 +83,8 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	// prepare Queue
 	if p.msg.Queue != nil {
 		for _, qe := range p.msg.Queue {
-			ctxToSent := context.TODO() //FIXME: !!!!
-			transcript := NewTranscript(ctxToSent, &qe.RequestRef, qe.Request)
-
+			requestCtx := contextFromServiceData(qe.ServiceData)
+			transcript := NewTranscript(requestCtx, qe.RequestRef, qe.Request)
 			broker.Prepend(ctx, false, transcript)
 		}
 	}
@@ -94,12 +96,12 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 type HandleExecutorResults struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	msg := parcel.Message().(*message.ExecutorResults)
+	msg := h.Parcel.Message().(*message.ExecutorResults)
 
 	// now we have 2 different types of data in message.HandleExecutorResultsMessage
 	// one part of it is about consensus
@@ -121,7 +123,7 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 
 	if procInitializeExecutionState.Result.clarifyPending {
 		procClarifyPending := ClarifyPendingState{
-			es:              procInitializeExecutionState.Result.es,
+			broker:          procInitializeExecutionState.Result.broker,
 			ArtifactManager: h.dep.lr.ArtifactManager,
 		}
 
@@ -141,13 +143,12 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 }
 
 func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("HandleExecutorResults.Present starts ...")
 
-	msg, ok := parcel.Message().(*message.ExecutorResults)
+	msg, ok := h.Parcel.Message().(*message.ExecutorResults)
 	if !ok {
 		return errors.New("HandleExecutorResults( ! message.ExecutorResults )")
 	}
@@ -158,11 +159,17 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 
 	err := h.realHandleExecutorState(ctx, f)
 
-	actualReply := bus.Reply{Reply: &reply.OK{}, Err: err}
+	var rep *watermillMsg.Message
 	if err != nil {
-		actualReply.Reply = &reply.Error{}
+		var newErr error
+		rep, newErr = payload.NewMessage(&payload.Error{Text: err.Error()})
+		if newErr != nil {
+			return newErr
+		}
+	} else {
+		rep = bus.ReplyAsMessage(ctx, &reply.OK{})
 	}
-	h.Message.ReplyTo <- actualReply
+	h.dep.Sender.Reply(ctx, h.Message, rep)
 
 	return err
 }
