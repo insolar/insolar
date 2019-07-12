@@ -52,7 +52,7 @@ package long_bits
 
 import (
 	"errors"
-	io "io"
+	"io"
 	"math"
 	"testing"
 
