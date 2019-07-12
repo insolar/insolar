@@ -115,6 +115,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case payload.TypeDeactivate:
 		h := NewDeactivateObject(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeUpdate:
+		h := NewUpdateObject(s.dep, meta, false)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypePass:
 		err = s.handlePass(ctx, f, meta)
 	case payload.TypeError:
@@ -147,17 +150,9 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	defer span.End()
 
 	switch msgType {
-	case insolar.TypeSetBlob.String():
-		msg := parcel.Message().(*message.SetBlob)
-		h := NewSetBlob(s.dep, meta, msg)
-		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetRequest.String():
 		msg := parcel.Message().(*message.GetRequest)
 		h := NewGetRequest(s.dep, meta, msg.Request)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeUpdateObject.String():
-		msg := parcel.Message().(*message.UpdateObject)
-		h := NewUpdateObject(s.dep, meta, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetChildren.String():
 		h := NewGetChildren(s.dep, meta, parcel)
@@ -241,6 +236,9 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeDeactivate:
 		h := NewDeactivateObject(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeUpdate:
+		h := NewUpdateObject(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())

@@ -116,11 +116,12 @@ func TestFuture_SetResponse(t *testing.T) {
 
 	require.Empty(t, f.Response())
 
-	go f.SetResponse(m)
+	receivedPacket := packet.NewReceivedPacket(m, nil)
+	go f.SetResponse(receivedPacket)
 
 	m2 := <-f.Response() // Response() call closes channel
 
-	require.Equal(t, m, m2)
+	require.Equal(t, receivedPacket, m2)
 
 	m3, err := f.WaitResponse(time.Minute)
 	// legal behavior, the channel is closed because of the previous f.Response() call finished the Future
@@ -148,7 +149,7 @@ func TestFuture_Cancel(t *testing.T) {
 
 func TestFuture_WaitResponse_Cancel(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
-	c := make(chan network.Packet)
+	c := make(chan network.ReceivedPacket)
 	var f Future = &future{
 		response:       c,
 		receiver:       n,
@@ -166,7 +167,7 @@ func TestFuture_WaitResponse_Cancel(t *testing.T) {
 
 func TestFuture_WaitResponse_Timeout(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
-	c := make(chan network.Packet)
+	c := make(chan network.ReceivedPacket)
 	cancelled := false
 	var f Future = &future{
 		response:       c,
@@ -183,7 +184,7 @@ func TestFuture_WaitResponse_Timeout(t *testing.T) {
 
 func TestFuture_WaitResponse_Success(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
-	c := make(chan network.Packet, 1)
+	c := make(chan network.ReceivedPacket, 1)
 	var f Future = &future{
 		response:       c,
 		receiver:       n,
@@ -192,7 +193,7 @@ func TestFuture_WaitResponse_Success(t *testing.T) {
 		cancelCallback: func(f Future) {},
 	}
 
-	p := &packet.Packet{}
+	p := packet.NewReceivedPacket(&packet.Packet{}, nil)
 	c <- p
 
 	res, err := f.WaitResponse(time.Minute)
@@ -218,7 +219,7 @@ func TestFuture_SetResponse_Cancel_Concurrency(t *testing.T) {
 		wg.Done()
 	}()
 	go func() {
-		f.SetResponse(&packet.Packet{})
+		f.SetResponse(packet.NewReceivedPacket(&packet.Packet{}, nil))
 		wg.Done()
 	}()
 

@@ -57,68 +57,85 @@ import (
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 )
 
-var _ common2.LocalNodeProfile = &nodeSlot{}
+var _ common2.LocalNodeProfile = &NodeProfileSlot{}
 
-type nodeSlot struct {
+const joinerIndex = 0x8000
+
+type NodeProfileSlot struct {
 	common2.NodeIntroProfile
 	verifier common.SignatureVerifier
 	index    uint16
-	state    common2.MembershipState
+	mode     common2.MemberOpMode
 	power    common2.MemberPower
 }
 
-func newNodeSlot(index int, p common2.NodeIntroProfile, verifier common.SignatureVerifier) nodeSlot {
-	return nodeSlot{index: uint16(index), state: common2.Joining, NodeIntroProfile: p, verifier: verifier}
+func NewNodeProfile(index int, p common2.NodeIntroProfile, verifier common.SignatureVerifier, pw common2.MemberPower) NodeProfileSlot {
+
+	if index < 0 || index > common2.MaxNodeIndex {
+		panic("illegal value")
+	}
+	return NodeProfileSlot{index: uint16(index), NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
-func (c *nodeSlot) Less(o common2.NodeProfile) bool {
-	return common2.LessForNodeProfile(c, o)
+func NewJoinerProfile(p common2.NodeIntroProfile, verifier common.SignatureVerifier, pw common2.MemberPower) NodeProfileSlot {
+
+	return NodeProfileSlot{index: joinerIndex, NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
-func (c *nodeSlot) HasWorkingPower() bool {
-	return c.state.IsWorking() && c.power > 0
-}
-
-func (c *nodeSlot) GetDeclaredPower() common2.MemberPower {
+func (c *NodeProfileSlot) GetDeclaredPower() common2.MemberPower {
 	return c.power
 }
 
-func (c *nodeSlot) GetPower() common2.MemberPower {
-	if c.state.IsWorking() {
-		return c.power
-	}
-	return 0
+func (c *NodeProfileSlot) GetOpMode() common2.MemberOpMode {
+	return c.mode
 }
 
-func (c *nodeSlot) GetState() common2.MembershipState {
-	return c.state
+func (c *NodeProfileSlot) LocalNodeProfile() {
 }
 
-func (c *nodeSlot) LocalNodeProfile() {
+func (c *NodeProfileSlot) GetIndex() int {
+	return int(c.index & common2.NodeIndexMask)
 }
 
-func (c *nodeSlot) GetIndex() int {
-	return int(c.index)
+func (c *NodeProfileSlot) IsJoiner() bool {
+	return c.index == joinerIndex
 }
 
-func (c *nodeSlot) GetSignatureVerifier() common.SignatureVerifier {
+func (c *NodeProfileSlot) GetSignatureVerifier() common.SignatureVerifier {
 	return c.verifier
-}
-
-func (c *nodeSlot) IsJoiner() bool {
-	return c.state.IsJoining()
 }
 
 var _ common2.UpdatableNodeProfile = &updatableSlot{}
 
 type updatableSlot struct {
-	nodeSlot
+	NodeProfileSlot
+	leaveReason uint32
 }
 
-func (c *updatableSlot) SetRank(index int, state common2.MembershipState, power common2.MemberPower) {
+func (c *updatableSlot) SetRank(index int, m common2.MemberOpMode, power common2.MemberPower) {
 	c.SetIndex(index)
-	c.state = state
 	c.power = power
+	c.mode = m
+}
+
+func (c *updatableSlot) SetPower(power common2.MemberPower) {
+	c.power = power
+}
+
+func (c *updatableSlot) SetOpMode(m common2.MemberOpMode) {
+	c.mode = m
+}
+
+func (c *updatableSlot) SetOpModeAndLeaveReason(leaveReason uint32) {
+	c.mode = common2.MemberModeEvictedGracefully
+	c.leaveReason = leaveReason
+}
+
+func (c *updatableSlot) GetLeaveReason() uint32 {
+	if c.mode != common2.MemberModeEvictedGracefully {
+		return 0
+	}
+	return c.leaveReason
 }
 
 func (c *updatableSlot) SetIndex(index int) {
@@ -130,12 +147,4 @@ func (c *updatableSlot) SetIndex(index int) {
 
 func (c *updatableSlot) SetSignatureVerifier(verifier common.SignatureVerifier) {
 	c.verifier = verifier
-}
-
-func (c *updatableSlot) setJoiner(joiner bool) {
-	if joiner {
-		c.state = common2.Joining
-	} else if c.state.IsJoining() || c.state.IsUndefined() {
-		c.state = common2.Working
-	}
 }

@@ -39,7 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
@@ -55,6 +54,7 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/server/internal"
 	"github.com/pkg/errors"
 )
 
@@ -109,6 +109,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
 
 	// Network.
 	var (
@@ -218,7 +219,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		conf := cfg.Ledger
 		idLocker := object.NewIndexLocker()
 		drops := drop.NewStorageMemory()
-		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
@@ -238,9 +238,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.DelegationTokenFactory = Tokens
 		handler.JetStorage = Jets
 		handler.DropModifier = drops
-		handler.BlobModifier = blobs
-		handler.BlobAccessor = blobs
-		handler.Blobs = blobs
 		handler.IndexLocker = idLocker
 		handler.Records = records
 		handler.Nodes = Nodes
@@ -256,7 +253,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
-			blobs,
 			records,
 			indexes,
 			Pulses,
@@ -270,7 +266,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Bus,
 			Pulses,
 			drops,
-			blobs,
 			records,
 			indexes,
 			Jets,

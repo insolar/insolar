@@ -224,7 +224,7 @@ func (ac *authorizationController) getSession(sessionID SessionID, claim *packet
 	return session, nil
 }
 
-func (ac *authorizationController) processRegisterRequest(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (ac *authorizationController) processRegisterRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetRegister() == nil {
 		return nil, errors.Errorf("process register: got invalid protobuf request message: %s", request)
 	}
@@ -252,7 +252,7 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 	return ac.Network.BuildResponse(ctx, request, response), nil
 }
 
-func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetAuthorize() == nil {
 		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
 	}

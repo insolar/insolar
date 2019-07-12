@@ -76,6 +76,7 @@ func (h *HandleCall) sendToNextExecutor(
 			ObjectReference: es.Ref,
 			RequestRef:      *requestRef,
 			Request:         *transcript.Request,
+			ServiceData:     serviceDataFromContext(transcript.Context),
 		}
 		if es.pending == message.PendingUnknown {
 			additionalCallMsg.Pending = message.NotPending
@@ -141,7 +142,7 @@ func (h *HandleCall) handleActual(
 	es, broker := lr.StateStorage.UpsertExecutionState(*objRef)
 
 	es.Lock()
-	broker.Put(ctx, false, NewTranscript(ctx, requestRef, request))
+	broker.Put(ctx, false, NewTranscript(ctx, *requestRef, request))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
@@ -226,7 +227,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 		es.pending = message.NotPending
 	}
 
-	broker.Put(ctx, false, NewTranscript(ctx, &msg.RequestRef, msg.Request))
+	broker.Put(ctx, false, NewTranscript(ctx, msg.RequestRef, msg.Request))
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
@@ -248,13 +249,14 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
 	parcel := h.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
 	inslogger.FromContext(ctx).Debug("HandleAdditionalCallFromPreviousExecutor.Present starts ...")
 
 	msg, ok := parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
 	if !ok {
 		return errors.New("is not AdditionalCallFromPreviousExecutor message")
 	}
+
+	ctx = contextFromServiceData(msg.ServiceData)
 
 	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
 	span.AddAttributes(

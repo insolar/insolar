@@ -72,24 +72,6 @@ type EmuUpstreamPulseController struct {
 	nshDelay time.Duration
 }
 
-func (r *EmuUpstreamPulseController) MembershipSuspended() {
-}
-
-func (r *EmuUpstreamPulseController) MembershipResumed() {
-}
-
-func (r *EmuUpstreamPulseController) MembershipAcquired() {
-}
-
-func (r *EmuUpstreamPulseController) MembershipLost(graceful bool) {
-}
-
-func (*EmuUpstreamPulseController) PulseIsComing(anticipatedStart time.Time) {
-}
-
-func (*EmuUpstreamPulseController) PulseDetected() {
-}
-
 func (r *EmuUpstreamPulseController) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
 	c := make(chan common.NodeStateHash, 1)
 	nsh := NewEmuNodeStateHash(rand.Uint64())
@@ -111,16 +93,7 @@ func (*EmuUpstreamPulseController) CommitPulseChange(report core.MembershipUpstr
 func (*EmuUpstreamPulseController) CancelPulseChange() {
 }
 
-func (*EmuUpstreamPulseController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-}
-
-func (*EmuUpstreamPulseController) ConsensusFailed() {
-}
-
-func (*EmuUpstreamPulseController) SuspendTraffic() {
-}
-
-func (*EmuUpstreamPulseController) ResumeTraffic() {
+func (*EmuUpstreamPulseController) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
 }
 
 func NewEmuNodeStateHash(v uint64) EmuNodeStateHash {

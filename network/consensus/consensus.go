@@ -61,6 +61,7 @@ import (
 	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -68,14 +69,16 @@ import (
 type Dep struct {
 	PrimingCloudStateHash [64]byte
 
+	KeyProcessor       insolar.KeyProcessor
 	Scheme             insolar.PlatformCryptographyScheme
 	CertificateManager insolar.CertificateManager
 	KeyStore           insolar.KeyStore
 	NodeKeeper         network.NodeKeeper
 	DatagramTransport  transport.DatagramTransport
 
-	Stater       adapters.Stater
+	StateGetter  adapters.StateGetter
 	PulseChanger adapters.PulseChanger
+	StateUpdater adapters.StateUpdater
 
 	// TODO: remove it from here
 	PacketBuilder func(core.TransportCryptographyFactory, core.LocalNodeConfiguration) core.PacketBuilder
@@ -87,11 +90,13 @@ func (cd *Dep) verify() {
 }
 
 type Consensus struct {
-	population                   census.ManyNodePopulation // TODO: there should be interface
+	population                   census.ManyNodePopulation     // TODO: there should be interface
+	consensusConfiguration       census.ConsensusConfiguration // TODO: there should be interface
 	mandateRegistry              census.MandateRegistry
 	misbehaviorRegistry          census.MisbehaviorRegistry
 	offlinePopulation            census.OfflinePopulation
 	versionedRegistries          census.VersionedRegistries
+	nodeProfileFactory           common.NodeProfileFactory
 	consensusChronicles          census.ConsensusChronicles
 	localNodeConfiguration       core.LocalNodeConfiguration
 	upstreamPulseController      core.UpstreamPulseController
@@ -113,9 +118,10 @@ func New(ctx context.Context, dep Dep) Consensus {
 	knownNodes := dep.NodeKeeper.GetAccessor().GetActiveNodes()
 
 	consensus.population = adapters.NewPopulation(
-		adapters.NewNodeIntroProfile(origin, certificate),
-		adapters.NewNodeIntroProfileList(knownNodes, certificate),
+		adapters.NewNodeIntroProfile(origin, certificate, dep.KeyProcessor),
+		adapters.NewNodeIntroProfileList(knownNodes, certificate, dep.KeyProcessor),
 	)
+	consensus.consensusConfiguration = adapters.NewConsensusConfiguration()
 	consensus.mandateRegistry = adapters.NewMandateRegistry(
 		common2.NewDigest(
 			common2.NewBits512FromBytes(
@@ -123,19 +129,23 @@ func New(ctx context.Context, dep Dep) Consensus {
 			),
 			adapters.SHA3512Digest,
 		).AsDigestHolder(),
+		consensus.consensusConfiguration,
 	)
 	consensus.misbehaviorRegistry = adapters.NewMisbehaviorRegistry()
 	consensus.offlinePopulation = adapters.NewOfflinePopulation(
 		dep.NodeKeeper,
 		dep.CertificateManager,
+		dep.KeyProcessor,
 	)
 	consensus.versionedRegistries = adapters.NewVersionedRegistries(
 		consensus.mandateRegistry,
 		consensus.misbehaviorRegistry,
 		consensus.offlinePopulation,
 	)
+	consensus.nodeProfileFactory = adapters.NewNodeProfileFactory(dep.KeyProcessor)
 	consensus.consensusChronicles = adapters.NewChronicles(
 		consensus.population,
+		consensus.nodeProfileFactory,
 		consensus.versionedRegistries,
 	)
 	consensus.localNodeConfiguration = adapters.NewLocalNodeConfiguration(
@@ -143,9 +153,9 @@ func New(ctx context.Context, dep Dep) Consensus {
 		dep.KeyStore,
 	)
 	consensus.upstreamPulseController = adapters.NewUpstreamPulseController(
-		dep.Stater,
+		dep.StateGetter,
 		dep.PulseChanger,
-		dep.NodeKeeper,
+		dep.StateUpdater,
 	)
 	consensus.roundStrategyFactory = adapters.NewRoundStrategyFactory()
 	consensus.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
@@ -169,13 +179,27 @@ func New(ctx context.Context, dep Dep) Consensus {
 			consensus.transportFactory,
 			consensus.roundStrategyFactory,
 		),
+		&core.SequencialCandidateFeeder{},
+		adapters.NewConsensusControlFeeder(),
 	)
 
 	consensus.verify()
 	return consensus
 }
 
-func (c *Consensus) Controller() core.ConsensusController {
+type packetProcessorSetter interface {
+	SetPacketProcessor(adapters.PacketProcessor)
+}
+
+type Controller interface {
+	// Leave
+	// SetPower
+}
+
+func (c Consensus) Install(setters ...packetProcessorSetter) Controller {
+	for _, setter := range setters {
+		setter.SetPacketProcessor(c.consensusController)
+	}
 	return c.consensusController
 }
 

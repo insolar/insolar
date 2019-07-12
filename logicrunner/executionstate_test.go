@@ -44,7 +44,7 @@ func InitBroker(_ *testing.T, ctx context.Context, count int, broker *ExecutionB
 		broker.Put(ctx, false, &Transcript{
 			LogicContext: &insolar.LogicCallContext{},
 			Context:      ctx,
-			RequestRef:   &reqRef,
+			RequestRef:   reqRef,
 			Request:      &record.IncomingRequest{},
 		})
 	}
@@ -87,7 +87,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 
 	list := NewCurrentExecutionList()
 	requestRef := gen.Reference()
-	list.SetTranscript(&Transcript{RequestRef: &requestRef})
+	list.SetTranscript(&Transcript{RequestRef: requestRef})
 
 	inPending := message.InPending
 

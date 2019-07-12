@@ -55,6 +55,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/network/consensus/common"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
@@ -120,16 +125,16 @@ func (c *Phase3Controller) HandleMemberPacket(ctx context.Context, reader packet
 		return err
 	}
 	bs := p3.GetBitset()
-	gshTrusted := p3.GetTrustedGsh()
-	gshDoubted := p3.GetDoubtedGsh()
 	// TODO ClaimHashes as well
 
 	c.queuePh3Recv <- ph3Data{
 		np: n,
 		vector: nodeset.HashedNodeVector{
-			Bitset:        bs,
-			DoubtedVector: gshDoubted,
-			TrustedVector: gshTrusted,
+			Bitset:                             bs,
+			TrustedAnnouncementVector:          p3.GetTrustedGlobulaAnnouncementHash(),
+			DoubtedAnnouncementVector:          p3.GetDoubtedGlobulaAnnouncementHash(),
+			TrustedGlobulaStateVectorSignature: p3.GetTrustedGlobulaStateSignature(),
+			DoubtedGlobulaStateVectorSignature: p3.GetDoubtedGlobulaStateSignature(),
 		},
 	}
 
@@ -153,17 +158,22 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 		// c.R.StopRoundByTimeout()
 		return
 	}
-	d := c.calcGshPair()
 
-	go c.workerSendPhase3(ctx, d)
+	vectorHelper := c.R.GetPopulation().SetOrUpdateVectorHelper(&core.RealmVectorHelper{})
+	localVector := nodeset.NewLocalNodeVector(c.R.GetDigestFactory(), vectorHelper)
 
-	if !c.workerRecvPhase3(ctx, d) {
-		// context was stopped in a hard way, we are dead in terms of consensus
-		// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
-		// c.R.StopRoundByTimeout()
+	d0 := c.calcLocalVector(&localVector)
+
+	go c.workerSendPhase3(ctx, d0.HashedNodeVector)
+
+	if !c.workerRecvPhase3(ctx, d0, &localVector) {
+		// context was stopped in a hard way or we have left a consensus
 		return
 	}
+	// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
+	// c.R.StopRoundByTimeout()
 
+	//avoid any links to controllers for this flusher
 	go workerQueueFlusher(ctxRound, c.queuePh3Recv, c.queueTrustUpdated)
 }
 
@@ -193,9 +203,9 @@ func workerQueueFlusher(ctxRound context.Context, q0 chan ph3Data, q1 <-chan Tru
 }
 
 func (c *Phase3Controller) workerPrePhase3(ctx context.Context) bool {
-	logger := c.R.Log()
+	log := inslogger.FromContext(ctx)
 
-	logger.Debug(">>>>workerPrePhase3: begin")
+	log.Debug(">>>>workerPrePhase3: begin")
 
 	timings := c.R.GetTimings()
 	startOfPhase3 := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
@@ -210,49 +220,51 @@ outer:
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Debug(">>>>workerPrePhase3: ctx.Done")
+			log.Debug(">>>>workerPrePhase3: ctx.Done")
 			return false // ctx.Err() ?
 		case <-chasingDelayTimer.Channel():
-			logger.Debug(">>>>workerPrePhase3: chaseExpired")
+			log.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
 		case <-startOfPhase3:
-			logger.Debug(">>>>workerPrePhase3: startOfPhase3")
+			log.Debug(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case sig := <-c.queueTrustUpdated:
 			if sig.IsPingSignal() { // ping indicates arrival of Phase2 packet, to support chasing
+				//TODO chasing
 				break
 			}
 			switch {
 			case sig.NewTrustLevel < 0:
 				countFraud++
 				continue // no chasing delay on fraud
-			case sig.NewTrustLevel == packets.UnknownTrust:
+			case sig.NewTrustLevel == common2.UnknownTrust:
 				countHasNsh++
 				// if countHasNsh >= R.othersCount {
 				// 	// we have answers from all
 				// 	break outer
 				// }
-			case sig.NewTrustLevel >= packets.TrustByNeighbors:
+			case sig.NewTrustLevel >= common2.TrustByNeighbors:
 				countTrustByNeighbors++
 				fallthrough
 			default:
 				countTrustBySome++
 
+				pop := c.R.GetPopulation()
 				// We have some-trusted from all nodes, and the majority of them are well-trusted
-				if countTrustBySome >= c.R.GetOthersCount() && countTrustByNeighbors >= c.R.GetBftMajorityCount() {
-					logger.Debug(">>>>workerPrePhase3: all")
+				if countTrustBySome >= pop.GetOthersCount() && countTrustByNeighbors >= pop.GetBftMajorityCount() {
+					log.Debug(">>>>workerPrePhase3: all")
 					break outer
 				}
 
 				if chasingDelayTimer.IsEnabled() {
 					// We have answers from all nodes, and the majority of them are well-trusted
-					if countHasNsh >= c.R.GetOthersCount() && countTrustByNeighbors >= c.R.GetBftMajorityCount() {
+					if countHasNsh >= pop.GetOthersCount() && countTrustByNeighbors >= pop.GetBftMajorityCount() {
 						chasingDelayTimer.RestartChase()
-						logger.Debug(">>>>workerPrePhase3: chaseStartedAll")
-					} else if countTrustBySome-countFraud >= c.R.GetBftMajorityCount() {
+						log.Debug(">>>>workerPrePhase3: chaseStartedAll")
+					} else if countTrustBySome-countFraud >= pop.GetBftMajorityCount() {
 						// We can start chasing-timeout after getting answers from majority of some-trusted nodes
 						chasingDelayTimer.RestartChase()
-						logger.Debug(">>>>workerPrePhase3: chaseStartedSome")
+						log.Debug(">>>>workerPrePhase3: chaseStartedSome")
 					}
 				}
 			}
@@ -263,7 +275,7 @@ outer:
 	for c.R.GetSelf().IsNshRequired() {
 		select {
 		case <-ctx.Done():
-			logger.Debug(">>>>workerPrePhase3: ctx.Done")
+			log.Debug(">>>>workerPrePhase3: ctx.Done")
 			return false // ctx.Err() ?
 		case <-c.queueTrustUpdated:
 		case <-time.After(loopingMinimalDelay):
@@ -272,70 +284,56 @@ outer:
 	return true
 }
 
-func (c *Phase3Controller) calcGshPair() nodeset.HashedNodeVector {
+func (c *Phase3Controller) calcLocalVector(localVector *nodeset.NodeVectorHelper) nodeset.LocalHashedNodeVector {
 
 	/*
 		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always
 		have trust level set high enough to get bitset[i].IsTrusted() == true
 	*/
-	aggTrusted := c.R.GetDigestFactory().GetGshDigester()
-	var aggDoubted common.SequenceDigester
 
-	bitset := make(nodeset.NodeBitset, c.R.GetNodeCount())
-	nodes := c.R.GetIndexedNodes()
-	for i := range nodes {
-		membership, trust := nodes[i].GetNodeMembershipAndTrust()
-		switch {
-		case membership.IsEmpty():
-			bitset[i] = nodeset.NbsTimeout
-			continue
-		case trust.IsNegative():
-			bitset[i] = nodeset.NbsFraud
-		case trust == packets.UnknownTrust:
-			bitset[i] = nodeset.NbsBaselineTrust
-		case trust < packets.TrustByNeighbors:
-			bitset[i] = nodeset.NbsLimitedTrust
-		default:
-			bitset[i] = nodeset.NbsHighTrust
-		}
-		if bitset[i].IsTrusted() {
-			aggTrusted.AddNext(membership.StateEvidence.GetNodeStateHash())
-			if aggDoubted == nil {
-				continue
-			}
-		} else if aggDoubted == nil {
-			aggDoubted = aggTrusted.ForkSequence()
-		}
-		aggDoubted.AddNext(membership.StateEvidence.GetNodeStateHash())
+	res := nodeset.LocalHashedNodeVector{}
+	res.Bitset = localVector.GetNodeBitset()
+	res.TrustedAnnouncementVector, res.DoubtedAnnouncementVector =
+		localVector.BuildGlobulaAnnouncementHashes(true, true, nil, nil)
+
+	duplicateDoubted := res.TrustedAnnouncementVector != nil && res.TrustedAnnouncementVector.Equals(res.DoubtedAnnouncementVector)
+	if duplicateDoubted {
+		res.DoubtedAnnouncementVector = nil
 	}
 
-	res := nodeset.HashedNodeVector{Bitset: bitset}
-	res.TrustedVector = aggTrusted.FinishSequence().AsDigestHolder()
-	if aggDoubted != nil {
-		res.DoubtedVector = aggDoubted.FinishSequence().AsDigestHolder()
+	res.TrustedGlobulaStateVector, res.DoubtedGlobulaStateVector = localVector.BuildGlobulaStateHashes(
+		true, !duplicateDoubted, nil, nil)
+
+	signer := c.R.GetSigner()
+	res.TrustedGlobulaStateVectorSignature = res.TrustedGlobulaStateVector.SignWith(signer).GetSignatureHolder()
+	if !duplicateDoubted {
+		res.DoubtedGlobulaStateVectorSignature = res.DoubtedGlobulaStateVector.SignWith(signer).GetSignatureHolder()
 	}
+
 	return res
 }
 
 func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData nodeset.HashedNodeVector) {
 
-	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.GetLocalProfile(), c.R.GetPulseData(),
-		selfData.Bitset, selfData.TrustedVector, selfData.DoubtedVector, c.packetPrepareOptions)
+	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
-	for _, np := range c.R.GetShuffledOtherNodes() {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
+	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.CreateLocalAnnouncement(), selfData,
+		c.packetPrepareOptions)
 
-		p3.SendTo(ctx, np.GetProfile(), 0, c.R.GetPacketSender())
-		np.SetSentByPacketType(c.GetPacketType())
-	}
+	p3.SendToMany(ctx, len(otherNodes), c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (common2.NodeProfile, core.PacketSendOptions) {
+			np := otherNodes[targetIdx]
+			np.SetSentByPacketType(c.GetPacketType())
+			return np.GetProfile(), 0
+		})
+
+	//TODO send to shuffled joiners as well?
 }
 
-func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodeset.HashedNodeVector) bool {
-	logger := c.R.Log()
+func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodeset.LocalHashedNodeVector,
+	localVector *nodeset.NodeVectorHelper) bool {
+
+	log := inslogger.FromContext(ctx)
 
 	timings := c.R.GetTimings()
 	softDeadline := time.After(c.R.AdjustedAfter(timings.EndOfPhase3))
@@ -344,58 +342,64 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodese
 	statTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
 	statTbl.PutRow(c.R.GetSelf().GetIndex(), selfData.Bitset.LocalToConsensusStatRow())
 
-	remainingNodes := c.R.GetOthersCount()
+	remainingNodes := c.R.GetPopulation().GetOthersCount()
 
 	// TODO detect nodes produced similar bitmaps, but different GSH
 	// even if we wont have all NSH, we can let to know these nodes on such collision
 	// bitsetMatcher := make(map[gcpv2.NodeBitset])
 
-	alteredDoubtedGshCount := 0
+	//hasher := nodeset.NewFilteredSequenceHasher(c.R.GetDigestFactory(), localVector)
 
-	hasher := nodeset.NewFilteredSequenceHasher(c.R.GetDigestFactory(), c.handleNodeHashing)
+	alteredDoubtedGshCount := 0
 	var consensusSelection ConsensusSelection
 
 outer:
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Debug("Phase3 cancelled")
+			log.Debug("Phase3 cancelled")
 			return false
 		case <-softDeadline:
-			logger.Debug("Phase3 deadline")
+			log.Debug("Phase3 deadline")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, true, c.R)
 			break outer
 		case <-chasingDelayTimer.Channel():
-			logger.Debug("Phase3 chasing expired")
+			log.Debug("Phase3 chasing expired")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, true, c.R)
 			break outer
 		case d := <-c.queuePh3Recv:
 			nodeStats := statTbl.NewRow()
 
-			logger.Debugf(
-				"\n%v\n%v\n%v\n%v\n",
-				selfData.Bitset,
-				d.vector.Bitset,
-				selfData.Bitset.CompareToStatRow(d.vector.Bitset), // TODO: ugly. pass it to ClassifyByNodeGsh?
-				nodeStats,
-			)
-			vr := nodeset.ClassifyByNodeGsh(selfData, d.vector, nodeStats, hasher)
+			if log.Is(insolar.DebugLevel) {
+				log.Debugf(
+					"\n%v\n%v\n%v\n%v\n",
+					selfData.Bitset,
+					d.vector.Bitset,
+					selfData.Bitset.CompareToStatRow(d.vector.Bitset), // TODO: ugly. pass it to ClassifyByNodeGsh?
+					nodeStats,
+				)
+			}
+
+			nodeVector := localVector.CreateDerivedVector(d.np.GetSignatureVerifier(c.R.GetVerifierFactory()))
+			vr := nodeset.ClassifyByNodeGsh(selfData, d.vector, nodeStats, &nodeVector)
 
 			logMsg := "add"
 			if nodeStats.HasAllValues(0) {
 				logMsg = "missed"
 			}
 
-			logger.Debugf(
-				"%s: s:%v, t:%v, %d, %d, %d: %v",
-				logMsg,
-				d.np.GetShortNodeID(),
-				c.R.GetSelf().GetShortNodeID(),
-				d.np.GetIndex(),
-				remainingNodes,
-				vr,
-				nodeStats,
-			)
+			if log.Is(insolar.DebugLevel) {
+				log.Debugf(
+					"%s: s:%v, t:%v, %d, %d, %d: %v",
+					logMsg,
+					d.np.GetShortNodeID(),
+					c.R.GetSelf().GetShortNodeID(),
+					d.np.GetIndex(),
+					remainingNodes,
+					vr,
+					nodeStats,
+				)
+			}
 
 			statTbl.PutRow(d.np.GetIndex(), nodeStats)
 			remainingNodes--
@@ -406,29 +410,28 @@ outer:
 
 			if remainingNodes <= 0 {
 				consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, false, c.R)
-				logger.Debug("Phase3 done all")
+				log.Debug("Phase3 done all")
 				break outer
-			} else {
-				consensusSelection = c.consensusStrategy.TrySelectOnAdded(&statTbl, d.np.GetProfile(), nodeStats, c.R)
-				if consensusSelection == nil {
-					continue
-				}
-				if chasingDelayTimer.IsEnabled() && consensusSelection.CanBeImproved() {
-					logger.Debug("Phase3 (re)start chasing")
-					chasingDelayTimer.RestartChase()
-				} else {
-					logger.Debug("Phase3 done strategy")
-					break outer
-				}
 			}
+
+			consensusSelection = c.consensusStrategy.TrySelectOnAdded(&statTbl, d.np.GetProfile(), nodeStats, c.R)
+			if consensusSelection == nil {
+				continue
+			}
+			if chasingDelayTimer.IsEnabled() && consensusSelection.CanBeImproved() {
+				log.Debug("Phase3 (re)start chasing")
+				chasingDelayTimer.RestartChase()
+				continue
+			}
+			log.Debug("Phase3 done by strategy")
+			break outer
 		}
 	}
 
-	// TODO do table generation only when it is needed for logging
-	// if c.R.Log().IsInfo() {
-	tblHeader := fmt.Sprintf("Consensus Node View: %v", c.R.GetSelfNodeID())
-	logger.Debug(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
-	// }
+	if log.Is(insolar.DebugLevel) {
+		tblHeader := fmt.Sprintf("Consensus Node View: %v", c.R.GetSelfNodeID())
+		log.Warn(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
+	}
 
 	if consensusSelection == nil {
 		panic("illegal state")
@@ -445,23 +448,67 @@ outer:
 	}
 
 	if sameWithActive {
-		logger.Infof("Consensus is finished as same")
+		selectionSet = nil
+		log.Info("Consensus is finished as same")
 	} else {
-		logger.Infof("Consensus is finished as different, %v", selectionSet)
+		log.Infof("Consensus is finished as different, %v", selectionSet)
 		// TODO update population and/or start Phase 4
 	}
 
-	b := c.R.CreateNextPopulationBuilder()
-	priming := c.R.GetPrimingCloudHash()
-	// population is to be updated somewhere here
-	b.SetGlobulaStateHash(priming)
-	b.SealCensus()
-	c.R.FinishRound(b, priming)
-
-	return true
+	b := c.R.CreateNextCensusBuilder()
+	if c.buildNextPopulation(b.GetPopulationBuilder(), selectionSet) {
+		//TODO HACK
+		priming := c.R.GetPrimingCloudHash()
+		b.SetGlobulaStateHash(priming)
+		b.SealCensus()
+		c.R.FinishRound(b, priming)
+		return true
+	}
+	log.Info("Node has left")
+	c.R.FinishRound(b, nil)
+	return false
 }
 
-func (c *Phase3Controller) handleNodeHashing(index int, digester common.SequenceDigester) {
-	nsh := c.R.GetNodeAppearanceByIndex(index).GetNodeMembershipProfile().StateEvidence.GetNodeStateHash()
-	digester.AddNext(nsh)
+func (c *Phase3Controller) buildNextPopulation(pb census.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
+
+	//pop := c.R.GetPopulation()
+	//count := 0
+	//for _, na := pop.GetIndexedNodes() {
+	//
+	//}
+	//
+	//for
+	//
+	//if isLeaver, leaveReason, _, _, _ := c.R.GetSelf().GetRequestedState(); isLeaver {
+	//	//we are leaving, no need to build population, but lets make it look nice
+	//	pb.RemoveOthers()
+	//	lp := pb.GetLocalProfile()
+	//	lp.SetIndex(0)
+	//	lp.SetOpModeAndLeaveReason(leaveReason)
+	//	return false
+	//}
+	//
+	//
+	////if pb.GetLocalProfile().GetOpMode().IsEvicted() /* TODO and local is still evicted */ {
+	////	//this node was evicted, so we can have a consensus with ourselves
+	////	pb.RemoveOthers()
+	////	return
+	////}
+	//
+	//pop := c.R.GetPopulation()
+	//for _, np := range pb.GetUnorderedProfiles() {
+	//	opm := np.GetOpMode()
+	//	if np.IsJoiner() || opm.IsEvicted() { panic("illegal state") }
+	//
+	//	idx := np.GetIndex()
+	//	//TODO if nodeset.
+	//
+	//	na := pop.GetNodeAppearanceByIndex(idx)
+	//	//TODO MUST use cached vector values
+	//	isLeaver, _, _, _, _ := na.GetRequestedState()
+	//	if isLeaver {
+	//		np.SetOpMode(common2.MemberModeEvictedGracefully)
+	//	}
+	//}
+	return true
 }

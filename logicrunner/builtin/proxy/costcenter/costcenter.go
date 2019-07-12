@@ -105,7 +105,7 @@ func (r *CostCenter) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -135,7 +135,7 @@ func (r *CostCenter) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -171,7 +171,7 @@ func (r *CostCenter) SetTariffs(tariffs []insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "SetTariffs", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "SetTariffs", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func (r *CostCenter) SetTariffsNoWait(tariffs []insolar.Reference) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "SetTariffs", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "SetTariffs", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func (r *CostCenter) SetTariffsAsImmutable(tariffs []insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "SetTariffs", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "SetTariffs", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (r *CostCenter) GetTariffs() ([]insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetTariffs", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetTariffs", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -283,7 +283,7 @@ func (r *CostCenter) GetTariffsNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetTariffs", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetTariffs", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -308,7 +308,7 @@ func (r *CostCenter) GetTariffsAsImmutable() ([]insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetTariffs", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetTariffs", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -340,7 +340,7 @@ func (r *CostCenter) SetCurrentTariff(currentTariff insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "SetCurrentTariff", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "SetCurrentTariff", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -368,7 +368,7 @@ func (r *CostCenter) SetCurrentTariffNoWait(currentTariff insolar.Reference) err
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "SetCurrentTariff", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "SetCurrentTariff", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -392,7 +392,7 @@ func (r *CostCenter) SetCurrentTariffAsImmutable(currentTariff insolar.Reference
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "SetCurrentTariff", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "SetCurrentTariff", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -425,7 +425,7 @@ func (r *CostCenter) GetCurrentTariff() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCurrentTariff", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCurrentTariff", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -452,7 +452,7 @@ func (r *CostCenter) GetCurrentTariffNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetCurrentTariff", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetCurrentTariff", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -477,7 +477,7 @@ func (r *CostCenter) GetCurrentTariffAsImmutable() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetCurrentTariff", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetCurrentTariff", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

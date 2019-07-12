@@ -156,7 +156,7 @@ func TestValidationProxyImplementation_RouteCall(t *testing.T) {
 			transcript: &Transcript{
 				LogicContext: &insolar.LogicCallContext{},
 				Request:      &record.IncomingRequest{},
-				RequestRef:   &reqRef1,
+				RequestRef:   reqRef1,
 				OutgoingRequests: []OutgoingRequest{
 					{
 						Request: record.IncomingRequest{

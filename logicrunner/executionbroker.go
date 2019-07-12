@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -120,9 +121,13 @@ func (d *TranscriptDequeue) PopByReference(ref insolar.Reference) *Transcript {
 		if elem.value.RequestRef.Compare(ref) == 0 {
 			if elem.prev != nil {
 				elem.prev.next = elem.next
+			} else {
+				d.first = elem.next
 			}
 			if elem.next != nil {
 				elem.next.prev = elem.prev
+			} else {
+				d.last = elem.prev
 			}
 
 			d.length--
@@ -265,7 +270,7 @@ type ExecutionBrokerRotationResult struct {
 }
 
 func (q *ExecutionBroker) checkCurrent(_ context.Context, transcript *Transcript) {
-	if q.currentList.Has(*transcript.RequestRef) {
+	if q.currentList.Has(transcript.RequestRef) {
 		panic(fmt.Sprintf("requestRef %s is already in currentList", transcript.RequestRef.String()))
 	}
 }
@@ -310,10 +315,10 @@ func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript)
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	if !q.currentList.Has(*transcript.RequestRef) {
+	if !q.currentList.Has(transcript.RequestRef) {
 		return
 	}
-	q.currentList.Delete(*transcript.RequestRef)
+	q.currentList.Delete(transcript.RequestRef)
 
 	queue := q.mutable
 	if transcript.Request.Immutable {
@@ -331,14 +336,20 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript
 
 	q.finished.Push(transcript)
 
-	if !q.currentList.Has(*transcript.RequestRef) {
+	if !q.currentList.Has(transcript.RequestRef) {
 		logger.Error("[ ExecutionBroker.FinishTask ] task '%s' is not in current", transcript.RequestRef.String())
 	} else {
-		q.currentList.Delete(*transcript.RequestRef)
+		q.currentList.Delete(transcript.RequestRef)
 	}
 }
 
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) bool {
+	if transcript.Context != nil {
+		ctx = transcript.Context
+	} else {
+		inslogger.FromContext(ctx).Error("context in transcript is nil")
+	}
+
 	defer q.releaseTask(ctx, transcript)
 
 	if readyToExecute := q.Check(ctx); !readyToExecute {
@@ -354,10 +365,10 @@ func (q *ExecutionBroker) storeWithoutDuplication(_ context.Context, transcript 
 	q.deduplicationLock.Lock()
 	defer q.deduplicationLock.Unlock()
 
-	if _, ok := q.deduplicationTable[*transcript.RequestRef]; ok {
+	if _, ok := q.deduplicationTable[transcript.RequestRef]; ok {
 		return true
 	}
-	q.deduplicationTable[*transcript.RequestRef] = true
+	q.deduplicationTable[transcript.RequestRef] = true
 	return false
 }
 
@@ -545,14 +556,16 @@ func (q *ExecutionBroker) checkLedgerPendingRequests(ctx context.Context, transc
 func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
 	q.checkLedgerPendingRequests(ctx, nil)
 
+	logger := inslogger.FromContext(ctx)
+
 	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
-		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
+		logger.Warn("contract execution error: ", err)
 	}
 
 	q.finishTask(ctx, transcript) // TODO: hack for now, later that function need to be splitted
 
-	go q.requestsExecutor.SendReply(transcript.Context, transcript, reply, err)
+	go q.requestsExecutor.SendReply(ctx, transcript, reply, err)
 
 	q.checkLedgerPendingRequests(ctx, transcript)
 

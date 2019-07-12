@@ -183,7 +183,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 
 	response, err := sdk.DoRequest(
 		userConfig,
-		"contract.createMember",
+		"member.create",
 		map[string]interface{}{},
 	)
 	if err != nil {
