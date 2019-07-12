@@ -276,7 +276,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return n.cm.Stop(ctx)
 }
 
-func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse) {
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse, _ network.ReceivedPacket) {
 	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
 	logger := inslogger.FromContext(ctx)
 
@@ -335,7 +335,7 @@ func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse
 	}
 
 	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
+	err := n.PulseManager.Set(ctx, newPulse)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}

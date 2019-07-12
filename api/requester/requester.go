@@ -119,7 +119,7 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 	}
 
 	if postResp == nil {
-		return nil, errors.New("[ GetResponseBodyContract ] Reponse is nil")
+		return nil, errors.New("[ GetResponseBodyContract ] Response is nil")
 	}
 
 	defer postResp.Body.Close()
@@ -153,7 +153,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 	}
 
 	if postResp == nil {
-		return nil, errors.New("[ GetResponseBodyPlatform ] Reponse is nil")
+		return nil, errors.New("[ GetResponseBodyPlatform ] Response is nil")
 	}
 
 	defer postResp.Body.Close()

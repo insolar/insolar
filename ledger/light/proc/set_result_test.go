@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package proc
+package proc_test
 
 import (
 	"context"
@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
@@ -81,11 +82,8 @@ func TestSetResult_Proceed(t *testing.T) {
 	}
 
 	// Pendings limit not reached.
-	setResultProc := NewSetResult(msg, *res, id, jetID)
-	setResultProc.dep.writer = writeAccessor
-	setResultProc.dep.sender = sender
-	setResultProc.dep.locker = object.NewIndexLocker()
-	setResultProc.dep.filament = filamentModifier
+	setResultProc := proc.NewSetResult(msg, *res, id, jetID)
+	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filamentModifier)
 
 	err = setResultProc.Proceed(ctx)
 	require.NoError(t, err)

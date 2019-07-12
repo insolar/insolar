@@ -132,15 +132,28 @@ func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 
 // AddNewMemberToMaps adds new member to PublicKeyMap and BurnAddressMap.
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
-	if _, ok := rd.PublicKeyMap[trimPublicKey(publicKey)]; ok {
+	trimPublicKey := trimPublicKey(publicKey)
+	if _, ok := rd.PublicKeyMap[trimPublicKey]; ok {
 		return fmt.Errorf("member for this publicKey already exist")
 	}
-	rd.PublicKeyMap[trimPublicKey(publicKey)] = memberRef
+	rd.PublicKeyMap[trimPublicKey] = memberRef
 
-	if _, ok := rd.PublicKeyMap[trimPublicKey(burnAddress)]; ok {
+	trimBurnAddress := trimBurnAddress(burnAddress)
+	if _, ok := rd.BurnAddressMap[trimBurnAddress]; ok {
 		return fmt.Errorf("member for this burnAddress already exist")
 	}
-	rd.BurnAddressMap[trimBurnAddress(burnAddress)] = memberRef
+	rd.BurnAddressMap[trimBurnAddress] = memberRef
+
+	return nil
+}
+
+// AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
+func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
+	trimPublicKey := trimPublicKey(publicKey)
+	if _, ok := rd.PublicKeyMap[trimPublicKey]; ok {
+		return fmt.Errorf("member for this publicKey already exist")
+	}
+	rd.PublicKeyMap[trimPublicKey] = memberRef
 
 	return nil
 }

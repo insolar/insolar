@@ -20,9 +20,9 @@ import (
 	"context"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
@@ -38,7 +38,9 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	defer span.End()
 
 	lr := p.dep.lr
-	es := lr.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
+	ref := Ref{}.FromSlice(p.Message.Payload)
+
+	es, broker := lr.StateStorage.GetExecutionState(ref)
 	if es == nil {
 		return nil
 	}
@@ -48,6 +50,7 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 
 	proc := &UnsafeGetLedgerPendingRequest{
 		es:         es,
+		broker:     broker,
 		dep:        p.dep,
 		hasPending: false,
 	}
@@ -62,23 +65,24 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 		return nil
 	}
 
-	// insolarRef := Ref{}.FromSlice(p.Message.Payload)
-	es.Broker.StartProcessorIfNeeded(ctx)
+	broker.StartProcessorIfNeeded(ctx)
 	return nil
 }
 
 type UnsafeGetLedgerPendingRequest struct {
 	dep        *Dependencies
 	es         *ExecutionState
+	broker     *ExecutionBroker
 	hasPending bool
 }
 
 func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	es := u.es
 	lr := u.dep.lr
+	broker := u.broker
 
 	es.Lock()
-	if es.Broker.HasLedgerRequest(ctx) != nil || !es.LedgerHasMoreRequests {
+	if broker.HasLedgerRequest(ctx) != nil || !es.LedgerHasMoreRequests {
 		es.Unlock()
 		return nil
 	}
@@ -86,7 +90,7 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 
 	id := *es.Ref.Record()
 
-	requestRef, parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	requestRef, request, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
 		if err != insolar.ErrNoPendingRequest {
 			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
@@ -107,10 +111,6 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	}
 	es.Lock()
 	defer es.Unlock()
-
-	msg := parcel.Message().(*message.CallMethod)
-
-	parcel.SetSender(msg.IncomingRequest.Sender)
 
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(
@@ -136,13 +136,9 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	u.hasPending = true
 	es.LedgerHasMoreRequests = true
 
-	if es.CurrentList.Has(*requestRef) {
-		return nil
-	}
-
-	t := NewTranscript(ctx, parcel, requestRef, lr.pulse(ctx), es.Ref)
+	t := NewTranscript(ctx, *requestRef, *request)
 	t.FromLedger = true
-	es.Broker.Prepend(ctx, true, t)
+	broker.Prepend(ctx, true, t)
 
 	return nil
 }

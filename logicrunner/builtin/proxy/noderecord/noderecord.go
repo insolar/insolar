@@ -110,7 +110,7 @@ func (r *NodeRecord) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -140,7 +140,7 @@ func (r *NodeRecord) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -177,7 +177,7 @@ func (r *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetNodeInfo", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetNodeInfo", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -204,7 +204,7 @@ func (r *NodeRecord) GetNodeInfoNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetNodeInfo", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetNodeInfo", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -229,7 +229,7 @@ func (r *NodeRecord) GetNodeInfoAsImmutable() (RecordInfo, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetNodeInfo", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetNodeInfo", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -262,7 +262,7 @@ func (r *NodeRecord) GetPublicKey() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPublicKey", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -289,7 +289,7 @@ func (r *NodeRecord) GetPublicKeyNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetPublicKey", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -314,7 +314,7 @@ func (r *NodeRecord) GetPublicKeyAsImmutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetPublicKey", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -347,7 +347,7 @@ func (r *NodeRecord) GetRole() (insolar.StaticRole, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetRole", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetRole", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -374,7 +374,7 @@ func (r *NodeRecord) GetRoleNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetRole", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetRole", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -399,7 +399,7 @@ func (r *NodeRecord) GetRoleAsImmutable() (insolar.StaticRole, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetRole", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetRole", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -430,7 +430,7 @@ func (r *NodeRecord) Destroy() error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Destroy", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Destroy", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -457,7 +457,7 @@ func (r *NodeRecord) DestroyNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Destroy", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Destroy", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -480,7 +480,7 @@ func (r *NodeRecord) DestroyAsImmutable() error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Destroy", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Destroy", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

@@ -115,7 +115,7 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 			p.Dep.Sender = h.Sender
 		},
-		GetIndexWM: func(p *proc.EnsureIndexWM) {
+		EnsureIndex: func(p *proc.EnsureIndexWM) {
 			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.IndexAccessor = h.IndexStorage
 			p.Dep.IndexLocker = h.IndexLocker
@@ -132,20 +132,42 @@ func NewMessageHandler(
 				h.IndexLocker,
 			)
 		},
-		SetActivationRequest: func(p *proc.SetActivationRequest) {
-			p.Dep(
-				h.PCS,
-				h.WriteAccessor,
-				h.Records,
-				h.Sender,
-			)
-		},
 		SetResult: func(p *proc.SetResult) {
 			p.Dep(
 				h.WriteAccessor,
 				h.Sender,
 				h.IndexLocker,
 				h.filamentModifier,
+			)
+		},
+		ActivateObject: func(p *proc.ActivateObject) {
+			p.Dep(
+				h.WriteAccessor,
+				h.IndexLocker,
+				h.Records,
+				h.IndexStorage,
+				h.filamentModifier,
+				h.Sender,
+			)
+		},
+		DeactivateObject: func(p *proc.DeactivateObject) {
+			p.Dep(
+				h.WriteAccessor,
+				h.IndexLocker,
+				h.Records,
+				h.IndexStorage,
+				h.filamentModifier,
+				h.Sender,
+			)
+		},
+		UpdateObject: func(p *proc.UpdateObject) {
+			p.Dep(
+				h.WriteAccessor,
+				h.IndexLocker,
+				h.Records,
+				h.IndexStorage,
+				h.filamentModifier,
+				h.Sender,
 			)
 		},
 		SetBlob: func(p *proc.SetBlob) {
@@ -172,18 +194,6 @@ func NewMessageHandler(
 		},
 		GetRequest: func(p *proc.GetRequest) {
 			p.Dep.RecordAccessor = h.Records
-		},
-		UpdateObject: func(p *proc.UpdateObject) {
-			p.Dep.RecordModifier = h.Records
-			p.Dep.Bus = h.Bus
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PCS = h.PCS
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.WriteAccessor = h.WriteAccessor
-			p.Dep.Filaments = h.filamentModifier
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.IndexLocker = h.IndexLocker
@@ -266,6 +276,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 		h.Records,
 		h.PCS,
 		h.filamentCalculator,
+		h.PulseCalculator,
 	)
 	h.setHandlersForLight()
 

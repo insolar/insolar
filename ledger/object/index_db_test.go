@@ -17,16 +17,99 @@
 package object
 
 import (
+	"context"
+	"io/ioutil"
+	"math/rand"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestIndexKey(t *testing.T) {
+	t.Parallel()
+
+	testPulseNumber := insolar.GenesisPulse.PulseNumber
+	expectedKey := indexKey{objID: testutils.RandomID(), pn: testPulseNumber}
+
+	rawID := expectedKey.ID()
+
+	actualKey := newIndexKey(rawID)
+	require.Equal(t, expectedKey, actualKey)
+}
+
+func TestIndexDB_TruncateHead(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	dbMock, err := store.NewBadgerDB(tmpdir)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
+
+	indexStore := NewIndexDB(dbMock)
+
+	numElements := 400
+
+	// it's used for writing pulses in random order to db
+	indexes := make([]int, numElements)
+	for i := 0; i < numElements; i++ {
+		indexes[i] = i
+	}
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(indexes), func(i, j int) { indexes[i], indexes[j] = indexes[j], indexes[i] })
+
+	startPulseNumber := insolar.GenesisPulse.PulseNumber
+	objects := make([]insolar.ID, numElements)
+	for _, idx := range indexes {
+		pulse := startPulseNumber + insolar.PulseNumber(idx)
+		objects[idx] = gen.ID()
+
+		bucket := FilamentIndex{}
+
+		bucket.ObjID = objects[idx]
+		indexStore.SetIndex(ctx, pulse, bucket)
+
+		for i := 0; i < 5; i++ {
+			bucket := FilamentIndex{}
+
+			bucket.ObjID = gen.ID()
+			indexStore.SetIndex(ctx, pulse, bucket)
+		}
+
+		require.NoError(t, err)
+	}
+
+	for i := 0; i < numElements; i++ {
+		_, err := indexStore.ForID(ctx, startPulseNumber+insolar.PulseNumber(i), objects[i])
+		require.NoError(t, err)
+	}
+
+	numLeftElements := numElements / 2
+	err = indexStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
+	require.NoError(t, err)
+
+	for i := 0; i < numLeftElements; i++ {
+		_, err := indexStore.ForID(ctx, startPulseNumber+insolar.PulseNumber(i), objects[i])
+		require.NoError(t, err)
+	}
+
+	for i := numElements - 1; i >= numLeftElements; i-- {
+		_, err := indexStore.ForID(ctx, startPulseNumber+insolar.PulseNumber(i), objects[i])
+		require.EqualError(t, err, ErrIndexNotFound.Error())
+	}
+}
 
 func TestDBIndexStorage_ForID(t *testing.T) {
 	t.Parallel()
@@ -38,10 +121,17 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 	t.Run("returns error when no index-value for id", func(t *testing.T) {
 		t.Parallel()
 
-		storage := NewIndexDB(store.NewMemoryMockDB())
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		storage := NewIndexDB(db)
 		pn := gen.PulseNumber()
 
-		_, err := storage.ForID(ctx, pn, id)
+		_, err = storage.ForID(ctx, pn, id)
 
 		assert.Equal(t, ErrIndexNotFound, err)
 	})
@@ -53,21 +143,26 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	objID := gen.ID()
 	lflID := gen.ID()
-	jetID := gen.JetID()
 	buck := FilamentIndex{
 		ObjID: objID,
 		Lifeline: Lifeline{
 			LatestState: &lflID,
-			JetID:       jetID,
 			Delegates:   []LifelineDelegate{},
 		},
 	}
 
 	t.Run("saves correct bucket", func(t *testing.T) {
 		pn := gen.PulseNumber()
-		index := NewIndexDB(store.NewMemoryMockDB())
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
 
-		err := index.SetIndex(ctx, pn, buck)
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		index := NewIndexDB(db)
+
+		err = index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
 
 		res, err := index.ForID(ctx, pn, objID)
@@ -81,18 +176,23 @@ func TestDBIndex_SetBucket(t *testing.T) {
 
 	t.Run("re-save works fine", func(t *testing.T) {
 		pn := gen.PulseNumber()
-		index := NewIndexDB(store.NewMemoryMockDB())
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
 
-		err := index.SetIndex(ctx, pn, buck)
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		index := NewIndexDB(db)
+
+		err = index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
-		sJetID := gen.JetID()
 		sBuck := FilamentIndex{
 			ObjID: objID,
 			Lifeline: Lifeline{
 				LatestState: &sLlflID,
-				JetID:       sJetID,
 				Delegates:   []LifelineDelegate{},
 			},
 		}
@@ -112,7 +212,13 @@ func TestDBIndex_SetBucket(t *testing.T) {
 
 func TestIndexDB_FetchFilament(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
 	recordStorage := NewRecordDB(db)
 	index := NewIndexDB(db)
 
@@ -160,7 +266,13 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	firstMeta := *insolar.NewID(11, nil)
 
 	t.Run("previous exists", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
 		index := NewIndexDB(db)
 
@@ -184,7 +296,13 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	})
 
 	t.Run("previous doesn't exist", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
 		index := NewIndexDB(db)
 
@@ -204,7 +322,13 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	})
 
 	t.Run("doesn't exist", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
 		fi := &FilamentIndex{
@@ -222,7 +346,13 @@ func TestIndexDB_Records(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	t.Run("returns err, if readUntil > readFrom", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
 		res, err := index.Records(ctx, 1, 10, insolar.ID{})
@@ -232,7 +362,13 @@ func TestIndexDB_Records(t *testing.T) {
 	})
 
 	t.Run("works fine", func(t *testing.T) {
-		db := store.NewMemoryMockDB()
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 		rms := NewRecordDB(db)
 
@@ -278,7 +414,7 @@ func TestIndexDB_Records(t *testing.T) {
 		second := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*midS}}
 		first := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*mid}}
 
-		err := index.SetIndex(ctx, pn, first)
+		err = index.SetIndex(ctx, pn, first)
 		require.NoError(t, err)
 		err = index.SetIndex(ctx, pnS, second)
 		require.NoError(t, err)

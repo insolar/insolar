@@ -39,6 +39,11 @@ type ContractRequesterMock struct {
 	SendRequestCounter    uint64
 	SendRequestPreCounter uint64
 	SendRequestMock       mContractRequesterMockSendRequest
+
+	SendRequestWithPulseFunc       func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}, p4 insolar.PulseNumber) (r insolar.Reply, r1 error)
+	SendRequestWithPulseCounter    uint64
+	SendRequestWithPulsePreCounter uint64
+	SendRequestWithPulseMock       mContractRequesterMockSendRequestWithPulse
 }
 
 //NewContractRequesterMock returns a mock for github.com/insolar/insolar/insolar.ContractRequester
@@ -53,6 +58,7 @@ func NewContractRequesterMock(t minimock.Tester) *ContractRequesterMock {
 	m.CallConstructorMock = mContractRequesterMockCallConstructor{mock: m}
 	m.CallMethodMock = mContractRequesterMockCallMethod{mock: m}
 	m.SendRequestMock = mContractRequesterMockSendRequest{mock: m}
+	m.SendRequestWithPulseMock = mContractRequesterMockSendRequestWithPulse{mock: m}
 
 	return m
 }
@@ -663,6 +669,160 @@ func (m *ContractRequesterMock) SendRequestFinished() bool {
 	return true
 }
 
+type mContractRequesterMockSendRequestWithPulse struct {
+	mock              *ContractRequesterMock
+	mainExpectation   *ContractRequesterMockSendRequestWithPulseExpectation
+	expectationSeries []*ContractRequesterMockSendRequestWithPulseExpectation
+}
+
+type ContractRequesterMockSendRequestWithPulseExpectation struct {
+	input  *ContractRequesterMockSendRequestWithPulseInput
+	result *ContractRequesterMockSendRequestWithPulseResult
+}
+
+type ContractRequesterMockSendRequestWithPulseInput struct {
+	p  context.Context
+	p1 *insolar.Reference
+	p2 string
+	p3 []interface{}
+	p4 insolar.PulseNumber
+}
+
+type ContractRequesterMockSendRequestWithPulseResult struct {
+	r  insolar.Reply
+	r1 error
+}
+
+//Expect specifies that invocation of ContractRequester.SendRequestWithPulse is expected from 1 to Infinity times
+func (m *mContractRequesterMockSendRequestWithPulse) Expect(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}, p4 insolar.PulseNumber) *mContractRequesterMockSendRequestWithPulse {
+	m.mock.SendRequestWithPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ContractRequesterMockSendRequestWithPulseExpectation{}
+	}
+	m.mainExpectation.input = &ContractRequesterMockSendRequestWithPulseInput{p, p1, p2, p3, p4}
+	return m
+}
+
+//Return specifies results of invocation of ContractRequester.SendRequestWithPulse
+func (m *mContractRequesterMockSendRequestWithPulse) Return(r insolar.Reply, r1 error) *ContractRequesterMock {
+	m.mock.SendRequestWithPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ContractRequesterMockSendRequestWithPulseExpectation{}
+	}
+	m.mainExpectation.result = &ContractRequesterMockSendRequestWithPulseResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ContractRequester.SendRequestWithPulse is expected once
+func (m *mContractRequesterMockSendRequestWithPulse) ExpectOnce(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}, p4 insolar.PulseNumber) *ContractRequesterMockSendRequestWithPulseExpectation {
+	m.mock.SendRequestWithPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ContractRequesterMockSendRequestWithPulseExpectation{}
+	expectation.input = &ContractRequesterMockSendRequestWithPulseInput{p, p1, p2, p3, p4}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ContractRequesterMockSendRequestWithPulseExpectation) Return(r insolar.Reply, r1 error) {
+	e.result = &ContractRequesterMockSendRequestWithPulseResult{r, r1}
+}
+
+//Set uses given function f as a mock of ContractRequester.SendRequestWithPulse method
+func (m *mContractRequesterMockSendRequestWithPulse) Set(f func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}, p4 insolar.PulseNumber) (r insolar.Reply, r1 error)) *ContractRequesterMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SendRequestWithPulseFunc = f
+	return m.mock
+}
+
+//SendRequestWithPulse implements github.com/insolar/insolar/insolar.ContractRequester interface
+func (m *ContractRequesterMock) SendRequestWithPulse(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}, p4 insolar.PulseNumber) (r insolar.Reply, r1 error) {
+	counter := atomic.AddUint64(&m.SendRequestWithPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.SendRequestWithPulseCounter, 1)
+
+	if len(m.SendRequestWithPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SendRequestWithPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequestWithPulse. %v %v %v %v %v", p, p1, p2, p3, p4)
+			return
+		}
+
+		input := m.SendRequestWithPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ContractRequesterMockSendRequestWithPulseInput{p, p1, p2, p3, p4}, "ContractRequester.SendRequestWithPulse got unexpected parameters")
+
+		result := m.SendRequestWithPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ContractRequesterMock.SendRequestWithPulse")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.SendRequestWithPulseMock.mainExpectation != nil {
+
+		input := m.SendRequestWithPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ContractRequesterMockSendRequestWithPulseInput{p, p1, p2, p3, p4}, "ContractRequester.SendRequestWithPulse got unexpected parameters")
+		}
+
+		result := m.SendRequestWithPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ContractRequesterMock.SendRequestWithPulse")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.SendRequestWithPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequestWithPulse. %v %v %v %v %v", p, p1, p2, p3, p4)
+		return
+	}
+
+	return m.SendRequestWithPulseFunc(p, p1, p2, p3, p4)
+}
+
+//SendRequestWithPulseMinimockCounter returns a count of ContractRequesterMock.SendRequestWithPulseFunc invocations
+func (m *ContractRequesterMock) SendRequestWithPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SendRequestWithPulseCounter)
+}
+
+//SendRequestWithPulseMinimockPreCounter returns the value of ContractRequesterMock.SendRequestWithPulse invocations
+func (m *ContractRequesterMock) SendRequestWithPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SendRequestWithPulsePreCounter)
+}
+
+//SendRequestWithPulseFinished returns true if mock invocations count is ok
+func (m *ContractRequesterMock) SendRequestWithPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SendRequestWithPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SendRequestWithPulseCounter) == uint64(len(m.SendRequestWithPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SendRequestWithPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SendRequestWithPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SendRequestWithPulseFunc != nil {
+		return atomic.LoadUint64(&m.SendRequestWithPulseCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ContractRequesterMock) ValidateCallCounters() {
@@ -681,6 +841,10 @@ func (m *ContractRequesterMock) ValidateCallCounters() {
 
 	if !m.SendRequestFinished() {
 		m.t.Fatal("Expected call to ContractRequesterMock.SendRequest")
+	}
+
+	if !m.SendRequestWithPulseFinished() {
+		m.t.Fatal("Expected call to ContractRequesterMock.SendRequestWithPulse")
 	}
 
 }
@@ -716,6 +880,10 @@ func (m *ContractRequesterMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ContractRequesterMock.SendRequest")
 	}
 
+	if !m.SendRequestWithPulseFinished() {
+		m.t.Fatal("Expected call to ContractRequesterMock.SendRequestWithPulse")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -734,6 +902,7 @@ func (m *ContractRequesterMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.CallConstructorFinished()
 		ok = ok && m.CallMethodFinished()
 		ok = ok && m.SendRequestFinished()
+		ok = ok && m.SendRequestWithPulseFinished()
 
 		if ok {
 			return
@@ -756,6 +925,10 @@ func (m *ContractRequesterMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SendRequestFinished() {
 				m.t.Error("Expected call to ContractRequesterMock.SendRequest")
+			}
+
+			if !m.SendRequestWithPulseFinished() {
+				m.t.Error("Expected call to ContractRequesterMock.SendRequestWithPulse")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -783,6 +956,10 @@ func (m *ContractRequesterMock) AllMocksCalled() bool {
 	}
 
 	if !m.SendRequestFinished() {
+		return false
+	}
+
+	if !m.SendRequestWithPulseFinished() {
 		return false
 	}
 

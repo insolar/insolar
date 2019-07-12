@@ -133,7 +133,7 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
 	reqCfg := &requester.Request{
 		Params:   requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey},
-		Method:   "api.Call",
+		Method:   "api.call",
 		LogLevel: sdk.logLevel.(string),
 	}
 
@@ -183,7 +183,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 
 	response, err := sdk.DoRequest(
 		userConfig,
-		"contract.createMember",
+		"member.create",
 		map[string]interface{}{},
 	)
 	if err != nil {
@@ -267,7 +267,7 @@ func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params 
 	}
 
 	if response.Error != nil {
-		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.TraceID)
+		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.Data.TraceID)
 	}
 
 	return response.Result, nil

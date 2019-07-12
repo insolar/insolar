@@ -56,32 +56,33 @@ import (
 	"math"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
-func NewPhase2Controller(packetPrepareOptions core.PacketSendOptions, queueNshReady chan *core.NodeAppearance,
-	queueTrustUpdated chan<- TrustUpdateSignal) *Phase2Controller {
+func NewPhase2Controller(packetPrepareOptions core.PacketSendOptions, queueNshReady <-chan *core.NodeAppearance) *Phase2Controller {
 	return &Phase2Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueNshReady:        queueNshReady,
-		queueTrustUpdated:    queueTrustUpdated,
+		//queueTrustUpdated:    queueTrustUpdated,
 	}
 }
 
 var _ core.PhaseController = &Phase2Controller{}
 
 type Phase2Controller struct {
-	core.PhaseControllerPerMemberTemplate
+	PhaseControllerWithJoinersTemplate
 	packetPrepareOptions core.PacketSendOptions
-	queueNshReady        chan *core.NodeAppearance
-	queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
+	queueNshReady        <-chan *core.NodeAppearance
+	//queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
 }
 
 type TrustUpdateSignal struct {
-	NewTrustLevel packets.NodeTrustLevel
+	NewTrustLevel common2.NodeTrustLevel
 	UpdatedNode   *core.NodeAppearance
 }
 
@@ -93,6 +94,12 @@ func (v *TrustUpdateSignal) IsPingSignal() bool {
 
 func (*Phase2Controller) GetPacketType() packets.PacketType {
 	return packets.PacketPhase2
+}
+
+func (c *Phase2Controller) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *core.NodeAppearance,
+	realm *core.FullRealm) (core.PhasePerNodePacketFunc, context.Context) {
+
+	return c.createPerNodePacketHandler(sharedNodeContext, ctlIndex, node, realm, c.handleJoinerPacket)
 }
 
 func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, n *core.NodeAppearance) error {
@@ -113,55 +120,57 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 	var signalSent = false
 	for _, nb := range p2.GetNeighbourhood() {
 
-		nid := nb.GetShortNodeID()
-		neighbour, err := c.R.GetNodeAppearance(nid)
-		if err != nil {
+		nid := nb.GetNodeID()
+		neighbour := c.R.GetPopulation().GetNodeAppearance(nid)
+		if neighbour == nil {
 			// TODO unknown node - blame sender
 			panic(fmt.Errorf("unlisted neighbour node: %v", nid))
 			// R.GetBlameFactory().NewMultipleNshBlame()
 		}
 
-		mp := common2.NewMembershipProfile(nb.GetNodeIndex(), nb.GetNodePower(), nb.GetNodeStateHashEvidence(), nb.GetNodeClaimsSignature())
+		nr := nb.GetNodeRank()
+		mp := common2.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(), nb.GetNodeStateHashEvidence(),
+			nb.GetAnnouncementSignature(), nb.GetRequestedPower())
+
 		// TODO validate node proof - if fails, then fraud on sender
-		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetEvidence())
+		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetSignature())
 		// TODO check NodeRank also
 		// if p1.HasSelfIntro() {
 		//	// TODO register protocol misbehavior - IntroClaim was not expected
 		// }
 
-		var trustBefore, trustAfter packets.NodeTrustLevel
-		var modifiedNsh bool
-
-		nc := c.R.GetNodeCount()
-		if nc != int(nb.GetNodeCount()) {
-			trustBefore, trustAfter, _ = n.RegisterFraudWithTrust(n.Frauds().NewMismatchedMembershipNodeCount(n.GetProfile(), mp, nc))
-			modifiedNsh = false
-		} else {
-			modifiedNsh, trustBefore, trustAfter = neighbour.ApplyNeighbourEvidence(n, mp)
+		var ma common2.MembershipAnnouncement
+		switch {
+		case nb.IsLeaving():
+			ma = common2.NewMembershipAnnouncementWithLeave(mp, nb.GetLeaveReason())
+		case nb.GetJoinerID().IsAbsent():
+			ma = common2.NewMembershipAnnouncement(mp)
+		default:
+			panic("not implemented") //TODO implement
+			//jar := na.GetJoinerAnnouncement()
+			//ma = common.NewMembershipAnnouncementWithJoiner(mp)
 		}
 
-		if modifiedNsh {
-			c.queueNshReady <- neighbour
-			c.queueTrustUpdated <- TrustUpdateSignal{NewTrustLevel: packets.UnknownTrust, UpdatedNode: neighbour}
+		var modified bool
+		nc := c.R.GetNodeCount()
+		if nc != int(nr.GetTotalCount()) {
+			modified, _ = n.RegisterFraud(n.Frauds().NewMismatchedMembershipNodeCount(n.GetProfile(), mp, nc))
+		} else {
+			modified, _ = neighbour.ApplyNeighbourEvidence(n, ma)
+		}
+		if modified {
 			signalSent = true
 		}
-		switch {
-		case trustBefore < packets.TrustByNeighbors && trustAfter >= packets.TrustByNeighbors:
-			trustAfter = packets.TrustByNeighbors
-		case trustBefore < packets.TrustBySome && trustAfter >= packets.TrustBySome:
-			trustAfter = packets.TrustBySome
-		case !trustBefore.IsNegative() && trustAfter.IsNegative():
-		default:
-			continue
-		}
-		c.queueTrustUpdated <- TrustUpdateSignal{NewTrustLevel: trustAfter, UpdatedNode: neighbour}
-		signalSent = true
 	}
 	if !signalSent {
-		c.queueTrustUpdated <- pingSignal
+		n.NotifyOnCustom(pingSignal)
 	}
 
 	return nil
+}
+
+func (c *Phase2Controller) handleJoinerPacket(ctx context.Context, reader packets.MemberPacketReader, from *JoinerController) error {
+	panic("unsupported")
 }
 
 func (c *Phase2Controller) StartWorker(ctx context.Context) {
@@ -190,7 +199,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 
 	neighbourhoodBuf := make([]interface{}, 0, neighbourSize-1)
 
-	remainingJoiners := c.R.GetJoinersCount()
+	remainingJoiners := c.R.GetPopulation().GetJoinersCount()
 	remainingNodes := c.R.GetNodeCount() - remainingJoiners
 
 	if c.R.IsJoiner() { // exclude self
@@ -261,45 +270,35 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			remainingJoiners -= takeJoiners
 			remainingNodes -= takeNodes
 
-			nh := make([]*core.NodeAppearance, 1, len(nhBuf)+1)
-			nh[0] = c.R.GetSelf()
-			for _, np := range nhBuf {
-				nh = append(nh, np.(*core.NodeAppearance))
+			nh := make([]*core.NodeAppearance, len(nhBuf))
+			for i, np := range nhBuf {
+				//don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
+				nh[i] = np.(*core.NodeAppearance)
 			}
 
-			go c.sendPhase2(ctx, nh, takeJoiners)
+			go c.sendPhase2(ctx, nh)
 
 			idleLoop = false
 		}
 	}
 }
 
-func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core.NodeAppearance, joinerCount int) {
+func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core.NodeAppearance) {
 
-	neighbourhoodBags := make([]packets.NodeStateHashReportReader, len(neighbourhood))
-	introductions := make([]common2.NodeIntroduction, 0, joinerCount)
-
+	neighbourhoodAnnouncements := make([]packets.MembershipAnnouncementReader, len(neighbourhood))
 	for i, np := range neighbourhood {
-		neighbourhoodBags[i] = newNeighbourReport(np, c.R.GetNodeCount())
-		node := np.GetProfile()
-		if node.IsJoiner() {
-			introductions = append(introductions, node.GetIntroduction())
-		}
+		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np)
 	}
 
-	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.GetLocalProfile(), c.R.GetPulseData(),
-		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
-		neighbourhoodBags, introductions, c.packetPrepareOptions)
+	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(),
+		neighbourhoodAnnouncements, c.packetPrepareOptions)
 
-	for _, np := range neighbourhood[1:] { // start from 1 to skip sending to self
-		p2.SendTo(ctx, np.GetProfile(), 0, c.R.GetPacketSender())
-		np.SetSentByPacketType(c.GetPacketType())
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-	}
+	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (common2.NodeProfile, core.PacketSendOptions) {
+			np := neighbourhood[targetIdx]
+			np.SetSentByPacketType(c.GetPacketType())
+			return np.GetProfile(), 0
+		})
 }
 
 func availableInQueue(captured int, queue common.HeadedLazySortedList, remains int, maxWeight uint32) int {
@@ -340,9 +339,9 @@ func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
 }
 
 func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
-	logger := c.R.Log()
+	log := inslogger.FromContext(ctx)
 
-	logger.Infof("Phase2 has started re-requesting Phase1")
+	log.Info("Phase2 has started re-requesting Phase1")
 
 	s := c.R.GetSelf()
 	if s.IsNshRequired() {
@@ -350,11 +349,10 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 		return
 	}
 
-	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(s.GetProfile(), c.R.GetOriginalPulse(),
-		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
-		core.RequestForPhase1|c.packetPrepareOptions)
+	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
+		c.R.GetOriginalPulse(), core.RequestForPhase1|c.packetPrepareOptions)
 
-	for _, v := range c.R.GetShuffledOtherNodes() {
+	for _, v := range c.R.GetPopulation().GetShuffledOtherNodes() {
 		select {
 		case <-ctx.Done():
 			return
@@ -377,57 +375,3 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 // 	return c.R.callback.PreparePhase1Packet(c.R.activePulse.originalPacket, selfIntro,
 // 		c.R.self.membership, c.R.strategy.GetPacketOptions(gcpv2.Phase1)|po)
 // }
-
-func newNeighbourReport(na *core.NodeAppearance, nodeCount int) *neighbourReport {
-	r := neighbourReport{
-		nodeID:    na.GetShortNodeID(),
-		nodeCount: uint16(nodeCount),
-	}
-	r.membership, r.trustLevel = na.GetNodeMembershipAndTrust()
-	return &r
-}
-
-var _ packets.NodeStateHashReportReader = &neighbourReport{}
-
-type neighbourReport struct {
-	nodeID     common.ShortNodeID
-	trustLevel packets.NodeTrustLevel
-	nodeCount  uint16
-	membership common2.MembershipProfile
-}
-
-func (c *neighbourReport) GetNodeClaimsSignature() common2.NodeClaimSignature {
-	return c.membership.ClaimSignature
-}
-
-func (c *neighbourReport) GetNodeIndex() uint16 {
-	return c.membership.Index
-}
-
-func (c *neighbourReport) GetNodeCount() uint16 {
-	return c.nodeCount
-}
-
-func (c *neighbourReport) GetNodePower() common2.MemberPower {
-	return c.membership.Power
-}
-
-func (c *neighbourReport) GetShortNodeID() common.ShortNodeID {
-	return c.nodeID
-}
-
-func (c *neighbourReport) GetNodeTrustLevel() packets.NodeTrustLevel {
-	return c.trustLevel
-}
-
-func (c *neighbourReport) GetNodeStateHash() common2.NodeStateHash {
-	return c.membership.StateEvidence.GetNodeStateHash()
-}
-
-func (c *neighbourReport) GetNodeStateHashEvidence() common2.NodeStateHashEvidence {
-	return c.membership.StateEvidence
-}
-
-func (c neighbourReport) String() string {
-	return fmt.Sprintf("{sid:%d, %d/%d, T%d, mp:%v, cs:%v}", c.nodeID, c.membership.Index, c.nodeCount, c.trustLevel, c.membership.StateEvidence, c.membership.ClaimSignature)
-}

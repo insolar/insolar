@@ -91,11 +91,23 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		case payload.TypeSetCode:
 			h := NewSetCode(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
-		case payload.TypeSetRequest:
-			h := NewSetRequest(s.dep, meta, false)
+		case payload.TypeSetIncomingRequest:
+			h := NewSetIncomingRequest(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
+		case payload.TypeSetOutgoingRequest:
+			h := NewSetOutgoingRequest(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypeSetResult:
 			h := NewSetResult(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
+		case payload.TypeActivate:
+			h := NewActivateObject(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
+		case payload.TypeDeactivate:
+			h := NewDeactivateObject(s.dep, meta, false)
+			err = f.Handle(ctx, h.Present)
+		case payload.TypeUpdate:
+			h := NewUpdateObject(s.dep, meta, false)
 			err = f.Handle(ctx, h.Present)
 		case payload.TypePass:
 			err = s.handlePass(ctx, f, meta)
@@ -121,10 +133,6 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeGetRequest:
 		msg := s.message.Parcel.Message().(*message.GetRequest)
 		h := NewGetRequest(s.dep, s.message.ReplyTo, msg.Request)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeUpdateObject:
-		msg := s.message.Parcel.Message().(*message.UpdateObject)
-		h := NewUpdateObject(s.dep, s.message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetChildren:
 		h := NewGetChildren(s.dep, s.message.ReplyTo, s.message)
@@ -194,11 +202,23 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	case payload.TypeSetCode:
 		h := NewSetCode(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
-	case payload.TypeSetRequest:
-		h := NewSetRequest(s.dep, originMeta, true)
+	case payload.TypeSetIncomingRequest:
+		h := NewSetIncomingRequest(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeSetOutgoingRequest:
+		h := NewSetOutgoingRequest(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeSetResult:
 		h := NewSetResult(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeActivate:
+		h := NewActivateObject(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeDeactivate:
+		h := NewDeactivateObject(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeUpdate:
+		h := NewUpdateObject(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())

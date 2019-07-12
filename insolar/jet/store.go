@@ -102,7 +102,6 @@ func (s *Store) Update(ctx context.Context, pulse insolar.PulseNumber, setActual
 	return nil
 }
 
-// Split performs jet split and returns resulting jet ids.
 func (s *Store) Split(
 	ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID,
 ) (insolar.JetID, insolar.JetID, error) {

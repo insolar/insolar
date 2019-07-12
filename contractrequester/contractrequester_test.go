@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -49,11 +50,12 @@ func TestNew(t *testing.T) {
 	messageBus := mockMessageBus(t, nil)
 	pulseAccessor := pulse.NewAccessorMock(t)
 	jetCoordinator := jet.NewCoordinatorMock(t)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(messageBus, contractRequester, pulseAccessor, jetCoordinator)
+	cm.Inject(messageBus, contractRequester, pulseAccessor, jetCoordinator, pcs)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
@@ -106,10 +108,9 @@ func TestContractRequester_SendRequest(t *testing.T) {
 		}
 
 		cReq.ResultMutex.Lock()
-		for k, v := range cReq.ResultMap {
+		for _, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
-				Sequence: k,
-				Reply:    &reply.CallMethod{},
+				Reply: &reply.CallMethod{},
 			}
 		}
 		cReq.ResultMutex.Unlock()
@@ -146,10 +147,9 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 			runtime.Gosched()
 		}
 		cReq.ResultMutex.Lock()
-		for k, v := range cReq.ResultMap {
+		for _, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
-				Sequence: k,
-				Reply:    nil,
+				Reply: nil,
 			}
 		}
 		cReq.ResultMutex.Unlock()
@@ -179,7 +179,13 @@ func TestCallMethodCanceled(t *testing.T) {
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
 
+	var reqHash [insolar.RecordHashSize]byte
+
 	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
+		for k := range cr.ResultMap {
+			reqHash = k
+			break
+		}
 		return &reply.RegisterRequest{}, nil
 	}
 
@@ -195,7 +201,7 @@ func TestCallMethodCanceled(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "canceled")
 
-	_, ok := cr.ResultMap[msg.Sequence]
+	_, ok := cr.ResultMap[reqHash]
 	assert.Equal(t, false, ok)
 }
 
@@ -219,14 +225,21 @@ func TestCallMethodWaitResults(t *testing.T) {
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
 
+	var reqHash [insolar.RecordHashSize]byte
+
 	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
+		for k := range cr.ResultMap {
+			reqHash = k
+			break
+		}
+
 		go func() {
-			r, ok := p1.(*message.CallMethod)
+			_, ok := p1.(*message.CallMethod)
 			require.Equal(t, ok, true)
 
 			cr.ResultMutex.Lock()
 			defer cr.ResultMutex.Unlock()
-			resChan, ok := cr.ResultMap[r.Sequence]
+			resChan, ok := cr.ResultMap[reqHash]
 			resChan <- &message.ReturnResults{
 				Reply: &reply.CallMethod{},
 			}
@@ -258,8 +271,11 @@ func TestReceiveResult(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	sequence := randomUint64()
-	msg := &message.ReturnResults{Sequence: sequence}
+	reqRef := testutils.RandomRef()
+	var reqHash [insolar.RecordHashSize]byte
+	copy(reqHash[:], reqRef.Record().Hash())
+
+	msg := &message.ReturnResults{RequestRef: reqRef}
 	parcel := testutils.NewParcelMock(mc).MessageMock.Return(
 		msg,
 	)
@@ -272,10 +288,10 @@ func TestReceiveResult(t *testing.T) {
 	// expected result
 	resChan := make(chan *message.ReturnResults)
 	chanResult := make(chan *message.ReturnResults)
-	cr.ResultMap[sequence] = resChan
+	cr.ResultMap[reqHash] = resChan
 
 	go func() {
-		chanResult <- <-cr.ResultMap[sequence]
+		chanResult <- <-cr.ResultMap[reqHash]
 	}()
 
 	rep, err = cr.ReceiveResult(ctx, parcel)
