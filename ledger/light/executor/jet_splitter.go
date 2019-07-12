@@ -89,8 +89,8 @@ func (js *JetSplitterDefault) Do(
 ) ([]insolar.JetID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jets.split")
 	defer span.End()
-	ctx, _ = inslogger.WithField(ctx, "current_pulse", endedPulse.String())
-	inslog := inslogger.FromContext(ctx).WithField("split_for_pulse", newPulse.String())
+	ctx, _ = inslogger.WithField(ctx, "ended_pulse", endedPulse.String())
+	inslog := inslogger.FromContext(ctx).WithField("new_pulse", newPulse.String())
 
 	// copy current jet tree for new pulse, for further modification on jets owned in current pulse.
 	err := js.jetModifier.Clone(ctx, endedPulse, newPulse)
@@ -101,32 +101,31 @@ func (js *JetSplitterDefault) Do(
 	all := js.jetCalculator.MineForPulse(ctx, endedPulse)
 	result := make([]insolar.JetID, 0, len(all)*2)
 	for _, jetID := range all {
-		splitThresholdExceeded := js.getDropThreshold(ctx, jetID, endedPulse)
-		exceed := splitThresholdExceeded > js.cfg.ThresholdOverflowCount
+		exceed, err := js.createDrop(ctx, jetID, endedPulse)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed create drop for pulse=%v, jet=%v",
+				endedPulse, jetID.DebugString())
+		}
+
 		if !exceed {
 			// mark jet as actual for new pulse
 			if err := js.jetModifier.Update(ctx, newPulse, true, jetID); err != nil {
 				panic("failed to update jets on LM-node: " + err.Error())
 			}
 			result = append(result, jetID)
-		} else {
-			// split jet for new pulse if it got a split intention on previous pulse.
-			leftJetID, rightJetID, err := js.jetModifier.Split(ctx, newPulse, jetID)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to split jet tree")
-			}
-			result = append(result, leftJetID, rightJetID)
-
-			inslog.WithFields(map[string]interface{}{
-				"left_child": leftJetID.DebugString(), "right_child": rightJetID.DebugString(),
-			}).Info("jet split performed")
+			continue
 		}
 
-		err := js.createDrop(ctx, jetID, endedPulse, splitThresholdExceeded)
+		// split jet for new pulse if it got a split intention on previous pulse.
+		leftJetID, rightJetID, err := js.jetModifier.Split(ctx, newPulse, jetID)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed create drop for pulse=%v, jet=%v",
-				endedPulse, jetID.DebugString())
+			return nil, errors.Wrap(err, "failed to split jet tree")
 		}
+		result = append(result, leftJetID, rightJetID)
+
+		inslog.WithFields(map[string]interface{}{
+			"left_child": leftJetID.DebugString(), "right_child": rightJetID.DebugString(),
+		}).Info("jet split performed")
 	}
 
 	return result, nil
@@ -136,26 +135,28 @@ func (js *JetSplitterDefault) createDrop(
 	ctx context.Context,
 	jetID insolar.JetID,
 	pn insolar.PulseNumber,
-	previousValue int,
-) error {
+) (bool, error) {
+	threshold := js.getPreviousDropThreshold(ctx, jetID, pn)
+	// reset threshold after split
+	if threshold > js.cfg.ThresholdRecordsCount {
+		threshold = 0
+	}
+
 	block := drop.Drop{
 		Pulse: pn,
 		JetID: jetID,
 	}
-	if previousValue > js.cfg.ThresholdOverflowCount {
-		// it split so proceed with zero in SplitThresholdExceeded field.
-		return js.dropModifier.Set(ctx, block)
-	}
-
+	// if threshold reached increase counter (instead it reset)
 	recordsCount := len(js.recordsAccessor.ForPulse(ctx, jetID, pn))
-
 	if recordsCount > js.cfg.ThresholdRecordsCount {
-		block.SplitThresholdExceeded = previousValue + 1
+		block.SplitThresholdExceeded = threshold + 1
 	}
-	return js.dropModifier.Set(ctx, block)
+
+	// first return value is split needed
+	return block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount, js.dropModifier.Set(ctx, block)
 }
 
-func (js *JetSplitterDefault) getDropThreshold(
+func (js *JetSplitterDefault) getPreviousDropThreshold(
 	ctx context.Context,
 	jetID insolar.JetID,
 	pn insolar.PulseNumber,
@@ -167,7 +168,15 @@ func (js *JetSplitterDefault) getDropThreshold(
 		}
 		panic("failed to fetch previous pulse")
 	}
-	block, err := js.dropAccessor.ForPulse(ctx, jetID, prevPulse.PulseNumber)
+	return js.getDropThreshold(ctx, jetID, prevPulse.PulseNumber)
+}
+
+func (js *JetSplitterDefault) getDropThreshold(
+	ctx context.Context,
+	jetID insolar.JetID,
+	pn insolar.PulseNumber,
+) int {
+	block, err := js.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
 		if err == drop.ErrNotFound {
 			// it could happen in two cases:
