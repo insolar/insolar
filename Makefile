@@ -227,8 +227,6 @@ generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src insolar/payload/payload.proto
-	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/lifeline.proto
-	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/filamentindex.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto
 

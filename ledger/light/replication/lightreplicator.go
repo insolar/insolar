@@ -167,8 +167,8 @@ func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, data insolar.
 
 func (lr *LightReplicatorDefault) filterAndGroupIndexes(
 	ctx context.Context, pn insolar.PulseNumber,
-) map[insolar.JetID][]object.FilamentIndex {
-	byJet := map[insolar.JetID][]object.FilamentIndex{}
+) map[insolar.JetID][]record.Index {
+	byJet := map[insolar.JetID][]record.Index{}
 	indexes := lr.idxAccessor.ForPulse(ctx, pn)
 	for _, idx := range indexes {
 		jetID, _ := lr.jetAccessor.ForID(ctx, pn, idx.ObjID)
@@ -182,7 +182,7 @@ func (lr *LightReplicatorDefault) heavyPayload(
 	ctx context.Context,
 	pn insolar.PulseNumber,
 	jetID insolar.JetID,
-	indexes []object.FilamentIndex,
+	indexes []record.Index,
 ) (*message.HeavyPayload, error) {
 	dr, err := lr.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
@@ -200,7 +200,7 @@ func (lr *LightReplicatorDefault) heavyPayload(
 	}, nil
 }
 
-func convertIndexBuckets(ctx context.Context, buckets []object.FilamentIndex) [][]byte {
+func convertIndexBuckets(ctx context.Context, buckets []record.Index) [][]byte {
 	convertedBucks := make([][]byte, len(buckets))
 	for i, buck := range buckets {
 		buff, err := buck.Marshal()

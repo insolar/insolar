@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -123,7 +124,7 @@ func (p *HotData) process(ctx context.Context) error {
 		err = p.Dep.IndexModifier.SetIndex(
 			ctx,
 			p.msg.PulseNumber,
-			object.FilamentIndex{
+			record.Index{
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
 				LifelineLastUsed: meta.LifelineLastUsed,
@@ -159,7 +160,7 @@ func (p *HotData) releaseHotDataWaiters(ctx context.Context) {
 func (p *HotData) notifyPending(
 	ctx context.Context,
 	objectID insolar.ID,
-	lifeline object.Lifeline,
+	lifeline record.Lifeline,
 	notifyLimit insolar.PulseNumber,
 ) {
 	// No pending requests.

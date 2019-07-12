@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -71,7 +72,7 @@ func NewHotSender(
 
 func (m *HotSenderDefault) filterAndGroupIndexes(
 	ctx context.Context, currentPulse, newPulse insolar.PulseNumber,
-) (map[insolar.JetID][]object.FilamentIndex, error) {
+) (map[insolar.JetID][]record.Index, error) {
 	limitPN, err := m.pulseCalculator.Backwards(ctx, currentPulse, m.lightChainLimit)
 	if err == pulse.ErrNotFound {
 		limitPN = *insolar.GenesisPulse
@@ -90,7 +91,7 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 		filtered = append(filtered, idx)
 	}
 
-	byJet := map[insolar.JetID][]object.FilamentIndex{}
+	byJet := map[insolar.JetID][]record.Index{}
 	for _, idx := range filtered {
 		jetID, _ := m.jetAccessor.ForID(ctx, newPulse, idx.ObjID)
 		byJet[jetID] = append(byJet[jetID], idx)
@@ -139,7 +140,7 @@ func (m *HotSenderDefault) sendForJet(
 	ctx context.Context,
 	jetID insolar.JetID,
 	pn insolar.PulseNumber,
-	indexes []object.FilamentIndex,
+	indexes []record.Index,
 	block drop.Drop,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "hot_sender.send_hot")
@@ -188,7 +189,7 @@ func (m *HotSenderDefault) findDrop(
 // if jetID provided, filters output records what only match this jet.
 func (m *HotSenderDefault) hotDataForJet(
 	ctx context.Context,
-	indexes []object.FilamentIndex,
+	indexes []record.Index,
 ) []message.HotIndex {
 	hotIndexes := make([]message.HotIndex, 0, len(indexes))
 	for _, meta := range indexes {
