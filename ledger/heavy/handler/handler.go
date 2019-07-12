@@ -140,6 +140,8 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 		rep, err = h.handleGetChildren(ctx, parcel)
 	case insolar.TypeGetDelegate.String():
 		rep, err = h.handleGetDelegate(ctx, parcel)
+	case insolar.TypeGetJet.String():
+		rep, err = h.handleGetJet(ctx, parcel)
 	default:
 		err = fmt.Errorf("no handler for message type %s", msgType)
 	}
@@ -252,7 +254,6 @@ func (h *Handler) replyError(ctx context.Context, replyTo payload.Meta, err erro
 func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
-	h.Bus.MustRegister(insolar.TypeGetJet, h.handleGetJet)
 	return nil
 }
 
