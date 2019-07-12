@@ -191,14 +191,13 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	}
 
 	var memberRef string
-	if member, ok := response.ContractResult.(map[string]interface{}); !ok {
+	var contractResultCasted map[string]interface{}
+	var ok bool
+	if contractResultCasted, ok = response.ContractResult.(map[string]interface{}); !ok {
 		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.ContractResult)
-	} else {
-		if ref, ok := member["reference"].(string); !ok {
-			return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", member["reference"])
-		} else {
-			memberRef = ref
-		}
+	}
+	if memberRef, ok = contractResultCasted["reference"].(string); !ok {
+		return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", contractResultCasted["reference"])
 	}
 
 	return NewMember(memberRef, privateKeyStr, publicKeyStr), response.TraceID, nil
