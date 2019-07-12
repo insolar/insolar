@@ -73,7 +73,7 @@ func TestDBStore_TruncateHead(t *testing.T) {
 
 	dbStore := NewDB(dbMock)
 
-	numElements := 400
+	numElements := 100
 
 	startPulseNumber := insolar.GenesisPulse.PulseNumber
 	for i := 0; i < numElements; i++ {
