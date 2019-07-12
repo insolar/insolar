@@ -1049,36 +1049,6 @@ func (m *client) activateObject(
 	}
 }
 
-func (m *client) setBlob(
-	ctx context.Context,
-	blob []byte,
-	target insolar.Reference,
-) (*insolar.ID, error) {
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryJetSender(m.JetStorage),
-		messagebus.RetryFlowCancelled(m.PulseAccessor),
-	)
-	genericReact, err := sender(ctx, &message.SetBlob{
-		Memory:    blob,
-		TargetRef: target,
-	}, nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	switch rep := genericReact.(type) {
-	case *reply.ID:
-		return &rep.ID, nil
-	case *reply.Error:
-		return nil, rep.Error()
-	default:
-		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", rep)
-	}
-}
-
 func (m *client) sendUpdateObject(
 	ctx context.Context,
 	objRec record.Virtual,
