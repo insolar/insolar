@@ -56,6 +56,7 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/server/internal"
 	"github.com/pkg/errors"
 )
 
@@ -108,6 +109,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
 
 	// Network.
 	var (
