@@ -36,6 +36,10 @@ const (
 	StateDeactivation
 )
 
+func (s *StateID) Equal(other StateID) bool {
+	return *s == other
+}
+
 // State is common object state record.
 type State interface {
 	// ID returns state id.

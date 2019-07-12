@@ -150,3 +150,12 @@ message RequestInfo {
     bytes Request = 22;
     bytes Result = 23;
 }
+
+message HotObjects {
+    uint32 Polymorph = 16;
+
+    bytes JetID      = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes Pulse      = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes Drop       = 21;
+    repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
+}

@@ -165,8 +165,6 @@ message PendingFilament {
 }
 
 message Lifeline {
-    option (gogoproto.equal) = false;
-
     int32  Polymorph  = 16;
 
     bytes LatestState = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
@@ -189,8 +187,6 @@ message LifelineDelegate {
 }
 
 message Index {
-    option (gogoproto.equal) = false;
-
     int32 Polymorph  = 16;
 
     bytes ObjID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
