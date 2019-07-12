@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 
@@ -47,8 +46,6 @@ type Handler struct {
 	Bus            insolar.MessageBus
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
-	BlobAccessor   blob.Accessor
-	BlobModifier   blob.Modifier
 	RecordAccessor object.RecordAccessor
 	RecordModifier object.RecordModifier
 
@@ -58,8 +55,10 @@ type Handler struct {
 	DropModifier  drop.Modifier
 	PulseAccessor pulse.Accessor
 	JetModifier   jet.Modifier
+	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
-	Sender        bus.Sender
+
+	Sender bus.Sender
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -72,14 +71,12 @@ func New() *Handler {
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
-			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.Sender = h.Sender
 			p.Dep.RecordAccessor = h.RecordAccessor
-			p.Dep.BlobAccessor = h.BlobAccessor
 		},
 		SendRequests: func(p *proc.SendRequests) {
 			p.Dep(h.Sender, h.RecordAccessor, h.IndexAccessor)
@@ -215,6 +212,7 @@ func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeGetDelegate, h.handleGetDelegate)
 	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
+	h.Bus.MustRegister(insolar.TypeGetJet, h.handleGetJet)
 	h.Bus.MustRegister(insolar.TypeGetRequest, h.handleGetRequest)
 	return nil
 }
@@ -342,6 +340,13 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 	return &rep, nil
 }
 
+func (h *Handler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	msg := parcel.Message().(*message.GetJet)
+	jet, actual := h.JetAccessor.ForID(ctx, msg.Pulse, msg.Object)
+
+	return &reply.Jet{ID: insolar.ID(jet), Actual: actual}, nil
+}
+
 func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetObjectIndex)
 
@@ -389,8 +394,6 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		logger.Error(errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", msg.JetID.DebugString()))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-
-	storeBlobs(ctx, h.BlobModifier, h.PCS, msg.PulseNum, msg.Blobs)
 
 	stats.Record(ctx,
 		statReceivedHeavyPayloadCount.M(1),

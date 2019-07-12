@@ -340,7 +340,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg insolar.Parcel) (insola
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
-		txt := "no handler for received message type"
+		txt := "no handler for received message type: " + msg.Type().String()
 		inslogger.FromContext(ctx).Error(txt)
 		return nil, errors.New(txt)
 	}

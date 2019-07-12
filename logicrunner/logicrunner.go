@@ -455,8 +455,9 @@ func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []mess
 	var traces string
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			RequestRef: elem.RequestRef,
-			Request:    *elem.Request,
+			RequestRef:  elem.RequestRef,
+			Request:     *elem.Request,
+			ServiceData: serviceDataFromContext(elem.Context),
 		})
 
 		traces += inslogger.TraceID(elem.Context) + ", "
@@ -473,4 +474,26 @@ func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 		panic(err)
 	}
 	return &p
+}
+
+func contextFromServiceData(data message.ServiceData) context.Context {
+	ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
+	if data.TraceSpanData != nil {
+		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
+		return instracer.WithParentSpan(ctx, parentSpan)
+	}
+	return ctx
+}
+
+func serviceDataFromContext(ctx context.Context) message.ServiceData {
+	if ctx == nil {
+		log.Error("nil context, can't create correct ServiceData")
+		return message.ServiceData{}
+	}
+	return message.ServiceData{
+		LogTraceID:    inslogger.TraceID(ctx),
+		LogLevel:      inslogger.GetLoggerLevel(ctx),
+		TraceSpanData: instracer.MustSerialize(ctx),
+	}
 }

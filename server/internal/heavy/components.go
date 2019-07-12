@@ -25,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/server/internal"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 
@@ -51,7 +52,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
@@ -117,6 +117,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	logger := inslogger.FromContext(ctx)
 	wmLogger := log.NewWatermillLogAdapter(logger)
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
 
 	// Network.
 	var (
@@ -231,7 +232,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	{
 		records := object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB)
-		blobs := blob.NewDB(DB)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
 		jetKeeper := executor.NewJetKeeper(jets, DB)
@@ -253,12 +253,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.IndexAccessor = indexes
 		h.IndexModifier = indexes
 		h.Bus = Bus
-		h.BlobAccessor = blobs
-		h.BlobModifier = blobs
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
 		h.JetModifier = jets
+		h.JetAccessor = jets
 		h.JetKeeper = jetKeeper
 		h.Sender = WmBus
 
@@ -268,7 +267,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		artifactManager := &artifact.Scope{
 			PulseNumber:    insolar.FirstPulseNumber,
 			PCS:            CryptoScheme,
-			BlobStorage:    blobs,
 			RecordAccessor: records,
 			RecordModifier: records,
 			IndexModifier:  indexes,
