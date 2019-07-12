@@ -19,7 +19,6 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 	msg := payload.SagaCallAcceptNotification{}
 	err := msg.Unmarshal(h.meta.Payload)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("VSE OCHEN HUEVO")
 		return err
 	}
 
