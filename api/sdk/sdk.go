@@ -190,7 +190,18 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "request was failed ")
 	}
 
-	return NewMember(response.ContractResult.(string), privateKeyStr, publicKeyStr), response.TraceID, nil
+	var memberRef string
+	if member, ok := response.ContractResult.(map[string]interface{}); !ok {
+		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.ContractResult)
+	} else {
+		if ref, ok := member["reference"].(string); !ok {
+			return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", member["reference"])
+		} else {
+			memberRef = ref
+		}
+	}
+
+	return NewMember(memberRef, privateKeyStr, publicKeyStr), response.TraceID, nil
 }
 
 // AddBurnAddresses method add burn addresses
