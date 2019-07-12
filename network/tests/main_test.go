@@ -195,8 +195,6 @@ func (s *consensusSuite) TestNodeLeave() {
 
 	// but all nodes are active
 	s.AssertActiveNodesCountDelta(1)
-
-	// <-time.After(time.Second * 6)
 }
 
 func (s *consensusSuite) TestNodeLeaveAtETA() {
