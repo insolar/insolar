@@ -51,7 +51,6 @@ import (
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/version/manager"
-	"github.com/pkg/errors"
 )
 
 type bootstrapComponents struct {
@@ -155,13 +154,8 @@ func initComponents(
 	pulses := pulse.NewStorageMem()
 	b := bus.NewBus(pubsub, pulses, jc, pcs)
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pubsub, b)
 	checkError(ctx, err, "failed to start LogicRunner")
-
-	innerRouter, err := logicrunner.InitHandlers(logicRunner, b)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "Error while init handlers for logic runner:")
-	}
 
 	cm.Register(
 		terminationHandler,
@@ -203,9 +197,7 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	inRouter, outRouter := startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process)
-
-	stopper := stopWatermill(ctx, innerRouter, inRouter, outRouter)
+	stopper := startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process, logicRunner.InnerFlowDispatcher.InnerSubscriber)
 
 	return &cm, terminationHandler, stopper, nil
 }
@@ -215,13 +207,18 @@ func startWatermill(
 	logger watermill.LoggerAdapter,
 	pubSub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler message.HandlerFunc,
-) (*message.Router, *message.Router) {
+	outHandler, inHandler, lrHandler message.HandlerFunc,
+) func() {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
 		panic(err)
 	}
 	outRouter, err := message.NewRouter(message.RouterConfig{}, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	lrRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
 		panic(err)
 	}
@@ -244,10 +241,18 @@ func startWatermill(
 		inHandler,
 	)
 
+	lrRouter.AddNoPublisherHandler(
+		"InnerMsgHandler",
+		logicrunner.InnerMsgTopic,
+		pubSub,
+		lrHandler,
+	)
+
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
+	startRouter(ctx, lrRouter)
 
-	return inRouter, outRouter
+	return stopWatermill(ctx, inRouter, outRouter, lrRouter)
 }
 
 func startRouter(ctx context.Context, router *message.Router) {

@@ -275,7 +275,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
 func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		logger := inslogger.FromContext(context.Background())
+		_, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
 
 		meta := payload.Meta{}
 		err := meta.Unmarshal(msg.Payload)

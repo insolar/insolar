@@ -211,7 +211,9 @@ func channelIsEmpty(channel chan struct{}) bool {
 }
 
 func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	sender := bus.NewSenderMock(s.Controller)
+	pm := &publisherMock{}
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{}, pm, sender)
 
 	// initialize mocks
 	am := artifacts.NewClientMock(s.Controller)
@@ -222,11 +224,6 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	jc := jet.NewCoordinatorMock(s.Controller)
 	ps := pulse.NewAccessorMock(s.Controller)
 	nn := network.NewNodeNetworkMock(s.Controller)
-	sender := bus.NewSenderMock(s.Controller)
-	var err error
-	_, err = InitHandlers(lr, sender)
-	s.Require().NoError(err)
-	pm := &publisherMock{}
 
 	// initialize lr
 	lr.ArtifactManager = am
@@ -237,7 +234,6 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	lr.PulseAccessor = ps
 	lr.NodeNetwork = nn
 	lr.RequestsExecutor = re
-	lr.publisher = pm
 
 	_ = lr.Init(s.Context)
 

@@ -62,21 +62,21 @@ import (
 type LogicRunnerCommonTestSuite struct {
 	suite.Suite
 
-	mc          *minimock.Controller
-	ctx         context.Context
-	am          *artifacts.ClientMock
-	dc          *artifacts.DescriptorsCacheMock
-	mb          *testutils.MessageBusMock
-	jc          *jet.CoordinatorMock
-	mm          *mmanager
-	lr          *LogicRunner
-	re          *RequestsExecutorMock
-	es          ExecutionState
-	ps          *pulse.AccessorMock
-	mle         *testutils.MachineLogicExecutorMock
-	nn          *network.NodeNetworkMock
-	innerRouter *message2.Router
-	sender      *bus.SenderMock
+	mc     *minimock.Controller
+	ctx    context.Context
+	am     *artifacts.ClientMock
+	dc     *artifacts.DescriptorsCacheMock
+	mb     *testutils.MessageBusMock
+	jc     *jet.CoordinatorMock
+	mm     *mmanager
+	lr     *LogicRunner
+	re     *RequestsExecutorMock
+	es     ExecutionState
+	ps     *pulse.AccessorMock
+	mle    *testutils.MachineLogicExecutorMock
+	nn     *network.NodeNetworkMock
+	sender *bus.SenderMock
+	pub    message2.Publisher
 }
 
 func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) {
@@ -93,12 +93,16 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)
+	suite.sender = bus.NewSenderMock(suite.mc)
+	suite.pub = &publisherMock{}
 
 	suite.SetupLogicRunner()
 }
 
 func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
-	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	suite.sender = bus.NewSenderMock(suite.mc)
+	suite.pub = &publisherMock{}
+	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 	suite.lr.ArtifactManager = suite.am
 	suite.lr.DescriptorsCache = suite.dc
 	suite.lr.MessageBus = suite.mb
@@ -106,24 +110,21 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
 	suite.lr.NodeNetwork = suite.nn
-	suite.sender = bus.NewSenderMock(suite.mc)
-	var err error
-	suite.innerRouter, err = InitHandlers(suite.lr, suite.sender)
-	suite.Require().NoError(err)
+	suite.lr.Sender = suite.sender
+	suite.lr.Publisher = suite.pub
 	suite.lr.RequestsExecutor = suite.re
 
 	_ = suite.lr.Init(suite.ctx)
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(2 * time.Minute)
+	suite.mc.Wait(2 * time.Second)
 	suite.mc.Finish()
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
 	// that weren't shut down in case no Stop was called
 	// Do what we must, stop server
 	_ = suite.lr.Stop(suite.ctx)
-	_ = suite.innerRouter.Close()
 }
 
 type LogicRunnerTestSuite struct {
@@ -770,7 +771,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests false
-	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 
 	es, _ = suite.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = false
@@ -789,7 +790,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests already true
-	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 
 	es, _ = suite.lr.StateStorage.UpsertExecutionState(objectRef)
 	es.LedgerHasMoreRequests = true
@@ -896,11 +897,11 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 }
 
 func (suite *LogicRunnerTestSuite) TestNewLogicRunner() {
-	lr, err := NewLogicRunner(nil)
+	lr, err := NewLogicRunner(nil, suite.pub, suite.sender)
 	suite.Require().Error(err)
 	suite.Require().Nil(lr)
 
-	lr, err = NewLogicRunner(&configuration.LogicRunner{})
+	lr, err = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
 	_ = lr.Stop(context.Background())
@@ -909,7 +910,7 @@ func (suite *LogicRunnerTestSuite) TestNewLogicRunner() {
 func (suite *LogicRunnerTestSuite) TestStartStop() {
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
-	})
+	}, suite.pub, suite.sender)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
 
@@ -1041,8 +1042,6 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 }
 
 func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
-	suite.T().Skip()
-
 	objectRef := testutils.RandomRef()
 	protoRef := testutils.RandomRef()
 
@@ -1055,7 +1054,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	// Last time we spent two full workdays trying to find a race condition
 	// in our code before we realized this test has a logic error related
 	// to it concurrent nature. Keep the code as simple as possible. Don't be smart.
-	var pn insolar.PulseNumber = 100
+	var pn insolar.PulseNumber = insolar.FirstPulseNumber
 	var lck sync.Mutex
 
 	suite.ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
@@ -1115,7 +1114,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 		test := test
 		suite.T().Run(test.name, func(t *testing.T) {
 			lck.Lock()
-			pn = 100
+			pn = insolar.FirstPulseNumber
 			lck.Unlock()
 
 			changePulse := func() {
@@ -1133,7 +1132,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			suite.jc.IsAuthorizedFunc = func(
 				ctx context.Context, role insolar.DynamicRole, id insolar.ID, pnArg insolar.PulseNumber, obj insolar.Reference,
 			) (bool, error) {
-				if pnArg == 101 {
+				if pnArg == insolar.FirstPulseNumber+1 {
 					return false, nil
 				}
 
@@ -1146,7 +1145,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				lck.Lock()
 				defer lck.Unlock()
 
-				return pn == 100, nil
+				return pn == insolar.FirstPulseNumber, nil
 			}
 
 			if test.when > whenIsAuthorized {
@@ -1237,21 +1236,19 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			parcel := &message.Parcel{
 				Sender:      notMeRef,
 				Msg:         msg,
-				PulseNumber: insolar.PulseNumber(100),
+				PulseNumber: insolar.PulseNumber(insolar.FirstPulseNumber),
 			}
 
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
 
-			pulseNum := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
+			pulseNum := pulsar.NewPulse(1, parcel.Pulse()-1, &entropygenerator.StandardEntropyGenerator{})
 			err := suite.lr.OnPulse(ctx, *pulseNum)
 			require.NoError(t, err)
-
-			// _, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 
 			wrapper := payload.Meta{
 				Payload: message.ParcelToBytes(parcel),
 				Sender:  notMeRef,
-				Pulse:   insolar.PulseNumber(100),
+				Pulse:   insolar.PulseNumber(insolar.FirstPulseNumber),
 			}
 			buf, err := wrapper.Marshal()
 			suite.Require().NoError(err)
@@ -1259,12 +1256,14 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			wmMsg := message2.NewMessage(watermill.NewUUID(), buf)
 			wmMsg.Metadata.Set(bus.MetaType, fmt.Sprintf("%s", msg.Type()))
 			wmMsg.Metadata.Set(bus.MetaTraceID, inslogger.TraceID(ctx))
+			wmMsg.Metadata.Set(bus.MetaPulse, pulseNum.PulseNumber.String())
+			sp, err := instracer.Serialize(context.Background())
+			suite.Require().NoError(err)
+			wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
 
 			replyChan := mockSender(suite)
-
 			_, err = suite.lr.FlowDispatcher.Process(wmMsg)
 			<-replyChan
-
 			// if test.flowCanceledExpected {
 			// 	errReply, _ := bus.DeserializeError(bytes.NewBuffer(res.Payload))
 			// 	require.EqualError(t, errReply, flow.ErrCancelled.Error())

@@ -62,10 +62,11 @@ func (d *Dispatcher) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 }
 
 func (d *Dispatcher) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
-	if uint32(msgPulseNumber) > atomic.LoadUint32(&d.currentPulseNumber) {
+	currentPulse := atomic.LoadUint32(&d.currentPulseNumber)
+	if uint32(msgPulseNumber) > currentPulse {
 		return d.handles.future
 	}
-	if uint32(msgPulseNumber) < atomic.LoadUint32(&d.currentPulseNumber) {
+	if uint32(msgPulseNumber) < currentPulse {
 		return d.handles.past
 	}
 	return d.handles.present
