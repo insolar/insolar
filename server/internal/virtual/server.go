@@ -88,7 +88,7 @@ func (s *Server) Serve() {
 	}
 	defer jaegerflush()
 
-	cm, th, stopWatermill, err := initComponents(
+	cm, th, stopWatermill := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,

@@ -116,7 +116,7 @@ func initComponents(
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
 
-) (*component.Manager, insolar.TerminationHandler, func(), error) {
+) (*component.Manager, insolar.TerminationHandler, func()) {
 	cm := component.Manager{}
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
@@ -201,7 +201,7 @@ func initComponents(
 
 	stopper := startWatermill(ctx, logger, pubSub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process, logicRunner.InnerFlowDispatcher.InnerSubscriber)
 
-	return &cm, terminationHandler, stopper, nil
+	return &cm, terminationHandler, stopper
 }
 
 func startWatermill(

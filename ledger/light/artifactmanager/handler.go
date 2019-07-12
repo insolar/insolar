@@ -244,7 +244,6 @@ func NewMessageHandler(
 			p.Dep.IndexAccessor = h.IndexStorage
 			p.Dep.Sender = h.Sender
 		},
-		Sender: h.Sender,
 	}
 
 	initHandle := func(msg *message.Message) *handle.Init {

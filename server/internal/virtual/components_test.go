@@ -41,7 +41,7 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
-	cm, _, stopWatermill, err := initComponents(
+	cm, _, stopWatermill := initComponents(
 		ctx,
 		cfg,
 		bootstrapComponents.CryptographyService,

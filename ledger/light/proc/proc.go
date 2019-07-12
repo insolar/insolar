@@ -51,7 +51,6 @@ type Dependencies struct {
 	SetCode             func(*SetCode)
 	SendRequests        func(*SendRequests)
 	GetDelegate         func(*GetDelegate)
-	Sender              bus.Sender
 }
 
 type ReturnReply struct {

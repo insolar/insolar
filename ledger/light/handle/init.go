@@ -37,7 +37,6 @@ import (
 type Init struct {
 	dep     *proc.Dependencies
 	message *wmessage.Message
-	meta    payload.Meta
 	sender  wbus.Sender
 }
 
@@ -81,8 +80,6 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	}
 
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
-
-	s.meta = meta
 
 	switch payloadType {
 	case payload.TypeGetObject:
@@ -137,7 +134,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal meta")
 	}
-	s.meta = meta
 
 	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
 	if err != nil {
