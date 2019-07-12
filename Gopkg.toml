@@ -88,3 +88,7 @@ required = [
 [[constraint]]
   name = "google.golang.org/grpc"
   version = "=1.19.0"
+
+[[constraint]]
+  name = "github.com/fortytw2/leaktest"
+  version = "1.3.0"
