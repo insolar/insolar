@@ -89,10 +89,3 @@ func Decode(buf []byte) (*Drop, error) {
 	}
 	return &drop, nil
 }
-
-// MustDecode deserializes a jet.Drop
-func MustDecode(buf []byte) (dr Drop) {
-	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
-	dec.MustDecode(&dr)
-	return dr
-}
