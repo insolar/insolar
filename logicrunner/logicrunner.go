@@ -53,14 +53,6 @@ const maxQueueLength = 10
 
 type Ref = insolar.Reference
 
-// Context of one contract execution
-type ObjectState struct {
-	sync.Mutex
-
-	ExecutionBroker *ExecutionBroker
-	Validation      *ExecutionState
-}
-
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
 	wmMsg.Metadata.Set(wmBus.MetaTraceID, inslogger.TraceID(ctx))

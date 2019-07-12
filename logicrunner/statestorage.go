@@ -25,6 +25,14 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 )
 
+// Context of one contract execution
+type ObjectState struct {
+	sync.Mutex
+
+	ExecutionBroker *ExecutionBroker
+	Validation      *ExecutionState
+}
+
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go
 type StateStorage interface {
 	sync.Locker
@@ -58,7 +66,7 @@ func (ss *stateStorage) UpsertValidationState(ref insolar.Reference) *ExecutionS
 	os.Lock()
 	defer os.Unlock()
 
-	os.Validation = NewExecutionState()
+	os.Validation = &ExecutionState{}
 	return os.Validation
 }
 
@@ -74,7 +82,13 @@ func (ss *stateStorage) GetValidationState(ref insolar.Reference) *ExecutionStat
 	return os.Validation
 }
 
-func NewStateStorage(publisher watermillMsg.Publisher, requestsExecutor RequestsExecutor, messageBus insolar.MessageBus, jetCoordinator jet.Coordinator, pulseAccessor pulse.Accessor) StateStorage {
+func NewStateStorage(
+	publisher watermillMsg.Publisher,
+	requestsExecutor RequestsExecutor,
+	messageBus insolar.MessageBus,
+	jetCoordinator jet.Coordinator,
+	pulseAccessor pulse.Accessor,
+) StateStorage {
 	ss := &stateStorage{
 		state: make(map[insolar.Reference]*ObjectState),
 

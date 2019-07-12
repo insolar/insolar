@@ -225,6 +225,27 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 	}
 }
 
+type ExecutionState struct {
+	sync.Mutex
+
+	LedgerHasMoreRequests bool
+	getLedgerPendingMutex sync.Mutex
+
+	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+	pending              message.PendingState
+	PendingConfirmed     bool
+	HasPendingCheckMutex sync.Mutex
+}
+
+// PendingNotConfirmed checks that we were in pending and waiting
+// for previous executor to notify us that he still executes it
+//
+// Used in OnPulse to tell next executor, that it's time to continue
+// work on this object
+func (es *ExecutionState) InPendingNotConfirmed() bool {
+	return es.pending == message.InPending && !es.PendingConfirmed
+}
+
 type ExecutionBroker struct {
 	stateLock   sync.Locker
 	mutable     *TranscriptDequeue
