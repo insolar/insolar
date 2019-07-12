@@ -21,48 +21,48 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type RegisterChild struct {
 	dep     *proc.Dependencies
-	replyTo chan<- bus.Reply
+	meta    payload.Meta
 	message *message.RegisterChild
 	pulse   insolar.PulseNumber
 }
 
-func NewRegisterChild(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
+func NewRegisterChild(dep *proc.Dependencies, meta payload.Meta, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
 	return &RegisterChild{
 		dep:     dep,
-		replyTo: rep,
+		meta:    meta,
 		message: msg,
 		pulse:   pulse,
 	}
 }
 
 func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.meta)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
 
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.meta)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
-	getIndex := proc.NewEnsureIndex(s.message.Parent, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
+	getIndex := proc.NewEnsureIndex(s.message.Parent, jet.Result.Jet, s.meta, flow.Pulse(ctx))
 	s.dep.GetIndex(getIndex)
 	err := f.Procedure(ctx, getIndex, true)
 	if err != nil {
 		return err
 	}
 
-	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, s.replyTo)
+	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, s.meta)
 	s.dep.RegisterChild(registerChild)
 	return f.Procedure(ctx, registerChild, false)
 }

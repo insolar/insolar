@@ -17,6 +17,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -103,7 +104,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	meta := payload.Meta{}
 	err = meta.Unmarshal(msg.Payload)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
+		logger.Error(err)
 	}
 
 	err = h.handle(ctx, msg)
@@ -114,7 +115,51 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	return nil, nil
 }
 
+func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) error {
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize payload to parcel")
+	}
+
+	msgType := msg.Metadata.Get(bus.MetaType)
+	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
+	defer span.End()
+
+	var rep insolar.Reply
+	switch msgType {
+	case insolar.TypeGetRequest.String():
+		rep, err = h.handleGetRequest(ctx, parcel)
+	case insolar.TypeGetChildren.String():
+		rep, err = h.handleGetChildren(ctx, parcel)
+	case insolar.TypeGetDelegate.String():
+		rep, err = h.handleGetDelegate(ctx, parcel)
+	case insolar.TypeGetJet.String():
+		rep, err = h.handleGetJet(ctx, parcel)
+	default:
+		err = fmt.Errorf("no handler for message type %s", msgType)
+	}
+	if err != nil {
+		h.replyError(ctx, meta, errors.Wrap(err, "error while handle parcel"))
+	} else {
+		resAsMsg := bus.ReplyAsMessage(ctx, rep)
+		h.Sender.Reply(ctx, meta, resAsMsg)
+	}
+	return err
+}
+
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
+	msgType := msg.Metadata.Get(bus.MetaType)
+	if msgType != "" {
+		return h.handleParcel(ctx, msg)
+	}
+
 	var err error
 
 	meta := payload.Meta{}
@@ -208,12 +253,7 @@ func (h *Handler) replyError(ctx context.Context, replyTo payload.Meta, err erro
 
 func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
-
-	h.Bus.MustRegister(insolar.TypeGetDelegate, h.handleGetDelegate)
-	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
-	h.Bus.MustRegister(insolar.TypeGetJet, h.handleGetJet)
-	h.Bus.MustRegister(insolar.TypeGetRequest, h.handleGetRequest)
 	return nil
 }
 

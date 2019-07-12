@@ -19,17 +19,17 @@ package thread
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
 type Thread struct {
 	controller *Controller
 	cancel     <-chan struct{}
 	procedures map[flow.Procedure]*result
-	message    bus.Message
+	message    *message.Message
 	migrated   bool
 }
 
@@ -39,7 +39,7 @@ type result struct {
 }
 
 // NewThread creates a new Thread instance. Thread implements the Flow interface.
-func NewThread(msg bus.Message, controller *Controller) *Thread {
+func NewThread(msg *message.Message, controller *Controller) *Thread {
 	return &Thread{
 		controller: controller,
 		cancel:     controller.Cancel(),

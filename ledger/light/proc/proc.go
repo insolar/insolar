@@ -16,13 +16,6 @@
 
 package proc
 
-import (
-	"context"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
-)
-
 type Dependencies struct {
 	FetchJet            func(*FetchJet)
 	CheckJet            func(*CheckJet)
@@ -49,20 +42,6 @@ type Dependencies struct {
 	SetCode             func(*SetCode)
 	SendRequests        func(*SendRequests)
 	GetDelegate         func(*GetDelegate)
-}
-
-type ReturnReply struct {
-	ReplyTo chan<- bus.Reply
-	Err     error
-	Reply   insolar.Reply
-}
-
-func (p *ReturnReply) Proceed(ctx context.Context) error {
-	select {
-	case p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}:
-	case <-ctx.Done():
-	}
-	return nil
 }
 
 // NewDependenciesMock returns all dependencies for handlers.

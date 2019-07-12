@@ -20,8 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	wbus "github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
@@ -32,7 +31,7 @@ import (
 type FetchJet struct {
 	target  insolar.ID
 	pulse   insolar.PulseNumber
-	replyTo chan<- bus.Reply
+	message payload.Meta
 
 	Result struct {
 		Jet insolar.JetID
@@ -43,14 +42,15 @@ type FetchJet struct {
 		Coordinator jet.Coordinator
 		JetUpdater  jet.Fetcher
 		JetFetcher  jet.Fetcher
+		Sender      bus.Sender
 	}
 }
 
-func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, rep chan<- bus.Reply) *FetchJet {
+func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, message payload.Meta) *FetchJet {
 	return &FetchJet{
 		target:  target,
 		pulse:   pn,
-		replyTo: rep,
+		message: message,
 	}
 }
 
@@ -64,17 +64,30 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
 	if err != nil {
 		err := errors.Wrap(err, "failed to fetch jet")
-		p.replyTo <- bus.Reply{Err: err}
+		if err != nil {
+			msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+			if err != nil {
+				return err
+			}
+			go p.Dep.Sender.Reply(ctx, p.message, msg)
+		}
 		return err
 	}
 	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
 	if err != nil {
 		err := errors.Wrap(err, "failed to calculate executor for jet")
-		p.replyTo <- bus.Reply{Err: err}
+		if err != nil {
+			msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+			if err != nil {
+				return err
+			}
+			go p.Dep.Sender.Reply(ctx, p.message, msg)
+		}
 		return err
 	}
 	if *executor != p.Dep.Coordinator.Me() {
-		p.replyTo <- bus.Reply{Reply: &reply.JetMiss{JetID: *jetID, Pulse: p.pulse}}
+		msg := bus.ReplyAsMessage(ctx, &reply.JetMiss{JetID: *jetID, Pulse: p.pulse})
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		return errors.New("jet miss")
 	}
 
@@ -85,25 +98,27 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 type WaitHot struct {
 	jetID   insolar.JetID
 	pulse   insolar.PulseNumber
-	replyTo chan<- bus.Reply
+	message payload.Meta
 
 	Dep struct {
 		Waiter hot.JetWaiter
+		Sender bus.Sender
 	}
 }
 
-func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, rep chan<- bus.Reply) *WaitHot {
+func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, message payload.Meta) *WaitHot {
 	return &WaitHot{
 		jetID:   j,
 		pulse:   pn,
-		replyTo: rep,
+		message: message,
 	}
 }
 
 func (p *WaitHot) Proceed(ctx context.Context) error {
 	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
 	if err != nil {
-		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrHotDataTimeout}}
+		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrHotDataTimeout})
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		return err
 	}
 
@@ -124,7 +139,7 @@ type CheckJet struct {
 		JetAccessor jet.Accessor
 		Coordinator jet.Coordinator
 		JetFetcher  jet.Fetcher
-		Sender      wbus.Sender
+		Sender      bus.Sender
 	}
 }
 
@@ -180,7 +195,7 @@ type WaitHotWM struct {
 
 	Dep struct {
 		Waiter hot.JetWaiter
-		Sender wbus.Sender
+		Sender bus.Sender
 	}
 }
 

@@ -24,6 +24,7 @@ import (
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
@@ -283,7 +284,9 @@ func channelIsEmpty(channel chan struct{}) bool {
 }
 
 func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	sender := bus.NewSenderMock(s.Controller)
+	pm := &publisherMock{}
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{}, pm, sender)
 
 	// initialize mocks
 	am := artifacts.NewClientMock(s.Controller)
@@ -294,7 +297,6 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	jc := jet.NewCoordinatorMock(s.Controller)
 	ps := pulse.NewAccessorMock(s.Controller)
 	nn := network.NewNodeNetworkMock(s.Controller)
-	pm := &publisherMock{}
 
 	// initialize lr
 	lr.ArtifactManager = am
@@ -305,7 +307,6 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	lr.PulseAccessor = ps
 	lr.NodeNetwork = nn
 	lr.RequestsExecutor = re
-	lr.publisher = pm
 
 	_ = lr.Init(s.Context)
 

@@ -19,9 +19,11 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
@@ -29,18 +31,18 @@ import (
 type HandleStillExecuting struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	logger := inslogger.FromContext(ctx)
-	parcel := h.Message.Parcel
 	lr := h.dep.lr
-	replyOk := bus.Reply{Reply: &reply.OK{}, Err: nil}
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
 
-	logger.Debug("HandleStillExecuting.Present starts ...")
+	inslogger.FromContext(ctx).Debug("HandleStillExecuting.Present starts ...")
 
-	msg := parcel.Message().(*message.StillExecuting)
+	msg := h.Parcel.Message().(*message.StillExecuting)
 	ref := msg.DefaultTarget()
 	broker := lr.StateStorage.UpsertExecutionState(*ref)
 	es := &broker.executionState
@@ -59,9 +61,10 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		es.pending = message.InPending
 		es.PendingConfirmed = true
 	}
-	es.Unlock()
 
-	h.Message.ReplyTo <- replyOk
+	es.Unlock()
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
+
 	return nil
 
 }
