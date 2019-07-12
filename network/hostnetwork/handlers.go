@@ -53,7 +53,6 @@ package hostnetwork
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/insolar/insolar/network/utils"
 
@@ -92,15 +91,8 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 
 	// context cancel monitoring
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				utils.CloseVerbose(reader)
-				return
-			default:
-				<-time.After(time.Millisecond * 10)
-			}
-		}
+		<-ctx.Done()
+		utils.CloseVerbose(reader)
 	}()
 
 	for {
