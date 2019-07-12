@@ -808,6 +808,37 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_ = suite.lr.Stop(suite.ctx)
 }
 
+func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
+	pl := &payload.SagaCallAcceptNotification{}
+	msg, err := payload.NewMessage(pl)
+	suite.Require().NoError(err)
+
+	pulseNum := pulsar.NewPulse(0, insolar.FirstPulseNumber, &entropygenerator.StandardEntropyGenerator{})
+	msg.Metadata.Set(bus.MetaPulse, pulseNum.PulseNumber.String())
+	sp, err := instracer.Serialize(context.Background())
+	suite.Require().NoError(err)
+	msg.Metadata.Set(bus.MetaSpanData, string(sp))
+
+	meta := payload.Meta{
+		Payload: msg.Payload,
+	}
+	buf, err := meta.Marshal()
+	msg.Payload = buf
+
+	replyChan := mockSender(suite)
+	_, err = suite.lr.FlowDispatcher.Process(msg)
+	suite.Require().NoError(err)
+
+	rep, err := getReply(suite, replyChan)
+	suite.Require().NoError(err)
+
+	// This is a temporary reply. It is required only to make sure that the
+	// message handler was executed. Actually LME doesn't need any reply.
+	suite.Require().Equal(&reply.OK{}, rep)
+
+	// work in progress...
+}
+
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 	ref1 := testutils.RandomRef()
 
