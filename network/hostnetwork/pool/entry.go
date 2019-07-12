@@ -115,6 +115,9 @@ func (e *entry) dial(ctx context.Context) (io.ReadWriteCloser, error) {
 }
 
 func (e *entry) close() {
+	e.Lock()
+	defer e.Unlock()
+
 	if e.conn != nil {
 		network.CloseVerbose(e.conn)
 	}

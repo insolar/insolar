@@ -119,7 +119,7 @@ func (pn PulseNumber) Size() int {
 // PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {
 	// Set set's new pulse and closes current jet drop. If dry is true, nothing will be saved to storage.
-	Set(ctx context.Context, pulse Pulse, persist bool) error
+	Set(ctx context.Context, pulse Pulse) error
 }
 
 // PulseRange represents range of pulses.

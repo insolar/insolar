@@ -25,6 +25,7 @@ import (
 )
 
 type jet struct {
+	// Active indicates what node is approved as last one, i.e. it's leaf (ignored for non leafs if set)
 	Actual bool
 	Left   *jet
 	Right  *jet
@@ -154,8 +155,8 @@ func (t *Tree) Split(id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
 	}
 
 	left, right := Siblings(id)
-	j.Left = &jet{}
-	j.Right = &jet{}
+	j.Left = &jet{Actual: true}
+	j.Right = &jet{Actual: true}
 	return left, right, nil
 }
 

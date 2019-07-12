@@ -81,13 +81,13 @@ type Future interface {
 	Request() network.Packet
 
 	// Response is a channel to listen for future response.
-	Response() <-chan network.Packet
+	Response() <-chan network.ReceivedPacket
 
 	// SetResponse makes packet to appear in response channel.
-	SetResponse(network.Packet)
+	SetResponse(network.ReceivedPacket)
 
 	// WaitResponse gets the future response from Response() channel with a timeout set to `duration`.
-	WaitResponse(duration time.Duration) (network.Packet, error)
+	WaitResponse(duration time.Duration) (network.ReceivedPacket, error)
 
 	// Cancel closes all channels and cleans up underlying structures.
 	Cancel()
@@ -102,5 +102,5 @@ type Manager interface {
 }
 
 type PacketHandler interface {
-	Handle(ctx context.Context, msg *packet.Packet)
+	Handle(ctx context.Context, msg *packet.ReceivedPacket)
 }

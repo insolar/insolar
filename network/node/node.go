@@ -52,15 +52,14 @@ package node
 
 import (
 	"crypto"
-	"hash/crc32"
 	"sync"
 	"sync/atomic"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 type MutableNode interface {
@@ -68,9 +67,17 @@ type MutableNode interface {
 
 	SetShortID(shortID insolar.ShortNodeID)
 	SetState(state insolar.NodeState)
+	GetSignature() insolar.Signature
+	SetSignature(signature insolar.Signature)
 	ChangeState()
 	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
+}
+
+type Evidence struct {
+	Data      []byte
+	Digest    []byte
+	Signature []byte
 }
 
 // GenerateUintShortID generate short ID for node without checking collisions
@@ -86,17 +93,16 @@ type node struct {
 
 	NodeAddress string
 
-	versionMutex sync.RWMutex
-	NodeVersion  string
-
+	mutex          sync.RWMutex
+	signature      insolar.Signature
+	NodeVersion    string
 	NodeLeavingETA uint32
-
-	state uint32
+	state          uint32
 }
 
 func (n *node) SetVersion(version string) {
-	n.versionMutex.Lock()
-	defer n.versionMutex.Unlock()
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 
 	n.NodeVersion = version
 }
@@ -169,10 +175,24 @@ func (n *node) GetGlobuleID() insolar.GlobuleID {
 }
 
 func (n *node) Version() string {
-	n.versionMutex.RLock()
-	defer n.versionMutex.RUnlock()
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
 
 	return n.NodeVersion
+}
+
+func (n *node) GetSignature() insolar.Signature {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	return n.signature
+}
+
+func (n *node) SetSignature(signature insolar.Signature) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	n.signature = signature
 }
 
 func (n *node) SetShortID(id insolar.ShortNodeID) {

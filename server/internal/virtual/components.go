@@ -22,6 +22,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -48,8 +49,7 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/server/internal"
 	"github.com/insolar/insolar/version/manager"
 )
 
@@ -119,7 +119,8 @@ func initComponents(
 	cm := component.Manager{}
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
-	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	pubSub = internal.PubSubWrapper(ctx, &cm, cfg.Introspection, pubSub)
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -153,10 +154,6 @@ func initComponents(
 	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
-	// move to logic runner ??
-	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	checkError(ctx, err, "failed init pulse for LogicRunner")
-
 	cm.Register(
 		terminationHandler,
 		pcs,
@@ -166,6 +163,7 @@ func initComponents(
 		certManager,
 		logicRunner,
 		logicrunner.NewLogicExecutor(),
+		logicrunner.NewRequestsExecutor(),
 		logicrunner.NewMachinesManager(),
 		nodeNetwork,
 		nw,
@@ -174,11 +172,11 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(pubsub, pulses, jc, pcs)
+	b := bus.NewBus(pubSub, pulses, jc, pcs)
 
 	components := []interface{}{
 		b,
-		pubsub,
+		pubSub,
 		messageBus,
 		contractRequester,
 		artifacts.NewClient(b),
@@ -200,7 +198,7 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, notFound)
+	startWatermill(ctx, logger, pubSub, b, nw.SendMessageHandler, notFound)
 
 	return &cm, terminationHandler
 }

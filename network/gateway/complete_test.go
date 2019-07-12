@@ -228,7 +228,7 @@ func TestComplete_handler(t *testing.T) {
 	ge = ge.NewGateway(insolar.CompleteNetworkState)
 	ctx := context.Background()
 
-	p := packet.NewPacket(nil, nil, types.SignCert, 1)
+	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil)
 	p.SetRequest(&packet.SignCertRequest{NodeRef: nodeRef})
 
 	hn.BuildResponseFunc = func(p context.Context, p1 network.Packet, p2 interface{}) network.Packet {

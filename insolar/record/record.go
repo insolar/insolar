@@ -45,7 +45,7 @@ type State interface {
 	// GetIsPrototype returns state code.
 	GetIsPrototype() bool
 	// GetMemory returns state indexStorage.
-	GetMemory() *insolar.ID
+	GetMemory() []byte
 	// PrevStateID returns previous state id.
 	PrevStateID() *insolar.ID
 }
@@ -62,8 +62,8 @@ func (p Activate) GetIsPrototype() bool {
 	return p.IsPrototype
 }
 
-func (p Activate) GetMemory() *insolar.ID {
-	return &p.Memory
+func (p Activate) GetMemory() []byte {
+	return p.Memory
 }
 
 func (Activate) PrevStateID() *insolar.ID {
@@ -82,8 +82,8 @@ func (p Amend) GetIsPrototype() bool {
 	return p.IsPrototype
 }
 
-func (p Amend) GetMemory() *insolar.ID {
-	return &p.Memory
+func (p Amend) GetMemory() []byte {
+	return p.Memory
 }
 
 func (p Amend) PrevStateID() *insolar.ID {
@@ -102,7 +102,7 @@ func (Deactivate) GetIsPrototype() bool {
 	return false
 }
 
-func (Deactivate) GetMemory() *insolar.ID {
+func (Deactivate) GetMemory() []byte {
 	return nil
 }
 
@@ -118,7 +118,7 @@ func (Genesis) ID() StateID {
 	return StateActivation
 }
 
-func (Genesis) GetMemory() *insolar.ID {
+func (Genesis) GetMemory() []byte {
 	return nil
 }
 
@@ -130,10 +130,32 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
-type CompositeFilamentRecord struct {
-	RecordID insolar.ID
-	Record   Material
+type Request interface {
+	// AffinityRef returns a pointer to the reference of the object the
+	// Request is affine to. The result can be nil, e.g. in case of creating
+	// a new object.
+	AffinityRef() *insolar.Reference
+	// ReasonRef returns a reference of the Request that caused the creating
+	// of this Request.
+	ReasonRef() insolar.Reference
+	GetCallType() CallType
+}
 
-	MetaID insolar.ID
-	Meta   PendingFilament
+func (r *IncomingRequest) AffinityRef() *insolar.Reference {
+	// IncomingRequests are affine to the Object on which the request
+	// is going to be executed.
+	return r.Object
+}
+
+func (r *IncomingRequest) ReasonRef() insolar.Reference {
+	return r.Reason
+}
+
+func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
+	// OutgoingRequests are affine to the Caller which created the Request.
+	return &r.Caller
+}
+
+func (r *OutgoingRequest) ReasonRef() insolar.Reference {
+	return r.Reason
 }

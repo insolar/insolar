@@ -195,7 +195,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	info, err := requester.Info(sendURL)
 	check("Problems with obtaining info", err)
 
-	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey)
+	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey, cfg.PublicKey)
 	check("Problems with creating user config:", err)
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
@@ -204,8 +204,9 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 		ID:      1,
 		Method:  "api.call",
 		Params: requester.Params{
-			CallSite:   "contract.createMember",
+			CallSite:   "member.create",
 			CallParams: []interface{}{userName, cfg.PublicKey},
+			PublicKey:  ucfg.PublicKey,
 		},
 		LogLevel: logLevelInsolar.String(),
 	}

@@ -40,13 +40,11 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
@@ -57,6 +55,7 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/server/internal"
 	"github.com/pkg/errors"
 )
 
@@ -109,6 +108,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
 
 	// Network.
 	var (
@@ -216,21 +216,20 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		conf := cfg.Ledger
-		idLocker := object.NewIDLocker()
+		idLocker := object.NewIndexLocker()
 		drops := drop.NewStorageMemory()
-		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewInMemoryIndex(records, CryptoScheme)
+		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
 
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
-		hots := recentstorage.NewProvider()
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, indexes, indexes, &conf)
-		handler.RecentStorageProvider = hots
+		handler := artifactmanager.NewMessageHandler(&conf)
+		handler.PulseCalculator = Pulses
+
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
 		handler.JetCoordinator = Coordinator
@@ -238,24 +237,20 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.DelegationTokenFactory = Tokens
 		handler.JetStorage = Jets
 		handler.DropModifier = drops
-		handler.BlobModifier = blobs
-		handler.BlobAccessor = blobs
-		handler.Blobs = blobs
-		handler.IDLocker = idLocker
-		handler.RecordModifier = records
-		handler.RecordAccessor = records
+		handler.IndexLocker = idLocker
+		handler.Records = records
 		handler.Nodes = Nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
 		handler.WriteAccessor = writeController
 		handler.Sender = WmBus
+		handler.IndexStorage = indexes
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
 			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
-			blobs,
 			records,
 			indexes,
 			Pulses,
@@ -269,19 +264,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Bus,
 			Pulses,
 			drops,
-			blobs,
 			records,
 			indexes,
 			Jets,
 		)
 
-		jetSplitter := executor.NewJetSplitter(
-			Coordinator,
-			Jets,
-			Jets,
-			drops,
-			hots,
-		)
+		jetSplitter := executor.NewJetSplitter(jetCalculator, Jets, Jets, drops, drops, Pulses)
 
 		hotSender := executor.NewHotSender(
 			Bus,

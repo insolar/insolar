@@ -65,7 +65,7 @@ func NewPulseManager() *PulseManager {
 }
 
 // Set set's new pulse.
-func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
+func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
 	if m.stopped {
@@ -80,13 +80,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	)
 	defer span.End()
 
-	err := m.setUnderGilSection(ctx, newPulse, persist)
+	err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		return err
-	}
-
-	if !persist {
-		return nil
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)
@@ -102,7 +98,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	return nil
 }
 
-func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
+func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse) error {
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
 
@@ -119,7 +115,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
 		"new_pulse": newPulse.PulseNumber,
-		"persist":   persist,
 	}).Debugf("received pulse")
 
 	// swap pulse
@@ -130,19 +125,17 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if err != nil {
 		return errors.Wrap(err, "failed to apply new active node list")
 	}
-	if persist {
-		if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-			return errors.Wrap(err, "call of AddPulse failed")
-		}
-		fromNetwork := m.NodeNet.GetWorkingNodes()
-		toSet := make([]insolar.Node, 0, len(fromNetwork))
-		for _, node := range fromNetwork {
-			toSet = append(toSet, insolar.Node{ID: node.ID(), Role: node.Role()})
-		}
-		err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
-		if err != nil {
-			return errors.Wrap(err, "call of SetActiveNodes failed")
-		}
+	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		return errors.Wrap(err, "call of AddPulse failed")
+	}
+	fromNetwork := m.NodeNet.GetWorkingNodes()
+	toSet := make([]insolar.Node, 0, len(fromNetwork))
+	for _, n := range fromNetwork {
+		toSet = append(toSet, insolar.Node{ID: n.ID(), Role: n.Role()})
+	}
+	err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
+	if err != nil {
+		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber)
@@ -154,12 +147,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 
 // Start starts pulse manager.
 func (m *PulseManager) Start(ctx context.Context) error {
-	origin := m.NodeNet.GetOrigin()
-	err := m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
-	if err != nil && err != node.ErrOverride {
-		return err
-	}
-
 	return nil
 }
 

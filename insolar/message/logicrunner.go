@@ -32,11 +32,10 @@ const (
 
 // ReturnResults - push results of methods
 type ReturnResults struct {
-	Target   insolar.Reference
-	Caller   insolar.Reference
-	Sequence uint64
-	Reply    insolar.Reply
-	Error    string
+	Target     insolar.Reference
+	RequestRef insolar.Reference
+	Reply      insolar.Reply
+	Error      string
 }
 
 func (rr *ReturnResults) Type() insolar.MessageType {
@@ -44,7 +43,7 @@ func (rr *ReturnResults) Type() insolar.MessageType {
 }
 
 func (rr *ReturnResults) GetCaller() *insolar.Reference {
-	return &rr.Caller
+	return nil
 }
 
 func (rr *ReturnResults) DefaultTarget() *insolar.Reference {
@@ -61,7 +60,7 @@ func (rr *ReturnResults) AllowedSenderObjectAndRole() (*insolar.Reference, insol
 
 // CallMethod - Simply call method and return result
 type CallMethod struct {
-	record.Request
+	record.IncomingRequest
 
 	PulseNum insolar.PulseNumber // DIRTY: EVIL: HACK
 }
@@ -119,8 +118,9 @@ type ExecutorResults struct {
 }
 
 type ExecutionQueueElement struct {
-	Parcel  insolar.Parcel
-	Request *insolar.Reference
+	RequestRef  insolar.Reference
+	Request     record.IncomingRequest
+	ServiceData ServiceData
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -277,9 +277,10 @@ func (pf *PendingFinished) Type() insolar.MessageType {
 // for more details.
 type AdditionalCallFromPreviousExecutor struct {
 	ObjectReference insolar.Reference
-	Parcel          insolar.Parcel
-	Request         *insolar.Reference
 	Pending         PendingState
+	RequestRef      insolar.Reference
+	Request         record.IncomingRequest
+	ServiceData     ServiceData
 }
 
 func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {

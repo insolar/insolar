@@ -91,9 +91,6 @@ func (mb *MessageBus) Init(ctx context.Context) error {
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.Acquire")
-	defer span.End()
-
 	counter := atomic.AddInt64(&mb.counter, 1)
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
 	if counter == 1 {
@@ -104,9 +101,6 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 }
 
 func (mb *MessageBus) Release(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.Release")
-	defer span.End()
-
 	counter := atomic.AddInt64(&mb.counter, -1)
 	if counter < 0 {
 		panic("Trying to unlock without locking")
@@ -272,6 +266,8 @@ func (mb *MessageBus) SendParcel(
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, parcelType)
 	defer span.End()
 
+	inslogger.FromContext(ctx).Debug("About to send message ", parcelType)
+
 	readBarrier(ctx, &mb.globalLock)
 
 	nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, options)
@@ -346,7 +342,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg insolar.Parcel) (insola
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
-		txt := "no handler for received message type"
+		txt := "no handler for received message type: " + msg.Type().String()
 		inslogger.FromContext(ctx).Error(txt)
 		return nil, errors.New(txt)
 	}
@@ -542,11 +538,8 @@ func (mb *MessageBus) checkParcel(_ context.Context, parcel insolar.Parcel) erro
 }
 
 func readBarrier(ctx context.Context, mutex *sync.RWMutex) {
-	inslogger.FromContext(ctx).Debug("Locking readBarrier")
 	mutex.RLock()
-	inslogger.FromContext(ctx).Debug("readBarrier locked")
 	mutex.RUnlock()
-	inslogger.FromContext(ctx).Debug("readBarrier unlocked")
 }
 
 func init() {

@@ -475,7 +475,7 @@ func (p *pulseManagerMock) Append(ctx context.Context, pulse insolar.Pulse) erro
 	return nil
 }
 
-func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist bool) error {
+func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse) error {
 	p.lock.Lock()
 	p.pulse = pulse
 	p.lock.Unlock()

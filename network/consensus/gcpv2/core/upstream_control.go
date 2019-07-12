@@ -51,70 +51,31 @@
 package core
 
 import (
-	"time"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
 type UpstreamPulseController interface {
-	/* Called when pulse is expected soon.
-	Application traffic should be throttled down a bit.
-	*/
-	PulseIsComing(anticipatedStart time.Time)
-
-	/* Called on receiving seem-to-be-valid Pulsar or Phase0 packets.
-	Application traffic should be stopped or throttled down severely for a limited time (1-2 secs).
-	Restoration of application traffic should be done automatically, unless PulseDetected() is called again.
-	Can be called multiple time in sequence.
-
-	Application MUST NOT consider it as a new pulse.
-	*/
-	PulseDetected()
-
-	/* Called on a valid Pulse, but the pulse can yet be rolled back. No additional implications on traffic.
+	/* Called on a valid Pulse, but the pulse can yet be rolled back.
 	Application should return immediately and start preparation of NodeStateHash.
 	NodeStateHash should be sent into the channel when ready.
 	*/
 	PreparePulseChange(report MembershipUpstreamReport) <-chan common2.NodeStateHash
 
-	/* Called on a confirmed Pulse and indicates final change of Pulse for the application.
-	Application traffic can be resumed, but should remain throttled.
-	*/
+	/* Called on a confirmed Pulse and indicates final change of Pulse for the application.	*/
 	CommitPulseChange(report MembershipUpstreamReport, pd common.PulseData, activeCensus census.OperationalCensus)
 
-	/* Called on a rollback of Pulse and indicates continuation of the previous Pulse for the application.
-	Application traffic can be resumed at full.
-	*/
+	/* Called on a rollback of Pulse and indicates continuation of the previous Pulse for the application. */
 	CancelPulseChange()
 
-	/* Consensus is finished and population for the next pulse is finalized
-	Application traffic can be resumed at full.
-
-	This method is also invoked on resuming of this member from suspended state.
-	*/
-	MembershipConfirmed(report MembershipUpstreamReport, expectedCensus census.OperationalCensus)
-
-	/* This node has left gracefully (by node's request) or it was expelled by globula */
-	MembershipLost(graceful bool)
-
-	/* This node became suspected in the globula */
-	MembershipSuspended()
-
-	/* Application traffic should be stopped or throttled down severely for a limited time (1-2 secs). */
-	SuspendTraffic()
-
-	/* Application traffic can be resumed at full */
-	ResumeTraffic()
-
-	// JoinCandidatePromoted()
+	/* Consensus is finished. If expectedCensus == 0 then this node was evicted from consensus.	*/
+	ConsensusFinished(report MembershipUpstreamReport, expectedCensus census.OperationalCensus)
 }
 
 type MembershipUpstreamReport struct {
-	PulseNumber     common.PulseNumber
-	MembershipState common2.MembershipState
-	MemberPower     common2.MemberPower
+	PulseNumber common.PulseNumber
+	MemberPower common2.MemberPower
+	MemberMode  common2.MemberOpMode
 }

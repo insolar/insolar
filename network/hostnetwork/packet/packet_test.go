@@ -95,7 +95,8 @@ func TestDeserializePacket(t *testing.T) {
 	deserialized, err := DeserializePacket(log.GlobalLogger, &buffer)
 
 	require.NoError(t, err)
-	require.Equal(t, deserialized, msg)
+	require.Equal(t, deserialized.Packet, msg)
+	require.Equal(t, deserialized.Bytes(), serialized)
 }
 
 func TestDeserializeBigPacket(t *testing.T) {

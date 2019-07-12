@@ -63,7 +63,7 @@ func TestPublicKeyResponse_UnmarshalError(t *testing.T) {
 }
 
 func TestCallResponse(t *testing.T) {
-	testValue := map[interface{}]interface{}{
+	testValue := map[string]interface{}{
 		"string_value": "test_string",
 		"int_value":    uint64(1),
 	}

@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -155,23 +156,23 @@ func SerializePacket(p *Packet) ([]byte, error) {
 }
 
 // DeserializePacket reads packet from io.Reader.
-func DeserializePacket(logger insolar.Logger, conn io.Reader) (*Packet, error) {
+func DeserializePacket(logger insolar.Logger, conn io.Reader) (*ReceivedPacket, error) {
+	reader := utils.NewCapturingReader(conn)
+
 	lengthBytes := make([]byte, 8)
-	if _, err := io.ReadFull(conn, lengthBytes); err != nil {
+	if _, err := io.ReadFull(reader, lengthBytes); err != nil {
 		return nil, err
 	}
-	lengthReader := bytes.NewBuffer(lengthBytes)
+	lengthReader := bytes.NewReader(lengthBytes)
 	length, err := binary.ReadUvarint(lengthReader)
 	if err != nil {
 		return nil, io.ErrUnexpectedEOF
 	}
 
-	logger.Debugf("[ DeserializePacket ] packet length %d", length)
 	buf := make([]byte, length)
-	if _, err := io.ReadFull(conn, buf); err != nil {
+	if _, err := io.ReadFull(reader, buf); err != nil {
 		return nil, errors.Wrap(err, "failed to read packet")
 	}
-	logger.Debugf("[ DeserializePacket ] read packet")
 
 	msg := &Packet{}
 	err = msg.Unmarshal(buf)
@@ -181,7 +182,8 @@ func DeserializePacket(logger insolar.Logger, conn io.Reader) (*Packet, error) {
 
 	logger.Debugf("[ DeserializePacket ] decoded packet to %s", msg.DebugString())
 
-	return msg, nil
+	receivedPacket := NewReceivedPacket(msg, reader.Captured())
+	return receivedPacket, nil
 }
 
 func (p *Packet) DebugString() string {

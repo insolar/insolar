@@ -18,16 +18,91 @@ package object
 
 import (
 	"crypto/sha256"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestRecordKey(t *testing.T) {
+	t.Parallel()
+
+	expectedKey := recordKey(testutils.RandomID())
+
+	rawID := expectedKey.ID()
+
+	actualKey := newRecordKey(rawID)
+	require.Equal(t, expectedKey, actualKey)
+}
+
+func TestRecordStorage_TruncateHead(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	dbMock, err := store.NewBadgerDB(tmpdir)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
+
+	recordStore := NewRecordDB(dbMock)
+
+	numElements := 100
+
+	// it's used for writing pulses in random order to db
+	indexes := make([]int, numElements)
+	for i := 0; i < numElements; i++ {
+		indexes[i] = i
+	}
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(indexes), func(i, j int) { indexes[i], indexes[j] = indexes[j], indexes[i] })
+
+	startPulseNumber := insolar.GenesisPulse.PulseNumber
+	ids := make([]insolar.ID, numElements)
+	for _, idx := range indexes {
+		pulse := startPulseNumber + insolar.PulseNumber(idx)
+		ids[idx] = *insolar.NewID(pulse, []byte(testutils.RandomString()))
+
+		recordStore.Set(ctx, ids[idx], record.Material{JetID: *insolar.NewJetID(uint8(idx), nil)})
+
+		for i := 0; i < 5; i++ {
+			recordStore.Set(ctx, ids[idx], record.Material{JetID: *insolar.NewJetID(uint8(i), nil)})
+		}
+
+		require.NoError(t, err)
+	}
+
+	for i := 0; i < numElements; i++ {
+		_, err := recordStore.ForID(ctx, ids[i])
+		require.NoError(t, err)
+	}
+
+	numLeftElements := numElements / 2
+	err = recordStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
+	require.NoError(t, err)
+
+	for i := 0; i < numLeftElements; i++ {
+		_, err := recordStore.ForID(ctx, ids[i])
+		require.NoError(t, err)
+	}
+
+	for i := numElements - 1; i >= numLeftElements; i-- {
+		_, err := recordStore.ForID(ctx, ids[i])
+		require.EqualError(t, err, ErrNotFound.Error())
+	}
+}
 
 func TestRecordStorage_NewStorageMemory(t *testing.T) {
 	t.Parallel()
@@ -184,14 +259,14 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 
 // getVirtualRecord generates random Virtual record
 func getVirtualRecord() record.Virtual {
-	var requestRecord record.Request
+	var requestRecord record.IncomingRequest
 
 	obj := gen.Reference()
 	requestRecord.Object = &obj
 
 	virtualRecord := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &requestRecord,
+		Union: &record.Virtual_IncomingRequest{
+			IncomingRequest: &requestRecord,
 		},
 	}
 

@@ -19,38 +19,32 @@ package executor
 import (
 	"bytes"
 	"context"
-	"log"
 	"sort"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestJetSplitter(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	jc := jet.NewCoordinatorMock(t)
+	jc := NewJetCalculatorMock(t)
 	// use real jet store
 	js := jet.NewStore()
 	da := drop.NewAccessorMock(t)
-	rsp := recentstorage.NewProviderMock(t)
-	splitter := NewJetSplitter(jc, js, js, da, rsp)
+	dm := drop.NewModifierMock(t)
+	pc := pulse.NewCalculatorMock(t)
+	splitter := NewJetSplitter(jc, js, js, da, dm, pc)
 	require.NotNil(t, splitter, "jet splitter created")
 
-	splitter.splitCount = 0
+	splitter.splitsLimit = 0
 
-	me := gen.Reference()
-	jc.MeMock.Return(me)
-	rsp.ClonePendingStorageMock.Return()
-
-	// hasSplitIntention
 	pn := gen.PulseNumber()
 	// just avoid special pulses
 	if pn < 60000 {
@@ -62,8 +56,12 @@ func TestJetSplitter(t *testing.T) {
 		newpulse = pn + 2
 	)
 
+	pc.BackwardsMock.Return(insolar.Pulse{PulseNumber: previous}, nil)
+
+	// beware splitID is a shared variable (check code below)
 	var splitID insolar.JetID
-	da.ForPulseFunc = func(_ context.Context, jetID insolar.JetID, pn insolar.PulseNumber) (r drop.Drop, r1 error) {
+
+	da.ForPulseFunc = func(_ context.Context, jetID insolar.JetID, pn insolar.PulseNumber) (drop.Drop, error) {
 		if pn != previous {
 			return drop.Drop{}, errors.Errorf("unexpected pulse number %v, expects previous pulse %v", pn, previous)
 		}
@@ -73,6 +71,13 @@ func TestJetSplitter(t *testing.T) {
 		}
 		return drop.Drop{Split: split}, nil
 	}
+	dm.SetFunc = func(_ context.Context, d drop.Drop) error {
+		if d.Pulse != current {
+			return errors.Errorf("unexpected pulse number %v, expects current pulse %v", d.Pulse, current)
+		}
+		require.False(t, d.Split, "we have no jets with split intent although splitsLimit set to 0")
+		return nil
+	}
 
 	jets := []insolar.JetID{
 		jet.NewIDFromString("0"),
@@ -81,56 +86,45 @@ func TestJetSplitter(t *testing.T) {
 	}
 
 	// no filter for ID
-	jc.LightExecutorForJetMock.Return(&me, nil)
+	jc.MineForPulseFunc = func(_ context.Context, pn insolar.PulseNumber) []insolar.JetID {
+		return jets
+	}
 
 	// update real jet store
-	js.Update(ctx, current, true, jets...)
+	err := js.Update(ctx, current, true, jets...)
+	require.NoError(t, err, "jet store update")
 
 	t.Run("no_split", func(t *testing.T) {
-		res, err := splitter.Do(ctx, previous, current, newpulse)
+		gotJets, err := splitter.Do(ctx, current, newpulse)
 		require.NoError(t, err, "splitter method Do error check")
-		require.Equal(t, len(jets), len(res), "compare jets count")
-		var gotJets []insolar.JetID
-		for _, info := range res {
-			gotJets = append(gotJets, info.ID)
-			assert.False(t, info.SplitPerformed, "split is not performed")
-		}
-		require.Equal(t, jsort(jets), jsort(gotJets), "compare results")
+		require.Equal(t, len(jets), len(gotJets), "compare jets count")
+		require.Equal(t, jsort(jets), jsort(gotJets), "no splits")
 	})
 
 	t.Run("with_split_intent", func(t *testing.T) {
 		splitID = jet.NewIDFromString("11")
 
-		res, err := splitter.Do(ctx, previous, current, newpulse)
+		gotJets, err := splitter.Do(ctx, current, newpulse)
 		require.NoError(t, err, "splitter method Do error check")
-		require.Equal(t, len(jets), len(res), "compare jets count")
-		var gotJets []insolar.JetID
-		for _, info := range res {
-			gotJets = append(gotJets, info.ID)
-			assert.False(t, info.SplitIntent, "no split")
-
-			if info.ID != splitID {
-				assert.False(t, info.SplitPerformed, "split is not performed")
-			} else {
-				assert.True(t, info.SplitPerformed, "split is performed")
+		require.Equal(t, len(jets)+1, len(gotJets), "compare jets count, expect one split")
+		expectJets := make([]insolar.JetID, 0, len(jets))
+		split0, split1 := jet.NewIDFromString("110"), jet.NewIDFromString("111")
+		for _, id := range jets {
+			if id == splitID {
+				expectJets = append(expectJets, split0, split1)
+				continue
 			}
-
+			expectJets = append(expectJets, id)
 		}
-		require.Equal(t, jsort(jets), jsort(gotJets), "compare results")
+		require.Equalf(t, jsort(expectJets), jsort(gotJets), "split %v is split to %v and %v",
+			splitID.DebugString(), split0.DebugString(), split1.DebugString(),
+		)
 	})
 }
 
 func jsort(jets []insolar.JetID) []string {
 	sort.Slice(jets, func(i, j int) bool {
-		switch bytes.Compare(jets[i][:], jets[j][:]) {
-		case -1:
-			return true
-		case 0, 1:
-			return false
-		default:
-			log.Panic("not fail-able with `bytes.Comparable` bounded [-1, 1].")
-			return false
-		}
+		return bytes.Compare(jets[i][:], jets[j][:]) == -1
 	})
 	result := make([]string, 0, len(jets))
 	for _, j := range jets {

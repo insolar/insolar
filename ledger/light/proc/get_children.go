@@ -31,12 +31,13 @@ import (
 )
 
 type GetChildren struct {
-	index   object.Lifeline
 	msg     *message.GetChildren
 	parcel  insolar.Parcel
 	replyTo chan<- bus.Reply
 
 	Dep struct {
+		IndexLocker            object.IndexLocker
+		IndexAccessor          object.IndexAccessor
 		Coordinator            jet.Coordinator
 		RecordAccessor         object.RecordAccessor
 		JetStorage             jet.Storage
@@ -45,9 +46,8 @@ type GetChildren struct {
 	}
 }
 
-func NewGetChildren(index object.Lifeline, msg *message.GetChildren, parcel insolar.Parcel, replyTo chan<- bus.Reply) *GetChildren {
+func NewGetChildren(msg *message.GetChildren, parcel insolar.Parcel, replyTo chan<- bus.Reply) *GetChildren {
 	return &GetChildren{
-		index:   index,
 		msg:     msg,
 		parcel:  parcel,
 		replyTo: replyTo,
@@ -60,8 +60,16 @@ func (p *GetChildren) Proceed(ctx context.Context) error {
 }
 
 func (p *GetChildren) reply(ctx context.Context) bus.Reply {
+	p.Dep.IndexLocker.Lock(p.msg.Parent.Record())
+	defer p.Dep.IndexLocker.Unlock(p.msg.Parent.Record())
+
+	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.parcel.Pulse(), *p.msg.Parent.Record())
+	if err != nil {
+		return bus.Reply{Err: err}
+	}
+
 	// The object has no children.
-	if p.index.ChildPointer == nil {
+	if idx.Lifeline.ChildPointer == nil {
 		return bus.Reply{
 			Reply: &reply.Children{Refs: nil, NextFrom: nil},
 		}
@@ -73,7 +81,7 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	if p.msg.FromChild != nil {
 		currentChild = p.msg.FromChild
 	} else {
-		currentChild = p.index.ChildPointer
+		currentChild = idx.Lifeline.ChildPointer
 	}
 
 	// The object has no children.
@@ -84,12 +92,12 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	}
 
 	var childJet *insolar.ID
-	onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, p.parcel.Pulse(), currentChild.Pulse())
+	onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, currentChild.Pulse())
 	if err != nil && err != pulse.ErrNotFound {
 		return bus.Reply{Err: err}
 	}
 	if onHeavy {
-		node, err := p.Dep.Coordinator.Heavy(ctx, p.parcel.Pulse())
+		node, err := p.Dep.Coordinator.Heavy(ctx)
 		if err != nil {
 			return bus.Reply{Err: err}
 		}
@@ -116,7 +124,7 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	_, err = p.Dep.RecordAccessor.ForID(ctx, *currentChild)
 
 	if err == object.ErrNotFound {
-		node, err := p.Dep.Coordinator.NodeForJet(ctx, *childJet, p.parcel.Pulse(), currentChild.Pulse())
+		node, err := p.Dep.Coordinator.NodeForJet(ctx, *childJet, currentChild.Pulse())
 		if err != nil {
 			return bus.Reply{Err: err}
 		}

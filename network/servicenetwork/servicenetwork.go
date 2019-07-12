@@ -51,19 +51,19 @@
 package servicenetwork
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-
 	"github.com/insolar/insolar/network/gateway"
-	"github.com/insolar/insolar/network/gateway/bootstrap"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/network/controller/common"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
-
-	"github.com/insolar/insolar/network/controller/common"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -71,15 +71,22 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/controller"
+	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/utils"
 )
+
+const deliverWatermillMsg = "ServiceNetwork.processIncoming"
+
+var ack = []byte{1}
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
@@ -229,14 +236,14 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return n.cm.Stop(ctx)
 }
 
-func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse) {
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse, _ network.ReceivedPacket) {
 	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
 	logger := inslogger.FromContext(ctx)
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	ctx = network.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
+	ctx = utils.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
 	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
 	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
 	span.AddAttributes(
@@ -244,23 +251,15 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	)
 	defer span.End()
 
-	if n.Gatewayer.Gateway().ShouldIgnorePulse(ctx, newPulse) {
+	if !n.NodeKeeper.IsBootstrapped() {
+		n.Bootstrapper.SetLastPulse(newPulse.NextPulseNumber)
+		return
+	}
+	if n.shoudIgnorePulse(newPulse) {
+		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
 		return
 	}
 
-	//todo call Gatewayer
-	/*
-		if !n.NodeKeeper.IsBootstrapped() {
-			n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
-			return
-		}
-		if n.shoudIgnorePulse(newPulse) {
-			log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
-			return
-		}
-	*/
-
-	// todo move to nonetwork gateway
 	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
@@ -291,12 +290,12 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 
-	if err := n.Gatewayer.Gateway().OnPulse(ctx, newPulse); err != nil {
+	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
 
 	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err := n.PulseManager.Set(ctx, newPulse, n.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState)
+	err := n.PulseManager.Set(ctx, newPulse)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
