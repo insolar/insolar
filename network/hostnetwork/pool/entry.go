@@ -93,7 +93,7 @@ func (e *entry) watchRemoteClose(ctx context.Context) {
 		return
 	}
 
-	inslogger.FromContext(ctx).Errorf("[ Open ] unexpected data on connection to %s", e.host.String())
+	inslogger.FromContext(ctx).Errorf("[ watchRemoteClose ] unexpected data on connection to %s", e.host.String())
 }
 
 func (e *entry) open(ctx context.Context) (io.ReadWriteCloser, error) {

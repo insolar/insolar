@@ -76,7 +76,7 @@ var (
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
 	// defer leaktest.Check(t)()
-	s := newConsensusSuite(6, 0)
+	s := newConsensusSuite(12, 0)
 	suite.Run(t, s)
 }
 
@@ -89,7 +89,6 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 // Consensus suite tests
 
 func (s *consensusSuite) TestNetworkConsensus3Times() {
-	// defer leaktest.Check(s.T())()
 	s.waitForConsensus(3)
 }
 
@@ -197,6 +196,8 @@ func (s *consensusSuite) TestNodeLeave() {
 
 	// but all nodes are active
 	s.AssertActiveNodesCountDelta(1)
+
+	// <-time.After(time.Second * 6)
 }
 
 func (s *consensusSuite) TestNodeLeaveAtETA() {

@@ -53,6 +53,7 @@ package hostnetwork
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/insolar/insolar/network/utils"
 
@@ -72,7 +73,6 @@ type RequestHandler func(ctx context.Context, p *packet.Packet)
 type StreamHandler struct {
 	requestHandler  RequestHandler
 	responseHandler future.PacketHandler
-	pool            pool.ConnectionPool
 }
 
 // NewStreamHandler creates new StreamHandler
@@ -98,6 +98,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 				utils.CloseVerbose(reader)
 				return
 			default:
+				<-time.After(time.Millisecond * 10)
 			}
 		}
 	}()
