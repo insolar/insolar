@@ -76,7 +76,7 @@ func NewPulseNumber(buf []byte) PulseNumber {
 }
 
 func NewPulseNumberFromStr(pn string) (PulseNumber, error) {
-	i, err := strconv.ParseInt(pn, 10, 32)
+	i, err := strconv.ParseUint(pn, 10, 32)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to parse pulse number")
 	}
