@@ -72,6 +72,7 @@ type Payload interface {
 const (
 	MessageHashSize = 28
 	MorphFieldNum   = 16
+	MorpyFieldType  = 0 // Varint
 )
 
 type MessageHash [MessageHashSize]byte
@@ -116,12 +117,12 @@ func (h *MessageHash) IsZero() bool {
 // UnmarshalType decodes payload type from given binary.
 func UnmarshalType(data []byte) (Type, error) {
 	buf := proto.NewBuffer(data)
-	fieldNum, err := buf.DecodeVarint()
+	fieldNumType, err := buf.DecodeVarint()
 	if err != nil {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
 	}
-	if fieldNum != MorphFieldNum {
-		return TypeUnknown, errors.Wrap(err, "wrong polymorph field number")
+	if fieldNumType != MorphFieldNum<<3|MorpyFieldType {
+		return TypeUnknown, errors.Errorf("wrong polymorph field number %d", fieldNumType)
 	}
 	morph, err := buf.DecodeVarint()
 	if err != nil {
