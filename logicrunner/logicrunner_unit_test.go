@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar/payload"
-
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
@@ -42,6 +40,7 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
