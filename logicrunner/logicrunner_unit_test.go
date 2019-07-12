@@ -1263,19 +1263,17 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 			replyChan := mockSender(suite)
 			_, err = suite.lr.FlowDispatcher.Process(wmMsg)
-			<-replyChan
-			// if test.flowCanceledExpected {
-			// 	errReply, _ := bus.DeserializeError(bytes.NewBuffer(res.Payload))
-			// 	require.EqualError(t, errReply, flow.ErrCancelled.Error())
-			// 	require.Equal(t, flow.ErrCancelled, errReply)
-			// } else if test.errorExpected {
-			// 	errReply, err := bus.DeserializeError(bytes.NewBuffer(res.Payload))
-			// 	suite.Require().NoError(err)
-			// 	require.Error(t, errReply)
-			// } else {
-			// 	_, err := reply.Deserialize(bytes.NewBuffer(res.Payload))
-			// 	require.NoError(t, err)
-			// }
+
+			if test.flowCanceledExpected {
+				_, err := getReply(suite, replyChan)
+				require.EqualError(t, err, flow.ErrCancelled.Error())
+			} else if test.errorExpected {
+				_, err := getReply(suite, replyChan)
+				require.Error(t, err)
+			} else {
+				_, err := getReply(suite, replyChan)
+				require.NoError(t, err)
+			}
 
 			suite.Require().True(WaitGroup_TimeoutWait(&wg, 2*time.Minute),
 				"Failed to wait for all requests to be processed")
