@@ -90,9 +90,9 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		s.T().Error("Can't create TempDir", err)
 	}
 
-	s.badgerDB1, err = store.NewBadgerDB(s.tmpDir1)
+	s.badgerDB1, err = store.NewTestBadgerDB(s.tmpDir1)
 	if err != nil {
-		s.T().Error("Can't NewBadgerDB", err)
+		s.T().Error("Can't NewTestBadgerDB", err)
 	}
 
 	dropStorage := drop.NewDB(s.badgerDB1)
@@ -104,9 +104,9 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		s.T().Error("Can't create TempDir", err)
 	}
 
-	s.badgerDB2, err = store.NewBadgerDB(s.tmpDir2)
+	s.badgerDB2, err = store.NewTestBadgerDB(s.tmpDir2)
 	if err != nil {
-		s.T().Error("Can't create NewBadgerDB", err)
+		s.T().Error("Can't create NewTestBadgerDB", err)
 	}
 
 	s.cm.Inject(

@@ -36,6 +36,31 @@ type BadgerDB struct {
 	doneGC  chan struct{}
 }
 
+// NewTestBadgerDB creates new BadgerDB instance for tests.
+func NewTestBadgerDB(dir string) (*BadgerDB, error) {
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	ops := badger.DefaultOptions
+	ops.DoNotCompact = true
+	ops.SyncWrites = false
+	ops.ValueDir = dir
+	ops.Dir = dir
+	bdb, err := badger.Open(ops)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open badger")
+	}
+
+	b := &BadgerDB{backend: bdb}
+	b.stopGC = make(chan struct{})
+	b.doneGC = make(chan struct{})
+	close(b.doneGC)
+
+	return b, nil
+}
+
 // NewBadgerDB creates new BadgerDB instance.
 // Creates new badger.DB instance with provided working dir and use it as backend for BadgerDB.
 func NewBadgerDB(dir string) (*BadgerDB, error) {
