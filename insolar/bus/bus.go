@@ -185,7 +185,7 @@ func (b *Bus) SendTarget(
 	}
 
 	msg.SetContext(ctx)
-	wrapped, err := b.wrapMeta(msg, target, payload.MessageHash{})
+	wrapped, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{})
 	if err != nil {
 		return handleError(errors.Wrap(err, "can't wrap meta message"))
 	}
@@ -246,7 +246,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		return
 	}
 
-	wrapped, err := b.wrapMeta(reply, origin.Sender, originHash)
+	wrapped, err := b.wrapMeta(ctx, reply, origin.Sender, originHash)
 	if err != nil {
 		logger.Error("can't wrap meta message ", err.Error())
 		return
@@ -329,19 +329,24 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 // and set it as byte slice back to msg.Payload.
 // Note: this method has side effect - origin-argument mutating
 func (b *Bus) wrapMeta(
+	ctx context.Context,
 	msg *message.Message,
 	receiver insolar.Reference,
 	originHash payload.MessageHash,
 ) (payload.Meta, error) {
+	var pn insolar.PulseNumber
 	latestPulse, err := b.pulses.Latest(context.Background())
-	if err != nil {
-		return payload.Meta{}, errors.Wrap(err, "failed to fetch pulse")
+	if err == nil {
+		pn = latestPulse.PulseNumber
+	} else {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
 	}
+
 	meta := payload.Meta{
 		Payload:    msg.Payload,
 		Receiver:   receiver,
 		Sender:     b.coordinator.Me(),
-		Pulse:      latestPulse.PulseNumber,
+		Pulse:      pn,
 		OriginHash: originHash,
 		ID:         []byte(msg.UUID),
 	}
