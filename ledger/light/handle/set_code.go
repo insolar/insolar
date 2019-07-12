@@ -48,6 +48,10 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal SetCode message")
 	}
 
+	if len(msg.Record) == 0 {
+		return errors.New("empty record")
+	}
+
 	calc := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
 	s.dep.CalculateID(calc)
 	if err := f.Procedure(ctx, calc, true); err != nil {
@@ -71,7 +75,7 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal record")
 	}
 
-	setCode := proc.NewSetCode(s.message, rec, msg.Code, recID, jet.Result.Jet)
+	setCode := proc.NewSetCode(s.message, rec, recID, jet.Result.Jet)
 	s.dep.SetCode(setCode)
 	return f.Procedure(ctx, setCode, false)
 }

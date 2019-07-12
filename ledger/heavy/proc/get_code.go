@@ -67,7 +67,6 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	}
 	msg, err := payload.NewMessage(&payload.Code{
 		Record: buf,
-		Code:   code.Code,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")

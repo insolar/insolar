@@ -1,4 +1,4 @@
-package integration
+package integration_test
 
 import (
 	"context"
@@ -20,7 +20,9 @@ import (
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
@@ -31,12 +33,11 @@ import (
 	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
-type LightServer struct {
+type Server struct {
 	pm      insolar.PulseManager
 	network *networkMock
 	handler message.HandlerFunc
@@ -49,7 +50,7 @@ func DefaultLightConfig() configuration.Configuration {
 	return cfg
 }
 
-func NewLightServer(ctx context.Context, cfg configuration.Configuration) (*LightServer, error) {
+func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -116,12 +117,8 @@ func NewLightServer(ctx context.Context, cfg configuration.Configuration) (*Ligh
 		WmBus  *bus.Bus
 	)
 	{
-		var err error
 		Tokens = delegationtoken.NewDelegationTokenFactory()
-		Bus, err = messagebus.NewMessageBus(cfg)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start MessageBus")
-		}
+		Bus = &stub{}
 		WmBus = bus.NewBus(pubSub, Pulses, Coordinator, CryptoScheme)
 	}
 
@@ -138,9 +135,6 @@ func NewLightServer(ctx context.Context, cfg configuration.Configuration) (*Ligh
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
-
-		c := component.Manager{}
-		c.Inject(CryptoScheme)
 
 		waiter := hot.NewChannelWaiter()
 
@@ -165,6 +159,10 @@ func NewLightServer(ctx context.Context, cfg configuration.Configuration) (*Ligh
 		handler.WriteAccessor = writeController
 		handler.Sender = WmBus
 		handler.IndexStorage = indexes
+		err := handler.Init(ctx)
+		if err != nil {
+			return nil, err
+		}
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
@@ -229,10 +227,11 @@ func NewLightServer(ctx context.Context, cfg configuration.Configuration) (*Ligh
 	netMock := newNetworkMock(Handler.FlowDispatcher.Process, NodeNetwork.GetOrigin().ID())
 	startWatermill(ctx, logger, pubSub, WmBus, netMock.Handle, Handler.FlowDispatcher.Process)
 
-	s := &LightServer{
+	s := &Server{
 		pm:      PulseManager,
 		handler: Handler.FlowDispatcher.Process,
 		pulse:   *insolar.GenesisPulse,
+		network: netMock,
 	}
 	return s, nil
 }
@@ -285,24 +284,46 @@ func startRouter(ctx context.Context, router *message.Router) {
 	<-router.Running()
 }
 
-func (s *LightServer) Pulse(ctx context.Context) error {
+func (s *Server) Pulse(ctx context.Context) {
 	s.pulse = insolar.Pulse{
 		PulseNumber: s.pulse.PulseNumber + 10,
 	}
-	return s.pm.Set(ctx, s.pulse)
+	err := s.pm.Set(ctx, s.pulse)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func (s *LightServer) Send(msg *message.Message) error {
-	_, err := s.handler(msg)
-	return err
+func (s *Server) Send(pl payload.Payload) {
+	msg, err := payload.NewMessage(pl)
+	if err != nil {
+		panic(err)
+	}
+	meta := payload.Meta{
+		Payload: msg.Payload,
+		Pulse:   s.pulse.PulseNumber,
+		ID:      []byte(watermill.NewUUID()),
+	}
+	buf, err := meta.Marshal()
+	if err != nil {
+		panic(err)
+	}
+	msg.Payload = buf
+	msg.Metadata.Set(bus.MetaPulse, s.pulse.PulseNumber.String())
+	msg.Metadata.Set(bus.MetaSpanData, string(instracer.MustSerialize(context.Background())))
+
+	_, err = s.handler(msg)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func (s *LightServer) Receive(h func(*message.Message)) {
+func (s *Server) Receive(h func(meta payload.Meta, pl payload.Payload)) {
 	s.network.outHandler = h
 }
 
 type networkMock struct {
-	outHandler func(*message.Message)
+	outHandler func(meta payload.Meta, pl payload.Payload)
 	inHandler  message.HandlerFunc
 	me         insolar.Reference
 }
@@ -312,15 +333,19 @@ func newNetworkMock(in message.HandlerFunc, me insolar.Reference) *networkMock {
 }
 
 func (p *networkMock) Handle(msg *message.Message) ([]*message.Message, error) {
-	if p.outHandler != nil {
-		p.outHandler(msg)
-	}
-
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		panic(errors.Wrap(err, "failed to unmarshal message"))
+		panic(errors.Wrap(err, "failed to unmarshal meta"))
 	}
+	if p.outHandler != nil {
+		pl, err := payload.Unmarshal(meta.Payload)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to unmarshal payload"))
+		}
+		go p.outHandler(meta, pl)
+	}
+
 	if meta.Receiver != p.me {
 		return nil, nil
 	}
@@ -387,14 +412,6 @@ func newNodeNetMock() *nodeNetMock {
 			ref:  gen.Reference(),
 			role: insolar.StaticRoleLightMaterial,
 		},
-		&nodeMock{
-			ref:  gen.Reference(),
-			role: insolar.StaticRoleVirtual,
-		},
-		&nodeMock{
-			ref:  gen.Reference(),
-			role: insolar.StaticRoleLightMaterial,
-		},
 	}}
 }
 
@@ -415,6 +432,21 @@ func (n *nodeNetMock) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.
 }
 
 type stub struct{}
+
+func (*stub) Send(context.Context, insolar.Message, *insolar.MessageSendOptions) (insolar.Reply, error) {
+	return &reply.OK{}, nil
+}
+
+func (*stub) Register(p insolar.MessageType, handler insolar.MessageHandler) error {
+	return nil
+}
+
+func (*stub) MustRegister(p insolar.MessageType, handler insolar.MessageHandler) {
+}
+
+func (*stub) OnPulse(context.Context, insolar.Pulse) error {
+	return nil
+}
 
 func (*stub) Acquire(ctx context.Context) {}
 
