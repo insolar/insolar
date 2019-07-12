@@ -49,7 +49,7 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	dbMock, err := store.NewTestBadgerDB(tmpdir)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
@@ -67,13 +67,13 @@ func TestDBStore_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	dbMock, err := store.NewTestBadgerDB(tmpdir)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
 	dbStore := NewDB(dbMock)
 
-	numElements := 400
+	numElements := 10
 
 	startPulseNumber := insolar.GenesisPulse.PulseNumber
 	for i := 0; i < numElements; i++ {
