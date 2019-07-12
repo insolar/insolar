@@ -145,9 +145,9 @@ func (s *SetIncomingRequest) setRequest(
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
-	// If we don't have it and heavy does, SetResult fails because it should update light's index state
+	// If we don't have it and heavy does, SetRequest fails because it should update light's index state
 	getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
-	s.dep.GetIndexWM(getIndex)
+	s.dep.EnsureIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err
 	}

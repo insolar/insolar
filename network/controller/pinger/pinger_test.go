@@ -94,7 +94,7 @@ func TestPing_HappyPath(t *testing.T) {
 	n2, err := hostnetwork.NewHostNetwork(insolar.Reference{23}.String())
 	require.NoError(t, err)
 	defer n2.Stop(ctx)
-	n2.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Packet) (network.Packet, error) {
+	n2.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 		return n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	resolver2 := testutils.NewRoutingTableMock(t)
@@ -135,7 +135,7 @@ func TestPing_Timeout(t *testing.T) {
 
 	startRespondig := make(chan struct{})
 	responded := make(chan struct{})
-	n2.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Packet) (network.Packet, error) {
+	n2.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 		defer func() {
 			close(responded)
 		}()

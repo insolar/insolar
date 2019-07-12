@@ -11,6 +11,7 @@ INSOLAR_LOG_LEVEL=${INSOLAR_LOG_LEVEL:-"debug"}
 GORUND_LOG_LEVEL=${GORUND_LOG_LEVEL:-${INSOLAR_LOG_LEVEL}}
 # we can skip build binaries (by default in CI environment they skips)
 SKIP_BUILD=${SKIP_BUILD:-${CI_ENV}}
+BUILD_TAGS=${BUILD_TAGS:-'-tags "functest"'}
 
 # predefined/dependent environment variables
 
@@ -168,7 +169,10 @@ prepare()
 build_binaries()
 {
     echo "build binaries"
-    make BUILD_TAGS="-tags functest" build
+    set -x
+    export BUILD_TAGS
+    make build
+    { set +x; } 2>/dev/null
 }
 
 rebuild_binaries()

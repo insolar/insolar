@@ -92,12 +92,12 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	}
 
 	var childJet *insolar.ID
-	onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, p.parcel.Pulse(), currentChild.Pulse())
+	onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, currentChild.Pulse())
 	if err != nil && err != pulse.ErrNotFound {
 		return bus.Reply{Err: err}
 	}
 	if onHeavy {
-		node, err := p.Dep.Coordinator.Heavy(ctx, p.parcel.Pulse())
+		node, err := p.Dep.Coordinator.Heavy(ctx)
 		if err != nil {
 			return bus.Reply{Err: err}
 		}
@@ -124,7 +124,7 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	_, err = p.Dep.RecordAccessor.ForID(ctx, *currentChild)
 
 	if err == object.ErrNotFound {
-		node, err := p.Dep.Coordinator.NodeForJet(ctx, *childJet, p.parcel.Pulse(), currentChild.Pulse())
+		node, err := p.Dep.Coordinator.NodeForJet(ctx, *childJet, currentChild.Pulse())
 		if err != nil {
 			return bus.Reply{Err: err}
 		}

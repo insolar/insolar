@@ -12,6 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	network "github.com/insolar/insolar/network"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +21,7 @@ import (
 type PulseHandlerMock struct {
 	t minimock.Tester
 
-	HandlePulseFunc       func(p context.Context, p1 insolar.Pulse)
+	HandlePulseFunc       func(p context.Context, p1 insolar.Pulse, p2 network.ReceivedPacket)
 	HandlePulseCounter    uint64
 	HandlePulsePreCounter uint64
 	HandlePulseMock       mPulseHandlerMockHandlePulse
@@ -52,17 +53,18 @@ type PulseHandlerMockHandlePulseExpectation struct {
 type PulseHandlerMockHandlePulseInput struct {
 	p  context.Context
 	p1 insolar.Pulse
+	p2 network.ReceivedPacket
 }
 
 //Expect specifies that invocation of PulseHandler.HandlePulse is expected from 1 to Infinity times
-func (m *mPulseHandlerMockHandlePulse) Expect(p context.Context, p1 insolar.Pulse) *mPulseHandlerMockHandlePulse {
+func (m *mPulseHandlerMockHandlePulse) Expect(p context.Context, p1 insolar.Pulse, p2 network.ReceivedPacket) *mPulseHandlerMockHandlePulse {
 	m.mock.HandlePulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &PulseHandlerMockHandlePulseExpectation{}
 	}
-	m.mainExpectation.input = &PulseHandlerMockHandlePulseInput{p, p1}
+	m.mainExpectation.input = &PulseHandlerMockHandlePulseInput{p, p1, p2}
 	return m
 }
 
@@ -79,18 +81,18 @@ func (m *mPulseHandlerMockHandlePulse) Return() *PulseHandlerMock {
 }
 
 //ExpectOnce specifies that invocation of PulseHandler.HandlePulse is expected once
-func (m *mPulseHandlerMockHandlePulse) ExpectOnce(p context.Context, p1 insolar.Pulse) *PulseHandlerMockHandlePulseExpectation {
+func (m *mPulseHandlerMockHandlePulse) ExpectOnce(p context.Context, p1 insolar.Pulse, p2 network.ReceivedPacket) *PulseHandlerMockHandlePulseExpectation {
 	m.mock.HandlePulseFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &PulseHandlerMockHandlePulseExpectation{}
-	expectation.input = &PulseHandlerMockHandlePulseInput{p, p1}
+	expectation.input = &PulseHandlerMockHandlePulseInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of PulseHandler.HandlePulse method
-func (m *mPulseHandlerMockHandlePulse) Set(f func(p context.Context, p1 insolar.Pulse)) *PulseHandlerMock {
+func (m *mPulseHandlerMockHandlePulse) Set(f func(p context.Context, p1 insolar.Pulse, p2 network.ReceivedPacket)) *PulseHandlerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -99,18 +101,18 @@ func (m *mPulseHandlerMockHandlePulse) Set(f func(p context.Context, p1 insolar.
 }
 
 //HandlePulse implements github.com/insolar/insolar/network.PulseHandler interface
-func (m *PulseHandlerMock) HandlePulse(p context.Context, p1 insolar.Pulse) {
+func (m *PulseHandlerMock) HandlePulse(p context.Context, p1 insolar.Pulse, p2 network.ReceivedPacket) {
 	counter := atomic.AddUint64(&m.HandlePulsePreCounter, 1)
 	defer atomic.AddUint64(&m.HandlePulseCounter, 1)
 
 	if len(m.HandlePulseMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.HandlePulseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PulseHandlerMock.HandlePulse. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to PulseHandlerMock.HandlePulse. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.HandlePulseMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PulseHandlerMockHandlePulseInput{p, p1}, "PulseHandler.HandlePulse got unexpected parameters")
+		testify_assert.Equal(m.t, *input, PulseHandlerMockHandlePulseInput{p, p1, p2}, "PulseHandler.HandlePulse got unexpected parameters")
 
 		return
 	}
@@ -119,18 +121,18 @@ func (m *PulseHandlerMock) HandlePulse(p context.Context, p1 insolar.Pulse) {
 
 		input := m.HandlePulseMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, PulseHandlerMockHandlePulseInput{p, p1}, "PulseHandler.HandlePulse got unexpected parameters")
+			testify_assert.Equal(m.t, *input, PulseHandlerMockHandlePulseInput{p, p1, p2}, "PulseHandler.HandlePulse got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.HandlePulseFunc == nil {
-		m.t.Fatalf("Unexpected call to PulseHandlerMock.HandlePulse. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to PulseHandlerMock.HandlePulse. %v %v %v", p, p1, p2)
 		return
 	}
 
-	m.HandlePulseFunc(p, p1)
+	m.HandlePulseFunc(p, p1, p2)
 }
 
 //HandlePulseMinimockCounter returns a count of PulseHandlerMock.HandlePulseFunc invocations

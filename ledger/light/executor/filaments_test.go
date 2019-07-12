@@ -603,8 +603,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		coordinator.IsBeyondLimitFunc = func(_ context.Context, calc insolar.PulseNumber, target insolar.PulseNumber) (bool, error) {
-			require.Equal(t, fromPulse, calc)
+		coordinator.IsBeyondLimitFunc = func(_ context.Context, target insolar.PulseNumber) (bool, error) {
 			require.Equal(t, missingRec.MetaID.Pulse(), target)
 			return false, nil
 		}
@@ -618,7 +617,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		}
 
 		node := gen.Reference()
-		coordinator.NodeForJetFunc = func(_ context.Context, jet insolar.ID, calc insolar.PulseNumber, target insolar.PulseNumber) (*insolar.Reference, error) {
+		coordinator.NodeForJetFunc = func(_ context.Context, jet insolar.ID, target insolar.PulseNumber) (*insolar.Reference, error) {
 			require.Equal(t, insolar.ID(jetID), jet)
 			require.Equal(t, missingRec.MetaID.Pulse(), target)
 			return &node, nil
@@ -687,15 +686,13 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		coordinator.IsBeyondLimitFunc = func(_ context.Context, calc insolar.PulseNumber, target insolar.PulseNumber) (bool, error) {
-			require.Equal(t, fromPulse, calc)
+		coordinator.IsBeyondLimitFunc = func(_ context.Context, target insolar.PulseNumber) (bool, error) {
 			require.Equal(t, missingRec.MetaID.Pulse(), target)
 			return true, nil
 		}
 
 		node := gen.Reference()
-		coordinator.HeavyFunc = func(_ context.Context, pn insolar.PulseNumber) (*insolar.Reference, error) {
-			require.Equal(t, fromPulse, pn)
+		coordinator.HeavyFunc = func(_ context.Context) (*insolar.Reference, error) {
 			return &node, nil
 		}
 		coordinator.MeMock.Return(node)

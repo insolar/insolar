@@ -146,7 +146,8 @@ func (p FraudFactory) NewHostFraud(fraudType int, msg string, violatorHost commo
 	return p.NewFraud(fraudType, msg, violatorHost, nil, details...)
 }
 
-func (p FraudFactory) NewMultipleMembershipProfiles(violator common2.NodeProfile, evidence1 common2.MembershipProfile, evidence2 common2.MembershipProfile) FraudError {
+func (p FraudFactory) NewInconsistentMembershipAnnouncement(violator common2.NodeProfile,
+	evidence1 common2.MembershipAnnouncement, evidence2 common2.MembershipAnnouncement) FraudError {
 	return p.NewNodeFraud(FraudMultipleNsh, "multiple membership profile", violator, evidence1, evidence2)
 }
 

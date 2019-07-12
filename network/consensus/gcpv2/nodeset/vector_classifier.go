@@ -51,42 +51,32 @@
 package nodeset
 
 import (
-	"github.com/insolar/insolar/network/consensus/common"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/stats"
 )
 
 type HashedNodeVector struct {
-	Bitset        NodeBitset
-	TrustedVector common.DigestHolder
-	DoubtedVector common.DigestHolder
+	Bitset                             NodeBitset
+	TrustedAnnouncementVector          common2.GlobulaAnnouncementHash
+	DoubtedAnnouncementVector          common2.GlobulaAnnouncementHash
+	TrustedGlobulaStateVectorSignature common2.GlobulaStateSignature
+	DoubtedGlobulaStateVectorSignature common2.GlobulaStateSignature
 }
 
-func ClassifyByNodeGsh(selfData HashedNodeVector, otherData HashedNodeVector, nodeStats *stats.Row, hasher FilteredSequenceHasher) NodeVerificationResult {
+type LocalHashedNodeVector struct {
+	HashedNodeVector
+	TrustedGlobulaStateVector common2.GlobulaStateHash
+	DoubtedGlobulaStateVector common2.GlobulaStateHash
+}
 
-	if selfData.DoubtedVector == nil {
-		selfData.DoubtedVector = selfData.TrustedVector
-	}
-	if otherData.DoubtedVector == nil {
-		otherData.DoubtedVector = otherData.TrustedVector
-	}
+func ClassifyByNodeGsh(selfData LocalHashedNodeVector, otherData HashedNodeVector, nodeStats *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
 
 	if selfData.Bitset.Len() != nodeStats.ColumnCount() {
 		panic("bitset length mismatch")
 	}
 
-	// var sr *stats.Row
-	// var verifyRes NodeVerificationResult
-	// for {
-	// 	repeat := false
-	// 	verifyRes, repeat = catcher(selfData, otherData, hasher, &sr)
-	// 	if repeat {
-	// 		continue
-	// 	} else {
-	// 		break
-	// 	}
-	// }
 	sr := selfData.Bitset.CompareToStatRow(otherData.Bitset)
-	verifyRes := verifyVectorHashes(selfData, otherData, sr, hasher)
+	verifyRes := verifyVectorHashes(selfData, otherData, sr, derivedVector)
 
 	if verifyRes == norNotVerified || verifyRes == NvrSenderFault {
 		return verifyRes
@@ -96,37 +86,73 @@ func ClassifyByNodeGsh(selfData HashedNodeVector, otherData HashedNodeVector, no
 	return verifyRes
 }
 
-// func catcher(selfData HashedNodeVector, otherData HashedNodeVector, hasher *FilteredSequenceHasher, sr **stats.Row) (verifyRes NodeVerificationResult, repeat bool) {
-// 	defer func() {
-// 		repeat = recover() != nil
-// 	}()
-// 	*sr = selfData.Bitset.CompareToStatRow(otherData.Bitset)
-// 	return verifyVectorHashes(selfData, otherData, *sr, hasher), false
-// }
+type subVectorVerifyMode uint8
 
-func verifyVectorHashes(selfData HashedNodeVector, otherData HashedNodeVector, sr *stats.Row, hasher FilteredSequenceHasher) NodeVerificationResult {
+const (
+	ignore subVectorVerifyMode = iota
+	verify
+	verifyAsIs
+	verifyRecalc
+)
+
+func (v subVectorVerifyMode) UpdateVerify(n subVectorVerifyMode) subVectorVerifyMode {
+	if v == ignore {
+		return ignore
+	}
+	if v != verify {
+		panic("illegal state")
+	}
+	return n
+}
+
+func (v subVectorVerifyMode) IsNeeded() bool {
+	return v != ignore
+}
+
+func initVerify(needed bool) subVectorVerifyMode {
+	if needed {
+		return verify
+	}
+	return ignore
+}
+
+func verifyVectorHashes(selfData LocalHashedNodeVector, otherData HashedNodeVector, sr *stats.Row, derivedVector *NodeVectorHelper) NodeVerificationResult {
 	// TODO All GSH comparisons should be based on SIGNATURES! not on pure hashes
 
 	verifyRes := norNotVerified
-	valid := false
-	gsh := selfData.TrustedVector
-	altered := false
+
+	trustedPart := initVerify(otherData.TrustedAnnouncementVector != nil)
+	doubtedPart := initVerify(otherData.DoubtedAnnouncementVector != nil)
+
+	if !trustedPart.IsNeeded() {
+		//Trusted is always present as there is always at least one node - the sender
+		panic("illegal state")
+	}
+	if doubtedPart.IsNeeded() && selfData.DoubtedAnnouncementVector == nil {
+		//special case when all our nodes are in trusted, so other's doubted vector will be matched with the trusted one of ours
+		selfData.DoubtedAnnouncementVector = selfData.TrustedAnnouncementVector
+		selfData.DoubtedGlobulaStateVector = selfData.TrustedGlobulaStateVector
+		//selfData.DoubtedGlobulaStateVectorSignature = selfData.TrustedGlobulaStateVectorSignature
+	}
+
+	if sr.HasValues(NodeBitMissingHere) {
+		// we can't validate anything without data
+		// ...  check for updates or/and send requests
+		return norNotVerified
+	}
 
 	switch {
-	case sr.HasValues(NodeBitMissingHere):
-		// we can't validate anything without requests
-		// ...  check for updates and send requests
-		return norNotVerified
 	case sr.HasAllValuesOf(NodeBitSame, NodeBitLessTrustedHere):
 		// check DoubtedGsh as is, if not then TrustedGSH with some locally-known NSH included
 		fallthrough
 	case sr.HasAllValuesOf(NodeBitSame, NodeBitLessTrustedThere):
 		// check DoubtedGsh as is, if not then TrustedGSH with some locally-known NSH excluded
-		valid = verifyRes.SetDoubted(selfData.DoubtedVector.Equals(otherData.DoubtedVector), false)
-		if !sr.HasAllValues(NodeBitSame) {
-			gsh = hasher.BuildHashByFilter(otherData.Bitset, sr, true)
-			altered = true
+		if sr.HasAllValues(NodeBitSame) {
+			trustedPart = trustedPart.UpdateVerify(verifyAsIs)
+		} else {
+			trustedPart = trustedPart.UpdateVerify(verifyRecalc)
 		}
+		doubtedPart = doubtedPart.UpdateVerify(verifyAsIs)
 	case sr.HasValues(NodeBitDoubtedMissingHere):
 		// check TrustedGSH only
 		// validation of DoubtedGsh needs requests
@@ -135,36 +161,69 @@ func verifyVectorHashes(selfData HashedNodeVector, otherData HashedNodeVector, s
 		// if HasValues(NodeBitLessTrustedThere) then ... exclude some locally-known NSH
 		// if HasValues(NodeBitMissingThere) then ... exclude some locally-known NSH
 		// if HasValues(NodeBitLessTrustedHere) then ... include some locally-known NSH
-		gsh = hasher.BuildHashByFilter(otherData.Bitset, sr, true)
-		verifyRes.SetTrusted(gsh.Equals(otherData.TrustedVector), true)
-		return verifyRes
+		trustedPart = trustedPart.UpdateVerify(verifyRecalc)
+		doubtedPart = doubtedPart.UpdateVerify(ignore)
 	default:
-		if sr.HasValues(NodeBitMissingThere) {
-			// check DoubtedGsh with exclusions, then TrustedGSH with exclusions/inclusions
-			gsh = hasher.BuildHashByFilter(otherData.Bitset, sr, false)
-			valid = verifyRes.SetDoubted(gsh.Equals(otherData.DoubtedVector), true)
-		} else {
-			// check DoubtedGsh, then TrustedGSH with exclusions/inclusions
-			gsh = selfData.DoubtedVector
-			valid = verifyRes.SetDoubted(gsh.Equals(otherData.DoubtedVector), false)
-		}
-
 		// if HasValues(NodeBitLessTrustedThere) then ... exclude some locally-known NSH from TrustedGSH
 		// if HasValues(NodeBitLessTrustedHere) then ... include some locally-known NSH to TrustedGSH
-		gsh = hasher.BuildHashByFilter(otherData.Bitset, sr, true)
-		altered = true
+
+		trustedPart = trustedPart.UpdateVerify(verifyRecalc)
+		if sr.HasValues(NodeBitMissingThere) {
+			// check DoubtedGsh with exclusions, then TrustedGSH with exclusions/inclusions
+			doubtedPart = doubtedPart.UpdateVerify(verifyRecalc)
+		} else {
+			// check DoubtedGsh as-is, then TrustedGSH with exclusions/inclusions
+			doubtedPart = doubtedPart.UpdateVerify(verifyAsIs)
+		}
 	}
 
+	gahTrusted, gahDoubted := selfData.TrustedAnnouncementVector, selfData.DoubtedAnnouncementVector
+
 	switch {
-	case valid == gsh.Equals(otherData.TrustedVector):
-		verifyRes.SetTrusted(valid, altered)
-	case valid:
-		verifyRes.SetTrusted(false, altered)
-	default:
-		// Dont set valid/fraud as there is an evident fraud/error by the sender
-		// TODO fraud - there must be match when a wider set is in match
-		verifyRes |= NvrSenderFault
+	case trustedPart == verify || doubtedPart == verify:
+		panic("illegal state")
+	case trustedPart == verifyRecalc || doubtedPart == verifyRecalc:
+
+		//It does remap the original bitset with the given stats
+		derivedVector.PrepareDerivedVector(sr)
+
+		gahTrusted, gahDoubted = derivedVector.BuildGlobulaAnnouncementHashes(
+			trustedPart == verifyRecalc, doubtedPart == verifyRecalc, gahTrusted, gahDoubted)
 	}
+
+	validTrusted := trustedPart.IsNeeded() && gahTrusted.Equals(otherData.TrustedAnnouncementVector)
+	validDoubted := doubtedPart.IsNeeded() && gahDoubted.Equals(otherData.DoubtedAnnouncementVector)
+
+	if validDoubted && !validTrusted {
+		// As Trusted is a subset of Doubted, then Doubted can't be valid if Trusted is not.
+		// This is an evident fraud/error by the sender.
+		// Use status for doubted, but ignore results for Trusted check
+		// TODO report fraud
+		verifyRes |= NvrSenderFault
+		trustedPart = ignore
+	}
+
+	if validTrusted || validDoubted {
+		recalcTrusted := trustedPart == verifyRecalc && validTrusted
+		recalcDoubted := doubtedPart == verifyRecalc && validDoubted
+
+		gshTrusted, gshDoubted := selfData.TrustedGlobulaStateVector, selfData.DoubtedGlobulaStateVector
+		if recalcTrusted || recalcDoubted {
+			gshTrusted, gshDoubted = derivedVector.BuildGlobulaStateHashes(
+				recalcTrusted, recalcDoubted, gshTrusted, gshDoubted)
+		}
+
+		validTrusted = validTrusted && derivedVector.VerifyGlobulaStateSignature(gshTrusted, otherData.TrustedGlobulaStateVectorSignature)
+		validDoubted = validDoubted && derivedVector.VerifyGlobulaStateSignature(gshDoubted, otherData.DoubtedGlobulaStateVectorSignature)
+	}
+
+	if doubtedPart.IsNeeded() {
+		verifyRes.SetDoubted(validDoubted, doubtedPart == verifyRecalc)
+	}
+	if trustedPart.IsNeeded() {
+		verifyRes.SetTrusted(validTrusted, trustedPart == verifyRecalc)
+	}
+
 	return verifyRes
 }
 

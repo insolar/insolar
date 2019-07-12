@@ -49,7 +49,21 @@ const (
 	TypeActivate
 	TypeRequestInfo
 	TypeGotHotConfirmation
+	TypeDeactivate
+	TypeUpdate
+
+	// should be the last (required by TypesMap)
+	_latestType
 )
+
+// TypesMap contains Type name (gen by stringer) to type mapping.
+var TypesMap = func() map[string]Type {
+	m := map[string]Type{}
+	for i := TypeUnknown; i < _latestType; i++ {
+		m[i.String()] = i
+	}
+	return m
+}()
 
 // Payload represents any kind of data that can be encoded in consistent manner.
 type Payload interface {
@@ -172,6 +186,12 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *GotHotConfirmation:
 		pl.Polymorph = uint32(TypeGotHotConfirmation)
 		return pl.Marshal()
+	case *Deactivate:
+		pl.Polymorph = uint32(TypeDeactivate)
+		return pl.Marshal()
+	case *Update:
+		pl.Polymorph = uint32(TypeUpdate)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -257,6 +277,14 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeGotHotConfirmation:
 		pl := GotHotConfirmation{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeDeactivate:
+		pl := Deactivate{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeUpdate:
+		pl := Update{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

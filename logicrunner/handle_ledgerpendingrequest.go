@@ -38,7 +38,9 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	defer span.End()
 
 	lr := p.dep.lr
-	es := lr.StateStorage.GetExecutionState(Ref{}.FromSlice(p.Message.Payload))
+	ref := Ref{}.FromSlice(p.Message.Payload)
+
+	es, broker := lr.StateStorage.GetExecutionState(ref)
 	if es == nil {
 		return nil
 	}
@@ -48,6 +50,7 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 
 	proc := &UnsafeGetLedgerPendingRequest{
 		es:         es,
+		broker:     broker,
 		dep:        p.dep,
 		hasPending: false,
 	}
@@ -62,22 +65,24 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 		return nil
 	}
 
-	es.Broker.StartProcessorIfNeeded(ctx)
+	broker.StartProcessorIfNeeded(ctx)
 	return nil
 }
 
 type UnsafeGetLedgerPendingRequest struct {
 	dep        *Dependencies
 	es         *ExecutionState
+	broker     *ExecutionBroker
 	hasPending bool
 }
 
 func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	es := u.es
 	lr := u.dep.lr
+	broker := u.broker
 
 	es.Lock()
-	if es.Broker.HasLedgerRequest(ctx) != nil || !es.LedgerHasMoreRequests {
+	if broker.HasLedgerRequest(ctx) != nil || !es.LedgerHasMoreRequests {
 		es.Unlock()
 		return nil
 	}
@@ -131,9 +136,9 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	u.hasPending = true
 	es.LedgerHasMoreRequests = true
 
-	t := NewTranscript(ctx, requestRef, *request)
+	t := NewTranscript(ctx, *requestRef, *request)
 	t.FromLedger = true
-	es.Broker.Prepend(ctx, true, t)
+	broker.Prepend(ctx, true, t)
 
 	return nil
 }

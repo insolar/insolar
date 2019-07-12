@@ -124,7 +124,7 @@ func (r *HelloWorld) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -154,7 +154,7 @@ func (r *HelloWorld) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -191,7 +191,7 @@ func (r *HelloWorld) ReturnObj() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "ReturnObj", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "ReturnObj", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -218,7 +218,7 @@ func (r *HelloWorld) ReturnObjNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "ReturnObj", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "ReturnObj", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func (r *HelloWorld) ReturnObjAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "ReturnObj", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "ReturnObj", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -277,7 +277,7 @@ func (r *HelloWorld) Greet(name string) (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Greet", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Greet", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -305,7 +305,7 @@ func (r *HelloWorld) GreetNoWait(name string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Greet", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Greet", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -331,7 +331,7 @@ func (r *HelloWorld) GreetAsImmutable(name string) (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Greet", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Greet", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -364,7 +364,7 @@ func (r *HelloWorld) Count() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Count", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Count", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -391,7 +391,7 @@ func (r *HelloWorld) CountNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Count", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Count", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -416,7 +416,7 @@ func (r *HelloWorld) CountAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Count", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Count", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -449,7 +449,7 @@ func (r *HelloWorld) Errored() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Errored", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Errored", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -476,7 +476,7 @@ func (r *HelloWorld) ErroredNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Errored", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Errored", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -501,7 +501,7 @@ func (r *HelloWorld) ErroredAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Errored", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Errored", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -534,7 +534,7 @@ func (r *HelloWorld) CreateChild() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "CreateChild", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "CreateChild", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -561,7 +561,7 @@ func (r *HelloWorld) CreateChildNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "CreateChild", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "CreateChild", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -586,7 +586,7 @@ func (r *HelloWorld) CreateChildAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "CreateChild", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "CreateChild", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -619,7 +619,7 @@ func (r *HelloWorld) CountChild() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "CountChild", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "CountChild", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -646,7 +646,7 @@ func (r *HelloWorld) CountChildNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "CountChild", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "CountChild", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -671,7 +671,7 @@ func (r *HelloWorld) CountChildAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "CountChild", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "CountChild", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -705,7 +705,7 @@ func (r *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Call", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Call", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -733,7 +733,7 @@ func (r *HelloWorld) CallNoWait(signedRequest []byte) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Call", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Call", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -759,7 +759,7 @@ func (r *HelloWorld) CallAsImmutable(signedRequest []byte) (interface{}, error) 
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Call", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Call", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

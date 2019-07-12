@@ -67,23 +67,19 @@ func (m *RPCMethods) getCurrent(
 ) (
 	ProxyImplementation, *Transcript, error,
 ) {
-	os := m.ss.GetObjectState(obj)
-	if os == nil {
-		return nil, nil, errors.New("Failed to find requested object state. ref: " + obj.String())
-	}
 	switch mode {
 	case insolar.ExecuteCallMode:
-		es := os.ExecutionState
-		if es == nil {
+		_, broker := m.ss.GetExecutionState(obj)
+		if broker == nil {
 			return nil, nil, errors.New("No execution in the state")
 		}
 
-		cur := es.Broker.currentList.Get(reqRef)
-		if cur == nil {
-			return nil, nil, errors.New("No current execution in the state for request " + reqRef.String())
+		transcript := broker.currentList.Get(reqRef)
+		if transcript == nil {
+			return nil, nil, errors.Errorf("No current execution in the state for request %s", reqRef.String())
 		}
 
-		return m.execution, cur, nil
+		return m.execution, transcript, nil
 	default:
 		panic("not implemented")
 	}
@@ -216,6 +212,12 @@ func (m *executionProxyImplementation) RouteCall(
 	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
+	}
+
+	if req.Saga {
+		// Saga methods are not executed right away. LME will send a method
+		// to the VE when current object finishes the execution and validation.
+		return nil
 	}
 
 	// Step 2. Actually make a call.
@@ -525,10 +527,10 @@ func buildIncomingAndOutgoingCallRequests(
 		Arguments: req.Arguments,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
-	// Currently IncomingRequest and OutgoingRequest are exact copies of each other
+	// Currently IncomingRequest and OutgoingRequest are almost exact copies of each other
 	// thus the following code is a bit ugly. However this will change when we'll
 	// figure out which fields are actually needed in OutgoingRequest and which are
 	// not. Thus please keep the code the way it is for now, dont't introduce any
@@ -549,10 +551,14 @@ func buildIncomingAndOutgoingCallRequests(
 		Arguments: req.Arguments,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
-	if !req.Wait {
+	if req.Saga {
+		// OutgoingRequest with ReturnMode = ReturnSaga will be called by LME
+		// when current object finishes the execution and validation.
+		outgoing.ReturnMode = record.ReturnSaga
+	} else if !req.Wait {
 		incoming.ReturnMode = record.ReturnNoWait
 		outgoing.ReturnMode = record.ReturnNoWait
 	}
@@ -578,7 +584,7 @@ func buildIncomingAndOutgoingSaveAsChildRequests(
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	outgoing := record.OutgoingRequest{
@@ -593,7 +599,7 @@ func buildIncomingAndOutgoingSaveAsChildRequests(
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	return &incoming, &outgoing
@@ -617,7 +623,7 @@ func buildIncomingAndOutgoingSaveAsDelegateRequests(
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	outgoing := record.OutgoingRequest{
@@ -632,7 +638,7 @@ func buildIncomingAndOutgoingSaveAsDelegateRequests(
 		Arguments: req.ArgsSerialized,
 
 		APIRequestID: current.Request.APIRequestID,
-		Reason:       *current.RequestRef,
+		Reason:       current.RequestRef,
 	}
 
 	return &incoming, &outgoing

@@ -1,7 +1,7 @@
 //
 // Modified BSD 3-Clause Clear License
 //
-// Copyright (config) 2019 Insolar Technologies GmbH
+// Copyright (c) 2019 Insolar Technologies GmbH
 //
 // All rights reserved.
 //
@@ -13,7 +13,7 @@
 //  * Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other materials
 //    provided with the distribution.
-//  * Neither the addr of Insolar Technologies GmbH nor the names of its contributors
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
 //    may be used to endorse or promote products derived from this software without
 //    specific prior written permission.
 //
@@ -35,7 +35,7 @@
 //
 //    (b) prepare modifications and derivative works of this software,
 //
-//    (config) distribute this software (including without limitation in source code, binary or
+//    (c) distribute this software (including without limitation in source code, binary or
 //        object code form), and
 //
 //    (d) reproduce copies of this software
@@ -66,6 +66,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/node"
@@ -73,6 +74,11 @@ import (
 	transport2 "github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+)
+
+var (
+	keyProcessor = platformpolicy.NewKeyProcessor()
+	scheme       = platformpolicy.NewPlatformCryptographyScheme()
 )
 
 func TestConsensusMain(t *testing.T) {
@@ -85,33 +91,36 @@ func TestConsensusMain(t *testing.T) {
 	nodeInfos := generateNodeInfos(nodeIdents)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
+	pulseHandlers := make([]network2.PulseHandler, 0, len(nodes))
+
 	for i, n := range nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
 		nodeKeeper.SetInitialSnapshot(nodes)
 		certificateManager := initCrypto(n, discoveryNodes)
-		handler := adapters.NewDatagramHandler()
+		datagramHandler := adapters.NewDatagramHandler()
 		transportFactory := transport2.NewFactory(configuration.NewHostNetwork().Transport)
-		transport, _ := transportFactory.CreateDatagramTransport(handler)
+		transport, _ := transportFactory.CreateDatagramTransport(datagramHandler)
 
 		consensusAdapter := NewEmuHostConsensusAdapter(n.Address())
 
-		cons := consensus.New(ctx, consensus.Dep{
+		pulseHandler := adapters.NewPulseHandler()
+		pulseHandlers = append(pulseHandlers, pulseHandler)
+
+		_ = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-			Scheme:                platformpolicy.NewPlatformCryptographyScheme(),
+			KeyProcessor:          keyProcessor,
+			Scheme:                scheme,
 			CertificateManager:    certificateManager,
 			KeyStore:              keystore.NewInplaceKeyStore(nodeInfos[i].privateKey),
 			NodeKeeper:            nodeKeeper,
-			Stater:                &nshGen{nshDelay: defaultNshGenerationDelay},
+			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
 			PulseChanger:          &pulseChanger{},
+			StateUpdater:          &stateUpdater{nodeKeeper},
 			PacketBuilder:         NewEmuPacketBuilder,
 			DatagramTransport:     transport,
 			// TODO: remove
 			PacketSender: consensusAdapter,
-		})
-
-		controller := cons.Controller()
-		handler.SetConsensusController(controller)
-		consensusAdapter.SetConsensusController(controller)
+		}).Install(datagramHandler, pulseHandler, consensusAdapter)
 
 		_ = transport.Start(ctx)
 		consensusAdapter.ConnectTo(network)
@@ -121,7 +130,12 @@ func TestConsensusMain(t *testing.T) {
 
 	network.Start(ctx)
 
-	go CreateGenerator(2, 10, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
+	pulsar := NewPulsar(2, pulseHandlers)
+	go func() {
+		for {
+			pulsar.Pulse(ctx, 4+len(nodes)/10)
+		}
+	}()
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
@@ -143,8 +157,8 @@ func initLogger() context.Context {
 
 func initNetwork(ctx context.Context) *EmuNetwork {
 	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         100 * time.Millisecond,
-		MaxDelay:         300 * time.Millisecond,
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
 		Variance:         0.2,
 		SpikeProbability: 0.1,
 	})
@@ -177,8 +191,6 @@ func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole)
 }
 
 func generateNodeInfos(nodeIdents []nodeIdentity) []*nodeInfo {
-	keyProcessor := platformpolicy.NewKeyProcessor()
-
 	nodeInfos := make([]*nodeInfo, 0, len(nodeIdents))
 	for _, ni := range nodeIdents {
 		privateKey, _ := keyProcessor.GeneratePrivateKey()
@@ -214,7 +226,7 @@ func nodesFromInfo(nodeInfos []*nodeInfo) ([]insolar.NetworkNode, []insolar.Netw
 			isDiscovery = true
 		}
 
-		nn := newNetworkNode(i, info.addr, info.role, info.publicKey)
+		nn := newNetworkNode(i, info.addr, info.role, info.publicKey, info.privateKey)
 		nodes[i] = nn
 		if isDiscovery {
 			discoveryNodes = append(discoveryNodes, nn)
@@ -226,7 +238,7 @@ func nodesFromInfo(nodeInfos []*nodeInfo) ([]insolar.NetworkNode, []insolar.Netw
 
 const shortNodeIdOffset = 1000
 
-func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.PublicKey) node.MutableNode {
+func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.PublicKey, sk crypto.PrivateKey) node.MutableNode {
 	n := node.NewNode(
 		testutils.RandomRef(),
 		role,
@@ -236,19 +248,28 @@ func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.Publ
 	)
 	mn := n.(node.MutableNode)
 	mn.SetShortID(insolar.ShortNodeID(shortNodeIdOffset + id))
+
+	hasher := scheme.IntegrityHasher()
+	signer := scheme.DigestSigner(sk)
+
+	data := []byte{1, 3, 3, 7}
+	digest := hasher.Hash(data)
+	signature, _ := signer.Sign(digest)
+
+	mn.SetSignature(*signature)
+
 	return mn
 }
 
 func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) *certificate.CertificateManager {
 	pubKey := node.PublicKey()
 
-	proc := platformpolicy.NewKeyProcessor()
-	publicKey, _ := proc.ExportPublicKeyPEM(pubKey)
+	publicKey, _ := keyProcessor.ExportPublicKeyPEM(pubKey)
 
 	bootstrapNodes := make([]certificate.BootstrapNode, 0, len(discoveryNodes))
 	for _, dn := range discoveryNodes {
 		pubKey := dn.PublicKey()
-		pubKeyBuf, _ := proc.ExportPublicKeyPEM(pubKey)
+		pubKeyBuf, _ := keyProcessor.ExportPublicKeyPEM(pubKey)
 
 		bootstrapNode := certificate.NewBootstrapNode(
 			pubKey,
@@ -270,7 +291,7 @@ func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) 
 
 	// dump cert and read it again from json for correct private files initialization
 	jsonCert, _ := cert.Dump()
-	cert, _ = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
+	cert, _ = certificate.ReadCertificateFromReader(pubKey, keyProcessor, strings.NewReader(jsonCert))
 	return certificate.NewCertificateManager(cert)
 }
 
@@ -296,4 +317,18 @@ type pulseChanger struct{}
 
 func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
+}
+
+type stateUpdater struct {
+	nodeKeeper network2.NodeKeeper
+}
+
+func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
+
+	// err := su.nodeKeeper.Sync(ctx, nodes, nil)
+	// if err != nil {
+	// 	inslogger.FromContext(ctx).Error(err)
+	// }
+	// su.nodeKeeper.SetCloudHash(cloudStateHash)
 }

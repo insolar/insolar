@@ -62,7 +62,7 @@ import (
 )
 
 type future struct {
-	response       chan network.Packet
+	response       chan network.ReceivedPacket
 	receiver       *host.Host
 	request        *packet.Packet
 	requestID      types.RequestID
@@ -74,7 +74,7 @@ type future struct {
 func NewFuture(requestID types.RequestID, receiver *host.Host, packet *packet.Packet, cancelCallback CancelCallback) Future {
 	metrics.NetworkFutures.WithLabelValues(packet.GetType().String()).Inc()
 	return &future{
-		response:       make(chan network.Packet, 1),
+		response:       make(chan network.ReceivedPacket, 1),
 		receiver:       receiver,
 		request:        packet,
 		requestID:      requestID,
@@ -98,12 +98,12 @@ func (f *future) Request() network.Packet {
 }
 
 // Response returns response packet channel.
-func (f *future) Response() <-chan network.Packet {
+func (f *future) Response() <-chan network.ReceivedPacket {
 	return f.response
 }
 
 // SetResponse write packet to the response channel.
-func (f *future) SetResponse(response network.Packet) {
+func (f *future) SetResponse(response network.ReceivedPacket) {
 	if atomic.CompareAndSwapUint32(&f.finished, 0, 1) {
 		f.response <- response
 		f.finish()
@@ -111,7 +111,7 @@ func (f *future) SetResponse(response network.Packet) {
 }
 
 // WaitResponse gets the future response from Response() channel with a timeout set to `duration`.
-func (f *future) WaitResponse(duration time.Duration) (network.Packet, error) {
+func (f *future) WaitResponse(duration time.Duration) (network.ReceivedPacket, error) {
 	select {
 	case response, ok := <-f.Response():
 		if !ok {

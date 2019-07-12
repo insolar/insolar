@@ -29,6 +29,14 @@ import (
 
 //ID and Reference serialization tests
 
+func TestNewIDFromBytes(t *testing.T) {
+	id := testutils.RandomID()
+	actualID := *insolar.NewIDFromBytes(id.Bytes())
+	require.Equal(t, id, actualID)
+
+	insolar.NewIDFromBytes(nil)
+}
+
 func TestNewIDFromBase58(t *testing.T) {
 	id := testutils.RandomID()
 	idStr := base58.Encode(id[:])
