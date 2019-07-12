@@ -136,22 +136,26 @@ func (js *JetSplitterDefault) createDrop(
 	jetID insolar.JetID,
 	pn insolar.PulseNumber,
 ) (bool, error) {
-	threshold := js.getPreviousDropThreshold(ctx, jetID, pn)
-	// reset threshold after split
-	if threshold > js.cfg.ThresholdRecordsCount {
-		threshold = 0
-	}
-
 	block := drop.Drop{
 		Pulse: pn,
 		JetID: jetID,
 	}
-	// if threshold reached increase counter (instead it reset)
+
+	// skip any thresholds calculation for split if jet depth reached limit.
+	if jetID.Depth() > js.cfg.DepthLimit {
+		return false, js.dropModifier.Set(ctx, block)
+	}
+
+	threshold := js.getPreviousDropThreshold(ctx, jetID, pn)
+	// reset threshold counter, if split is happened
+	if threshold > js.cfg.ThresholdRecordsCount {
+		threshold = 0
+	}
+	// if records count reached threshold increase counter (instead it reset)
 	recordsCount := len(js.recordsAccessor.ForPulse(ctx, jetID, pn))
 	if recordsCount > js.cfg.ThresholdRecordsCount {
 		block.SplitThresholdExceeded = threshold + 1
 	}
-
 	// first return value is split needed
 	return block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount, js.dropModifier.Set(ctx, block)
 }

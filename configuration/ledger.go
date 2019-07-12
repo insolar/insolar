@@ -35,6 +35,8 @@ type JetSplit struct {
 	ThresholdRecordsCount int
 	// ThresholdOverflowCount is a how many times in row ThresholdRecordsCount should be surpassed.
 	ThresholdOverflowCount int
+	// DepthLimit limits jet tree depth (maximum possible jets = 2^DepthLimit)
+	DepthLimit uint8
 }
 
 // Backoff configures retry backoff algorithm
@@ -85,6 +87,7 @@ func NewLedger() Ledger {
 			// TODO: find best default values
 			ThresholdRecordsCount:  100,
 			ThresholdOverflowCount: 3,
+			DepthLimit:             10, // limit to 1024 jets
 		},
 		LightChainLimit: 5, // 5 pulses
 

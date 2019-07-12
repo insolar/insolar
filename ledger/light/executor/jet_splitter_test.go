@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -36,53 +37,109 @@ import (
 )
 
 type splitCase struct {
-	name             string
-	jetID            insolar.JetID
-	recordsThreshold int
-	overflowCount    int
-
-	// represents expected values on every pulse (elements count should match!)
-	recordsPerPulse []int
-	dropExceed      []int
-	hasSplit        []bool
+	name string
+	cfg  configuration.JetSplit
+	// represents expected values on every pulse for every jet
+	pulses []map[insolar.JetID]jetConfig
 }
+
+type jetConfig struct {
+	// how many record return record accessor
+	records int
+	// expected drop's threshold value
+	dropThreshold int
+	// is split expected
+	hasSplit bool
+}
+
+var defaultDepthLimit uint8 = 2
+
+// initial jets
+var (
+	jet0  = jet.NewIDFromString("0")
+	jet10 = jet.NewIDFromString("10")
+	jet11 = jet.NewIDFromString("11")
+)
+
+// children jets
+var (
+	// left and right children for jet10
+	children = map[insolar.JetID]map[string]insolar.JetID{
+		jet10: {
+			"left":  jet.NewIDFromString("100"),
+			"right": jet.NewIDFromString("101"),
+		},
+	}
+
+// right for jet10
+)
+
+// map[insolar] children
+
+// var defaultJetID = jet.NewIDFromString("10")
 
 var cases = []splitCase{
 	{
-		name:             "no_split",
-		jetID:            jet.NewIDFromString("10"),
-		recordsThreshold: 5,
-		overflowCount:    0,
-		recordsPerPulse:  []int{5, 3},
-		dropExceed:       []int{0, 0},
-		hasSplit:         []bool{false, false},
+		name: "no_split",
+		cfg: configuration.JetSplit{
+			ThresholdRecordsCount:  5,
+			ThresholdOverflowCount: 0,
+			DepthLimit:             defaultDepthLimit,
+		},
+		pulses: []map[insolar.JetID]jetConfig{
+			{jet10: {5, 0, false}},
+			{jet10: {3, 0, false}},
+		},
 	},
 	{
-		name:             "split",
-		jetID:            jet.NewIDFromString("10"),
-		recordsThreshold: 4,
-		overflowCount:    0,
-		recordsPerPulse:  []int{5, 3},
-		dropExceed:       []int{1, 0},
-		hasSplit:         []bool{true, false},
+		name: "split",
+		cfg: configuration.JetSplit{
+			ThresholdRecordsCount:  4,
+			ThresholdOverflowCount: 0,
+			DepthLimit:             defaultDepthLimit,
+		},
+		pulses: []map[insolar.JetID]jetConfig{
+			{jet10: {5, 1, true}},
+			{jet10: {3, 0, false}},
+		},
 	},
 	{
-		name:             "split_with_overflow",
-		jetID:            jet.NewIDFromString("10"),
-		recordsThreshold: 4,
-		overflowCount:    1,
-		recordsPerPulse:  []int{5, 5, 5},
-		dropExceed:       []int{1, 2, 0},
-		hasSplit:         []bool{false, true, false},
+		name: "split_with_overflow",
+		cfg: configuration.JetSplit{
+			ThresholdRecordsCount:  4,
+			ThresholdOverflowCount: 1,
+			DepthLimit:             defaultDepthLimit,
+		},
+		pulses: []map[insolar.JetID]jetConfig{
+			{jet10: {5, 1, false}},
+			{jet10: {5, 2, true}},
+			{jet10: {5, 0, false}},
+		},
 	},
 	{
-		name:             "no_split_with_overflow",
-		jetID:            jet.NewIDFromString("10"),
-		recordsThreshold: 4,
-		overflowCount:    1,
-		recordsPerPulse:  []int{5, 4, 5},
-		dropExceed:       []int{1, 0, 1},
-		hasSplit:         []bool{false, false, false},
+		name: "no_split_with_overflow",
+		cfg: configuration.JetSplit{
+			ThresholdRecordsCount:  4,
+			ThresholdOverflowCount: 1,
+			DepthLimit:             defaultDepthLimit,
+		},
+		pulses: []map[insolar.JetID]jetConfig{
+			{jet10: {5, 1, false}},
+			{jet10: {4, 0, false}},
+			{jet10: {5, 1, false}},
+		},
+	},
+	{
+		name: "split_with_depth_limit",
+		cfg: configuration.JetSplit{
+			ThresholdRecordsCount:  4,
+			ThresholdOverflowCount: 0,
+			DepthLimit:             2,
+		},
+		pulses: []map[insolar.JetID]jetConfig{
+			{jet10: {5, 1, true}},
+			{children[jet10]["left"]: {5, 0, false}},
+		},
 	},
 }
 
@@ -111,10 +168,6 @@ func TestJetSplitter(t *testing.T) {
 		db := drop.NewStorageMemory()
 		dropAccessor := db
 		dropModifier := db
-		cfg := configuration.JetSplit{
-			ThresholdRecordsCount:  sc.recordsThreshold,
-			ThresholdOverflowCount: sc.overflowCount,
-		}
 		// mocks
 		jetCalc := NewJetCalculatorMock(t)
 		collectionAccessor := object.NewRecordCollectionAccessorMock(t)
@@ -122,7 +175,8 @@ func TestJetSplitter(t *testing.T) {
 
 		// create splitter
 		splitter := NewJetSplitter(
-			cfg, jetCalc, jetStore, jetStore,
+			sc.cfg,
+			jetCalc, jetStore, jetStore,
 			dropAccessor, dropModifier,
 			pulseCalc, collectionAccessor,
 		)
@@ -132,7 +186,7 @@ func TestJetSplitter(t *testing.T) {
 			return jetStore.All(ctx, pn)
 		}
 
-		for i, recordsCount := range sc.recordsPerPulse {
+		for i, jetsConfig := range sc.pulses {
 			delta := insolar.PulseNumber(i)
 			current, newpulse := currentPulse+delta, newPulse+delta
 			pulseCalc.BackwardsMock.Return(insolar.Pulse{PulseNumber: previousPulse + delta}, nil)
@@ -140,35 +194,40 @@ func TestJetSplitter(t *testing.T) {
 			pulseStartedWithJets := jetStore.All(ctx, current)
 
 			collectionAccessor.ForPulseFunc = func(_ context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.Material {
-				if pn == current && jetID == sc.jetID {
-					return make([]record.Material, recordsCount)
+				jConf, ok := jetsConfig[jetID]
+				if !ok {
+					return nil
 				}
-				return nil
+				return make([]record.Material, jConf.records)
 			}
 
 			gotJets, err := splitter.Do(ctx, current, newpulse)
 			require.NoError(t, err, "splitter.Do performed")
 
-			dropThreshold := splitter.getDropThreshold(ctx, sc.jetID, current)
-			require.NoErrorf(t, err, "get jet's %v drop for pulse %v", sc.jetID.DebugString(), current)
-
-			require.Equalf(t, sc.dropExceed[i], dropThreshold,
-				"check drop.SplitThresholdExceeded for pulse with offset: %v", i)
+			for jetID, jConf := range jetsConfig {
+				dropThreshold := splitter.getDropThreshold(ctx, jetID, current)
+				require.Equalf(t, jConf.dropThreshold, dropThreshold,
+					"check drop.SplitThresholdExceeded for jet %v in +%v pulse", jetID.DebugString(), i)
+			}
 
 			var expectJets []insolar.JetID
+			var splitedJets []string
 			for _, jetID := range pulseStartedWithJets {
-				if sc.hasSplit[i] && (jetID == sc.jetID) {
-					left, right := jet.Siblings(sc.jetID)
+				jConf := jetsConfig[jetID]
+				if jConf.hasSplit {
+					left, right := jet.Siblings(jetID)
 					expectJets = append(expectJets, left, right)
+					splitedJets = append(splitedJets, jetID.DebugString())
 					continue
 				}
 				expectJets = append(expectJets, jetID)
 			}
-			expectMsg := fmt.Sprintf("jet %v should%v split on +%v pulse",
-				sc.jetID.DebugString(),
-				map[bool]string{false: " not"}[sc.hasSplit[i]],
-				i,
-			)
+			jetsInfo := "jets should split " + strings.Join(splitedJets, ", ")
+			if len(splitedJets) == 0 {
+				jetsInfo = "no jets spit"
+			}
+
+			expectMsg := fmt.Sprintf("jet %v should split on +%v pulse", jetsInfo, i)
 			require.Equal(t, jsort(expectJets), jsort(gotJets), expectMsg)
 		}
 	}
