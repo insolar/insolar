@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/insolar/payload"
+
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
@@ -718,6 +720,17 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	es, _ = suite.lr.StateStorage.GetExecutionState(objectRef)
 	suite.Equal(true, es.LedgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
+}
+
+func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
+	pl := &payload.SagaCallAcceptNotification{}
+
+	msg, err := payload.NewMessage(pl)
+	suite.Require().NoError(err)
+
+	rep, err := suite.lr.FlowDispatcher.Process(msg)
+	suite.Require().NoError(err)
+	suite.Require().Equal(&reply.OK{}, rep)
 }
 
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
