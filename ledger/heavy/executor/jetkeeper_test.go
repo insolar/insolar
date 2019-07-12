@@ -36,7 +36,7 @@ func TestNewJetKeeper(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	db, err := store.NewTestBadgerDB(tmpdir)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -51,7 +51,7 @@ func TestDbJetKeeper_Add(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	db, err := store.NewTestBadgerDB(tmpdir)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -75,7 +75,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	db, err := store.NewTestBadgerDB(tmpdir)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)

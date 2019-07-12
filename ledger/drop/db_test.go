@@ -51,7 +51,7 @@ func TestNewStorageDB(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	db, err := store.NewTestBadgerDB(tmpdir)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	dbStore := NewDB(db)
@@ -71,7 +71,7 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	dbMock, err := store.NewTestBadgerDB(tmpdir)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
@@ -89,13 +89,13 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	dbMock, err := store.NewTestBadgerDB(tmpdir)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
 	dropStore := NewDB(dbMock)
 
-	numElements := 400
+	numElements := 80
 
 	// it's used for writing pulses in random order to db
 	indexes := make([]int, numElements)
