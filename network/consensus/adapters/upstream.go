@@ -52,6 +52,7 @@ package adapters
 
 import (
 	"context"
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
 	common2 "github.com/insolar/insolar/network/consensus/common"

@@ -3,6 +3,7 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/instrumentation/instracer"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
@@ -19,8 +20,13 @@ var ack = []byte{1}
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-
-	err := n.sendMessage(ctx, msg)
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	if err == nil {
+		ctx = instracer.WithParentSpan(ctx, parentSpan)
+	} else {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	err = n.sendMessage(ctx, msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send message")
 	}

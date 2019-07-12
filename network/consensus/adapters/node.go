@@ -53,13 +53,13 @@ package adapters
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type NodeIntroduction struct {
@@ -116,7 +116,7 @@ type NodeIntroProfile struct {
 
 func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) *NodeIntroProfile {
 	specialRole := common2.SpecialRoleNone
-	if utils.IsDiscovery(networkNode.ID(), certificate) {
+	if network.IsDiscovery(networkNode.ID(), certificate) {
 		specialRole = common2.SpecialRoleDiscovery
 	}
 

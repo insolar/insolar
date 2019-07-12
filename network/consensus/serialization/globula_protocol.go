@@ -51,12 +51,12 @@
 package serialization
 
 import (
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"io"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -274,7 +274,7 @@ func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer
 }
 
 func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	capture := utils.NewCapturingReader(reader)
+	capture := packet.NewCapturingReader(reader)
 
 	if err := pd.Header.DeserializeFrom(ctx, capture); err != nil {
 		return errors.Wrap(err, "failed to deserialize Header")

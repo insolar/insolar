@@ -51,16 +51,15 @@
 package servicenetwork
 
 import (
-	"bytes"
 	"context"
+	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
+
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -76,12 +75,10 @@ import (
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/controller"
-	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const deliverWatermillMsg = "ServiceNetwork.processIncoming"
@@ -243,7 +240,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	ctx = utils.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
+	ctx = network.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
 	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
 	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
 	span.AddAttributes(

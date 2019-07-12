@@ -51,7 +51,6 @@
 package network
 
 import (
-	"bytes"
 	"context"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"io"
@@ -204,23 +203,4 @@ func NewPulseContext(ctx context.Context, pulseNumber uint32) context.Context {
 	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
 	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
 	return ctx
-}
-
-type CapturingReader struct {
-	io.Reader
-	buffer bytes.Buffer
-}
-
-func NewCapturingReader(reader io.Reader) *CapturingReader {
-	return &CapturingReader{Reader: reader}
-}
-
-func (r *CapturingReader) Read(p []byte) (int, error) {
-	n, err := r.Reader.Read(p)
-	r.buffer.Write(p)
-	return n, err
-}
-
-func (r *CapturingReader) Captured() []byte {
-	return r.buffer.Bytes()
 }

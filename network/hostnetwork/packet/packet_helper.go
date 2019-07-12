@@ -59,7 +59,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -157,7 +156,7 @@ func SerializePacket(p *Packet) ([]byte, error) {
 
 // DeserializePacket reads packet from io.Reader.
 func DeserializePacket(logger insolar.Logger, conn io.Reader) (*ReceivedPacket, error) {
-	reader := utils.NewCapturingReader(conn)
+	reader := NewCapturingReader(conn)
 
 	lengthBytes := make([]byte, 8)
 	if _, err := io.ReadFull(reader, lengthBytes); err != nil {
@@ -209,4 +208,23 @@ func NewPacket(sender, receiver *host.Host, packetType types.PacketType, id uint
 		Type:      uint32(packetType),
 		RequestID: id,
 	}
+}
+
+type CapturingReader struct {
+	io.Reader
+	buffer bytes.Buffer
+}
+
+func NewCapturingReader(reader io.Reader) *CapturingReader {
+	return &CapturingReader{Reader: reader}
+}
+
+func (r *CapturingReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.buffer.Write(p)
+	return n, err
+}
+
+func (r *CapturingReader) Captured() []byte {
+	return r.buffer.Bytes()
 }

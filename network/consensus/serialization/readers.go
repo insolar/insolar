@@ -53,13 +53,13 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"io"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type PacketParser struct {
@@ -69,7 +69,7 @@ type PacketParser struct {
 }
 
 func newPacketParser(ctx context.Context, reader io.Reader, digester common.DataDigester, signMethod common.SignMethod) (*PacketParser, error) {
-	capture := utils.NewCapturingReader(reader)
+	capture := packet.NewCapturingReader(reader)
 	parser := &PacketParser{
 		packetData: packetData{
 			packet: new(Packet),
