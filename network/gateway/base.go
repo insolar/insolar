@@ -52,8 +52,9 @@ package gateway
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"time"
+
+	"github.com/insolar/insolar/network/consensusv1/packets"
 
 	"github.com/pkg/errors"
 
@@ -124,7 +125,7 @@ func (g *Base) Init(ctx context.Context) error {
 	g.HostNetwork.RegisterRequestHandler(types.Bootstrap, g.HandleNodeBootstrapRequest) // provide joiner claim
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
-	g.HostNetwork.RegisterRequestHandler(types.Ping, func(ctx context.Context, req network.Packet) (network.Packet, error) {
+	g.HostNetwork.RegisterRequestHandler(types.Ping, func(ctx context.Context, req network.ReceivedPacket) (network.Packet, error) {
 		return g.HostNetwork.BuildResponse(ctx, req, &packet.Ping{}), nil
 	})
 
@@ -188,7 +189,7 @@ func (g *Base) ShouldIgnorePulse(context.Context, insolar.Pulse) bool {
 	return false
 }
 
-func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
 		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
 	}
@@ -257,7 +258,7 @@ func validateTimestamp(timestamp int64, delta time.Duration) bool {
 	return time.Now().UTC().Sub(time.Unix(timestamp, 0)) < delta
 }
 
-func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
 		return nil, errors.New("Only discovery nodes could authorize other nodes. I am not a discovery node.")
 	}
@@ -328,13 +329,13 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.P
 	}), nil
 }
 
-func (g *Base) HandleUpdateSchedule(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (g *Base) HandleUpdateSchedule(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	storage.NewSnapshotStorage()
 	// TODO:
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.UpdateScheduleResponse{}), nil
 }
 
-func (g *Base) HandleReconnect(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetReconnect() == nil {
 		return nil, errors.Errorf("process reconnect: got invalid protobuf request message: %s", request)
 	}
