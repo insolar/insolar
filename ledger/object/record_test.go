@@ -53,13 +53,13 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	dbMock, err := store.NewTestBadgerDB(tmpdir)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
 	recordStore := NewRecordDB(dbMock)
 
-	numElements := 400
+	numElements := 80
 
 	// it's used for writing pulses in random order to db
 	indexes := make([]int, numElements)

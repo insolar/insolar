@@ -61,7 +61,7 @@ func TestRecord_Components(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		dbStorage := object.NewRecordDB(db)
@@ -91,7 +91,7 @@ func TestRecord_Components(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		dbStorage := object.NewRecordDB(db)
@@ -114,7 +114,7 @@ func TestRecord_Components(t *testing.T) {
 		defer os.RemoveAll(tmpdir1)
 		require.NoError(t, err)
 
-		db1, err := store.NewBadgerDB(tmpdir1)
+		db1, err := store.NewTestBadgerDB(tmpdir1)
 		defer db1.Stop(context.Background())
 		dbStorage := object.NewRecordDB(db1)
 

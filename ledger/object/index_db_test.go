@@ -54,13 +54,13 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	dbMock, err := store.NewTestBadgerDB(tmpdir)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
 	indexStore := NewIndexDB(dbMock)
 
-	numElements := 400
+	numElements := 80
 
 	// it's used for writing pulses in random order to db
 	indexes := make([]int, numElements)
@@ -125,7 +125,7 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		storage := NewIndexDB(db)
@@ -152,12 +152,13 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	}
 
 	t.Run("saves correct bucket", func(t *testing.T) {
+		t.Parallel()
 		pn := gen.PulseNumber()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
@@ -175,12 +176,13 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	})
 
 	t.Run("re-save works fine", func(t *testing.T) {
+		t.Parallel()
 		pn := gen.PulseNumber()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
@@ -216,7 +218,7 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	db, err := store.NewTestBadgerDB(tmpdir)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	recordStorage := NewRecordDB(db)
@@ -266,11 +268,12 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	firstMeta := *insolar.NewID(11, nil)
 
 	t.Run("previous exists", func(t *testing.T) {
+		t.Parallel()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
@@ -296,11 +299,12 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	})
 
 	t.Run("previous doesn't exist", func(t *testing.T) {
+		t.Parallel()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
@@ -322,11 +326,12 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	})
 
 	t.Run("doesn't exist", func(t *testing.T) {
+		t.Parallel()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
@@ -346,11 +351,12 @@ func TestIndexDB_Records(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	t.Run("returns err, if readUntil > readFrom", func(t *testing.T) {
+		t.Parallel()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
@@ -362,11 +368,12 @@ func TestIndexDB_Records(t *testing.T) {
 	})
 
 	t.Run("works fine", func(t *testing.T) {
+		t.Parallel()
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewTestBadgerDB(tmpdir)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
