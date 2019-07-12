@@ -71,7 +71,7 @@ func TestNewPulseStorage(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 	cm := component.NewManager(nil)
-	badgerDB, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
+	badgerDB, err := NewTestBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
 	defer badgerDB.Stop(ctx)
 	ps := NewPulseStorage()
 

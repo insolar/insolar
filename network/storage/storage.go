@@ -106,6 +106,30 @@ type BadgerDB struct {
 	db *badger.DB
 }
 
+// NewTestBadgerDB creates new badger DB instance for tests.
+// Flag DoNotCompact lets close db immediately
+func NewTestBadgerDB(conf configuration.ServiceNetwork) (*BadgerDB, error) {
+	dir, err := filepath.Abs(conf.CacheDirectory)
+	if err != nil {
+		return nil, err
+	}
+
+	ops := badger.DefaultOptions
+	ops.SyncWrites = false
+	ops.DoNotCompact = true
+	ops.ValueDir = dir
+	ops.Dir = dir
+	bdb, err := badger.Open(ops)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open badger")
+	}
+
+	db := &BadgerDB{
+		db: bdb,
+	}
+	return db, nil
+}
+
 // NewBadgerDB creates new badger DB instance. Configuration should contain DataDirectory option. Badger will create
 // files there.
 func NewBadgerDB(conf configuration.ServiceNetwork) (*BadgerDB, error) {

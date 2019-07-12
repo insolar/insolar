@@ -86,7 +86,7 @@ func TestBadgerDB_Get(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
+	db, err := NewTestBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 
@@ -115,7 +115,7 @@ func TestBadgerDB_Set(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
+	db, err := NewTestBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 
