@@ -35,6 +35,159 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
+func TestRPCMethods_New(t *testing.T) {
+	m := NewRPCMethods(
+		artifacts.NewClientMock(t),
+		artifacts.NewDescriptorsCacheMock(t),
+		testutils.NewContractRequesterMock(t),
+		NewStateStorageMock(t),
+	)
+	require.NotNil(t, m)
+}
+
+func genBaseData(t minimock.Tester, tr *Transcript) (
+	*RPCMethods, insolar.Reference, insolar.Reference,
+) {
+	reqRef := gen.Reference()
+	objRef := gen.Reference()
+
+	tr.RequestRef = reqRef
+
+	execList := NewCurrentExecutionList()
+	execList.Set(reqRef, tr)
+	ss := NewStateStorageMock(t).
+		GetExecutionStateMock.Set(func(ref insolar.Reference) (r *ExecutionBroker) {
+			if ref.Equal(objRef) {
+				return &ExecutionBroker{currentList: execList}
+			} else {
+				return nil
+			}
+	})
+
+	m := &RPCMethods{
+		ss:        ss,
+		execution: NewProxyImplementationMock(t),
+	}
+	return m, reqRef, objRef
+}
+
+func TestRPCMethods_DeactivateObject(t *testing.T) {
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	reqRef := gen.Reference()
+	objRef := gen.Reference()
+
+	tr := &Transcript{RequestRef: reqRef}
+
+	execList := NewCurrentExecutionList()
+	execList.Set(reqRef, tr)
+	ss := NewStateStorageMock(t).
+		GetExecutionStateMock.Set(func(ref insolar.Reference) (r *ExecutionBroker) {
+		if ref.Equal(objRef) {
+			return &ExecutionBroker{currentList: execList}
+		} else {
+			return nil
+		}
+	})
+
+	m := &RPCMethods{
+		ss:        ss,
+		execution: NewProxyImplementationMock(t),
+	}
+
+	m.execution.(*ProxyImplementationMock).
+		DeactivateObjectMock.Return(nil).
+		GetCodeMock.Return(nil).
+		RouteCallMock.Return(nil).
+		SaveAsChildMock.Return(nil).
+		SaveAsDelegateMock.Return(nil).
+		GetObjChildrenIteratorMock.Return(nil).
+		GetDelegateMock.Return(nil)
+
+	table := []struct {
+		name string
+		f func(rpctypes.UpBaseReq) error
+	}{
+		{
+			name: "deactivate",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.DeactivateObject(
+					rpctypes.UpDeactivateObjectReq{UpBaseReq: baseReq},
+					&rpctypes.UpDeactivateObjectResp{},
+				)
+			},
+		},
+		{
+			name: "code",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.GetCode(
+					rpctypes.UpGetCodeReq{UpBaseReq: baseReq},
+					&rpctypes.UpGetCodeResp{},
+				)
+			},
+		},
+		{
+			name: "call",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.RouteCall(
+					rpctypes.UpRouteReq{UpBaseReq: baseReq},
+					&rpctypes.UpRouteResp{},
+				)
+			},
+		},
+		{
+			name: "as child",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.SaveAsChild(
+					rpctypes.UpSaveAsChildReq{UpBaseReq: baseReq},
+					&rpctypes.UpSaveAsChildResp{},
+				)
+			},
+		},
+		{
+			name: "as delegate",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.SaveAsDelegate(
+					rpctypes.UpSaveAsDelegateReq{UpBaseReq: baseReq},
+					&rpctypes.UpSaveAsDelegateResp{},
+				)
+			},
+		},
+		{
+			name: "child iter",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.GetObjChildrenIterator(
+					rpctypes.UpGetObjChildrenIteratorReq{UpBaseReq: baseReq},
+					&rpctypes.UpGetObjChildrenIteratorResp{},
+				)
+			},
+		},
+		{
+			name: "get delegate",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.GetDelegate(
+					rpctypes.UpGetDelegateReq{UpBaseReq: baseReq},
+					&rpctypes.UpGetDelegateResp{},
+				)
+			},
+		},
+	}
+
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.f(rpctypes.UpBaseReq{Callee: objRef, Request: reqRef})
+			require.NoError(t, err)
+
+			err = test.f(rpctypes.UpBaseReq{Callee: objRef, Request: gen.Reference()})
+			require.Error(t, err)
+
+			err = test.f(rpctypes.UpBaseReq{Callee: gen.Reference(), Request: reqRef})
+			require.Error(t, err)
+		})
+	}
+}
+
 func TestValidationProxyImplementation_GetCode(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
