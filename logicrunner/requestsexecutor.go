@@ -158,24 +158,36 @@ func (e *requestsExecutor) SendReply(
 
 	inslogger.FromContext(ctx).Debug("Returning result")
 
-	target := transcript.Request.Sender
+	// target := transcript.Request.Sender
 
 	errstr := ""
 	if err != nil {
 		errstr = err.Error()
 	}
-	_, err = e.MessageBus.Send(
-		ctx,
-		&message.ReturnResults{
-			Target:     target,
-			RequestRef: transcript.RequestRef,
-			Reply:      re,
-			Error:      errstr,
-		},
-		&insolar.MessageSendOptions{
-			Receiver: &target,
-		},
-	)
+	if transcript.Request.Sender.IsEmpty() {
+		_, err = e.MessageBus.Send(
+			ctx,
+			&message.ReturnResults{
+				Target:     transcript.Request.Caller,
+				RequestRef: transcript.RequestRef,
+				Reply:      re,
+				Error:      errstr,
+			},
+			&insolar.MessageSendOptions{},
+		)
+	} else {
+		_, err = e.MessageBus.Send(
+			ctx,
+			&message.ReturnResults{
+				RequestRef: transcript.RequestRef,
+				Reply:      re,
+				Error:      errstr,
+			},
+			&insolar.MessageSendOptions{
+				Receiver: &transcript.Request.Sender,
+			},
+		)
+	}
 	if err != nil {
 		inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
 	}

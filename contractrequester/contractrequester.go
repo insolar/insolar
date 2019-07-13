@@ -105,6 +105,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			Reason:       api.MakeReason(pulse, args),
+			Sender:       cr.JetCoordinator.Me(),
 		},
 	}
 
@@ -141,7 +142,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	if msg.Nonce == 0 {
 		msg.Nonce = randomUint64()
 	}
-	msg.Sender = cr.JetCoordinator.Me()
+	//msg.Sender = cr.JetCoordinator.Me()
 
 	var ch chan *message.ReturnResults
 	var reqHash [insolar.RecordHashSize]byte
