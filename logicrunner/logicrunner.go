@@ -82,6 +82,7 @@ type LogicRunner struct {
 	Publisher                  watermillMsg.Publisher
 	Sender                     bus.Sender
 	StateStorage               StateStorage
+	resultsMatcher             resultsMatcher
 
 	Cfg *configuration.LogicRunner
 
@@ -107,6 +108,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		Publisher: publisher,
 		Sender:    sender,
 	}
+	res.resultsMatcher = NewResultsMatcher(res.MessageBus)
 
 	initHandlers(&res)
 
@@ -397,6 +399,10 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Messa
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
 	}
+}
+
+func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) {
+	lr.resultsMatcher.AddUnwantedResponse(ctx, msg)
 }
 
 func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []message.ExecutionQueueElement {

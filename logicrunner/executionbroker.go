@@ -652,7 +652,11 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 		sendExecResults = true
 
 		// TODO: this should return delegation token to continue execution of the pending
-		msg := &message.StillExecuting{Reference: q.Ref}
+		msg := &message.StillExecuting{
+			Reference:   q.Ref,
+			Executor:    q.jetCoordinator.Me(),
+			RequestRefs: q.currentList.GetAllRequestRefs(),
+		}
 		messages = append(messages, msg)
 	case es.InPendingNotConfirmed():
 		logger.Warn("looks like pending executor died, continuing execution on next executor")

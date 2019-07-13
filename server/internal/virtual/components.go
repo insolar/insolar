@@ -137,9 +137,6 @@ func initComponents(
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	contractRequester, err := contractrequester.New()
-	checkError(ctx, err, "failed to start ContractRequester")
-
 	genesisDataProvider, err := genesisdataprovider.New()
 	checkError(ctx, err, "failed to start GenesisDataProvider")
 
@@ -158,6 +155,9 @@ func initComponents(
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pubSub, b)
 	checkError(ctx, err, "failed to start LogicRunner")
+
+	contractRequester, err := contractrequester.New(logicRunner)
+	checkError(ctx, err, "failed to start ContractRequester")
 
 	cm.Register(
 		terminationHandler,

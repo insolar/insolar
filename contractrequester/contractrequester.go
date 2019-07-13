@@ -46,6 +46,7 @@ type ContractRequester struct {
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	lr                         insolar.LogicRunner
 
 	ResultMutex sync.Mutex
 	ResultMap   map[[insolar.RecordHashSize]byte]chan *message.ReturnResults
@@ -56,10 +57,11 @@ type ContractRequester struct {
 }
 
 // New creates new ContractRequester
-func New() (*ContractRequester, error) {
+func New(lr insolar.LogicRunner) (*ContractRequester, error) {
 	return &ContractRequester{
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *message.ReturnResults),
 		callTimeout: 25 * time.Second,
+		lr:          lr,
 	}, nil
 }
 
@@ -230,6 +232,9 @@ func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResu
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
 		inslogger.FromContext(ctx).Warn("unwaited results of request ", msg.RequestRef.String())
+		if cr.lr != nil {
+			cr.lr.AddUnwantedResponse(ctx, msg)
+		}
 		return
 	}
 

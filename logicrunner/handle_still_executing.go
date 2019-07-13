@@ -56,10 +56,12 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		logger.Error("got StillExecuting message, but our state says that it's not in pending")
 	case message.InPending:
 		es.PendingConfirmed = true
+		h.dep.lr.resultsMatcher.AddStillExecution(ctx, msg)
 	case message.PendingUnknown:
 		// we are first, strange, soon ExecuteResults message should come
 		es.pending = message.InPending
 		es.PendingConfirmed = true
+		h.dep.lr.resultsMatcher.AddStillExecution(ctx, msg)
 	}
 
 	es.Unlock()
