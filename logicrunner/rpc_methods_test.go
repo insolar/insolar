@@ -188,7 +188,7 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 	}
 }
 
-func TestValidationProxyImplementation_GetCode(t *testing.T) {
+func TestProxyImplementation_GetCode(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -240,16 +240,21 @@ func TestValidationProxyImplementation_GetCode(t *testing.T) {
 	for _, test := range table {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			impl := &validationProxyImplementation{dc: test.dc}
-			result := rpctypes.UpGetCodeResp{}
-			err := impl.GetCode(ctx, test.transcript, test.req, &result)
-			if !test.error {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				require.Equal(t, test.result, result)
-			} else {
-				require.Error(t, err)
-				require.Equal(t, test.result, rpctypes.UpGetCodeResp{})
+			implementations := []ProxyImplementation{
+				&executionProxyImplementation{dc: test.dc},
+				&validationProxyImplementation{dc: test.dc},
+			}
+			for _, impl := range implementations {
+				result := rpctypes.UpGetCodeResp{}
+				err := impl.GetCode(ctx, test.transcript, test.req, &result)
+				if !test.error {
+					require.NoError(t, err)
+					require.NotNil(t, result)
+					require.Equal(t, test.result, result)
+				} else {
+					require.Error(t, err)
+					require.Equal(t, test.result, rpctypes.UpGetCodeResp{})
+				}
 			}
 		})
 	}
