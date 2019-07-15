@@ -120,17 +120,6 @@ func (r *Jet) Type() insolar.ReplyType {
 	return TypeJet
 }
 
-// Request contains jet.
-type Request struct {
-	ID     insolar.ID
-	Record []byte
-}
-
-// Type implementation of Reply interface.
-func (r *Request) Type() insolar.ReplyType {
-	return TypeRequest
-}
-
 // OpenRequestsOnHeavy contains
 type OpenRequestsOnHeavy struct {
 	ObjID    insolar.ID

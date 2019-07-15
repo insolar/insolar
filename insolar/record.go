@@ -100,7 +100,7 @@ func (id ID) IsEmpty() bool {
 	return id.Equal(ID{})
 }
 
-// IsEmpty - check for void
+// NotEmpty - check for void
 func (id ID) NotEmpty() bool {
 	return !id.IsEmpty()
 }

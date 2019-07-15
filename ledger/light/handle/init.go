@@ -85,6 +85,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case payload.TypeGetObject:
 		h := NewGetObject(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetRequest:
+		h := NewGetRequest(s.dep, meta)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
 		h := NewGetRequests(s.dep, meta)
 		return f.Handle(ctx, h.Present)
@@ -148,10 +151,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	defer span.End()
 
 	switch msgType {
-	case insolar.TypeGetRequest.String():
-		msg := parcel.Message().(*message.GetRequest)
-		h := NewGetRequest(s.dep, meta, msg.Request)
-		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetChildren.String():
 		h := NewGetChildren(s.dep, meta, parcel)
 		return f.Handle(ctx, h.Present)

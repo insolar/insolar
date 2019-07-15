@@ -86,6 +86,9 @@ func New(cfg configuration.Ledger) *Handler {
 		SendRequests: func(p *proc.SendRequests) {
 			p.Dep(h.Sender, h.RecordAccessor, h.IndexAccessor)
 		},
+		GetRequest: func(p *proc.GetRequest) {
+			p.Dep(h.RecordAccessor, h.Sender)
+		},
 	}
 	h.dep = &dep
 	return h
@@ -138,8 +141,6 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 
 	var rep insolar.Reply
 	switch msgType {
-	case insolar.TypeGetRequest.String():
-		rep, err = h.handleGetRequest(ctx, parcel)
 	case insolar.TypeGetChildren.String():
 		rep, err = h.handleGetChildren(ctx, parcel)
 	case insolar.TypeGetDelegate.String():
@@ -178,6 +179,10 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	switch payloadType {
+	case payload.TypeGetRequest:
+		p := proc.NewGetRequest(meta)
+		h.dep.GetRequest(p)
+		return p.Proceed(ctx)
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
 		h.dep.SendRequests(p)
@@ -354,34 +359,6 @@ func (h *Handler) handleGetChildren(
 	}
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
-}
-
-func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetRequest)
-
-	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
-	if err != nil {
-		return nil, errors.New("failed to fetch request")
-	}
-
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	_, ok := concrete.(*record.IncomingRequest)
-	if !ok {
-		return nil, errors.New("failed to decode request")
-	}
-
-	data, err := virtRec.Marshal()
-	if err != nil {
-		return nil, errors.New("failed to serialize request")
-	}
-
-	rep := reply.Request{
-		ID:     msg.Request,
-		Record: data,
-	}
-
-	return &rep, nil
 }
 
 func (h *Handler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {

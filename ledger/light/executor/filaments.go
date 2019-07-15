@@ -182,7 +182,7 @@ func (m *FilamentModifierDefault) SetRequest(
 
 	foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), objectID, requestID, request)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to set request")
 	}
 	if foundRequest != nil || foundResult != nil {
 		return foundRequest, foundResult, err
@@ -506,6 +506,18 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		c.sender,
 	)
 
+	_, isOutgoing := request.(*record.OutgoingRequest)
+	if !isOutgoing {
+		exists, err := c.checkReason(ctx, reason)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !exists {
+			return nil, nil, errors.New("request reason is not found")
+		}
+	}
+
+	isReasonFound := false
 	var foundRequest *record.CompositeFilamentRecord
 	var foundResult *record.CompositeFilamentRecord
 
@@ -518,6 +530,9 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		if bytes.Equal(rec.RecordID.Hash(), requestID.Hash()) {
 			foundRequest = &rec
 		}
+		if rec.RecordID == *reason.Record() {
+			isReasonFound = true
+		}
 
 		virtual := record.Unwrap(rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
@@ -525,10 +540,10 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 				foundResult = &rec
 			}
 		}
+	}
 
-		if foundRequest != nil && foundResult != nil {
-			return foundRequest, foundResult, nil
-		}
+	if isOutgoing && !isReasonFound {
+		return nil, nil, errors.New("request reason is not found")
 	}
 
 	return foundRequest, foundResult, nil
@@ -539,6 +554,60 @@ func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
 	cache.Lock()
 	cache.Clear()
 	cache.Unlock()
+}
+
+func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason insolar.Reference) (bool, error) {
+	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, reason.Record().Pulse())
+	if err != nil {
+		return false, errors.Wrap(err, "failed to calculate limit")
+	}
+	var node *insolar.Reference
+	if isBeyond {
+		node, err = c.coordinator.Heavy(ctx)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to calculate node")
+		}
+	} else {
+		jetID, err := c.jetFetcher.Fetch(ctx, *reason.Record(), reason.Record().Pulse())
+		if err != nil {
+			return false, errors.Wrap(err, "failed to fetch jet")
+		}
+		node, err = c.coordinator.NodeForJet(ctx, *jetID, reason.Record().Pulse())
+		if err != nil {
+			return false, errors.Wrap(err, "failed to calculate node")
+		}
+	}
+	msg, err := payload.NewMessage(&payload.GetRequest{
+		RequestID: *reason.Record(),
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "failed to check an object existence")
+	}
+
+	reps, done := c.sender.SendTarget(ctx, msg, *node)
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return false, errors.New("no reply for filament fetch")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch concrete := pl.(type) {
+	case *payload.Request:
+		return true, nil
+	case *payload.Error:
+		if concrete.Code == payload.CodeObjectNotFound {
+			inslogger.FromContext(ctx).Errorf("reason is wrong. %v", concrete.Text)
+			return true, nil
+		}
+		return false, errors.New(concrete.Text)
+	default:
+		return false, fmt.Errorf("unexpected reply %T", pl)
+	}
 }
 
 type fetchingIterator struct {

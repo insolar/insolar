@@ -45,6 +45,8 @@ const (
 	TypeSetOutgoingRequest
 	TypeSagaCallAcceptNotification
 	TypeGetFilament
+	TypeGetRequest
+	TypeRequest
 	TypeFilamentSegment
 	TypeSetResult
 	TypeActivate
@@ -192,6 +194,12 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *RequestInfo:
 		pl.Polymorph = uint32(TypeRequestInfo)
 		return pl.Marshal()
+	case *GetRequest:
+		pl.Polymorph = uint32(TypeGetRequest)
+		return pl.Marshal()
+	case *Request:
+		pl.Polymorph = uint32(TypeRequest)
+		return pl.Marshal()
 	case *Deactivate:
 		pl.Polymorph = uint32(TypeDeactivate)
 		return pl.Marshal()
@@ -286,6 +294,14 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeRequestInfo:
 		pl := RequestInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetRequest:
+		pl := GetRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeRequest:
+		pl := Request{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeDeactivate:
