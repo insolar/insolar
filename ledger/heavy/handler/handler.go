@@ -363,14 +363,20 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 }
 
 func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Meta) {
+	logger := inslogger.FromContext(ctx)
 	confirm := payload.GotHotConfirmation{}
 	err := confirm.Unmarshal(meta.Payload)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to unmarshal to GotHotConfirmation"))
+		logger.Error(errors.Wrap(err, "failed to unmarshal to GotHotConfirmation"))
 		return
 	}
 
-	inslogger.FromContext(ctx).Debug("[ handleGotHotConfirmation ] Got Confirmation: ", confirm.String())
+	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID)
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
+	} else {
+		logger.Debug("got confirmation: ", confirm.String())
+	}
 }
 
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
@@ -403,7 +409,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 
-	if err := h.JetKeeper.Add(ctx, drop.Pulse, drop.JetID); err != nil {
+	if err := h.JetKeeper.AddJet(ctx, drop.Pulse, drop.JetID); err != nil {
 		logger.Error(errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", msg.JetID.DebugString()))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
