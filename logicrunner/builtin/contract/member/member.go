@@ -38,9 +38,10 @@ import (
 // Member - basic member contract.
 type Member struct {
 	foundation.BaseContract
-	RootDomain insolar.Reference
-	Name       string
-	PublicKey  string
+	RootDomain  insolar.Reference
+	Name        string
+	PublicKey   string
+	BurnAddress string
 }
 
 // GetName gets name.
@@ -56,11 +57,12 @@ func (m *Member) GetPublicKey() (string, error) {
 }
 
 // New creates new member.
-func New(rootDomain insolar.Reference, name string, key string) (*Member, error) {
+func New(rootDomain insolar.Reference, name string, key string, burnAddress string) (*Member, error) {
 	return &Member{
-		RootDomain: rootDomain,
-		Name:       name,
-		PublicKey:  key,
+		RootDomain:  rootDomain,
+		Name:        name,
+		PublicKey:   key,
+		BurnAddress: burnAddress,
 	}, nil
 }
 
@@ -114,7 +116,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		selfSigned = true
 	case "member.migrationCreate":
 		selfSigned = true
-	case "contract.getReferenceByPublicKey":
+	case "member.get":
 		selfSigned = true
 	}
 
@@ -130,8 +132,8 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.contractCreateMember(request.Params.PublicKey)
 	case "member.migrationCreate":
 		return m.memberMigrationCreate(request.Params.PublicKey)
-	case "contract.getReferenceByPublicKey":
-		return m.getReferenceByPublicKey(request.Params.PublicKey)
+	case "member.get":
+		return m.memberGet(request.Params.PublicKey)
 	}
 
 	params := request.Params.CallParams.(map[string]interface{})
@@ -348,7 +350,7 @@ func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, er
 		return nil, fmt.Errorf("failed to create member: %s", e.Error())
 	}
 
-	created, err := m.createMember("", key)
+	created, err := m.createMember("", key, burnAddress)
 	if err != nil {
 		return rollBack(err)
 	}
@@ -367,7 +369,7 @@ func (m *Member) contractCreateMember(key string) (*CreateResponse, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 
-	created, err := m.createMember("", key)
+	created, err := m.createMember("", key, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create member: %s", err.Error())
 	}
@@ -378,12 +380,12 @@ func (m *Member) contractCreateMember(key string) (*CreateResponse, error) {
 
 	return &CreateResponse{Reference: created.Reference.String()}, nil
 }
-func (m *Member) createMember(name string, key string) (*member.Member, error) {
+func (m *Member) createMember(name string, key string, burnAddress string) (*member.Member, error) {
 	if key == "" {
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	memberHolder := member.New(m.RootDomain, name, key)
+	memberHolder := member.New(m.RootDomain, name, key, burnAddress)
 	created, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
@@ -530,12 +532,28 @@ func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 	return false, deposit.Deposit{}, nil
 }
 
-func (m *Member) getReferenceByPublicKey(publicKey string) (interface{}, error) {
+func (m *Member) GetBurnAddress() (string, error) {
+	return m.BurnAddress, nil
+}
+
+type GetResponse struct {
+	Reference   string `json:"reference"`
+	BurnAddress string `json:"migrationAddress,omitempty"`
+}
+
+func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 	ref, err := rootDomain.GetMemberByPublicKey(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get get reference by public key: %s", err.Error())
+		return nil, fmt.Errorf("failed to get reference by public key: %s", err.Error())
 	}
-	return ref.String(), nil
+
+	user := member.GetObject(ref)
+	ba, err := user.GetBurnAddress()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
+	}
+
+	return GetResponse{Reference: ref.String(), BurnAddress: ba}, nil
 
 }

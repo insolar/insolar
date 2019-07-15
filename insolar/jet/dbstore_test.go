@@ -73,7 +73,7 @@ func TestDBStore_TruncateHead(t *testing.T) {
 
 	dbStore := NewDBStore(dbMock)
 
-	numElements := 400
+	numElements := 100
 
 	// it's used for writing pulses in random order to db
 	indexes := make([]int, numElements)

@@ -274,7 +274,7 @@ func (m *client) GetCode(
 		desc = &codeDescriptor{
 			ref:         code,
 			machineType: codeRecord.MachineType,
-			code:        p.Code,
+			code:        codeRecord.Code,
 		}
 		return desc, nil
 	case *payload.Error:
@@ -623,7 +623,6 @@ func (m *client) DeployCode(
 
 	psc := &payload.SetCode{
 		Record: buf,
-		Code:   code,
 	}
 
 	pl, err := m.sendWithRetry(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
@@ -1046,36 +1045,6 @@ func (m *client) activateObject(
 		return errors.New(p.Text)
 	default:
 		return fmt.Errorf("ActivateObject: unexpected reply: %#v", p)
-	}
-}
-
-func (m *client) setBlob(
-	ctx context.Context,
-	blob []byte,
-	target insolar.Reference,
-) (*insolar.ID, error) {
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryJetSender(m.JetStorage),
-		messagebus.RetryFlowCancelled(m.PulseAccessor),
-	)
-	genericReact, err := sender(ctx, &message.SetBlob{
-		Memory:    blob,
-		TargetRef: target,
-	}, nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	switch rep := genericReact.(type) {
-	case *reply.ID:
-		return &rep.ID, nil
-	case *reply.Error:
-		return nil, rep.Error()
-	default:
-		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", rep)
 	}
 }
 

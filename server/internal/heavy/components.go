@@ -52,7 +52,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
@@ -67,10 +66,12 @@ import (
 )
 
 type components struct {
-	cmp      component.Manager
-	NodeRef  string
-	NodeRole string
-	rollback *executor.DBRollback
+	cmp       component.Manager
+	NodeRef   string
+	NodeRole  string
+	rollback  *executor.DBRollback
+	inRouter  *watermillMsg.Router
+	outRouter *watermillMsg.Router
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
@@ -233,7 +234,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	{
 		records := object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB)
-		blobs := blob.NewDB(DB)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
 		jetKeeper := executor.NewJetKeeper(jets, DB)
@@ -249,15 +249,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.JetModifier = jets
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(jetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
 
-		h := handler.New()
+		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = records
 		h.RecordModifier = records
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
 		h.IndexModifier = indexes
 		h.Bus = Bus
-		h.BlobAccessor = blobs
-		h.BlobModifier = blobs
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
@@ -272,7 +270,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		artifactManager := &artifact.Scope{
 			PulseNumber:    insolar.FirstPulseNumber,
 			PCS:            CryptoScheme,
-			BlobStorage:    blobs,
 			RecordAccessor: records,
 			RecordModifier: records,
 			IndexModifier:  indexes,
@@ -330,7 +327,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 	}
 
-	startWatermill(ctx, wmLogger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
+	c.startWatermill(ctx, wmLogger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
 
 	return c, nil
 }
@@ -344,10 +341,18 @@ func (c *components) Start(ctx context.Context) error {
 }
 
 func (c *components) Stop(ctx context.Context) error {
+	err := c.inRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
+	err = c.outRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
 	return c.cmp.Stop(ctx)
 }
 
-func startWatermill(
+func (c *components) startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
 	pubSub watermillMsg.PubSub,
@@ -383,7 +388,9 @@ func startWatermill(
 	)
 
 	startRouter(ctx, inRouter)
+	c.inRouter = inRouter
 	startRouter(ctx, outRouter)
+	c.outRouter = outRouter
 }
 
 func startRouter(ctx context.Context, router *watermillMsg.Router) {

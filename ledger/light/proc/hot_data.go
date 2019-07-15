@@ -20,11 +20,12 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
@@ -39,7 +40,7 @@ const (
 )
 
 type HotData struct {
-	replyTo chan<- bus.Reply
+	message payload.Meta
 	msg     *message.HotData
 
 	Dep struct {
@@ -51,20 +52,25 @@ type HotData struct {
 		JetReleaser   hot.JetReleaser
 		Coordinator   jet.Coordinator
 		Calculator    pulse.Calculator
+		Sender        bus.Sender
 	}
 }
 
-func NewHotData(msg *message.HotData, replyTo chan<- bus.Reply) *HotData {
+func NewHotData(msg *message.HotData, message payload.Meta) *HotData {
 	return &HotData{
 		msg:     msg,
-		replyTo: replyTo,
+		message: message,
 	}
 }
 
 func (p *HotData) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		p.replyTo <- bus.Reply{Err: err}
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }
@@ -135,7 +141,8 @@ func (p *HotData) process(ctx context.Context) error {
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
 
-	p.replyTo <- bus.Reply{Reply: &reply.OK{}}
+	msg := bus.ReplyAsMessage(ctx, &reply.OK{})
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 
 	p.releaseHotDataWaiters(ctx)
 	return nil

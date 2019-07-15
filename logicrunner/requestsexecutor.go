@@ -68,6 +68,8 @@ func (e *requestsExecutor) ExecuteAndSave(
 		return nil, errors.Wrap(err, "couldn't save request result")
 	}
 
+	inslogger.FromContext(ctx).Debug("saved result")
+
 	return repl, nil
 }
 
@@ -147,7 +149,10 @@ func (e *requestsExecutor) Save(
 func (e *requestsExecutor) SendReply(
 	ctx context.Context, transcript *Transcript, re insolar.Reply, err error,
 ) {
-	if transcript.Request.ReturnMode != record.ReturnResult {
+	if rm := transcript.Request.ReturnMode; rm != record.ReturnResult {
+		inslogger.FromContext(ctx).Debug(
+			"Not sending result, return mode: ", rm.String(),
+		)
 		return
 	}
 

@@ -19,10 +19,13 @@ package proc
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -33,7 +36,7 @@ import (
 type GetChildren struct {
 	msg     *message.GetChildren
 	parcel  insolar.Parcel
-	replyTo chan<- bus.Reply
+	message payload.Meta
 
 	Dep struct {
 		IndexLocker            object.IndexLocker
@@ -43,19 +46,31 @@ type GetChildren struct {
 		JetStorage             jet.Storage
 		JetTreeUpdater         jet.Fetcher
 		DelegationTokenFactory insolar.DelegationTokenFactory
+		Sender                 wmBus.Sender
 	}
 }
 
-func NewGetChildren(msg *message.GetChildren, parcel insolar.Parcel, replyTo chan<- bus.Reply) *GetChildren {
+func NewGetChildren(msg *message.GetChildren, parcel insolar.Parcel, message payload.Meta) *GetChildren {
 	return &GetChildren{
 		msg:     msg,
 		parcel:  parcel,
-		replyTo: replyTo,
+		message: message,
 	}
 }
 
 func (p *GetChildren) Proceed(ctx context.Context) error {
-	p.replyTo <- p.reply(ctx)
+	r := p.reply(ctx)
+	var msg *watermillMsg.Message
+	if r.Err != nil {
+		var err error
+		msg, err = payload.NewMessage(&payload.Error{Text: r.Err.Error()})
+		if err != nil {
+			return err
+		}
+	} else {
+		msg = wmBus.ReplyAsMessage(ctx, r.Reply)
+	}
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }
 
