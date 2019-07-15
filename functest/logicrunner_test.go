@@ -20,11 +20,13 @@ package functest
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSingleContract(t *testing.T) {
@@ -669,9 +671,31 @@ func (r *One) Recursive() (error) {
 }
 
 `
-	obj := callConstructor(t, uploadContractOnce(t, "recursive_call_one", contractOneCode), "New")
-	resp := callMethod(t, obj, "Recursive")
-	require.Contains(t, resp.ExtractedError, "loop detected")
+	protoRef := uploadContractOnce(t, "recursive_call_one", contractOneCode)
+
+	for i := 0; i <= 5; i++ {
+		obj := callConstructor(t, protoRef, "New")
+		resp := callMethodNoChecks(t, obj, "Recursive")
+
+		errstr := resp.Error.Error()
+		if errstr != "" {
+			if strings.Contains(errstr, "timeout") {
+				continue
+			} else {
+				require.Fail(t, "Unexpected error: "+errstr)
+			}
+		}
+
+		errstr = resp.Result.ExtractedError
+		require.NotEmpty(t, errstr)
+		if strings.Contains(errstr, "loop detected") {
+			return
+		} else {
+			require.Fail(t, "Unexpected error: "+errstr)
+		}
+	}
+
+	require.Fail(t, "loop detection is broken, all requests failed with timeout")
 }
 
 func TestGetParent(t *testing.T) {

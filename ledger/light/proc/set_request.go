@@ -83,10 +83,23 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	p.dep.locker.Lock(p.request.GetObject().Record())
-	defer p.dep.locker.Unlock(p.request.GetObject().Record())
+	var req *record.CompositeFilamentRecord
+	var res *record.CompositeFilamentRecord
+	var objID insolar.ID
 
-	req, res, err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
+	if p.request.GetCallType() == record.CTSaveAsChild || p.request.GetCallType() == record.CTSaveAsDelegate {
+		p.dep.locker.Lock(&p.requestID)
+		defer p.dep.locker.Unlock(&p.requestID)
+
+		objID = p.requestID
+	} else {
+		p.dep.locker.Lock(p.request.AffinityRef().Record())
+		defer p.dep.locker.Unlock(p.request.AffinityRef().Record())
+
+		objID = *p.request.AffinityRef().Record()
+	}
+
+	req, res, err = p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
 	if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
@@ -108,7 +121,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 
 	msg, err := payload.NewMessage(&payload.RequestInfo{
-		ObjectID:  *p.request.GetObject().Record(),
+		ObjectID:  objID,
 		RequestID: p.requestID,
 		Request:   reqBuf,
 		Result:    resBuf,

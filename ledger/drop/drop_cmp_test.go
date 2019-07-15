@@ -17,9 +17,12 @@
 package drop
 
 import (
+	"context"
+	"io/ioutil"
+	"os"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/stretchr/testify/require"
 
@@ -76,7 +79,14 @@ func TestDropStorageMemory(t *testing.T) {
 
 func TestDropStorageDB(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	ds := NewDB(store.NewMemoryMockDB())
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+	ds := NewDB(db)
 
 	var drops []Drop
 	genInputs := map[jetPulse]struct{}{}
@@ -107,7 +117,14 @@ func TestDropStorageDB(t *testing.T) {
 func TestDropStorageCompare(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	ds := NewDB(store.NewMemoryMockDB())
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+	ds := NewDB(db)
 	ms := NewStorageMemory()
 
 	var drops []Drop

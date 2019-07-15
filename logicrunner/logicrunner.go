@@ -82,7 +82,7 @@ func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
 	if err != nil {
 		panic(err)
 	}
-	if res.CurrentList.Empty() {
+	if res.Broker.currentList.Empty() {
 		panic("object " + res.Ref.String() + " has no Current")
 	}
 	return res
@@ -347,51 +347,37 @@ func noLoopCheckerPredicate(current *Transcript, args interface{}) bool {
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
-	ctx context.Context, es *ExecutionState, parcel insolar.Parcel) bool {
-	if es.CurrentList.Empty() {
+	ctx context.Context, request record.IncomingRequest,
+) bool {
+
+	if request.ReturnMode == record.ReturnNoWait {
+		return false
+	}
+	if request.CallType != record.CTMethod {
+		return false
+	}
+	if request.Object == nil {
+		// should be catched by other code
 		return false
 	}
 
-	msg, ok := parcel.Message().(*message.CallMethod)
-	if ok && msg.ReturnMode == record.ReturnNoWait {
+	es := lr.StateStorage.GetExecutionState(*request.Object)
+	if es == nil {
 		return false
 	}
 
-	if es.CurrentList.Check(noLoopCheckerPredicate, msg.APIRequestID) {
+	es.Lock()
+	defer es.Unlock()
+
+	if es.Broker.currentList.Empty() {
+		return false
+	}
+	if es.Broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
 		return false
 	}
 
 	inslogger.FromContext(ctx).Error("loop detected")
 	return true
-}
-
-// finishPendingIfNeeded checks whether last execution was a pending one.
-// If this is true as a side effect the function sends a PendingFinished
-// message to the current executor
-func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionState) {
-	es.Lock()
-	defer es.Unlock()
-
-	if es.pending != message.InPending {
-		return
-	}
-
-	es.pending = message.NotPending
-	es.PendingConfirmed = false
-
-	pulseObj := lr.pulse(ctx)
-	meCurrent, _ := lr.JetCoordinator.IsAuthorized(
-		ctx, insolar.DynamicRoleVirtualExecutor, *es.Ref.Record(), pulseObj.PulseNumber, lr.JetCoordinator.Me(),
-	)
-	if !meCurrent {
-		go func() {
-			msg := message.PendingFinished{Reference: es.Ref}
-			_, err := lr.MessageBus.Send(ctx, &msg, nil)
-			if err != nil {
-				inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
-			}
-		}()
-	}
 }
 
 func (lr *LogicRunner) startGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
@@ -412,7 +398,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 	messages := make([]insolar.Message, 0)
 
-	for ref, state := range *lr.StateStorage.StateMap() {
+	objects := lr.StateStorage.StateMap()
+	inslogger.FromContext(ctx).Debug("Processing ", len(*objects), " on pulse change")
+	for ref, state := range *objects {
 		meNext, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
 		)
@@ -425,7 +413,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 			messages = append(messages, toSend...)
 
 			if !meNext {
-				if es.CurrentList.Empty() {
+				if es.Broker.currentList.Empty() {
 					state.ExecutionState = nil
 				}
 			} else {
@@ -509,8 +497,8 @@ func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []mess
 	var traces string
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			Parcel:  elem.Parcel,
-			Request: elem.RequestRef,
+			RequestRef: *elem.RequestRef,
+			Request:    *elem.Request,
 		})
 
 		traces += inslogger.TraceID(elem.Context) + ", "

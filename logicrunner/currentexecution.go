@@ -22,15 +22,11 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 type Transcript struct {
-	State interface{} // Shows current execution status of task
-
 	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
@@ -40,36 +36,22 @@ type Transcript struct {
 	Nonce            uint64
 	Deactivate       bool
 	OutgoingRequests []OutgoingRequest
-
-	Parcel     insolar.Parcel
-	FromLedger bool
+	FromLedger       bool
 }
 
-func NewTranscript(ctx context.Context, parcel insolar.Parcel, requestRef *insolar.Reference,
-	pulse *insolar.Pulse, callee insolar.Reference) *Transcript {
-
-	msg := parcel.Message().(*message.CallMethod)
-
-	logicalContext := &insolar.LogicCallContext{
-		Mode:            insolar.ExecuteCallMode,
-		Caller:          msg.GetCaller(),
-		Callee:          &callee,
-		Request:         requestRef,
-		TraceID:         inslogger.TraceID(ctx),
-		CallerPrototype: &msg.CallerPrototype,
-	}
-	sender := parcel.GetSender()
+func NewTranscript(
+	ctx context.Context,
+	requestRef *insolar.Reference,
+	request record.IncomingRequest,
+) *Transcript {
 
 	return &Transcript{
-		Context:       ctx,
-		LogicContext:  logicalContext,
-		Request:       &msg.IncomingRequest,
-		RequestRef:    requestRef,
-		RequesterNode: &sender,
-		Nonce:         0,
-		Deactivate:    false,
+		Context:    ctx,
+		Request:    &request,
+		RequestRef: requestRef,
+		Nonce:      0,
+		Deactivate: false,
 
-		Parcel:     parcel,
 		FromLedger: false,
 	}
 }
@@ -119,6 +101,12 @@ func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *Transcript {
 func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *Transcript) {
 	ces.lock.Lock()
 	ces.executions[requestRef] = ce
+	ces.lock.Unlock()
+}
+
+func (ces *CurrentExecutionList) SetTranscript(t *Transcript) {
+	ces.lock.Lock()
+	ces.executions[*t.RequestRef] = t
 	ces.lock.Unlock()
 }
 

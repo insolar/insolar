@@ -131,6 +131,31 @@ func (Genesis) GetIsPrototype() bool {
 }
 
 type Request interface {
-	GetObject() *insolar.Reference
-	GetReason() insolar.Reference
+	// AffinityRef returns a pointer to the reference of the object the
+	// Request is affine to. The result can be nil, e.g. in case of creating
+	// a new object.
+	AffinityRef() *insolar.Reference
+	// ReasonRef returns a reference of the Request that caused the creating
+	// of this Request.
+	ReasonRef() insolar.Reference
+	GetCallType() CallType
+}
+
+func (r *IncomingRequest) AffinityRef() *insolar.Reference {
+	// IncomingRequests are affine to the Object on which the request
+	// is going to be executed.
+	return r.Object
+}
+
+func (r *IncomingRequest) ReasonRef() insolar.Reference {
+	return r.Reason
+}
+
+func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
+	// OutgoingRequests are affine to the Caller which created the Request.
+	return &r.Caller
+}
+
+func (r *OutgoingRequest) ReasonRef() insolar.Reference {
+	return r.Reason
 }

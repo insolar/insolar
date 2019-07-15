@@ -19,7 +19,6 @@ package message
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -44,7 +43,6 @@ func (rr *ReturnResults) Type() insolar.MessageType {
 }
 
 func (rr *ReturnResults) GetCaller() *insolar.Reference {
-	log.Error("GetCaller shouldn't be called on ReturnResults message")
 	return nil
 }
 
@@ -120,8 +118,8 @@ type ExecutorResults struct {
 }
 
 type ExecutionQueueElement struct {
-	Parcel  insolar.Parcel
-	Request *insolar.Reference
+	RequestRef insolar.Reference
+	Request    record.IncomingRequest
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -278,9 +276,9 @@ func (pf *PendingFinished) Type() insolar.MessageType {
 // for more details.
 type AdditionalCallFromPreviousExecutor struct {
 	ObjectReference insolar.Reference
-	Parcel          insolar.Parcel
-	Request         *insolar.Reference
 	Pending         PendingState
+	RequestRef      insolar.Reference
+	Request         record.IncomingRequest
 }
 
 func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {
