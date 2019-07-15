@@ -56,7 +56,6 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -197,16 +196,16 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 		body.Announcement.Member.Leaver.LeaveReason = sender.GetLeaveReason()
 	}
 
-	if announcement := sender.GetJoinerAnnouncement(); announcement != nil {
-		intro := announcement.GetBriefIntro()
-		body.Announcement.Member.Joiner.ShortID = sender.GetJoinerID()
-		body.Announcement.Member.Joiner.setPrimaryRole(intro.GetPrimaryRole())
-		body.Announcement.Member.Joiner.setAddrMode(endpoints.IPEndpoint)
-		body.Announcement.Member.Joiner.SpecialRoles = intro.GetSpecialRoles()
-		body.Announcement.Member.Joiner.StartPower = intro.GetStartPower()
-		copy(body.Announcement.Member.Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
-		body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
-	}
+	// if announcement := sender.GetJoinerAnnouncement(); announcement != nil {
+	// 	intro := announcement.GetBriefIntro()
+	// 	body.Announcement.Member.Joiner.ShortID = sender.GetJoinerID()
+	// 	body.Announcement.Member.Joiner.setPrimaryRole(intro.GetPrimaryRole())
+	// 	body.Announcement.Member.Joiner.setAddrMode(endpoints.IPEndpoint)
+	// 	body.Announcement.Member.Joiner.SpecialRoles = intro.GetSpecialRoles()
+	// 	body.Announcement.Member.Joiner.StartPower = intro.GetStartPower()
+	// 	copy(body.Announcement.Member.Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
+	// 	body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+	// }
 
 	body.Neighbourhood.NeighbourCount = uint8(len(neighbourhood))
 	body.Neighbourhood.Neighbours = make([]NeighbourAnnouncement, len(neighbourhood))
@@ -232,16 +231,16 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 			body.Neighbourhood.Neighbours[i].Member.Leaver.LeaveReason = neighbour.GetLeaveReason()
 		}
 
-		if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
-			intro := announcement.GetBriefIntro()
-			body.Neighbourhood.Neighbours[i].Joiner.ShortID = sender.GetJoinerID()
-			body.Neighbourhood.Neighbours[i].Joiner.setPrimaryRole(intro.GetPrimaryRole())
-			body.Neighbourhood.Neighbours[i].Joiner.setAddrMode(endpoints.IPEndpoint)
-			body.Neighbourhood.Neighbours[i].Joiner.SpecialRoles = intro.GetSpecialRoles()
-			body.Neighbourhood.Neighbours[i].Joiner.StartPower = intro.GetStartPower()
-			copy(body.Neighbourhood.Neighbours[i].Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
-			body.Neighbourhood.Neighbours[i].Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
-		}
+		// if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
+		// 	intro := announcement.GetBriefIntro()
+		// 	body.Neighbourhood.Neighbours[i].Joiner.ShortID = sender.GetJoinerID()
+		// 	body.Neighbourhood.Neighbours[i].Joiner.setPrimaryRole(intro.GetPrimaryRole())
+		// 	body.Neighbourhood.Neighbours[i].Joiner.setAddrMode(endpoints.IPEndpoint)
+		// 	body.Neighbourhood.Neighbours[i].Joiner.SpecialRoles = intro.GetSpecialRoles()
+		// 	body.Neighbourhood.Neighbours[i].Joiner.StartPower = intro.GetStartPower()
+		// 	copy(body.Neighbourhood.Neighbours[i].Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
+		// 	body.Neighbourhood.Neighbours[i].Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+		// }
 	}
 	// TODO: fill joiner fields
 

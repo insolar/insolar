@@ -179,8 +179,10 @@ func (p *PacketParser) IsRelayForbidden() bool {
 }
 
 func (p *PacketParser) GetPacketSignature() cryptkit.SignedDigest {
+	payloadReader := bytes.NewReader(p.data[:len(p.data)-signatureSize])
+
 	signature := cryptkit.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
-	digest := p.digester.GetDigestOf(bytes.NewReader(p.data))
+	digest := p.digester.GetDigestOf(payloadReader)
 	return cryptkit.NewSignedDigest(digest, signature)
 }
 
