@@ -250,6 +250,47 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
+func INSMETHOD_SetDeposit(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(Member)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeSetDeposit ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeSetDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := [1]interface{}{}
+	var args0 insolar.Reference
+	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeSetDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0 := self.SetDeposit(args0)
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0}, &ret)
+
+	return state, ret, err
+}
+
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
 	args := [3]interface{}{}
@@ -294,6 +335,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"GetPublicKey": INSMETHOD_GetPublicKey,
 			"Call":         INSMETHOD_Call,
 			"FindDeposit":  INSMETHOD_FindDeposit,
+			"SetDeposit":   INSMETHOD_SetDeposit,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
