@@ -3,11 +3,14 @@ package logicrunner
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/record"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type HandleSagaCallAcceptNotification struct {
@@ -22,10 +25,46 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 		return err
 	}
 
-	// work in progress...
-	inslogger.FromContext(ctx).Errorf("HandleSagaCallAcceptNotification.Present is in construction")
+	cr := h.dep.lr.ContractRequester
+	am := h.dep.lr.ArtifactManager
 
-	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
-	h.dep.Sender.Reply(ctx, h.meta, replyOk)
-	return nil
+	outgoing := record.OutgoingRequest{}
+	err = outgoing.Unmarshal(msg.Request)
+	if err != nil {
+		return err
+	}
+
+	// restore IncomingRequest by OutgoingRequest fields
+	incoming := record.IncomingRequest{
+		Caller:          outgoing.Caller,
+		CallerPrototype: outgoing.CallerPrototype,
+		Nonce:           outgoing.Nonce,
+
+		Immutable: outgoing.Immutable,
+
+		Object:    outgoing.Object,
+		Prototype: outgoing.Prototype,
+		Method:    outgoing.Method,
+		Arguments: outgoing.Arguments,
+
+		APIRequestID: outgoing.APIRequestID,
+		Reason:       outgoing.Reason,
+	}
+
+	// Make a call to the second VE.
+	callMsg := &message.CallMethod{IncomingRequest: incoming}
+	res, err := cr.CallMethod(ctx, callMsg)
+	if err != nil {
+		return err
+	}
+
+	// Register result of the outgoing method
+	outgoingReqRef := insolar.NewReference(msg.OutgoingReqID)
+	result := res.(*reply.CallMethod).Result
+	_, err = am.RegisterResult(ctx, outgoing.Caller, *outgoingReqRef, result)
+	return err
+
+	// replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+	// h.dep.Sender.Reply(ctx, h.meta, replyOk)
+	// return nil
 }

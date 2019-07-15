@@ -106,8 +106,12 @@ message SagaCallAcceptNotification {
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 
+    // OutgoingReqID contains the id of registered outgoing request.
+    // VE needs it to register the result of the outgoing request.
+    bytes OutgoingReqID  = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+
     // Request contains original OutgoingRequest registered by VE
-    bytes Request  = 21;
+    bytes Request  = 22;
 }
 
 message SetResult {
