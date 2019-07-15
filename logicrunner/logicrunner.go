@@ -108,7 +108,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		Publisher: publisher,
 		Sender:    sender,
 	}
-	res.resultsMatcher = NewResultsMatcher(res.MessageBus)
+	res.resultsMatcher = NewResultsMatcher(res.MessageBus, res.JetCoordinator)
 
 	initHandlers(&res)
 
