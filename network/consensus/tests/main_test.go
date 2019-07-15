@@ -91,9 +91,9 @@ func TestConsensusMain(t *testing.T) {
 		chronicles := NewEmuChronicles(nodes, i, &primingCloudStateHash)
 		node := NewConsensusHost(n.GetDefaultEndpoint().GetNameAddress())
 		controlFeeder := &EmuControlFeeder{}
-		if i%5 == 2 {
-			controlFeeder.leaveReason = uint32(i) //simulate leave
-		}
+		//if i % 5 == 2 {
+		//	controlFeeder.leaveReason = uint32(i) //simulate leave
+		//}
 		node.ConnectTo(chronicles, network, strategyFactory, candidateFeeder, controlFeeder, config)
 	}
 

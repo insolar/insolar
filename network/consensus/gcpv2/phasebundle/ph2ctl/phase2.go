@@ -83,7 +83,6 @@ type Phase2Controller struct {
 	packetPrepareOptions transport.PacketSendOptions
 	queueNshReady        <-chan *core.NodeAppearance
 	loopingMinimalDelay  time.Duration
-
 	//queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
 }
 
