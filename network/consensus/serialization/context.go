@@ -53,11 +53,10 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"io"
 	"math"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
 
 	"github.com/pkg/errors"
 )
@@ -70,7 +69,7 @@ const (
 
 type serializeSetter interface {
 	setPayloadLength(uint16)
-	setSignature(signature cryptography_containers.SignatureHolder)
+	setSignature(signature cryptkit.SignatureHolder)
 }
 
 type deserializeGetter interface {
@@ -155,8 +154,8 @@ type serializeContext struct {
 	PacketHeaderModifier
 
 	writer   *trackableWriter
-	digester cryptography_containers.DataDigester
-	signer   cryptography_containers.DigestSigner
+	digester cryptkit.DataDigester
+	signer   cryptkit.DigestSigner
 	setter   serializeSetter
 
 	buf1         [packetMaxSize]byte
@@ -166,7 +165,7 @@ type serializeContext struct {
 	packetBuffer *bytes.Buffer
 }
 
-func newSerializeContext(ctx packetContext, writer *trackableWriter, digester cryptography_containers.DataDigester, signer cryptography_containers.DigestSigner, callback serializeSetter) *serializeContext {
+func newSerializeContext(ctx packetContext, writer *trackableWriter, digester cryptkit.DataDigester, signer cryptkit.DigestSigner, callback serializeSetter) *serializeContext {
 	sctx := &serializeContext{
 		packetContext:        ctx,
 		PacketHeaderModifier: ctx.header,

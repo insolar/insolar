@@ -54,10 +54,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"math"
 	"testing"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/stretchr/testify/require"
 )
@@ -265,12 +264,12 @@ func TestNodeAppearanceBitset_setLength_Panic(t *testing.T) {
 func TestNodeAppearanceBitset_SetBitset(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := gcp_types.NodeBitset{
-		gcp_types.NbsHighTrust,
-		gcp_types.NbsHighTrust,
-		gcp_types.NbsTimeout,
-		gcp_types.NbsFraud,
-		gcp_types.NbsBaselineTrust,
+	bitset := member.StateBitset{
+		member.BeHighTrust,
+		member.BeHighTrust,
+		member.BeTimeout,
+		member.BeFraud,
+		member.BeBaselineTrust,
 	}
 
 	b.SetBitset(bitset)
@@ -282,7 +281,7 @@ func TestNodeAppearanceBitset_SetBitset(t *testing.T) {
 func TestNodeAppearanceBitset_SetBitset_Panic(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := gcp_types.NodeBitset(make([]gcp_types.NodeBitsetEntry, math.MaxUint16+1))
+	bitset := member.StateBitset(make([]member.BitsetEntry, math.MaxUint16+1))
 
 	require.Panics(t, func() { b.SetBitset(bitset) })
 }
@@ -290,12 +289,12 @@ func TestNodeAppearanceBitset_SetBitset_Panic(t *testing.T) {
 func TestNodeAppearanceBitset_GetBitset(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := gcp_types.NodeBitset{
-		gcp_types.NbsHighTrust,
-		gcp_types.NbsHighTrust,
-		gcp_types.NbsTimeout,
-		gcp_types.NbsFraud,
-		gcp_types.NbsBaselineTrust,
+	bitset := member.StateBitset{
+		member.BeHighTrust,
+		member.BeHighTrust,
+		member.BeTimeout,
+		member.BeFraud,
+		member.BeBaselineTrust,
 	}
 
 	b.SetBitset(bitset)
@@ -322,12 +321,12 @@ func TestNodeAppearanceBitset_Empty(t *testing.T) {
 func TestNodeAppearanceBitset_NoHiLength(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := gcp_types.NodeBitset{
-		gcp_types.NbsHighTrust,
-		gcp_types.NbsHighTrust,
-		gcp_types.NbsTimeout,
-		gcp_types.NbsFraud,
-		gcp_types.NbsBaselineTrust,
+	bitset := member.StateBitset{
+		member.BeHighTrust,
+		member.BeHighTrust,
+		member.BeTimeout,
+		member.BeFraud,
+		member.BeBaselineTrust,
 	}
 
 	b.SetBitset(bitset)
@@ -349,7 +348,7 @@ func TestNodeAppearanceBitset_NoHiLength(t *testing.T) {
 func TestNodeAppearanceBitset_HasHiLength(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := gcp_types.NodeBitset(make([]gcp_types.NodeBitsetEntry, loByteLengthMax+1))
+	bitset := member.StateBitset(make([]member.BitsetEntry, loByteLengthMax+1))
 
 	b.SetBitset(bitset)
 

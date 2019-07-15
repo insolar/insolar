@@ -52,16 +52,14 @@ package tests
 
 import (
 	"context"
-	"time"
-
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"time"
 )
 
 const defaultNshGenerationDelay = time.Millisecond * 0
 
-var RoundTimingsFor1s = gcp_types.RoundTimings{
+var RoundTimingsFor1s = api.RoundTimings{
 	StartPhase0At: 100 * time.Millisecond, // Not scaled
 
 	StartPhase1RetryAt: 00 * time.Millisecond, // 0 for no retries
@@ -79,7 +77,7 @@ func NewEmuLocalConfig(ctx context.Context) api.LocalNodeConfiguration {
 }
 
 type emuLocalConfig struct {
-	timings gcp_types.RoundTimings
+	timings api.RoundTimings
 	ctx     context.Context
 }
 
@@ -90,14 +88,14 @@ func (r *emuLocalConfig) GetParentContext() context.Context {
 func (r *emuLocalConfig) PublicKeyStore() {
 }
 
-func (r *emuLocalConfig) AsPublicKeyStore() cryptography_containers.PublicKeyStore {
+func (r *emuLocalConfig) AsPublicKeyStore() cryptkit.PublicKeyStore {
 	return r
 }
 
 func (r *emuLocalConfig) PrivateKeyStore() {
 }
 
-func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) gcp_types.RoundTimings {
+func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) api.RoundTimings {
 	if nextPulseDelta == 1 {
 		return r.timings
 	}
@@ -115,6 +113,6 @@ func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner boo
 	return t
 }
 
-func (r *emuLocalConfig) GetSecretKeyStore() cryptography_containers.SecretKeyStore {
+func (r *emuLocalConfig) GetSecretKeyStore() cryptkit.SecretKeyStore {
 	return r
 }

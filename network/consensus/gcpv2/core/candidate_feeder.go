@@ -51,20 +51,18 @@
 package core
 
 import (
-	"sync"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"sync"
 )
 
 type SequencialCandidateFeeder struct {
 	mx  sync.Mutex
-	buf []gcp_types.CandidateProfile
+	buf []profiles.CandidateProfile
 }
 
-func (p *SequencialCandidateFeeder) PickNextJoinCandidate() gcp_types.CandidateProfile {
+func (p *SequencialCandidateFeeder) PickNextJoinCandidate() profiles.CandidateProfile {
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
@@ -90,7 +88,7 @@ func (p *SequencialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nod
 	return true
 }
 
-func (p *SequencialCandidateFeeder) AddJoinCandidate(candidate packets.FullIntroductionReader) {
+func (p *SequencialCandidateFeeder) AddJoinCandidate(candidate transport.FullIntroductionReader) {
 	if candidate == nil {
 		panic("illegal value")
 	}

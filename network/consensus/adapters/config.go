@@ -53,15 +53,14 @@ package adapters
 import (
 	"context"
 	"crypto/ecdsa"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"time"
-
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/insolar/insolar/insolar"
 )
 
-var defaultRoundTimings = gcp_types.RoundTimings{
+var defaultRoundTimings = api.RoundTimings{
 	StartPhase0At: 100 * time.Millisecond, // Not scaled
 
 	StartPhase1RetryAt: 200 * time.Millisecond, // 0 for no retries
@@ -75,8 +74,8 @@ var defaultRoundTimings = gcp_types.RoundTimings{
 
 type LocalNodeConfiguration struct {
 	ctx            context.Context
-	timings        gcp_types.RoundTimings
-	secretKeyStore cryptography_containers.SecretKeyStore
+	timings        api.RoundTimings
+	secretKeyStore cryptkit.SecretKeyStore
 }
 
 func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *LocalNodeConfiguration {
@@ -98,7 +97,7 @@ func (c *LocalNodeConfiguration) GetParentContext() context.Context {
 	return c.ctx
 }
 
-func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) gcp_types.RoundTimings {
+func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) api.RoundTimings {
 	if nextPulseDelta == 1 {
 		return c.timings
 	}
@@ -116,7 +115,7 @@ func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJo
 	return t
 }
 
-func (c *LocalNodeConfiguration) GetSecretKeyStore() cryptography_containers.SecretKeyStore {
+func (c *LocalNodeConfiguration) GetSecretKeyStore() cryptkit.SecretKeyStore {
 	return c.secretKeyStore
 }
 

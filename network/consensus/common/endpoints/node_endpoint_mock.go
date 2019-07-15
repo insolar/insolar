@@ -3,18 +3,18 @@ package endpoints
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "NodeEndpoint" can be found in github.com/insolar/insolar/network/consensus/common/endpoints
+The original interface "Outbound" can be found in github.com/insolar/insolar/network/consensus/common
 */
 import (
+	"github.com/insolar/insolar/insolar"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	packets "github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
-//NodeEndpointMock implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint
+//NodeEndpointMock implements github.com/insolar/insolar/network/consensus/common.Outbound
 type NodeEndpointMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type NodeEndpointMock struct {
 	GetIPAddressPreCounter uint64
 	GetIPAddressMock       mNodeEndpointMockGetIPAddress
 
-	GetNameAddressFunc       func() (r HostAddress)
+	GetNameAddressFunc       func() (r Name)
 	GetNameAddressCounter    uint64
 	GetNameAddressPreCounter uint64
 	GetNameAddressMock       mNodeEndpointMockGetNameAddress
@@ -39,7 +39,7 @@ type NodeEndpointMock struct {
 	GetRelayIDMock       mNodeEndpointMockGetRelayID
 }
 
-//NewNodeEndpointMock returns a mock for github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint
+//NewNodeEndpointMock returns a mock for github.com/insolar/insolar/network/consensus/common.Outbound
 func NewNodeEndpointMock(t minimock.Tester) *NodeEndpointMock {
 	m := &NodeEndpointMock{t: t}
 
@@ -69,7 +69,7 @@ type NodeEndpointMockGetEndpointTypeResult struct {
 	r NodeEndpointType
 }
 
-//Expect specifies that invocation of NodeEndpoint.GetEndpointType is expected from 1 to Infinity times
+//Expect specifies that invocation of Outbound.GetEndpointType is expected from 1 to Infinity times
 func (m *mNodeEndpointMockGetEndpointType) Expect() *mNodeEndpointMockGetEndpointType {
 	m.mock.GetEndpointTypeFunc = nil
 	m.expectationSeries = nil
@@ -81,7 +81,7 @@ func (m *mNodeEndpointMockGetEndpointType) Expect() *mNodeEndpointMockGetEndpoin
 	return m
 }
 
-//Return specifies results of invocation of NodeEndpoint.GetEndpointType
+//Return specifies results of invocation of Outbound.GetEndpointType
 func (m *mNodeEndpointMockGetEndpointType) Return(r NodeEndpointType) *NodeEndpointMock {
 	m.mock.GetEndpointTypeFunc = nil
 	m.expectationSeries = nil
@@ -93,7 +93,7 @@ func (m *mNodeEndpointMockGetEndpointType) Return(r NodeEndpointType) *NodeEndpo
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of NodeEndpoint.GetEndpointType is expected once
+//ExpectOnce specifies that invocation of Outbound.GetEndpointType is expected once
 func (m *mNodeEndpointMockGetEndpointType) ExpectOnce() *NodeEndpointMockGetEndpointTypeExpectation {
 	m.mock.GetEndpointTypeFunc = nil
 	m.mainExpectation = nil
@@ -108,7 +108,7 @@ func (e *NodeEndpointMockGetEndpointTypeExpectation) Return(r NodeEndpointType) 
 	e.result = &NodeEndpointMockGetEndpointTypeResult{r}
 }
 
-//Set uses given function f as a mock of NodeEndpoint.GetEndpointType method
+//Set uses given function f as a mock of Outbound.GetEndpointType method
 func (m *mNodeEndpointMockGetEndpointType) Set(f func() (r NodeEndpointType)) *NodeEndpointMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -117,7 +117,7 @@ func (m *mNodeEndpointMockGetEndpointType) Set(f func() (r NodeEndpointType)) *N
 	return m.mock
 }
 
-//GetEndpointType implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint interface
+//GetEndpointType implements github.com/insolar/insolar/network/consensus/common.Outbound interface
 func (m *NodeEndpointMock) GetEndpointType() (r NodeEndpointType) {
 	counter := atomic.AddUint64(&m.GetEndpointTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetEndpointTypeCounter, 1)
@@ -203,7 +203,7 @@ type NodeEndpointMockGetIPAddressResult struct {
 	r packets.NodeAddress
 }
 
-//Expect specifies that invocation of NodeEndpoint.GetIPAddress is expected from 1 to Infinity times
+//Expect specifies that invocation of Outbound.GetIPAddress is expected from 1 to Infinity times
 func (m *mNodeEndpointMockGetIPAddress) Expect() *mNodeEndpointMockGetIPAddress {
 	m.mock.GetIPAddressFunc = nil
 	m.expectationSeries = nil
@@ -215,7 +215,7 @@ func (m *mNodeEndpointMockGetIPAddress) Expect() *mNodeEndpointMockGetIPAddress 
 	return m
 }
 
-//Return specifies results of invocation of NodeEndpoint.GetIPAddress
+//Return specifies results of invocation of Outbound.GetIPAddress
 func (m *mNodeEndpointMockGetIPAddress) Return(r packets.NodeAddress) *NodeEndpointMock {
 	m.mock.GetIPAddressFunc = nil
 	m.expectationSeries = nil
@@ -227,7 +227,7 @@ func (m *mNodeEndpointMockGetIPAddress) Return(r packets.NodeAddress) *NodeEndpo
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of NodeEndpoint.GetIPAddress is expected once
+//ExpectOnce specifies that invocation of Outbound.GetIPAddress is expected once
 func (m *mNodeEndpointMockGetIPAddress) ExpectOnce() *NodeEndpointMockGetIPAddressExpectation {
 	m.mock.GetIPAddressFunc = nil
 	m.mainExpectation = nil
@@ -242,7 +242,7 @@ func (e *NodeEndpointMockGetIPAddressExpectation) Return(r packets.NodeAddress) 
 	e.result = &NodeEndpointMockGetIPAddressResult{r}
 }
 
-//Set uses given function f as a mock of NodeEndpoint.GetIPAddress method
+//Set uses given function f as a mock of Outbound.GetIPAddress method
 func (m *mNodeEndpointMockGetIPAddress) Set(f func() (r packets.NodeAddress)) *NodeEndpointMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -251,7 +251,7 @@ func (m *mNodeEndpointMockGetIPAddress) Set(f func() (r packets.NodeAddress)) *N
 	return m.mock
 }
 
-//GetIPAddress implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint interface
+//GetIPAddress implements github.com/insolar/insolar/network/consensus/common.Outbound interface
 func (m *NodeEndpointMock) GetIPAddress() (r packets.NodeAddress) {
 	counter := atomic.AddUint64(&m.GetIPAddressPreCounter, 1)
 	defer atomic.AddUint64(&m.GetIPAddressCounter, 1)
@@ -334,10 +334,10 @@ type NodeEndpointMockGetNameAddressExpectation struct {
 }
 
 type NodeEndpointMockGetNameAddressResult struct {
-	r HostAddress
+	r Name
 }
 
-//Expect specifies that invocation of NodeEndpoint.GetNameAddress is expected from 1 to Infinity times
+//Expect specifies that invocation of Outbound.GetNameAddress is expected from 1 to Infinity times
 func (m *mNodeEndpointMockGetNameAddress) Expect() *mNodeEndpointMockGetNameAddress {
 	m.mock.GetNameAddressFunc = nil
 	m.expectationSeries = nil
@@ -349,8 +349,8 @@ func (m *mNodeEndpointMockGetNameAddress) Expect() *mNodeEndpointMockGetNameAddr
 	return m
 }
 
-//Return specifies results of invocation of NodeEndpoint.GetNameAddress
-func (m *mNodeEndpointMockGetNameAddress) Return(r HostAddress) *NodeEndpointMock {
+//Return specifies results of invocation of Outbound.GetNameAddress
+func (m *mNodeEndpointMockGetNameAddress) Return(r Name) *NodeEndpointMock {
 	m.mock.GetNameAddressFunc = nil
 	m.expectationSeries = nil
 
@@ -361,7 +361,7 @@ func (m *mNodeEndpointMockGetNameAddress) Return(r HostAddress) *NodeEndpointMoc
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of NodeEndpoint.GetNameAddress is expected once
+//ExpectOnce specifies that invocation of Outbound.GetNameAddress is expected once
 func (m *mNodeEndpointMockGetNameAddress) ExpectOnce() *NodeEndpointMockGetNameAddressExpectation {
 	m.mock.GetNameAddressFunc = nil
 	m.mainExpectation = nil
@@ -372,12 +372,12 @@ func (m *mNodeEndpointMockGetNameAddress) ExpectOnce() *NodeEndpointMockGetNameA
 	return expectation
 }
 
-func (e *NodeEndpointMockGetNameAddressExpectation) Return(r HostAddress) {
+func (e *NodeEndpointMockGetNameAddressExpectation) Return(r Name) {
 	e.result = &NodeEndpointMockGetNameAddressResult{r}
 }
 
-//Set uses given function f as a mock of NodeEndpoint.GetNameAddress method
-func (m *mNodeEndpointMockGetNameAddress) Set(f func() (r HostAddress)) *NodeEndpointMock {
+//Set uses given function f as a mock of Outbound.GetNameAddress method
+func (m *mNodeEndpointMockGetNameAddress) Set(f func() (r Name)) *NodeEndpointMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -385,8 +385,8 @@ func (m *mNodeEndpointMockGetNameAddress) Set(f func() (r HostAddress)) *NodeEnd
 	return m.mock
 }
 
-//GetNameAddress implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint interface
-func (m *NodeEndpointMock) GetNameAddress() (r HostAddress) {
+//GetNameAddress implements github.com/insolar/insolar/network/consensus/common.Outbound interface
+func (m *NodeEndpointMock) GetNameAddress() (r Name) {
 	counter := atomic.AddUint64(&m.GetNameAddressPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNameAddressCounter, 1)
 
@@ -471,7 +471,7 @@ type NodeEndpointMockGetRelayIDResult struct {
 	r insolar.ShortNodeID
 }
 
-//Expect specifies that invocation of NodeEndpoint.GetRelayID is expected from 1 to Infinity times
+//Expect specifies that invocation of Outbound.GetRelayID is expected from 1 to Infinity times
 func (m *mNodeEndpointMockGetRelayID) Expect() *mNodeEndpointMockGetRelayID {
 	m.mock.GetRelayIDFunc = nil
 	m.expectationSeries = nil
@@ -483,7 +483,7 @@ func (m *mNodeEndpointMockGetRelayID) Expect() *mNodeEndpointMockGetRelayID {
 	return m
 }
 
-//Return specifies results of invocation of NodeEndpoint.GetRelayID
+//Return specifies results of invocation of Outbound.GetRelayID
 func (m *mNodeEndpointMockGetRelayID) Return(r insolar.ShortNodeID) *NodeEndpointMock {
 	m.mock.GetRelayIDFunc = nil
 	m.expectationSeries = nil
@@ -495,7 +495,7 @@ func (m *mNodeEndpointMockGetRelayID) Return(r insolar.ShortNodeID) *NodeEndpoin
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of NodeEndpoint.GetRelayID is expected once
+//ExpectOnce specifies that invocation of Outbound.GetRelayID is expected once
 func (m *mNodeEndpointMockGetRelayID) ExpectOnce() *NodeEndpointMockGetRelayIDExpectation {
 	m.mock.GetRelayIDFunc = nil
 	m.mainExpectation = nil
@@ -510,7 +510,7 @@ func (e *NodeEndpointMockGetRelayIDExpectation) Return(r insolar.ShortNodeID) {
 	e.result = &NodeEndpointMockGetRelayIDResult{r}
 }
 
-//Set uses given function f as a mock of NodeEndpoint.GetRelayID method
+//Set uses given function f as a mock of Outbound.GetRelayID method
 func (m *mNodeEndpointMockGetRelayID) Set(f func() (r insolar.ShortNodeID)) *NodeEndpointMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -519,7 +519,7 @@ func (m *mNodeEndpointMockGetRelayID) Set(f func() (r insolar.ShortNodeID)) *Nod
 	return m.mock
 }
 
-//GetRelayID implements github.com/insolar/insolar/network/consensus/common/endpoints.NodeEndpoint interface
+//GetRelayID implements github.com/insolar/insolar/network/consensus/common.Outbound interface
 func (m *NodeEndpointMock) GetRelayID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetRelayIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRelayIDCounter, 1)

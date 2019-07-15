@@ -52,11 +52,10 @@ package adapters
 
 import (
 	"context"
-	"math/rand"
-
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"math/rand"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
@@ -80,7 +79,7 @@ func NewRoundStrategy(
 	}
 }
 
-func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse_data.PulseNumber, self gcp_types.LocalNodeProfile) context.Context {
+func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 		"node_id": self.GetShortNodeID(),
 		"pulse":   expectedPulse,
@@ -109,5 +108,5 @@ func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
 	return false
 }
 
-func (rs *RoundStrategy) AdjustConsensusTimings(timings *gcp_types.RoundTimings) {
+func (rs *RoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
 }

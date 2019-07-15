@@ -51,11 +51,10 @@
 package serialization
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"io"
 	"math"
-
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
 
 	"github.com/pkg/errors"
 )
@@ -139,7 +138,7 @@ type NodeAppearanceBitset struct {
 	Bytes            []byte
 }
 
-func (nab *NodeAppearanceBitset) SetBitset(bitset gcp_types.NodeBitset) {
+func (nab *NodeAppearanceBitset) SetBitset(bitset member.StateBitset) {
 	length := bitset.Len()
 	if length > math.MaxUint16 {
 		panic("invalid length")
@@ -155,15 +154,15 @@ func (nab *NodeAppearanceBitset) SetBitset(bitset gcp_types.NodeBitset) {
 	}
 }
 
-func (nab *NodeAppearanceBitset) GetBitset() gcp_types.NodeBitset {
+func (nab *NodeAppearanceBitset) GetBitset() member.StateBitset {
 	length := nab.getLength()
 	if nab.isCompressed() {
 		panic("not implemented")
 	}
 
-	bitset := make([]gcp_types.NodeBitsetEntry, length)
+	bitset := make([]member.BitsetEntry, length)
 	for i, b := range nab.Bytes {
-		bitset[i] = gcp_types.NodeBitsetEntry(b)
+		bitset[i] = member.BitsetEntry(b)
 	}
 
 	return bitset
@@ -288,9 +287,9 @@ func (nab *NodeAppearanceBitset) DeserializeFrom(ctx DeserializeContext, reader 
 
 type GlobulaStateVector struct {
 	// ByteSize=132
-	ExpectedRank           gcp_types.MembershipRank // ByteSize=4
-	VectorHash             long_bits.Bits512        // ByteSize=64
-	SignedGlobulaStateHash long_bits.Bits512        // ByteSize=64
+	ExpectedRank           member.Rank      // ByteSize=4
+	VectorHash             longbits.Bits512 // ByteSize=64
+	SignedGlobulaStateHash longbits.Bits512 // ByteSize=64
 }
 
 func (gsv *GlobulaStateVector) SerializeTo(_ SerializeContext, writer io.Writer) error {

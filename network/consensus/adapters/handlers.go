@@ -52,17 +52,16 @@ package adapters
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 type PacketProcessor interface {
-	ProcessPacket(ctx context.Context, payload packets.PacketParser, from endpoints.HostIdentityHolder) error
+	ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error
 }
 
 type DatagramHandler struct {
@@ -89,7 +88,7 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 		return
 	}
 
-	packetParser, ok := p.Payload.(packets.PacketParser)
+	packetParser, ok := p.Payload.(transport.PacketParser)
 	if !ok {
 		logger.Error("Failed to get PacketParser")
 		return
@@ -100,8 +99,8 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 		return
 	}
 
-	hostIdentity := endpoints.HostIdentity{
-		Addr: endpoints.HostAddress(address),
+	hostIdentity := endpoints.InboundConnection{
+		Addr: endpoints.Name(address),
 	}
 	err = dh.packetProcessor.ProcessPacket(ctx, packetParser, &hostIdentity)
 	if err != nil {
@@ -125,7 +124,7 @@ func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
 func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, _ network.ReceivedPacket) {
 	pulsePayload := NewPulsePacketParser(pulse)
 
-	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &endpoints.HostIdentity{
+	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &endpoints.InboundConnection{
 		Addr: "pulsar",
 	})
 	if err != nil {

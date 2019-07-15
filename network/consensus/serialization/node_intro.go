@@ -51,14 +51,12 @@
 package serialization
 
 import (
-	"io"
-	"net"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"io"
 
 	"github.com/pkg/errors"
 )
@@ -83,9 +81,9 @@ type NodeBriefIntro struct {
 	*/
 	ShortID insolar.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
 
-	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:NodePrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
-	SpecialRoles        gcp_types.NodeSpecialRole
-	StartPower          gcp_types.MemberPower
+	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:PrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
+	SpecialRoles        member.SpecialRole
+	StartPower          member.Power
 
 	// 4 | 6 | 18 bytes
 	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
@@ -94,15 +92,15 @@ type NodeBriefIntro struct {
 	// PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
 
 	// 128 bytes
-	NodePK          long_bits.Bits512 // works as a unique node identity
-	JoinerSignature long_bits.Bits512 // ByteSize=64
+	NodePK          longbits.Bits512 // works as a unique node identity
+	JoinerSignature longbits.Bits512 // ByteSize=64
 }
 
-func (bi *NodeBriefIntro) getPrimaryRole() gcp_types.NodePrimaryRole {
-	return gcp_types.NodePrimaryRole(bi.PrimaryRoleAndFlags & primaryRoleMask)
+func (bi *NodeBriefIntro) getPrimaryRole() member.PrimaryRole {
+	return member.PrimaryRole(bi.PrimaryRoleAndFlags & primaryRoleMask)
 }
 
-func (bi *NodeBriefIntro) setPrimaryRole(primaryRole gcp_types.NodePrimaryRole) {
+func (bi *NodeBriefIntro) setPrimaryRole(primaryRole member.PrimaryRole) {
 	if primaryRole > primaryRoleMax {
 		panic("invalid primary role")
 	}
@@ -119,10 +117,6 @@ func (bi *NodeBriefIntro) setAddrMode(addrMode endpoints.NodeEndpointType) {
 	}
 
 	bi.PrimaryRoleAndFlags |= uint8(addrMode) << addrModeShift
-}
-
-func (bi *NodeBriefIntro) setIP(ip net.IP) {
-	bi.PrimaryIPv4 = ip2int(ip)
 }
 
 func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) error {
@@ -195,19 +189,19 @@ type NodeFullIntro struct {
 	NodeBriefIntro // ByteSize= 135, 137, 147
 
 	// ByteSize>=86
-	IssuedAtPulse pulse_data.PulseNumber // =0 when a node was connected during zeronet
+	IssuedAtPulse pulse.Number // =0 when a node was connected during zeronet
 	IssuedAtTime  uint64
 
-	PowerLevels gcp_types.MemberPowerSet // ByteSize=4
+	PowerLevels member.PowerSet // ByteSize=4
 
 	EndpointLen    uint8
 	ExtraEndpoints []uint16
 
 	ProofLen     uint8
-	NodeRefProof []long_bits.Bits512
+	NodeRefProof []longbits.Bits512
 
 	DiscoveryIssuerNodeID insolar.ShortNodeID
-	IssuerSignature       long_bits.Bits512
+	IssuerSignature       longbits.Bits512
 }
 
 func (fi *NodeFullIntro) SerializeTo(ctx SerializeContext, writer io.Writer) error {
@@ -293,7 +287,7 @@ func (fi *NodeFullIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reade
 	}
 
 	if fi.ProofLen > 0 {
-		fi.NodeRefProof = make([]long_bits.Bits512, fi.ProofLen)
+		fi.NodeRefProof = make([]longbits.Bits512, fi.ProofLen)
 		for i := 0; i < int(fi.EndpointLen); i++ {
 			if err := read(reader, &fi.NodeRefProof[i]); err != nil {
 				return errors.Wrapf(err, "failed to deserialize NodeRefProof[%d]", i)

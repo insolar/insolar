@@ -54,28 +54,31 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 type PacketBuilder struct {
-	crypto      api.TransportCryptographyFactory
+	crypto      transport.CryptographyFactory
 	localConfig api.LocalNodeConfiguration
 }
 
-func NewPacketBuilder(crypto api.TransportCryptographyFactory, localConfig api.LocalNodeConfiguration) *PacketBuilder {
+func NewPacketBuilder(crypto transport.CryptographyFactory, localConfig api.LocalNodeConfiguration) *PacketBuilder {
 	return &PacketBuilder{
 		crypto:      crypto,
 		localConfig: localConfig,
 	}
 }
 
-func (pb *PacketBuilder) GetNeighbourhoodSize() gcp_types.NeighbourhoodSizes {
-	return gcp_types.NeighbourhoodSizes{
+func (p *PacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
+	return transport.NeighbourhoodSizes{
 		NeighbourhoodSize:           5,
 		NeighbourhoodTrustThreshold: 2,
 		JoinersPerNeighbourhood:     2,
@@ -83,7 +86,7 @@ func (pb *PacketBuilder) GetNeighbourhoodSize() gcp_types.NeighbourhoodSizes {
 	}
 }
 
-func (pb *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, packetType gcp_types.PacketType) *Packet {
+func (pb *PacketBuilder) preparePacket(sender *transport.NodeAnnouncementProfile, packetType phases.PacketType) *Packet {
 	packet := &Packet{
 		Header: Header{
 			SourceID: uint32(sender.GetNodeID()),
@@ -109,11 +112,11 @@ func (pb *PacketBuilder) prepareWrapper(packet *Packet) *PreparedPacketSender {
 	}
 }
 
-func (pb *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-	options api.PacketSendOptions) api.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
+	options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := pb.preparePacket(sender, gcp_types.PacketPhase0)
-	if (options & api.SendWithoutPulseData) == 0 {
+	packet := pb.preparePacket(sender, phases.PacketPhase0)
+	if (options & transport.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
 
@@ -124,11 +127,11 @@ func (pb *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementPro
 	return pb.prepareWrapper(packet)
 }
 
-func (pb *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-	welcome *gcp_types.NodeWelcomePackage, options api.PacketSendOptions) api.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
+	options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := pb.preparePacket(sender, gcp_types.PacketPhase1)
-	if (options & api.SendWithoutPulseData) == 0 {
+	packet := pb.preparePacket(sender, phases.PacketPhase1)
+	if (options & transport.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
 
@@ -142,32 +145,32 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementPro
 	return pb.prepareWrapper(packet)
 }
 
-func (pb *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile, welcome *gcp_types.NodeWelcomePackage,
-	neighbourhood []packets.MembershipAnnouncementReader, options api.PacketSendOptions) api.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile,
+	neighbourhood []transport.MembershipAnnouncementReader, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := pb.preparePacket(sender, gcp_types.PacketPhase2)
+	packet := pb.preparePacket(sender, phases.PacketPhase2)
 
 	return pb.prepareWrapper(packet)
 }
 
-func (pb *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
-	vectors gcp_types.HashedNodeVector, options api.PacketSendOptions) api.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementProfile,
+	vectors statevector.Vector, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := pb.preparePacket(sender, gcp_types.PacketPhase3)
+	packet := pb.preparePacket(sender, phases.PacketPhase3)
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.Vectors.StateVectorMask.SetBitset(vectors.Bitset)
 
-	copy(body.Vectors.MainStateVector.VectorHash[:], vectors.TrustedAnnouncementVector.AsBytes())
-	copy(body.Vectors.MainStateVector.SignedGlobulaStateHash[:], vectors.TrustedGlobulaStateVectorSignature.AsBytes())
-	body.Vectors.MainStateVector.ExpectedRank = vectors.TrustedExpectedRank
+	copy(body.Vectors.MainStateVector.VectorHash[:], vectors.Trusted.AnnouncementHash.AsBytes())
+	copy(body.Vectors.MainStateVector.SignedGlobulaStateHash[:], vectors.Trusted.StateSignature.AsBytes())
+	body.Vectors.MainStateVector.ExpectedRank = vectors.Trusted.ExpectedRank
 
-	if vectors.DoubtedAnnouncementVector == nil {
+	if vectors.Doubted.AnnouncementHash != nil {
 		packet.Header.SetFlag(1)
 		body.Vectors.AdditionalStateVectors = make([]GlobulaStateVector, 1)
-		copy(body.Vectors.AdditionalStateVectors[0].VectorHash[:], vectors.DoubtedAnnouncementVector.AsBytes())
-		copy(body.Vectors.AdditionalStateVectors[0].SignedGlobulaStateHash[:], vectors.DoubtedGlobulaStateVectorSignature.AsBytes())
-		body.Vectors.AdditionalStateVectors[0].ExpectedRank = vectors.DoubtedExpectedRank
+		copy(body.Vectors.AdditionalStateVectors[0].VectorHash[:], vectors.Doubted.AnnouncementHash.AsBytes())
+		copy(body.Vectors.AdditionalStateVectors[0].SignedGlobulaStateHash[:], vectors.Doubted.StateSignature.AsBytes())
+		body.Vectors.AdditionalStateVectors[0].ExpectedRank = vectors.Doubted.ExpectedRank
 	}
 
 	return pb.prepareWrapper(packet)
@@ -176,14 +179,14 @@ func (pb *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementPro
 type PreparedPacketSender struct {
 	packet   *Packet
 	buf      [packetMaxSize]byte
-	digester cryptography_containers.DataDigester
-	signer   cryptography_containers.DigestSigner
+	digester cryptkit.DataDigester
+	signer   cryptkit.DigestSigner
 }
 
-func (p *PreparedPacketSender) SendTo(ctx context.Context, target gcp_types.NodeProfile, sendOptions api.PacketSendOptions, sender api.PacketSender) {
+func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
 	p.packet.Header.TargetID = uint32(target.GetShortNodeID())
 
-	if (sendOptions & api.SendWithoutPulseData) != 0 {
+	if (sendOptions & transport.SendWithoutPulseData) != 0 {
 		p.packet.Header.ClearFlag(FlagHasPulsePacket)
 	}
 
@@ -196,8 +199,8 @@ func (p *PreparedPacketSender) SendTo(ctx context.Context, target gcp_types.Node
 	sender.SendPacketToTransport(ctx, target, sendOptions, p.buf[:buf.Len()])
 }
 
-func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, sender api.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (gcp_types.NodeProfile, api.PacketSendOptions)) {
+func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, sender transport.PacketSender,
+	filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, transport.PacketSendOptions)) {
 
 	for i := 0; i <= targetCount; i++ {
 		if np, options := filter(ctx, i); np != nil {

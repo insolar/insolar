@@ -99,7 +99,7 @@ func TestConsensusMain(t *testing.T) {
 
 	network.Start(ctx)
 
-	go CreateGenerator(10, 2, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
+	go CreateGenerator(2, 2, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")

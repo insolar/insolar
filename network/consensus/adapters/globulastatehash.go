@@ -51,10 +51,9 @@
 package adapters
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"math/rand"
-
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
 )
 
 type gshDigester struct {
@@ -63,7 +62,7 @@ type gshDigester struct {
 	lastSeed int64
 }
 
-func (s *gshDigester) AddNext(digest cryptography_containers.DigestHolder) {
+func (s *gshDigester) AddNext(digest cryptkit.DigestHolder) {
 	// it is a dirty emulation of digest
 	if s.rnd == nil {
 		s.rnd = rand.New(rand.NewSource(0))
@@ -72,11 +71,11 @@ func (s *gshDigester) AddNext(digest cryptography_containers.DigestHolder) {
 	s.rnd.Seed(s.lastSeed)
 }
 
-func (s *gshDigester) GetDigestMethod() cryptography_containers.DigestMethod {
+func (s *gshDigester) GetDigestMethod() cryptkit.DigestMethod {
 	return "emuDigest64"
 }
 
-func (s *gshDigester) ForkSequence() cryptography_containers.SequenceDigester {
+func (s *gshDigester) ForkSequence() cryptkit.SequenceDigester {
 	cp := gshDigester{}
 	if s.rnd != nil {
 		cp.rnd = rand.New(rand.NewSource(s.lastSeed))
@@ -84,11 +83,11 @@ func (s *gshDigester) ForkSequence() cryptography_containers.SequenceDigester {
 	return &cp
 }
 
-func (s *gshDigester) FinishSequence() cryptography_containers.Digest {
+func (s *gshDigester) FinishSequence() cryptkit.Digest {
 	if s.rnd == nil {
 		panic("nothing")
 	}
-	bits := long_bits.NewBits64(s.rnd.Uint64())
+	bits := longbits.NewBits64(s.rnd.Uint64())
 	s.rnd = nil
-	return cryptography_containers.NewDigest(&bits, s.GetDigestMethod())
+	return cryptkit.NewDigest(&bits, s.GetDigestMethod())
 }

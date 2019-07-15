@@ -54,24 +54,23 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"testing"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"testing"
 
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
 
-var digester = func() cryptography_containers.DataDigester {
+var digester = func() cryptkit.DataDigester {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	digester := adapters.NewSha3512Digester(scheme)
 	return digester
 }()
 
-var signer = func() cryptography_containers.DigestSigner {
+var signer = func() cryptkit.DigestSigner {
 	processor := platformpolicy.NewKeyProcessor()
 	key, _ := processor.GeneratePrivateKey()
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -229,22 +228,22 @@ func TestHeader_setProtocolType_Panic(t *testing.T) {
 func TestHeader_GetPacketType(t *testing.T) {
 	h := Header{}
 
-	require.Equal(t, gcp_types.PacketPhase0, h.GetPacketType())
+	require.Equal(t, phases.PacketPhase0, h.GetPacketType())
 
 	h.ProtocolAndPacketType = 1 // 0b00000001
-	require.Equal(t, gcp_types.PacketPhase1, h.GetPacketType())
+	require.Equal(t, phases.PacketPhase1, h.GetPacketType())
 
 	h.ProtocolAndPacketType = 2 // 0b00000010
-	require.Equal(t, gcp_types.PacketPhase2, h.GetPacketType())
+	require.Equal(t, phases.PacketPhase2, h.GetPacketType())
 }
 
 func TestHeader_setPacketType(t *testing.T) {
 	h := Header{}
 
-	require.Equal(t, gcp_types.PacketPhase0, h.GetPacketType())
+	require.Equal(t, phases.PacketPhase0, h.GetPacketType())
 
-	h.setPacketType(gcp_types.PacketPhase3)
-	require.Equal(t, gcp_types.PacketPhase3, h.GetPacketType())
+	h.setPacketType(phases.PacketPhase3)
+	require.Equal(t, phases.PacketPhase3, h.GetPacketType())
 }
 
 func TestHeader_setPacketType_Panic(t *testing.T) {
@@ -286,7 +285,7 @@ func TestHeader_SerializeTo(t *testing.T) {
 	h.setIsBodyEncrypted(true)
 	h.setIsRelayRestricted(true)
 	h.setProtocolType(ProtocolTypeGlobulaConsensus)
-	h.setPacketType(gcp_types.PacketPhase3)
+	h.setPacketType(phases.PacketPhase3)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 
@@ -304,7 +303,7 @@ func TestHeader_DeserializeFrom(t *testing.T) {
 	h1.setIsBodyEncrypted(true)
 	h1.setIsRelayRestricted(true)
 	h1.setProtocolType(ProtocolTypeGlobulaConsensus)
-	h1.setPacketType(gcp_types.PacketPhase3)
+	h1.setPacketType(phases.PacketPhase3)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	err := h1.SerializeTo(nil, buf)
