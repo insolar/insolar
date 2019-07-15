@@ -83,10 +83,10 @@ func TestDigestMethod(t *testing.T) {
 	sep := "/"
 	require.Equal(t, DigestMethod(td), SignatureMethod(strings.Join([]string{td, ts}, sep)).DigestMethod())
 
-	emptyDigMeth := DigestMethod("")
-	require.Equal(t, emptyDigMeth, SignatureMethod("testSignature").DigestMethod())
+	emptyDigMethod := DigestMethod("")
+	require.Equal(t, emptyDigMethod, SignatureMethod("testSignature").DigestMethod())
 
-	require.Equal(t, emptyDigMeth, SignatureMethod(strings.Join([]string{td, ts, "test"}, sep)).DigestMethod())
+	require.Equal(t, emptyDigMethod, SignatureMethod(strings.Join([]string{td, ts, "test"}, sep)).DigestMethod())
 }
 
 func TestSignMethod(t *testing.T) {
@@ -95,10 +95,10 @@ func TestSignMethod(t *testing.T) {
 	sep := "/"
 	require.Equal(t, SignMethod(ts), SignatureMethod(strings.Join([]string{td, ts}, sep)).SignMethod())
 
-	emptySignMeth := SignMethod("")
-	require.Equal(t, emptySignMeth, SignatureMethod("testSignature").SignMethod())
+	emptySignMethod := SignMethod("")
+	require.Equal(t, emptySignMethod, SignatureMethod("testSignature").SignMethod())
 
-	require.Equal(t, emptySignMeth, SignatureMethod(strings.Join([]string{td, ts, "test"}, sep)).SignMethod())
+	require.Equal(t, emptySignMethod, SignatureMethod(strings.Join([]string{td, ts, "test"}, sep)).SignMethod())
 }
 
 func TestCopyOfDigest(t *testing.T) {

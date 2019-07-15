@@ -58,12 +58,12 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type SequencialCandidateFeeder struct {
+type SequentialCandidateFeeder struct {
 	mx  sync.Mutex
 	buf []profiles.CandidateProfile
 }
 
-func (p *SequencialCandidateFeeder) PickNextJoinCandidate() profiles.CandidateProfile {
+func (p *SequentialCandidateFeeder) PickNextJoinCandidate() profiles.CandidateProfile {
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
@@ -73,7 +73,7 @@ func (p *SequencialCandidateFeeder) PickNextJoinCandidate() profiles.CandidatePr
 	return p.buf[0]
 }
 
-func (p *SequencialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool {
+func (p *SequentialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool {
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
@@ -89,7 +89,7 @@ func (p *SequencialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nod
 	return true
 }
 
-func (p *SequencialCandidateFeeder) AddJoinCandidate(candidate transport.FullIntroductionReader) {
+func (p *SequentialCandidateFeeder) AddJoinCandidate(candidate transport.FullIntroductionReader) {
 	if candidate == nil {
 		panic("illegal value")
 	}

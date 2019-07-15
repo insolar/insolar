@@ -146,9 +146,9 @@ func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader tran
 		case nb.GetJoinerID().IsAbsent():
 			ma = profiles.NewMembershipAnnouncement(mp)
 		default:
-			panic("not implemented") //TODO implement
-			//jar := na.GetJoinerAnnouncement()
-			//ma = common.NewMembershipAnnouncementWithJoiner(mp)
+			panic("not implemented") // TODO implement
+			// jar := na.GetJoinerAnnouncement()
+			// ma = common.NewMembershipAnnouncementWithJoiner(mp)
 		}
 
 		var modified bool
@@ -268,7 +268,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 
 			nh := make([]*core.NodeAppearance, len(nhBuf))
 			for i, np := range nhBuf {
-				//don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
+				// don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
 				nh[i] = np.(*core.NodeAppearance)
 			}
 

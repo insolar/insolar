@@ -152,28 +152,6 @@ func (ds *ECDSADigestSigner) GetSignMethod() cryptkit.SignMethod {
 	return SECP256r1Sign
 }
 
-type ECDSADataSigner struct {
-	cryptkit.DataDigester
-	cryptkit.DigestSigner
-}
-
-func NewECDSADataSigner(dataDigester cryptkit.DataDigester, digestSigner cryptkit.DigestSigner) *ECDSADataSigner {
-	return &ECDSADataSigner{
-		DataDigester: dataDigester,
-		DigestSigner: digestSigner,
-	}
-}
-
-func (ds *ECDSADataSigner) GetSignOfData(reader io.Reader) cryptkit.SignedDigest {
-	digest := ds.DataDigester.GetDigestOf(reader)
-	signature := ds.DigestSigner.SignDigest(digest)
-	return cryptkit.NewSignedDigest(digest, signature)
-}
-
-func (ds *ECDSADataSigner) GetSignatureMethod() cryptkit.SignatureMethod {
-	return ds.DataDigester.GetDigestMethod().SignedBy(ds.DigestSigner.GetSignMethod())
-}
-
 type ECDSASignatureVerifier struct {
 	digester  *Sha3512Digester
 	scheme    insolar.PlatformCryptographyScheme

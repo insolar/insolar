@@ -91,7 +91,7 @@ type FullRealm struct {
 	isFinished bool
 }
 
-func (p *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
+func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
 	verificationProof interface{}) error {
 
 	pt := packet.GetPacketType()
@@ -103,10 +103,10 @@ func (p *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	var sourceNode *NodeAppearance
 
 	switch {
-	case pt.GetLimitPerSender() == 0 || int(pt) >= len(p.packetDispatchers) || p.packetDispatchers[pt] == nil:
+	case pt.GetLimitPerSender() == 0 || int(pt) >= len(r.packetDispatchers) || r.packetDispatchers[pt] == nil:
 		return fmt.Errorf("packet type (%v) is unknown", pt)
 	case pt.IsMemberPacket():
-		strict, err := VerifyPacketRoute(ctx, packet, p.GetSelfNodeID())
+		strict, err := VerifyPacketRoute(ctx, packet, r.GetSelfNodeID())
 		if err != nil {
 			return err
 		}
@@ -114,9 +114,9 @@ func (p *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 			verifyFlags |= RequireStrictVerify
 		}
 		sourceID := packet.GetSourceID()
-		sourceNode = p.GetPopulation().GetNodeAppearance(sourceID)
+		sourceNode = r.GetPopulation().GetNodeAppearance(sourceID)
 	default:
-		//TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
 		verifyFlags |= SkipVerify
 	}
 
@@ -128,7 +128,7 @@ func (p *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		var err error
 		strict := verifyFlags&RequireStrictVerify != 0
 		if sourceNode == nil {
-			err = p.coreRealm.VerifyPacketAuthenticity(packet, from, strict)
+			err = r.coreRealm.VerifyPacketAuthenticity(packet, from, strict)
 		} else {
 			err = sourceNode.VerifyPacketAuthenticity(packet, from, strict)
 		}
@@ -137,10 +137,10 @@ func (p *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 	}
 
-	pd := p.packetDispatchers[pt] //was checked above for != nil
+	pd := r.packetDispatchers[pt] // was checked above for != nil
 
 	if pt.IsMemberPacket() {
-		//now it is safe to parse the rest of the packet
+		// now it is safe to parse the rest of the packet
 		memberPacket := packet.GetMemberPacket()
 		if memberPacket == nil {
 			return fmt.Errorf("packet type (%v) can't be parsed: from=%v", pt, from)
@@ -163,10 +163,10 @@ func (p *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 /* LOCK - runs under RoundController lock */
 func (r *FullRealm) start(census census2.Active, population census2.OnlinePopulation) {
 	r.initBasics(census)
-	allCtls, perNodeCtls := r.initHandlers(population.GetCount())
-	r.initPopulation(population, perNodeCtls)
+	allControllers, perNodeControllers := r.initHandlers(population.GetCount())
+	r.initPopulation(population, perNodeControllers)
 	r.initSelf()
-	r.startWorkers(allCtls)
+	r.startWorkers(allControllers)
 }
 
 func (r *FullRealm) init(transport transport.Factory, controlFeeder api.ConsensusControlFeeder,
@@ -251,12 +251,12 @@ func (r *FullRealm) initSelf() {
 	r.self = newSelf
 
 	if !newSelf.profile.IsJoiner() {
-		//joiners are not allowed to request leave
+		// joiners are not allowed to request leave
 		newSelf.requestedLeave, newSelf.requestedLeaveReason = r.controlFeeder.GetRequiredGracefulLeave()
 	}
 
 	if !newSelf.requestedLeave {
-		//leaver is not allowed to add new nodes
+		// leaver is not allowed to add new nodes
 		newSelf.requestedJoiner = r.pickNextJoinCandidate()
 	}
 	newSelf.callback.updatePopulationVersion()
@@ -264,7 +264,7 @@ func (r *FullRealm) initSelf() {
 
 func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
 	if r.GetLocalProfile().GetOpMode().IsRestricted() {
-		//this node is not allowed to introduce joiners
+		// this node is not allowed to introduce joiners
 		return nil
 	}
 
@@ -364,9 +364,9 @@ func (r *coreRealm) UpstreamPreparePulseChange() <-chan proofs.NodeStateHash {
 
 	sp := r.GetSelf().GetProfile()
 	report := api.UpstreamReport{
-		r.pulseData.PulseNumber,
-		sp.GetDeclaredPower(),
-		sp.GetOpMode(),
+		PulseNumber: r.pulseData.PulseNumber,
+		MemberPower: sp.GetDeclaredPower(),
+		MemberMode:  sp.GetOpMode(),
 	}
 	return r.upstream.PreparePulseChange(report)
 }
@@ -386,7 +386,7 @@ func (r *FullRealm) GetLocalProfile() profiles.LocalNode {
 func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh proofs.NodeStateHash) {
 	// TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
 
-	//TODO Hack! MUST provide announcement hash
+	// TODO Hack! MUST provide announcement hash
 	nas := cryptkit.NewSignature(nsh, "stubSign")
 
 	v := nsh.SignWith(r.signer)
@@ -422,7 +422,7 @@ func (r *FullRealm) preparePrimingMembers(pop census2.PopulationBuilder) {
 
 /* deprecated */
 func (r *FullRealm) prepareRegularMembers(pop census2.PopulationBuilder) {
-	//cc := r.census.GetMandateRegistry().GetConsensusConfiguration()
+	// cc := r.census.GetMandateRegistry().GetConsensusConfiguration()
 
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() == nil {
@@ -469,9 +469,9 @@ func (r *FullRealm) FinishRound(builder census2.Builder, csh proofs.CloudStateHa
 
 func (r *FullRealm) notifyConsensusFinished(newSelf profiles.ActiveNode, expectedCensus census2.Operational) {
 	report := api.UpstreamReport{
-		r.pulseData.PulseNumber,
-		newSelf.GetDeclaredPower(),
-		newSelf.GetOpMode(),
+		PulseNumber: r.pulseData.PulseNumber,
+		MemberPower: newSelf.GetDeclaredPower(),
+		MemberMode:  newSelf.GetOpMode(),
 	}
 
 	r.controlFeeder.ConsensusFinished(report, expectedCensus)
@@ -485,45 +485,45 @@ func (r *FullRealm) GetProfileFactory() profiles.Factory {
 func (r *FullRealm) CreatePurgatoryNode(ctx context.Context, intro transport.BriefIntroductionReader, from endpoints.Inbound) (*NodeAppearance, error) {
 
 	panic("not implemented")
-	//nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
-	//if fIntro, ok := intro.(packets.FullIntroductionReader); ok && !fIntro.GetIssuerID().IsAbsent() {
+	// nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
+	// if fIntro, ok := intro.(packets.FullIntroductionReader); ok && !fIntro.GetIssuerID().IsAbsent() {
 	//	nip = r.profileFactory.CreateFullIntroProfile(nip, fIntro)
-	//}
-	//na := r.population.CreateNodeAppearance(r.roundContext, nip)
+	// }
+	// na := r.population.CreateNodeAppearance(r.roundContext, nip)
 	//
-	//nna, ps := r.population.AddToPurgatory(na)
+	// nna, ps := r.population.AddToPurgatory(na)
 	//
-	//if !common2.EqualIntroProfiles(nna.profile, na.profile) {
+	// if !common2.EqualIntroProfiles(nna.profile, na.profile) {
 	//	nodes = append(nodes, na)
 	//	nna = nil
-	//}
-	//if nodes != nil {
+	// }
+	// if nodes != nil {
 	//	inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetNodeID(), nodes)
-	//}
-	//if nna != nil {
+	// }
+	// if nna != nil {
 	//	newSelf.requestedJoiner = nna
 	//	break
-	//}
+	// }
 
 }
 
-//func (r *FullRealm) getPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
+// func (r *FullRealm) getPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
 //
-//}
+// }
 //
-//func (r *FullRealm) createPurgatoryNode(profile common2.BriefCandidateProfile, nodeSignature common.SignatureHolder) *NodeAppearance {
+// func (r *FullRealm) createPurgatoryNode(profile common2.BriefCandidateProfile, nodeSignature common.SignatureHolder) *NodeAppearance {
 //	pr := r.profileFactory.CreateBriefIntroProfile(profile, nodeSignature)
 //
-//}
+// }
 //
-//func (r *FullRealm) _registerPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
+// func (r *FullRealm) _registerPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
 //
-//}
+// }
 //
-//func (r *FullRealm) CreatePurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
+// func (r *FullRealm) CreatePurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
 //	r.
-//}
+// }
 //
-//func (r *FullRealm) UpgradeToDynamicNode(n *NodeAppearance, profile common2.CandidateProfile) {
+// func (r *FullRealm) UpgradeToDynamicNode(n *NodeAppearance, profile common2.CandidateProfile) {
 //
-//}
+// }

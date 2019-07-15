@@ -184,19 +184,19 @@ func (p *StateAndRankSequenceCalc) hashMemberEntry(v memberEntry, roleIndex uint
 	}
 
 	fr := member.FullRank{
-		member.InterimRank{
-			member.RankCursor{
-				p.cursor.Role,
-				roleIndex,
-				v.RolePowerIndex,
-				p.roleFirstTotalIndex + roleIndex,
+		InterimRank: member.InterimRank{
+			RankCursor: member.RankCursor{
+				Role:           p.cursor.Role,
+				RoleIndex:      roleIndex,
+				RolePowerIndex: v.RolePowerIndex,
+				TotalIndex:     p.roleFirstTotalIndex + roleIndex,
 			},
-			v.SpecialRoles,
-			v.Power,
-			v.OpMode,
+			SpecialRoles: v.SpecialRoles,
+			Power:        v.Power,
+			OpMode:       v.OpMode,
 		},
-		p.cursor.RoleIndex,
-		p.cursor.RolePowerIndex,
+		RoleCount: p.cursor.RoleIndex,
+		RolePower: p.cursor.RolePowerIndex,
 	}
 	if v.capture {
 		p.nodeFullRank = fr

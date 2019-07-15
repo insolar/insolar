@@ -175,9 +175,9 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions t
 	c := *r
 	c.tgt = t.GetShortNodeID()
 
-	//if !t.IsJoiner() {
+	// if !t.IsJoiner() {
 	//	c.selfIntro = nil
-	//}
+	// }
 	if sendOptions&transport.SendWithoutPulseData != 0 {
 		c.pulsePacket = nil
 	}
@@ -207,9 +207,9 @@ func (r *EmuPhase2NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions t
 	c := *r
 	c.tgt = t.GetShortNodeID()
 
-	//if !t.IsJoiner() || len(c.intros) == 1 /* the only joiner */ {
+	// if !t.IsJoiner() || len(c.intros) == 1 /* the only joiner */ {
 	//	c.intros = nil
-	//} else {
+	// } else {
 	//	c.intros = make([]common2.NodeIntroduction, 0, len(r.intros)-1)
 	//	for _, ni := range r.intros {
 	//		if ni.GetShortNodeID() == t.GetShortNodeID() {
@@ -217,7 +217,7 @@ func (r *EmuPhase2NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions t
 	//		}
 	//		c.intros = append(c.intros, ni)
 	//	}
-	//}
+	// }
 	return &c
 }
 

@@ -83,7 +83,7 @@ type PreparedPacketSender interface {
 type PacketBuilder interface {
 	GetNeighbourhoodSize() NeighbourhoodSizes
 
-	//PrepareIntro
+	// PrepareIntro
 
 	PreparePhase0Packet(sender *NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
 		options PacketSendOptions) PreparedPacketSender
@@ -112,4 +112,4 @@ const (
 	RequestForPhase1
 )
 
-//type PreparedIntro interface {}
+// type PreparedIntro interface {}

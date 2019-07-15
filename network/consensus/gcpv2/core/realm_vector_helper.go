@@ -74,9 +74,9 @@ Unsafe for concurrent use
 type RealmVectorProjection struct {
 	origin              *RealmVectorHelper
 	populationVersion   uint32
-	indexedRefs         []*VectorEntry //can't be appended, must be copied on setting new entries
-	joinersRefs         []*VectorEntry //can be appended in-place, can't set/update entries
-	poweredSorted       []sortedEntry  //must be copied on append/sort, can't set/update entries
+	indexedRefs         []*VectorEntry // can't be appended, must be copied on setting new entries
+	joinersRefs         []*VectorEntry // can be appended in-place, can't set/update entries
+	poweredSorted       []sortedEntry  // must be copied on append/sort, can't set/update entries
 	sharedIndexedRefs   bool
 	sharedPoweredSorted bool
 }
@@ -84,7 +84,7 @@ type RealmVectorProjection struct {
 type VectorEntry struct {
 	nodeset.VectorEntryData
 	filterBy uint16
-	//joiner 	 *NodeAppearance
+	// joiner 	 *NodeAppearance
 }
 
 func (p *RealmVectorProjection) CreateProjection() RealmVectorProjection {
@@ -265,7 +265,7 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance, joinerCou
 		}
 
 		if joinerCount >= len(p.joiners) {
-			//got more joiners than expected - it is possible
+			// got more joiners than expected - it is possible
 			p.joiners = append(p.joiners, VectorEntry{})
 			p.projection.poweredSorted = append(p.projection.poweredSorted, sortedEntry{})
 		}
@@ -315,7 +315,7 @@ func (p *VectorEntry) setValues(n *NodeAppearance) *NodeAppearance {
 type sortedEntry struct {
 	id        insolar.ShortNodeID
 	powerRole uint16
-	index     int16 //points to the same for both member and joiner, but joiner has different id in the entryRank
+	index     int16 // points to the same for both member and joiner, but joiner has different id in the entryRank
 }
 
 func (v *sortedEntry) isJoiner() bool {
@@ -336,7 +336,7 @@ func (v *sortedEntry) setJoiner(ve *VectorEntry, index int) {
 func (v *sortedEntry) setMember(ve *VectorEntry, index int) {
 	v.id = ve.Profile.GetShortNodeID()
 	v.index = int16(index)
-	//role of zero-power nodes is ignored for sorting
+	// role of zero-power nodes is ignored for sorting
 	if ve.RequestedPower == 0 {
 		v.powerRole = 0
 	} else {
@@ -362,7 +362,7 @@ func (c *vectorPowerSorter) Len() int {
 	return len(c.values)
 }
 
-//sorting is REVERSED - it makes the most powerful nodes of a role to be first in the list
+// sorting is REVERSED - it makes the most powerful nodes of a role to be first in the list
 func (c *vectorPowerSorter) Less(i, j int) bool {
 	return c.values[j].lessByPowerRole(c.values[i])
 }

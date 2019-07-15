@@ -54,7 +54,7 @@ import (
 	"fmt"
 )
 
-type OpMode uint8 //4-bit value
+type OpMode uint8 // 4-bit value
 const (
 	ModeBits                          = 4
 	ModeFlagRestrictedBehavior OpMode = 4

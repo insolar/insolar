@@ -94,9 +94,9 @@ func int2ip(nn uint32) net.IP {
 	return ip
 }
 
-func ip2int(ip net.IP) uint32 {
-	if len(ip) == 16 {
-		return defaultByteOrder.Uint32(ip[12:16])
-	}
-	return defaultByteOrder.Uint32(ip)
-}
+// func ip2int(ip net.IP) uint32 {
+// 	if len(ip) == 16 {
+// 		return defaultByteOrder.Uint32(ip[12:16])
+// 	}
+// 	return defaultByteOrder.Uint32(ip)
+// }

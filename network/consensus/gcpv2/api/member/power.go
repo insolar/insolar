@@ -183,7 +183,7 @@ Always true for p=0. Requires normalized ops.
 		if v[0] == 0 { // [0, 0, p2, max]
 			return p <= v[2] || p == v[3]
 		}
-		//[min, 0, p2, max]
+		// [min, 0, p2, max]
 		return v[3] == p || v[2] >= p
 	}
 	// [min, p1, p2, max]

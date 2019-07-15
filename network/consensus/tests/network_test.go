@@ -105,11 +105,6 @@ func ErrUnknownEmuHost(host endpoints.Name) error {
 	return errEmuNetwork{errType: "Unknown host", details: host}
 }
 
-func IsEmuError(err *error) bool {
-	_, ok := (*err).(errEmuNetwork)
-	return ok
-}
-
 func NewEmuNetwork(nwStrategy NetStrategy, ctx context.Context) *EmuNetwork {
 	return &EmuNetwork{strategy: nwStrategy, ctx: ctx}
 }

@@ -61,18 +61,18 @@ import (
 )
 
 func TestPickNextJoinCandidate(t *testing.T) {
-	require.Equal(t, nil, (&SequencialCandidateFeeder{}).PickNextJoinCandidate())
+	require.Equal(t, nil, (&SequentialCandidateFeeder{}).PickNextJoinCandidate())
 
-	s := &SequencialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
+	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
 	c := profiles.NewCandidateProfileMock(t)
 	s.buf[0] = c
 	require.Equal(t, c, s.PickNextJoinCandidate())
 }
 
 func TestRemoveJoinCandidate(t *testing.T) {
-	require.False(t, (&SequencialCandidateFeeder{}).RemoveJoinCandidate(false, insolar.ShortNodeID(0)))
+	require.False(t, (&SequentialCandidateFeeder{}).RemoveJoinCandidate(false, insolar.ShortNodeID(0)))
 
-	s := &SequencialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
+	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
 	c := profiles.NewCandidateProfileMock(t)
 	s.buf[0] = c
 	c.GetNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
@@ -95,10 +95,10 @@ func TestRemoveJoinCandidate(t *testing.T) {
 }
 
 func TestAddJoinCandidate(t *testing.T) {
-	require.Panics(t, func() { (&SequencialCandidateFeeder{}).AddJoinCandidate(nil) })
+	require.Panics(t, func() { (&SequentialCandidateFeeder{}).AddJoinCandidate(nil) })
 
 	f := transport.NewFullIntroductionReaderMock(t)
-	s := &SequencialCandidateFeeder{}
+	s := &SequentialCandidateFeeder{}
 	s.AddJoinCandidate(f)
 	require.True(t, len(s.buf) == 1 && s.buf[0] == f)
 }

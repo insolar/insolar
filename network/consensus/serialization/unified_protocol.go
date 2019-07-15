@@ -286,18 +286,18 @@ func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, digester cry
 	}
 
 	w := newTrackableWriter(writer)
-	pctx := newPacketContext(ctx, &p.Header)
-	sctx := newSerializeContext(pctx, w, digester, signer, p)
+	packetCtx := newPacketContext(ctx, &p.Header)
+	serializeCtx := newSerializeContext(packetCtx, w, digester, signer, p)
 
-	if err := write(sctx, &p.PulseNumber); err != nil {
+	if err := write(serializeCtx, &p.PulseNumber); err != nil {
 		return 0, ErrMalformedPulseNumber(err)
 	}
 
-	if err := p.EncryptableBody.SerializeTo(sctx, sctx); err != nil {
+	if err := p.EncryptableBody.SerializeTo(serializeCtx, serializeCtx); err != nil {
 		return 0, ErrMalformedPacketBody(err)
 	}
 
-	return sctx.Finalize()
+	return serializeCtx.Finalize()
 }
 
 func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, error) {
@@ -307,25 +307,25 @@ func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, 
 		return r.totalRead, ErrMalformedHeader(err)
 	}
 
-	pctx := newPacketContext(ctx, &p.Header)
-	dctx := newDeserializeContext(pctx, r, &p.Header)
+	packetCtx := newPacketContext(ctx, &p.Header)
+	deserializeCtx := newDeserializeContext(packetCtx, r, &p.Header)
 
-	if err := read(dctx, &p.PulseNumber); err != nil {
+	if err := read(deserializeCtx, &p.PulseNumber); err != nil {
 		return r.totalRead, ErrMalformedPulseNumber(err)
 	}
 
-	p.EncryptableBody = pctx.GetProtocolType().NewBody()
+	p.EncryptableBody = packetCtx.GetProtocolType().NewBody()
 	if p.EncryptableBody == nil {
 		return 0, ErrMalformedPacketBody(ErrNilBody)
 	}
 
-	if err := p.EncryptableBody.DeserializeFrom(dctx, dctx); err != nil {
+	if err := p.EncryptableBody.DeserializeFrom(deserializeCtx, deserializeCtx); err != nil {
 		return r.totalRead, ErrMalformedPacketBody(err)
 	}
 
-	if err := read(dctx, &p.PacketSignature); err != nil {
+	if err := read(deserializeCtx, &p.PacketSignature); err != nil {
 		return r.totalRead, ErrMalformedPacketSignature(err)
 	}
 
-	return dctx.Finalize()
+	return deserializeCtx.Finalize()
 }

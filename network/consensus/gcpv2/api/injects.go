@@ -72,7 +72,7 @@ type ConsensusController interface {
 	/* Ungraceful stop */
 	Abort()
 	/* Graceful exit, actual moment of leave will be indicated via Upstream */
-	//RequestLeave()
+	// RequestLeave()
 
 	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
 	GetActivePowerLimit() (member.Power, pulse.Number)
@@ -110,8 +110,8 @@ type ConsensusControlFeeder interface {
 	/* Consensus is finished. If expectedCensus == 0 then this node was evicted from consensus.	*/
 	ConsensusFinished(report UpstreamReport, expectedCensus census.Operational)
 
-	///* Consensus has stopped abnormally	*/
-	//ConsensusFailed(report UpstreamReport)
+	// /* Consensus has stopped abnormally	*/
+	// ConsensusFailed(report UpstreamReport)
 }
 
 type RoundController interface {

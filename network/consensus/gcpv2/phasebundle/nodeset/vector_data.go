@@ -66,8 +66,8 @@ type VectorEntryData struct {
 	TrustLevel     member.TrustLevel
 	Profile        profiles.ActiveNode
 
-	//Node *NodeAppearance
-	//common.MembershipAnnouncement
+	// Node *NodeAppearance
+	// common.MembershipAnnouncement
 	proofs.NodeAnnouncedState
 }
 

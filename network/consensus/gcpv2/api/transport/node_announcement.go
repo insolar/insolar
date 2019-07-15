@@ -70,7 +70,7 @@ func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncem
 	}
 }
 
-//func NewNodeAnnouncementOf(na MembershipAnnouncementReader, pn common.PulseNumber) *NodeAnnouncementProfile {
+// func NewNodeAnnouncementOf(na MembershipAnnouncementReader, pn common.PulseNumber) *NodeAnnouncementProfile {
 //	nr := na.GetNodeRank()
 //	return &NodeAnnouncementProfile{
 //		nodeID:    na.GetNodeID(),
@@ -87,7 +87,7 @@ func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncem
 //			na.GetRequestedPower(),
 //		),
 //	}
-//}
+// }
 
 var _ MembershipAnnouncementReader = &NodeAnnouncementProfile{}
 

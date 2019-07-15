@@ -230,19 +230,19 @@ func VerifyPacketRoute(ctx context.Context, packet transport.PacketParser, selfI
 
 	tid := packet.GetTargetID()
 	if tid != selfID {
-		//Relaying
+		// Relaying
 		if packet.IsRelayForbidden() {
 			return false, fmt.Errorf("sender doesn't allow relaying for targetID(%v)", tid)
 		}
 
-		//TODO relay support
+		// TODO relay support
 		err := fmt.Errorf("unsupported: relay is required for targetID(%v)", tid)
 		inslogger.FromContext(ctx).Errorf(err.Error())
-		//allow sender to be different from source
+		// allow sender to be different from source
 		return false, err
 	}
 
-	//sender must be source
+	// sender must be source
 	return packet.IsRelayForbidden(), nil
 }
 

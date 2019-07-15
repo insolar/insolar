@@ -87,5 +87,3 @@ type nextPulseRoundError struct {
 func (e *nextPulseRoundError) Error() string {
 	return e.s
 }
-
-var ErrPacketLimitExceeded = errors.New("packet limit exceeded")

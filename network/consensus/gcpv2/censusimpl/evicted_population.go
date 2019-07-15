@@ -63,15 +63,15 @@ func newEvictedPopulation(evicts []*updatableSlot) evictedPopulation {
 	if len(evicts) == 0 {
 		return evictedPopulation{}
 	}
-	profiles := make(map[insolar.ShortNodeID]profiles.EvictedNode, len(evicts))
+	evictedNodes := make(map[insolar.ShortNodeID]profiles.EvictedNode, len(evicts))
 
 	for _, s := range evicts {
 		id := s.GetShortNodeID()
-		profiles[id] = &evictedSlot{s.NodeIntroProfile, s.verifier, s.mode,
+		evictedNodes[id] = &evictedSlot{s.NodeIntroProfile, s.verifier, s.mode,
 			s.leaveReason}
 	}
 
-	return evictedPopulation{profiles}
+	return evictedPopulation{evictedNodes}
 }
 
 var _ census.EvictedPopulation = &evictedPopulation{}

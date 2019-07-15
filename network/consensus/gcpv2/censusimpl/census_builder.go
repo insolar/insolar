@@ -64,7 +64,7 @@ func newLocalCensusBuilder(chronicles *localChronicles, pn pulse.Number, populat
 	fullCopy bool) *LocalCensusBuilder {
 
 	r := &LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn}
-	if fullCopy { //TODO remove fullCopy later
+	if fullCopy { // TODO remove fullCopy later
 		r.population = NewDynamicPopulation(population)
 	} else {
 		r.population = NewDynamicPopulationCopySelf(population)

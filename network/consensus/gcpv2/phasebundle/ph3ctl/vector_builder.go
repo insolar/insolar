@@ -170,7 +170,7 @@ func (p *VectorBuilder) buildGlobulaStateHash(trusted bool, nodeID insolar.Short
 		})
 
 	tHash, tRank, tCount := calc.FinishSequence()
-	return statevector.CalcStateWithRank{tHash, tRank.AsMembershipRank(tCount)}
+	return statevector.CalcStateWithRank{StateHash: tHash, ExpectedRank: tRank.AsMembershipRank(tCount)}
 }
 
 func (p *VectorBuilder) BuildGlobulaAnnouncementHashes(buildTrusted, buildDoubted bool,

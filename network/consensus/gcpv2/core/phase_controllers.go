@@ -67,7 +67,7 @@ type PacketDispatcher interface {
 
 type PhasePerNodePacketFunc func(ctx context.Context, packet transport.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
 type PerNodePacketDispatcherFactory interface {
-	//PhasePerNodePacketFunc
+	// PhasePerNodePacketFunc
 	CreatePerNodePacketHandler(perNodeContext context.Context, node *NodeAppearance) (context.Context, PhasePerNodePacketFunc)
 }
 
@@ -77,12 +77,12 @@ const DefaultVerify PacketVerifyFlags = 0
 const SkipVerify PacketVerifyFlags = 1
 const RequireStrictVerify PacketVerifyFlags = 2
 
-//type PrepPhasePacketHandler func(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
+// type PrepPhasePacketHandler func(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
 type PrepPhaseController interface {
 	GetPacketType() []phases.PacketType
 	CreatePacketDispatcher(pt phases.PacketType, realm *PrepRealm) PacketDispatcher
 
-	//HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
+	// HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
 
 	BeforeStart(realm *PrepRealm)
 	StartWorker(ctx context.Context, realm *PrepRealm)
@@ -94,9 +94,9 @@ type PhaseController interface {
 	GetPacketType() []phases.PacketType
 	CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *FullRealm) (PacketDispatcher, PerNodePacketDispatcherFactory)
 
-	//HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) error                                   // GetHandlerType() == PacketHandlerTypeHost
-	//HandleMemberPacket(ctx context.Context, reader transport.MemberPacketReader, src *NodeAppearance) error                              // GetHandlerType() == PacketHandlerTypeMember OR PacketHandlerTypeMemberFromUnknown
-	//HandleUnknownMemberPacket(ctx context.Context, reader transport.MemberPacketReader, from endpoints.Inbound) (*NodeAppearance, error) // GetHandlerType() == PacketHandlerTypeMemberFromUnknown
+	// HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) error                                   // GetHandlerType() == PacketHandlerTypeHost
+	// HandleMemberPacket(ctx context.Context, reader transport.MemberPacketReader, src *NodeAppearance) error                              // GetHandlerType() == PacketHandlerTypeMember OR PacketHandlerTypeMemberFromUnknown
+	// HandleUnknownMemberPacket(ctx context.Context, reader transport.MemberPacketReader, from endpoints.Inbound) (*NodeAppearance, error) // GetHandlerType() == PacketHandlerTypeMemberFromUnknown
 
 	BeforeStart(realm *FullRealm)
 	StartWorker(ctx context.Context, realm *FullRealm)

@@ -84,7 +84,7 @@ type nodeContext struct {
 	blameFactory            misbehavior.BlameFactory
 	phaseControllerCallback NodeUpdateCallback
 
-	populationVersion uint32 //atomic
+	populationVersion uint32 // atomic
 
 	signatureVerifierFactory cryptkit.SignatureVerifierFactory
 	nbTrustThreshold         uint8

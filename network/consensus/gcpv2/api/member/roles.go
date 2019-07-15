@@ -50,7 +50,7 @@
 
 package member
 
-type PrimaryRole uint8 //MUST BE 6-bit
+type PrimaryRole uint8 // MUST BE 6-bit
 
 const (
 	PrimaryRoleInactive PrimaryRole = iota
@@ -58,8 +58,8 @@ const (
 	PrimaryRoleHeavyMaterial
 	PrimaryRoleLightMaterial
 	PrimaryRoleVirtual
-	//PrimaryRoleCascade
-	//PrimaryRoleRecrypt
+	// PrimaryRoleCascade
+	// PrimaryRoleRecrypt
 )
 
 func (v PrimaryRole) IsMaterial() bool {

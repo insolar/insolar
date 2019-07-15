@@ -141,12 +141,12 @@ type Phase2PacketReader interface {
 type HashedVectorReader interface {
 	GetBitset() member.StateBitset
 
-	//GetTrustedExpectedRank() common2.Rank
+	// GetTrustedExpectedRank() common2.Rank
 	GetTrustedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash
 	GetTrustedGlobulaStateSignature() proofs.GlobulaStateSignature
 	GetTrustedExpectedRank() member.Rank
 
-	//GetDoubtedExpectedRank() common2.Rank
+	// GetDoubtedExpectedRank() common2.Rank
 	GetDoubtedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash
 	GetDoubtedGlobulaStateSignature() proofs.GlobulaStateSignature
 	GetDoubtedExpectedRank() member.Rank

@@ -66,33 +66,33 @@ const (
 	PacketPhase2
 	PacketPhase3
 	PacketPhase4
-	_ //5
-	_ //6
-	_ //7
+	_ // 5
+	_ // 6
+	_ // 7
 
-	PacketPulse //PacketPhase0 | PacketOffPhase /* Triggers Phase0-1 */
+	PacketPulse // PacketPhase0 | PacketOffPhase /* Triggers Phase0-1 */
 
-	PacketReqPhase1 //PacketPhase1 | PacketOffPhase
+	PacketReqPhase1 // PacketPhase1 | PacketOffPhase
 	/*  Request to resend own NSH - will be replied with PacketPhase1 without PulseData.
 	The reply MUST include all data (except for PulseData) as it was presented in the original Phase1 packet.
 	This request MUST be replied not more than 1-2 times per requesting node per consensus round,
 	otherwise is ignored.
 	*/
 
-	PacketExtPhase2 //PacketPhase2 | PacketOffPhase
+	PacketExtPhase2 // PacketPhase2 | PacketOffPhase
 	/*	And additional Phase 2 packet to improve coverage for fraud detection,
 		but it doesn't increase trust-level, as can be exploited by sending multiple times.
 	*/
 
-	PacketFastPhase3 //PacketPhase3 | PacketOffPhase
+	PacketFastPhase3 // PacketPhase3 | PacketOffPhase
 	/* Out-of-order Phase3 packet that can be sent before or during Phase 2. Can only be sent once.	*/
 
-	//PacketReqIntro /* Request to resend other's (NSH + intro) - will be replied with PacketPhase2.
-	//Only joiners can send this request, and only to anyone in a relevant neighbourhood.
-	//Limited by 1 times per requesting node per consensus round per requested intro,
-	//otherwise is ignored.
-	//PacketReqFraud /* Requests fraud proof */
-	//PacketFraud /* Delivers fraud proof, by request only */
+	// PacketReqIntro /* Request to resend other's (NSH + intro) - will be replied with PacketPhase2.
+	// Only joiners can send this request, and only to anyone in a relevant neighbourhood.
+	// Limited by 1 times per requesting node per consensus round per requested intro,
+	// otherwise is ignored.
+	// PacketReqFraud /* Requests fraud proof */
+	// PacketFraud /* Delivers fraud proof, by request only */
 
 	maxPacketType
 )
@@ -101,7 +101,7 @@ const PacketOffPhase = 8
 const PacketTypeCount = int(maxPacketType)
 const UnlimitedPackets = math.MaxUint8
 
-//TODO TEST must correlate: (p.GetLimitPerSender()<=1)==(p.GetLimitCounterIndex()<0)
+// TODO TEST must correlate: (p.GetLimitPerSender()<=1)==(p.GetLimitCounterIndex()<0)
 func (p PacketType) GetLimitPerSender() uint8 {
 	switch p {
 	case PacketPhase0, PacketPhase1, PacketPhase2, PacketPhase3, PacketPhase4:
@@ -115,11 +115,11 @@ func (p PacketType) GetLimitPerSender() uint8 {
 	case PacketFastPhase3:
 		return 1
 	default:
-		return 0 //packet is not allowed
+		return 0 // packet is not allowed
 	}
 }
 
-//TODO TEST must correlate: GetLimitCounterIndex() must be unique for every p, and less than PacketCountedLimits
+// TODO TEST must correlate: GetLimitCounterIndex() must be unique for every p, and less than PacketCountedLimits
 func (p PacketType) GetLimitCounterIndex() int {
 	switch p {
 	case PacketReqPhase1:

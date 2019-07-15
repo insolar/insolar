@@ -82,7 +82,7 @@ type NodeBriefIntro struct {
 	*/
 	ShortID insolar.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
 
-	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:PrimaryRole;[6:7]=header:AddrMode"` //AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
+	PrimaryRoleAndFlags uint8 `insolar-transport:"[0:5]=header:PrimaryRole;[6:7]=header:AddrMode"` // AddrMode =0 reserved, =1 Relay, =2 IPv4 =3 IPv6
 	SpecialRoles        member.SpecialRole
 	StartPower          member.Power
 

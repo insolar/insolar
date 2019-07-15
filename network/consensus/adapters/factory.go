@@ -113,9 +113,9 @@ func (cf *TransportCryptographyFactory) GetDigestFactory() transport.ConsensusDi
 }
 
 func (cf *TransportCryptographyFactory) GetNodeSigner(sks cryptkit.SecretKeyStore) cryptkit.DigestSigner {
-	isks := sks.(*ECDSASecretKeyStore)
+	ks := sks.(*ECDSASecretKeyStore)
 
-	return NewECDSADigestSigner(isks.privateKey, cf.scheme)
+	return NewECDSADigestSigner(ks.privateKey, cf.scheme)
 }
 
 func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh cryptkit.SignatureKeyHolder) cryptkit.PublicKeyStore {

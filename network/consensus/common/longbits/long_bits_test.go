@@ -75,7 +75,7 @@ func TestBits64WriteTo(t *testing.T) {
 
 	require.Equal(t, uint8(1), bits.AsBytes()[0])
 
-	require.Panics(t, func() { bits.WriteTo(&writerToComparer{}) })
+	require.Panics(t, func() { _, _ = bits.WriteTo(&writerToComparer{}) })
 }
 
 func TestBits64Read(t *testing.T) {
@@ -155,7 +155,7 @@ func TestBits128WriteTo(t *testing.T) {
 
 	require.Equal(t, uint8(2), bits.AsBytes()[8])
 
-	require.Panics(t, func() { bits.WriteTo(&writerToComparer{}) })
+	require.Panics(t, func() { _, _ = bits.WriteTo(&writerToComparer{}) })
 }
 
 func TestBits128Read(t *testing.T) {
@@ -219,7 +219,7 @@ func TestBits224WriteTo(t *testing.T) {
 
 	require.Equal(t, uint8(1), bits.AsBytes()[0])
 
-	require.Panics(t, func() { bits.WriteTo(&writerToComparer{}) })
+	require.Panics(t, func() { _, _ = bits.WriteTo(&writerToComparer{}) })
 }
 
 func TestBits224Read(t *testing.T) {
@@ -289,7 +289,7 @@ func TestBits256WriteTo(t *testing.T) {
 
 	require.Equal(t, uint8(1), bits.AsBytes()[0])
 
-	require.Panics(t, func() { bits.WriteTo(&writerToComparer{}) })
+	require.Panics(t, func() { _, _ = bits.WriteTo(&writerToComparer{}) })
 }
 
 func TestBits256Read(t *testing.T) {
@@ -381,7 +381,7 @@ func TestBits512WriteTo(t *testing.T) {
 
 	require.Equal(t, uint8(1), bits.AsBytes()[0])
 
-	require.Panics(t, func() { bits.WriteTo(&writerToComparer{}) })
+	require.Panics(t, func() { _, _ = bits.WriteTo(&writerToComparer{}) })
 }
 
 func TestBits512Read(t *testing.T) {

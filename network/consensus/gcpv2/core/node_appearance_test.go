@@ -214,20 +214,19 @@ func TestVerifyPacketAuthenticity(t *testing.T) {
 	packet := transport.NewPacketParserMock(t)
 	packet.GetPacketSignatureMock.Set(func() cryptkit.SignedDigest { return cryptkit.SignedDigest{} })
 	from := endpoints.NewInboundMock(t)
-	strictFrom := true
-	isAcceptable = false
-	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, strictFrom))
 
-	strictFrom = false
+	isAcceptable = false
+	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, true))
+
 	isSignOfSignatureMethodSupported = false
-	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, strictFrom))
+	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, false))
 
 	isSignOfSignatureMethodSupported = true
 	isValidDigestSignature = false
-	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, strictFrom))
+	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, false))
 
 	isValidDigestSignature = true
-	require.Equal(t, nil, r.VerifyPacketAuthenticity(packet, from, strictFrom))
+	require.Equal(t, nil, r.VerifyPacketAuthenticity(packet, from, false))
 }
 
 // func TestSetReceivedPhase(t *testing.T) {

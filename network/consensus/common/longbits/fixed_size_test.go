@@ -105,7 +105,7 @@ func TestCompare(t *testing.T) {
 }
 
 func TestWrite(t *testing.T) {
-	require.Panics(t, func() { (&writerToComparer{}).Write(nil) })
+	require.Panics(t, func() { _, _ = (&writerToComparer{}).Write(nil) })
 
 	bits := NewBits64(0)
 	fr := NewFixedReaderMock(t)

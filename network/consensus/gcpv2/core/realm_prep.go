@@ -108,7 +108,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	default:
 		limiterKey = from.AsByteString()
 
-		//TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
 		verifyFlags = SkipVerify
 	}
 

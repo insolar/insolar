@@ -267,7 +267,7 @@ func (p *inspectedVector) doVerifyVectorHashes() nodeset.NodeVerificationResult 
 	selfData := statevector.CalcVector{Trusted: p.parent.Trusted, Doubted: p.parent.Doubted}
 
 	if p.doubtedPart.IsNeeded() && selfData.Doubted.AnnouncementHash == nil {
-		//special case when all our nodes are in trusted, so other's doubted vector will be matched with the trusted one of ours
+		// special case when all our nodes are in trusted, so other's doubted vector will be matched with the trusted one of ours
 		selfData.Doubted = selfData.Trusted
 	}
 
@@ -277,7 +277,7 @@ func (p *inspectedVector) doVerifyVectorHashes() nodeset.NodeVerificationResult 
 	if p.trustedPart.IsRecalc() || p.doubtedPart.IsRecalc() {
 		vectorBuilder = p.parent.CreateDerived(p.comparedStats)
 
-		//It does remap the original bitset with the given stats
+		// It does remap the original bitset with the given stats
 		gahTrusted, gahDoubted = vectorBuilder.BuildGlobulaAnnouncementHashes(
 			p.trustedPart.IsRecalc(), p.doubtedPart.IsRecalc(), gahTrusted, gahDoubted)
 	}

@@ -80,7 +80,7 @@ func ClassifyByNodeGsh(selfData LocalHashedNodeVector, otherData statevector.Vec
 		otherData.Doubted.AnnouncementHash != nil)
 
 	if trustedPart == verifyRecalc || doubtedPart == verifyRecalc {
-		//It does remap the original bitset with the given stats
+		// It does remap the original bitset with the given stats
 		derivedVector.PrepareDerivedVector(sr)
 	}
 
@@ -133,7 +133,7 @@ func PrepareSubVectorsComparison(sr ComparedBitsetRow, hasOtherTrusted, hasOther
 	doubtedPart := initVerify(hasOtherDoubted)
 
 	if !trustedPart.IsNeeded() {
-		//Trusted is always present as there is always at least one node - the sender
+		// Trusted is always present as there is always at least one node - the sender
 		panic("illegal state")
 	}
 
@@ -190,17 +190,17 @@ func doVerifyVectorHashes(trustedPart, doubtedPart SubVectorCompared,
 	selfData LocalHashedNodeVector, otherData statevector.Vector, derivedVector *NodeVectorHelper) NodeVerificationResult {
 
 	if doubtedPart.IsNeeded() && selfData.Doubted.AnnouncementHash == nil {
-		//special case when all our nodes are in trusted, so other's doubted vector will be matched with the trusted one of ours
+		// special case when all our nodes are in trusted, so other's doubted vector will be matched with the trusted one of ours
 		selfData.Doubted.AnnouncementHash = selfData.Trusted.AnnouncementHash
 		selfData.DoubtedGlobulaStateVector = selfData.TrustedGlobulaStateVector
-		//selfData.DoubtedGlobulaStateVectorSignature = selfData.TrustedGlobulaStateVectorSignature
+		// selfData.DoubtedGlobulaStateVectorSignature = selfData.TrustedGlobulaStateVectorSignature
 	}
 
 	gahTrusted, gahDoubted := selfData.Trusted.AnnouncementHash, selfData.Doubted.AnnouncementHash
 
 	if trustedPart.IsRecalc() || doubtedPart.IsRecalc() {
-		//It does remap the original bitset with the given stats
-		//derivedVector.PrepareDerivedVector(sr)
+		// It does remap the original bitset with the given stats
+		// derivedVector.PrepareDerivedVector(sr)
 		gahTrusted, gahDoubted = derivedVector.BuildGlobulaAnnouncementHashes(
 			trustedPart.IsRecalc(), doubtedPart.IsRecalc(), gahTrusted, gahDoubted)
 	}

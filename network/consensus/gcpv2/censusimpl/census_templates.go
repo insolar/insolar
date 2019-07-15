@@ -93,7 +93,7 @@ func (c *PrimingCensusTemplate) getVersionedRegistries() census.VersionedRegistr
 }
 
 func NewPrimingCensus(population copyToOnlinePopulation, pf profiles.Factory, registries census.VersionedRegistries) *PrimingCensusTemplate {
-	//TODO HACK - ugly sorting impl to establish initial node ordering
+	// TODO HACK - ugly sorting impl to establish initial node ordering
 	dp := NewDynamicPopulation(population)
 	sortedPopulation := ManyNodePopulation{}
 	sortedPopulation.makeCopyOfMapAndSort(dp.slotByID, dp.local, lessForNodeProfile)

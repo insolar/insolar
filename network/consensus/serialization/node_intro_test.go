@@ -133,7 +133,7 @@ func TestNodeBriefIntro_DeserializeFrom(t *testing.T) {
 	}
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	copy(ni1.JoinerSignature[:], b)
 	copy(ni1.NodePK[:], b)
@@ -160,7 +160,7 @@ func TestNodeBriefIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	}
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	copy(ni1.JoinerSignature[:], b)
 	copy(ni1.NodePK[:], b)
@@ -202,7 +202,7 @@ func TestNodeFullIntro_DeserializeFrom(t *testing.T) {
 	}
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	copy(ni1.JoinerSignature[:], b)
 	copy(ni1.NodePK[:], b)
@@ -230,7 +230,7 @@ func TestNodeFullIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	}
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	copy(ni1.JoinerSignature[:], b)
 	copy(ni1.NodePK[:], b)
@@ -266,7 +266,7 @@ func TestNodeFullIntro_DeserializeFrom_Slices(t *testing.T) {
 	}
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	copy(ni1.JoinerSignature[:], b)
 	copy(ni1.NodePK[:], b)

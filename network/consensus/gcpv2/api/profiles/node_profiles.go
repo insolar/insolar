@@ -73,7 +73,8 @@ type Host interface {
 	// GetHostType()
 }
 
-type NodeIntroduction interface { //full intro
+type NodeIntroduction interface {
+	// full intro
 	GetShortNodeID() insolar.ShortNodeID
 	GetNodeReference() insolar.Reference
 	IsAllowedPower(p member.Power) bool
@@ -82,7 +83,8 @@ type NodeIntroduction interface { //full intro
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.NodeIntroProfile -o . -s _mock.go
 
-type NodeIntroProfile interface { //brief intro
+type NodeIntroProfile interface {
+	// brief intro
 	Host
 	GetShortNodeID() insolar.ShortNodeID
 	GetPrimaryRole() member.PrimaryRole
@@ -91,30 +93,33 @@ type NodeIntroProfile interface { //brief intro
 	GetStartPower() member.Power
 	GetAnnouncementSignature() cryptkit.SignatureHolder
 
-	HasIntroduction() bool             //must be always true for LocalNode
-	GetIntroduction() NodeIntroduction //not null, full intro, will panic when HasIntroduction() == false
+	HasIntroduction() bool             // must be always true for LocalNode
+	GetIntroduction() NodeIntroduction // not null, full intro, will panic when HasIntroduction() == false
 }
 
-type BaseNode interface { //TODO Rename
+type BaseNode interface {
+	// TODO Rename
 	NodeIntroProfile
 	GetSignatureVerifier() cryptkit.SignatureVerifier
 	GetOpMode() member.OpMode
 }
 
-const NodeIndexBits = 10 //DO NOT change it, otherwise nasty consequences will come
+const NodeIndexBits = 10 // DO NOT change it, otherwise nasty consequences will come
 const NodeIndexMask = 1<<NodeIndexBits - 1
 const MaxNodeIndex = NodeIndexMask
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode -o . -s _mock.go
 
-type ActiveNode interface { //TODO Rename
+type ActiveNode interface {
+	// TODO Rename
 	BaseNode
-	GetIndex() int //0 for joiners
+	GetIndex() int // 0 for joiners
 	IsJoiner() bool
 	GetDeclaredPower() member.Power
 }
 
-type EvictedNode interface { //TODO Rename
+type EvictedNode interface {
+	// TODO Rename
 	BaseNode
 	GetLeaveReason() uint32
 }
@@ -143,7 +148,7 @@ type CandidateProfile interface {
 	GetExtraEndpoints() []endpoints.Outbound
 
 	GetReference() insolar.Reference
-	//NodeRefProof	[]common.Bits512
+	// NodeRefProof	[]common.Bits512
 
 	GetIssuerID() insolar.ShortNodeID
 	GetIssuerSignature() cryptkit.SignatureHolder

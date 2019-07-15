@@ -77,7 +77,7 @@ func NewPacketBuilder(crypto transport.CryptographyFactory, localConfig api.Loca
 	}
 }
 
-func (p *PacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
+func (pb *PacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
 	return transport.NeighbourhoodSizes{
 		NeighbourhoodSize:           5,
 		NeighbourhoodTrustThreshold: 2,
