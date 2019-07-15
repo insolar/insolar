@@ -25,20 +25,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GetRequestWM struct {
+type GetRequest struct {
 	dep *proc.Dependencies
 
 	message payload.Meta
 }
 
-func NewGetRequestWM(dep *proc.Dependencies, msg payload.Meta) *GetRequestWM {
-	return &GetRequestWM{
+func NewGetRequest(dep *proc.Dependencies, msg payload.Meta) *GetRequest {
+	return &GetRequest{
 		dep:     dep,
 		message: msg,
 	}
 }
 
-func (s *GetRequestWM) Present(ctx context.Context, f flow.Flow) error {
+func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
 	msg := payload.GetRequest{}
 	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
@@ -46,6 +46,6 @@ func (s *GetRequestWM) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	req := proc.NewGetRequest(s.message, msg.RequestID)
-	s.dep.GetRequestWM(req)
+	s.dep.GetRequest(req)
 	return f.Procedure(ctx, req, false)
 }
