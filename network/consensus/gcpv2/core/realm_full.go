@@ -274,7 +274,7 @@ func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
 		}
 
 		nip := r.profileFactory.CreateFullIntroProfile(cp)
-		sv := r.GetSignatureVerifier(nip.GetNodePublicKeyStore())
+		sv := r.GetSignatureVerifier(nip.GetPublicKeyStore())
 		np := censusimpl.NewJoinerProfile(nip, sv, nip.GetStartPower())
 		na := r.population.CreateNodeAppearance(r.roundContext, &np)
 		nna, nodes := r.population.AddToDynamics(na)
@@ -284,12 +284,12 @@ func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
 			nna = nil
 		}
 		if nodes != nil {
-			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetNodeID(), nodes)
+			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetShortNodeID(), nodes)
 		}
 		if nna != nil {
 			return nna
 		}
-		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetNodeID())
+		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetShortNodeID())
 	}
 }
 
@@ -414,7 +414,7 @@ func (r *FullRealm) preparePrimingMembers(pop census2.PopulationBuilder) {
 		if p.GetSignatureVerifier() != nil {
 			continue
 		}
-		v := r.GetSignatureVerifier(p.GetNodePublicKeyStore())
+		v := r.GetSignatureVerifier(p.GetPublicKeyStore())
 		p.SetSignatureVerifier(v)
 	}
 }
@@ -425,7 +425,7 @@ func (r *FullRealm) prepareRegularMembers(pop census2.PopulationBuilder) {
 
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() == nil {
-			v := r.GetSignatureVerifier(p.GetNodePublicKeyStore())
+			v := r.GetSignatureVerifier(p.GetPublicKeyStore())
 			p.SetSignatureVerifier(v)
 		}
 

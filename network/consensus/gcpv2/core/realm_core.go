@@ -211,7 +211,7 @@ func (r *coreRealm) VerifyPacketAuthenticity(packet transport.PacketParser, from
 			return fmt.Errorf("unable to identify sender: %v", from)
 		}
 	}
-	sf := r.verifierFactory.GetSignatureVerifierWithPKS(nr.GetNodePublicKeyStore())
+	sf := r.verifierFactory.GetSignatureVerifierWithPKS(nr.GetPublicKeyStore())
 	return VerifyPacketAuthenticityBy(packet, nr, sf, from, strictFrom)
 }
 

@@ -93,7 +93,7 @@ func (ni *NodeIntroduction) ConvertPowerRequest(request power.Request) member.Po
 	return pw
 }
 
-func (ni *NodeIntroduction) GetNodeReference() insolar.Reference {
+func (ni *NodeIntroduction) GetReference() insolar.Reference {
 	return ni.ref
 }
 
@@ -185,7 +185,7 @@ func (nip *NodeIntroProfile) GetDefaultEndpoint() endpoints.Outbound {
 	return nip.endpoint
 }
 
-func (nip *NodeIntroProfile) GetNodePublicKeyStore() cryptkit.PublicKeyStore {
+func (nip *NodeIntroProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
 	return nip.store
 }
 
@@ -212,7 +212,7 @@ func (nip *NodeIntroProfile) GetAnnouncementSignature() cryptkit.SignatureHolder
 }
 
 func (nip *NodeIntroProfile) String() string {
-	return fmt.Sprintf("{sid:%d, node:%s}", nip.shortID, nip.intro.GetNodeReference().String())
+	return fmt.Sprintf("{sid:%d, node:%s}", nip.shortID, nip.intro.GetReference().String())
 }
 
 type NodeEndpoint struct {
@@ -258,11 +258,11 @@ func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Ce
 }
 
 func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
-	store := profile.GetNodePublicKeyStore()
+	store := profile.GetPublicKeyStore()
 	introduction := profile.GetIntroduction()
 
 	networkNode := node.NewNode(
-		introduction.GetNodeReference(),
+		introduction.GetReference(),
 		PrimaryRoleToStaticRole(profile.GetPrimaryRole()),
 		store.(*ECDSAPublicKeyStore).publicKey,
 		profile.GetDefaultEndpoint().GetNameAddress().String(),

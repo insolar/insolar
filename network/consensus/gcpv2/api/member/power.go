@@ -159,13 +159,17 @@ Only for normalized
 
 /*
 Only for normalized
-*/func (v PowerSet) ForLevel(lvl capacity.Level) Power {
+*/
+
+func (v PowerSet) ForLevel(lvl capacity.Level) Power {
 	return v.ForLevelWithPercents(lvl, 20, 60, 80)
 }
 
 /*
 Only for normalized
-*/func (v PowerSet) ForLevelWithPercents(lvl capacity.Level, pMinimal, pReduced, pNormal int) Power {
+*/
+
+func (v PowerSet) ForLevelWithPercents(lvl capacity.Level, pMinimal, pReduced, pNormal int) Power {
 
 	if lvl == capacity.LevelZero || v.IsEmpty() {
 		return 0
@@ -221,5 +225,16 @@ Only for normalized
 		return v[3]
 	default:
 		panic("missing")
+	}
+}
+
+func (v PowerSet) FindNearestValid(pw Power) Power {
+
+	panic("unsupported")
+	if pw == 0 {
+		return 0
+	}
+	if pw >= v[3] {
+		return v[3]
 	}
 }

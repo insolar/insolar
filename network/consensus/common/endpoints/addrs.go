@@ -85,6 +85,7 @@ type Outbound interface {
 	GetNameAddress() Name
 	GetIPAddress() packets.NodeAddress
 	AsByteString() string
+	CanAccept(connection Inbound) bool
 }
 
 func EqualEndpoints(p, o Outbound) bool {

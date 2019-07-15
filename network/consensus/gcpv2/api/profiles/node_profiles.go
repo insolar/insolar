@@ -67,27 +67,31 @@ import (
 
 type Host interface {
 	GetDefaultEndpoint() endpoints.Outbound
-	GetNodePublicKeyStore() cryptkit.PublicKeyStore
+	GetPublicKeyStore() cryptkit.PublicKeyStore
 	IsAcceptableHost(from endpoints.Inbound) bool
 	// GetHostType()
 }
 
 type NodeIntroduction interface { //full intro
 	GetShortNodeID() insolar.ShortNodeID
-	GetNodeReference() insolar.Reference
+	GetReference() insolar.Reference
 	IsAllowedPower(p member.Power) bool
 	ConvertPowerRequest(request power.Request) member.Power
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeIntroProfile -o . -s _mock.go
 
-type NodeIntroProfile interface { //brief intro
-	Host
+type nodeIntroProfile interface {
 	GetShortNodeID() insolar.ShortNodeID
 	GetPrimaryRole() member.PrimaryRole
 	GetSpecialRoles() member.SpecialRole
 	GetNodePublicKey() cryptkit.SignatureKeyHolder
 	GetStartPower() member.Power
+}
+
+type NodeIntroProfile interface { //brief intro
+	Host
+	nodeIntroProfile
 	GetAnnouncementSignature() cryptkit.SignatureHolder
 
 	HasIntroduction() bool             //must be always true for LocalNode
@@ -118,18 +122,14 @@ type EvictedNode interface { //TODO Rename
 	GetLeaveReason() uint32
 }
 
-type BriefCandidateProfile interface {
-	GetNodeID() insolar.ShortNodeID
-	GetNodePrimaryRole() member.PrimaryRole
-	GetNodeSpecialRoles() member.SpecialRole
-	GetStartPower() member.Power
-	GetNodePK() cryptkit.SignatureKeyHolder
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.CandidateProfile -o . -s _mock.go
 
-	GetNodeEndpoint() endpoints.Outbound
+type BriefCandidateProfile interface {
+	nodeIntroProfile
+
+	GetDefaultEndpoint() endpoints.Outbound
 	GetJoinerSignature() cryptkit.SignatureHolder
 }
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.CandidateProfile -o . -s _mock.go
 
 type CandidateProfile interface {
 	BriefCandidateProfile

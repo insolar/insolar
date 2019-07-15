@@ -108,12 +108,14 @@ func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.NodeIntroProfile, se
 
 	controlFeeder := &EmuControlFeeder{}
 	candidateFeeder := &core.SequencialCandidateFeeder{}
-	//switch i % 5 {
-	//case 1:
-	//	candidateFeeder.buf = []profiles.CandidateProfile{}
-	//case 2:
-	//	controlFeeder.leaveReason = uint32(i) //simulate leave
-	//}
+	switch {
+	case selfIndex%7 == 1:
+		introID := 8000 + selfIndex
+		intro := NewEmuNodeIntroByName(introID, fmt.Sprintf("v%04d", introID))
+		candidateFeeder.AddJoinCandidate(intro)
+	case selfIndex%5 == 2:
+		controlFeeder.leaveReason = uint32(selfIndex) //simulate leave
+	}
 
 	chronicles := NewEmuChronicles(nodes, selfIndex, &p.primingCloudStateHash)
 	self := nodes[selfIndex]
@@ -124,10 +126,10 @@ func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.NodeIntroProfile, se
 func generateNameList(countNeutral, countHeavy, countLight, countVirtual int) []string {
 	r := make([]string, 0, countNeutral+countHeavy+countLight+countVirtual)
 
-	r = appendNameList(len(r), r, "n%03d", countNeutral)
-	r = appendNameList(len(r), r, "h%03d", countHeavy)
-	r = appendNameList(len(r), r, "l%03d", countLight)
-	r = appendNameList(len(r), r, "v%03d", countVirtual)
+	r = appendNameList(len(r), r, "n%04d", countNeutral)
+	r = appendNameList(len(r), r, "h%04d", countHeavy)
+	r = appendNameList(len(r), r, "l%04d", countLight)
+	r = appendNameList(len(r), r, "v%04d", countVirtual)
 
 	return r
 }

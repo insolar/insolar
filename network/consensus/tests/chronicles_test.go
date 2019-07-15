@@ -65,6 +65,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"math"
+	"time"
 
 	"github.com/insolar/insolar/network/consensusv1/packets"
 
@@ -76,7 +77,7 @@ func NewEmuChronicles(intros []profiles.NodeIntroProfile, localNodeIndex int, pr
 	chronicles := censusimpl.NewLocalChronicles()
 	censusimpl.NewPrimingCensus(
 		&pop,
-		nil,
+		&EmuProfileFactory{},
 		&EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash},
 	).SetAsActiveTo(chronicles)
 	return chronicles
@@ -85,23 +86,28 @@ func NewEmuChronicles(intros []profiles.NodeIntroProfile, localNodeIndex int, pr
 func NewEmuNodeIntros(names ...string) []profiles.NodeIntroProfile {
 	r := make([]profiles.NodeIntroProfile, len(names))
 	for i, n := range names {
-		var sr member.SpecialRole
-		var pr member.PrimaryRole
-		switch n[0] {
-		case 'h':
-			pr = member.PrimaryRoleHeavyMaterial
-			sr = member.SpecialRoleDiscovery
-		case 'l':
-			pr = member.PrimaryRoleLightMaterial
-		case 'v':
-			pr = member.PrimaryRoleVirtual
-		default:
-			pr = member.PrimaryRoleNeutral
-			sr = member.SpecialRoleDiscovery
-		}
-		r[i] = NewEmuNodeIntro(i, endpoints.Name(n), pr, sr)
+		r[i] = NewEmuNodeIntroByName(i, n)
 	}
 	return r
+}
+
+func NewEmuNodeIntroByName(id int, name string) *EmuNodeIntro {
+
+	var sr member.SpecialRole
+	var pr member.PrimaryRole
+	switch name[0] {
+	case 'h':
+		pr = member.PrimaryRoleHeavyMaterial
+		sr = member.SpecialRoleDiscovery
+	case 'l':
+		pr = member.PrimaryRoleLightMaterial
+	case 'v':
+		pr = member.PrimaryRoleVirtual
+	default:
+		pr = member.PrimaryRoleNeutral
+		sr = member.SpecialRoleDiscovery
+	}
+	return NewEmuNodeIntro(id, endpoints.Name(name), pr, sr)
 }
 
 type EmuVersionedRegistries struct {
@@ -150,8 +156,8 @@ func (c *EmuVersionedRegistries) GetVersionPulseData() pulse.Data {
 
 const ShortNodeIdOffset = 1000
 
-func NewEmuNodeIntro(id int, s endpoints.Name, pr member.PrimaryRole, sr member.SpecialRole) profiles.NodeIntroProfile {
-	return &emuNodeIntro{
+func NewEmuNodeIntro(id int, s endpoints.Name, pr member.PrimaryRole, sr member.SpecialRole) *EmuNodeIntro {
+	return &EmuNodeIntro{
 		id: insolar.ShortNodeID(ShortNodeIdOffset + id),
 		n:  &emuEndpoint{name: s},
 		pr: pr,
@@ -185,33 +191,61 @@ func (p *emuEndpoint) GetNameAddress() endpoints.Name {
 	return p.name
 }
 
-type emuNodeIntro struct {
+type EmuNodeIntro struct {
 	n  endpoints.Outbound
 	id insolar.ShortNodeID
 	pr member.PrimaryRole
 	sr member.SpecialRole
 }
 
-func (c *emuNodeIntro) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+func (c *EmuNodeIntro) GetJoinerSignature() cryptkit.SignatureHolder {
+	panic("implement me")
+}
+
+func (c *EmuNodeIntro) GetIssuedAtPulse() pulse.Number {
+	return 0
+}
+
+func (c *EmuNodeIntro) GetIssuedAtTime() time.Time {
+	return time.Now()
+}
+
+func (c *EmuNodeIntro) GetPowerLevels() member.PowerSet {
+	return member.PowerSet{0, 0, 0, 0xFF}
+}
+
+func (c *EmuNodeIntro) GetExtraEndpoints() []endpoints.Outbound {
+	panic("implement me")
+}
+
+func (c *EmuNodeIntro) GetIssuerID() insolar.ShortNodeID {
+	panic("implement me")
+}
+
+func (c *EmuNodeIntro) GetIssuerSignature() cryptkit.SignatureHolder {
+	panic("implement me")
+}
+
+func (c *EmuNodeIntro) GetNodePublicKey() cryptkit.SignatureKeyHolder {
 	v := &longbits.Bits512{}
 	longbits.FillBitsWithStaticNoise(uint32(c.id), v[:])
 	k := cryptkit.NewSignatureKey(v, "stub/stub", cryptkit.PublicAsymmetricKey)
 	return &k
 }
 
-func (c *emuNodeIntro) GetStartPower() member.Power {
+func (c *EmuNodeIntro) GetStartPower() member.Power {
 	return 10
 }
 
-func (c *emuNodeIntro) GetNodeReference() insolar.Reference {
+func (c *EmuNodeIntro) GetReference() insolar.Reference {
 	panic("unsupported")
 }
 
-func (c *emuNodeIntro) HasIntroduction() bool {
+func (c *EmuNodeIntro) HasIntroduction() bool {
 	return true
 }
 
-func (c *emuNodeIntro) ConvertPowerRequest(request power.Request) member.Power {
+func (c *EmuNodeIntro) ConvertPowerRequest(request power.Request) member.Power {
 	if ok, cl := request.AsCapacityLevel(); ok {
 		return member.PowerOf(uint16(cl.DefaultPercent()))
 	}
@@ -219,43 +253,43 @@ func (c *emuNodeIntro) ConvertPowerRequest(request power.Request) member.Power {
 	return pw
 }
 
-func (c *emuNodeIntro) GetPrimaryRole() member.PrimaryRole {
+func (c *EmuNodeIntro) GetPrimaryRole() member.PrimaryRole {
 	return c.pr
 }
 
-func (c *emuNodeIntro) GetSpecialRoles() member.SpecialRole {
+func (c *EmuNodeIntro) GetSpecialRoles() member.SpecialRole {
 	return c.sr
 }
 
-func (*emuNodeIntro) IsAllowedPower(p member.Power) bool {
+func (*EmuNodeIntro) IsAllowedPower(p member.Power) bool {
 	return true
 }
 
-func (c *emuNodeIntro) GetAnnouncementSignature() cryptkit.SignatureHolder {
+func (c *EmuNodeIntro) GetAnnouncementSignature() cryptkit.SignatureHolder {
 	return nil
 }
 
-func (c *emuNodeIntro) GetDefaultEndpoint() endpoints.Outbound {
+func (c *EmuNodeIntro) GetDefaultEndpoint() endpoints.Outbound {
 	return c.n
 }
 
-func (*emuNodeIntro) GetNodePublicKeyStore() cryptkit.PublicKeyStore {
+func (*EmuNodeIntro) GetPublicKeyStore() cryptkit.PublicKeyStore {
 	return nil
 }
 
-func (c *emuNodeIntro) IsAcceptableHost(from endpoints.Inbound) bool {
+func (c *EmuNodeIntro) IsAcceptableHost(from endpoints.Inbound) bool {
 	addr := c.n.GetNameAddress()
 	return addr.Equals(from.GetNameAddress())
 }
 
-func (c *emuNodeIntro) GetShortNodeID() insolar.ShortNodeID {
+func (c *EmuNodeIntro) GetShortNodeID() insolar.ShortNodeID {
 	return c.id
 }
 
-func (c *emuNodeIntro) GetIntroduction() profiles.NodeIntroduction {
+func (c *EmuNodeIntro) GetIntroduction() profiles.NodeIntroduction {
 	return c
 }
 
-func (c *emuNodeIntro) String() string {
+func (c *EmuNodeIntro) String() string {
 	return fmt.Sprintf("{sid:%v, n:%v}", c.id, c.n)
 }

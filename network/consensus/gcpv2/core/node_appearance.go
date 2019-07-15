@@ -214,7 +214,7 @@ func (c *NodeAppearance) GetSignatureVerifier() cryptkit.SignatureVerifier {
 }
 
 func (c *NodeAppearance) CreateSignatureVerifier(vFactory cryptkit.SignatureVerifierFactory) cryptkit.SignatureVerifier {
-	return vFactory.GetSignatureVerifierWithPKS(c.profile.GetNodePublicKeyStore())
+	return vFactory.GetSignatureVerifierWithPKS(c.profile.GetPublicKeyStore())
 }
 
 /* Evidence MUST be verified before this call */

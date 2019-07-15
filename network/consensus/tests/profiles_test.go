@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,54 +46,19 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package core
+package tests
 
-import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"sync"
-)
+import "github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
-type SequencialCandidateFeeder struct {
-	mx  sync.Mutex
-	buf []profiles.CandidateProfile
+type EmuProfileFactory struct {
 }
 
-func (p *SequencialCandidateFeeder) PickNextJoinCandidate() profiles.CandidateProfile {
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
-	if len(p.buf) == 0 {
-		return nil
-	}
-	return p.buf[0]
+func (*EmuProfileFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.NodeIntroProfile {
+	panic("implement me")
 }
 
-func (p *SequencialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool {
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
-	if len(p.buf) == 0 || p.buf[0].GetShortNodeID() != nodeID {
-		return false
-	}
-	if len(p.buf) == 1 {
-		p.buf = nil
-	} else {
-		p.buf[0] = nil
-		p.buf = p.buf[1:]
-	}
-	return true
-}
-
-func (p *SequencialCandidateFeeder) AddJoinCandidate(candidate transport.FullIntroductionReader) {
-	if candidate == nil {
-		panic("illegal value")
-	}
-	p.mx.Lock()
-	defer p.mx.Unlock()
-
-	p.buf = append(p.buf, candidate)
+func (*EmuProfileFactory) CreateFullIntroProfile(candidate profiles.CandidateProfile) profiles.NodeIntroProfile {
+	panic("implement me")
 }
