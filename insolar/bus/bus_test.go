@@ -66,7 +66,7 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	require.Equal(t, mapSizeBefore+1, len(b.replies))
 	externalMsg := <-externalMsgCh
 	require.Equal(t, msg.Metadata, externalMsg.Metadata)
-	require.Equal(t, msg.Payload, externalMsg.Payload)
+	require.Equal(t, payload, []byte(msg.Payload))
 	require.Equal(t, msg.UUID, externalMsg.UUID)
 }
 
@@ -428,8 +428,8 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 
 	ctx := context.Background()
 
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msgPayload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), msgPayload)
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
@@ -442,6 +442,13 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 		return []*message.Message{resMsg}, nil
 	}
 	handler := b.IncomingMessageRouter(incomingHandler)
+
+	meta := payload.Meta{
+		Payload: msg.Payload,
+		ID:      []byte(msg.UUID),
+	}
+	buf, _ := meta.Marshal()
+	msg = message.NewMessage(msg.UUID, buf)
 
 	resHandler, err := handler(msg)
 	require.NoError(t, err)
@@ -490,7 +497,13 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 
 	var reps []*message.Message
 	for _, msg := range msgs {
-		msgMeta := payload.Meta{}
+		msgMeta := payload.Meta{
+			Payload: msg.Payload,
+			ID:      []byte(msg.UUID),
+		}
+		buf, _ := msgMeta.Marshal()
+		msg = message.NewMessage(msg.UUID, buf)
+
 		err := msgMeta.Unmarshal(msg.Payload)
 		require.NoError(t, err)
 
@@ -502,7 +515,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 			OriginHash: hash,
 			ID:         []byte(watermill.NewUUID()),
 		}
-		buf, err := meta.Marshal()
+		buf, err = meta.Marshal()
 		require.NoError(t, err)
 		reps = append(reps, message.NewMessage(watermill.NewUUID(), buf))
 	}

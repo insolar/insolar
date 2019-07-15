@@ -276,7 +276,7 @@ func TestMessageBus_deserializePayload_GetError_WrongBytes(t *testing.T) {
 	r, err := deserializePayload(msg)
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "message bus receive unexpected payload type")
+	require.Contains(t, err.Error(), "wrong polymorph field number")
 	require.Nil(t, r)
 }
 func TestMessageBus_deserializePayload_Nil(t *testing.T) {

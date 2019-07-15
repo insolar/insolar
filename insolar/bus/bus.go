@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -185,7 +185,7 @@ func (b *Bus) SendTarget(
 	}
 
 	msg.SetContext(ctx)
-	wrapped, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{})
+	wrapped, msg, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{})
 	if err != nil {
 		return handleError(errors.Wrap(err, "can't wrap meta message"))
 	}
@@ -246,7 +246,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		return
 	}
 
-	wrapped, err := b.wrapMeta(ctx, reply, origin.Sender, originHash)
+	wrapped, reply, err := b.wrapMeta(ctx, reply, origin.Sender, originHash)
 	if err != nil {
 		logger.Error("can't wrap meta message ", err.Error())
 		return
@@ -333,7 +333,8 @@ func (b *Bus) wrapMeta(
 	msg *message.Message,
 	receiver insolar.Reference,
 	originHash payload.MessageHash,
-) (payload.Meta, error) {
+) (payload.Meta, *message.Message, error) {
+	msg = msg.Copy()
 	var pn insolar.PulseNumber
 	latestPulse, err := b.pulses.Latest(context.Background())
 	if err == nil {
@@ -353,9 +354,9 @@ func (b *Bus) wrapMeta(
 
 	buf, err := meta.Marshal()
 	if err != nil {
-		return payload.Meta{}, errors.Wrap(err, "failed to wrap message")
+		return payload.Meta{}, nil, errors.Wrap(err, "failed to wrap message")
 	}
 	msg.Payload = buf
 
-	return meta, nil
+	return meta, msg, nil
 }
