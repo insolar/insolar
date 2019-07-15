@@ -53,13 +53,14 @@ package ph2ctl
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/lazyhead"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"math"
-	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 

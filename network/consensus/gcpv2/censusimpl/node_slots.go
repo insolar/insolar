@@ -51,10 +51,11 @@
 package censusimpl
 
 import (
+	"math"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"math"
 )
 
 var _ profiles.LocalNode = &NodeProfileSlot{}

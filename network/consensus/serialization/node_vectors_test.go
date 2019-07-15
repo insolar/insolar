@@ -54,9 +54,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"math"
 	"testing"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
 	"github.com/stretchr/testify/require"
 )

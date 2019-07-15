@@ -52,6 +52,9 @@ package tests
 
 import (
 	"context"
+	"io"
+	"math/rand"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -59,8 +62,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"io"
-	"math/rand"
 )
 
 var EmuDefaultPacketBuilder transport.PacketBuilder = &emuPacketBuilder{}

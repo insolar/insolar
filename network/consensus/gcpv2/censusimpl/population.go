@@ -52,11 +52,12 @@ package censusimpl
 
 import (
 	"fmt"
+	"sort"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"sort"
 )
 
 type copyToPopulation interface {

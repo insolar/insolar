@@ -53,6 +53,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 )
 

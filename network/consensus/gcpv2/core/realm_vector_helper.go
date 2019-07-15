@@ -51,10 +51,11 @@
 package core
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 	"sort"
 	"sync"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
 type RealmVectorHelper struct {

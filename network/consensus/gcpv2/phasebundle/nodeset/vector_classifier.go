@@ -51,10 +51,11 @@
 package nodeset
 
 import (
+	"strings"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
-	"strings"
 )
 
 type LocalHashedNodeVector struct {

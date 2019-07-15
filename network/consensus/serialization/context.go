@@ -53,10 +53,11 @@ package serialization
 import (
 	"bytes"
 	"context"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"io"
 	"math"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 
 	"github.com/pkg/errors"
 )
