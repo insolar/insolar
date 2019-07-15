@@ -689,6 +689,10 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 			LedgerHasMoreRequests: ledgerHasMoreRequests,
 		}
 		messages = append(messages, resultsMsg)
+		for _, k := range messagesQueue {
+			logger.Warn("IP1: Send by ExecutorResults ", k.RequestRef)
+		}
+
 	}
 
 	return messages

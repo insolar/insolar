@@ -236,7 +236,7 @@ func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResu
 		if cr.lr != nil {
 			cr.lr.AddUnwantedResponse(ctx, msg)
 		} else {
-			inslogger.FromContext(ctx).Warn("IP1: drop unwanted", msg.RequestRef)
+			inslogger.FromContext(ctx).Warn("IP1: drop unwanted ", msg.RequestRef)
 		}
 		return
 	}
