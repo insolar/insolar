@@ -838,7 +838,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	buf, err := meta.Marshal()
 	msg.Payload = buf
 
-	dummyResult := []byte{1, 2, 3}
+	dummyRequestRef := gen.Reference()
 	callMethodChan := make(chan struct{})
 	var usedCaller insolar.Reference
 	var usedReason insolar.Reference
@@ -852,8 +852,8 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		usedReason = cm.Reason
 		usedReturnMode = cm.ReturnMode
 
-		result := &reply.CallMethod{
-			Result: dummyResult,
+		result := &reply.RegisterRequest{
+			Request: dummyRequestRef,
 		}
 		callMethodChan <- struct{}{}
 		return result, nil
@@ -884,7 +884,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 
 	<-registerResultChan
 	suite.Require().Equal(outgoingRequestRef, &usedRequestRef)
-	suite.Require().Equal(dummyResult, usedResult)
+	suite.Require().Equal(dummyRequestRef.Bytes(), usedResult)
 
 	// In this test LME doesn't need any reply from VE. But if an reply was
 	// required you could check it like this:

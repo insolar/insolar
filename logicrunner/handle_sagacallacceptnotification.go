@@ -3,13 +3,11 @@ package logicrunner
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/record"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
-
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 )
 
@@ -63,7 +61,7 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 
 	// Register result of the outgoing method.
 	outgoingReqRef := insolar.NewReference(msg.OutgoingReqID)
-	result := res.(*reply.CallMethod).Result
+	result := res.(*reply.RegisterRequest).Request.Bytes()
 	am := h.dep.lr.ArtifactManager
 	_, err = am.RegisterResult(ctx, outgoing.Caller, *outgoingReqRef, result)
 	return err
