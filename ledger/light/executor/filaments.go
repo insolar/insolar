@@ -75,6 +75,10 @@ type FilamentCleaner interface {
 	Clear(objID insolar.ID)
 }
 
+func isDetached(rm record.ReturnMode) bool {
+	return rm == record.ReturnSaga
+}
+
 func NewFilamentModifier(
 	indexes object.IndexStorage,
 	recordStorage object.RecordModifier,
@@ -183,12 +187,39 @@ func (m *FilamentModifierDefault) SetRequest(
 		return nil, nil, errors.New("request from the past")
 	}
 
+	// if request has duplicate or result already exists, return RequestDuplicate result
 	foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), objectID, requestID, request)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to set request")
 	}
 	if foundRequest != nil || foundResult != nil {
-		return foundRequest, foundResult, err
+		return foundRequest, foundResult, nil
+	}
+
+	// check outgoing request if any pending exists with the same ID as request's reason.
+	isAnyPendingWithOutgoingRequestReason := func(req record.Request) error {
+		pendings, err := m.calculator.PendingRequests(ctx, requestID.Pulse(), objectID)
+		if err != nil {
+			return err
+		}
+		reason := req.ReasonRef().Record()
+		for _, p := range pendings {
+			if p == *reason {
+				return nil
+			}
+		}
+		return errors.Errorf("object ID %v not found in pendings for request %v", objectID, requestID)
+	}
+
+	switch r := request.(type) {
+	case *record.IncomingRequest:
+		if isDetached(r.ReturnMode) {
+			return nil, nil, errors.Errorf("incoming request can't be detached, has wrong reason %v", r.ReturnMode)
+		}
+	case *record.OutgoingRequest:
+		if err := isAnyPendingWithOutgoingRequestReason(request); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// Save request record to storage.
@@ -419,12 +450,26 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 
 		virtual := record.Unwrap(rec.Record.Virtual)
 		switch r := virtual.(type) {
+		// result should always go first, before initial request
+		case *record.Result:
+			hasResult[*r.Request.Record()] = struct{}{}
 		case *record.IncomingRequest:
 			if _, ok := hasResult[rec.RecordID]; !ok {
 				pending = append(pending, rec.RecordID)
 			}
-		case *record.Result:
-			hasResult[*r.Request.Record()] = struct{}{}
+		// Outgoing without pending incoming reason request couldn't be registered,
+		// so pending outgoing request always goes:
+		// 1) after reason's request (before while iterating)
+		// 2) before reason's request Result. (after while iterating)
+		case *record.OutgoingRequest:
+			// check only detached outgoing requests
+			if !isDetached(r.ReturnMode) {
+				break
+			}
+			// has incoming request with result.
+			if _, ok := hasResult[*r.Reason.Record()]; !ok {
+				pending = append(pending, rec.RecordID)
+			}
 		}
 	}
 
