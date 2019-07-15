@@ -29,21 +29,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CheckOKSender allows to send messaged via provided Sender with retries and check that reply.OK was received.
-type CheckOKSender struct {
+// WaitOKSender allows to send messaged via provided Sender and wait for reply.OK.
+type WaitOKSender struct {
 	sender Sender
 }
 
-// NewCheckOKAndRetrySender creates CheckOKSender instance with RetrySender as Sender.
-func NewCheckOKAndRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *CheckOKSender {
+// NewWaitOKWithRetrySender creates WaitOKSender instance with RetrySender as Sender.
+func NewWaitOKWithRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *WaitOKSender {
 	r := NewRetrySender(sender, pulseAccessor, tries)
-	c := NewCheckOKSender(r)
+	c := NewWaitOKSender(r)
 	return c
 }
 
-// NewCheckOKSender creates CheckOKSender instance with provided values.
-func NewCheckOKSender(sender Sender) *CheckOKSender {
-	c := &CheckOKSender{
+// NewWaitOKSender creates WaitOKSender instance with provided values.
+func NewWaitOKSender(sender Sender) *WaitOKSender {
+	c := &WaitOKSender{
 		sender: sender,
 	}
 	return c
@@ -51,9 +51,19 @@ func NewCheckOKSender(sender Sender) *CheckOKSender {
 
 // SendRole sends message to specified role, using provided Sender.SendRole. It waiting for reply.OK and
 // close replies channel after getting it. If
-func (c *CheckOKSender) SendRole(
+func (c *WaitOKSender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) {
+	msgType := msg.Metadata.Get(MetaType)
+	if msgType == "" {
+		payloadType, err := payload.UnmarshalType(msg.Payload)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to unmarshal payload type"))
+		}
+		msgType = payloadType.String()
+	}
+	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
+
 	reps, done := c.sender.SendRole(ctx, msg, role, ref)
 	defer done()
 
@@ -65,10 +75,10 @@ func (c *CheckOKSender) SendRole(
 		return
 	}
 
-	check(ctx, rep)
+	checkReply(ctx, rep)
 }
 
-func check(ctx context.Context, rep *message.Message) {
+func checkReply(ctx context.Context, rep *message.Message) {
 	logger := inslogger.FromContext(ctx)
 
 	meta := payload.Meta{}
