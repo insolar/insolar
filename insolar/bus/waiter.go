@@ -112,5 +112,4 @@ func checkReply(ctx context.Context, rep *message.Message) {
 	default:
 		logger.Errorf("got unexpected reply: %#v", p)
 	}
-	return
 }
