@@ -859,30 +859,31 @@ func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	logger := inslogger.FromContext(ctx)
 
 	rec, err := i.iter.Prev(ctx)
-	switch err {
-	case nil:
+	if err == nil {
 		return rec, nil
+	}
 
-	case object.ErrNotFound:
-		// Update cache from network.
-		logger.Debug("fetching requests from network")
-		defer logger.Debug("received requests from network")
-		recs, err := i.fetchFromNetwork(ctx, *i.PrevID())
-		if err != nil {
-			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
-		}
-		i.cache.Update(recs)
-
-		// Try to iterate again.
-		rec, err = i.iter.Prev(ctx)
-		if err != nil {
-			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to update filament")
-		}
-		return rec, nil
-
-	default:
+	if err != object.ErrNotFound {
 		return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
 	}
+
+	// Update cache from network.
+	logger.Debug("fetching requests from network")
+	recs, err := i.fetchFromNetwork(ctx, *i.PrevID())
+	logger.Debug("received requests from network")
+	if err != nil {
+		return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
+	}
+
+	i.cache.Update(recs)
+
+	// Try to iterate again.
+	rec, err = i.iter.Prev(ctx)
+	if err != nil {
+		return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to update filament")
+	}
+	return rec, nil
+
 }
 
 func (i *fetchingIterator) fetchFromNetwork(
