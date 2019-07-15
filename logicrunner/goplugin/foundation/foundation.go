@@ -66,6 +66,15 @@ func (bc *BaseContract) GetContext() *insolar.LogicCallContext {
 	return GetContext()
 }
 
+// GetPulse returns current pulse from context.
+func GetPulse() insolar.PulseNumber {
+	req := GetContext().Request
+	if req == nil {
+		panic("request from context is nil")
+	}
+	return req.Record().Pulse()
+}
+
 // GetContext returns current calling context.
 func GetContext() *insolar.LogicCallContext {
 	ctx := gls.Get("callCtx")

@@ -62,6 +62,12 @@ func (hw *HelloWorld) Errored() (interface{}, error) {
 	return nil, errors.New("TestError")
 }
 
+//Get number pulse from foundation
+func (hw *HelloWorld) NumberPulse() (interface{}, error) {
+	pulse := foundation.GetPulse()
+	return pulse, nil
+}
+
 func (hw *HelloWorld) CreateChild() (interface{}, error) {
 	hwHolder := hwProxy.New()
 	chw, err := hwHolder.AsChild(hw.GetReference())
@@ -148,6 +154,8 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return hw.CountChild()
 	case "ReturnObj":
 		return hw.ReturnObj()
+	case "NumberPulse":
+		return hw.NumberPulse()
 	default:
 		return nil, errors.New("Unknown method " + request.Params.CallSite)
 	}

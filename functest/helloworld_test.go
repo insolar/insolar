@@ -263,6 +263,32 @@ func TestCallHelloWorld(t *testing.T) {
 	a.LessOrEqual(100, count)
 }
 
+func (i *HelloWorldInstance) NumberPulse(ctx context.Context) (int, error) {
+	member := &user{i.Ref.String(), root.privKey, root.pubKey}
+	result, err := signedRequest(member, "NumberPulse", nil)
+	if err != nil {
+		return 0, err
+	}
+	rv, ok := result.(float64)
+	if !ok {
+		return 0, errors.Errorf("failed to decode: expected float64, got %T", result)
+	}
+	return int(rv), nil
+}
+
+func TestCallNumberPulse(t *testing.T) {
+	a, r := assert.New(t), require.New(t)
+	ctx := context.TODO()
+
+	hw, err := NewHelloWorld(ctx)
+	r.NoError(err, "Unexpected error")
+	a.NotEmpty(hw.Ref, "Ref doesn't exists")
+	numPulse, err := hw.NumberPulse(ctx)
+	r.NoError(err)
+
+	r.True(numPulse > 0)
+}
+
 func TestCallHelloWorldChild(t *testing.T) {
 	t.Skip("Feature 'child of contract object' is not stable right now")
 
