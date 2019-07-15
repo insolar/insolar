@@ -14,6 +14,7 @@ import (
 )
 
 func Test_BootstrapCalls(t *testing.T) {
+	t.Skip()
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg)
@@ -42,6 +43,7 @@ func Test_BootstrapCalls(t *testing.T) {
 }
 
 func Test_ReplicationScenario(t *testing.T) {
+	t.Skip()
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg)

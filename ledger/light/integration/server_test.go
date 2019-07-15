@@ -185,12 +185,12 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 		jetSplitter := executor.NewJetSplitter(jetCalculator, Jets, Jets, drops, drops, Pulses)
 
 		hotSender := executor.NewHotSender(
-			Bus,
 			drops,
 			indexes,
 			Pulses,
 			Jets,
 			conf.LightChainLimit,
+			WmBus,
 		)
 
 		pm := pulsemanager.NewPulseManager(
