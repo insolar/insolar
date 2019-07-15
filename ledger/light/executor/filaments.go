@@ -567,8 +567,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	if request.ReasonRef().IsEmpty() {
 		return nil, nil, ErrEmptyReason
 	}
-	reason := request.ReasonRef()
-
+	reason := request.ReasonRef().Record()
 	idx, err := c.indexes.ForID(ctx, startFrom, objectID)
 	if err != nil {
 		return nil, nil, err
@@ -586,7 +585,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		cache,
 		objectID,
 		*idx.Lifeline.PendingPointer,
-		reason.Record().Pulse(),
+		reason.Pulse(),
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
