@@ -53,13 +53,14 @@ package ph2ctl
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/lazyhead"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"math"
-	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
@@ -145,9 +146,9 @@ func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader tran
 		case nb.GetJoinerID().IsAbsent():
 			ma = profiles.NewMembershipAnnouncement(mp)
 		default:
-			panic("not implemented") //TODO implement
-			//jar := na.GetJoinerAnnouncement()
-			//ma = common.NewMembershipAnnouncementWithJoiner(mp)
+			panic("not implemented") // TODO implement
+			// jar := na.GetJoinerAnnouncement()
+			// ma = common.NewMembershipAnnouncementWithJoiner(mp)
 		}
 
 		var modified bool
@@ -267,7 +268,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 
 			nh := make([]*core.NodeAppearance, len(nhBuf))
 			for i, np := range nhBuf {
-				//don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
+				// don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
 				nh[i] = np.(*core.NodeAppearance)
 			}
 

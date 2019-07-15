@@ -51,19 +51,20 @@
 package censusimpl
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-	"sync"
 )
 
 func newLocalCensusBuilder(chronicles *localChronicles, pn pulse.Number, population copyToPopulation,
 	fullCopy bool) *LocalCensusBuilder {
 
 	r := &LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn}
-	if fullCopy { //TODO remove fullCopy later
+	if fullCopy { // TODO remove fullCopy later
 		r.population = NewDynamicPopulation(population)
 	} else {
 		r.population = NewDynamicPopulationCopySelf(population)

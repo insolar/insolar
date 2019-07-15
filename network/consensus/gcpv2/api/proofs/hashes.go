@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package proofs
 
@@ -54,7 +54,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeStateHash -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
 
 type NodeStateHash interface {
 	cryptkit.DigestHolder
@@ -72,11 +72,11 @@ type CloudStateHash interface {
 	cryptkit.DigestHolder
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.MemberAnnouncementSignature -o . -s _mock.go
-
 type GlobulaStateSignature interface {
 	cryptkit.SignatureHolder
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
 
 type MemberAnnouncementSignature interface {
 	cryptkit.SignatureHolder
@@ -86,9 +86,9 @@ type NodeAnnouncedState struct {
 	StateEvidence     NodeStateHashEvidence
 	AnnounceSignature MemberAnnouncementSignature
 	//
-	//NodeInternalState common.Digest
-	//NodeStateSignature common.Signature
-	//AnnounceSignature *common.Signature
+	// NodeInternalState common.Digest
+	// NodeStateSignature common.Signature
+	// AnnounceSignature *common.Signature
 }
 
 func (p *NodeAnnouncedState) IsEmpty() bool {
@@ -110,6 +110,8 @@ func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
 func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
 	return c.GetSignatureHolder()
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
 
 // TODO revisit and rework
 type NodeStateHashEvidence interface {

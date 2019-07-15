@@ -53,22 +53,22 @@ package joinctl
 /*
 	Provides handling of packets _from_ joiners.
 */
-//type PhaseControllerWithJoinersTemplate struct {
+// type PhaseControllerWithJoinersTemplate struct {
 //	core.PhaseControllerPerMemberFromUnknownTemplate
-//}
+// }
 //
-//func (*PhaseControllerWithJoinersTemplate) GetHandlerType() core.PhaseControllerHandlerType {
+// func (*PhaseControllerWithJoinersTemplate) GetHandlerType() core.PhaseControllerHandlerType {
 //	return core.PacketHandlerTypeEnableUnknown | core.PacketHandlerTypeMember | core.PacketHandlerTypePerNode
-//}
+// }
 //
-//func (c *PhaseControllerWithJoinersTemplate) HandleUnknownMemberPacket(ctx context.Context, reader transport.MemberPacketReader,
+// func (c *PhaseControllerWithJoinersTemplate) HandleUnknownMemberPacket(ctx context.Context, reader transport.MemberPacketReader,
 //	from endpoints.Inbound) (*core.NodeAppearance, error) {
 //
 //	jc := newJoinerController()
 //	return jc.handleUnknownJoinerPacket(ctx, reader, from, c.R)
-//}
+// }
 //
-//func (c *PhaseControllerWithJoinersTemplate) JoinerCreatePerNodePacketHandler(ctx context.Context, ctlIndex int, node *core.NodeAppearance,
+// func (c *PhaseControllerWithJoinersTemplate) JoinerCreatePerNodePacketHandler(ctx context.Context, ctlIndex int, node *core.NodeAppearance,
 //	realm *core.FullRealm, fn JoinerControllerPacketFunc) (core.PhasePerNodePacketFunc, context.Context) {
 //
 //	if !node.IsJoiner() {
@@ -81,42 +81,42 @@ package joinctl
 //	}
 //
 //	return nil, ctx
-//}
+// }
 //
-//type contextKeyType struct{}
+// type contextKeyType struct{}
 //
-//var contextKeyValue = contextKeyType{}
+// var contextKeyValue = contextKeyType{}
 //
-////type postponedPacket struct {
-////	packet packets.PacketParser
-////}
+// //type postponedPacket struct {
+// //	packet packets.PacketParser
+// //}
 //
-//type JoinerControllerPacketFunc func(ctx context.Context, reader transport.MemberPacketReader, from *JoinerController) error
+// type JoinerControllerPacketFunc func(ctx context.Context, reader transport.MemberPacketReader, from *JoinerController) error
 //
-//type JoinerController struct {
+// type JoinerController struct {
 //	node *core.NodeAppearance
 //	//realm *core.FullRealm
 //
 //	handlerIndices []int //to cleanup when joiner is confirmed
 //	//postponedPackets []postponedPacket
-//}
+// }
 //
-//func newJoinerController() *JoinerController {
+// func newJoinerController() *JoinerController {
 //	return &JoinerController{}
-//}
+// }
 //
-//func (p *JoinerController) EnsureEnvironment(n *core.NodeAppearance, r *core.FullRealm) {
+// func (p *JoinerController) EnsureEnvironment(n *core.NodeAppearance, r *core.FullRealm) {
 //	if p.node != n /* || p.realm != r */ {
 //		panic("illegal value")
 //	}
-//}
+// }
 //
-//func (p *JoinerController) getJoinerPacketHandler(ctlIndex int, fn JoinerControllerPacketFunc) core.PhasePerNodePacketFunc {
+// func (p *JoinerController) getJoinerPacketHandler(ctlIndex int, fn JoinerControllerPacketFunc) core.PhasePerNodePacketFunc {
 //	p.handlerIndices = append(p.handlerIndices, ctlIndex)
 //	return p.createPacketHandler(fn)
-//}
+// }
 //
-//func (p *JoinerController) createPacketHandler(fn JoinerControllerPacketFunc) core.PhasePerNodePacketFunc {
+// func (p *JoinerController) createPacketHandler(fn JoinerControllerPacketFunc) core.PhasePerNodePacketFunc {
 //	return func(ctx context.Context, reader transport.MemberPacketReader, from *core.NodeAppearance, realm *core.FullRealm) error {
 //		p.EnsureEnvironment(from, realm)
 //
@@ -127,9 +127,9 @@ package joinctl
 //		//
 //		return fn(ctx, reader, p)
 //	}
-//}
+// }
 //
-//func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader transport.MemberPacketReader,
+// func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader transport.MemberPacketReader,
 //	from endpoints.Inbound, r *core.FullRealm) (*core.NodeAppearance, error) {
 //
 //	//all packets will also be processed by main handlers
@@ -157,11 +157,11 @@ package joinctl
 //		return p.applyBriefInfo(ctx, p2.GetBriefIntroduction(), from, r)
 //	}
 //	return nil, nil
-//}
+// }
 //
-//func (p *JoinerController) applyBriefInfo(ctx context.Context, intro transport.BriefIntroductionReader,
+// func (p *JoinerController) applyBriefInfo(ctx context.Context, intro transport.BriefIntroductionReader,
 //	from endpoints.Inbound, r *core.FullRealm) (*core.NodeAppearance, error) {
 //
 //	ctx = context.WithValue(ctx, contextKeyValue, p)
 //	return r.CreatePurgatoryNode(ctx, intro, from)
-//}
+// }

@@ -48,89 +48,52 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package power
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/common/capacity"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/stretchr/testify/require"
 )
 
-func TestIsMaterial(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsMaterial())
-
-	require.False(t, member.PrimaryRoleNeutral.IsMaterial())
-
-	require.True(t, member.PrimaryRoleHeavyMaterial.IsMaterial())
-
-	require.True(t, member.PrimaryRoleLightMaterial.IsMaterial())
-
-	require.False(t, member.PrimaryRoleVirtual.IsMaterial())
+func TestNewRequestByLevel(t *testing.T) {
+	require.Equal(t, -Request(capacity.LevelMinimal), NewRequestByLevel(capacity.LevelMinimal))
 }
 
-func TestIsHeavyMaterial(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsHeavyMaterial())
-
-	require.False(t, member.PrimaryRoleNeutral.IsHeavyMaterial())
-
-	require.True(t, member.PrimaryRoleHeavyMaterial.IsHeavyMaterial())
-
-	require.False(t, member.PrimaryRoleLightMaterial.IsHeavyMaterial())
-
-	require.False(t, member.PrimaryRoleVirtual.IsHeavyMaterial())
+func TestNewRequest(t *testing.T) {
+	require.Equal(t, Request(1), NewRequest(member.Power(1)))
 }
 
-func TestIsLightMaterial(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsLightMaterial())
+func TestAsCapacityLevel(t *testing.T) {
+	b, l := Request(-1).AsCapacityLevel()
+	require.True(t, b)
+	require.Equal(t, capacity.Level(1), l)
 
-	require.False(t, member.PrimaryRoleNeutral.IsLightMaterial())
+	b, l = Request(1).AsCapacityLevel()
+	require.False(t, b)
 
-	require.False(t, member.PrimaryRoleHeavyMaterial.IsLightMaterial())
+	r := Request(1)
+	require.Equal(t, capacity.Level(-r), l)
 
-	require.True(t, member.PrimaryRoleLightMaterial.IsLightMaterial())
-
-	require.False(t, member.PrimaryRoleVirtual.IsLightMaterial())
+	b, l = Request(0).AsCapacityLevel()
+	require.False(t, b)
+	require.Equal(t, capacity.Level(0), l)
 }
 
-func TestIsVirtual(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsVirtual())
+func TestAsMemberPower(t *testing.T) {
+	b, l := Request(1).AsMemberPower()
+	require.True(t, b)
+	require.Equal(t, member.Power(1), l)
 
-	require.False(t, member.PrimaryRoleNeutral.IsVirtual())
+	b, l = Request(-1).AsMemberPower()
+	require.False(t, b)
 
-	require.False(t, member.PrimaryRoleHeavyMaterial.IsVirtual())
+	r := Request(-1)
+	require.Equal(t, member.Power(r), l)
 
-	require.False(t, member.PrimaryRoleLightMaterial.IsVirtual())
-
-	require.True(t, member.PrimaryRoleVirtual.IsVirtual())
-}
-
-func TestIsNeutral(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsNeutral())
-
-	require.True(t, member.PrimaryRoleNeutral.IsNeutral())
-
-	require.False(t, member.PrimaryRoleHeavyMaterial.IsNeutral())
-
-	require.False(t, member.PrimaryRoleLightMaterial.IsNeutral())
-
-	require.False(t, member.PrimaryRoleVirtual.IsNeutral())
-}
-
-func TestIsInactive(t *testing.T) {
-	require.True(t, member.PrimaryRoleInactive.IsInactive())
-
-	require.False(t, member.PrimaryRoleNeutral.IsInactive())
-
-	require.False(t, member.PrimaryRoleHeavyMaterial.IsInactive())
-
-	require.False(t, member.PrimaryRoleLightMaterial.IsInactive())
-
-	require.False(t, member.PrimaryRoleVirtual.IsInactive())
-}
-
-func TestIsDiscovery(t *testing.T) {
-	require.False(t, member.SpecialRoleNone.IsDiscovery())
-
-	require.True(t, member.SpecialRoleDiscovery.IsDiscovery())
+	b, l = Request(0).AsMemberPower()
+	require.True(t, b)
+	require.Equal(t, member.Power(0), l)
 }

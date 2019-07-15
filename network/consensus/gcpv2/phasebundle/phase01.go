@@ -53,11 +53,12 @@ package phasebundle
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
@@ -73,8 +74,8 @@ func NewPhase01Controller(packetPrepareOptions transport.PacketSendOptions) *Pha
 func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p0 := packet.AsPhase0Packet()
-	//TODO check NodeRank - especially for suspected node
-	//TODO when PulseDataExt is bigger than ~1.5KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
+	// TODO check NodeRank - especially for suspected node
+	// TODO when PulseDataExt is bigger than ~1.5KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
 	return p.ctl.handlePulseData(ctx, packet, p0.GetEmbeddedPulsePacket(), n)
 }
 
@@ -132,9 +133,9 @@ func (c *Phase01Controller) handleNodeData(p1 transport.Phase1PacketReader, n *c
 	case na.GetJoinerID().IsAbsent():
 		ma = profiles.NewMembershipAnnouncement(mp)
 	default:
-		panic("not implemented") //TODO implement
-		//jar := na.GetJoinerAnnouncement()
-		//ma = common.NewMembershipAnnouncementWithJoiner(mp)
+		panic("not implemented") // TODO implement
+		// jar := na.GetJoinerAnnouncement()
+		// ma = common.NewMembershipAnnouncementWithJoiner(mp)
 	}
 
 	_, err := n.ApplyNodeMembership(ma)
@@ -230,8 +231,8 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeSt
 			continue
 		}
 
-		//DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
-		//Instead we have a chance to save some traffic.
+		// DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
+		// Instead we have a chance to save some traffic.
 		p0.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
 		target.SetPacketSent(phases.PacketPhase0)
 
@@ -259,7 +260,7 @@ func (c *Phase01Controller) workerSendPhase1(ctx context.Context, startIndex int
 
 	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
-	//first, send to nodes not covered by Phase 0
+	// first, send to nodes not covered by Phase 0
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (profiles.ActiveNode, transport.PacketSendOptions) {
 			target := otherNodes[targetIdx+startIndex]

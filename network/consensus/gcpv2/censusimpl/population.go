@@ -52,11 +52,12 @@ package censusimpl
 
 import (
 	"fmt"
+	"sort"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"sort"
 )
 
 type copyToPopulation interface {
@@ -160,7 +161,7 @@ func (c *ManyNodePopulation) makeFullCopyOf(slots []updatableSlot, local *updata
 func (c *ManyNodePopulation) makeCopyOfMapAndSeparateEvicts(slots map[insolar.ShortNodeID]*updatableSlot, local *updatableSlot) []*updatableSlot {
 
 	var evicts []*updatableSlot
-	//TODO HACK - must use vector-based ordering
+	// TODO HACK - must use vector-based ordering
 	slotCount := len(slots)
 	indexed := make([]*updatableSlot, slotCount)
 	c.slots = make([]updatableSlot, slotCount)

@@ -53,6 +53,9 @@ package ph3ctl
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/chaser"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -62,8 +65,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph2ctl"
-	"sync"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -162,7 +163,7 @@ func (c *Phase3ControllerV2) workerPhase3(ctxRound context.Context) {
 	localProjection := vectorHelper.CreateProjection()
 	localInspector := c.inspectionFactory.CreateInspector(&localProjection, c.R.GetDigestFactory(), c.R.GetSelfNodeID())
 
-	//it also finalizes internal state to allow later parallel use
+	// it also finalizes internal state to allow later parallel use
 	localHashedVector := localInspector.CreateVector(c.R.GetSigner())
 
 	c.setInspector(localInspector)
@@ -176,7 +177,7 @@ func (c *Phase3ControllerV2) workerPhase3(ctxRound context.Context) {
 	// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
 	// c.R.StopRoundByTimeout()
 
-	//avoid any links to controllers for this flusher
+	// avoid any links to controllers for this flusher
 	go workerQueueFlusher(ctxRound, c.queuePh3Recv, c.queueTrustUpdated)
 }
 
@@ -234,7 +235,7 @@ outer:
 		case sig := <-c.queueTrustUpdated:
 			switch {
 			case sig.IsPingSignal(): // ping indicates arrival of Phase2 packet, to support chasing
-				//TODO chasing
+				// TODO chasing
 				continue
 			case sig.NewTrustLevel < 0:
 				countFraud++
@@ -295,7 +296,7 @@ func (c *Phase3ControllerV2) workerRescanForMissing(ctx context.Context, missing
 			if sig.IsPingSignal() {
 				continue
 			}
-			//TODO
+			// TODO
 		}
 	}
 }
@@ -314,7 +315,7 @@ func (c *Phase3ControllerV2) workerSendPhase3(ctx context.Context, selfData stat
 			return np.GetProfile(), 0
 		})
 
-	//TODO send to shuffled joiners as well?
+	// TODO send to shuffled joiners as well?
 }
 
 func (c *Phase3ControllerV2) workerRecvPhase3(ctx context.Context, localInspector VectorInspector) bool {
@@ -329,7 +330,7 @@ func (c *Phase3ControllerV2) workerRecvPhase3(ctx context.Context, localInspecto
 
 	statTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
 
-	//should it be updatable?
+	// should it be updatable?
 	statTbl.PutRow(c.R.GetSelf().GetIndex(), nodeset.LocalToConsensusStatRow(localInspector.GetBitset()))
 
 	remainingNodes := c.R.GetPopulation().GetOthersCount()
@@ -338,7 +339,7 @@ func (c *Phase3ControllerV2) workerRecvPhase3(ctx context.Context, localInspecto
 	// even if we wont have all NSH, we can let to know these nodes on such collision
 	// bitsetMatcher := make(map[gcpv2.StateBitset])
 
-	//hasher := nodeset.NewFilteredSequenceHasher(c.R.GetDigestFactory(), localVector)
+	// hasher := nodeset.NewFilteredSequenceHasher(c.R.GetDigestFactory(), localVector)
 
 	alteredDoubtedGshCount := 0
 	var consensusSelection ConsensusSelection
@@ -365,23 +366,23 @@ outer:
 					go c.workerRescanForMissing(ctx, queueMissing)
 				}
 				queueMissing <- d
-				break //do chasing
+				break // do chasing
 			case !d.IsInspected():
 				d = d.Reinspect(localInspector)
 				if !d.IsInspected() {
 					if d.HasMissingMembers() {
 						c.queuePh3Recv <- d
 					}
-					//TODO heavy inspection with hash recalculations should be running on a limited pool
+					// TODO heavy inspection with hash recalculations should be running on a limited pool
 					go func() {
 						d.Inspect()
 						if d.IsInspected() {
 							c.queuePh3Recv <- d
 						} else {
-							//TODO error
+							// TODO error
 						}
 					}()
-					break //do chasing
+					break // do chasing
 				}
 				fallthrough
 			default:
@@ -468,7 +469,7 @@ outer:
 
 	b := c.R.CreateNextCensusBuilder()
 	if c.buildNextPopulation(b.GetPopulationBuilder(), selectionSet) {
-		//TODO HACK
+		// TODO HACK
 		priming := c.R.GetPrimingCloudHash()
 		b.SetGlobulaStateHash(priming)
 		b.SealCensus()
@@ -482,32 +483,32 @@ outer:
 
 func (c *Phase3ControllerV2) buildNextPopulation(pb census.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
 
-	//pop := c.R.GetPopulation()
-	//count := 0
-	//for _, na := pop.GetIndexedNodes() {
+	// pop := c.R.GetPopulation()
+	// count := 0
+	// for _, na := pop.GetIndexedNodes() {
 	//
-	//}
+	// }
 	//
-	//for
+	// for
 	//
-	//if isLeaver, leaveReason, _, _, _ := c.R.GetSelf().GetRequestedState(); isLeaver {
+	// if isLeaver, leaveReason, _, _, _ := c.R.GetSelf().GetRequestedState(); isLeaver {
 	//	//we are leaving, no need to build population, but lets make it look nice
 	//	pb.RemoveOthers()
 	//	lp := pb.GetLocalProfile()
 	//	lp.SetIndex(0)
 	//	lp.SetOpModeAndLeaveReason(leaveReason)
 	//	return false
-	//}
+	// }
 	//
 	//
-	////if pb.GetLocalProfile().GetOpMode().IsEvicted() /* TODO and local is still evicted */ {
-	////	//this node was evicted, so we can have a consensus with ourselves
-	////	pb.RemoveOthers()
-	////	return
-	////}
+	// //if pb.GetLocalProfile().GetOpMode().IsEvicted() /* TODO and local is still evicted */ {
+	// //	//this node was evicted, so we can have a consensus with ourselves
+	// //	pb.RemoveOthers()
+	// //	return
+	// //}
 	//
-	//pop := c.R.GetPopulation()
-	//for _, np := range pb.GetUnorderedProfiles() {
+	// pop := c.R.GetPopulation()
+	// for _, np := range pb.GetUnorderedProfiles() {
 	//	opm := np.GetOpMode()
 	//	if np.IsJoiner() || opm.IsEvicted() { panic("illegal state") }
 	//
@@ -520,6 +521,6 @@ func (c *Phase3ControllerV2) buildNextPopulation(pb census.PopulationBuilder, no
 	//	if isLeaver {
 	//		np.SetOpMode(common2.MemberModeEvictedGracefully)
 	//	}
-	//}
+	// }
 	return true
 }

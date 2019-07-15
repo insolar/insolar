@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,20 +46,18 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package endpoints
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 )
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.Outbound -o . -s _mock.go
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.Inbound -o . -s _mock.go
 
 type Name string
 
@@ -78,6 +76,8 @@ func (addr *Name) EqualsToString(o string) bool {
 func (addr Name) String() string {
 	return string(addr)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/endpoints.Outbound -o . -s _mock.go
 
 type Outbound interface {
 	GetEndpointType() NodeEndpointType
@@ -117,6 +117,8 @@ const (
 	NameEndpoint
 	RelayEndpoint
 )
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/endpoints.Inbound -o . -s _mock.go
 
 type Inbound interface {
 	GetNameAddress() Name

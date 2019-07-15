@@ -3,7 +3,7 @@ package cryptkit
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DigestSigner" can be found in github.com/insolar/insolar/network/consensus/common
+The original interface "DigestSigner" can be found in github.com/insolar/insolar/network/consensus/common/cryptkit
 */
 import (
 	"sync/atomic"
@@ -13,7 +13,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DigestSignerMock implements github.com/insolar/insolar/network/consensus/common.DigestSigner
+//DigestSignerMock implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestSigner
 type DigestSignerMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type DigestSignerMock struct {
 	SignDigestMock       mDigestSignerMockSignDigest
 }
 
-//NewDigestSignerMock returns a mock for github.com/insolar/insolar/network/consensus/common.DigestSigner
+//NewDigestSignerMock returns a mock for github.com/insolar/insolar/network/consensus/common/cryptkit.DigestSigner
 func NewDigestSignerMock(t minimock.Tester) *DigestSignerMock {
 	m := &DigestSignerMock{t: t}
 
@@ -104,7 +104,7 @@ func (m *mDigestSignerMockGetSignMethod) Set(f func() (r SignMethod)) *DigestSig
 	return m.mock
 }
 
-//GetSignMethod implements github.com/insolar/insolar/network/consensus/common.DigestSigner interface
+//GetSignMethod implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestSigner interface
 func (m *DigestSignerMock) GetSignMethod() (r SignMethod) {
 	counter := atomic.AddUint64(&m.GetSignMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignMethodCounter, 1)
@@ -243,7 +243,7 @@ func (m *mDigestSignerMockSignDigest) Set(f func(p Digest) (r Signature)) *Diges
 	return m.mock
 }
 
-//SignDigest implements github.com/insolar/insolar/network/consensus/common.DigestSigner interface
+//SignDigest implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestSigner interface
 func (m *DigestSignerMock) SignDigest(p Digest) (r Signature) {
 	counter := atomic.AddUint64(&m.SignDigestPreCounter, 1)
 	defer atomic.AddUint64(&m.SignDigestCounter, 1)

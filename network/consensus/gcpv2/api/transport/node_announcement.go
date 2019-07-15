@@ -52,6 +52,7 @@ package transport
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -69,7 +70,7 @@ func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncem
 	}
 }
 
-//func NewNodeAnnouncementOf(na MembershipAnnouncementReader, pn common.PulseNumber) *NodeAnnouncementProfile {
+// func NewNodeAnnouncementOf(na MembershipAnnouncementReader, pn common.PulseNumber) *NodeAnnouncementProfile {
 //	nr := na.GetNodeRank()
 //	return &NodeAnnouncementProfile{
 //		nodeID:    na.GetNodeID(),
@@ -86,7 +87,7 @@ func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncem
 //			na.GetRequestedPower(),
 //		),
 //	}
-//}
+// }
 
 var _ MembershipAnnouncementReader = &NodeAnnouncementProfile{}
 

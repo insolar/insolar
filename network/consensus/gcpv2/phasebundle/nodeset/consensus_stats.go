@@ -52,6 +52,7 @@ package nodeset
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/stats"

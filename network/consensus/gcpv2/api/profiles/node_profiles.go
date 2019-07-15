@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,24 +46,25 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package profiles
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Host -o . -s _mock.go
 
 type Host interface {
 	GetDefaultEndpoint() endpoints.Outbound
@@ -72,14 +73,15 @@ type Host interface {
 	// GetHostType()
 }
 
-type NodeIntroduction interface { //full intro
+type NodeIntroduction interface {
+	// full intro
 	GetShortNodeID() insolar.ShortNodeID
 	GetReference() insolar.Reference
 	IsAllowedPower(p member.Power) bool
 	ConvertPowerRequest(request power.Request) member.Power
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeIntroProfile -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.NodeIntroProfile -o . -s _mock.go
 
 type nodeIntroProfile interface {
 	GetShortNodeID() insolar.ShortNodeID
@@ -94,30 +96,33 @@ type NodeIntroProfile interface { //brief intro
 	nodeIntroProfile
 	GetAnnouncementSignature() cryptkit.SignatureHolder
 
-	HasIntroduction() bool             //must be always true for LocalNode
-	GetIntroduction() NodeIntroduction //not null, full intro, will panic when HasIntroduction() == false
+	HasIntroduction() bool             // must be always true for LocalNode
+	GetIntroduction() NodeIntroduction // not null, full intro, will panic when HasIntroduction() == false
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.ActiveNode -o . -s _mock.go
-
-type BaseNode interface { //TODO Rename
+type BaseNode interface {
+	// TODO Rename
 	NodeIntroProfile
 	GetSignatureVerifier() cryptkit.SignatureVerifier
 	GetOpMode() member.OpMode
 }
 
-const NodeIndexBits = 10 //DO NOT change it, otherwise nasty consequences will come
+const NodeIndexBits = 10 // DO NOT change it, otherwise nasty consequences will come
 const NodeIndexMask = 1<<NodeIndexBits - 1
 const MaxNodeIndex = NodeIndexMask
 
-type ActiveNode interface { //TODO Rename
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode -o . -s _mock.go
+
+type ActiveNode interface {
+	// TODO Rename
 	BaseNode
-	GetIndex() int //0 for joiners
+	GetIndex() int // 0 for joiners
 	IsJoiner() bool
 	GetDeclaredPower() member.Power
 }
 
-type EvictedNode interface { //TODO Rename
+type EvictedNode interface {
+	// TODO Rename
 	BaseNode
 	GetLeaveReason() uint32
 }
@@ -131,6 +136,8 @@ type BriefCandidateProfile interface {
 	GetJoinerSignature() cryptkit.SignatureHolder
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile -o . -s _mock.go
+
 type CandidateProfile interface {
 	BriefCandidateProfile
 
@@ -142,7 +149,7 @@ type CandidateProfile interface {
 	GetExtraEndpoints() []endpoints.Outbound
 
 	GetReference() insolar.Reference
-	//NodeRefProof	[]common.Bits512
+	// NodeRefProof	[]common.Bits512
 
 	GetIssuerID() insolar.ShortNodeID
 	GetIssuerSignature() cryptkit.SignatureHolder
@@ -154,7 +161,7 @@ type Factory interface {
 	CreateFullIntroProfile(candidate CandidateProfile) NodeIntroProfile
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNode -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.LocalNode -o . -s _mock.go
 
 type LocalNode interface {
 	ActiveNode

@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
@@ -74,7 +75,7 @@ func (c *PrepPhaseControllerTemplate) BeforeStart(realm *PrepRealm) {
 func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {
 }
 
-//var _ PacketDispatcher = &HostPacketDispatcher{}
+// var _ PacketDispatcher = &HostPacketDispatcher{}
 
 type HostPacketDispatcher struct {
 }
@@ -83,7 +84,7 @@ func (*HostPacketDispatcher) DispatchMemberPacket(ctx context.Context, packet tr
 	panic("illegal state")
 }
 
-//var _ PacketDispatcher = &MemberPacketDispatcher{}
+// var _ PacketDispatcher = &MemberPacketDispatcher{}
 
 type MemberPacketDispatcher struct {
 }

@@ -52,11 +52,12 @@ package phasebundle
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph2ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph3ctl"
-	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )

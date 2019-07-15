@@ -53,6 +53,7 @@ package serialization
 import (
 	"bytes"
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -76,7 +77,7 @@ func NewPacketBuilder(crypto transport.CryptographyFactory, localConfig api.Loca
 	}
 }
 
-func (p *PacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
+func (pb *PacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
 	return transport.NeighbourhoodSizes{
 		NeighbourhoodSize:           5,
 		NeighbourhoodTrustThreshold: 2,
@@ -85,7 +86,7 @@ func (p *PacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
 	}
 }
 
-func (p *PacketBuilder) preparePacket(sender *transport.NodeAnnouncementProfile, packetType phases.PacketType) *Packet {
+func (pb *PacketBuilder) preparePacket(sender *transport.NodeAnnouncementProfile, packetType phases.PacketType) *Packet {
 	packet := &Packet{
 		Header: Header{
 			SourceID: uint32(sender.GetNodeID()),
@@ -103,18 +104,18 @@ func (p *PacketBuilder) preparePacket(sender *transport.NodeAnnouncementProfile,
 	return packet
 }
 
-func (p *PacketBuilder) prepareWrapper(packet *Packet) *preparedPacketWrapper {
-	return &preparedPacketWrapper{
+func (pb *PacketBuilder) prepareWrapper(packet *Packet) *PreparedPacketSender {
+	return &PreparedPacketSender{
 		packet:   packet,
-		digester: p.crypto.GetDigestFactory().GetPacketDigester(),
-		signer:   p.crypto.GetNodeSigner(p.localConfig.GetSecretKeyStore()),
+		digester: pb.crypto.GetDigestFactory().GetPacketDigester(),
+		signer:   pb.crypto.GetNodeSigner(pb.localConfig.GetSecretKeyStore()),
 	}
 }
 
-func (p *PacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
+func (pb *PacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
 	options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, phases.PacketPhase0)
+	packet := pb.preparePacket(sender, phases.PacketPhase0)
 	if (options & transport.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
@@ -123,13 +124,13 @@ func (p *PacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementPr
 	body.CurrentRank = sender.GetNodeRank()
 	body.PulsarPacket.Data = pulsarPacket.AsBytes()
 
-	return p.prepareWrapper(packet)
+	return pb.prepareWrapper(packet)
 }
 
-func (p *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
+func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
 	options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, phases.PacketPhase1)
+	packet := pb.preparePacket(sender, phases.PacketPhase1)
 	if (options & transport.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
@@ -141,36 +142,48 @@ func (p *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementPr
 	body.FullSelfIntro.setAddrMode(body.FullSelfIntro.getAddrMode())
 	body.FullSelfIntro.setPrimaryRole(body.FullSelfIntro.getPrimaryRole())
 
-	return p.prepareWrapper(packet)
+	return pb.prepareWrapper(packet)
 }
 
-func (p *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile,
+func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile,
 	neighbourhood []transport.MembershipAnnouncementReader, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, phases.PacketPhase2)
+	packet := pb.preparePacket(sender, phases.PacketPhase2)
 
-	return p.prepareWrapper(packet)
+	return pb.prepareWrapper(packet)
 }
 
-func (p *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementProfile,
+func (pb *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementProfile,
 	vectors statevector.Vector, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, phases.PacketPhase3)
+	packet := pb.preparePacket(sender, phases.PacketPhase3)
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.Vectors.StateVectorMask.SetBitset(vectors.Bitset)
 
-	return p.prepareWrapper(packet)
+	copy(body.Vectors.MainStateVector.VectorHash[:], vectors.Trusted.AnnouncementHash.AsBytes())
+	copy(body.Vectors.MainStateVector.SignedGlobulaStateHash[:], vectors.Trusted.StateSignature.AsBytes())
+	body.Vectors.MainStateVector.ExpectedRank = vectors.Trusted.ExpectedRank
+
+	if vectors.Doubted.AnnouncementHash != nil {
+		packet.Header.SetFlag(1)
+		body.Vectors.AdditionalStateVectors = make([]GlobulaStateVector, 1)
+		copy(body.Vectors.AdditionalStateVectors[0].VectorHash[:], vectors.Doubted.AnnouncementHash.AsBytes())
+		copy(body.Vectors.AdditionalStateVectors[0].SignedGlobulaStateHash[:], vectors.Doubted.StateSignature.AsBytes())
+		body.Vectors.AdditionalStateVectors[0].ExpectedRank = vectors.Doubted.ExpectedRank
+	}
+
+	return pb.prepareWrapper(packet)
 }
 
-type preparedPacketWrapper struct {
+type PreparedPacketSender struct {
 	packet   *Packet
 	buf      [packetMaxSize]byte
 	digester cryptkit.DataDigester
 	signer   cryptkit.DigestSigner
 }
 
-func (p *preparedPacketWrapper) SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
+func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
 	p.packet.Header.TargetID = uint32(target.GetShortNodeID())
 
 	if (sendOptions & transport.SendWithoutPulseData) != 0 {
@@ -186,7 +199,7 @@ func (p *preparedPacketWrapper) SendTo(ctx context.Context, target profiles.Acti
 	sender.SendPacketToTransport(ctx, target, sendOptions, p.buf[:buf.Len()])
 }
 
-func (p *preparedPacketWrapper) SendToMany(ctx context.Context, targetCount int, sender transport.PacketSender,
+func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, sender transport.PacketSender,
 	filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, transport.PacketSendOptions)) {
 
 	for i := 0; i <= targetCount; i++ {

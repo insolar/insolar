@@ -48,10 +48,9 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package transport
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"math"
 	"testing"
 
@@ -59,7 +58,7 @@ import (
 )
 
 func TestVerifySizes(t *testing.T) {
-	ns := &transport.NeighbourhoodSizes{}
+	ns := &NeighbourhoodSizes{}
 	ns.NeighbourhoodSize = 1
 	require.Panics(t, ns.VerifySizes)
 

@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package ph3ctl
 
@@ -86,7 +86,7 @@ func (*simpleSimpleConsensusSelectionStrategy) SelectOnStopped(globulaStats *nod
 		case tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority:
 			decision = nodeset.CbsIncluded
 			// TODO suspect markings etc must be by consensus decision
-			//case pop.GetNodeAppearanceByIndex(i).GetProfile().GetState().IsSuspect():
+			// case pop.GetNodeAppearanceByIndex(i).GetProfile().GetState().IsSuspect():
 			//	decision = nodeset.CbsExcluded
 		}
 		resultSet.Set(i, decision)

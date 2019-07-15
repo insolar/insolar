@@ -52,6 +52,7 @@ package misbehavior
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )

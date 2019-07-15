@@ -90,9 +90,9 @@ type ClaimList struct {
 	EndOfClaims EmptyClaim // ByteSize=2 - indicates end of claims
 }
 
-func newClaimHeader(t ClaimType, lenght int) ClaimHeader {
+func newClaimHeader(t ClaimType, length int) ClaimHeader {
 	var h ClaimHeader
-	h.TypeAndLength = (h.TypeAndLength | uint16(t)<<claimHeaderTypeShift) | uint16(lenght)
+	h.TypeAndLength = (h.TypeAndLength | uint16(t)<<claimHeaderTypeShift) | uint16(length)
 	return h
 }
 
@@ -150,10 +150,10 @@ func (cl *ClaimList) DeserializeFrom(ctx DeserializeContext, reader io.Reader) e
 			}
 
 			claim := GenericClaim{header, make([]byte, header.Length())}
-			lreader := io.LimitReader(reader, int64(header.Length()))
-			n, err := lreader.Read(claim.Payload)
+			limitReader := io.LimitReader(reader, int64(header.Length()))
+			n, err := limitReader.Read(claim.Payload)
 			if err != nil || n != header.Length() {
-				return ErrPayloadLengthMissmatch(int64(header.Length()), int64(n))
+				return ErrPayloadLengthMismatch(int64(header.Length()), int64(n))
 			}
 			cl.Claims = append(cl.Claims, claim)
 			return nil

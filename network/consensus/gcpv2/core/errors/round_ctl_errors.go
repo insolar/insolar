@@ -53,6 +53,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 )
 
@@ -86,5 +87,3 @@ type nextPulseRoundError struct {
 func (e *nextPulseRoundError) Error() string {
 	return e.s
 }
-
-var ErrPacketLimitExceeded = errors.New("packet limit exceeded")

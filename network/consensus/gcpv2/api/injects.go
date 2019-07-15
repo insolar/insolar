@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,12 +46,14 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package api
 
 import (
 	"context"
+	"time"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -62,7 +64,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"time"
 )
 
 type ConsensusController interface {
@@ -71,12 +72,13 @@ type ConsensusController interface {
 	/* Ungraceful stop */
 	Abort()
 	/* Graceful exit, actual moment of leave will be indicated via Upstream */
-	//RequestLeave()
+	// RequestLeave()
 
 	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
 	GetActivePowerLimit() (member.Power, pulse.Number)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api.CandidateControlFeeder -o . -s _mock.go
 type CandidateControlFeeder interface {
 	PickNextJoinCandidate() profiles.CandidateProfile
 	RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool
@@ -108,8 +110,8 @@ type ConsensusControlFeeder interface {
 	/* Consensus is finished. If expectedCensus == 0 then this node was evicted from consensus.	*/
 	ConsensusFinished(report UpstreamReport, expectedCensus census.Operational)
 
-	///* Consensus has stopped abnormally	*/
-	//ConsensusFailed(report UpstreamReport)
+	// /* Consensus has stopped abnormally	*/
+	// ConsensusFailed(report UpstreamReport)
 }
 
 type RoundController interface {

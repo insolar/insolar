@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,15 +46,16 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package pulse
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"strings"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/common/longbits"
 )
 
 const InvalidPulseEpoch uint32 = 0
@@ -155,7 +156,7 @@ func newEphemeralData(pn Number) *Data {
 	return &s
 }
 
-/* This function has a fixed implementation and MUST remain unchanged as some elements of Consesnsus rely on identical behavior of this functions. */
+/* This function has a fixed implementation and MUST remain unchanged as some elements of Consensus rely on identical behavior of this functions. */
 func fixedPulseEntropy(v *longbits.Bits256, pn Number) {
 	longbits.FillBitsWithStaticNoise(uint32(pn), (*v)[:])
 }

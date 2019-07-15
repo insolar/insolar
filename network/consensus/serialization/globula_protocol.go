@@ -51,12 +51,13 @@
 package serialization
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"io"
 
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"

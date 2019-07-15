@@ -52,10 +52,11 @@ package censusimpl
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"sync"
 )
 
 func NewLocalChronicles() LocalConsensusChronicles {

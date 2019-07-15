@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package longbits
 
@@ -59,7 +59,7 @@ type Foldable interface {
 	FoldToUint64() uint64
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.FoldableReader -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/longbits.FixedReader -o . -s _mock.go
 
 type FixedReader interface {
 	io.WriterTo
@@ -69,6 +69,8 @@ type FixedReader interface {
 
 	FixedByteSize() int
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader -o . -s _mock.go
 
 type FoldableReader interface {
 	FixedReader

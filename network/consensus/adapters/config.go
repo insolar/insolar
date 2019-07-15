@@ -53,11 +53,11 @@ package adapters
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 )
 
 var defaultRoundTimings = api.RoundTimings{

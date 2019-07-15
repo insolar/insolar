@@ -53,10 +53,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/consensuskit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"sync"
 )
 
 func NewDynamicRealmPopulation(baselineWeight uint32, local profiles.ActiveNode, nodeCountHint int, phase2ExtLimit uint8,
@@ -174,9 +175,9 @@ func (r *DynamicRealmPopulation) IsComplete() bool {
 
 func (r *DynamicRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	cp, _ := r.GetIndexedNodesWithCheck()
-	//if !ok {
+	// if !ok {
 	//	panic("node set is incomplete")
-	//}
+	// }
 	return cp
 }
 

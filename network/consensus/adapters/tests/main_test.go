@@ -87,8 +87,8 @@ func TestConsensusMain(t *testing.T) {
 	ctx := initLogger()
 	network := initNetwork(ctx)
 
-	nodeIdents := generateNodeIdentities(0, 1, 3, 5)
-	nodeInfos := generateNodeInfos(nodeIdents)
+	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
+	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
 	pulseHandlers := make([]network2.PulseHandler, 0, len(nodes))
@@ -190,9 +190,9 @@ func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole)
 	return r
 }
 
-func generateNodeInfos(nodeIdents []nodeIdentity) []*nodeInfo {
-	nodeInfos := make([]*nodeInfo, 0, len(nodeIdents))
-	for _, ni := range nodeIdents {
+func generateNodeInfos(nodeIdentities []nodeIdentity) []*nodeInfo {
+	nodeInfos := make([]*nodeInfo, 0, len(nodeIdentities))
+	for _, ni := range nodeIdentities {
 		privateKey, _ := keyProcessor.GeneratePrivateKey()
 		publicKey := keyProcessor.ExtractPublicKey(privateKey)
 

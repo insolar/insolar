@@ -54,8 +54,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"testing"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 
 	"github.com/stretchr/testify/require"
 )
@@ -84,7 +85,7 @@ func TestEmbeddedPulsarData_DeserializeFrom(t *testing.T) {
 	p.Header.setProtocolType(ProtocolTypePulsar)
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	_, err := p.SerializeTo(context.Background(), buf, digester, signer)
@@ -113,7 +114,7 @@ func TestCloudIntro_DeserializeFrom(t *testing.T) {
 	ci1 := CloudIntro{}
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	copy(ci1.CloudIdentity[:], b)
 	copy(ci1.LastCloudStateHash[:], b)
@@ -143,7 +144,7 @@ func TestCompactGlobulaNodeState_DeserializeFrom(t *testing.T) {
 	s1 := CompactGlobulaNodeState{}
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	copy(s1.NodeStateHash[:], b)
 	copy(s1.GlobulaNodeStateSignature[:], b)
@@ -195,7 +196,7 @@ func TestGlobulaConsensusPacket_SerializeTo_EmptyPacket(t *testing.T) {
 		EncryptableBody: &GlobulaConsensusPacketBody{},
 	}
 	p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
-	p.Header.setPacketType(phases.PacketTypeCount) // To emulate empty packet
+	p.Header.setPacketType(phases.PacketType(phases.PacketTypeCount)) // To emulate empty packet
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	s, err := p.SerializeTo(context.Background(), buf, digester, signer)
@@ -298,7 +299,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 	pp.Header.setProtocolType(ProtocolTypePulsar)
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	_, err := pp.SerializeTo(context.Background(), buf, digester, signer)

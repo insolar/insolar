@@ -51,16 +51,16 @@
 package adapters
 
 import (
+	"io"
+	"time"
+
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"io"
-	"time"
-
-	"github.com/insolar/insolar/insolar"
 )
 
 const nanosecondsInSecond = int64(time.Second / time.Nanosecond)
@@ -88,14 +88,14 @@ func NewPulse(pulseData pulse.Data) insolar.Pulse {
 	}
 }
 
-func NewPulseData(pulse insolar.Pulse) pulse.Data {
+func NewPulseData(p insolar.Pulse) pulse.Data {
 	data := pulse.NewPulsarData(
-		pulse.PulseNumber(pulse.PulseNumber),
-		uint16(pulse.NextPulseNumber-pulse.PulseNumber),
-		uint16(pulse.PulseNumber-pulse.PrevPulseNumber),
-		longbits.NewBits512FromBytes(pulse.Entropy[:]).FoldToBits256(),
+		pulse.Number(p.PulseNumber),
+		uint16(p.NextPulseNumber-p.PulseNumber),
+		uint16(p.PulseNumber-p.PrevPulseNumber),
+		longbits.NewBits512FromBytes(p.Entropy[:]).FoldToBits256(),
 	)
-	data.Timestamp = uint32(pulse.PulseTimestamp / nanosecondsInSecond)
+	data.Timestamp = uint32(p.PulseTimestamp / nanosecondsInSecond)
 	return *data
 }
 

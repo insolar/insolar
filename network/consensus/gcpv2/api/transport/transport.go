@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,12 +46,13 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package transport
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
@@ -82,7 +83,7 @@ type PreparedPacketSender interface {
 type PacketBuilder interface {
 	GetNeighbourhoodSize() NeighbourhoodSizes
 
-	//PrepareIntro
+	// PrepareIntro
 
 	PreparePhase0Packet(sender *NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
 		options PacketSendOptions) PreparedPacketSender
@@ -111,4 +112,4 @@ const (
 	RequestForPhase1
 )
 
-//type PreparedIntro interface {}
+// type PreparedIntro interface {}

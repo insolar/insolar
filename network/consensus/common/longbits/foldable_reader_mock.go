@@ -3,7 +3,7 @@ package longbits
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "FoldableReader" can be found in github.com/insolar/insolar/network/consensus/common
+The original interface "FoldableReader" can be found in github.com/insolar/insolar/network/consensus/common/longbits
 */
 import (
 	io "io"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//FoldableReaderMock implements github.com/insolar/insolar/network/consensus/common.FoldableReader
+//FoldableReaderMock implements github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader
 type FoldableReaderMock struct {
 	t minimock.Tester
 
@@ -50,7 +50,7 @@ type FoldableReaderMock struct {
 	WriteToMock       mFoldableReaderMockWriteTo
 }
 
-//NewFoldableReaderMock returns a mock for github.com/insolar/insolar/network/consensus/common.FoldableReader
+//NewFoldableReaderMock returns a mock for github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader
 func NewFoldableReaderMock(t minimock.Tester) *FoldableReaderMock {
 	m := &FoldableReaderMock{t: t}
 
@@ -130,7 +130,7 @@ func (m *mFoldableReaderMockAsByteString) Set(f func() (r string)) *FoldableRead
 	return m.mock
 }
 
-//AsByteString implements github.com/insolar/insolar/network/consensus/common.FoldableReader interface
+//AsByteString implements github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader interface
 func (m *FoldableReaderMock) AsByteString() (r string) {
 	counter := atomic.AddUint64(&m.AsByteStringPreCounter, 1)
 	defer atomic.AddUint64(&m.AsByteStringCounter, 1)
@@ -264,7 +264,7 @@ func (m *mFoldableReaderMockAsBytes) Set(f func() (r []byte)) *FoldableReaderMoc
 	return m.mock
 }
 
-//AsBytes implements github.com/insolar/insolar/network/consensus/common.FoldableReader interface
+//AsBytes implements github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader interface
 func (m *FoldableReaderMock) AsBytes() (r []byte) {
 	counter := atomic.AddUint64(&m.AsBytesPreCounter, 1)
 	defer atomic.AddUint64(&m.AsBytesCounter, 1)
@@ -398,7 +398,7 @@ func (m *mFoldableReaderMockFixedByteSize) Set(f func() (r int)) *FoldableReader
 	return m.mock
 }
 
-//FixedByteSize implements github.com/insolar/insolar/network/consensus/common.FoldableReader interface
+//FixedByteSize implements github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader interface
 func (m *FoldableReaderMock) FixedByteSize() (r int) {
 	counter := atomic.AddUint64(&m.FixedByteSizePreCounter, 1)
 	defer atomic.AddUint64(&m.FixedByteSizeCounter, 1)
@@ -532,7 +532,7 @@ func (m *mFoldableReaderMockFoldToUint64) Set(f func() (r uint64)) *FoldableRead
 	return m.mock
 }
 
-//FoldToUint64 implements github.com/insolar/insolar/network/consensus/common.FoldableReader interface
+//FoldToUint64 implements github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader interface
 func (m *FoldableReaderMock) FoldToUint64() (r uint64) {
 	counter := atomic.AddUint64(&m.FoldToUint64PreCounter, 1)
 	defer atomic.AddUint64(&m.FoldToUint64Counter, 1)
@@ -672,7 +672,7 @@ func (m *mFoldableReaderMockRead) Set(f func(p []byte) (r int, r1 error)) *Folda
 	return m.mock
 }
 
-//Read implements github.com/insolar/insolar/network/consensus/common.FoldableReader interface
+//Read implements github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader interface
 func (m *FoldableReaderMock) Read(p []byte) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.ReadPreCounter, 1)
 	defer atomic.AddUint64(&m.ReadCounter, 1)
@@ -822,7 +822,7 @@ func (m *mFoldableReaderMockWriteTo) Set(f func(p io.Writer) (r int64, r1 error)
 	return m.mock
 }
 
-//WriteTo implements github.com/insolar/insolar/network/consensus/common.FoldableReader interface
+//WriteTo implements github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader interface
 func (m *FoldableReaderMock) WriteTo(p io.Writer) (r int64, r1 error) {
 	counter := atomic.AddUint64(&m.WriteToPreCounter, 1)
 	defer atomic.AddUint64(&m.WriteToCounter, 1)

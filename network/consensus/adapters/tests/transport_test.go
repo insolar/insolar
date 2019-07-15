@@ -53,6 +53,7 @@ package tests
 import (
 	"bytes"
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -145,7 +146,7 @@ func (r *EmuPhase0NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions t
 }
 
 func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	welcome *proofs.NodeWelcomePackage, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	pp := pulsarPacket.(*adapters.PulsePacketReader)
 	pulseData := pp.GetPulseData()
@@ -179,9 +180,8 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions t
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile,
-	neighbourhood []transport.MembershipAnnouncementReader,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile, welcome *proofs.NodeWelcomePackage,
+	neighbourhood []transport.MembershipAnnouncementReader, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{
 		basePacket:    r.defaultBasePacket(sender),

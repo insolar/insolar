@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package longbits
 
@@ -320,7 +320,7 @@ func readFromArray(d []byte, s []byte) (int, error) {
 
 func bitsToStringDefault(s FoldableReader) string {
 	return BytesToDigestString(s, BitsStringPrefix)
-	//return BytesToGroupedString(s.AsBytes(), BitsStringPrefix, "_", 8)
+	// return BytesToGroupedString(s.AsBytes(), BitsStringPrefix, "_", 8)
 }
 
 func BytesToDigestString(s FoldableReader, prefix string) string {

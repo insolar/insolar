@@ -3,7 +3,7 @@ package cryptkit
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SignatureVerifierFactory" can be found in github.com/insolar/insolar/network/consensus/common
+The original interface "SignatureVerifierFactory" can be found in github.com/insolar/insolar/network/consensus/common/cryptkit
 */
 import (
 	"sync/atomic"
@@ -13,7 +13,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//SignatureVerifierFactoryMock implements github.com/insolar/insolar/network/consensus/common.SignatureVerifierFactory
+//SignatureVerifierFactoryMock implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifierFactory
 type SignatureVerifierFactoryMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type SignatureVerifierFactoryMock struct {
 	GetSignatureVerifierWithPKSMock       mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS
 }
 
-//NewSignatureVerifierFactoryMock returns a mock for github.com/insolar/insolar/network/consensus/common.SignatureVerifierFactory
+//NewSignatureVerifierFactoryMock returns a mock for github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifierFactory
 func NewSignatureVerifierFactoryMock(t minimock.Tester) *SignatureVerifierFactoryMock {
 	m := &SignatureVerifierFactoryMock{t: t}
 
@@ -103,7 +103,7 @@ func (m *mSignatureVerifierFactoryMockGetSignatureVerifierWithPKS) Set(f func(p 
 	return m.mock
 }
 
-//GetSignatureVerifierWithPKS implements github.com/insolar/insolar/network/consensus/common.SignatureVerifierFactory interface
+//GetSignatureVerifierWithPKS implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifierFactory interface
 func (m *SignatureVerifierFactoryMock) GetSignatureVerifierWithPKS(p PublicKeyStore) (r SignatureVerifier) {
 	counter := atomic.AddUint64(&m.GetSignatureVerifierWithPKSPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignatureVerifierWithPKSCounter, 1)

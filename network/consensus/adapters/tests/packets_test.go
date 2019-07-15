@@ -52,6 +52,7 @@ package tests
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
@@ -237,6 +238,22 @@ type EmuPhase1NetPacket struct {
 	// packetType uint8 // to reuse this type for Phase1 and Phase1Req
 }
 
+func (r *EmuPhase1NetPacket) HasFullIntro() bool {
+	return false
+}
+
+func (r *EmuPhase1NetPacket) HasCloudIntro() bool {
+	return false
+}
+
+func (r *EmuPhase1NetPacket) HasJoinerSecret() bool {
+	return false
+}
+
+func (r *EmuPhase1NetPacket) GetJoinerSecret() cryptkit.SignatureHolder {
+	panic("implement me")
+}
+
 func (r *EmuPhase1NetPacket) GetCloudIntroduction() transport.CloudIntroductionReader {
 	panic("implement me")
 }
@@ -246,11 +263,11 @@ func (r *EmuPhase1NetPacket) GetFullIntroduction() transport.FullIntroductionRea
 }
 
 func (r *EmuPhase1NetPacket) String() string {
-	prefix := ""
+	suffix := ""
 	if r.isRequest {
-		prefix = "rq"
+		suffix = "rq"
 	}
-	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d", prefix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
+	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d", suffix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
 }
 
 func (r *EmuPhase1NetPacket) GetPacketType() phases.PacketType {
@@ -291,6 +308,30 @@ type EmuPhase2NetPacket struct {
 	neighbourhood []transport.MembershipAnnouncementReader
 }
 
+func (r *EmuPhase2NetPacket) HasFullIntro() bool {
+	return false
+}
+
+func (r *EmuPhase2NetPacket) GetFullIntroduction() transport.FullIntroductionReader {
+	panic("implement me")
+}
+
+func (r *EmuPhase2NetPacket) HasCloudIntro() bool {
+	return false
+}
+
+func (r *EmuPhase2NetPacket) GetCloudIntroduction() transport.CloudIntroductionReader {
+	panic("implement me")
+}
+
+func (r *EmuPhase2NetPacket) HasJoinerSecret() bool {
+	return false
+}
+
+func (r *EmuPhase2NetPacket) GetJoinerSecret() cryptkit.SignatureHolder {
+	panic("implement me")
+}
+
 func (r *EmuPhase2NetPacket) GetBriefIntroduction() transport.BriefIntroductionReader {
 	panic("implement me")
 }
@@ -329,20 +370,28 @@ type EmuPhase3NetPacket struct {
 	vectors     statevector.Vector
 }
 
+func (r *EmuPhase3NetPacket) GetTrustedExpectedRank() member.Rank {
+	return r.vectors.Trusted.ExpectedRank
+}
+
+func (r *EmuPhase3NetPacket) GetDoubtedExpectedRank() member.Rank {
+	return r.vectors.Doubted.ExpectedRank
+}
+
 func (r *EmuPhase3NetPacket) GetTrustedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash {
-	return r.vectors.TrustedAnnouncementVector
+	return r.vectors.Trusted.AnnouncementHash
 }
 
 func (r *EmuPhase3NetPacket) GetTrustedGlobulaStateSignature() proofs.GlobulaStateSignature {
-	return r.vectors.TrustedGlobulaStateVectorSignature
+	return r.vectors.Trusted.StateSignature
 }
 
 func (r *EmuPhase3NetPacket) GetDoubtedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash {
-	return r.vectors.DoubtedAnnouncementVector
+	return r.vectors.Doubted.AnnouncementHash
 }
 
 func (r *EmuPhase3NetPacket) GetDoubtedGlobulaStateSignature() proofs.GlobulaStateSignature {
-	return r.vectors.DoubtedGlobulaStateVectorSignature
+	return r.vectors.Doubted.StateSignature
 }
 
 func (r *EmuPhase3NetPacket) String() string {

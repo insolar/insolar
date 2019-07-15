@@ -53,9 +53,10 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"math/rand"
 	"sync"
+
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 )
 
 type NetStrategy interface {
@@ -102,11 +103,6 @@ func (e errEmuNetwork) Error() string {
 
 func ErrUnknownEmuHost(host endpoints.Name) error {
 	return errEmuNetwork{errType: "Unknown host", details: host}
-}
-
-func IsEmuError(err *error) bool {
-	_, ok := (*err).(errEmuNetwork)
-	return ok
 }
 
 func NewEmuNetwork(nwStrategy NetStrategy, ctx context.Context) *EmuNetwork {

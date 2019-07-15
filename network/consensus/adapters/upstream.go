@@ -52,6 +52,7 @@ package adapters
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -115,9 +116,9 @@ func (u *UpstreamPulseController) PreparePulseChange(report api.UpstreamReport) 
 
 func (u *UpstreamPulseController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
 	ctx := contextFromReport(report)
-	pulse := NewPulse(pulseData)
+	p := NewPulse(pulseData)
 
-	u.pulseChanger.ChangePulse(ctx, pulse)
+	u.pulseChanger.ChangePulse(ctx, p)
 }
 
 func (u *UpstreamPulseController) CancelPulseChange() {

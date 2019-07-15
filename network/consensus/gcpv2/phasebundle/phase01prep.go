@@ -52,6 +52,7 @@ package phasebundle
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -72,24 +73,24 @@ type Phase01PrepController struct {
 	pulseStrategy PulseSelectionStrategy
 }
 
-func (r *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
-	r.realm = realm
-	return r
+func (c *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
+	c.realm = realm
+	return c
 }
 
-func (*Phase01PrepController) GetPacketType() []phases.PacketType {
+func (c *Phase01PrepController) GetPacketType() []phases.PacketType {
 	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
 }
 
-func (p *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
+func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
 	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
 	switch packet.GetPacketType() {
 	case phases.PacketPhase0:
 		p0 := packet.GetMemberPacket().AsPhase0Packet()
-		return p.pulseStrategy.HandlePrepPulsarPacket(ctx, p0.GetEmbeddedPulsePacket(), from, p.realm, false)
+		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p0.GetEmbeddedPulsePacket(), from, c.realm, false)
 	case phases.PacketPhase1:
 		p1 := packet.GetMemberPacket().AsPhase1Packet()
-		return p.pulseStrategy.HandlePrepPulsarPacket(ctx, p1.GetEmbeddedPulsePacket(), from, p.realm, false)
+		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p1.GetEmbeddedPulsePacket(), from, c.realm, false)
 	default:
 		panic("illegal value")
 	}

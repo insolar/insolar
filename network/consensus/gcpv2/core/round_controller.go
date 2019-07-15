@@ -53,13 +53,14 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"sync"
-	"time"
 
 	errors2 "github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 )
@@ -146,12 +147,12 @@ func (r *PhasedRoundController) StartConsensusRound(upstream api.UpstreamControl
 			},
 
 			postponedPacketFn: func(packet transport.PacketParser, from endpoints.Inbound) {
-				//There is no real context for delayed reprocessing, so we use the round context
+				// There is no real context for delayed reprocessing, so we use the round context
 				_ = r.handlePacket(r.realm.roundContext, packet, from, true)
 			},
 		}
 
-		//r.prepareCancel will be cancelled through r.fullCancel()
+		// r.prepareCancel will be cancelled through r.fullCancel()
 		ctx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
 
 		r.prepR.start(ctx, preps /* Should be excessively enough to avoid lockups */)
@@ -168,7 +169,7 @@ func (r *PhasedRoundController) StopConsensusRound() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	r.prevPulseRound = nil //prevents memory leak
+	r.prevPulseRound = nil // prevents memory leak
 
 	if r.fullCancel == nil || !r.isRunning {
 		return
@@ -262,7 +263,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	}
 	return r.realm.dispatchPacket(ctx, packet, from, verificationProof)
 
-	//if pt.IsMemberPacket() {
+	// if pt.IsMemberPacket() {
 	//	memberPacket := packet.GetMemberPacket()
 	//	if memberPacket == nil {
 	//		panic("missing parser for phased packet")
@@ -306,26 +307,26 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	//		}
 	//		return route.dispatchHostPacket(ctx, packet, from)
 	//	}
-	//}
+	// }
 	//
-	////TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
-	//hackIgnoreVerification := !packet.GetPacketType().IsMemberPacket()
+	// //TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+	// hackIgnoreVerification := !packet.GetPacketType().IsMemberPacket()
 	//
-	//if !preVerified && !hackIgnoreVerification {
+	// if !preVerified && !hackIgnoreVerification {
 	//	err = r.realm.coreRealm.VerifyPacketAuthenticity(packet, from, strictSenderCheck)
 	//	if err != nil {
 	//		return err
 	//	}
-	//}
+	// }
 	//
-	//if prep != nil { // Prep realm is active
+	// if prep != nil { // Prep realm is active
 	//	return prep.handleHostPacket(ctx, packet, from)
-	//}
-	//route, err := r.realm.getPacketDispatcher(pt)
-	//if err != nil {
+	// }
+	// route, err := r.realm.getPacketDispatcher(pt)
+	// if err != nil {
 	//	return err
-	//}
-	//return route.dispatchHostPacket(ctx, packet, from)
+	// }
+	// return route.dispatchHostPacket(ctx, packet, from)
 }
 
 // /* Initiates cancellation of this round */
