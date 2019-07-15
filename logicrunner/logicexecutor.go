@@ -93,14 +93,13 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 		return res, nil
 	}
 
-	if transcript.Deactivate {
+	switch {
+	case transcript.Deactivate:
 		res.SetDeactivate(objDesc)
 		res.Deactivate()
-	} else if !bytes.Equal(objDesc.Memory(), newData) {
-		if err := res.SetAmend(objDesc, newData); err != nil {
-			return nil, err
-		}
-	} else {
+	case !bytes.Equal(objDesc.Memory(), newData):
+		_ = res.SetAmend(objDesc, newData)
+	default:
 		res.SetNone(objDesc.HeadRef())
 	}
 
