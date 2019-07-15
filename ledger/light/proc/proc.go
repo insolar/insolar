@@ -25,7 +25,7 @@ type Dependencies struct {
 	EnsureIndex         func(*EnsureIndexWM)
 	SendObject          func(*SendObject)
 	GetCode             func(*GetCode)
-	GetRequestWM        func(*GetRequestWM)
+	GetRequestWM        func(*GetRequest)
 	SetRequest          func(*SetRequest)
 	SetResult           func(*SetResult)
 	ActivateObject      func(*ActivateObject)

@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GetRequestWM struct {
+type GetRequest struct {
 	message   payload.Meta
 	requestID insolar.ID
 
@@ -38,14 +38,14 @@ type GetRequestWM struct {
 	}
 }
 
-func NewGetRequestWM(msg payload.Meta, requestID insolar.ID) *GetRequestWM {
-	return &GetRequestWM{
+func NewGetRequest(msg payload.Meta, requestID insolar.ID) *GetRequest {
+	return &GetRequest{
 		requestID: requestID,
 		message:   msg,
 	}
 }
 
-func (p *GetRequestWM) Proceed(ctx context.Context) error {
+func (p *GetRequest) Proceed(ctx context.Context) error {
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.requestID)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch request")

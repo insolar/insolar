@@ -45,7 +45,7 @@ func (s *GetRequestWM) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal GetRequest message")
 	}
 
-	req := proc.NewGetRequestWM(s.message, msg.RequestID)
+	req := proc.NewGetRequest(s.message, msg.RequestID)
 	s.dep.GetRequestWM(req)
 	return f.Procedure(ctx, req, false)
 }

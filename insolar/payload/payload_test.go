@@ -65,11 +65,13 @@ func TestMarshalUnmarshal(t *testing.T) {
 		// FIXME: uncomment after removing virtual record wrapper.
 		// {tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
 		// {tp: payload.TypeSetIncomingRequest, pl: &payload.SetIncomingRequest{}},
+		// {tp: payload.TypeRequest, pl: &payload.Request{}},
 		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
 		{tp: payload.TypeActivate, pl: &payload.Activate{}},
 		{tp: payload.TypeDeactivate, pl: &payload.Deactivate{}},
 		{tp: payload.TypeUpdate, pl: &payload.Update{}},
 		{tp: payload.TypeHotObjects, pl: &payload.HotObjects{}},
+		{tp: payload.TypeGetRequest, pl: &payload.GetRequest{}},
 	}
 
 	for _, d := range table {
