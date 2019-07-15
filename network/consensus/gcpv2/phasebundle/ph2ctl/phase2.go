@@ -58,7 +58,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/joinctl"
 	"math"
 	"time"
 
@@ -67,23 +66,25 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-func NewPhase2Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketSendOptions, queueNshReady <-chan *core.NodeAppearance) *Phase2Controller {
+func NewPhase2Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketSendOptions,
+	queueNshReady <-chan *core.NodeAppearance) *Phase2Controller {
+
 	return &Phase2Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueNshReady:        queueNshReady,
 		loopingMinimalDelay:  loopingMinimalDelay,
-		//queueTrustUpdated:    queueTrustUpdated,
 	}
 }
 
 var _ core.PhaseController = &Phase2Controller{}
 
 type Phase2Controller struct {
-	//joinctl.PhaseControllerWithJoinersTemplate
+	core.PhaseControllerTemplate
+	core.MemberPacketDispatcher
+	R                    *core.FullRealm
 	packetPrepareOptions transport.PacketSendOptions
 	queueNshReady        <-chan *core.NodeAppearance
 	loopingMinimalDelay  time.Duration
-	//queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
 }
 
 type TrustUpdateSignal struct {
@@ -97,25 +98,18 @@ func (v *TrustUpdateSignal) IsPingSignal() bool {
 	return v.UpdatedNode == nil
 }
 
-func (*Phase2Controller) GetPacketType() phases.PacketType {
-	return phases.PacketPhase2
+func (c *Phase2Controller) GetPacketType() []phases.PacketType {
+	return []phases.PacketType{phases.PacketPhase2}
 }
 
-func (c *Phase2Controller) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *core.NodeAppearance,
-	realm *core.FullRealm) (core.PhasePerNodePacketFunc, context.Context) {
-
-	return c.JoinerCreatePerNodePacketHandler(sharedNodeContext, ctlIndex, node, realm, c.handleJoinerPacket)
+func (c *Phase2Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
+	c.R = realm
+	return c, nil
 }
 
-func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p2 := reader.AsPhase2Packet()
-	err := n.SetPacketReceivedWithDupError(c.GetPacketType())
-	if err != nil {
-		// allows to avoid cheating by boosting up trust with additional Phase2 packets
-		return err
-	}
-
 	// for _, ni := range p2.GetIntroductions() {
 	// TODO I'm joiner, lets add another joiner's profile
 	// and this enable the added other node for sending Ph2 by this node
@@ -174,11 +168,7 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader transp
 	return nil
 }
 
-func (c *Phase2Controller) handleJoinerPacket(ctx context.Context, reader transport.MemberPacketReader, from *joinctl.JoinerController) error {
-	panic("unsupported")
-}
-
-func (c *Phase2Controller) StartWorker(ctx context.Context) {
+func (c *Phase2Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
 	go c.workerPhase2(ctx)
 }
 
@@ -301,7 +291,7 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (profiles.ActiveNode, transport.PacketSendOptions) {
 			np := neighbourhood[targetIdx]
-			np.SetPacketSent(c.GetPacketType())
+			np.SetPacketSent(phases.PacketPhase2)
 			return np.GetProfile(), 0
 		})
 }

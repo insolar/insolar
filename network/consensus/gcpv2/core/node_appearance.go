@@ -64,8 +64,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"math"
 	"sync"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 )
 
 func NewNodeAppearanceAsSelf(np profiles.LocalNode, callback *nodeContext) *NodeAppearance {
@@ -205,13 +203,6 @@ func (c *NodeAppearance) SetPacketSent(pt phases.PacketType) bool {
 		return true
 	}
 	return false
-}
-
-func (c *NodeAppearance) SetPacketReceivedWithDupError(pt phases.PacketType) error {
-	if c.SetPacketReceived(pt) {
-		return nil
-	}
-	return errors.ErrPacketLimitExceeded
 }
 
 func (c *NodeAppearance) GetSignatureVerifier() cryptkit.SignatureVerifier {

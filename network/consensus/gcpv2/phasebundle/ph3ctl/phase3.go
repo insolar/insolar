@@ -62,6 +62,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph2ctl"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -71,73 +72,81 @@ import (
 )
 
 func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketSendOptions, queueTrustUpdated <-chan ph2ctl.TrustUpdateSignal,
-	consensusStrategy ConsensusSelectionStrategy) *Phase3Controller {
-	return &Phase3Controller{
+	consensusStrategy ConsensusSelectionStrategy, inspectionFactory VectorInspectorFactory) *Phase3ControllerV2 {
+	return &Phase3ControllerV2{
 		packetPrepareOptions: packetPrepareOptions,
 		queueTrustUpdated:    queueTrustUpdated,
 		consensusStrategy:    consensusStrategy,
 		loopingMinimalDelay:  loopingMinimalDelay,
+		inspectionFactory:    inspectionFactory,
 	}
 }
 
-var _ core.PhaseController = &Phase3Controller{}
+var _ core.PhaseController = &Phase3ControllerV2{}
 
-type Phase3Controller struct {
-	core.PhaseControllerPerMemberTemplate
+type Phase3ControllerV2 struct {
+	core.PhaseControllerTemplate
+	core.MemberPacketDispatcher
 	packetPrepareOptions transport.PacketSendOptions
 	queueTrustUpdated    <-chan ph2ctl.TrustUpdateSignal
-	queuePh3Recv         chan ph3Data
+	queuePh3Recv         chan InspectedVector
 	consensusStrategy    ConsensusSelectionStrategy
+	inspectionFactory    VectorInspectorFactory
 	loopingMinimalDelay  time.Duration
+	R                    *core.FullRealm
 
+	rw        sync.RWMutex
+	inspector VectorInspector
 	// packetHandler to Worker channel
 }
 
-type ph3Data struct {
-	np     *core.NodeAppearance
-	vector statevector.Vector
+func (c *Phase3ControllerV2) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
+	c.R = realm
+	return c, nil
 }
 
-func (*Phase3Controller) GetPacketType() phases.PacketType {
-	return phases.PacketPhase3
+func (*Phase3ControllerV2) GetPacketType() []phases.PacketType {
+	return []phases.PacketType{phases.PacketPhase3}
 }
 
-func (c *Phase3Controller) HandleMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *Phase3ControllerV2) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p3 := reader.AsPhase3Packet()
 
-	err := n.SetPacketReceivedWithDupError(c.GetPacketType())
-	if err != nil {
-		return err
-	}
-
 	// TODO validations
 
-	bs := p3.GetBitset()
-	c.queuePh3Recv <- ph3Data{
-		np: n,
-		vector: statevector.NewVector(
-			bs,
-			statevector.NewSubVector(
-				p3.GetTrustedGlobulaAnnouncementHash(),
-				p3.GetTrustedGlobulaStateSignature(),
-				p3.GetTrustedExpectedRank()),
-			statevector.NewSubVector(
-				p3.GetDoubtedGlobulaAnnouncementHash(),
-				p3.GetDoubtedGlobulaStateSignature(),
-				p3.GetDoubtedExpectedRank())),
+	iv := c.getInspector().InspectVector(n, statevector.NewVector(p3.GetBitset(),
+		statevector.NewSubVector(p3.GetTrustedGlobulaAnnouncementHash(), p3.GetTrustedGlobulaStateSignature(), p3.GetTrustedExpectedRank()),
+		statevector.NewSubVector(p3.GetDoubtedGlobulaAnnouncementHash(), p3.GetDoubtedGlobulaStateSignature(), p3.GetDoubtedExpectedRank())))
+
+	if iv == nil {
+		panic("illegal state")
 	}
+	c.queuePh3Recv <- iv
 
 	return nil
 }
 
-func (c *Phase3Controller) StartWorker(ctx context.Context) {
-	c.queuePh3Recv = make(chan ph3Data, c.R.GetNodeCount())
+func (c *Phase3ControllerV2) getInspector() VectorInspector {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+	return c.inspector
+}
+
+func (c *Phase3ControllerV2) setInspector(inspector VectorInspector) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	c.inspector = inspector
+}
+
+func (c *Phase3ControllerV2) StartWorker(ctx context.Context, realm *core.FullRealm) {
+	c.queuePh3Recv = make(chan InspectedVector, c.R.GetNodeCount())
+	c.inspector = NewBypassInspector()
 
 	go c.workerPhase3(ctx)
 }
 
-func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
+func (c *Phase3ControllerV2) workerPhase3(ctxRound context.Context) {
 
 	ctx, cancel := context.WithDeadline(ctxRound, time.Now().Add(c.R.AdjustedAfter(c.R.GetTimings().EndOfPhase3)))
 	defer cancel()
@@ -149,14 +158,18 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 		return
 	}
 
-	vectorHelper := c.R.GetPopulation().CreateVectorHelper().CreateProjection()
-	localVector := nodeset.NewLocalNodeVector(c.R.GetDigestFactory(), &vectorHelper)
+	vectorHelper := c.R.GetPopulation().CreateVectorHelper()
+	localProjection := vectorHelper.CreateProjection()
+	localInspector := c.inspectionFactory.CreateInspector(&localProjection, c.R.GetDigestFactory(), c.R.GetSelfNodeID())
 
-	d0 := c.calcLocalVector(&localVector)
+	//it also finalizes internal state to allow later parallel use
+	localHashedVector := localInspector.CreateVector(c.R.GetSigner())
 
-	go c.workerSendPhase3(ctx, d0.Vector)
+	c.setInspector(localInspector)
 
-	if !c.workerRecvPhase3(ctx, d0, &localVector) {
+	go c.workerSendPhase3(ctx, localHashedVector)
+
+	if !c.workerRecvPhase3(ctx, localInspector) {
 		// context was stopped in a hard way or we have left a consensus
 		return
 	}
@@ -167,7 +180,7 @@ func (c *Phase3Controller) workerPhase3(ctxRound context.Context) {
 	go workerQueueFlusher(ctxRound, c.queuePh3Recv, c.queueTrustUpdated)
 }
 
-func workerQueueFlusher(ctxRound context.Context, q0 chan ph3Data, q1 <-chan ph2ctl.TrustUpdateSignal) {
+func workerQueueFlusher(ctxRound context.Context, q0 chan InspectedVector, q1 <-chan ph2ctl.TrustUpdateSignal) {
 	for {
 		select {
 		case <-ctxRound.Done():
@@ -192,7 +205,7 @@ func workerQueueFlusher(ctxRound context.Context, q0 chan ph3Data, q1 <-chan ph2
 	}
 }
 
-func (c *Phase3Controller) workerPrePhase3(ctx context.Context) bool {
+func (c *Phase3ControllerV2) workerPrePhase3(ctx context.Context) bool {
 	log := inslogger.FromContext(ctx)
 
 	log.Debug(">>>>workerPrePhase3: begin")
@@ -219,11 +232,10 @@ outer:
 			log.Debug(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case sig := <-c.queueTrustUpdated:
-			if sig.IsPingSignal() { // ping indicates arrival of Phase2 packet, to support chasing
-				//TODO chasing
-				break
-			}
 			switch {
+			case sig.IsPingSignal(): // ping indicates arrival of Phase2 packet, to support chasing
+				//TODO chasing
+				continue
 			case sig.NewTrustLevel < 0:
 				countFraud++
 				continue // no chasing delay on fraud
@@ -274,36 +286,21 @@ outer:
 	return true
 }
 
-func (c *Phase3Controller) calcLocalVector(localVector *nodeset.NodeVectorHelper) nodeset.LocalHashedNodeVector {
-
-	/*
-		NB! SequenceDigester requires at least one hash to be added. So to avoid errors, local node MUST always
-		have trust level set high enough to get bitset[i].IsTrusted() == true
-	*/
-
-	res := nodeset.LocalHashedNodeVector{}
-	res.Bitset = localVector.GetNodeBitset()
-	res.Trusted.AnnouncementHash, res.Doubted.AnnouncementHash =
-		localVector.BuildGlobulaAnnouncementHashes(true, true, nil, nil)
-
-	duplicateDoubted := res.Trusted.AnnouncementHash != nil && res.Trusted.AnnouncementHash.Equals(res.Doubted.AnnouncementHash)
-	if duplicateDoubted {
-		res.Doubted.AnnouncementHash = nil
+func (c *Phase3ControllerV2) workerRescanForMissing(ctx context.Context, missing chan InspectedVector) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case sig := <-c.queueTrustUpdated:
+			if sig.IsPingSignal() {
+				continue
+			}
+			//TODO
+		}
 	}
-
-	res.TrustedGlobulaStateVector, res.DoubtedGlobulaStateVector = localVector.BuildGlobulaStateHashes(
-		true, !duplicateDoubted, nil, nil)
-
-	signer := c.R.GetSigner()
-	res.Trusted.StateSignature = res.TrustedGlobulaStateVector.SignWith(signer).GetSignatureHolder()
-	if !duplicateDoubted {
-		res.Doubted.StateSignature = res.DoubtedGlobulaStateVector.SignWith(signer).GetSignatureHolder()
-	}
-
-	return res
 }
 
-func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statevector.Vector) {
+func (c *Phase3ControllerV2) workerSendPhase3(ctx context.Context, selfData statevector.Vector) {
 
 	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
@@ -313,24 +310,27 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 	p3.SendToMany(ctx, len(otherNodes), c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (profiles.ActiveNode, transport.PacketSendOptions) {
 			np := otherNodes[targetIdx]
-			np.SetPacketSent(c.GetPacketType())
+			np.SetPacketSent(phases.PacketPhase3)
 			return np.GetProfile(), 0
 		})
 
 	//TODO send to shuffled joiners as well?
 }
 
-func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, selfData nodeset.LocalHashedNodeVector,
-	localVector *nodeset.NodeVectorHelper) bool {
+func (c *Phase3ControllerV2) workerRecvPhase3(ctx context.Context, localInspector VectorInspector) bool {
 
 	log := inslogger.FromContext(ctx)
+
+	var queueMissing chan InspectedVector
 
 	timings := c.R.GetTimings()
 	softDeadline := time.After(c.R.AdjustedAfter(timings.EndOfPhase3))
 	chasingDelayTimer := chaser.NewChasingTimer(timings.BeforeInPhase3ChasingDelay)
 
 	statTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
-	statTbl.PutRow(c.R.GetSelf().GetIndex(), nodeset.LocalToConsensusStatRow(selfData.Bitset))
+
+	//should it be updatable?
+	statTbl.PutRow(c.R.GetSelf().GetIndex(), nodeset.LocalToConsensusStatRow(localInspector.GetBitset()))
 
 	remainingNodes := c.R.GetPopulation().GetOthersCount()
 
@@ -358,54 +358,76 @@ outer:
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, true, c.R)
 			break outer
 		case d := <-c.queuePh3Recv:
-			//nodeStats := statTbl.NewRow()
+			switch {
+			case d.HasMissingMembers():
+				if queueMissing == nil {
+					queueMissing = make(chan InspectedVector, len(c.queuePh3Recv))
+					go c.workerRescanForMissing(ctx, queueMissing)
+				}
+				queueMissing <- d
+				break //do chasing
+			case !d.IsInspected():
+				d = d.Reinspect(localInspector)
+				if !d.IsInspected() {
+					if d.HasMissingMembers() {
+						c.queuePh3Recv <- d
+					}
+					//TODO heavy inspection with hash recalculations should be running on a limited pool
+					go func() {
+						d.Inspect()
+						if d.IsInspected() {
+							c.queuePh3Recv <- d
+						} else {
+							//TODO error
+						}
+					}()
+					break //do chasing
+				}
+				fallthrough
+			default:
+				nodeStats, vr := d.GetInspectionResults()
+				if log.Is(insolar.DebugLevel) {
+					var logMsg interface{}
+					switch {
+					case d.HasSenderFault() || nodeStats == nil:
+						logMsg = "fault"
+					case nodeStats.HasAllValues(0):
+						logMsg = "missed"
+					default:
+						logMsg = "added"
+					}
 
-			if log.Is(insolar.DebugLevel) {
-				log.Debugf(
-					"\n Here:%v\nThere:%v\n Comp:%v\n",
-					selfData.Bitset,
-					d.vector.Bitset,
-					nodeset.CompareToStatRow(selfData.Bitset, d.vector.Bitset), // TODO: ugly. pass it to ClassifyByNodeGsh?
-				)
-			}
+					na := d.GetNode()
+					log.Debugf(
+						"%s: s:%v t:%v idx:%d left:%d\n Here:%v\nThere:%v\n Comp:%v\nStats:%v\n",
+						logMsg, na.GetShortNodeID(), c.R.GetSelf().GetShortNodeID(), na.GetIndex(), remainingNodes,
+						localInspector.GetBitset(), d.GetBitset(), d, nodeStats,
+					)
+				}
 
-			nodeVector := localVector.CreateDerivedVector(d.np.GetSignatureVerifier())
-			vr, nodeStats := nodeset.ClassifyByNodeGsh(selfData, d.vector, &nodeVector)
+				if nodeStats == nil {
+					break
+				}
 
-			logMsg := "add"
-			if nodeStats.HasAllValues(0) {
-				logMsg = "missed"
-			}
+				statTbl.PutRow(d.GetNode().GetIndex(), nodeStats)
+				remainingNodes--
 
-			if log.Is(insolar.DebugLevel) {
-				log.Debugf(
-					"%s: s:%v, t:%v, %d, %d, %d: %v",
-					logMsg,
-					d.np.GetShortNodeID(),
-					c.R.GetSelf().GetShortNodeID(),
-					d.np.GetIndex(),
-					remainingNodes,
-					vr,
-					nodeStats,
-				)
-			}
+				if vr.AnyOf(nodeset.NvrDoubtedAlteredNodeSet) {
+					alteredDoubtedGshCount++
+				}
 
-			statTbl.PutRow(d.np.GetIndex(), &nodeStats)
-			remainingNodes--
+				if remainingNodes <= 0 {
+					consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, false, c.R)
+					log.Debug("Phase3 done all")
+					break outer
+				}
 
-			if vr.AnyOf(nodeset.NvrDoubtedAlteredNodeSet) {
-				alteredDoubtedGshCount++
-			}
+				consensusSelection = c.consensusStrategy.TrySelectOnAdded(
+					&statTbl, d.GetNode().GetProfile(), nodeStats, c.R)
 
-			if remainingNodes <= 0 {
-				consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, false, c.R)
-				log.Debug("Phase3 done all")
-				break outer
-			}
-
-			consensusSelection = c.consensusStrategy.TrySelectOnAdded(&statTbl, d.np.GetProfile(), &nodeStats, c.R)
-			if consensusSelection == nil {
-				continue
+				if consensusSelection == nil {
+					continue
+				}
 			}
 			if chasingDelayTimer.IsEnabled() && consensusSelection.CanBeImproved() {
 				log.Debug("Phase3 (re)start chasing")
@@ -458,7 +480,7 @@ outer:
 	return false
 }
 
-func (c *Phase3Controller) buildNextPopulation(pb census.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
+func (c *Phase3ControllerV2) buildNextPopulation(pb census.PopulationBuilder, nodeset *nodeset.ConsensusBitsetRow) bool {
 
 	//pop := c.R.GetPopulation()
 	//count := 0
