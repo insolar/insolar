@@ -842,6 +842,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	callMethodChan := make(chan struct{})
 	var usedCaller insolar.Reference
 	var usedReason insolar.Reference
+	var usedReturnMode record.ReturnMode
 
 	cr := testutils.NewContractRequesterMock(suite.T())
 	cr.CallMethodFunc = func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
@@ -849,6 +850,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		cm := msg.(*message.CallMethod)
 		usedCaller = cm.Caller
 		usedReason = cm.Reason
+		usedReturnMode = cm.ReturnMode
 
 		result := &reply.CallMethod{
 			Result: dummyResult,
@@ -878,6 +880,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	<-callMethodChan
 	suite.Require().Equal(outgoing.Caller, usedCaller)
 	suite.Require().Equal(outgoing.Reason, usedReason)
+	suite.Require().Equal(record.ReturnNoWait, usedReturnMode)
 
 	<-registerResultChan
 	suite.Require().Equal(outgoingRequestRef, &usedRequestRef)

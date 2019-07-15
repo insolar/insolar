@@ -46,6 +46,11 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 
 		APIRequestID: outgoing.APIRequestID,
 		Reason:       outgoing.Reason,
+
+		// Saga calls are always asynchronous. We wait only for a confirmation
+		// that the incoming request was registered by the second VE. This is
+		// implemented in ContractRequester.CallMethod.
+		ReturnMode: record.ReturnNoWait,
 	}
 
 	// Make a call to the second VE.
