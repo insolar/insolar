@@ -49,8 +49,8 @@ func NewWaitOKSender(sender Sender) *WaitOKSender {
 	return c
 }
 
-// SendRole sends message to specified role, using provided Sender.SendRole. It waiting for reply.OK and
-// close replies channel after getting it. If
+// SendRole sends message to specified role, using provided Sender.SendRole. It waiting for one reply and
+// close replies channel after getting it. If reply is not reply.OK, it logs error message.
 func (c *WaitOKSender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) {
