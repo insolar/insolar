@@ -665,5 +665,5 @@ func TestNewBits512FromBytes(t *testing.T) {
 	bits := NewBits512FromBytes(bytes)
 	require.Equal(t, bytes, bits.AsBytes())
 
-	require.Panics(t, func() { NewBits256FromBytes([]byte{1}) })
+	require.Panics(t, func() { NewBits512FromBytes([]byte{1}) })
 }
