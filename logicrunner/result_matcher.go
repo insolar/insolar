@@ -8,6 +8,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/messagebus"
 )
 
 type resultsMatcher struct {
@@ -30,10 +31,16 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.St
 	inslogger.FromContext(ctx).Warn("IP1: Receive StillExecution", msg.RequestRefs, "from", msg.Executor)
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
+	sender := messagebus.BuildSender(
+		rm.lr.MessageBus.Send,
+		messagebus.RetryIncorrectPulse(rm.lr.PulseAccessor),
+		messagebus.RetryFlowCancelled(rm.lr.PulseAccessor),
+	)
+
 	for _, reqRef := range msg.RequestRefs {
 		if response, ok := rm.unwantedResponses[reqRef]; ok {
 			inslogger.FromContext(ctx).Warn("IP1: Send StillExecution", reqRef)
-			go rm.lr.MessageBus.Send(ctx, &response, &insolar.MessageSendOptions{
+			go sender(ctx, &response, &insolar.MessageSendOptions{
 				Receiver: &msg.Executor,
 			})
 			continue
@@ -49,7 +56,12 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg insolar.M
 	defer rm.lock.Unlock()
 	if node, ok := rm.executionNodes[response.Reason]; ok {
 		inslogger.FromContext(ctx).Warn("IP1: Send UnwantedResponse", response.Reason)
-		go rm.lr.MessageBus.Send(ctx, response, &insolar.MessageSendOptions{
+		sender := messagebus.BuildSender(
+			rm.lr.MessageBus.Send,
+			messagebus.RetryIncorrectPulse(rm.lr.PulseAccessor),
+			messagebus.RetryFlowCancelled(rm.lr.PulseAccessor),
+		)
+		go sender(ctx, response, &insolar.MessageSendOptions{
 			Receiver: &node,
 		})
 		return

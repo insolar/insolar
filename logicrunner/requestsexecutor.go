@@ -23,11 +23,13 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/messagebus"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go
@@ -44,6 +46,7 @@ type requestsExecutor struct {
 	NodeNetwork     insolar.NodeNetwork `inject:""`
 	LogicExecutor   LogicExecutor       `inject:""`
 	ArtifactManager artifacts.Client    `inject:""`
+	PulseAccessor   pulse.Accessor      `inject:""`
 }
 
 func NewRequestsExecutor() RequestsExecutor {
@@ -164,9 +167,15 @@ func (e *requestsExecutor) SendReply(
 	if err != nil {
 		errstr = err.Error()
 	}
+	sender := messagebus.BuildSender(
+		e.MessageBus.Send,
+		messagebus.RetryIncorrectPulse(e.PulseAccessor),
+		messagebus.RetryFlowCancelled(e.PulseAccessor),
+	)
+
 	if transcript.Request.Sender.IsEmpty() {
 		inslogger.FromContext(ctx).Debug("IP2: Send by caller", transcript.RequestRef)
-		_, err = e.MessageBus.Send(
+		_, err = sender(
 			ctx,
 			&message.ReturnResults{
 				Target:     transcript.Request.Caller,
@@ -179,7 +188,7 @@ func (e *requestsExecutor) SendReply(
 		)
 	} else {
 		inslogger.FromContext(ctx).Debug("IP2: Send by sender", transcript.RequestRef, " to ", transcript.Request.Sender)
-		_, err = e.MessageBus.Send(
+		_, err = sender(
 			ctx,
 			&message.ReturnResults{
 				RequestRef: transcript.RequestRef,
