@@ -250,15 +250,56 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
+func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(Member)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeGetBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetBurnAddress()
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	args := [3]interface{}{}
+	args := [4]interface{}{}
 	var args0 insolar.Reference
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
+	var args3 string
+	args[3] = &args3
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -266,7 +307,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 		return nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2)
+	ret0, ret1 := New(args0, args1, args2, args3)
 	if ret1 != nil {
 		return nil, ret1
 	}
@@ -290,10 +331,11 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"GetName":      INSMETHOD_GetName,
-			"GetPublicKey": INSMETHOD_GetPublicKey,
-			"Call":         INSMETHOD_Call,
-			"FindDeposit":  INSMETHOD_FindDeposit,
+			"GetName":        INSMETHOD_GetName,
+			"GetPublicKey":   INSMETHOD_GetPublicKey,
+			"Call":           INSMETHOD_Call,
+			"FindDeposit":    INSMETHOD_FindDeposit,
+			"GetBurnAddress": INSMETHOD_GetBurnAddress,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
