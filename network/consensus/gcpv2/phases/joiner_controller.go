@@ -97,18 +97,18 @@ type contextKeyType struct{}
 
 var contextKeyValue = contextKeyType{}
 
-// type postponedPacket struct {
+//type postponedPacket struct {
 //	packet packets.PacketParser
-// }
+//}
 
 type JoinerControllerPacketFunc func(ctx context.Context, reader packets.MemberPacketReader, from *JoinerController) error
 
 type JoinerController struct {
 	node *core.NodeAppearance
-	// realm *core.FullRealm
+	//realm *core.FullRealm
 
-	handlerIndices []int // to cleanup when joiner is confirmed
-	// postponedPackets []postponedPacket
+	handlerIndices []int //to cleanup when joiner is confirmed
+	//postponedPackets []postponedPacket
 }
 
 func newJoinerController() *JoinerController {
@@ -130,10 +130,10 @@ func (p *JoinerController) createPacketHandler(fn JoinerControllerPacketFunc) co
 	return func(ctx context.Context, reader packets.MemberPacketReader, from *core.NodeAppearance, realm *core.FullRealm) error {
 		p.EnsureEnvironment(from, realm)
 
-		// if err == nil {
+		//if err == nil {
 		//	p.addPostponedPacket(reader)
-		// }
-		// return na, err
+		//}
+		//return na, err
 		//
 		return fn(ctx, reader, p)
 	}
@@ -142,21 +142,21 @@ func (p *JoinerController) createPacketHandler(fn JoinerControllerPacketFunc) co
 func (p *JoinerController) handleUnknownJoinerPacket(ctx context.Context, reader packets.MemberPacketReader,
 	from endpoints.HostIdentityHolder, r *core.FullRealm) (*core.NodeAppearance, error) {
 
-	// all packets will also be processed by main handlers
+	//all packets will also be processed by main handlers
 
 	switch reader.GetPacketType() {
 	case gcp_types.PacketPhase1:
 		p1 := reader.AsPhase1Packet()
-		// r.GetProfileFactory().CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
-		// nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
-		// if fIntro, ok := intro.(packets.FullIntroductionReader); ok && !fIntro.GetIssuerID().IsAbsent() {
+		//r.GetProfileFactory().CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
+		//nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
+		//if fIntro, ok := intro.(packets.FullIntroductionReader); ok && !fIntro.GetIssuerID().IsAbsent() {
 		//	nip = r.profileFactory.CreateFullIntroProfile(nip, fIntro)
-		// }
-		// na := r.population.CreateNodeAppearance(r.roundContext, nip)
+		//}
+		//na := r.population.CreateNodeAppearance(r.roundContext, nip)
 		//
-		// cIntro := p1.GetCloudIntroduction()
-		// //checkJoinerSecret(cIntro.GetCloudIdentity(), cIntro.GetJoinerSecret())
-		// cIntro.GetLastCloudStateHash()
+		//cIntro := p1.GetCloudIntroduction()
+		////checkJoinerSecret(cIntro.GetCloudIdentity(), cIntro.GetJoinerSecret())
+		//cIntro.GetLastCloudStateHash()
 
 		return p.applyBriefInfo(ctx, p1.GetFullIntroduction(), from, r)
 

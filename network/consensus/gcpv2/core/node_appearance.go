@@ -96,7 +96,7 @@ type NodeAppearance struct {
 
 	/* Other fields - need mutex */
 
-	// membership common2.MembershipProfile // one-time set
+	//membership common2.MembershipProfile // one-time set
 	announceSignature gcp_types.MemberAnnouncementSignature // one-time set
 	stateEvidence     gcp_types.NodeStateHashEvidence       // one-time set
 	requestedPower    gcp_types.MemberPower                 // one-time set
@@ -307,7 +307,7 @@ func (c *NodeAppearance) _applyNodeMembership(ma gcp_types.MembershipAnnouncemen
 		c.requestedLeave = true
 		c.requestedLeaveReason = ma.LeaveReason
 	} else if ma.Joiner != nil {
-		panic("not implemented") // TODO implement
+		panic("not implemented") //TODO implement
 	}
 
 	c.neighbourWeight ^= long_bits.FoldUint64(ma.Membership.StateEvidence.GetNodeStateHash().FoldToUint64())
@@ -334,9 +334,9 @@ func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (gcp_types.Membershi
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	// if c.stateEvidence == nil {
+	//if c.stateEvidence == nil {
 	//	panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
-	// }
+	//}
 	return c.getMembership(), c.trust
 }
 

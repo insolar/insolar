@@ -69,7 +69,7 @@ type PreparedPacketSender interface {
 type PacketBuilder interface {
 	GetNeighbourhoodSize() gcp_types.NeighbourhoodSizes
 
-	// PrepareIntro
+	//PrepareIntro
 
 	PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
 		options PacketSendOptions) PreparedPacketSender

@@ -81,7 +81,7 @@ type nodeContext struct {
 	blameFactory            errors.BlameFactory
 	phaseControllerCallback NodeUpdateCallback
 
-	populationVersion uint32 // atomic
+	populationVersion uint32 //atomic
 
 	nbTrustThreshold uint8
 }

@@ -173,9 +173,9 @@ func (r *DynamicRealmPopulation) IsComplete() bool {
 
 func (r *DynamicRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	cp, _ := r.GetIndexedNodesWithCheck()
-	// if !ok {
+	//if !ok {
 	//	panic("node set is incomplete")
-	// }
+	//}
 	return cp
 }
 

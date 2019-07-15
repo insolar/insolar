@@ -101,9 +101,9 @@ func (h *EmuHostConsensusAdapter) ConnectTo(chronicles api.ConsensusChronicles, 
 
 func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	defer func() {
-		// r := recover()
-		// inslogger.FromContext(ctx).Errorf("host has died: %v, %v", h.hostAddr, r)
-		// TODO print stacktrace
+		//r := recover()
+		//inslogger.FromContext(ctx).Errorf("host has died: %v, %v", h.hostAddr, r)
+		//TODO print stacktrace
 		close(h.outbound)
 	}()
 

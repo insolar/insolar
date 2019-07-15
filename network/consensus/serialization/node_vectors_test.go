@@ -66,11 +66,11 @@ func TestNodeVectors_SerializeTo(t *testing.T) {
 	nv := NodeVectors{}
 
 	header := Header{}
-	packetCtx := newPacketContext(context.Background(), &header)
-	serializeCtx := newSerializeContext(packetCtx, nil, nil, nil, nil)
+	pctx := newPacketContext(context.Background(), &header)
+	sctx := newSerializeContext(pctx, nil, nil, nil, nil)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	err := nv.SerializeTo(serializeCtx, buf)
+	err := nv.SerializeTo(sctx, buf)
 	require.NoError(t, err)
 }
 
@@ -78,16 +78,16 @@ func TestNodeVectors_DeserializeFrom(t *testing.T) {
 	nv := NodeVectors{}
 
 	header := Header{}
-	packetCtx := newPacketContext(context.Background(), &header)
-	serializeCtx := newSerializeContext(packetCtx, nil, nil, nil, nil)
+	pctx := newPacketContext(context.Background(), &header)
+	sctx := newSerializeContext(pctx, nil, nil, nil, nil)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	err := nv.SerializeTo(serializeCtx, buf)
+	err := nv.SerializeTo(sctx, buf)
 	require.NoError(t, err)
 
-	deserializeCtx := newDeserializeContext(packetCtx, nil, nil)
+	dcxt := newDeserializeContext(pctx, nil, nil)
 	nv2 := NodeVectors{}
-	err = nv2.DeserializeFrom(deserializeCtx, buf)
+	err = nv2.DeserializeFrom(dcxt, buf)
 	require.NoError(t, err)
 
 	require.Equal(t, nv, nv2)
@@ -104,16 +104,16 @@ func TestNodeVectors_AdditionalVectors(t *testing.T) {
 	header.ClearFlag(1)
 	header.SetFlag(2)
 
-	packetCtx := newPacketContext(context.Background(), &header)
-	serializeCtx := newSerializeContext(packetCtx, nil, nil, nil, nil)
+	pctx := newPacketContext(context.Background(), &header)
+	sctx := newSerializeContext(pctx, nil, nil, nil, nil)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	err := nv.SerializeTo(serializeCtx, buf)
+	err := nv.SerializeTo(sctx, buf)
 	require.NoError(t, err)
 
-	deserializeCtx := newDeserializeContext(packetCtx, nil, nil)
+	dcxt := newDeserializeContext(pctx, nil, nil)
 	nv2 := NodeVectors{}
-	err = nv2.DeserializeFrom(deserializeCtx, buf)
+	err = nv2.DeserializeFrom(dcxt, buf)
 	require.NoError(t, err)
 
 	require.Equal(t, nv, nv2)
@@ -383,7 +383,7 @@ func TestGlobulaStateVector_DeserializeFrom(t *testing.T) {
 	}
 
 	b := make([]byte, 64)
-	_, _ = rand.Read(b)
+	rand.Read(b)
 
 	copy(v1.VectorHash[:], b)
 	copy(v1.SignedGlobulaStateHash[:], b)

@@ -70,7 +70,7 @@ func NewPhase2Controller(packetPrepareOptions api.PacketSendOptions, queueNshRea
 	return &Phase2Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueNshReady:        queueNshReady,
-		// queueTrustUpdated:    queueTrustUpdated,
+		//queueTrustUpdated:    queueTrustUpdated,
 	}
 }
 
@@ -80,7 +80,7 @@ type Phase2Controller struct {
 	PhaseControllerWithJoinersTemplate
 	packetPrepareOptions api.PacketSendOptions
 	queueNshReady        <-chan *core.NodeAppearance
-	// queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
+	//queueTrustUpdated    chan<- TrustUpdateSignal // small enough to be sent as values
 }
 
 type TrustUpdateSignal struct {
@@ -148,9 +148,9 @@ func (c *Phase2Controller) HandleMemberPacket(ctx context.Context, reader packet
 		case nb.GetJoinerID().IsAbsent():
 			ma = gcp_types.NewMembershipAnnouncement(mp)
 		default:
-			panic("not implemented") // TODO implement
-			// jar := na.GetJoinerAnnouncement()
-			// ma = common.NewMembershipAnnouncementWithJoiner(mp)
+			panic("not implemented") //TODO implement
+			//jar := na.GetJoinerAnnouncement()
+			//ma = common.NewMembershipAnnouncementWithJoiner(mp)
 		}
 
 		var modified bool
@@ -274,7 +274,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 
 			nh := make([]*core.NodeAppearance, len(nhBuf))
 			for i, np := range nhBuf {
-				// don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
+				//don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
 				nh[i] = np.(*core.NodeAppearance)
 			}
 

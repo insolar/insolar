@@ -76,7 +76,7 @@ func (r *Row) Len() int {
 }
 
 func (r *Row) Set(column int, value uint8) uint8 {
-	r.ensureUpdatable()
+	r.ensureUpdateable()
 	prev := r.values[column]
 	if prev != value {
 		r.summary[prev]--
@@ -87,7 +87,7 @@ func (r *Row) Set(column int, value uint8) uint8 {
 }
 
 func (r *Row) ensureForTable(t *StatTable) {
-	r.ensureUpdatable()
+	r.ensureUpdateable()
 	if r.ColumnCount() != t.ColumnCount() {
 		panic("column count mismatched")
 	}
@@ -96,7 +96,7 @@ func (r *Row) ensureForTable(t *StatTable) {
 	}
 }
 
-func (r *Row) ensureUpdatable() {
+func (r *Row) ensureUpdateable() {
 	if !r.CanUpdate() {
 		panic("row is in the table or uninitialized")
 	}

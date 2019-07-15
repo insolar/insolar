@@ -72,8 +72,7 @@ type HostProfile interface {
 	// GetHostType()
 }
 
-type NodeIntroduction interface {
-	// full intro
+type NodeIntroduction interface { //full intro
 	GetShortNodeID() insolar.ShortNodeID
 	GetNodeReference() insolar.Reference
 	IsAllowedPower(p MemberPower) bool
@@ -82,8 +81,7 @@ type NodeIntroduction interface {
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeIntroProfile -o . -s _mock.go
 
-type NodeIntroProfile interface {
-	// brief intro
+type NodeIntroProfile interface { //brief intro
 	HostProfile
 	GetShortNodeID() insolar.ShortNodeID
 	GetPrimaryRole() NodePrimaryRole
@@ -92,33 +90,30 @@ type NodeIntroProfile interface {
 	GetStartPower() MemberPower
 	GetAnnouncementSignature() cryptography_containers.SignatureHolder
 
-	HasIntroduction() bool             // must be always true for LocalNodeProfile
-	GetIntroduction() NodeIntroduction // not null, full intro, will panic when HasIntroduction() == false
+	HasIntroduction() bool             //must be always true for LocalNodeProfile
+	GetIntroduction() NodeIntroduction //not null, full intro, will panic when HasIntroduction() == false
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/gcp_types.NodeProfile -o . -s _mock.go
 
-type BaseNodeProfile interface {
-	// TODO Rename
+type BaseNodeProfile interface { //TODO Rename
 	NodeIntroProfile
 	GetSignatureVerifier() cryptography_containers.SignatureVerifier
 	GetOpMode() MemberOpMode
 }
 
-const NodeIndexBits = 10 // DO NOT change it, otherwise nasty consequences will come
+const NodeIndexBits = 10 //DO NOT change it, otherwise nasty consequences will come
 const NodeIndexMask = 1<<NodeIndexBits - 1
 const MaxNodeIndex = NodeIndexMask
 
-type /* Active */ NodeProfile interface {
-	// TODO Rename
+type /* Active */ NodeProfile interface { //TODO Rename
 	BaseNodeProfile
-	GetIndex() int // 0 for joiners
+	GetIndex() int //0 for joiners
 	IsJoiner() bool
 	GetDeclaredPower() MemberPower
 }
 
-type EvictedNodeProfile interface {
-	// TODO Rename
+type EvictedNodeProfile interface { //TODO Rename
 	BaseNodeProfile
 	GetLeaveReason() uint32
 }
@@ -147,7 +142,7 @@ type CandidateProfile interface {
 	GetExtraEndpoints() []endpoints.NodeEndpoint
 
 	GetReference() insolar.Reference
-	// NodeRefProof	[]common.Bits512
+	//NodeRefProof	[]common.Bits512
 
 	GetIssuerID() insolar.ShortNodeID
 	GetIssuerSignature() cryptography_containers.SignatureHolder
@@ -306,7 +301,7 @@ func (v MemberPowerSet) IsAllowed(p MemberPower) bool {
 		if v[0] == 0 { // [0, 0, p2, max]
 			return p <= v[2] || p == v[3]
 		}
-		// [min, 0, p2, max]
+		//[min, 0, p2, max]
 		return v[3] == p || v[2] >= p
 	}
 	// [min, p1, p2, max]

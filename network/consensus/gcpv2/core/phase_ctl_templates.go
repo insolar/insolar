@@ -99,7 +99,7 @@ func (*PhaseControllerPerMemberTemplate) HandleUnknownMemberPacket(ctx context.C
 	return nil, errPacketIsNotAllowed
 }
 
-// var _ PhaseController = &PhaseControllerPerNodeTemplate{}
+//var _ PhaseController = &PhaseControllerPerNodeTemplate{}
 type PhaseControllerPerNodeTemplate struct {
 	R *FullRealm
 }

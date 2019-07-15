@@ -141,10 +141,12 @@ type Phase3PacketReader interface {
 
 	GetBitset() gcp_types.NodeBitset
 
+	//GetTrustedExpectedRank() common2.MembershipRank
 	GetTrustedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash
 	GetTrustedGlobulaStateSignature() gcp_types.GlobulaStateSignature
 	GetTrustedExpectedRank() gcp_types.MembershipRank
 
+	//GetDoubtedExpectedRank() common2.MembershipRank
 	GetDoubtedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash
 	GetDoubtedGlobulaStateSignature() gcp_types.GlobulaStateSignature
 	GetDoubtedExpectedRank() gcp_types.MembershipRank

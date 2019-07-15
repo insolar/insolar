@@ -320,7 +320,7 @@ func readFromArray(d []byte, s []byte) (int, error) {
 
 func bitsToStringDefault(s FoldableReader) string {
 	return BytesToDigestString(s, BitsStringPrefix)
-	// return BytesToGroupedString(s.AsBytes(), BitsStringPrefix, "_", 8)
+	//return BytesToGroupedString(s.AsBytes(), BitsStringPrefix, "_", 8)
 }
 
 func BytesToDigestString(s FoldableReader, prefix string) string {

@@ -88,9 +88,9 @@ func (c *Phase0Controller) HandleMemberPacket(ctx context.Context, p packets.Mem
 	p0 := p.AsPhase0Packet()
 	pp := p0.GetEmbeddedPulsePacket()
 
-	// TODO check NodeRank - especially for suspected node
+	//TODO check NodeRank - especially for suspected node
 
-	// TODO when PulseDataExt is bigger than ~1.5KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
+	//TODO when PulseDataExt is bigger than ~1.5KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
 
 	err := n.SetReceivedWithDupCheck(c.GetPacketType())
 	return handleEmbeddedPulsePacket(ctx, p, pp, n, c.R, err)
@@ -166,9 +166,9 @@ func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core
 	case na.GetJoinerID().IsAbsent():
 		ma = gcp_types.NewMembershipAnnouncement(mp)
 	default:
-		panic("not implemented") // TODO implement
-		// jar := na.GetJoinerAnnouncement()
-		// ma = common.NewMembershipAnnouncementWithJoiner(mp)
+		panic("not implemented") //TODO implement
+		//jar := na.GetJoinerAnnouncement()
+		//ma = common.NewMembershipAnnouncementWithJoiner(mp)
 	}
 
 	_, err := n.ApplyNodeMembership(ma)
@@ -221,8 +221,8 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (gcp_types.Node
 			continue
 		}
 
-		// DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
-		// Instead we have a chance to save some traffic.
+		//DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
+		//Instead we have a chance to save some traffic.
 		p0.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
 		target.SetSentPhase(gcp_types.Phase0)
 
@@ -250,7 +250,7 @@ func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int)
 
 	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
-	// first, send to nodes not covered by Phase 0
+	//first, send to nodes not covered by Phase 0
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (gcp_types.NodeProfile, api.PacketSendOptions) {
 			target := otherNodes[targetIdx+startIndex]
