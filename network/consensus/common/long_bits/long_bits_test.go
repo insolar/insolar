@@ -131,7 +131,8 @@ func TestBits64AsBytes(t *testing.T) {
 func TestFoldToBits64(t *testing.T) {
 	require.Equal(t, NewBits64(0x807060504030201), FoldToBits64([]byte{1, 2, 3, 4, 5, 6, 7, 8}))
 
-	require.Equal(t, NewBits64(0x1808080808080808), FoldToBits64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}))
+	require.Equal(t, NewBits64(0x1808080808080808), FoldToBits64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+		11, 12, 13, 14, 15, 16}))
 
 	require.Panics(t, func() { FoldToBits64([]byte{1}) })
 }
@@ -484,4 +485,185 @@ func TestBits512AsBytes(t *testing.T) {
 	require.Equal(t, []uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 		1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 		1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2, 3, 4}, bits.AsBytes())
+}
+
+func TestFoldedFoldToUint64(t *testing.T) {
+	require.Equal(t, uint64(0x807060504030201), FoldToUint64([]byte{1, 2, 3, 4, 5, 6, 7, 8}))
+
+	require.Equal(t, uint64(0x1808080808080808), FoldToUint64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+		11, 12, 13, 14, 15, 16}))
+
+	require.Panics(t, func() { FoldToUint64([]byte{1}) })
+}
+
+func TestFillBitsWithStaticNoise(t *testing.T) {
+	bytes := []byte{1, 2, 3, 4, 5, 6, 7, 8}
+	FillBitsWithStaticNoise(5, bytes)
+	require.Equal(t, []byte{0xde, 0xaa, 0xdb, 0x79, 0x6d, 0xd5, 0xed, 0x3c}, bytes)
+
+	bytes = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	FillBitsWithStaticNoise(31, bytes)
+	require.Equal(t, []byte{0xc9, 0xaa, 0xcc, 0xf9, 0x65, 0x55, 0xe6, 0x3c, 0xc8, 0x2a, 0xcd,
+		0xb9, 0x64, 0x95, 0xe6, 0x3c}, bytes)
+
+	require.Panics(t, func() { FillBitsWithStaticNoise(1, []byte{1}) })
+}
+
+func TestReadFromArray(t *testing.T) {
+	var d, s []byte
+	n, err := readFromArray(d, s)
+	require.Equal(t, 0, n)
+
+	require.Equal(t, nil, err)
+
+	d = make([]byte, 1)
+	n, err = readFromArray(d, s)
+	require.Equal(t, 0, n)
+
+	require.Equal(t, nil, err)
+
+	d = nil
+	s = []byte{1}
+	n, err = readFromArray(d, s)
+	require.Equal(t, 0, n)
+
+	require.Equal(t, nil, err)
+
+	d = make([]byte, 1)
+	n, err = readFromArray(d, s)
+	require.Equal(t, 1, n)
+
+	require.Equal(t, nil, err)
+
+	require.Equal(t, s[0], d[0])
+
+	require.Equal(t, uint8(1), d[0])
+
+	d = make([]byte, 2)
+	n, err = readFromArray(d, s)
+	require.Equal(t, 1, n)
+
+	require.Equal(t, nil, err)
+
+	d = make([]byte, 1)
+	s = make([]byte, 2)
+	n, err = readFromArray(d, s)
+	require.Equal(t, 1, n)
+
+	require.Equal(t, nil, err)
+}
+
+func TestBitsToStringDefault(t *testing.T) {
+	bits := Bits64{1}
+	require.True(t, bitsToStringDefault(&bits) != "")
+}
+
+func TestBytesToDigestString(t *testing.T) {
+	bits := Bits64{1}
+	require.True(t, BytesToDigestString(&bits, "abc") != "")
+}
+
+func TestCopyToFixedBits(t *testing.T) {
+	var d, s []byte
+	copyToFixedBits(d, s, 0)
+	require.Len(t, d, 0)
+
+	require.Len(t, s, 0)
+
+	d = make([]byte, 1)
+	copyToFixedBits(d, s, 0)
+	require.Len(t, d, 1)
+
+	require.Len(t, s, 0)
+
+	d = nil
+	s = []byte{1}
+	copyToFixedBits(d, s, 1)
+	require.Len(t, d, 0)
+
+	require.Len(t, s, 1)
+
+	d = make([]byte, 1)
+	copyToFixedBits(d, s, 1)
+	require.Len(t, s, 1)
+
+	require.Len(t, s, 1)
+
+	require.Equal(t, s[0], d[0])
+
+	require.Equal(t, uint8(1), d[0])
+
+	d = make([]byte, 2)
+	copyToFixedBits(d, s, 1)
+	require.Len(t, d, 2)
+
+	require.Len(t, s, 1)
+
+	d = make([]byte, 1)
+	s = []byte{1, 2}
+	copyToFixedBits(d, s, 2)
+	require.Len(t, d, 1)
+
+	require.Len(t, s, 2)
+
+	require.Equal(t, s[0], d[0])
+
+	require.Equal(t, uint8(1), d[0])
+
+	require.Panics(t, func() { copyToFixedBits(d, s, 3) })
+}
+
+func TestNewBits64FromBytes(t *testing.T) {
+	bytes := []byte{}
+	for i := 0; i < 8; i++ {
+		bytes = append(bytes, byte(i%8))
+	}
+	bits := NewBits64FromBytes(bytes)
+	require.Equal(t, bytes, bits.AsBytes())
+
+	require.Panics(t, func() { NewBits64FromBytes([]byte{1}) })
+}
+
+func TestNewBits128FromBytes(t *testing.T) {
+	bytes := []byte{}
+	for i := 0; i < 16; i++ {
+		bytes = append(bytes, byte(i%8))
+	}
+	bits := NewBits128FromBytes(bytes)
+	require.Equal(t, bytes, bits.AsBytes())
+
+	require.Panics(t, func() { NewBits128FromBytes([]byte{1}) })
+}
+
+func TestNewBits224FromBytes(t *testing.T) {
+	bytes := []byte{}
+	for i := 0; i < 24; i++ {
+		bytes = append(bytes, byte(i%8))
+	}
+	bits := NewBits224FromBytes(bytes)
+	require.Equal(t, bytes, bits.AsBytes())
+
+	require.Panics(t, func() { NewBits224FromBytes([]byte{1}) })
+}
+
+func TestNewBits256FromBytes(t *testing.T) {
+	bytes := []byte{}
+	for i := 0; i < 32; i++ {
+		bytes = append(bytes, byte(i%8))
+	}
+	bits := NewBits256FromBytes(bytes)
+	require.Equal(t, bytes, bits.AsBytes())
+
+	require.Panics(t, func() { NewBits256FromBytes([]byte{1}) })
+}
+
+func TestNewBits512FromBytes(t *testing.T) {
+	bytes := []byte{}
+	for i := 0; i < 64; i++ {
+		bytes = append(bytes, byte(i%8))
+	}
+	bits := NewBits512FromBytes(bytes)
+	require.Equal(t, bytes, bits.AsBytes())
+
+	require.Panics(t, func() { NewBits256FromBytes([]byte{1}) })
 }
