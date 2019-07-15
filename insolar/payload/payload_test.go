@@ -76,9 +76,9 @@ func TestMarshalUnmarshal(t *testing.T) {
 		t.Run(d.tp.String(), func(t *testing.T) {
 			fuzz.New().Fuzz(d.pl)
 			encoded, err := payload.Marshal(d.pl)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			decoded, err := payload.Unmarshal(encoded)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, d.pl, decoded)
 		})
 	}

@@ -182,7 +182,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 			Jets,
 		)
 
-		jetSplitter := executor.NewJetSplitter(jetCalculator, Jets, Jets, drops, drops, Pulses)
+		jetSplitter := executor.NewJetSplitter(cfg.Ledger.JetSplit, jetCalculator, Jets, Jets, drops, drops, Pulses, records)
 
 		hotSender := executor.NewHotSender(
 			drops,

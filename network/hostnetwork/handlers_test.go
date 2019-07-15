@@ -48,107 +48,45 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package utils
+package hostnetwork
 
 import (
-	"bytes"
 	"context"
-	"hash/crc32"
-	"io"
-	"strconv"
-	"strings"
-	"sync"
+	"net"
+	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/fortytw2/leaktest"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
+func TestNewStreamHandler(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	requestHandler := func(ctx context.Context, p *packet.ReceivedPacket) {
+		inslogger.FromContext(ctx).Info("requestHandler")
+	}
+
+	h := NewStreamHandler(requestHandler, nil)
+
+	con1, _ := net.Pipe()
+
+	done := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		defer close(c)
-		wg.Wait()
+		h.HandleStream(ctx, "127.0.0.1:8080", con1)
+		done <- struct{}{}
 	}()
+
+	cancel()
+	// con2.Close()
+
 	select {
-	case <-c:
-		return true // completed normally
-	case <-time.After(timeout):
-		return false // timed out
+	case <-done:
+		return
+	case <-time.After(time.Second * 5):
+		t.Fail()
 	}
-}
-
-// GenerateShortID generate short ID for node without checking collisions
-func GenerateShortID(ref insolar.Reference) insolar.ShortNodeID {
-	return insolar.ShortNodeID(GenerateUintShortID(ref))
-}
-
-// GenerateShortID generate short ID for node without checking collisions
-func GenerateUintShortID(ref insolar.Reference) uint32 {
-	return crc32.ChecksumIEEE(ref[:])
-}
-
-func OriginIsDiscovery(cert insolar.Certificate) bool {
-	return IsDiscovery(*cert.GetNodeRef(), cert)
-}
-
-func IsDiscovery(nodeID insolar.Reference, cert insolar.Certificate) bool {
-	bNodes := cert.GetDiscoveryNodes()
-	for _, discoveryNode := range bNodes {
-		if nodeID.Equal(*discoveryNode.GetNodeRef()) {
-			return true
-		}
-	}
-	return false
-}
-
-func CloseVerbose(closer io.Closer) {
-	err := closer.Close()
-	if err != nil {
-		log.Errorf("[ CloseVerbose ] Failed to close: %s", err.Error())
-	}
-}
-
-// IsConnectionClosed checks err for connection closed, workaround for poll.ErrNetClosing https://github.com/golang/go/issues/4373
-func IsConnectionClosed(err error) bool {
-	if err == nil {
-		return false
-	}
-	err = errors.Cause(err)
-	return strings.Contains(err.Error(), "use of closed network connection")
-}
-
-func IsClosedPipe(err error) bool {
-	if err == nil {
-		return false
-	}
-	err = errors.Cause(err)
-	return strings.Contains(err.Error(), "read/write on closed pipe")
-}
-
-func NewPulseContext(ctx context.Context, pulseNumber uint32) context.Context {
-	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
-	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
-	return ctx
-}
-
-type CapturingReader struct {
-	io.Reader
-	buffer bytes.Buffer
-}
-
-func NewCapturingReader(reader io.Reader) *CapturingReader {
-	return &CapturingReader{Reader: reader}
-}
-
-func (r *CapturingReader) Read(p []byte) (int, error) {
-	n, err := r.Reader.Read(p)
-	r.buffer.Write(p)
-	return n, err
-}
-
-func (r *CapturingReader) Captured() []byte {
-	return r.buffer.Bytes()
 }

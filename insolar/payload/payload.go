@@ -43,6 +43,7 @@ const (
 	TypeSetCode
 	TypeSetIncomingRequest
 	TypeSetOutgoingRequest
+	TypeSagaCallAcceptNotification
 	TypeGetFilament
 	TypeFilamentSegment
 	TypeSetResult
@@ -72,6 +73,8 @@ type Payload interface {
 
 const (
 	MessageHashSize = 28
+	MorphFieldNum   = 16
+	MorpyFieldType  = 0 // Varint
 )
 
 type MessageHash [MessageHashSize]byte
@@ -116,9 +119,12 @@ func (h *MessageHash) IsZero() bool {
 // UnmarshalType decodes payload type from given binary.
 func UnmarshalType(data []byte) (Type, error) {
 	buf := proto.NewBuffer(data)
-	_, err := buf.DecodeVarint()
+	fieldNumType, err := buf.DecodeVarint()
 	if err != nil {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
+	}
+	if fieldNumType != MorphFieldNum<<3|MorpyFieldType {
+		return TypeUnknown, errors.Errorf("wrong polymorph field number %d", fieldNumType)
 	}
 	morph, err := buf.DecodeVarint()
 	if err != nil {
@@ -173,6 +179,9 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *SetOutgoingRequest:
 		pl.Polymorph = uint32(TypeSetOutgoingRequest)
+		return pl.Marshal()
+	case *SagaCallAcceptNotification:
+		pl.Polymorph = uint32(TypeSagaCallAcceptNotification)
 		return pl.Marshal()
 	case *SetResult:
 		pl.Polymorph = uint32(TypeSetResult)
@@ -261,6 +270,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeSetOutgoingRequest:
 		pl := SetOutgoingRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSagaCallAcceptNotification:
+		pl := SagaCallAcceptNotification{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeSetResult:

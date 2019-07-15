@@ -24,20 +24,21 @@ func _() {
 	_ = x[TypeSetCode-13]
 	_ = x[TypeSetIncomingRequest-14]
 	_ = x[TypeSetOutgoingRequest-15]
-	_ = x[TypeGetFilament-16]
-	_ = x[TypeFilamentSegment-17]
-	_ = x[TypeSetResult-18]
-	_ = x[TypeActivate-19]
-	_ = x[TypeRequestInfo-20]
-	_ = x[TypeDeactivate-21]
-	_ = x[TypeUpdate-22]
-	_ = x[TypeHotObjects-23]
-	_ = x[_latestType-24]
+	_ = x[TypeSagaCallAcceptNotification-16]
+	_ = x[TypeGetFilament-17]
+	_ = x[TypeFilamentSegment-18]
+	_ = x[TypeSetResult-19]
+	_ = x[TypeActivate-20]
+	_ = x[TypeRequestInfo-21]
+	_ = x[TypeDeactivate-22]
+	_ = x[TypeUpdate-23]
+	_ = x[TypeHotObjects-24]
+	_ = x[_latestType-25]
 }
 
-const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeGetFilamentTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeDeactivateTypeUpdateTypeHotObjects_latestType"
+const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeDeactivateTypeUpdateTypeHotObjects_latestType"
 
-var _Type_index = [...]uint16{0, 11, 19, 28, 34, 43, 56, 69, 81, 93, 102, 110, 121, 129, 140, 162, 184, 199, 218, 231, 243, 258, 272, 282, 296, 307}
+var _Type_index = [...]uint16{0, 11, 19, 28, 34, 43, 56, 69, 81, 93, 102, 110, 121, 129, 140, 162, 184, 214, 229, 248, 261, 273, 288, 302, 312, 326, 337}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

@@ -40,7 +40,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -373,10 +372,6 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg insolar.Parcel) (insola
 		return nil, errors.New(txt)
 	}
 
-	origin := mb.NodeNetwork.GetOrigin()
-	if msg.GetSender().Equal(origin.ID()) {
-		ctx = hack.SetSkipValidation(ctx, true)
-	}
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 
 	resp, err := handler(ctx, msg)

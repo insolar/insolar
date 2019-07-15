@@ -55,6 +55,38 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
+	msgType := s.Message.Metadata.Get(bus.MetaType)
+	if msgType != "" {
+		return s.handleParcel(ctx, f)
+	}
+
+	var err error
+
+	meta := payload.Meta{}
+	err = meta.Unmarshal(s.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+	payloadType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload type")
+	}
+
+	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
+	switch payloadType {
+	case payload.TypeSagaCallAcceptNotification:
+		h := &HandleSagaCallAcceptNotification{
+			dep:  s.dep,
+			meta: meta,
+		}
+		return f.Handle(ctx, h.Present)
+	default:
+		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
+	}
+}
+
+func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	var err error
 
 	meta := payload.Meta{}
@@ -114,7 +146,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		}
 		return f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
+		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", msgType)
 	}
 }
 
