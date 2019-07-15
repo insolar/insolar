@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,39 +46,63 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package rwlock
+package endpoints
 
-import "sync"
+import (
+	"testing"
 
-type RWLocker interface {
-	sync.Locker
-	RLock()
-	RUnlock()
+	"github.com/stretchr/testify/require"
+)
+
+func TestIsLocalHost(t *testing.T) {
+	var ha *Name
+	require.False(t, ha.IsLocalHost())
+
+	h := Name("")
+	require.True(t, h.IsLocalHost())
+
+	h = Name("addr")
+	require.False(t, h.IsLocalHost())
 }
 
-func DummyLocker() RWLocker {
-	return &dummyLock
+func TestEquals(t *testing.T) {
+	var h1 *Name
+	h2 := Name("")
+	require.False(t, h1.Equals(h2))
+
+	h3 := h2
+	require.True(t, h2.Equals(h3))
+
+	h2 = Name("addr")
+	h3 = Name("addr")
+	require.True(t, h2.Equals(h3))
+
+	h3 = Name("addr1")
+	require.False(t, h2.Equals(h3))
 }
 
-var dummyLock = dummyLocker{}
+func TestEqualsToString(t *testing.T) {
+	var h1 *Name
+	require.False(t, h1.EqualsToString(""))
 
-type dummyLocker struct {
+	h2 := Name("")
+	require.True(t, h2.EqualsToString(""))
+
+	h2 = Name("addr")
+	require.True(t, h2.EqualsToString("addr"))
+
+	h2 = Name("addr")
+	require.False(t, h2.EqualsToString("addr1"))
 }
 
-func (*dummyLocker) Lock() {
-}
+func TestString(t *testing.T) {
+	s := ""
+	h1 := Name(s)
+	require.Equal(t, s, h1.String())
 
-func (*dummyLocker) Unlock() {
-}
-
-func (*dummyLocker) RUnlock() {
-}
-
-func (*dummyLocker) RLock() {
-}
-
-func (*dummyLocker) String() string {
-	return "dummyLocker"
+	s = "addr"
+	h1 = Name(s)
+	require.Equal(t, s, h1.String())
 }

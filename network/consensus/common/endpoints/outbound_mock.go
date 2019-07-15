@@ -12,6 +12,8 @@ import (
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
 	packets "github.com/insolar/insolar/network/consensusv1/packets"
+
+	testify_assert "github.com/stretchr/testify/assert"
 )
 
 //OutboundMock implements github.com/insolar/insolar/network/consensus/common/endpoints.Outbound
@@ -22,6 +24,11 @@ type OutboundMock struct {
 	AsByteStringCounter    uint64
 	AsByteStringPreCounter uint64
 	AsByteStringMock       mOutboundMockAsByteString
+
+	CanAcceptFunc       func(p Inbound) (r bool)
+	CanAcceptCounter    uint64
+	CanAcceptPreCounter uint64
+	CanAcceptMock       mOutboundMockCanAccept
 
 	GetEndpointTypeFunc       func() (r NodeEndpointType)
 	GetEndpointTypeCounter    uint64
@@ -53,6 +60,7 @@ func NewOutboundMock(t minimock.Tester) *OutboundMock {
 	}
 
 	m.AsByteStringMock = mOutboundMockAsByteString{mock: m}
+	m.CanAcceptMock = mOutboundMockCanAccept{mock: m}
 	m.GetEndpointTypeMock = mOutboundMockGetEndpointType{mock: m}
 	m.GetIPAddressMock = mOutboundMockGetIPAddress{mock: m}
 	m.GetNameAddressMock = mOutboundMockGetNameAddress{mock: m}
@@ -190,6 +198,153 @@ func (m *OutboundMock) AsByteStringFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.AsByteStringFunc != nil {
 		return atomic.LoadUint64(&m.AsByteStringCounter) > 0
+	}
+
+	return true
+}
+
+type mOutboundMockCanAccept struct {
+	mock              *OutboundMock
+	mainExpectation   *OutboundMockCanAcceptExpectation
+	expectationSeries []*OutboundMockCanAcceptExpectation
+}
+
+type OutboundMockCanAcceptExpectation struct {
+	input  *OutboundMockCanAcceptInput
+	result *OutboundMockCanAcceptResult
+}
+
+type OutboundMockCanAcceptInput struct {
+	p Inbound
+}
+
+type OutboundMockCanAcceptResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Outbound.CanAccept is expected from 1 to Infinity times
+func (m *mOutboundMockCanAccept) Expect(p Inbound) *mOutboundMockCanAccept {
+	m.mock.CanAcceptFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &OutboundMockCanAcceptExpectation{}
+	}
+	m.mainExpectation.input = &OutboundMockCanAcceptInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Outbound.CanAccept
+func (m *mOutboundMockCanAccept) Return(r bool) *OutboundMock {
+	m.mock.CanAcceptFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &OutboundMockCanAcceptExpectation{}
+	}
+	m.mainExpectation.result = &OutboundMockCanAcceptResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Outbound.CanAccept is expected once
+func (m *mOutboundMockCanAccept) ExpectOnce(p Inbound) *OutboundMockCanAcceptExpectation {
+	m.mock.CanAcceptFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &OutboundMockCanAcceptExpectation{}
+	expectation.input = &OutboundMockCanAcceptInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *OutboundMockCanAcceptExpectation) Return(r bool) {
+	e.result = &OutboundMockCanAcceptResult{r}
+}
+
+//Set uses given function f as a mock of Outbound.CanAccept method
+func (m *mOutboundMockCanAccept) Set(f func(p Inbound) (r bool)) *OutboundMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.CanAcceptFunc = f
+	return m.mock
+}
+
+//CanAccept implements github.com/insolar/insolar/network/consensus/common/endpoints.Outbound interface
+func (m *OutboundMock) CanAccept(p Inbound) (r bool) {
+	counter := atomic.AddUint64(&m.CanAcceptPreCounter, 1)
+	defer atomic.AddUint64(&m.CanAcceptCounter, 1)
+
+	if len(m.CanAcceptMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.CanAcceptMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to OutboundMock.CanAccept. %v", p)
+			return
+		}
+
+		input := m.CanAcceptMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, OutboundMockCanAcceptInput{p}, "Outbound.CanAccept got unexpected parameters")
+
+		result := m.CanAcceptMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the OutboundMock.CanAccept")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.CanAcceptMock.mainExpectation != nil {
+
+		input := m.CanAcceptMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, OutboundMockCanAcceptInput{p}, "Outbound.CanAccept got unexpected parameters")
+		}
+
+		result := m.CanAcceptMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the OutboundMock.CanAccept")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.CanAcceptFunc == nil {
+		m.t.Fatalf("Unexpected call to OutboundMock.CanAccept. %v", p)
+		return
+	}
+
+	return m.CanAcceptFunc(p)
+}
+
+//CanAcceptMinimockCounter returns a count of OutboundMock.CanAcceptFunc invocations
+func (m *OutboundMock) CanAcceptMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.CanAcceptCounter)
+}
+
+//CanAcceptMinimockPreCounter returns the value of OutboundMock.CanAccept invocations
+func (m *OutboundMock) CanAcceptMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.CanAcceptPreCounter)
+}
+
+//CanAcceptFinished returns true if mock invocations count is ok
+func (m *OutboundMock) CanAcceptFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.CanAcceptMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.CanAcceptCounter) == uint64(len(m.CanAcceptMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.CanAcceptMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.CanAcceptCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.CanAcceptFunc != nil {
+		return atomic.LoadUint64(&m.CanAcceptCounter) > 0
 	}
 
 	return true
@@ -739,6 +894,10 @@ func (m *OutboundMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to OutboundMock.AsByteString")
 	}
 
+	if !m.CanAcceptFinished() {
+		m.t.Fatal("Expected call to OutboundMock.CanAccept")
+	}
+
 	if !m.GetEndpointTypeFinished() {
 		m.t.Fatal("Expected call to OutboundMock.GetEndpointType")
 	}
@@ -776,6 +935,10 @@ func (m *OutboundMock) MinimockFinish() {
 		m.t.Fatal("Expected call to OutboundMock.AsByteString")
 	}
 
+	if !m.CanAcceptFinished() {
+		m.t.Fatal("Expected call to OutboundMock.CanAccept")
+	}
+
 	if !m.GetEndpointTypeFinished() {
 		m.t.Fatal("Expected call to OutboundMock.GetEndpointType")
 	}
@@ -807,6 +970,7 @@ func (m *OutboundMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.AsByteStringFinished()
+		ok = ok && m.CanAcceptFinished()
 		ok = ok && m.GetEndpointTypeFinished()
 		ok = ok && m.GetIPAddressFinished()
 		ok = ok && m.GetNameAddressFinished()
@@ -821,6 +985,10 @@ func (m *OutboundMock) MinimockWait(timeout time.Duration) {
 
 			if !m.AsByteStringFinished() {
 				m.t.Error("Expected call to OutboundMock.AsByteString")
+			}
+
+			if !m.CanAcceptFinished() {
+				m.t.Error("Expected call to OutboundMock.CanAccept")
 			}
 
 			if !m.GetEndpointTypeFinished() {
@@ -852,6 +1020,10 @@ func (m *OutboundMock) MinimockWait(timeout time.Duration) {
 func (m *OutboundMock) AllMocksCalled() bool {
 
 	if !m.AsByteStringFinished() {
+		return false
+	}
+
+	if !m.CanAcceptFinished() {
 		return false
 	}
 

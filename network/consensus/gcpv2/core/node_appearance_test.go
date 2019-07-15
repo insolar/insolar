@@ -290,7 +290,7 @@ func TestGetSignatureVerifier(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	sv1 := cryptkit.NewSignatureVerifierMock(t)
 	lp.GetSignatureVerifierMock.Set(func() cryptkit.SignatureVerifier { return sv1 })
-	lp.GetNodePublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return nil })
+	lp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return nil })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	svf := cryptkit.NewSignatureVerifierFactoryMock(t)
@@ -306,7 +306,7 @@ func TestGetSignatureVerifier(t *testing.T) {
 func TestCreateSignatureVerifier(t *testing.T) {
 	lp := profiles.NewLocalNodeMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
-	lp.GetNodePublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return nil })
+	lp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return nil })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 

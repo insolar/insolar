@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,39 +46,27 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package rwlock
+package capacity
 
-import "sync"
+import (
+	"testing"
 
-type RWLocker interface {
-	sync.Locker
-	RLock()
-	RUnlock()
+	"github.com/stretchr/testify/require"
+)
+
+func TestDefaultPercent(t *testing.T) {
+	require.Equal(t, 20, LevelMinimal.DefaultPercent())
+
+	require.Panics(t, func() { LevelCount.DefaultPercent() })
 }
 
-func DummyLocker() RWLocker {
-	return &dummyLock
-}
+func TestChooseInt(t *testing.T) {
+	var options [LevelCount]int
+	l := LevelMinimal
+	options[l] = 5
+	require.Equal(t, 5, l.ChooseInt(options))
 
-var dummyLock = dummyLocker{}
-
-type dummyLocker struct {
-}
-
-func (*dummyLocker) Lock() {
-}
-
-func (*dummyLocker) Unlock() {
-}
-
-func (*dummyLocker) RUnlock() {
-}
-
-func (*dummyLocker) RLock() {
-}
-
-func (*dummyLocker) String() string {
-	return "dummyLocker"
+	require.Panics(t, func() { LevelCount.ChooseInt(options) })
 }

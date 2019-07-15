@@ -21,6 +21,11 @@ import (
 type CandidateProfileMock struct {
 	t minimock.Tester
 
+	GetDefaultEndpointFunc       func() (r endpoints.Outbound)
+	GetDefaultEndpointCounter    uint64
+	GetDefaultEndpointPreCounter uint64
+	GetDefaultEndpointMock       mCandidateProfileMockGetDefaultEndpoint
+
 	GetExtraEndpointsFunc       func() (r []endpoints.Outbound)
 	GetExtraEndpointsCounter    uint64
 	GetExtraEndpointsPreCounter uint64
@@ -51,40 +56,35 @@ type CandidateProfileMock struct {
 	GetJoinerSignaturePreCounter uint64
 	GetJoinerSignatureMock       mCandidateProfileMockGetJoinerSignature
 
-	GetNodeEndpointFunc       func() (r endpoints.Outbound)
-	GetNodeEndpointCounter    uint64
-	GetNodeEndpointPreCounter uint64
-	GetNodeEndpointMock       mCandidateProfileMockGetNodeEndpoint
-
-	GetNodeIDFunc       func() (r insolar.ShortNodeID)
-	GetNodeIDCounter    uint64
-	GetNodeIDPreCounter uint64
-	GetNodeIDMock       mCandidateProfileMockGetNodeID
-
-	GetNodePKFunc       func() (r cryptkit.SignatureKeyHolder)
-	GetNodePKCounter    uint64
-	GetNodePKPreCounter uint64
-	GetNodePKMock       mCandidateProfileMockGetNodePK
-
-	GetNodePrimaryRoleFunc       func() (r member.PrimaryRole)
-	GetNodePrimaryRoleCounter    uint64
-	GetNodePrimaryRolePreCounter uint64
-	GetNodePrimaryRoleMock       mCandidateProfileMockGetNodePrimaryRole
-
-	GetNodeSpecialRolesFunc       func() (r member.SpecialRole)
-	GetNodeSpecialRolesCounter    uint64
-	GetNodeSpecialRolesPreCounter uint64
-	GetNodeSpecialRolesMock       mCandidateProfileMockGetNodeSpecialRoles
+	GetNodePublicKeyFunc       func() (r cryptkit.SignatureKeyHolder)
+	GetNodePublicKeyCounter    uint64
+	GetNodePublicKeyPreCounter uint64
+	GetNodePublicKeyMock       mCandidateProfileMockGetNodePublicKey
 
 	GetPowerLevelsFunc       func() (r member.PowerSet)
 	GetPowerLevelsCounter    uint64
 	GetPowerLevelsPreCounter uint64
 	GetPowerLevelsMock       mCandidateProfileMockGetPowerLevels
 
+	GetPrimaryRoleFunc       func() (r member.PrimaryRole)
+	GetPrimaryRoleCounter    uint64
+	GetPrimaryRolePreCounter uint64
+	GetPrimaryRoleMock       mCandidateProfileMockGetPrimaryRole
+
 	GetReferenceFunc       func() (r insolar.Reference)
 	GetReferenceCounter    uint64
 	GetReferencePreCounter uint64
 	GetReferenceMock       mCandidateProfileMockGetReference
+
+	GetShortNodeIDFunc       func() (r insolar.ShortNodeID)
+	GetShortNodeIDCounter    uint64
+	GetShortNodeIDPreCounter uint64
+	GetShortNodeIDMock       mCandidateProfileMockGetShortNodeID
+
+	GetSpecialRolesFunc       func() (r member.SpecialRole)
+	GetSpecialRolesCounter    uint64
+	GetSpecialRolesPreCounter uint64
+	GetSpecialRolesMock       mCandidateProfileMockGetSpecialRoles
 
 	GetStartPowerFunc       func() (r member.Power)
 	GetStartPowerCounter    uint64
@@ -100,22 +100,156 @@ func NewCandidateProfileMock(t minimock.Tester) *CandidateProfileMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.GetDefaultEndpointMock = mCandidateProfileMockGetDefaultEndpoint{mock: m}
 	m.GetExtraEndpointsMock = mCandidateProfileMockGetExtraEndpoints{mock: m}
 	m.GetIssuedAtPulseMock = mCandidateProfileMockGetIssuedAtPulse{mock: m}
 	m.GetIssuedAtTimeMock = mCandidateProfileMockGetIssuedAtTime{mock: m}
 	m.GetIssuerIDMock = mCandidateProfileMockGetIssuerID{mock: m}
 	m.GetIssuerSignatureMock = mCandidateProfileMockGetIssuerSignature{mock: m}
 	m.GetJoinerSignatureMock = mCandidateProfileMockGetJoinerSignature{mock: m}
-	m.GetNodeEndpointMock = mCandidateProfileMockGetNodeEndpoint{mock: m}
-	m.GetNodeIDMock = mCandidateProfileMockGetNodeID{mock: m}
-	m.GetNodePKMock = mCandidateProfileMockGetNodePK{mock: m}
-	m.GetNodePrimaryRoleMock = mCandidateProfileMockGetNodePrimaryRole{mock: m}
-	m.GetNodeSpecialRolesMock = mCandidateProfileMockGetNodeSpecialRoles{mock: m}
+	m.GetNodePublicKeyMock = mCandidateProfileMockGetNodePublicKey{mock: m}
 	m.GetPowerLevelsMock = mCandidateProfileMockGetPowerLevels{mock: m}
+	m.GetPrimaryRoleMock = mCandidateProfileMockGetPrimaryRole{mock: m}
 	m.GetReferenceMock = mCandidateProfileMockGetReference{mock: m}
+	m.GetShortNodeIDMock = mCandidateProfileMockGetShortNodeID{mock: m}
+	m.GetSpecialRolesMock = mCandidateProfileMockGetSpecialRoles{mock: m}
 	m.GetStartPowerMock = mCandidateProfileMockGetStartPower{mock: m}
 
 	return m
+}
+
+type mCandidateProfileMockGetDefaultEndpoint struct {
+	mock              *CandidateProfileMock
+	mainExpectation   *CandidateProfileMockGetDefaultEndpointExpectation
+	expectationSeries []*CandidateProfileMockGetDefaultEndpointExpectation
+}
+
+type CandidateProfileMockGetDefaultEndpointExpectation struct {
+	result *CandidateProfileMockGetDefaultEndpointResult
+}
+
+type CandidateProfileMockGetDefaultEndpointResult struct {
+	r endpoints.Outbound
+}
+
+//Expect specifies that invocation of CandidateProfile.GetDefaultEndpoint is expected from 1 to Infinity times
+func (m *mCandidateProfileMockGetDefaultEndpoint) Expect() *mCandidateProfileMockGetDefaultEndpoint {
+	m.mock.GetDefaultEndpointFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetDefaultEndpointExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of CandidateProfile.GetDefaultEndpoint
+func (m *mCandidateProfileMockGetDefaultEndpoint) Return(r endpoints.Outbound) *CandidateProfileMock {
+	m.mock.GetDefaultEndpointFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetDefaultEndpointExpectation{}
+	}
+	m.mainExpectation.result = &CandidateProfileMockGetDefaultEndpointResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CandidateProfile.GetDefaultEndpoint is expected once
+func (m *mCandidateProfileMockGetDefaultEndpoint) ExpectOnce() *CandidateProfileMockGetDefaultEndpointExpectation {
+	m.mock.GetDefaultEndpointFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CandidateProfileMockGetDefaultEndpointExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CandidateProfileMockGetDefaultEndpointExpectation) Return(r endpoints.Outbound) {
+	e.result = &CandidateProfileMockGetDefaultEndpointResult{r}
+}
+
+//Set uses given function f as a mock of CandidateProfile.GetDefaultEndpoint method
+func (m *mCandidateProfileMockGetDefaultEndpoint) Set(f func() (r endpoints.Outbound)) *CandidateProfileMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetDefaultEndpointFunc = f
+	return m.mock
+}
+
+//GetDefaultEndpoint implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
+func (m *CandidateProfileMock) GetDefaultEndpoint() (r endpoints.Outbound) {
+	counter := atomic.AddUint64(&m.GetDefaultEndpointPreCounter, 1)
+	defer atomic.AddUint64(&m.GetDefaultEndpointCounter, 1)
+
+	if len(m.GetDefaultEndpointMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetDefaultEndpointMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetDefaultEndpoint.")
+			return
+		}
+
+		result := m.GetDefaultEndpointMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetDefaultEndpoint")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetDefaultEndpointMock.mainExpectation != nil {
+
+		result := m.GetDefaultEndpointMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetDefaultEndpoint")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetDefaultEndpointFunc == nil {
+		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetDefaultEndpoint.")
+		return
+	}
+
+	return m.GetDefaultEndpointFunc()
+}
+
+//GetDefaultEndpointMinimockCounter returns a count of CandidateProfileMock.GetDefaultEndpointFunc invocations
+func (m *CandidateProfileMock) GetDefaultEndpointMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDefaultEndpointCounter)
+}
+
+//GetDefaultEndpointMinimockPreCounter returns the value of CandidateProfileMock.GetDefaultEndpoint invocations
+func (m *CandidateProfileMock) GetDefaultEndpointMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDefaultEndpointPreCounter)
+}
+
+//GetDefaultEndpointFinished returns true if mock invocations count is ok
+func (m *CandidateProfileMock) GetDefaultEndpointFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetDefaultEndpointMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetDefaultEndpointCounter) == uint64(len(m.GetDefaultEndpointMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetDefaultEndpointMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetDefaultEndpointCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetDefaultEndpointFunc != nil {
+		return atomic.LoadUint64(&m.GetDefaultEndpointCounter) > 0
+	}
+
+	return true
 }
 
 type mCandidateProfileMockGetExtraEndpoints struct {
@@ -922,350 +1056,82 @@ func (m *CandidateProfileMock) GetJoinerSignatureFinished() bool {
 	return true
 }
 
-type mCandidateProfileMockGetNodeEndpoint struct {
+type mCandidateProfileMockGetNodePublicKey struct {
 	mock              *CandidateProfileMock
-	mainExpectation   *CandidateProfileMockGetNodeEndpointExpectation
-	expectationSeries []*CandidateProfileMockGetNodeEndpointExpectation
+	mainExpectation   *CandidateProfileMockGetNodePublicKeyExpectation
+	expectationSeries []*CandidateProfileMockGetNodePublicKeyExpectation
 }
 
-type CandidateProfileMockGetNodeEndpointExpectation struct {
-	result *CandidateProfileMockGetNodeEndpointResult
+type CandidateProfileMockGetNodePublicKeyExpectation struct {
+	result *CandidateProfileMockGetNodePublicKeyResult
 }
 
-type CandidateProfileMockGetNodeEndpointResult struct {
-	r endpoints.Outbound
-}
-
-//Expect specifies that invocation of CandidateProfile.GetNodeEndpoint is expected from 1 to Infinity times
-func (m *mCandidateProfileMockGetNodeEndpoint) Expect() *mCandidateProfileMockGetNodeEndpoint {
-	m.mock.GetNodeEndpointFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodeEndpointExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of CandidateProfile.GetNodeEndpoint
-func (m *mCandidateProfileMockGetNodeEndpoint) Return(r endpoints.Outbound) *CandidateProfileMock {
-	m.mock.GetNodeEndpointFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodeEndpointExpectation{}
-	}
-	m.mainExpectation.result = &CandidateProfileMockGetNodeEndpointResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of CandidateProfile.GetNodeEndpoint is expected once
-func (m *mCandidateProfileMockGetNodeEndpoint) ExpectOnce() *CandidateProfileMockGetNodeEndpointExpectation {
-	m.mock.GetNodeEndpointFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &CandidateProfileMockGetNodeEndpointExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *CandidateProfileMockGetNodeEndpointExpectation) Return(r endpoints.Outbound) {
-	e.result = &CandidateProfileMockGetNodeEndpointResult{r}
-}
-
-//Set uses given function f as a mock of CandidateProfile.GetNodeEndpoint method
-func (m *mCandidateProfileMockGetNodeEndpoint) Set(f func() (r endpoints.Outbound)) *CandidateProfileMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodeEndpointFunc = f
-	return m.mock
-}
-
-//GetNodeEndpoint implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
-func (m *CandidateProfileMock) GetNodeEndpoint() (r endpoints.Outbound) {
-	counter := atomic.AddUint64(&m.GetNodeEndpointPreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodeEndpointCounter, 1)
-
-	if len(m.GetNodeEndpointMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodeEndpointMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodeEndpoint.")
-			return
-		}
-
-		result := m.GetNodeEndpointMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodeEndpoint")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeEndpointMock.mainExpectation != nil {
-
-		result := m.GetNodeEndpointMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodeEndpoint")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeEndpointFunc == nil {
-		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodeEndpoint.")
-		return
-	}
-
-	return m.GetNodeEndpointFunc()
-}
-
-//GetNodeEndpointMinimockCounter returns a count of CandidateProfileMock.GetNodeEndpointFunc invocations
-func (m *CandidateProfileMock) GetNodeEndpointMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeEndpointCounter)
-}
-
-//GetNodeEndpointMinimockPreCounter returns the value of CandidateProfileMock.GetNodeEndpoint invocations
-func (m *CandidateProfileMock) GetNodeEndpointMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeEndpointPreCounter)
-}
-
-//GetNodeEndpointFinished returns true if mock invocations count is ok
-func (m *CandidateProfileMock) GetNodeEndpointFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodeEndpointMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodeEndpointCounter) == uint64(len(m.GetNodeEndpointMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodeEndpointMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodeEndpointCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodeEndpointFunc != nil {
-		return atomic.LoadUint64(&m.GetNodeEndpointCounter) > 0
-	}
-
-	return true
-}
-
-type mCandidateProfileMockGetNodeID struct {
-	mock              *CandidateProfileMock
-	mainExpectation   *CandidateProfileMockGetNodeIDExpectation
-	expectationSeries []*CandidateProfileMockGetNodeIDExpectation
-}
-
-type CandidateProfileMockGetNodeIDExpectation struct {
-	result *CandidateProfileMockGetNodeIDResult
-}
-
-type CandidateProfileMockGetNodeIDResult struct {
-	r insolar.ShortNodeID
-}
-
-//Expect specifies that invocation of CandidateProfile.GetNodeID is expected from 1 to Infinity times
-func (m *mCandidateProfileMockGetNodeID) Expect() *mCandidateProfileMockGetNodeID {
-	m.mock.GetNodeIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodeIDExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of CandidateProfile.GetNodeID
-func (m *mCandidateProfileMockGetNodeID) Return(r insolar.ShortNodeID) *CandidateProfileMock {
-	m.mock.GetNodeIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodeIDExpectation{}
-	}
-	m.mainExpectation.result = &CandidateProfileMockGetNodeIDResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of CandidateProfile.GetNodeID is expected once
-func (m *mCandidateProfileMockGetNodeID) ExpectOnce() *CandidateProfileMockGetNodeIDExpectation {
-	m.mock.GetNodeIDFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &CandidateProfileMockGetNodeIDExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *CandidateProfileMockGetNodeIDExpectation) Return(r insolar.ShortNodeID) {
-	e.result = &CandidateProfileMockGetNodeIDResult{r}
-}
-
-//Set uses given function f as a mock of CandidateProfile.GetNodeID method
-func (m *mCandidateProfileMockGetNodeID) Set(f func() (r insolar.ShortNodeID)) *CandidateProfileMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodeIDFunc = f
-	return m.mock
-}
-
-//GetNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
-func (m *CandidateProfileMock) GetNodeID() (r insolar.ShortNodeID) {
-	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
-
-	if len(m.GetNodeIDMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodeIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodeID.")
-			return
-		}
-
-		result := m.GetNodeIDMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodeID")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeIDMock.mainExpectation != nil {
-
-		result := m.GetNodeIDMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodeID")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeIDFunc == nil {
-		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodeID.")
-		return
-	}
-
-	return m.GetNodeIDFunc()
-}
-
-//GetNodeIDMinimockCounter returns a count of CandidateProfileMock.GetNodeIDFunc invocations
-func (m *CandidateProfileMock) GetNodeIDMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeIDCounter)
-}
-
-//GetNodeIDMinimockPreCounter returns the value of CandidateProfileMock.GetNodeID invocations
-func (m *CandidateProfileMock) GetNodeIDMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeIDPreCounter)
-}
-
-//GetNodeIDFinished returns true if mock invocations count is ok
-func (m *CandidateProfileMock) GetNodeIDFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodeIDMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodeIDCounter) == uint64(len(m.GetNodeIDMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodeIDMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodeIDCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodeIDFunc != nil {
-		return atomic.LoadUint64(&m.GetNodeIDCounter) > 0
-	}
-
-	return true
-}
-
-type mCandidateProfileMockGetNodePK struct {
-	mock              *CandidateProfileMock
-	mainExpectation   *CandidateProfileMockGetNodePKExpectation
-	expectationSeries []*CandidateProfileMockGetNodePKExpectation
-}
-
-type CandidateProfileMockGetNodePKExpectation struct {
-	result *CandidateProfileMockGetNodePKResult
-}
-
-type CandidateProfileMockGetNodePKResult struct {
+type CandidateProfileMockGetNodePublicKeyResult struct {
 	r cryptkit.SignatureKeyHolder
 }
 
-//Expect specifies that invocation of CandidateProfile.GetNodePK is expected from 1 to Infinity times
-func (m *mCandidateProfileMockGetNodePK) Expect() *mCandidateProfileMockGetNodePK {
-	m.mock.GetNodePKFunc = nil
+//Expect specifies that invocation of CandidateProfile.GetNodePublicKey is expected from 1 to Infinity times
+func (m *mCandidateProfileMockGetNodePublicKey) Expect() *mCandidateProfileMockGetNodePublicKey {
+	m.mock.GetNodePublicKeyFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodePKExpectation{}
+		m.mainExpectation = &CandidateProfileMockGetNodePublicKeyExpectation{}
 	}
 
 	return m
 }
 
-//Return specifies results of invocation of CandidateProfile.GetNodePK
-func (m *mCandidateProfileMockGetNodePK) Return(r cryptkit.SignatureKeyHolder) *CandidateProfileMock {
-	m.mock.GetNodePKFunc = nil
+//Return specifies results of invocation of CandidateProfile.GetNodePublicKey
+func (m *mCandidateProfileMockGetNodePublicKey) Return(r cryptkit.SignatureKeyHolder) *CandidateProfileMock {
+	m.mock.GetNodePublicKeyFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodePKExpectation{}
+		m.mainExpectation = &CandidateProfileMockGetNodePublicKeyExpectation{}
 	}
-	m.mainExpectation.result = &CandidateProfileMockGetNodePKResult{r}
+	m.mainExpectation.result = &CandidateProfileMockGetNodePublicKeyResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of CandidateProfile.GetNodePK is expected once
-func (m *mCandidateProfileMockGetNodePK) ExpectOnce() *CandidateProfileMockGetNodePKExpectation {
-	m.mock.GetNodePKFunc = nil
+//ExpectOnce specifies that invocation of CandidateProfile.GetNodePublicKey is expected once
+func (m *mCandidateProfileMockGetNodePublicKey) ExpectOnce() *CandidateProfileMockGetNodePublicKeyExpectation {
+	m.mock.GetNodePublicKeyFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &CandidateProfileMockGetNodePKExpectation{}
+	expectation := &CandidateProfileMockGetNodePublicKeyExpectation{}
 
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *CandidateProfileMockGetNodePKExpectation) Return(r cryptkit.SignatureKeyHolder) {
-	e.result = &CandidateProfileMockGetNodePKResult{r}
+func (e *CandidateProfileMockGetNodePublicKeyExpectation) Return(r cryptkit.SignatureKeyHolder) {
+	e.result = &CandidateProfileMockGetNodePublicKeyResult{r}
 }
 
-//Set uses given function f as a mock of CandidateProfile.GetNodePK method
-func (m *mCandidateProfileMockGetNodePK) Set(f func() (r cryptkit.SignatureKeyHolder)) *CandidateProfileMock {
+//Set uses given function f as a mock of CandidateProfile.GetNodePublicKey method
+func (m *mCandidateProfileMockGetNodePublicKey) Set(f func() (r cryptkit.SignatureKeyHolder)) *CandidateProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetNodePKFunc = f
+	m.mock.GetNodePublicKeyFunc = f
 	return m.mock
 }
 
-//GetNodePK implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
-func (m *CandidateProfileMock) GetNodePK() (r cryptkit.SignatureKeyHolder) {
-	counter := atomic.AddUint64(&m.GetNodePKPreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodePKCounter, 1)
+//GetNodePublicKey implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
+func (m *CandidateProfileMock) GetNodePublicKey() (r cryptkit.SignatureKeyHolder) {
+	counter := atomic.AddUint64(&m.GetNodePublicKeyPreCounter, 1)
+	defer atomic.AddUint64(&m.GetNodePublicKeyCounter, 1)
 
-	if len(m.GetNodePKMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodePKMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodePK.")
+	if len(m.GetNodePublicKeyMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetNodePublicKeyMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodePublicKey.")
 			return
 		}
 
-		result := m.GetNodePKMock.expectationSeries[counter-1].result
+		result := m.GetNodePublicKeyMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodePK")
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodePublicKey")
 			return
 		}
 
@@ -1274,11 +1140,11 @@ func (m *CandidateProfileMock) GetNodePK() (r cryptkit.SignatureKeyHolder) {
 		return
 	}
 
-	if m.GetNodePKMock.mainExpectation != nil {
+	if m.GetNodePublicKeyMock.mainExpectation != nil {
 
-		result := m.GetNodePKMock.mainExpectation.result
+		result := m.GetNodePublicKeyMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodePK")
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodePublicKey")
 		}
 
 		r = result.r
@@ -1286,307 +1152,39 @@ func (m *CandidateProfileMock) GetNodePK() (r cryptkit.SignatureKeyHolder) {
 		return
 	}
 
-	if m.GetNodePKFunc == nil {
-		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodePK.")
+	if m.GetNodePublicKeyFunc == nil {
+		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodePublicKey.")
 		return
 	}
 
-	return m.GetNodePKFunc()
+	return m.GetNodePublicKeyFunc()
 }
 
-//GetNodePKMinimockCounter returns a count of CandidateProfileMock.GetNodePKFunc invocations
-func (m *CandidateProfileMock) GetNodePKMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePKCounter)
+//GetNodePublicKeyMinimockCounter returns a count of CandidateProfileMock.GetNodePublicKeyFunc invocations
+func (m *CandidateProfileMock) GetNodePublicKeyMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNodePublicKeyCounter)
 }
 
-//GetNodePKMinimockPreCounter returns the value of CandidateProfileMock.GetNodePK invocations
-func (m *CandidateProfileMock) GetNodePKMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePKPreCounter)
+//GetNodePublicKeyMinimockPreCounter returns the value of CandidateProfileMock.GetNodePublicKey invocations
+func (m *CandidateProfileMock) GetNodePublicKeyMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNodePublicKeyPreCounter)
 }
 
-//GetNodePKFinished returns true if mock invocations count is ok
-func (m *CandidateProfileMock) GetNodePKFinished() bool {
+//GetNodePublicKeyFinished returns true if mock invocations count is ok
+func (m *CandidateProfileMock) GetNodePublicKeyFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodePKMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodePKCounter) == uint64(len(m.GetNodePKMock.expectationSeries))
+	if len(m.GetNodePublicKeyMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetNodePublicKeyCounter) == uint64(len(m.GetNodePublicKeyMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodePKMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodePKCounter) > 0
+	if m.GetNodePublicKeyMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetNodePublicKeyCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetNodePKFunc != nil {
-		return atomic.LoadUint64(&m.GetNodePKCounter) > 0
-	}
-
-	return true
-}
-
-type mCandidateProfileMockGetNodePrimaryRole struct {
-	mock              *CandidateProfileMock
-	mainExpectation   *CandidateProfileMockGetNodePrimaryRoleExpectation
-	expectationSeries []*CandidateProfileMockGetNodePrimaryRoleExpectation
-}
-
-type CandidateProfileMockGetNodePrimaryRoleExpectation struct {
-	result *CandidateProfileMockGetNodePrimaryRoleResult
-}
-
-type CandidateProfileMockGetNodePrimaryRoleResult struct {
-	r member.PrimaryRole
-}
-
-//Expect specifies that invocation of CandidateProfile.GetNodePrimaryRole is expected from 1 to Infinity times
-func (m *mCandidateProfileMockGetNodePrimaryRole) Expect() *mCandidateProfileMockGetNodePrimaryRole {
-	m.mock.GetNodePrimaryRoleFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodePrimaryRoleExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of CandidateProfile.GetNodePrimaryRole
-func (m *mCandidateProfileMockGetNodePrimaryRole) Return(r member.PrimaryRole) *CandidateProfileMock {
-	m.mock.GetNodePrimaryRoleFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodePrimaryRoleExpectation{}
-	}
-	m.mainExpectation.result = &CandidateProfileMockGetNodePrimaryRoleResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of CandidateProfile.GetNodePrimaryRole is expected once
-func (m *mCandidateProfileMockGetNodePrimaryRole) ExpectOnce() *CandidateProfileMockGetNodePrimaryRoleExpectation {
-	m.mock.GetNodePrimaryRoleFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &CandidateProfileMockGetNodePrimaryRoleExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *CandidateProfileMockGetNodePrimaryRoleExpectation) Return(r member.PrimaryRole) {
-	e.result = &CandidateProfileMockGetNodePrimaryRoleResult{r}
-}
-
-//Set uses given function f as a mock of CandidateProfile.GetNodePrimaryRole method
-func (m *mCandidateProfileMockGetNodePrimaryRole) Set(f func() (r member.PrimaryRole)) *CandidateProfileMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodePrimaryRoleFunc = f
-	return m.mock
-}
-
-//GetNodePrimaryRole implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
-func (m *CandidateProfileMock) GetNodePrimaryRole() (r member.PrimaryRole) {
-	counter := atomic.AddUint64(&m.GetNodePrimaryRolePreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodePrimaryRoleCounter, 1)
-
-	if len(m.GetNodePrimaryRoleMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodePrimaryRoleMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodePrimaryRole.")
-			return
-		}
-
-		result := m.GetNodePrimaryRoleMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodePrimaryRole")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodePrimaryRoleMock.mainExpectation != nil {
-
-		result := m.GetNodePrimaryRoleMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodePrimaryRole")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodePrimaryRoleFunc == nil {
-		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodePrimaryRole.")
-		return
-	}
-
-	return m.GetNodePrimaryRoleFunc()
-}
-
-//GetNodePrimaryRoleMinimockCounter returns a count of CandidateProfileMock.GetNodePrimaryRoleFunc invocations
-func (m *CandidateProfileMock) GetNodePrimaryRoleMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePrimaryRoleCounter)
-}
-
-//GetNodePrimaryRoleMinimockPreCounter returns the value of CandidateProfileMock.GetNodePrimaryRole invocations
-func (m *CandidateProfileMock) GetNodePrimaryRoleMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePrimaryRolePreCounter)
-}
-
-//GetNodePrimaryRoleFinished returns true if mock invocations count is ok
-func (m *CandidateProfileMock) GetNodePrimaryRoleFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodePrimaryRoleMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodePrimaryRoleCounter) == uint64(len(m.GetNodePrimaryRoleMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodePrimaryRoleMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodePrimaryRoleCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodePrimaryRoleFunc != nil {
-		return atomic.LoadUint64(&m.GetNodePrimaryRoleCounter) > 0
-	}
-
-	return true
-}
-
-type mCandidateProfileMockGetNodeSpecialRoles struct {
-	mock              *CandidateProfileMock
-	mainExpectation   *CandidateProfileMockGetNodeSpecialRolesExpectation
-	expectationSeries []*CandidateProfileMockGetNodeSpecialRolesExpectation
-}
-
-type CandidateProfileMockGetNodeSpecialRolesExpectation struct {
-	result *CandidateProfileMockGetNodeSpecialRolesResult
-}
-
-type CandidateProfileMockGetNodeSpecialRolesResult struct {
-	r member.SpecialRole
-}
-
-//Expect specifies that invocation of CandidateProfile.GetNodeSpecialRoles is expected from 1 to Infinity times
-func (m *mCandidateProfileMockGetNodeSpecialRoles) Expect() *mCandidateProfileMockGetNodeSpecialRoles {
-	m.mock.GetNodeSpecialRolesFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodeSpecialRolesExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of CandidateProfile.GetNodeSpecialRoles
-func (m *mCandidateProfileMockGetNodeSpecialRoles) Return(r member.SpecialRole) *CandidateProfileMock {
-	m.mock.GetNodeSpecialRolesFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetNodeSpecialRolesExpectation{}
-	}
-	m.mainExpectation.result = &CandidateProfileMockGetNodeSpecialRolesResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of CandidateProfile.GetNodeSpecialRoles is expected once
-func (m *mCandidateProfileMockGetNodeSpecialRoles) ExpectOnce() *CandidateProfileMockGetNodeSpecialRolesExpectation {
-	m.mock.GetNodeSpecialRolesFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &CandidateProfileMockGetNodeSpecialRolesExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *CandidateProfileMockGetNodeSpecialRolesExpectation) Return(r member.SpecialRole) {
-	e.result = &CandidateProfileMockGetNodeSpecialRolesResult{r}
-}
-
-//Set uses given function f as a mock of CandidateProfile.GetNodeSpecialRoles method
-func (m *mCandidateProfileMockGetNodeSpecialRoles) Set(f func() (r member.SpecialRole)) *CandidateProfileMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodeSpecialRolesFunc = f
-	return m.mock
-}
-
-//GetNodeSpecialRoles implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
-func (m *CandidateProfileMock) GetNodeSpecialRoles() (r member.SpecialRole) {
-	counter := atomic.AddUint64(&m.GetNodeSpecialRolesPreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodeSpecialRolesCounter, 1)
-
-	if len(m.GetNodeSpecialRolesMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodeSpecialRolesMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodeSpecialRoles.")
-			return
-		}
-
-		result := m.GetNodeSpecialRolesMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodeSpecialRoles")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeSpecialRolesMock.mainExpectation != nil {
-
-		result := m.GetNodeSpecialRolesMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetNodeSpecialRoles")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeSpecialRolesFunc == nil {
-		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetNodeSpecialRoles.")
-		return
-	}
-
-	return m.GetNodeSpecialRolesFunc()
-}
-
-//GetNodeSpecialRolesMinimockCounter returns a count of CandidateProfileMock.GetNodeSpecialRolesFunc invocations
-func (m *CandidateProfileMock) GetNodeSpecialRolesMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeSpecialRolesCounter)
-}
-
-//GetNodeSpecialRolesMinimockPreCounter returns the value of CandidateProfileMock.GetNodeSpecialRoles invocations
-func (m *CandidateProfileMock) GetNodeSpecialRolesMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeSpecialRolesPreCounter)
-}
-
-//GetNodeSpecialRolesFinished returns true if mock invocations count is ok
-func (m *CandidateProfileMock) GetNodeSpecialRolesFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodeSpecialRolesMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodeSpecialRolesCounter) == uint64(len(m.GetNodeSpecialRolesMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodeSpecialRolesMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodeSpecialRolesCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodeSpecialRolesFunc != nil {
-		return atomic.LoadUint64(&m.GetNodeSpecialRolesCounter) > 0
+	if m.GetNodePublicKeyFunc != nil {
+		return atomic.LoadUint64(&m.GetNodePublicKeyCounter) > 0
 	}
 
 	return true
@@ -1726,6 +1324,140 @@ func (m *CandidateProfileMock) GetPowerLevelsFinished() bool {
 	return true
 }
 
+type mCandidateProfileMockGetPrimaryRole struct {
+	mock              *CandidateProfileMock
+	mainExpectation   *CandidateProfileMockGetPrimaryRoleExpectation
+	expectationSeries []*CandidateProfileMockGetPrimaryRoleExpectation
+}
+
+type CandidateProfileMockGetPrimaryRoleExpectation struct {
+	result *CandidateProfileMockGetPrimaryRoleResult
+}
+
+type CandidateProfileMockGetPrimaryRoleResult struct {
+	r member.PrimaryRole
+}
+
+//Expect specifies that invocation of CandidateProfile.GetPrimaryRole is expected from 1 to Infinity times
+func (m *mCandidateProfileMockGetPrimaryRole) Expect() *mCandidateProfileMockGetPrimaryRole {
+	m.mock.GetPrimaryRoleFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetPrimaryRoleExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of CandidateProfile.GetPrimaryRole
+func (m *mCandidateProfileMockGetPrimaryRole) Return(r member.PrimaryRole) *CandidateProfileMock {
+	m.mock.GetPrimaryRoleFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetPrimaryRoleExpectation{}
+	}
+	m.mainExpectation.result = &CandidateProfileMockGetPrimaryRoleResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CandidateProfile.GetPrimaryRole is expected once
+func (m *mCandidateProfileMockGetPrimaryRole) ExpectOnce() *CandidateProfileMockGetPrimaryRoleExpectation {
+	m.mock.GetPrimaryRoleFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CandidateProfileMockGetPrimaryRoleExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CandidateProfileMockGetPrimaryRoleExpectation) Return(r member.PrimaryRole) {
+	e.result = &CandidateProfileMockGetPrimaryRoleResult{r}
+}
+
+//Set uses given function f as a mock of CandidateProfile.GetPrimaryRole method
+func (m *mCandidateProfileMockGetPrimaryRole) Set(f func() (r member.PrimaryRole)) *CandidateProfileMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetPrimaryRoleFunc = f
+	return m.mock
+}
+
+//GetPrimaryRole implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
+func (m *CandidateProfileMock) GetPrimaryRole() (r member.PrimaryRole) {
+	counter := atomic.AddUint64(&m.GetPrimaryRolePreCounter, 1)
+	defer atomic.AddUint64(&m.GetPrimaryRoleCounter, 1)
+
+	if len(m.GetPrimaryRoleMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetPrimaryRoleMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetPrimaryRole.")
+			return
+		}
+
+		result := m.GetPrimaryRoleMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetPrimaryRole")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetPrimaryRoleMock.mainExpectation != nil {
+
+		result := m.GetPrimaryRoleMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetPrimaryRole")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetPrimaryRoleFunc == nil {
+		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetPrimaryRole.")
+		return
+	}
+
+	return m.GetPrimaryRoleFunc()
+}
+
+//GetPrimaryRoleMinimockCounter returns a count of CandidateProfileMock.GetPrimaryRoleFunc invocations
+func (m *CandidateProfileMock) GetPrimaryRoleMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPrimaryRoleCounter)
+}
+
+//GetPrimaryRoleMinimockPreCounter returns the value of CandidateProfileMock.GetPrimaryRole invocations
+func (m *CandidateProfileMock) GetPrimaryRoleMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPrimaryRolePreCounter)
+}
+
+//GetPrimaryRoleFinished returns true if mock invocations count is ok
+func (m *CandidateProfileMock) GetPrimaryRoleFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetPrimaryRoleMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetPrimaryRoleCounter) == uint64(len(m.GetPrimaryRoleMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetPrimaryRoleMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetPrimaryRoleCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetPrimaryRoleFunc != nil {
+		return atomic.LoadUint64(&m.GetPrimaryRoleCounter) > 0
+	}
+
+	return true
+}
+
 type mCandidateProfileMockGetReference struct {
 	mock              *CandidateProfileMock
 	mainExpectation   *CandidateProfileMockGetReferenceExpectation
@@ -1855,6 +1587,274 @@ func (m *CandidateProfileMock) GetReferenceFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetReferenceFunc != nil {
 		return atomic.LoadUint64(&m.GetReferenceCounter) > 0
+	}
+
+	return true
+}
+
+type mCandidateProfileMockGetShortNodeID struct {
+	mock              *CandidateProfileMock
+	mainExpectation   *CandidateProfileMockGetShortNodeIDExpectation
+	expectationSeries []*CandidateProfileMockGetShortNodeIDExpectation
+}
+
+type CandidateProfileMockGetShortNodeIDExpectation struct {
+	result *CandidateProfileMockGetShortNodeIDResult
+}
+
+type CandidateProfileMockGetShortNodeIDResult struct {
+	r insolar.ShortNodeID
+}
+
+//Expect specifies that invocation of CandidateProfile.GetShortNodeID is expected from 1 to Infinity times
+func (m *mCandidateProfileMockGetShortNodeID) Expect() *mCandidateProfileMockGetShortNodeID {
+	m.mock.GetShortNodeIDFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetShortNodeIDExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of CandidateProfile.GetShortNodeID
+func (m *mCandidateProfileMockGetShortNodeID) Return(r insolar.ShortNodeID) *CandidateProfileMock {
+	m.mock.GetShortNodeIDFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetShortNodeIDExpectation{}
+	}
+	m.mainExpectation.result = &CandidateProfileMockGetShortNodeIDResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CandidateProfile.GetShortNodeID is expected once
+func (m *mCandidateProfileMockGetShortNodeID) ExpectOnce() *CandidateProfileMockGetShortNodeIDExpectation {
+	m.mock.GetShortNodeIDFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CandidateProfileMockGetShortNodeIDExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CandidateProfileMockGetShortNodeIDExpectation) Return(r insolar.ShortNodeID) {
+	e.result = &CandidateProfileMockGetShortNodeIDResult{r}
+}
+
+//Set uses given function f as a mock of CandidateProfile.GetShortNodeID method
+func (m *mCandidateProfileMockGetShortNodeID) Set(f func() (r insolar.ShortNodeID)) *CandidateProfileMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetShortNodeIDFunc = f
+	return m.mock
+}
+
+//GetShortNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
+func (m *CandidateProfileMock) GetShortNodeID() (r insolar.ShortNodeID) {
+	counter := atomic.AddUint64(&m.GetShortNodeIDPreCounter, 1)
+	defer atomic.AddUint64(&m.GetShortNodeIDCounter, 1)
+
+	if len(m.GetShortNodeIDMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetShortNodeIDMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetShortNodeID.")
+			return
+		}
+
+		result := m.GetShortNodeIDMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetShortNodeID")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetShortNodeIDMock.mainExpectation != nil {
+
+		result := m.GetShortNodeIDMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetShortNodeID")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetShortNodeIDFunc == nil {
+		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetShortNodeID.")
+		return
+	}
+
+	return m.GetShortNodeIDFunc()
+}
+
+//GetShortNodeIDMinimockCounter returns a count of CandidateProfileMock.GetShortNodeIDFunc invocations
+func (m *CandidateProfileMock) GetShortNodeIDMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetShortNodeIDCounter)
+}
+
+//GetShortNodeIDMinimockPreCounter returns the value of CandidateProfileMock.GetShortNodeID invocations
+func (m *CandidateProfileMock) GetShortNodeIDMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetShortNodeIDPreCounter)
+}
+
+//GetShortNodeIDFinished returns true if mock invocations count is ok
+func (m *CandidateProfileMock) GetShortNodeIDFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetShortNodeIDMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetShortNodeIDCounter) == uint64(len(m.GetShortNodeIDMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetShortNodeIDMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetShortNodeIDCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetShortNodeIDFunc != nil {
+		return atomic.LoadUint64(&m.GetShortNodeIDCounter) > 0
+	}
+
+	return true
+}
+
+type mCandidateProfileMockGetSpecialRoles struct {
+	mock              *CandidateProfileMock
+	mainExpectation   *CandidateProfileMockGetSpecialRolesExpectation
+	expectationSeries []*CandidateProfileMockGetSpecialRolesExpectation
+}
+
+type CandidateProfileMockGetSpecialRolesExpectation struct {
+	result *CandidateProfileMockGetSpecialRolesResult
+}
+
+type CandidateProfileMockGetSpecialRolesResult struct {
+	r member.SpecialRole
+}
+
+//Expect specifies that invocation of CandidateProfile.GetSpecialRoles is expected from 1 to Infinity times
+func (m *mCandidateProfileMockGetSpecialRoles) Expect() *mCandidateProfileMockGetSpecialRoles {
+	m.mock.GetSpecialRolesFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetSpecialRolesExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of CandidateProfile.GetSpecialRoles
+func (m *mCandidateProfileMockGetSpecialRoles) Return(r member.SpecialRole) *CandidateProfileMock {
+	m.mock.GetSpecialRolesFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetSpecialRolesExpectation{}
+	}
+	m.mainExpectation.result = &CandidateProfileMockGetSpecialRolesResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CandidateProfile.GetSpecialRoles is expected once
+func (m *mCandidateProfileMockGetSpecialRoles) ExpectOnce() *CandidateProfileMockGetSpecialRolesExpectation {
+	m.mock.GetSpecialRolesFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CandidateProfileMockGetSpecialRolesExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CandidateProfileMockGetSpecialRolesExpectation) Return(r member.SpecialRole) {
+	e.result = &CandidateProfileMockGetSpecialRolesResult{r}
+}
+
+//Set uses given function f as a mock of CandidateProfile.GetSpecialRoles method
+func (m *mCandidateProfileMockGetSpecialRoles) Set(f func() (r member.SpecialRole)) *CandidateProfileMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetSpecialRolesFunc = f
+	return m.mock
+}
+
+//GetSpecialRoles implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
+func (m *CandidateProfileMock) GetSpecialRoles() (r member.SpecialRole) {
+	counter := atomic.AddUint64(&m.GetSpecialRolesPreCounter, 1)
+	defer atomic.AddUint64(&m.GetSpecialRolesCounter, 1)
+
+	if len(m.GetSpecialRolesMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetSpecialRolesMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetSpecialRoles.")
+			return
+		}
+
+		result := m.GetSpecialRolesMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetSpecialRoles")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetSpecialRolesMock.mainExpectation != nil {
+
+		result := m.GetSpecialRolesMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetSpecialRoles")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetSpecialRolesFunc == nil {
+		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetSpecialRoles.")
+		return
+	}
+
+	return m.GetSpecialRolesFunc()
+}
+
+//GetSpecialRolesMinimockCounter returns a count of CandidateProfileMock.GetSpecialRolesFunc invocations
+func (m *CandidateProfileMock) GetSpecialRolesMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetSpecialRolesCounter)
+}
+
+//GetSpecialRolesMinimockPreCounter returns the value of CandidateProfileMock.GetSpecialRoles invocations
+func (m *CandidateProfileMock) GetSpecialRolesMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetSpecialRolesPreCounter)
+}
+
+//GetSpecialRolesFinished returns true if mock invocations count is ok
+func (m *CandidateProfileMock) GetSpecialRolesFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetSpecialRolesMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetSpecialRolesCounter) == uint64(len(m.GetSpecialRolesMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetSpecialRolesMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetSpecialRolesCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetSpecialRolesFunc != nil {
+		return atomic.LoadUint64(&m.GetSpecialRolesCounter) > 0
 	}
 
 	return true
@@ -1998,6 +1998,10 @@ func (m *CandidateProfileMock) GetStartPowerFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CandidateProfileMock) ValidateCallCounters() {
 
+	if !m.GetDefaultEndpointFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetDefaultEndpoint")
+	}
+
 	if !m.GetExtraEndpointsFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetExtraEndpoints")
 	}
@@ -2022,32 +2026,28 @@ func (m *CandidateProfileMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetJoinerSignature")
 	}
 
-	if !m.GetNodeEndpointFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodeEndpoint")
-	}
-
-	if !m.GetNodeIDFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodeID")
-	}
-
-	if !m.GetNodePKFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodePK")
-	}
-
-	if !m.GetNodePrimaryRoleFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodePrimaryRole")
-	}
-
-	if !m.GetNodeSpecialRolesFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodeSpecialRoles")
+	if !m.GetNodePublicKeyFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetNodePublicKey")
 	}
 
 	if !m.GetPowerLevelsFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetPowerLevels")
 	}
 
+	if !m.GetPrimaryRoleFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetPrimaryRole")
+	}
+
 	if !m.GetReferenceFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetReference")
+	}
+
+	if !m.GetShortNodeIDFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetShortNodeID")
+	}
+
+	if !m.GetSpecialRolesFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetSpecialRoles")
 	}
 
 	if !m.GetStartPowerFinished() {
@@ -2071,6 +2071,10 @@ func (m *CandidateProfileMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CandidateProfileMock) MinimockFinish() {
 
+	if !m.GetDefaultEndpointFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetDefaultEndpoint")
+	}
+
 	if !m.GetExtraEndpointsFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetExtraEndpoints")
 	}
@@ -2095,32 +2099,28 @@ func (m *CandidateProfileMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetJoinerSignature")
 	}
 
-	if !m.GetNodeEndpointFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodeEndpoint")
-	}
-
-	if !m.GetNodeIDFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodeID")
-	}
-
-	if !m.GetNodePKFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodePK")
-	}
-
-	if !m.GetNodePrimaryRoleFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodePrimaryRole")
-	}
-
-	if !m.GetNodeSpecialRolesFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetNodeSpecialRoles")
+	if !m.GetNodePublicKeyFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetNodePublicKey")
 	}
 
 	if !m.GetPowerLevelsFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetPowerLevels")
 	}
 
+	if !m.GetPrimaryRoleFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetPrimaryRole")
+	}
+
 	if !m.GetReferenceFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetReference")
+	}
+
+	if !m.GetShortNodeIDFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetShortNodeID")
+	}
+
+	if !m.GetSpecialRolesFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetSpecialRoles")
 	}
 
 	if !m.GetStartPowerFinished() {
@@ -2141,19 +2141,19 @@ func (m *CandidateProfileMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.GetDefaultEndpointFinished()
 		ok = ok && m.GetExtraEndpointsFinished()
 		ok = ok && m.GetIssuedAtPulseFinished()
 		ok = ok && m.GetIssuedAtTimeFinished()
 		ok = ok && m.GetIssuerIDFinished()
 		ok = ok && m.GetIssuerSignatureFinished()
 		ok = ok && m.GetJoinerSignatureFinished()
-		ok = ok && m.GetNodeEndpointFinished()
-		ok = ok && m.GetNodeIDFinished()
-		ok = ok && m.GetNodePKFinished()
-		ok = ok && m.GetNodePrimaryRoleFinished()
-		ok = ok && m.GetNodeSpecialRolesFinished()
+		ok = ok && m.GetNodePublicKeyFinished()
 		ok = ok && m.GetPowerLevelsFinished()
+		ok = ok && m.GetPrimaryRoleFinished()
 		ok = ok && m.GetReferenceFinished()
+		ok = ok && m.GetShortNodeIDFinished()
+		ok = ok && m.GetSpecialRolesFinished()
 		ok = ok && m.GetStartPowerFinished()
 
 		if ok {
@@ -2162,6 +2162,10 @@ func (m *CandidateProfileMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.GetDefaultEndpointFinished() {
+				m.t.Error("Expected call to CandidateProfileMock.GetDefaultEndpoint")
+			}
 
 			if !m.GetExtraEndpointsFinished() {
 				m.t.Error("Expected call to CandidateProfileMock.GetExtraEndpoints")
@@ -2187,32 +2191,28 @@ func (m *CandidateProfileMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to CandidateProfileMock.GetJoinerSignature")
 			}
 
-			if !m.GetNodeEndpointFinished() {
-				m.t.Error("Expected call to CandidateProfileMock.GetNodeEndpoint")
-			}
-
-			if !m.GetNodeIDFinished() {
-				m.t.Error("Expected call to CandidateProfileMock.GetNodeID")
-			}
-
-			if !m.GetNodePKFinished() {
-				m.t.Error("Expected call to CandidateProfileMock.GetNodePK")
-			}
-
-			if !m.GetNodePrimaryRoleFinished() {
-				m.t.Error("Expected call to CandidateProfileMock.GetNodePrimaryRole")
-			}
-
-			if !m.GetNodeSpecialRolesFinished() {
-				m.t.Error("Expected call to CandidateProfileMock.GetNodeSpecialRoles")
+			if !m.GetNodePublicKeyFinished() {
+				m.t.Error("Expected call to CandidateProfileMock.GetNodePublicKey")
 			}
 
 			if !m.GetPowerLevelsFinished() {
 				m.t.Error("Expected call to CandidateProfileMock.GetPowerLevels")
 			}
 
+			if !m.GetPrimaryRoleFinished() {
+				m.t.Error("Expected call to CandidateProfileMock.GetPrimaryRole")
+			}
+
 			if !m.GetReferenceFinished() {
 				m.t.Error("Expected call to CandidateProfileMock.GetReference")
+			}
+
+			if !m.GetShortNodeIDFinished() {
+				m.t.Error("Expected call to CandidateProfileMock.GetShortNodeID")
+			}
+
+			if !m.GetSpecialRolesFinished() {
+				m.t.Error("Expected call to CandidateProfileMock.GetSpecialRoles")
 			}
 
 			if !m.GetStartPowerFinished() {
@@ -2230,6 +2230,10 @@ func (m *CandidateProfileMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CandidateProfileMock) AllMocksCalled() bool {
+
+	if !m.GetDefaultEndpointFinished() {
+		return false
+	}
 
 	if !m.GetExtraEndpointsFinished() {
 		return false
@@ -2255,23 +2259,7 @@ func (m *CandidateProfileMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetNodeEndpointFinished() {
-		return false
-	}
-
-	if !m.GetNodeIDFinished() {
-		return false
-	}
-
-	if !m.GetNodePKFinished() {
-		return false
-	}
-
-	if !m.GetNodePrimaryRoleFinished() {
-		return false
-	}
-
-	if !m.GetNodeSpecialRolesFinished() {
+	if !m.GetNodePublicKeyFinished() {
 		return false
 	}
 
@@ -2279,7 +2267,19 @@ func (m *CandidateProfileMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.GetPrimaryRoleFinished() {
+		return false
+	}
+
 	if !m.GetReferenceFinished() {
+		return false
+	}
+
+	if !m.GetShortNodeIDFinished() {
+		return false
+	}
+
+	if !m.GetSpecialRolesFinished() {
 		return false
 	}
 

@@ -74,7 +74,7 @@ type NodeIntroduction struct {
 
 func NewNodeIntroduction(networkNode insolar.NetworkNode) *NodeIntroduction {
 	return newNodeIntroduction(
-		insolar.ShortNodeID(networkNode.ShortID()),
+		networkNode.ShortID(),
 		networkNode.ID(),
 	)
 }
@@ -130,11 +130,11 @@ func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Ce
 	signature := mutableNode.GetSignature()
 
 	return newNodeIntroProfile(
-		insolar.ShortNodeID(networkNode.ShortID()),
+		networkNode.ShortID(),
 		StaticRoleToPrimaryRole(networkNode.Role()),
 		specialRole,
 		NewNodeIntroduction(networkNode),
-		NewNodeEndpoint(networkNode.Address()),
+		NewOutbound(networkNode.Address()),
 		NewECDSAPublicKeyStore(publicKey),
 		NewECDSASignatureKeyHolder(publicKey, keyProcessor),
 		cryptkit.NewSignature(
@@ -216,40 +216,44 @@ func (nip *NodeIntroProfile) String() string {
 	return fmt.Sprintf("{sid:%d, node:%s}", nip.shortID, nip.intro.GetReference().String())
 }
 
-type NodeEndpoint struct {
+type Outbound struct {
 	name endpoints.Name
 	addr packets.NodeAddress
 }
 
-func NewNodeEndpoint(address string) *NodeEndpoint {
+func NewOutbound(address string) *Outbound {
 	addr, err := packets.NewNodeAddress(address)
 	if err != nil {
 		panic(err)
 	}
 
-	return &NodeEndpoint{
+	return &Outbound{
 		name: endpoints.Name(address),
 		addr: addr,
 	}
 }
 
-func (p *NodeEndpoint) GetEndpointType() endpoints.NodeEndpointType {
-	return endpoints.NameEndpoint
+func (p *Outbound) CanAccept(connection endpoints.Inbound) bool {
+	return true
 }
 
-func (*NodeEndpoint) GetRelayID() insolar.ShortNodeID {
+func (p *Outbound) GetEndpointType() endpoints.NodeEndpointType {
+	return endpoints.IPEndpoint
+}
+
+func (*Outbound) GetRelayID() insolar.ShortNodeID {
 	return 0
 }
 
-func (p *NodeEndpoint) GetNameAddress() endpoints.Name {
+func (p *Outbound) GetNameAddress() endpoints.Name {
 	return p.name
 }
 
-func (p *NodeEndpoint) GetIPAddress() packets.NodeAddress {
+func (p *Outbound) GetIPAddress() packets.NodeAddress {
 	return p.addr
 }
 
-func (p *NodeEndpoint) AsByteString() string {
+func (p *Outbound) AsByteString() string {
 	return p.addr.String()
 }
 
@@ -276,7 +280,7 @@ func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
 
 	mutableNode := networkNode.(node.MutableNode)
 
-	mutableNode.SetShortID(insolar.ShortNodeID(profile.GetShortNodeID()))
+	mutableNode.SetShortID(profile.GetShortNodeID())
 	mutableNode.SetState(insolar.NodeReady)
 	mutableNode.SetSignature(insolar.SignatureFromBytes(profile.GetAnnouncementSignature().AsBytes()))
 

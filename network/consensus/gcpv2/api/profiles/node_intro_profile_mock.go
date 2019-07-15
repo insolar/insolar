@@ -42,15 +42,15 @@ type NodeIntroProfileMock struct {
 	GetNodePublicKeyPreCounter uint64
 	GetNodePublicKeyMock       mNodeIntroProfileMockGetNodePublicKey
 
-	GetNodePublicKeyStoreFunc       func() (r cryptkit.PublicKeyStore)
-	GetNodePublicKeyStoreCounter    uint64
-	GetNodePublicKeyStorePreCounter uint64
-	GetNodePublicKeyStoreMock       mNodeIntroProfileMockGetNodePublicKeyStore
-
 	GetPrimaryRoleFunc       func() (r member.PrimaryRole)
 	GetPrimaryRoleCounter    uint64
 	GetPrimaryRolePreCounter uint64
 	GetPrimaryRoleMock       mNodeIntroProfileMockGetPrimaryRole
+
+	GetPublicKeyStoreFunc       func() (r cryptkit.PublicKeyStore)
+	GetPublicKeyStoreCounter    uint64
+	GetPublicKeyStorePreCounter uint64
+	GetPublicKeyStoreMock       mNodeIntroProfileMockGetPublicKeyStore
 
 	GetShortNodeIDFunc       func() (r insolar.ShortNodeID)
 	GetShortNodeIDCounter    uint64
@@ -90,8 +90,8 @@ func NewNodeIntroProfileMock(t minimock.Tester) *NodeIntroProfileMock {
 	m.GetDefaultEndpointMock = mNodeIntroProfileMockGetDefaultEndpoint{mock: m}
 	m.GetIntroductionMock = mNodeIntroProfileMockGetIntroduction{mock: m}
 	m.GetNodePublicKeyMock = mNodeIntroProfileMockGetNodePublicKey{mock: m}
-	m.GetNodePublicKeyStoreMock = mNodeIntroProfileMockGetNodePublicKeyStore{mock: m}
 	m.GetPrimaryRoleMock = mNodeIntroProfileMockGetPrimaryRole{mock: m}
+	m.GetPublicKeyStoreMock = mNodeIntroProfileMockGetPublicKeyStore{mock: m}
 	m.GetShortNodeIDMock = mNodeIntroProfileMockGetShortNodeID{mock: m}
 	m.GetSpecialRolesMock = mNodeIntroProfileMockGetSpecialRoles{mock: m}
 	m.GetStartPowerMock = mNodeIntroProfileMockGetStartPower{mock: m}
@@ -637,140 +637,6 @@ func (m *NodeIntroProfileMock) GetNodePublicKeyFinished() bool {
 	return true
 }
 
-type mNodeIntroProfileMockGetNodePublicKeyStore struct {
-	mock              *NodeIntroProfileMock
-	mainExpectation   *NodeIntroProfileMockGetNodePublicKeyStoreExpectation
-	expectationSeries []*NodeIntroProfileMockGetNodePublicKeyStoreExpectation
-}
-
-type NodeIntroProfileMockGetNodePublicKeyStoreExpectation struct {
-	result *NodeIntroProfileMockGetNodePublicKeyStoreResult
-}
-
-type NodeIntroProfileMockGetNodePublicKeyStoreResult struct {
-	r cryptkit.PublicKeyStore
-}
-
-//Expect specifies that invocation of NodeIntroProfile.GetNodePublicKeyStore is expected from 1 to Infinity times
-func (m *mNodeIntroProfileMockGetNodePublicKeyStore) Expect() *mNodeIntroProfileMockGetNodePublicKeyStore {
-	m.mock.GetNodePublicKeyStoreFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeIntroProfileMockGetNodePublicKeyStoreExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of NodeIntroProfile.GetNodePublicKeyStore
-func (m *mNodeIntroProfileMockGetNodePublicKeyStore) Return(r cryptkit.PublicKeyStore) *NodeIntroProfileMock {
-	m.mock.GetNodePublicKeyStoreFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeIntroProfileMockGetNodePublicKeyStoreExpectation{}
-	}
-	m.mainExpectation.result = &NodeIntroProfileMockGetNodePublicKeyStoreResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeIntroProfile.GetNodePublicKeyStore is expected once
-func (m *mNodeIntroProfileMockGetNodePublicKeyStore) ExpectOnce() *NodeIntroProfileMockGetNodePublicKeyStoreExpectation {
-	m.mock.GetNodePublicKeyStoreFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeIntroProfileMockGetNodePublicKeyStoreExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeIntroProfileMockGetNodePublicKeyStoreExpectation) Return(r cryptkit.PublicKeyStore) {
-	e.result = &NodeIntroProfileMockGetNodePublicKeyStoreResult{r}
-}
-
-//Set uses given function f as a mock of NodeIntroProfile.GetNodePublicKeyStore method
-func (m *mNodeIntroProfileMockGetNodePublicKeyStore) Set(f func() (r cryptkit.PublicKeyStore)) *NodeIntroProfileMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodePublicKeyStoreFunc = f
-	return m.mock
-}
-
-//GetNodePublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.NodeIntroProfile interface
-func (m *NodeIntroProfileMock) GetNodePublicKeyStore() (r cryptkit.PublicKeyStore) {
-	counter := atomic.AddUint64(&m.GetNodePublicKeyStorePreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodePublicKeyStoreCounter, 1)
-
-	if len(m.GetNodePublicKeyStoreMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodePublicKeyStoreMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetNodePublicKeyStore.")
-			return
-		}
-
-		result := m.GetNodePublicKeyStoreMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetNodePublicKeyStore")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodePublicKeyStoreMock.mainExpectation != nil {
-
-		result := m.GetNodePublicKeyStoreMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetNodePublicKeyStore")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodePublicKeyStoreFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetNodePublicKeyStore.")
-		return
-	}
-
-	return m.GetNodePublicKeyStoreFunc()
-}
-
-//GetNodePublicKeyStoreMinimockCounter returns a count of NodeIntroProfileMock.GetNodePublicKeyStoreFunc invocations
-func (m *NodeIntroProfileMock) GetNodePublicKeyStoreMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter)
-}
-
-//GetNodePublicKeyStoreMinimockPreCounter returns the value of NodeIntroProfileMock.GetNodePublicKeyStore invocations
-func (m *NodeIntroProfileMock) GetNodePublicKeyStoreMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePublicKeyStorePreCounter)
-}
-
-//GetNodePublicKeyStoreFinished returns true if mock invocations count is ok
-func (m *NodeIntroProfileMock) GetNodePublicKeyStoreFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodePublicKeyStoreMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter) == uint64(len(m.GetNodePublicKeyStoreMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodePublicKeyStoreMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodePublicKeyStoreFunc != nil {
-		return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeIntroProfileMockGetPrimaryRole struct {
 	mock              *NodeIntroProfileMock
 	mainExpectation   *NodeIntroProfileMockGetPrimaryRoleExpectation
@@ -900,6 +766,140 @@ func (m *NodeIntroProfileMock) GetPrimaryRoleFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetPrimaryRoleFunc != nil {
 		return atomic.LoadUint64(&m.GetPrimaryRoleCounter) > 0
+	}
+
+	return true
+}
+
+type mNodeIntroProfileMockGetPublicKeyStore struct {
+	mock              *NodeIntroProfileMock
+	mainExpectation   *NodeIntroProfileMockGetPublicKeyStoreExpectation
+	expectationSeries []*NodeIntroProfileMockGetPublicKeyStoreExpectation
+}
+
+type NodeIntroProfileMockGetPublicKeyStoreExpectation struct {
+	result *NodeIntroProfileMockGetPublicKeyStoreResult
+}
+
+type NodeIntroProfileMockGetPublicKeyStoreResult struct {
+	r cryptkit.PublicKeyStore
+}
+
+//Expect specifies that invocation of NodeIntroProfile.GetPublicKeyStore is expected from 1 to Infinity times
+func (m *mNodeIntroProfileMockGetPublicKeyStore) Expect() *mNodeIntroProfileMockGetPublicKeyStore {
+	m.mock.GetPublicKeyStoreFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeIntroProfileMockGetPublicKeyStoreExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of NodeIntroProfile.GetPublicKeyStore
+func (m *mNodeIntroProfileMockGetPublicKeyStore) Return(r cryptkit.PublicKeyStore) *NodeIntroProfileMock {
+	m.mock.GetPublicKeyStoreFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeIntroProfileMockGetPublicKeyStoreExpectation{}
+	}
+	m.mainExpectation.result = &NodeIntroProfileMockGetPublicKeyStoreResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of NodeIntroProfile.GetPublicKeyStore is expected once
+func (m *mNodeIntroProfileMockGetPublicKeyStore) ExpectOnce() *NodeIntroProfileMockGetPublicKeyStoreExpectation {
+	m.mock.GetPublicKeyStoreFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeIntroProfileMockGetPublicKeyStoreExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeIntroProfileMockGetPublicKeyStoreExpectation) Return(r cryptkit.PublicKeyStore) {
+	e.result = &NodeIntroProfileMockGetPublicKeyStoreResult{r}
+}
+
+//Set uses given function f as a mock of NodeIntroProfile.GetPublicKeyStore method
+func (m *mNodeIntroProfileMockGetPublicKeyStore) Set(f func() (r cryptkit.PublicKeyStore)) *NodeIntroProfileMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetPublicKeyStoreFunc = f
+	return m.mock
+}
+
+//GetPublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.NodeIntroProfile interface
+func (m *NodeIntroProfileMock) GetPublicKeyStore() (r cryptkit.PublicKeyStore) {
+	counter := atomic.AddUint64(&m.GetPublicKeyStorePreCounter, 1)
+	defer atomic.AddUint64(&m.GetPublicKeyStoreCounter, 1)
+
+	if len(m.GetPublicKeyStoreMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetPublicKeyStoreMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetPublicKeyStore.")
+			return
+		}
+
+		result := m.GetPublicKeyStoreMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetPublicKeyStore")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetPublicKeyStoreMock.mainExpectation != nil {
+
+		result := m.GetPublicKeyStoreMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetPublicKeyStore")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetPublicKeyStoreFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetPublicKeyStore.")
+		return
+	}
+
+	return m.GetPublicKeyStoreFunc()
+}
+
+//GetPublicKeyStoreMinimockCounter returns a count of NodeIntroProfileMock.GetPublicKeyStoreFunc invocations
+func (m *NodeIntroProfileMock) GetPublicKeyStoreMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPublicKeyStoreCounter)
+}
+
+//GetPublicKeyStoreMinimockPreCounter returns the value of NodeIntroProfileMock.GetPublicKeyStore invocations
+func (m *NodeIntroProfileMock) GetPublicKeyStoreMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPublicKeyStorePreCounter)
+}
+
+//GetPublicKeyStoreFinished returns true if mock invocations count is ok
+func (m *NodeIntroProfileMock) GetPublicKeyStoreFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetPublicKeyStoreMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetPublicKeyStoreCounter) == uint64(len(m.GetPublicKeyStoreMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetPublicKeyStoreMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyStoreCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetPublicKeyStoreFunc != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyStoreCounter) > 0
 	}
 
 	return true
@@ -1608,12 +1608,12 @@ func (m *NodeIntroProfileMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeIntroProfileMock.GetNodePublicKey")
 	}
 
-	if !m.GetNodePublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to NodeIntroProfileMock.GetNodePublicKeyStore")
-	}
-
 	if !m.GetPrimaryRoleFinished() {
 		m.t.Fatal("Expected call to NodeIntroProfileMock.GetPrimaryRole")
+	}
+
+	if !m.GetPublicKeyStoreFinished() {
+		m.t.Fatal("Expected call to NodeIntroProfileMock.GetPublicKeyStore")
 	}
 
 	if !m.GetShortNodeIDFinished() {
@@ -1669,12 +1669,12 @@ func (m *NodeIntroProfileMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeIntroProfileMock.GetNodePublicKey")
 	}
 
-	if !m.GetNodePublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to NodeIntroProfileMock.GetNodePublicKeyStore")
-	}
-
 	if !m.GetPrimaryRoleFinished() {
 		m.t.Fatal("Expected call to NodeIntroProfileMock.GetPrimaryRole")
+	}
+
+	if !m.GetPublicKeyStoreFinished() {
+		m.t.Fatal("Expected call to NodeIntroProfileMock.GetPublicKeyStore")
 	}
 
 	if !m.GetShortNodeIDFinished() {
@@ -1715,8 +1715,8 @@ func (m *NodeIntroProfileMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetDefaultEndpointFinished()
 		ok = ok && m.GetIntroductionFinished()
 		ok = ok && m.GetNodePublicKeyFinished()
-		ok = ok && m.GetNodePublicKeyStoreFinished()
 		ok = ok && m.GetPrimaryRoleFinished()
+		ok = ok && m.GetPublicKeyStoreFinished()
 		ok = ok && m.GetShortNodeIDFinished()
 		ok = ok && m.GetSpecialRolesFinished()
 		ok = ok && m.GetStartPowerFinished()
@@ -1746,12 +1746,12 @@ func (m *NodeIntroProfileMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NodeIntroProfileMock.GetNodePublicKey")
 			}
 
-			if !m.GetNodePublicKeyStoreFinished() {
-				m.t.Error("Expected call to NodeIntroProfileMock.GetNodePublicKeyStore")
-			}
-
 			if !m.GetPrimaryRoleFinished() {
 				m.t.Error("Expected call to NodeIntroProfileMock.GetPrimaryRole")
+			}
+
+			if !m.GetPublicKeyStoreFinished() {
+				m.t.Error("Expected call to NodeIntroProfileMock.GetPublicKeyStore")
 			}
 
 			if !m.GetShortNodeIDFinished() {
@@ -1802,11 +1802,11 @@ func (m *NodeIntroProfileMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetNodePublicKeyStoreFinished() {
+	if !m.GetPrimaryRoleFinished() {
 		return false
 	}
 
-	if !m.GetPrimaryRoleFinished() {
+	if !m.GetPublicKeyStoreFinished() {
 		return false
 	}
 
