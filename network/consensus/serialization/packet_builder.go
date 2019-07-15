@@ -74,7 +74,7 @@ func NewPacketBuilder(crypto api.TransportCryptographyFactory, localConfig api.L
 	}
 }
 
-func (p *PacketBuilder) GetNeighbourhoodSize() gcp_types.NeighbourhoodSizes {
+func (pb *PacketBuilder) GetNeighbourhoodSize() gcp_types.NeighbourhoodSizes {
 	return gcp_types.NeighbourhoodSizes{
 		NeighbourhoodSize:           5,
 		NeighbourhoodTrustThreshold: 2,
@@ -83,7 +83,7 @@ func (p *PacketBuilder) GetNeighbourhoodSize() gcp_types.NeighbourhoodSizes {
 	}
 }
 
-func (p *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, packetType gcp_types.PacketType) *Packet {
+func (pb *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, packetType gcp_types.PacketType) *Packet {
 	packet := &Packet{
 		Header: Header{
 			SourceID: uint32(sender.GetNodeID()),
@@ -101,18 +101,18 @@ func (p *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, p
 	return packet
 }
 
-func (p *PacketBuilder) prepareWrapper(packet *Packet) *preparedPacketWrapper {
-	return &preparedPacketWrapper{
+func (pb *PacketBuilder) prepareWrapper(packet *Packet) *PreparedPacketSender {
+	return &PreparedPacketSender{
 		packet:   packet,
-		digester: p.crypto.GetDigestFactory().GetPacketDigester(),
-		signer:   p.crypto.GetNodeSigner(p.localConfig.GetSecretKeyStore()),
+		digester: pb.crypto.GetDigestFactory().GetPacketDigester(),
+		signer:   pb.crypto.GetNodeSigner(pb.localConfig.GetSecretKeyStore()),
 	}
 }
 
-func (p *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
+func (pb *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
 	options api.PacketSendOptions) api.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, gcp_types.PacketPhase0)
+	packet := pb.preparePacket(sender, gcp_types.PacketPhase0)
 	if (options & api.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
@@ -121,13 +121,13 @@ func (p *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProf
 	body.CurrentRank = sender.GetNodeRank()
 	body.PulsarPacket.Data = pulsarPacket.AsBytes()
 
-	return p.prepareWrapper(packet)
+	return pb.prepareWrapper(packet)
 }
 
-func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
+func (pb *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
 	welcome *gcp_types.NodeWelcomePackage, options api.PacketSendOptions) api.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, gcp_types.PacketPhase1)
+	packet := pb.preparePacket(sender, gcp_types.PacketPhase1)
 	if (options & api.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
@@ -139,46 +139,48 @@ func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProf
 	body.FullSelfIntro.setAddrMode(body.FullSelfIntro.getAddrMode())
 	body.FullSelfIntro.setPrimaryRole(body.FullSelfIntro.getPrimaryRole())
 
-	return p.prepareWrapper(packet)
+	return pb.prepareWrapper(packet)
 }
 
-func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile, welcome *gcp_types.NodeWelcomePackage,
+func (pb *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile, welcome *gcp_types.NodeWelcomePackage,
 	neighbourhood []packets.MembershipAnnouncementReader, options api.PacketSendOptions) api.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, gcp_types.PacketPhase2)
+	packet := pb.preparePacket(sender, gcp_types.PacketPhase2)
 
-	return p.prepareWrapper(packet)
+	return pb.prepareWrapper(packet)
 }
 
-func (p *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
+func (pb *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
 	vectors gcp_types.HashedNodeVector, options api.PacketSendOptions) api.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, gcp_types.PacketPhase3)
+	packet := pb.preparePacket(sender, gcp_types.PacketPhase3)
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.Vectors.StateVectorMask.SetBitset(vectors.Bitset)
 
 	copy(body.Vectors.MainStateVector.VectorHash[:], vectors.TrustedAnnouncementVector.AsBytes())
 	copy(body.Vectors.MainStateVector.SignedGlobulaStateHash[:], vectors.TrustedGlobulaStateVectorSignature.AsBytes())
-	// TODO: set rank
+	body.Vectors.MainStateVector.ExpectedRank = vectors.TrustedExpectedRank
 
-	packet.Header.SetFlag(1)
-	body.Vectors.AdditionalStateVectors = make([]GlobulaStateVector, 1)
-	copy(body.Vectors.AdditionalStateVectors[0].VectorHash[:], vectors.DoubtedAnnouncementVector.AsBytes())
-	copy(body.Vectors.AdditionalStateVectors[0].SignedGlobulaStateHash[:], vectors.DoubtedGlobulaStateVectorSignature.AsBytes())
-	// TODO: set rank
+	if vectors.DoubtedAnnouncementVector == nil {
+		packet.Header.SetFlag(1)
+		body.Vectors.AdditionalStateVectors = make([]GlobulaStateVector, 1)
+		copy(body.Vectors.AdditionalStateVectors[0].VectorHash[:], vectors.DoubtedAnnouncementVector.AsBytes())
+		copy(body.Vectors.AdditionalStateVectors[0].SignedGlobulaStateHash[:], vectors.DoubtedGlobulaStateVectorSignature.AsBytes())
+		body.Vectors.AdditionalStateVectors[0].ExpectedRank = vectors.DoubtedExpectedRank
+	}
 
-	return p.prepareWrapper(packet)
+	return pb.prepareWrapper(packet)
 }
 
-type preparedPacketWrapper struct {
+type PreparedPacketSender struct {
 	packet   *Packet
 	buf      [packetMaxSize]byte
 	digester cryptography_containers.DataDigester
 	signer   cryptography_containers.DigestSigner
 }
 
-func (p *preparedPacketWrapper) SendTo(ctx context.Context, target gcp_types.NodeProfile, sendOptions api.PacketSendOptions, sender api.PacketSender) {
+func (p *PreparedPacketSender) SendTo(ctx context.Context, target gcp_types.NodeProfile, sendOptions api.PacketSendOptions, sender api.PacketSender) {
 	p.packet.Header.TargetID = uint32(target.GetShortNodeID())
 
 	if (sendOptions & api.SendWithoutPulseData) != 0 {
@@ -194,7 +196,7 @@ func (p *preparedPacketWrapper) SendTo(ctx context.Context, target gcp_types.Nod
 	sender.SendPacketToTransport(ctx, target, sendOptions, p.buf[:buf.Len()])
 }
 
-func (p *preparedPacketWrapper) SendToMany(ctx context.Context, targetCount int, sender api.PacketSender,
+func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, sender api.PacketSender,
 	filter func(ctx context.Context, targetIndex int) (gcp_types.NodeProfile, api.PacketSendOptions)) {
 
 	for i := 0; i <= targetCount; i++ {
